@@ -186,9 +186,9 @@ export class PersonaService {
       let cashDrawerId: number | null = null;
       if (paymentMethod === PaymentMethod.CASH) {
         const activeDrawer = await tx.cashDrawer.findFirst({
-          where: { userId, status: 'OPEN', branch: selectedBranch },
+          where: { userId, status: 'OPEN' },
         });
-        if (!activeDrawer) throw new Error(`Debés tener una caja abierta para la Sucursal ${selectedBranch} antes de registrar cobros/pagos en efectivo.`);
+        if (!activeDrawer) throw new Error(`Debés tener la Caja Grande abierta antes de registrar cobros/pagos en efectivo.`);
         cashDrawerId = activeDrawer.id;
       }
 

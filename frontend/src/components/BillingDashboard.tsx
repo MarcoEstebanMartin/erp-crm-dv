@@ -668,13 +668,10 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
       return;
     }
 
-    const isDrawerInvalid = immediatePayment && paymentMethod === 'CASH' && (
-      activeDrawers.length === 0 ||
-      !activeDrawers.some(d => d.branch === (billingType === 'OFFICIAL' ? 'A' : 'X'))
-    );
+    const isDrawerInvalid = immediatePayment && paymentMethod === 'CASH' && activeDrawers.length === 0;
 
     if (isDrawerInvalid) {
-      setErrorMsg('No se puede cobrar en efectivo. Verifique que la caja de la sucursal correspondiente esté abierta.');
+      setErrorMsg('No se puede cobrar en efectivo. Verifique que la Caja Grande esté abierta.');
       return;
     }
 
@@ -2912,9 +2909,7 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
 
                   {/* Validaciones de caja operativa en efectivo */}
                   {(() => {
-                    const requiredBranch = directInvoiceForm.billingType === 'OFFICIAL' ? 'A' : 'X';
-                    const activeForBranch = activeDrawers.find(d => d.branch === requiredBranch && d.status === 'OPEN');
-                    const isDrawerInvalid = directInvoiceForm.immediatePayment && directInvoiceForm.paymentMethod === 'CASH' && !activeForBranch;
+                    const isDrawerInvalid = directInvoiceForm.immediatePayment && directInvoiceForm.paymentMethod === 'CASH' && activeDrawers.length === 0;
 
                     return (
                       <>
@@ -2928,9 +2923,9 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
                             fontSize: '0.78rem',
                             lineHeight: '1.4'
                           }}>
-                            <strong>⚠️ Caja Cerrada:</strong> No tenés una caja operativa abierta para la <strong>Sucursal {requiredBranch}</strong>.
+                            <strong>⚠️ Caja Cerrada:</strong> No tenés una caja operativa abierta.
                             <div style={{ marginTop: '4px' }}>
-                              Para cobrar ventas en efectivo en esta sucursal, debés abrir la caja correspondiente en el Panel de Finanzas.
+                              Para cobrar ventas en efectivo, debés abrir la <strong>Caja Grande</strong> en el Panel de Finanzas.
                             </div>
                           </div>
                         )}

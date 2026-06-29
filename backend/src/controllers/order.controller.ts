@@ -578,12 +578,11 @@ export async function invoiceOrder(req: AuthenticatedRequest, res: Response): Pr
           const activeDrawer = await tx.cashDrawer.findFirst({
             where: {
               userId: adminId,
-              branch: billingType === BillingType.OFFICIAL ? 'A' : 'X',
               status: 'OPEN',
             },
           });
           if (!activeDrawer) {
-            throw new Error(`Debe abrir una caja operativa para la sucursal ${billingType === BillingType.OFFICIAL ? 'A' : 'X'} antes de registrar cobros en efectivo.`);
+            throw new Error(`Debe abrir la Caja Grande antes de registrar cobros en efectivo.`);
           }
           cashDrawerId = activeDrawer.id;
         } else if (paymentMethod === PaymentMethod.BANK_TRANSFER) {
@@ -1093,12 +1092,11 @@ export async function createDirectInvoice(req: AuthenticatedRequest, res: Respon
           const activeDrawer = await tx.cashDrawer.findFirst({
             where: {
               userId: adminId,
-              branch: billingType === BillingType.OFFICIAL ? 'A' : 'X',
               status: 'OPEN',
             },
           });
           if (!activeDrawer) {
-            throw new Error(`Debe abrir una caja operativa para la sucursal ${billingType === BillingType.OFFICIAL ? 'A' : 'X'} antes de registrar cobros en efectivo.`);
+            throw new Error(`Debe abrir la Caja Grande antes de registrar cobros en efectivo.`);
           }
           cashDrawerId = activeDrawer.id;
         } else if (paymentMethod === PaymentMethod.BANK_TRANSFER) {

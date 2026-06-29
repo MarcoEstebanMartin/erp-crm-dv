@@ -16,10 +16,7 @@ export async function openDrawer(req: AuthenticatedRequest, res: Response): Prom
     return;
   }
 
-  if (!branch || !['A', 'X'].includes(branch)) {
-    res.status(400).json({ status: 'error', message: 'La sucursal ("A" o "X") es requerida.' });
-    return;
-  }
+  const drawerBranch = branch || 'CONSOLIDADA';
 
   if (openingBalance === undefined || Number(openingBalance) < 0) {
     res.status(400).json({ status: 'error', message: 'El saldo inicial debe ser mayor o igual a cero.' });
@@ -27,11 +24,10 @@ export async function openDrawer(req: AuthenticatedRequest, res: Response): Prom
   }
 
   try {
-    // Validar si ya hay una caja abierta para este usuario en esta sucursal
+    // Validar si ya hay una caja abierta para este usuario (cualquier sucursal / consolidada)
     const existing = await prisma.cashDrawer.findFirst({
       where: {
         userId,
-        branch,
         status: 'OPEN',
       },
     });
@@ -39,7 +35,7 @@ export async function openDrawer(req: AuthenticatedRequest, res: Response): Prom
     if (existing) {
       res.status(400).json({
         status: 'error',
-        message: `Ya tenés una caja abierta para la Sucursal ${branch}. Debés cerrarla antes de abrir una nueva.`,
+        message: `Ya tenés una caja operativa abierta. Debés cerrarla antes de abrir una nueva.`,
       });
       return;
     }
@@ -47,7 +43,7 @@ export async function openDrawer(req: AuthenticatedRequest, res: Response): Prom
     const drawer = await prisma.cashDrawer.create({
       data: {
         userId,
-        branch,
+        branch: drawerBranch,
         openingBalance: Number(openingBalance),
         status: 'OPEN',
       },
@@ -215,6 +211,7 @@ export async function getActiveDrawers(req: AuthenticatedRequest, res: Response)
 
 /**
  * Cierre de Caja Conjunto (A + X) para cerrar de forma atómica y conjunta ambas cajas del usuario.
+ * Nota: En la versión unificada (Caja Grande), cierra la caja consolidada activa.
  */
 export async function closeJointDrawers(req: AuthenticatedRequest, res: Response): Promise<void> {
   const { realBalanceA, realBalanceX } = req.body;
@@ -234,20 +231,16 @@ export async function closeJointDrawers(req: AuthenticatedRequest, res: Response
       },
     });
 
-    const drawerA = activeDrawers.find(d => d.branch === 'A');
-    const drawerX = activeDrawers.find(d => d.branch === 'X');
-
-    if (!drawerA && !drawerX) {
+    if (activeDrawers.length === 0) {
       res.status(400).json({ status: 'error', message: 'No se encontraron cajas abiertas para realizar un cierre.' });
       return;
     }
 
     const closedDrawers = [];
 
-    // Cierre de la caja A si existe
-    if (drawerA) {
+    for (const drawer of activeDrawers) {
       const transactions = await prisma.transaction.findMany({
-        where: { cashDrawerId: drawerA.id },
+        where: { cashDrawerId: drawer.id },
       });
       let cashIncome = 0;
       let cashOutcome = 0;
@@ -255,56 +248,38 @@ export async function closeJointDrawers(req: AuthenticatedRequest, res: Response
         if (t.type === TransactionType.INCOME) cashIncome += Number(t.amount);
         else cashOutcome += Number(t.amount);
       });
-      const theoretical = Number(drawerA.openingBalance) + cashIncome - cashOutcome;
-      const closed = await prisma.cashDrawer.update({
-        where: { id: drawerA.id },
-        data: {
-          closingBalance: theoretical,
-          realBalance: realBalanceA !== undefined && realBalanceA !== null ? Number(realBalanceA) : theoretical,
-          status: 'CLOSED',
-          closedAt: new Date(),
-        },
-      });
-      await logAudit({
-        userId,
-        action: 'CLOSE_CASH_DRAWER',
-        entityType: 'CashDrawer',
-        entityId: drawerA.id,
-        oldValues: drawerA,
-        newValues: closed,
-      });
-      closedDrawers.push(closed);
-    }
+      const theoretical = Number(drawer.openingBalance) + cashIncome - cashOutcome;
 
-    // Cierre de la caja X si existe
-    if (drawerX) {
-      const transactions = await prisma.transaction.findMany({
-        where: { cashDrawerId: drawerX.id },
-      });
-      let cashIncome = 0;
-      let cashOutcome = 0;
-      transactions.forEach((t) => {
-        if (t.type === TransactionType.INCOME) cashIncome += Number(t.amount);
-        else cashOutcome += Number(t.amount);
-      });
-      const theoretical = Number(drawerX.openingBalance) + cashIncome - cashOutcome;
+      // Determinar qué saldo real usar
+      let realBalance = theoretical;
+      if (drawer.branch === 'A' && realBalanceA !== undefined && realBalanceA !== null) {
+        realBalance = Number(realBalanceA);
+      } else if (drawer.branch === 'X' && realBalanceX !== undefined && realBalanceX !== null) {
+        realBalance = Number(realBalanceX);
+      } else if (drawer.branch === 'CONSOLIDADA') {
+        realBalance = realBalanceA !== undefined && realBalanceA !== null ? Number(realBalanceA) : 
+                     (realBalanceX !== undefined && realBalanceX !== null ? Number(realBalanceX) : theoretical);
+      }
+
       const closed = await prisma.cashDrawer.update({
-        where: { id: drawerX.id },
+        where: { id: drawer.id },
         data: {
           closingBalance: theoretical,
-          realBalance: realBalanceX !== undefined && realBalanceX !== null ? Number(realBalanceX) : theoretical,
+          realBalance: realBalance,
           status: 'CLOSED',
           closedAt: new Date(),
         },
       });
+
       await logAudit({
         userId,
         action: 'CLOSE_CASH_DRAWER',
         entityType: 'CashDrawer',
-        entityId: drawerX.id,
-        oldValues: drawerX,
+        entityId: drawer.id,
+        oldValues: drawer,
         newValues: closed,
       });
+
       closedDrawers.push(closed);
     }
 
@@ -314,7 +289,7 @@ export async function closeJointDrawers(req: AuthenticatedRequest, res: Response
     });
   } catch (error: any) {
     console.error('Error al realizar cierre conjunto:', error);
-    res.status(500).json({ status: 'error', message: 'Error al realizar el cierre de caja conjunto.' });
+    res.status(500).json({ status: 'error', message: 'Error al realizar el cierre de caja.' });
   }
 }
 

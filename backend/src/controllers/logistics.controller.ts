@@ -256,11 +256,9 @@ export async function settleDeliveryRoute(req: AuthenticatedRequest, res: Respon
           let txDescription = `Rendición Reparto - Chofer: ${route.driverName} - Ruta #${route.id} - Pago de ${order.persona.name}`;
 
           if (set.paymentMethod === 'CASH') {
-            const branch = order.billingType === BillingType.OFFICIAL ? 'A' : 'X';
             const activeDrawer = await tx.cashDrawer.findFirst({
               where: {
                 userId: userId,
-                branch: branch,
                 status: 'OPEN'
               }
             });

@@ -39,6 +39,7 @@ export default function Sidebar({ username, role, activeTab, setActiveTab, onLog
           { id: 'reparto', label: 'Reparto', icon: <Truck size={18} /> },
           { id: 'finanzas', label: 'Finanzas', icon: <DollarSign size={18} /> },
           { id: 'compras', label: 'Compras', icon: <Receipt size={18} /> },
+          { id: 'afip', label: 'Exportación AFIP', icon: <FileText size={18} /> },
           { id: 'reports', label: 'Reportes', icon: <TrendingUp size={18} /> },
           { id: 'config', label: 'Configuración', icon: <Settings size={18} /> },
         ];
@@ -47,6 +48,7 @@ export default function Sidebar({ username, role, activeTab, setActiveTab, onLog
           { id: 'orders', label: 'Facturar Pedidos', icon: <ShoppingCart size={18} /> },
           { id: 'clients', label: 'Personas', icon: <Users size={18} /> },
           { id: 'billing', label: 'Facturación', icon: <FileText size={18} /> },
+          { id: 'afip', label: 'Exportación AFIP', icon: <FileText size={18} /> },
           { id: 'products', label: 'Productos', icon: <Package size={18} /> },
           { id: 'finanzas', label: 'Caja Operativa', icon: <DollarSign size={18} /> },
         ];

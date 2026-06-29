@@ -6,6 +6,7 @@ import AdminDashboard from './components/AdminDashboard';
 import VendedorDashboard from './components/VendedorDashboard';
 import DepositoDashboard from './components/DepositoDashboard';
 import FacturacionDashboard from './components/FacturacionDashboard';
+import AfipExportDashboard from './pages/AfipExportDashboard';
 
 function App() {
   const [user, setUser] = useState<any>(null);
@@ -53,6 +54,9 @@ function App() {
 
   // Renderizado del Dashboard correspondiente
   const renderDashboard = () => {
+    if (activeTab === 'afip') {
+      return <AfipExportDashboard />;
+    }
     switch (user.role) {
       case 'ADMIN':
         return <AdminDashboard activeTab={activeTab} setActiveTab={setActiveTab} />;
@@ -104,6 +108,8 @@ function App() {
         return '🧾 Facturación, Comprobantes & Impuestos';
       case 'compras':
         return '🧾 Compras & Proveedores';
+      case 'afip':
+        return '🏛️ Exportación AFIP & Subdiarios';
       case 'reports':
         return '📈 Reportes de Venta & Rentabilidad';
       case 'crm':

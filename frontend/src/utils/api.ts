@@ -866,10 +866,9 @@ export const api = {
 
       if (paymentData.paymentMethod === 'CASH') {
         const drawers = mockDb.get('db_cash_drawers');
-        const targetBranch = paymentData.branch || 'X';
-        const activeDrawer = drawers.find((d: any) => d.userId === user.id && d.status === 'OPEN' && d.branch === targetBranch);
+        const activeDrawer = drawers.find((d: any) => d.userId === user.id && d.status === 'OPEN');
         if (!activeDrawer) {
-          throw new Error(`Debe abrir una caja operativa para la Sucursal ${targetBranch} antes de registrar cobros/pagos en efectivo.`);
+          throw new Error(`Debe abrir la Caja Grande antes de registrar cobros/pagos en efectivo.`);
         }
         cashDrawerId = activeDrawer.id;
       } else if (paymentData.paymentMethod === 'BANK_TRANSFER' || paymentData.paymentMethod === 'CHECK') {
@@ -1695,15 +1694,17 @@ export const api = {
     const user = api.getCurrentUser();
     if (simulationMode) {
       const drawers = mockDb.get('db_cash_drawers');
-      const active = drawers.find((d: any) => d.userId === user.id && d.branch === branch && d.status === 'OPEN');
+      const active = drawers.find((d: any) => d.userId === user.id && d.status === 'OPEN');
       if (active) {
-        throw new Error(`Ya tenés una caja abierta para la Sucursal ${branch}. Debés cerrarla antes de abrir una nueva.`);
+        throw new Error(`Ya tenés una caja operativa abierta. Debés cerrarla antes de abrir una nueva.`);
       }
+
+      const drawerBranch = branch || 'CONSOLIDADA';
 
       const newDrawer = {
         id: drawers.length + 1,
         userId: user.id,
-        branch,
+        branch: drawerBranch,
         openingBalance: Number(openingBalance),
         closingBalance: null,
         realBalance: null,
@@ -1806,49 +1807,40 @@ export const api = {
     const user = api.getCurrentUser();
     if (simulationMode) {
       const drawers = mockDb.get('db_cash_drawers');
-      const activeA = drawers.find((d: any) => d.userId === user.id && d.branch === 'A' && d.status === 'OPEN');
-      const activeX = drawers.find((d: any) => d.userId === user.id && d.branch === 'X' && d.status === 'OPEN');
-
+      const activeDrawers = drawers.filter((d: any) => d.userId === user.id && d.status === 'OPEN');
       const trans = mockDb.get('db_transactions');
-      const closedList = [];
+      const closedList: any[] = [];
 
-      if (activeA) {
-        const idx = drawers.findIndex((d: any) => d.id === activeA.id);
-        const cashTransA = trans.filter((t: any) => t.cashDrawerId === activeA.id);
+      activeDrawers.forEach((drawer: any) => {
+        const idx = drawers.findIndex((d: any) => d.id === drawer.id);
+        const cashTrans = trans.filter((t: any) => t.cashDrawerId === drawer.id);
         let cashIncome = 0;
         let cashOutcome = 0;
-        cashTransA.forEach((t: any) => {
+        cashTrans.forEach((t: any) => {
           if (t.type === 'INCOME') cashIncome += Number(t.amount);
           else cashOutcome += Number(t.amount);
         });
-        const closingBalance = Number(activeA.openingBalance) + cashIncome - cashOutcome;
-        activeA.status = 'CLOSED';
-        activeA.closingBalance = closingBalance;
-        activeA.realBalance = Number(payload.realBalanceA);
-        activeA.closedAt = new Date().toISOString();
-        drawers[idx] = activeA;
-        closedList.push(activeA);
-        mockDb.log(user.id, user.username, user.role, 'CLOSE_CASH_DRAWER', 'CashDrawer', activeA.id, null, activeA);
-      }
+        const closingBalance = Number(drawer.openingBalance) + cashIncome - cashOutcome;
 
-      if (activeX) {
-        const idx = drawers.findIndex((d: any) => d.id === activeX.id);
-        const cashTransX = trans.filter((t: any) => t.cashDrawerId === activeX.id);
-        let cashIncome = 0;
-        let cashOutcome = 0;
-        cashTransX.forEach((t: any) => {
-          if (t.type === 'INCOME') cashIncome += Number(t.amount);
-          else cashOutcome += Number(t.amount);
-        });
-        const closingBalance = Number(activeX.openingBalance) + cashIncome - cashOutcome;
-        activeX.status = 'CLOSED';
-        activeX.closingBalance = closingBalance;
-        activeX.realBalance = Number(payload.realBalanceX);
-        activeX.closedAt = new Date().toISOString();
-        drawers[idx] = activeX;
-        closedList.push(activeX);
-        mockDb.log(user.id, user.username, user.role, 'CLOSE_CASH_DRAWER', 'CashDrawer', activeX.id, null, activeX);
-      }
+        let realBalance = closingBalance;
+        if (drawer.branch === 'A' && payload.realBalanceA !== undefined && payload.realBalanceA !== null) {
+          realBalance = Number(payload.realBalanceA);
+        } else if (drawer.branch === 'X' && payload.realBalanceX !== undefined && payload.realBalanceX !== null) {
+          realBalance = Number(payload.realBalanceX);
+        } else if (drawer.branch === 'CONSOLIDADA') {
+          realBalance = payload.realBalanceA !== undefined && payload.realBalanceA !== null ? Number(payload.realBalanceA) : 
+                       (payload.realBalanceX !== undefined && payload.realBalanceX !== null ? Number(payload.realBalanceX) : closingBalance);
+        }
+
+        drawer.status = 'CLOSED';
+        drawer.closingBalance = closingBalance;
+        drawer.realBalance = realBalance;
+        drawer.closedAt = new Date().toISOString();
+
+        drawers[idx] = drawer;
+        closedList.push(drawer);
+        mockDb.log(user.id, user.username, user.role, 'CLOSE_CASH_DRAWER', 'CashDrawer', drawer.id, null, drawer);
+      });
 
       mockDb.set('db_cash_drawers', drawers);
       return { drawers: closedList };
@@ -1858,7 +1850,7 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(payload)
     });
-    return res;
+    return res.data;
   },
 
   getBankAccounts: async () => {

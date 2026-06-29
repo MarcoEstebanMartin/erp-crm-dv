@@ -1784,10 +1784,6 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
           ==================================================================== */}
       {activeTab === 'finanzas' && financialReport && (() => {
         // 1. Filtrar transacciones por categorías
-        const localTxs = transactions.filter((t: any) => 
-          !t.description?.includes('Rendición Vendedor') && 
-          !t.description?.includes('Rendición Reparto')
-        );
 
         const sellerTxs = transactions.filter((t: any) => 
           t.description?.includes('Rendición Vendedor')
@@ -1823,176 +1819,248 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
           }
         });
 
-        // Calcular cheques locales
-        const localCheques = localTxs.filter((t: any) => t.paymentMethod === 'CHECK' && t.type === 'INCOME')
-          .reduce((sum, t) => sum + Number(t.amount), 0);
-
         // Calcular total en bancos
         const totalBancos = bankAccounts.reduce((sum: number, acc: any) => sum + Number(acc.balance || 0), 0);
 
+        // Caja Unificada (Caja Grande)
+        const localDrawer = activeDrawers[0] || null;
+        let localIncome = 0;
+        let localOutcome = 0;
+        if (localDrawer) {
+          const drawerTxs = transactions.filter((t: any) => t.cashDrawerId === localDrawer.id);
+          drawerTxs.forEach((t: any) => {
+            if (t.type === 'INCOME') localIncome += Number(t.amount);
+            else localOutcome += Number(t.amount);
+          });
+        }
+        const totalCajaFisica = localDrawer ? Number(localDrawer.openingBalance) + localIncome - localOutcome : 0;
+
+        // Liquidez Total Consolidada de la Empresa
+        const totalLiquidez = totalCajaFisica + totalBancos + (sellerEfectivo + sellerCheques) + (repartoEfectivo + repartoCheques);
+
+        // --- CÁLCULO DE A DÓNDE VA EL DINERO (CASH FLOW BREAKDOWN) ---
+        const ingLocal = transactions.filter((t: any) => t.type === 'INCOME' && !t.description?.includes('Rendición') && t.cashDrawerId).reduce((sum, t) => sum + Number(t.amount), 0);
+        const ingVendedores = transactions.filter((t: any) => t.type === 'INCOME' && t.description?.includes('Rendición Vendedor')).reduce((sum, t) => sum + Number(t.amount), 0);
+        const ingReparto = transactions.filter((t: any) => t.type === 'INCOME' && t.description?.includes('Rendición Reparto')).reduce((sum, t) => sum + Number(t.amount), 0);
+        const ingBancos = transactions.filter((t: any) => t.type === 'INCOME' && t.bankAccountId && !t.description?.includes('Depósito')).reduce((sum, t) => sum + Number(t.amount), 0);
+        const totalIngresosCalculados = ingLocal + ingVendedores + ingReparto + ingBancos;
+
+        const egProveedores = transactions.filter((t: any) => t.type === 'OUTCOME' && t.supplierInvoiceId).reduce((sum, t) => sum + Number(t.amount), 0);
+        const egDepositos = transactions.filter((t: any) => t.type === 'OUTCOME' && (t.description?.includes('Depósito') || t.description?.includes('transferencia a cuenta'))).reduce((sum, t) => sum + Number(t.amount), 0);
+        const egGastos = transactions.filter((t: any) => t.type === 'OUTCOME' && !t.supplierInvoiceId && !t.description?.includes('Depósito')).reduce((sum, t) => sum + Number(t.amount), 0);
+        const totalEgresosCalculados = egProveedores + egDepositos + egGastos;
+
+        const totalFlujoMax = Math.max(totalEgresosCalculados, 1);
+        const pctProveedores = Math.round((egProveedores / totalFlujoMax) * 100);
+        const pctDepositos = Math.round((egDepositos / totalFlujoMax) * 100);
+        const pctGastos = Math.round((egGastos / totalFlujoMax) * 100);
+
         return (
           <div>
-            {/* Controles de Apertura para Cajas Cerradas */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', marginBottom: '24px' }}>
-              {(() => {
-                const isAOpen = activeDrawers.some(d => d.branch === 'A' && d.status === 'OPEN');
-                const isXOpen = activeDrawers.some(d => d.branch === 'X' && d.status === 'OPEN');
+            {/* 1. SECCIÓN DE KPI / LIQUIDEZ TOTAL */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '20px', marginBottom: '24px' }}>
+              <div className="card" style={{ padding: '16px 20px', borderLeft: '4px solid var(--accent-color)', borderRadius: '12px', border: '1px solid var(--border-color)', borderLeftWidth: '4px' }}>
+                <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 600, display: 'block', marginBottom: '4px' }}>TESORERÍA GENERAL (LIQUIDEZ)</span>
+                <span style={{ fontSize: '1.75rem', fontWeight: 700, letterSpacing: '-0.03em' }}>${totalLiquidez.toLocaleString()}</span>
+                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'block', marginTop: '4px' }}>Efectivo total en vault, choferes, calle y bancos</span>
+              </div>
+              <div className="card" style={{ padding: '16px 20px', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
+                <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 600, display: 'block', marginBottom: '4px' }}>🏦 TOTAL EN BANCOS</span>
+                <span style={{ fontSize: '1.75rem', fontWeight: 700, letterSpacing: '-0.03em', color: '#1a73e8' }}>${totalBancos.toLocaleString()}</span>
+                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'block', marginTop: '4px' }}>Suma de saldos en cuentas digitales</span>
+              </div>
+              <div className="card" style={{ padding: '16px 20px', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
+                <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 600, display: 'block', marginBottom: '4px' }}>🏪 CAJA GRANDE (FÍSICA)</span>
+                <span style={{ fontSize: '1.75rem', fontWeight: 700, letterSpacing: '-0.03em', color: '#137333' }}>${totalCajaFisica.toLocaleString()}</span>
+                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'block', marginTop: '4px' }}>
+                  {localDrawer ? '🟢 Operativa Abierta' : '🔴 Caja Cerrada'}
+                </span>
+              </div>
+              <div className="card" style={{ padding: '16px 20px', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
+                <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 600, display: 'block', marginBottom: '4px' }}>💼 EN VENDEDORES / REPARTO</span>
+                <span style={{ fontSize: '1.75rem', fontWeight: 700, letterSpacing: '-0.03em', color: '#b06000' }}>
+                  ${(sellerEfectivo + sellerCheques + repartoEfectivo + repartoCheques).toLocaleString()}
+                </span>
+                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'block', marginTop: '4px' }}>Valores en calle pendientes de rendición</span>
+              </div>
+            </div>
 
-                if (isAOpen && isXOpen) return null; // Ambas están abiertas
-
-                return (
-                  <div className="card" style={{ padding: '20px', border: '1px dashed var(--border-color)', borderRadius: '12px' }}>
-                    <h3 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '8px' }}>Apertura de Caja Operativa</h3>
+            {/* 2. OPERATORIA DIARIA: APERTURA Y CIERRE DE CAJA GRANDE */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '24px', flexWrap: 'wrap' }}>
+              
+              {/* APERTURA O CIERRE DE LA CAJA GRANDE */}
+              <div className="card" style={{ padding: '20px', borderRadius: '12px', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                {!localDrawer ? (
+                  <div>
+                    <h3 style={{ fontSize: '1.05rem', fontWeight: 700, marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span>🏪</span> Apertura de Caja Grande (Caja Diaria)
+                    </h3>
                     <p style={{ fontSize: '0.825rem', color: 'var(--text-secondary)', marginBottom: '16px' }}>
-                      Declarar los fondos iniciales para habilitar el cobro en efectivo. Podés abrir Sucursal A y Sucursal X de forma paralela.
+                      Declará el fondo inicial de efectivo de la distribuidora para comenzar la jornada y habilitar cobros físicos de A y X.
                     </p>
-                    <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', alignItems: 'flex-end' }}>
-                      {!isAOpen && (
-                        <div style={{ border: '1px solid var(--border-color)', padding: '12px', borderRadius: '8px', display: 'flex', gap: '12px', alignItems: 'flex-end', backgroundColor: '#fdfdfd' }}>
-                          <div>
-                            <span style={{ fontSize: '0.78rem', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Sucursal A (Oficial)</span>
-                            <input
-                              type="number"
-                              className="input"
-                              placeholder="Efectivo Inicial..."
-                              style={{ width: '160px', padding: '8px 12px' }}
-                              id="openBalanceA"
-                              defaultValue="0"
-                            />
-                          </div>
-                          <button className="btn btn-primary" style={{ padding: '8px 14px', fontSize: '0.8rem' }} onClick={async () => {
-                            const val = (document.getElementById('openBalanceA') as HTMLInputElement)?.value || '0';
-                            try {
-                              await api.openDrawer('A', Number(val));
-                              setSuccessMsg(`Caja abierta para Sucursal A correctamente.`);
-                              fetchData();
-                            } catch (err: any) {
-                              setErrorMsg(err.message || 'Error al abrir la caja A.');
-                            }
-                          }}>
-                            Abrir Suc A
-                          </button>
-                        </div>
-                      )}
-
-                      {!isXOpen && (
-                        <div style={{ border: '1px solid var(--border-color)', padding: '12px', borderRadius: '8px', display: 'flex', gap: '12px', alignItems: 'flex-end', backgroundColor: '#fdfdfd' }}>
-                          <div>
-                            <span style={{ fontSize: '0.78rem', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Sucursal X (Interno)</span>
-                            <input
-                              type="number"
-                              className="input"
-                              placeholder="Efectivo Inicial..."
-                              style={{ width: '160px', padding: '8px 12px' }}
-                              id="openBalanceX"
-                              defaultValue="0"
-                            />
-                          </div>
-                          <button className="btn btn-primary" style={{ padding: '8px 14px', fontSize: '0.8rem' }} onClick={async () => {
-                            const val = (document.getElementById('openBalanceX') as HTMLInputElement)?.value || '0';
-                            try {
-                              await api.openDrawer('X', Number(val));
-                              setSuccessMsg(`Caja abierta para Sucursal X correctamente.`);
-                              fetchData();
-                            } catch (err: any) {
-                              setErrorMsg(err.message || 'Error al abrir la caja X.');
-                            }
-                          }}>
-                            Abrir Suc X
-                          </button>
-                        </div>
-                      )}
+                    <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-end' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Fondo de Efectivo Inicial ($)</span>
+                        <input
+                          type="number"
+                          className="input"
+                          placeholder="ej: 15000"
+                          style={{ width: '180px', padding: '8px 12px' }}
+                          id="openConsolidatedBalance"
+                          defaultValue="0"
+                        />
+                      </div>
+                      <button className="btn btn-primary" style={{ padding: '9px 18px', fontSize: '0.825rem', fontWeight: 600 }} onClick={async () => {
+                        const val = (document.getElementById('openConsolidatedBalance') as HTMLInputElement)?.value || '0';
+                        try {
+                          await api.openDrawer('CONSOLIDADA', Number(val));
+                          setSuccessMsg(`Caja Grande abierta correctamente.`);
+                          fetchData();
+                        } catch (err: any) {
+                          setErrorMsg(err.message || 'Error al abrir la Caja Grande.');
+                        }
+                      }}>
+                        Abrir Caja Grande
+                      </button>
                     </div>
                   </div>
-                );
-              })()}
-            </div>
-
-            {/* BOTONERA GENERAL DE FINANZAS */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h2 style={{ fontSize: '1.15rem', fontWeight: 700, margin: 0 }}>Cajas & Tesorería Unificada</h2>
-              <div style={{ display: 'flex', gap: '10px' }}>
-                <button
-                  className="btn btn-secondary"
-                  style={{ padding: '8px 16px', fontSize: '0.85rem' }}
-                  onClick={handleOpenReconciliation}
-                >
-                  Planilla de Rendición de Cobros
-                </button>
-                {activeDrawers.length > 0 && (
-                  <button
-                    className="btn btn-primary"
-                    style={{ backgroundColor: '#E30613', borderColor: '#E30613', padding: '8px 16px', fontSize: '0.85rem' }}
-                    onClick={() => {
-                      setCloseRealBalanceA('');
-                      setCloseRealBalanceX('');
-                      setShowJointCloseModal(true);
-                    }}
-                  >
-                    Cierre de Caja Conjunto (A + X)
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* PANEL PRINCIPAL EN CUATRO COLUMNAS (GRID DE CUENTAS Y CAJAS) */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(270px, 1fr))', gap: '20px', marginBottom: '24px' }}>
-              
-              {/* COLUMNA 1: CAJA OPERATIVA DIARIA (DEPÓSITO LOCAL) */}
-              <div className="card" style={{ padding: '16px', borderRadius: '12px', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
-                  <span style={{ fontWeight: 700, fontSize: '0.9rem' }}>🏪 Caja Diaria Depósito</span>
-                  <span className="badge" style={{ backgroundColor: '#eaf9ee', color: '#137333', fontSize: '0.7rem', fontWeight: 600 }}>Local</span>
-                </div>
-                
-                {activeDrawers.length === 0 ? (
-                  <div style={{ padding: '12px 0', fontSize: '0.8rem', color: 'var(--text-secondary)', textAlign: 'center' }}>
-                    Cajas operativas cerradas.
-                  </div>
                 ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    {activeDrawers.map((drawer) => {
-                      const drawerTxs = localTxs.filter((t: any) => t.cashDrawerId === drawer.id);
-                      let localIncome = 0;
-                      let localOutcome = 0;
-                      drawerTxs.forEach((t: any) => {
-                        if (t.type === 'INCOME') localIncome += Number(t.amount);
-                        else localOutcome += Number(t.amount);
-                      });
-                      const theoretical = Number(drawer.openingBalance) + localIncome - localOutcome;
+                  <div>
+                    <h3 style={{ fontSize: '1.05rem', fontWeight: 700, marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span>🏪</span> Caja Grande Abierta
+                    </h3>
+                    <p style={{ fontSize: '0.825rem', color: 'var(--text-secondary)', marginBottom: '16px' }}>
+                      La caja diaria consolidada está activa. Podés recibir cobranzas en efectivo de ambas sucursales.
+                    </p>
+                    
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px', backgroundColor: 'var(--bg-app)', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                      <div>
+                        <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', display: 'block' }}>Fondo Inicial:</span>
+                        <strong style={{ fontSize: '0.9rem' }}>${Number(localDrawer.openingBalance).toLocaleString()}</strong>
+                      </div>
+                      <div>
+                        <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', display: 'block' }}>Cobros Registrados:</span>
+                        <strong style={{ fontSize: '0.9rem', color: 'var(--color-success)' }}>+${localIncome.toLocaleString()}</strong>
+                      </div>
+                      <div>
+                        <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', display: 'block' }}>Egresos/Depósitos:</span>
+                        <strong style={{ fontSize: '0.9rem', color: 'var(--color-danger)' }}>-${localOutcome.toLocaleString()}</strong>
+                      </div>
+                      <div>
+                        <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', display: 'block' }}>Saldo Teórico Actual:</span>
+                        <strong style={{ fontSize: '0.9rem', color: '#137333' }}>${totalCajaFisica.toLocaleString()}</strong>
+                      </div>
+                    </div>
 
-                      return (
-                        <div key={drawer.id} style={{ fontSize: '0.8rem', borderBottom: '1px solid #f9f9f9', paddingBottom: '8px' }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 600, marginBottom: '4px' }}>
-                            <span>Sucursal {drawer.branch === 'A' ? 'A (Oficial)' : 'X (Interno)'}</span>
-                            <span>${theoretical.toLocaleString()}</span>
-                          </div>
-                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', fontSize: '0.72rem', color: 'var(--text-secondary)' }}>
-                            <span>Apertura: ${Number(drawer.openingBalance).toLocaleString()}</span>
-                            <span style={{ textAlign: 'right' }}>Cobros: +${localIncome.toLocaleString()}</span>
-                          </div>
-                        </div>
-                      );
-                    })}
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                      <button 
+                        className="btn btn-primary" 
+                        style={{ backgroundColor: '#E30613', borderColor: '#E30613', padding: '8px 16px', fontSize: '0.825rem', fontWeight: 600 }}
+                        onClick={() => {
+                          setCloseRealBalance('');
+                          setActiveDrawer(localDrawer);
+                          setShowCloseDrawerModal(true);
+                        }}
+                      >
+                        Cerrar y Arqueo de Caja
+                      </button>
+                      <button 
+                        className="btn btn-secondary" 
+                        style={{ padding: '8px 16px', fontSize: '0.825rem' }}
+                        onClick={() => setShowTransferModal(true)}
+                      >
+                        Depositar Efectivo a Banco
+                      </button>
+                    </div>
                   </div>
                 )}
-                
-                <div style={{ marginTop: 'auto', borderTop: '1px solid #f0f0f0', paddingTop: '10px', display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem' }}>
-                  <span style={{ color: 'var(--text-secondary)' }}>Cheques en Cartera:</span>
-                  <span style={{ fontWeight: 600 }}>${localCheques.toLocaleString()}</span>
+              </div>
+
+              {/* A DÓNDE VA EL DINERO (CASH FLOW BREAKDOWN) */}
+              <div className="card" style={{ padding: '20px', borderRadius: '12px', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column' }}>
+                <h3 style={{ fontSize: '1.05rem', fontWeight: 700, marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span>📊</span> Entender a Dónde va el Dinero
+                </h3>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '16px' }}>
+                  Destino y origen de los movimientos de fondos consolidado de hoy
+                </span>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', flex: 1, justifyContent: 'center' }}>
+                  {/* Origen de los Fondos (Ingresos) */}
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', fontWeight: 600, marginBottom: '4px' }}>
+                      <span>Ingresos Totales (Cobranza y Calle)</span>
+                      <span style={{ color: 'var(--color-success)' }}>+${totalIngresosCalculados.toLocaleString()}</span>
+                    </div>
+                    <div style={{ display: 'flex', gap: '6px', fontSize: '0.7rem', color: 'var(--text-secondary)' }}>
+                      <span>Caja Local: ${ingLocal.toLocaleString()}</span> | 
+                      <span>Vendedores: ${ingVendedores.toLocaleString()}</span> | 
+                      <span>Reparto: ${ingReparto.toLocaleString()}</span>
+                    </div>
+                  </div>
+
+                  <hr style={{ border: '0', borderTop: '1px solid var(--border-color)', margin: '4px 0' }} />
+
+                  {/* Destino de los Fondos (Egresos) */}
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', fontWeight: 600, marginBottom: '6px' }}>
+                      <span>Destino de Fondos (Egresos Totales)</span>
+                      <span style={{ color: 'var(--color-danger)' }}>-${totalEgresosCalculados.toLocaleString()}</span>
+                    </div>
+                    
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '8px' }}>
+                      {/* Proveedores */}
+                      <div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', color: 'var(--text-secondary)', marginBottom: '2px' }}>
+                          <span>Pago a Proveedores (Compras)</span>
+                          <span>${egProveedores.toLocaleString()} ({pctProveedores}%)</span>
+                        </div>
+                        <div style={{ width: '100%', height: '5px', backgroundColor: '#e5e5ea', borderRadius: '4px', overflow: 'hidden' }}>
+                          <div style={{ width: `${pctProveedores}%`, height: '100%', backgroundColor: '#E30613' }} />
+                        </div>
+                      </div>
+
+                      {/* Depósitos a Banco */}
+                      <div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', color: 'var(--text-secondary)', marginBottom: '2px' }}>
+                          <span>Efectivo Depositado en Bancos</span>
+                          <span>${egDepositos.toLocaleString()} ({pctDepositos}%)</span>
+                        </div>
+                        <div style={{ width: '100%', height: '5px', backgroundColor: '#e5e5ea', borderRadius: '4px', overflow: 'hidden' }}>
+                          <div style={{ width: `${pctDepositos}%`, height: '100%', backgroundColor: '#1a73e8' }} />
+                        </div>
+                      </div>
+
+                      {/* Gastos / Retiros */}
+                      <div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', color: 'var(--text-secondary)', marginBottom: '2px' }}>
+                          <span>Gastos de Operación / Varios</span>
+                          <span>${egGastos.toLocaleString()} ({pctGastos}%)</span>
+                        </div>
+                        <div style={{ width: '100%', height: '5px', backgroundColor: '#e5e5ea', borderRadius: '4px', overflow: 'hidden' }}>
+                          <div style={{ width: `${pctGastos}%`, height: '100%', backgroundColor: '#6c757d' }} />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              {/* COLUMNA 2: BANCOS Y DIGITAL WALLETS */}
-              <div className="card" style={{ padding: '16px', borderRadius: '12px', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
-                  <span style={{ fontWeight: 700, fontSize: '0.9rem' }}>🏦 Bancos y Cuentas</span>
-                  <span className="badge" style={{ backgroundColor: '#e8f0fe', color: '#1a73e8', fontSize: '0.7rem', fontWeight: 600 }}>Digital</span>
+            </div>
+
+            {/* 3. GRILLA SECUNDARIA: BANCOS Y RENDICIONES */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '24px' }}>
+              
+              {/* BANCOS Y DIGITAL WALLETS */}
+              <div className="card" style={{ padding: '16px 20px', borderRadius: '12px', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '10px', marginBottom: '14px' }}>
+                  <span style={{ fontWeight: 700, fontSize: '0.9rem' }}>🏦 Cuentas Bancarias y Digitales</span>
+                  <span className="badge" style={{ backgroundColor: '#e8f0fe', color: '#1a73e8', fontSize: '0.7rem', fontWeight: 600 }}>Total: ${totalBancos.toLocaleString()}</span>
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                   {bankAccounts.map((acc: any) => (
-                    <div key={acc.id} style={{ fontSize: '0.8rem', borderBottom: '1px solid #f9f9f9', paddingBottom: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div key={acc.id} style={{ fontSize: '0.825rem', borderBottom: '1px solid #f9f9f9', paddingBottom: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <div>
                         <span style={{ fontWeight: 600, display: 'block' }}>{acc.name}</span>
                         <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>Cta: {acc.accountNumber}</span>
@@ -2001,66 +2069,55 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
                     </div>
                   ))}
                 </div>
+              </div>
 
-                <div style={{ marginTop: 'auto', borderTop: '1px solid #f0f0f0', paddingTop: '10px', display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', fontWeight: 700 }}>
-                  <span>Total Bancos:</span>
-                  <span style={{ color: '#1a73e8' }}>${totalBancos.toLocaleString()}</span>
+              {/* CAJAS EXTERNAS (CALLE Y LOGÍSTICA) */}
+              <div className="card" style={{ padding: '16px 20px', borderRadius: '12px', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '10px', marginBottom: '14px' }}>
+                  <span style={{ fontWeight: 700, fontSize: '0.9rem' }}>📦 Planillas de Rendiciones</span>
+                  <button 
+                    className="btn btn-secondary" 
+                    style={{ padding: '4px 10px', fontSize: '0.75rem' }}
+                    onClick={handleOpenReconciliation}
+                  >
+                    Rendir Cobros de Calle
+                  </button>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', flex: 1, justifyContent: 'center' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.825rem', borderBottom: '1px solid #f9f9f9', paddingBottom: '8px' }}>
+                    <div>
+                      <strong style={{ display: 'block' }}>Vendedores (Calle)</strong>
+                      <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>Pendiente de rendición en efectivo/cheque</span>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <span style={{ fontWeight: 700, color: '#b06000' }}>${(sellerEfectivo + sellerCheques).toLocaleString()}</span>
+                      <div style={{ fontSize: '0.68rem', color: 'var(--text-secondary)' }}>Ef: ${sellerEfectivo.toLocaleString()} | Ch: ${sellerCheques.toLocaleString()}</div>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.825rem', borderBottom: '1px solid #f9f9f9', paddingBottom: '8px' }}>
+                    <div>
+                      <strong style={{ display: 'block' }}>Reparto (Choferes)</strong>
+                      <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>Valores recolectados en la calle por logística</span>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <span style={{ fontWeight: 700, color: '#681da8' }}>${(repartoEfectivo + repartoCheques).toLocaleString()}</span>
+                      <div style={{ fontSize: '0.68rem', color: 'var(--text-secondary)' }}>Ef: ${repartoEfectivo.toLocaleString()} | Ch: ${repartoCheques.toLocaleString()}</div>
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              {/* COLUMNA 3: CAJA VENTA VENDEDORES (CALLE) */}
-              <div className="card" style={{ padding: '16px', borderRadius: '12px', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
-                  <span style={{ fontWeight: 700, fontSize: '0.9rem' }}>💼 Caja Venta Vendedores</span>
-                  <span className="badge" style={{ backgroundColor: '#fdf4e7', color: '#b06000', fontSize: '0.7rem', fontWeight: 600 }}>Calle</span>
-                </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', justifyContent: 'center', height: '100%' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem' }}>
-                    <span style={{ color: 'var(--text-secondary)' }}>Efectivo Rendido:</span>
-                    <span style={{ fontWeight: 600, color: 'var(--color-success)' }}>${sellerEfectivo.toLocaleString()}</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem' }}>
-                    <span style={{ color: 'var(--text-secondary)' }}>Cheques Rendidos:</span>
-                    <span style={{ fontWeight: 600 }}>${sellerCheques.toLocaleString()}</span>
-                  </div>
-                </div>
-
-                <div style={{ marginTop: 'auto', borderTop: '1px solid #f0f0f0', paddingTop: '10px', display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', fontWeight: 700 }}>
-                  <span>Total Vendedores:</span>
-                  <span style={{ color: '#b06000' }}>${(sellerEfectivo + sellerCheques).toLocaleString()}</span>
-                </div>
-              </div>
-
-              {/* COLUMNA 4: CAJA REPARTO (LOGÍSTICA) */}
-              <div className="card" style={{ padding: '16px', borderRadius: '12px', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
-                  <span style={{ fontWeight: 700, fontSize: '0.9rem' }}>🚚 Caja Reparto</span>
-                  <span className="badge" style={{ backgroundColor: '#f3e8fd', color: '#681da8', fontSize: '0.7rem', fontWeight: 600 }}>Reparto</span>
-                </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', justifyContent: 'center', height: '100%' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem' }}>
-                    <span style={{ color: 'var(--text-secondary)' }}>Efectivo Rendido:</span>
-                    <span style={{ fontWeight: 600, color: 'var(--color-success)' }}>${repartoEfectivo.toLocaleString()}</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem' }}>
-                    <span style={{ color: 'var(--text-secondary)' }}>Cheques Rendidos:</span>
-                    <span style={{ fontWeight: 600 }}>${repartoCheques.toLocaleString()}</span>
-                  </div>
-                </div>
-
-                <div style={{ marginTop: 'auto', borderTop: '1px solid #f0f0f0', paddingTop: '10px', display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', fontWeight: 700 }}>
-                  <span>Total Reparto:</span>
-                  <span style={{ color: '#681da8' }}>${(repartoEfectivo + repartoCheques).toLocaleString()}</span>
-                </div>
-              </div>
             </div>
 
-            {/* 3. TIMELINE Y HISTORIAL DE TRANSACCIONES */}
+            {/* 4. TIMELINE Y HISTORIAL DE TRANSACCIONES */}
             <div className="card" style={{ marginTop: '24px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                <h3 className="card-title" style={{ margin: '0' }}>Historial y Timeline de Fondos</h3>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
+                <div>
+                  <h3 className="card-title" style={{ margin: '0', fontSize: '1rem' }}>Historial y Auditoría de Fondos</h3>
+                  <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', margin: '2px 0 0 0' }}>Timeline detallado de todas las transacciones monetarias registradas</p>
+                </div>
                 <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                   <select className="input" style={{ width: '160px', padding: '4px 8px', fontSize: '0.8rem' }} value={selectedBranchFilter} onChange={(e) => setSelectedBranchFilter(e.target.value)}>
                     <option value="ALL">Todas las Sucursales</option>
@@ -2077,14 +2134,14 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
 
                   <select className="input" style={{ width: '160px', padding: '4px 8px', fontSize: '0.8rem' }} value={selectedDrawerFilter} onChange={(e) => setSelectedDrawerFilter(e.target.value)}>
                     <option value="ALL">Todas las Cajas</option>
-                    {activeDrawer && (
-                      <option value={activeDrawer.id.toString()}>Caja Activa (ID: {activeDrawer.id})</option>
+                    {localDrawer && (
+                      <option value={localDrawer.id.toString()}>Caja Activa (ID: {localDrawer.id})</option>
                     )}
                   </select>
                 </div>
               </div>
               
-              <div className="table-container">
+              <div className="table-container" style={{ border: 'none', margin: 0 }}>
                 <table>
                   <thead>
                     <tr>
@@ -2100,7 +2157,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
                   <tbody>
                     {transactions.length === 0 ? (
                       <tr>
-                        <td colSpan={7} style={{ textAlign: 'center', padding: '16px 0', color: 'var(--text-secondary)' }}>No se registraron movimientos en este período.</td>
+                        <td colSpan={7} style={{ textAlign: 'center', padding: '24px 0', color: 'var(--text-secondary)' }}>No se registraron movimientos en este período.</td>
                       </tr>
                     ) : (
                       transactions.map((t) => (
@@ -2112,7 +2169,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
                           <td style={{ fontSize: '0.82rem' }}>
                             {t.cashDrawer ? (
                               <span className="badge" style={{ backgroundColor: '#ECEFF1', color: '#37474F', fontWeight: 600, fontSize: '0.7rem' }}>
-                                Caja Suc. {t.cashDrawer.branch}
+                                Caja Grande
                               </span>
                             ) : t.bankAccount ? (
                               <span className="badge" style={{ backgroundColor: '#E8F0FE', color: '#1A73E8', fontWeight: 600, fontSize: '0.7rem' }}>
@@ -3836,6 +3893,16 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
                       value={closeRealBalance}
                       onChange={(e) => setCloseRealBalance(e.target.value)}
                     />
+                    {closeRealBalance !== '' && (() => {
+                      const diff = Number(closeRealBalance) - theoretical;
+                      if (diff === 0) {
+                        return <span style={{ fontSize: '0.78rem', color: 'var(--color-success)', fontWeight: 600, display: 'block', marginTop: '6px' }}>✅ Arqueo Perfecto (Diferencia: $0)</span>;
+                      }
+                      if (diff > 0) {
+                        return <span style={{ fontSize: '0.78rem', color: '#1a73e8', fontWeight: 600, display: 'block', marginTop: '6px' }}>📈 Sobrante de +${diff.toLocaleString()}</span>;
+                      }
+                      return <span style={{ fontSize: '0.78rem', color: 'var(--color-danger)', fontWeight: 600, display: 'block', marginTop: '6px' }}>⚠️ Faltante de -${Math.abs(diff).toLocaleString()}</span>;
+                    })()}
                   </div>
 
                   <div className="modal-footer">

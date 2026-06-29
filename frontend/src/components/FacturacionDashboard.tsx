@@ -330,10 +330,7 @@ export default function FacturacionDashboard({ activeTab, setActiveTab }: Factur
 
                 {/* Validación de caja activa si es efectivo */}
                 {(() => {
-                  const isDrawerInvalid = immediatePayment && paymentMethod === 'CASH' && (
-                    !activeDrawer || 
-                    activeDrawer.branch !== (billingType === BillingType.OFFICIAL ? 'A' : 'X')
-                  );
+                  const isDrawerInvalid = immediatePayment && paymentMethod === 'CASH' && !activeDrawer;
 
                   return (
                     <>
@@ -348,18 +345,10 @@ export default function FacturacionDashboard({ activeTab, setActiveTab }: Factur
                           marginBottom: '16px',
                           lineHeight: '1.4'
                         }}>
-                          {!activeDrawer ? (
-                            <div>
-                              <strong>⚠️ Caja Cerrada:</strong> No tenés una caja operativa abierta. 
-                              Debés abrir una caja para la <strong>Sucursal {billingType === BillingType.OFFICIAL ? 'A' : 'X'}</strong> desde el menú de Finanzas para cobrar en efectivo.
-                            </div>
-                          ) : (
-                            <div>
-                              <strong>⚠️ Conflicto de Sucursal:</strong> Tu caja operativa abierta es de 
-                              <strong> Sucursal {activeDrawer.branch}</strong>, pero estás facturando por 
-                              <strong> Sucursal {billingType === BillingType.OFFICIAL ? 'A' : 'X'}</strong>.
-                            </div>
-                          )}
+                          <div>
+                            <strong>⚠️ Caja Cerrada:</strong> No tenés una caja operativa abierta. 
+                            Debés abrir la <strong>Caja Grande</strong> desde el menú de Finanzas para cobrar en efectivo.
+                          </div>
                         </div>
                       )}
 
