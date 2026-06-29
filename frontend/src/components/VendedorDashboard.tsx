@@ -171,7 +171,7 @@ export default function VendedorDashboard({ activeTab }: VendedorDashboardProps)
         notes: orderNotes
       });
 
-      setSuccessMsg(`�x}0 ¡Pedido cargado con éxito! Se envió a depósito para su armado.`);
+      setSuccessMsg(`✅ ¡Pedido cargado con éxito! Se envió a depósito para su armado.`);
       setCart([]);
       setOrderNotes('');
       setSelectedClient(null);
@@ -442,7 +442,7 @@ export default function VendedorDashboard({ activeTab }: VendedorDashboardProps)
                     </div>
                     {Number(selectedClient.outstandingBalance || 0) > 0 && (
                       <div style={{ marginTop: '8px', padding: '8px', backgroundColor: '#FFF9E6', border: '1px solid #FFE0B2', borderRadius: '4px', color: '#B78103', fontSize: '0.775rem', display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                        <strong>�a�️ Cuenta con Deuda Pendiente:</strong>
+                        <strong>⚠️ Cuenta con Deuda Pendiente:</strong>
                         <span>Este cliente posee una deuda activa de <strong>${Number(selectedClient.outstandingBalance).toLocaleString()}</strong>. Se registrará el pedido, pero quedará sujeto a aprobación de administración.</span>
                       </div>
                     )}
@@ -643,7 +643,7 @@ export default function VendedorDashboard({ activeTab }: VendedorDashboardProps)
                     {/* Notas/Observaciones */}
                     <div style={{ marginBottom: '14px' }}>
                       <label style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>
-                        �x� Notas / Observaciones del Envío:
+                        📝 Notas / Observaciones del Envío:
                       </label>
                       <textarea
                         className="input"
@@ -930,7 +930,7 @@ export default function VendedorDashboard({ activeTab }: VendedorDashboardProps)
           <div className="modal-content">
             <div className="modal-header">
               <h3>Registrar Nuevo Cliente</h3>
-              <button className="btn btn-ghost" style={{ padding: '4px' }} onClick={() => setClientModal({ ...clientModal, open: false })}>�S"</button>
+              <button className="btn btn-ghost" style={{ padding: '4px' }} onClick={() => setClientModal({ ...clientModal, open: false })}>✕</button>
             </div>
             <form onSubmit={handleCreateClient}>
               <div className="form-group">
@@ -1014,7 +1014,7 @@ export default function VendedorDashboard({ activeTab }: VendedorDashboardProps)
           <div className="modal-content" style={{ maxWidth: '600px' }}>
             <div className="modal-header">
               <h3>Pedido #{orderDetailsModal.id}</h3>
-              <button className="btn btn-ghost" style={{ padding: '4px' }} onClick={() => setOrderDetailsModal(null)}>�S"</button>
+              <button className="btn btn-ghost" style={{ padding: '4px' }} onClick={() => setOrderDetailsModal(null)}>✕</button>
             </div>
             
             {/* Barra de progreso de preparación (Fase 2) */}
@@ -1050,7 +1050,7 @@ export default function VendedorDashboard({ activeTab }: VendedorDashboardProps)
                           border: isActive ? '2px solid var(--text-primary)' : 'none',
                           transition: 'all 0.3s'
                         }}>
-                          {isCompleted ? '�S' : idx + 1}
+                          {isCompleted ? '✓' : idx + 1}
                         </div>
                         <span style={{ fontSize: '0.7rem', marginTop: '6px', fontWeight: isActive ? 600 : 400, color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)' }}>
                           {step.label}
@@ -1071,7 +1071,7 @@ export default function VendedorDashboard({ activeTab }: VendedorDashboardProps)
               </div>
             ) : (
               <div style={{ padding: '8px 12px', backgroundColor: '#FFF2F2', color: 'var(--color-danger)', borderRadius: '4px', fontSize: '0.85rem', fontWeight: 500, marginBottom: '16px', display: 'inline-block' }}>
-                �xa� Este pedido ha sido CANCELADO.
+                ❌ Este pedido ha sido CANCELADO.
               </div>
             )}
 
@@ -1082,7 +1082,7 @@ export default function VendedorDashboard({ activeTab }: VendedorDashboardProps)
               <p><strong>Fecha de Carga:</strong> {new Date(orderDetailsModal.createdAt).toLocaleString('es-AR')}</p>
               {orderDetailsModal.notes && (
                 <div style={{ marginTop: '10px', padding: '8px 12px', backgroundColor: '#FEF7E0', borderLeft: '3px solid #FBBC04', borderRadius: '4px' }}>
-                  <strong>�x� Notas de Entrega:</strong> {orderDetailsModal.notes}
+                  <strong>📝 Notas de Entrega:</strong> {orderDetailsModal.notes}
                 </div>
               )}
             </div>
@@ -1132,7 +1132,7 @@ export default function VendedorDashboard({ activeTab }: VendedorDashboardProps)
           <div className="modal-content" style={{ maxWidth: '800px', display: 'flex', flexDirection: 'column', maxHeight: '90vh' }}>
             <div className="modal-header">
               <h3>Editar Pedido #{editOrderModal.orderId} - {editOrderModal.clientName}</h3>
-              <button className="btn btn-ghost" style={{ padding: '4px' }} onClick={() => setEditOrderModal(null)}>�S"</button>
+              <button className="btn btn-ghost" style={{ padding: '4px' }} onClick={() => setEditOrderModal(null)}>✕</button>
             </div>
             
             <div style={{ display: 'grid', gridTemplateColumns: '1.1fr 1fr', gap: '20px', overflowY: 'auto', flex: 1, padding: '10px 0' }}>

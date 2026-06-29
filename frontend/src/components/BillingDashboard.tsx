@@ -692,7 +692,7 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
         items
       });
 
-      setSuccessMsg(`�S� Factura directa emitida con éxito. Comprobante: ${res.invoiceNumber}`);
+      setSuccessMsg(`✅ Factura directa emitida con éxito. Comprobante: ${res.invoiceNumber}`);
       setShowDirectInvoiceModal(false);
       
       setDirectInvoiceForm({
@@ -747,7 +747,7 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
 
     const expectedTotal = Number(netAmount) + Number(taxAmount) + (Number(percepcionAmount) || 0);
     if (Math.abs(Number(totalAmount) - expectedTotal) > 1.00) {
-      if (!window.confirm(`�a�️ El total ($${totalAmount}) no coincide con Neto + IVA + Percepción ($${expectedTotal.toFixed(2)}). ¿Desea guardar de todas formas?`)) {
+      if (!window.confirm(`⚠️ El total ($${totalAmount}) no coincide con Neto + IVA + Percepción ($${expectedTotal.toFixed(2)}). ¿Desea guardar de todas formas?`)) {
         return;
       }
     }
@@ -766,7 +766,7 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
         totalAmount: Number(totalAmount)
       });
 
-      setSuccessMsg('�S� Factura de compra registrada con éxito en cuenta corriente del proveedor.');
+      setSuccessMsg('✅ Factura de compra registrada con éxito en cuenta corriente del proveedor.');
       setShowSupplierModal(false);
       // Reset form
       setSupplierForm({
@@ -814,7 +814,7 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
       setPaymentModal(null);
       setPaymentAmount('');
       setPaymentDescription('');
-      setSuccessMsg('�S� Pago registrado exitosamente en la factura de compra.');
+      setSuccessMsg('✅ Pago registrado exitosamente en la factura de compra.');
       loadData();
     } catch (err: any) {
       setErrorMsg(err.message || 'Error al registrar el pago.');
@@ -848,7 +848,7 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
         jurisdiction: taxType === 'IIBB' ? jurisdiction : null
       });
 
-      setSuccessMsg('�S� Movimiento de retención/percepción registrado con éxito.');
+      setSuccessMsg('✅ Movimiento de retención/percepción registrado con éxito.');
       setShowWithholdingModal(false);
       // Reset form
       setWithholdingForm({
@@ -1167,7 +1167,7 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
             <CheckCircle size={16} style={{ color: 'var(--color-success)' }} />
             {successMsg}
           </span>
-          <button className="btn btn-ghost" style={{ padding: '2px', color: 'var(--text-secondary)' }} onClick={() => setSuccessMsg(null)}>�S"</button>
+          <button className="btn btn-ghost" style={{ padding: '2px', color: 'var(--text-secondary)' }} onClick={() => setSuccessMsg(null)}>✕</button>
         </div>
       )}
 
@@ -1188,7 +1188,7 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
             <AlertTriangle size={16} style={{ color: 'var(--color-danger)' }} />
             {errorMsg}
           </span>
-          <button className="btn btn-ghost" style={{ padding: '2px', color: 'var(--text-secondary)' }} onClick={() => setErrorMsg(null)}>�S"</button>
+          <button className="btn btn-ghost" style={{ padding: '2px', color: 'var(--text-secondary)' }} onClick={() => setErrorMsg(null)}>✕</button>
         </div>
       )}
 
@@ -1379,13 +1379,13 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
       )}
 
       {/* ====================================================================
-          SUB-TAB: NOTAS DE CR�0DITO Y DEVOLUCIONES (CLIENTES)
+          SUB-TAB: NOTAS DE CRÉDITO Y DEVOLUCIONES (CLIENTES)
           ==================================================================== */}
       {activeSubTab === 'notas-credito' && (
         <div className="card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
             <div>
-              <h3 className="card-title" style={{ margin: '0' }}>�x� Notas de Crédito & Devoluciones de Clientes</h3>
+              <h3 className="card-title" style={{ margin: '0' }}>🔄 Notas de Crédito & Devoluciones de Clientes</h3>
               <p style={{ fontSize: '0.8rem', marginTop: '2px', color: 'var(--text-secondary)' }}>Comprobantes de crédito emitidos por devolución física de stock o corrección de facturas.</p>
             </div>
             <button 
@@ -1521,7 +1521,7 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
               flexDirection: 'column',
               gap: '4px'
             }}>
-              <span style={{ fontSize: '0.78rem', color: 'var(--color-danger)', fontWeight: 600 }}>�a�️ Facturas Vencidas</span>
+              <span style={{ fontSize: '0.78rem', color: 'var(--color-danger)', fontWeight: 600 }}>⚠️ Facturas Vencidas</span>
               <span style={{ fontSize: '1.4rem', fontWeight: 700, color: 'var(--color-danger)' }}>
                 ${supplierMetrics.totalVencidas.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
               </span>
@@ -1553,7 +1553,7 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
           <div className="card">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
               <div>
-                <h3 className="card-title" style={{ margin: '0' }}>�x� Comprobantes y Facturas de Compra</h3>
+                <h3 className="card-title" style={{ margin: '0' }}>📥 Comprobantes y Facturas de Compra</h3>
                 <p style={{ fontSize: '0.8rem', marginTop: '2px' }}>Historial de compras registradas a proveedores alimentando el IVA Crédito Fiscal.</p>
               </div>
               <button 
@@ -1703,7 +1703,7 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
         <div className="card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
             <div>
-              <h3 className="card-title" style={{ margin: '0' }}>�a️ Registro de Percepciones (IIBB / IVA)</h3>
+              <h3 className="card-title" style={{ margin: '0' }}>📈 Registro de Percepciones (IIBB / IVA)</h3>
               <p style={{ fontSize: '0.8rem', marginTop: '2px' }}>Percepciones aplicadas en nuestras facturas de venta y sufridas en las facturas de proveedores.</p>
             </div>
             <button 
@@ -1779,7 +1779,7 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
         <div className="card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
             <div>
-              <h3 className="card-title" style={{ margin: '0' }}>�x� Certificados de Retención</h3>
+              <h3 className="card-title" style={{ margin: '0' }}>📄 Certificados de Retención</h3>
               <p style={{ fontSize: '0.8rem', marginTop: '2px' }}>Retenciones que nos hicieron los clientes al pagarnos (reducen su saldo deudor) o que practicamos al pagar a proveedores.</p>
             </div>
             <button 
@@ -2524,7 +2524,7 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '12px', marginBottom: '16px' }}>
               <h2 style={{ fontSize: '1.2rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ color: 'var(--accent-color)' }}>�x�</span> Emitir Factura de Venta Directa
+                <span style={{ color: 'var(--accent-color)' }}>📃</span> Emitir Factura de Venta Directa
               </h2>
               <button type="button" className="btn btn-ghost" style={{ padding: '4px' }} onClick={() => {
                 setShowDirectInvoiceModal(false);
@@ -2651,7 +2651,7 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
                       
                       {Number(selectedDirectClient.outstandingBalance || 0) > 0 && (
                         <div style={{ gridColumn: 'span 2', color: 'var(--color-danger)', fontWeight: 600, fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
-                          �a�️ Regla Boleta contra Boleta: El cliente tiene saldo pendiente.
+                          ⚠️ Regla Boleta contra Boleta: El cliente tiene saldo pendiente.
                         </div>
                       )}
                     </div>
@@ -2818,7 +2818,7 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
                                     style={{ padding: '4px 8px', color: 'var(--color-danger)' }}
                                     onClick={() => handleRemoveDirectProduct(item.product.id)}
                                   >
-                                    �S"
+                                    ✕
                                   </button>
                                 </td>
                               </tr>
@@ -2928,7 +2928,7 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
                             fontSize: '0.78rem',
                             lineHeight: '1.4'
                           }}>
-                            <strong>�a�️ Caja Cerrada:</strong> No tenés una caja operativa abierta para la <strong>Sucursal {requiredBranch}</strong>.
+                            <strong>⚠️ Caja Cerrada:</strong> No tenés una caja operativa abierta para la <strong>Sucursal {requiredBranch}</strong>.
                             <div style={{ marginTop: '4px' }}>
                               Para cobrar ventas en efectivo en esta sucursal, debés abrir la caja correspondiente en el Panel de Finanzas.
                             </div>
@@ -2995,7 +2995,7 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
       )}
 
       {/* ====================================================================
-          MODAL: EMITIR NOTA DE CR�0DITO
+          MODAL: EMITIR NOTA DE CRÉDITO
           ==================================================================== */}
       {showCreditNoteModal && (
         <div className="modal-overlay" style={{ zIndex: 1000 }}>
@@ -3011,7 +3011,7 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '12px', marginBottom: '16px' }}>
               <h2 style={{ fontSize: '1.2rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ color: 'var(--color-success)' }}>�x�</span> Emitir Nota de Crédito / Devolución
+                <span style={{ color: 'var(--color-success)' }}>🔄</span> Emitir Nota de Crédito / Devolución
               </h2>
               <button type="button" className="btn btn-ghost" style={{ padding: '4px' }} onClick={() => {
                 setShowCreditNoteModal(false);
@@ -3326,7 +3326,7 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
                                         setCreditNoteCart(prev => prev.filter(p => p.productId !== item.productId));
                                       }}
                                     >
-                                      �S"
+                                      ✕
                                     </button>
                                   </td>
                                 )}
@@ -3463,7 +3463,7 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
       )}
 
       {/* ====================================================================
-          MODAL: DETALLE E IMPRESI�N DE NOTA DE CR�0DITO
+          MODAL: DETALLE E IMPRESIÓN DE NOTA DE CRÉDITO
           ==================================================================== */}
       {viewCreditNoteModal && (() => {
         const isOfficial = viewCreditNoteModal.billingType === 'OFFICIAL';
@@ -3537,7 +3537,7 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
                     </div>
 
                     <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontSize: '1.05rem', fontWeight: 900 }}>NOTA DE CR�0DITO</div>
+                      <div style={{ fontSize: '1.05rem', fontWeight: 900 }}>NOTA DE CRÉDITO</div>
                       <div style={{ fontSize: '0.72rem', color: '#555', marginTop: '4px' }}>
                         <div><strong>Nro:</strong> {viewCreditNoteModal.creditNoteNumber || `00001-${viewCreditNoteModal.id.toString().padStart(8, '0')}`}</div>
                         <div><strong>Fecha:</strong> {formattedDate}</div>
