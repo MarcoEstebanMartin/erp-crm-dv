@@ -74,6 +74,30 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
+  // Estados de Configuración de la Empresa (Persistidos en localStorage)
+  const [companyRazonSocial, setCompanyRazonSocial] = useState<string>(() => localStorage.getItem('company_razon_social') || 'Distribuidora de Bebidas SRL');
+  const [companyNombreFantasia, setCompanyNombreFantasia] = useState<string>(() => localStorage.getItem('company_nombre_fantasia') || 'Bebidas del Sur');
+  const [companyCuit, setCompanyCuit] = useState<string>(() => localStorage.getItem('company_cuit') || '30-71717171-9');
+  const [companyDireccion, setCompanyDireccion] = useState<string>(() => localStorage.getItem('company_direccion') || 'Av. San Martín 1234, Ciudad Autónoma de Buenos Aires');
+  const [companyTelefono, setCompanyTelefono] = useState<string>(() => localStorage.getItem('company_telefono') || '011-4567-8900');
+  const [companyEmail, setCompanyEmail] = useState<string>(() => localStorage.getItem('company_email') || 'ventas@bebidasdelsur.com');
+  const [companyPos, setCompanyPos] = useState<string>(() => localStorage.getItem('company_pos') || '1');
+  const [companyDefaultIva, setCompanyDefaultIva] = useState<string>(() => localStorage.getItem('company_default_iva') || '21');
+
+  const handleSaveCompanyConfig = (e: React.FormEvent) => {
+    e.preventDefault();
+    localStorage.setItem('company_razon_social', companyRazonSocial);
+    localStorage.setItem('company_nombre_fantasia', companyNombreFantasia);
+    localStorage.setItem('company_cuit', companyCuit);
+    localStorage.setItem('company_direccion', companyDireccion);
+    localStorage.setItem('company_telefono', companyTelefono);
+    localStorage.setItem('company_email', companyEmail);
+    localStorage.setItem('company_pos', companyPos);
+    localStorage.setItem('company_default_iva', companyDefaultIva);
+    setSuccessMsg('Configuración de la empresa guardada exitosamente.');
+    setTimeout(() => setSuccessMsg(null), 3000);
+  };
+
   // Estados de Personas (Clientes)
   const [personaRoleFilter, setPersonaRoleFilter] = useState<string>('client');
 
@@ -717,6 +741,11 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
   const printTicket = (order: any) => {
     const printWindow = window.open('', '_blank', 'width=600,height=800');
     if (!printWindow) return;
+
+    const companyLogo = localStorage.getItem('company_nombre_fantasia') || 'DV DISTRIBUIDORA';
+    const companySub = localStorage.getItem('company_razon_social') || 'Mayorista de Alimentos & Bebidas';
+    const companyCuitVal = localStorage.getItem('company_cuit') || '30-71717171-9';
+
     printWindow.document.write(`
       <html>
         <head>
@@ -735,9 +764,9 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
         </head>
         <body>
           <div class="header">
-            <div class="logo">DV DISTRIBUIDORA</div>
-            <div>Mayorista de Alimentos & Bebidas</div>
-            <div>CUIT: 30-71717171-9</div>
+            <div class="logo">${companyLogo}</div>
+            <div>${companySub}</div>
+            <div>CUIT: ${companyCuitVal}</div>
             <div>Fecha: ${new Date(order.createdAt || Date.now()).toLocaleString('es-AR')}</div>
             <div><strong>PEDIDO NRO: ${order.id}</strong></div>
           </div>
@@ -2528,25 +2557,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
               }}
               onClick={() => setConfigTab('general')}
             >
-              ⚙️ General
-            </button>
-            <button 
-              type="button"
-              className="btn" 
-              style={{ 
-                backgroundColor: configTab === 'empresa' ? 'var(--color-primary)' : 'transparent',
-                color: configTab === 'empresa' ? '#fff' : 'var(--text-primary)',
-                border: configTab === 'empresa' ? '1px solid var(--color-primary)' : '1px solid var(--border-color)',
-                fontWeight: 600,
-                fontSize: '0.85rem',
-                padding: '8px 16px',
-                borderRadius: '6px',
-                cursor: 'pointer',
-                whiteSpace: 'nowrap'
-              }}
-              onClick={() => setConfigTab('empresa')}
-            >
-              🏢 Datos Empresa
+              🏢 General & Empresa
             </button>
             <button 
               type="button"
@@ -2622,64 +2633,105 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
             </button>
           </div>
 
-          {/* Sub-tab 1: General */}
+          {/* Sub-tab 1: General & Empresa Unificado */}
           {configTab === 'general' && (
-            <div className="card">
-              <h3 className="card-title">Configuración General del Sistema</h3>
-              <p style={{ fontSize: '0.85rem', marginBottom: '20px', color: 'var(--text-secondary)' }}>Parámetros generales de la distribuidora para la AFIP y emisión de comprobantes oficiales.</p>
+            <form onSubmit={handleSaveCompanyConfig} className="card" style={{ padding: '24px' }}>
+              <h3 className="card-title" style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '0 0 4px 0' }}>
+                🏢 Datos de la Empresa & Configuración
+              </h3>
+              <p style={{ fontSize: '0.85rem', marginBottom: '20px', color: 'var(--text-secondary)' }}>
+                Configure la información comercial y los parámetros fiscales del emisor para la facturación.
+              </p>
               
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-                <div className="form-group">
-                  <label>CUIT del Emisor</label>
-                  <input type="text" className="input" defaultValue="30-71717171-9" />
-                </div>
-                <div className="form-group">
-                  <label>Punto de Venta Oficial (Factura Electrónica)</label>
-                  <input type="number" className="input" defaultValue={1} />
-                </div>
-                <div className="form-group">
-                  <label>IVA por defecto (%)</label>
-                  <input type="number" className="input" defaultValue={21} />
-                </div>
-                <div className="form-group">
-                  <label>Certificado Homologación AFIP</label>
-                  <div style={{ fontSize: '0.75rem', padding: '10px', backgroundColor: '#F1F3F4', borderRadius: '4px', border: '1px solid var(--border-color)', color: 'var(--text-secondary)' }}>
-                    🔑 certificado_produccion.crt (Cargado en backend/certs/)
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Sub-tab 2: Empresa */}
-          {configTab === 'empresa' && (
-            <div className="card">
-              <h3 className="card-title">Datos de la Empresa</h3>
-              <p style={{ fontSize: '0.85rem', marginBottom: '20px', color: 'var(--text-secondary)' }}>Información que aparecerá en los encabezados de facturas y remitos.</p>
-              
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '20px', marginBottom: '20px' }}>
                 <div className="form-group">
                   <label>Razón Social</label>
-                  <input type="text" className="input" defaultValue="Distribuidora de Bebidas SRL" />
+                  <input 
+                    type="text" 
+                    className="input" 
+                    value={companyRazonSocial} 
+                    onChange={(e) => setCompanyRazonSocial(e.target.value)} 
+                  />
                 </div>
                 <div className="form-group">
-                  <label>Nombre de Fantasía</label>
-                  <input type="text" className="input" defaultValue="Bebidas del Sur" />
+                  <label>Nombre de Fantasía (Logo)</label>
+                  <input 
+                    type="text" 
+                    className="input" 
+                    value={companyNombreFantasia} 
+                    onChange={(e) => setCompanyNombreFantasia(e.target.value)} 
+                  />
                 </div>
-                <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+                <div className="form-group">
+                  <label>CUIT del Emisor</label>
+                  <input 
+                    type="text" 
+                    className="input" 
+                    value={companyCuit} 
+                    onChange={(e) => setCompanyCuit(e.target.value)} 
+                  />
+                </div>
+                <div className="form-group">
                   <label>Dirección Comercial</label>
-                  <input type="text" className="input" defaultValue="Av. San Martín 1234, Ciudad Autónoma de Buenos Aires" />
+                  <input 
+                    type="text" 
+                    className="input" 
+                    value={companyDireccion} 
+                    onChange={(e) => setCompanyDireccion(e.target.value)} 
+                  />
                 </div>
                 <div className="form-group">
                   <label>Teléfono de Contacto</label>
-                  <input type="text" className="input" defaultValue="011-4567-8900" />
+                  <input 
+                    type="text" 
+                    className="input" 
+                    value={companyTelefono} 
+                    onChange={(e) => setCompanyTelefono(e.target.value)} 
+                  />
                 </div>
                 <div className="form-group">
                   <label>Email de Contacto</label>
-                  <input type="email" className="input" defaultValue="ventas@bebidasdelsur.com" />
+                  <input 
+                    type="email" 
+                    className="input" 
+                    value={companyEmail} 
+                    onChange={(e) => setCompanyEmail(e.target.value)} 
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Punto de Venta Oficial (Factura Electrónica)</label>
+                  <input 
+                    type="number" 
+                    className="input" 
+                    value={companyPos} 
+                    onChange={(e) => setCompanyPos(e.target.value)} 
+                  />
+                </div>
+                <div className="form-group">
+                  <label>IVA por defecto (%)</label>
+                  <input 
+                    type="number" 
+                    className="input" 
+                    value={companyDefaultIva} 
+                    onChange={(e) => setCompanyDefaultIva(e.target.value)} 
+                  />
                 </div>
               </div>
-            </div>
+              
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', borderTop: '1px solid var(--border-color)', paddingTop: '16px' }}>
+                <div className="form-group" style={{ margin: 0 }}>
+                  <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '4px', display: 'block' }}>Certificado Homologación AFIP</label>
+                  <div style={{ fontSize: '0.75rem', padding: '8px 12px', backgroundColor: '#F1F3F4', borderRadius: '4px', border: '1px solid var(--border-color)', color: 'var(--text-secondary)', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                    <span>🔑</span>
+                    <span>certificado_produccion.crt (Cargado en backend/certs/)</span>
+                  </div>
+                </div>
+                
+                <button type="submit" className="btn btn-primary" style={{ height: '40px', padding: '0 20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  💾 Guardar Configuración
+                </button>
+              </div>
+            </form>
           )}
 
           {/* Sub-tab 3: Impresión */}

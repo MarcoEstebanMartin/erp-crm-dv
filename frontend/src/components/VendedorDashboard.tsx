@@ -254,6 +254,11 @@ export default function VendedorDashboard({ activeTab }: VendedorDashboardProps)
   const printTicket = (order: any) => {
     const printWindow = window.open('', '_blank', 'width=600,height=800');
     if (!printWindow) return;
+
+    const companyLogo = localStorage.getItem('company_nombre_fantasia') || 'DV DISTRIBUIDORA';
+    const companySub = localStorage.getItem('company_razon_social') || 'Mayorista de Alimentos & Bebidas';
+    const companyCuitVal = localStorage.getItem('company_cuit') || '30-71717171-9';
+
     printWindow.document.write(`
       <html>
         <head>
@@ -272,9 +277,9 @@ export default function VendedorDashboard({ activeTab }: VendedorDashboardProps)
         </head>
         <body>
           <div class="header">
-            <div class="logo">DV DISTRIBUIDORA</div>
-            <div>Mayorista de Alimentos & Bebidas</div>
-            <div>CUIT: 30-71717171-9</div>
+            <div class="logo">${companyLogo}</div>
+            <div>${companySub}</div>
+            <div>CUIT: ${companyCuitVal}</div>
             <div>Fecha: ${new Date(order.createdAt || Date.now()).toLocaleString('es-AR')}</div>
             <div><strong>PEDIDO NRO: ${order.id}</strong></div>
           </div>
