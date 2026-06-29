@@ -470,7 +470,6 @@ export default function FacturacionDashboard({ activeTab, setActiveTab }: Factur
                 <tr>
                   <th>Nombre / Razón Social</th>
                   <th>CUIT</th>
-                  <th>Lista / Descuento</th>
                   <th>Saldo C/C</th>
                   <th>Contacto</th>
                   <th>Dirección</th>
@@ -480,7 +479,7 @@ export default function FacturacionDashboard({ activeTab, setActiveTab }: Factur
               <tbody>
                 {clients.length === 0 ? (
                   <tr>
-                    <td colSpan={7} style={{ textAlign: 'center', padding: '24px 0' }}>No se encontraron clientes.</td>
+                    <td colSpan={6} style={{ textAlign: 'center', padding: '24px 0' }}>No se encontraron clientes.</td>
                   </tr>
                 ) : (
                   clients.map((c) => {
@@ -488,30 +487,13 @@ export default function FacturacionDashboard({ activeTab, setActiveTab }: Factur
                     return (
                       <tr key={c.id}>
                         <td style={{ fontWeight: 600 }}>{c.name}</td>
-                        <td style={{ fontFamily: 'monospace' }}>{c.cuit || 'S/D'}</td>
-                        <td>
-                          <span style={{
-                            fontSize: '0.75rem',
-                            fontWeight: 600,
-                            backgroundColor: c.priceList === 'C' ? '#E5F6FD' : c.priceList === 'B' ? '#FDF6E2' : '#F2F2F7',
-                            color: c.priceList === 'C' ? '#0288D1' : c.priceList === 'B' ? '#B78103' : '#3A3A3C',
-                            padding: '3px 6px',
-                            borderRadius: '4px'
-                          }}>
-                            {c.priceList === 'C' ? 'Dist C' : c.priceList === 'B' ? 'Esp B' : 'Est A'}
-                          </span>
-                          {Number(c.discount || 0) > 0 && (
-                            <div style={{ fontSize: '0.75rem', color: 'var(--color-success)', fontWeight: 600, marginTop: '2px' }}>
-                              Desc: {c.discount}%
-                            </div>
-                          )}
-                        </td>
+                        <td style={{ fontFamily: 'monospace', whiteSpace: 'nowrap' }}>{c.cuit || ''}</td>
                         <td style={{ fontWeight: 600, color: balance > 0 ? 'var(--color-danger)' : balance < 0 ? 'var(--color-success)' : 'var(--text-secondary)' }}>
                           ${balance.toLocaleString()}
                         </td>
                         <td>
-                          <div>{c.phone}</div>
-                          <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{c.email}</div>
+                          {c.phone && <div>{c.phone}</div>}
+                          {c.email && <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{c.email}</div>}
                         </td>
                         <td>{c.address}</td>
                         <td>

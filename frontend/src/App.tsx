@@ -140,7 +140,7 @@ function App() {
       />
       
       <main className="main-content">
-        {user.role !== 'VENDEDOR' && (
+        {user.role !== 'VENDEDOR' && activeTab !== 'clients' && (
           <header className="header-container no-print">
             <div>
               <h1 style={{ fontSize: '1.65rem', fontWeight: 700, letterSpacing: '-0.02em', marginBottom: '2px' }}>

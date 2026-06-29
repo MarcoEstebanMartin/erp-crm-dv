@@ -1404,7 +1404,6 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
                   <th>Nombre Comercial / Razón Social</th>
                   <th>CUIT</th>
                   <th>Contacto</th>
-                  <th>Configuración Comercial</th>
                   <th>Saldo C/C</th>
                   <th>Límite de Crédito</th>
                   <th>Acción</th>
@@ -1413,7 +1412,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
               <tbody>
                 {clients.length === 0 ? (
                   <tr>
-                    <td colSpan={7} style={{ textAlign: 'center', padding: '24px 0' }}>No se encontraron personas registradas.</td>
+                    <td colSpan={6} style={{ textAlign: 'center', padding: '24px 0' }}>No se encontraron personas registradas.</td>
                   </tr>
                 ) : (
                   clients.map((c) => {
@@ -1437,11 +1436,11 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
                           <div style={{ fontWeight: 600 }}>{c.name}</div>
                           <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{c.address || 'Sin dirección'}</div>
                         </td>
-                        <td style={{ fontFamily: 'monospace' }}>{c.cuit || 'S/D'}</td>
+                        <td style={{ fontFamily: 'monospace', whiteSpace: 'nowrap' }}>{c.cuit || ''}</td>
                         <td>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <span>{c.phone || 'S/D'}</span>
-                            {c.phone && (
+                          {c.phone && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <span>{c.phone}</span>
                               <a 
                                 href={getWhatsAppLink(c.phone)} 
                                 target="_blank" 
@@ -1453,35 +1452,10 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
                                   <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.513 2.262 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.724-1.455L0 24zm6.59-4.846c1.6.95 3.188 1.449 4.825 1.451 5.436 0 9.86-4.37 9.863-9.755.002-2.61-1.01-5.063-2.85-6.908-1.839-1.844-4.286-2.86-6.903-2.861-5.441 0-9.863 4.37-9.866 9.756-.001 1.748.469 3.456 1.36 5.01L1.932 20.17l4.715-1.016zM17.47 15.3c-.3-.15-1.775-.875-2.05-1.05-.275-.1-.475-.15-.675.15-.2.3-.775 1.05-.95 1.25-.175.2-.35.225-.65.075-.3-.15-1.263-.465-2.403-1.485-.888-.795-1.487-1.77-1.663-2.07-.176-.3-.019-.462.13-.61.135-.133.3-.35.45-.525.15-.175.2-.3.3-.5.1-.2.05-.375-.025-.525-.075-.15-.675-1.625-.925-2.225-.244-.589-.491-.51-.675-.52-.175-.01-.375-.01-.575-.01-.2 0-.525.075-.8 1.05-.275.975-1.05 2.1-1.275 2.55-.225.45-.05.875.1 1.05.887 1.02 2.222 1.944 3.9 2.52.27.093.536.14.79.165.37.037.706.024.97-.015.295-.044.875-.36 1 .71.125.35.125.65.063.8-.062.15-.325.29-1 .15z"/>
                                 </svg>
                               </a>
-                            )}
-                          </div>
-                          <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{c.email || 'S/D'}</div>
-                        </td>
-                        <td>
-                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginBottom: '4px' }}>
-                            {c.isClient && <span style={{ fontSize: '0.68rem', backgroundColor: '#E2F0D9', color: '#385723', padding: '2px 6px', borderRadius: '3px', fontWeight: 600 }}>Cliente</span>}
-                            {c.isProvider && <span style={{ fontSize: '0.68rem', backgroundColor: '#FCE4D6', color: '#C65911', padding: '2px 6px', borderRadius: '3px', fontWeight: 600 }}>Proveedor</span>}
-                            {c.isSeller && <span style={{ fontSize: '0.68rem', backgroundColor: '#FFF2CC', color: '#7F6000', padding: '2px 6px', borderRadius: '3px', fontWeight: 600 }}>Vendedor</span>}
-                            {c.isCommissionAgent && <span style={{ fontSize: '0.68rem', backgroundColor: '#E1F5FE', color: '#01579B', padding: '2px 6px', borderRadius: '3px', fontWeight: 600 }}>Comisionista</span>}
-                          </div>
-                          {c.isClient && (
-                            <>
-                              <span style={{
-                                fontSize: '0.75rem',
-                                fontWeight: 600,
-                                backgroundColor: c.priceList === 'C' ? '#E5F6FD' : c.priceList === 'B' ? '#FDF6E2' : '#F2F2F7',
-                                color: c.priceList === 'C' ? '#0288D1' : c.priceList === 'B' ? '#B78103' : '#3A3A3C',
-                                padding: '3px 8px',
-                                borderRadius: '4px'
-                              }}>
-                                {c.priceList === 'C' ? 'Lista C' : c.priceList === 'B' ? 'Lista B (Especial)' : 'Lista A (Estándar)'}
-                              </span>
-                              {Number(c.discount || 0) > 0 && (
-                                <div style={{ fontSize: '0.75rem', color: 'var(--color-success)', fontWeight: 600, marginTop: '4px' }}>
-                                  Desc: {c.discount}%
-                                </div>
-                              )}
-                            </>
+                            </div>
+                          )}
+                          {c.email && (
+                            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{c.email}</div>
                           )}
                         </td>
                         <td style={{ fontWeight: 600, color: balanceColor }}>
