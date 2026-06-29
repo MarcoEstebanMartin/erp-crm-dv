@@ -16,6 +16,7 @@ export default function FacturacionDashboard({ activeTab, setActiveTab }: Factur
   const [products, setProducts] = useState<any[]>([]);
   const [clients, setClients] = useState<any[]>([]);
   const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
+  const [pesableWeights, setPesableWeights] = useState<{ [orderItemId: number]: number }>({});
   const [activeDrawer, setActiveDrawer] = useState<any | null>(null);
   
   // Modales y formularios de facturación
@@ -35,6 +36,20 @@ export default function FacturacionDashboard({ activeTab, setActiveTab }: Factur
   useEffect(() => {
     fetchData();
   }, [normalizedTab, searchQuery]);
+
+  useEffect(() => {
+    if (selectedOrder) {
+      const initialWeights: any = {};
+      selectedOrder.items.forEach((item: any) => {
+        if (item.weight) {
+          initialWeights[item.id] = Number(item.weight);
+        }
+      });
+      setPesableWeights(initialWeights);
+    } else {
+      setPesableWeights({});
+    }
+  }, [selectedOrder]);
 
   const fetchData = async () => {
     setErrorMsg(null);
@@ -75,6 +90,16 @@ export default function FacturacionDashboard({ activeTab, setActiveTab }: Factur
     setLoading(true);
 
     try {
+      // Si hay pesos que se hayan modificado en facturacion, actualizarlos primero
+      const weightItems = Object.entries(pesableWeights).map(([orderItemId, weight]) => ({
+        orderItemId: Number(orderItemId),
+        weight: Number(weight)
+      })).filter(i => i.weight > 0);
+      
+      if (weightItems.length > 0) {
+        await api.updateOrderWeights(selectedOrder.id, weightItems);
+      }
+
       const updated = await api.invoiceOrder(
         selectedOrder.id,
         billingType,
@@ -229,7 +254,22 @@ export default function FacturacionDashboard({ activeTab, setActiveTab }: Factur
                   <tbody>
                     {selectedOrder.items.map((item: any) => (
                       <tr key={item.id}>
-                        <td>{item.product?.name}</td>
+                        <td>
+                          {item.product?.name}
+                          {item.product?.isPesable && (
+                            <div style={{ marginTop: '6px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Peso final (Kg):</span>
+                              <input 
+                                type="number" 
+                                step="0.001"
+                                className="input" 
+                                style={{ width: '80px', padding: '2px 6px', fontSize: '0.8rem', height: '26px' }}
+                                value={pesableWeights[item.id] || ''}
+                                onChange={(e) => setPesableWeights(prev => ({ ...prev, [item.id]: Number(e.target.value) }))}
+                              />
+                            </div>
+                          )}
+                        </td>
                         <td style={{ textAlign: 'right', fontWeight: 700 }}>{item.quantity} u.</td>
                       </tr>
                     ))}

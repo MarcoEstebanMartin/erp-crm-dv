@@ -140,31 +140,33 @@ function App() {
       />
       
       <main className="main-content">
-        <header className="header-container">
-          <div>
-            <h1 style={{ fontSize: '1.65rem', fontWeight: 700, letterSpacing: '-0.02em', marginBottom: '2px' }}>
-              {getHeaderTitle()}
-            </h1>
-            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-              {getHeaderSubtitle()}
-            </p>
-          </div>
-          
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <span style={{
-              fontSize: '0.75rem',
-              backgroundColor: '#E5E5EA',
-              padding: '6px 12px',
-              borderRadius: '20px',
-              fontWeight: 600,
-              color: 'var(--text-primary)'
-            }}>
-              {localStorage.getItem('simulation_mode') === 'true' ? '🔌 Modo Simulación Local' : '🌐 Conectado al Servidor'}
-            </span>
-          </div>
-        </header>
+        {user.role !== 'VENDEDOR' && (
+          <header className="header-container no-print">
+            <div>
+              <h1 style={{ fontSize: '1.65rem', fontWeight: 700, letterSpacing: '-0.02em', marginBottom: '2px' }}>
+                {getHeaderTitle()}
+              </h1>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                {getHeaderSubtitle()}
+              </p>
+            </div>
+            
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{
+                fontSize: '0.75rem',
+                backgroundColor: '#E5E5EA',
+                padding: '6px 12px',
+                borderRadius: '20px',
+                fontWeight: 600,
+                color: 'var(--text-primary)'
+              }}>
+                {localStorage.getItem('simulation_mode') === 'true' ? '🔌 Modo Simulación Local' : '🌐 Conectado al Servidor'}
+              </span>
+            </div>
+          </header>
+        )}
 
-        <section style={{ animation: 'fadeIn 0.4s cubic-bezier(0.25, 1, 0.5, 1)' }}>
+        <section style={{ animation: 'fadeIn 0.4s cubic-bezier(0.25, 1, 0.5, 1)', paddingTop: user.role === 'VENDEDOR' ? '20px' : '0' }}>
           {renderDashboard()}
         </section>
       </main>

@@ -8,7 +8,8 @@ import {
   Play, 
   Map, 
   X, 
-  ChevronRight
+  ChevronRight,
+  Printer
 } from 'lucide-react';
 
 // Coordenadas fijas simuladas para clientes en General Villegas
@@ -53,6 +54,261 @@ function solveTSP(start: [number, number], targets: { id: number; lat: number; l
   }
 
   return route;
+}
+
+// Función para obtener la traza de calles reales de OSRM
+async function fetchOSRMRoute(points: [number, number][]): Promise<[number, number][]> {
+  if (points.length < 2) return points;
+  try {
+    const coordinatesStr = points.map(p => `${p[1]},${p[0]}`).join(';');
+    const url = `https://router.project-osrm.org/route/v1/driving/${coordinatesStr}?overview=full&geometries=geojson`;
+    const response = await fetch(url);
+    if (!response.ok) throw new Error('Error en API OSRM');
+    const data = await response.json();
+    if (data.code === 'Ok' && data.routes && data.routes[0]) {
+      const coords = data.routes[0].geometry.coordinates; // [[lng, lat], ...]
+      return coords.map((c: [number, number]) => [c[1], c[0]]); // Convertir a [lat, lng]
+    }
+  } catch (error) {
+    console.error("Error al obtener la ruta de OSRM, usando líneas rectas:", error);
+  }
+  return points;
+}
+
+// Cargador del Script de Google Maps
+const loadGoogleMapsScript = (apiKey: string, callback: () => void) => {
+  if ((window as any).google && (window as any).google.maps) {
+    callback();
+    return;
+  }
+  const id = 'google-maps-js';
+  const existingScript = document.getElementById(id);
+  if (existingScript) {
+    const interval = setInterval(() => {
+      if ((window as any).google && (window as any).google.maps) {
+        clearInterval(interval);
+        callback();
+      }
+    }, 100);
+    return;
+  }
+  const script = document.createElement('script');
+  script.id = id;
+  script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=geometry`;
+  script.async = true;
+  script.defer = true;
+  script.onload = () => {
+    if (callback) callback();
+  };
+  document.head.appendChild(script);
+};
+
+// Sub-componente para renderizar con Google Maps
+function GoogleRouteMap({ locations, routePoints }: { locations: any[], routePoints: [number, number][] }) {
+  const mapRef = useRef<HTMLDivElement>(null);
+  const apiKey = (import.meta.env as any)?.VITE_GOOGLE_MAPS_API_KEY || '';
+  const [metrics, setMetrics] = useState<{ distance: string; duration: string } | null>(null);
+
+  useEffect(() => {
+    if (!apiKey) return;
+
+    loadGoogleMapsScript(apiKey, () => {
+      if (!mapRef.current) return;
+      const google = (window as any).google;
+
+      const mapOptions = {
+        center: { lat: VILLEGAS_DEPOT[0], lng: VILLEGAS_DEPOT[1] },
+        zoom: 14,
+        disableDefaultUI: false,
+        zoomControl: true
+      };
+
+      const map = new google.maps.Map(mapRef.current, mapOptions);
+
+      // Limitar zoom máximo automático para evitar zoom infinito (vista gris) en puntos únicos
+      google.maps.event.addListener(map, 'zoom_changed', () => {
+        if (map.getZoom() > 16) {
+          map.setZoom(14);
+        }
+      });
+
+      const bounds = new google.maps.LatLngBounds();
+      const infoWindow = new google.maps.InfoWindow();
+
+      // Marcador del depósito
+      const depotMarker = new google.maps.Marker({
+        position: { lat: VILLEGAS_DEPOT[0], lng: VILLEGAS_DEPOT[1] },
+        map: map,
+        title: 'DEPÓSITO CENTRAL DV',
+        icon: {
+          url: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png',
+          scaledSize: new google.maps.Size(25, 41),
+        }
+      });
+      bounds.extend(depotMarker.getPosition());
+      
+      depotMarker.addListener('click', () => {
+        infoWindow.setContent('<b>DEPÓSITO CENTRAL DV</b><br/>Moreno 200, Gral Villegas');
+        infoWindow.open(map, depotMarker);
+      });
+
+      // Marcadores de paradas
+      locations.forEach((loc, idx) => {
+        const marker = new google.maps.Marker({
+          position: { lat: loc.lat, lng: loc.lng },
+          map: map,
+          label: {
+            text: String(idx + 1),
+            color: '#FFFFFF',
+            fontWeight: 'bold',
+            fontSize: '11px'
+          },
+          icon: {
+            path: google.maps.SymbolPath.CIRCLE,
+            fillColor: '#1D1D1F',
+            fillOpacity: 1,
+            strokeColor: '#FFFFFF',
+            strokeWeight: 2,
+            scale: 12,
+            labelOrigin: new google.maps.Point(0, 0)
+          },
+          title: `${idx + 1}º Parada: ${loc.name}`
+        });
+
+        bounds.extend(marker.getPosition());
+        marker.addListener('click', () => {
+          infoWindow.setContent(`<b>${idx + 1}º Parada: ${loc.name}</b><br/>Comprobante: ${loc.invoice}<br/>Dirección: ${loc.address}`);
+          infoWindow.open(map, marker);
+        });
+      });
+
+      // Función auxiliar para dibujar ruta estática en caso de fallback
+      const drawFallbackRoute = () => {
+        if (routePoints.length > 1) {
+          const pathCoords = routePoints.map(p => ({ lat: p[0], lng: p[1] }));
+          const routePath = new google.maps.Polyline({
+            path: pathCoords,
+            geodesic: true,
+            strokeColor: '#E30613',
+            strokeOpacity: 0.85,
+            strokeWeight: 4,
+          });
+          routePath.setMap(map);
+          map.fitBounds(bounds);
+        }
+      };
+
+      // Trazado de ruta con Google Directions Service (si hay localizaciones válidas)
+      if (locations.length > 0) {
+        const directionsService = new google.maps.DirectionsService();
+        const directionsRenderer = new google.maps.DirectionsRenderer({
+          map: map,
+          suppressMarkers: true,
+          polylineOptions: {
+            strokeColor: '#E30613',
+            strokeOpacity: 0.85,
+            strokeWeight: 4,
+          }
+        });
+
+        const originLatLng = new google.maps.LatLng(VILLEGAS_DEPOT[0], VILLEGAS_DEPOT[1]);
+        
+        // Google Directions API limita waypoints. Si excedemos, usamos el fallback.
+        // También filtramos para asegurar lat/lng válidos.
+        const validLocations = locations.filter(l => typeof l.lat === 'number' && typeof l.lng === 'number');
+
+        if (validLocations.length > 0 && validLocations.length <= 25) {
+          const waypoints = validLocations.map(loc => ({
+            location: new google.maps.LatLng(loc.lat, loc.lng),
+            stopover: true
+          }));
+
+          const request = {
+            origin: originLatLng,
+            destination: originLatLng,
+            waypoints: waypoints,
+            travelMode: google.maps.TravelMode.DRIVING,
+            optimizeWaypoints: false // Respetar orden de secuencia TSP ya ordenado en frontend
+          };
+
+          directionsService.route(request, (result: any, status: any) => {
+            if (status === google.maps.DirectionsStatus.OK && result) {
+              directionsRenderer.setDirections(result);
+              
+              // Sumar la distancia total y la duración estimada
+              let totalMeters = 0;
+              let totalSeconds = 0;
+              const route = result.routes[0];
+              if (route && route.legs) {
+                route.legs.forEach((leg: any) => {
+                  totalMeters += leg.distance?.value || 0;
+                  totalSeconds += leg.duration?.value || 0;
+                });
+              }
+
+              const km = (totalMeters / 1000).toFixed(1);
+              const hours = Math.floor(totalSeconds / 3600);
+              const minutes = Math.round((totalSeconds % 3600) / 60);
+
+              let durationStr = '';
+              if (hours > 0) {
+                durationStr = `${hours} h ${minutes} min`;
+              } else {
+                durationStr = `${minutes} min`;
+              }
+
+              setMetrics({
+                distance: `${km} km`,
+                duration: durationStr
+              });
+            } else {
+              console.warn("Google Directions falló, usando traza local:", status);
+              drawFallbackRoute();
+            }
+          });
+        } else {
+          // Demasiados waypoints o ninguno válido -> usar fallback local
+          drawFallbackRoute();
+        }
+      } else {
+        drawFallbackRoute();
+      }
+    });
+  }, [locations, routePoints, apiKey]);
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%' }}>
+      {metrics && (
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '16px',
+          padding: '8px 12px',
+          backgroundColor: 'var(--bg-light, #fafafa)',
+          border: '1px solid var(--border-color, #e5e5e5)',
+          borderRadius: '6px',
+          fontSize: '0.8rem',
+          color: 'var(--text-primary, #1d1d1f)',
+          fontWeight: 500
+        }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            🛣️ <strong>Recorrido vial:</strong> {metrics.distance}
+          </span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            ⏱️ <strong>Tiempo estimado:</strong> {metrics.duration}
+          </span>
+        </div>
+      )}
+      <div ref={mapRef} style={{ 
+        width: '100%', 
+        height: '420px', 
+        borderRadius: '8px', 
+        border: '1px solid var(--border-color, #e5e5e5)', 
+        backgroundColor: '#e5e5e5',
+        zIndex: 1
+      }}></div>
+    </div>
+  );
 }
 
 // Sub-componente para inyectar Leaflet y renderizar el mapa
@@ -100,19 +356,11 @@ function LeafletRouteMap({ locations, routePoints }: { locations: any[], routePo
       const map = L.map('leaflet-map-div').setView(VILLEGAS_DEPOT, 14);
       mapRef.current = map;
       
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
         maxZoom: 19,
-        attribution: '© OpenStreetMap'
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
       }).addTo(map);
       
-      const defaultIcon = L.icon({
-        iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-        shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-        iconSize: [25, 41],
-        iconAnchor: [12, 41],
-        popupAnchor: [1, -34]
-      });
-
       const redIcon = L.icon({
         iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png',
         shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
@@ -128,14 +376,21 @@ function LeafletRouteMap({ locations, routePoints }: { locations: any[], routePo
 
       // Añadir marcadores de entrega
       locations.forEach((loc, idx) => {
-        L.marker([loc.lat, loc.lng], { icon: defaultIcon })
+        const numberedIcon = L.divIcon({
+          className: 'custom-div-icon',
+          html: `<div style="background-color:#1D1D1F; color:white; border-radius:50%; width:24px; height:24px; display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:10px; border: 2px solid white; box-shadow: 0 1px 4px rgba(0,0,0,0.3);">${idx + 1}</div>`,
+          iconSize: [24, 24],
+          iconAnchor: [12, 12]
+        });
+
+        L.marker([loc.lat, loc.lng], { icon: numberedIcon })
           .addTo(map)
           .bindPopup(`<b>${idx + 1}º Parada: ${loc.name}</b><br/>Comprobante: ${loc.invoice}<br/>Dirección: ${loc.address}`);
       });
       
       // Trazar línea de ruta
       if (routePoints.length > 1) {
-        L.polyline(routePoints, { color: '#E30613', weight: 4, opacity: 0.75, dashArray: '5, 10' }).addTo(map);
+        L.polyline(routePoints, { color: '#E30613', weight: 4, opacity: 0.85 }).addTo(map);
         // Ajustar límites del mapa
         map.fitBounds(L.polyline(routePoints).getBounds(), { padding: [40, 40] });
       }
@@ -161,10 +416,198 @@ function LeafletRouteMap({ locations, routePoints }: { locations: any[], routePo
   );
 }
 
+// Wrapper unificado que decide cuál renderizar
+function RouteMap({ locations, routePoints }: { locations: any[], routePoints: [number, number][] }) {
+  const apiKey = (import.meta.env as any)?.VITE_GOOGLE_MAPS_API_KEY || '';
+  
+  if (apiKey) {
+    return <GoogleRouteMap locations={locations} routePoints={routePoints} />;
+  }
+  return <LeafletRouteMap locations={locations} routePoints={routePoints} />;
+}
+
+// Componente de impresión de Hoja de Ruta (oculto en pantalla, visible al imprimir)
+function PrintRouteSheet({ route, locations }: { route: any; locations: any[] }) {
+  if (!route) return null;
+
+  // Generar URL de Google Maps para el chofer
+  const originStr = `${VILLEGAS_DEPOT[0]},${VILLEGAS_DEPOT[1]}`;
+  const waypointsStr = locations.map(loc => `${loc.lat},${loc.lng}`).join('|');
+  const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${originStr}&destination=${originStr}&waypoints=${encodeURIComponent(waypointsStr)}&travelmode=driving`;
+  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(googleMapsUrl)}`;
+
+  const totalAmount = route.orders?.reduce((sum: number, o: any) => sum + Number(o.totalAmount || 0), 0) || 0;
+
+  return (
+    <div className="print-only" style={{ padding: '20px', color: '#000', backgroundColor: '#fff', width: '100%' }}>
+      {/* Cabecera del Documento */}
+      <div className="print-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #1D1D1F', paddingBottom: '10px', marginBottom: '20px' }}>
+        <div>
+          <h1 style={{ margin: 0, fontSize: '1.6rem', fontWeight: 700, color: '#1D1D1F' }}>DISTRIBUIDORA DV</h1>
+          <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: '#555' }}>Logística y Distribución Mayorista de Alimentos y Bebidas</p>
+        </div>
+        <div style={{ textAlign: 'right' }}>
+          <h2 style={{ margin: 0, fontSize: '1.4rem', fontWeight: 700, color: '#E30613' }}>HOJA DE RUTA #{route.id}</h2>
+          <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: '#555' }}>Fecha: {new Date(route.date || route.createdAt).toLocaleDateString('es-AR')}</p>
+        </div>
+      </div>
+
+      {/* Información de Chofer y Vehículo */}
+      <div className="print-grid" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '20px', marginBottom: '20px' }}>
+        <div className="print-card" style={{ border: '1px solid #ccc', padding: '12px', borderRadius: '4px', backgroundColor: '#fafafa' }}>
+          <h3 style={{ margin: '0 0 8px 0', fontSize: '0.95rem', fontWeight: 700, borderBottom: '1px solid #ddd', paddingBottom: '4px' }}>Datos de Logística</h3>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '0.85rem' }}>
+            <div><strong>Chofer:</strong> {route.driverName}</div>
+            <div><strong>Patente:</strong> {route.vehiclePlate}</div>
+            <div><strong>Vehículo:</strong> {route.vehicleDescription || 'No especificado'}</div>
+            <div><strong>Estado del Viaje:</strong> {route.status === 'PENDING' ? 'Pendiente' : route.status === 'IN_TRANSIT' ? 'En Tránsito' : 'Completado'}</div>
+          </div>
+        </div>
+
+        {/* QR de Navegación GPS para el Chofer */}
+        <div className="print-card" style={{ border: '1px solid #ccc', padding: '8px', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '10px', backgroundColor: '#fafafa' }}>
+          <img src={qrCodeUrl} alt="QR Google Maps" style={{ width: '80px', height: '80px', border: '1px solid #eee' }} />
+          <div style={{ fontSize: '0.72rem', lineHeight: '1.3' }}>
+            <strong style={{ display: 'block', marginBottom: '4px', color: '#1D1D1F' }}>📲 GPS GOOGLE MAPS</strong>
+            Escanea el código QR para abrir el recorrido y navegar parada por parada en tiempo real.
+          </div>
+        </div>
+      </div>
+
+      {/* Secuencia de Paradas (Listado de Clientes) */}
+      <h3 style={{ fontSize: '1rem', fontWeight: 700, margin: '0 0 10px 0', borderBottom: '1px solid #1D1D1F', paddingBottom: '4px' }}>Planilla de Entregas y Rendición</h3>
+      <table className="print-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem', marginTop: '10px' }}>
+        <thead>
+          <tr style={{ backgroundColor: '#f2f2f2' }}>
+            <th style={{ width: '40px', textAlign: 'center', border: '1px solid #1D1D1F', padding: '6px' }}>Parada</th>
+            <th style={{ width: '180px', border: '1px solid #1D1D1F', padding: '6px' }}>Cliente</th>
+            <th style={{ border: '1px solid #1D1D1F', padding: '6px' }}>Dirección y Localidad</th>
+            <th style={{ width: '100px', border: '1px solid #1D1D1F', padding: '6px' }}>Comprobante</th>
+            <th style={{ width: '100px', textAlign: 'right', border: '1px solid #1D1D1F', padding: '6px' }}>Importe a Cobrar</th>
+            <th style={{ width: '130px', border: '1px solid #1D1D1F', padding: '6px' }}>Cobrado Físico ($)</th>
+            <th style={{ width: '110px', textAlign: 'center', border: '1px solid #1D1D1F', padding: '6px' }}>Estado Entrega</th>
+            <th style={{ width: '140px', border: '1px solid #1D1D1F', padding: '6px' }}>Firma del Cliente</th>
+          </tr>
+        </thead>
+        <tbody>
+          {locations.map((stop, idx) => {
+            const order = route.orders?.find((o: any) => o.id === stop.id);
+            return (
+              <tr key={idx} style={{ pageBreakInside: 'avoid' }}>
+                <td style={{ textAlign: 'center', fontWeight: 'bold', border: '1px solid #1D1D1F', padding: '6px' }}>{idx + 1}</td>
+                <td style={{ border: '1px solid #1D1D1F', padding: '6px' }}>
+                  <div style={{ fontWeight: 'bold' }}>{stop.name}</div>
+                  {order?.persona?.phone && <div style={{ fontSize: '0.7rem', color: '#555' }}>Tel: {order.persona.phone}</div>}
+                  {order?.persona?.cuit && <div style={{ fontSize: '0.7rem', color: '#555' }}>CUIT: {order.persona.cuit}</div>}
+                </td>
+                <td style={{ border: '1px solid #1D1D1F', padding: '6px' }}>
+                  <div>{stop.address}</div>
+                  <div style={{ fontSize: '0.7rem', color: '#555', fontStyle: 'italic' }}>{order?.persona?.city || 'Gral Villegas'}</div>
+                </td>
+                <td style={{ fontFamily: 'monospace', border: '1px solid #1D1D1F', padding: '6px' }}>{stop.invoice}</td>
+                <td style={{ textAlign: 'right', fontWeight: 'bold', border: '1px solid #1D1D1F', padding: '6px' }}>
+                  ${Number(order?.totalAmount || 0).toLocaleString('es-AR')}
+                </td>
+                <td style={{ fontSize: '0.7rem', border: '1px solid #1D1D1F', padding: '6px' }}>
+                  <div style={{ display: 'flex', gap: '3px', marginBottom: '2px', alignItems: 'center' }}>
+                    <span style={{ border: '1px solid #555', width: '9px', height: '9px', display: 'inline-block' }}></span> Efec: $__________
+                  </div>
+                  <div style={{ display: 'flex', gap: '3px', marginBottom: '2px', alignItems: 'center' }}>
+                    <span style={{ border: '1px solid #555', width: '9px', height: '9px', display: 'inline-block' }}></span> Transf: $________
+                  </div>
+                  <div style={{ display: 'flex', gap: '3px', alignItems: 'center' }}>
+                    <span style={{ border: '1px solid #555', width: '9px', height: '9px', display: 'inline-block' }}></span> Cheq: $________
+                  </div>
+                </td>
+                <td style={{ fontSize: '0.72rem', border: '1px solid #1D1D1F', padding: '6px', textAlign: 'center' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', justifyContent: 'center', marginBottom: '4px' }}>
+                    <span style={{ border: '1px solid #000', width: '9px', height: '9px', display: 'inline-block' }}></span> Entregado
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', justifyContent: 'center' }}>
+                    <span style={{ border: '1px solid #000', width: '9px', height: '9px', display: 'inline-block' }}></span> Rechazado
+                  </div>
+                </td>
+                <td style={{ verticalAlign: 'bottom', paddingBottom: '4px', height: '40px', border: '1px solid #1D1D1F', padding: '6px' }}>
+                  <div style={{ borderBottom: '1px dotted #555', width: '100%', height: '18px' }}></div>
+                  <div style={{ fontSize: '0.6rem', textAlign: 'center', color: '#555', marginTop: '2px' }}>Firma y Aclaración</div>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+
+      {/* Sección de Conciliación en Retorno */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginTop: '25px', pageBreakInside: 'avoid' }}>
+        <div className="print-card" style={{ border: '1px solid #ccc', padding: '12px', borderRadius: '4px', backgroundColor: '#fafafa' }}>
+          <h4 style={{ margin: '0 0 6px 0', fontSize: '0.85rem', fontWeight: 700 }}>Resumen de Valores Totales</h4>
+          <table style={{ width: '100%', fontSize: '0.75rem' }}>
+            <tbody>
+              <tr>
+                <td style={{ padding: '3px 0' }}>Total Pedidos Planificados:</td>
+                <td style={{ textAlign: 'right', fontWeight: 'bold' }}>{route.orders?.length || 0} entregas</td>
+              </tr>
+              <tr style={{ borderBottom: '1px solid #ddd' }}>
+                <td style={{ padding: '3px 0' }}>Total a Cobrar Estimado:</td>
+                <td style={{ textAlign: 'right', fontWeight: 'bold', fontSize: '0.85rem' }}>${totalAmount.toLocaleString('es-AR')}</td>
+              </tr>
+              <tr>
+                <td style={{ padding: '3px 0', paddingTop: '6px' }}>Efectivo Rendido Físico:</td>
+                <td style={{ textAlign: 'right', borderBottom: '1px solid #000' }}>$_________________</td>
+              </tr>
+              <tr>
+                <td style={{ padding: '3px 0' }}>Cheques Rendidos Físico:</td>
+                <td style={{ textAlign: 'right', borderBottom: '1px solid #000' }}>$_________________</td>
+              </tr>
+              <tr>
+                <td style={{ padding: '3px 0' }}>Comprobantes de Transf.:</td>
+                <td style={{ textAlign: 'right', borderBottom: '1px solid #000' }}>$_________________</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div className="print-card" style={{ border: '1px solid #ccc', padding: '12px', borderRadius: '4px', backgroundColor: '#fafafa', fontSize: '0.75rem' }}>
+          <h4 style={{ margin: '0 0 6px 0', fontSize: '0.85rem', fontWeight: 700 }}>Observaciones y Novedades del Viaje</h4>
+          <div style={{ height: '80px', border: '1px solid #ddd', borderRadius: '3px', backgroundColor: '#fff', padding: '4px', marginTop: '6px' }}>
+            {/* Espacio para escribir notas de entrega, rechazos o demoras */}
+          </div>
+        </div>
+      </div>
+
+      {/* Firmas de Conformidad */}
+      <div className="print-footer-signatures" style={{ marginTop: '40px', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '30px', textAlign: 'center', pageBreakInside: 'avoid' }}>
+        <div>
+          <div className="signature-line" style={{ borderTop: '1px solid #000', paddingTop: '4px', fontSize: '0.8rem' }}>
+            <strong>Firma del Chofer</strong>
+            <div style={{ fontSize: '0.65rem', color: '#555' }}>Chofer: {route.driverName}</div>
+          </div>
+        </div>
+        <div>
+          <div className="signature-line" style={{ borderTop: '1px solid #000', paddingTop: '4px', fontSize: '0.8rem' }}>
+            <strong>Control de Salida / Retorno</strong>
+            <div style={{ fontSize: '0.65rem', color: '#555' }}>Firma Responsable Depósito</div>
+          </div>
+        </div>
+        <div>
+          <div className="signature-line" style={{ borderTop: '1px solid #000', paddingTop: '4px', fontSize: '0.8rem' }}>
+            <strong>Recepción Administración</strong>
+            <div style={{ fontSize: '0.65rem', color: '#555' }}>Firma Cajero / Conciliador</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function RepartoDashboard() {
   const [routes, setRoutes] = useState<any[]>([]);
   const [pendingOrders, setPendingOrders] = useState<any[]>([]);
   const [selectedRoute, setSelectedRoute] = useState<any | null>(null);
+
+  // Estados para trazas de calles reales por OSRM
+  const [createRouteStreetPoints, setCreateRouteStreetPoints] = useState<[number, number][]>([]);
+  const [selectedRouteStreetPoints, setSelectedRouteStreetPoints] = useState<[number, number][]>([]);
 
   // Formulario de nueva ruta
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -172,6 +615,18 @@ export default function RepartoDashboard() {
   const [vehiclePlate, setVehiclePlate] = useState('');
   const [vehicleDescription, setVehicleDescription] = useState('');
   const [selectedOrderIds, setSelectedOrderIds] = useState<number[]>([]);
+
+  // Estados para liquidación de hoja de ruta
+  const [showSettleModal, setShowSettleModal] = useState(false);
+  const [settleRoute, setSettleRoute] = useState<any | null>(null);
+  const [settlements, setSettlements] = useState<any[]>([]);
+  const [settleCashDeclared, setSettleCashDeclared] = useState('');
+  const [settleChecksDeclared, setSettleChecksDeclared] = useState('');
+  const [settleTransfersDeclared, setSettleTransfersDeclared] = useState('');
+  const [bankAccounts, setBankAccounts] = useState<any[]>([]);
+
+  // Estado para filtrado de localidad
+  const [selectedCityFilter, setSelectedCityFilter] = useState('ALL');
 
   // Estados de carga y feedback
   const [_loading, setLoading] = useState(false);
@@ -185,9 +640,12 @@ export default function RepartoDashboard() {
       setRoutes(allRoutes);
 
       const allOrders = await api.getOrders();
-      // Órdenes preparadas (armadas por depósito) que no tienen hoja de ruta asignada
-      const available = allOrders.filter((o: any) => o.status === 'PREPARED' && !o.deliveryRouteId);
+      // Órdenes preparadas o facturadas (DELIVERED) que no tengan ruta asignada aún
+      const available = allOrders.filter((o: any) => (o.status === 'PREPARED' || o.status === 'DELIVERED') && !o.deliveryRouteId);
       setPendingOrders(available);
+
+      const banks = await api.getBankAccounts();
+      setBankAccounts(banks);
     } catch (err: any) {
       setErrorMsg('Error al cargar datos logísticos.');
     } finally {
@@ -198,6 +656,70 @@ export default function RepartoDashboard() {
   useEffect(() => {
     fetchRoutesAndOrders();
   }, []);
+
+  const uniqueCities = useMemo(() => {
+    const citiesSet = new Set<string>();
+    pendingOrders.forEach(o => {
+      const city = o.persona?.city;
+      if (city) {
+        citiesSet.add(city.toUpperCase().trim());
+      }
+    });
+    return Array.from(citiesSet).sort();
+  }, [pendingOrders]);
+
+  const filteredPendingOrders = useMemo(() => {
+    if (selectedCityFilter === 'ALL') return pendingOrders;
+    return pendingOrders.filter(o => o.persona?.city?.toUpperCase().trim() === selectedCityFilter);
+  }, [pendingOrders, selectedCityFilter]);
+
+  const handleOpenSettleModal = (route: any) => {
+    setSettleRoute(route);
+    const initialSettlements = route.orders.map((o: any) => ({
+      orderId: o.id,
+      clientName: o.persona?.name || 'Cliente',
+      invoiceNumber: o.invoiceNumber || `Pedido #${o.id}`,
+      amount: Number(o.totalAmount),
+      paymentMethod: 'CASH', // Por defecto efectivo
+      bankAccountId: bankAccounts[0]?.id || '',
+      checkNumber: '',
+      checkIssuer: '',
+      checkAmount: Number(o.totalAmount)
+    }));
+    setSettlements(initialSettlements);
+    setSettleCashDeclared('');
+    setSettleChecksDeclared('');
+    setSettleTransfersDeclared('');
+    setShowSettleModal(true);
+  };
+
+  const handleSettleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!settleRoute) return;
+
+    setErrorMsg(null);
+    setSuccessMsg(null);
+    setLoading(true);
+
+    try {
+      await api.settleDeliveryRoute(settleRoute.id, {
+        settlements,
+        cashDeclared: Number(settleCashDeclared || 0),
+        checksDeclared: Number(settleChecksDeclared || 0),
+        transfersDeclared: Number(settleTransfersDeclared || 0)
+      });
+
+      setSuccessMsg(`✨ Hoja de ruta #${settleRoute.id} liquidada y completada con éxito. Cobros registrados.`);
+      setShowSettleModal(false);
+      setSettleRoute(null);
+      setSelectedRoute(null);
+      fetchRoutesAndOrders();
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Error al liquidar la hoja de ruta.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleToggleOrder = (orderId: number) => {
     setSelectedOrderIds((prev: number[]) => 
@@ -262,6 +784,31 @@ export default function RepartoDashboard() {
     return { locations: route, points };
   }, [selectedRoute]);
 
+  // --- TRAZADO VIAL OSRM REAL (Efectos asíncronos para cargar coordenadas de calles) ---
+  useEffect(() => {
+    if (mapPoints.length < 2) {
+      setCreateRouteStreetPoints([]);
+      return;
+    }
+    let active = true;
+    fetchOSRMRoute(mapPoints).then(pts => {
+      if (active) setCreateRouteStreetPoints(pts);
+    });
+    return () => { active = false; };
+  }, [mapPoints]);
+
+  useEffect(() => {
+    if (activeRouteTspDetails.points.length < 2) {
+      setSelectedRouteStreetPoints([]);
+      return;
+    }
+    let active = true;
+    fetchOSRMRoute(activeRouteTspDetails.points).then(pts => {
+      if (active) setSelectedRouteStreetPoints(pts);
+    });
+    return () => { active = false; };
+  }, [activeRouteTspDetails.points]);
+
   // --- GUARDAR HOJA DE RUTA ---
   const handleCreateRouteSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -318,12 +865,31 @@ export default function RepartoDashboard() {
     }
   };
 
+  const logisticsStats = useMemo(() => {
+    const inTransitRoutes = routes.filter(r => r.status === 'IN_TRANSIT');
+    const onStreetAmount = inTransitRoutes.reduce((sum, r) => {
+      const ordersSum = r.orders?.reduce((oSum: number, o: any) => oSum + Number(o.totalAmount || 0), 0) || 0;
+      return sum + ordersSum;
+    }, 0);
+
+    const pendingRouteCount = routes.filter(r => r.status === 'PENDING').length;
+    const totalPreparedAmount = pendingOrders.reduce((sum, o) => sum + Number(o.totalAmount || 0), 0);
+
+    return {
+      inTransitCount: inTransitRoutes.length,
+      onStreetAmount,
+      pendingRouteCount,
+      pendingOrdersCount: pendingOrders.length,
+      pendingOrdersAmount: totalPreparedAmount
+    };
+  }, [routes, pendingOrders]);
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       
       {/* Feedback alerts */}
       {successMsg && (
-        <div style={{
+        <div className="no-print" style={{
           backgroundColor: 'var(--color-success-bg)',
           borderLeft: '4px solid var(--color-success)',
           color: 'var(--text-primary)',
@@ -340,7 +906,7 @@ export default function RepartoDashboard() {
       )}
 
       {errorMsg && (
-        <div style={{
+        <div className="no-print" style={{
           backgroundColor: '#FFF2F2',
           borderLeft: '4px solid var(--color-danger)',
           color: 'var(--text-primary)',
@@ -356,7 +922,46 @@ export default function RepartoDashboard() {
         </div>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', alignItems: 'start' }}>
+      {/* PANEL DE CONTROL DE CAJA EN REPARTO */}
+      <div className="no-print" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px', marginBottom: '8px' }}>
+        <div className="card" style={{ padding: '16px', borderRadius: '12px', border: '1px solid var(--border-color)', backgroundColor: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+          <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px', letterSpacing: '0.5px' }}>
+            VIAJES ACTIVOS (EN CALLE)
+          </span>
+          <span style={{ fontSize: '1.4rem', fontWeight: 700, color: '#681da8' }}>
+            {logisticsStats.inTransitCount} {logisticsStats.inTransitCount === 1 ? 'viaje activo' : 'viajes activos'}
+          </span>
+          <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', display: 'block', marginTop: '6px' }}>
+            Vehículos en distribución activa
+          </span>
+        </div>
+
+        <div className="card" style={{ padding: '16px', borderRadius: '12px', border: '1px solid var(--border-color)', backgroundColor: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+          <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px', letterSpacing: '0.5px' }}>
+            DINERO EN LA CALLE (POR RENDIR)
+          </span>
+          <span style={{ fontSize: '1.4rem', fontWeight: 700, color: '#E30613' }}>
+            ${logisticsStats.onStreetAmount.toLocaleString()}
+          </span>
+          <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', display: 'block', marginTop: '6px' }}>
+            Total a conciliar y depositar en caja
+          </span>
+        </div>
+
+        <div className="card" style={{ padding: '16px', borderRadius: '12px', border: '1px solid var(--border-color)', backgroundColor: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+          <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px', letterSpacing: '0.5px' }}>
+            PEDIDOS EN ESPERA DE VIAJE
+          </span>
+          <span style={{ fontSize: '1.4rem', fontWeight: 700, color: '#3c4043' }}>
+            {logisticsStats.pendingOrdersCount} pedidos (${logisticsStats.pendingOrdersAmount.toLocaleString()})
+          </span>
+          <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', display: 'block', marginTop: '6px' }}>
+            Disponibles para armar hojas de ruta
+          </span>
+        </div>
+      </div>
+
+      <div className="no-print" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', alignItems: 'start' }}>
         
         {/* COLUMNA IZQUIERDA: HISTORIAL DE HOJAS DE RUTA */}
         <div className="card">
@@ -458,12 +1063,20 @@ export default function RepartoDashboard() {
                     <button 
                       className="btn btn-primary" 
                       style={{ fontSize: '0.78rem', backgroundColor: 'var(--color-success)', borderColor: 'var(--color-success)', display: 'flex', alignItems: 'center', gap: '4px' }}
-                      onClick={() => handleChangeStatus(selectedRoute.id, 'COMPLETED')}
+                      onClick={() => handleOpenSettleModal(selectedRoute)}
                     >
                       <CheckCircle size={12} />
-                      Completar Ruta
+                      Rendir y Completar Viaje
                     </button>
                   )}
+                  <button 
+                    className="btn btn-secondary no-print" 
+                    style={{ fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '4px' }}
+                    onClick={() => window.print()}
+                  >
+                    <Printer size={12} />
+                    Imprimir Hoja
+                  </button>
                 </div>
               </div>
 
@@ -473,9 +1086,9 @@ export default function RepartoDashboard() {
                   <Map size={14} />
                   <span>Mapa de Recorrido Óptimo (General Villegas)</span>
                 </div>
-                <LeafletRouteMap 
+                <RouteMap 
                   locations={activeRouteTspDetails.locations} 
-                  routePoints={activeRouteTspDetails.points} 
+                  routePoints={selectedRouteStreetPoints.length > 0 ? selectedRouteStreetPoints : activeRouteTspDetails.points} 
                 />
               </div>
 
@@ -585,9 +1198,23 @@ export default function RepartoDashboard() {
 
                   {/* Listado de pedidos preparados disponibles */}
                   <div style={{ marginTop: '10px' }}>
-                    <label style={{ fontWeight: 600, fontSize: '0.85rem', display: 'block', marginBottom: '6px' }}>
-                      Pedidos Armados Disponibles ({pendingOrders.length})
-                    </label>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                      <label style={{ fontWeight: 600, fontSize: '0.85rem' }}>
+                        Pedidos Disponibles ({filteredPendingOrders.length})
+                      </label>
+                      <select 
+                        className="input" 
+                        style={{ width: '160px', padding: '2px 6px', fontSize: '0.78rem', height: '28px' }}
+                        value={selectedCityFilter}
+                        onChange={(e) => setSelectedCityFilter(e.target.value)}
+                      >
+                        <option value="ALL">Todas las localidades</option>
+                        {uniqueCities.map(city => (
+                          <option key={city} value={city}>{city}</option>
+                        ))}
+                      </select>
+                    </div>
+                    
                     <div style={{ 
                       maxHeight: '180px', 
                       overflowY: 'auto', 
@@ -595,12 +1222,12 @@ export default function RepartoDashboard() {
                       borderRadius: '6px',
                       padding: '6px'
                     }}>
-                      {pendingOrders.length === 0 ? (
+                      {filteredPendingOrders.length === 0 ? (
                         <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', padding: '10px', textAlign: 'center' }}>
-                          No hay pedidos preparados en depósito esperando reparto.
+                          No hay pedidos disponibles para la localidad seleccionada.
                         </div>
                       ) : (
-                        pendingOrders.map(o => (
+                        filteredPendingOrders.map(o => (
                           <div 
                             key={o.id} 
                             style={{ 
@@ -618,8 +1245,15 @@ export default function RepartoDashboard() {
                               onChange={() => handleToggleOrder(o.id)}
                             />
                             <div style={{ flex: 1 }}>
-                              <div style={{ fontWeight: 600 }}>{o.persona?.name}</div>
-                              <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>Comprobante: {o.invoiceNumber}</div>
+                              <div style={{ fontWeight: 600, display: 'flex', justifyContent: 'space-between' }}>
+                                <span>{o.persona?.name}</span>
+                                {o.persona?.city && (
+                                  <span style={{ fontSize: '0.68rem', color: '#681da8', backgroundColor: '#f3e8fd', padding: '1px 5px', borderRadius: '4px', fontWeight: 600 }}>
+                                    {o.persona?.city}
+                                  </span>
+                                )}
+                              </div>
+                              <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>Comprobante: {o.invoiceNumber || 'Remito de Carga'}</div>
                             </div>
                             <div style={{ fontWeight: 600 }}>${Number(o.totalAmount).toLocaleString()}</div>
                           </div>
@@ -639,7 +1273,10 @@ export default function RepartoDashboard() {
                           Ruta calculada con {selectedOrderIds.length} paradas
                         </span>
                       </div>
-                      <LeafletRouteMap locations={currentTspRoute} routePoints={mapPoints} />
+                      <RouteMap 
+                        locations={currentTspRoute} 
+                        routePoints={createRouteStreetPoints.length > 0 ? createRouteStreetPoints : mapPoints} 
+                      />
                       
                       <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', padding: '8px', backgroundColor: '#FFFEE0', borderRadius: '4px', border: '1px solid #EAE2B7' }}>
                         <strong>💡 Sugerencia TSP:</strong> La ruta se calcula minimizando distancias espaciales saliendo del Depósito Central.
@@ -685,6 +1322,239 @@ export default function RepartoDashboard() {
         </div>
       )}
 
+      {/* ====================================================================
+          MODAL: LIQUIDAR / RENDIR VIAJE (HOJA DE RUTA)
+          ==================================================================== */}
+      {showSettleModal && settleRoute && (() => {
+        const expectedCash = settlements.filter(s => s.paymentMethod === 'CASH').reduce((sum, s) => sum + s.amount, 0);
+        const expectedTransfers = settlements.filter(s => s.paymentMethod === 'BANK_TRANSFER').reduce((sum, s) => sum + s.amount, 0);
+        const expectedChecks = settlements.filter(s => s.paymentMethod === 'CHECK').reduce((sum, s) => sum + s.amount, 0);
+        const expectedCredit = settlements.filter(s => s.paymentMethod === 'CREDITO').reduce((sum, s) => sum + s.amount, 0);
+
+        const cashDiff = Number(settleCashDeclared || 0) - expectedCash;
+        const checkDiff = Number(settleChecksDeclared || 0) - expectedChecks;
+        const transferDiff = Number(settleTransfersDeclared || 0) - expectedTransfers;
+
+        return (
+          <div className="modal-overlay" style={{ zIndex: 1100 }}>
+            <div className="modal-content" style={{ maxWidth: '1000px', width: '90vw', padding: '24px' }}>
+              <div className="modal-header">
+                <h3>Rendición y Liquidación de Caja - Viaje #{settleRoute.id}</h3>
+                <button type="button" className="btn btn-ghost" style={{ padding: '4px' }} onClick={() => setShowSettleModal(false)}>✕</button>
+              </div>
+
+              <div style={{ marginBottom: '16px', padding: '10px 14px', backgroundColor: '#f3e8fd', borderRadius: '6px', fontSize: '0.82rem', color: '#681da8' }}>
+                🚚 Chofer: <strong>{settleRoute.driverName}</strong> | Patente: <strong>{settleRoute.vehiclePlate}</strong> | Pedidos a rendir: <strong>{settleRoute.orders?.length || 0}</strong>
+              </div>
+
+              <form onSubmit={handleSettleSubmit}>
+                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '20px', alignItems: 'start' }}>
+                  
+                  {/* TABLA DE DETALLE DE PEDIDOS */}
+                  <div className="card" style={{ padding: '16px', border: '1px solid var(--border-color)' }}>
+                    <h4 style={{ fontSize: '0.88rem', fontWeight: 600, marginTop: 0, marginBottom: '12px' }}>Listado de Entregas y Cobros</h4>
+                    <div style={{ maxHeight: '350px', overflowY: 'auto' }}>
+                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
+                        <thead>
+                          <tr style={{ borderBottom: '2px solid var(--border-color)', textAlign: 'left' }}>
+                            <th style={{ padding: '8px 4px' }}>Cliente</th>
+                            <th style={{ padding: '8px 4px' }}>Comprobante</th>
+                            <th style={{ padding: '8px 4px', textAlign: 'right' }}>Total</th>
+                            <th style={{ padding: '8px 4px', width: '160px' }}>Medio de Pago</th>
+                            <th style={{ padding: '8px 4px' }}>Detalles Cobro</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {settlements.map((set, idx) => (
+                            <tr key={set.orderId} style={{ borderBottom: '1px solid #f0f0f0' }}>
+                              <td style={{ padding: '8px 4px', fontWeight: 600 }}>{set.clientName}</td>
+                              <td style={{ padding: '8px 4px' }}>{set.invoiceNumber}</td>
+                              <td style={{ padding: '8px 4px', fontWeight: 700, textAlign: 'right' }}>${set.amount.toLocaleString()}</td>
+                              <td style={{ padding: '8px 4px' }}>
+                                <select
+                                  className="input"
+                                  style={{ padding: '2px 4px', fontSize: '0.78rem', height: '28px' }}
+                                  value={set.paymentMethod}
+                                  onChange={(e) => {
+                                    const val = e.target.value;
+                                    setSettlements(prev => prev.map((s, i) => i === idx ? { ...s, paymentMethod: val } : s));
+                                  }}
+                                >
+                                  <option value="CASH">💵 Efectivo</option>
+                                  <option value="BANK_TRANSFER">🏦 Transferencia</option>
+                                  <option value="CHECK">✍️ Cheque</option>
+                                  <option value="CREDITO">💳 A Cuenta (C/C)</option>
+                                </select>
+                              </td>
+                              <td style={{ padding: '8px 4px' }}>
+                                {set.paymentMethod === 'BANK_TRANSFER' && (
+                                  <select
+                                    className="input"
+                                    style={{ padding: '2px 4px', fontSize: '0.75rem', height: '28px' }}
+                                    value={set.bankAccountId}
+                                    onChange={(e) => {
+                                      const val = e.target.value;
+                                      setSettlements(prev => prev.map((s, i) => i === idx ? { ...s, bankAccountId: val } : s));
+                                    }}
+                                  >
+                                    {bankAccounts.map(b => (
+                                      <option key={b.id} value={b.id}>{b.name}</option>
+                                    ))}
+                                  </select>
+                                )}
+                                {set.paymentMethod === 'CHECK' && (
+                                  <div style={{ display: 'flex', gap: '4px' }}>
+                                    <input
+                                      type="text"
+                                      placeholder="N° Cheque"
+                                      className="input"
+                                      style={{ padding: '2px 4px', fontSize: '0.72rem', height: '28px', width: '70px' }}
+                                      value={set.checkNumber}
+                                      onChange={(e) => {
+                                        const val = e.target.value;
+                                        setSettlements(prev => prev.map((s, i) => i === idx ? { ...s, checkNumber: val } : s));
+                                      }}
+                                      required
+                                    />
+                                    <input
+                                      type="text"
+                                      placeholder="Emisor"
+                                      className="input"
+                                      style={{ padding: '2px 4px', fontSize: '0.72rem', height: '28px', width: '80px' }}
+                                      value={set.checkIssuer}
+                                      onChange={(e) => {
+                                        const val = e.target.value;
+                                        setSettlements(prev => prev.map((s, i) => i === idx ? { ...s, checkIssuer: val } : s));
+                                      }}
+                                      required
+                                    />
+                                  </div>
+                                )}
+                                {set.paymentMethod === 'CASH' && (
+                                  <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>A Caja Reparto</span>
+                                )}
+                                {set.paymentMethod === 'CREDITO' && (
+                                  <span style={{ fontSize: '0.72rem', color: '#b78103', fontWeight: 600 }}>Deuda en C/C</span>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  {/* CONTROL DE CAJA Y ARQUEO */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    <div className="card" style={{ padding: '16px', border: '1px solid var(--border-color)', backgroundColor: '#fcfcfc' }}>
+                      <h4 style={{ fontSize: '0.88rem', fontWeight: 600, marginTop: 0, marginBottom: '12px' }}>Cuadro Resumen (Esperado)</h4>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.78rem' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <span>💵 Efectivo Esperado:</span>
+                          <span style={{ fontWeight: 600 }}>${expectedCash.toLocaleString()}</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <span>✍️ Cheques Esperados:</span>
+                          <span style={{ fontWeight: 600 }}>${expectedChecks.toLocaleString()}</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <span>🏦 Transferencias Esperadas:</span>
+                          <span style={{ fontWeight: 600 }}>${expectedTransfers.toLocaleString()}</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #ddd', paddingBottom: '6px' }}>
+                          <span>💳 A Cuenta Corriente:</span>
+                          <span style={{ fontWeight: 600, color: '#b78103' }}>${expectedCredit.toLocaleString()}</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: '0.82rem', paddingTop: '4px' }}>
+                          <span>Total Rendido:</span>
+                          <span style={{ color: 'var(--color-success)' }}>${(expectedCash + expectedChecks + expectedTransfers).toLocaleString()}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="card" style={{ padding: '16px', border: '1px solid var(--border-color)' }}>
+                      <h4 style={{ fontSize: '0.88rem', fontWeight: 600, marginTop: 0, marginBottom: '12px' }}>Declarar Valores Físicos</h4>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        <div className="form-group" style={{ margin: 0 }}>
+                          <label style={{ fontSize: '0.75rem', fontWeight: 600 }}>Efectivo Declarado ($)</label>
+                          <input
+                            type="number"
+                            className="input"
+                            style={{ height: '32px', fontSize: '0.8rem' }}
+                            placeholder="ej: 120000"
+                            value={settleCashDeclared}
+                            onChange={(e) => setSettleCashDeclared(e.target.value)}
+                          />
+                        </div>
+                        <div className="form-group" style={{ margin: 0 }}>
+                          <label style={{ fontSize: '0.75rem', fontWeight: 600 }}>Cheques Declarados ($)</label>
+                          <input
+                            type="number"
+                            className="input"
+                            style={{ height: '32px', fontSize: '0.8rem' }}
+                            placeholder="ej: 30000"
+                            value={settleChecksDeclared}
+                            onChange={(e) => setSettleChecksDeclared(e.target.value)}
+                          />
+                        </div>
+                        <div className="form-group" style={{ margin: 0 }}>
+                          <label style={{ fontSize: '0.75rem', fontWeight: 600 }}>Transferencias Declaradas ($)</label>
+                          <input
+                            type="number"
+                            className="input"
+                            style={{ height: '32px', fontSize: '0.8rem' }}
+                            placeholder="ej: 45000"
+                            value={settleTransfersDeclared}
+                            onChange={(e) => setSettleTransfersDeclared(e.target.value)}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* CONTROL DE DIFERENCIAS */}
+                    <div className="card" style={{
+                      padding: '16px',
+                      border: '1px solid var(--border-color)',
+                      backgroundColor: (cashDiff === 0 && checkDiff === 0 && transferDiff === 0) ? '#f4fbf7' : '#fffbf0'
+                    }}>
+                      <h4 style={{ fontSize: '0.88rem', fontWeight: 600, marginTop: 0, marginBottom: '8px' }}>Arqueo de Rendición</h4>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.76rem' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', color: cashDiff === 0 ? 'var(--text-secondary)' : cashDiff > 0 ? '#137333' : '#E30613' }}>
+                          <span>Efectivo Diferencia:</span>
+                          <span style={{ fontWeight: 700 }}>{cashDiff === 0 ? '$0' : cashDiff > 0 ? `Sobrante: +$${cashDiff.toLocaleString()}` : `Faltante: -$${Math.abs(cashDiff).toLocaleString()}`}</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', color: checkDiff === 0 ? 'var(--text-secondary)' : checkDiff > 0 ? '#137333' : '#E30613' }}>
+                          <span>Cheques Diferencia:</span>
+                          <span style={{ fontWeight: 700 }}>{checkDiff === 0 ? '$0' : checkDiff > 0 ? `Sobrante: +$${checkDiff.toLocaleString()}` : `Faltante: -$${Math.abs(checkDiff).toLocaleString()}`}</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', color: transferDiff === 0 ? 'var(--text-secondary)' : transferDiff > 0 ? '#137333' : '#E30613' }}>
+                          <span>Transf. Diferencia:</span>
+                          <span style={{ fontWeight: 700 }}>{transferDiff === 0 ? '$0' : transferDiff > 0 ? `Sobrante: +$${transferDiff.toLocaleString()}` : `Faltante: -$${Math.abs(transferDiff).toLocaleString()}`}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
+
+                <div className="modal-footer" style={{ marginTop: '20px', borderTop: '1px solid var(--border-color)', paddingTop: '16px' }}>
+                  <button type="button" className="btn btn-secondary" onClick={() => setShowSettleModal(false)}>Cancelar</button>
+                  <button
+                    type="submit"
+                    className="btn btn-primary"
+                    style={{ backgroundColor: '#E30613', borderColor: '#E30613' }}
+                  >
+                    Confirmar Arqueo y Liquidar Viaje
+                  </button>
+                </div>
+              </form>
+
+            </div>
+          </div>
+        );
+      })()}
+
+      <PrintRouteSheet route={selectedRoute} locations={activeRouteTspDetails.locations} />
     </div>
   );
 }

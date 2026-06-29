@@ -151,3 +151,106 @@ export async function emitirFacturaAFIP({
     throw new Error(`Error AFIP: ${error.message || error}`);
   }
 }
+
+/**
+ * Solicita el CAE a AFIP para una Nota de Crédito.
+ */
+export async function emitirNotaCreditoAFIP({
+  clientCuit,
+  clientDocType,
+  invoiceType,
+  total,
+}: InvoiceRequest): Promise<InvoiceResult> {
+  const puntoDeVenta = 1; // Punto de venta por defecto
+  const cbteTipo = invoiceType === 'A' ? 3 : 8; // 3: Nota de Crédito A, 8: Nota de Crédito B
+
+  // Si estamos usando Mock
+  if (useMock || !afipClient) {
+    const mockInvoiceNum = Math.floor(100000 + Math.random() * 900000);
+    const mockCae = '9999' + Math.floor(10000000 + Math.random() * 90000000) + '2';
+    const dueDate = new Date();
+    dueDate.setDate(dueDate.getDate() + 10); // Expira en 10 días
+
+    console.log(`[MOCK AFIP] Creando Nota de Crédito ${invoiceType} #${mockInvoiceNum} por total ARS ${total}`);
+
+    return {
+      invoiceNumber: `00001-${mockInvoiceNum.toString().padStart(8, '0')}`,
+      cae: mockCae,
+      caeDueDate: dueDate,
+      puntoVenta: puntoDeVenta,
+    };
+  }
+
+  try {
+    // 1. Obtener el último número de comprobante registrado en AFIP
+    const lastVoucher = await afipClient.ElectronicBilling.getLastVoucher(puntoDeVenta, cbteTipo);
+    const nextVoucherNumber = lastVoucher + 1;
+
+    // 2. Cálculos impositivos
+    const neto = Number((total / 1.21).toFixed(2));
+    const iva = Number((total - neto).toFixed(2));
+
+    // Formatear fecha en AAAAMMDD
+    const fechaActual = parseInt(new Date().toISOString().replace(/-/g, '').substring(0, 8));
+
+    // 3. Estructurar datos para AFIP
+    const data: any = {
+      CantReg: 1,
+      PtoVta: puntoDeVenta,
+      CbteTipo: cbteTipo,
+      Concepto: 1, // 1: Productos
+      DocTipo: clientDocType,
+      DocNro: clientDocType === 99 ? 0 : Number(clientCuit.replace(/-/g, '')),
+      CbteDesde: nextVoucherNumber,
+      CbteHasta: nextVoucherNumber,
+      CbteFch: fechaActual,
+      ImpTotal: total,
+      ImpTotConc: 0,
+      ImpNeto: neto,
+      ImpOpEx: 0,
+      ImpIVA: iva,
+      ImpTrib: 0,
+      MonId: 'PES',
+      MonCotiz: 1,
+    };
+
+    // Agregar detalle de IVA si corresponde
+    if (iva > 0) {
+      data.Iva = [
+        {
+          Id: 5, // IVA 21%
+          BaseImp: neto,
+          Importe: iva,
+        },
+      ];
+    }
+
+    // 4. Crear el comprobante ante AFIP
+    const res = await afipClient.ElectronicBilling.createVoucher(data);
+
+    const formattedInvoiceNumber = `${puntoDeVenta.toString().padStart(5, '0')}-${nextVoucherNumber
+      .toString()
+      .padStart(8, '0')}`;
+
+    // Obtener vencimiento del CAE
+    let expirationDate = new Date();
+    if (res.CAEFchVto) {
+      const year = res.CAEFchVto.substring(0, 4);
+      const month = res.CAEFchVto.substring(4, 6);
+      const day = res.CAEFchVto.substring(6, 8);
+      expirationDate = new Date(`${year}-${month}-${day}T23:59:59`);
+    } else {
+      expirationDate.setDate(expirationDate.getDate() + 10);
+    }
+
+    return {
+      invoiceNumber: formattedInvoiceNumber,
+      cae: res.CAE,
+      caeDueDate: expirationDate,
+      puntoVenta: puntoDeVenta,
+    };
+  } catch (error: any) {
+    console.error('❌ Error llamando a los Web Services de AFIP para Nota de Crédito:', error);
+    throw new Error(`Error AFIP Nota de Crédito: ${error.message || error}`);
+  }
+}

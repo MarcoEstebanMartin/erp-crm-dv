@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import React from 'react';
 import { api } from '../utils/api';
 import { Trash2, ShoppingCart, UserPlus, CheckCircle2, Eye, Edit, Printer } from 'lucide-react';
+import PriceListModal from './PriceListModal';
 
 interface VendedorDashboardProps {
   activeTab: string;
@@ -12,25 +13,34 @@ export default function VendedorDashboard({ activeTab }: VendedorDashboardProps)
   const [clients, setClients] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
   const [orders, setOrders] = useState<any[]>([]);
+  const [rubros, setRubros] = useState<any[]>([]);
+  const [filterRubroId, setFilterRubroId] = useState<string>('');
   
   // Nuevo Pedido State
   const [selectedClient, setSelectedClient] = useState<any | null>(null);
+  const [clientFilter, setClientFilter] = useState('');
   const [cart, setCart] = useState<{ product: any; quantity: number }[]>([]);
   const [subTab, setSubTab] = useState<'create' | 'list'>('create');
+  const [orderNotes, setOrderNotes] = useState('');
   
   // Modales
   const [clientModal, setClientModal] = useState({ open: false, name: '', cuit: '', address: '', city: '', phone: '', email: '' });
   const [orderDetailsModal, setOrderDetailsModal] = useState<any | null>(null);
+  const [isPriceListModalOpen, setIsPriceListModalOpen] = useState(false);
   const [editOrderModal, setEditOrderModal] = useState<{ open: boolean; orderId: number; clientId: number; clientName: string; items: { id: number; productId: number; name: string; sku: string; quantity: number; listPrice: number }[] } | null>(null);
   
   // Filtros y búsquedas
   const [searchQuery, setSearchQuery] = useState('');
   const [prodSearchQuery, setProdSearchQuery] = useState('');
-  const [barcodeInput, setBarcodeInput] = useState('');
-  const [barcodeError, setBarcodeError] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  // Filtrar clientes para la selección del pedido
+  const filteredClientsForSelect = clients.filter(c => 
+    c.name.toLowerCase().includes(clientFilter.toLowerCase()) || 
+    (c.cuit && c.cuit.includes(clientFilter))
+  );
 
   const getWhatsAppLink = (phone: string) => {
     const cleanPhone = phone.replace(/\D/g, '');
@@ -40,17 +50,18 @@ export default function VendedorDashboard({ activeTab }: VendedorDashboardProps)
   };
 
   const getItemPrice = (product: any, client: any) => {
-    if (!client) return Number(product.listPrice);
+    if (!client) return Math.round(Number(product.listPrice));
     let price = Number(product.listPrice);
+    let discount = Number(client.discount || 0);
     if (client.priceList === 'B') {
-      const priceB = Number(product.listPriceB);
-      if (priceB > 0) price = priceB;
-    } else if (client.priceList === 'C') {
-      const priceC = Number(product.listPriceC);
-      if (priceC > 0) price = priceC;
+      const isMelincue = product.description?.toUpperCase() === 'MELINCUE' || product.name?.toUpperCase().includes('MELINCUE');
+      if (isMelincue) {
+        discount = 3;
+      } else {
+        discount = 0;
+      }
     }
-    const discount = Number(client.discount || 0);
-    return price * (1 - discount / 100);
+    return Math.round(price * (1 - discount / 100));
   };
 
   useEffect(() => {
@@ -67,12 +78,16 @@ export default function VendedorDashboard({ activeTab }: VendedorDashboardProps)
         setProducts(prodData);
         const orderData = await api.getOrders();
         setOrders(orderData);
+        const rubroData = await api.getRubros();
+        setRubros(rubroData);
       } else if (activeTab === 'clients') {
         const clientData = await api.getClients(searchQuery);
         setClients(clientData);
       } else if (activeTab === 'products') {
         const prodData = await api.getProducts(searchQuery);
         setProducts(prodData);
+        const rubroData = await api.getRubros();
+        setRubros(rubroData);
       }
     } catch (err: any) {
       setErrorMsg(err.message || 'Error al obtener datos.');
@@ -102,37 +117,7 @@ export default function VendedorDashboard({ activeTab }: VendedorDashboardProps)
     setErrorMsg(null);
   };
 
-  const handleBarcodeScan = async (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      const code = barcodeInput.trim();
-      if (!code) return;
 
-      setErrorMsg(null);
-      setBarcodeError(false);
-
-      try {
-        const found = products.find(p => p.barcode === code);
-        if (found) {
-          addToCart(found);
-          setBarcodeInput('');
-        } else {
-          const prod = await api.getProductByBarcode(code);
-          if (prod) {
-            setProducts(prev => prev.some(p => p.id === prod.id) ? prev : [...prev, prod]);
-            addToCart(prod);
-            setBarcodeInput('');
-          } else {
-            throw new Error('Producto no encontrado.');
-          }
-        }
-      } catch (err: any) {
-        setBarcodeError(true);
-        setErrorMsg(`Código de barras "${code}" no reconocido.`);
-        setTimeout(() => setBarcodeError(false), 1500);
-      }
-    }
-  };
 
   const updateCartQty = (productId: number, change: number) => {
     const existing = cart.find(item => item.product.id === productId);
@@ -170,12 +155,6 @@ export default function VendedorDashboard({ activeTab }: VendedorDashboardProps)
       return;
     }
 
-    // Validar regla boleta contra boleta
-    if (Number(selectedClient.outstandingBalance || 0) > 0) {
-      setErrorMsg(`Regla Boleta contra Boleta: El cliente posee una boleta pendiente ($${Number(selectedClient.outstandingBalance).toLocaleString()}). Debe registrar el pago de la boleta anterior antes de iniciar un nuevo pedido a crédito.`);
-      return;
-    }
-
     setLoading(true);
     setErrorMsg(null);
     setSuccessMsg(null);
@@ -188,12 +167,15 @@ export default function VendedorDashboard({ activeTab }: VendedorDashboardProps)
 
       await api.createOrder({
         clientId: selectedClient.id,
-        items
+        items,
+        notes: orderNotes
       });
 
-      setSuccessMsg(`🎉 ¡Pedido cargado con éxito! Se envió a depósito para su armado.`);
+      setSuccessMsg(`�x}0 ¡Pedido cargado con éxito! Se envió a depósito para su armado.`);
       setCart([]);
+      setOrderNotes('');
       setSelectedClient(null);
+      setClientFilter('');
       setSubTab('list'); // Ir al historial
       fetchData();
     } catch (err: any) {
@@ -385,13 +367,7 @@ export default function VendedorDashboard({ activeTab }: VendedorDashboardProps)
           ==================================================================== */}
       {activeTab === 'orders' && (
         <div>
-          {/* Sub Tab Selector */}
-          <div className="tabs-container" style={{ marginBottom: '20px' }}>
-            <button className={`tab-btn ${subTab === 'create' ? 'tab-btn-active' : ''}`} onClick={() => setSubTab('create')}>Nueva Toma de Pedido</button>
-            <button className={`tab-btn ${subTab === 'list' ? 'tab-btn-active' : ''}`} onClick={() => setSubTab('list')}>Historial de Pedidos</button>
-          </div>
-
-          {subTab === 'create' ? (
+          <div>
             <div>
               {/* Clic 1: Seleccionar Cliente */}
               <div className="card" style={{ marginBottom: '20px', padding: '20px' }}>
@@ -400,29 +376,43 @@ export default function VendedorDashboard({ activeTab }: VendedorDashboardProps)
                   <span>Seleccionar Cliente</span>
                 </h3>
                 
-                <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                  <div style={{ flex: 1, position: 'relative' }}>
-                    <select
-                      className="select"
-                      value={selectedClient ? selectedClient.id : ''}
-                      onChange={(e) => {
-                        const client = clients.find(c => c.id === Number(e.target.value));
-                        setSelectedClient(client || null);
-                      }}
-                      style={{ paddingRight: '40px' }}
-                    >
-                      <option value="">-- Selecciona un cliente registrado --</option>
-                      {clients.map(c => (
-                        <option key={c.id} value={c.id}>
-                          {c.name} {c.cuit ? `(CUIT: ${c.cuit})` : ''}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <input
+                    type="text"
+                    className="input"
+                    placeholder="🔍 Filtrar cliente por nombre o CUIT..."
+                    value={clientFilter}
+                    onChange={(e) => setClientFilter(e.target.value)}
+                    style={{ fontSize: '0.85rem', padding: '10px' }}
+                  />
+                  <div className="client-select-row">
+                    <div style={{ flex: 1, position: 'relative' }}>
+                      <select
+                        className="select"
+                        value={selectedClient ? selectedClient.id : ''}
+                        onChange={(e) => {
+                           const client = clients.find(c => c.id === Number(e.target.value));
+                           setSelectedClient(client || null);
+                        }}
+                        style={{ paddingRight: '40px' }}
+                      >
+                        <option value="">
+                          {clientFilter.trim() 
+                            ? `-- Seleccionar de los ${filteredClientsForSelect.length} filtrados --`
+                            : "-- Selecciona un cliente registrado --"
+                          }
                         </option>
-                      ))}
-                    </select>
+                        {filteredClientsForSelect.map(c => (
+                          <option key={c.id} value={c.id}>
+                            {c.name} {c.cuit ? `(CUIT: ${c.cuit})` : ''}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <button className="btn btn-secondary" style={{ padding: '8px 12px' }} title="Nuevo Cliente" onClick={() => setClientModal({ open: true, name: '', cuit: '', address: '', city: '', phone: '', email: '' })}>
+                      <UserPlus size={16} />
+                    </button>
                   </div>
-                  <button className="btn btn-secondary" onClick={() => setClientModal({ open: true, name: '', cuit: '', address: '', city: '', phone: '', email: '' })}>
-                    <UserPlus size={16} />
-                    <span>Nuevo Cliente</span>
-                  </button>
                 </div>
                 {selectedClient && (
                   <div style={{ marginTop: '10px', fontSize: '0.825rem', display: 'flex', flexDirection: 'column', gap: '4px', padding: '10px', backgroundColor: 'var(--bg-light)', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
@@ -442,7 +432,7 @@ export default function VendedorDashboard({ activeTab }: VendedorDashboardProps)
                         </a>
                       )}
                     </div>
-                    <div style={{ display: 'flex', gap: '16px', marginTop: '4px' }}>
+                    <div className="client-info-stats">
                       <span><strong>Saldo C/C:</strong> <span style={{ color: (selectedClient.outstandingBalance || 0) > 0 ? 'var(--color-danger)' : 'var(--text-primary)', fontWeight: 600 }}>${(selectedClient.outstandingBalance || 0).toLocaleString()}</span></span>
                       <span><strong>Límite Crédito:</strong> <span style={{ fontWeight: 600 }}>${(selectedClient.creditLimit || 0).toLocaleString()}</span></span>
                       <span><strong>Lista:</strong> <span style={{ fontWeight: 600 }}>{selectedClient.priceList === 'C' ? 'Distribuidor C' : selectedClient.priceList === 'B' ? 'Especial B' : 'Estándar A'}</span></span>
@@ -451,9 +441,9 @@ export default function VendedorDashboard({ activeTab }: VendedorDashboardProps)
                       )}
                     </div>
                     {Number(selectedClient.outstandingBalance || 0) > 0 && (
-                      <div style={{ marginTop: '8px', padding: '8px', backgroundColor: '#FDF2F2', border: '1px solid #F8B4B4', borderRadius: '4px', color: '#9B1C1C', fontSize: '0.775rem', display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                        <strong>⚠️ Bloqueo de Cuenta Corriente (Boleta contra Boleta):</strong>
-                        <span>Este cliente posee una deuda activa de <strong>${Number(selectedClient.outstandingBalance).toLocaleString()}</strong>. No se permite registrar nuevos pedidos a crédito (C/C).</span>
+                      <div style={{ marginTop: '8px', padding: '8px', backgroundColor: '#FFF9E6', border: '1px solid #FFE0B2', borderRadius: '4px', color: '#B78103', fontSize: '0.775rem', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                        <strong>�a�️ Cuenta con Deuda Pendiente:</strong>
+                        <span>Este cliente posee una deuda activa de <strong>${Number(selectedClient.outstandingBalance).toLocaleString()}</strong>. Se registrará el pedido, pero quedará sujeto a aprobación de administración.</span>
                       </div>
                     )}
                   </div>
@@ -461,7 +451,7 @@ export default function VendedorDashboard({ activeTab }: VendedorDashboardProps)
               </div>
 
               {/* Clic 2: Armar Carrito de Compras */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '20px' }}>
+              <div className="order-creation-grid">
                 {/* Columna Izquierda: Catálogo */}
                 <div className="card" style={{ display: 'flex', flexDirection: 'column' }}>
                   <h3 style={{ fontSize: '0.95rem', fontWeight: 600, marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -469,67 +459,144 @@ export default function VendedorDashboard({ activeTab }: VendedorDashboardProps)
                     <span>Agregar Productos al Carrito</span>
                   </h3>
                   
-                  <div style={{ display: 'flex', gap: '8px', marginBottom: '10px' }}>
-                    <div className="search-input-wrapper" style={{ flex: 1 }}>
+                  <div className="catalog-filters-row">
+                    <div className="search-input-wrapper" style={{ flex: 1.2 }}>
                       <input
                         type="text"
                         className="input"
-                        placeholder="Filtrar catálogo..."
+                        placeholder="🔍 Filtrar catálogo..."
                         value={prodSearchQuery}
                         onChange={(e) => setProdSearchQuery(e.target.value)}
                       />
                     </div>
-                    <div className="search-input-wrapper" style={{ flex: 1 }}>
-                      <input
-                        type="text"
-                        className={`input ${barcodeError ? 'border-danger' : ''}`}
-                        placeholder="Escanear Código Barras..."
-                        value={barcodeInput}
-                        onChange={(e) => setBarcodeInput(e.target.value)}
-                        onKeyDown={handleBarcodeScan}
-                        style={{
-                          borderColor: barcodeError ? '#C5221F' : undefined,
-                          backgroundColor: barcodeError ? '#FDF6F6' : undefined,
-                          transition: 'all 0.2s ease'
-                        }}
-                      />
+                    <div style={{ flex: 1 }}>
+                      <select
+                        className="input"
+                        value={filterRubroId}
+                        onChange={(e) => setFilterRubroId(e.target.value)}
+                        style={{ height: '40px', fontSize: '0.85rem', padding: '8px 12px' }}
+                      >
+                        <option value="">-- Todos los Rubros --</option>
+                        {rubros.map((r) => (
+                          <option key={r.id} value={r.id}>{r.name}</option>
+                        ))}
+                      </select>
                     </div>
+
                   </div>
 
-                  <div className="catalog-list" style={{ flex: 1, maxHeight: '350px', overflowY: 'auto' }}>
-                    {products.length === 0 ? (
-                      <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-secondary)' }}>No hay productos.</div>
-                    ) : (
-                      products.map(p => {
-                        const price = getItemPrice(p, selectedClient);
-                        const hasCustomPrice = selectedClient && (
-                          (selectedClient.priceList === 'B' && p.listPriceB > 0) || 
-                          (selectedClient.priceList === 'C' && p.listPriceC > 0) ||
-                          Number(selectedClient.discount || 0) > 0
-                        );
-                        return (
-                          <div key={p.id} className="list-item" style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid var(--border-color)' }}>
-                            <div>
-                              <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>{p.name}</div>
-                              <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Stock: {p.stock} u.</div>
+                  <div className="catalog-grid" style={{ flex: 1, maxHeight: '600px', overflowY: 'auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '8px', padding: '10px 4px' }}>
+                    {(() => {
+                      const filtered = products
+                        .filter(p => {
+                          if (filterRubroId && Number(p.rubroId) !== Number(filterRubroId)) return false;
+                          return true;
+                        })
+                        .sort((a, b) => {
+                          const rubroA = rubros.find(r => Number(r.id) === Number(a.rubroId))?.name || 'Z';
+                          const rubroB = rubros.find(r => Number(r.id) === Number(b.rubroId))?.name || 'Z';
+                          if (rubroA < rubroB) return -1;
+                          if (rubroA > rubroB) return 1;
+                          return a.name.localeCompare(b.name);
+                        });
+
+                      return filtered.length === 0 ? (
+                        <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-secondary)', gridColumn: '1 / -1' }}>No se encontraron productos.</div>
+                      ) : (
+                        filtered.map(p => {
+                          const price = getItemPrice(p, selectedClient);
+                          const isMelincue = p.description?.toUpperCase() === 'MELINCUE' || p.name?.toUpperCase().includes('MELINCUE');
+                          const hasCustomPrice = selectedClient && (
+                            (selectedClient.priceList === 'B' && isMelincue) ||
+                            Number(selectedClient.discount || 0) > 0
+                          );
+                          
+                          // Helper para imágenes realistas de demostración
+                          const getFallbackImage = (product: any) => {
+                             let keyword = 'groceries,food';
+                             const name = product.name.toLowerCase();
+                             if (name.includes('queso') || name.includes('melincue') || name.includes('sardo') || name.includes('mozzarella')) keyword = 'cheese';
+                             else if (name.includes('leche') || name.includes('crema') || name.includes('yogurt') || name.includes('manteca')) keyword = 'milk,dairy';
+                             else if (name.includes('fiambre') || name.includes('jamon') || name.includes('bondiola')) keyword = 'ham,meat';
+                             else if (name.includes('cerveza') || name.includes('vino') || name.includes('bebida')) keyword = 'beer,beverage';
+                             else if (name.includes('miel') || name.includes('dulce')) keyword = 'honey,sweet';
+                             return `https://loremflickr.com/320/240/${keyword}?random=${product.id}`;
+                          };
+                          
+                          const imgSrc = p.imageUrl || getFallbackImage(p);
+
+                          return (
+                            <div key={p.id} className="product-card" style={{ 
+                              backgroundColor: '#fff', 
+                              borderRadius: '4px', 
+                              border: '1px solid transparent', 
+                              overflow: 'hidden', 
+                              display: 'flex', 
+                              flexDirection: 'column',
+                              alignItems: 'center',
+                              padding: '12px',
+                              transition: 'box-shadow 0.2s ease, transform 0.2s ease',
+                              cursor: 'pointer'
+                            }}
+                            onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 16px rgba(0,0,0,0.06)'; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}
+                            onClick={() => { if(p.stock > 0) addToCart(p); }}
+                            >
+                              <div style={{ position: 'relative', height: '130px', width: '100%', backgroundColor: '#fff', marginBottom: '8px' }}>
+                                <img src={imgSrc} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'contain' }} loading="lazy" />
+                                {p.stock <= p.minStock && p.stock > 0 && (
+                                   <span style={{ position: 'absolute', top: '0', right: '0', background: 'var(--color-warning)', color: '#fff', fontSize: '0.65rem', padding: '2px 6px', borderRadius: '4px', fontWeight: 700 }}>Poco Stock</span>
+                                )}
+                                {p.stock <= 0 && (
+                                   <span style={{ position: 'absolute', top: '0', right: '0', background: 'var(--color-danger)', color: '#fff', fontSize: '0.65rem', padding: '2px 6px', borderRadius: '4px', fontWeight: 700 }}>Agotado</span>
+                                )}
+                              </div>
+                              
+                              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', textAlign: 'center', flex: 1 }}>
+                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1 }}>
+                                  <span style={{ fontWeight: 800, fontSize: '1.3rem', color: hasCustomPrice ? 'var(--color-success)' : 'var(--text-primary)', lineHeight: '1' }}>
+                                    ${price.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                                  </span>
+                                  
+                                  {hasCustomPrice && (
+                                    <span style={{ fontSize: '0.75rem', color: 'var(--color-danger)', textDecoration: 'line-through', marginTop: '2px', fontWeight: 600 }}>
+                                      Antes: ${Number(p.listPrice).toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                                    </span>
+                                  )}
+                                  
+                                  <div style={{ fontWeight: 600, fontSize: '0.8rem', marginTop: '8px', lineHeight: '1.2', color: 'var(--text-primary)' }}>
+                                    {p.name}
+                                  </div>
+                                </div>
+
+                                <button
+                                  type="button"
+                                  style={{
+                                    marginTop: '12px',
+                                    width: '100%',
+                                    padding: '8px',
+                                    borderRadius: '20px',
+                                    backgroundColor: p.stock <= 0 ? 'var(--border-color)' : 'var(--text-primary)',
+                                    color: p.stock <= 0 ? 'var(--text-secondary)' : '#fff',
+                                    border: 'none',
+                                    fontWeight: 700,
+                                    fontSize: '0.75rem',
+                                    cursor: p.stock <= 0 ? 'not-allowed' : 'pointer',
+                                    transition: 'opacity 0.2s'
+                                  }}
+                                  onClick={(e) => { e.stopPropagation(); addToCart(p); }}
+                                  disabled={p.stock <= 0}
+                                  onMouseEnter={(e) => { if (p.stock > 0) e.currentTarget.style.opacity = '0.9'; }}
+                                  onMouseLeave={(e) => { if (p.stock > 0) e.currentTarget.style.opacity = '1'; }}
+                                >
+                                  {p.stock <= 0 ? 'AGOTADO' : '+ AGREGAR'}
+                                </button>
+                              </div>
                             </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                              <span style={{ fontWeight: 600, fontSize: '0.9rem', color: hasCustomPrice ? 'var(--color-success)' : 'var(--text-primary)' }}>
-                                ${price.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                              </span>
-                              <button
-                                type="button"
-                                className="btn btn-primary"
-                                style={{ padding: '4px 8px', borderRadius: '4px', fontSize: '0.75rem' }}
-                                onClick={() => addToCart(p)}
-                              >
-                                +
-                              </button>
-                            </div>
-                          </div>
-                        );
-                      })
-                    )}
+                          );
+                        })
+                      );
+                    })()}
                   </div>
                 </div>
 
@@ -573,6 +640,20 @@ export default function VendedorDashboard({ activeTab }: VendedorDashboardProps)
                   </div>
 
                   <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '16px', marginTop: '16px' }}>
+                    {/* Notas/Observaciones */}
+                    <div style={{ marginBottom: '14px' }}>
+                      <label style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>
+                        �x� Notas / Observaciones del Envío:
+                      </label>
+                      <textarea
+                        className="input"
+                        placeholder="Ej: Entregar después de las 17 hs, tiene cambio..."
+                        style={{ width: '100%', fontSize: '0.8rem', padding: '8px', minHeight: '50px', resize: 'vertical' }}
+                        value={orderNotes}
+                        onChange={(e) => setOrderNotes(e.target.value)}
+                      />
+                    </div>
+
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '16px' }}>
                       <span style={{ fontSize: '0.9rem', fontWeight: 500 }}>Importe Total:</span>
                       <span style={{ fontSize: '1.45rem', fontWeight: 700, color: 'var(--accent-color)' }}>
@@ -592,10 +673,17 @@ export default function VendedorDashboard({ activeTab }: VendedorDashboardProps)
                 </div>
               </div>
             </div>
-          ) : (
-            /* Historial de Pedidos */
-            <div className="table-container">
-              <table>
+          </div>
+        </div>
+      )}
+
+      {/* ====================================================================
+          1.5 HISTORIAL DE PEDIDOS
+          ==================================================================== */}
+      {activeTab === 'history' && (
+        <div>
+          <div className="table-container">
+            <table>
                 <thead>
                   <tr>
                     <th>Fecha</th>
@@ -648,7 +736,6 @@ export default function VendedorDashboard({ activeTab }: VendedorDashboardProps)
                 </tbody>
               </table>
             </div>
-          )}
         </div>
       )}
 
@@ -662,7 +749,7 @@ export default function VendedorDashboard({ activeTab }: VendedorDashboardProps)
               <input
                 type="text"
                 className="input"
-                placeholder="Buscar mis clientes..."
+                placeholder="🔍 Buscar mis clientes..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
@@ -678,9 +765,6 @@ export default function VendedorDashboard({ activeTab }: VendedorDashboardProps)
               <thead>
                 <tr>
                   <th>Nombre/Razón Social</th>
-                  <th>CUIT / ID Fiscal</th>
-                  <th>Lista</th>
-                  <th>Saldo C/C</th>
                   <th>Dirección de Entrega</th>
                   <th>Teléfono</th>
                 </tr>
@@ -688,30 +772,13 @@ export default function VendedorDashboard({ activeTab }: VendedorDashboardProps)
               <tbody>
                 {clients.length === 0 ? (
                   <tr>
-                    <td colSpan={6} style={{ textAlign: 'center', padding: '24px 0' }}>No se encontraron clientes asociados a tu cuenta.</td>
+                    <td colSpan={3} style={{ textAlign: 'center', padding: '24px 0' }}>No se encontraron clientes asociados a tu cuenta.</td>
                   </tr>
                 ) : (
                   clients.map((c) => {
-                    const balance = Number(c.outstandingBalance || 0);
                     return (
                       <tr key={c.id}>
                         <td style={{ fontWeight: 600 }}>{c.name}</td>
-                        <td style={{ fontFamily: 'monospace' }}>{c.cuit || 'Sin CUIT'}</td>
-                        <td>
-                          <span style={{
-                            fontSize: '0.75rem',
-                            fontWeight: 600,
-                            backgroundColor: c.priceList === 'C' ? '#E5F6FD' : c.priceList === 'B' ? '#FDF6E2' : '#F2F2F7',
-                            color: c.priceList === 'C' ? '#0288D1' : c.priceList === 'B' ? '#B78103' : '#3A3A3C',
-                            padding: '3px 6px',
-                            borderRadius: '4px'
-                          }}>
-                            {c.priceList === 'C' ? 'Dist C' : c.priceList === 'B' ? 'Esp B' : 'Est A'}
-                          </span>
-                        </td>
-                        <td style={{ fontWeight: 600, color: balance > 0 ? 'var(--color-danger)' : balance < 0 ? 'var(--color-success)' : 'var(--text-secondary)' }}>
-                          ${balance.toLocaleString()}
-                        </td>
                         <td>{c.address || 'Sin dirección'}</td>
                         <td>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -739,48 +806,122 @@ export default function VendedorDashboard({ activeTab }: VendedorDashboardProps)
           3. CATALOGO DE PRODUCTOS (READ-ONLY)
           ==================================================================== */}
       {activeTab === 'products' && (
-        <div>
-          <div className="actions-bar">
-            <div className="search-input-wrapper">
+        <div className="no-print">
+          <div className="actions-bar" style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap', marginBottom: '16px' }}>
+            <div className="search-input-wrapper" style={{ flex: 1, minWidth: '250px' }}>
               <input
                 type="text"
                 className="input"
-                placeholder="Buscar en el catálogo..."
+                placeholder="🔍 Buscar en el catálogo..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
+            <div className="form-group" style={{ margin: 0, minWidth: '180px' }}>
+              <select
+                className="input"
+                style={{ height: '40px', fontSize: '0.85rem', padding: '8px 12px' }}
+                value={filterRubroId}
+                onChange={(e) => setFilterRubroId(e.target.value)}
+              >
+                <option value="">-- Todos los Rubros --</option>
+                {rubros.map((r) => (
+                  <option key={r.id} value={r.id}>{r.name}</option>
+                ))}
+              </select>
+            </div>
+            <button 
+              type="button"
+              className="btn btn-secondary" 
+              style={{ padding: '6px 12px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}
+              onClick={() => setIsPriceListModalOpen(true)}
+            >
+              <span>📄 </span>
+              <span>Listas PDF</span>
+            </button>
           </div>
 
-          <div className="table-container">
-            <table>
-              <thead>
-                <tr>
-                  <th>SKU</th>
-                  <th>Nombre</th>
-                  <th>Precio Venta (Lista)</th>
-                  <th>Stock Físico</th>
-                </tr>
-              </thead>
-              <tbody>
-                {products.length === 0 ? (
-                  <tr>
-                    <td colSpan={4} style={{ textAlign: 'center', padding: '24px 0' }}>No se encontraron productos.</td>
-                  </tr>
-                ) : (
-                  products.map((p) => (
-                    <tr key={p.id}>
-                      <td style={{ fontFamily: 'monospace', fontWeight: 600 }}>{p.sku}</td>
-                      <td style={{ fontWeight: 500 }}>{p.name}</td>
-                      <td style={{ fontWeight: 600 }}>${p.listPrice}</td>
-                      <td>{p.stock} u.</td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+          <div className="catalog-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '8px', padding: '10px 4px' }}>
+            {(() => {
+              const filtered = products
+                .filter(p => {
+                  if (filterRubroId && Number(p.rubroId) !== Number(filterRubroId)) return false;
+                  return true;
+                })
+                .sort((a, b) => {
+                  const rubroA = rubros.find(r => Number(r.id) === Number(a.rubroId))?.name || 'Z';
+                  const rubroB = rubros.find(r => Number(r.id) === Number(b.rubroId))?.name || 'Z';
+                  if (rubroA < rubroB) return -1;
+                  if (rubroA > rubroB) return 1;
+                  return a.name.localeCompare(b.name);
+                });
+
+              return filtered.length === 0 ? (
+                <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-secondary)', gridColumn: '1 / -1' }}>No se encontraron productos.</div>
+              ) : (
+                filtered.map((p) => {
+                  // Helper para imágenes realistas de demostración
+                  const getFallbackImage = (product: any) => {
+                     let keyword = 'groceries,food';
+                     const name = product.name.toLowerCase();
+                     if (name.includes('queso') || name.includes('melincue') || name.includes('sardo') || name.includes('mozzarella')) keyword = 'cheese';
+                     else if (name.includes('leche') || name.includes('crema') || name.includes('yogurt') || name.includes('manteca')) keyword = 'milk,dairy';
+                     else if (name.includes('fiambre') || name.includes('jamon') || name.includes('bondiola')) keyword = 'ham,meat';
+                     else if (name.includes('cerveza') || name.includes('vino') || name.includes('bebida')) keyword = 'beer,beverage';
+                     else if (name.includes('miel') || name.includes('dulce')) keyword = 'honey,sweet';
+                     return `https://loremflickr.com/320/240/${keyword}?random=${product.id}`;
+                  };
+                  
+                  const imgSrc = p.imageUrl || getFallbackImage(p);
+
+                  return (
+                    <div key={p.id} className="product-card" style={{ 
+                      backgroundColor: '#fff', 
+                      borderRadius: '4px', 
+                      border: '1px solid transparent', 
+                      overflow: 'hidden', 
+                      display: 'flex', 
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      padding: '12px',
+                      transition: 'box-shadow 0.2s ease, transform 0.2s ease'
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 16px rgba(0,0,0,0.06)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}
+                    >
+                      <div style={{ position: 'relative', height: '130px', width: '100%', backgroundColor: '#fff', marginBottom: '8px' }}>
+                        <img src={imgSrc} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'contain' }} loading="lazy" />
+                        {p.stock <= p.minStock && p.stock > 0 && (
+                           <span style={{ position: 'absolute', top: '0', right: '0', background: 'var(--color-warning)', color: '#fff', fontSize: '0.65rem', padding: '2px 6px', borderRadius: '4px', fontWeight: 700 }}>Poco Stock</span>
+                        )}
+                        {p.stock <= 0 && (
+                           <span style={{ position: 'absolute', top: '0', right: '0', background: 'var(--color-danger)', color: '#fff', fontSize: '0.65rem', padding: '2px 6px', borderRadius: '4px', fontWeight: 700 }}>Agotado</span>
+                        )}
+                      </div>
+                      
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', textAlign: 'center', flex: 1 }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1 }}>
+                          <span style={{ fontWeight: 800, fontSize: '1.3rem', color: 'var(--text-primary)', lineHeight: '1' }}>
+                            ${Number(p.listPrice).toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                          </span>
+                          
+                          <div style={{ fontWeight: 600, fontSize: '0.8rem', marginTop: '8px', lineHeight: '1.2', color: 'var(--text-primary)' }}>
+                            {p.name}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              );
+            })()}
           </div>
         </div>
+      )}
+
+      {/* Modal Lista de Precios PDF */}
+      {isPriceListModalOpen && (
+        <PriceListModal isOpen={isPriceListModalOpen} onClose={() => setIsPriceListModalOpen(false)} />
       )}
 
       {/* ALTA CLIENTE MODAL */}
@@ -789,7 +930,7 @@ export default function VendedorDashboard({ activeTab }: VendedorDashboardProps)
           <div className="modal-content">
             <div className="modal-header">
               <h3>Registrar Nuevo Cliente</h3>
-              <button className="btn btn-ghost" style={{ padding: '4px' }} onClick={() => setClientModal({ ...clientModal, open: false })}>✕</button>
+              <button className="btn btn-ghost" style={{ padding: '4px' }} onClick={() => setClientModal({ ...clientModal, open: false })}>�S"</button>
             </div>
             <form onSubmit={handleCreateClient}>
               <div className="form-group">
@@ -873,7 +1014,7 @@ export default function VendedorDashboard({ activeTab }: VendedorDashboardProps)
           <div className="modal-content" style={{ maxWidth: '600px' }}>
             <div className="modal-header">
               <h3>Pedido #{orderDetailsModal.id}</h3>
-              <button className="btn btn-ghost" style={{ padding: '4px' }} onClick={() => setOrderDetailsModal(null)}>✕</button>
+              <button className="btn btn-ghost" style={{ padding: '4px' }} onClick={() => setOrderDetailsModal(null)}>�S"</button>
             </div>
             
             {/* Barra de progreso de preparación (Fase 2) */}
@@ -909,7 +1050,7 @@ export default function VendedorDashboard({ activeTab }: VendedorDashboardProps)
                           border: isActive ? '2px solid var(--text-primary)' : 'none',
                           transition: 'all 0.3s'
                         }}>
-                          {isCompleted ? '✓' : idx + 1}
+                          {isCompleted ? '�S' : idx + 1}
                         </div>
                         <span style={{ fontSize: '0.7rem', marginTop: '6px', fontWeight: isActive ? 600 : 400, color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)' }}>
                           {step.label}
@@ -930,7 +1071,7 @@ export default function VendedorDashboard({ activeTab }: VendedorDashboardProps)
               </div>
             ) : (
               <div style={{ padding: '8px 12px', backgroundColor: '#FFF2F2', color: 'var(--color-danger)', borderRadius: '4px', fontSize: '0.85rem', fontWeight: 500, marginBottom: '16px', display: 'inline-block' }}>
-                🚫 Este pedido ha sido CANCELADO.
+                �xa� Este pedido ha sido CANCELADO.
               </div>
             )}
 
@@ -939,6 +1080,11 @@ export default function VendedorDashboard({ activeTab }: VendedorDashboardProps)
               <p><strong>Dirección:</strong> {orderDetailsModal.client?.address || 'S/D'}</p>
               <p><strong>Estado:</strong> <span className={`badge badge-${orderDetailsModal.status.toLowerCase()}`}>{orderDetailsModal.status}</span></p>
               <p><strong>Fecha de Carga:</strong> {new Date(orderDetailsModal.createdAt).toLocaleString('es-AR')}</p>
+              {orderDetailsModal.notes && (
+                <div style={{ marginTop: '10px', padding: '8px 12px', backgroundColor: '#FEF7E0', borderLeft: '3px solid #FBBC04', borderRadius: '4px' }}>
+                  <strong>�x� Notas de Entrega:</strong> {orderDetailsModal.notes}
+                </div>
+              )}
             </div>
 
             <div className="table-container" style={{ maxHeight: '200px', overflowY: 'auto' }}>
@@ -986,7 +1132,7 @@ export default function VendedorDashboard({ activeTab }: VendedorDashboardProps)
           <div className="modal-content" style={{ maxWidth: '800px', display: 'flex', flexDirection: 'column', maxHeight: '90vh' }}>
             <div className="modal-header">
               <h3>Editar Pedido #{editOrderModal.orderId} - {editOrderModal.clientName}</h3>
-              <button className="btn btn-ghost" style={{ padding: '4px' }} onClick={() => setEditOrderModal(null)}>✕</button>
+              <button className="btn btn-ghost" style={{ padding: '4px' }} onClick={() => setEditOrderModal(null)}>�S"</button>
             </div>
             
             <div style={{ display: 'grid', gridTemplateColumns: '1.1fr 1fr', gap: '20px', overflowY: 'auto', flex: 1, padding: '10px 0' }}>
@@ -997,7 +1143,7 @@ export default function VendedorDashboard({ activeTab }: VendedorDashboardProps)
                   <input
                     type="text"
                     className="input"
-                    placeholder="Buscar producto..."
+                    placeholder="🔍 Buscar producto..."
                     value={prodSearchQuery}
                     onChange={(e) => setProdSearchQuery(e.target.value)}
                   />

@@ -69,6 +69,7 @@ model User {
   auditLogs      AuditLog[]
   personas       Persona[]
   cashDrawers    CashDrawer[]
+  creditNotes    CreditNote[]
 }
 
 model Persona {
@@ -111,6 +112,8 @@ model Persona {
   supplierInvoices   SupplierInvoice[]
   taxWithholdings    TaxWithholding[]
   purchaseOrders     PurchaseOrder[]
+  creditNotes        CreditNote[]
+  products           Product[]
 }
 
 model Product {
@@ -125,6 +128,9 @@ model Product {
   listPriceC  Decimal  @default(0.00) @db.Decimal(12, 2)
   stock       Int      @default(0)
   minStock    Int      @default(0)
+  isPesable   Boolean  @default(false)
+  approximateWeight Decimal? @db.Decimal(12, 3)
+  imageUrl    String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -133,6 +139,11 @@ model Product {
   stockMovements StockMovement[]
   lots               ProductLot[]
   purchaseOrderItems PurchaseOrderItem[]
+  creditNoteItems    CreditNoteItem[]
+  rubroId            Int?
+  rubro              Rubro?              @relation(fields: [rubroId], references: [id])
+  providerId         Int?
+  provider           Persona?            @relation(fields: [providerId], references: [id])
 }
 
 model Order {
@@ -159,6 +170,7 @@ model Order {
   transactions    Transaction[]
   deliveryRouteId Int?
   deliveryRoute   DeliveryRoute? @relation(fields: [deliveryRouteId], references: [id])
+  creditNotes     CreditNote[]
 }
 
 model OrderItem {
@@ -168,6 +180,7 @@ model OrderItem {
   productId     Int
   product       Product        @relation(fields: [productId], references: [id])
   quantity      Int
+  weight        Decimal?       @db.Decimal(12, 3)
   unitPrice     Decimal        @db.Decimal(12, 2)
   subtotal      Decimal        @db.Decimal(12, 2)
   orderItemLots OrderItemLot[]
@@ -262,7 +275,12 @@ model Transaction {
   bankAccountId Int?
   bankAccount   BankAccount?    @relation(fields: [bankAccountId], references: [id])
 
+  // Relación con facturas de proveedor
+  supplierInvoiceId Int?
+  supplierInvoice   SupplierInvoice? @relation(fields: [supplierInvoiceId], references: [id])
+
   createdAt     DateTime        @default(now())
+  verified      Boolean         @default(false)
 }
 
 model AuditLog {
@@ -279,18 +297,22 @@ model AuditLog {
 }
 
 model SupplierInvoice {
-  id               Int      @id @default(autoincrement())
+  id               Int           @id @default(autoincrement())
   personaId        Int
-  persona          Persona  @relation(fields: [personaId], references: [id])
-  invoiceNumber    String   // Nro comprobante ej: "0001-00004321"
-  invoiceType      String   // "FACTURA_A" | "FACTURA_B" | "FACTURA_C"
+  persona          Persona       @relation(fields: [personaId], references: [id])
+  invoiceNumber    String        // Nro comprobante ej: "0001-00004321"
+  invoiceType      String        // "FACTURA_A" | "FACTURA_B" | "FACTURA_C"
   issueDate        DateTime
-  netAmount        Decimal  @db.Decimal(12, 2) // Neto Gravado
-  taxAmount        Decimal  @db.Decimal(12, 2) // IVA Crédito Fiscal
-  percepcionAmount Decimal  @default(0.00) @db.Decimal(12, 2) // Percepciones IIBB / IVA sufridas
-  totalAmount      Decimal  @db.Decimal(12, 2) // Total
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  dueDate          DateTime?     // Fecha de vencimiento
+  status           String        @default("PENDING") // "PENDING" | "PAID" | "PARTIALLY_PAID"
+  paidAmount       Decimal       @default(0.00) @db.Decimal(12, 2)
+  netAmount        Decimal       @db.Decimal(12, 2) // Neto Gravado
+  taxAmount        Decimal       @db.Decimal(12, 2) // IVA Crédito Fiscal
+  percepcionAmount Decimal       @default(0.00) @db.Decimal(12, 2) // Percepciones IIBB / IVA sufridas
+  totalAmount      Decimal       @db.Decimal(12, 2) // Total
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  transactions     Transaction[]
 }
 
 model TaxWithholding {
@@ -341,4 +363,48 @@ model PurchaseOrderItem {
   quantity        Int
   costPrice       Decimal       @db.Decimal(12, 2)
   subtotal        Decimal       @db.Decimal(12, 2)
+}
+
+model CreditNote {
+  id               Int              @id @default(autoincrement())
+  personaId        Int
+  persona          Persona          @relation(fields: [personaId], references: [id])
+  orderId          Int?             // Vinculación opcional a una factura/pedido específico
+  order            Order?           @relation(fields: [orderId], references: [id])
+  userId           Int
+  user             User             @relation(fields: [userId], references: [id])
+  billingType      BillingType      @default(INTERNAL)
+  creditNoteType   String           // "NOTA_CREDITO_A" | "NOTA_CREDITO_B" | "NOTA_CREDITO_C" | "NOTA_CREDITO_INTERNA"
+  creditNoteNumber String?          // Nro comprobante ej: "00001-00000124"
+  cae              String?
+  caeDueDate       DateTime?
+  totalAmount      Decimal          @db.Decimal(12, 2)
+  netAmount        Decimal          @default(0.00) @db.Decimal(12, 2)
+  taxAmount        Decimal          @default(0.00) @db.Decimal(12, 2)
+  reason           String           // "DEVOLUCION" | "DESCUENTO" | "ERROR_FACTURACION"
+  comments         String?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  items            CreditNoteItem[]
+}
+
+model CreditNoteItem {
+  id           Int        @id @default(autoincrement())
+  creditNoteId Int
+  creditNote   CreditNote @relation(fields: [creditNoteId], references: [id], onDelete: Cascade)
+  productId    Int
+  product      Product    @relation(fields: [productId], references: [id])
+  quantity     Int
+  unitPrice    Decimal    @db.Decimal(12, 2)
+  subtotal     Decimal    @db.Decimal(12, 2)
+}
+
+model Rubro {
+  id          Int       @id @default(autoincrement())
+  name        String    @unique
+  description String?
+  products    Product[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 }

@@ -30,6 +30,9 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
   // Formato: { [orderItemId: number]: { [lotId: number]: number } }
   const [lotAssignments, setLotAssignments] = useState<{ [orderItemId: number]: { [lotId: number]: number } }>({});
   
+  // Pesos exactos para productos pesables
+  const [pesableWeights, setPesableWeights] = useState<{ [orderItemId: number]: number }>({});
+  
   const [searchQuery, setSearchQuery] = useState('');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
@@ -63,6 +66,8 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
   useEffect(() => {
     if (selectedOrder) {
       const initial: any = {};
+      const initialWeights: any = {};
+      
       selectedOrder.items.forEach((item: any) => {
         initial[item.id] = {};
         
@@ -72,10 +77,16 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
             initial[item.id][oil.productLotId] = oil.quantity;
           });
         }
+        
+        if (item.weight) {
+          initialWeights[item.id] = Number(item.weight);
+        }
       });
       setLotAssignments(initial);
+      setPesableWeights(initialWeights);
     } else {
       setLotAssignments({});
+      setPesableWeights({});
     }
   }, [selectedOrder]);
 
@@ -194,6 +205,16 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
     }
 
     try {
+      // 1. Enviar pesos exactos si existen
+      const weightItems = Object.entries(pesableWeights).map(([orderItemId, weight]) => ({
+        orderItemId: Number(orderItemId),
+        weight: Number(weight)
+      })).filter(i => i.weight > 0);
+      
+      if (weightItems.length > 0) {
+        await api.updateOrderWeights(orderId, weightItems);
+      }
+      
       await api.updateOrderStatus(orderId, OrderStatus.PREPARED, assignmentsPayload);
       setSuccessMsg(`Pedido #${orderId} preparado correctamente. Esperando facturación.`);
       setSelectedOrder(null);
@@ -411,6 +432,34 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
                                   {assignedSum} de {item.quantity} u.
                                 </span>
                               </div>
+
+                              {/* Input de peso exacto si es pesable */}
+                              {item.product?.isPesable && (
+                                <div style={{
+                                  marginTop: '10px',
+                                  paddingTop: '10px',
+                                  borderTop: '1px solid var(--border-color)',
+                                  display: 'flex',
+                                  justifyContent: 'space-between',
+                                  alignItems: 'center'
+                                }}>
+                                  <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--accent-color)' }}>
+                                    ⚖️ Peso Exacto Total:
+                                  </span>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    <input
+                                      type="number"
+                                      step="0.001"
+                                      className="input"
+                                      style={{ width: '90px', textAlign: 'right' }}
+                                      placeholder="Ej: 4.250"
+                                      value={pesableWeights[item.id] || ''}
+                                      onChange={(e) => setPesableWeights(prev => ({ ...prev, [item.id]: Number(e.target.value) }))}
+                                    />
+                                    <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>Kg</span>
+                                  </div>
+                                </div>
+                              )}
                             </div>
                           </td>
                           <td style={{ fontWeight: 700, verticalAlign: 'top', paddingTop: '16px' }}>{item.quantity} u.</td>

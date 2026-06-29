@@ -99,7 +99,7 @@ export async function getSupplierInvoices(req: AuthenticatedRequest, res: Respon
  * Registrar un nuevo comprobante de compra (Factura de Proveedor)
  */
 export async function createSupplierInvoice(req: AuthenticatedRequest, res: Response): Promise<void> {
-  const { personaId, invoiceNumber, invoiceType, issueDate, netAmount, taxAmount, percepcionAmount, totalAmount } = req.body;
+  const { personaId, invoiceNumber, invoiceType, issueDate, dueDate, netAmount, taxAmount, percepcionAmount, totalAmount } = req.body;
   const userId = req.user?.id;
 
   if (!personaId || !invoiceNumber || !invoiceType || !issueDate || netAmount === undefined || taxAmount === undefined || totalAmount === undefined) {
@@ -111,6 +111,8 @@ export async function createSupplierInvoice(req: AuthenticatedRequest, res: Resp
   }
 
   try {
+    const resolvedDueDate = dueDate ? new Date(dueDate) : new Date(new Date(issueDate).getTime() + 30 * 24 * 3600 * 1000);
+
     const invoice = await prisma.$transaction(async (tx) => {
       // 1. Crear la factura de compra
       const inv = await tx.supplierInvoice.create({
@@ -119,6 +121,9 @@ export async function createSupplierInvoice(req: AuthenticatedRequest, res: Resp
           invoiceNumber,
           invoiceType,
           issueDate: new Date(issueDate),
+          dueDate: resolvedDueDate,
+          status: 'PENDING',
+          paidAmount: 0.00,
           netAmount: Number(netAmount),
           taxAmount: Number(taxAmount),
           percepcionAmount: Number(percepcionAmount || 0),

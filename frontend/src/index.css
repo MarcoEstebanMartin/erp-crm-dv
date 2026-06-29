@@ -15,6 +15,8 @@
   --border-color: #E5E5EA;    /* Borde suave */
   --border-focus: #1D1D1F;    /* Foco de borde (Negro) */
   
+  --color-primary: #1D1D1F;   /* Negro Apple para elementos seleccionados/activos */
+  
   /* Acento Principal (Rojo suave/elegante para Distribución) */
   --accent-color: #E30613;    /* Rojo mate elegante */
   --accent-hover: #C8102E;    /* Rojo oscuro hover */
@@ -315,11 +317,54 @@ tr:hover td {
   font-size: 1.15rem;
   font-weight: 700;
   letter-spacing: -0.03em;
-  padding: 10px 14px 30px 14px;
+  color: var(--text-primary);
+  display: flex; 
+  flex-direction: column;
+  align-items: center; 
+  justify-content: center;
+  gap: 10px; 
+  padding-bottom: 20px; 
+  border-bottom: 1px solid var(--border-color);
+  margin-bottom: 16px;
+  width: 100%;
+}
+
+.sidebar-logo {
+  height: 80px;
+  width: 80px;
+  object-fit: contain;
+}
+
+.sidebar-status {
   display: flex;
   align-items: center;
-  gap: 10px;
-  color: var(--text-primary);
+  justify-content: center;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.client-select-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.client-info-stats {
+  display: flex;
+  gap: 16px;
+  margin-top: 4px;
+}
+
+.order-creation-grid {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 20px;
+}
+
+.catalog-filters-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
 }
 
 .sidebar-menu {
@@ -598,26 +643,81 @@ tr:hover td {
     width: 100%;
     height: auto;
     position: relative;
-    padding: 16px;
+    padding: 8px 12px;
     border-bottom: 1px solid var(--border-color);
     border-right: none;
   }
   .sidebar-brand {
-    padding-bottom: 10px;
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: none;
+    margin-bottom: 8px;
+    padding: 4px 8px;
+    width: 100%;
+    gap: 8px;
+  }
+  .sidebar-logo {
+    height: 32px;
+    width: auto;
+  }
+  .sidebar-status {
+    margin-top: 0;
+    font-size: 0.75rem;
   }
   .sidebar-menu {
     flex-direction: row;
     flex-wrap: wrap;
+    gap: 4px;
+    justify-content: flex-start;
+  }
+  .sidebar-link {
+    padding: 8px 12px;
+    font-size: 0.85rem;
   }
   .sidebar-user {
     display: none; /* Simplificado para móviles */
   }
   .main-content {
     margin-left: 0;
-    padding: 20px;
+    padding: 16px;
   }
   .selector-grid {
     grid-template-columns: 1fr;
+  }
+  .header-container {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 1rem;
+  }
+  .header-container h1 {
+    font-size: 1.25rem !important;
+  }
+  .header-container p {
+    font-size: 0.75rem !important;
+  }
+  .card {
+    padding: 12px;
+    border-radius: var(--radius-sm);
+  }
+  .client-select-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  .client-info-stats {
+    flex-direction: column;
+    gap: 4px;
+  }
+  .order-creation-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  .catalog-filters-row {
+    flex-direction: column;
+    gap: 8px;
   }
 }
 
@@ -650,3 +750,169 @@ tr:hover td {
   background-color: var(--bg-app);
 }
 
+/* Operating shortcuts cards */
+.shortcut-card:hover {
+  border-color: var(--text-primary) !important;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05) !important;
+}
+.shortcut-card:active {
+  transform: translateY(0);
+}
+
+/* ==========================================================================
+   MICRO-ANIMATIONS & SKELETON LOADERS (AGENTS.md)
+   ========================================================================== */
+
+/* Fade-in for new elements */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn var(--transition-medium) forwards;
+}
+
+/* Skeleton Loading */
+@keyframes shimmer {
+  0% { background-position: -1000px 0; }
+  100% { background-position: 1000px 0; }
+}
+
+.skeleton {
+  background: #f6f7f8;
+  background-image: linear-gradient(
+    to right,
+    #f6f7f8 0%,
+    #edeef1 20%,
+    #f6f7f8 40%,
+    #f6f7f8 100%
+  );
+  background-repeat: no-repeat;
+  background-size: 1000px 100%;
+  animation: shimmer 2s infinite linear forwards;
+  border-radius: var(--radius-sm);
+}
+
+.skeleton-text {
+  height: 14px;
+  width: 100%;
+  margin-bottom: 8px;
+}
+
+/* Hover effects for rows */
+.table-row-hover {
+  transition: background-color var(--transition-fast);
+}
+.table-row-hover:hover {
+  background-color: var(--bg-app);
+}
+
+/* Interactive Feedback */
+.btn:active, .interactive:active {
+  transform: scale(0.98);
+}
+
+/* Estilos para impresión (Hoja de Ruta PDF) */
+@media print {
+  body, html, #root, .main-content, .app-container {
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    font-size: 11pt !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: auto !important;
+    box-shadow: none !important;
+    overflow: visible !important;
+  }
+  
+  .sidebar,
+  .no-print, 
+  .no-print * {
+    display: none !important;
+  }
+
+  .main-content {
+    margin-left: 0 !important;
+    padding: 0 !important;
+  }
+
+  @page {
+    size: A4;
+    margin: 12mm 15mm 12mm 15mm;
+  }
+
+  .print-only {
+    display: block !important;
+    width: 100% !important;
+  }
+  
+  /* Ajustes de tablas de impresión */
+  .print-table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    margin-top: 15px !important;
+  }
+  
+  .print-table th, 
+  .print-table td {
+    border: 1px solid #1D1D1F !important;
+    padding: 6px 8px !important;
+    text-align: left !important;
+    font-size: 10pt !important;
+  }
+  
+  .print-table th {
+    background-color: #f2f2f2 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    font-weight: bold !important;
+  }
+
+  .print-header {
+    border-bottom: 2px solid #1D1D1F !important;
+    padding-bottom: 10px !important;
+    margin-bottom: 20px !important;
+  }
+
+  .print-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 15px !important;
+    margin-bottom: 20px !important;
+  }
+
+  .print-card {
+    border: 1px solid #cccccc !important;
+    border-radius: 4px !important;
+    padding: 10px !important;
+    margin-bottom: 15px !important;
+    background-color: #fafafa !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .print-footer-signatures {
+    margin-top: 50px !important;
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 30px !important;
+    text-align: center !important;
+  }
+
+  .signature-line {
+    border-top: 1px solid #000000 !important;
+    margin-top: 45px !important;
+    padding-top: 5px !important;
+    font-size: 9pt !important;
+    color: #333333 !important;
+  }
+}
+
+.print-only {
+  display: none;
+}

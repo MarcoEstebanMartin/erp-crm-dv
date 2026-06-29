@@ -323,7 +323,7 @@ export async function closeJointDrawers(req: AuthenticatedRequest, res: Response
  * Listado histórico de movimientos financieros con filtros.
  */
 export async function getTransactions(req: AuthenticatedRequest, res: Response): Promise<void> {
-  const { branch, cashDrawerId, bankAccountId, startDate, endDate } = req.query;
+  const { branch, cashDrawerId, bankAccountId, startDate, endDate, paymentMethod, verified } = req.query;
 
   try {
     const whereClause: any = {};
@@ -336,6 +336,12 @@ export async function getTransactions(req: AuthenticatedRequest, res: Response):
     }
     if (bankAccountId) {
       whereClause.bankAccountId = Number(bankAccountId);
+    }
+    if (paymentMethod) {
+      whereClause.paymentMethod = String(paymentMethod);
+    }
+    if (verified !== undefined) {
+      whereClause.verified = verified === 'true';
     }
 
     if (startDate || endDate) {
@@ -374,9 +380,22 @@ export async function getTransactions(req: AuthenticatedRequest, res: Response):
  */
 export async function getBankAccounts(req: AuthenticatedRequest, res: Response): Promise<void> {
   try {
-    const accounts = await prisma.bankAccount.findMany({
+    let accounts = await prisma.bankAccount.findMany({
       orderBy: { name: 'asc' },
     });
+
+    if (accounts.length === 0) {
+      await prisma.bankAccount.createMany({
+        data: [
+          { name: 'Banco Provincia Corriente', accountNumber: 'CTA-4321/0', balance: 500000.00 },
+          { name: 'Mercado Pago Distribuidora', accountNumber: 'CVU-0000003100012345678901', balance: 150000.00 },
+          { name: 'QR', accountNumber: 'QR-ARCA', balance: 0.00 },
+        ],
+      });
+      accounts = await prisma.bankAccount.findMany({
+        orderBy: { name: 'asc' },
+      });
+    }
 
     res.status(200).json({
       status: 'success',
@@ -536,5 +555,62 @@ export async function transferFunds(req: AuthenticatedRequest, res: Response): P
   } catch (error: any) {
     console.error('Error al transferir fondos:', error);
     res.status(400).json({ status: 'error', message: error.message || 'Error al depositar fondos.' });
+  }
+}
+
+/**
+ * Alternar el estado de verificación de una transacción bancaria.
+ */
+export async function verifyTransaction(req: AuthenticatedRequest, res: Response): Promise<void> {
+  const { id } = req.params;
+  const { verified } = req.body;
+
+  try {
+    const txId = Number(id);
+    if (isNaN(txId)) {
+      res.status(400).json({ status: 'error', message: 'ID de transacción inválido.' });
+      return;
+    }
+
+    const transaction = await prisma.transaction.findUnique({
+      where: { id: txId },
+    });
+
+    if (!transaction) {
+      res.status(404).json({ status: 'error', message: 'Transacción no encontrada.' });
+      return;
+    }
+
+    const updatedTx = await prisma.transaction.update({
+      where: { id: txId },
+      data: { verified: Boolean(verified) },
+      include: {
+        user: { select: { id: true, username: true } },
+        persona: { select: { id: true, name: true, isClient: true, isProvider: true } },
+        cashDrawer: true,
+        bankAccount: true,
+      }
+    });
+
+    // Auditoría
+    await logAudit({
+      userId: req.user!.id,
+      action: 'VERIFY_BANK_TRANSFER',
+      entityType: 'Transaction',
+      entityId: txId,
+      newValues: {
+        verified: Boolean(verified),
+        amount: updatedTx.amount,
+        bankAccountId: updatedTx.bankAccountId,
+      },
+    });
+
+    res.status(200).json({
+      status: 'success',
+      data: { transaction: updatedTx },
+    });
+  } catch (error: any) {
+    console.error('Error al verificar transacción:', error);
+    res.status(500).json({ status: 'error', message: 'Error al cambiar estado de verificación.' });
   }
 }

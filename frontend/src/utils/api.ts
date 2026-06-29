@@ -1,7 +1,9 @@
 import { BillingType, InvoiceType, OrderStatus, TransactionType, PaymentMethod } from './types';
+import rawClients from './clients_data.json';
+import rawProducts from './products_data.json';
 
-// Definimos la URL base del API backend
-const API_BASE_URL = 'http://localhost:3000/api';
+// Detecta dinámicamente el host para que funcione en localhost y desde el celular en la red local
+const API_BASE_URL = `http://${window.location.hostname}:3000/api`;
 
 // Verificar si estamos en modo simulación
 let simulationMode = localStorage.getItem('simulation_mode') === 'true';
@@ -22,27 +24,171 @@ export function isSimulationMode() {
 // BASE DE DATOS MOCK (LOCAL STORAGE) PARA MODO SIMULACIÓN
 // ==========================================================================
 function initMockDatabase() {
+  const categoriesList = [
+    { id: 1, name: 'REMOTTI', description: 'Productos de marca Remotti / Melincue' },
+    { id: 2, name: 'LECHES', description: 'Leches líquidas, en polvo, chocolatadas y yogur' },
+    { id: 3, name: 'SANCOR y CREMIGAL', description: 'Cremas, mantecas, dulce de leche y quesos untables' },
+    { id: 4, name: 'QUESOS RALLADOS', description: 'Quesos rallados' },
+    { id: 5, name: 'SODECAR', description: 'Fiambres y chacinados Sodecar' },
+    { id: 6, name: 'CONSERVAS', description: 'Conservas de todo tipo' },
+    { id: 7, name: 'A.G.D Y NIZA', description: 'Aceites, vinagres y aderezos' },
+    { id: 8, name: 'CAFE', description: 'Café, cacao y té' },
+    { id: 9, name: 'ARROZ', description: 'Arroz' },
+    { id: 10, name: 'YERBAS', description: 'Yerbas' },
+    { id: 11, name: 'AZUCAR', description: 'Azúcar' },
+    { id: 12, name: 'EDULCORANTES', description: 'Edulcorantes' },
+    { id: 13, name: 'PESCADERIA', description: 'Conservas de pescado y mariscos' },
+    { id: 14, name: 'PASTAS SECAS', description: 'Fideos y pastas secas' },
+    { id: 15, name: 'PAPELES', description: 'Papel higiénico y rollos de cocina' },
+    { id: 16, name: 'REGALERIA', description: 'Regalería' },
+    { id: 17, name: 'BEBIDAS', description: 'Bebidas con y sin alcohol, gaseosas, aguas, vinos' },
+    { id: 18, name: 'NO COMESTIBLES', description: 'Artículos de limpieza y bazar no comestibles' },
+    { id: 19, name: 'OTROS', description: 'Otros productos no categorizados' }
+  ];
+
+  const dbVersion = localStorage.getItem('db_version');
+  let forceReload = false;
+  if (dbVersion !== '1.1') {
+    forceReload = true;
+    localStorage.setItem('db_version', '1.1');
+  }
+
+  // Migración para forzar recarga de los nuevos clientes reales y vendedores (Fase 5)
+  const personasInStorage = localStorage.getItem('db_personas');
+  if (personasInStorage && !forceReload) {
+    try {
+      const list = JSON.parse(personasInStorage);
+      if (list.length < 100) {
+        forceReload = true;
+      }
+    } catch (e) {
+      forceReload = true;
+    }
+  } else {
+    forceReload = true;
+  }
+
+  const rubrosInStorage = localStorage.getItem('db_rubros');
+  if (rubrosInStorage) {
+    try {
+      const list = JSON.parse(rubrosInStorage);
+      const isMismatched = list.length !== categoriesList.length || 
+        list.some((r: any) => {
+          const matching = categoriesList.find(c => c.name === r.name);
+          return !matching || Number(matching.id) !== Number(r.id);
+        });
+      if (isMismatched || list.some((r: any) => /^\d/.test(r.name))) {
+        forceReload = true;
+      }
+    } catch (e) {
+      forceReload = true;
+    }
+  } else {
+    forceReload = true;
+  }
+
+  const productsInStorage = localStorage.getItem('db_products');
+  if (productsInStorage) {
+    try {
+      const list = JSON.parse(productsInStorage);
+      let changed = false;
+      const sanitized = list.map((p: any) => {
+        if (p.rubroId !== undefined && p.rubroId !== null && typeof p.rubroId === 'string') {
+          p.rubroId = Number(p.rubroId);
+          changed = true;
+        }
+        if (p.providerId !== undefined && p.providerId !== null && typeof p.providerId === 'string') {
+          p.providerId = Number(p.providerId);
+          changed = true;
+        }
+        return p;
+      });
+      if (changed) {
+        localStorage.setItem('db_products', JSON.stringify(sanitized));
+      }
+      if (list.length < 100 || list.some((p: any) => p.rubroId === undefined)) {
+        localStorage.removeItem('db_products');
+        localStorage.removeItem('db_product_lots');
+        forceReload = true;
+      }
+    } catch (e) {
+      localStorage.removeItem('db_products');
+      localStorage.removeItem('db_product_lots');
+      forceReload = true;
+    }
+  } else {
+    forceReload = true;
+  }
+
+  if (forceReload) {
+    localStorage.removeItem('db_users');
+    localStorage.removeItem('db_personas');
+    localStorage.removeItem('db_orders');
+    localStorage.removeItem('db_cash_drawers');
+    localStorage.removeItem('db_transactions');
+    localStorage.removeItem('db_rubros');
+    localStorage.removeItem('db_products');
+    localStorage.removeItem('db_product_lots');
+    localStorage.removeItem('db_bank_accounts');
+    localStorage.removeItem('db_supplier_invoices');
+    localStorage.removeItem('db_credit_notes');
+  }
+
   if (!localStorage.getItem('db_users')) {
     localStorage.setItem('db_users', JSON.stringify([
       { id: 1, username: 'admin', role: 'ADMIN', isActive: true },
-      { id: 2, username: 'vendedor', role: 'VENDEDOR', isActive: true },
-      { id: 3, username: 'deposito', role: 'DEPOSITO', isActive: true },
-      { id: 4, username: 'facturacion', role: 'FACTURACION', isActive: true }
+      { id: 2, username: 'diego', role: 'VENDEDOR', isActive: true },
+      { id: 3, username: 'fabian', role: 'VENDEDOR', isActive: true },
+      { id: 4, username: 'norberto', role: 'VENDEDOR', isActive: true },
+      { id: 5, username: 'maria_jose', role: 'VENDEDOR', isActive: true },
+      { id: 6, username: 'dario', role: 'ADMIN', isActive: true },
+      { id: 7, username: 'agustin', role: 'ADMIN', isActive: true },
+      { id: 8, username: 'miguel', role: 'DEPOSITO', isActive: true },
+      { id: 9, username: 'matias', role: 'DEPOSITO', isActive: true },
+      { id: 10, username: 'thiago', role: 'DEPOSITO', isActive: true },
+      { id: 11, username: 'rocio', role: 'DEPOSITO', isActive: true }
     ]));
   }
 
   if (!localStorage.getItem('db_personas')) {
-    localStorage.setItem('db_personas', JSON.stringify([
-      { id: 1, name: 'Almacén Don Julio', cuit: '20-22233444-9', address: 'Av. Corrientes 1540, CABA', city: 'CABA', phone: '11-4567-8901', email: 'donjulio@gmail.com', sellerId: 2, creditLimit: 150000.00, outstandingBalance: 12500.00, priceList: 'A', discount: 5.00, contacts: [{ name: 'Julio Pérez', phone: '11-4567-8901', email: 'julio@donjulio.com', role: 'Dueño' }], isClient: true, isProvider: false, isSeller: false, isCommissionAgent: false, iibbAliquot: 2.00 },
-      { id: 2, name: 'Supermercado Sol de Mayo', cuit: '30-44455566-9', address: 'Pampa 3200, CABA', city: 'CABA', phone: '11-9876-5432', email: 'soldemayo@gmail.com', sellerId: 2, creditLimit: 300000.00, outstandingBalance: 0.00, priceList: 'B', discount: 0.00, contacts: [{ name: 'María Gómez', phone: '11-9876-5432', email: 'maria@soldemayo.com', role: 'Compras' }], isClient: true, isProvider: false, isSeller: false, isCommissionAgent: false, iibbAliquot: 3.50 },
-      { id: 3, name: 'Distribuidora San Telmo', cuit: '27-33322211-9', address: 'Defensa 840, CABA', city: 'CABA', phone: '11-3322-1100', email: 'santelmo@gmail.com', sellerId: 2, creditLimit: 500000.00, outstandingBalance: 145000.00, priceList: 'C', discount: 10.00, contacts: [{ name: 'Esteban Quito', phone: '11-3322-1100', email: 'esteban@santelmo.com', role: 'Gerente' }], isClient: true, isProvider: false, isSeller: false, isCommissionAgent: false, iibbAliquot: 0.00 },
-      { id: 4, name: 'Cervecería Quilmes S.A.', cuit: '30-50001000-4', address: 'Av. 12 de Octubre 3300, Quilmes', city: 'Quilmes', phone: '0800-222-7456', email: 'proveedores@quilmes.com.ar', sellerId: null, creditLimit: 0.00, outstandingBalance: -50000.00, priceList: 'A', discount: 0.00, contacts: [{ name: 'Juan Carlos', phone: '11-5555-5555', email: 'juancarlos@quilmes.com', role: 'Ejecutivo de Cuentas' }], isClient: false, isProvider: true, isSeller: false, isCommissionAgent: false, iibbAliquot: 0.00 },
-      { id: 5, name: 'Coca Cola Andina', cuit: '30-60002000-8', address: 'Ruta 9 Km 4.5, Córdoba', city: 'Córdoba', phone: '0800-888-2622', email: 'contacto@coca-cola.com.ar', sellerId: null, creditLimit: 0.00, outstandingBalance: 0.00, priceList: 'A', discount: 0.00, contacts: [], isClient: false, isProvider: true, isSeller: false, isCommissionAgent: false, iibbAliquot: 0.00 },
-      { id: 6, name: 'Carlos Vendedor', cuit: '20-30444555-2', address: 'Cabildo 2000, CABA', city: 'CABA', phone: '11-6666-7777', email: 'carlos@distribuidora.com', sellerId: null, creditLimit: 0.00, outstandingBalance: 0.00, priceList: 'A', discount: 0.00, contacts: [], isClient: false, isProvider: false, isSeller: true, isCommissionAgent: false, iibbAliquot: 0.00 },
-      { id: 7, name: 'Autoservicio Villegas', cuit: '30-11223344-5', address: 'San Martín 450, General Villegas', city: 'General Villegas', phone: '2388-421234', email: 'autovillegas@gmail.com', sellerId: 2, creditLimit: 120000.00, outstandingBalance: 32000.00, priceList: 'A', discount: 0.00, contacts: [], isClient: true, isProvider: false, isSeller: false, isCommissionAgent: false, iibbAliquot: 1.50 },
-      { id: 8, name: 'Despensa Villegas', cuit: '20-55667788-9', address: 'Rivadavia 120, General Villegas', city: 'General Villegas', phone: '2388-425678', email: 'despensavillegas@gmail.com', sellerId: 2, creditLimit: 80000.00, outstandingBalance: 15400.00, priceList: 'A', discount: 0.00, contacts: [], isClient: true, isProvider: false, isSeller: false, isCommissionAgent: false, iibbAliquot: 1.50 },
-      { id: 9, name: 'Almacén La Esquina', cuit: '27-88990011-2', address: '9 de Julio 560, Trenque Lauquen', city: 'Trenque Lauquen', phone: '2392-411234', email: 'esquinatl@gmail.com', sellerId: 2, creditLimit: 90000.00, outstandingBalance: 18500.00, priceList: 'A', discount: 0.00, contacts: [], isClient: true, isProvider: false, isSeller: false, isCommissionAgent: false, iibbAliquot: 1.50 }
-    ]));
+    const sellerMap: { [key: string]: number } = {
+      'Diego': 2,
+      'Fabian': 3,
+      'Norberto': 4,
+      'Maria Jose': 5
+    };
+
+    const seededPersonas = rawClients.map((c: any) => {
+      const sellerId = c.sellerName ? sellerMap[c.sellerName] : null;
+      return {
+        id: c.id,
+        name: c.name,
+        cuit: c.cuit,
+        address: c.address,
+        city: c.city,
+        phone: c.phone,
+        email: c.email,
+        sellerId: sellerId,
+        creditLimit: c.creditLimit,
+        outstandingBalance: c.outstandingBalance,
+        priceList: c.priceList,
+        discount: c.discount,
+        contacts: [],
+        isClient: c.isClient,
+        isProvider: c.isProvider,
+        isSeller: c.isSeller,
+        isCommissionAgent: c.isCommissionAgent,
+        iibbAliquot: 0.00
+      };
+    });
+
+    // Add default providers
+    seededPersonas.push(
+      { id: 1, name: 'Cervecería Quilmes S.A.', cuit: '30-50001000-4', address: 'Av. 12 de Octubre 3300, Quilmes', city: 'Quilmes', phone: '0800-222-7456', email: 'proveedores@quilmes.com.ar', sellerId: null, creditLimit: 0.00, outstandingBalance: -50000.00, priceList: 'A', discount: 0.00, contacts: [], isClient: false, isProvider: true, isSeller: false, isCommissionAgent: false, iibbAliquot: 0.00 },
+      { id: 2, name: 'Coca Cola Andina', cuit: '30-60002000-8', address: 'Ruta 9 Km 4.5, Córdoba', city: 'Córdoba', phone: '0800-888-2622', email: 'contacto@coca-cola.com.ar', sellerId: null, creditLimit: 0.00, outstandingBalance: 0.00, priceList: 'A', discount: 0.00, contacts: [], isClient: false, isProvider: true, isSeller: false, isCommissionAgent: false, iibbAliquot: 0.00 }
+    );
+
+    localStorage.setItem('db_personas', JSON.stringify(seededPersonas));
   }
 
   // Migrar cuenta bancaria de prueba vieja si existe
@@ -54,48 +200,203 @@ function initMockDatabase() {
   if (!localStorage.getItem('db_bank_accounts')) {
     localStorage.setItem('db_bank_accounts', JSON.stringify([
       { id: 1, name: 'Banco Provincia Corriente', accountNumber: 'CTA-4321/0', balance: 500000.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-      { id: 2, name: 'Mercado Pago Distribuidora', accountNumber: 'CVU-0000003100012345678901', balance: 150000.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }
+      { id: 2, name: 'Mercado Pago Distribuidora', accountNumber: 'CVU-0000003100012345678901', balance: 150000.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+      { id: 3, name: 'QR', accountNumber: 'QR-ARCA', balance: 0.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }
     ]));
+  } else {
+    try {
+      const list = JSON.parse(localStorage.getItem('db_bank_accounts') || '[]');
+      if (!list.some((a: any) => a.name === 'QR' || a.accountNumber === 'QR-ARCA')) {
+        list.push({ id: 3, name: 'QR', accountNumber: 'QR-ARCA', balance: 0.00, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
+        localStorage.setItem('db_bank_accounts', JSON.stringify(list));
+      }
+    } catch (e) {
+      // Ignorar
+    }
   }
 
   if (!localStorage.getItem('db_cash_drawers')) {
     localStorage.setItem('db_cash_drawers', JSON.stringify([]));
   }
 
+  if (!localStorage.getItem('db_credit_notes')) {
+    localStorage.setItem('db_credit_notes', JSON.stringify([]));
+  }
+
+
+  if (!localStorage.getItem('db_rubros')) {
+    localStorage.setItem('db_rubros', JSON.stringify(categoriesList));
+  }
+
   if (!localStorage.getItem('db_products')) {
-    localStorage.setItem('db_products', JSON.stringify([
-      { id: 1, sku: 'PROD-CERV-01', name: 'Cerveza Quilmes Clásica 1L (Retornable)', description: 'Cajón de cerveza Quilmes 1L. Bebida nacional.', costPrice: 950.00, listPrice: 1400.00, listPriceB: 1250.00, listPriceC: 1100.00, barcode: '7790123456789', stock: 120, minStock: 24 },
-      { id: 2, sku: 'PROD-COCA-02', name: 'Gaseosa Coca Cola Original 1.5L', description: 'Pack x6 botellas de Coca Cola sabor original.', costPrice: 1200.00, listPrice: 1800.00, listPriceB: 1600.00, listPriceC: 1400.00, barcode: '7799876543210', stock: 80, minStock: 18 },
-      { id: 3, sku: 'PROD-HARI-03', name: 'Harina de Trigo Favorita 000 1kg', description: 'Bulto x10 unidades de harina 000.', costPrice: 450.00, listPrice: 650.00, listPriceB: 0.00, listPriceC: 500.00, barcode: '7791234567890', stock: 200, minStock: 50 },
-      { id: 4, sku: 'PROD-AGUA-04', name: 'Agua Mineral Villavicencio Sin Gas 2L', description: 'Pack x6 botellas de agua mineral natural.', costPrice: 800.00, listPrice: 1150.00, listPriceB: 1000.00, listPriceC: 900.00, barcode: '7790987654321', stock: 150, minStock: 30 },
-      { id: 5, sku: 'PROD-FIDE-05', name: 'Fideos Tallarín Lucchetti 500g', description: 'Bulto x20 paquetes de fideos tallarín.', costPrice: 380.00, listPrice: 550.00, listPriceB: 0.00, listPriceC: 0.00, barcode: '7792468135790', stock: 90, minStock: 20 }
-    ]));
+    const productsToSave = rawProducts.map((p, idx) => {
+      const categoryName = p.category || "OTROS";
+      const cat = categoriesList.find(c => c.name === categoryName);
+      const rubroId = cat ? cat.id : 19;
+
+      const providerId = (idx % 2 === 0) ? 1 : 2;
+
+      return {
+        id: idx + 1,
+        sku: p.sku,
+        name: p.name,
+        description: p.description,
+        barcode: p.barcode,
+        costPrice: p.costPrice,
+        listPrice: p.listPrice,
+        listPriceB: p.listPriceB,
+        listPriceC: p.listPriceC,
+        stock: p.stock,
+        minStock: p.minStock,
+        imageUrl: (p as any).imageUrl || null,
+        rubroId,
+        providerId
+      };
+    });
+    localStorage.setItem('db_products', JSON.stringify(productsToSave));
   }
 
   if (!localStorage.getItem('db_product_lots')) {
-    localStorage.setItem('db_product_lots', JSON.stringify([
-      // Cerveza Quilmes (120u total)
-      { id: 1, productId: 1, lotNumber: 'L-QUIL-001', expirationDate: new Date(Date.now() + 90 * 24 * 3600 * 1000).toISOString().split('T')[0], stock: 50 },
-      { id: 2, productId: 1, lotNumber: 'L-QUIL-002', expirationDate: new Date(Date.now() + 180 * 24 * 3600 * 1000).toISOString().split('T')[0], stock: 70 },
-      // Coca Cola (80u total)
-      { id: 3, productId: 2, lotNumber: 'L-COCA-001', expirationDate: new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString().split('T')[0], stock: 30 },
-      { id: 4, productId: 2, lotNumber: 'L-COCA-002', expirationDate: new Date(Date.now() + 120 * 24 * 3600 * 1000).toISOString().split('T')[0], stock: 50 },
-      // Harina (200u total)
-      { id: 5, productId: 3, lotNumber: 'L-HARI-001', expirationDate: new Date(Date.now() + 60 * 24 * 3600 * 1000).toISOString().split('T')[0], stock: 100 },
-      { id: 6, productId: 3, lotNumber: 'L-HARI-002', expirationDate: new Date(Date.now() + 150 * 24 * 3600 * 1000).toISOString().split('T')[0], stock: 100 },
-      // Agua Mineral (150u total)
-      { id: 7, productId: 4, lotNumber: 'L-AGUA-001', expirationDate: new Date(Date.now() + 365 * 24 * 3600 * 1000).toISOString().split('T')[0], stock: 150 },
-      // Fideos (90u total)
-      { id: 8, productId: 5, lotNumber: 'L-FIDE-001', expirationDate: new Date(Date.now() + 240 * 24 * 3600 * 1000).toISOString().split('T')[0], stock: 90 }
-    ]));
+    const lotsToSave = rawProducts.map((p, idx) => ({
+      id: idx + 1,
+      productId: idx + 1,
+      lotNumber: `LOT-${p.sku}`,
+      expirationDate: new Date(Date.now() + 180 * 24 * 3600 * 1000).toISOString().split('T')[0],
+      stock: p.stock
+    }));
+    localStorage.setItem('db_product_lots', JSON.stringify(lotsToSave));
   }
 
   if (!localStorage.getItem('db_orders')) {
-    localStorage.setItem('db_orders', JSON.stringify([]));
+    const seedOrders = [
+      {
+        id: 1,
+        personaId: 1,
+        clientId: 1,
+        sellerId: 2,
+        billingType: 'OFFICIAL',
+        invoiceType: 'FACTURA_A',
+        invoiceNumber: '0001-00000001',
+        cae: '12345678901234',
+        caeDueDate: new Date(Date.now() + 10 * 24 * 3600 * 1000).toISOString().split('T')[0],
+        status: 'DELIVERED',
+        totalAmount: 48500.00,
+        createdAt: new Date(Date.now() - 3 * 24 * 3600 * 1000).toISOString(),
+        updatedAt: new Date(Date.now() - 3 * 24 * 3600 * 1000).toISOString(),
+        items: [
+          { id: 1, productId: 3, quantity: 50, unitPrice: 650.00, subtotal: 32500.00 },
+          { id: 2, productId: 2, quantity: 10, unitPrice: 1600.00, subtotal: 16000.00 }
+        ]
+      },
+      {
+        id: 2,
+        personaId: 8,
+        clientId: 8,
+        sellerId: 2,
+        billingType: 'INTERNAL',
+        invoiceType: 'PRESUPUESTO',
+        invoiceNumber: null,
+        cae: null,
+        caeDueDate: null,
+        status: 'DELIVERED',
+        totalAmount: 13750.00,
+        createdAt: new Date(Date.now() - 2 * 24 * 3600 * 1000).toISOString(),
+        updatedAt: new Date(Date.now() - 2 * 24 * 3600 * 1000).toISOString(),
+        items: [
+          { id: 3, productId: 5, quantity: 25, unitPrice: 550.00, subtotal: 13750.00 }
+        ]
+      },
+      {
+        id: 3,
+        personaId: 3,
+        clientId: 3,
+        sellerId: 5,
+        billingType: 'OFFICIAL',
+        invoiceType: 'FACTURA_A',
+        invoiceNumber: '0001-00000002',
+        cae: '98765432109876',
+        caeDueDate: new Date(Date.now() + 10 * 24 * 3600 * 1000).toISOString().split('T')[0],
+        status: 'DELIVERED',
+        totalAmount: 76000.00,
+        createdAt: new Date(Date.now() - 1 * 24 * 3600 * 1000).toISOString(),
+        updatedAt: new Date(Date.now() - 1 * 24 * 3600 * 1000).toISOString(),
+        items: [
+          { id: 4, productId: 1, quantity: 40, unitPrice: 1100.00, subtotal: 44000.00 },
+          { id: 5, productId: 2, quantity: 20, unitPrice: 1600.00, subtotal: 32000.00 }
+        ]
+      },
+      {
+        id: 4,
+        personaId: 9,
+        clientId: 9,
+        sellerId: 5,
+        billingType: 'INTERNAL',
+        invoiceType: 'PRESUPUESTO',
+        invoiceNumber: null,
+        cae: null,
+        caeDueDate: null,
+        status: 'DELIVERED',
+        totalAmount: 26000.00,
+        createdAt: new Date(Date.now() - 12 * 3600 * 1000).toISOString(),
+        updatedAt: new Date(Date.now() - 12 * 3600 * 1000).toISOString(),
+        items: [
+          { id: 6, productId: 4, quantity: 20, unitPrice: 1000.00, subtotal: 20000.00 },
+          { id: 7, productId: 3, quantity: 12, unitPrice: 500.00, subtotal: 6000.00 }
+        ]
+      }
+    ];
+    localStorage.setItem('db_orders', JSON.stringify(seedOrders));
   }
 
   if (!localStorage.getItem('db_transactions')) {
-    localStorage.setItem('db_transactions', JSON.stringify([]));
+    const seedTransactions = [
+      {
+        id: 1,
+        personaId: 8,
+        userId: 1,
+        billingType: 'OFFICIAL',
+        type: 'INCOME',
+        paymentMethod: 'BANK_TRANSFER',
+        amount: 48500.00,
+        description: 'Cobro de Factura Directa #1 - Transferencia Bco Provincia',
+        cashDrawerId: null,
+        bankAccountId: 1,
+        verified: false,
+        createdAt: new Date(Date.now() - 2 * 24 * 3600 * 1000).toISOString(),
+        updatedAt: new Date(Date.now() - 2 * 24 * 3600 * 1000).toISOString()
+      },
+      {
+        id: 2,
+        personaId: 3,
+        userId: 1,
+        billingType: 'OFFICIAL',
+        type: 'INCOME',
+        paymentMethod: 'BANK_TRANSFER',
+        amount: 76000.00,
+        description: 'Cobro de Factura Directa #3 - Transferencia Mercado Pago',
+        cashDrawerId: null,
+        bankAccountId: 2,
+        verified: true,
+        createdAt: new Date(Date.now() - 1 * 24 * 3600 * 1000).toISOString(),
+        updatedAt: new Date(Date.now() - 1 * 24 * 3600 * 1000).toISOString()
+      },
+      {
+        id: 3,
+        personaId: 9,
+        userId: 2,
+        billingType: 'INTERNAL',
+        type: 'INCOME',
+        paymentMethod: 'BANK_TRANSFER',
+        amount: 15400.00,
+        description: 'Rendición preventista Diego - Transferencia QR',
+        cashDrawerId: null,
+        bankAccountId: 3,
+        verified: false,
+        createdAt: new Date(Date.now() - 3 * 3600 * 1000).toISOString(),
+        updatedAt: new Date(Date.now() - 3 * 3600 * 1000).toISOString()
+      }
+    ];
+    localStorage.setItem('db_transactions', JSON.stringify(seedTransactions));
   }
 
   if (!localStorage.getItem('db_supplier_invoices')) {
@@ -285,6 +586,9 @@ export const api = {
         listPriceB: Number(productData.listPriceB || 0),
         listPriceC: Number(productData.listPriceC || 0),
         minStock: Number(productData.minStock || 0),
+        imageUrl: productData.imageUrl || null,
+        rubroId: productData.rubroId ? Number(productData.rubroId) : null,
+        providerId: productData.providerId ? Number(productData.providerId) : null,
         createdAt: new Date().toISOString()
       };
       mockDb.set('db_products', [...prods, newProd]);
@@ -320,6 +624,9 @@ export const api = {
         listPriceB: productData.listPriceB !== undefined ? Number(productData.listPriceB) : (oldVal.listPriceB || 0),
         listPriceC: productData.listPriceC !== undefined ? Number(productData.listPriceC) : (oldVal.listPriceC || 0),
         minStock: productData.minStock !== undefined ? Number(productData.minStock) : oldVal.minStock,
+        imageUrl: productData.imageUrl !== undefined ? productData.imageUrl : oldVal.imageUrl,
+        rubroId: productData.rubroId !== undefined ? (productData.rubroId ? Number(productData.rubroId) : null) : oldVal.rubroId,
+        providerId: productData.providerId !== undefined ? (productData.providerId ? Number(productData.providerId) : null) : oldVal.providerId,
       };
       
       prods[idx] = newVal;
@@ -510,7 +817,7 @@ export const api = {
     return api.updatePersona(id, clientData);
   },
 
-  registerPayment: async (personaId: number, paymentData: { amount: number, paymentMethod: string, description?: string, branch?: string }) => {
+  registerPayment: async (personaId: number, paymentData: { amount: number, paymentMethod: string, description?: string, branch?: string, type?: string, supplierInvoiceId?: number }) => {
     const user = api.getCurrentUser();
     if (simulationMode) {
       const personas = mockDb.get('db_personas');
@@ -521,15 +828,38 @@ export const api = {
       const amount = Number(paymentData.amount);
 
       let type: 'INCOME' | 'OUTCOME' = 'INCOME';
-      if (persona.isProvider && !persona.isClient) {
+      if (paymentData.type === 'OUTCOME') {
+        type = 'OUTCOME';
+        persona.outstandingBalance = Number(persona.outstandingBalance || 0) + amount;
+      } else if (paymentData.type === 'INCOME') {
+        type = 'INCOME';
+        persona.outstandingBalance = Number(persona.outstandingBalance || 0) - amount;
+      } else if (persona.isProvider && !persona.isClient) {
         type = 'OUTCOME';
         persona.outstandingBalance = Number(persona.outstandingBalance || 0) + amount;
       } else {
+        type = 'INCOME';
         persona.outstandingBalance = Number(persona.outstandingBalance || 0) - amount;
       }
 
       personas[idx] = persona;
       mockDb.set('db_personas', personas);
+
+      let invoiceNumberToLog = '';
+      if (paymentData.supplierInvoiceId) {
+        const invoices = mockDb.get('db_supplier_invoices') || [];
+        const invIdx = invoices.findIndex((i: any) => i.id === Number(paymentData.supplierInvoiceId));
+        if (invIdx !== -1) {
+          const inv = invoices[invIdx];
+          const curPaid = Number(inv.paidAmount || 0);
+          const newPaid = curPaid + amount;
+          inv.paidAmount = newPaid;
+          inv.status = newPaid >= Number(inv.totalAmount) ? 'PAID' : 'PARTIALLY_PAID';
+          invoices[invIdx] = inv;
+          mockDb.set('db_supplier_invoices', invoices);
+          invoiceNumberToLog = inv.invoiceNumber;
+        }
+      }
 
       let cashDrawerId = null;
       let bankAccountId = null;
@@ -557,21 +887,25 @@ export const api = {
         mockDb.set('db_bank_accounts', banks);
       }
 
-      const trans = mockDb.get('db_transactions');
+      const trans = mockDb.get('db_transactions') || [];
       const newTran = {
         id: trans.length + 1,
         personaId,
         userId: user.id,
-        billingType: 'INTERNAL',
+        billingType: (paymentData.branch || 'X') === 'A' ? 'OFFICIAL' : 'INTERNAL',
         type,
         paymentMethod: paymentData.paymentMethod,
         amount,
-        description: paymentData.description || `${type === 'INCOME' ? 'Cobro' : 'Pago'} a cuenta de ${persona.name}`,
+        description: paymentData.description || (paymentData.supplierInvoiceId
+          ? `Pago de Factura Nro ${invoiceNumberToLog}`
+          : `${type === 'OUTCOME' ? 'Pago' : 'Cobro'} a cuenta de ${persona.name}`),
         cashDrawerId,
         bankAccountId,
+        supplierInvoiceId: paymentData.supplierInvoiceId ? Number(paymentData.supplierInvoiceId) : null,
         createdAt: new Date().toISOString()
       };
-      mockDb.set('db_transactions', [...trans, newTran]);
+      trans.push(newTran);
+      mockDb.set('db_transactions', trans);
 
       mockDb.log(user.id, user.username, user.role, 'RECORD_PERSONA_PAYMENT', 'Persona', personaId, null, {
         amount,
@@ -596,6 +930,7 @@ export const api = {
 
       const orders = mockDb.get('db_orders').filter((o: any) => (o.personaId === personaId || o.clientId === personaId) && o.status === 'DELIVERED');
       const transactions = mockDb.get('db_transactions').filter((t: any) => t.personaId === personaId);
+      const supplierInvoices = (mockDb.get('db_supplier_invoices') || []).filter((si: any) => si.personaId === personaId);
 
       const ledgerItems: any[] = [];
       orders.forEach((o: any) => {
@@ -617,6 +952,17 @@ export const api = {
           reference: `Recibo #${t.id}`,
           description: `${t.type === 'INCOME' ? 'Cobro' : 'Pago'} - ${t.paymentMethod} (${t.description || 'Cuenta corriente'})`,
           amount: Number(t.amount)
+        });
+      });
+
+      supplierInvoices.forEach((si: any) => {
+        ledgerItems.push({
+          id: `supplier-invoice-${si.id}`,
+          date: si.issueDate,
+          type: 'CREDIT',
+          reference: `Factura Nro ${si.invoiceNumber}`,
+          description: `Compra - Factura ${si.invoiceType.replace('_', ' ')}`,
+          amount: Number(si.totalAmount)
         });
       });
 
@@ -686,7 +1032,7 @@ export const api = {
     return res.orders;
   },
 
-  createOrder: async (orderData: { clientId: number, items: { productId: number, quantity: number }[] }) => {
+  createOrder: async (orderData: { clientId: number, items: { productId: number, quantity: number }[], notes?: string }) => {
     const user = api.getCurrentUser();
     if (simulationMode) {
       const orders = mockDb.get('db_orders');
@@ -711,22 +1057,20 @@ export const api = {
 
         // Determinar precio según lista
         let selectedPrice = Number(prod.listPrice);
+        let itemDiscount = Number(persona.discount || 0);
+
         if (persona.priceList === 'B') {
-          const priceB = Number(prod.listPriceB);
-          if (priceB > 0) {
-            selectedPrice = priceB;
-          }
-        } else if (persona.priceList === 'C') {
-          const priceC = Number(prod.listPriceC);
-          if (priceC > 0) {
-            selectedPrice = priceC;
+          const isMelincue = prod.description?.toUpperCase() === 'MELINCUE' || prod.name?.toUpperCase().includes('MELINCUE');
+          if (isMelincue) {
+            itemDiscount = 3;
+          } else {
+            itemDiscount = 0;
           }
         }
 
-        // Aplicar descuento
-        const discountPercentage = Number(persona.discount || 0);
-        const finalUnitPrice = selectedPrice * (1 - discountPercentage / 100);
-        const subtotal = finalUnitPrice * item.quantity;
+        // Aplicar descuento y redondear al entero más cercano
+        const finalUnitPrice = Math.round(selectedPrice * (1 - itemDiscount / 100));
+        const subtotal = Math.round(finalUnitPrice * item.quantity);
         totalAmount += subtotal;
 
         prod.stock -= item.quantity;
@@ -750,15 +1094,6 @@ export const api = {
         }
       }
 
-      // Validar regla de "boleta contra boleta" (deben una y deben pagar la proxima)
-      if (outstandingBalance > 0) {
-        if (user.role !== 'ADMIN') {
-          throw new Error(
-            `Regla Boleta contra Boleta: El cliente posee una boleta pendiente ($${outstandingBalance.toLocaleString()}). Debe registrar el pago de la boleta anterior antes de iniciar un nuevo pedido a crédito.`
-          );
-        }
-      }
-
       // Guardar productos con stock actualizado
       mockDb.set('db_products', products);
 
@@ -774,6 +1109,7 @@ export const api = {
         caeDueDate: null,
         status: OrderStatus.PENDING,
         totalAmount,
+        notes: orderData.notes || null,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         items: orderItems
@@ -836,21 +1172,19 @@ export const api = {
 
         // Determinar precio según lista
         let selectedPrice = Number(prod.listPrice);
+        let itemDiscount = Number(persona.discount || 0);
+
         if (persona.priceList === 'B') {
-          const priceB = Number(prod.listPriceB);
-          if (priceB > 0) {
-            selectedPrice = priceB;
-          }
-        } else if (persona.priceList === 'C') {
-          const priceC = Number(prod.listPriceC);
-          if (priceC > 0) {
-            selectedPrice = priceC;
+          const isMelincue = prod.description?.toUpperCase() === 'MELINCUE' || prod.name?.toUpperCase().includes('MELINCUE');
+          if (isMelincue) {
+            itemDiscount = 3;
+          } else {
+            itemDiscount = 0;
           }
         }
 
         // Aplicar descuento
-        const discountPercentage = Number(persona.discount || 0);
-        const finalUnitPrice = selectedPrice * (1 - discountPercentage / 100);
+        const finalUnitPrice = selectedPrice * (1 - itemDiscount / 100);
         const subtotal = finalUnitPrice * item.quantity;
         totalAmount += subtotal;
 
@@ -950,8 +1284,8 @@ export const api = {
           const iibbAliquot = Number(persona.iibbAliquot || 0);
           if (iibbAliquot > 0) {
             netAmount = totalSum / (1.21 + (iibbAliquot / 100));
-            taxAmount = netAmount * 0.21;
-            percepcionAmount = netAmount * (iibbAliquot / 100);
+            taxAmount = Math.round(netAmount * 0.21);
+            percepcionAmount = Math.round(netAmount * (iibbAliquot / 100));
           }
         }
       }
@@ -1047,6 +1381,52 @@ export const api = {
       body: JSON.stringify({ billingType, paymentMethod })
     });
     return res.order;
+  },
+
+  updateOrderWeights: async (id: number, items: { orderItemId: number; weight: number }[]) => {
+    if (simulationMode) {
+      const orders = mockDb.get('db_orders');
+      const idx = orders.findIndex((o: any) => o.id === id);
+      if (idx === -1) throw new Error('Pedido no encontrado.');
+      const order = orders[idx];
+
+      let newTotal = 0;
+      const updatedItems = order.items.map((item: any) => {
+        const weightUpdate = items.find(i => i.orderItemId === item.id);
+        let subtotal = Number(item.subtotal);
+        let weight = item.weight || null;
+
+        if (item.product?.isPesable && weightUpdate && weightUpdate.weight > 0) {
+          weight = weightUpdate.weight;
+          subtotal = Number(item.price || item.unitPrice) * weight;
+        }
+
+        newTotal += subtotal;
+        return { ...item, weight, subtotal };
+      });
+
+      const updatedOrder = { ...order, items: updatedItems, totalAmount: newTotal };
+      orders[idx] = updatedOrder;
+      mockDb.set('db_orders', orders);
+      return updatedOrder;
+    }
+
+    const res = await fetch(`${API_BASE_URL}/orders/${id}/weights`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${localStorage.getItem('token')}`,
+      },
+      body: JSON.stringify({ items }),
+    });
+
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({}));
+      throw new Error(errorData.message || 'Error al actualizar pesos');
+    }
+    
+    const data = await res.json();
+    return data.data.order;
   },
 
   updateOrderStatus: async (id: number, status: OrderStatus, lotAssignments?: any) => {
@@ -1597,6 +1977,13 @@ export const api = {
         if (filters.bankAccountId) {
           trans = trans.filter((t: any) => t.bankAccountId === Number(filters.bankAccountId));
         }
+        if (filters.paymentMethod) {
+          trans = trans.filter((t: any) => t.paymentMethod === filters.paymentMethod);
+        }
+        if (filters.verified !== undefined && filters.verified !== 'ALL') {
+          const isVerified = filters.verified === 'true' || filters.verified === true;
+          trans = trans.filter((t: any) => !!t.verified === isVerified);
+        }
       }
 
       return trans.map((t: any) => ({
@@ -1614,11 +2001,48 @@ export const api = {
       if (filters.branch) params.push(`branch=${filters.branch}`);
       if (filters.cashDrawerId) params.push(`cashDrawerId=${filters.cashDrawerId}`);
       if (filters.bankAccountId) params.push(`bankAccountId=${filters.bankAccountId}`);
+      if (filters.paymentMethod) params.push(`paymentMethod=${filters.paymentMethod}`);
+      if (filters.verified !== undefined) params.push(`verified=${filters.verified}`);
       if (params.length > 0) path += `?${params.join('&')}`;
     }
 
     const res = await request(path);
     return res.transactions;
+  },
+
+  getCashDrawers: async () => {
+    if (simulationMode) {
+      const drawers = mockDb.get('db_cash_drawers') || [];
+      const users = mockDb.get('db_users') || [];
+      return drawers.map((d: any) => ({
+        ...d,
+        openedByUser: users.find((u: any) => u.id === d.openedById) || null,
+        closedByUser: users.find((u: any) => u.id === d.closedById) || null
+      }));
+    }
+    try {
+      const res = await request('/finance/drawers/history');
+      return res.drawers || [];
+    } catch {
+      return [];
+    }
+  },
+
+  verifyTransaction: async (id: number, verified: boolean) => {
+    if (simulationMode) {
+      const trans = mockDb.get('db_transactions');
+      const idx = trans.findIndex((t: any) => t.id === Number(id));
+      if (idx === -1) throw new Error('Transacción no encontrada.');
+      trans[idx].verified = Boolean(verified);
+      mockDb.set('db_transactions', trans);
+      return trans[idx];
+    }
+
+    const res = await request(`/finance/transactions/${id}/verify`, {
+      method: 'PUT',
+      body: JSON.stringify({ verified })
+    });
+    return res;
   },
 
   getProductByBarcode: async (barcode: string) => {
@@ -1716,6 +2140,152 @@ export const api = {
     return res.data;
   },
 
+  getRubros: async () => {
+    if (simulationMode) {
+      return mockDb.get('db_rubros');
+    }
+    const res = await request('/rubros');
+    return res.rubros;
+  },
+
+  createRubro: async (rubroData: { name: string; description?: string }) => {
+    const user = api.getCurrentUser();
+    if (simulationMode) {
+      const rubros = mockDb.get('db_rubros');
+      if (rubros.some((r: any) => r.name.toLowerCase() === rubroData.name.toLowerCase())) {
+        throw new Error('El rubro ya existe.');
+      }
+      const newRubro = {
+        id: rubros.length + 1,
+        name: rubroData.name,
+        description: rubroData.description || '',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      mockDb.set('db_rubros', [...rubros, newRubro]);
+      mockDb.log(user.id, user.username, user.role, 'CREATE_RUBRO', 'Rubro', newRubro.id, null, newRubro);
+      return newRubro;
+    }
+    const res = await request('/rubros', {
+      method: 'POST',
+      body: JSON.stringify(rubroData)
+    });
+    return res.rubro;
+  },
+
+  updateRubro: async (id: number, rubroData: { name?: string; description?: string }) => {
+    const user = api.getCurrentUser();
+    if (simulationMode) {
+      const rubros = mockDb.get('db_rubros');
+      const idx = rubros.findIndex((r: any) => r.id === id);
+      if (idx === -1) throw new Error('Rubro no encontrado.');
+      const oldVal = rubros[idx];
+      if (rubroData.name && rubroData.name.toLowerCase() !== oldVal.name.toLowerCase()) {
+        if (rubros.some((r: any) => r.name.toLowerCase() === rubroData.name!.toLowerCase())) {
+          throw new Error('El nombre de rubro ya existe.');
+        }
+      }
+      const newVal = {
+        ...oldVal,
+        ...rubroData,
+        updatedAt: new Date().toISOString()
+      };
+      rubros[idx] = newVal;
+      mockDb.set('db_rubros', rubros);
+      mockDb.log(user.id, user.username, user.role, 'UPDATE_RUBRO', 'Rubro', id, oldVal, newVal);
+      return newVal;
+    }
+    const res = await request(`/rubros/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(rubroData)
+    });
+    return res.rubro;
+  },
+
+  deleteRubro: async (id: number) => {
+    const user = api.getCurrentUser();
+    if (simulationMode) {
+      const rubros = mockDb.get('db_rubros');
+      const idx = rubros.findIndex((r: any) => r.id === id);
+      if (idx === -1) throw new Error('Rubro no encontrado.');
+      const oldVal = rubros[idx];
+
+      const prods = mockDb.get('db_products');
+      const updatedProds = prods.map((p: any) => p.rubroId === id ? { ...p, rubroId: null } : p);
+      mockDb.set('db_products', updatedProds);
+
+      const filtered = rubros.filter((r: any) => r.id !== id);
+      mockDb.set('db_rubros', filtered);
+      mockDb.log(user.id, user.username, user.role, 'DELETE_RUBRO', 'Rubro', id, oldVal, null);
+      return { success: true };
+    }
+    const res = await request(`/rubros/${id}`, {
+      method: 'DELETE'
+    });
+    return res;
+  },
+
+  bulkUpdatePrices: async (params: {
+    rubroId?: number | null;
+    providerId?: number | null;
+    type: 'margin' | 'percentage' | 'fixed';
+    basis?: 'cost' | 'current';
+    value: number;
+    priceList: 'all' | 'listPrice' | 'listPriceB' | 'listPriceC';
+  }) => {
+    const user = api.getCurrentUser();
+    if (simulationMode) {
+      const prods = mockDb.get('db_products');
+      let updatedCount = 0;
+      const updatedProds = prods.map((p: any) => {
+        if (params.rubroId && p.rubroId !== Number(params.rubroId)) return p;
+        if (params.providerId && p.providerId !== Number(params.providerId)) return p;
+
+        const updateData: any = {};
+        const fieldsToUpdate = params.priceList === 'all'
+          ? ['listPrice', 'listPriceB', 'listPriceC']
+          : [params.priceList];
+
+        fieldsToUpdate.forEach((field: string) => {
+          const cost = Number(p.costPrice || 0);
+          const currentVal = Number(p[field] || 0);
+          let newVal = currentVal;
+
+          if (params.type === 'margin') {
+            newVal = cost * (1 + params.value / 100);
+          } else if (params.type === 'percentage') {
+            const base = params.basis === 'cost' ? cost : currentVal;
+            newVal = base * (1 + params.value / 100);
+          } else if (params.type === 'fixed') {
+            newVal = currentVal + params.value;
+          }
+
+          updateData[field] = Math.max(0, Math.round(newVal * 100) / 100);
+        });
+
+        updatedCount++;
+        return { ...p, ...updateData };
+      });
+
+      mockDb.set('db_products', updatedProds);
+      mockDb.log(user.id, user.username, user.role, 'BULK_UPDATE_PRICES', 'Product', 0, null, {
+        rubroId: params.rubroId,
+        providerId: params.providerId,
+        type: params.type,
+        value: params.value,
+        priceList: params.priceList,
+        updatedCount
+      });
+      return { updatedCount };
+    }
+
+    const res = await request('/products/bulk-update-prices', {
+      method: 'POST',
+      body: JSON.stringify(params)
+    });
+    return res;
+  },
+
   getSalesInvoices: async (filters?: any) => {
     if (simulationMode) {
       const orders = mockDb.get('db_orders');
@@ -1809,13 +2379,18 @@ export const api = {
   createSupplierInvoice: async (invoiceData: any) => {
     const user = api.getCurrentUser();
     if (simulationMode) {
-      const invoices = mockDb.get('db_supplier_invoices');
+      const invoices = mockDb.get('db_supplier_invoices') || [];
       const personas = mockDb.get('db_personas');
       
       const newInvoice = {
         id: invoices.length + 1,
         ...invoiceData,
         personaId: Number(invoiceData.personaId),
+        dueDate: invoiceData.dueDate 
+          ? new Date(invoiceData.dueDate).toISOString() 
+          : new Date(new Date(invoiceData.issueDate || Date.now()).getTime() + 30 * 24 * 3600 * 1000).toISOString(),
+        status: 'PENDING',
+        paidAmount: 0.00,
         netAmount: Number(invoiceData.netAmount),
         taxAmount: Number(invoiceData.taxAmount),
         percepcionAmount: Number(invoiceData.percepcionAmount || 0),
@@ -1863,10 +2438,186 @@ export const api = {
     return res.invoice;
   },
 
+  getCreditNotes: async (filters?: any) => {
+    if (simulationMode) {
+      const creditNotes = mockDb.get('db_credit_notes');
+      const personas = mockDb.get('db_personas');
+      const users = mockDb.get('db_users');
+      const orders = mockDb.get('db_orders');
+
+      let filtered = [...creditNotes];
+
+      if (filters) {
+        if (filters.startDate && filters.endDate) {
+          const start = new Date(filters.startDate).getTime();
+          const end = new Date(filters.endDate).getTime();
+          filtered = filtered.filter((cn: any) => {
+            const t = new Date(cn.createdAt).getTime();
+            return t >= start && t <= end;
+          });
+        }
+        if (filters.query) {
+          const q = filters.query.toLowerCase();
+          filtered = filtered.filter((cn: any) => {
+            const p = personas.find((c: any) => c.id === cn.personaId);
+            return (cn.creditNoteNumber && cn.creditNoteNumber.toLowerCase().includes(q)) ||
+                   (p && (p.name.toLowerCase().includes(q) || p.cuit.includes(q)));
+          });
+        }
+      }
+
+      return filtered.map((cn: any) => ({
+        ...cn,
+        persona: personas.find((c: any) => c.id === cn.personaId) || { name: 'Desconocido', cuit: '' },
+        user: users.find((u: any) => u.id === cn.userId) || { username: 'Desconocido' },
+        order: cn.orderId ? orders.find((o: any) => o.id === cn.orderId) : null
+      })).sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    }
+
+    let path = '/billing/credit-notes';
+    if (filters) {
+      const params = [];
+      if (filters.startDate) params.push(`startDate=${filters.startDate}`);
+      if (filters.endDate) params.push(`endDate=${filters.endDate}`);
+      if (filters.query) params.push(`query=${filters.query}`);
+      if (params.length > 0) path += `?${params.join('&')}`;
+    }
+    const res = await request(path);
+    return res.creditNotes;
+  },
+
+  createCreditNote: async (data: any) => {
+    const user = api.getCurrentUser();
+    if (simulationMode) {
+      const creditNotes = mockDb.get('db_credit_notes');
+      const personas = mockDb.get('db_personas');
+      const products = mockDb.get('db_products');
+      const productLots = mockDb.get('db_product_lots');
+      const orders = mockDb.get('db_orders');
+      const stockMovements = mockDb.get('db_stock_movements') || [];
+
+      const persona = personas.find((c: any) => c.id === Number(data.personaId));
+      if (!persona) throw new Error('Cliente no encontrado.');
+
+      let totalAmount = 0;
+      const cnItems: any[] = [];
+
+      for (const item of data.items) {
+        const prod = products.find((p: any) => p.id === Number(item.productId));
+        if (!prod) throw new Error(`Producto con ID ${item.productId} no encontrado.`);
+
+        const itemTotal = Number(item.quantity) * Number(item.unitPrice);
+        totalAmount += itemTotal;
+
+        cnItems.push({
+          productId: prod.id,
+          product: prod,
+          quantity: Number(item.quantity),
+          unitPrice: Number(item.unitPrice),
+          subtotal: itemTotal
+        });
+
+        // Si es devolución física, asentar stock
+        if (data.reason === 'DEVOLUCION') {
+          prod.stock = Number(prod.stock || 0) + Number(item.quantity);
+
+          // Agregar StockMovement
+          stockMovements.push({
+            id: stockMovements.length + 1,
+            productId: prod.id,
+            quantity: Number(item.quantity),
+            type: 'IN',
+            referenceId: `NC-MOCK`,
+            userId: user.id,
+            reason: `Devolución de cliente (Simulada): ${persona.name}`,
+            createdAt: new Date().toISOString()
+          });
+
+          // Devolver al lote si hay orden
+          if (data.orderId) {
+            const order = orders.find((o: any) => o.id === Number(data.orderId));
+            if (order && order.items) {
+              const lot = productLots.find((l: any) => l.productId === prod.id);
+              if (lot) {
+                lot.stock = Number(lot.stock || 0) + Number(item.quantity);
+              }
+            }
+          }
+        }
+      }
+
+      let creditNoteType = 'NOTA_CREDITO_INTERNA';
+      let creditNoteNumber = '';
+      let cae = null;
+      let caeDueDate = null;
+
+      if (data.billingType === 'OFFICIAL') {
+        const cuitLimpio = persona.cuit ? persona.cuit.replace(/-/g, '') : '';
+        let isA = cuitLimpio.length === 11;
+        creditNoteType = isA ? 'NOTA_CREDITO_A' : 'NOTA_CREDITO_B';
+
+        const mockInvoiceNum = Math.floor(100000 + Math.random() * 900000);
+        creditNoteNumber = `00001-${mockInvoiceNum.toString().padStart(8, '0')}`;
+        cae = '9999' + Math.floor(10000000 + Math.random() * 90000000) + '2';
+        const dueDate = new Date();
+        dueDate.setDate(dueDate.getDate() + 10);
+        caeDueDate = dueDate.toISOString();
+      } else {
+        const count = creditNotes.filter((cn: any) => cn.billingType === 'INTERNAL').length;
+        creditNoteNumber = `NCI-${(count + 1).toString().padStart(8, '0')}`;
+      }
+
+      const newCreditNote = {
+        id: creditNotes.length + 1,
+        personaId: Number(data.personaId),
+        orderId: data.orderId ? Number(data.orderId) : null,
+        userId: user.id,
+        billingType: data.billingType,
+        creditNoteType,
+        creditNoteNumber,
+        cae,
+        caeDueDate,
+        totalAmount,
+        netAmount: totalAmount / 1.21,
+        taxAmount: totalAmount - (totalAmount / 1.21),
+        reason: data.reason,
+        comments: data.comments || '',
+        items: cnItems,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+
+      mockDb.set('db_credit_notes', [...creditNotes, newCreditNote]);
+      mockDb.set('db_products', products);
+      mockDb.set('db_product_lots', productLots);
+      mockDb.set('db_stock_movements', stockMovements);
+
+      // Decrementar Cuenta Corriente del cliente
+      const pIdx = personas.findIndex((p: any) => p.id === persona.id);
+      if (pIdx !== -1) {
+        personas[pIdx].outstandingBalance = Number(personas[pIdx].outstandingBalance || 0) - totalAmount;
+        mockDb.set('db_personas', personas);
+      }
+
+      mockDb.log(user.id, user.username, user.role, 'CREATE_CREDIT_NOTE', 'CreditNote', newCreditNote.id, null, newCreditNote);
+      return newCreditNote;
+    }
+
+    const res = await request('/billing/credit-notes', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+    return res.creditNote;
+  },
+
   createDirectInvoice: async (payload: {
     personaId: number;
     billingType: string;
     paymentMethod?: string;
+    bankAccountId?: number;
+    checkNumber?: string;
+    checkIssuer?: string;
+    checkAmount?: number;
     items: { productId: number; quantity: number }[];
   }) => {
     const user = api.getCurrentUser();
@@ -1897,17 +2648,19 @@ export const api = {
 
         // Determinar precio según lista
         let selectedPrice = Number(prod.listPrice);
+        let itemDiscount = Number(persona.discount || 0);
+
         if (persona.priceList === 'B') {
-          const priceB = Number(prod.listPriceB);
-          if (priceB > 0) selectedPrice = priceB;
-        } else if (persona.priceList === 'C') {
-          const priceC = Number(prod.listPriceC);
-          if (priceC > 0) selectedPrice = priceC;
+          const isMelincue = prod.description?.toUpperCase() === 'MELINCUE' || prod.name?.toUpperCase().includes('MELINCUE');
+          if (isMelincue) {
+            itemDiscount = 3;
+          } else {
+            itemDiscount = 0;
+          }
         }
 
         // Aplicar descuento
-        const discountPercentage = Number(persona.discount || 0);
-        const finalUnitPrice = selectedPrice * (1 - discountPercentage / 100);
+        const finalUnitPrice = selectedPrice * (1 - itemDiscount / 100);
         const subtotal = finalUnitPrice * item.quantity;
         totalSum += subtotal;
 
@@ -1970,8 +2723,9 @@ export const api = {
           const iibbAliquot = Number(persona.iibbAliquot || 0);
           if (iibbAliquot > 0) {
             net = totalSum / (1.21 + (iibbAliquot / 100));
-            tax = net * 0.21;
-            percepcion = net * (iibbAliquot / 100);
+            tax = Math.round(net * 0.21);
+            percepcion = Math.round(net * (iibbAliquot / 100));
+            totalSum = Math.round(net + tax + percepcion);
           }
         }
       }
@@ -2025,8 +2779,10 @@ export const api = {
 
       // 6. Cobro o C/C
       if (payload.paymentMethod) {
-        let cashDrawerId = null;
-        let bankAccountId = null;
+        let cashDrawerId: number | null = null;
+        let bankAccountId: number | null = null;
+        let txAmount = totalSum;
+        let txDescription = `Cobro en el acto de factura directa #${orders.length + 1} (${finalInvoiceNumber})`;
 
         if (payload.paymentMethod === 'CASH') {
           const activeDrawer = drawers.find((d: any) => d.userId === user.id && d.status === 'OPEN' && d.branch === (payload.billingType === 'OFFICIAL' ? 'A' : 'X'));
@@ -2034,12 +2790,25 @@ export const api = {
             throw new Error(`Debe abrir una caja operativa para la sucursal ${payload.billingType === 'OFFICIAL' ? 'A' : 'X'} antes de registrar cobros en efectivo.`);
           }
           cashDrawerId = activeDrawer.id;
-        } else {
-          bankAccountId = 1;
+        } else if (payload.paymentMethod === 'BANK_TRANSFER') {
+          bankAccountId = payload.bankAccountId || 1;
           const accounts = mockDb.get('db_bank_accounts') || [];
-          const accIdx = accounts.findIndex((a: any) => a.id === 1);
+          const accIdx = accounts.findIndex((a: any) => a.id === bankAccountId);
           if (accIdx !== -1) {
             accounts[accIdx].balance = Number(accounts[accIdx].balance || 0) + totalSum;
+            mockDb.set('db_bank_accounts', accounts);
+          }
+        } else if (payload.paymentMethod === 'CHECK') {
+          const accounts = mockDb.get('db_bank_accounts') || [];
+          const defaultBank = accounts[0] || { id: 1 };
+          bankAccountId = defaultBank.id;
+
+          const accIdx = accounts.findIndex((a: any) => a.id === bankAccountId);
+          txAmount = payload.checkAmount ?? totalSum;
+          txDescription = `Cobro con Cheque N° ${payload.checkNumber || 'S/N'} (Emisor: ${payload.checkIssuer || 'Desconocido'}) - Comprobante ${finalInvoiceNumber}`;
+
+          if (accIdx !== -1) {
+            accounts[accIdx].balance = Number(accounts[accIdx].balance || 0) + txAmount;
             mockDb.set('db_bank_accounts', accounts);
           }
         }
@@ -2052,8 +2821,8 @@ export const api = {
           billingType: payload.billingType,
           type: 'INCOME',
           paymentMethod: payload.paymentMethod,
-          amount: totalSum,
-          description: `Cobro en el acto de factura directa #${orders.length + 1} (${finalInvoiceNumber})`,
+          amount: txAmount,
+          description: txDescription,
           cashDrawerId,
           bankAccountId,
           createdAt: new Date().toISOString(),
@@ -2286,6 +3055,122 @@ export const api = {
     return res.route;
   },
 
+  settleDeliveryRoute: async (id: number, settleData: { settlements: any[], cashDeclared: number, checksDeclared: number, transfersDeclared: number }) => {
+    const user = api.getCurrentUser();
+    if (simulationMode) {
+      const routes = mockDb.get('db_delivery_routes');
+      const orders = mockDb.get('db_orders');
+      const personas = mockDb.get('db_personas');
+      const transactions = mockDb.get('db_transactions');
+      const bankAccounts = mockDb.get('db_bank_accounts');
+      const cashDrawers = mockDb.get('db_cash_drawers');
+
+      const routeIdx = routes.findIndex((r: any) => r.id === id);
+      if (routeIdx === -1) throw new Error('Hoja de ruta no encontrada.');
+
+      const route = routes[routeIdx];
+      if (route.status === 'COMPLETED') throw new Error('La hoja de ruta ya está completada.');
+
+      // Procesar órdenes
+      const routeOrders = orders.filter((o: any) => o.deliveryRouteId === id);
+      const updatedOrders = [...orders];
+
+      routeOrders.forEach((order: any) => {
+        const set = settleData.settlements.find((s: any) => s.orderId === order.id);
+        if (!set) return;
+
+        const totalAmount = Number(order.totalAmount);
+        const personaIdx = personas.findIndex((p: any) => p.id === (order.personaId || order.clientId));
+        if (personaIdx === -1) return;
+
+        const persona = personas[personaIdx];
+
+        // 1. Invoicing if PREPARED
+        if (order.status === 'PREPARED') {
+          const ordIdx = updatedOrders.findIndex((o: any) => o.id === order.id);
+          if (ordIdx !== -1) {
+            updatedOrders[ordIdx].status = 'DELIVERED';
+            updatedOrders[ordIdx].invoiceType = 'PRESUPUESTO';
+            updatedOrders[ordIdx].invoiceNumber = `INT-${order.id.toString().padStart(8, '0')}`;
+            updatedOrders[ordIdx].updatedAt = new Date().toISOString();
+          }
+
+          if (set.paymentMethod === 'CREDITO') {
+            persona.outstandingBalance = Number(persona.outstandingBalance || 0) + totalAmount;
+          }
+        }
+
+        // 2. Register collections
+        if (set.paymentMethod && set.paymentMethod !== 'CREDITO') {
+          if (order.status === 'DELIVERED') {
+            persona.outstandingBalance = Number(persona.outstandingBalance || 0) - totalAmount;
+          }
+
+          let cashDrawerId = null;
+          let bankAccountId = null;
+          let txDescription = `Rendición Reparto - Chofer: ${route.driverName} - Ruta #${route.id} - Pago de ${persona.name}`;
+
+          if (set.paymentMethod === 'CASH') {
+            const branch = order.billingType === 'OFFICIAL' ? 'A' : 'X';
+            const activeDrawer = cashDrawers.find((d: any) => d.userId === user.id && d.status === 'OPEN' && d.branch === branch);
+            if (activeDrawer) {
+              cashDrawerId = activeDrawer.id;
+            }
+          } else if (set.paymentMethod === 'BANK_TRANSFER') {
+            const defaultBank = bankAccounts[0];
+            if (defaultBank) {
+              bankAccountId = defaultBank.id;
+              defaultBank.balance = Number(defaultBank.balance || 0) + totalAmount;
+            }
+          } else if (set.paymentMethod === 'CHECK') {
+            const defaultBank = bankAccounts[0];
+            if (defaultBank) {
+              bankAccountId = defaultBank.id;
+              defaultBank.balance = Number(defaultBank.balance || 0) + Number(set.checkAmount || totalAmount);
+            }
+            txDescription = `Rendición Reparto - Cheque N° ${set.checkNumber || 'S/N'} (Emisor: ${set.checkIssuer || 'Desconocido'}) - Chofer: ${route.driverName} - Ruta #${route.id}`;
+          }
+
+          // Crear Transacción
+          const newTran = {
+            id: transactions.length + 1,
+            orderId: order.id,
+            personaId: persona.id,
+            userId: user.id,
+            billingType: order.billingType || 'INTERNAL',
+            type: 'INCOME',
+            paymentMethod: set.paymentMethod,
+            amount: totalAmount,
+            description: txDescription,
+            cashDrawerId,
+            bankAccountId,
+            createdAt: new Date().toISOString()
+          };
+          transactions.push(newTran);
+        }
+      });
+
+      // Guardar estados
+      routes[routeIdx].status = 'COMPLETED';
+      routes[routeIdx].updatedAt = new Date().toISOString();
+
+      mockDb.set('db_delivery_routes', routes);
+      mockDb.set('db_orders', updatedOrders);
+      mockDb.set('db_personas', personas);
+      mockDb.set('db_transactions', transactions);
+      mockDb.set('db_bank_accounts', bankAccounts);
+
+      mockDb.log(user.id, user.username, user.role, 'SETTLE_DELIVERY_ROUTE', 'DeliveryRoute', id, null, settleData);
+      return routes[routeIdx];
+    }
+
+    const res = await request(`/logistics/${id}/settle`, {
+      method: 'POST',
+      body: JSON.stringify(settleData)
+    });
+    return res;
+  },
+
   getPurchaseOrders: async (filters?: any) => {
     if (simulationMode) {
       const orders = mockDb.get('db_purchase_orders');
@@ -2426,9 +3311,9 @@ export const api = {
       mockDb.set('db_purchase_orders', orders);
 
       // d. Auto-generar factura de compra
-      const neto = Number(orders[oIdx].totalAmount);
-      const iva = Number((neto * 0.21).toFixed(2));
-      const total = Number((neto + iva).toFixed(2));
+      const neto = Math.round(Number(orders[oIdx].totalAmount));
+      const iva = Math.round(neto * 0.21);
+      const total = Math.round(neto + iva);
       const invoiceNum = payload.invoiceNumber || `COMP-${id.toString().padStart(8, '0')}`;
 
       const newInv = {
@@ -2437,6 +3322,9 @@ export const api = {
         invoiceNumber: invoiceNum,
         invoiceType: 'FACTURA_A',
         issueDate: new Date().toISOString(),
+        dueDate: new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString(), // 30 días de plazo por defecto
+        status: 'PENDING',
+        paidAmount: 0.00,
         netAmount: neto,
         taxAmount: iva,
         percepcionAmount: 0,
@@ -2571,6 +3459,42 @@ export const api = {
 
     const res = await request('/crm/alerts');
     return res.data;
+  },
+
+  uploadPurchaseDocument: async (file: File) => {
+    if (simulationMode) {
+      throw new Error('Esta función no está disponible en modo simulación.');
+    }
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const token = localStorage.getItem('auth_token');
+    const headers = new Headers();
+    if (token) {
+      headers.append('Authorization', `Bearer ${token}`);
+    }
+
+    const response = await fetch(`${API_BASE_URL}/purchases/upload-document`, {
+      method: 'POST',
+      headers,
+      body: formData
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.message || 'Error al procesar el documento');
+    }
+    return data;
+  },
+
+  confirmPurchaseDocument: async (payload: any) => {
+    if (simulationMode) {
+      throw new Error('Esta función no está disponible en modo simulación.');
+    }
+    const res = await request('/purchases/confirm-document', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+    return res.data;
   }
 };
-

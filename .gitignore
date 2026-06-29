@@ -34,3 +34,11 @@ desktop.ini
 backend/certs/*.key
 backend/certs/*.crt
 !backend/certs/.gitkeep
+
+# Backups y Archivos Temporales de Oficina
+*.bak*
+*.pdf
+*.xlsx
+*.xls
+
+

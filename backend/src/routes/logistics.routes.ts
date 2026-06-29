@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getDeliveryRoutes, createDeliveryRoute, updateRouteStatus } from '../controllers/logistics.controller';
+import { getDeliveryRoutes, createDeliveryRoute, updateRouteStatus, settleDeliveryRoute } from '../controllers/logistics.controller';
 import { authenticateJWT } from '../middlewares/auth';
 
 const router = Router();
@@ -10,5 +10,6 @@ router.use(authenticateJWT);
 router.get('/', getDeliveryRoutes);
 router.post('/', createDeliveryRoute);
 router.patch('/:id/status', updateRouteStatus);
+router.post('/:id/settle', settleDeliveryRoute);
 
 export default router;

@@ -9,11 +9,9 @@ import {
   DollarSign, 
   Receipt, 
   TrendingUp, 
-  Sparkles, 
-  UserCheck, 
   Settings, 
-  History,
-  FileText
+  FileText,
+  History
 } from 'lucide-react';
 import { api } from '../utils/api';
 
@@ -42,10 +40,7 @@ export default function Sidebar({ username, role, activeTab, setActiveTab, onLog
           { id: 'finanzas', label: 'Finanzas', icon: <DollarSign size={18} /> },
           { id: 'compras', label: 'Compras', icon: <Receipt size={18} /> },
           { id: 'reports', label: 'Reportes', icon: <TrendingUp size={18} /> },
-          { id: 'crm', label: 'CRM + IA', icon: <Sparkles size={18} /> },
-          { id: 'personal', label: 'Personal', icon: <UserCheck size={18} /> },
           { id: 'config', label: 'Configuración', icon: <Settings size={18} /> },
-          { id: 'audit', label: 'Auditoría', icon: <History size={18} /> },
         ];
       case 'FACTURACION':
         return [
@@ -60,6 +55,7 @@ export default function Sidebar({ username, role, activeTab, setActiveTab, onLog
           { id: 'orders', label: 'Toma de Pedidos', icon: <ShoppingCart size={18} /> },
           { id: 'clients', label: 'Mis Personas', icon: <Users size={18} /> },
           { id: 'products', label: 'Catálogo', icon: <Package size={18} /> },
+          { id: 'history', label: 'Historial de Pedidos', icon: <History size={18} /> },
         ];
       case 'DEPOSITO':
         return [
@@ -81,31 +77,17 @@ export default function Sidebar({ username, role, activeTab, setActiveTab, onLog
   return (
     <aside className="sidebar">
       {/* Cabecera del Sidebar con el Logo y Rol Debajo */}
-      <div className="sidebar-brand" style={{ 
-        display: 'flex', 
-        flexDirection: 'column',
-        alignItems: 'center', 
-        justifyContent: 'center',
-        gap: '10px', 
-        paddingBottom: '20px', 
-        borderBottom: '1px solid var(--border-color)',
-        marginBottom: '16px',
-        width: '100%'
-      }}>
+      <div className="sidebar-brand">
         <img 
           src="/logo.png" 
           alt="Logo DV" 
-          style={{ 
-            height: '80px', 
-            width: '80px', 
-            objectFit: 'contain'
-          }}
+          className="sidebar-logo"
           onError={(e) => {
             // Si el logo no carga, ocultarlo
             e.currentTarget.style.display = 'none';
           }}
         />
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', marginTop: '2px' }}>
+        <div className="sidebar-status">
           <div style={{
             width: '8px',
             height: '8px',

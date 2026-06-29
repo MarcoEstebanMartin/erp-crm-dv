@@ -2,6 +2,7 @@ import { Response } from 'express';
 import prisma from '../utils/prisma';
 import { AuthenticatedRequest } from '../types';
 import { logAudit } from '../utils/audit';
+import { BillingType, InvoiceType, OrderStatus, TransactionType, PaymentMethod } from '@prisma/client';
 
 /**
  * Obtener hojas de ruta de reparto
@@ -171,5 +172,166 @@ export async function updateRouteStatus(req: AuthenticatedRequest, res: Response
       status: 'error',
       message: 'Error al actualizar el estado de la hoja de ruta.',
     });
+  }
+}
+
+/**
+ * Liquidar una hoja de ruta con cobros por lote
+ */
+export async function settleDeliveryRoute(req: AuthenticatedRequest, res: Response): Promise<void> {
+  const { id } = req.params;
+  const { settlements, cashDeclared, checksDeclared, transfersDeclared } = req.body;
+  const userId = req.user?.id;
+  const userRole = req.user?.role;
+
+  if (!userId || !userRole) {
+    res.status(401).json({ status: 'error', message: 'No autorizado.' });
+    return;
+  }
+
+  try {
+    const routeId = Number(id);
+    const route = await prisma.deliveryRoute.findUnique({
+      where: { id: routeId },
+      include: { orders: { include: { persona: true } } }
+    });
+
+    if (!route) {
+      res.status(404).json({ status: 'error', message: 'Hoja de ruta no encontrada.' });
+      return;
+    }
+
+    if (route.status === 'COMPLETED') {
+      res.status(400).json({ status: 'error', message: 'La hoja de ruta ya fue completada y liquidada.' });
+      return;
+    }
+
+    // Procesar liquidación en una transacción de base de datos
+    await prisma.$transaction(async (tx) => {
+      // 1. Iterar sobre las órdenes
+      for (const order of route.orders) {
+        const set = settlements.find((s: any) => s.orderId === order.id);
+        if (!set) continue;
+
+        const totalAmount = Number(order.totalAmount);
+
+        // Si está en PREPARED (no facturado aún), primero lo facturamos
+        if (order.status === OrderStatus.PREPARED) {
+          const finalInvoiceType = InvoiceType.PRESUPUESTO;
+          const finalInvoiceNumber = `INT-${order.id.toString().padStart(8, '0')}`;
+          
+          // Actualizar pedido a DELIVERED
+          await tx.order.update({
+            where: { id: order.id },
+            data: {
+              status: OrderStatus.DELIVERED,
+              invoiceType: finalInvoiceType,
+              invoiceNumber: finalInvoiceNumber,
+            }
+          });
+
+          // Si es cobro diferido (CREDITO), incrementamos Cuenta Corriente
+          if (set.paymentMethod === 'CREDITO') {
+            await tx.persona.update({
+              where: { id: order.personaId },
+              data: { outstandingBalance: { increment: totalAmount } }
+            });
+          }
+        }
+
+        // Registrar los cobros si no es crédito
+        if (set.paymentMethod && set.paymentMethod !== 'CREDITO') {
+          // Si el pedido ya estaba en DELIVERED, significa que ya se le había cargado la deuda en Cuenta Corriente
+          // Por ende, registrar el cobro reduce la deuda (outstandingBalance).
+          if (order.status === OrderStatus.DELIVERED) {
+            await tx.persona.update({
+              where: { id: order.personaId },
+              data: { outstandingBalance: { decrement: totalAmount } }
+            });
+          }
+
+          // Determinar Caja Operativa (para CASH)
+          let cashDrawerId: number | null = null;
+          let bankAccountId: number | null = null;
+          let txDescription = `Rendición Reparto - Chofer: ${route.driverName} - Ruta #${route.id} - Pago de ${order.persona.name}`;
+
+          if (set.paymentMethod === 'CASH') {
+            const branch = order.billingType === BillingType.OFFICIAL ? 'A' : 'X';
+            const activeDrawer = await tx.cashDrawer.findFirst({
+              where: {
+                userId: userId,
+                branch: branch,
+                status: 'OPEN'
+              }
+            });
+            if (activeDrawer) {
+              cashDrawerId = activeDrawer.id;
+            }
+          } else if (set.paymentMethod === 'BANK_TRANSFER') {
+            bankAccountId = set.bankAccountId || (await tx.bankAccount.findFirst())?.id || null;
+            if (bankAccountId) {
+              await tx.bankAccount.update({
+                where: { id: bankAccountId },
+                data: { balance: { increment: totalAmount } }
+              });
+            }
+          } else if (set.paymentMethod === 'CHECK') {
+            const defaultBank = await tx.bankAccount.findFirst();
+            if (defaultBank) {
+              bankAccountId = defaultBank.id;
+              await tx.bankAccount.update({
+                where: { id: defaultBank.id },
+                data: { balance: { increment: Number(set.checkAmount || totalAmount) } }
+              });
+            }
+            txDescription = `Rendición Reparto - Cheque N° ${set.checkNumber || 'S/N'} (Emisor: ${set.checkIssuer || 'Desconocido'}) - Chofer: ${route.driverName} - Ruta #${route.id}`;
+          }
+
+          // Crear transacción financiera
+          await tx.transaction.create({
+            data: {
+              orderId: order.id,
+              personaId: order.personaId,
+              userId: userId,
+              billingType: order.billingType,
+              type: TransactionType.INCOME,
+              paymentMethod: set.paymentMethod as PaymentMethod,
+              amount: totalAmount,
+              description: txDescription,
+              cashDrawerId,
+              bankAccountId
+            }
+          });
+        }
+      }
+
+      // 2. Marcar la Hoja de Ruta como COMPLETADA
+      await tx.deliveryRoute.update({
+        where: { id: routeId },
+        data: { status: 'COMPLETED' }
+      });
+    });
+
+    // Auditoría
+    await logAudit({
+      userId,
+      action: 'SETTLE_DELIVERY_ROUTE',
+      entityType: 'DeliveryRoute',
+      entityId: routeId,
+      newValues: {
+        status: 'COMPLETED',
+        cashDeclared,
+        checksDeclared,
+        transfersDeclared
+      }
+    });
+
+    res.status(200).json({
+      status: 'success',
+      message: 'Hoja de ruta liquidada y completada con éxito.'
+    });
+  } catch (error: any) {
+    console.error('Error al liquidar hoja de ruta:', error);
+    res.status(500).json({ status: 'error', message: error.message || 'Error al liquidar la hoja de ruta.' });
   }
 }

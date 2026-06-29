@@ -13,6 +13,8 @@ import billingRoutes from './routes/billing.routes';
 import logisticsRoutes from './routes/logistics.routes';
 import purchaseRoutes from './routes/purchase.routes';
 import crmRoutes from './routes/crm.routes';
+import creditNoteRoutes from './routes/creditNote.routes';
+import rubroRoutes from './routes/rubro.routes';
 
 dotenv.config();
 
@@ -29,10 +31,12 @@ app.use('/api/personas', personaRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/finance', financeRoutes);
+app.use('/api/billing/credit-notes', creditNoteRoutes);
 app.use('/api/billing', billingRoutes);
 app.use('/api/logistics', logisticsRoutes);
 app.use('/api/purchases', purchaseRoutes);
 app.use('/api/crm', crmRoutes);
+app.use('/api/rubros', rubroRoutes);
 
 // Ruta de comprobación de estado (Healthcheck)
 app.get('/api/health', (req: Request, res: Response) => {

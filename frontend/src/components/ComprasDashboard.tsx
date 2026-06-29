@@ -6,6 +6,7 @@ import {
   Truck,
   Eye
 } from 'lucide-react';
+import { PurchaseScannerModal } from './PurchaseScannerModal';
 
 export default function ComprasDashboard() {
   const [purchaseOrders, setPurchaseOrders] = useState<any[]>([]);
@@ -16,6 +17,8 @@ export default function ComprasDashboard() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showReceiveModal, setShowReceiveModal] = useState<any | null>(null);
   const [viewDetailsModal, setViewDetailsModal] = useState<any | null>(null);
+  const [scannerFile, setScannerFile] = useState<File | null>(null);
+  const [showScannerModal, setShowScannerModal] = useState(false);
 
   // Formulario Crear Orden de Compra
   const [selectedProviderId, setSelectedProviderId] = useState('');
@@ -216,7 +219,7 @@ export default function ComprasDashboard() {
           alignItems: 'center'
         }}>
           <span>{successMsg}</span>
-          <button className="btn btn-ghost" style={{ padding: '2px' }} onClick={() => setSuccessMsg(null)}>✕</button>
+          <button className="btn btn-ghost" style={{ padding: '2px' }} onClick={() => setSuccessMsg(null)}>✖</button>
         </div>
       )}
 
@@ -233,7 +236,7 @@ export default function ComprasDashboard() {
           alignItems: 'center'
         }}>
           <span>{errorMsg}</span>
-          <button className="btn btn-ghost" style={{ padding: '2px' }} onClick={() => setErrorMsg(null)}>✕</button>
+          <button className="btn btn-ghost" style={{ padding: '2px' }} onClick={() => setErrorMsg(null)}>✖</button>
         </div>
       )}
 
@@ -244,10 +247,27 @@ export default function ComprasDashboard() {
             <h3 className="card-title" style={{ margin: '0' }}>🧾 Órdenes de Compra a Proveedores</h3>
             <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Control de abastecimiento, ingresos de lotes y actualización automática del precio costo en el catálogo.</p>
           </div>
-          <button className="btn btn-primary" onClick={() => setShowCreateModal(true)}>
-            <Plus size={16} />
-            Nueva Orden de Compra
-          </button>
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <label className="btn" style={{ backgroundColor: '#E30613', color: 'white', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', padding: '0 16px', borderRadius: '8px' }}>
+              <span style={{ fontWeight: 600, fontSize: '0.85rem' }}>📸 Escanear Documento (IA)</span>
+              <input 
+                type="file" 
+                accept="image/*,application/pdf" 
+                style={{ display: 'none' }}
+                onChange={(e) => {
+                  if (e.target.files && e.target.files[0]) {
+                    setScannerFile(e.target.files[0]);
+                    setShowScannerModal(true);
+                  }
+                  e.target.value = '';
+                }}
+              />
+            </label>
+            <button className="btn btn-primary" onClick={() => setShowCreateModal(true)}>
+              <Plus size={16} />
+              Nueva Orden de Compra
+            </button>
+          </div>
         </div>
 
         {/* Grilla de OC */}
@@ -276,7 +296,7 @@ export default function ComprasDashboard() {
                       <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>CUIT: {order.persona?.cuit}</div>
                     </td>
                     <td style={{ fontWeight: 700 }}>
-                      ${Number(order.totalAmount).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                      ${Number(order.totalAmount).toLocaleString('es-AR', { minimumFractionDigits: 0 })}
                     </td>
                     <td>
                       <span style={{
@@ -469,7 +489,7 @@ export default function ComprasDashboard() {
                               style={{ padding: '2px', color: 'var(--color-danger)' }}
                               onClick={() => handleRemoveFromCart(item.productId)}
                             >
-                              ✕
+                              ✖
                             </button>
                           </div>
                         </div>
@@ -490,7 +510,7 @@ export default function ComprasDashboard() {
                       fontSize: '0.95rem'
                     }}>
                       <span>Monto Neto Total:</span>
-                      <span style={{ color: 'var(--accent-color)' }}>${cartTotal.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
+                      <span style={{ color: 'var(--accent-color)' }}>${cartTotal.toLocaleString('es-AR', { minimumFractionDigits: 0 })}</span>
                     </div>
                   )}
                 </div>
@@ -639,8 +659,8 @@ export default function ComprasDashboard() {
                       <tr key={item.id}>
                         <td>{item.product?.name || `Producto ID #${item.productId}`}</td>
                         <td style={{ textAlign: 'right' }}>{item.quantity} u.</td>
-                        <td style={{ textAlign: 'right' }}>${Number(item.costPrice).toLocaleString('es-AR', { minimumFractionDigits: 2 })}</td>
-                        <td style={{ textAlign: 'right' }}>${Number(item.subtotal).toLocaleString('es-AR', { minimumFractionDigits: 2 })}</td>
+                        <td style={{ textAlign: 'right' }}>${Number(item.costPrice).toLocaleString('es-AR', { minimumFractionDigits: 0 })}</td>
+                        <td style={{ textAlign: 'right' }}>${Number(item.subtotal).toLocaleString('es-AR', { minimumFractionDigits: 0 })}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -649,7 +669,7 @@ export default function ComprasDashboard() {
 
               <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px', backgroundColor: '#F8F8FA', borderRadius: '6px', fontWeight: 700, fontSize: '0.95rem' }}>
                 <span>Total de Compra (Neto):</span>
-                <span>${Number(viewDetailsModal.totalAmount).toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
+                <span>${Number(viewDetailsModal.totalAmount).toLocaleString('es-AR', { minimumFractionDigits: 0 })}</span>
               </div>
             </div>
 
@@ -660,6 +680,15 @@ export default function ComprasDashboard() {
         </div>
       )}
 
+      <PurchaseScannerModal
+        isOpen={showScannerModal}
+        onClose={() => setShowScannerModal(false)}
+        file={scannerFile}
+        onSuccess={() => {
+          setSuccessMsg('Documento procesado con éxito y stock inyectado.');
+          loadData();
+        }}
+      />
     </div>
   );
 }

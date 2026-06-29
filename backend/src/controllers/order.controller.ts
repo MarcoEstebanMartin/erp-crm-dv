@@ -4,6 +4,7 @@ import { AuthenticatedRequest } from '../types';
 import { Role, BillingType, InvoiceType, OrderStatus, MovementType, TransactionType, PaymentMethod } from '@prisma/client';
 import { emitirFacturaAFIP } from '../services/afip.service';
 import { logAudit } from '../utils/audit';
+import { OrderService } from '../services/order.service';
 
 /**
  * Obtener listado de pedidos.
@@ -133,6 +134,7 @@ interface CreateOrderRequest {
   items: {
     productId: number;
     quantity: number;
+    weight?: number;
   }[];
 }
 
@@ -150,150 +152,12 @@ export async function createOrder(req: AuthenticatedRequest, res: Response): Pro
     return;
   }
 
-  if (!personaId || !items || items.length === 0) {
-    res.status(400).json({
-      status: 'error',
-      message: 'Persona e ítems son requeridos.',
-    });
-    return;
-  }
-
   try {
-    // 1. Validar persona
-    const persona = await prisma.persona.findUnique({ where: { id: personaId } });
-    if (!persona) {
-      res.status(404).json({ status: 'error', message: 'Persona no encontrada.' });
-      return;
-    }
-
-    if (userRole === Role.VENDEDOR && persona.sellerId !== sellerId) {
-      res.status(403).json({
-        status: 'error',
-        message: 'No podés cargar un pedido para un cliente asignado a otro vendedor.',
-      });
-      return;
-    }
-
-    // 2. Ejecutar transacciones de stock preventivo
-    const result = await prisma.$transaction(async (tx) => {
-      let totalSum = 0;
-      const orderItemsToCreate = [];
-      const stockUpdates = [];
-
-      for (const item of items) {
-        const product = await tx.product.findUnique({
-          where: { id: item.productId },
-        });
-
-        if (!product) {
-          throw new Error(`Producto ID ${item.productId} no encontrado.`);
-        }
-
-        if (product.stock < item.quantity) {
-          throw new Error(
-            `Stock insuficiente para "${product.name}" (Disponible: ${product.stock}, Solicitado: ${item.quantity}).`
-          );
-        }
-
-        // Determinar precio según lista de la persona con fallback a lista A (listPrice)
-        let selectedPrice = Number(product.listPrice);
-        if (persona.priceList === 'B') {
-          const priceB = Number(product.listPriceB);
-          if (priceB > 0) {
-            selectedPrice = priceB;
-          }
-        } else if (persona.priceList === 'C') {
-          const priceC = Number(product.listPriceC);
-          if (priceC > 0) {
-            selectedPrice = priceC;
-          }
-        }
-
-        // Aplicar descuento
-        const discountPercentage = Number(persona.discount || 0);
-        const finalUnitPrice = selectedPrice * (1 - discountPercentage / 100);
-        const subtotal = finalUnitPrice * item.quantity;
-        totalSum += subtotal;
-
-        orderItemsToCreate.push({
-          productId: product.id,
-          quantity: item.quantity,
-          unitPrice: finalUnitPrice,
-          subtotal: subtotal,
-        });
-
-        stockUpdates.push({
-          productId: product.id,
-          newStock: product.stock - item.quantity,
-          quantityDecreased: -item.quantity,
-        });
-      }
-
-      // Validar límite de crédito
-      const creditLimit = Number(persona.creditLimit || 0);
-      const outstandingBalance = Number(persona.outstandingBalance || 0);
-      if (creditLimit > 0 && (outstandingBalance + totalSum) > creditLimit) {
-        if (userRole !== Role.ADMIN) {
-          throw new Error(
-            `Límite de crédito excedido. Saldo actual: $${outstandingBalance.toLocaleString()}, Disponible: $${(creditLimit - outstandingBalance).toLocaleString()}, Requerido para este pedido: $${totalSum.toLocaleString()}.`
-          );
-        }
-      }
-
-      // Validar regla de "boleta contra boleta" (deben una y deben pagar la proxima)
-      if (outstandingBalance > 0) {
-        if (userRole !== Role.ADMIN) {
-          throw new Error(
-            `Regla Boleta contra Boleta: El cliente posee una boleta pendiente ($${outstandingBalance.toLocaleString()}). Debe registrar el pago de la boleta anterior antes de iniciar un nuevo pedido a crédito.`
-          );
-        }
-      }
-
-      // Crear pedido PENDING (por defecto INTERNAL/PRESUPUESTO hasta que administración lo facture)
-      const order = await tx.order.create({
-        data: {
-          personaId,
-          sellerId,
-          billingType: BillingType.INTERNAL,
-          invoiceType: InvoiceType.PRESUPUESTO,
-          totalAmount: totalSum,
-          status: OrderStatus.PENDING,
-        },
-      });
-
-      // Crear ítems
-      for (const oItem of orderItemsToCreate) {
-        await tx.orderItem.create({
-          data: {
-            orderId: order.id,
-            productId: oItem.productId,
-            quantity: oItem.quantity,
-            unitPrice: oItem.unitPrice,
-            subtotal: oItem.subtotal,
-          },
-        });
-      }
-
-      // Restar stock preventivamente
-      for (const stockUp of stockUpdates) {
-        await tx.product.update({
-          where: { id: stockUp.productId },
-          data: { stock: stockUp.newStock },
-        });
-
-        await tx.stockMovement.create({
-          data: {
-            productId: stockUp.productId,
-            quantity: stockUp.quantityDecreased,
-            type: MovementType.OUT,
-            referenceId: `ORDER-${order.id}`,
-            userId: sellerId,
-            reason: `Venta - Reserva de Pedido #${order.id}`,
-          },
-        });
-      }
-
-      return order;
+    const result = await OrderService.createOrder({
+      sellerId,
+      userRole,
+      personaId,
+      items,
     });
 
     // Auditoría
@@ -318,6 +182,49 @@ export async function createOrder(req: AuthenticatedRequest, res: Response): Pro
     res.status(400).json({
       status: 'error',
       message: error.message || 'Error al procesar el pedido.',
+    });
+  }
+}
+
+/**
+ * Actualizar pesos de productos pesables (Depósito / Facturación).
+ */
+export async function updateOrderWeights(req: AuthenticatedRequest, res: Response): Promise<void> {
+  const { id } = req.params;
+  const { items } = req.body;
+  const userId = req.user?.id;
+  const userRole = req.user?.role;
+
+  if (!userId || !userRole) {
+    res.status(401).json({ status: 'error', message: 'No autorizado.' });
+    return;
+  }
+
+  if (userRole !== Role.ADMIN && userRole !== Role.FACTURACION && userRole !== Role.DEPOSITO) {
+    res.status(403).json({ status: 'error', message: 'Permisos insuficientes para actualizar pesos.' });
+    return;
+  }
+
+  try {
+    const updatedOrder = await OrderService.updateOrderWeights(Number(id), items);
+
+    await logAudit({
+      userId,
+      action: 'UPDATE_ORDER_WEIGHTS',
+      entityType: 'Order',
+      entityId: updatedOrder.id,
+      newValues: { totalAmount: updatedOrder.totalAmount },
+    });
+
+    res.status(200).json({
+      status: 'success',
+      data: { order: updatedOrder },
+      message: 'Pesos actualizados con éxito.',
+    });
+  } catch (error: any) {
+    res.status(400).json({
+      status: 'error',
+      message: error.message || 'Error al actualizar los pesos.',
     });
   }
 }
@@ -823,21 +730,19 @@ export async function updateOrder(req: AuthenticatedRequest, res: Response): Pro
 
         // Determinar precio según lista con fallback
         let selectedPrice = Number(product.listPrice);
+        let itemDiscount = Number(persona.discount || 0);
+
         if (persona.priceList === 'B') {
-          const priceB = Number(product.listPriceB);
-          if (priceB > 0) {
-            selectedPrice = priceB;
-          }
-        } else if (persona.priceList === 'C') {
-          const priceC = Number(product.listPriceC);
-          if (priceC > 0) {
-            selectedPrice = priceC;
+          const isMelincue = product.description?.toUpperCase() === 'MELINCUE' || product.name?.toUpperCase().includes('MELINCUE');
+          if (isMelincue) {
+            itemDiscount = 3;
+          } else {
+            itemDiscount = 0;
           }
         }
 
         // Aplicar descuento
-        const discountPercentage = Number(persona.discount || 0);
-        const finalUnitPrice = selectedPrice * (1 - discountPercentage / 100);
+        const finalUnitPrice = selectedPrice * (1 - itemDiscount / 100);
         const subtotal = finalUnitPrice * item.quantity;
         totalSum += subtotal;
 
@@ -922,6 +827,10 @@ interface CreateDirectInvoiceRequest {
   personaId: number;
   billingType: BillingType;
   paymentMethod?: PaymentMethod;
+  bankAccountId?: number;
+  checkNumber?: string;
+  checkIssuer?: string;
+  checkAmount?: number;
   items: {
     productId: number;
     quantity: number;
@@ -931,7 +840,16 @@ interface CreateDirectInvoiceRequest {
 export async function createDirectInvoice(req: AuthenticatedRequest, res: Response): Promise<void> {
   const adminId = req.user?.id;
   const userRole = req.user?.role;
-  const { personaId, billingType, paymentMethod, items }: CreateDirectInvoiceRequest = req.body;
+  const { 
+    personaId, 
+    billingType, 
+    paymentMethod, 
+    bankAccountId,
+    checkNumber,
+    checkIssuer,
+    checkAmount,
+    items 
+  }: CreateDirectInvoiceRequest = req.body;
 
   if (!adminId || !userRole) {
     res.status(401).json({ status: 'error', message: 'No autorizado.' });
@@ -978,17 +896,19 @@ export async function createDirectInvoice(req: AuthenticatedRequest, res: Respon
 
         // Determinar precio unitario base según la lista del cliente
         let selectedPrice = Number(product.listPrice);
+        let itemDiscount = Number(persona.discount || 0);
+
         if (persona.priceList === 'B') {
-          const priceB = Number(product.listPriceB);
-          if (priceB > 0) selectedPrice = priceB;
-        } else if (persona.priceList === 'C') {
-          const priceC = Number(product.listPriceC);
-          if (priceC > 0) selectedPrice = priceC;
+          const isMelincue = product.description?.toUpperCase() === 'MELINCUE' || product.name?.toUpperCase().includes('MELINCUE');
+          if (isMelincue) {
+            itemDiscount = 3;
+          } else {
+            itemDiscount = 0;
+          }
         }
 
-        // Aplicar descuento fijo
-        const discountPercentage = Number(persona.discount || 0);
-        const finalUnitPrice = selectedPrice * (1 - discountPercentage / 100);
+        // Aplicar descuento fijo / dinámico
+        const finalUnitPrice = selectedPrice * (1 - itemDiscount / 100);
         const subtotal = finalUnitPrice * item.quantity;
         totalSum += subtotal;
 
@@ -1165,7 +1085,9 @@ export async function createDirectInvoice(req: AuthenticatedRequest, res: Respon
       // 7. Cobro en caja (si se pagó en el acto) o registro en Cuenta Corriente
       if (paymentMethod) {
         let cashDrawerId: number | undefined = undefined;
-        let bankAccountId: number | undefined = undefined;
+        let bankAccountIdVal: number | undefined = undefined;
+        let txAmount = totalSum;
+        let txDescription = `Cobro en el acto de factura directa #${order.id} (${finalInvoiceNumber})`;
 
         if (paymentMethod === PaymentMethod.CASH) {
           const activeDrawer = await tx.cashDrawer.findFirst({
@@ -1179,17 +1101,33 @@ export async function createDirectInvoice(req: AuthenticatedRequest, res: Respon
             throw new Error(`Debe abrir una caja operativa para la sucursal ${billingType === BillingType.OFFICIAL ? 'A' : 'X'} antes de registrar cobros en efectivo.`);
           }
           cashDrawerId = activeDrawer.id;
-        } else if (paymentMethod === PaymentMethod.BANK_TRANSFER || paymentMethod === PaymentMethod.CHECK) {
+        } else if (paymentMethod === PaymentMethod.BANK_TRANSFER) {
+          const selectedBankId = bankAccountId || (await tx.bankAccount.findFirst())?.id;
+          if (!selectedBankId) {
+            throw new Error(`No se encontró ninguna cuenta bancaria configurada en el sistema.`);
+          }
+          bankAccountIdVal = selectedBankId;
+
+          // Incrementar saldo banco
+          await tx.bankAccount.update({
+            where: { id: selectedBankId },
+            data: { balance: { increment: totalSum } },
+          });
+        } else if (paymentMethod === PaymentMethod.CHECK) {
           const defaultBank = await tx.bankAccount.findFirst();
           if (!defaultBank) {
             throw new Error(`No se encontró ninguna cuenta bancaria configurada en el sistema.`);
           }
-          bankAccountId = defaultBank.id;
+          bankAccountIdVal = defaultBank.id;
+
+          const finalCheckAmount = checkAmount !== undefined ? Number(checkAmount) : totalSum;
+          txAmount = finalCheckAmount;
+          txDescription = `Cobro con Cheque N° ${checkNumber || 'S/N'} (Emisor: ${checkIssuer || 'Desconocido'}) - Comprobante ${finalInvoiceNumber || 'INT-' + order.id}`;
 
           // Incrementar saldo banco
           await tx.bankAccount.update({
             where: { id: defaultBank.id },
-            data: { balance: { increment: totalSum } },
+            data: { balance: { increment: finalCheckAmount } },
           });
         }
 
@@ -1201,10 +1139,10 @@ export async function createDirectInvoice(req: AuthenticatedRequest, res: Respon
             billingType,
             type: TransactionType.INCOME,
             paymentMethod,
-            amount: totalSum,
-            description: `Cobro en el acto de factura directa #${order.id} (${finalInvoiceNumber})`,
+            amount: txAmount,
+            description: txDescription,
             cashDrawerId,
-            bankAccountId,
+            bankAccountId: bankAccountIdVal,
           },
         });
       } else {

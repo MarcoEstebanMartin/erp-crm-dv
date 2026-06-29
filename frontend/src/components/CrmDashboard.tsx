@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+﻿import React, { useState, useEffect, useMemo } from 'react';
 import { api } from '../utils/api';
 import { 
   Sparkles, 
@@ -80,7 +80,7 @@ export default function CrmDashboard() {
         }))
       });
 
-      setSuccessMsg(`✨ Orden de compra sugerida por la IA creada con éxito para ${suggestedPoModal.providerName}.`);
+      setSuccessMsg(`âœ¨ Orden de compra sugerida por la IA creada con Ã©xito para ${suggestedPoModal.providerName}.`);
       setSuggestedPoModal(null);
       fetchCRMAlerts();
     } catch (err: any) {
@@ -124,7 +124,7 @@ export default function CrmDashboard() {
           alignItems: 'center'
         }}>
           <span>{successMsg}</span>
-          <button className="btn btn-ghost" style={{ padding: '2px' }} onClick={() => setSuccessMsg(null)}>✕</button>
+          <button className="btn btn-ghost" style={{ padding: '2px' }} onClick={() => setSuccessMsg(null)}>âœ•</button>
         </div>
       )}
 
@@ -141,7 +141,7 @@ export default function CrmDashboard() {
           alignItems: 'center'
         }}>
           <span>{errorMsg}</span>
-          <button className="btn btn-ghost" style={{ padding: '2px' }} onClick={() => setErrorMsg(null)}>✕</button>
+          <button className="btn btn-ghost" style={{ padding: '2px' }} onClick={() => setErrorMsg(null)}>âœ•</button>
         </div>
       )}
 
@@ -159,7 +159,7 @@ export default function CrmDashboard() {
         </div>
 
         <p style={{ fontSize: '0.85rem', marginBottom: '20px', color: 'var(--text-secondary)' }}>
-          Nuestra inteligencia artificial analiza diariamente los niveles de stock contra los mínimos del catálogo, generando borradores rápidos de órdenes de compra para reabastecer de forma óptima a tus proveedores.
+          Nuestra inteligencia artificial analiza diariamente los niveles de stock contra los mÃ­nimos del catÃ¡logo, generando borradores rÃ¡pidos de Ã³rdenes de compra para reabastecer de forma Ã³ptima a tus proveedores.
         </p>
 
         {loading ? (
@@ -171,7 +171,7 @@ export default function CrmDashboard() {
           <div style={{ textAlign: 'center', padding: '24px', backgroundColor: 'var(--bg-app)', borderRadius: '6px' }}>
             <CheckCircle size={24} style={{ color: 'var(--color-success)', marginBottom: '8px' }} />
             <h5 style={{ margin: 0 }}>Stock Perfecto</h5>
-            <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Todos los artículos tienen stock por encima del mínimo de seguridad.</p>
+            <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Todos los artÃ­culos tienen stock por encima del mÃ­nimo de seguridad.</p>
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
@@ -224,7 +224,7 @@ export default function CrmDashboard() {
         <div className="card">
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', color: 'var(--accent-color)' }}>
             <Users size={20} />
-            <h3 className="card-title" style={{ margin: '0' }}>Alerta de Clientes Inactivos (&gt;15 días sin comprar)</h3>
+            <h3 className="card-title" style={{ margin: '0' }}>Alerta de Clientes Inactivos (&gt;15 dÃ­as sin comprar)</h3>
           </div>
 
           <div className="table-container">
@@ -234,26 +234,26 @@ export default function CrmDashboard() {
                   <th>Cliente</th>
                   <th>Contacto</th>
                   <th>Saldo Deudor</th>
-                  <th>Última Compra</th>
+                  <th>Ãšltima Compra</th>
                   <th>WhatsApp</th>
                 </tr>
               </thead>
               <tbody>
                 {!alerts?.inactiveClients || alerts.inactiveClients.length === 0 ? (
-                  <tr><td colSpan={5} style={{ textAlign: 'center' }}>Todos los clientes han comprado recientemente. ¡Excelente relación!</td></tr>
+                  <tr><td colSpan={5} style={{ textAlign: 'center' }}>Todos los clientes han comprado recientemente. Â¡Excelente relaciÃ³n!</td></tr>
                 ) : (
                   alerts.inactiveClients.map((client: any) => (
                     <tr key={client.id}>
                       <td style={{ fontWeight: 600 }}>{client.name}</td>
                       <td>
-                        <div style={{ fontSize: '0.8rem' }}>{client.phone || 'Sin teléfono'}</div>
+                        <div style={{ fontSize: '0.8rem' }}>{client.phone || 'Sin telÃ©fono'}</div>
                         <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>CUIT: {client.cuit}</div>
                       </td>
                       <td style={{ color: client.outstandingBalance > 0 ? 'var(--color-danger)' : 'var(--text-primary)', fontWeight: 600 }}>
                         ${client.outstandingBalance.toLocaleString()}
                       </td>
                       <td style={{ fontSize: '0.78rem' }}>
-                        {client.lastOrderDate ? new Date(client.lastOrderDate).toLocaleDateString('es-AR') : 'Nunca compró'}
+                        {client.lastOrderDate ? new Date(client.lastOrderDate).toLocaleDateString('es-AR') : 'Nunca comprÃ³'}
                       </td>
                       <td>
                         <a 
@@ -287,8 +287,8 @@ export default function CrmDashboard() {
               <thead>
                 <tr>
                   <th>Cliente</th>
-                  <th>Productos Frecuentes Omitidos en Último Pedido</th>
-                  <th>Acción</th>
+                  <th>Productos Frecuentes Omitidos en Ãšltimo Pedido</th>
+                  <th>AcciÃ³n</th>
                 </tr>
               </thead>
               <tbody>
@@ -311,7 +311,7 @@ export default function CrmDashboard() {
                                 gap: '4px'
                               }}
                             >
-                              📦 {p.name} <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>(Histórico: {p.frequency} u.)</span>
+                              ðŸ“¦ {p.name} <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>(HistÃ³rico: {p.frequency} u.)</span>
                             </span>
                           ))}
                         </div>
@@ -320,7 +320,7 @@ export default function CrmDashboard() {
                         <button 
                           className="btn btn-secondary" 
                           style={{ padding: '4px 8px', fontSize: '0.72rem' }}
-                          onClick={() => alert(`Sugerencia cargada en preventa para ${group.clientName}. Se le ofrecerán estos productos prioritariamente.`)}
+                          onClick={() => alert(`Sugerencia cargada en preventa para ${group.clientName}. Se le ofrecerÃ¡n estos productos prioritariamente.`)}
                         >
                           Ofrecer
                         </button>
@@ -352,14 +352,14 @@ export default function CrmDashboard() {
                   <strong>Proveedor de Abastecimiento:</strong> {suggestedPoModal.providerName}
                 </div>
                 <div>
-                  <strong>Artículos sugeridos a reponer (Stock &lt;= Mínimo):</strong>
+                  <strong>ArtÃ­culos sugeridos a reponer (Stock &lt;= MÃ­nimo):</strong>
                 </div>
 
                 <div className="table-container" style={{ borderRadius: '6px' }}>
                   <table style={{ fontSize: '0.8rem' }}>
                     <thead>
                       <tr>
-                        <th>Artículo</th>
+                        <th>ArtÃ­culo</th>
                         <th style={{ textAlign: 'right' }}>Cant Sugerida</th>
                         <th style={{ textAlign: 'right' }}>Costo Est.</th>
                         <th style={{ textAlign: 'right' }}>Subtotal</th>
@@ -390,7 +390,7 @@ export default function CrmDashboard() {
                 }}>
                   <span>Total Estimado del Abastecimiento:</span>
                   <span style={{ color: 'var(--accent-color)' }}>
-                    ${suggestedPoModal.items.reduce((acc: number, i: any) => acc + (i.quantity * i.costPrice), 0).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                    ${suggestedPoModal.items.reduce((acc: number, i: any) => acc + (i.quantity * i.costPrice), 0).toLocaleString('es-AR', { minimumFractionDigits: 0 })}
                   </span>
                 </div>
               </div>

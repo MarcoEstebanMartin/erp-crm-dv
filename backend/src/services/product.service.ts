@@ -1,0 +1,385 @@
+import prisma from '../utils/prisma';
+import { logAudit } from '../utils/audit';
+
+export class ProductService {
+  /**
+   * Obtener todos los productos (Buscador inteligente por SKU o Nombre).
+   */
+  async getProducts(search?: string) {
+    const products = await prisma.product.findMany({
+      where: search
+        ? {
+            OR: [
+              { name: { contains: search, mode: 'insensitive' } },
+              { sku: { contains: search, mode: 'insensitive' } },
+              { barcode: { equals: search } },
+            ],
+          }
+        : {},
+      include: {
+        lots: {
+          orderBy: { expirationDate: 'asc' },
+        },
+        rubro: true,
+        provider: true,
+      },
+      orderBy: { name: 'asc' },
+    });
+
+    return products;
+  }
+
+  /**
+   * Obtener un producto por ID.
+   */
+  async getProductById(id: number) {
+    return prisma.product.findUnique({
+      where: { id },
+      include: {
+        lots: {
+          orderBy: { expirationDate: 'asc' },
+        },
+        rubro: true,
+        provider: true,
+      },
+    });
+  }
+
+  /**
+   * Obtener un producto por código de barras.
+   */
+  async getProductByBarcode(barcode: string) {
+    return prisma.product.findUnique({
+      where: { barcode: barcode.trim() },
+      include: {
+        lots: {
+          orderBy: { expirationDate: 'asc' },
+        },
+        rubro: true,
+        provider: true,
+      },
+    });
+  }
+
+  /**
+   * Crear un nuevo producto.
+   */
+  async createProduct(data: any, userId?: number) {
+    const { sku, name, description, barcode, costPrice, listPrice, listPriceB, listPriceC, minStock, rubroId, providerId, isPesable, approximateWeight } = data;
+
+    const existing = await prisma.product.findUnique({ where: { sku } });
+    if (existing) {
+      throw new Error(`El SKU ${sku} ya está en uso.`);
+    }
+
+    if (barcode) {
+      const existingBarcode = await prisma.product.findUnique({ where: { barcode: String(barcode).trim() } });
+      if (existingBarcode) {
+        throw new Error(`El código de barras ${barcode} ya está asignado al producto ${existingBarcode.sku}.`);
+      }
+    }
+
+    const product = await prisma.product.create({
+      data: {
+        sku,
+        name,
+        description,
+        barcode: barcode ? String(barcode).trim() : null,
+        costPrice: Number(costPrice),
+        listPrice: Number(listPrice),
+        listPriceB: listPriceB ? Number(listPriceB) : 0.00,
+        listPriceC: listPriceC ? Number(listPriceC) : 0.00,
+        stock: 0,
+        minStock: minStock ? Number(minStock) : 0,
+        isPesable: Boolean(isPesable),
+        approximateWeight: approximateWeight ? Number(approximateWeight) : null,
+        rubroId: rubroId ? Number(rubroId) : null,
+        providerId: providerId ? Number(providerId) : null,
+      },
+    });
+
+    if (userId) {
+      await logAudit({
+        userId,
+        action: 'CREATE_PRODUCT',
+        entityType: 'Product',
+        entityId: product.id,
+        newValues: product,
+      });
+    }
+
+    return product;
+  }
+
+  /**
+   * Actualizar datos de producto.
+   */
+  async updateProduct(id: number, data: any, userId?: number) {
+    const original = await prisma.product.findUnique({ where: { id } });
+    if (!original) throw new Error('Producto no encontrado.');
+
+    if (data.barcode && data.barcode !== original.barcode) {
+      const existingBarcode = await prisma.product.findUnique({ where: { barcode: String(data.barcode).trim() } });
+      if (existingBarcode) {
+        throw new Error(`El código de barras ${data.barcode} ya está asignado al producto ${existingBarcode.sku}.`);
+      }
+    }
+
+    const updated = await prisma.product.update({
+      where: { id },
+      data: {
+        name: data.name,
+        description: data.description,
+        barcode: data.barcode !== undefined ? (data.barcode ? String(data.barcode).trim() : null) : undefined,
+        costPrice: data.costPrice !== undefined ? Number(data.costPrice) : undefined,
+        listPrice: data.listPrice !== undefined ? Number(data.listPrice) : undefined,
+        listPriceB: data.listPriceB !== undefined ? Number(data.listPriceB) : undefined,
+        listPriceC: data.listPriceC !== undefined ? Number(data.listPriceC) : undefined,
+        minStock: data.minStock !== undefined ? Number(data.minStock) : undefined,
+        isPesable: data.isPesable !== undefined ? Boolean(data.isPesable) : undefined,
+        approximateWeight: data.approximateWeight !== undefined ? (data.approximateWeight ? Number(data.approximateWeight) : null) : undefined,
+        rubroId: data.rubroId !== undefined ? (data.rubroId ? Number(data.rubroId) : null) : undefined,
+        providerId: data.providerId !== undefined ? (data.providerId ? Number(data.providerId) : null) : undefined,
+      },
+    });
+
+    if (userId) {
+      await logAudit({
+        userId,
+        action: 'UPDATE_PRODUCT',
+        entityType: 'Product',
+        entityId: updated.id,
+        oldValues: original,
+        newValues: updated,
+      });
+    }
+
+    return updated;
+  }
+
+  /**
+   * Ajustar stock físicamente (Transacción atómica).
+   */
+  async adjustStock(id: number, data: any, userId: number) {
+    const { quantityChange, reason, lotNumber, expirationDate } = data;
+    const change = Number(quantityChange);
+
+    const result = await prisma.$transaction(async (tx) => {
+      const product = await tx.product.findUnique({ where: { id } });
+      if (!product) throw new Error('Producto no encontrado.');
+
+      const newStock = product.stock + change;
+      if (newStock < 0) {
+        throw new Error(`Ajuste inválido. El stock general no puede ser negativo (Stock actual: ${product.stock}, Cambio solicitado: ${change}).`);
+      }
+
+      let lotId: number | null = null;
+
+      if (lotNumber) {
+        const trimmedLot = lotNumber.trim();
+        if (trimmedLot) {
+          let lot = await tx.productLot.findUnique({
+            where: {
+              productId_lotNumber: { productId: product.id, lotNumber: trimmedLot },
+            },
+          });
+
+          if (change > 0) {
+            if (!lot) {
+              if (!expirationDate) throw new Error('La fecha de vencimiento es requerida para crear un lote nuevo.');
+              lot = await tx.productLot.create({
+                data: {
+                  productId: product.id,
+                  lotNumber: trimmedLot,
+                  expirationDate: new Date(expirationDate),
+                  stock: 0,
+                },
+              });
+            }
+          } else {
+            if (!lot) throw new Error(`El lote "${trimmedLot}" no existe para este producto.`);
+            if (lot.stock + change < 0) {
+              throw new Error(`Stock insuficiente en el lote "${trimmedLot}" (Disponible: ${lot.stock}, Solicitado: ${change}).`);
+            }
+          }
+
+          const updatedLot = await tx.productLot.update({
+            where: { id: lot.id },
+            data: { stock: lot.stock + change },
+          });
+          lotId = updatedLot.id;
+        }
+      }
+
+      const updatedProduct = await tx.product.update({
+        where: { id: product.id },
+        data: { stock: newStock },
+      });
+
+      const movement = await tx.stockMovement.create({
+        data: {
+          productId: product.id,
+          quantity: change,
+          type: change > 0 ? 'IN' : 'OUT',
+          reason: reason || 'Ajuste de stock manual',
+          userId: userId,
+          productLotId: lotId,
+        },
+      });
+
+      return { updatedProduct, movement, originalProduct: product };
+    });
+
+    await logAudit({
+      userId,
+      action: 'ADJUST_STOCK',
+      entityType: 'Product',
+      entityId: id,
+      oldValues: { stock: result.originalProduct.stock },
+      newValues: { stock: result.updatedProduct.stock, movementId: result.movement.id, lotNumber },
+    });
+
+    const freshProduct = await prisma.product.findUnique({
+      where: { id },
+      include: {
+        lots: { orderBy: { expirationDate: 'asc' } },
+      },
+    });
+
+    return { product: freshProduct, movement: result.movement };
+  }
+
+  /**
+   * Importar precios masivamente.
+   */
+  async importPrices(rows: any[], userId?: number) {
+    const updatedItems: any[] = [];
+    const createdItems: any[] = [];
+    const failedItems: { sku: string; error: string }[] = [];
+
+    await prisma.$transaction(async (tx) => {
+      for (const row of rows) {
+        const { sku, name, costPrice, listPrice, listPriceB, listPriceC, barcode } = row;
+
+        const existing = await tx.product.findUnique({ where: { sku } });
+
+        if (existing) {
+          const updateData: any = {};
+          if (name !== undefined) updateData.name = name;
+          if (costPrice !== undefined) updateData.costPrice = Number(costPrice);
+          if (listPrice !== undefined) updateData.listPrice = Number(listPrice);
+          if (listPriceB !== undefined) updateData.listPriceB = Number(listPriceB);
+          if (listPriceC !== undefined) updateData.listPriceC = Number(listPriceC);
+          if (barcode !== undefined) updateData.barcode = barcode ? String(barcode).trim() : null;
+
+          const updated = await tx.product.update({
+            where: { sku },
+            data: updateData,
+          });
+          updatedItems.push(updated);
+        } else {
+          if (!name || costPrice === undefined || listPrice === undefined) {
+            failedItems.push({ sku, error: 'Para crear un producto nuevo se requiere SKU, Nombre, Costo y Lista A.' });
+            continue;
+          }
+
+          if (barcode) {
+            const existingBarcode = await tx.product.findUnique({ where: { barcode: String(barcode).trim() } });
+            if (existingBarcode) {
+              failedItems.push({ sku, error: `El código de barras ${barcode} ya está asignado al producto ${existingBarcode.sku}.` });
+              continue;
+            }
+          }
+
+          const created = await tx.product.create({
+            data: {
+              sku,
+              name,
+              costPrice: Number(costPrice),
+              listPrice: Number(listPrice),
+              listPriceB: listPriceB !== undefined ? Number(listPriceB) : 0.00,
+              listPriceC: listPriceC !== undefined ? Number(listPriceC) : 0.00,
+              barcode: barcode ? String(barcode).trim() : null,
+              stock: 0,
+              minStock: 0,
+            },
+          });
+          createdItems.push(created);
+        }
+      }
+    });
+
+    if (userId && (updatedItems.length > 0 || createdItems.length > 0)) {
+      await logAudit({
+        userId,
+        action: 'IMPORT_PRODUCTS_CSV',
+        entityType: 'Product',
+        entityId: 0,
+        newValues: {
+          updatedCount: updatedItems.length,
+          createdCount: createdItems.length,
+          failedCount: failedItems.length,
+        },
+      });
+    }
+
+    return { updatedItems, createdItems, failedItems };
+  }
+
+  /**
+   * Actualizar precios masivamente por Rubro y/o Proveedor.
+   */
+  async bulkUpdatePrices(data: any, userId?: number) {
+    const { rubroId, providerId, type, basis, value, priceList } = data;
+    const filterWhere: any = {};
+    if (rubroId) filterWhere.rubroId = Number(rubroId);
+    if (providerId) filterWhere.providerId = Number(providerId);
+
+    const products = await prisma.product.findMany({ where: filterWhere });
+    if (products.length === 0) return { updatedCount: 0 };
+
+    const val = Number(value);
+    let updatedCount = 0;
+
+    await prisma.$transaction(async (tx) => {
+      for (const p of products) {
+        const updateData: any = {};
+        const listsToUpdate = priceList === 'all' ? ['listPrice', 'listPriceB', 'listPriceC'] : [priceList];
+
+        for (const listField of listsToUpdate) {
+          const cost = Number(p.costPrice);
+          const currentPrice = Number((p as any)[listField] || 0);
+          let newPrice = currentPrice;
+
+          if (type === 'margin') {
+            newPrice = cost * (1 + val / 100);
+          } else if (type === 'percentage') {
+            const base = basis === 'cost' ? cost : currentPrice;
+            newPrice = base * (1 + val / 100);
+          } else if (type === 'fixed') {
+            newPrice = currentPrice + val;
+          }
+
+          updateData[listField] = Math.max(0, Math.round(newPrice * 100) / 100);
+        }
+
+        await tx.product.update({ where: { id: p.id }, data: updateData });
+        updatedCount++;
+      }
+    });
+
+    if (userId) {
+      await logAudit({
+        userId,
+        action: 'BULK_UPDATE_PRICES',
+        entityType: 'Product',
+        entityId: 0,
+        newValues: { rubroId, providerId, type, basis, value: val, priceList, updatedCount },
+      });
+    }
+
+    return { updatedCount };
+  }
+}
+
+export const productService = new ProductService();
