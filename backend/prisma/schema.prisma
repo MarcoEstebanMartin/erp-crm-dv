@@ -1,0 +1,344 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Role {
+  ADMIN
+  FACTURACION
+  VENDEDOR
+  DEPOSITO
+}
+
+enum BillingType {
+  OFFICIAL
+  INTERNAL
+}
+
+enum InvoiceType {
+  FACTURA_A
+  FACTURA_B
+  FACTURA_C
+  PRESUPUESTO
+}
+
+enum OrderStatus {
+  PENDING
+  PREPARING
+  PREPARED
+  DELIVERED
+  CANCELLED
+}
+
+enum MovementType {
+  IN
+  OUT
+  ADJUSTMENT
+}
+
+enum TransactionType {
+  INCOME
+  OUTCOME
+}
+
+enum PaymentMethod {
+  CASH
+  BANK_TRANSFER
+  CHECK
+  OTHER
+}
+
+model User {
+  id             Int             @id @default(autoincrement())
+  username       String          @unique
+  passwordHash   String
+  role           Role            @default(VENDEDOR)
+  isActive       Boolean         @default(true)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  
+  // Relaciones
+  orders         Order[]
+  transactions   Transaction[]
+  stockMovements StockMovement[]
+  auditLogs      AuditLog[]
+  personas       Persona[]
+  cashDrawers    CashDrawer[]
+}
+
+model Persona {
+  id                 Int           @id @default(autoincrement())
+  name               String
+  cuit               String?
+  address            String?
+  city               String?
+  phone              String?
+  email              String?
+  
+  // Roles de Persona
+  isClient           Boolean       @default(true)
+  isProvider         Boolean       @default(false)
+  isSeller           Boolean       @default(false)
+  isCommissionAgent  Boolean       @default(false)
+
+  // Datos de Cliente
+  creditLimit        Decimal       @default(0.00) @db.Decimal(12, 2)
+  priceList          String        @default("A")
+  discount           Decimal       @default(0.00) @db.Decimal(12, 2)
+  contacts           Json?
+
+  // Cuenta Corriente (neto: positivo = nos debe, negativo = le debemos)
+  outstandingBalance Decimal       @default(0.00) @db.Decimal(12, 2)
+
+  // Relación con vendedor (si es cliente)
+  sellerId           Int?
+  seller             User?         @relation(fields: [sellerId], references: [id])
+  
+  // Alícuota impositiva para percepción IIBB (ej: 1.50)
+  iibbAliquot        Decimal       @default(0.00) @db.Decimal(5, 2)
+  
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+
+  // Relaciones
+  orders             Order[]
+  transactions       Transaction[]
+  supplierInvoices   SupplierInvoice[]
+  taxWithholdings    TaxWithholding[]
+  purchaseOrders     PurchaseOrder[]
+}
+
+model Product {
+  id          Int      @id @default(autoincrement())
+  sku         String   @unique
+  name        String
+  description String?
+  barcode     String?  @unique
+  costPrice   Decimal  @db.Decimal(12, 2)
+  listPrice   Decimal  @db.Decimal(12, 2)
+  listPriceB  Decimal  @default(0.00) @db.Decimal(12, 2)
+  listPriceC  Decimal  @default(0.00) @db.Decimal(12, 2)
+  stock       Int      @default(0)
+  minStock    Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relaciones
+  orderItems     OrderItem[]
+  stockMovements StockMovement[]
+  lots               ProductLot[]
+  purchaseOrderItems PurchaseOrderItem[]
+}
+
+model Order {
+  id            Int         @id @default(autoincrement())
+  personaId     Int
+  persona       Persona     @relation(fields: [personaId], references: [id])
+  sellerId      Int
+  seller        User        @relation(fields: [sellerId], references: [id])
+  billingType   BillingType @default(INTERNAL)
+  invoiceType   InvoiceType @default(PRESUPUESTO)
+  invoiceNumber String?
+  cae           String?
+  caeDueDate    DateTime?
+  status        OrderStatus @default(PENDING)
+  totalAmount      Decimal     @db.Decimal(12, 2)
+  netAmount        Decimal     @default(0.00) @db.Decimal(12, 2) // Neto Gravado
+  taxAmount        Decimal     @default(0.00) @db.Decimal(12, 2) // IVA Débito Fiscal
+  percepcionAmount Decimal     @default(0.00) @db.Decimal(12, 2) // Percepciones IIBB
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+
+  // Relaciones
+  items           OrderItem[]
+  transactions    Transaction[]
+  deliveryRouteId Int?
+  deliveryRoute   DeliveryRoute? @relation(fields: [deliveryRouteId], references: [id])
+}
+
+model OrderItem {
+  id            Int            @id @default(autoincrement())
+  orderId       Int
+  order         Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId     Int
+  product       Product        @relation(fields: [productId], references: [id])
+  quantity      Int
+  unitPrice     Decimal        @db.Decimal(12, 2)
+  subtotal      Decimal        @db.Decimal(12, 2)
+  orderItemLots OrderItemLot[]
+}
+
+model ProductLot {
+  id             Int             @id @default(autoincrement())
+  productId      Int
+  product        Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
+  lotNumber      String
+  expirationDate DateTime
+  stock          Int             @default(0)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  // Relaciones
+  orderItemLots  OrderItemLot[]
+  stockMovements StockMovement[]
+
+  @@unique([productId, lotNumber])
+}
+
+model OrderItemLot {
+  id           Int        @id @default(autoincrement())
+  orderItemId  Int
+  orderItem    OrderItem  @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+  productLotId Int
+  productLot   ProductLot @relation(fields: [productLotId], references: [id])
+  quantity     Int
+}
+
+model StockMovement {
+  id           Int         @id @default(autoincrement())
+  productId    Int
+  product      Product     @relation(fields: [productId], references: [id])
+  quantity     Int         // Positivo para entrada, negativo para salida
+  type         MovementType
+  referenceId  String?     // ID del pedido u orden de compra
+  userId       Int
+  user         User        @relation(fields: [userId], references: [id])
+  reason       String?
+  productLotId Int?
+  productLot   ProductLot? @relation(fields: [productLotId], references: [id])
+  createdAt    DateTime    @default(now())
+}
+
+model CashDrawer {
+  id             Int           @id @default(autoincrement())
+  userId         Int
+  user           User          @relation(fields: [userId], references: [id])
+  branch         String        // "A" | "X" (Sucursal A / X)
+  openingBalance Decimal       @db.Decimal(12, 2)
+  closingBalance Decimal?      @db.Decimal(12, 2)
+  realBalance    Decimal?      @db.Decimal(12, 2)
+  status         String        @default("OPEN") // "OPEN" | "CLOSED"
+  openedAt       DateTime      @default(now())
+  closedAt       DateTime?
+
+  // Relaciones
+  transactions   Transaction[]
+}
+
+model BankAccount {
+  id            Int           @id @default(autoincrement())
+  name          String
+  accountNumber String?
+  balance       Decimal       @default(0.00) @db.Decimal(12, 2)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  // Relaciones
+  transactions  Transaction[]
+}
+
+model Transaction {
+  id            Int             @id @default(autoincrement())
+  orderId       Int?
+  order         Order?          @relation(fields: [orderId], references: [id])
+  personaId     Int?
+  persona       Persona?        @relation(fields: [personaId], references: [id])
+  userId        Int
+  user          User            @relation(fields: [userId], references: [id])
+  billingType   BillingType
+  type          TransactionType
+  paymentMethod PaymentMethod
+  amount        Decimal         @db.Decimal(12, 2)
+  description   String?
+  
+  // Relaciones Financieras
+  cashDrawerId  Int?
+  cashDrawer    CashDrawer?     @relation(fields: [cashDrawerId], references: [id])
+  bankAccountId Int?
+  bankAccount   BankAccount?    @relation(fields: [bankAccountId], references: [id])
+
+  createdAt     DateTime        @default(now())
+}
+
+model AuditLog {
+  id         Int      @id @default(autoincrement())
+  userId     Int
+  user       User     @relation(fields: [userId], references: [id])
+  action     String   // ej. "UPDATE_PRODUCT", "CREATE_ORDER", "ADJUST_STOCK"
+  entityType String   // ej. "Product", "Order"
+  entityId   Int
+  oldValues  Json?
+  newValues  Json?
+  ipAddress  String?
+  createdAt  DateTime @default(now())
+}
+
+model SupplierInvoice {
+  id               Int      @id @default(autoincrement())
+  personaId        Int
+  persona          Persona  @relation(fields: [personaId], references: [id])
+  invoiceNumber    String   // Nro comprobante ej: "0001-00004321"
+  invoiceType      String   // "FACTURA_A" | "FACTURA_B" | "FACTURA_C"
+  issueDate        DateTime
+  netAmount        Decimal  @db.Decimal(12, 2) // Neto Gravado
+  taxAmount        Decimal  @db.Decimal(12, 2) // IVA Crédito Fiscal
+  percepcionAmount Decimal  @default(0.00) @db.Decimal(12, 2) // Percepciones IIBB / IVA sufridas
+  totalAmount      Decimal  @db.Decimal(12, 2) // Total
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model TaxWithholding {
+  id                Int      @id @default(autoincrement())
+  type              String   // "PERCEPCION_SUFRIDA" | "PERCEPCION_PRACTICADA" | "RETENCION_SUFRIDA" | "RETENCION_PRACTICADA"
+  taxType           String   // "IIBB" | "IVA" | "GANANCIAS"
+  personaId         Int
+  persona           Persona  @relation(fields: [personaId], references: [id])
+  number            String   // Nro certificado o comprobante
+  date              DateTime
+  amount            Decimal  @db.Decimal(12, 2)
+  jurisdiction      String?  // Jurisdicción si es IIBB (ej: "AR-B", "AR-C")
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+model DeliveryRoute {
+  id                 Int             @id @default(autoincrement())
+  driverName         String
+  vehiclePlate       String
+  vehicleDescription String?
+  status             String          @default("PENDING") // "PENDING" | "IN_TRANSIT" | "COMPLETED"
+  date               DateTime        @default(now())
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+  
+  orders             Order[]
+}
+
+model PurchaseOrder {
+  id          Int                 @id @default(autoincrement())
+  personaId   Int
+  persona     Persona             @relation(fields: [personaId], references: [id])
+  status      String              @default("PENDING") // "PENDING" | "RECEIVED" | "CANCELLED"
+  totalAmount Decimal             @db.Decimal(12, 2)
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  
+  items       PurchaseOrderItem[]
+}
+
+model PurchaseOrderItem {
+  id              Int           @id @default(autoincrement())
+  purchaseOrderId Int
+  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  productId       Int
+  product         Product       @relation(fields: [productId], references: [id])
+  quantity        Int
+  costPrice       Decimal       @db.Decimal(12, 2)
+  subtotal        Decimal       @db.Decimal(12, 2)
+}

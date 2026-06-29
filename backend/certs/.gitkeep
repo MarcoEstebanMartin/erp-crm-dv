@@ -1,0 +1,2 @@
+# Este directorio se utiliza para almacenar los certificados de AFIP (.key y .crt).
+# Las claves reales están excluidas en el .gitignore para evitar filtraciones de seguridad.
