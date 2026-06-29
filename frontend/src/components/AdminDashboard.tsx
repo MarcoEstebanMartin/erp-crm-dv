@@ -5,6 +5,7 @@ import BillingDashboard from './BillingDashboard';
 import RepartoDashboard from './RepartoDashboard';
 import ComprasDashboard from './ComprasDashboard';
 import CrmDashboard from './CrmDashboard';
+import PriceListModal from './PriceListModal';
 import { 
   Plus, 
   UserPlus, 
@@ -12,11 +13,17 @@ import {
   ToggleRight, 
   RotateCcw, 
   AlertTriangle, 
-  Eye, 
+  Eye,
+  EyeOff, 
   Trash2, 
   Printer, 
   RefreshCw, 
-  Edit
+  Edit,
+  ShoppingCart,
+  BookOpen,
+  Receipt,
+  Search,
+  DollarSign
 } from 'lucide-react';
 
 interface AdminDashboardProps {
@@ -35,6 +42,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
   // Modales
   const [productModal, setProductModal] = useState({ open: false, mode: 'create', data: { id: 0, sku: '', name: '', description: '', barcode: '', costPrice: 0, listPrice: 0, listPriceB: 0, listPriceC: 0, minStock: 0 } });
   const [userModal, setUserModal] = useState({ open: false, username: '', password: '', role: 'VENDEDOR' });
+  const [showPassword, setShowPassword] = useState(false);
   const [clientModal, setClientModal] = useState({ open: false, mode: 'create', data: { id: 0, name: '', cuit: '', address: '', city: '', phone: '', email: '', creditLimit: 0, priceList: 'A', discount: 0, isClient: true, isProvider: false, isSeller: false, isCommissionAgent: false } });
   const [orderDetailsModal, setOrderDetailsModal] = useState<any | null>(null);
   const [editOrderModal, setEditOrderModal] = useState<{ open: boolean; orderId: number; clientId: number; clientName: string; items: { id: number; productId: number; name: string; sku: string; quantity: number; listPrice: number }[] } | null>(null);
@@ -48,11 +56,21 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
   const [newContact, setNewContact] = useState({ name: '', phone: '', email: '', role: '' });
   const [showAddContact, setShowAddContact] = useState(false);
 
+  // Estados para accesos directos y acciones rápidas
+  const [isPriceListModalOpen, setIsPriceListModalOpen] = useState(false);
+  const [clientSearchModal, setClientSearchModal] = useState<{ open: boolean; action: 'ledger' | 'payment' | 'order' } | null>(null);
+  const [quickClientQuery, setQuickClientQuery] = useState('');
+  
+  const [createOrderModal, setCreateOrderModal] = useState<{ open: boolean; client: any; cart: { product: any; quantity: number }[]; notes: string } | null>(null);
+  const [quickProductQuery, setQuickProductQuery] = useState('');
+
   const [searchQuery, setSearchQuery] = useState('');
   const [prodSearchQuery, setProdSearchQuery] = useState('');
   const [orderStatusFilter, setOrderStatusFilter] = useState<string>('ALL');
   const [auditPage, setAuditPage] = useState(1);
   const [auditTotalPages, setAuditTotalPages] = useState(1);
+  const [activeReportTab, setActiveReportTab] = useState<string>('finanzas');
+  const [configTab, setConfigTab] = useState<string>('general');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
@@ -102,8 +120,6 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
   const [selectedBranchFilter, setSelectedBranchFilter] = useState<string>('ALL');
   const [selectedBankFilter, setSelectedBankFilter] = useState<string>('ALL');
   const [selectedDrawerFilter, setSelectedDrawerFilter] = useState<string>('ALL');
-  const [openBranch, setOpenBranch] = useState<string>('A');
-  const [openOpeningBalance, setOpenOpeningBalance] = useState<string>('0');
   const [showCloseDrawerModal, setShowCloseDrawerModal] = useState<boolean>(false);
   const [closeRealBalance, setCloseRealBalance] = useState<string>('');
   const [showTransferModal, setShowTransferModal] = useState<boolean>(false);
@@ -219,7 +235,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
   // Carga de datos según pestaña activa
   useEffect(() => {
     fetchData();
-  }, [activeTab, searchQuery, orderStatusFilter, auditPage, personaRoleFilter, selectedBranchFilter, selectedBankFilter, selectedDrawerFilter]);
+  }, [activeTab, searchQuery, orderStatusFilter, auditPage, configTab, personaRoleFilter, selectedBranchFilter, selectedBankFilter, selectedDrawerFilter]);
 
   // Efecto para buscar y filtrar sugerencias de clientes locales en el reconciliador de vendedores
   useEffect(() => {
@@ -378,9 +394,21 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
         setAuditLogs(latestLogs.logs);
         const allOrders = await api.getOrders();
         setOrders(allOrders);
+        const allClients = await api.getPersonas('client');
+        setClients(allClients);
+        const allProducts = await api.getProducts('');
+        setProducts(allProducts);
       } else if (activeTab === 'reports') {
         const stats = await api.getFinancialReports();
         setFinancialReport(stats);
+        const dataUsers = await api.getUsers();
+        setUsers(dataUsers);
+        const allOrders = await api.getOrders();
+        setOrders(allOrders);
+        const allProducts = await api.getProducts('');
+        setProducts(allProducts);
+        const allClients = await api.getPersonas('client');
+        setClients(allClients);
       } else if (activeTab === 'products') {
         const data = await api.getProducts(searchQuery);
         setProducts(data);
@@ -403,6 +431,15 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
         const data = await api.getAuditLogs(auditPage, 10);
         setAuditLogs(data.logs);
         setAuditTotalPages(data.pagination.totalPages);
+      } else if (activeTab === 'config') {
+        if (configTab === 'personal') {
+          const data = await api.getUsers();
+          setUsers(data);
+        } else if (configTab === 'audit') {
+          const data = await api.getAuditLogs(auditPage, 10);
+          setAuditLogs(data.logs);
+          setAuditTotalPages(data.pagination.totalPages);
+        }
       } else if (activeTab === 'finanzas') {
         const stats = await api.getFinancialReports();
         setFinancialReport(stats);
@@ -760,6 +797,92 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
     return `https://wa.me/${formatted}`;
   };
 
+  const getQuickItemPrice = (product: any, client: any) => {
+    if (!client) return Math.round(Number(product.listPrice));
+    let price = Number(product.listPrice);
+    let discount = Number(client.discount || 0);
+    if (client.priceList === 'B') {
+      const isMelincue = product.description?.toUpperCase() === 'MELINCUE' || product.name?.toUpperCase().includes('MELINCUE');
+      if (isMelincue) {
+        discount = 3;
+      } else {
+        discount = 0;
+      }
+    }
+    return Math.round(price * (1 - discount / 100));
+  };
+
+  const handleAddProductToQuickCart = (product: any) => {
+    if (!createOrderModal) return;
+    const existing = createOrderModal.cart.find(item => item.product.id === product.id);
+    if (existing) {
+      if (product.stock < existing.quantity + 1) {
+        alert(`Stock insuficiente para "${product.name}".`);
+        return;
+      }
+      setCreateOrderModal({
+        ...createOrderModal,
+        cart: createOrderModal.cart.map(item =>
+          item.product.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
+        )
+      });
+    } else {
+      if (product.stock < 1) {
+        alert(`Stock insuficiente para "${product.name}".`);
+        return;
+      }
+      setCreateOrderModal({
+        ...createOrderModal,
+        cart: [...createOrderModal.cart, { product, quantity: 1 }]
+      });
+    }
+  };
+
+  const handleUpdateQuickCartQty = (productId: number, qty: number) => {
+    if (!createOrderModal) return;
+    if (qty <= 0) {
+      setCreateOrderModal({
+        ...createOrderModal,
+        cart: createOrderModal.cart.filter(item => item.product.id !== productId)
+      });
+      return;
+    }
+    const item = createOrderModal.cart.find(i => i.product.id === productId);
+    if (item && item.product.stock < qty) {
+      alert(`Stock insuficiente para "${item.product.name}" (Disponible: ${item.product.stock}).`);
+      return;
+    }
+    setCreateOrderModal({
+      ...createOrderModal,
+      cart: createOrderModal.cart.map(i =>
+        i.product.id === productId ? { ...i, quantity: qty } : i
+      )
+    });
+  };
+
+  const handleCreateOrderSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!createOrderModal || createOrderModal.cart.length === 0) return;
+    setErrorMsg(null);
+    setSuccessMsg(null);
+    try {
+      const payload = {
+        clientId: createOrderModal.client.id,
+        items: createOrderModal.cart.map(item => ({
+          productId: item.product.id,
+          quantity: item.quantity
+        })),
+        notes: createOrderModal.notes
+      };
+      await api.createOrder(payload);
+      setSuccessMsg(`Pedido registrado exitosamente para ${createOrderModal.client.name}.`);
+      setCreateOrderModal(null);
+      fetchData();
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Error al crear el pedido.');
+    }
+  };
+
   const handlePrintDebtorsReport = () => {
     // Agrupar deudores por ciudad
     const debtors = clients.filter(c => Number(c.outstandingBalance || 0) > 0);
@@ -875,6 +998,12 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
     ? Math.round((deliveredOrders / (totalOrders - cancelledOrders || 1)) * 100) 
     : 100;
 
+  const filteredQuickClients = clients.filter(c => {
+    if (!c.isClient) return false;
+    const query = quickClientQuery.toLowerCase();
+    return c.name.toLowerCase().includes(query) || (c.cuit && c.cuit.includes(query));
+  });
+
   return (
     <div style={{ width: '100%' }}>
       {/* Alertas de error y éxito */}
@@ -934,6 +1063,139 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
                 {pendingOrders + preparingOrders + preparedOrders}
               </div>
               <div className="stat-desc">Pendientes, picking o listos</div>
+            </div>
+          </div>
+
+          {/* Accesos Directos (Acciones Rápidas) */}
+          <div style={{ marginTop: '24px' }}>
+            <style>{`
+              .quick-action-card:hover {
+                transform: translateY(-2px);
+                border-color: #a1a1a6 !important;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+                background-color: var(--bg-hover, #fbfbfd) !important;
+              }
+              .quick-action-card:active {
+                transform: translateY(0);
+              }
+            `}</style>
+            <h3 style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '16px', letterSpacing: '-0.01em', color: 'var(--text-primary)' }}>
+              Accesos Directos
+            </h3>
+            <div style={{ 
+              display: 'grid', 
+              gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', 
+              gap: '16px' 
+            }}>
+              {[
+                {
+                  title: 'Facturar Directo',
+                  desc: 'Emitir comprobante de venta',
+                  icon: <Receipt size={20} style={{ color: 'var(--text-secondary)' }} />,
+                  onClick: () => {
+                    localStorage.setItem('preselected_billing_client', 'direct');
+                    setActiveTab('billing');
+                  }
+                },
+                {
+                  title: 'Agregar Cliente',
+                  desc: 'Registrar nueva persona',
+                  icon: <UserPlus size={20} style={{ color: 'var(--text-secondary)' }} />,
+                  onClick: () => {
+                    setActiveTab('clients');
+                    setClientModal({ 
+                      open: true, 
+                      mode: 'create', 
+                      data: { 
+                        id: 0, 
+                        name: '', 
+                        cuit: '', 
+                        address: '', 
+                        city: '', 
+                        phone: '', 
+                        email: '', 
+                        creditLimit: 0, 
+                        priceList: 'A', 
+                        discount: 0, 
+                        isClient: true, 
+                        isProvider: false, 
+                        isSeller: false, 
+                        isCommissionAgent: false 
+                      } 
+                    });
+                  }
+                },
+                {
+                  title: 'Tomar Pedido',
+                  desc: 'Registrar nuevo pedido',
+                  icon: <ShoppingCart size={20} style={{ color: 'var(--text-secondary)' }} />,
+                  onClick: () => {
+                    setClientSearchModal({ open: true, action: 'order' });
+                    setQuickClientQuery('');
+                  }
+                },
+                {
+                  title: 'Mirar un Precio',
+                  desc: 'Consulta rápida de precios',
+                  icon: <Search size={20} style={{ color: 'var(--text-secondary)' }} />,
+                  onClick: () => setIsPriceListModalOpen(true)
+                },
+                {
+                  title: 'Cuenta Corriente',
+                  desc: 'Estado y movimientos de CC',
+                  icon: <BookOpen size={20} style={{ color: 'var(--text-secondary)' }} />,
+                  onClick: () => {
+                    setClientSearchModal({ open: true, action: 'ledger' });
+                    setQuickClientQuery('');
+                  }
+                },
+                {
+                  title: 'Cargar Recibo',
+                  desc: 'Registrar cobro de cliente',
+                  icon: <DollarSign size={20} style={{ color: 'var(--text-secondary)' }} />,
+                  onClick: () => {
+                    setClientSearchModal({ open: true, action: 'payment' });
+                    setQuickClientQuery('');
+                  }
+                }
+              ].map((act) => (
+                <button
+                  key={act.title}
+                  onClick={act.onClick}
+                  className="quick-action-card"
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'flex-start',
+                    padding: '16px',
+                    backgroundColor: '#ffffff',
+                    border: '1px solid var(--border-color, #e5e5e7)',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    width: '100%',
+                    gap: '8px',
+                    transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+                  }}
+                >
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: '36px',
+                    height: '36px',
+                    borderRadius: '6px',
+                    backgroundColor: 'var(--bg-light, #f5f5f7)',
+                    border: '1px solid var(--border-color, #e5e5e7)'
+                  }}>
+                    {act.icon}
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-primary)' }}>{act.title}</div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '2px' }}>{act.desc}</div>
+                  </div>
+                </button>
+              ))}
             </div>
           </div>
 
@@ -1788,8 +2050,8 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
                 <div style={{ marginTop: 'auto', borderTop: '1px solid #f0f0f0', paddingTop: '10px', display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', fontWeight: 700 }}>
                   <span>Total Reparto:</span>
                   <span style={{ color: '#681da8' }}>${(repartoEfectivo + repartoCheques).toLocaleString()}</span>
+                </div>
               </div>
-
             </div>
 
             {/* 3. TIMELINE Y HISTORIAL DE TRANSACCIONES */}
@@ -1904,225 +2166,709 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
       {/* ====================================================================
           9. REPORTES Y MARGENES (REPORTES)
           ==================================================================== */}
-      {activeTab === 'reports' && financialReport && (
-        <div className="card">
-          <h3 className="card-title">Márgenes de Venta y Rentabilidad</h3>
-          <p style={{ fontSize: '0.9rem', marginBottom: '20px' }}>
-            Análisis financiero consolidado. El margen representa la diferencia neta entre el costo del producto y su valor final facturado.
-          </p>
-
-          <div className="table-container" style={{ border: '1px solid var(--border-color)' }}>
-            <table>
-              <thead>
-                <tr>
-                  <th>Sucursal</th>
-                  <th>Vendido (Facturado)</th>
-                  <th>Costo Estimado</th>
-                  <th>Margen Neto</th>
-                  <th>Porcentaje Margen</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td style={{ fontWeight: 600 }}>Sucursal A (Oficial)</td>
-                  <td>${financialReport.sales.official.toLocaleString()}</td>
-                  <td>${(financialReport.sales.official * 0.65).toLocaleString()}</td>
-                  <td style={{ fontWeight: 600, color: '#137333' }}>${(financialReport.sales.official * 0.35).toLocaleString()}</td>
-                  <td><span className="badge badge-official">35%</span></td>
-                </tr>
-                <tr>
-                  <td style={{ fontWeight: 600 }}>Sucursal X (Interno)</td>
-                  <td>${financialReport.sales.internal.toLocaleString()}</td>
-                  <td>${(financialReport.sales.internal * 0.60).toLocaleString()}</td>
-                  <td style={{ fontWeight: 600, color: '#137333' }}>${(financialReport.sales.internal * 0.40).toLocaleString()}</td>
-                  <td><span className="badge badge-official">40%</span></td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
       {/* ====================================================================
-          10. CRM + INTELIGENCIA ARTIFICIAL (PLACEHOLDER INTERACTIVO)
+          9. REPORTES Y MARGENES (BUSINESS INTELLIGENCE)
           ==================================================================== */}
-      {/* ====================================================================
-          10. CRM + INTELIGENCIA ARTIFICIAL (CRM DASHBOARD)
-          ==================================================================== */}
-      {activeTab === 'crm' && (
-        <CrmDashboard />
-      )}
+      {activeTab === 'reports' && financialReport && (() => {
+        // --- 1. CÁLCULOS DE FINANZAS Y MÁRGENES ---
+        const deliveredOrders = orders.filter((o: any) => o.status === 'DELIVERED');
+        const totalSalesSum = deliveredOrders.reduce((sum: number, o: any) => sum + Number(o.totalAmount), 0);
+        const ticketAverage = deliveredOrders.length > 0 ? totalSalesSum / deliveredOrders.length : 0;
+        
+        const officialSales = financialReport.sales.official;
+        const internalSales = financialReport.sales.internal;
+        const totalFacturado = officialSales + internalSales;
+        const totalCostoEstimado = (officialSales * 0.65) + (internalSales * 0.60);
+        const totalMargenNeto = totalFacturado - totalCostoEstimado;
+        const pctMargenConsolidado = totalFacturado > 0 ? Math.round((totalMargenNeto / totalFacturado) * 100) : 0;
 
-      {/* ====================================================================
-          11. PERSONAL / EMPLEADOS
-          ==================================================================== */}
-      {(activeTab === 'users' || activeTab === 'personal') && (
-        <div>
-          <div className="actions-bar" style={{ justifyContent: 'flex-end' }}>
-            <button className="btn btn-primary" onClick={() => setUserModal({ open: true, username: '', password: '', role: 'VENDEDOR' })}>
-              <UserPlus size={16} />
-              <span>Agregar Empleado</span>
-            </button>
+        // --- 2. CÁLCULOS DE RENDIMIENTO DE VENDEDORES ---
+        const sellerUsers = users.filter((u: any) => u.role === 'VENDEDOR');
+        const sellerPerformance = sellerUsers.map((seller: any) => {
+          const sellerOrders = orders.filter((o: any) => o.sellerId === seller.id);
+          const completedOrders = sellerOrders.filter((o: any) => o.status === 'DELIVERED');
+          const totalSales = completedOrders.reduce((sum: number, o: any) => sum + Number(o.totalAmount), 0);
+          const avgTicket = completedOrders.length > 0 ? totalSales / completedOrders.length : 0;
+          
+          const assignedClients = clients.filter((c: any) => c.sellerId === seller.id && c.isClient);
+          const visitedClients = assignedClients.filter((c: any) => 
+            orders.some((o: any) => (o.personaId === c.id || o.clientId === c.id) && o.sellerId === seller.id)
+          );
+          
+          const visitEffectiveness = assignedClients.length > 0 
+            ? Math.round((visitedClients.length / assignedClients.length) * 100) 
+            : 0;
+
+          // Simulación de última actividad
+          let lastActivity = 'Sin actividad reciente';
+          if (completedOrders.length > 0) {
+            const sorted = [...completedOrders].sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+            const lastOrder = sorted[0];
+            const clientName = lastOrder.client?.name || clients.find((c: any) => c.id === lastOrder.clientId)?.name || 'Cliente';
+            lastActivity = `Visita exitosa en ${clientName} (hace ${Math.floor(Math.random() * 40) + 5}m)`;
+          }
+
+          return {
+            id: seller.id,
+            username: seller.username,
+            totalSales,
+            ordersCount: sellerOrders.length,
+            completedCount: completedOrders.length,
+            avgTicket,
+            assignedCount: assignedClients.length,
+            visitedCount: visitedClients.length,
+            effectiveness: visitEffectiveness,
+            lastActivity,
+            commission: totalSales * 0.05 // 5% de comisión
+          };
+        }).sort((a: any, b: any) => b.totalSales - a.totalSales);
+
+        // --- 3. CÁLCULOS DE ROTACIÓN DE PRODUCTOS ---
+        const productStatsMap: { [key: number]: { qty: number; revenue: number; name: string; sku: string; stock: number } } = {};
+        
+        // Inicializar con todos los productos
+        products.forEach((p: any) => {
+          productStatsMap[p.id] = { qty: 0, revenue: 0, name: p.name, sku: p.sku, stock: p.stock };
+        });
+
+        // Sumar ventas de órdenes completadas
+        deliveredOrders.forEach((o: any) => {
+          if (o.items && Array.isArray(o.items)) {
+            o.items.forEach((item: any) => {
+              const pId = item.productId;
+              if (productStatsMap[pId]) {
+                productStatsMap[pId].qty += Number(item.quantity);
+                productStatsMap[pId].revenue += Number(item.subtotal || (item.quantity * (item.unitPrice || 0)));
+              }
+            });
+          }
+        });
+
+        const productStatsList = Object.keys(productStatsMap).map((key: any) => ({
+          id: Number(key),
+          ...productStatsMap[key]
+        }));
+
+        const topProducts = [...productStatsList]
+          .filter(p => p.qty > 0)
+          .sort((a, b) => b.qty - a.qty)
+          .slice(0, 5);
+
+        const deadStockProducts = [...productStatsList]
+          .filter(p => p.qty === 0 && p.stock > 0)
+          .sort((a, b) => b.stock - a.stock);
+
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            
+            {/* Navegación horizontal de reportes */}
+            <div style={{ display: 'flex', borderBottom: '1px solid var(--border-color)', gap: '24px', paddingBottom: '2px', marginBottom: '8px' }}>
+              <button 
+                type="button"
+                className={`tab-btn ${activeReportTab === 'finanzas' ? 'active' : ''}`}
+                style={{
+                  fontSize: '0.9rem',
+                  fontWeight: 600,
+                  padding: '8px 4px',
+                  border: 'none',
+                  backgroundColor: 'transparent',
+                  cursor: 'pointer',
+                  color: activeReportTab === 'finanzas' ? '#E30613' : 'var(--text-secondary)',
+                  borderBottom: activeReportTab === 'finanzas' ? '2px solid #E30613' : 'none',
+                  transition: 'all 0.2s ease'
+                }}
+                onClick={() => setActiveReportTab('finanzas')}
+              >
+                📊 Ventas y Rentabilidad
+              </button>
+              
+              <button 
+                type="button"
+                className={`tab-btn ${activeReportTab === 'vendedores' ? 'active' : ''}`}
+                style={{
+                  fontSize: '0.9rem',
+                  fontWeight: 600,
+                  padding: '8px 4px',
+                  border: 'none',
+                  backgroundColor: 'transparent',
+                  cursor: 'pointer',
+                  color: activeReportTab === 'vendedores' ? '#E30613' : 'var(--text-secondary)',
+                  borderBottom: activeReportTab === 'vendedores' ? '2px solid #E30613' : 'none',
+                  transition: 'all 0.2s ease'
+                }}
+                onClick={() => setActiveReportTab('vendedores')}
+              >
+                💼 Rendimiento de Vendedores
+              </button>
+              
+              <button 
+                type="button"
+                className={`tab-btn ${activeReportTab === 'productos' ? 'active' : ''}`}
+                style={{
+                  fontSize: '0.9rem',
+                  fontWeight: 600,
+                  padding: '8px 4px',
+                  border: 'none',
+                  backgroundColor: 'transparent',
+                  cursor: 'pointer',
+                  color: activeReportTab === 'productos' ? '#E30613' : 'var(--text-secondary)',
+                  borderBottom: activeReportTab === 'productos' ? '2px solid #E30613' : 'none',
+                  transition: 'all 0.2s ease'
+                }}
+                onClick={() => setActiveReportTab('productos')}
+              >
+                📦 Rotación de Productos
+              </button>
+            </div>
+
+            {/* SECCIÓN 1: FINANZAS Y RENTABILIDAD */}
+            {activeReportTab === 'finanzas' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                
+                {/* KPIs principales */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
+                  
+                  <div className="card" style={{ padding: '16px', borderRadius: '12px', border: '1px solid var(--border-color)', backgroundColor: '#fff' }}>
+                    <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>VENTAS FACTURADAS</span>
+                    <span style={{ fontSize: '1.4rem', fontWeight: 700 }}>${totalFacturado.toLocaleString()}</span>
+                    <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', display: 'block', marginTop: '6px' }}>
+                      {deliveredOrders.length} pedidos entregados
+                    </span>
+                  </div>
+
+                  <div className="card" style={{ padding: '16px', borderRadius: '12px', border: '1px solid var(--border-color)', backgroundColor: '#fff' }}>
+                    <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>COSTO ESTIMADO</span>
+                    <span style={{ fontSize: '1.4rem', fontWeight: 700, color: '#3c4043' }}>${totalCostoEstimado.toLocaleString()}</span>
+                    <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', display: 'block', marginTop: '6px' }}>
+                      Costo ponderado de mercadería
+                    </span>
+                  </div>
+
+                  <div className="card" style={{ padding: '16px', borderRadius: '12px', border: '1px solid var(--border-color)', backgroundColor: '#fff' }}>
+                    <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>MARGEN NETO</span>
+                    <span style={{ fontSize: '1.4rem', fontWeight: 700, color: '#137333' }}>${totalMargenNeto.toLocaleString()}</span>
+                    <span className="badge" style={{ backgroundColor: '#e6f4ea', color: '#137333', fontSize: '0.7rem', fontWeight: 600, marginLeft: '8px', verticalAlign: 'middle' }}>
+                      {pctMargenConsolidado}%
+                    </span>
+                  </div>
+
+                  <div className="card" style={{ padding: '16px', borderRadius: '12px', border: '1px solid var(--border-color)', backgroundColor: '#fff' }}>
+                    <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>TICKET PROMEDIO</span>
+                    <span style={{ fontSize: '1.4rem', fontWeight: 700, color: '#1a73e8' }}>${Math.round(ticketAverage).toLocaleString()}</span>
+                    <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', display: 'block', marginTop: '6px' }}>
+                      Valor neto de compra medio
+                    </span>
+                  </div>
+
+                </div>
+
+                {/* Tabla de Márgenes por Canal */}
+                <div className="card" style={{ padding: '20px', borderRadius: '12px', border: '1px solid var(--border-color)', backgroundColor: '#fff' }}>
+                  <h4 style={{ fontSize: '0.925rem', fontWeight: 700, marginTop: 0, marginBottom: '16px' }}>Rentabilidad por Sucursal/Canal</h4>
+                  <div className="table-container" style={{ border: '1px solid var(--border-color)' }}>
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>Sucursal</th>
+                          <th>Vendido (Facturado)</th>
+                          <th>Costo Estimado</th>
+                          <th>Margen Neto</th>
+                          <th>Porcentaje Margen</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td style={{ fontWeight: 600 }}>Sucursal A (Oficial)</td>
+                          <td>${officialSales.toLocaleString()}</td>
+                          <td>${(officialSales * 0.65).toLocaleString()}</td>
+                          <td style={{ fontWeight: 600, color: '#137333' }}>${(officialSales * 0.35).toLocaleString()}</td>
+                          <td><span className="badge" style={{ backgroundColor: '#e8f0fe', color: '#1a73e8', fontSize: '0.72rem', fontWeight: 600 }}>35%</span></td>
+                        </tr>
+                        <tr>
+                          <td style={{ fontWeight: 600 }}>Sucursal X (Interno)</td>
+                          <td>${internalSales.toLocaleString()}</td>
+                          <td>${(internalSales * 0.60).toLocaleString()}</td>
+                          <td style={{ fontWeight: 600, color: '#137333' }}>${(internalSales * 0.40).toLocaleString()}</td>
+                          <td><span className="badge" style={{ backgroundColor: '#e8f0fe', color: '#1a73e8', fontSize: '0.72rem', fontWeight: 600 }}>40%</span></td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+              </div>
+            )}
+
+            {/* SECCIÓN 2: DESEMPEÑO DE VENDEDORES */}
+            {activeReportTab === 'vendedores' && (
+              <div className="card" style={{ padding: '20px', borderRadius: '12px', border: '1px solid var(--border-color)', backgroundColor: '#fff' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                  <h4 style={{ fontSize: '0.925rem', fontWeight: 700, margin: 0 }}>Desempeño y Seguimiento de Preventistas</h4>
+                  <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Comisión configurada: <strong>5% neto</strong></span>
+                </div>
+
+                <div className="table-container" style={{ border: '1px solid var(--border-color)' }}>
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Vendedor</th>
+                        <th>Ventas Totales</th>
+                        <th>Ticket Promedio</th>
+                        <th>Pedidos (Entregados)</th>
+                        <th>Efectividad de Visitas</th>
+                        <th>Comisiones Est.</th>
+                        <th>Última Actividad / Estado</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {sellerPerformance.length === 0 ? (
+                        <tr>
+                          <td colSpan={7} style={{ textAlign: 'center', padding: '20px 0', color: 'var(--text-secondary)' }}>No hay preventistas registrados.</td>
+                        </tr>
+                      ) : (
+                        sellerPerformance.map((perf: any) => (
+                          <tr key={perf.id}>
+                            <td style={{ fontWeight: 600 }}>{perf.username}</td>
+                            <td style={{ fontWeight: 700 }}>${perf.totalSales.toLocaleString()}</td>
+                            <td>${Math.round(perf.avgTicket).toLocaleString()}</td>
+                            <td>{perf.completedCount} / {perf.ordersCount}</td>
+                            <td>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <div style={{ flex: 1, backgroundColor: '#f0f0f0', height: '6px', borderRadius: '3px', width: '80px', overflow: 'hidden' }}>
+                                  <div style={{
+                                    backgroundColor: perf.effectiveness >= 80 ? 'var(--color-success)' : perf.effectiveness >= 50 ? '#f2994a' : '#E30613',
+                                    height: '100%',
+                                    width: `${perf.effectiveness}%`
+                                  }} />
+                                </div>
+                                <span style={{ fontWeight: 600, fontSize: '0.78rem' }}>{perf.effectiveness}%</span>
+                                <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>({perf.visitedCount}/{perf.assignedCount})</span>
+                              </div>
+                            </td>
+                            <td style={{ fontWeight: 600, color: '#137333' }}>${Math.round(perf.commission).toLocaleString()}</td>
+                            <td style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                              <span className="badge" style={{ 
+                                display: 'inline-block',
+                                width: '8px', 
+                                height: '8px', 
+                                borderRadius: '50%', 
+                                backgroundColor: perf.completedCount > 0 ? '#137333' : '#f2994a', 
+                                marginRight: '6px',
+                                padding: 0
+                              }} />
+                              {perf.lastActivity}
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* SECCIÓN 3: ROTACIÓN DE PRODUCTOS */}
+            {activeReportTab === 'productos' && (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', alignItems: 'start' }}>
+                
+                {/* Top 5 Más Vendidos */}
+                <div className="card" style={{ padding: '20px', borderRadius: '12px', border: '1px solid var(--border-color)', backgroundColor: '#fff' }}>
+                  <h4 style={{ fontSize: '0.925rem', fontWeight: 700, marginTop: 0, marginBottom: '16px', color: '#137333' }}>🔥 Productos Estrella (Más Vendidos)</h4>
+                  
+                  {topProducts.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '20px 0', color: 'var(--text-secondary)', fontSize: '0.825rem' }}>No hay ventas registradas todavía.</div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                      {topProducts.map((p: any, idx: number) => (
+                        <div key={p.id} style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.8rem', borderBottom: '1px solid #f9f9f9', paddingBottom: '8px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 600 }}>
+                            <span>#{idx + 1} {p.name}</span>
+                            <span>{p.qty} bultos / u</span>
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', color: 'var(--text-secondary)' }}>
+                            <span>SKU: {p.sku} | Stock actual: {p.stock}</span>
+                            <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>Recaudación: ${p.revenue.toLocaleString()}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Stock Muerto / Baja Rotación */}
+                <div className="card" style={{ padding: '20px', borderRadius: '12px', border: '1px solid var(--border-color)', backgroundColor: '#fff' }}>
+                  <h4 style={{ fontSize: '0.925rem', fontWeight: 700, marginTop: 0, marginBottom: '16px', color: '#E30613' }}>⚠️ Alerta de Stock Muerto (Cero Ventas)</h4>
+                  
+                  {deadStockProducts.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '20px 0', color: 'var(--text-secondary)', fontSize: '0.825rem' }}>Buen control. No hay stock inmovilizado sin rotación.</div>
+                  ) : (
+                    <div>
+                      <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '14px', lineHeight: '1.25' }}>
+                        Los siguientes productos tienen stock disponible en depósito pero no registran ventas en el sistema. Considere realizar promociones.
+                      </p>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '220px', overflowY: 'auto' }}>
+                        {deadStockProducts.map((p: any) => (
+                          <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem', borderBottom: '1px solid #fcfcfc', paddingBottom: '6px' }}>
+                            <div>
+                              <span style={{ fontWeight: 600, display: 'block' }}>{p.name}</span>
+                              <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>SKU: {p.sku}</span>
+                            </div>
+                            <div style={{ textAlign: 'right' }}>
+                              <span className="badge" style={{ backgroundColor: '#FCE8E6', color: '#E30613', fontWeight: 700 }}>{p.stock} u en depósito</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+              </div>
+            )}
+
           </div>
-
-          <div className="table-container">
-            <table>
-              <thead>
-                <tr>
-                  <th>Usuario</th>
-                  <th>Rol / Permiso</th>
-                  <th>Estado</th>
-                  <th>Acción</th>
-                </tr>
-              </thead>
-              <tbody>
-                {users.map((u) => (
-                  <tr key={u.id}>
-                    <td style={{ fontWeight: 600 }}>{u.username}</td>
-                    <td>
-                      <span className={`badge ${u.role === 'ADMIN' ? 'badge-official' : 'badge-internal'}`}>
-                        {u.role}
-                      </span>
-                    </td>
-                    <td>
-                      <span style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                        fontWeight: 500,
-                        color: u.isActive ? 'var(--color-success)' : 'var(--color-danger)'
-                      }}>
-                        <span style={{
-                          width: '8px',
-                          height: '8px',
-                          borderRadius: '50%',
-                          backgroundColor: u.isActive ? 'var(--color-success)' : 'var(--color-danger)'
-                        }} />
-                        {u.isActive ? 'Activo' : 'Suspendido'}
-                      </span>
-                    </td>
-                    <td>
-                      <button
-                        className="btn btn-secondary"
-                        style={{ padding: '6px 12px', gap: '4px', fontSize: '0.8rem' }}
-                        onClick={() => handleToggleUser(u.id)}
-                      >
-                        {u.isActive ? <ToggleLeft size={16} /> : <ToggleRight size={16} />}
-                        <span>{u.isActive ? 'Desactivar' : 'Activar'}</span>
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* ====================================================================
-          12. CONFIGURACIÓN (PLACEHOLDER INTERACTIVO)
+          10. CONFIGURACIÓN UNIFICADA (General, Empresa, Impresión, Empleados, CRM, Auditoría)
           ==================================================================== */}
       {activeTab === 'config' && (
-        <div className="card">
-          <h3 className="card-title">Configuración General del Sistema</h3>
-          <p style={{ fontSize: '0.85rem', marginBottom: '20px' }}>Parámetros generales de la distribuidora para la AFIP y emisión de comprobantes oficiales.</p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-            <div className="form-group">
-              <label>CUIT del Emisor</label>
-              <input type="text" className="input" defaultValue="30-71717171-9" />
-            </div>
-            <div className="form-group">
-              <label>Punto de Venta Oficial (Factura Electrónica)</label>
-              <input type="number" className="input" defaultValue={1} />
-            </div>
-            <div className="form-group">
-              <label>IVA por defecto (%)</label>
-              <input type="number" className="input" defaultValue={21} />
-            </div>
-            <div className="form-group">
-              <label>Certificado Homologación AFIP</label>
-              <div style={{ fontSize: '0.75rem', padding: '10px', backgroundColor: '#F1F3F4', borderRadius: '4px', border: '1px solid var(--border-color)', color: 'var(--text-secondary)' }}>
-                🔑 certificado_produccion.crt (Cargado en backend/certs/)
-              </div>
-            </div>
-          </div>
-
-          <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'flex-end' }}>
-            <button className="btn btn-primary" onClick={() => alert('Configuración guardada (Simulación).')}>Guardar Configuración</button>
-          </div>
-        </div>
-      )}
-
-      {/* ====================================================================
-          13. LOGS DE AUDITORÍA
-          ==================================================================== */}
-      {activeTab === 'audit' && (
-        <div>
-          <div className="actions-bar" style={{ justifyContent: 'flex-end' }}>
-            <button className="btn btn-secondary" onClick={() => { setAuditPage(1); fetchData(); }}>
-              <RotateCcw size={16} />
-              <span>Recargar Logs</span>
+          {/* Sub-tab Navigation */}
+          <div style={{ display: 'flex', gap: '12px', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px', marginBottom: '12px', overflowX: 'auto', paddingRight: '4px' }}>
+            <button 
+              type="button"
+              className="btn" 
+              style={{ 
+                backgroundColor: configTab === 'general' ? 'var(--color-primary)' : 'transparent',
+                color: configTab === 'general' ? '#fff' : 'var(--text-primary)',
+                border: configTab === 'general' ? '1px solid var(--color-primary)' : '1px solid var(--border-color)',
+                fontWeight: 600,
+                fontSize: '0.85rem',
+                padding: '8px 16px',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap'
+              }}
+              onClick={() => setConfigTab('general')}
+            >
+              ⚙️ General
+            </button>
+            <button 
+              type="button"
+              className="btn" 
+              style={{ 
+                backgroundColor: configTab === 'empresa' ? 'var(--color-primary)' : 'transparent',
+                color: configTab === 'empresa' ? '#fff' : 'var(--text-primary)',
+                border: configTab === 'empresa' ? '1px solid var(--color-primary)' : '1px solid var(--border-color)',
+                fontWeight: 600,
+                fontSize: '0.85rem',
+                padding: '8px 16px',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap'
+              }}
+              onClick={() => setConfigTab('empresa')}
+            >
+              🏢 Datos Empresa
+            </button>
+            <button 
+              type="button"
+              className="btn" 
+              style={{ 
+                backgroundColor: configTab === 'impresion' ? 'var(--color-primary)' : 'transparent',
+                color: configTab === 'impresion' ? '#fff' : 'var(--text-primary)',
+                border: configTab === 'impresion' ? '1px solid var(--color-primary)' : '1px solid var(--border-color)',
+                fontWeight: 600,
+                fontSize: '0.85rem',
+                padding: '8px 16px',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap'
+              }}
+              onClick={() => setConfigTab('impresion')}
+            >
+              🖨️ Impresión
+            </button>
+            <button 
+              type="button"
+              className="btn" 
+              style={{ 
+                backgroundColor: configTab === 'personal' ? 'var(--color-primary)' : 'transparent',
+                color: configTab === 'personal' ? '#fff' : 'var(--text-primary)',
+                border: configTab === 'personal' ? '1px solid var(--color-primary)' : '1px solid var(--border-color)',
+                fontWeight: 600,
+                fontSize: '0.85rem',
+                padding: '8px 16px',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap'
+              }}
+              onClick={() => setConfigTab('personal')}
+            >
+              👥 Empleados
+            </button>
+            <button 
+              type="button"
+              className="btn" 
+              style={{ 
+                backgroundColor: configTab === 'crm' ? 'var(--color-primary)' : 'transparent',
+                color: configTab === 'crm' ? '#fff' : 'var(--text-primary)',
+                border: configTab === 'crm' ? '1px solid var(--color-primary)' : '1px solid var(--border-color)',
+                fontWeight: 600,
+                fontSize: '0.85rem',
+                padding: '8px 16px',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap'
+              }}
+              onClick={() => setConfigTab('crm')}
+            >
+              ✨ CRM + IA
+            </button>
+            <button 
+              type="button"
+              className="btn" 
+              style={{ 
+                backgroundColor: configTab === 'audit' ? 'var(--color-primary)' : 'transparent',
+                color: configTab === 'audit' ? '#fff' : 'var(--text-primary)',
+                border: configTab === 'audit' ? '1px solid var(--color-primary)' : '1px solid var(--border-color)',
+                fontWeight: 600,
+                fontSize: '0.85rem',
+                padding: '8px 16px',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap'
+              }}
+              onClick={() => setConfigTab('audit')}
+            >
+              📜 Auditoría (Logs)
             </button>
           </div>
 
-          <div className="table-container">
-            <table>
-              <thead>
-                <tr>
-                  <th>Fecha/Hora</th>
-                  <th>Usuario</th>
-                  <th>Rol</th>
-                  <th>Acción</th>
-                  <th>Entidad</th>
-                  <th>Detalles</th>
-                </tr>
-              </thead>
-              <tbody>
-                {auditLogs.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} style={{ textAlign: 'center', padding: '24px 0' }}>No se registraron logs de auditoría aún.</td>
-                  </tr>
-                ) : (
-                  auditLogs.map((log) => (
-                    <tr key={log.id}>
-                      <td style={{ fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
-                        {new Date(log.createdAt).toLocaleString('es-AR')}
-                      </td>
-                      <td style={{ fontWeight: 600 }}>{log.user?.username || 'Sistema'}</td>
-                      <td>
-                        <span className="badge badge-internal" style={{ fontSize: '0.7rem' }}>
-                          {log.user?.role || 'SYSTEM'}
-                        </span>
-                      </td>
-                      <td style={{ fontWeight: 600, fontSize: '0.85rem' }}>{log.action}</td>
-                      <td>
-                        {log.entityType} (ID: {log.entityId})
-                      </td>
-                      <td style={{ fontSize: '0.75rem', fontFamily: 'monospace', maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {log.oldValues && (
-                          <div style={{ color: 'var(--text-secondary)' }}>
-                            <strong>Antes:</strong> {JSON.stringify(log.oldValues)}
-                          </div>
-                        )}
-                        {log.newValues && (
-                          <div style={{ color: 'var(--text-primary)', marginTop: '2px' }}>
-                            <strong>Ahora:</strong> {JSON.stringify(log.newValues)}
-                          </div>
-                        )}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+          {/* Sub-tab 1: General */}
+          {configTab === 'general' && (
+            <div className="card">
+              <h3 className="card-title">Configuración General del Sistema</h3>
+              <p style={{ fontSize: '0.85rem', marginBottom: '20px', color: 'var(--text-secondary)' }}>Parámetros generales de la distribuidora para la AFIP y emisión de comprobantes oficiales.</p>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                <div className="form-group">
+                  <label>CUIT del Emisor</label>
+                  <input type="text" className="input" defaultValue="30-71717171-9" />
+                </div>
+                <div className="form-group">
+                  <label>Punto de Venta Oficial (Factura Electrónica)</label>
+                  <input type="number" className="input" defaultValue={1} />
+                </div>
+                <div className="form-group">
+                  <label>IVA por defecto (%)</label>
+                  <input type="number" className="input" defaultValue={21} />
+                </div>
+                <div className="form-group">
+                  <label>Certificado Homologación AFIP</label>
+                  <div style={{ fontSize: '0.75rem', padding: '10px', backgroundColor: '#F1F3F4', borderRadius: '4px', border: '1px solid var(--border-color)', color: 'var(--text-secondary)' }}>
+                    🔑 certificado_produccion.crt (Cargado en backend/certs/)
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
-          <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', marginTop: '20px', alignItems: 'center' }}>
-            <button className="btn btn-secondary" disabled={auditPage === 1} onClick={() => setAuditPage(p => p - 1)}>Anterior</button>
-            <span style={{ fontSize: '0.85rem' }}>Página {auditPage} de {auditTotalPages}</span>
-            <button className="btn btn-secondary" disabled={auditPage === auditTotalPages} onClick={() => setAuditPage(p => p + 1)}>Siguiente</button>
-          </div>
+          {/* Sub-tab 2: Empresa */}
+          {configTab === 'empresa' && (
+            <div className="card">
+              <h3 className="card-title">Datos de la Empresa</h3>
+              <p style={{ fontSize: '0.85rem', marginBottom: '20px', color: 'var(--text-secondary)' }}>Información que aparecerá en los encabezados de facturas y remitos.</p>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                <div className="form-group">
+                  <label>Razón Social</label>
+                  <input type="text" className="input" defaultValue="Distribuidora de Bebidas SRL" />
+                </div>
+                <div className="form-group">
+                  <label>Nombre de Fantasía</label>
+                  <input type="text" className="input" defaultValue="Bebidas del Sur" />
+                </div>
+                <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+                  <label>Dirección Comercial</label>
+                  <input type="text" className="input" defaultValue="Av. San Martín 1234, Ciudad Autónoma de Buenos Aires" />
+                </div>
+                <div className="form-group">
+                  <label>Teléfono de Contacto</label>
+                  <input type="text" className="input" defaultValue="011-4567-8900" />
+                </div>
+                <div className="form-group">
+                  <label>Email de Contacto</label>
+                  <input type="email" className="input" defaultValue="ventas@bebidasdelsur.com" />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Sub-tab 3: Impresión */}
+          {configTab === 'impresion' && (
+            <div className="card">
+              <h3 className="card-title">Preferencias de Impresión</h3>
+              <p style={{ fontSize: '0.85rem', marginBottom: '20px', color: 'var(--text-secondary)' }}>Configuración de tickets y comprobantes impresos.</p>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                <div className="form-group">
+                  <label>Formato por defecto</label>
+                  <select className="select">
+                    <option>Ticket 80mm</option>
+                    <option>A4</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Mensaje al pie del ticket</label>
+                  <input type="text" className="input" defaultValue="¡Gracias por su compra!" />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Sub-tab 4: Empleados */}
+          {configTab === 'personal' && (
+            <div>
+              <div className="actions-bar" style={{ justifyContent: 'flex-end' }}>
+                <button className="btn btn-primary" onClick={() => setUserModal({ open: true, username: '', password: '', role: 'VENDEDOR' })}>
+                  <UserPlus size={16} />
+                  <span>Agregar Empleado</span>
+                </button>
+              </div>
+
+              <div className="table-container">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Usuario</th>
+                      <th>Rol / Permiso</th>
+                      <th>Estado</th>
+                      <th>Acción</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {users.map((u) => (
+                      <tr key={u.id}>
+                        <td style={{ fontWeight: 600 }}>{u.username}</td>
+                        <td>
+                          <span className={`badge ${u.role === 'ADMIN' ? 'badge-official' : 'badge-internal'}`}>
+                            {u.role}
+                          </span>
+                        </td>
+                        <td>
+                          <span style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            fontWeight: 500,
+                            color: u.isActive ? 'var(--color-success)' : 'var(--color-danger)'
+                          }}>
+                            <span style={{
+                              width: '8px',
+                              height: '8px',
+                              borderRadius: '50%',
+                              backgroundColor: u.isActive ? 'var(--color-success)' : 'var(--color-danger)'
+                            }} />
+                            {u.isActive ? 'Activo' : 'Suspendido'}
+                          </span>
+                        </td>
+                        <td>
+                          <button
+                            className="btn btn-secondary"
+                            style={{ padding: '6px 12px', gap: '4px', fontSize: '0.8rem' }}
+                            onClick={() => handleToggleUser(u.id)}
+                          >
+                            {u.isActive ? <ToggleLeft size={16} /> : <ToggleRight size={16} />}
+                            <span>{u.isActive ? 'Desactivar' : 'Activar'}</span>
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* Sub-tab 5: CRM */}
+          {configTab === 'crm' && (
+            <CrmDashboard />
+          )}
+
+          {/* Sub-tab 6: Auditoría */}
+          {configTab === 'audit' && (
+            <div>
+              <div className="actions-bar" style={{ justifyContent: 'flex-end' }}>
+                <button className="btn btn-secondary" onClick={() => { setAuditPage(1); fetchData(); }}>
+                  <RotateCcw size={16} />
+                  <span>Recargar Logs</span>
+                </button>
+              </div>
+
+              <div className="table-container">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Fecha/Hora</th>
+                      <th>Usuario</th>
+                      <th>Rol</th>
+                      <th>Acción</th>
+                      <th>Entidad</th>
+                      <th>Detalles</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {auditLogs.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} style={{ textAlign: 'center', padding: '24px 0' }}>No se registraron logs de auditoría aún.</td>
+                      </tr>
+                    ) : (
+                      auditLogs.map((log) => (
+                        <tr key={log.id}>
+                          <td style={{ fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
+                            {new Date(log.createdAt).toLocaleString('es-AR')}
+                          </td>
+                          <td style={{ fontWeight: 600 }}>{log.user?.username || 'Sistema'}</td>
+                          <td>
+                            <span className="badge badge-internal" style={{ fontSize: '0.7rem' }}>
+                              {log.user?.role || 'SYSTEM'}
+                            </span>
+                          </td>
+                          <td style={{ fontWeight: 600, fontSize: '0.85rem' }}>{log.action}</td>
+                          <td>
+                            {log.entityType} (ID: {log.entityId})
+                          </td>
+                          <td style={{ fontSize: '0.75rem', fontFamily: 'monospace', maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {log.oldValues && (
+                              <div style={{ color: 'var(--text-secondary)' }}>
+                                <strong>Antes:</strong> {JSON.stringify(log.oldValues)}
+                              </div>
+                            )}
+                            {log.newValues && (
+                              <div style={{ color: 'var(--text-primary)', marginTop: '2px' }}>
+                                <strong>Ahora:</strong> {JSON.stringify(log.newValues)}
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', marginTop: '20px', alignItems: 'center' }}>
+                <button className="btn btn-secondary" disabled={auditPage === 1} onClick={() => setAuditPage(p => p - 1)}>Anterior</button>
+                <span style={{ fontSize: '0.85rem' }}>Página {auditPage} de {auditTotalPages}</span>
+                <button className="btn btn-secondary" disabled={auditPage === auditTotalPages} onClick={() => setAuditPage(p => p + 1)}>Siguiente</button>
+              </div>
+            </div>
+          )}
+
         </div>
       )}
 
@@ -2707,14 +3453,33 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
 
               <div className="form-group">
                 <label>Contraseña inicial</label>
-                <input
-                  type="password"
-                  className="input"
-                  placeholder="••••••••"
-                  value={userModal.password}
-                  onChange={(e) => setUserModal({ ...userModal, password: e.target.value })}
-                  required
-                />
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    className="input"
+                    placeholder="••••••••"
+                    value={userModal.password}
+                    onChange={(e) => setUserModal({ ...userModal, password: e.target.value })}
+                    required
+                    style={{ paddingRight: '40px' }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    style={{
+                      position: 'absolute',
+                      right: '10px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      color: '#6b7280'
+                    }}
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
               </div>
 
               <div className="form-group">
@@ -3730,6 +4495,282 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
               <div className="modal-footer">
                 <button type="button" className="btn btn-secondary" onClick={() => setShowTransferModal(false)}>Cancelar</button>
                 <button type="submit" className="btn btn-primary">Registrar Depósito</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Renderizar PriceListModal */}
+      <PriceListModal isOpen={isPriceListModalOpen} onClose={() => setIsPriceListModalOpen(false)} />
+
+      {/* Modal de búsqueda rápida de cliente */}
+      {clientSearchModal && clientSearchModal.open && (
+        <div className="modal-overlay" style={{ zIndex: 1100 }}>
+          <div className="modal-content" style={{ maxWidth: '500px', width: '90%' }}>
+            <div className="modal-header">
+              <h3>
+                {clientSearchModal.action === 'ledger' && '📋 Consultar Cuenta Corriente'}
+                {clientSearchModal.action === 'payment' && '💵 Cargar Recibo / Registrar Pago'}
+                {clientSearchModal.action === 'order' && '🛒 Iniciar Nuevo Pedido'}
+              </h3>
+              <button className="btn btn-ghost" style={{ padding: '4px' }} onClick={() => setClientSearchModal(null)}>✕</button>
+            </div>
+            <div className="form-group" style={{ marginTop: '10px' }}>
+              <label>Buscar Cliente (por Nombre o CUIT)</label>
+              <input
+                type="text"
+                className="input"
+                autoFocus
+                placeholder="Escriba para buscar..."
+                value={quickClientQuery}
+                onChange={(e) => setQuickClientQuery(e.target.value)}
+              />
+            </div>
+            <div style={{ 
+              maxHeight: '300px', 
+              overflowY: 'auto', 
+              border: '1px solid var(--border-color)', 
+              borderRadius: '6px',
+              marginTop: '12px',
+              backgroundColor: '#ffffff'
+            }}>
+              {filteredQuickClients.length === 0 ? (
+                <div style={{ padding: '16px', color: 'var(--text-secondary)', textAlign: 'center', fontSize: '0.85rem' }}>
+                  No se encontraron clientes.
+                </div>
+              ) : (
+                filteredQuickClients.map((c) => (
+                  <button
+                    key={c.id}
+                    onClick={() => {
+                      const action = clientSearchModal.action;
+                      setClientSearchModal(null);
+                      if (action === 'ledger') {
+                        handleViewClientProfile(c);
+                      } else if (action === 'payment') {
+                        setPaymentModal({ open: true, clientId: c.id, clientName: c.name });
+                        setPaymentAmount('');
+                      } else if (action === 'order') {
+                        setCreateOrderModal({ open: true, client: c, cart: [], notes: '' });
+                        setQuickProductQuery('');
+                      }
+                    }}
+                    style={{
+                      width: '100%',
+                      padding: '12px 16px',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      border: 'none',
+                      borderBottom: '1px solid #f0f0f2',
+                      background: 'none',
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      transition: 'background-color 0.15s ease'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-light, #f5f5f7)'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                  >
+                    <div>
+                      <div style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--text-primary)' }}>{c.name}</div>
+                      {c.cuit && <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '2px' }}>CUIT: {c.cuit}</div>}
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ 
+                        fontSize: '0.85rem', 
+                        fontWeight: 600,
+                        color: (c.outstandingBalance || 0) > 0 ? 'var(--color-danger)' : 'var(--text-primary)'
+                      }}>
+                        ${Number(c.outstandingBalance || 0).toLocaleString()}
+                      </div>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>Saldo CC</div>
+                    </div>
+                  </button>
+                ))
+              )}
+            </div>
+            <div className="modal-footer" style={{ marginTop: '16px' }}>
+              <button type="button" className="btn btn-secondary" onClick={() => setClientSearchModal(null)}>Cancelar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de creación rápida de pedido */}
+      {createOrderModal && createOrderModal.open && (
+        <div className="modal-overlay" style={{ zIndex: 1100 }}>
+          <div className="modal-content" style={{ maxWidth: '850px', width: '95%', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
+            <div className="modal-header">
+              <h3>🛒 Registrar Nuevo Pedido</h3>
+              <button className="btn btn-ghost" style={{ padding: '4px' }} onClick={() => setCreateOrderModal(null)}>✕</button>
+            </div>
+
+            <form onSubmit={handleCreateOrderSubmit} style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
+              <div style={{ 
+                display: 'grid', 
+                gridTemplateColumns: '1.2fr 1fr', 
+                gap: '20px', 
+                overflowY: 'auto', 
+                flex: 1, 
+                padding: '10px 0' 
+              }}>
+                {/* Panel de Artículos */}
+                <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                  <div className="form-group" style={{ marginBottom: '10px' }}>
+                    <label style={{ fontSize: '0.85rem', fontWeight: 600 }}>Añadir Artículos al Pedido</label>
+                    <input
+                      type="text"
+                      className="input"
+                      placeholder="Buscar producto por nombre o SKU..."
+                      value={quickProductQuery}
+                      onChange={(e) => setQuickProductQuery(e.target.value)}
+                    />
+                  </div>
+
+                  <div style={{ 
+                    flex: 1, 
+                    overflowY: 'auto', 
+                    border: '1px solid var(--border-color)', 
+                    borderRadius: '6px', 
+                    padding: '10px',
+                    backgroundColor: '#ffffff'
+                  }}>
+                    {products
+                      .filter(p => p.name.toLowerCase().includes(quickProductQuery.toLowerCase()) || p.sku.toLowerCase().includes(quickProductQuery.toLowerCase()))
+                      .slice(0, 15)
+                      .map(p => {
+                        const price = getQuickItemPrice(p, createOrderModal.client);
+                        return (
+                          <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid #f0f0f2' }}>
+                            <div style={{ marginRight: '10px', flex: 1 }}>
+                              <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-primary)' }}>{p.name}</div>
+                              <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                                SKU: {p.sku} | Stock: <span style={{ fontWeight: 600, color: p.stock <= 0 ? 'var(--color-danger)' : 'var(--text-primary)' }}>{p.stock}</span>
+                              </div>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                              <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                                ${price.toLocaleString()}
+                              </span>
+                              <button
+                                type="button"
+                                className="btn btn-secondary"
+                                style={{ padding: '6px 12px', fontSize: '0.75rem' }}
+                                disabled={p.stock <= 0}
+                                onClick={() => handleAddProductToQuickCart(p)}
+                              >
+                                + Añadir
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                  </div>
+                </div>
+
+                {/* Panel de Resumen del Pedido */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', overflowY: 'auto' }}>
+                  {/* Resumen del Cliente */}
+                  <div style={{ padding: '12px', backgroundColor: 'var(--bg-light)', borderRadius: '6px', border: '1px solid var(--border-color)', fontSize: '0.8rem', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>Cliente Seleccionado</div>
+                    <div><strong>Nombre:</strong> {createOrderModal.client.name}</div>
+                    <div><strong>Lista:</strong> {createOrderModal.client.priceList === 'C' ? 'Distribuidor C' : createOrderModal.client.priceList === 'B' ? 'Especial B' : 'Estándar A'}</div>
+                    {Number(createOrderModal.client.discount || 0) > 0 && <div style={{ color: 'var(--color-success)' }}><strong>Desc. Fijo:</strong> {createOrderModal.client.discount}%</div>}
+                    <div>
+                      <strong>Saldo CC:</strong> <span style={{ fontWeight: 600, color: (createOrderModal.client.outstandingBalance || 0) > 0 ? 'var(--color-danger)' : 'var(--text-primary)' }}>${Number(createOrderModal.client.outstandingBalance || 0).toLocaleString()}</span>
+                    </div>
+                  </div>
+
+                  {/* Detalle del Carrito */}
+                  <div style={{ flex: 1, minHeight: '180px' }}>
+                    <div style={{ fontSize: '0.85rem', fontWeight: 600, marginBottom: '6px' }}>Artículos Cargados ({createOrderModal.cart.length})</div>
+                    {createOrderModal.cart.length === 0 ? (
+                      <div style={{ padding: '24px 0', color: 'var(--text-secondary)', textAlign: 'center', fontSize: '0.85rem', border: '1px dashed var(--border-color)', borderRadius: '6px' }}>
+                        No hay artículos en el pedido.
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '200px', overflowY: 'auto' }}>
+                        {createOrderModal.cart.map(item => {
+                          const price = getQuickItemPrice(item.product, createOrderModal.client);
+                          return (
+                            <div key={item.product.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px', border: '1px solid var(--border-color)', borderRadius: '6px', backgroundColor: '#ffffff' }}>
+                              <div style={{ flex: 1, marginRight: '8px' }}>
+                                <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-primary)' }}>{item.product.name}</div>
+                                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>${price.toLocaleString()} x {item.quantity} = ${(price * item.quantity).toLocaleString()}</div>
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <button
+                                  type="button"
+                                  className="btn btn-secondary"
+                                  style={{ padding: '2px 6px', fontSize: '0.75rem', minWidth: '24px' }}
+                                  onClick={() => handleUpdateQuickCartQty(item.product.id, item.quantity - 1)}
+                                >
+                                  -
+                                </button>
+                                <span style={{ fontSize: '0.85rem', fontWeight: 600, minWidth: '20px', textAlign: 'center' }}>{item.quantity}</span>
+                                <button
+                                  type="button"
+                                  className="btn btn-secondary"
+                                  style={{ padding: '2px 6px', fontSize: '0.75rem', minWidth: '24px' }}
+                                  onClick={() => handleUpdateQuickCartQty(item.product.id, item.quantity + 1)}
+                                >
+                                  +
+                                </button>
+                                <button
+                                  type="button"
+                                  className="btn btn-secondary"
+                                  style={{ padding: '4px', marginLeft: '4px', color: 'var(--color-danger)' }}
+                                  onClick={() => handleUpdateQuickCartQty(item.product.id, 0)}
+                                >
+                                  <Trash2 size={12} />
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Notas y Total */}
+                  <div className="form-group">
+                    <label style={{ fontSize: '0.8rem' }}>Observaciones del Pedido (opcional)</label>
+                    <input
+                      type="text"
+                      className="input"
+                      placeholder="ej: Entregar por la mañana..."
+                      value={createOrderModal.notes}
+                      onChange={(e) => setCreateOrderModal({ ...createOrderModal, notes: e.target.value })}
+                    />
+                  </div>
+
+                  <div style={{ 
+                    display: 'flex', 
+                    justifyContent: 'space-between', 
+                    alignItems: 'center', 
+                    padding: '12px', 
+                    backgroundColor: 'var(--bg-light)', 
+                    borderRadius: '6px', 
+                    border: '1px solid var(--border-color)' 
+                  }}>
+                    <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>Total del Pedido:</span>
+                    <span style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                      ${createOrderModal.cart.reduce((acc, curr) => acc + (getQuickItemPrice(curr.product, createOrderModal.client) * curr.quantity), 0).toLocaleString()}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="modal-footer" style={{ borderTop: '1px solid var(--border-color)', paddingTop: '12px', marginTop: '12px' }}>
+                <button type="button" className="btn btn-secondary" onClick={() => setCreateOrderModal(null)}>Cancelar</button>
+                <button 
+                  type="submit" 
+                  className="btn btn-primary"
+                  disabled={createOrderModal.cart.length === 0}
+                >
+                  Confirmar y Guardar Pedido
+                </button>
               </div>
             </form>
           </div>

@@ -277,9 +277,17 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
 
   // --- EFECTO PARA CLIENTE PRESELECCIONADO ---
   useEffect(() => {
-    if (personas.length > 0) {
-      const preselected = localStorage.getItem('preselected_billing_client');
-      if (preselected) {
+    const preselected = localStorage.getItem('preselected_billing_client');
+    if (preselected) {
+      if (preselected === 'direct') {
+        localStorage.removeItem('preselected_billing_client');
+        setClientSearchQuery('');
+        setDirectInvoiceForm(prev => ({
+          ...prev,
+          personaId: ''
+        }));
+        setShowDirectInvoiceModal(true);
+      } else if (personas.length > 0) {
         localStorage.removeItem('preselected_billing_client');
         const found = personas.find(p => p.id === Number(preselected));
         if (found) {
