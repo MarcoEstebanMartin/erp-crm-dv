@@ -828,12 +828,14 @@ interface CreateDirectInvoiceRequest {
   billingType: BillingType;
   paymentMethod?: PaymentMethod;
   bankAccountId?: number;
+  cashDrawerId?: number;
   checkNumber?: string;
   checkIssuer?: string;
   checkAmount?: number;
   items: {
     productId: number;
     quantity: number;
+    weight?: number | null;
   }[];
 }
 
@@ -845,6 +847,7 @@ export async function createDirectInvoice(req: AuthenticatedRequest, res: Respon
     billingType, 
     paymentMethod, 
     bankAccountId,
+    cashDrawerId: explicitCashDrawerId,
     checkNumber,
     checkIssuer,
     checkAmount,
@@ -1090,14 +1093,25 @@ export async function createDirectInvoice(req: AuthenticatedRequest, res: Respon
         let txDescription = `Cobro en el acto de factura directa #${order.id} (${finalInvoiceNumber})`;
 
         if (paymentMethod === PaymentMethod.CASH) {
-          const activeDrawer = await tx.cashDrawer.findFirst({
-            where: {
-              userId: adminId,
-              status: 'OPEN',
-            },
-          });
+          let activeDrawer;
+          if (explicitCashDrawerId) {
+            activeDrawer = await tx.cashDrawer.findFirst({
+              where: {
+                id: explicitCashDrawerId,
+                status: 'OPEN',
+              },
+            });
+          } else {
+            activeDrawer = await tx.cashDrawer.findFirst({
+              where: {
+                userId: adminId,
+                status: 'OPEN',
+              },
+            });
+          }
+          
           if (!activeDrawer) {
-            throw new Error(`Debe abrir la Caja Grande antes de registrar cobros en efectivo.`);
+            throw new Error(`Debe abrir la Caja o seleccionar una caja operativa válida antes de registrar cobros en efectivo.`);
           }
           cashDrawerId = activeDrawer.id;
         } else if (paymentMethod === PaymentMethod.BANK_TRANSFER) {

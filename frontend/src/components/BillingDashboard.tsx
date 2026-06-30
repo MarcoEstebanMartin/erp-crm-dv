@@ -103,9 +103,10 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
     billingType: 'INTERNAL',
     immediatePayment: false,
     paymentMethod: 'CASH',
+    cashDrawerId: '',
     checkNumber: '',
     checkIssuer: '',
-    isEcheq: false,
+    isEcheq: false
   });
   const [directCart, setDirectCart] = useState<any[]>([]);
   const [selectedDirectProduct, setSelectedDirectProduct] = useState('');
@@ -635,14 +636,14 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
     setErrorMsg(null);
     setSuccessMsg(null);
 
-    const { personaId, billingType, immediatePayment, paymentMethod } = directInvoiceForm;
+    const { personaId, billingType, immediatePayment, paymentMethod, cashDrawerId } = directInvoiceForm;
 
     if (!personaId || !billingType || directCart.length === 0) {
       setErrorMsg('Por favor completa todos los campos y añade al menos un producto.');
       return;
     }
 
-    const isDrawerInvalid = immediatePayment && paymentMethod === 'CASH' && activeDrawers.length === 0;
+    const isDrawerInvalid = immediatePayment && paymentMethod === 'CASH' && (!cashDrawerId || activeDrawers.length === 0);
 
     if (isDrawerInvalid) {
       setErrorMsg('No se puede cobrar en efectivo. Verifique que la Caja Grande esté abierta.');
@@ -651,17 +652,16 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
 
     try {
       setLoading(true);
-      const items = directCart.map(item => ({
-        productId: item.product.id,
-        quantity: item.quantity,
-        weight: item.weight || null
-      }));
-
       const reqData: any = {
         personaId: Number(personaId),
         billingType,
         paymentMethod: immediatePayment ? paymentMethod : undefined,
-        items
+        cashDrawerId: immediatePayment && paymentMethod === 'CASH' ? Number(cashDrawerId) : undefined,
+        items: directCart.map(item => ({ 
+          productId: item.product.id, 
+          quantity: item.quantity,
+          weight: item.weight || null
+        }))
       };
 
       if (immediatePayment && paymentMethod === 'CHECK') {
@@ -681,6 +681,7 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
         billingType: 'INTERNAL',
         immediatePayment: false,
         paymentMethod: 'CASH',
+        cashDrawerId: '',
         checkNumber: '',
         checkIssuer: '',
         isEcheq: false,
@@ -2353,6 +2354,25 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
                             <option value="CHECK">Cheque de Terceros</option>
                           </select>
                           
+                          {directInvoiceForm.paymentMethod === 'CASH' && activeDrawers.length > 0 && (
+                            <div style={{ marginTop: '12px' }}>
+                              <label style={{ fontWeight: 600, fontSize: '0.78rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>Caja de Ingreso</label>
+                              <select
+                                className="select"
+                                value={directInvoiceForm.cashDrawerId}
+                                onChange={(e) => setDirectInvoiceForm(prev => ({ ...prev, cashDrawerId: e.target.value }))}
+                                style={{ fontSize: '0.85rem' }}
+                              >
+                                <option value="">-- Seleccionar Caja --</option>
+                                {activeDrawers.map((drawer: any) => (
+                                  <option key={drawer.id} value={drawer.id}>
+                                    Caja {drawer.branch}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                          )}
+
                           {directInvoiceForm.paymentMethod === 'CHECK' && (
                             <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                               <input 
@@ -2388,7 +2408,7 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
 
                   {/* Validaciones de caja operativa en efectivo */}
                   {(() => {
-                    const isDrawerInvalid = directInvoiceForm.immediatePayment && directInvoiceForm.paymentMethod === 'CASH' && activeDrawers.length === 0;
+                    const isDrawerInvalid = directInvoiceForm.immediatePayment && directInvoiceForm.paymentMethod === 'CASH' && (!directInvoiceForm.cashDrawerId || activeDrawers.length === 0);
 
                     return (
                       <>

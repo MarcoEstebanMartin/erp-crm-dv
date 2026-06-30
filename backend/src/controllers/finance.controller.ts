@@ -27,7 +27,7 @@ export async function openDrawer(req: AuthenticatedRequest, res: Response): Prom
     // Validar si ya hay una caja abierta para este usuario (cualquier sucursal / consolidada)
     const existing = await prisma.cashDrawer.findFirst({
       where: {
-        userId,
+        branch: drawerBranch,
         status: 'OPEN',
       },
     });
@@ -35,7 +35,7 @@ export async function openDrawer(req: AuthenticatedRequest, res: Response): Prom
     if (existing) {
       res.status(400).json({
         status: 'error',
-        message: `Ya tenés una caja operativa abierta. Debés cerrarla antes de abrir una nueva.`,
+        message: `La caja ${drawerBranch} ya se encuentra abierta.`,
       });
       return;
     }
@@ -104,6 +104,26 @@ export async function closeDrawer(req: AuthenticatedRequest, res: Response): Pro
       res.status(400).json({ status: 'error', message: 'Esta caja ya se encuentra cerrada.' });
       return;
     }
+    const { receipts } = req.body;
+    
+    // Procesar recibos entrantes (cobranzas) para sumarlos a la caja ANTES del arqueo
+    if (receipts && Array.isArray(receipts)) {
+      for (const r of receipts) {
+        await prisma.transaction.create({
+          data: {
+            personaId: Number(r.clientId),
+            userId,
+            billingType: r.billingType || 'INTERNAL',
+            type: 'INCOME',
+            paymentMethod: r.paymentMethod || 'CASH',
+            amount: Number(r.amount),
+            description: 'Recibo/Cobranza - Arqueo de Caja',
+            cashDrawerId: drawer.id
+          }
+        });
+      }
+    }
+
 
     // Calcular saldo teórico basado en transacciones de la caja
     const transactions = await prisma.transaction.findMany({
@@ -167,7 +187,6 @@ export async function getActiveDrawer(req: AuthenticatedRequest, res: Response):
   try {
     const drawer = await prisma.cashDrawer.findFirst({
       where: {
-        userId,
         status: 'OPEN',
       },
     });
@@ -195,7 +214,6 @@ export async function getActiveDrawers(req: AuthenticatedRequest, res: Response)
   try {
     const drawers = await prisma.cashDrawer.findMany({
       where: {
-        userId,
         status: 'OPEN',
       },
     });
@@ -587,5 +605,27 @@ export async function verifyTransaction(req: AuthenticatedRequest, res: Response
   } catch (error: any) {
     console.error('Error al verificar transacción:', error);
     res.status(500).json({ status: 'error', message: 'Error al cambiar estado de verificación.' });
+  }
+}
+
+export async function getDrawersHistory(req: AuthenticatedRequest, res: Response): Promise<void> {
+  try {
+    const closedDrawers = await prisma.cashDrawer.findMany({
+      where: {
+        status: 'CLOSED'
+      },
+      orderBy: {
+        closedAt: 'desc'
+      },
+      take: 50,
+      include: {
+        user: { select: { id: true, username: true } },
+        transactions: { select: { type: true, paymentMethod: true, amount: true } }
+      }
+    });
+    res.json({ status: 'success', data: { drawers: closedDrawers } });
+  } catch (error: any) {
+    console.error('Error fetching drawers history:', error);
+    res.status(500).json({ status: 'error', message: 'Error al obtener el historial de cajas.' });
   }
 }

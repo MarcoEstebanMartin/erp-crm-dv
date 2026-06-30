@@ -27,36 +27,36 @@ async function main() {
 
   // Vendedores
   const uDiego = await prisma.user.create({
-    data: { username: 'diego', passwordHash: await pwhash('diego123'), role: 'VENDEDOR' }
+    data: { username: 'diego', passwordHash: await pwhash('diego2026-Erp!'), role: 'VENDEDOR' }
   });
   const uFabian = await prisma.user.create({
-    data: { username: 'fabian', passwordHash: await pwhash('fabian123'), role: 'VENDEDOR' }
+    data: { username: 'fabian', passwordHash: await pwhash('fabian2026-Erp!'), role: 'VENDEDOR' }
   });
   const uNorberto = await prisma.user.create({
-    data: { username: 'norberto', passwordHash: await pwhash('norberto123'), role: 'VENDEDOR' }
+    data: { username: 'norberto', passwordHash: await pwhash('norberto2026-Erp!'), role: 'VENDEDOR' }
   });
   const uMariaJose = await prisma.user.create({
-    data: { username: 'maria_jose', passwordHash: await pwhash('mariajose123'), role: 'VENDEDOR' }
+    data: { username: 'maria_jose', passwordHash: await pwhash('mariajose2026-Erp!'), role: 'VENDEDOR' }
   });
 
   // Administración (Dario y Agustin)
   const uDario = await prisma.user.create({
-    data: { username: 'dario', passwordHash: await pwhash('dario123'), role: 'ADMIN' }
+    data: { username: 'dario', passwordHash: await pwhash('dario2026-Erp!'), role: 'ADMIN' }
   });
   const uAgustin = await prisma.user.create({
-    data: { username: 'agustin', passwordHash: await pwhash('agustin123'), role: 'ADMIN' }
+    data: { username: 'agustin', passwordHash: await pwhash('agustin2026-Erp!'), role: 'ADMIN' }
   });
   
   // Default admin
   const uAdmin = await prisma.user.create({
-    data: { username: 'admin', passwordHash: await pwhash('admin123'), role: 'ADMIN' }
+    data: { username: 'admin', passwordHash: await pwhash('admin2026-Erp!'), role: 'ADMIN' }
   });
 
   // Repartidores y Armado
-  await prisma.user.create({ data: { username: 'miguel', passwordHash: await pwhash('miguel123'), role: 'DEPOSITO' } });
-  await prisma.user.create({ data: { username: 'matias', passwordHash: await pwhash('matias123'), role: 'DEPOSITO' } });
-  await prisma.user.create({ data: { username: 'thiago', passwordHash: await pwhash('thiago123'), role: 'DEPOSITO' } });
-  await prisma.user.create({ data: { username: 'rocio', passwordHash: await pwhash('rocio123'), role: 'DEPOSITO' } });
+  await prisma.user.create({ data: { username: 'miguel', passwordHash: await pwhash('miguel2026-Erp!'), role: 'DEPOSITO' } });
+  await prisma.user.create({ data: { username: 'matias', passwordHash: await pwhash('matias2026-Erp!'), role: 'DEPOSITO' } });
+  await prisma.user.create({ data: { username: 'thiago', passwordHash: await pwhash('thiago2026-Erp!'), role: 'DEPOSITO' } });
+  await prisma.user.create({ data: { username: 'rocio', passwordHash: await pwhash('rocio2026-Erp!'), role: 'DEPOSITO' } });
 
   console.log('👥 11 Usuarios del equipo creados y listos.');
 

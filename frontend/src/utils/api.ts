@@ -1752,12 +1752,11 @@ export const api = {
     const user = api.getCurrentUser();
     if (simulationMode) {
       const drawers = mockDb.get('db_cash_drawers');
-      const active = drawers.find((d: any) => d.userId === user.id && d.status === 'OPEN');
-      if (active) {
-        throw new Error(`Ya tenés una caja operativa abierta. Debés cerrarla antes de abrir una nueva.`);
-      }
-
       const drawerBranch = branch || 'CONSOLIDADA';
+      const active = drawers.find((d: any) => d.status === 'OPEN' && d.branch === drawerBranch);
+      if (active) {
+        throw new Error(`La caja ${drawerBranch} ya se encuentra abierta.`);
+      }
 
       const newDrawer = {
         id: drawers.length + 1,
@@ -1783,7 +1782,7 @@ export const api = {
     return res.drawer;
   },
 
-  closeDrawer: async (drawerId: number, realBalance: number) => {
+  closeDrawer: async (drawerId: number, realBalance: number, receipts?: any[], checks?: any[]) => {
     const user = api.getCurrentUser();
     if (simulationMode) {
       const drawers = mockDb.get('db_cash_drawers');
@@ -1808,6 +1807,28 @@ export const api = {
         }
       });
 
+
+      // Simular recibos
+      if (receipts && receipts.length > 0) {
+        receipts.forEach((r: any) => {
+          trans.push({
+            id: trans.length > 0 ? trans[trans.length - 1].id + 1 : 1,
+            personaId: Number(r.clientId),
+            userId: user.id,
+            billingType: r.billingType || 'INTERNAL',
+            type: 'INCOME',
+            paymentMethod: r.paymentMethod || 'CASH',
+            amount: Number(r.amount),
+            description: 'Recibo/Cobranza - Arqueo de Caja',
+            cashDrawerId: drawer.id,
+            createdAt: new Date().toISOString(),
+            verified: false
+          });
+          cashIncome += Number(r.amount);
+        });
+        mockDb.set('db_transactions', trans);
+      }
+
       const closingBalance = Number(drawer.openingBalance) + cashIncome - cashOutcome;
 
       drawer.status = 'CLOSED';
@@ -1823,7 +1844,7 @@ export const api = {
 
     const res = await request('/finance/drawers/close', {
       method: 'POST',
-      body: JSON.stringify({ drawerId, realBalance })
+      body: JSON.stringify({ drawerId, realBalance, receipts, checks })
     });
     return res.drawer;
   },
@@ -1850,7 +1871,7 @@ export const api = {
     if (!user) return [];
     if (simulationMode) {
       const drawers = mockDb.get('db_cash_drawers');
-      return drawers.filter((d: any) => d.userId === user.id && d.status === 'OPEN');
+      return drawers.filter((d: any) => d.status === 'OPEN');
     }
 
     try {

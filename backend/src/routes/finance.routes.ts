@@ -10,6 +10,7 @@ import {
   createBankAccount,
   transferFunds,
   verifyTransaction,
+  getDrawersHistory,
 } from '../controllers/finance.controller';
 import { authenticateJWT, requireRole } from '../middlewares/auth';
 import { Role } from '@prisma/client';
@@ -21,6 +22,7 @@ router.post('/drawers/open', authenticateJWT, openDrawer);
 router.post('/drawers/close', authenticateJWT, closeDrawer);
 router.get('/drawers/active', authenticateJWT, getActiveDrawer);
 router.get('/drawers/active-all', authenticateJWT, getActiveDrawers);
+router.get('/drawers/history', authenticateJWT, getDrawersHistory);
 router.post('/drawers/close-joint', authenticateJWT, closeJointDrawers);
 
 // Rutas administrativas

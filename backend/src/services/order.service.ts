@@ -147,7 +147,7 @@ export class OrderService {
       });
 
       if (!order) throw new Error('Pedido no encontrado.');
-      if (![OrderStatus.PENDING, OrderStatus.PREPARING, OrderStatus.PREPARED].includes(order.status as OrderStatus)) {
+      if (!([OrderStatus.PENDING, OrderStatus.PREPARING, OrderStatus.PREPARED] as OrderStatus[]).includes(order.status as OrderStatus)) {
         throw new Error('Solo se pueden ajustar pesos en pedidos PENDIENTES, EN PREPARACIÓN o PREPARADOS antes de facturar.');
       }
 

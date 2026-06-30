@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../utils/api';
 import { OrderStatus } from '../utils/types';
-import BillingDashboard from './BillingDashboard';
 import RepartoDashboard from './RepartoDashboard';
 import ComprasDashboard from './ComprasDashboard';
 import CrmDashboard from './CrmDashboard';
 import PriceListModal from './PriceListModal';
 import ProductsList from './ProductsList';
 import RubrosList from './RubrosList';
+import CajasDashboard from './CajasDashboard';
+import BillingDashboard from './BillingDashboard';
+import ResumenCuentaModal from './modals/ResumenCuentaModal';
 import { 
   UserPlus, 
   ToggleLeft, 
@@ -44,6 +46,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
   const [userModal, setUserModal] = useState({ open: false, username: '', password: '', role: 'VENDEDOR' });
   const [showPassword, setShowPassword] = useState(false);
   const [clientModal, setClientModal] = useState({ open: false, mode: 'create', data: { id: 0, name: '', cuit: '', address: '', city: '', phone: '', email: '', creditLimit: 0, priceList: 'A', discount: 0, isClient: true, isProvider: false, isSeller: false, isCommissionAgent: false } });
+  const [showResumenModal, setShowResumenModal] = useState<any>(null);
   const [orderDetailsModal, setOrderDetailsModal] = useState<any | null>(null);
   const [editOrderModal, setEditOrderModal] = useState<{ open: boolean; orderId: number; clientId: number; clientName: string; items: { id: number; productId: number; name: string; sku: string; quantity: number; listPrice: number; weight?: number | null; isPesable?: boolean; approximateWeight?: number | null }[] } | null>(null);
 
@@ -129,8 +132,8 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
   const [reconCashDeclared, setReconCashDeclared] = useState<string>('');
   const [reconChecksDeclared, setReconChecksDeclared] = useState<string>('');
   const [reconTransfersDeclared, setReconTransfersDeclared] = useState<string>('');
-  const [allClientsCache, setAllClientsCache] = useState<any[]>([]);
-  const [sellers, setSellers] = useState<any[]>([]);
+  const [allClientsCache] = useState<any[]>([]);
+  const [sellers] = useState<any[]>([]);
   
   interface ReconciliationReceipt {
     id: string;
@@ -154,11 +157,11 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
   const [reconProcessing, setReconProcessing] = useState<boolean>(false);
   const [bankAccounts, setBankAccounts] = useState<any[]>([]);
   const [transactions, setTransactions] = useState<any[]>([]);
-  const [selectedBranchFilter, setSelectedBranchFilter] = useState<string>('ALL');
-  const [selectedBankFilter, setSelectedBankFilter] = useState<string>('ALL');
+  const [selectedBranchFilter] = useState<string>('ALL');
+  const [selectedBankFilter] = useState<string>('ALL');
   // @ts-ignore
   const [selectedCityFilter, setSelectedCityFilter] = useState<string>('');
-  const [selectedDrawerFilter, setSelectedDrawerFilter] = useState<string>('ALL');
+  const [selectedDrawerFilter] = useState<string>('ALL');
   const [showCloseDrawerModal, setShowCloseDrawerModal] = useState<boolean>(false);
   const [closeRealBalance, setCloseRealBalance] = useState<string>('');
   const [showTransferModal, setShowTransferModal] = useState<boolean>(false);
@@ -295,36 +298,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
     setReconClientSuggestions(suggestions.slice(0, 8));
   }, [reconSearchClient, allClientsCache]);
 
-  const handleOpenReconciliation = async () => {
-    setErrorMsg(null);
-    try {
-      const allUsers = await api.getUsers();
-      const sellersList = allUsers.filter((u: any) => u.isActive);
-      setSellers(sellersList);
-      if (sellersList.length > 0) {
-        setReconSellerId(sellersList[0].id.toString());
-      }
 
-      const allClients = await api.getPersonas('client');
-      setAllClientsCache(allClients);
-
-      setReconType('VENDEDOR');
-      setReconBranch('X');
-      setReconCashDeclared('');
-      setReconChecksDeclared('');
-      setReconTransfersDeclared('');
-      setReconReceipts([]);
-      setReconSearchClient('');
-      setReconSelectedClient(null);
-      setReconReceiptNumber('');
-      setReconReceiptMethod('CASH');
-      setReconReceiptAmount('');
-      
-      setShowReconciliationModal(true);
-    } catch (err: any) {
-      setErrorMsg('Error al inicializar la planilla de rendición: ' + (err.message || err));
-    }
-  };
 
   const handleAddReconReceipt = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -1537,6 +1511,9 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
                             <button className="btn btn-secondary" style={{ padding: '6px 10px', fontSize: '0.8rem' }} onClick={() => handleViewClientProfile(c)}>
                               Ver Ficha
                             </button>
+                            <button className="btn btn-secondary" style={{ padding: '6px 10px', fontSize: '0.8rem' }} onClick={() => setShowResumenModal(c)}>
+                              Resumen de Cta
+                            </button>
                             {c.isClient && (
                               <button 
                                 className="btn btn-primary" 
@@ -1773,432 +1750,9 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
       {/* ====================================================================
           7. CAJAS Y TESORERÍA
           ==================================================================== */}
-      {activeTab === 'finanzas' && financialReport && (() => {
-        // 1. Filtrar transacciones por categorías
-
-        const sellerTxs = transactions.filter((t: any) => 
-          t.description?.includes('Rendición Vendedor')
-        );
-
-        const repartoTxs = transactions.filter((t: any) => 
-          t.description?.includes('Rendición Reparto')
-        );
-
-        // Calcular caja vendedores
-        let sellerEfectivo = 0;
-        let sellerCheques = 0;
-        sellerTxs.forEach((t: any) => {
-          if (t.paymentMethod === 'CASH') {
-            if (t.type === 'INCOME') sellerEfectivo += Number(t.amount);
-            else sellerEfectivo -= Number(t.amount);
-          } else if (t.paymentMethod === 'CHECK') {
-            if (t.type === 'INCOME') sellerCheques += Number(t.amount);
-            else sellerCheques -= Number(t.amount);
-          }
-        });
-
-        // Calcular caja reparto
-        let repartoEfectivo = 0;
-        let repartoCheques = 0;
-        repartoTxs.forEach((t: any) => {
-          if (t.paymentMethod === 'CASH') {
-            if (t.type === 'INCOME') repartoEfectivo += Number(t.amount);
-            else repartoEfectivo -= Number(t.amount);
-          } else if (t.paymentMethod === 'CHECK') {
-            if (t.type === 'INCOME') repartoCheques += Number(t.amount);
-            else repartoCheques -= Number(t.amount);
-          }
-        });
-
-        // Calcular total en bancos
-        const totalBancos = bankAccounts.reduce((sum: number, acc: any) => sum + Number(acc.balance || 0), 0);
-
-        // Caja Unificada (Caja Grande)
-        const localDrawer = activeDrawers[0] || null;
-        let localIncome = 0;
-        let localOutcome = 0;
-        if (localDrawer) {
-          const drawerTxs = transactions.filter((t: any) => t.cashDrawerId === localDrawer.id);
-          drawerTxs.forEach((t: any) => {
-            if (t.type === 'INCOME') localIncome += Number(t.amount);
-            else localOutcome += Number(t.amount);
-          });
-        }
-        const totalCajaFisica = localDrawer ? Number(localDrawer.openingBalance) + localIncome - localOutcome : 0;
-
-        // Liquidez Total Consolidada de la Empresa
-        const totalLiquidez = totalCajaFisica + totalBancos + (sellerEfectivo + sellerCheques) + (repartoEfectivo + repartoCheques);
-
-        // --- CÁLCULO DE A DÓNDE VA EL DINERO (CASH FLOW BREAKDOWN) ---
-        const ingLocal = transactions.filter((t: any) => t.type === 'INCOME' && !t.description?.includes('Rendición') && t.cashDrawerId).reduce((sum, t) => sum + Number(t.amount), 0);
-        const ingVendedores = transactions.filter((t: any) => t.type === 'INCOME' && t.description?.includes('Rendición Vendedor')).reduce((sum, t) => sum + Number(t.amount), 0);
-        const ingReparto = transactions.filter((t: any) => t.type === 'INCOME' && t.description?.includes('Rendición Reparto')).reduce((sum, t) => sum + Number(t.amount), 0);
-        const ingBancos = transactions.filter((t: any) => t.type === 'INCOME' && t.bankAccountId && !t.description?.includes('Depósito')).reduce((sum, t) => sum + Number(t.amount), 0);
-        const totalIngresosCalculados = ingLocal + ingVendedores + ingReparto + ingBancos;
-
-        const egProveedores = transactions.filter((t: any) => t.type === 'OUTCOME' && t.supplierInvoiceId).reduce((sum, t) => sum + Number(t.amount), 0);
-        const egDepositos = transactions.filter((t: any) => t.type === 'OUTCOME' && (t.description?.includes('Depósito') || t.description?.includes('transferencia a cuenta'))).reduce((sum, t) => sum + Number(t.amount), 0);
-        const egGastos = transactions.filter((t: any) => t.type === 'OUTCOME' && !t.supplierInvoiceId && !t.description?.includes('Depósito')).reduce((sum, t) => sum + Number(t.amount), 0);
-        const totalEgresosCalculados = egProveedores + egDepositos + egGastos;
-
-        const totalFlujoMax = Math.max(totalEgresosCalculados, 1);
-        const pctProveedores = Math.round((egProveedores / totalFlujoMax) * 100);
-        const pctDepositos = Math.round((egDepositos / totalFlujoMax) * 100);
-        const pctGastos = Math.round((egGastos / totalFlujoMax) * 100);
-
-        return (
-          <div>
-            {/* 1. SECCIÓN DE KPI / LIQUIDEZ TOTAL */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '20px', marginBottom: '24px' }}>
-              <div className="card" style={{ padding: '16px 20px', borderLeft: '4px solid var(--accent-color)', borderRadius: '12px', border: '1px solid var(--border-color)', borderLeftWidth: '4px' }}>
-                <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 600, display: 'block', marginBottom: '4px' }}>TESORERÍA GENERAL (LIQUIDEZ)</span>
-                <span style={{ fontSize: '1.75rem', fontWeight: 700, letterSpacing: '-0.03em' }}>${totalLiquidez.toLocaleString()}</span>
-                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'block', marginTop: '4px' }}>Efectivo total en vault, choferes, calle y bancos</span>
-              </div>
-              <div className="card" style={{ padding: '16px 20px', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
-                <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 600, display: 'block', marginBottom: '4px' }}>🏦 TOTAL EN BANCOS</span>
-                <span style={{ fontSize: '1.75rem', fontWeight: 700, letterSpacing: '-0.03em', color: '#1a73e8' }}>${totalBancos.toLocaleString()}</span>
-                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'block', marginTop: '4px' }}>Suma de saldos en cuentas digitales</span>
-              </div>
-              <div className="card" style={{ padding: '16px 20px', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
-                <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 600, display: 'block', marginBottom: '4px' }}>🏪 CAJA GRANDE (FÍSICA)</span>
-                <span style={{ fontSize: '1.75rem', fontWeight: 700, letterSpacing: '-0.03em', color: '#137333' }}>${totalCajaFisica.toLocaleString()}</span>
-                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'block', marginTop: '4px' }}>
-                  {localDrawer ? '🟢 Operativa Abierta' : '🔴 Caja Cerrada'}
-                </span>
-              </div>
-              <div className="card" style={{ padding: '16px 20px', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
-                <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 600, display: 'block', marginBottom: '4px' }}>💼 EN VENDEDORES / REPARTO</span>
-                <span style={{ fontSize: '1.75rem', fontWeight: 700, letterSpacing: '-0.03em', color: '#b06000' }}>
-                  ${(sellerEfectivo + sellerCheques + repartoEfectivo + repartoCheques).toLocaleString()}
-                </span>
-                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'block', marginTop: '4px' }}>Valores en calle pendientes de rendición</span>
-              </div>
-            </div>
-
-            {/* 2. OPERATORIA DIARIA: APERTURA Y CIERRE DE CAJA GRANDE */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '24px', flexWrap: 'wrap' }}>
-              
-              {/* APERTURA O CIERRE DE LA CAJA GRANDE */}
-              <div className="card" style={{ padding: '20px', borderRadius: '12px', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                {!localDrawer ? (
-                  <div>
-                    <h3 style={{ fontSize: '1.05rem', fontWeight: 700, marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span>🏪</span> Apertura de Caja Grande (Caja Diaria)
-                    </h3>
-                    <p style={{ fontSize: '0.825rem', color: 'var(--text-secondary)', marginBottom: '16px' }}>
-                      Declará el fondo inicial de efectivo de la distribuidora para comenzar la jornada y habilitar cobros físicos de A y X.
-                    </p>
-                    <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-end' }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                        <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Fondo de Efectivo Inicial ($)</span>
-                        <input
-                          type="number"
-                          className="input"
-                          placeholder="ej: 15000"
-                          style={{ width: '180px', padding: '8px 12px' }}
-                          id="openConsolidatedBalance"
-                          defaultValue="0"
-                        />
-                      </div>
-                      <button className="btn btn-primary" style={{ padding: '9px 18px', fontSize: '0.825rem', fontWeight: 600 }} onClick={async () => {
-                        const val = (document.getElementById('openConsolidatedBalance') as HTMLInputElement)?.value || '0';
-                        try {
-                          await api.openDrawer('CONSOLIDADA', Number(val));
-                          setSuccessMsg(`Caja Grande abierta correctamente.`);
-                          fetchData();
-                        } catch (err: any) {
-                          setErrorMsg(err.message || 'Error al abrir la Caja Grande.');
-                        }
-                      }}>
-                        Abrir Caja Grande
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <div>
-                    <h3 style={{ fontSize: '1.05rem', fontWeight: 700, marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span>🏪</span> Caja Grande Abierta
-                    </h3>
-                    <p style={{ fontSize: '0.825rem', color: 'var(--text-secondary)', marginBottom: '16px' }}>
-                      La caja diaria consolidada está activa. Podés recibir cobranzas en efectivo de ambas sucursales.
-                    </p>
-                    
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px', backgroundColor: 'var(--bg-app)', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-                      <div>
-                        <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', display: 'block' }}>Fondo Inicial:</span>
-                        <strong style={{ fontSize: '0.9rem' }}>${Number(localDrawer.openingBalance).toLocaleString()}</strong>
-                      </div>
-                      <div>
-                        <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', display: 'block' }}>Cobros Registrados:</span>
-                        <strong style={{ fontSize: '0.9rem', color: 'var(--color-success)' }}>+${localIncome.toLocaleString()}</strong>
-                      </div>
-                      <div>
-                        <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', display: 'block' }}>Egresos/Depósitos:</span>
-                        <strong style={{ fontSize: '0.9rem', color: 'var(--color-danger)' }}>-${localOutcome.toLocaleString()}</strong>
-                      </div>
-                      <div>
-                        <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', display: 'block' }}>Saldo Teórico Actual:</span>
-                        <strong style={{ fontSize: '0.9rem', color: '#137333' }}>${totalCajaFisica.toLocaleString()}</strong>
-                      </div>
-                    </div>
-
-                    <div style={{ display: 'flex', gap: '10px' }}>
-                      <button 
-                        className="btn btn-primary" 
-                        style={{ backgroundColor: '#E30613', borderColor: '#E30613', padding: '8px 16px', fontSize: '0.825rem', fontWeight: 600 }}
-                        onClick={() => {
-                          setCloseRealBalance('');
-                          setActiveDrawer(localDrawer);
-                          setShowCloseDrawerModal(true);
-                        }}
-                      >
-                        Cerrar y Arqueo de Caja
-                      </button>
-                      <button 
-                        className="btn btn-secondary" 
-                        style={{ padding: '8px 16px', fontSize: '0.825rem' }}
-                        onClick={() => setShowTransferModal(true)}
-                      >
-                        Depositar Efectivo a Banco
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* A DÓNDE VA EL DINERO (CASH FLOW BREAKDOWN) */}
-              <div className="card" style={{ padding: '20px', borderRadius: '12px', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column' }}>
-                <h3 style={{ fontSize: '1.05rem', fontWeight: 700, marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span>📊</span> Entender a Dónde va el Dinero
-                </h3>
-                <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '16px' }}>
-                  Destino y origen de los movimientos de fondos consolidado de hoy
-                </span>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', flex: 1, justifyContent: 'center' }}>
-                  {/* Origen de los Fondos (Ingresos) */}
-                  <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', fontWeight: 600, marginBottom: '4px' }}>
-                      <span>Ingresos Totales (Cobranza y Calle)</span>
-                      <span style={{ color: 'var(--color-success)' }}>+${totalIngresosCalculados.toLocaleString()}</span>
-                    </div>
-                    <div style={{ display: 'flex', gap: '6px', fontSize: '0.7rem', color: 'var(--text-secondary)' }}>
-                      <span>Caja Local: ${ingLocal.toLocaleString()}</span> | 
-                      <span>Vendedores: ${ingVendedores.toLocaleString()}</span> | 
-                      <span>Reparto: ${ingReparto.toLocaleString()}</span>
-                    </div>
-                  </div>
-
-                  <hr style={{ border: '0', borderTop: '1px solid var(--border-color)', margin: '4px 0' }} />
-
-                  {/* Destino de los Fondos (Egresos) */}
-                  <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', fontWeight: 600, marginBottom: '6px' }}>
-                      <span>Destino de Fondos (Egresos Totales)</span>
-                      <span style={{ color: 'var(--color-danger)' }}>-${totalEgresosCalculados.toLocaleString()}</span>
-                    </div>
-                    
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '8px' }}>
-                      {/* Proveedores */}
-                      <div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', color: 'var(--text-secondary)', marginBottom: '2px' }}>
-                          <span>Pago a Proveedores (Compras)</span>
-                          <span>${egProveedores.toLocaleString()} ({pctProveedores}%)</span>
-                        </div>
-                        <div style={{ width: '100%', height: '5px', backgroundColor: '#e5e5ea', borderRadius: '4px', overflow: 'hidden' }}>
-                          <div style={{ width: `${pctProveedores}%`, height: '100%', backgroundColor: '#E30613' }} />
-                        </div>
-                      </div>
-
-                      {/* Depósitos a Banco */}
-                      <div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', color: 'var(--text-secondary)', marginBottom: '2px' }}>
-                          <span>Efectivo Depositado en Bancos</span>
-                          <span>${egDepositos.toLocaleString()} ({pctDepositos}%)</span>
-                        </div>
-                        <div style={{ width: '100%', height: '5px', backgroundColor: '#e5e5ea', borderRadius: '4px', overflow: 'hidden' }}>
-                          <div style={{ width: `${pctDepositos}%`, height: '100%', backgroundColor: '#1a73e8' }} />
-                        </div>
-                      </div>
-
-                      {/* Gastos / Retiros */}
-                      <div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', color: 'var(--text-secondary)', marginBottom: '2px' }}>
-                          <span>Gastos de Operación / Varios</span>
-                          <span>${egGastos.toLocaleString()} ({pctGastos}%)</span>
-                        </div>
-                        <div style={{ width: '100%', height: '5px', backgroundColor: '#e5e5ea', borderRadius: '4px', overflow: 'hidden' }}>
-                          <div style={{ width: `${pctGastos}%`, height: '100%', backgroundColor: '#6c757d' }} />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-            </div>
-
-            {/* 3. GRILLA SECUNDARIA: BANCOS Y RENDICIONES */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '24px' }}>
-              
-              {/* BANCOS Y DIGITAL WALLETS */}
-              <div className="card" style={{ padding: '16px 20px', borderRadius: '12px', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '10px', marginBottom: '14px' }}>
-                  <span style={{ fontWeight: 700, fontSize: '0.9rem' }}>🏦 Cuentas Bancarias y Digitales</span>
-                  <span className="badge" style={{ backgroundColor: '#e8f0fe', color: '#1a73e8', fontSize: '0.7rem', fontWeight: 600 }}>Total: ${totalBancos.toLocaleString()}</span>
-                </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  {bankAccounts.map((acc: any) => (
-                    <div key={acc.id} style={{ fontSize: '0.825rem', borderBottom: '1px solid #f9f9f9', paddingBottom: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div>
-                        <span style={{ fontWeight: 600, display: 'block' }}>{acc.name}</span>
-                        <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>Cta: {acc.accountNumber}</span>
-                      </div>
-                      <span style={{ fontWeight: 700 }}>${Number(acc.balance || 0).toLocaleString()}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* CAJAS EXTERNAS (CALLE Y LOGÍSTICA) */}
-              <div className="card" style={{ padding: '16px 20px', borderRadius: '12px', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '10px', marginBottom: '14px' }}>
-                  <span style={{ fontWeight: 700, fontSize: '0.9rem' }}>📦 Planillas de Rendiciones</span>
-                  <button 
-                    className="btn btn-secondary" 
-                    style={{ padding: '4px 10px', fontSize: '0.75rem' }}
-                    onClick={handleOpenReconciliation}
-                  >
-                    Rendir Cobros de Calle
-                  </button>
-                </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', flex: 1, justifyContent: 'center' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.825rem', borderBottom: '1px solid #f9f9f9', paddingBottom: '8px' }}>
-                    <div>
-                      <strong style={{ display: 'block' }}>Vendedores (Calle)</strong>
-                      <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>Pendiente de rendición en efectivo/cheque</span>
-                    </div>
-                    <div style={{ textAlign: 'right' }}>
-                      <span style={{ fontWeight: 700, color: '#b06000' }}>${(sellerEfectivo + sellerCheques).toLocaleString()}</span>
-                      <div style={{ fontSize: '0.68rem', color: 'var(--text-secondary)' }}>Ef: ${sellerEfectivo.toLocaleString()} | Ch: ${sellerCheques.toLocaleString()}</div>
-                    </div>
-                  </div>
-
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.825rem', borderBottom: '1px solid #f9f9f9', paddingBottom: '8px' }}>
-                    <div>
-                      <strong style={{ display: 'block' }}>Reparto (Choferes)</strong>
-                      <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>Valores recolectados en la calle por logística</span>
-                    </div>
-                    <div style={{ textAlign: 'right' }}>
-                      <span style={{ fontWeight: 700, color: '#681da8' }}>${(repartoEfectivo + repartoCheques).toLocaleString()}</span>
-                      <div style={{ fontSize: '0.68rem', color: 'var(--text-secondary)' }}>Ef: ${repartoEfectivo.toLocaleString()} | Ch: ${repartoCheques.toLocaleString()}</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-            </div>
-
-            {/* 4. TIMELINE Y HISTORIAL DE TRANSACCIONES */}
-            <div className="card" style={{ marginTop: '24px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
-                <div>
-                  <h3 className="card-title" style={{ margin: '0', fontSize: '1rem' }}>Historial y Auditoría de Fondos</h3>
-                  <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', margin: '2px 0 0 0' }}>Timeline detallado de todas las transacciones monetarias registradas</p>
-                </div>
-                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                  <select className="input" style={{ width: '160px', padding: '4px 8px', fontSize: '0.8rem' }} value={selectedBranchFilter} onChange={(e) => setSelectedBranchFilter(e.target.value)}>
-                    <option value="ALL">Todas las Sucursales</option>
-                    <option value="A">Sucursal A (Oficial)</option>
-                    <option value="X">Sucursal X (Interno)</option>
-                  </select>
-
-                  <select className="input" style={{ width: '160px', padding: '4px 8px', fontSize: '0.8rem' }} value={selectedBankFilter} onChange={(e) => setSelectedBankFilter(e.target.value)}>
-                    <option value="ALL">Todos los Bancos</option>
-                    {bankAccounts.map((account: any) => (
-                      <option key={account.id} value={account.id.toString()}>{account.name}</option>
-                    ))}
-                  </select>
-
-                  <select className="input" style={{ width: '160px', padding: '4px 8px', fontSize: '0.8rem' }} value={selectedDrawerFilter} onChange={(e) => setSelectedDrawerFilter(e.target.value)}>
-                    <option value="ALL">Todas las Cajas</option>
-                    {localDrawer && (
-                      <option value={localDrawer.id.toString()}>Caja Activa (ID: {localDrawer.id})</option>
-                    )}
-                  </select>
-                </div>
-              </div>
-              
-              <div className="table-container" style={{ border: 'none', margin: 0 }}>
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Fecha / Hora</th>
-                      <th>Operador</th>
-                      <th>Destino / Origen</th>
-                      <th>Método</th>
-                      <th>Tipo</th>
-                      <th>Monto</th>
-                      <th>Descripción</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {transactions.length === 0 ? (
-                      <tr>
-                        <td colSpan={7} style={{ textAlign: 'center', padding: '24px 0', color: 'var(--text-secondary)' }}>No se registraron movimientos en este período.</td>
-                      </tr>
-                    ) : (
-                      transactions.map((t) => (
-                        <tr key={t.id}>
-                          <td style={{ fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
-                            {new Date(t.createdAt).toLocaleString('es-AR')}
-                          </td>
-                          <td style={{ fontWeight: 600 }}>{t.user?.username}</td>
-                          <td style={{ fontSize: '0.82rem' }}>
-                            {t.cashDrawer ? (
-                              <span className="badge" style={{ backgroundColor: '#ECEFF1', color: '#37474F', fontWeight: 600, fontSize: '0.7rem' }}>
-                                Caja Grande
-                              </span>
-                            ) : t.bankAccount ? (
-                              <span className="badge" style={{ backgroundColor: '#E8F0FE', color: '#1A73E8', fontWeight: 600, fontSize: '0.7rem' }}>
-                                {t.bankAccount.name}
-                              </span>
-                            ) : (
-                              <span style={{ color: 'var(--text-secondary)' }}>Cuenta Corriente</span>
-                            )}
-                          </td>
-                          <td style={{ fontSize: '0.82rem', fontWeight: 500 }}>
-                            {t.paymentMethod === 'CASH' ? 'Efectivo' : t.paymentMethod === 'BANK_TRANSFER' ? 'Transferencia' : t.paymentMethod === 'CHECK' ? 'Cheque' : 'Otro'}
-                          </td>
-                          <td>
-                            <span style={{
-                              fontSize: '0.72rem',
-                              fontWeight: 600,
-                              color: t.type === 'INCOME' ? 'var(--color-success)' : '#E30613',
-                              backgroundColor: t.type === 'INCOME' ? '#E6F4EA' : '#FCE8E6',
-                              padding: '2px 6px',
-                              borderRadius: '3px'
-                            }}>
-                              {t.type === 'INCOME' ? 'INGRESO' : 'EGRESO'}
-                            </span>
-                          </td>
-                          <td style={{ fontWeight: 700, color: t.type === 'INCOME' ? 'var(--color-success)' : '#E30613' }}>
-                            {t.type === 'INCOME' ? '+' : '-'}${Number(t.amount).toLocaleString()}
-                          </td>
-                          <td style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>{t.description}</td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        );
-      })()}
+      {activeTab === 'finanzas' && (
+        <CajasDashboard />
+      )}
 
       {/* ====================================================================
           FACTURACION & IMPUESTOS (BILLING)
@@ -3400,6 +2954,9 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
       )}
 
       {/* 3. Modal Cliente */}
+      {showResumenModal && (
+        <ResumenCuentaModal client={showResumenModal} onClose={() => setShowResumenModal(null)} />
+      )}
       {clientModal.open && (
         <div className="modal-overlay">
           <div className="modal-content">
