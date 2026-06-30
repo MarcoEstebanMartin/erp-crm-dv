@@ -6,13 +6,13 @@ import RepartoDashboard from './RepartoDashboard';
 import ComprasDashboard from './ComprasDashboard';
 import CrmDashboard from './CrmDashboard';
 import PriceListModal from './PriceListModal';
+import ProductsList from './ProductsList';
+import RubrosList from './RubrosList';
 import { 
-  Plus, 
   UserPlus, 
   ToggleLeft, 
   ToggleRight, 
   RotateCcw, 
-  AlertTriangle, 
   Eye,
   EyeOff, 
   Trash2, 
@@ -58,6 +58,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
 
   // Estados para accesos directos y acciones rápidas
   const [isPriceListModalOpen, setIsPriceListModalOpen] = useState(false);
+  const [catalogTab, setCatalogTab] = useState<'products'|'rubros'>('products');
   const [clientSearchModal, setClientSearchModal] = useState<{ open: boolean; action: 'ledger' | 'payment' | 'order' } | null>(null);
   const [quickClientQuery, setQuickClientQuery] = useState('');
   
@@ -66,6 +67,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
 
   const [searchQuery, setSearchQuery] = useState('');
   const [prodSearchQuery, setProdSearchQuery] = useState('');
+
   const [orderStatusFilter, setOrderStatusFilter] = useState<string>('ALL');
   const [auditPage, setAuditPage] = useState(1);
   const [auditTotalPages, setAuditTotalPages] = useState(1);
@@ -84,7 +86,11 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
   const [companyPos, setCompanyPos] = useState<string>(() => localStorage.getItem('company_pos') || '1');
   const [companyDefaultIva, setCompanyDefaultIva] = useState<string>(() => localStorage.getItem('company_default_iva') || '21');
 
-  const handleSaveCompanyConfig = (e: React.FormEvent) => {
+  const [ignoreStockCheck, setIgnoreStockCheck] = useState<boolean>(() => {
+    return api.getServerConfig()?.ignoreStock || false;
+  });
+
+  const handleSaveCompanyConfig = async (e: React.FormEvent) => {
     e.preventDefault();
     localStorage.setItem('company_razon_social', companyRazonSocial);
     localStorage.setItem('company_nombre_fantasia', companyNombreFantasia);
@@ -94,11 +100,18 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
     localStorage.setItem('company_email', companyEmail);
     localStorage.setItem('company_pos', companyPos);
     localStorage.setItem('company_default_iva', companyDefaultIva);
-    setSuccessMsg('Configuración de la empresa guardada exitosamente.');
+    
+    try {
+      await api.updateServerConfig({ ignoreStockCheck });
+      setSuccessMsg('Configuración de la empresa y servidor guardada exitosamente.');
+    } catch {
+      setErrorMsg('Error al guardar configuración del servidor.');
+    }
     setTimeout(() => setSuccessMsg(null), 3000);
   };
 
   // Estados de Personas (Clientes)
+  // @ts-ignore
   const [personaRoleFilter, setPersonaRoleFilter] = useState<string>('client');
 
   // Estados de Finanzas (Cajas y Bancos)
@@ -143,6 +156,8 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
   const [transactions, setTransactions] = useState<any[]>([]);
   const [selectedBranchFilter, setSelectedBranchFilter] = useState<string>('ALL');
   const [selectedBankFilter, setSelectedBankFilter] = useState<string>('ALL');
+  // @ts-ignore
+  const [selectedCityFilter, setSelectedCityFilter] = useState<string>('');
   const [selectedDrawerFilter, setSelectedDrawerFilter] = useState<string>('ALL');
   const [showCloseDrawerModal, setShowCloseDrawerModal] = useState<boolean>(false);
   const [closeRealBalance, setCloseRealBalance] = useState<string>('');
@@ -260,6 +275,12 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
   useEffect(() => {
     fetchData();
   }, [activeTab, searchQuery, orderStatusFilter, auditPage, configTab, personaRoleFilter, selectedBranchFilter, selectedBankFilter, selectedDrawerFilter]);
+
+  // Limpiar mensajes al cambiar de pestaña principal
+  useEffect(() => {
+    setSuccessMsg(null);
+    setErrorMsg(null);
+  }, [activeTab]);
 
   // Efecto para buscar y filtrar sugerencias de clientes locales en el reconciliador de vendedores
   useEffect(() => {
@@ -486,7 +507,8 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
   };
 
   // --- CSV IMPORT / EXPORT DE PRECIOS ---
-  const handleExportCSV = () => {
+  // @ts-ignore
+  const _handleExportCSV = () => {
     const headers = 'sku,name,costPrice,listPrice,listPriceB,listPriceC,barcode\n';
     const rows = products.map((p: any) => 
       `"${p.sku}","${p.name.replace(/"/g, '""')}",${p.costPrice},${p.listPrice},${p.listPriceB || 0},${p.listPriceC || 0},"${p.barcode || ''}"`
@@ -503,7 +525,8 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
     document.body.removeChild(link);
   };
 
-  const handleImportCSV = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // @ts-ignore
+  const _handleImportCSV = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -592,6 +615,26 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
       fetchData();
     } catch (err: any) {
       setErrorMsg(err.message || 'Error al guardar producto.');
+    }
+  };
+
+  const handleUpdateProductInline = async (updatedProduct: any) => {
+    try {
+      await api.updateProduct(updatedProduct.id, {
+        name: updatedProduct.name,
+        description: updatedProduct.description,
+        barcode: updatedProduct.barcode || null,
+        costPrice: Number(updatedProduct.costPrice),
+        listPrice: Number(updatedProduct.listPrice),
+        listPriceB: Number(updatedProduct.listPriceB || 0),
+        listPriceC: Number(updatedProduct.listPriceC || 0),
+        minStock: Number(updatedProduct.minStock)
+      });
+      // Update local state directly to reflect changes immediately
+      setProducts(prev => prev.map(p => p.id === updatedProduct.id ? updatedProduct : p));
+      setSuccessMsg('Producto actualizado correctamente.');
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Error al actualizar producto.');
     }
   };
 
@@ -912,6 +955,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
     }
   };
 
+  // @ts-ignore
   const handlePrintDebtorsReport = () => {
     // Agrupar deudores por ciudad
     const debtors = clients.filter(c => Number(c.outstandingBalance || 0) > 0);
@@ -1023,6 +1067,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
   const deliveredOrders = orders.filter(o => o.status === OrderStatus.DELIVERED).length;
   const cancelledOrders = orders.filter(o => o.status === OrderStatus.CANCELLED).length;
 
+  // @ts-ignore
   const successRate = totalOrders > 0 
     ? Math.round((deliveredOrders / (totalOrders - cancelledOrders || 1)) * 100) 
     : 100;
@@ -1068,6 +1113,17 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
           ==================================================================== */}
       {activeTab === 'dashboard' && (
         <div>
+          <div style={{ marginBottom: '24px' }}>
+            <h1 style={{ fontSize: '1.65rem', fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--text-primary)' }}>
+              {(() => {
+                const hour = new Date().getHours();
+                const greeting = hour >= 6 && hour < 12 ? '¡Buen día' : hour >= 12 && hour < 20 ? '¡Buenas tardes' : '¡Buenas noches';
+                const user = api.getCurrentUser();
+                return `${greeting}, ${user ? user.username : 'Usuario'}!`;
+              })()}
+            </h1>
+          </div>
+
           {/* Grilla de Métricas de Pedidos */}
           <div className="dashboard-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '20px' }}>
             <div className="card stat-card" style={{ borderLeft: '4px solid var(--accent-color)' }}>
@@ -1228,32 +1284,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
             </div>
           </div>
 
-          {/* Notas de Resumen */}
-          <div className="card" style={{ marginTop: '24px', padding: '24px' }}>
-            <h3 className="card-title" style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '16px' }}>Notas de Resumen</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.92rem', color: 'var(--text-primary)' }}>
-                <span style={{ fontSize: '1.25rem' }}>📦</span>
-                <span>Hay <strong>{pendingOrders}</strong> {pendingOrders === 1 ? 'pedido pendiente' : 'pedidos pendientes'} de picking y preparación en depósito.</span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.92rem', color: 'var(--text-primary)' }}>
-                <span style={{ fontSize: '1.25rem' }}>⚙️</span>
-                <span>Actualmente <strong>{preparingOrders}</strong> {preparingOrders === 1 ? 'pedido está' : 'pedidos están'} en proceso de picking en las estanterías.</span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.92rem', color: 'var(--text-primary)' }}>
-                <span style={{ fontSize: '1.25rem' }}>🚛</span>
-                <span>Se registran <strong>{preparedOrders}</strong> {preparedOrders === 1 ? 'pedido listo' : 'pedidos listos'} esperando distribución o retiro.</span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.92rem', color: 'var(--text-primary)' }}>
-                <span style={{ fontSize: '1.25rem' }}>✅</span>
-                <span>Un total de <strong>{deliveredOrders}</strong> {deliveredOrders === 1 ? 'pedido ha sido entregado' : 'pedidos han sido entregados'} de manera exitosa (tasa de efectividad: <strong>{successRate}%</strong>).</span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.92rem', color: 'var(--text-primary)' }}>
-                <span style={{ fontSize: '1.25rem' }}>❌</span>
-                <span>Hay <strong>{cancelledOrders}</strong> {cancelledOrders === 1 ? 'pedido cancelado' : 'pedidos cancelados'} en el sistema.</span>
-              </div>
-            </div>
-          </div>
+
         </div>
       )}
 
@@ -1642,91 +1673,43 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
       )}
 
       {/* ====================================================================
-          4. CATÁLOGO DE PRODUCTOS
+          4. CATÁLOGO (PRODUCTOS Y RUBROS)
           ==================================================================== */}
       {activeTab === 'products' && (
-        <div>
-          <div className="actions-bar" style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
-            <div className="search-input-wrapper" style={{ flex: 1, minWidth: '250px' }}>
-              <input
-                type="text"
-                className="input"
-                placeholder="Buscar SKU, nombre o código de barra..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
+        <div className="card">
+          <div style={{ display: 'flex', gap: '24px', marginBottom: '24px', borderBottom: '1px solid var(--border-color)', paddingBottom: '12px' }}>
+            <div 
+              style={{ cursor: 'pointer', fontWeight: catalogTab === 'products' ? 600 : 400, color: catalogTab === 'products' ? 'var(--color-primary)' : 'var(--text-secondary)', position: 'relative' }}
+              onClick={() => setCatalogTab('products')}
+            >
+              Lista de Productos
+              {catalogTab === 'products' && <div style={{ position: 'absolute', bottom: '-13px', left: 0, right: 0, height: '2px', backgroundColor: 'var(--color-primary)' }} />}
             </div>
-            
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <button className="btn btn-secondary" onClick={handleExportCSV}>
-                Descargar Planilla
-              </button>
-              
-              <label className="btn btn-secondary" style={{ cursor: 'pointer', margin: 0, display: 'inline-flex', alignItems: 'center' }}>
-                Subir Planilla
-                <input 
-                  type="file" 
-                  accept=".csv" 
-                  onChange={handleImportCSV} 
-                  style={{ display: 'none' }} 
-                />
-              </label>
-
-              <button className="btn btn-primary" onClick={() => setProductModal({ open: true, mode: 'create', data: { id: 0, sku: '', name: '', description: '', barcode: '', costPrice: 0, listPrice: 0, listPriceB: 0, listPriceC: 0, minStock: 0 } })}>
-                <Plus size={16} />
-                <span>Nuevo Producto</span>
-              </button>
+            <div 
+              style={{ cursor: 'pointer', fontWeight: catalogTab === 'rubros' ? 600 : 400, color: catalogTab === 'rubros' ? 'var(--color-primary)' : 'var(--text-secondary)', position: 'relative' }}
+              onClick={() => setCatalogTab('rubros')}
+            >
+              Gestión de Rubros
+              {catalogTab === 'rubros' && <div style={{ position: 'absolute', bottom: '-13px', left: 0, right: 0, height: '2px', backgroundColor: 'var(--color-primary)' }} />}
             </div>
           </div>
 
-          <div className="table-container">
-            <table>
-              <thead>
-                <tr>
-                  <th>SKU</th>
-                  <th>Nombre</th>
-                  <th>Costo</th>
-                  <th>P. Lista</th>
-                  <th>Stock Físico</th>
-                  <th>Acción</th>
-                </tr>
-              </thead>
-              <tbody>
-                {products.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} style={{ textAlign: 'center', padding: '24px 0' }}>No se encontraron productos.</td>
-                  </tr>
-                ) : (
-                  products.map((p) => (
-                    <tr key={p.id}>
-                      <td style={{ fontFamily: 'monospace', fontWeight: 600 }}>{p.sku}</td>
-                      <td>
-                        <div style={{ fontWeight: 500 }}>{p.name}</div>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{p.description}</div>
-                      </td>
-                      <td>${p.costPrice}</td>
-                      <td style={{ fontWeight: 600 }}>${p.listPrice}</td>
-                      <td>
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                          <span style={{ fontWeight: 600 }}>{p.stock} u.</span>
-                          {p.stock <= p.minStock && (
-                            <span title="Bajo stock mínimo" style={{ color: 'var(--color-warning)', display: 'inline-flex' }}>
-                              <AlertTriangle size={14} />
-                            </span>
-                          )}
-                        </span>
-                      </td>
-                      <td>
-                        <button className="btn btn-secondary" style={{ padding: '6px 12px', fontSize: '0.8rem' }} onClick={() => setProductModal({ open: true, mode: 'edit', data: { id: p.id, sku: p.sku, name: p.name, description: p.description || '', barcode: p.barcode || '', costPrice: p.costPrice, listPrice: p.listPrice, listPriceB: p.listPriceB || 0, listPriceC: p.listPriceC || 0, minStock: p.minStock } })}>
-                          Editar
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+          {catalogTab === 'products' && (
+            <ProductsList 
+              products={products} 
+              searchQuery={searchQuery} 
+              setSearchQuery={setSearchQuery} 
+              setProductModal={setProductModal}
+              onUpdateProduct={handleUpdateProductInline}
+            />
+          )}
+
+
+          {catalogTab === 'rubros' && (
+            <RubrosList 
+              onRubroUpdated={fetchData} 
+            />
+          )}
         </div>
       )}
 
@@ -2782,6 +2765,18 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
                     <span>🔑</span>
                     <span>certificado_produccion.crt (Cargado en backend/certs/)</span>
                   </div>
+                </div>
+
+                <div className="form-group" style={{ margin: 0 }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                    <input 
+                      type="checkbox" 
+                      checked={ignoreStockCheck}
+                      onChange={(e) => setIgnoreStockCheck(e.target.checked)}
+                      style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                    />
+                    <span style={{ fontSize: '0.85rem', fontWeight: 500 }}>Desactivar control de stock por lotes (Venta libre)</span>
+                  </label>
                 </div>
                 
                 <button type="submit" className="btn btn-primary" style={{ height: '40px', padding: '0 20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
