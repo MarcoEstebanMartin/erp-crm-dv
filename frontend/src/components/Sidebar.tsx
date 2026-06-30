@@ -13,7 +13,7 @@ import {
   FileText,
   History
 } from 'lucide-react';
-import { api } from '../utils/api';
+import { api, isSimulationMode } from '../utils/api';
 
 interface SidebarProps {
   username: string;
@@ -92,14 +92,12 @@ export default function Sidebar({ username, role, activeTab, setActiveTab, onLog
           }}
         />
         {(() => {
-          const config = api.getServerConfig();
-          const isSimulatedStock = config?.ignoreStock;
-          const isAfipTest = config ? !config.afipProduction : false;
+          const isSimulator = isSimulationMode();
           
-          let dotColor = 'var(--color-success)';
+          let dotColor = 'var(--color-success)'; // Verde
           let tooltip = 'Conectado en Producción';
 
-          if (isSimulatedStock || isAfipTest) {
+          if (isSimulator) {
             dotColor = 'var(--color-warning)'; // Naranja
             tooltip = 'Simulador';
           }
