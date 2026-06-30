@@ -2462,8 +2462,8 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
                             padding: '12px',
                             fontWeight: 600,
                             cursor: (isDrawerInvalid || directCart.length === 0) ? 'not-allowed' : 'pointer',
-                            backgroundColor: (isDrawerInvalid || directCart.length === 0) ? '#a1a1a6' : 'var(--accent-color)',
-                            borderColor: (isDrawerInvalid || directCart.length === 0) ? '#a1a1a6' : 'var(--accent-color)'
+                            backgroundColor: (isDrawerInvalid || directCart.length === 0) ? '#a1a1a6' : (directInvoiceForm.billingType === 'OFFICIAL' ? 'var(--color-info)' : 'var(--accent-color)'),
+                            borderColor: (isDrawerInvalid || directCart.length === 0) ? '#a1a1a6' : (directInvoiceForm.billingType === 'OFFICIAL' ? 'var(--color-info)' : 'var(--accent-color)')
                           }}
                           disabled={loading || isDrawerInvalid || directCart.length === 0}
                         >
