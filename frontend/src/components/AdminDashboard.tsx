@@ -40,12 +40,12 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
   const [financialReport, setFinancialReport] = useState<any | null>(null);
   
   // Modales
-  const [productModal, setProductModal] = useState({ open: false, mode: 'create', data: { id: 0, sku: '', name: '', description: '', barcode: '', costPrice: 0, listPrice: 0, listPriceB: 0, listPriceC: 0, minStock: 0 } });
+  const [productModal, setProductModal] = useState({ open: false, mode: 'create', data: { id: 0, sku: '', name: '', description: '', barcode: '', costPrice: 0, listPrice: 0, listPriceB: 0, listPriceC: 0, minStock: 0, isPesable: false, approximateWeight: 0 } });
   const [userModal, setUserModal] = useState({ open: false, username: '', password: '', role: 'VENDEDOR' });
   const [showPassword, setShowPassword] = useState(false);
   const [clientModal, setClientModal] = useState({ open: false, mode: 'create', data: { id: 0, name: '', cuit: '', address: '', city: '', phone: '', email: '', creditLimit: 0, priceList: 'A', discount: 0, isClient: true, isProvider: false, isSeller: false, isCommissionAgent: false } });
   const [orderDetailsModal, setOrderDetailsModal] = useState<any | null>(null);
-  const [editOrderModal, setEditOrderModal] = useState<{ open: boolean; orderId: number; clientId: number; clientName: string; items: { id: number; productId: number; name: string; sku: string; quantity: number; listPrice: number }[] } | null>(null);
+  const [editOrderModal, setEditOrderModal] = useState<{ open: boolean; orderId: number; clientId: number; clientName: string; items: { id: number; productId: number; name: string; sku: string; quantity: number; listPrice: number; weight?: number | null; isPesable?: boolean; approximateWeight?: number | null }[] } | null>(null);
 
   // Estados para cuenta corriente y cobros
   const [clientProfileModal, setClientProfileModal] = useState<{ open: boolean; client: any; ledger: any[] } | null>(null);
@@ -607,7 +607,9 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
           listPrice: Number(data.listPrice),
           listPriceB: Number(data.listPriceB || 0),
           listPriceC: Number(data.listPriceC || 0),
-          minStock: Number(data.minStock)
+          minStock: Number(data.minStock),
+          isPesable: Boolean(data.isPesable),
+          approximateWeight: data.approximateWeight ? Number(data.approximateWeight) : 0
         });
       }
       setProductModal({ ...productModal, open: false });
@@ -628,7 +630,9 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
         listPrice: Number(updatedProduct.listPrice),
         listPriceB: Number(updatedProduct.listPriceB || 0),
         listPriceC: Number(updatedProduct.listPriceC || 0),
-        minStock: Number(updatedProduct.minStock)
+        minStock: Number(updatedProduct.minStock),
+        isPesable: Boolean(updatedProduct.isPesable),
+        approximateWeight: updatedProduct.approximateWeight ? Number(updatedProduct.approximateWeight) : 0
       });
       // Update local state directly to reflect changes immediately
       setProducts(prev => prev.map(p => p.id === updatedProduct.id ? updatedProduct : p));
@@ -743,7 +747,10 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
         name: i.product?.name || 'Artículo',
         sku: i.product?.sku || '',
         quantity: i.quantity,
-        listPrice: i.price
+        weight: i.weight,
+        isPesable: i.product?.isPesable,
+        approximateWeight: i.product?.approximateWeight,
+        listPrice: i.price || i.unitPrice || (i.product ? i.product.listPrice : 0)
       }));
       
       setEditOrderModal({
@@ -768,7 +775,8 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
     try {
       const itemsPayload = editOrderModal.items.map(item => ({
         productId: item.productId,
-        quantity: item.quantity
+        quantity: item.quantity,
+        weight: item.weight || null
       }));
       
       await api.updateOrder(editOrderModal.orderId, { items: itemsPayload });
@@ -3112,6 +3120,8 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
                                   name: p.name,
                                   sku: p.sku,
                                   quantity: 1,
+                                  isPesable: p.isPesable,
+                                  approximateWeight: p.approximateWeight,
                                   listPrice: p.listPrice
                                 }]
                               });
@@ -3136,7 +3146,28 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
                       <div key={item.productId} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid #f0f0f0' }}>
                         <div style={{ flex: 1, marginRight: '10px' }}>
                           <div style={{ fontSize: '0.85rem', fontWeight: 600 }}>{item.name}</div>
-                          <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>${item.listPrice} c/u</div>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>${item.listPrice} c/u {item.isPesable && '(Por Kg)'}</div>
+                          {item.isPesable && (
+                            <div style={{ marginTop: '4px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <span style={{ fontSize: '0.75rem', fontWeight: 600 }}>Peso Exacto (Kg):</span>
+                              <input 
+                                type="number" 
+                                step="0.01"
+                                className="input" 
+                                style={{ width: '80px', padding: '2px 6px', fontSize: '0.8rem' }}
+                                value={item.weight || ''}
+                                onChange={(e) => {
+                                  const val = parseFloat(e.target.value);
+                                  setEditOrderModal({
+                                    ...editOrderModal,
+                                    items: editOrderModal.items.map(i => 
+                                      i.productId === item.productId ? { ...i, weight: isNaN(val) ? null : val } : i
+                                    )
+                                  });
+                                }}
+                              />
+                            </div>
+                          )}
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                           <button
@@ -3200,7 +3231,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
                 <div style={{ marginTop: '16px', borderTop: '1px solid var(--border-color)', paddingTop: '12px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', fontSize: '1.05rem', marginBottom: '12px' }}>
                     <span>Nuevo Total:</span>
-                    <span>${editOrderModal.items.reduce((acc, i) => acc + (i.listPrice * i.quantity), 0).toLocaleString()}</span>
+                    <span>${editOrderModal.items.reduce((acc, i) => acc + (i.listPrice * (i.isPesable ? (i.weight || (i.quantity * (i.approximateWeight || 1))) : i.quantity)), 0).toLocaleString()}</span>
                   </div>
                 </div>
               </div>
@@ -3270,6 +3301,33 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
                   value={productModal.data.description}
                   onChange={(e) => setProductModal({ ...productModal, data: { ...productModal.data, description: e.target.value } })}
                 />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '14px', alignItems: 'flex-start', marginBottom: '14px' }}>
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', margin: 0 }}>
+                    <input
+                      type="checkbox"
+                      checked={productModal.data.isPesable || false}
+                      onChange={(e) => setProductModal({ ...productModal, data: { ...productModal.data, isPesable: e.target.checked } })}
+                      style={{ width: '18px', height: '18px' }}
+                    />
+                    Es Producto Pesable
+                  </label>
+                </div>
+                {productModal.data.isPesable && (
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label>Peso Aproximado de Horma (Kg)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      className="input"
+                      placeholder="ej: 4.5"
+                      value={productModal.data.approximateWeight || ''}
+                      onChange={(e) => setProductModal({ ...productModal, data: { ...productModal.data, approximateWeight: Number(e.target.value) } })}
+                    />
+                  </div>
+                )}
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>

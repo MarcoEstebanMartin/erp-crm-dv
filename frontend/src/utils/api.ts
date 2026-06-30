@@ -1112,7 +1112,13 @@ export const api = {
 
         // Aplicar descuento y redondear al entero más cercano
         const finalUnitPrice = Math.round(selectedPrice * (1 - itemDiscount / 100));
-        const subtotal = Math.round(finalUnitPrice * item.quantity);
+        
+        // Calculate based on weight if weighable
+        const actualQuantityForPrice = prod.isPesable
+          ? (item.quantity * Number(prod.approximateWeight || 1))
+          : item.quantity;
+          
+        const subtotal = Math.round(finalUnitPrice * actualQuantityForPrice);
         totalAmount += subtotal;
 
         prod.stock -= item.quantity;
@@ -1120,6 +1126,7 @@ export const api = {
         orderItems.push({
           productId: prod.id,
           quantity: item.quantity,
+          weight: null,
           unitPrice: finalUnitPrice,
           subtotal
         });
@@ -1227,14 +1234,22 @@ export const api = {
 
         // Aplicar descuento
         const finalUnitPrice = selectedPrice * (1 - itemDiscount / 100);
-        const subtotal = finalUnitPrice * item.quantity;
+        
+        // Calculate based on weight if weighable
+        const actualQuantityForPrice = prod.isPesable
+          ? (item.quantity * Number(prod.approximateWeight || 1))
+          : item.quantity;
+          
+        const subtotal = finalUnitPrice * actualQuantityForPrice;
         totalAmount += subtotal;
 
         prod.stock -= item.quantity;
 
         orderItems.push({
+          id: Date.now() + Math.random(),
           productId: prod.id,
           quantity: item.quantity,
+          weight: (item as any).weight || null,
           unitPrice: finalUnitPrice,
           subtotal
         });
