@@ -2312,7 +2312,13 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
                         type="button"
                         className={`btn ${directInvoiceForm.billingType === 'OFFICIAL' ? 'btn-primary' : 'btn-secondary'}`}
                         onClick={() => setDirectInvoiceForm(prev => ({ ...prev, billingType: 'OFFICIAL' }))}
-                        style={{ flex: 1, fontSize: '0.8rem', padding: '10px' }}
+                        style={{ 
+                          flex: 1, 
+                          fontSize: '0.8rem', 
+                          padding: '10px',
+                          backgroundColor: directInvoiceForm.billingType === 'OFFICIAL' ? 'var(--color-info)' : undefined,
+                          borderColor: directInvoiceForm.billingType === 'OFFICIAL' ? 'var(--color-info)' : undefined
+                        }}
                       >
                         Sucursal A (Oficial)
                       </button>
@@ -2320,7 +2326,13 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
                         type="button"
                         className={`btn ${directInvoiceForm.billingType === 'INTERNAL' ? 'btn-primary' : 'btn-secondary'}`}
                         onClick={() => setDirectInvoiceForm(prev => ({ ...prev, billingType: 'INTERNAL' }))}
-                        style={{ flex: 1, fontSize: '0.8rem', padding: '10px' }}
+                        style={{ 
+                          flex: 1, 
+                          fontSize: '0.8rem', 
+                          padding: '10px',
+                          backgroundColor: directInvoiceForm.billingType === 'INTERNAL' ? 'var(--accent-color)' : undefined,
+                          borderColor: directInvoiceForm.billingType === 'INTERNAL' ? 'var(--accent-color)' : undefined
+                        }}
                       >
                         Sucursal X (Interno)
                       </button>
@@ -2437,7 +2449,7 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
                           )}
                           <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '8px', marginTop: '4px', display: 'flex', justifyContent: 'space-between', fontSize: '1.05rem', fontWeight: 700 }}>
                             <span>Total Facturado:</span>
-                            <span style={{ color: 'var(--accent-color)' }}>${directBillingTotals.total.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span>
+                            <span style={{ color: directInvoiceForm.billingType === 'OFFICIAL' ? 'var(--color-info)' : 'var(--accent-color)' }}>${directBillingTotals.total.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span>
                           </div>
                         </div>
 
