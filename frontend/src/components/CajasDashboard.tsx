@@ -24,10 +24,10 @@ export default function CajasDashboard() {
 
   const filteredHistory = historicalDrawers.filter((d: any) => {
     const closedDate = new Date(d.closedAt);
-    const start = new Date(filterStartDate);
-    start.setHours(0, 0, 0, 0);
-    const end = new Date(filterEndDate);
-    end.setHours(23, 59, 59, 999);
+    const [sYear, sMonth, sDay] = filterStartDate.split('-').map(Number);
+    const start = new Date(sYear, sMonth - 1, sDay, 0, 0, 0, 0);
+    const [eYear, eMonth, eDay] = filterEndDate.split('-').map(Number);
+    const end = new Date(eYear, eMonth - 1, eDay, 23, 59, 59, 999);
     return closedDate >= start && closedDate <= end;
   });
 
