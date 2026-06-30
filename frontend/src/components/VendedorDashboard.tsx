@@ -68,6 +68,12 @@ export default function VendedorDashboard({ activeTab }: VendedorDashboardProps)
     fetchData();
   }, [activeTab, searchQuery, prodSearchQuery, subTab]);
 
+  // Limpiar mensajes al cambiar de pestaña
+  useEffect(() => {
+    setSuccessMsg(null);
+    setErrorMsg(null);
+  }, [activeTab, subTab]);
+
   const fetchData = async () => {
     setErrorMsg(null);
     try {

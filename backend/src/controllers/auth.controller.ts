@@ -61,6 +61,10 @@ export async function login(req: Request, res: Response): Promise<void> {
           username: user.username,
           role: user.role,
         },
+        config: {
+          ignoreStock: process.env.IGNORE_STOCK_CHECK === 'true',
+          afipProduction: process.env.AFIP_PRODUCTION === 'true'
+        }
       },
     });
   } catch (error: any) {
@@ -103,7 +107,13 @@ export async function getMe(req: AuthenticatedRequest, res: Response): Promise<v
 
     res.status(200).json({
       status: 'success',
-      data: { user },
+      data: { 
+        user,
+        config: {
+          ignoreStock: process.env.IGNORE_STOCK_CHECK === 'true',
+          afipProduction: process.env.AFIP_PRODUCTION === 'true'
+        }
+      },
     });
   } catch (error: any) {
     res.status(500).json({

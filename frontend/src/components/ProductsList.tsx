@@ -167,7 +167,7 @@ export default function ProductsList({ products, searchQuery, setSearchQuery, se
                             style={{ width: '80px', textAlign: 'right', padding: '4px', borderRadius: '4px', border: '1px solid var(--color-primary)' }}
                           />
                         ) : (
-                          <div onClick={() => handleEditStart(p.id, 'costPrice', costo)} style={{ cursor: 'pointer', padding: '4px', border: '1px solid transparent' }} title="Clic para editar">
+                          <div onClick={() => handleEditStart(p.id, 'costPrice', Math.round(costo))} style={{ cursor: 'pointer', padding: '4px', border: '1px solid transparent' }} title="Clic para editar">
                             ${costo.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                           </div>
                         )}
@@ -188,7 +188,7 @@ export default function ProductsList({ products, searchQuery, setSearchQuery, se
                           </div>
                         ) : (
                           <span 
-                            onClick={() => handleEditStart(p.id, 'rentabilidad', rentabilidad > 0 ? ((rentabilidad - 1) * 100) : 0)}
+                            onClick={() => handleEditStart(p.id, 'rentabilidad', Math.round(rentabilidad > 0 ? ((rentabilidad - 1) * 100) : 0))}
                             style={{ backgroundColor: 'var(--bg-muted)', padding: '4px 8px', borderRadius: '6px', fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-primary)', cursor: 'pointer' }}
                             title="Clic para editar"
                           >
@@ -208,7 +208,7 @@ export default function ProductsList({ products, searchQuery, setSearchQuery, se
                             style={{ width: '80px', textAlign: 'right', padding: '4px', borderRadius: '4px', border: '1px solid var(--color-primary)' }}
                           />
                         ) : (
-                          <div onClick={() => handleEditStart(p.id, 'listPrice', precioSinIva)} style={{ cursor: 'pointer', padding: '4px', border: '1px solid transparent' }} title="Clic para editar">
+                          <div onClick={() => handleEditStart(p.id, 'listPrice', Math.round(precioSinIva))} style={{ cursor: 'pointer', padding: '4px', border: '1px solid transparent' }} title="Clic para editar">
                             ${precioSinIva.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                           </div>
                         )}

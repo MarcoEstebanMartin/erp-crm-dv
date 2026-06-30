@@ -23,7 +23,7 @@ export class ProductService {
         rubro: true,
         provider: true,
       },
-      orderBy: { name: 'asc' },
+      orderBy: { sku: 'asc' },
     });
 
     return products;

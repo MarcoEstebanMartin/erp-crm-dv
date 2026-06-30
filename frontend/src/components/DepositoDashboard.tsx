@@ -42,6 +42,12 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
     fetchData();
   }, [normalizedTab, searchQuery]);
 
+  // Limpiar mensajes al cambiar de pestaña
+  useEffect(() => {
+    setSuccessMsg(null);
+    setErrorMsg(null);
+  }, [normalizedTab, activeTab]);
+
   // Auto-abrir modal de ajuste si se escanea/busca un SKU o código de barra exacto
   useEffect(() => {
     if (normalizedTab === 'stock-adjust' && products.length === 1 && searchQuery.trim() !== '') {
@@ -452,7 +458,7 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
                                       step="0.001"
                                       className="input"
                                       style={{ width: '90px', textAlign: 'right' }}
-                                      placeholder="Ej: 4.250"
+                                      placeholder={item.product?.approximateWeight ? `Aprox: ${Number(item.quantity) * Number(item.product.approximateWeight)}` : "Ej: 4.250"}
                                       value={pesableWeights[item.id] || ''}
                                       onChange={(e) => setPesableWeights(prev => ({ ...prev, [item.id]: Number(e.target.value) }))}
                                     />

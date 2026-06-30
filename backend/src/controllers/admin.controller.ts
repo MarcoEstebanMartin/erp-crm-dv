@@ -1,6 +1,8 @@
 import { Response } from 'express';
 import { AuthenticatedRequest } from '../types';
 import { adminService } from '../services/admin.service';
+import fs from 'fs';
+import path from 'path';
 
 /**
  * Obtener reporte consolidado financiero (Solo ADMIN).
@@ -67,5 +69,34 @@ export async function toggleUserStatus(req: AuthenticatedRequest, res: Response)
       return;
     }
     res.status(400).json({ status: 'error', message: error.message || 'Error al modificar el estado del usuario.' });
+  }
+}
+
+/**
+ * Actualizar configuracion global del sistema (Solo ADMIN).
+ */
+export async function updateConfig(req: AuthenticatedRequest, res: Response): Promise<void> {
+  const { ignoreStockCheck } = req.body;
+  try {
+    const envPath = path.resolve(process.cwd(), '.env');
+    if (fs.existsSync(envPath)) {
+      let envContent = fs.readFileSync(envPath, 'utf8');
+      
+      if (ignoreStockCheck !== undefined) {
+        const val = ignoreStockCheck ? 'true' : 'false';
+        if (envContent.includes('IGNORE_STOCK_CHECK=')) {
+          envContent = envContent.replace(/IGNORE_STOCK_CHECK=.*/g, `IGNORE_STOCK_CHECK="${val}"`);
+        } else {
+          envContent += `\nIGNORE_STOCK_CHECK="${val}"`;
+        }
+        process.env.IGNORE_STOCK_CHECK = val;
+      }
+      
+      fs.writeFileSync(envPath, envContent);
+    }
+    
+    res.status(200).json({ status: 'success', data: { ignoreStockCheck } });
+  } catch (error: any) {
+    res.status(500).json({ status: 'error', message: 'Error al actualizar configuración.' });
   }
 }

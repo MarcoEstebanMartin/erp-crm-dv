@@ -3,7 +3,7 @@ import rawClients from './clients_data.json';
 import rawProducts from './products_data.json';
 
 // Detecta dinámicamente el host para que funcione en localhost y desde el celular en la red local
-const API_BASE_URL = `http://${window.location.hostname}:3000/api`;
+export const API_BASE_URL = `http://${window.location.hostname}:3000/api`;
 
 // Verificar si estamos en modo simulación
 let simulationMode = localStorage.getItem('simulation_mode') === 'true';
@@ -106,7 +106,7 @@ function initMockDatabase() {
       if (changed) {
         localStorage.setItem('db_products', JSON.stringify(sanitized));
       }
-      if (list.length < 100 || list.some((p: any) => p.rubroId === undefined)) {
+      if (list.length < 100 || list.some((p: any) => p.rubroId === undefined || p.rubro === undefined)) {
         localStorage.removeItem('db_products');
         localStorage.removeItem('db_product_lots');
         forceReload = true;
@@ -250,7 +250,9 @@ function initMockDatabase() {
         minStock: p.minStock,
         imageUrl: (p as any).imageUrl || null,
         rubroId,
-        providerId
+        providerId,
+        rubro: p.category || 'OTROS',
+        subrubro: p.subcategory || 'OTROS'
       };
     });
     localStorage.setItem('db_products', JSON.stringify(productsToSave));
@@ -531,17 +533,58 @@ export const api = {
     });
     localStorage.setItem('auth_token', res.token);
     localStorage.setItem('auth_user', JSON.stringify(res.user));
+    if (res.config) {
+      localStorage.setItem('auth_config', JSON.stringify(res.config));
+    }
     return res;
   },
 
   logout: () => {
     localStorage.removeItem('auth_token');
     localStorage.removeItem('auth_user');
+    localStorage.removeItem('auth_config');
   },
 
   getCurrentUser: () => {
     const userStr = localStorage.getItem('auth_user');
     return userStr ? JSON.parse(userStr) : null;
+  },
+
+  getMe: async () => {
+    if (simulationMode) return api.getCurrentUser();
+    const token = localStorage.getItem('auth_token');
+    if (!token) return null;
+    try {
+      const res = await request('/auth/me');
+      if (res.data?.user) {
+        localStorage.setItem('auth_user', JSON.stringify(res.data.user));
+      }
+      if (res.data?.config) {
+        localStorage.setItem('auth_config', JSON.stringify(res.data.config));
+      }
+      return res.data?.user;
+    } catch (e) {
+      return null;
+    }
+  },
+
+  getServerConfig: () => {
+    const configStr = localStorage.getItem('auth_config');
+    return configStr ? JSON.parse(configStr) : null;
+  },
+
+  updateServerConfig: async (config: { ignoreStockCheck?: boolean }) => {
+    if (simulationMode) return;
+    try {
+      await request('/admin/config', {
+        method: 'POST',
+        body: JSON.stringify(config),
+      });
+      await api.getMe(); // Refrescar config
+    } catch (error) {
+      console.error('Error updating config', error);
+      throw error;
+    }
   },
 
   // --- PRODUCTOS e INVENTARIO ---
@@ -983,7 +1026,7 @@ export const api = {
       return { persona, ledger };
     }
     const res = await request(`/personas/${personaId}/ledger`);
-    return res.data;
+    return res;
   },
 
   getClientLedger: async (clientId: number) => {
@@ -1234,7 +1277,7 @@ export const api = {
     return res.order;
   },
 
-  invoiceOrder: async (id: number, billingType: BillingType, paymentMethod?: PaymentMethod) => {
+  invoiceOrder: async (id: number, billingType: BillingType, paymentMethod?: PaymentMethod, paymentDescription?: string) => {
     const user = api.getCurrentUser();
     if (simulationMode) {
       const orders = mockDb.get('db_orders');
@@ -1377,7 +1420,7 @@ export const api = {
 
     const res = await request(`/orders/${id}/invoice`, {
       method: 'POST',
-      body: JSON.stringify({ billingType, paymentMethod })
+      body: JSON.stringify({ billingType, paymentMethod, paymentDescription })
     });
     return res.order;
   },
@@ -1797,7 +1840,7 @@ export const api = {
 
     try {
       const res = await request('/finance/drawers/active-all');
-      return res.data?.drawers || [];
+      return res.drawers || [];
     } catch {
       return [];
     }
@@ -2140,7 +2183,7 @@ export const api = {
     return res.rubros;
   },
 
-  createRubro: async (rubroData: { name: string; description?: string }) => {
+  createRubro: async (rubroData: { name: string; description?: string; profitMargin?: number }) => {
     const user = api.getCurrentUser();
     if (simulationMode) {
       const rubros = mockDb.get('db_rubros');
@@ -2151,6 +2194,7 @@ export const api = {
         id: rubros.length + 1,
         name: rubroData.name,
         description: rubroData.description || '',
+        profitMargin: rubroData.profitMargin !== undefined ? Number(rubroData.profitMargin) : 1.25,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       };
@@ -2165,7 +2209,7 @@ export const api = {
     return res.rubro;
   },
 
-  updateRubro: async (id: number, rubroData: { name?: string; description?: string }) => {
+  updateRubro: async (id: number, rubroData: { name?: string; description?: string; profitMargin?: number }) => {
     const user = api.getCurrentUser();
     if (simulationMode) {
       const rubros = mockDb.get('db_rubros');
@@ -2182,8 +2226,28 @@ export const api = {
         ...rubroData,
         updatedAt: new Date().toISOString()
       };
+      
       rubros[idx] = newVal;
       mockDb.set('db_rubros', rubros);
+      
+      if (rubroData.profitMargin !== undefined && Number(rubroData.profitMargin) !== Number(oldVal.profitMargin)) {
+        const prods = mockDb.get('db_products');
+        const val = Number(rubroData.profitMargin);
+        const updatedProds = prods.map((p: any) => {
+          if (p.rubroId === id) {
+            const cost = Number(p.costPrice);
+            const precioFinal = cost * val;
+            const precioSinIva = precioFinal / 1.21;
+            return {
+              ...p,
+              listPrice: Math.max(0, Math.round(precioSinIva * 100) / 100)
+            };
+          }
+          return p;
+        });
+        mockDb.set('db_products', updatedProds);
+      }
+      
       mockDb.log(user.id, user.username, user.role, 'UPDATE_RUBRO', 'Rubro', id, oldVal, newVal);
       return newVal;
     }

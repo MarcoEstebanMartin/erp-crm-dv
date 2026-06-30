@@ -3,11 +3,8 @@ import { api } from '../utils/api';
 import { 
   Plus, 
   Search, 
-  Download, 
-  Calendar, 
   AlertTriangle, 
   Printer, 
-  BookOpen,
   CheckCircle,
   X
 } from 'lucide-react';
@@ -18,6 +15,9 @@ interface BillingDashboardProps {
 }
 
 export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: _setActiveTab }: BillingDashboardProps) {
+  const currentUser = api.getCurrentUser();
+  const isAdmin = currentUser?.role === 'ADMIN';
+
   // Sub-pestañas del módulo de facturación
   const [activeSubTab, setActiveSubTab] = useState<'ventas' | 'compras' | 'percepciones' | 'retenciones' | 'libro-ventas' | 'libro-compras' | 'notas-credito'>('ventas');
 
@@ -103,6 +103,9 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
     billingType: 'INTERNAL',
     immediatePayment: false,
     paymentMethod: 'CASH',
+    checkNumber: '',
+    checkIssuer: '',
+    isEcheq: false,
   });
   const [directCart, setDirectCart] = useState<any[]>([]);
   const [selectedDirectProduct, setSelectedDirectProduct] = useState('');
@@ -126,12 +129,6 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
   const [query, setQuery] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-  const [selectedMonth, setSelectedMonth] = useState(() => {
-    const today = new Date();
-    const mm = String(today.getMonth() + 1).padStart(2, '0');
-    return `${today.getFullYear()}-${mm}`;
-  });
-  const [useCustomDatesInLedger, setUseCustomDatesInLedger] = useState(false);
 
   // Modales
   const [showSupplierModal, setShowSupplierModal] = useState(false);
@@ -220,39 +217,7 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
         // Filtrar retenciones sufridas y practicadas
         const retenciones = data.filter((w: any) => w.type.startsWith('RETENCION_'));
         setTaxWithholdings(retenciones);
-      } else if (activeSubTab === 'libro-ventas') {
-        const ledgerFilters: any = {};
-        if (useCustomDatesInLedger) {
-          if (startDate && endDate) {
-            ledgerFilters.startDate = startDate;
-            ledgerFilters.endDate = endDate;
-          }
-        } else {
-          // Filtrar por el mes seleccionado
-          const [year, month] = selectedMonth.split('-');
-          const start = new Date(Number(year), Number(month) - 1, 1).toISOString();
-          const end = new Date(Number(year), Number(month), 0, 23, 59, 59).toISOString();
-          ledgerFilters.startDate = start;
-          ledgerFilters.endDate = end;
-        }
-        const data = await api.getSalesInvoices(ledgerFilters);
-        setSalesInvoices(data);
-      } else if (activeSubTab === 'libro-compras') {
-        const ledgerFilters: any = {};
-        if (useCustomDatesInLedger) {
-          if (startDate && endDate) {
-            ledgerFilters.startDate = startDate;
-            ledgerFilters.endDate = endDate;
-          }
-        } else {
-          const [year, month] = selectedMonth.split('-');
-          const start = new Date(Number(year), Number(month) - 1, 1).toISOString();
-          const end = new Date(Number(year), Number(month), 0, 23, 59, 59).toISOString();
-          ledgerFilters.startDate = start;
-          ledgerFilters.endDate = end;
-        }
-        const data = await api.getSupplierInvoices(ledgerFilters);
-        setSupplierInvoices(data);
+
       } else if (activeSubTab === 'notas-credito') {
         const data = await api.getCreditNotes(filters);
         setCreditNotes(data);
@@ -266,7 +231,13 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
 
   useEffect(() => {
     loadData();
-  }, [activeSubTab, startDate, endDate, query, selectedMonth, useCustomDatesInLedger]);
+  }, [activeSubTab, startDate, endDate, query]);
+
+  // Limpiar mensajes al cambiar de pestaña
+  useEffect(() => {
+    setSuccessMsg(null);
+    setErrorMsg(null);
+  }, [activeSubTab]);
 
   // Limpiar filtros
   const handleClearFilters = () => {
@@ -301,6 +272,15 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
       }
     }
   }, [personas]);
+
+  // --- EFECTO PARA REFRESCAR CAJAS AL ABRIR MODAL ---
+  useEffect(() => {
+    if (showDirectInvoiceModal) {
+      api.getActiveDrawers()
+        .then(list => setActiveDrawers(list || []))
+        .catch(() => setActiveDrawers([]));
+    }
+  }, [showDirectInvoiceModal]);
 
   // --- SELECCIONAR CLIENTE ACTIVO ---
   const selectedDirectClient = useMemo(() => {
@@ -682,12 +662,21 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
         quantity: item.quantity
       }));
 
-      const res = await api.createDirectInvoice({
+      const reqData: any = {
         personaId: Number(personaId),
         billingType,
         paymentMethod: immediatePayment ? paymentMethod : undefined,
         items
-      });
+      };
+
+      if (immediatePayment && paymentMethod === 'CHECK') {
+        reqData.checkNumber = directInvoiceForm.checkNumber;
+        reqData.checkIssuer = directInvoiceForm.isEcheq 
+          ? `${directInvoiceForm.checkIssuer} (Echeq)` 
+          : directInvoiceForm.checkIssuer;
+      }
+
+      const res = await api.createDirectInvoice(reqData);
 
       setSuccessMsg(`✅ Factura directa emitida con éxito. Comprobante: ${res.invoiceNumber}`);
       setShowDirectInvoiceModal(false);
@@ -697,6 +686,9 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
         billingType: 'INTERNAL',
         immediatePayment: false,
         paymentMethod: 'CASH',
+        checkNumber: '',
+        checkIssuer: '',
+        isEcheq: false,
       });
       setClientSearchQuery('');
       setProductSearchQuery('');
@@ -865,281 +857,7 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
     }
   };
 
-  // --- CÁLCULO DE SUMATORIAS PARA LIBRO IVA ---
-  const libroVentasTotals = useMemo(() => {
-    let total = 0;
-    let neto = 0;
-    let iva = 0;
-    let percep = 0;
-    salesInvoices.forEach(inv => {
-      total += Number(inv.totalAmount || 0);
-      neto += Number(inv.netAmount || 0);
-      iva += Number(inv.taxAmount || 0);
-      percep += Number(inv.percepcionAmount || 0);
-    });
-    return { total, neto, iva, percep };
-  }, [salesInvoices]);
 
-  const libroComprasTotals = useMemo(() => {
-    let total = 0;
-    let neto = 0;
-    let iva = 0;
-    let percep = 0;
-    supplierInvoices.forEach(inv => {
-      total += Number(inv.totalAmount || 0);
-      neto += Number(inv.netAmount || 0);
-      iva += Number(inv.taxAmount || 0);
-      percep += Number(inv.percepcionAmount || 0);
-    });
-    return { total, neto, iva, percep };
-  }, [supplierInvoices]);
-
-  // --- FORMATEADORES AFIP TEXT (RG 3685) ---
-  const padLeft = (str: string, length: number, char: string = ' '): string => {
-    return str.length >= length ? str.slice(0, length) : char.repeat(length - str.length) + str;
-  };
-
-  const padRight = (str: string, length: number, char: string = ' '): string => {
-    return str.length >= length ? str.slice(0, length) : str + char.repeat(length - str.length);
-  };
-
-  const formatNumberAFIP = (amount: number): string => {
-    const fixed = Math.abs(amount).toFixed(2);
-    const cleaned = fixed.replace('.', '');
-    return padLeft(cleaned, 15, '0');
-  };
-
-  const formatDateAFIP = (dateStr: string): string => {
-    const d = new Date(dateStr);
-    const yyyy = d.getFullYear();
-    const mm = String(d.getMonth() + 1).padStart(2, '0');
-    const dd = String(d.getDate()).padStart(2, '0');
-    return `${yyyy}${mm}${dd}`;
-  };
-
-  // --- EXPORTAR LIBRO IVA VENTAS EN CSV ---
-  const handleExportVentasCSV = () => {
-    let csv = 'Fecha,Tipo Comp.,Pto Venta,Numero,Cliente,CUIT,Neto Gravado,IVA 21%,Percep. IIBB,Total\n';
-    salesInvoices.forEach(inv => {
-      const date = new Date(inv.createdAt).toLocaleDateString('es-AR');
-      const type = inv.invoiceType || 'PRESUPUESTO';
-      const numberParts = inv.invoiceNumber ? inv.invoiceNumber.split('-') : ['00001', String(inv.id)];
-      const pto = numberParts[0] || '00001';
-      const num = numberParts[1] || String(inv.id);
-      const name = inv.persona?.name || 'Consumidor Final';
-      const cuit = inv.persona?.cuit || '99-99999999-9';
-      csv += `"${date}","${type}","${pto}","${num}","${name.replace(/"/g, '""')}","${cuit}",${inv.netAmount},${inv.taxAmount},${inv.percepcionAmount},${inv.totalAmount}\n`;
-    });
-    // Totales
-    csv += `\nTOTALES,,,,,,${libroVentasTotals.neto.toFixed(2)},${libroVentasTotals.iva.toFixed(2)},${libroVentasTotals.percep.toFixed(2)},${libroVentasTotals.total.toFixed(2)}\n`;
-
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.setAttribute('download', `Libro_IVA_Ventas_${selectedMonth}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
-  // --- EXPORTAR LIBRO IVA COMPRAS EN CSV ---
-  const handleExportComprasCSV = () => {
-    let csv = 'Fecha,Tipo Comp.,Pto Venta,Numero,Proveedor,CUIT,Neto Gravado,IVA Crédito,Percep. Sufridas,Total\n';
-    supplierInvoices.forEach(inv => {
-      const date = new Date(inv.issueDate).toLocaleDateString('es-AR');
-      const type = inv.invoiceType || 'FACTURA_A';
-      const numberParts = inv.invoiceNumber ? inv.invoiceNumber.split('-') : ['0001', String(inv.id)];
-      const pto = numberParts[0] || '0001';
-      const num = numberParts[1] || String(inv.id);
-      const name = inv.persona?.name || 'Proveedor';
-      const cuit = inv.persona?.cuit || '';
-      csv += `"${date}","${type}","${pto}","${num}","${name.replace(/"/g, '""')}","${cuit}",${inv.netAmount},${inv.taxAmount},${inv.percepcionAmount},${inv.totalAmount}\n`;
-    });
-    csv += `\nTOTALES,,,,,,${libroComprasTotals.neto.toFixed(2)},${libroComprasTotals.iva.toFixed(2)},${libroComprasTotals.percep.toFixed(2)},${libroComprasTotals.total.toFixed(2)}\n`;
-
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.setAttribute('download', `Libro_IVA_Compras_${selectedMonth}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
-  // --- EXPORTAR AFIP TXT RG 3685 (VENTAS) ---
-  const handleExportVentasAFIP = () => {
-    let cabeceraTxt = '';
-    let alicuotasTxt = '';
-
-    salesInvoices.forEach(inv => {
-      // 1. Generar línea de Cabecera
-      const fecha = formatDateAFIP(inv.createdAt);
-      
-      // Tipo comprobante AFIP codes
-      let tipoComp = '006'; // Factura B
-      if (inv.invoiceType === 'FACTURA_A') tipoComp = '001';
-      else if (inv.invoiceType === 'FACTURA_C') tipoComp = '011';
-      else if (inv.invoiceType === 'PRESUPUESTO') tipoComp = '099';
-
-      const numberParts = inv.invoiceNumber ? inv.invoiceNumber.split('-') : ['1', String(inv.id)];
-      const ptoVenta = padLeft(numberParts[0].replace(/\D/g, ''), 5, '0');
-      const nroComp = padLeft(numberParts[1].replace(/\D/g, ''), 8, '0');
-      
-      const docTipo = (inv.persona?.cuit && inv.persona.cuit.replace(/\D/g, '').length === 11) ? '80' : '96'; // CUIT o DNI
-      const docNro = padLeft(inv.persona?.cuit ? inv.persona.cuit.replace(/\D/g, '') : '99999999', 20, '0');
-      const nombreCliente = padRight(inv.persona?.name || 'CONSUMIDOR FINAL', 30, ' ').slice(0, 30);
-      
-      const impTotal = formatNumberAFIP(inv.totalAmount);
-      const impNeto = formatNumberAFIP(inv.netAmount);
-      const impIVA = formatNumberAFIP(inv.taxAmount);
-      const impPercepIIBB = formatNumberAFIP(inv.percepcionAmount);
-      
-      // Armar línea de Cabecera de 227 caracteres
-      let lineCab = '';
-      lineCab += fecha;                     // [0-8]
-      lineCab += tipoComp;                  // [8-11]
-      lineCab += ptoVenta;                  // [11-16]
-      lineCab += nroComp;                   // [16-24]
-      lineCab += nroComp;                   // [24-32] (Hasta)
-      lineCab += docTipo;                   // [32-34]
-      lineCab += docNro;                    // [34-54]
-      lineCab += nombreCliente;             // [54-84]
-      lineCab += impTotal;                  // [84-99]
-      lineCab += padLeft('0', 15, '0');     // [99-114] No gravado
-      lineCab += padLeft('0', 15, '0');     // [114-129] Exento
-      lineCab += padLeft('0', 15, '0');     // [129-144] Percep Nacionales
-      lineCab += impPercepIIBB;             // [144-159] Percep IIBB
-      lineCab += padLeft('0', 15, '0');     // [159-174] Percep Municipales
-      lineCab += padLeft('0', 15, '0');     // [174-189] Imp. Internos
-      lineCab += 'PES';                     // [189-192] Moneda
-      lineCab += '0001000000';              // [192-202] Tipo cambio (1.000000)
-      lineCab += '1';                       // [202-203] Alícuotas count (1)
-      lineCab += ' ';                       // [203-204] Cod operacion
-      lineCab += padLeft('0', 15, '0');     // [204-219] Otros tributos
-      lineCab += fecha;                     // [219-227] Vto pago
-      
-      cabeceraTxt += lineCab + '\r\n';
-
-      // 2. Generar línea de Alícuotas
-      // Cod alícuota IVA AFIP: 5 es 21.00%, 4 es 10.50%
-      const codAlicuota = '0005'; // 21%
-      let lineAli = '';
-      lineAli += tipoComp;                  // [0-3]
-      lineAli += ptoVenta;                  // [3-8]
-      lineAli += nroComp;                   // [8-16]
-      lineAli += impNeto;                   // [16-31]
-      lineAli += codAlicuota;               // [31-35]
-      lineAli += impIVA;                    // [35-50]
-
-      alicuotasTxt += lineAli + '\r\n';
-    });
-
-    // Descargar Cabecera
-    let blobCab = new Blob([cabeceraTxt], { type: 'text/plain;charset=utf-8' });
-    let linkCab = document.createElement('a');
-    linkCab.href = URL.createObjectURL(blobCab);
-    linkCab.setAttribute('download', `AFIP_RG3685_Ventas_Comprobantes_${selectedMonth}.txt`);
-    document.body.appendChild(linkCab);
-    linkCab.click();
-    document.body.removeChild(linkCab);
-
-    // Descargar Alícuotas
-    let blobAli = new Blob([alicuotasTxt], { type: 'text/plain;charset=utf-8' });
-    let linkAli = document.createElement('a');
-    linkAli.href = URL.createObjectURL(blobAli);
-    linkAli.setAttribute('download', `AFIP_RG3685_Ventas_Alicuotas_${selectedMonth}.txt`);
-    document.body.appendChild(linkAli);
-    linkAli.click();
-    document.body.removeChild(linkAli);
-  };
-
-  // --- EXPORTAR AFIP TXT RG 3685 (COMPRAS) ---
-  const handleExportComprasAFIP = () => {
-    let cabeceraTxt = '';
-    let alicuotasTxt = '';
-
-    supplierInvoices.forEach(inv => {
-      const fecha = formatDateAFIP(inv.issueDate);
-      
-      let tipoComp = '001'; // Factura A
-      if (inv.invoiceType === 'FACTURA_B') tipoComp = '006';
-      else if (inv.invoiceType === 'FACTURA_C') tipoComp = '011';
-
-      const numberParts = inv.invoiceNumber ? inv.invoiceNumber.split('-') : ['1', String(inv.id)];
-      const ptoVenta = padLeft(numberParts[0].replace(/\D/g, ''), 5, '0');
-      const nroComp = padLeft(numberParts[1].replace(/\D/g, ''), 8, '0');
-      
-      const docTipo = '80'; // CUIT del proveedor
-      const docNro = padLeft(inv.persona?.cuit ? inv.persona.cuit.replace(/\D/g, '') : '99999999', 20, '0');
-      const nombreProv = padRight(inv.persona?.name || 'PROVEEDOR', 30, ' ').slice(0, 30);
-      
-      const impTotal = formatNumberAFIP(inv.totalAmount);
-      const impNeto = formatNumberAFIP(inv.netAmount);
-      const impIVA = formatNumberAFIP(inv.taxAmount);
-      const impPercepIIBB = formatNumberAFIP(inv.percepcionAmount);
-      
-      // Línea compras cabecera
-      let lineCab = '';
-      lineCab += fecha;
-      lineCab += tipoComp;
-      lineCab += ptoVenta;
-      lineCab += nroComp;
-      lineCab += padLeft('0', 8, '0'); // despacho
-      lineCab += docTipo;
-      lineCab += docNro;
-      lineCab += nombreProv;
-      lineCab += impTotal;
-      lineCab += padLeft('0', 15, '0'); // no gravado
-      lineCab += padLeft('0', 15, '0'); // exento
-      lineCab += padLeft('0', 15, '0'); // percep IVA/nacional
-      lineCab += impPercepIIBB;         // percep IIBB
-      lineCab += padLeft('0', 15, '0'); // percep municipal
-      lineCab += padLeft('0', 15, '0'); // imp internos
-      lineCab += 'PES';
-      lineCab += '0001000000';
-      lineCab += '1'; // alícuotas
-      lineCab += ' '; // operacion
-      lineCab += impIVA; // crédito computable
-      lineCab += padLeft('0', 15, '0'); // otros
-      lineCab += padLeft('0', 11, '0'); // emisor cuit
-      lineCab += padRight(' ', 30, ' ');
-      lineCab += padLeft('0', 15, '0');
-
-      cabeceraTxt += lineCab + '\r\n';
-
-      // Línea compras alícuota
-      const codAlicuota = '0005'; // 21%
-      let lineAli = '';
-      lineAli += tipoComp;
-      lineAli += ptoVenta;
-      lineAli += nroComp;
-      lineAli += docTipo;
-      lineAli += docNro;
-      lineAli += impNeto;
-      lineAli += codAlicuota;
-      lineAli += impIVA;
-
-      alicuotasTxt += lineAli + '\r\n';
-    });
-
-    // Descargar Compras Cabecera
-    let blobCab = new Blob([cabeceraTxt], { type: 'text/plain;charset=utf-8' });
-    let linkCab = document.createElement('a');
-    linkCab.href = URL.createObjectURL(blobCab);
-    linkCab.setAttribute('download', `AFIP_RG3685_Compras_Comprobantes_${selectedMonth}.txt`);
-    document.body.appendChild(linkCab);
-    linkCab.click();
-    document.body.removeChild(linkCab);
-
-    // Descargar Compras Alícuotas
-    let blobAli = new Blob([alicuotasTxt], { type: 'text/plain;charset=utf-8' });
-    let linkAli = document.createElement('a');
-    linkAli.href = URL.createObjectURL(blobAli);
-    linkAli.setAttribute('download', `AFIP_RG3685_Compras_Alicuotas_${selectedMonth}.txt`);
-    document.body.appendChild(linkAli);
-    linkAli.click();
-    document.body.removeChild(linkAli);
-  };
 
 
 
@@ -1198,15 +916,13 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
         borderRadius: '8px',
         width: 'fit-content'
       }}>
-        {(['ventas', 'notas-credito', 'compras', 'percepciones', 'retenciones', 'libro-ventas', 'libro-compras'] as const).map((tab) => {
+        {(['ventas', 'notas-credito', 'compras', 'percepciones', 'retenciones'] as const).map((tab) => {
           const labels = {
             'ventas': 'Comprobantes Venta',
             'notas-credito': 'Notas de Crédito',
             'compras': 'Comprobantes Compra',
             'percepciones': 'Percepciones',
-            'retenciones': 'Retenciones',
-            'libro-ventas': 'Libro IVA Ventas',
-            'libro-compras': 'Libro IVA Compras'
+            'retenciones': 'Retenciones'
           };
           const isActive = activeSubTab === tab;
           return (
@@ -1233,9 +949,8 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
       </div>
 
       {/* Barra de Filtros Generales (Se muestra en Ventas, Compras, Percepciones, Retenciones) */}
-      {!['libro-ventas', 'libro-compras'].includes(activeSubTab) && (
-        <div className="card" style={{ padding: '16px' }}>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center' }}>
+      <div className="card" style={{ padding: '16px' }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center' }}>
             
             <div style={{ flex: 1, minWidth: '200px', position: 'relative' }}>
               <Search size={16} style={{ position: 'absolute', left: '12px', top: '12px', color: 'var(--text-muted)' }} />
@@ -1274,7 +989,7 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
             )}
           </div>
         </div>
-      )}
+
 
       {/* ====================================================================
           SUB-TAB 1: COMPROBANTES DE VENTA (VENTAS EMITIDAS)
@@ -1486,6 +1201,7 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
       {activeSubTab === 'compras' && (
         <div>
           {/* Tarjetas de Métricas de Proveedores */}
+          {isAdmin && (
           <div style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
@@ -1546,6 +1262,7 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
               </span>
             </div>
           </div>
+          )}
 
           <div className="card">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
@@ -1592,11 +1309,11 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
                       const pendingAmount = Number(inv.totalAmount || 0) - Number(inv.paidAmount || 0);
 
                       return (
-                        <tr key={inv.id} style={isOverdue ? { backgroundColor: '#FFF5F5' } : undefined}>
+                        <tr key={inv.id} style={isAdmin && isOverdue ? { backgroundColor: '#FFF5F5' } : undefined}>
                           <td>{new Date(inv.issueDate).toLocaleDateString('es-AR')}</td>
-                          <td style={isOverdue ? { color: 'var(--color-danger)', fontWeight: 700 } : { fontWeight: 500 }}>
+                          <td style={isAdmin && isOverdue ? { color: 'var(--color-danger)', fontWeight: 700 } : { fontWeight: 500 }}>
                             {inv.dueDate ? new Date(inv.dueDate).toLocaleDateString('es-AR') : '-'}
-                            {isOverdue && <span style={{ marginLeft: '4px', fontSize: '0.65rem', backgroundColor: 'var(--color-danger)', color: '#FFF', padding: '1px 4px', borderRadius: '4px', fontWeight: 600 }}>VENCIDO</span>}
+                            {isAdmin && isOverdue && <span style={{ marginLeft: '4px', fontSize: '0.65rem', backgroundColor: 'var(--color-danger)', color: '#FFF', padding: '1px 4px', borderRadius: '4px', fontWeight: 600 }}>VENCIDO</span>}
                           </td>
                           <td>
                             <span style={{
@@ -1845,299 +1562,7 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
         </div>
       )}
 
-      {/* ====================================================================
-          SUB-TAB 5: LIBRO IVA VENTAS
-          ==================================================================== */}
-      {activeSubTab === 'libro-ventas' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          
-          {/* Controles de Período para el Libro IVA */}
-          <div className="card" style={{ padding: '16px' }}>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'center' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Calendar size={18} style={{ color: 'var(--text-secondary)' }} />
-                <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>Período Libro Ventas:</span>
-              </div>
 
-              {!useCustomDatesInLedger ? (
-                <input
-                  type="month"
-                  className="input"
-                  value={selectedMonth}
-                  onChange={(e) => setSelectedMonth(e.target.value)}
-                  style={{ width: '180px' }}
-                />
-              ) : (
-                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                  <input
-                    type="date"
-                    className="input"
-                    value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                    style={{ width: '135px' }}
-                  />
-                  <span style={{ color: 'var(--text-secondary)' }}>a</span>
-                  <input
-                    type="date"
-                    className="input"
-                    value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
-                    style={{ width: '135px' }}
-                  />
-                </div>
-              )}
-
-              <button 
-                className="btn btn-ghost" 
-                style={{ fontSize: '0.82rem', textDecoration: 'underline' }}
-                onClick={() => setUseCustomDatesInLedger(!useCustomDatesInLedger)}
-              >
-                {useCustomDatesInLedger ? 'Usar filtro por mes' : 'Usar rango personalizado'}
-              </button>
-
-              <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px' }}>
-                <button 
-                  className="btn btn-secondary" 
-                  style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem' }}
-                  onClick={handleExportVentasCSV}
-                  disabled={salesInvoices.length === 0}
-                >
-                  <Download size={14} />
-                  Excel / CSV
-                </button>
-                <button 
-                  className="btn btn-secondary"
-                  style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', color: 'var(--text-primary)', border: '1px solid var(--text-primary)' }}
-                  onClick={handleExportVentasAFIP}
-                  disabled={salesInvoices.length === 0}
-                >
-                  <BookOpen size={14} />
-                  Exportar AFIP RG 3685 (.txt)
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Tarjetas Informativas / Resumen Impositivo (Ventas) */}
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-            gap: '16px'
-          }}>
-            <div className="card" style={{ padding: '16px' }}>
-              <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>Neto Gravado (Subtotal)</div>
-              <div style={{ fontSize: '1.45rem', fontWeight: 700 }}>${libroVentasTotals.neto.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</div>
-            </div>
-            <div className="card" style={{ padding: '16px' }}>
-              <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>IVA Débito Fiscal (21%)</div>
-              <div style={{ fontSize: '1.45rem', fontWeight: 700, color: 'var(--color-danger)' }}>${libroVentasTotals.iva.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</div>
-            </div>
-            <div className="card" style={{ padding: '16px' }}>
-              <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>Percepciones practicadas IIBB</div>
-              <div style={{ fontSize: '1.45rem', fontWeight: 700, color: 'var(--color-warning)' }}>${libroVentasTotals.percep.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</div>
-            </div>
-            <div className="card" style={{ padding: '16px', borderLeft: '3px solid var(--color-success)' }}>
-              <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>Total Facturado</div>
-              <div style={{ fontSize: '1.45rem', fontWeight: 700, color: 'var(--color-success)' }}>${libroVentasTotals.total.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</div>
-            </div>
-          </div>
-
-          {/* Grilla Libro IVA Ventas */}
-          <div className="card">
-            <h4 style={{ marginBottom: '12px' }}>Detalle de Ventas</h4>
-            <div className="table-container">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Fecha</th>
-                    <th>Tipo Comp.</th>
-                    <th>Pto. Venta - Número</th>
-                    <th>Cliente</th>
-                    <th>CUIT</th>
-                    <th>Neto Gravado</th>
-                    <th>IVA Débito 21%</th>
-                    <th>Percep. IIBB</th>
-                    <th>Importe Total</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {loading ? (
-                    <tr><td colSpan={9} style={{ textAlign: 'center' }}>Procesando libro de ventas...</td></tr>
-                  ) : salesInvoices.length === 0 ? (
-                    <tr><td colSpan={9} style={{ textAlign: 'center' }}>No hay ventas registradas en el período seleccionado.</td></tr>
-                  ) : (
-                    salesInvoices.map((inv) => {
-                      const numberParts = inv.invoiceNumber ? inv.invoiceNumber.split('-') : ['00001', String(inv.id)];
-                      const pto = numberParts[0].padStart(5, '0');
-                      const num = numberParts[1].padStart(8, '0');
-                      return (
-                        <tr key={inv.id}>
-                          <td>{new Date(inv.createdAt).toLocaleDateString('es-AR')}</td>
-                          <td>{inv.invoiceType || 'PRESUPUESTO'}</td>
-                          <td style={{ fontFamily: 'monospace' }}>{pto}-{num}</td>
-                          <td>{inv.persona?.name || 'Consumidor Final'}</td>
-                          <td>{inv.persona?.cuit || '99-99999999-9'}</td>
-                          <td>${Number(inv.netAmount || 0).toLocaleString('es-AR', { minimumFractionDigits: 0 })}</td>
-                          <td>${Number(inv.taxAmount || 0).toLocaleString('es-AR', { minimumFractionDigits: 0 })}</td>
-                          <td>${Number(inv.percepcionAmount || 0).toLocaleString('es-AR', { minimumFractionDigits: 0 })}</td>
-                          <td style={{ fontWeight: 600 }}>${Number(inv.totalAmount || 0).toLocaleString('es-AR', { minimumFractionDigits: 0 })}</td>
-                        </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ====================================================================
-          SUB-TAB 6: LIBRO IVA COMPRAS
-          ==================================================================== */}
-      {activeSubTab === 'libro-compras' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          
-          {/* Controles de Período Compras */}
-          <div className="card" style={{ padding: '16px' }}>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'center' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Calendar size={18} style={{ color: 'var(--text-secondary)' }} />
-                <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>Período Libro Compras:</span>
-              </div>
-
-              {!useCustomDatesInLedger ? (
-                <input
-                  type="month"
-                  className="input"
-                  value={selectedMonth}
-                  onChange={(e) => setSelectedMonth(e.target.value)}
-                  style={{ width: '180px' }}
-                />
-              ) : (
-                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                  <input
-                    type="date"
-                    className="input"
-                    value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                    style={{ width: '135px' }}
-                  />
-                  <span style={{ color: 'var(--text-secondary)' }}>a</span>
-                  <input
-                    type="date"
-                    className="input"
-                    value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
-                    style={{ width: '135px' }}
-                  />
-                </div>
-              )}
-
-              <button 
-                className="btn btn-ghost" 
-                style={{ fontSize: '0.82rem', textDecoration: 'underline' }}
-                onClick={() => setUseCustomDatesInLedger(!useCustomDatesInLedger)}
-              >
-                {useCustomDatesInLedger ? 'Usar filtro por mes' : 'Usar rango personalizado'}
-              </button>
-
-              <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px' }}>
-                <button 
-                  className="btn btn-secondary" 
-                  style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem' }}
-                  onClick={handleExportComprasCSV}
-                  disabled={supplierInvoices.length === 0}
-                >
-                  <Download size={14} />
-                  Excel / CSV
-                </button>
-                <button 
-                  className="btn btn-secondary"
-                  style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', color: 'var(--text-primary)', border: '1px solid var(--text-primary)' }}
-                  onClick={handleExportComprasAFIP}
-                  disabled={supplierInvoices.length === 0}
-                >
-                  <BookOpen size={14} />
-                  Exportar AFIP RG 3685 (.txt)
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Resumen Impositivo (Compras) */}
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-            gap: '16px'
-          }}>
-            <div className="card" style={{ padding: '16px' }}>
-              <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>Costo Neto Gravado</div>
-              <div style={{ fontSize: '1.45rem', fontWeight: 700 }}>${libroComprasTotals.neto.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</div>
-            </div>
-            <div className="card" style={{ padding: '16px' }}>
-              <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>IVA Crédito Fiscal</div>
-              <div style={{ fontSize: '1.45rem', fontWeight: 700, color: 'var(--color-info)' }}>${libroComprasTotals.iva.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</div>
-            </div>
-            <div className="card" style={{ padding: '16px' }}>
-              <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>Percepciones Sufridas IIBB</div>
-              <div style={{ fontSize: '1.45rem', fontWeight: 700, color: 'var(--color-warning)' }}>${libroComprasTotals.percep.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</div>
-            </div>
-            <div className="card" style={{ padding: '16px', borderLeft: '3px solid var(--text-secondary)' }}>
-              <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>Total de Compras</div>
-              <div style={{ fontSize: '1.45rem', fontWeight: 700 }}>${libroComprasTotals.total.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</div>
-            </div>
-          </div>
-
-          {/* Grilla Libro IVA Compras */}
-          <div className="card">
-            <h4 style={{ marginBottom: '12px' }}>Detalle de Compras</h4>
-            <div className="table-container">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Fecha</th>
-                    <th>Tipo</th>
-                    <th>Número</th>
-                    <th>Proveedor</th>
-                    <th>CUIT</th>
-                    <th>Neto Gravado</th>
-                    <th>IVA Crédito</th>
-                    <th>Percep. Sufridas</th>
-                    <th>Total</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {loading ? (
-                    <tr><td colSpan={9} style={{ textAlign: 'center' }}>Procesando libro de compras...</td></tr>
-                  ) : supplierInvoices.length === 0 ? (
-                    <tr><td colSpan={9} style={{ textAlign: 'center' }}>No hay compras registradas en el período seleccionado.</td></tr>
-                  ) : (
-                    supplierInvoices.map((inv) => {
-                      const numberParts = inv.invoiceNumber ? inv.invoiceNumber.split('-') : ['0001', String(inv.id)];
-                      const pto = numberParts[0].padStart(5, '0');
-                      const num = numberParts[1].padStart(8, '0');
-                      return (
-                        <tr key={inv.id}>
-                          <td>{new Date(inv.issueDate).toLocaleDateString('es-AR')}</td>
-                          <td>{inv.invoiceType || 'FACTURA_A'}</td>
-                          <td style={{ fontFamily: 'monospace' }}>{pto}-{num}</td>
-                          <td>{inv.persona?.name || 'Proveedor'}</td>
-                          <td>{inv.persona?.cuit || 'Sin CUIT'}</td>
-                          <td>${Number(inv.netAmount || 0).toLocaleString('es-AR', { minimumFractionDigits: 0 })}</td>
-                          <td>${Number(inv.taxAmount || 0).toLocaleString('es-AR', { minimumFractionDigits: 0 })}</td>
-                          <td>${Number(inv.percepcionAmount || 0).toLocaleString('es-AR', { minimumFractionDigits: 0 })}</td>
-                          <td style={{ fontWeight: 600 }}>${Number(inv.totalAmount || 0).toLocaleString('es-AR', { minimumFractionDigits: 0 })}</td>
-                        </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* ====================================================================
           MODAL: REGISTRAR PAGO A PROVEEDOR
@@ -2531,6 +1956,9 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
                   billingType: 'INTERNAL',
                   immediatePayment: false,
                   paymentMethod: 'CASH',
+                  checkNumber: '',
+                  checkIssuer: '',
+                  isEcheq: false,
                 });
                 setClientSearchQuery('');
                 setProductSearchQuery('');
@@ -2806,8 +2234,8 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
                                   <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', fontFamily: 'monospace' }}>SKU: {item.product.sku}</div>
                                 </td>
                                 <td style={{ padding: '10px 12px', textAlign: 'right' }}>{item.quantity} u.</td>
-                                <td style={{ padding: '10px 12px', textAlign: 'right' }}>${item.unitPrice.toFixed(2)}</td>
-                                <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 600 }}>${item.subtotal.toFixed(2)}</td>
+                                <td style={{ padding: '10px 12px', textAlign: 'right' }}>${item.unitPrice.toLocaleString('es-AR')}</td>
+                                <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 600 }}>${item.subtotal.toLocaleString('es-AR')}</td>
                                 <td style={{ padding: '10px 12px', textAlign: 'center' }}>
                                   <button
                                     type="button"
@@ -2902,6 +2330,35 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
                             <option value="BANK_TRANSFER">Transferencia Bancaria</option>
                             <option value="CHECK">Cheque de Terceros</option>
                           </select>
+                          
+                          {directInvoiceForm.paymentMethod === 'CHECK' && (
+                            <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                              <input 
+                                type="text" 
+                                className="input" 
+                                placeholder="Número de Cheque" 
+                                value={directInvoiceForm.checkNumber}
+                                onChange={(e) => setDirectInvoiceForm(prev => ({...prev, checkNumber: e.target.value}))}
+                                style={{ fontSize: '0.85rem' }}
+                              />
+                              <input 
+                                type="text" 
+                                className="input" 
+                                placeholder="Banco Emisor / Detalles" 
+                                value={directInvoiceForm.checkIssuer}
+                                onChange={(e) => setDirectInvoiceForm(prev => ({...prev, checkIssuer: e.target.value}))}
+                                style={{ fontSize: '0.85rem' }}
+                              />
+                              <label className="checkbox-container" style={{ marginTop: '4px' }}>
+                                <input
+                                  type="checkbox"
+                                  checked={directInvoiceForm.isEcheq}
+                                  onChange={(e) => setDirectInvoiceForm(prev => ({ ...prev, isEcheq: e.target.checked }))}
+                                />
+                                <span style={{ fontSize: '0.8rem' }}>Es E-Cheq</span>
+                              </label>
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>

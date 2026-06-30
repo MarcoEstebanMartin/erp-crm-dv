@@ -38,7 +38,7 @@ export class OrderService {
           throw new Error(`Producto ID ${item.productId} no encontrado.`);
         }
 
-        if (product.stock < item.quantity) {
+        if (product.stock < item.quantity && process.env.IGNORE_STOCK_CHECK !== 'true') {
           throw new Error(
             `Stock insuficiente para "${product.name}" (Disponible: ${product.stock}, Solicitado: ${item.quantity}).`
           );
@@ -147,8 +147,8 @@ export class OrderService {
       });
 
       if (!order) throw new Error('Pedido no encontrado.');
-      if (order.status !== OrderStatus.PREPARED) {
-        throw new Error('Solo se pueden ajustar pesos en pedidos PREPARADOS antes de facturar.');
+      if (![OrderStatus.PENDING, OrderStatus.PREPARING, OrderStatus.PREPARED].includes(order.status as OrderStatus)) {
+        throw new Error('Solo se pueden ajustar pesos en pedidos PENDIENTES, EN PREPARACIÓN o PREPARADOS antes de facturar.');
       }
 
       let newTotal = 0;

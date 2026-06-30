@@ -32,5 +32,6 @@ export const invoiceOrderSchema = z.object({
   body: z.object({
     billingType: z.nativeEnum(BillingType),
     paymentMethod: z.nativeEnum(PaymentMethod).optional(),
+    paymentDescription: z.string().optional(),
   }),
 });

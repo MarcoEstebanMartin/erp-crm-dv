@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { API_BASE_URL } from '../utils/api';
 import { FileText, FileDown } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -29,7 +30,11 @@ export default function AfipExportDashboard() {
     try {
       setLoading(true);
       setErrorMsg(null);
-      const res = await fetch(`/api/iva/export?month=${month}&year=${year}`);
+      const res = await fetch(`${API_BASE_URL}/iva/export?month=${month}&year=${year}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+        }
+      });
       if (!res.ok) throw new Error('Error al generar los archivos AFIP');
       const { data } = await res.json();
       
@@ -62,14 +67,18 @@ export default function AfipExportDashboard() {
   };
 
   const formatCurrency = (val: number) => {
-    return '$ ' + Number(val).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return '$ ' + Number(val).toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
   };
 
   const generatePDFs = async () => {
     try {
       setLoading(true);
       setErrorMsg(null);
-      const res = await fetch(`/api/iva/export?month=${month}&year=${year}`);
+      const res = await fetch(`${API_BASE_URL}/iva/export?month=${month}&year=${year}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+        }
+      });
       if (!res.ok) throw new Error('Error al obtener datos para PDF');
       const { data } = await res.json();
 

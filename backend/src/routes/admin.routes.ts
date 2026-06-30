@@ -5,6 +5,7 @@ import {
   getUsers,
   createUser,
   toggleUserStatus,
+  updateConfig,
 } from '../controllers/admin.controller';
 import { authenticateJWT, requireRole } from '../middlewares/auth';
 import { Role } from '@prisma/client';
@@ -25,5 +26,6 @@ router.get('/audit-logs', getAuditLogs);
 router.get('/users', getUsers);
 router.post('/users', validateRequest(createUserSchema), createUser);
 router.post('/users/:id/toggle', validateRequest(toggleUserStatusSchema), toggleUserStatus);
+router.post('/config', updateConfig);
 
 export default router;

@@ -39,18 +39,20 @@ export default function Sidebar({ username, role, activeTab, setActiveTab, onLog
           { id: 'reparto', label: 'Reparto', icon: <Truck size={18} /> },
           { id: 'finanzas', label: 'Finanzas', icon: <DollarSign size={18} /> },
           { id: 'compras', label: 'Compras', icon: <Receipt size={18} /> },
-          { id: 'afip', label: 'Exportación AFIP', icon: <FileText size={18} /> },
           { id: 'reports', label: 'Reportes', icon: <TrendingUp size={18} /> },
           { id: 'config', label: 'Configuración', icon: <Settings size={18} /> },
         ];
       case 'FACTURACION':
         return [
-          { id: 'orders', label: 'Facturar Pedidos', icon: <ShoppingCart size={18} /> },
+          { id: 'dashboard', label: 'Panel Principal', icon: <LayoutDashboard size={18} /> },
           { id: 'clients', label: 'Personas', icon: <Users size={18} /> },
           { id: 'billing', label: 'Facturación', icon: <FileText size={18} /> },
-          { id: 'afip', label: 'Exportación AFIP', icon: <FileText size={18} /> },
+          { id: 'orders', label: 'Pedidos', icon: <ShoppingCart size={18} /> },
           { id: 'products', label: 'Productos', icon: <Package size={18} /> },
-          { id: 'finanzas', label: 'Caja Operativa', icon: <DollarSign size={18} /> },
+          { id: 'deposito', label: 'Depósito', icon: <Warehouse size={18} /> },
+          { id: 'reparto', label: 'Reparto', icon: <Truck size={18} /> },
+          { id: 'finanzas', label: 'Finanzas', icon: <DollarSign size={18} /> },
+          { id: 'compras', label: 'Compras', icon: <Receipt size={18} /> },
         ];
       case 'VENDEDOR':
         return [
@@ -89,18 +91,34 @@ export default function Sidebar({ username, role, activeTab, setActiveTab, onLog
             e.currentTarget.style.display = 'none';
           }}
         />
-        <div className="sidebar-status">
-          <div style={{
-            width: '8px',
-            height: '8px',
-            borderRadius: '50%',
-            backgroundColor: 'var(--color-success)',
-            animation: 'pulse 2s infinite'
-          }} />
-          <span style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
-            {role === 'ADMIN' ? 'Administrador' : role === 'FACTURACION' ? 'Administrativo' : 'Operativo'}
-          </span>
-        </div>
+        {(() => {
+          const config = api.getServerConfig();
+          const isSimulatedStock = config?.ignoreStock;
+          const isAfipTest = config ? !config.afipProduction : false;
+          
+          let dotColor = 'var(--color-success)';
+          let tooltip = 'Conectado en Producción';
+
+          if (isSimulatedStock || isAfipTest) {
+            dotColor = 'var(--color-warning)'; // Naranja
+            tooltip = 'Simulador';
+          }
+
+          return (
+            <div className="sidebar-status" title={tooltip} style={{ marginTop: '12px', cursor: 'pointer' }}>
+              <div style={{
+                width: '8px',
+                height: '8px',
+                borderRadius: '50%',
+                backgroundColor: dotColor,
+                animation: 'pulse 2s infinite'
+              }} />
+              <span style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
+                {role === 'ADMIN' ? 'Administrador' : role === 'FACTURACION' ? 'Administrativo' : 'Operativo'}
+              </span>
+            </div>
+          );
+        })()}
       </div>
 
       <nav className="sidebar-menu" style={{ flex: 1, overflowY: 'auto', paddingRight: '4px' }}>

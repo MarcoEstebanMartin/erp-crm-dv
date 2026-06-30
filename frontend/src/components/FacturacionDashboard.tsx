@@ -23,6 +23,11 @@ export default function FacturacionDashboard({ activeTab, setActiveTab }: Factur
   const [billingType, setBillingType] = useState<BillingType>(BillingType.INTERNAL);
   const [immediatePayment, setImmediatePayment] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(PaymentMethod.CASH);
+  const [checkDetails, setCheckDetails] = useState({
+    number: '',
+    issuer: '',
+    isEcheq: false
+  });
   
   // Crear cliente modal
   const [clientModal, setClientModal] = useState({ open: false, name: '', cuit: '', address: '', phone: '', email: '' });
@@ -36,6 +41,12 @@ export default function FacturacionDashboard({ activeTab, setActiveTab }: Factur
   useEffect(() => {
     fetchData();
   }, [normalizedTab, searchQuery]);
+
+  // Limpiar mensajes al cambiar de pestaña
+  useEffect(() => {
+    setSuccessMsg(null);
+    setErrorMsg(null);
+  }, [normalizedTab, activeTab]);
 
   useEffect(() => {
     if (selectedOrder) {
@@ -100,15 +111,24 @@ export default function FacturacionDashboard({ activeTab, setActiveTab }: Factur
         await api.updateOrderWeights(selectedOrder.id, weightItems);
       }
 
+      let paymentDescription: string | undefined = undefined;
+      if (immediatePayment && paymentMethod === 'CHECK') {
+        paymentDescription = checkDetails.isEcheq 
+          ? `${checkDetails.issuer} (Echeq) - Nro: ${checkDetails.number}` 
+          : `${checkDetails.issuer} - Nro: ${checkDetails.number}`;
+      }
+
       const updated = await api.invoiceOrder(
         selectedOrder.id,
         billingType,
-        immediatePayment ? paymentMethod : undefined
+        immediatePayment ? paymentMethod : undefined,
+        paymentDescription
       );
 
       setSuccessMsg(`✨ Pedido #${selectedOrder.id} facturado con éxito. Comprobante: ${updated.invoiceNumber}`);
       setSelectedOrder(null);
       setImmediatePayment(false);
+      setCheckDetails({ number: '', issuer: '', isEcheq: false });
       fetchData();
     } catch (err: any) {
       setErrorMsg(err.message || 'Error al facturar el pedido.');
@@ -264,6 +284,7 @@ export default function FacturacionDashboard({ activeTab, setActiveTab }: Factur
                                 step="0.001"
                                 className="input" 
                                 style={{ width: '80px', padding: '2px 6px', fontSize: '0.8rem', height: '26px' }}
+                                placeholder={item.product?.approximateWeight ? `Aprox: ${Number(item.quantity) * Number(item.product.approximateWeight)}` : ""}
                                 value={pesableWeights[item.id] || ''}
                                 onChange={(e) => setPesableWeights(prev => ({ ...prev, [item.id]: Number(e.target.value) }))}
                               />
@@ -326,6 +347,35 @@ export default function FacturacionDashboard({ activeTab, setActiveTab }: Factur
                       </select>
                     )}
                   </div>
+                  
+                  {immediatePayment && paymentMethod === 'CHECK' && (
+                    <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      <input 
+                        type="text" 
+                        className="input" 
+                        placeholder="Número de Cheque" 
+                        value={checkDetails.number}
+                        onChange={(e) => setCheckDetails(prev => ({...prev, number: e.target.value}))}
+                        style={{ fontSize: '0.85rem' }}
+                      />
+                      <input 
+                        type="text" 
+                        className="input" 
+                        placeholder="Banco Emisor / Detalles" 
+                        value={checkDetails.issuer}
+                        onChange={(e) => setCheckDetails(prev => ({...prev, issuer: e.target.value}))}
+                        style={{ fontSize: '0.85rem' }}
+                      />
+                      <label className="checkbox-container" style={{ marginTop: '4px' }}>
+                        <input
+                          type="checkbox"
+                          checked={checkDetails.isEcheq}
+                          onChange={(e) => setCheckDetails(prev => ({ ...prev, isEcheq: e.target.checked }))}
+                        />
+                        <span style={{ fontSize: '0.8rem' }}>Es E-Cheq</span>
+                      </label>
+                    </div>
+                  )}
                 </div>
 
                 {/* Validación de caja activa si es efectivo */}

@@ -303,7 +303,7 @@ export async function updateOrderStatus(req: AuthenticatedRequest, res: Response
               throw new Error(`El lote especificado no pertenece al producto "${item.product.name}".`);
             }
 
-            if (lot.stock < q) {
+            if (lot.stock < q && process.env.IGNORE_STOCK_CHECK !== 'true') {
               throw new Error(`Stock insuficiente en el lote "${lot.lotNumber}" para "${item.product.name}" (Disponible: ${lot.stock}, Solicitado: ${q}).`);
             }
 
@@ -420,6 +420,7 @@ export async function updateOrderStatus(req: AuthenticatedRequest, res: Response
 interface InvoiceOrderRequest {
   billingType: BillingType;
   paymentMethod?: 'CASH' | 'BANK_TRANSFER' | 'CHECK' | 'OTHER';
+  paymentDescription?: string;
 }
 
 /**
@@ -428,7 +429,7 @@ interface InvoiceOrderRequest {
  */
 export async function invoiceOrder(req: AuthenticatedRequest, res: Response): Promise<void> {
   const { id } = req.params;
-  const { billingType, paymentMethod }: InvoiceOrderRequest = req.body;
+  const { billingType, paymentMethod, paymentDescription }: InvoiceOrderRequest = req.body;
   const adminId = req.user?.id;
   const userRole = req.user?.role;
 
@@ -608,7 +609,7 @@ export async function invoiceOrder(req: AuthenticatedRequest, res: Response): Pr
             type: TransactionType.INCOME,
             paymentMethod,
             amount: totalSum,
-            description: `Cobro en caja de pedido #${order.id} (${billingType === BillingType.OFFICIAL ? 'Sucursal A' : 'Sucursal X'})`,
+            description: paymentDescription ? `Cobro en caja de pedido #${order.id} - ${paymentDescription}` : `Cobro en caja de pedido #${order.id} (${billingType === BillingType.OFFICIAL ? 'Sucursal A' : 'Sucursal X'})`,
             cashDrawerId,
             bankAccountId,
           },
@@ -723,7 +724,7 @@ export async function updateOrder(req: AuthenticatedRequest, res: Response): Pro
           throw new Error(`Producto ID ${item.productId} no encontrado.`);
         }
 
-        if (product.stock < item.quantity) {
+        if (product.stock < item.quantity && process.env.IGNORE_STOCK_CHECK !== 'true') {
           throw new Error(`Stock insuficiente para "${product.name}" (Disponible: ${product.stock}, Solicitado: ${item.quantity}).`);
         }
 
@@ -889,7 +890,7 @@ export async function createDirectInvoice(req: AuthenticatedRequest, res: Respon
           throw new Error(`Producto ID ${item.productId} no encontrado.`);
         }
 
-        if (product.stock < item.quantity) {
+        if (product.stock < item.quantity && process.env.IGNORE_STOCK_CHECK !== 'true') {
           throw new Error(`Stock insuficiente para "${product.name}" (Disponible: ${product.stock}, Solicitado: ${item.quantity}).`);
         }
 
@@ -1061,7 +1062,7 @@ export async function createDirectInvoice(req: AuthenticatedRequest, res: Respon
           });
         }
 
-        if (remainingToAssign > 0) {
+        if (remainingToAssign > 0 && process.env.IGNORE_STOCK_CHECK !== 'true') {
           throw new Error(`Inconsistencia de stock por lotes para "${itemData.productName}". Faltaron asignar ${remainingToAssign} unidades en lotes.`);
         }
       }
