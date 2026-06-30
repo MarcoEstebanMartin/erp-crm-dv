@@ -2760,14 +2760,6 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
               
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', borderTop: '1px solid var(--border-color)', paddingTop: '16px' }}>
                 <div className="form-group" style={{ margin: 0 }}>
-                  <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '4px', display: 'block' }}>Certificado Homologación AFIP</label>
-                  <div style={{ fontSize: '0.75rem', padding: '8px 12px', backgroundColor: '#F1F3F4', borderRadius: '4px', border: '1px solid var(--border-color)', color: 'var(--text-secondary)', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                    <span>🔑</span>
-                    <span>certificado_produccion.crt (Cargado en backend/certs/)</span>
-                  </div>
-                </div>
-
-                <div className="form-group" style={{ margin: 0 }}>
                   <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
                     <input 
                       type="checkbox" 
