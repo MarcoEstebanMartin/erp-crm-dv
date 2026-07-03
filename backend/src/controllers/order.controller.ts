@@ -131,6 +131,7 @@ export async function getOrderById(req: AuthenticatedRequest, res: Response): Pr
 
 interface CreateOrderRequest {
   personaId: number;
+  billingType?: string;
   items: {
     productId: number;
     quantity: number;
@@ -145,7 +146,7 @@ interface CreateOrderRequest {
 export async function createOrder(req: AuthenticatedRequest, res: Response): Promise<void> {
   const sellerId = req.user?.id;
   const userRole = req.user?.role;
-  const { personaId, items }: CreateOrderRequest = req.body;
+  const { personaId, billingType, items }: CreateOrderRequest = req.body;
 
   if (!sellerId || !userRole) {
     res.status(401).json({ status: 'error', message: 'No autorizado.' });
@@ -157,6 +158,7 @@ export async function createOrder(req: AuthenticatedRequest, res: Response): Pro
       sellerId,
       userRole,
       personaId,
+      billingType: billingType as any,
       items,
     });
 
@@ -225,6 +227,49 @@ export async function updateOrderWeights(req: AuthenticatedRequest, res: Respons
     res.status(400).json({
       status: 'error',
       message: error.message || 'Error al actualizar los pesos.',
+    });
+  }
+}
+
+/**
+ * Confirmación de Armado (Data Entry de Alta Eficiencia)
+ */
+export async function confirmArmado(req: AuthenticatedRequest, res: Response): Promise<void> {
+  const { id } = req.params;
+  const { items } = req.body;
+  const userId = req.user?.id;
+  const userRole = req.user?.role;
+
+  if (!userId || !userRole) {
+    res.status(401).json({ status: 'error', message: 'No autorizado.' });
+    return;
+  }
+
+  if (userRole !== Role.ADMIN && userRole !== Role.FACTURACION && userRole !== Role.DEPOSITO) {
+    res.status(403).json({ status: 'error', message: 'Permisos insuficientes para confirmar armado.' });
+    return;
+  }
+
+  try {
+    const updatedOrder = await OrderService.confirmArmado(Number(id), items);
+
+    await logAudit({
+      userId,
+      action: 'CONFIRM_ARMADO',
+      entityType: 'Order',
+      entityId: updatedOrder.id,
+      newValues: { totalAmount: updatedOrder.totalAmount, status: updatedOrder.status },
+    });
+
+    res.status(200).json({
+      status: 'success',
+      data: { order: updatedOrder },
+      message: 'Armado confirmado con éxito.',
+    });
+  } catch (error: any) {
+    res.status(400).json({
+      status: 'error',
+      message: error.message || 'Error al confirmar el armado.',
     });
   }
 }
@@ -910,9 +955,14 @@ export async function createDirectInvoice(req: AuthenticatedRequest, res: Respon
           }
         }
 
-        // Aplicar descuento fijo / dinámico
-        const finalUnitPrice = selectedPrice * (1 - itemDiscount / 100);
-        const subtotal = finalUnitPrice * item.quantity;
+        // Aplicar descuento fijo / dinámico (redondeando a 2 decimales)
+        const finalUnitPrice = Number((selectedPrice * (1 - itemDiscount / 100)).toFixed(2));
+        
+        // Si es pesable y tiene peso explícito lo usa, si no, usa quantity * approximateWeight, si no tiene aprox, asume 1kg por unidad.
+        const actualQuantityForPrice = product.isPesable 
+          ? (item.weight ? Number(item.weight) : item.quantity * Number((product as any).approximateWeight || 1))
+          : item.quantity;
+        const subtotal = Number((finalUnitPrice * actualQuantityForPrice).toFixed(2));
         totalSum += subtotal;
 
         // Descontar del stock general del producto
@@ -924,11 +974,14 @@ export async function createDirectInvoice(req: AuthenticatedRequest, res: Respon
         orderItemsData.push({
           productId: product.id,
           quantity: item.quantity,
+          weight: product.isPesable ? (item.weight ? Number(item.weight) : item.quantity * Number((product as any).approximateWeight || 1)) : null,
           unitPrice: finalUnitPrice,
           subtotal,
           productName: product.name,
         });
       }
+
+      totalSum = Number(totalSum.toFixed(2));
 
       // 3. Validar límite de crédito y boleta contra boleta
       const creditLimit = Number(persona.creditLimit || 0);
@@ -955,8 +1008,8 @@ export async function createDirectInvoice(req: AuthenticatedRequest, res: Respon
       let finalCae: string | null = null;
       let finalCaeDueDate: Date | null = null;
 
-      let net = totalSum / 1.21;
-      let tax = totalSum - net;
+      let net = Number((totalSum / 1.21).toFixed(2));
+      let tax = Number((totalSum - net).toFixed(2));
       let percepcion = 0;
 
       // Creamos el Order primero para tener un ID y poder asociarlo
@@ -1006,9 +1059,9 @@ export async function createDirectInvoice(req: AuthenticatedRequest, res: Respon
       if (billingType === BillingType.OFFICIAL && finalInvoiceType === InvoiceType.FACTURA_A) {
         const iibbAliquot = Number(persona.iibbAliquot || 0);
         if (iibbAliquot > 0) {
-          net = totalSum / (1.21 + (iibbAliquot / 100));
-          tax = net * 0.21;
-          percepcion = net * (iibbAliquot / 100);
+          net = Number((totalSum / (1.21 + (iibbAliquot / 100))).toFixed(2));
+          tax = Number((net * 0.21).toFixed(2));
+          percepcion = Number((net * (iibbAliquot / 100)).toFixed(2));
         }
       }
 
@@ -1019,6 +1072,7 @@ export async function createDirectInvoice(req: AuthenticatedRequest, res: Respon
             orderId: order.id,
             productId: itemData.productId,
             quantity: itemData.quantity,
+            weight: itemData.weight,
             unitPrice: itemData.unitPrice,
             subtotal: itemData.subtotal,
           },
