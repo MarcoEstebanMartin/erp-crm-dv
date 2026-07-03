@@ -35,6 +35,11 @@ export async function getSalesInvoices(req: AuthenticatedRequest, res: Response)
       include: {
         persona: true,
         seller: true,
+        items: {
+          include: {
+            product: { select: { id: true, name: true, sku: true } },
+          },
+        },
       },
       orderBy: { createdAt: 'desc' },
     });

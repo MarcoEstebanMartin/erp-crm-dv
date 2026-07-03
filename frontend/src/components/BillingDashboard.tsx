@@ -130,6 +130,7 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
   const [query, setQuery] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [salesInvoiceTypeFilter, setSalesInvoiceTypeFilter] = useState<'ALL' | 'OFFICIAL' | 'INTERNAL'>('ALL');
 
   // Modales
   const [showSupplierModal, setShowSupplierModal] = useState(false);
@@ -245,6 +246,7 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
     setQuery('');
     setStartDate('');
     setEndDate('');
+    setSalesInvoiceTypeFilter('ALL');
   };
 
   // --- EFECTO PARA CLIENTE PRESELECCIONADO ---
@@ -399,14 +401,16 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
     if (order && order.items) {
       const itemsToDev = order.items.map((item: any) => {
         const prod = products.find(p => p.id === item.productId);
+        const qty = Number(item.quantity);
+        const unitPrice = Number(item.unitPrice);
         return {
           productId: item.productId,
           name: prod ? prod.name : (item.product ? item.product.name : `Producto #${item.productId}`),
           sku: prod ? prod.sku : (item.product ? item.product.sku : ''),
-          orderQuantity: item.quantity,
-          quantity: 0,
-          unitPrice: Number(item.unitPrice),
-          subtotal: 0
+          orderQuantity: qty,
+          quantity: qty, // Precompletar con cantidad completa original
+          unitPrice: unitPrice,
+          subtotal: qty * unitPrice
         };
       });
       setCreditNoteCart(itemsToDev);
@@ -451,6 +455,84 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
     setCnProductSearchQuery('');
     setCnProductQty('1');
     setCnProductPrice('');
+  };
+
+  const handleCreateCreditNoteFromInvoice = async (invoice: any) => {
+    setErrorMsg(null);
+    setSuccessMsg(null);
+    
+    const pId = invoice.personaId || invoice.clientId;
+    const client = personas.find((p: any) => p.id === Number(pId));
+    if (!client) {
+      setErrorMsg('No se encontró el cliente de la factura.');
+      return;
+    }
+
+    setCnClientSearchQuery(client.name);
+    
+    try {
+      setLoading(true);
+      // Fetch para poblar el dropdown de órdenes del cliente en el modal
+      const orders = await api.getOrders(undefined, 'DELIVERED');
+      const filtered = orders.filter((o: any) => o.personaId === client.id || o.clientId === client.id);
+      setClientOrders(filtered);
+      
+      setCreditNoteForm({
+        personaId: String(client.id),
+        orderId: String(invoice.id),
+        billingType: invoice.billingType || (client.cuit ? 'OFFICIAL' : 'INTERNAL'),
+        reason: 'DEVOLUCION',
+        comments: `Devolución de comprobante #${invoice.invoiceNumber || invoice.id}`
+      });
+
+      // Si la factura tiene items (los cargamos en el query del backend), los usamos
+      if (invoice.items && invoice.items.length > 0) {
+        const itemsToDev = invoice.items.map((item: any) => {
+          const prod = products.find(p => p.id === item.productId);
+          const qty = Number(item.quantity);
+          const unitPrice = Number(item.unitPrice);
+          return {
+            productId: item.productId,
+            name: prod ? prod.name : (item.product ? item.product.name : `Producto #${item.productId}`),
+            sku: prod ? prod.sku : (item.product ? item.product.sku : ''),
+            orderQuantity: qty,
+            quantity: qty, // Devolución total por defecto
+            unitPrice: unitPrice,
+            subtotal: qty * unitPrice
+          };
+        });
+        setCreditNoteCart(itemsToDev);
+      } else {
+        // En caso de contingencia, buscamos la orden del listado fetched
+        const matchedOrder = filtered.find(o => o.id === invoice.id);
+        if (matchedOrder && matchedOrder.items) {
+          const itemsToDev = matchedOrder.items.map((item: any) => {
+            const prod = products.find(p => p.id === item.productId);
+            const qty = Number(item.quantity);
+            const unitPrice = Number(item.unitPrice);
+            return {
+              productId: item.productId,
+              name: prod ? prod.name : (item.product ? item.product.name : `Producto #${item.productId}`),
+              sku: prod ? prod.sku : (item.product ? item.product.sku : ''),
+              orderQuantity: qty,
+              quantity: qty,
+              unitPrice: unitPrice,
+              subtotal: qty * unitPrice
+            };
+          });
+          setCreditNoteCart(itemsToDev);
+        } else {
+          setCreditNoteCart([]);
+        }
+      }
+      
+      setShowCreditNoteModal(true);
+    } catch (err: any) {
+      console.error('Error al preparar nota de crédito desde factura:', err);
+      setErrorMsg('Error al preparar nota de crédito: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleCreateCreditNoteSubmit = async (e: React.FormEvent) => {
@@ -978,7 +1060,20 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
               />
             </div>
 
-            {(query || startDate || endDate) && (
+            {activeSubTab === 'ventas' && (
+              <select
+                className="input"
+                value={salesInvoiceTypeFilter}
+                onChange={(e) => setSalesInvoiceTypeFilter(e.target.value as any)}
+                style={{ width: '200px', fontSize: '0.85rem' }}
+              >
+                <option value="ALL">Todos los Comprobantes</option>
+                <option value="OFFICIAL">Solo Facturas</option>
+                <option value="INTERNAL">Solo Remitos</option>
+              </select>
+            )}
+
+            {(query || startDate || endDate || salesInvoiceTypeFilter !== 'ALL') && (
               <button className="btn btn-secondary" style={{ padding: '8px 12px', fontSize: '0.85rem' }} onClick={handleClearFilters}>
                 Limpiar Filtros
               </button>
@@ -1019,7 +1114,7 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
                   <th>Neto Gravado</th>
                   <th>IVA (21%)</th>
                   <th>Percep. IIBB</th>
-                  <th>Total Facturado</th>
+                  <th>Total</th>
                   <th>Detalle</th>
                 </tr>
               </thead>
@@ -1029,7 +1124,14 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
                 ) : salesInvoices.length === 0 ? (
                   <tr><td colSpan={10} style={{ textAlign: 'center' }}>No se encontraron comprobantes emitidos.</td></tr>
                 ) : (
-                  salesInvoices.map((inv) => (
+                  salesInvoices
+                    .filter(inv => {
+                      if (salesInvoiceTypeFilter === 'ALL') return true;
+                      const isOfficial = inv.billingType === 'OFFICIAL' || inv.invoiceType === 'FACTURA_A' || inv.invoiceType === 'FACTURA_B' || inv.invoiceType === 'FACTURA_C';
+                      if (salesInvoiceTypeFilter === 'OFFICIAL') return isOfficial;
+                      return !isOfficial;
+                    })
+                    .map((inv) => (
                     <tr key={inv.id} style={{ transition: 'background-color 0.2s hover' }}>
                       <td>{new Date(inv.createdAt).toLocaleDateString('es-AR')}</td>
                       <td>
@@ -1045,7 +1147,7 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
                         }}>
                           {inv.invoiceType === 'FACTURA_A' ? 'Factura A' : 
                            inv.invoiceType === 'FACTURA_B' ? 'Factura B' : 
-                           inv.invoiceType === 'FACTURA_C' ? 'Factura C' : 'Presupuesto'}
+                           inv.invoiceType === 'FACTURA_C' ? 'Factura C' : 'Remito'}
                         </span>
                       </td>
                       <td>
@@ -1069,13 +1171,30 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
                         ${Number(inv.totalAmount).toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                       </td>
                       <td>
-                        <button 
-                          className="btn btn-secondary" 
-                          style={{ padding: '4px 8px', fontSize: '0.78rem' }}
-                          onClick={() => setViewInvoiceModal(inv)}
-                        >
-                          Ver Factura
-                        </button>
+                        <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
+                          <button 
+                            className="btn btn-secondary" 
+                            style={{ padding: '4px 8px', fontSize: '0.78rem' }}
+                            onClick={() => setViewInvoiceModal(inv)}
+                          >
+                            {inv.invoiceType === 'FACTURA_A' || inv.invoiceType === 'FACTURA_B' || inv.invoiceType === 'FACTURA_C' ? 'Ver Factura' : 'Ver Remito'}
+                          </button>
+                          <button 
+                            className="btn btn-secondary" 
+                            style={{ 
+                              padding: '4px 8px', 
+                              fontSize: '0.78rem', 
+                              color: 'var(--color-danger, #dc2626)', 
+                              borderColor: 'var(--color-danger, #dc2626)',
+                              backgroundColor: 'transparent',
+                              transition: 'all 0.2s'
+                            }}
+                            onClick={() => handleCreateCreditNoteFromInvoice(inv)}
+                            title="Emitir Nota de Crédito para este comprobante"
+                          >
+                            Nota Crédito
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))
@@ -1952,6 +2071,7 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
                   billingType: 'INTERNAL',
                   immediatePayment: false,
                   paymentMethod: 'CASH',
+                  cashDrawerId: '',
                   checkNumber: '',
                   checkIssuer: '',
                   isEcheq: false,
@@ -2615,7 +2735,38 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
                   <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden', minHeight: 0 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                       <h4 style={{ margin: 0, fontSize: '0.9rem', fontWeight: 600 }}>Artículos en la Nota de Crédito</h4>
-                      {!creditNoteForm.orderId && selectedCNClient && (
+                      {creditNoteForm.orderId ? (
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <button 
+                            type="button" 
+                            className="btn btn-ghost" 
+                            style={{ padding: '2px 8px', fontSize: '0.75rem', color: '#16a34a', fontWeight: 500 }}
+                            onClick={() => {
+                              setCreditNoteCart(prev => prev.map(item => ({
+                                ...item,
+                                quantity: item.orderQuantity,
+                                subtotal: item.orderQuantity * item.unitPrice
+                              })));
+                            }}
+                          >
+                            ✓ Devolución Total
+                          </button>
+                          <button 
+                            type="button" 
+                            className="btn btn-ghost" 
+                            style={{ padding: '2px 8px', fontSize: '0.75rem', color: 'var(--text-secondary)' }}
+                            onClick={() => {
+                              setCreditNoteCart(prev => prev.map(item => ({
+                                ...item,
+                                quantity: 0,
+                                subtotal: 0
+                              })));
+                            }}
+                          >
+                            ✗ Poner en cero
+                          </button>
+                        </div>
+                      ) : selectedCNClient && (
                         <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Modo libre: agregá productos manualmente.</span>
                       )}
                     </div>
@@ -2740,17 +2891,17 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
                         <thead style={{ backgroundColor: '#fafafa', position: 'sticky', top: 0, zIndex: 1 }}>
                           <tr>
                             <th style={{ padding: '8px 12px', textAlign: 'left' }}>Producto</th>
-                            <th style={{ padding: '8px 12px', textAlign: 'left' }}>Precio Original</th>
+                            <th style={{ padding: '8px 12px', textAlign: 'left', width: '130px' }}>Precio</th>
                             {creditNoteForm.orderId && <th style={{ padding: '8px 12px', textAlign: 'center' }}>Cant. Pedido</th>}
                             <th style={{ padding: '8px 12px', width: '140px', textAlign: 'center' }}>Cant. Devuelta</th>
                             <th style={{ padding: '8px 12px', textAlign: 'right' }}>Subtotal</th>
-                            {!creditNoteForm.orderId && <th style={{ padding: '8px 12px', width: '50px' }}></th>}
+                            <th style={{ padding: '8px 12px', width: '50px' }}></th>
                           </tr>
                         </thead>
                         <tbody>
                           {creditNoteCart.length === 0 ? (
                             <tr>
-                              <td colSpan={5} style={{ padding: '30px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                              <td colSpan={creditNoteForm.orderId ? 6 : 5} style={{ padding: '30px', textAlign: 'center', color: 'var(--text-muted)' }}>
                                 {creditNoteForm.orderId 
                                   ? 'No se cargaron ítems. Seleccione un pedido para listar sus artículos.' 
                                   : 'No hay artículos en la Nota de Crédito.'
@@ -2765,7 +2916,24 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
                                   <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>SKU: {item.sku}</div>
                                 </td>
                                 <td style={{ padding: '10px 12px' }}>
-                                  ${Number(item.unitPrice).toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                    <span style={{ color: 'var(--text-secondary)' }}>$</span>
+                                    <input 
+                                      type="number"
+                                      className="input"
+                                      min="0"
+                                      step="0.01"
+                                      value={item.unitPrice}
+                                      onChange={(e) => {
+                                        const val = Math.max(0, Number(e.target.value));
+                                        const updated = [...creditNoteCart];
+                                        updated[idx].unitPrice = val;
+                                        updated[idx].subtotal = item.quantity * val;
+                                        setCreditNoteCart(updated);
+                                      }}
+                                      style={{ width: '90px', padding: '4px 8px', fontSize: '0.85rem' }}
+                                    />
+                                  </div>
                                 </td>
                                 {creditNoteForm.orderId && (
                                   <td style={{ padding: '10px 12px', textAlign: 'center', fontWeight: 600 }}>
@@ -2773,56 +2941,39 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
                                   </td>
                                 )}
                                 <td style={{ padding: '10px 12px', textAlign: 'center' }}>
-                                  {creditNoteForm.orderId ? (
-                                    <input 
-                                      type="number"
-                                      className="input"
-                                      min="0"
-                                      max={item.orderQuantity}
-                                      value={item.quantity}
-                                      onChange={(e) => {
-                                        const val = Math.min(item.orderQuantity, Math.max(0, Number(e.target.value)));
-                                        const updated = [...creditNoteCart];
-                                        updated[idx].quantity = val;
-                                        updated[idx].subtotal = val * item.unitPrice;
-                                        setCreditNoteCart(updated);
-                                      }}
-                                      style={{ width: '80px', padding: '4px 8px', textAlign: 'center', fontSize: '0.85rem' }}
-                                    />
-                                  ) : (
-                                    <input 
-                                      type="number"
-                                      className="input"
-                                      min="1"
-                                      value={item.quantity}
-                                      onChange={(e) => {
-                                        const val = Math.max(1, Number(e.target.value));
-                                        const updated = [...creditNoteCart];
-                                        updated[idx].quantity = val;
-                                        updated[idx].subtotal = val * item.unitPrice;
-                                        setCreditNoteCart(updated);
-                                      }}
-                                      style={{ width: '80px', padding: '4px 8px', textAlign: 'center', fontSize: '0.85rem' }}
-                                    />
-                                  )}
+                                  <input 
+                                    type="number"
+                                    className="input"
+                                    min="0"
+                                    max={creditNoteForm.orderId ? item.orderQuantity : undefined}
+                                    value={item.quantity}
+                                    onChange={(e) => {
+                                      const val = creditNoteForm.orderId 
+                                        ? Math.min(item.orderQuantity, Math.max(0, Number(e.target.value)))
+                                        : Math.max(0, Number(e.target.value));
+                                      const updated = [...creditNoteCart];
+                                      updated[idx].quantity = val;
+                                      updated[idx].subtotal = val * item.unitPrice;
+                                      setCreditNoteCart(updated);
+                                    }}
+                                    style={{ width: '80px', padding: '4px 8px', textAlign: 'center', fontSize: '0.85rem' }}
+                                  />
                                 </td>
                                 <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 600 }}>
                                   ${Number(item.subtotal).toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                                 </td>
-                                {!creditNoteForm.orderId && (
-                                  <td style={{ padding: '10px 12px', textAlign: 'center' }}>
-                                    <button 
-                                      type="button" 
-                                      className="btn btn-ghost" 
-                                      style={{ padding: '2px', color: 'var(--color-danger)' }}
-                                      onClick={() => {
-                                        setCreditNoteCart(prev => prev.filter(p => p.productId !== item.productId));
-                                      }}
-                                    >
-                                      ✕
-                                    </button>
-                                  </td>
-                                )}
+                                <td style={{ padding: '10px 12px', textAlign: 'center' }}>
+                                  <button 
+                                    type="button" 
+                                    className="btn btn-ghost" 
+                                    style={{ padding: '2px', color: 'var(--color-danger)' }}
+                                    onClick={() => {
+                                      setCreditNoteCart(prev => prev.filter(p => p.productId !== item.productId));
+                                    }}
+                                  >
+                                    ✕
+                                  </button>
+                                </td>
                               </tr>
                             ))
                           )}
@@ -3173,7 +3324,7 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
       })()}
 
       {viewInvoiceModal && (() => {
-        const isOfficial = viewInvoiceModal.invoiceType && viewInvoiceModal.invoiceType !== 'PRESUPUESTO' && viewInvoiceModal.invoiceType !== 'INTERNAL';
+        const isOfficial = viewInvoiceModal.billingType === 'OFFICIAL' || viewInvoiceModal.invoiceType === 'FACTURA_A' || viewInvoiceModal.invoiceType === 'FACTURA_B' || viewInvoiceModal.invoiceType === 'FACTURA_C';
         const issueDateStr = viewInvoiceModal.issueDate || viewInvoiceModal.createdAt;
         const formattedDate = issueDateStr ? new Date(issueDateStr).toLocaleDateString('es-AR') : new Date().toLocaleDateString('es-AR');
 
@@ -3243,7 +3394,7 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
                   {/* Lado Derecho: Datos Factura */}
                   <div style={{ padding: '12px', fontSize: '0.75rem', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '4px', paddingLeft: '16px', textAlign: 'left' }}>
                     <h1 style={{ fontSize: '1.4rem', fontWeight: 900, margin: '0 0 4px 0', letterSpacing: '0.02em', textTransform: 'uppercase', color: '#000000' }}>
-                      {!isOfficial ? 'PRESUPUESTO' : 'FACTURA'}
+                      {!isOfficial ? 'REMITO' : 'FACTURA'}
                     </h1>
                     <div style={{ marginBottom: '4px' }}>
                       <strong>Punto de Venta: 0005</strong> &nbsp;&nbsp; 
