@@ -11,6 +11,7 @@ import RubrosList from './RubrosList';
 import CajasDashboard from './CajasDashboard';
 import BillingDashboard from './BillingDashboard';
 import ResumenCuentaModal from './modals/ResumenCuentaModal';
+import QuickPriceSearchModal from './modals/QuickPriceSearchModal';
 import { 
   UserPlus, 
   ToggleLeft, 
@@ -62,6 +63,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
 
   // Estados para accesos directos y acciones rápidas
   const [isPriceListModalOpen, setIsPriceListModalOpen] = useState(false);
+  const [isQuickSearchModalOpen, setIsQuickSearchModalOpen] = useState(false);
   const [catalogTab, setCatalogTab] = useState<'products'|'rubros'>('products');
   const [clientSearchModal, setClientSearchModal] = useState<{ open: boolean; action: 'ledger' | 'payment' | 'order' } | null>(null);
   const [quickClientQuery, setQuickClientQuery] = useState('');
@@ -1023,10 +1025,16 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
                   }
                 },
                 {
-                  title: 'Mirar un Precio',
-                  desc: 'Consulta rápida de precios',
-                  icon: <Search size={20} style={{ color: 'var(--text-secondary)' }} />,
+                  title: 'Lista de Precios',
+                  desc: 'Generar PDF general',
+                  icon: <Printer size={20} style={{ color: 'var(--text-secondary)' }} />,
                   onClick: () => setIsPriceListModalOpen(true)
+                },
+                {
+                  title: 'Buscar Precio',
+                  desc: 'Consulta rápida (Lupa)',
+                  icon: <Search size={20} style={{ color: 'var(--text-secondary)' }} />,
+                  onClick: () => setIsQuickSearchModalOpen(true)
                 },
                 {
                   title: 'Cuenta Corriente',
@@ -2642,24 +2650,8 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
             <div className="modal-header">
               <div>
                 <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700 }}>
-                  👤 Ficha de Cliente: {clientProfileModal.client.name}
+                  👤 Ficha de {clientProfileModal.client.isProvider && !clientProfileModal.client.isClient ? 'Proveedor' : 'Cliente'}: {clientProfileModal.client.name}
                 </h3>
-                <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
-                  <span>CUIT: {clientProfileModal.client.cuit || 'S/D'}</span>
-                  <span>|</span>
-                  <span>Dirección: {clientProfileModal.client.address || 'S/D'}</span>
-                  <span>|</span>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <span>Tel: {clientProfileModal.client.phone || 'S/D'}</span>
-                    {clientProfileModal.client.phone && (
-                      <a href={getWhatsAppLink(clientProfileModal.client.phone)} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center' }}>
-                        <svg viewBox="0 0 24 24" width="13" height="13" fill="#25D366">
-                          <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.513 2.262 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.724-1.455L0 24zm6.59-4.846c1.6.95 3.188 1.449 4.825 1.451 5.436 0 9.86-4.37 9.863-9.755.002-2.61-1.01-5.063-2.85-6.908-1.839-1.844-4.286-2.86-6.903-2.861-5.441 0-9.863 4.37-9.866 9.756-.001 1.748.469 3.456 1.36 5.01L1.932 20.17l4.715-1.016zM17.47 15.3c-.3-.15-1.775-.875-2.05-1.05-.275-.1-.475-.15-.675.15-.2.3-.775 1.05-.95 1.25-.175.2-.35.225-.65.075-.3-.15-1.263-.465-2.403-1.485-.888-.795-1.487-1.77-1.663-2.07-.176-.3-.019-.462.13-.61.135-.133.3-.35.45-.525.15-.175.2-.3.3-.5.1-.2.05-.375-.025-.525-.075-.15-.675-1.625-.925-2.225-.244-.589-.491-.51-.675-.52-.175-.01-.375-.01-.575-.01-.2 0-.525.075-.8 1.05-.275.975-1.05 2.1-1.275 2.55-.225.45-.05.875.1 1.05.887 1.02 2.222 1.944 3.9 2.52.27.093.536.14.79.165.37.037.706.024.97-.015.295-.044.875-.36 1 .71.125.35.125.65.063.8-.062.15-.325.29-1 .15z"/>
-                        </svg>
-                      </a>
-                    )}
-                  </span>
-                </span>
               </div>
               <button className="btn btn-ghost" style={{ padding: '4px' }} onClick={() => setClientProfileModal(null)}>✕</button>
             </div>
@@ -2768,49 +2760,55 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
                 </div>
               </div>
               
-              {/* Columna Derecha: Libro Diario / Ledger */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 600 }}>📋 Extracto de Cuenta Corriente (Libro Diario)</h4>
-                <div style={{ overflowY: 'auto', maxHeight: '50vh', border: '1px solid var(--border-color)', borderRadius: '6px' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
-                    <thead>
-                      <tr style={{ backgroundColor: 'var(--bg-light)', borderBottom: '1px solid var(--border-color)', position: 'sticky', top: 0 }}>
-                        <th style={{ padding: '8px', textAlign: 'left' }}>Fecha</th>
-                        <th style={{ padding: '8px', textAlign: 'left' }}>Concepto</th>
-                        <th style={{ padding: '8px', textAlign: 'right' }}>Debe</th>
-                        <th style={{ padding: '8px', textAlign: 'right' }}>Haber</th>
-                        <th style={{ padding: '8px', textAlign: 'right' }}>Saldo</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {clientProfileModal.ledger.length === 0 ? (
-                        <tr>
-                          <td colSpan={5} style={{ textAlign: 'center', padding: '16px', color: 'var(--text-secondary)' }}>
-                            No hay movimientos registrados en la cuenta corriente.
-                          </td>
-                        </tr>
-                      ) : (
-                        clientProfileModal.ledger.map((item: any) => (
-                          <tr key={item.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
-                            <td style={{ padding: '8px', whiteSpace: 'nowrap' }}>{new Date(item.date).toLocaleDateString('es-AR')}</td>
-                            <td style={{ padding: '8px' }}>
-                              <div style={{ fontWeight: 500 }}>{item.description}</div>
-                              <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>Ref: {item.reference}</div>
-                            </td>
-                            <td style={{ padding: '8px', textAlign: 'right', color: 'var(--color-danger)', fontWeight: item.type === 'DEBIT' ? 600 : 400 }}>
-                              {item.type === 'DEBIT' ? `$${item.amount.toLocaleString()}` : '-'}
-                            </td>
-                            <td style={{ padding: '8px', textAlign: 'right', color: 'var(--color-success)', fontWeight: item.type === 'CREDIT' ? 600 : 400 }}>
-                              {item.type === 'CREDIT' ? `$${item.amount.toLocaleString()}` : '-'}
-                            </td>
-                            <td style={{ padding: '8px', textAlign: 'right', fontWeight: 600 }}>
-                              ${item.balance.toLocaleString()}
-                            </td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
+              {/* Columna Derecha: Datos de la Cuenta */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div style={{ backgroundColor: 'var(--bg-light)', padding: '16px', borderRadius: '8px', border: '1px solid var(--border-color)', flex: 1 }}>
+                  <h4 style={{ margin: '0 0 16px 0', fontSize: '1rem', fontWeight: 600, borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
+                    Información General
+                  </h4>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <div>
+                      <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Razón Social / Nombre</div>
+                      <div style={{ fontSize: '0.95rem', fontWeight: 500 }}>{clientProfileModal.client.name}</div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 600 }}>CUIT / DNI</div>
+                      <div style={{ fontSize: '0.95rem' }}>{clientProfileModal.client.cuit || 'S/D'}</div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Localidad / Zona</div>
+                      <div style={{ fontSize: '0.95rem' }}>{clientProfileModal.client.city || 'S/D'}</div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Dirección</div>
+                      <div style={{ fontSize: '0.95rem' }}>{clientProfileModal.client.address || 'S/D'}</div>
+                    </div>
+                    <div style={{ display: 'flex', gap: '20px' }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Teléfono Principal</div>
+                        <div style={{ fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          {clientProfileModal.client.phone || 'S/D'}
+                          {clientProfileModal.client.phone && (
+                            <a href={getWhatsAppLink(clientProfileModal.client.phone)} target="_blank" rel="noopener noreferrer">
+                              <svg viewBox="0 0 24 24" width="16" height="16" fill="#25D366">
+                                <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.513 2.262 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.724-1.455L0 24zm6.59-4.846c1.6.95 3.188 1.449 4.825 1.451 5.436 0 9.86-4.37 9.863-9.755.002-2.61-1.01-5.063-2.85-6.908-1.839-1.844-4.286-2.86-6.903-2.861-5.441 0-9.863 4.37-9.866 9.756-.001 1.748.469 3.456 1.36 5.01L1.932 20.17l4.715-1.016zM17.47 15.3c-.3-.15-1.775-.875-2.05-1.05-.275-.1-.475-.15-.675.15-.2.3-.775 1.05-.95 1.25-.175.2-.35.225-.65.075-.3-.15-1.263-.465-2.403-1.485-.888-.795-1.487-1.77-1.663-2.07-.176-.3-.019-.462.13-.61.135-.133.3-.35.45-.525.15-.175.2-.3.3-.5.1-.2.05-.375-.025-.525-.075-.15-.675-1.625-.925-2.225-.244-.589-.491-.51-.675-.52-.175-.01-.375-.01-.575-.01-.2 0-.525.075-.8 1.05-.275.975-1.05 2.1-1.275 2.55-.225.45-.05.875.1 1.05.887 1.02 2.222 1.944 3.9 2.52.27.093.536.14.79.165.37.037.706.024.97-.015.295-.044.875-.36 1 .71.125.35.125.65.063.8-.062.15-.325.29-1 .15z"/>
+                              </svg>
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Email Principal</div>
+                        <div style={{ fontSize: '0.95rem' }}>{clientProfileModal.client.email || 'S/D'}</div>
+                      </div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Vendedor Asignado</div>
+                      <div style={{ fontSize: '0.95rem', fontWeight: 500, color: 'var(--color-primary)' }}>
+                        {clientProfileModal.client.seller?.username || 'S/D'}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -2879,6 +2877,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
 
       {/* Renderizar PriceListModal */}
       <PriceListModal isOpen={isPriceListModalOpen} onClose={() => setIsPriceListModalOpen(false)} />
+      <QuickPriceSearchModal isOpen={isQuickSearchModalOpen} onClose={() => setIsQuickSearchModalOpen(false)} />
 
       {/* Modal de búsqueda rápida de cliente */}
       {clientSearchModal && clientSearchModal.open && (

@@ -2,8 +2,10 @@ import { useState, useEffect } from 'react';
 import { api } from '../utils/api';
 
 import { BillingType, OrderStatus, PaymentMethod } from '../utils/types';
-import { RefreshCw, Eye, Sparkles, UserPlus } from 'lucide-react';
+import { RefreshCw, Eye, Sparkles, UserPlus, Printer, Search } from 'lucide-react';
 import BillingDashboard from './BillingDashboard';
+import PriceListModal from './PriceListModal';
+import QuickPriceSearchModal from './modals/QuickPriceSearchModal';
 
 interface FacturacionDashboardProps {
   activeTab: string;
@@ -38,6 +40,9 @@ export default function FacturacionDashboard({ activeTab, setActiveTab }: Factur
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [sessionInvoices, setSessionInvoices] = useState<any[]>([]);
+
+  const [isPriceListModalOpen, setIsPriceListModalOpen] = useState(false);
+  const [isQuickSearchModalOpen, setIsQuickSearchModalOpen] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -450,6 +455,26 @@ export default function FacturacionDashboard({ activeTab, setActiveTab }: Factur
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button 
+                type="button"
+                className="btn btn-secondary" 
+                style={{ padding: '8px 16px', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}
+                onClick={() => setIsQuickSearchModalOpen(true)}
+              >
+                <Search size={16} />
+                <span>Buscar Precio</span>
+              </button>
+              <button 
+                type="button"
+                className="btn btn-secondary" 
+                style={{ padding: '8px 16px', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}
+                onClick={() => setIsPriceListModalOpen(true)}
+              >
+                <Printer size={16} />
+                <span>Lista de Precios General</span>
+              </button>
+            </div>
           </div>
 
           <div className="table-container">
@@ -707,6 +732,10 @@ export default function FacturacionDashboard({ activeTab, setActiveTab }: Factur
           </div>
         </div>
       )}
+
+      {/* Renderizar Modales de Precios */}
+      <PriceListModal isOpen={isPriceListModalOpen} onClose={() => setIsPriceListModalOpen(false)} />
+      <QuickPriceSearchModal isOpen={isQuickSearchModalOpen} onClose={() => setIsQuickSearchModalOpen(false)} />
     </div>
   );
 }
