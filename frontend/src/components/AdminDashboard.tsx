@@ -1276,7 +1276,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
                   <th>CUIT</th>
                   <th>Contacto</th>
                   <th>Saldo C/C</th>
-                  <th>Límite de Crédito</th>
+                  <th>Vendedor</th>
                   <th>Acción</th>
                 </tr>
               </thead>
@@ -1332,8 +1332,8 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
                         <td style={{ fontWeight: 600, color: balanceColor }}>
                           {balanceText}
                         </td>
-                        <td style={{ fontWeight: 600 }}>
-                          ${Number(c.creditLimit || 0).toLocaleString()}
+                        <td style={{ fontWeight: 500 }}>
+                          {c.seller?.username || 'Sin vendedor'}
                         </td>
                         <td>
                           <div style={{ display: 'flex', gap: '8px' }}>
