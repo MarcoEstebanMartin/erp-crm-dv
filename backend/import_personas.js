@@ -32,7 +32,7 @@ async function importPersonas() {
     let rawVendedor = row['Vendedor']?.trim().toUpperCase();
     let sellerId = null;
 
-    if (rawVendedor && rawVendedor !== 'OFICINA' && rawVendedor !== '') {
+    if (rawVendedor && rawVendedor !== '') {
       if (sellerMap.has(rawVendedor)) {
         sellerId = sellerMap.get(rawVendedor);
       } else {
