@@ -3,7 +3,6 @@ import { api } from '../utils/api';
 import { OrderStatus } from '../utils/types';
 import RepartoDashboard from './RepartoDashboard';
 import ComprasDashboard from './ComprasDashboard';
-import CrmDashboard from './CrmDashboard';
 import PriceListModal from './PriceListModal';
 import ProductsList from './ProductsList';
 import RubrosList from './RubrosList';
@@ -2201,24 +2200,6 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
               type="button"
               className="btn" 
               style={{ 
-                backgroundColor: configTab === 'crm' ? 'var(--color-primary)' : 'transparent',
-                color: configTab === 'crm' ? '#fff' : 'var(--text-primary)',
-                border: configTab === 'crm' ? '1px solid var(--color-primary)' : '1px solid var(--border-color)',
-                fontWeight: 600,
-                fontSize: '0.85rem',
-                padding: '8px 16px',
-                borderRadius: '6px',
-                cursor: 'pointer',
-                whiteSpace: 'nowrap'
-              }}
-              onClick={() => setConfigTab('crm')}
-            >
-              ✨ CRM + IA
-            </button>
-            <button 
-              type="button"
-              className="btn" 
-              style={{ 
                 backgroundColor: configTab === 'audit' ? 'var(--color-primary)' : 'transparent',
                 color: configTab === 'audit' ? '#fff' : 'var(--text-primary)',
                 border: configTab === 'audit' ? '1px solid var(--color-primary)' : '1px solid var(--border-color)',
@@ -2424,11 +2405,6 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
                 </table>
               </div>
             </div>
-          )}
-
-          {/* Sub-tab 5: CRM */}
-          {configTab === 'crm' && (
-            <CrmDashboard />
           )}
 
           {/* Sub-tab 6: Auditoría */}
