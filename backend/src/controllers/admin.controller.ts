@@ -100,3 +100,22 @@ export async function updateConfig(req: AuthenticatedRequest, res: Response): Pr
     res.status(500).json({ status: 'error', message: 'Error al actualizar configuración.' });
   }
 }
+
+/**
+ * Obtener reportes por zonas.
+ */
+export async function getZoneReports(req: AuthenticatedRequest, res: Response): Promise<void> {
+  const { sellerId, city } = req.query;
+  
+  try {
+    const filters = {
+      sellerId: sellerId ? Number(sellerId) : undefined,
+      city: city ? String(city) : undefined
+    };
+    
+    const result = await adminService.getZoneReports(filters);
+    res.status(200).json({ status: 'success', data: result });
+  } catch (error: any) {
+    res.status(500).json({ status: 'error', message: 'Error al obtener reportes por zona.' });
+  }
+}

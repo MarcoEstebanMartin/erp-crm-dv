@@ -6,6 +6,7 @@ import {
   createUser,
   toggleUserStatus,
   updateConfig,
+  getZoneReports,
 } from '../controllers/admin.controller';
 import { authenticateJWT, requireRole } from '../middlewares/auth';
 import { Role } from '@prisma/client';
@@ -22,6 +23,7 @@ router.use(authenticateJWT);
 router.use(requireRole([Role.ADMIN]));
 
 router.get('/reports', getFinancialReports);
+router.get('/reports/zones', getZoneReports);
 router.get('/audit-logs', getAuditLogs);
 router.get('/users', getUsers);
 router.post('/users', validateRequest(createUserSchema), createUser);

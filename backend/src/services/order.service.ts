@@ -5,6 +5,7 @@ interface CreateOrderDto {
   sellerId: number;
   userRole: string;
   personaId: number;
+  billingType?: BillingType;
   items: { productId: number; quantity: number; weight?: number }[];
 }
 
@@ -13,7 +14,7 @@ export class OrderService {
    * Crea un pedido, verifica el límite de crédito y descuenta stock preventivamente.
    */
   static async createOrder(data: CreateOrderDto) {
-    const { sellerId, userRole, personaId, items } = data;
+    const { sellerId, userRole, personaId, billingType, items } = data;
 
     const persona = await prisma.persona.findUnique({ where: { id: personaId } });
     if (!persona) {
@@ -93,7 +94,7 @@ export class OrderService {
         data: {
           personaId,
           sellerId,
-          billingType: BillingType.INTERNAL,
+          billingType: billingType || BillingType.INTERNAL,
           invoiceType: InvoiceType.PRESUPUESTO,
           totalAmount: totalSum,
           status: OrderStatus.PENDING,
@@ -171,6 +172,71 @@ export class OrderService {
       const updatedOrder = await tx.order.update({
         where: { id: orderId },
         data: { totalAmount: newTotal },
+        include: { items: { include: { product: true } }, persona: true },
+      });
+
+      return updatedOrder;
+    });
+  }
+
+  /**
+   * Confirma el armado (Picking rápido): Actualiza pesos y/o pone en 0 cantidades (faltantes)
+   * y pasa el pedido a PREPARED.
+   */
+  static async confirmArmado(orderId: number, itemUpdates: { orderItemId: number; quantity?: number; weight?: number }[]) {
+    return await prisma.$transaction(async (tx) => {
+      const order = await tx.order.findUnique({
+        where: { id: orderId },
+        include: { items: { include: { product: true } } },
+      });
+
+      if (!order) throw new Error('Pedido no encontrado.');
+      if (!([OrderStatus.PENDING, OrderStatus.PREPARING] as OrderStatus[]).includes(order.status as OrderStatus)) {
+        throw new Error('El pedido debe estar pendiente o en preparación para confirmar el armado.');
+      }
+
+      let newTotal = 0;
+
+      for (const item of order.items) {
+        let currentQuantity = item.quantity;
+        let subtotal = Number(item.subtotal);
+        let weightUpdate = item.weight ? Number(item.weight) : null;
+        const update = itemUpdates.find((u) => u.orderItemId === item.id);
+
+        if (update) {
+          if (update.quantity !== undefined) {
+            currentQuantity = update.quantity;
+          }
+          if (update.weight !== undefined) {
+            weightUpdate = update.weight;
+          }
+
+          if (currentQuantity === 0) {
+            subtotal = 0;
+            weightUpdate = 0;
+          } else {
+            if (item.product.isPesable && weightUpdate !== null && weightUpdate > 0) {
+              subtotal = Number(item.unitPrice) * weightUpdate;
+            } else {
+              subtotal = Number(item.unitPrice) * currentQuantity;
+            }
+          }
+
+          await tx.orderItem.update({
+            where: { id: item.id },
+            data: { quantity: currentQuantity, weight: weightUpdate, subtotal },
+          });
+        }
+
+        newTotal += subtotal;
+      }
+
+      const updatedOrder = await tx.order.update({
+        where: { id: orderId },
+        data: { 
+          totalAmount: newTotal,
+          status: OrderStatus.PREPARED
+        },
         include: { items: { include: { product: true } }, persona: true },
       });
 

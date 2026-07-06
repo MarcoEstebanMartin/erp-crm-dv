@@ -73,6 +73,8 @@ export class PersonaService {
         cuit: data.cuit,
         address: data.address,
         city: data.city,
+        province: data.province,
+        zipCode: data.zipCode,
         phone: data.phone,
         email: data.email,
         isClient: data.isClient !== undefined ? Boolean(data.isClient) : true,
@@ -121,6 +123,8 @@ export class PersonaService {
         cuit: data.cuit !== undefined ? data.cuit : undefined,
         address: data.address !== undefined ? data.address : undefined,
         city: data.city !== undefined ? data.city : undefined,
+        province: data.province !== undefined ? data.province : undefined,
+        zipCode: data.zipCode !== undefined ? data.zipCode : undefined,
         phone: data.phone !== undefined ? data.phone : undefined,
         email: data.email !== undefined ? data.email : undefined,
         isClient: data.isClient !== undefined ? Boolean(data.isClient) : undefined,
@@ -255,7 +259,10 @@ export class PersonaService {
    * Obtener libro diario.
    */
   async getPersonaLedger(id: number, userId: number, userRole: string) {
-    const persona = await prisma.persona.findUnique({ where: { id } });
+    const persona = await prisma.persona.findUnique({ 
+      where: { id },
+      include: { seller: { select: { id: true, username: true } } }
+    });
     if (!persona) throw new Error('Persona no encontrada.');
 
     if (userRole === Role.VENDEDOR && persona.isClient && persona.sellerId !== userId) {

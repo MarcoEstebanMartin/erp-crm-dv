@@ -797,6 +797,20 @@ export const api = {
     return api.getPersonas('client', search);
   },
 
+  getAfipData: async (cuit: string) => {
+    if (simulationMode) {
+      return {
+        name: 'Empresa de Prueba S.A. (Local)',
+        address: 'Calle Falsa 123',
+        location: 'CABA',
+        isClient: true
+      };
+    }
+    const res = await request(`/personas/afip/${cuit}`);
+    return res;
+  },
+
+
   createPersona: async (personaData: any) => {
     const user = api.getCurrentUser();
     if (simulationMode) {
@@ -1486,6 +1500,24 @@ export const api = {
     return data.data.order;
   },
 
+  confirmOrderArmado: async (orderId: number, items: any[]) => {
+    if (simulationMode) {
+      const orders = mockDb.get('db_orders') || [];
+      const idx = orders.findIndex((o: any) => o.id === orderId);
+      if (idx !== -1) {
+        orders[idx].status = OrderStatus.PREPARED;
+        mockDb.set('db_orders', orders);
+        return { order: orders[idx] };
+      }
+      throw new Error('Pedido no encontrado');
+    }
+    const res = await request(`/orders/${orderId}/confirm-armado`, {
+      method: 'POST',
+      body: JSON.stringify({ items })
+    });
+    return res.data;
+  },
+
   updateOrderStatus: async (id: number, status: OrderStatus, lotAssignments?: any) => {
     const user = api.getCurrentUser();
     if (simulationMode) {
@@ -1668,6 +1700,44 @@ export const api = {
 
     const res = await request('/admin/reports');
     return res.report;
+  },
+
+  getZoneReports: async (filters: { city?: string; sellerId?: number } = {}) => {
+    if (simulationMode) {
+      const personas = mockDb.get('db_personas') || [];
+      const clients = personas.filter((p: any) => p.isClient);
+      
+      let filteredClients = [...clients];
+      if (filters.sellerId) {
+        filteredClients = filteredClients.filter((c: any) => c.sellerId === Number(filters.sellerId));
+      }
+      if (filters.city) {
+        filteredClients = filteredClients.filter((c: any) => c.city && c.city.toLowerCase().includes(filters.city!.toLowerCase()));
+      }
+      
+      const totalClients = filteredClients.length;
+      const totalDebt = filteredClients.reduce((acc: number, curr: any) => acc + Number(curr.outstandingBalance || 0), 0);
+      
+      const availableCities = Array.from(new Set(clients.map((c: any) => c.city).filter(Boolean)));
+      
+      const users = mockDb.get('db_users') || [];
+      const availableSellers = users.filter((u: any) => u.role === 'VENDEDOR').map((u: any) => ({ id: u.id, username: u.username }));
+      
+      return {
+        totalClients,
+        totalDebt,
+        clients: filteredClients,
+        availableCities,
+        availableSellers
+      };
+    }
+    
+    const params = [];
+    if (filters.city) params.push(`city=${encodeURIComponent(filters.city)}`);
+    if (filters.sellerId) params.push(`sellerId=${filters.sellerId}`);
+    const query = params.length > 0 ? `?${params.join('&')}` : '';
+    
+    return await request(`/admin/reports/zones${query}`);
   },
 
   getAuditLogs: async (page = 1, limit = 50) => {

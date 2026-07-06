@@ -38,8 +38,9 @@ export default function Sidebar({ username, role, activeTab, setActiveTab, onLog
           { id: 'deposito', label: 'Depósito', icon: <Warehouse size={18} /> },
           { id: 'reparto', label: 'Reparto', icon: <Truck size={18} /> },
           { id: 'finanzas', label: 'Finanzas', icon: <DollarSign size={18} /> },
+          { id: 'rendiciones', label: 'Rendiciones / Arqueo', icon: <DollarSign size={18} /> },
           { id: 'compras', label: 'Compras', icon: <Receipt size={18} /> },
-          { id: 'reports', label: 'Reportes', icon: <TrendingUp size={18} /> },
+          { id: 'reportes', label: 'Reportes y Analíticas', icon: <TrendingUp size={18} /> },
           { id: 'config', label: 'Configuración', icon: <Settings size={18} /> },
         ];
       case 'FACTURACION':
@@ -52,12 +53,14 @@ export default function Sidebar({ username, role, activeTab, setActiveTab, onLog
           { id: 'deposito', label: 'Depósito', icon: <Warehouse size={18} /> },
           { id: 'reparto', label: 'Reparto', icon: <Truck size={18} /> },
           { id: 'finanzas', label: 'Finanzas', icon: <DollarSign size={18} /> },
+          { id: 'rendiciones', label: 'Rendiciones / Arqueo', icon: <DollarSign size={18} /> },
           { id: 'compras', label: 'Compras', icon: <Receipt size={18} /> },
         ];
       case 'VENDEDOR':
         return [
           { id: 'orders', label: 'Toma de Pedidos', icon: <ShoppingCart size={18} /> },
           { id: 'clients', label: 'Mis Personas', icon: <Users size={18} /> },
+          { id: 'cobranzas', label: 'Cobranzas y Recibos', icon: <DollarSign size={18} /> },
           { id: 'products', label: 'Catálogo', icon: <Package size={18} /> },
           { id: 'history', label: 'Historial de Pedidos', icon: <History size={18} /> },
         ];

@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import React from 'react';
 import { api } from '../utils/api';
+
 import { Trash2, ShoppingCart, UserPlus, CheckCircle2, Eye, Edit, Printer } from 'lucide-react';
 import PriceListModal from './PriceListModal';
+import MobileCobros from './MobileCobros';
 
 interface VendedorDashboardProps {
   activeTab: string;
@@ -816,6 +818,10 @@ export default function VendedorDashboard({ activeTab }: VendedorDashboardProps)
       {/* ====================================================================
           3. CATALOGO DE PRODUCTOS (READ-ONLY)
           ==================================================================== */}
+      {activeTab === 'cobranzas' && (
+        <MobileCobros />
+      )}
+
       {activeTab === 'products' && (
         <div className="no-print">
           <div className="actions-bar" style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap', marginBottom: '16px' }}>
@@ -964,6 +970,19 @@ export default function VendedorDashboard({ activeTab }: VendedorDashboardProps)
                   placeholder="ej: 20222334449"
                   value={clientModal.cuit}
                   onChange={(e) => setClientModal({ ...clientModal, cuit: e.target.value })}
+                  onBlur={async (e) => {
+                    const c = e.target.value;
+                    if(c && c.length >= 8) {
+                      try {
+                        const json = await api.getAfipData(c);
+                        if(json && json.status === 'success' && json.data) {
+                          setClientModal(prev => ({...prev, name: json.data.name || prev.name, address: json.data.address || prev.address, city: json.data.location || prev.city}));
+                        } else if (json && json.name) {
+                          setClientModal(prev => ({...prev, name: json.name || prev.name, address: json.address || prev.address, city: json.location || prev.city}));
+                        }
+                      } catch(err) { console.error('Error AFIP', err); }
+                    }
+                  }}
                 />
               </div>
 

@@ -5,6 +5,7 @@ import Login from './components/Login';
 import AdminDashboard from './components/AdminDashboard';
 import VendedorDashboard from './components/VendedorDashboard';
 import DepositoDashboard from './components/DepositoDashboard';
+import ReceiptView from './components/ReceiptView';
 
 
 function App() {
@@ -52,9 +53,15 @@ function App() {
   };
 
   const handleLogout = () => {
+    api.logout();
     setUser(null);
-    setActiveTab('');
   };
+
+  // Interceptar ruta para recibos compartidos
+  if (window.location.pathname.startsWith('/recibo/')) {
+    const receiptId = window.location.pathname.split('/recibo/')[1];
+    return <ReceiptView receiptId={receiptId} />;
+  }
 
   // Si no está autenticado, renderizar Login
   if (!user) {

@@ -78,6 +78,8 @@ model Persona {
   cuit               String?
   address            String?
   city               String?
+  province           String?
+  zipCode            String?
   phone              String?
   email              String?
   
@@ -268,6 +270,7 @@ model Transaction {
   paymentMethod PaymentMethod
   amount        Decimal         @db.Decimal(12, 2)
   description   String?
+  receiptNumber String?         // Nro de recibo ej: "REC-00001"
   
   // Relaciones Financieras
   cashDrawerId  Int?

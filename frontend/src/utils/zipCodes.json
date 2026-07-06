@@ -1,0 +1,16 @@
+[
+  { "zipCode": "1000", "city": "Ciudad Autónoma de Buenos Aires", "province": "CABA" },
+  { "zipCode": "1629", "city": "Pilar", "province": "Buenos Aires" },
+  { "zipCode": "1629", "city": "Del Viso", "province": "Buenos Aires" },
+  { "zipCode": "1900", "city": "La Plata", "province": "Buenos Aires" },
+  { "zipCode": "2000", "city": "Rosario", "province": "Santa Fe" },
+  { "zipCode": "5000", "city": "Córdoba", "province": "Córdoba" },
+  { "zipCode": "5500", "city": "Mendoza", "province": "Mendoza" },
+  { "zipCode": "4000", "city": "San Miguel de Tucumán", "province": "Tucumán" },
+  { "zipCode": "7600", "city": "Mar del Plata", "province": "Buenos Aires" },
+  { "zipCode": "6230", "city": "General Villegas", "province": "Buenos Aires" },
+  { "zipCode": "6230", "city": "Condores", "province": "Buenos Aires" },
+  { "zipCode": "8000", "city": "Bahía Blanca", "province": "Buenos Aires" },
+  { "zipCode": "3000", "city": "Santa Fe", "province": "Santa Fe" },
+  { "zipCode": "9410", "city": "Ushuaia", "province": "Tierra del Fuego" }
+]

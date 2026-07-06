@@ -3,6 +3,7 @@ import prisma from '../utils/prisma';
 import { AuthenticatedRequest } from '../types';
 import { logAudit } from '../utils/audit';
 import { BillingType, InvoiceType, OrderStatus, TransactionType, PaymentMethod } from '@prisma/client';
+import { emitirFacturaAFIP } from '../services/afip.service';
 
 /**
  * Obtener hojas de ruta de reparto
@@ -217,8 +218,32 @@ export async function settleDeliveryRoute(req: AuthenticatedRequest, res: Respon
 
         // Si está en PREPARED (no facturado aún), primero lo facturamos
         if (order.status === OrderStatus.PREPARED) {
-          const finalInvoiceType = InvoiceType.PRESUPUESTO;
-          const finalInvoiceNumber = `INT-${order.id.toString().padStart(8, '0')}`;
+          let finalInvoiceType: InvoiceType = InvoiceType.PRESUPUESTO;
+          let finalInvoiceNumber = `INT-${order.id.toString().padStart(8, '0')}`;
+          let finalCae = null;
+          let finalCaeDueDate = null;
+
+          if (order.billingType === BillingType.OFFICIAL) {
+            // Llamar a AFIP o al Mock
+            try {
+              const persona = await tx.persona.findUnique({ where: { id: order.personaId } });
+              const invoiceType = (persona?.cuit && persona.cuit.length > 5) ? InvoiceType.FACTURA_A : InvoiceType.FACTURA_B;
+              
+              const afipRes = await emitirFacturaAFIP({
+                total: Number(order.totalAmount),
+                clientDocType: invoiceType === InvoiceType.FACTURA_A ? 80 : 99,
+                clientCuit: invoiceType === InvoiceType.FACTURA_A ? (persona?.cuit?.replace(/\D/g, '') || '0') : '0',
+                invoiceType: invoiceType === InvoiceType.FACTURA_A ? 'A' : 'B',
+              });
+
+              finalInvoiceType = invoiceType;
+              finalInvoiceNumber = afipRes.invoiceNumber;
+              finalCae = afipRes.cae;
+              finalCaeDueDate = afipRes.caeDueDate;
+            } catch (err: any) {
+              throw new Error(`Error emitiendo factura AFIP para pedido #${order.id}: ${err.message}`);
+            }
+          }
           
           // Actualizar pedido a DELIVERED
           await tx.order.update({
@@ -227,6 +252,8 @@ export async function settleDeliveryRoute(req: AuthenticatedRequest, res: Respon
               status: OrderStatus.DELIVERED,
               invoiceType: finalInvoiceType,
               invoiceNumber: finalInvoiceNumber,
+              cae: finalCae,
+              caeDueDate: finalCaeDueDate ? new Date(finalCaeDueDate) : null,
             }
           });
 

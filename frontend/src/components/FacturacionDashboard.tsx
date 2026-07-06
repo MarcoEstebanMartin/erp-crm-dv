@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { api } from '../utils/api';
+
 import { BillingType, OrderStatus, PaymentMethod } from '../utils/types';
 import { RefreshCw, Eye, Sparkles, UserPlus } from 'lucide-react';
 import BillingDashboard from './BillingDashboard';
@@ -650,6 +651,19 @@ export default function FacturacionDashboard({ activeTab, setActiveTab }: Factur
                   placeholder="ej: 30123456789"
                   value={clientModal.cuit}
                   onChange={(e) => setClientModal({ ...clientModal, cuit: e.target.value })}
+                  onBlur={async (e) => {
+                    const c = e.target.value;
+                    if(c && c.length >= 8) {
+                      try {
+                        const json = await api.getAfipData(c);
+                        if(json && json.status === 'success' && json.data) {
+                          setClientModal(prev => ({...prev, name: json.data.name || prev.name, address: json.data.address || prev.address}));
+                        } else if (json && json.name) {
+                          setClientModal(prev => ({...prev, name: json.name || prev.name, address: json.address || prev.address}));
+                        }
+                      } catch(err) { console.error('Error AFIP', err); }
+                    }
+                  }}
                 />
               </div>
 

@@ -87,7 +87,14 @@ export async function updatePersona(req: AuthenticatedRequest, res: Response): P
   }
 
   try {
-    const persona = await personaService.updatePersona(Number(id), req.body, userId, userRole);
+    const persona = await personaService.updatePersona(Number(id), {
+        ...req.body,
+        address: req.body.address !== undefined ? req.body.address : undefined,
+        city: req.body.city !== undefined ? req.body.city : undefined,
+        province: req.body.province !== undefined ? req.body.province : undefined,
+        zipCode: req.body.zipCode !== undefined ? req.body.zipCode : undefined,
+        phone: req.body.phone !== undefined ? req.body.phone : undefined,
+    }, userId, userRole);
     res.status(200).json({ status: 'success', data: { persona } });
   } catch (error: any) {
     if (error.message === 'Persona no encontrada.') {
@@ -159,5 +166,34 @@ export async function getPersonaLedger(req: AuthenticatedRequest, res: Response)
       return;
     }
     res.status(500).json({ status: 'error', message: 'Error al obtener el extracto de cuenta.' });
+  }
+}
+
+/**
+ * Obtener datos de AFIP dado un CUIT o DNI
+ */
+export async function getAfipData(req: AuthenticatedRequest, res: Response): Promise<void> {
+  const cuit = req.params.cuit as string;
+  const userId = req.user?.id;
+  const userRole = req.user?.role;
+
+  if (!userId || !userRole) {
+    res.status(401).json({ status: 'error', message: 'No autorizado.' });
+    return;
+  }
+
+  if (!cuit || cuit.trim().length < 8) {
+    res.status(400).json({ status: 'error', message: 'CUIT/DNI inválido.' });
+    return;
+  }
+
+  try {
+    // Importación dinámica o local para evitar circular dependencies si las hubiera (no suele haber en controllers)
+    const { getPersonDetailsAFIP } = await import('../services/afip.service');
+    const data = await getPersonDetailsAFIP(cuit);
+    res.status(200).json({ status: 'success', data });
+  } catch (error: any) {
+    console.error('Error consultando AFIP:', error);
+    res.status(500).json({ status: 'error', message: 'Error al consultar datos en AFIP.' });
   }
 }

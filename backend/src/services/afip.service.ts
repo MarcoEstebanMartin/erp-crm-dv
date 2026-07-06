@@ -254,3 +254,61 @@ export async function emitirNotaCreditoAFIP({
     throw new Error(`Error AFIP Nota de Crédito: ${error.message || error}`);
   }
 }
+
+/**
+ * Consulta los datos de un contribuyente en AFIP por su CUIT.
+ */
+export async function getPersonDetailsAFIP(cuit: string): Promise<any> {
+  const numericCuit = Number(cuit.replace(/-/g, ''));
+
+  if (useMock || !afipClient) {
+    console.log(`[MOCK AFIP] Consultando datos para CUIT ${numericCuit}`);
+    return {
+      cuit: numericCuit,
+      name: 'Empresa de Prueba S.A.',
+      address: 'Avenida Falsa 123',
+      location: 'Ciudad Autónoma de Buenos Aires',
+      isClient: true,
+      isProvider: false,
+    };
+  }
+
+  try {
+    // Para consultar el padrón de AFIP se suele usar RegisterScopeThirteen o RegisterScopeFive.
+    // afip.js implementa RegisterScopeThirteen.
+    const details = await afipClient.RegisterScopeThirteen.getTaxpayerDetails(numericCuit);
+    
+    // Parsear respuesta (ejemplo basado en la estructura típica de AFIP A13)
+    const data = details?.datosGenerales || {};
+    const addressData = details?.datosGenerales?.domicilioFiscal || {};
+    
+    let fullName = data.razonSocial || '';
+    if (!fullName && data.nombre && data.apellido) {
+      fullName = `${data.nombre} ${data.apellido}`;
+    }
+
+    return {
+      cuit: numericCuit,
+      name: fullName,
+      address: addressData.direccion || '',
+      location: addressData.localidad || addressData.descripcionProvincia || '',
+      isClient: true,
+      isProvider: false,
+      rawData: details
+    };
+  } catch (error: any) {
+    console.error(`❌ Error consultando CUIT ${numericCuit} en AFIP (Probablemente faltan certificados reales):`, error.message || error);
+    
+    // Fallback a Mock si falla la conexión real a AFIP
+    console.log(`[MOCK FALLBACK] Retornando datos simulados para no bloquear el flujo.`);
+    return {
+      cuit: numericCuit,
+      name: 'Empresa Generada (AFIP Inactivo)',
+      address: 'Avenida Falsa 123',
+      location: 'Buenos Aires',
+      isClient: true,
+      isProvider: false,
+      fallback: true
+    };
+  }
+}

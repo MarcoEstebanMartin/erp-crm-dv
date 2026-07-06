@@ -16,6 +16,7 @@ import crmRoutes from './routes/crm.routes';
 import creditNoteRoutes from './routes/creditNote.routes';
 import rubroRoutes from './routes/rubro.routes';
 import ivaRoutes from './routes/iva.routes';
+import collectionRoutes from './routes/collection.routes';
 
 dotenv.config();
 
@@ -39,6 +40,7 @@ app.use('/api/purchases', purchaseRoutes);
 app.use('/api/crm', crmRoutes);
 app.use('/api/rubros', rubroRoutes);
 app.use('/api/iva', ivaRoutes);
+app.use('/api/collections', collectionRoutes);
 
 // Ruta de comprobación de estado (Healthcheck)
 app.get('/api/health', (req: Request, res: Response) => {

@@ -504,7 +504,7 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
         setCreditNoteCart(itemsToDev);
       } else {
         // En caso de contingencia, buscamos la orden del listado fetched
-        const matchedOrder = filtered.find(o => o.id === invoice.id);
+        const matchedOrder = filtered.find((o: any) => o.id === invoice.id);
         if (matchedOrder && matchedOrder.items) {
           const itemsToDev = matchedOrder.items.map((item: any) => {
             const prod = products.find(p => p.id === item.productId);

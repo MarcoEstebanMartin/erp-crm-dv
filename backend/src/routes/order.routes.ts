@@ -8,6 +8,7 @@ import {
   updateOrder,
   createDirectInvoice,
   updateOrderWeights,
+  confirmArmado,
 } from '../controllers/order.controller';
 import { authenticateJWT, requireRole } from '../middlewares/auth';
 import { Role } from '@prisma/client';
@@ -37,5 +38,8 @@ router.post('/:id/invoice', authenticateJWT, requireRole([Role.ADMIN, Role.FACTU
 
 // Actualizar pesos de productos pesables (ADMIN, FACTURACION, DEPOSITO)
 router.put('/:id/weights', authenticateJWT, requireRole([Role.ADMIN, Role.FACTURACION, Role.DEPOSITO]), updateOrderWeights);
+
+// Confirmación rápida de armado (Data Entry de Alta Eficiencia)
+router.post('/:id/confirm-armado', authenticateJWT, requireRole([Role.ADMIN, Role.FACTURACION, Role.DEPOSITO]), confirmArmado);
 
 export default router;

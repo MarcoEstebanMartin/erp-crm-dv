@@ -191,6 +191,49 @@ export class AdminService {
 
     return updated;
   }
+
+  /**
+   * Obtener reportes por zonas (estadísticas robustas).
+   */
+  async getZoneReports(filters: { sellerId?: number; city?: string }) {
+    const whereClause: any = { isClient: true };
+    if (filters.sellerId) whereClause.sellerId = filters.sellerId;
+    if (filters.city && filters.city.trim() !== '') {
+      whereClause.city = { contains: filters.city, mode: 'insensitive' };
+    }
+
+    const clients = await prisma.persona.findMany({
+      where: whereClause,
+      include: {
+        seller: { select: { id: true, username: true } }
+      },
+      orderBy: { city: 'asc' }
+    });
+
+    const totalClients = clients.length;
+    const totalDebt = clients.reduce((acc, curr) => acc + Number(curr.outstandingBalance || 0), 0);
+
+    // Get unique cities for filters
+    const allCitiesResult = await prisma.persona.findMany({
+      where: { isClient: true, city: { not: null } },
+      select: { city: true },
+      distinct: ['city']
+    });
+    
+    // Get unique sellers
+    const sellers = await prisma.user.findMany({
+      where: { role: 'VENDEDOR' },
+      select: { id: true, username: true }
+    });
+
+    return {
+      totalClients,
+      totalDebt,
+      clients,
+      availableCities: allCitiesResult.map(c => c.city).filter(Boolean),
+      availableSellers: sellers
+    };
+  }
 }
 
 export const adminService = new AdminService();

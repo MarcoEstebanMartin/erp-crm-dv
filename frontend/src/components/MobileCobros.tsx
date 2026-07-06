@@ -1,0 +1,256 @@
+import React, { useState, useEffect } from 'react';
+import { CreditCard, DollarSign, FileText, Share2, CheckCircle, ChevronLeft } from 'lucide-react';
+import axios from 'axios';
+import { API_BASE_URL } from '../utils/api';
+
+interface Persona {
+  id: number;
+  name: string;
+  address: string;
+  city: string;
+  outstandingBalance: number;
+  phone: string | null;
+}
+
+const MobileCobros: React.FC = () => {
+  const [personas, setPersonas] = useState<Persona[]>([]);
+  const [selectedPersona, setSelectedPersona] = useState<Persona | null>(null);
+  const [amount, setAmount] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState('CASH');
+  const [billingType, setBillingType] = useState('OFFICIAL'); // OFFICIAL = A, INTERNAL = X
+  const [loading, setLoading] = useState(false);
+  const [successReceipt, setSuccessReceipt] = useState<any>(null);
+
+  useEffect(() => {
+    fetchPending();
+  }, []);
+
+  const fetchPending = async () => {
+    try {
+      const res = await axios.get(`${API_BASE_URL}/collections/pending`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      if (Array.isArray(res.data)) {
+        setPersonas(res.data);
+      } else {
+        setPersonas([]);
+        console.error('Expected array of personas, got:', res.data);
+      }
+    } catch (error) {
+      console.error('Error fetching pending balances', error);
+    }
+  };
+
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedPersona) return;
+    
+    setLoading(true);
+    try {
+      const res = await axios.post(`${API_BASE_URL}/collections/register`, {
+        personaId: selectedPersona.id,
+        amount: parseFloat(amount),
+        paymentMethod,
+        billingType,
+      }, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      
+      setSuccessReceipt(res.data.transaction);
+      // Actualizar listado localmente o refetch
+      fetchPending();
+    } catch (error) {
+      console.error('Error registering collection', error);
+      alert('Hubo un error al registrar el cobro');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const shareViaWhatsApp = () => {
+    if (!successReceipt) return;
+    
+    // Crear el mensaje y link
+    // Suponemos que el frontend corre en el mismo dominio o tenemos una variable env
+    const receiptLink = `${window.location.origin}/recibo/${successReceipt.id}`;
+    const text = `Hola! Aquí tienes el comprobante de tu pago por $${successReceipt.amount}.\nVer recibo: ${receiptLink}`;
+    const encodedText = encodeURIComponent(text);
+    
+    // Si la persona tiene teléfono, lo usamos
+    let phoneStr = '';
+    if (selectedPersona?.phone) {
+       // Limpiar el teléfono para que solo queden números
+       const cleanPhone = selectedPersona.phone.replace(/\D/g, '');
+       phoneStr = `phone=${cleanPhone}&`;
+    }
+
+    const whatsappUrl = `https://api.whatsapp.com/send?${phoneStr}text=${encodedText}`;
+    window.open(whatsappUrl, '_blank');
+  };
+
+  const formatCurrency = (val: number | string) => {
+    return Number(val).toLocaleString('es-AR', { style: 'currency', currency: 'ARS' });
+  };
+
+  // Renderizar la vista de éxito
+  if (successReceipt) {
+    return (
+      <div className="p-4 max-w-md mx-auto bg-gray-50 min-h-screen">
+        <div className="bg-white rounded-xl shadow-lg p-6 text-center mt-10">
+          <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-gray-800">Cobro Registrado</h2>
+          <p className="text-gray-500 mt-2">Recibo {successReceipt.receiptNumber}</p>
+          
+          <div className="my-6 bg-gray-100 p-4 rounded-lg text-left">
+            <p className="text-sm text-gray-600">Cliente: <span className="font-semibold text-gray-800">{selectedPersona?.name}</span></p>
+            <p className="text-sm text-gray-600">Monto: <span className="font-bold text-gray-900 text-lg">{formatCurrency(successReceipt.amount)}</span></p>
+            <p className="text-sm text-gray-600">Medio: <span className="font-semibold text-gray-800">{successReceipt.paymentMethod}</span></p>
+            <p className="text-sm text-gray-600">Sucursal: <span className="font-semibold text-gray-800">{successReceipt.billingType === 'OFFICIAL' ? 'A' : 'X'}</span></p>
+          </div>
+
+          <button 
+            onClick={shareViaWhatsApp}
+            className="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2 mb-3 transition-colors"
+          >
+            <Share2 className="w-5 h-5" />
+            Enviar por WhatsApp
+          </button>
+          
+          <button 
+            onClick={() => { setSuccessReceipt(null); setSelectedPersona(null); setAmount(''); }}
+            className="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-3 px-4 rounded-lg transition-colors"
+          >
+            Volver a Cobros
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Renderizar Formulario de Cobro
+  if (selectedPersona) {
+    return (
+      <div className="p-4 max-w-md mx-auto bg-gray-50 min-h-screen">
+        <button 
+          onClick={() => setSelectedPersona(null)} 
+          className="flex items-center text-gray-600 mb-6 font-medium"
+        >
+          <ChevronLeft className="w-5 h-5 mr-1" />
+          Volver
+        </button>
+
+        <h2 className="text-2xl font-bold text-gray-800 mb-1">Registrar Cobro</h2>
+        <p className="text-gray-500 mb-6">{selectedPersona.name}</p>
+
+        <div className="bg-red-50 border border-red-100 p-4 rounded-lg mb-6 flex justify-between items-center">
+          <span className="text-red-700 font-medium">Saldo Pendiente</span>
+          <span className="text-red-700 font-bold text-lg">{formatCurrency(selectedPersona.outstandingBalance)}</span>
+        </div>
+
+        <form onSubmit={handleRegister} className="space-y-5">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Monto a Cobrar</label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <DollarSign className="h-5 w-5 text-gray-400" />
+              </div>
+              <input
+                type="number"
+                step="0.01"
+                required
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                className="pl-10 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 text-lg py-3 border bg-white"
+                placeholder="0.00"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Medio de Pago</label>
+            <select
+              value={paymentMethod}
+              onChange={(e) => setPaymentMethod(e.target.value)}
+              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 py-3 border bg-white text-base"
+            >
+              <option value="CASH">Efectivo</option>
+              <option value="BANK_TRANSFER">Transferencia</option>
+              <option value="CHECK">Cheque</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Corresponde a Sucursal</label>
+            <div className="flex bg-gray-100 p-1 rounded-lg">
+              <button
+                type="button"
+                className={`flex-1 py-2 rounded-md font-medium text-sm transition-all ${billingType === 'OFFICIAL' ? 'bg-white shadow text-gray-900' : 'text-gray-500'}`}
+                onClick={() => setBillingType('OFFICIAL')}
+              >
+                Sucursal A (Oficial)
+              </button>
+              <button
+                type="button"
+                className={`flex-1 py-2 rounded-md font-medium text-sm transition-all ${billingType === 'INTERNAL' ? 'bg-white shadow text-gray-900' : 'text-gray-500'}`}
+                onClick={() => setBillingType('INTERNAL')}
+              >
+                Sucursal X (Interno)
+              </button>
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading || !amount || parseFloat(amount) <= 0}
+            className="w-full bg-[#E30613] hover:bg-red-700 text-white font-bold py-4 px-4 rounded-lg flex justify-center items-center gap-2 mt-8 disabled:opacity-50 transition-colors shadow-md"
+          >
+            {loading ? 'Procesando...' : 'Confirmar Cobro'}
+          </button>
+        </form>
+      </div>
+    );
+  }
+
+  // Renderizar Listado de Clientes con Saldo
+  return (
+    <div className="p-4 max-w-md mx-auto bg-gray-50 min-h-screen">
+      <h2 className="text-2xl font-bold text-gray-800 mb-1 mt-4">Cobranzas</h2>
+      <p className="text-gray-500 mb-6">Selecciona un cliente para registrar un cobro</p>
+
+      {personas.length === 0 ? (
+        <div className="text-center py-10 bg-white rounded-lg border border-gray-100 shadow-sm">
+          <FileText className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+          <p className="text-gray-500">No hay saldos pendientes.</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {personas.map((p) => (
+            <div 
+              key={p.id} 
+              onClick={() => {
+                setSelectedPersona(p);
+                setAmount(p.outstandingBalance.toString()); // Pre-fill con el total
+              }}
+              className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex justify-between items-center cursor-pointer hover:shadow-md transition-shadow active:scale-[0.98]"
+            >
+              <div>
+                <h3 className="font-semibold text-gray-800">{p.name}</h3>
+                <p className="text-xs text-gray-400 mt-1">{p.address || p.city}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-sm font-medium text-red-600">{formatCurrency(p.outstandingBalance)}</p>
+                <div className="mt-1 flex justify-end">
+                  <div className="bg-red-50 text-red-600 p-1.5 rounded-full">
+                    <CreditCard className="w-4 h-4" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default MobileCobros;
