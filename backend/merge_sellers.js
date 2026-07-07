@@ -8,7 +8,8 @@ async function mergeSellers() {
     'diego': 'DIEGO LEJARZA',
     'fabian': 'FABIAN MAYA',
     'norberto': 'NORBERTO',
-    'maria_jose': 'MARIA JOSÉ VIDELA'
+    'mariajose': 'MARIA JOSÉ VIDELA',
+    'oficina': 'OFICINA'
   };
 
   for (const [oldName, newName] of Object.entries(map)) {
