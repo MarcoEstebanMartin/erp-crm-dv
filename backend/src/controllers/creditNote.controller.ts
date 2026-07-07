@@ -91,7 +91,20 @@ export async function createCreditNote(req: AuthenticatedRequest, res: Response)
         if (!item.productId || !item.quantity || Number(item.quantity) <= 0 || !item.unitPrice || Number(item.unitPrice) < 0) {
           throw new Error('Los ítems del comprobante tienen valores inválidos.');
         }
-        totalAmount += Number(item.quantity) * Number(item.unitPrice);
+
+        const product = await tx.product.findUnique({
+          where: { id: Number(item.productId) }
+        });
+        if (!product) {
+          throw new Error(`El producto con ID ${item.productId} no existe.`);
+        }
+
+        const isPesable = product.isPesable;
+        const actualQtyOrWeight = isPesable
+          ? (item.weight ? Number(item.weight) : Number(item.quantity) * Number(product.approximateWeight || 1))
+          : Number(item.quantity);
+
+        totalAmount += actualQtyOrWeight * Number(item.unitPrice);
       }
 
       let netAmount = totalAmount / 1.21;
@@ -159,13 +172,25 @@ export async function createCreditNote(req: AuthenticatedRequest, res: Response)
 
       // 5. Crear ítems
       for (const item of items) {
+        const product = await tx.product.findUnique({
+          where: { id: Number(item.productId) }
+        });
+        if (!product) {
+          throw new Error(`El producto con ID ${item.productId} no existe.`);
+        }
+        const isPesable = product.isPesable;
+        const actualQtyOrWeight = isPesable
+          ? (item.weight ? Number(item.weight) : Number(item.quantity) * Number(product.approximateWeight || 1))
+          : Number(item.quantity);
+
         await tx.creditNoteItem.create({
           data: {
             creditNoteId: creditNote.id,
             productId: Number(item.productId),
             quantity: Number(item.quantity),
+            weight: isPesable ? actualQtyOrWeight : null,
             unitPrice: Number(item.unitPrice),
-            subtotal: Number(item.quantity) * Number(item.unitPrice),
+            subtotal: actualQtyOrWeight * Number(item.unitPrice),
           },
         });
 

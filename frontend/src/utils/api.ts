@@ -2668,13 +2668,19 @@ export const api = {
         const prod = products.find((p: any) => p.id === Number(item.productId));
         if (!prod) throw new Error(`Producto con ID ${item.productId} no encontrado.`);
 
-        const itemTotal = Number(item.quantity) * Number(item.unitPrice);
+        const isPesable = prod.isPesable;
+        const actualQtyOrWeight = isPesable
+          ? (item.weight ? Number(item.weight) : Number(item.quantity) * Number(prod.approximateWeight || 1))
+          : Number(item.quantity);
+
+        const itemTotal = actualQtyOrWeight * Number(item.unitPrice);
         totalAmount += itemTotal;
 
         cnItems.push({
           productId: prod.id,
           product: prod,
           quantity: Number(item.quantity),
+          weight: isPesable ? actualQtyOrWeight : null,
           unitPrice: Number(item.unitPrice),
           subtotal: itemTotal
         });

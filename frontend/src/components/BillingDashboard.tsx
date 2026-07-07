@@ -44,6 +44,7 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
   const [selectedCNProduct, setSelectedCNProduct] = useState('');
   const [cnProductQty, setCnProductQty] = useState('1');
   const [cnProductPrice, setCnProductPrice] = useState('');
+  const [cnProductWeight, setCnProductWeight] = useState('');
   const [cnClientSearchQuery, setCnClientSearchQuery] = useState('');
   const [showCNClientDropdown, setShowCNClientDropdown] = useState(false);
   const [activeCNClientSuggestionIdx, setActiveCNClientSuggestionIdx] = useState(0);
@@ -401,16 +402,24 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
     if (order && order.items) {
       const itemsToDev = order.items.map((item: any) => {
         const prod = products.find(p => p.id === item.productId);
+        const isPesable = prod ? prod.isPesable : (item.product ? item.product.isPesable : false);
+        const approxWeight = prod ? prod.approximateWeight : (item.product ? item.product.approximateWeight : null);
         const qty = Number(item.quantity);
+        const weight = isPesable ? (item.weight ? Number(item.weight) : qty * Number(approxWeight || 1)) : null;
         const unitPrice = Number(item.unitPrice);
+        
         return {
           productId: item.productId,
           name: prod ? prod.name : (item.product ? item.product.name : `Producto #${item.productId}`),
           sku: prod ? prod.sku : (item.product ? item.product.sku : ''),
           orderQuantity: qty,
+          orderWeight: weight,
           quantity: qty, // Precompletar con cantidad completa original
+          weight: weight,
+          isPesable,
+          approximateWeight: approxWeight,
           unitPrice: unitPrice,
-          subtotal: qty * unitPrice
+          subtotal: isPesable ? (weight ? weight * unitPrice : 0) : qty * unitPrice
         };
       });
       setCreditNoteCart(itemsToDev);
@@ -423,6 +432,7 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
 
     const qty = Number(cnProductQty);
     const price = Number(cnProductPrice || prod.listPrice || 0);
+    const weightVal = prod.isPesable ? Number(cnProductWeight) : null;
 
     if (isNaN(qty) || qty <= 0) {
       setErrorMsg('La cantidad debe ser mayor a cero.');
@@ -432,12 +442,21 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
       setErrorMsg('El precio no puede ser negativo.');
       return;
     }
+    if (prod.isPesable && (isNaN(weightVal as number) || (weightVal as number) <= 0)) {
+      setErrorMsg('El peso debe ser mayor a cero.');
+      return;
+    }
 
     const existingIdx = creditNoteCart.findIndex(item => item.productId === prod.id);
     if (existingIdx !== -1) {
       const updated = [...creditNoteCart];
       updated[existingIdx].quantity += qty;
-      updated[existingIdx].subtotal = updated[existingIdx].quantity * updated[existingIdx].unitPrice;
+      if (prod.isPesable) {
+        updated[existingIdx].weight = (updated[existingIdx].weight || 0) + (weightVal || 0);
+        updated[existingIdx].subtotal = updated[existingIdx].weight * price;
+      } else {
+        updated[existingIdx].subtotal = updated[existingIdx].quantity * price;
+      }
       setCreditNoteCart(updated);
     } else {
       setCreditNoteCart(prev => [...prev, {
@@ -445,9 +464,13 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
         name: prod.name,
         sku: prod.sku,
         orderQuantity: null,
+        orderWeight: null,
         quantity: qty,
+        weight: weightVal,
+        isPesable: prod.isPesable,
+        approximateWeight: prod.approximateWeight,
         unitPrice: price,
-        subtotal: qty * price
+        subtotal: prod.isPesable ? (weightVal || 0) * price : qty * price
       }]);
     }
 
@@ -455,6 +478,7 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
     setCnProductSearchQuery('');
     setCnProductQty('1');
     setCnProductPrice('');
+    setCnProductWeight('');
   };
 
   const handleCreateCreditNoteFromInvoice = async (invoice: any) => {
@@ -489,16 +513,23 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
       if (invoice.items && invoice.items.length > 0) {
         const itemsToDev = invoice.items.map((item: any) => {
           const prod = products.find(p => p.id === item.productId);
+          const isPesable = prod ? prod.isPesable : (item.product ? item.product.isPesable : false);
+          const approxWeight = prod ? prod.approximateWeight : (item.product ? item.product.approximateWeight : null);
           const qty = Number(item.quantity);
+          const weight = isPesable ? (item.weight ? Number(item.weight) : qty * Number(approxWeight || 1)) : null;
           const unitPrice = Number(item.unitPrice);
           return {
             productId: item.productId,
             name: prod ? prod.name : (item.product ? item.product.name : `Producto #${item.productId}`),
             sku: prod ? prod.sku : (item.product ? item.product.sku : ''),
             orderQuantity: qty,
+            orderWeight: weight,
             quantity: qty, // Devolución total por defecto
+            weight: weight,
+            isPesable,
+            approximateWeight: approxWeight,
             unitPrice: unitPrice,
-            subtotal: qty * unitPrice
+            subtotal: isPesable ? (weight ? weight * unitPrice : 0) : qty * unitPrice
           };
         });
         setCreditNoteCart(itemsToDev);
@@ -508,16 +539,23 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
         if (matchedOrder && matchedOrder.items) {
           const itemsToDev = matchedOrder.items.map((item: any) => {
             const prod = products.find(p => p.id === item.productId);
+            const isPesable = prod ? prod.isPesable : (item.product ? item.product.isPesable : false);
+            const approxWeight = prod ? prod.approximateWeight : (item.product ? item.product.approximateWeight : null);
             const qty = Number(item.quantity);
+            const weight = isPesable ? (item.weight ? Number(item.weight) : qty * Number(approxWeight || 1)) : null;
             const unitPrice = Number(item.unitPrice);
             return {
               productId: item.productId,
               name: prod ? prod.name : (item.product ? item.product.name : `Producto #${item.productId}`),
               sku: prod ? prod.sku : (item.product ? item.product.sku : ''),
               orderQuantity: qty,
+              orderWeight: weight,
               quantity: qty,
+              weight: weight,
+              isPesable,
+              approximateWeight: approxWeight,
               unitPrice: unitPrice,
-              subtotal: qty * unitPrice
+              subtotal: isPesable ? (weight ? weight * unitPrice : 0) : qty * unitPrice
             };
           });
           setCreditNoteCart(itemsToDev);
@@ -545,9 +583,9 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
       return;
     }
 
-    const itemsToSend = creditNoteCart.filter(item => item.quantity > 0);
+    const itemsToSend = creditNoteCart.filter(item => item.isPesable ? (item.weight && item.weight > 0) : (item.quantity > 0));
     if (itemsToSend.length === 0) {
-      setErrorMsg('Debe agregar al menos un producto con cantidad a devolver/bonificar.');
+      setErrorMsg('Debe agregar al menos un producto con cantidad/peso a devolver o bonificar.');
       return;
     }
 
@@ -555,6 +593,10 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
       for (const item of itemsToSend) {
         if (item.quantity > item.orderQuantity) {
           setErrorMsg(`La cantidad a devolver de ${item.name} (${item.quantity}) no puede superar la cantidad original (${item.orderQuantity}).`);
+          return;
+        }
+        if (item.isPesable && item.weight && item.orderWeight && item.weight > item.orderWeight) {
+          setErrorMsg(`El peso a devolver de ${item.name} (${item.weight} kg) no puede superar el peso original (${item.orderWeight} kg).`);
           return;
         }
       }
@@ -571,6 +613,7 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
         items: itemsToSend.map(item => ({
           productId: item.productId,
           quantity: item.quantity,
+          weight: item.isPesable ? (item.weight || null) : null,
           unitPrice: item.unitPrice
         }))
       };
@@ -2864,6 +2907,22 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
                           />
                         </div>
 
+                        {products.find(p => p.id === Number(selectedCNProduct))?.isPesable && (
+                          <div>
+                            <label style={{ fontSize: '0.75rem', fontWeight: 600 }}>Peso (Kg)</label>
+                            <input 
+                              type="number" 
+                              step="0.01"
+                              className="input" 
+                              min="0.01" 
+                              value={cnProductWeight} 
+                              onChange={(e) => setCnProductWeight(e.target.value)}
+                              placeholder="Peso"
+                              style={{ fontSize: '0.85rem', padding: '6px 10px', width: '90px' }}
+                            />
+                          </div>
+                        )}
+
                         <div>
                           <label style={{ fontSize: '0.75rem', fontWeight: 600 }}>Precio Unit.</label>
                           <input 
@@ -2888,100 +2947,141 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
                       </div>
                     )}
 
-                    {/* Tabla de Artículos del Carrito */}
+                     {/* Tabla de Artículos del Carrito */}
                     <div style={{ flex: 1, overflowY: 'auto', border: '1px solid var(--border-color)', borderRadius: '6px' }}>
-                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
-                        <thead style={{ backgroundColor: '#fafafa', position: 'sticky', top: 0, zIndex: 1 }}>
-                          <tr>
-                            <th style={{ padding: '8px 12px', textAlign: 'left' }}>Producto</th>
-                            <th style={{ padding: '8px 12px', textAlign: 'left', width: '130px' }}>Precio</th>
-                            {creditNoteForm.orderId && <th style={{ padding: '8px 12px', textAlign: 'center' }}>Cant. Pedido</th>}
-                            <th style={{ padding: '8px 12px', width: '140px', textAlign: 'center' }}>Cant. Devuelta</th>
-                            <th style={{ padding: '8px 12px', textAlign: 'right' }}>Subtotal</th>
-                            <th style={{ padding: '8px 12px', width: '50px' }}></th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {creditNoteCart.length === 0 ? (
-                            <tr>
-                              <td colSpan={creditNoteForm.orderId ? 6 : 5} style={{ padding: '30px', textAlign: 'center', color: 'var(--text-muted)' }}>
-                                {creditNoteForm.orderId 
-                                  ? 'No se cargaron ítems. Seleccione un pedido para listar sus artículos.' 
-                                  : 'No hay artículos en la Nota de Crédito.'
-                                }
-                              </td>
-                            </tr>
-                          ) : (
-                            creditNoteCart.map((item, idx) => (
-                              <tr key={item.productId} style={{ borderBottom: '1px solid var(--border-color)' }}>
-                                <td style={{ padding: '10px 12px' }}>
-                                  <div style={{ fontWeight: 600 }}>{item.name}</div>
-                                  <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>SKU: {item.sku}</div>
-                                </td>
-                                <td style={{ padding: '10px 12px' }}>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                    <span style={{ color: 'var(--text-secondary)' }}>$</span>
-                                    <input 
-                                      type="number"
-                                      className="input"
-                                      min="0"
-                                      step="0.01"
-                                      value={item.unitPrice}
-                                      onChange={(e) => {
-                                        const val = Math.max(0, Number(e.target.value));
-                                        const updated = [...creditNoteCart];
-                                        updated[idx].unitPrice = val;
-                                        updated[idx].subtotal = item.quantity * val;
-                                        setCreditNoteCart(updated);
-                                      }}
-                                      style={{ width: '90px', padding: '4px 8px', fontSize: '0.85rem' }}
-                                    />
-                                  </div>
-                                </td>
-                                {creditNoteForm.orderId && (
-                                  <td style={{ padding: '10px 12px', textAlign: 'center', fontWeight: 600 }}>
-                                    {item.orderQuantity}
-                                  </td>
-                                )}
-                                <td style={{ padding: '10px 12px', textAlign: 'center' }}>
-                                  <input 
-                                    type="number"
-                                    className="input"
-                                    min="0"
-                                    max={creditNoteForm.orderId ? item.orderQuantity : undefined}
-                                    value={item.quantity}
-                                    onChange={(e) => {
-                                      const val = creditNoteForm.orderId 
-                                        ? Math.min(item.orderQuantity, Math.max(0, Number(e.target.value)))
-                                        : Math.max(0, Number(e.target.value));
-                                      const updated = [...creditNoteCart];
-                                      updated[idx].quantity = val;
-                                      updated[idx].subtotal = val * item.unitPrice;
-                                      setCreditNoteCart(updated);
-                                    }}
-                                    style={{ width: '80px', padding: '4px 8px', textAlign: 'center', fontSize: '0.85rem' }}
-                                  />
-                                </td>
-                                <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 600 }}>
-                                  ${Number(item.subtotal).toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-                                </td>
-                                <td style={{ padding: '10px 12px', textAlign: 'center' }}>
-                                  <button 
-                                    type="button" 
-                                    className="btn btn-ghost" 
-                                    style={{ padding: '2px', color: 'var(--color-danger)' }}
-                                    onClick={() => {
-                                      setCreditNoteCart(prev => prev.filter(p => p.productId !== item.productId));
-                                    }}
-                                  >
-                                    ✕
-                                  </button>
-                                </td>
+                      {(() => {
+                        const hasPesableItemInCNCart = creditNoteCart.some(item => item.isPesable);
+                        return (
+                          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                            <thead style={{ backgroundColor: '#fafafa', position: 'sticky', top: 0, zIndex: 1 }}>
+                              <tr>
+                                <th style={{ padding: '8px 12px', textAlign: 'left' }}>Producto</th>
+                                <th style={{ padding: '8px 12px', textAlign: 'left', width: '130px' }}>Precio</th>
+                                {creditNoteForm.orderId && <th style={{ padding: '8px 12px', textAlign: 'center' }}>Cant. Pedido</th>}
+                                <th style={{ padding: '8px 12px', width: '140px', textAlign: 'center' }}>Cant. Devuelta</th>
+                                {hasPesableItemInCNCart && <th style={{ padding: '8px 12px', width: '140px', textAlign: 'center' }}>Peso Devuelto (Kg)</th>}
+                                <th style={{ padding: '8px 12px', textAlign: 'right' }}>Subtotal</th>
+                                <th style={{ padding: '8px 12px', width: '50px' }}></th>
                               </tr>
-                            ))
-                          )}
-                        </tbody>
-                      </table>
+                            </thead>
+                            <tbody>
+                              {creditNoteCart.length === 0 ? (
+                                <tr>
+                                  <td colSpan={creditNoteForm.orderId ? (hasPesableItemInCNCart ? 7 : 6) : (hasPesableItemInCNCart ? 6 : 5)} style={{ padding: '30px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                                    {creditNoteForm.orderId 
+                                      ? 'No se cargaron ítems. Seleccione un pedido para listar sus artículos.' 
+                                      : 'No hay artículos en la Nota de Crédito.'
+                                    }
+                                  </td>
+                                </tr>
+                              ) : (
+                                creditNoteCart.map((item, idx) => (
+                                  <tr key={item.productId} style={{ borderBottom: '1px solid var(--border-color)' }}>
+                                    <td style={{ padding: '10px 12px' }}>
+                                      <div style={{ fontWeight: 600 }}>{item.name}</div>
+                                      <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>SKU: {item.sku}</div>
+                                    </td>
+                                    <td style={{ padding: '10px 12px' }}>
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                        <span style={{ color: 'var(--text-secondary)' }}>$</span>
+                                        <input 
+                                          type="number"
+                                          className="input"
+                                          min="0"
+                                          step="0.01"
+                                          value={item.unitPrice}
+                                          onChange={(e) => {
+                                            const val = Math.max(0, Number(e.target.value));
+                                            const updated = [...creditNoteCart];
+                                            updated[idx].unitPrice = val;
+                                            updated[idx].subtotal = item.isPesable 
+                                              ? (item.weight || 0) * val 
+                                              : item.quantity * val;
+                                            setCreditNoteCart(updated);
+                                          }}
+                                          style={{ width: '90px', padding: '4px 8px', fontSize: '0.85rem' }}
+                                        />
+                                      </div>
+                                    </td>
+                                    {creditNoteForm.orderId && (
+                                      <td style={{ padding: '10px 12px', textAlign: 'center', fontWeight: 600 }}>
+                                        {item.orderQuantity} {item.isPesable && item.orderWeight && ` (${item.orderWeight} kg)`}
+                                      </td>
+                                    )}
+                                    <td style={{ padding: '10px 12px', textAlign: 'center' }}>
+                                      <input 
+                                        type="number"
+                                        className="input"
+                                        min="0"
+                                        max={creditNoteForm.orderId ? item.orderQuantity : undefined}
+                                        value={item.quantity}
+                                        onChange={(e) => {
+                                          const val = creditNoteForm.orderId 
+                                            ? Math.min(item.orderQuantity, Math.max(0, Number(e.target.value)))
+                                            : Math.max(0, Number(e.target.value));
+                                          const updated = [...creditNoteCart];
+                                          updated[idx].quantity = val;
+                                          if (item.isPesable) {
+                                            const ratio = item.orderQuantity && item.orderWeight ? (item.orderWeight / item.orderQuantity) : Number(item.approximateWeight || 1);
+                                            updated[idx].weight = Number((val * ratio).toFixed(3));
+                                            updated[idx].subtotal = updated[idx].weight * item.unitPrice;
+                                          } else {
+                                            updated[idx].subtotal = val * item.unitPrice;
+                                          }
+                                          setCreditNoteCart(updated);
+                                        }}
+                                        style={{ width: '80px', padding: '4px 8px', textAlign: 'center', fontSize: '0.85rem' }}
+                                      />
+                                    </td>
+                                    {hasPesableItemInCNCart && (
+                                      <td style={{ padding: '10px 12px', textAlign: 'center' }}>
+                                        {item.isPesable ? (
+                                          <input 
+                                            type="number"
+                                            step="0.01"
+                                            className="input"
+                                            min="0"
+                                            max={creditNoteForm.orderId ? (item.orderWeight || undefined) : undefined}
+                                            value={item.weight || ''}
+                                            onChange={(e) => {
+                                              const val = Math.max(0, Number(e.target.value));
+                                              const finalVal = creditNoteForm.orderId && item.orderWeight
+                                                ? Math.min(item.orderWeight, val)
+                                                : val;
+                                              const updated = [...creditNoteCart];
+                                              updated[idx].weight = finalVal;
+                                              updated[idx].subtotal = finalVal * item.unitPrice;
+                                              setCreditNoteCart(updated);
+                                            }}
+                                            style={{ width: '90px', padding: '4px 8px', textAlign: 'center', fontSize: '0.85rem' }}
+                                          />
+                                        ) : (
+                                          <span style={{ color: 'var(--text-muted)' }}>-</span>
+                                        )}
+                                      </td>
+                                    )}
+                                    <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 600 }}>
+                                      ${Number(item.subtotal).toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                                    </td>
+                                    <td style={{ padding: '10px 12px', textAlign: 'center' }}>
+                                      <button 
+                                        type="button" 
+                                        className="btn btn-ghost" 
+                                        style={{ padding: '2px', color: 'var(--color-danger)' }}
+                                        onClick={() => {
+                                          setCreditNoteCart(prev => prev.filter(p => p.productId !== item.productId));
+                                        }}
+                                      >
+                                        ✕
+                                      </button>
+                                    </td>
+                                  </tr>
+                                ))
+                              )}
+                            </tbody>
+                          </table>
+                        );
+                      })()}
                     </div>
                   </div>
                 </div>
@@ -3235,19 +3335,25 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
                       </tr>
                     </thead>
                     <tbody>
-                      {viewCreditNoteModal.items && viewCreditNoteModal.items.map((item: any, idx: number) => (
-                        <tr key={idx} style={{ borderBottom: '1px solid #ddd' }}>
-                          <td style={{ padding: '6px' }}>{item.product?.sku || `PROD-${item.productId}`}</td>
-                          <td style={{ padding: '6px' }}>{item.product?.name || item.name || `Artículo #${item.productId}`}</td>
-                          <td style={{ padding: '6px', textAlign: 'center' }}>{item.quantity}</td>
-                          <td style={{ padding: '6px', textAlign: 'right' }}>
-                            ${Number(item.unitPrice).toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-                          </td>
-                          <td style={{ padding: '6px', textAlign: 'right', fontWeight: 600 }}>
-                            ${Number(item.subtotal || item.quantity * item.unitPrice).toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-                          </td>
-                        </tr>
-                      ))}
+                      {viewCreditNoteModal.items && viewCreditNoteModal.items.map((item: any, idx: number) => {
+                        const isPesable = item.product?.isPesable || (item.weight && Number(item.weight) > 0);
+                        return (
+                          <tr key={idx} style={{ borderBottom: '1px solid #ddd' }}>
+                            <td style={{ padding: '6px' }}>{item.product?.sku || `PROD-${item.productId}`}</td>
+                            <td style={{ padding: '6px' }}>{item.product?.name || item.name || `Artículo #${item.productId}`}</td>
+                            <td style={{ padding: '6px', textAlign: 'center' }}>
+                              {item.quantity} u.
+                              {item.weight && Number(item.weight) > 0 && ` (${Number(item.weight).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 3 })} kg)`}
+                            </td>
+                            <td style={{ padding: '6px', textAlign: 'right' }}>
+                              ${Number(item.unitPrice).toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}{isPesable ? ' / Kg' : ''}
+                            </td>
+                            <td style={{ padding: '6px', textAlign: 'right', fontWeight: 600 }}>
+                              ${Number(item.subtotal || (isPesable && item.weight ? Number(item.weight) * item.unitPrice : item.quantity * item.unitPrice)).toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
 
