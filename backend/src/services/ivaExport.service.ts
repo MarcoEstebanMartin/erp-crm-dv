@@ -234,8 +234,55 @@ export const ivaExportService = {
         const cbteType = getAfipVoucherType(c.tipo);
         const parsedInv = parseInvoiceNumber(c.numero);
         
-        comprasTxt += dateStr + padEndString('COMPRAS ' + parsedInv.cbte, 317) + '\n';
-        comprasAlicuotasTxt += cbteType + padEndString('ALICUOTAS ' + parsedInv.cbte, 81) + '\n';
+        const isFacturaC = cbteType === '011' || cbteType === '012' || cbteType === '013';
+        
+        const absNeto = Math.abs(c.neto);
+        const absIva = Math.abs(c.iva);
+        const absPerc = Math.abs(c.percepciones);
+        const absTotal = Math.abs(c.total);
+
+        // Compras Comprobantes (312 bytes estándar AFIP)
+        comprasTxt += 
+          dateStr + // 8
+          cbteType + // 3
+          parsedInv.ptoVenta + // 5
+          parsedInv.cbte + // 20
+          padString('', 16) + // 16 despacho importacion
+          getAfipDocType(c.persona?.cuit) + // 2
+          getAfipDocNumber(c.persona?.cuit) + // 20
+          padString(c.persona?.name, 30) + // 30
+          formatCurrency(absTotal) + // 15
+          formatCurrency(0) + // 15 no gravado
+          formatCurrency(0) + // 15 exentas
+          formatCurrency(0) + // 15 pago a cuenta IVA
+          formatCurrency(0) + // 15 pago a cuenta otros
+          formatCurrency(absPerc) + // 15 perc IIBB
+          formatCurrency(0) + // 15 perc municipales
+          formatCurrency(0) + // 15 impuestos internos
+          'PES' + // 3
+          '0001000000' + // 10
+          (isFacturaC ? '0' : '1') + // 1
+          ' ' + // 1
+          formatCurrency(absIva) + // 15 credito fiscal computable
+          formatCurrency(0) + // 15 otros tributos
+          '00000000000' + // 11 cuit emisor/corredor
+          padString('', 30) + // 30 denom emisor
+          formatCurrency(0) + // 15 IVA comision
+          '\n';
+
+        // Compras Alicuotas (84 bytes estándar AFIP)
+        if (!isFacturaC && absIva > 0) {
+            comprasAlicuotasTxt += 
+              cbteType + // 3
+              parsedInv.ptoVenta + // 5
+              parsedInv.cbte + // 20
+              getAfipDocType(c.persona?.cuit) + // 2
+              getAfipDocNumber(c.persona?.cuit) + // 20
+              formatCurrency(absNeto) + // 15
+              '0005' + // 4 alicuota (21%)
+              formatCurrency(absIva) + // 15
+              '\n';
+        }
     }
 
     return {

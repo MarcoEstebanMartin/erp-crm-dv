@@ -186,9 +186,9 @@ export default function Login({ onLoginSuccess }: LoginProps) {
         <div style={{ marginTop: '24px', fontSize: '0.75rem', color: 'var(--text-secondary)', borderTop: '1px solid var(--border-color)', paddingTop: '16px' }}>
           <p>Credenciales de prueba:</p>
           <div style={{ display: 'flex', justifyContent: 'space-around', marginTop: '6px' }}>
-            <span><strong>Admin</strong>: admin / admin123</span>
-            <span><strong>Vendedor</strong>: diego / diego123</span>
-            <span><strong>Depósito</strong>: miguel / miguel123</span>
+            <span><strong>Admin</strong>: admin / admin!</span>
+            <span><strong>Vendedor</strong>: diego / lejarza!</span>
+            <span><strong>Depósito</strong>: miguel / miguel!</span>
           </div>
         </div>
       </div>

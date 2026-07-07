@@ -623,7 +623,6 @@ export async function invoiceOrder(req: AuthenticatedRequest, res: Response): Pr
         if (paymentMethod === PaymentMethod.CASH) {
           const activeDrawer = await tx.cashDrawer.findFirst({
             where: {
-              userId: adminId,
               status: 'OPEN',
             },
           });
@@ -778,12 +777,15 @@ export async function updateOrder(req: AuthenticatedRequest, res: Response): Pro
         let itemDiscount = Number(persona.discount || 0);
 
         if (persona.priceList === 'B') {
+          selectedPrice = Number(product.listPriceB) > 0 ? Number(product.listPriceB) : Number(product.listPrice);
           const isMelincue = product.description?.toUpperCase() === 'MELINCUE' || product.name?.toUpperCase().includes('MELINCUE');
           if (isMelincue) {
             itemDiscount = 3;
           } else {
             itemDiscount = 0;
           }
+        } else if (persona.priceList === 'C') {
+          selectedPrice = Number(product.listPriceC) > 0 ? Number(product.listPriceC) : Number(product.listPrice);
         }
 
         // Aplicar descuento
@@ -947,12 +949,15 @@ export async function createDirectInvoice(req: AuthenticatedRequest, res: Respon
         let itemDiscount = Number(persona.discount || 0);
 
         if (persona.priceList === 'B') {
+          selectedPrice = Number(product.listPriceB) > 0 ? Number(product.listPriceB) : Number(product.listPrice);
           const isMelincue = product.description?.toUpperCase() === 'MELINCUE' || product.name?.toUpperCase().includes('MELINCUE');
           if (isMelincue) {
             itemDiscount = 3;
           } else {
             itemDiscount = 0;
           }
+        } else if (persona.priceList === 'C') {
+          selectedPrice = Number(product.listPriceC) > 0 ? Number(product.listPriceC) : Number(product.listPrice);
         }
 
         // Aplicar descuento fijo / dinámico (redondeando a 2 decimales)

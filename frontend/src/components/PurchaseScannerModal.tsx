@@ -21,13 +21,14 @@ export const PurchaseScannerModal: React.FC<PurchaseScannerModalProps> = ({
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   useEffect(() => {
+    let url: string | null = null;
     if (isOpen && file) {
-      const url = URL.createObjectURL(file);
+      url = URL.createObjectURL(file);
       setPreviewUrl(url);
       processDocument(file);
     }
     return () => {
-      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      if (url) URL.revokeObjectURL(url);
     };
   }, [isOpen, file]);
 

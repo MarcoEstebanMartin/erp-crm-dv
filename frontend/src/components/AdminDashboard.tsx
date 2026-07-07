@@ -122,9 +122,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
   // Estados de Finanzas (Cajas y Bancos)
             
   
-  // Estados de carga de recibo individual
-                          // @ts-ignore
-  const [selectedCityFilter, setSelectedCityFilter] = useState<string>('');
+                      
                       
   const handleViewClientProfile = async (client: any) => {
     setErrorMsg(null);
@@ -255,7 +253,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
         setClients(allClients);
         const allProducts = await api.getProducts('');
         setProducts(allProducts);
-      } else if (activeTab === 'reports') {
+      } else if (activeTab === 'reportes') {
         const stats = await api.getFinancialReports();
         setFinancialReport(stats);
         const dataUsers = await api.getUsers();
@@ -679,12 +677,15 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
     let price = Number(product.listPrice);
     let discount = Number(client.discount || 0);
     if (client.priceList === 'B') {
+      price = Number(product.listPriceB) > 0 ? Number(product.listPriceB) : Number(product.listPrice);
       const isMelincue = product.description?.toUpperCase() === 'MELINCUE' || product.name?.toUpperCase().includes('MELINCUE');
       if (isMelincue) {
         discount = 3;
       } else {
         discount = 0;
       }
+    } else if (client.priceList === 'C') {
+      price = Number(product.listPriceC) > 0 ? Number(product.listPriceC) : Number(product.listPrice);
     }
     return Math.round(price * (1 - discount / 100));
   };
@@ -870,12 +871,8 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
   const preparingOrders = orders.filter(o => o.status === OrderStatus.PREPARING).length;
   const preparedOrders = orders.filter(o => o.status === OrderStatus.PREPARED).length;
   const deliveredOrders = orders.filter(o => o.status === OrderStatus.DELIVERED).length;
-  const cancelledOrders = orders.filter(o => o.status === OrderStatus.CANCELLED).length;
 
-  // @ts-ignore
-  const successRate = totalOrders > 0 
-    ? Math.round((deliveredOrders / (totalOrders - cancelledOrders || 1)) * 100) 
-    : 100;
+
 
   const filteredQuickClients = clients.filter(c => {
     if (!c.isClient) return false;
@@ -1600,7 +1597,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
             {/* ====================================================================
           9. REPORTES Y MARGENES (UNIFIED REPORTS)
           ==================================================================== */}
-      {activeTab === 'reports' && (
+      {activeTab === 'reportes' && (
         <UnifiedReportsDashboard orders={orders} users={users} clients={clients} products={products} financialReport={financialReport} />
       )}
 

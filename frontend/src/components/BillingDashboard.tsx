@@ -670,12 +670,15 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
 
     if (selectedDirectClient) {
       if (selectedDirectClient.priceList === 'B') {
+        selectedPrice = Number(prod.listPriceB) > 0 ? Number(prod.listPriceB) : Number(prod.listPrice);
         const isMelincue = prod.description?.toUpperCase() === 'MELINCUE' || prod.name?.toUpperCase().includes('MELINCUE');
         if (isMelincue) {
           itemDiscount = 3;
         } else {
           itemDiscount = 0;
         }
+      } else if (selectedDirectClient.priceList === 'C') {
+        selectedPrice = Number(prod.listPriceC) > 0 ? Number(prod.listPriceC) : Number(prod.listPrice);
       }
     }
 

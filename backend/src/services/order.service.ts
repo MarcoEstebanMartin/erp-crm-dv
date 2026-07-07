@@ -49,12 +49,15 @@ export class OrderService {
         let itemDiscount = Number(persona.discount || 0);
 
         if (persona.priceList === 'B') {
+          selectedPrice = Number(product.listPriceB) > 0 ? Number(product.listPriceB) : Number(product.listPrice);
           const isMelincue = product.description?.toUpperCase() === 'MELINCUE' || product.name?.toUpperCase().includes('MELINCUE');
           if (isMelincue) {
             itemDiscount = 3;
           } else {
             itemDiscount = 0;
           }
+        } else if (persona.priceList === 'C') {
+          selectedPrice = Number(product.listPriceC) > 0 ? Number(product.listPriceC) : Number(product.listPrice);
         }
 
         const finalUnitPrice = selectedPrice * (1 - itemDiscount / 100);

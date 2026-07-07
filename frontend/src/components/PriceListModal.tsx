@@ -327,7 +327,7 @@ export default function PriceListModal({ isOpen, onClose }: PriceListModalProps)
         sortedSubcategories
       };
     }).filter(Boolean);
-  }, [products, hideNumbers]);
+  }, [products]);
 
   // Obtener el precio según la lista seleccionada
   const getProductPrice = (prod: Product) => {

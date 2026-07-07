@@ -56,12 +56,15 @@ export default function VendedorDashboard({ activeTab }: VendedorDashboardProps)
     let price = Number(product.listPrice);
     let discount = Number(client.discount || 0);
     if (client.priceList === 'B') {
+      price = Number(product.listPriceB) > 0 ? Number(product.listPriceB) : Number(product.listPrice);
       const isMelincue = product.description?.toUpperCase() === 'MELINCUE' || product.name?.toUpperCase().includes('MELINCUE');
       if (isMelincue) {
         discount = 3;
       } else {
         discount = 0;
       }
+    } else if (client.priceList === 'C') {
+      price = Number(product.listPriceC) > 0 ? Number(product.listPriceC) : Number(product.listPrice);
     }
     return Math.round(price * (1 - discount / 100));
   };
@@ -520,9 +523,10 @@ export default function VendedorDashboard({ activeTab }: VendedorDashboardProps)
                           const price = getItemPrice(p, selectedClient);
                           const isMelincue = p.description?.toUpperCase() === 'MELINCUE' || p.name?.toUpperCase().includes('MELINCUE');
                           const hasCustomPrice = selectedClient && (
-                            (selectedClient.priceList === 'B' && isMelincue) ||
-                            Number(selectedClient.discount || 0) > 0
-                          );
+                             (selectedClient.priceList === 'B' && (isMelincue || Number(p.listPriceB || 0) > 0)) ||
+                             (selectedClient.priceList === 'C' && Number(p.listPriceC || 0) > 0) ||
+                             Number(selectedClient.discount || 0) > 0
+                           );
                           
                           // Helper para imágenes realistas de demostración
                           const getFallbackImage = (product: any) => {
