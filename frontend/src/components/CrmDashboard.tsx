@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { api } from '../utils/api';
 import { 
   Sparkles, 
@@ -234,7 +234,7 @@ export default function CrmDashboard() {
                   <th>Cliente</th>
                   <th>Contacto</th>
                   <th>Saldo Deudor</th>
-                  <th>Ãšltima Compra</th>
+                  <th>Última Compra</th>
                   <th>WhatsApp</th>
                 </tr>
               </thead>
@@ -287,7 +287,7 @@ export default function CrmDashboard() {
               <thead>
                 <tr>
                   <th>Cliente</th>
-                  <th>Productos Frecuentes Omitidos en Ãšltimo Pedido</th>
+                  <th>Productos Frecuentes Omitidos en Último Pedido</th>
                   <th>Acción</th>
                 </tr>
               </thead>
