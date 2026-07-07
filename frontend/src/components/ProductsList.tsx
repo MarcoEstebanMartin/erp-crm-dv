@@ -113,7 +113,7 @@ export default function ProductsList({ products, searchQuery, setSearchQuery, se
         )}
 
         <div style={{ display: 'flex', gap: '8px' }}>
-          <button className="btn btn-primary" style={{ borderRadius: '8px' }} onClick={() => setProductModal({ open: true, mode: 'create', data: { id: 0, sku: '', name: '', description: '', barcode: '', costPrice: 0, listPrice: 0, listPriceB: 0, listPriceC: 0, minStock: 0 } })}>
+          <button className="btn btn-primary" style={{ borderRadius: '8px' }} onClick={() => setProductModal({ open: true, mode: 'create', data: { id: 0, sku: '', name: '', description: '', barcode: '', costPrice: 0, listPrice: 0, listPriceB: 0, listPriceC: 0, minStock: 0, isPesable: false, approximateWeight: 0 } })}>
             <Plus size={16} />
             <span>Nuevo Producto</span>
           </button>
@@ -233,7 +233,7 @@ export default function ProductsList({ products, searchQuery, setSearchQuery, se
                           className="btn btn-ghost" 
                           style={{ padding: '6px', borderRadius: '6px', color: 'var(--text-secondary)' }} 
                           title="Editar producto completo"
-                          onClick={() => setProductModal({ open: true, mode: 'edit', data: { id: p.id, sku: p.sku, name: p.name, description: p.description || '', barcode: p.barcode || '', costPrice: p.costPrice, listPrice: p.listPrice, listPriceB: p.listPriceB || 0, listPriceC: p.listPriceC || 0, minStock: p.minStock } })}
+                          onClick={() => setProductModal({ open: true, mode: 'edit', data: { id: p.id, sku: p.sku, name: p.name, description: p.description || '', barcode: p.barcode || '', costPrice: p.costPrice, listPrice: p.listPrice, listPriceB: p.listPriceB || 0, listPriceC: p.listPriceC || 0, minStock: p.minStock, isPesable: p.isPesable || false, approximateWeight: p.approximateWeight || 0 } })}
                         >
                           <Edit size={16} />
                         </button>
