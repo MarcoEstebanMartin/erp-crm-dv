@@ -39,7 +39,7 @@ export default function Sidebar({ username, role, activeTab, setActiveTab, onLog
           { id: 'reparto', label: 'Reparto', icon: <Truck size={18} /> },
           { id: 'finanzas', label: 'Finanzas', icon: <DollarSign size={18} /> },
           { id: 'rendiciones', label: 'Cajas', icon: <DollarSign size={18} /> },
-          { id: 'compras', label: 'Compras', icon: <Receipt size={18} /> },
+          { id: 'compras', label: 'Proveedores', icon: <Receipt size={18} /> },
           { id: 'reportes', label: 'Reportes y Analíticas', icon: <TrendingUp size={18} /> },
           { id: 'config', label: 'Configuración', icon: <Settings size={18} /> },
         ];
@@ -54,7 +54,7 @@ export default function Sidebar({ username, role, activeTab, setActiveTab, onLog
           { id: 'reparto', label: 'Reparto', icon: <Truck size={18} /> },
           { id: 'finanzas', label: 'Finanzas', icon: <DollarSign size={18} /> },
           { id: 'rendiciones', label: 'Cajas', icon: <DollarSign size={18} /> },
-          { id: 'compras', label: 'Compras', icon: <Receipt size={18} /> },
+          { id: 'compras', label: 'Proveedores', icon: <Receipt size={18} /> },
         ];
       case 'VENDEDOR':
         return [
