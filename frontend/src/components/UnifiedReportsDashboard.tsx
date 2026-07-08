@@ -36,6 +36,11 @@ export default function UnifiedReportsDashboard({
   const [selectedCity, setSelectedCity] = useState<string>('');
   const [selectedSeller, setSelectedSeller] = useState<string>('');
   const [hoveredWeekIdx, setHoveredWeekIdx] = useState<number | null>(null);
+  
+  // Date states for Zonas
+  const [zoneDatePreset, setZoneDatePreset] = useState<string>('all');
+  const [zoneStartDate, setZoneStartDate] = useState<string>('');
+  const [zoneEndDate, setZoneEndDate] = useState<string>('');
 
   // Filtros para Vendedores
   const [sellerDateFilter, setSellerDateFilter] = useState<string>('all');
@@ -160,9 +165,33 @@ export default function UnifiedReportsDashboard({
   const loadZoneData = async () => {
     setZoneLoading(true);
     try {
+      let startStr: string | undefined = undefined;
+      let endStr: string | undefined = undefined;
+
+      const now = new Date();
+      if (zoneDatePreset === 'last_30_days') {
+        const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 3600 * 1000);
+        startStr = thirtyDaysAgo.toISOString().split('T')[0];
+        endStr = now.toISOString().split('T')[0];
+      } else if (zoneDatePreset === 'this_month') {
+        const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+        startStr = firstDay.toISOString().split('T')[0];
+        endStr = now.toISOString().split('T')[0];
+      } else if (zoneDatePreset === 'last_month') {
+        const firstDay = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        const lastDay = new Date(now.getFullYear(), now.getMonth(), 0);
+        startStr = firstDay.toISOString().split('T')[0];
+        endStr = lastDay.toISOString().split('T')[0];
+      } else if (zoneDatePreset === 'custom') {
+        if (zoneStartDate) startStr = zoneStartDate;
+        if (zoneEndDate) endStr = zoneEndDate;
+      }
+
       const res = await api.getZoneReports({
         city: selectedCity,
-        sellerId: selectedSeller ? Number(selectedSeller) : undefined
+        sellerId: selectedSeller ? Number(selectedSeller) : undefined,
+        startDate: startStr,
+        endDate: endStr
       });
       setZoneData(res);
       if (res.availableCities) setCities(res.availableCities);
@@ -178,7 +207,7 @@ export default function UnifiedReportsDashboard({
     if (activeTab === 'zonas') {
       loadZoneData();
     }
-  }, [activeTab, selectedCity, selectedSeller]);
+  }, [activeTab, selectedCity, selectedSeller, zoneDatePreset, zoneStartDate, zoneEndDate]);
 
   // Helper calculations for Zone Analysis
   const zoneTopClients = zoneData.topClients || [];
@@ -403,21 +432,55 @@ export default function UnifiedReportsDashboard({
           {/* Tarjeta de Filtros */}
           <div className="card" style={{ padding: '20px', borderRadius: '12px' }}>
             <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', alignItems: 'center' }}>
-              <div style={{ flex: 1, minWidth: '200px' }}>
+              <div style={{ flex: 1, minWidth: '180px' }}>
                 <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '8px', color: 'var(--text-secondary)' }}>Filtrar por Localidad</label>
                 <select className="input-field" value={selectedCity} onChange={e => { setSelectedCity(e.target.value); setHoveredWeekIdx(null); }}>
                   <option value="">Todas las localidades</option>
                   {cities.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
-              <div style={{ flex: 1, minWidth: '200px' }}>
+              <div style={{ flex: 1, minWidth: '180px' }}>
                 <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '8px', color: 'var(--text-secondary)' }}>Filtrar por Vendedor</label>
                 <select className="input-field" value={selectedSeller} onChange={e => { setSelectedSeller(e.target.value); setHoveredWeekIdx(null); }}>
                   <option value="">Todos los vendedores</option>
                   {sellers.map(s => <option key={s.id} value={s.id}>{s.username}</option>)}
                 </select>
               </div>
-              <div style={{ display: 'flex', alignItems: 'flex-end' }}>
+              <div style={{ flex: 1, minWidth: '180px' }}>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '8px', color: 'var(--text-secondary)' }}>Período de Fecha</label>
+                <select className="input-field" value={zoneDatePreset} onChange={e => { setZoneDatePreset(e.target.value); setHoveredWeekIdx(null); }}>
+                  <option value="all">Histórico Completo</option>
+                  <option value="last_30_days">Últimos 30 días</option>
+                  <option value="this_month">Este mes</option>
+                  <option value="last_month">Mes anterior</option>
+                  <option value="custom">Rango personalizado</option>
+                </select>
+              </div>
+              {zoneDatePreset === 'custom' && (
+                <>
+                  <div style={{ flex: 1, minWidth: '130px' }}>
+                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '8px', color: 'var(--text-secondary)' }}>Desde</label>
+                    <input 
+                      type="date" 
+                      className="input-field" 
+                      value={zoneStartDate} 
+                      onChange={e => { setZoneStartDate(e.target.value); setHoveredWeekIdx(null); }} 
+                      style={{ padding: '7.5px 12px' }}
+                    />
+                  </div>
+                  <div style={{ flex: 1, minWidth: '130px' }}>
+                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '8px', color: 'var(--text-secondary)' }}>Hasta</label>
+                    <input 
+                      type="date" 
+                      className="input-field" 
+                      value={zoneEndDate} 
+                      onChange={e => { setZoneEndDate(e.target.value); setHoveredWeekIdx(null); }}
+                      style={{ padding: '7.5px 12px' }}
+                    />
+                  </div>
+                </>
+              )}
+              <div style={{ display: 'flex', alignItems: 'flex-end', height: '100%' }}>
                 <button className="btn btn-secondary" onClick={loadZoneData} disabled={zoneLoading} style={{ height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <RefreshCw size={18} className={zoneLoading ? 'spin' : ''} />
                 </button>

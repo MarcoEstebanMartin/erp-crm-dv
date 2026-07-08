@@ -195,7 +195,7 @@ export class AdminService {
   /**
    * Obtener reportes por zonas (estadísticas robustas).
    */
-  async getZoneReports(filters: { sellerId?: number; city?: string }) {
+  async getZoneReports(filters: { sellerId?: number; city?: string; startDate?: string; endDate?: string }) {
     const whereClause: any = { isClient: true };
     if (filters.sellerId) whereClause.sellerId = filters.sellerId;
     if (filters.city && filters.city.trim() !== '') {
@@ -227,6 +227,17 @@ export class AdminService {
         orderWhereClause.persona = {};
       }
       orderWhereClause.persona.sellerId = filters.sellerId;
+    }
+    if (filters.startDate || filters.endDate) {
+      orderWhereClause.createdAt = {};
+      if (filters.startDate) {
+        orderWhereClause.createdAt.gte = new Date(filters.startDate);
+      }
+      if (filters.endDate) {
+        const end = new Date(filters.endDate);
+        end.setHours(23, 59, 59, 999);
+        orderWhereClause.createdAt.lte = end;
+      }
     }
 
     const orders = await prisma.order.findMany({

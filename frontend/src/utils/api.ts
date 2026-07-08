@@ -1702,7 +1702,7 @@ export const api = {
     return res.report;
   },
 
-  getZoneReports: async (filters: { city?: string; sellerId?: number } = {}) => {
+  getZoneReports: async (filters: { city?: string; sellerId?: number; startDate?: string; endDate?: string } = {}) => {
     if (simulationMode) {
       const personas = mockDb.get('db_personas') || [];
       const clients = personas.filter((p: any) => p.isClient);
@@ -1725,7 +1725,20 @@ export const api = {
       
       // Simulation metrics calculations
       const filteredClientIds = new Set(filteredClients.map((c: any) => c.id));
-      const orders = (mockDb.get('db_orders') || []).filter((o: any) => o.status === 'DELIVERED' && filteredClientIds.has(o.personaId || o.clientId));
+      let orders = (mockDb.get('db_orders') || []).filter((o: any) => o.status === 'DELIVERED' && filteredClientIds.has(o.personaId || o.clientId));
+      
+      // Filter simulation orders by date
+      if (filters.startDate) {
+        const start = new Date(filters.startDate).getTime();
+        orders = orders.filter((o: any) => new Date(o.createdAt).getTime() >= start);
+      }
+      if (filters.endDate) {
+        const end = new Date(filters.endDate);
+        end.setHours(23, 59, 59, 999);
+        const endTime = end.getTime();
+        orders = orders.filter((o: any) => new Date(o.createdAt).getTime() <= endTime);
+      }
+
       const products = mockDb.get('db_products') || [];
       const productLookup = new Map<number, any>(products.map((p: any) => [p.id, p]));
 
@@ -1829,6 +1842,8 @@ export const api = {
     const params = [];
     if (filters.city) params.push(`city=${encodeURIComponent(filters.city)}`);
     if (filters.sellerId) params.push(`sellerId=${filters.sellerId}`);
+    if (filters.startDate) params.push(`startDate=${encodeURIComponent(filters.startDate)}`);
+    if (filters.endDate) params.push(`endDate=${encodeURIComponent(filters.endDate)}`);
     const query = params.length > 0 ? `?${params.join('&')}` : '';
     
     return await request(`/admin/reports/zones${query}`);

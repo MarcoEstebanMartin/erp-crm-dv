@@ -105,12 +105,14 @@ export async function updateConfig(req: AuthenticatedRequest, res: Response): Pr
  * Obtener reportes por zonas.
  */
 export async function getZoneReports(req: AuthenticatedRequest, res: Response): Promise<void> {
-  const { sellerId, city } = req.query;
+  const { sellerId, city, startDate, endDate } = req.query;
   
   try {
     const filters = {
       sellerId: sellerId ? Number(sellerId) : undefined,
-      city: city ? String(city) : undefined
+      city: city ? String(city) : undefined,
+      startDate: startDate ? String(startDate) : undefined,
+      endDate: endDate ? String(endDate) : undefined
     };
     
     const result = await adminService.getZoneReports(filters);
