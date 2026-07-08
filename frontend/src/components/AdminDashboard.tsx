@@ -1,16 +1,37 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { api } from '../utils/api';
 import { OrderStatus } from '../utils/types';
-import UnifiedReportsDashboard from './UnifiedReportsDashboard';
-import RendicionesDashboard from './RendicionesDashboard';
-import RepartoDashboard from './RepartoDashboard';
-import ComprasDashboard from './ComprasDashboard';
 import PriceListModal from './PriceListModal';
 import ProductsList from './ProductsList';
 import RubrosList from './RubrosList';
-import CajasDashboard from './CajasDashboard';
-import FinanzasDashboard from './FinanzasDashboard';
-import BillingDashboard from './BillingDashboard';
+
+// Carga diferida de sub-dashboards pesados
+const UnifiedReportsDashboard = lazy(() => import('./UnifiedReportsDashboard'));
+const RendicionesDashboard = lazy(() => import('./RendicionesDashboard'));
+const RepartoDashboard = lazy(() => import('./RepartoDashboard'));
+const ComprasDashboard = lazy(() => import('./ComprasDashboard'));
+const CajasDashboard = lazy(() => import('./CajasDashboard'));
+const FinanzasDashboard = lazy(() => import('./FinanzasDashboard'));
+const BillingDashboard = lazy(() => import('./BillingDashboard'));
+
+const LoadingDashboard = () => (
+  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '300px', gap: '12px', padding: '40px', backgroundColor: 'var(--background-card)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+    <div style={{
+      width: '24px',
+      height: '24px',
+      borderRadius: '50%',
+      border: '2px solid rgba(227, 6, 19, 0.1)',
+      borderTopColor: '#E30613',
+      animation: 'spin 0.8s linear infinite'
+    }} />
+    <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Cargando sección...</span>
+    <style>{`
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+    `}</style>
+  </div>
+);
 import ResumenCuentaModal from './modals/ResumenCuentaModal';
 import QuickPriceSearchModal from './modals/QuickPriceSearchModal';
 import { 
@@ -1572,35 +1593,45 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
           6. LOGÍSTICA & REPARTO (REPARTO DASHBOARD)
           ==================================================================== */}
       {activeTab === 'reparto' && (
-        <RepartoDashboard />
+        <Suspense fallback={<LoadingDashboard />}>
+          <RepartoDashboard />
+        </Suspense>
       )}
 
       {/* ====================================================================
           7. CAJAS Y TESORERÍA (FINANZAS)
           ==================================================================== */}
       {activeTab === 'finanzas' && (
-        <FinanzasDashboard />
+        <Suspense fallback={<LoadingDashboard />}>
+          <FinanzasDashboard />
+        </Suspense>
       )}
 
       {/* ====================================================================
           FACTURACION & IMPUESTOS (BILLING)
           ==================================================================== */}
       {activeTab === 'billing' && (
-        <BillingDashboard activeTab={activeTab} setActiveTab={setActiveTab} />
+        <Suspense fallback={<LoadingDashboard />}>
+          <BillingDashboard activeTab={activeTab} setActiveTab={setActiveTab} />
+        </Suspense>
       )}
 
       {/* ====================================================================
           8. COMPRAS (COMPRAS DASHBOARD)
           ==================================================================== */}
       {activeTab === 'compras' && (
-        <ComprasDashboard />
+        <Suspense fallback={<LoadingDashboard />}>
+          <ComprasDashboard />
+        </Suspense>
       )}
 
             {/* ====================================================================
           9. REPORTES Y MARGENES (UNIFIED REPORTS)
           ==================================================================== */}
       {activeTab === 'reportes' && (
-        <UnifiedReportsDashboard orders={orders} users={users} clients={clients} products={products} financialReport={financialReport} />
+        <Suspense fallback={<LoadingDashboard />}>
+          <UnifiedReportsDashboard orders={orders} users={users} clients={clients} products={products} financialReport={financialReport} />
+        </Suspense>
       )}
 
       {/* ====================================================================
@@ -1648,11 +1679,13 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
             </button>
           </div>
 
-          {cajasSubTab === 'rendiciones' ? (
-            <RendicionesDashboard />
-          ) : (
-            <CajasDashboard />
-          )}
+          <Suspense fallback={<LoadingDashboard />}>
+            {cajasSubTab === 'rendiciones' ? (
+              <RendicionesDashboard />
+            ) : (
+              <CajasDashboard />
+            )}
+          </Suspense>
         </div>
       )}
 

@@ -116,6 +116,10 @@ model Persona {
   purchaseOrders     PurchaseOrder[]
   creditNotes        CreditNote[]
   products           Product[]
+
+  @@index([sellerId])
+  @@index([isClient])
+  @@index([isProvider])
 }
 
 model Product {
@@ -146,6 +150,9 @@ model Product {
   rubro              Rubro?              @relation(fields: [rubroId], references: [id])
   providerId         Int?
   provider           Persona?            @relation(fields: [providerId], references: [id])
+
+  @@index([rubroId])
+  @@index([providerId])
 }
 
 model Order {
@@ -173,6 +180,11 @@ model Order {
   deliveryRouteId Int?
   deliveryRoute   DeliveryRoute? @relation(fields: [deliveryRouteId], references: [id])
   creditNotes     CreditNote[]
+
+  @@index([personaId])
+  @@index([sellerId])
+  @@index([createdAt])
+  @@index([status])
 }
 
 model OrderItem {
@@ -186,6 +198,9 @@ model OrderItem {
   unitPrice     Decimal        @db.Decimal(12, 2)
   subtotal      Decimal        @db.Decimal(12, 2)
   orderItemLots OrderItemLot[]
+
+  @@index([orderId])
+  @@index([productId])
 }
 
 model ProductLot {
@@ -227,6 +242,10 @@ model StockMovement {
   productLotId Int?
   productLot   ProductLot? @relation(fields: [productLotId], references: [id])
   createdAt    DateTime    @default(now())
+
+  @@index([productId])
+  @@index([userId])
+  @@index([createdAt])
 }
 
 model CashDrawer {
@@ -284,6 +303,13 @@ model Transaction {
 
   createdAt     DateTime        @default(now())
   verified      Boolean         @default(false)
+
+  @@index([orderId])
+  @@index([personaId])
+  @@index([userId])
+  @@index([cashDrawerId])
+  @@index([bankAccountId])
+  @@index([createdAt])
 }
 
 model AuditLog {
@@ -297,6 +323,9 @@ model AuditLog {
   newValues  Json?
   ipAddress  String?
   createdAt  DateTime @default(now())
+
+  @@index([userId])
+  @@index([createdAt])
 }
 
 model SupplierInvoice {

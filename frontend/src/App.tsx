@@ -1,11 +1,32 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { api } from './utils/api';
 import Sidebar from './components/Sidebar';
 import Login from './components/Login';
-import AdminDashboard from './components/AdminDashboard';
-import VendedorDashboard from './components/VendedorDashboard';
-import DepositoDashboard from './components/DepositoDashboard';
 import ReceiptView from './components/ReceiptView';
+
+// Carga diferida de los dashboards principales
+const AdminDashboard = lazy(() => import('./components/AdminDashboard'));
+const VendedorDashboard = lazy(() => import('./components/VendedorDashboard'));
+const DepositoDashboard = lazy(() => import('./components/DepositoDashboard'));
+
+const LoadingSpinner = () => (
+  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '50vh', gap: '12px' }}>
+    <div style={{
+      width: '32px',
+      height: '32px',
+      borderRadius: '50%',
+      border: '2px solid rgba(227, 6, 19, 0.1)',
+      borderTopColor: '#E30613',
+      animation: 'spin 0.8s linear infinite'
+    }} />
+    <span style={{ fontSize: '14px', color: '#666', fontWeight: 500 }}>Cargando panel...</span>
+    <style>{`
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+    `}</style>
+  </div>
+);
 
 
 function App() {
@@ -104,7 +125,9 @@ function App() {
 
 
         <section style={{ animation: 'fadeIn 0.4s cubic-bezier(0.25, 1, 0.5, 1)', paddingTop: user.role === 'VENDEDOR' ? '20px' : '0' }}>
-          {renderDashboard()}
+          <Suspense fallback={<LoadingSpinner />}>
+            {renderDashboard()}
+          </Suspense>
         </section>
       </main>
 
