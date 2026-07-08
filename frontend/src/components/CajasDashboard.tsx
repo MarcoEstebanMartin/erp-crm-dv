@@ -528,7 +528,7 @@ export default function CajasDashboard() {
                               backgroundColor: t.paymentMethod === 'CASH' ? '#ecfdf5' : t.paymentMethod === 'CHECK' ? '#eff6ff' : '#f1f5f9',
                               color: t.paymentMethod === 'CASH' ? '#047857' : t.paymentMethod === 'CHECK' ? '#1d4ed8' : '#475569'
                             }}>
-                              {t.paymentMethod}
+                              {t.paymentMethod === 'CASH' ? 'EFECTIVO' : t.paymentMethod === 'CHECK' ? 'CHEQUE' : t.paymentMethod === 'BANK_TRANSFER' ? 'TRANSFERENCIA' : t.paymentMethod}
                             </span>
                           </td>
                           <td style={{ padding: '10px', textAlign: 'right', fontWeight: 600, fontFamily: 'monospace' }}>
