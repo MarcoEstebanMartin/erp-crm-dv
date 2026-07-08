@@ -93,6 +93,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
   
   const [createOrderModal, setCreateOrderModal] = useState<{ open: boolean; client: any; cart: { product: any; quantity: number }[]; notes: string } | null>(null);
   const [quickProductQuery, setQuickProductQuery] = useState('');
+  const [summaryCardModal, setSummaryCardModal] = useState<{ open: boolean; cardKey: string; cardLabel: string } | null>(null);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [prodSearchQuery, setProdSearchQuery] = useState('');
@@ -960,7 +961,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
 
           {/* Grilla de Métricas de Pedidos */}
           <div className="dashboard-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px' }}>
-            <div className="card stat-card" style={{ borderLeft: '4px solid var(--accent-color)' }}>
+            <div className="card stat-card" style={{ borderLeft: '4px solid var(--accent-color)' }} onClick={() => setSummaryCardModal({ open: true, cardKey: 'RECIBIDO', cardLabel: 'Pedidos Recibidos' })}>
               <div className="stat-label">Pedidos Recibidos</div>
               <div className="stat-value" style={{ color: 'var(--accent-color)', fontSize: '1.8rem' }}>
                 {recibidosOrdersCount}
@@ -968,7 +969,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
               <div className="stat-desc">Toma de pedidos (vendedores)</div>
             </div>
 
-            <div className="card stat-card" style={{ borderLeft: '4px solid #F59E0B' }}>
+            <div className="card stat-card" style={{ borderLeft: '4px solid #F59E0B' }} onClick={() => setSummaryCardModal({ open: true, cardKey: 'ARMADO', cardLabel: 'Pedidos Armados' })}>
               <div className="stat-label">Pedidos Armados</div>
               <div className="stat-value" style={{ color: '#F59E0B', fontSize: '1.8rem' }}>
                 {armadosOrdersCount}
@@ -976,7 +977,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
               <div className="stat-desc">Pendientes de facturación</div>
             </div>
 
-            <div className="card stat-card" style={{ borderLeft: '4px solid #10B981' }}>
+            <div className="card stat-card" style={{ borderLeft: '4px solid #10B981' }} onClick={() => setSummaryCardModal({ open: true, cardKey: 'FACTURADO', cardLabel: 'Pedidos Facturados' })}>
               <div className="stat-label">Pedidos Facturados</div>
               <div className="stat-value" style={{ color: '#10B981', fontSize: '1.8rem' }}>
                 {facturadosOrdersCount}
@@ -984,7 +985,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
               <div className="stat-desc">Listos para cargar al viaje</div>
             </div>
 
-            <div className="card stat-card" style={{ borderLeft: '4px solid #8B5CF6' }}>
+            <div className="card stat-card" style={{ borderLeft: '4px solid #8B5CF6' }} onClick={() => setSummaryCardModal({ open: true, cardKey: 'EN_VIAJE', cardLabel: 'Pedidos en Viaje' })}>
               <div className="stat-label">Pedidos en Viaje</div>
               <div className="stat-value" style={{ color: '#8B5CF6', fontSize: '1.8rem' }}>
                 {enViajeOrdersCount}
@@ -992,7 +993,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
               <div className="stat-desc">Repartos activos en calle</div>
             </div>
 
-            <div className="card stat-card" style={{ borderLeft: '4px solid var(--color-success)' }}>
+            <div className="card stat-card" style={{ borderLeft: '4px solid var(--color-success)' }} onClick={() => setSummaryCardModal({ open: true, cardKey: 'ENTREGADO', cardLabel: 'Pedidos Entregados' })}>
               <div className="stat-label">Pedidos Entregados</div>
               <div className="stat-value" style={{ color: 'var(--color-success)', fontSize: '1.8rem' }}>
                 {entregadosOrdersCount}
@@ -1004,6 +1005,14 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
           {/* Accesos Directos (Acciones Rápidas) */}
           <div style={{ marginTop: '24px' }}>
             <style>{`
+              .stat-card {
+                cursor: pointer;
+                transition: transform 0.2s, box-shadow 0.2s;
+              }
+              .stat-card:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+              }
               .quick-action-card:hover {
                 transform: translateY(-2px);
                 border-color: #a1a1a6 !important;
@@ -2077,6 +2086,117 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
       {/* ====================================================================
           MODALES
           ==================================================================== */}
+      {/* 0. Resumen de tarjeta del panel */}
+      {summaryCardModal && summaryCardModal.open && (
+        <div className="modal-overlay" style={{ zIndex: 1200 }}>
+          <div className="modal-content" style={{ maxWidth: '800px', width: '90vw' }}>
+            <div className="modal-header">
+              <h3>{summaryCardModal.cardLabel}</h3>
+              <button className="btn btn-ghost" style={{ padding: '4px' }} onClick={() => setSummaryCardModal(null)}>✕</button>
+            </div>
+            
+            <div style={{ padding: '16px 0' }}>
+              {(() => {
+                const cardOrders = orders.filter(o => {
+                  const statusInfo = getOrderStatusInfo(o);
+                  const logicalKey = statusInfo.label.toUpperCase().replace(' ', '_');
+                  if (summaryCardModal.cardKey === 'RECIBIDO') {
+                    return logicalKey === 'RECIBIDO' || logicalKey === 'EN_PICKING';
+                  }
+                  return logicalKey === summaryCardModal.cardKey;
+                });
+
+                if (cardOrders.length === 0) {
+                  return (
+                    <div style={{ textAlign: 'center', padding: '24px 0', color: 'var(--text-secondary)' }}>
+                      No hay pedidos en esta categoría actualmente.
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="table-container" style={{ maxHeight: '400px', overflowY: 'auto' }}>
+                    <table style={{ width: '100%', fontSize: '0.82rem' }}>
+                      <thead>
+                        <tr>
+                          <th>Nro Pedido</th>
+                          <th>Cliente</th>
+                          <th>Fecha</th>
+                          <th>Vendedor</th>
+                          <th className="text-right">Monto</th>
+                          <th>Estado Real</th>
+                          <th>Acciones</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {cardOrders.map(o => (
+                          <tr key={o.id}>
+                            <td style={{ fontWeight: 700 }}>#{o.id}</td>
+                            <td>
+                              <div style={{ fontWeight: 600 }}>{o.client?.name || o.persona?.name}</div>
+                              <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>Items: {o.items?.length || 0}</div>
+                            </td>
+                            <td>{new Date(o.createdAt).toLocaleDateString('es-AR')} {new Date(o.createdAt).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}</td>
+                            <td>{o.seller?.username || 'Sistema'}</td>
+                            <td className="text-right" style={{ fontWeight: 600 }}>${o.totalAmount.toLocaleString()}</td>
+                            <td>
+                              {(() => {
+                                const statusInfo = getOrderStatusInfo(o);
+                                return (
+                                  <span 
+                                    className={`badge badge-${statusInfo.badgeClass}`}
+                                    style={{
+                                      backgroundColor: statusInfo.color + '15',
+                                      color: statusInfo.color,
+                                      border: `1px solid ${statusInfo.color}30`,
+                                      fontSize: '0.7rem',
+                                      padding: '2px 6px',
+                                      fontWeight: 600
+                                    }}
+                                  >
+                                    {statusInfo.label}
+                                  </span>
+                                );
+                              })()}
+                            </td>
+                            <td>
+                              <button 
+                                className="btn btn-secondary" 
+                                style={{ padding: '4px 8px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px' }}
+                                onClick={() => {
+                                  setOrderDetailsModal(o);
+                                  setSummaryCardModal(null);
+                                }}
+                              >
+                                <Eye size={12} /> Ver Detalle
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                );
+              })()}
+            </div>
+            
+            <div className="modal-footer" style={{ borderTop: '1px solid var(--border-color)', paddingTop: '12px' }}>
+              <button 
+                className="btn btn-primary" 
+                onClick={() => {
+                  setOrderStatusFilter(summaryCardModal.cardKey);
+                  setActiveTab('orders');
+                  setSummaryCardModal(null);
+                }}
+              >
+                Ver en Listado Completo
+              </button>
+              <button className="btn btn-secondary" onClick={() => setSummaryCardModal(null)}>Cerrar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 1. Detalles de pedido */}
       {orderDetailsModal && (
         <div className="modal-overlay">
