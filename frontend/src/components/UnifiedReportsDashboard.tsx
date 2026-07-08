@@ -34,7 +34,8 @@ export default function UnifiedReportsDashboard({
   const [zoneLoading, setZoneLoading] = useState(false);
   const [cities, setCities] = useState<string[]>([]);
   const [sellers, setSellers] = useState<any[]>([]);
-  const [selectedCity, setSelectedCity] = useState<string>('');
+  const [selectedCities, setSelectedCities] = useState<string[]>([]);
+  const [citiesDropdownOpen, setCitiesDropdownOpen] = useState(false);
   const [selectedSeller, setSelectedSeller] = useState<string>('');
   const [hoveredWeekIdx, setHoveredWeekIdx] = useState<number | null>(null);
   
@@ -51,7 +52,7 @@ export default function UnifiedReportsDashboard({
   useEffect(() => {
     setClientPage(1);
     setClientSearch('');
-  }, [selectedCity, selectedSeller, zoneDatePreset, zoneStartDate, zoneEndDate]);
+  }, [selectedCities, selectedSeller, zoneDatePreset, zoneStartDate, zoneEndDate]);
 
   // --- CÁLCULOS GENERALES ---
   const deliveredOrders = orders.filter((o: any) => o.status === 'DELIVERED');
@@ -116,7 +117,7 @@ export default function UnifiedReportsDashboard({
       }
 
       const res = await api.getZoneReports({
-        city: selectedCity,
+        cities: selectedCities,
         sellerId: selectedSeller ? Number(selectedSeller) : undefined,
         startDate: startStr,
         endDate: endStr
@@ -135,7 +136,7 @@ export default function UnifiedReportsDashboard({
     if (activeTab === 'zonas') {
       loadZoneData();
     }
-  }, [activeTab, selectedCity, selectedSeller, zoneDatePreset, zoneStartDate, zoneEndDate]);
+  }, [activeTab, selectedCities, selectedSeller, zoneDatePreset, zoneStartDate, zoneEndDate]);
 
   // Helper calculations for Zone Analysis
   const zoneTopProducts = zoneData.topProducts || [];
@@ -273,12 +274,119 @@ export default function UnifiedReportsDashboard({
           {/* Tarjeta de Filtros */}
           <div className="card" style={{ padding: '20px', borderRadius: '12px' }}>
             <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', alignItems: 'center' }}>
-              <div style={{ flex: 1, minWidth: '180px' }}>
+              <div style={{ flex: 1, minWidth: '180px', position: 'relative' }}>
                 <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '8px', color: 'var(--text-secondary)' }}>Filtrar por Localidad</label>
-                <select className="input-field" value={selectedCity} onChange={e => { setSelectedCity(e.target.value); setHoveredWeekIdx(null); }}>
-                  <option value="">Todas las localidades</option>
-                  {cities.map(c => <option key={c} value={c}>{c}</option>)}
-                </select>
+                <button
+                  onClick={() => setCitiesDropdownOpen(!citiesDropdownOpen)}
+                  className="input-field"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    width: '100%',
+                    backgroundColor: 'var(--bg-light)',
+                    border: '1px solid var(--border-color)',
+                    borderRadius: '8px',
+                    padding: '8px 12px',
+                    fontSize: '0.9rem',
+                    color: 'var(--text-primary)',
+                    cursor: 'pointer',
+                    outline: 'none',
+                    textAlign: 'left',
+                    height: '40px'
+                  }}
+                >
+                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '90%' }}>
+                    {selectedCities.length === 0 
+                      ? 'Todas las localidades' 
+                      : selectedCities.length === 1 
+                        ? selectedCities[0] 
+                        : `${selectedCities.length} localidades`}
+                  </span>
+                  <span style={{ fontSize: '0.6rem', color: 'var(--text-secondary)' }}>▼</span>
+                </button>
+
+                {citiesDropdownOpen && (
+                  <>
+                    <div
+                      onClick={() => setCitiesDropdownOpen(false)}
+                      style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 999 }}
+                    />
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: '100%',
+                        left: 0,
+                        zIndex: 1000,
+                        width: '100%',
+                        minWidth: '220px',
+                        backgroundColor: 'var(--card-bg, #fff)',
+                        border: '1px solid var(--border-color)',
+                        borderRadius: '8px',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                        marginTop: '4px',
+                        padding: '8px 0',
+                        maxHeight: '260px',
+                        overflowY: 'auto'
+                      }}
+                    >
+                      <div style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '6px', marginBottom: '6px', padding: '0 12px' }}>
+                        <button
+                          onClick={() => {
+                            setSelectedCities([]);
+                            setCitiesDropdownOpen(false);
+                            setHoveredWeekIdx(null);
+                          }}
+                          style={{
+                            fontSize: '0.75rem',
+                            color: '#1a73e8',
+                            background: 'none',
+                            border: 'none',
+                            cursor: 'pointer',
+                            fontWeight: 600,
+                            padding: 0
+                          }}
+                        >
+                          Limpiar selección (Todas)
+                        </button>
+                      </div>
+
+                      {cities.map(c => {
+                        const isChecked = selectedCities.includes(c);
+                        return (
+                          <label
+                            key={c}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px',
+                              padding: '6px 12px',
+                              cursor: 'pointer',
+                              fontSize: '0.85rem',
+                              color: 'var(--text-primary)',
+                              transition: 'background-color 0.15s'
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-light)'}
+                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={() => {
+                                setSelectedCities(prev => 
+                                  prev.includes(c) ? prev.filter(x => x !== c) : [...prev, c]
+                                );
+                                setHoveredWeekIdx(null);
+                              }}
+                              style={{ cursor: 'pointer' }}
+                            />
+                            <span>{c}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </>
+                )}
               </div>
               <div style={{ flex: 1, minWidth: '180px' }}>
                 <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '8px', color: 'var(--text-secondary)' }}>Filtrar por Vendedor</label>

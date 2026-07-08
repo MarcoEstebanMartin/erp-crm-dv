@@ -294,11 +294,12 @@ export const api = {
     return res.report;
   },
 
-  getZoneReports: async (filters: { city?: string; sellerId?: number; startDate?: string; endDate?: string } = {}) => {
-    
-    
+  getZoneReports: async (filters: { city?: string; cities?: string[]; sellerId?: number; startDate?: string; endDate?: string } = {}) => {
     const params = [];
     if (filters.city) params.push(`city=${encodeURIComponent(filters.city)}`);
+    if (filters.cities && filters.cities.length > 0) {
+      params.push(`cities=${encodeURIComponent(filters.cities.join(','))}`);
+    }
     if (filters.sellerId) params.push(`sellerId=${filters.sellerId}`);
     if (filters.startDate) params.push(`startDate=${encodeURIComponent(filters.startDate)}`);
     if (filters.endDate) params.push(`endDate=${encodeURIComponent(filters.endDate)}`);

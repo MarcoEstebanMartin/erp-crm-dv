@@ -105,12 +105,18 @@ export async function updateConfig(req: AuthenticatedRequest, res: Response): Pr
  * Obtener reportes por zonas.
  */
 export async function getZoneReports(req: AuthenticatedRequest, res: Response): Promise<void> {
-  const { sellerId, city, startDate, endDate } = req.query;
+  const { sellerId, city, cities, startDate, endDate } = req.query;
   
   try {
+    let citiesList: string[] | undefined = undefined;
+    if (cities) {
+      citiesList = String(cities).split(',').map(c => c.trim()).filter(Boolean);
+    }
+
     const filters = {
       sellerId: sellerId ? Number(sellerId) : undefined,
       city: city ? String(city) : undefined,
+      cities: citiesList,
       startDate: startDate ? String(startDate) : undefined,
       endDate: endDate ? String(endDate) : undefined
     };

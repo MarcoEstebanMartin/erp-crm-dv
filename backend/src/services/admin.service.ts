@@ -195,10 +195,12 @@ export class AdminService {
   /**
    * Obtener reportes por zonas (estadísticas robustas).
    */
-  async getZoneReports(filters: { sellerId?: number; city?: string; startDate?: string; endDate?: string }) {
+  async getZoneReports(filters: { sellerId?: number; city?: string; cities?: string[]; startDate?: string; endDate?: string }) {
     const whereClause: any = { isClient: true };
     if (filters.sellerId) whereClause.sellerId = filters.sellerId;
-    if (filters.city && filters.city.trim() !== '') {
+    if (filters.cities && filters.cities.length > 0) {
+      whereClause.city = { in: filters.cities };
+    } else if (filters.city && filters.city.trim() !== '') {
       whereClause.city = { contains: filters.city, mode: 'insensitive' };
     }
 
@@ -217,7 +219,11 @@ export class AdminService {
     const orderWhereClause: any = {
       status: 'DELIVERED',
     };
-    if (filters.city && filters.city.trim() !== '') {
+    if (filters.cities && filters.cities.length > 0) {
+      orderWhereClause.persona = {
+        city: { in: filters.cities }
+      };
+    } else if (filters.city && filters.city.trim() !== '') {
       orderWhereClause.persona = {
         city: { contains: filters.city, mode: 'insensitive' }
       };
