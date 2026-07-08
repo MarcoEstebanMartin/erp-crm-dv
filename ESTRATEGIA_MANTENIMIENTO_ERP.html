@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Estrategia de Mantenimiento y Pilares de Arquitectura - ERP-CRM DV</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Inter:wght@300;400;600&display=swap');
+        
+        :root {
+            --primary: #E30613;
+            --dark: #121214;
+            --gray-light: #F4F4F5;
+            --gray-medium: #E4E4E7;
+            --gray-text: #71717A;
+            --font-title: 'Outfit', sans-serif;
+            --font-body: 'Inter', sans-serif;
+        }
+
+        body {
+            font-family: var(--font-body);
+            color: var(--dark);
+            line-height: 1.6;
+            margin: 0;
+            padding: 40px;
+            background-color: #ffffff;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .no-print-zone {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            background: var(--gray-light);
+            border: 1px solid var(--gray-medium);
+            border-radius: 8px;
+            margin-bottom: 40px;
+        }
+
+        .no-print-zone p {
+            margin: 0;
+            font-size: 14px;
+            color: var(--gray-text);
+        }
+
+        .btn-print {
+            background-color: var(--dark);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-family: var(--font-title);
+            font-weight: 600;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-print:hover {
+            background-color: var(--primary);
+            transform: translateY(-1px);
+        }
+
+        header {
+            border-bottom: 2px solid var(--dark);
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            font-family: var(--font-title);
+            font-size: 32px;
+            font-weight: 800;
+            margin: 0 0 10px 0;
+            color: var(--dark);
+        }
+
+        .subtitle {
+            font-size: 16px;
+            color: var(--gray-text);
+            margin: 0;
+        }
+
+        h2 {
+            font-family: var(--font-title);
+            font-size: 22px;
+            font-weight: 600;
+            margin-top: 40px;
+            border-bottom: 1px solid var(--gray-medium);
+            padding-bottom: 8px;
+            color: var(--dark);
+        }
+
+        h3 {
+            font-family: var(--font-title);
+            font-size: 18px;
+            font-weight: 600;
+            margin-top: 25px;
+            color: var(--dark);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+
+        th, td {
+            border: 1px solid var(--gray-medium);
+            padding: 12px;
+            text-align: left;
+        }
+
+        th {
+            background-color: var(--gray-light);
+            font-weight: 600;
+        }
+
+        ul {
+            padding-left: 20px;
+        }
+
+        li {
+            margin-bottom: 8px;
+        }
+
+        .pillar-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .pillar-card {
+            border: 1px solid var(--gray-medium);
+            border-radius: 8px;
+            padding: 15px 20px;
+            background: #fff;
+        }
+
+        .pillar-card strong {
+            color: var(--primary);
+            font-family: var(--font-title);
+            font-size: 16px;
+            display: block;
+            margin-bottom: 6px;
+        }
+
+        .highlight-box {
+            border-left: 4px solid var(--primary);
+            background-color: var(--gray-light);
+            padding: 15px;
+            border-radius: 0 8px 8px 0;
+            margin: 20px 0;
+            font-style: italic;
+        }
+
+        footer {
+            margin-top: 60px;
+            border-top: 1px solid var(--gray-medium);
+            padding-top: 20px;
+            text-align: center;
+            font-size: 12px;
+            color: var(--gray-text);
+        }
+
+        /* Estilos específicos de impresión */
+        @media print {
+            body {
+                padding: 0;
+                font-size: 12pt;
+            }
+
+            .no-print-zone {
+                display: none;
+            }
+
+            .pillar-grid {
+                display: block;
+            }
+
+            .pillar-card {
+                page-break-inside: avoid;
+                border: none;
+                border-bottom: 1px dashed var(--gray-medium);
+                padding: 10px 0;
+            }
+
+            h2, h3 {
+                page-break-after: avoid;
+            }
+
+            footer {
+                page-break-before: always;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    
+    <!-- Zona interactiva para navegador (no se imprime) -->
+    <div class="no-print-zone">
+        <p>📄 Este archivo está optimizado para imprimir en hojas A4 o guardar como PDF.</p>
+        <button class="btn-print" onclick="window.print()">Imprimir / Guardar PDF</button>
+    </div>
+
+    <header>
+        <h1>Estrategia de Mantenimiento y Pilares de Arquitectura</h1>
+        <p class="subtitle">Guía de Desarrollo y Calidad Profesional para el ERP-CRM DV</p>
+    </header>
+
+    <div class="highlight-box">
+        "El objetivo no es construir solo un sistema funcional, sino un ERP increíble que combine la estética refinada con una robustez de nivel empresarial."
+    </div>
+
+    <h2>1. Frecuencias de Limpieza de Código y Gestión de Bugs</h2>
+    <p>Para evitar la degradación del software y mantener una velocidad de desarrollo ágil en el ERP, se establece la siguiente disciplina de mantenimiento:</p>
+
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 25%">Frecuencia</th>
+                <th style="width: 30%">Tipo de Limpieza</th>
+                <th>Acciones Requeridas</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>Diario / Continuo</strong></td>
+                <td>Micro-refactorizaciones</td>
+                <td>Eliminar <code>console.log</code> temporales, tipar estrictamente con TypeScript para evitar el uso de <code>any</code> y dar formato consistente al código mediante linters automáticos.</td>
+            </tr>
+            <tr>
+                <td><strong>Al cierre de Hitos</strong><br><small>(Cada 1-2 semanas)</small></td>
+                <td>Estabilización del Sprint</td>
+                <td>Compilar todo el proyecto con <code>tsc --noEmit</code>, mover scripts de parche temporales (archivos <code>fix_*.js</code> o <code>patch_*.js</code>) a una carpeta de herramientas para despejar la raíz, y probar los flujos críticos.</td>
+            </tr>
+            <tr>
+                <td><strong>Mensual</strong></td>
+                <td>Auditoría y Mantenimiento</td>
+                <td>Actualizar dependencias de forma segura, optimizar índices de PostgreSQL en base al rendimiento real y simplificar funciones redundantes en el backend.</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h2>2. Los 10 Pilares Estratégicos del ERP</h2>
+    
+    <div class="pillar-grid">
+        <div class="pillar-card">
+            <strong>1. Automatización</strong>
+            El sistema ejecuta los procesos aburridos: facturación automática con la AFIP al marcar un reparto como entregado, recálculo automático de precios de venta ante cambios de costos y sugerencias de rutas de reparto optimizadas.
+        </div>
+        <div class="pillar-card">
+            <strong>2. Sistematización</strong>
+            Flujos estandarizados. Estados de pedido estrictamente validados en base a un flujo de estados y validación de entrada/salida de datos única a través de esquemas robustos.
+        </div>
+        <div class="pillar-card">
+            <strong>3. Delegar</strong>
+            Diseñar controles para que otros operen el sistema. Roles de acceso (RBAC) que ocultan información financiera confidencial para perfiles de logística, permitiéndoles enfocarse únicamente en el despacho.
+        </div>
+        <div class="pillar-card">
+            <strong>4. Control</strong>
+            Arqueos de caja rigurosos comparando balances automáticos con balances declarados por el operario, y trazabilidad total por lote y fecha de vencimiento para cada movimiento de mercadería.
+        </div>
+        <div class="pillar-card">
+            <strong>5. Seguridad</strong>
+            Logs de auditoría históricos para rastrear cambios en precios, stock y cajas; autenticación segura mediante tokens JWT y prevención activa de accesos no autorizados en la API.
+        </div>
+        <div class="pillar-card">
+            <strong>6. Escalabilidad</strong>
+            Consultas eficientes en base de datos mediante paginación desde el primer día y selección estricta de columnas indexadas en PostgreSQL para evitar lentitudes en el futuro.
+        </div>
+        <div class="pillar-card">
+            <strong>7. Minimalismo</strong>
+            UI limpia inspirada en Stripe/Linear con bordes finos de 1px. El color corporativo rojo <code>#E30613</code> se reserva de manera exclusiva para alertas críticas, manteniendo una interfaz elegante y descansada.
+        </div>
+        <div class="pillar-card">
+            <strong>8. Valor</strong>
+            Centrarse en automatizar el núcleo financiero del distribuidor: cuentas corrientes claras de clientes/proveedores y cálculo automático de retenciones e IIBB en cada factura.
+        </div>
+        <div class="pillar-card">
+            <strong>9. Practicidad</strong>
+            Optimización del tiempo. Operabilidad total del ERP a través del teclado, focos automáticos para lectores de códigos de barras y búsquedas globales inteligentes que minimizan la cantidad de clics.
+        </div>
+        <div class="pillar-card">
+            <strong>10. Modernidad</strong>
+            Uso de TypeScript absoluto en backend y frontend, interfaces ágiles con animaciones fluidas y reactividad instantánea que hacen que la experiencia se sienta nativa y moderna.
+        </div>
+    </div>
+
+    <h2>3. Recomendaciones Técnicas Inmediatas y Acciones Realizadas</h2>
+    <ul>
+        <li><strong>Limpieza de Directorios (Ejecutado - 08/07/2026):</strong> Se crearon carpetas organizadas para despejar el desorden de scripts temporales:
+            <ul>
+                <li><strong>Directorio raíz:</strong> Se movieron más de 45 scripts (<code>fix_*.js</code>, <code>patch_*.js</code>, <code>*.py</code>, <code>*.csv</code>, <code>*.bak</code>) a <code>/scripts/</code>.</li>
+                <li><strong>Backend:</strong> Se movieron los scripts de chequeo y migración a <code>/backend/scripts/</code> y se actualizó su <code>package.json</code> para reflejar la ruta.</li>
+                <li><strong>Frontend:</strong> Se movieron los archivos de respaldo <code>*.bak</code> y <code>*.bak2</code> a <code>/frontend/src/backup/</code>.</li>
+            </ul>
+        </li>
+        <li><strong>Separar Servicios (Pendiente):</strong> Asegurar que los controladores del backend solo reciban peticiones, delegando la lógica empresarial (como llamadas a AFIP o cálculos de márgenes) a archivos en <code>backend/src/services</code>.</li>
+        <li><strong>Variables de Diseño (Pendiente):</strong> Centralizar los estilos en variables CSS en el frontend para asegurar consistencia estética y permitir cambios globales con una línea de código.</li>
+        <li><strong>Transacciones de Prisma (Pendiente):</strong> Para operaciones donde se alteren múltiples tablas a la vez (como actualizar la caja y saldar una cuenta corriente), usar siempre <code>prisma.$transaction</code> para evitar datos corruptos.</li>
+    </ul>
+
+    <footer>
+        <p>ERP-CRM DV &copy; 2026. Documento de Arquitectura y Buenas Prácticas.</p>
+    </footer>
+
+</div>
+
+</body>
+</html>
