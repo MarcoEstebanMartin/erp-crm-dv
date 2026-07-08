@@ -1,6 +1,7 @@
 import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { api } from '../utils/api';
 import { OrderStatus } from '../utils/types';
+import { getOrderStatusInfo } from '../utils/orderStatusHelper';
 import PriceListModal from './PriceListModal';
 import ProductsList from './ProductsList';
 import RubrosList from './RubrosList';
@@ -299,9 +300,16 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
         setClients(data);
       } else if (activeTab === 'orders') {
         const data = await api.getOrders();
-        // Filtrar orders localmente según el estado seleccionado
+        // Filtrar orders localmente según el estado lógico seleccionado
         if (orderStatusFilter !== 'ALL') {
-          setOrders(data.filter((o: any) => o.status === orderStatusFilter));
+          setOrders(data.filter((o: any) => {
+            const statusInfo = getOrderStatusInfo(o);
+            const logicalKey = statusInfo.label.toUpperCase().replace(' ', '_');
+            if (orderStatusFilter === 'RECIBIDO') {
+              return logicalKey === 'RECIBIDO' || logicalKey === 'EN_PICKING';
+            }
+            return logicalKey === orderStatusFilter;
+          }));
         } else {
           setOrders(data);
         }
@@ -890,10 +898,11 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
 
   // Pedidos por estado para el Panel Principal
   const totalOrders = orders.length;
-  const pendingOrders = orders.filter(o => o.status === OrderStatus.PENDING).length;
-  const preparingOrders = orders.filter(o => o.status === OrderStatus.PREPARING).length;
-  const preparedOrders = orders.filter(o => o.status === OrderStatus.PREPARED).length;
-  const deliveredOrders = orders.filter(o => o.status === OrderStatus.DELIVERED).length;
+  const recibidosOrdersCount = orders.filter(o => o.status === 'PENDING' || o.status === 'PREPARING').length;
+  const armadosOrdersCount = orders.filter(o => o.status === 'PREPARED' && !o.invoiceNumber).length;
+  const facturadosOrdersCount = orders.filter(o => o.invoiceNumber && (!o.deliveryRoute || o.deliveryRoute.status === 'PENDING')).length;
+  const enViajeOrdersCount = orders.filter(o => o.deliveryRoute && o.deliveryRoute.status === 'IN_TRANSIT').length;
+  const entregadosOrdersCount = orders.filter(o => (o.status === 'DELIVERED' && !o.deliveryRouteId) || (o.deliveryRoute && o.deliveryRoute.status === 'COMPLETED')).length;
 
 
 
@@ -950,29 +959,45 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
           </div>
 
           {/* Grilla de Métricas de Pedidos */}
-          <div className="dashboard-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '20px' }}>
+          <div className="dashboard-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px' }}>
             <div className="card stat-card" style={{ borderLeft: '4px solid var(--accent-color)' }}>
               <div className="stat-label">Pedidos Recibidos</div>
-              <div className="stat-value" style={{ color: 'var(--accent-color)' }}>
-                {totalOrders}
+              <div className="stat-value" style={{ color: 'var(--accent-color)', fontSize: '1.8rem' }}>
+                {recibidosOrdersCount}
               </div>
-              <div className="stat-desc">Cantidad total de pedidos registrados</div>
+              <div className="stat-desc">Toma de pedidos (vendedores)</div>
+            </div>
+
+            <div className="card stat-card" style={{ borderLeft: '4px solid #F59E0B' }}>
+              <div className="stat-label">Pedidos Armados</div>
+              <div className="stat-value" style={{ color: '#F59E0B', fontSize: '1.8rem' }}>
+                {armadosOrdersCount}
+              </div>
+              <div className="stat-desc">Pendientes de facturación</div>
+            </div>
+
+            <div className="card stat-card" style={{ borderLeft: '4px solid #10B981' }}>
+              <div className="stat-label">Pedidos Facturados</div>
+              <div className="stat-value" style={{ color: '#10B981', fontSize: '1.8rem' }}>
+                {facturadosOrdersCount}
+              </div>
+              <div className="stat-desc">Listos para cargar al viaje</div>
+            </div>
+
+            <div className="card stat-card" style={{ borderLeft: '4px solid #8B5CF6' }}>
+              <div className="stat-label">Pedidos en Viaje</div>
+              <div className="stat-value" style={{ color: '#8B5CF6', fontSize: '1.8rem' }}>
+                {enViajeOrdersCount}
+              </div>
+              <div className="stat-desc">Repartos activos en calle</div>
             </div>
 
             <div className="card stat-card" style={{ borderLeft: '4px solid var(--color-success)' }}>
               <div className="stat-label">Pedidos Entregados</div>
-              <div className="stat-value" style={{ color: 'var(--color-success)' }}>
-                {deliveredOrders}
+              <div className="stat-value" style={{ color: 'var(--color-success)', fontSize: '1.8rem' }}>
+                {entregadosOrdersCount}
               </div>
               <div className="stat-desc">Operación completada con éxito</div>
-            </div>
-
-            <div className="card stat-card" style={{ borderLeft: '4px solid #F59E0B' }}>
-              <div className="stat-label">Pedidos en Proceso</div>
-              <div className="stat-value" style={{ color: '#F59E0B' }}>
-                {pendingOrders + preparingOrders + preparedOrders}
-              </div>
-              <div className="stat-desc">Pendientes, picking o listos</div>
             </div>
           </div>
 
@@ -1429,11 +1454,12 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
             
             <select className="select" value={orderStatusFilter} onChange={(e) => setOrderStatusFilter(e.target.value)}>
               <option value="ALL">Todos los Estados</option>
-              <option value="PENDING">Pendientes de picking</option>
-              <option value="PREPARING">En preparación</option>
-              <option value="PREPARED">Listos para facturar</option>
-              <option value="DELIVERED">Facturados y Entregados</option>
-              <option value="CANCELLED">Cancelados</option>
+              <option value="RECIBIDO">Pedidos Recibidos</option>
+              <option value="ARMADO">Pedidos Armados (Pend. Facturación)</option>
+              <option value="FACTURADO">Pedidos Facturados</option>
+              <option value="EN_VIAJE">Pedidos en Viaje</option>
+              <option value="ENTREGADO">Pedidos Entregados</option>
+              <option value="CANCELADO">Cancelados</option>
             </select>
 
             <button className="btn btn-secondary" onClick={() => fetchData()}>
@@ -1475,9 +1501,22 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
                         </span>
                       </td>
                       <td>
-                        <span className={`badge badge-${o.status.toLowerCase()}`}>
-                          {o.status === 'PENDING' ? 'Pendiente' : o.status === 'PREPARING' ? 'En Picking' : o.status === 'PREPARED' ? 'Armado/Listo' : o.status === 'DELIVERED' ? 'Facturado' : 'Cancelado'}
-                        </span>
+                        {(() => {
+                          const statusInfo = getOrderStatusInfo(o);
+                          return (
+                            <span 
+                              className={`badge badge-${statusInfo.badgeClass}`}
+                              style={{
+                                backgroundColor: statusInfo.color + '15',
+                                color: statusInfo.color,
+                                border: `1px solid ${statusInfo.color}30`,
+                                fontWeight: 600
+                              }}
+                            >
+                              {statusInfo.label}
+                            </span>
+                          );
+                        })()}
                       </td>
                       <td style={{ display: 'flex', gap: '6px' }}>
                         <button className="btn btn-secondary" style={{ padding: '6px 10px' }} title="Ver Detalle" onClick={() => setOrderDetailsModal(o)}>
@@ -2047,21 +2086,23 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
               <button className="btn btn-ghost" style={{ padding: '4px' }} onClick={() => setOrderDetailsModal(null)}>✕</button>
             </div>
             
-            {/* Barra de progreso de preparación de pedidos (Fase 2) */}
+            {/* Barra de progreso de preparación de pedidos */}
             {orderDetailsModal.status !== 'CANCELLED' ? (
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', padding: '12px 0', borderBottom: '1px solid var(--border-color)' }}>
                 {[
-                  { status: 'PENDING', label: 'Cargado' },
-                  { status: 'PREPARING', label: 'En Picking' },
-                  { status: 'PREPARED', label: 'Armado' },
-                  { status: 'DELIVERED', label: 'Facturado' }
+                  { status: 'RECIBIDO', label: 'Recibido' },
+                  { status: 'EN_PICKING', label: 'En Picking' },
+                  { status: 'ARMADO', label: 'Armado' },
+                  { status: 'FACTURADO', label: 'Facturado' },
+                  { status: 'EN_VIAJE', label: 'En Viaje' },
+                  { status: 'ENTREGADO', label: 'Entregado' }
                 ].map((step, idx, arr) => {
-                  const orderStatus = orderDetailsModal.status;
-                  const statusOrder = ['PENDING', 'PREPARING', 'PREPARED', 'DELIVERED'];
-                  const currentIdx = statusOrder.indexOf(orderStatus);
+                  const logicalStatus = getOrderStatusInfo(orderDetailsModal).label.toUpperCase().replace(' ', '_');
+                  const statusOrder = ['RECIBIDO', 'EN_PICKING', 'ARMADO', 'FACTURADO', 'EN_VIAJE', 'ENTREGADO'];
+                  const currentIdx = statusOrder.indexOf(logicalStatus);
                   const stepIdx = statusOrder.indexOf(step.status);
                   const isCompleted = stepIdx <= currentIdx;
-                  const isActive = step.status === orderStatus;
+                  const isActive = step.status === logicalStatus;
                   
                   return (
                     <React.Fragment key={step.status}>
@@ -2108,7 +2149,22 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
             <div style={{ marginBottom: '16px' }}>
               <p><strong>Cliente:</strong> {orderDetailsModal.client?.name}</p>
               <p><strong>CUIT:</strong> {orderDetailsModal.client?.cuit || 'S/D'}</p>
-              <p><strong>Estado:</strong> <span className={`badge badge-${orderDetailsModal.status.toLowerCase()}`}>{orderDetailsModal.status}</span></p>
+              <p><strong>Estado:</strong> {(() => {
+                const statusInfo = getOrderStatusInfo(orderDetailsModal);
+                return (
+                  <span 
+                    className={`badge badge-${statusInfo.badgeClass}`}
+                    style={{
+                      backgroundColor: statusInfo.color + '15',
+                      color: statusInfo.color,
+                      border: `1px solid ${statusInfo.color}30`,
+                      fontWeight: 600
+                    }}
+                  >
+                    {statusInfo.label}
+                  </span>
+                );
+              })()}</p>
               <p><strong>Fecha de Carga:</strong> {new Date(orderDetailsModal.createdAt).toLocaleString('es-AR')}</p>
             </div>
 

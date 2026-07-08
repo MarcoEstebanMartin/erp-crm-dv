@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import React from 'react';
 import { api } from '../utils/api';
+import { getOrderStatusInfo } from '../utils/orderStatusHelper';
 
 import { Trash2, ShoppingCart, UserPlus, CheckCircle2, Eye, Edit, Printer } from 'lucide-react';
 import PriceListModal from './PriceListModal';
@@ -730,9 +731,22 @@ export default function VendedorDashboard({ activeTab }: VendedorDashboardProps)
                         </td>
                         <td style={{ fontWeight: 600 }}>${o.totalAmount.toLocaleString()}</td>
                         <td>
-                          <span className={`badge badge-${o.status.toLowerCase()}`}>
-                            {o.status === 'PENDING' ? 'Pendiente' : o.status === 'PREPARING' ? 'En picking' : o.status === 'PREPARED' ? 'Armado listo' : o.status === 'DELIVERED' ? 'Facturado' : 'Cancelado'}
-                          </span>
+                          {(() => {
+                            const statusInfo = getOrderStatusInfo(o);
+                            return (
+                              <span 
+                                className={`badge badge-${statusInfo.badgeClass}`}
+                                style={{
+                                  backgroundColor: statusInfo.color + '15',
+                                  color: statusInfo.color,
+                                  border: `1px solid ${statusInfo.color}30`,
+                                  fontWeight: 600
+                                }}
+                              >
+                                {statusInfo.label}
+                              </span>
+                            );
+                          })()}
                         </td>
                         <td style={{ display: 'flex', gap: '6px' }}>
                           <button type="button" className="btn btn-secondary" style={{ padding: '4px 8px' }} title="Ver Detalle" onClick={() => setOrderDetailsModal(o)}>
@@ -1051,21 +1065,23 @@ export default function VendedorDashboard({ activeTab }: VendedorDashboardProps)
               <button className="btn btn-ghost" style={{ padding: '4px' }} onClick={() => setOrderDetailsModal(null)}>✕</button>
             </div>
             
-            {/* Barra de progreso de preparación (Fase 2) */}
+            {/* Barra de progreso de preparación */}
             {orderDetailsModal.status !== 'CANCELLED' ? (
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', padding: '12px 0', borderBottom: '1px solid var(--border-color)' }}>
                 {[
-                  { status: 'PENDING', label: 'Cargado' },
-                  { status: 'PREPARING', label: 'En Picking' },
-                  { status: 'PREPARED', label: 'Armado' },
-                  { status: 'DELIVERED', label: 'Facturado' }
+                  { status: 'RECIBIDO', label: 'Recibido' },
+                  { status: 'EN_PICKING', label: 'En Picking' },
+                  { status: 'ARMADO', label: 'Armado' },
+                  { status: 'FACTURADO', label: 'Facturado' },
+                  { status: 'EN_VIAJE', label: 'En Viaje' },
+                  { status: 'ENTREGADO', label: 'Entregado' }
                 ].map((step, idx, arr) => {
-                  const orderStatus = orderDetailsModal.status;
-                  const statusOrder = ['PENDING', 'PREPARING', 'PREPARED', 'DELIVERED'];
-                  const currentIdx = statusOrder.indexOf(orderStatus);
+                  const logicalStatus = getOrderStatusInfo(orderDetailsModal).label.toUpperCase().replace(' ', '_');
+                  const statusOrder = ['RECIBIDO', 'EN_PICKING', 'ARMADO', 'FACTURADO', 'EN_VIAJE', 'ENTREGADO'];
+                  const currentIdx = statusOrder.indexOf(logicalStatus);
                   const stepIdx = statusOrder.indexOf(step.status);
                   const isCompleted = stepIdx <= currentIdx;
-                  const isActive = step.status === orderStatus;
+                  const isActive = step.status === logicalStatus;
                   
                   return (
                     <React.Fragment key={step.status}>
@@ -1112,7 +1128,22 @@ export default function VendedorDashboard({ activeTab }: VendedorDashboardProps)
             <div style={{ marginBottom: '16px', fontSize: '0.85rem' }}>
               <p><strong>Cliente:</strong> {orderDetailsModal.client?.name}</p>
               <p><strong>Dirección:</strong> {orderDetailsModal.client?.address || 'S/D'}</p>
-              <p><strong>Estado:</strong> <span className={`badge badge-${orderDetailsModal.status.toLowerCase()}`}>{orderDetailsModal.status}</span></p>
+              <p><strong>Estado:</strong> {(() => {
+                const statusInfo = getOrderStatusInfo(orderDetailsModal);
+                return (
+                  <span 
+                    className={`badge badge-${statusInfo.badgeClass}`}
+                    style={{
+                      backgroundColor: statusInfo.color + '15',
+                      color: statusInfo.color,
+                      border: `1px solid ${statusInfo.color}30`,
+                      fontWeight: 600
+                    }}
+                  >
+                    {statusInfo.label}
+                  </span>
+                );
+              })()}</p>
               <p><strong>Fecha de Carga:</strong> {new Date(orderDetailsModal.createdAt).toLocaleString('es-AR')}</p>
               {orderDetailsModal.notes && (
                 <div style={{ marginTop: '10px', padding: '8px 12px', backgroundColor: '#FEF7E0', borderLeft: '3px solid #FBBC04', borderRadius: '4px' }}>

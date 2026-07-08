@@ -45,6 +45,9 @@ export async function getOrders(req: AuthenticatedRequest, res: Response): Promi
         seller: {
           select: { id: true, username: true },
         },
+        deliveryRoute: {
+          select: { id: true, status: true, driverName: true, vehiclePlate: true }
+        },
         items: {
           include: {
             product: { select: { id: true, name: true, sku: true } },
@@ -90,6 +93,9 @@ export async function getOrderById(req: AuthenticatedRequest, res: Response): Pr
       include: {
         persona: true,
         seller: { select: { id: true, username: true } },
+        deliveryRoute: {
+          select: { id: true, status: true, driverName: true, vehiclePlate: true }
+        },
         items: {
           include: {
             product: true,
