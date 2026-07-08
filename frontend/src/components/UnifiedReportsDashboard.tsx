@@ -13,12 +13,12 @@ interface UnifiedReportsDashboardProps {
 
 export default function UnifiedReportsDashboard({
   orders,
-  users,
-  clients,
+  users: _users,
+  clients: _clients,
   products,
   financialReport
 }: UnifiedReportsDashboardProps) {
-  const [activeTab, setActiveTab] = useState<'finanzas' | 'vendedores' | 'zonas' | 'crm'>('finanzas');
+  const [activeTab, setActiveTab] = useState<'finanzas' | 'zonas' | 'crm'>('finanzas');
   
   // Estados para Zonas
   const [zoneData, setZoneData] = useState<any>({
@@ -26,6 +26,7 @@ export default function UnifiedReportsDashboard({
     totalClients: 0,
     totalDebt: 0,
     topClients: [],
+    clientsWithMovements: [],
     topProducts: [],
     bottomProducts: [],
     weeklyInvoicing: []
@@ -43,10 +44,14 @@ export default function UnifiedReportsDashboard({
   const [zoneEndDate, setZoneEndDate] = useState<string>('');
   const [bottomProductsTab, setBottomProductsTab] = useState<'lento' | 'sin_ventas'>('lento');
 
-  // Filtros para Vendedores
-  const [sellerDateFilter, setSellerDateFilter] = useState<string>('all');
-  const [sellerCityFilter, setSellerCityFilter] = useState<string>('all');
-  const sellerCities = Array.from(new Set(clients.filter(c => c.city).map(c => c.city))).sort();
+  // Filtros y paginación para la tabla de Clientes con Movimientos
+  const [clientSearch, setClientSearch] = useState<string>('');
+  const [clientPage, setClientPage] = useState<number>(1);
+
+  useEffect(() => {
+    setClientPage(1);
+    setClientSearch('');
+  }, [selectedCity, selectedSeller, zoneDatePreset, zoneStartDate, zoneEndDate]);
 
   // --- CÁLCULOS GENERALES ---
   const deliveredOrders = orders.filter((o: any) => o.status === 'DELIVERED');
@@ -60,76 +65,6 @@ export default function UnifiedReportsDashboard({
   const pctMargenConsolidado = totalFacturado > 0 ? Math.round((totalMargenNeto / totalFacturado) * 100) : 0;
   const totalSalesSum = deliveredOrders.reduce((sum: number, o: any) => sum + Number(o.totalAmount), 0);
   const ticketAverage = deliveredOrders.length > 0 ? totalSalesSum / deliveredOrders.length : 0;
-
-  // 2. VENDEDORES
-  const sellerUsers = users.filter((u: any) => u.role === 'VENDEDOR');
-  const sellerPerformance = sellerUsers.map((seller: any) => {
-    let sellerOrders = orders.filter((o: any) => o.sellerId === seller.id);
-    
-    if (sellerDateFilter === 'this_week') {
-      const oneWeekAgo = new Date();
-      oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-      sellerOrders = sellerOrders.filter((o: any) => new Date(o.createdAt) >= oneWeekAgo);
-    } else if (sellerDateFilter === 'this_month') {
-      const oneMonthAgo = new Date();
-      oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
-      sellerOrders = sellerOrders.filter((o: any) => new Date(o.createdAt) >= oneMonthAgo);
-    }
-
-    const completedOrders = sellerOrders.filter((o: any) => o.status === 'DELIVERED');
-    const totalSales = completedOrders.reduce((sum: number, o: any) => sum + Number(o.totalAmount), 0);
-    const avgTicket = completedOrders.length > 0 ? totalSales / completedOrders.length : 0;
-    
-    let assignedClients = clients.filter((c: any) => c.sellerId === seller.id && c.isClient);
-    
-    if (sellerCityFilter !== 'all') {
-      assignedClients = assignedClients.filter((c: any) => c.city === sellerCityFilter);
-    }
-
-    const visitedClients = assignedClients.filter((c: any) => 
-      sellerOrders.some((o: any) => (o.personaId === c.id || o.clientId === c.id))
-    );
-    
-    const visitEffectiveness = assignedClients.length > 0 
-      ? Math.round((visitedClients.length / assignedClients.length) * 100) 
-      : 0;
-
-    let lastActivity = 'Sin actividad';
-    if (completedOrders.length > 0) {
-      const sorted = [...completedOrders].sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-      const lastOrder = sorted[0];
-      const clientName = lastOrder.client?.name || clients.find((c: any) => c.id === lastOrder.clientId)?.name || 'Cliente';
-      lastActivity = `Visita: ${clientName}`;
-    }
-
-    // Generar recomendaciones
-    let recommendation = '';
-    if (assignedClients.length > 0 && visitEffectiveness < 50) {
-      recommendation = `Visitar a más clientes (solo ${visitedClients.length} de ${assignedClients.length} visitados).`;
-    } else if (completedOrders.length > 0 && avgTicket < ticketAverage * 0.7) {
-      recommendation = `El ticket promedio (${Math.round(avgTicket)}) está por debajo de la media general. Fomentar upselling.`;
-    } else if (totalSales === 0) {
-      recommendation = `Sin ventas registradas en el período seleccionado.`;
-    } else {
-      recommendation = 'Buen rendimiento general.';
-    }
-
-    return {
-      id: seller.id,
-      username: seller.username,
-      totalSales,
-      ordersCount: sellerOrders.length,
-      completedCount: completedOrders.length,
-      avgTicket,
-      assignedCount: assignedClients.length,
-      visitedCount: visitedClients.length,
-      effectiveness: visitEffectiveness,
-      lastActivity,
-      commission: totalSales * 0.05, // 5% neto
-      recommendation
-    };
-  }).sort((a: any, b: any) => b.totalSales - a.totalSales);
-
   // 3. PRODUCTOS
   const productStatsMap: { [key: number]: { qty: number; revenue: number; name: string; sku: string; stock: number } } = {};
   products.forEach((p: any) => {
@@ -158,7 +93,11 @@ export default function UnifiedReportsDashboard({
       let endStr: string | undefined = undefined;
 
       const now = new Date();
-      if (zoneDatePreset === 'last_30_days') {
+      if (zoneDatePreset === 'this_week') {
+        const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 3600 * 1000);
+        startStr = sevenDaysAgo.toISOString().split('T')[0];
+        endStr = now.toISOString().split('T')[0];
+      } else if (zoneDatePreset === 'last_30_days') {
         const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 3600 * 1000);
         startStr = thirtyDaysAgo.toISOString().split('T')[0];
         endStr = now.toISOString().split('T')[0];
@@ -199,7 +138,6 @@ export default function UnifiedReportsDashboard({
   }, [activeTab, selectedCity, selectedSeller, zoneDatePreset, zoneStartDate, zoneEndDate]);
 
   // Helper calculations for Zone Analysis
-  const zoneTopClients = zoneData.topClients || [];
   const zoneTopProducts = zoneData.topProducts || [];
   const zoneBottomProducts = zoneData.bottomProducts || [];
   const zoneDeadStockProducts = zoneData.deadStockProducts || [];
@@ -236,7 +174,6 @@ export default function UnifiedReportsDashboard({
       <div style={{ display: 'flex', gap: '8px', marginBottom: '24px', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
         {[
           { id: 'finanzas', label: 'Resumen Financiero', icon: <DollarSign size={16} /> },
-          { id: 'vendedores', label: 'Rendimiento Vendedores', icon: <Users size={16} /> },
           { id: 'zonas', label: 'Análisis de Zonas', icon: <MapPin size={16} /> },
           { id: 'crm', label: 'CRM + IA', icon: <Sparkles size={16} /> }
         ].map(tab => (
@@ -327,92 +264,7 @@ export default function UnifiedReportsDashboard({
         </div>
       )}
 
-      {/* 2. VENDEDORES */}
-      {activeTab === 'vendedores' && (
-        <div className="fade-in card" style={{ padding: '24px', borderRadius: '12px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-            <h4 style={{ fontSize: '1.1rem', fontWeight: 600, margin: 0 }}>Rendimiento y Recomendaciones de Preventistas</h4>
-            
-            <div style={{ display: 'flex', gap: '12px' }}>
-              <select 
-                value={sellerDateFilter} 
-                onChange={(e) => setSellerDateFilter(e.target.value)}
-                style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-light)', color: 'var(--text-primary)', outline: 'none' }}
-              >
-                <option value="all">Histórico Completo</option>
-                <option value="this_week">Últimos 7 días</option>
-                <option value="this_month">Últimos 30 días</option>
-              </select>
-
-              <select 
-                value={sellerCityFilter} 
-                onChange={(e) => setSellerCityFilter(e.target.value)}
-                style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-light)', color: 'var(--text-primary)', outline: 'none' }}
-              >
-                <option value="all">Todas las Localidades</option>
-                {sellerCities.map((city: string) => (
-                  <option key={city} value={city}>{city}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-          <div className="table-container">
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr style={{ borderBottom: '2px solid var(--border-color)', textAlign: 'left', fontSize: '0.85rem' }}>
-                  <th style={{ padding: '12px' }}>Vendedor</th>
-                  <th style={{ padding: '12px' }}>Ventas Totales</th>
-                  <th style={{ padding: '12px' }}>Efectividad de Visitas</th>
-                  <th style={{ padding: '12px' }}>Ticket Prom.</th>
-                  <th style={{ padding: '12px' }}>Comisión Est.</th>
-                  <th style={{ padding: '12px', width: '30%' }}>Recomendación Inteligente</th>
-                </tr>
-              </thead>
-              <tbody>
-                {sellerPerformance.length === 0 ? (
-                  <tr><td colSpan={6} style={{ textAlign: 'center', padding: '20px' }}>No hay preventistas.</td></tr>
-                ) : sellerPerformance.map((perf: any) => (
-                  <tr key={perf.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
-                    <td style={{ padding: '12px', fontWeight: 600 }}>
-                      {perf.username}
-                      <span style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 400, marginTop: '4px' }}>
-                        {perf.lastActivity}
-                      </span>
-                    </td>
-                    <td style={{ padding: '12px', fontWeight: 700 }}>${perf.totalSales.toLocaleString()}</td>
-                    <td style={{ padding: '12px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <div style={{ flex: 1, backgroundColor: '#f0f0f0', height: '6px', borderRadius: '3px', width: '60px', overflow: 'hidden' }}>
-                          <div style={{
-                            backgroundColor: perf.effectiveness >= 80 ? 'var(--color-success)' : perf.effectiveness >= 50 ? '#f2994a' : 'var(--color-danger)',
-                            height: '100%',
-                            width: `${perf.effectiveness}%`
-                          }} />
-                        </div>
-                        <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>{perf.effectiveness}%</span>
-                      </div>
-                      <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '4px' }}>{perf.visitedCount} de {perf.assignedCount} clientes</div>
-                    </td>
-                    <td style={{ padding: '12px' }}>${Math.round(perf.avgTicket).toLocaleString()}</td>
-                    <td style={{ padding: '12px', fontWeight: 600, color: '#137333' }}>${Math.round(perf.commission).toLocaleString()}</td>
-                    <td style={{ padding: '12px', fontSize: '0.85rem' }}>
-                      <div style={{ 
-                        backgroundColor: perf.recommendation.includes('Buen') ? '#e6f4ea' : (perf.recommendation.includes('Sin ventas') ? '#fce8e6' : '#fef7e0'), 
-                        color: perf.recommendation.includes('Buen') ? '#137333' : (perf.recommendation.includes('Sin ventas') ? '#c5221f' : '#b06000'),
-                        padding: '8px 12px', 
-                        borderRadius: '6px',
-                        lineHeight: 1.4
-                      }}>
-                        {perf.recommendation}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
+      {/* 2. VENDEDORES (Removido e integrado en Análisis de Zonas) */}
 
       {/* 3. ZONAS */}
       {activeTab === 'zonas' && (
@@ -439,6 +291,7 @@ export default function UnifiedReportsDashboard({
                 <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '8px', color: 'var(--text-secondary)' }}>Período de Fecha</label>
                 <select className="input-field" value={zoneDatePreset} onChange={e => { setZoneDatePreset(e.target.value); setHoveredWeekIdx(null); }}>
                   <option value="all">Histórico Completo</option>
+                  <option value="this_week">Esta semana (Últimos 7 días)</option>
                   <option value="last_30_days">Últimos 30 días</option>
                   <option value="this_month">Este mes</option>
                   <option value="last_month">Mes anterior</option>
@@ -478,7 +331,7 @@ export default function UnifiedReportsDashboard({
           </div>
 
           {/* KPIs Grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
             <div className="card" style={{ padding: '20px', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)' }}>CLIENTES EN LA ZONA</span>
@@ -486,6 +339,22 @@ export default function UnifiedReportsDashboard({
               </div>
               <span style={{ fontSize: '1.8rem', fontWeight: 700 }}>{zoneData.totalClients}</span>
               <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Clientes activos registrados</span>
+            </div>
+
+            <div className="card" style={{ padding: '20px', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)' }}>COBERTURA DE VENTAS</span>
+                <TrendingUp size={18} color="#1a73e8" />
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <span style={{ fontSize: '1.8rem', fontWeight: 700 }}>
+                  {zoneData.clientsWithMovements ? zoneData.clientsWithMovements.length : 0} de {zoneData.totalClients || 0}
+                </span>
+                <span className="badge" style={{ backgroundColor: '#e8f0fe', color: '#1a73e8', fontSize: '0.8rem', padding: '4px 8px', borderRadius: '4px', fontWeight: 600 }}>
+                  {zoneData.totalClients > 0 ? Math.round(((zoneData.clientsWithMovements ? zoneData.clientsWithMovements.length : 0) / zoneData.totalClients) * 100) : 0}%
+                </span>
+              </div>
+              <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Clientes con compras en el período</span>
             </div>
             
             <div className="card" style={{ padding: '20px', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -610,39 +479,149 @@ export default function UnifiedReportsDashboard({
           {/* Secciones de Tabla y Columnas */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '24px' }}>
             
-            {/* Top 10 Clientes */}
+            {/* Clientes con Movimientos (Ventas) */}
             <div className="card" style={{ padding: '24px', borderRadius: '12px' }}>
-              <h4 style={{ fontSize: '1.1rem', fontWeight: 600, margin: '0 0 16px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Users size={20} color="var(--text-secondary)" /> Mejores 10 Clientes de la Zona
-              </h4>
-              {zoneTopClients.length === 0 ? (
-                <p style={{ color: 'var(--text-secondary)', margin: 0 }}>No hay clientes con pedidos en esta zona.</p>
-              ) : (
-                <div className="table-container">
-                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                    <thead>
-                      <tr style={{ borderBottom: '2px solid var(--border-color)', textAlign: 'left', fontSize: '0.85rem' }}>
-                        <th style={{ padding: '12px 8px', color: 'var(--text-secondary)' }}>Rank</th>
-                        <th style={{ padding: '12px 8px', color: 'var(--text-secondary)' }}>Cliente</th>
-                        <th style={{ padding: '12px 8px', color: 'var(--text-secondary)' }}>Localidad</th>
-                        <th style={{ padding: '12px 8px', color: 'var(--text-secondary)', textAlign: 'center' }}>Pedidos</th>
-                        <th style={{ padding: '12px 8px', color: 'var(--text-secondary)', textAlign: 'right' }}>Total Comprado</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {zoneTopClients.map((c: any, idx: number) => (
-                        <tr key={c.id} style={{ borderBottom: '1px solid var(--border-color)', fontSize: '0.9rem', transition: 'background-color 0.2s' }} className="table-row-hover">
-                          <td style={{ padding: '12px 8px', fontWeight: 600, color: 'var(--text-secondary)' }}>#{idx + 1}</td>
-                          <td style={{ padding: '12px 8px', fontWeight: 600 }}>{c.name}</td>
-                          <td style={{ padding: '12px 8px', color: 'var(--text-secondary)' }}>{c.city}</td>
-                          <td style={{ padding: '12px 8px', textAlign: 'center' }}>{c.ordersCount}</td>
-                          <td style={{ padding: '12px 8px', textAlign: 'right', fontWeight: 700, color: '#137333' }}>${c.totalSpent.toLocaleString()}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
+                <h4 style={{ fontSize: '1.1rem', fontWeight: 600, margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Users size={20} color="var(--text-secondary)" /> Clientes con Movimientos (Ventas)
+                </h4>
+                
+                {/* Buscador de Clientes */}
+                <div style={{ position: 'relative', width: '280px' }}>
+                  <input
+                    type="text"
+                    placeholder="Buscar cliente, localidad o preventista..."
+                    value={clientSearch}
+                    onChange={(e) => {
+                      setClientSearch(e.target.value);
+                      setClientPage(1);
+                    }}
+                    style={{
+                      padding: '6px 12px',
+                      paddingLeft: '32px',
+                      fontSize: '0.85rem',
+                      borderRadius: '6px',
+                      border: '1px solid var(--border-color)',
+                      backgroundColor: 'var(--bg-light)',
+                      color: 'var(--text-primary)',
+                      width: '100%',
+                      outline: 'none'
+                    }}
+                  />
+                  <svg
+                    style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)', pointerEvents: 'none' }}
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                  </svg>
                 </div>
-              )}
+              </div>
+
+              {(() => {
+                const zoneClientsWithMovements = zoneData.clientsWithMovements || [];
+                const filteredClients = zoneClientsWithMovements.filter((c: any) =>
+                  c.name.toLowerCase().includes(clientSearch.toLowerCase()) ||
+                  c.city.toLowerCase().includes(clientSearch.toLowerCase()) ||
+                  (c.sellerName && c.sellerName.toLowerCase().includes(clientSearch.toLowerCase()))
+                );
+
+                if (filteredClients.length === 0) {
+                  return <p style={{ color: 'var(--text-secondary)', margin: 0 }}>No hay clientes con movimientos registrados para la búsqueda actual.</p>;
+                }
+
+                const ITEMS_PER_PAGE = 10;
+                const totalPages = Math.max(Math.ceil(filteredClients.length / ITEMS_PER_PAGE), 1);
+                const startIndex = (clientPage - 1) * ITEMS_PER_PAGE;
+                const paginatedClients = filteredClients.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+
+                return (
+                  <>
+                    <div className="table-container">
+                      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                        <thead>
+                          <tr style={{ borderBottom: '2px solid var(--border-color)', textAlign: 'left', fontSize: '0.85rem' }}>
+                            <th style={{ padding: '12px 8px', color: 'var(--text-secondary)' }}>Rank</th>
+                            <th style={{ padding: '12px 8px', color: 'var(--text-secondary)' }}>Cliente</th>
+                            <th style={{ padding: '12px 8px', color: 'var(--text-secondary)' }}>Localidad</th>
+                            <th style={{ padding: '12px 8px', color: 'var(--text-secondary)' }}>Preventista</th>
+                            <th style={{ padding: '12px 8px', color: 'var(--text-secondary)', textAlign: 'center' }}>Pedidos</th>
+                            <th style={{ padding: '12px 8px', color: 'var(--text-secondary)', textAlign: 'right' }}>Total Comprado</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {paginatedClients.map((c: any, idx: number) => {
+                            const globalRank = startIndex + idx + 1;
+                            return (
+                              <tr key={c.id} style={{ borderBottom: '1px solid var(--border-color)', fontSize: '0.9rem', transition: 'background-color 0.2s' }} className="table-row-hover">
+                                <td style={{ padding: '12px 8px', fontWeight: 600, color: 'var(--text-secondary)' }}>#{globalRank}</td>
+                                <td style={{ padding: '12px 8px', fontWeight: 600 }}>{c.name}</td>
+                                <td style={{ padding: '12px 8px', color: 'var(--text-secondary)' }}>{c.city}</td>
+                                <td style={{ padding: '12px 8px', color: 'var(--text-primary)' }}>{c.sellerName || 'Sin preventista'}</td>
+                                <td style={{ padding: '12px 8px', textAlign: 'center' }}>{c.ordersCount}</td>
+                                <td style={{ padding: '12px 8px', textAlign: 'right', fontWeight: 700, color: '#137333' }}>${c.totalSpent.toLocaleString()}</td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {/* Controles de Paginación */}
+                    {totalPages > 1 && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px', borderTop: '1px solid var(--border-color)', paddingTop: '16px' }}>
+                        <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                          Mostrando {startIndex + 1} a {Math.min(startIndex + ITEMS_PER_PAGE, filteredClients.length)} de {filteredClients.length} clientes con ventas
+                        </span>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <button
+                            onClick={() => setClientPage(prev => Math.max(prev - 1, 1))}
+                            disabled={clientPage === 1}
+                            style={{
+                              padding: '6px 12px',
+                              fontSize: '0.8rem',
+                              fontWeight: 600,
+                              backgroundColor: clientPage === 1 ? 'transparent' : 'var(--bg-light)',
+                              color: clientPage === 1 ? 'var(--text-secondary)' : 'var(--text-primary)',
+                              border: '1px solid var(--border-color)',
+                              borderRadius: '6px',
+                              cursor: clientPage === 1 ? 'not-allowed' : 'pointer',
+                              transition: 'all 0.2s'
+                            }}
+                          >
+                            Anterior
+                          </button>
+                          <button
+                            onClick={() => setClientPage(prev => Math.min(prev + 1, totalPages))}
+                            disabled={clientPage === totalPages}
+                            style={{
+                              padding: '6px 12px',
+                              fontSize: '0.8rem',
+                              fontWeight: 600,
+                              backgroundColor: clientPage === totalPages ? 'transparent' : 'var(--bg-light)',
+                              color: clientPage === totalPages ? 'var(--text-secondary)' : 'var(--text-primary)',
+                              border: '1px solid var(--border-color)',
+                              borderRadius: '6px',
+                              cursor: clientPage === totalPages ? 'not-allowed' : 'pointer',
+                              transition: 'all 0.2s'
+                            }}
+                          >
+                            Siguiente
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
             </div>
 
             {/* Split View: Productos más y menos vendidos */}

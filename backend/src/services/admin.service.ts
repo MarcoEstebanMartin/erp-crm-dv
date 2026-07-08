@@ -244,7 +244,14 @@ export class AdminService {
       where: orderWhereClause,
       include: {
         persona: {
-          select: { id: true, name: true, city: true }
+          select: {
+            id: true,
+            name: true,
+            city: true,
+            seller: {
+              select: { id: true, username: true }
+            }
+          }
         },
         items: {
           include: {
@@ -258,7 +265,7 @@ export class AdminService {
     });
 
     // Aggregations
-    const clientMap = new Map<number, { id: number; name: string; city: string; totalSpent: number; ordersCount: number }>();
+    const clientMap = new Map<number, { id: number; name: string; city: string; sellerName: string; totalSpent: number; ordersCount: number }>();
     const productMap = new Map<number, { id: number; sku: string; name: string; qty: number; revenue: number }>();
     const weeklyMap = new Map<string, { weekStart: string; dateObj: Date; total: number; count: number }>();
 
@@ -267,12 +274,14 @@ export class AdminService {
       const clientId = order.personaId;
       const clientName = order.persona.name;
       const clientCity = order.persona.city || 'Sin especificar';
+      const sellerName = order.persona.seller?.username || 'Sin preventista';
 
       // 1. Client
       const clientData = clientMap.get(clientId) || {
         id: clientId,
         name: clientName,
         city: clientCity,
+        sellerName: sellerName,
         totalSpent: 0,
         ordersCount: 0
       };
@@ -317,9 +326,10 @@ export class AdminService {
       }
     }
 
-    const topClients = Array.from(clientMap.values())
-      .sort((a, b) => b.totalSpent - a.totalSpent)
-      .slice(0, 10);
+    const clientsWithMovements = Array.from(clientMap.values())
+      .sort((a, b) => b.totalSpent - a.totalSpent);
+
+    const topClients = clientsWithMovements.slice(0, 10);
 
     const topProducts = Array.from(productMap.values())
       .sort((a, b) => b.qty - a.qty)
@@ -376,6 +386,7 @@ export class AdminService {
       availableCities: allCitiesResult.map(c => c.city).filter(Boolean),
       availableSellers: sellers,
       topClients,
+      clientsWithMovements,
       topProducts,
       bottomProducts,
       weeklyInvoicing,
