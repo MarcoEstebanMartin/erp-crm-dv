@@ -68,8 +68,7 @@ export default function Login({ onLoginSuccess }: LoginProps) {
           )}
         </div>
         
-        <h2 style={{ fontSize: '1.45rem', marginBottom: '4px' }}>ERP-CRM Mayorista</h2>
-        <p style={{ fontSize: '0.85rem', marginBottom: '28px' }}>Ingresá tus credenciales de acceso</p>
+        <p style={{ fontSize: '0.85rem', marginBottom: '28px', color: 'var(--text-secondary)' }}>Ingresá tus credenciales de acceso</p>
 
         {error && (
           <div style={{
