@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../utils/api';
-import { Lock, Unlock, DollarSign, RefreshCw } from 'lucide-react';
+import { Lock, Unlock, DollarSign, RefreshCw, Eye } from 'lucide-react';
 import ArqueoCajaModal from './ArqueoCajaModal';
 
 export default function CajasDashboard() {
@@ -11,6 +11,31 @@ export default function CajasDashboard() {
 
   const [actionModal, setActionModal] = useState<{ open: boolean; branch: string; mode: 'open' | 'close'; drawerId?: number } | null>(null);
   const [amountInput, setAmountInput] = useState('');
+
+  // Historical drawer inspection states
+  const [inspectDrawer, setInspectDrawer] = useState<any | null>(null);
+  const [inspectTxs, setInspectTxs] = useState<any[]>([]);
+  const [loadingTxs, setLoadingTxs] = useState(false);
+  const [hoveredRowId, setHoveredRowId] = useState<number | null>(null);
+
+  const handleInspectDrawer = async (drawer: any) => {
+    setInspectDrawer(drawer);
+    setLoadingTxs(true);
+    try {
+      const txs = await api.getTransactions({ cashDrawerId: drawer.id });
+      setInspectTxs(txs || []);
+    } catch (err: any) {
+      console.error('Error fetching transactions for historical drawer', err);
+      alert('Error al cargar los comprobantes de la caja.');
+    } finally {
+      setLoadingTxs(false);
+    }
+  };
+
+  const handleCloseInspect = () => {
+    setInspectDrawer(null);
+    setInspectTxs([]);
+  };
 
   // Date Filters
   const [filterStartDate, setFilterStartDate] = useState(() => {
@@ -324,6 +349,7 @@ export default function CajasDashboard() {
                 <th style={{ padding: '12px' }}>Ingreso Cheques</th>
                 <th style={{ padding: '12px' }}>Recaudación Total</th>
                 <th style={{ padding: '12px' }}>Diferencia</th>
+                <th style={{ padding: '12px', textAlign: 'center' }}>Acciones</th>
               </tr>
             </thead>
             <tbody>
@@ -349,7 +375,18 @@ export default function CajasDashboard() {
                   });
 
                   return (
-                    <tr key={d.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
+                    <tr 
+                      key={d.id} 
+                      onClick={() => handleInspectDrawer(d)}
+                      style={{ 
+                        borderBottom: '1px solid var(--border-color)',
+                        cursor: 'pointer',
+                        backgroundColor: hoveredRowId === d.id ? 'var(--bg-light)' : 'transparent',
+                        transition: 'background-color 0.15s'
+                      }}
+                      onMouseEnter={() => setHoveredRowId(d.id)}
+                      onMouseLeave={() => setHoveredRowId(null)}
+                    >
                       <td style={{ padding: '12px', fontWeight: 600 }}>{CAJAS.find(c => c.id === d.branch)?.name || d.branch}</td>
                       <td style={{ padding: '12px', fontSize: '0.8rem' }}>{new Date(d.openedAt).toLocaleString('es-AR', {dateStyle:'short', timeStyle:'short'})}</td>
                       <td style={{ padding: '12px', fontSize: '0.8rem' }}>{new Date(d.closedAt).toLocaleString('es-AR', {dateStyle:'short', timeStyle:'short'})}</td>
@@ -362,6 +399,19 @@ export default function CajasDashboard() {
                       <td style={{ padding: '12px', fontWeight: 600, color: dif >= 0 ? '#10b981' : '#ef4444' }}>
                         {dif > 0 ? '+' : ''}${dif.toLocaleString('es-AR', {minimumFractionDigits:2})}
                       </td>
+                      <td style={{ padding: '12px', textAlign: 'center' }}>
+                        <button 
+                          className="btn btn-ghost" 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleInspectDrawer(d);
+                          }}
+                          style={{ padding: '4px 8px', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.8rem' }}
+                          title="Ver detalle de recibos"
+                        >
+                          <Eye size={14} /> Ver
+                        </button>
+                      </td>
                     </tr>
                   )
                 })
@@ -370,6 +420,136 @@ export default function CajasDashboard() {
           </table>
         </div>
       </div>
+
+      {/* Modal de Inspección de Caja Histórica */}
+      {inspectDrawer && (
+        <div className="modal-overlay" onClick={handleCloseInspect}>
+          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '850px', width: '95%', padding: '24px' }}>
+            <div className="modal-header" style={{ marginBottom: '20px' }}>
+              <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700 }}>
+                Arqueo Histórico: {CAJAS.find(c => c.id === inspectDrawer.branch)?.name || inspectDrawer.branch}
+              </h3>
+              <button 
+                type="button" 
+                className="btn btn-ghost" 
+                style={{ padding: '4px' }} 
+                onClick={handleCloseInspect}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px', marginBottom: '20px' }}>
+              {/* Información General */}
+              <div className="card" style={{ padding: '16px', backgroundColor: '#f8fafc', border: '1px solid var(--border-color)' }}>
+                <h4 style={{ margin: '0 0 10px 0', fontSize: '0.85rem', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 600 }}>Información de la Caja</h4>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.85rem' }}>
+                  <div><strong>Estado:</strong> <span style={{ color: '#10b981', fontWeight: 600 }}>CERRADA</span></div>
+                  <div><strong>Apertura:</strong> {new Date(inspectDrawer.openedAt).toLocaleString('es-AR')}</div>
+                  <div><strong>Cierre:</strong> {new Date(inspectDrawer.closedAt).toLocaleString('es-AR')}</div>
+                  <div><strong>Procesado por:</strong> {inspectDrawer.user?.username || 'Desconocido'}</div>
+                </div>
+              </div>
+
+              {/* Conciliación Financiera */}
+              <div className="card" style={{ padding: '16px', backgroundColor: '#f8fafc', border: '1px solid var(--border-color)' }}>
+                <h4 style={{ margin: '0 0 10px 0', fontSize: '0.85rem', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 600 }}>Cierre y Conciliación</h4>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.85rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: 'var(--text-secondary)' }}>Fondo Inicial:</span>
+                    <strong style={{ fontFamily: 'monospace' }}>${Number(inspectDrawer.openingBalance).toLocaleString('es-AR', {minimumFractionDigits:2})}</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: 'var(--text-secondary)' }}>Esperado (Sistema):</span>
+                    <strong style={{ fontFamily: 'monospace' }}>${Number(inspectDrawer.closingBalance).toLocaleString('es-AR', {minimumFractionDigits:2})}</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: 'var(--text-secondary)' }}>Declarado (Arqueo):</span>
+                    <strong style={{ fontFamily: 'monospace' }}>${Number(inspectDrawer.realBalance).toLocaleString('es-AR', {minimumFractionDigits:2})}</strong>
+                  </div>
+                  <div style={{ height: '1px', backgroundColor: '#cbd5e1', margin: '4px 0' }} />
+                  {(() => {
+                    const diff = Number(inspectDrawer.realBalance) - Number(inspectDrawer.closingBalance);
+                    return (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, color: diff === 0 ? '#166534' : diff > 0 ? '#0f766e' : '#b91c1c' }}>
+                        <span>Diferencia:</span>
+                        <span style={{ fontFamily: 'monospace' }}>{diff > 0 ? '+' : ''}${diff.toLocaleString('es-AR', {minimumFractionDigits:2})}</span>
+                      </div>
+                    )
+                  })()}
+                </div>
+              </div>
+            </div>
+
+            {/* Listado de Transacciones */}
+            <div style={{ border: '1px solid var(--border-color)', borderRadius: '8px', overflow: 'hidden' }}>
+              <div style={{ padding: '12px 16px', backgroundColor: 'var(--bg-light)', fontWeight: 600, fontSize: '0.85rem', borderBottom: '1px solid var(--border-color)' }}>
+                Comprobantes y Cobros Conciliados en este Cierre
+              </div>
+              
+              {loadingTxs ? (
+                <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                  Cargando transacciones conciliadas...
+                </div>
+              ) : inspectTxs.length === 0 ? (
+                <div style={{ padding: '30px', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
+                  No hay transacciones individuales registradas en esta caja (ej: arqueo de solo fondos iniciales).
+                </div>
+              ) : (
+                <div style={{ maxHeight: '250px', overflowY: 'auto' }}>
+                  <table style={{ width: '100%', fontSize: '0.82rem', borderCollapse: 'collapse', textAlign: 'left' }}>
+                    <thead style={{ position: 'sticky', top: 0, backgroundColor: '#f1f5f9', borderBottom: '1px solid var(--border-color)', zIndex: 1 }}>
+                      <tr style={{ color: 'var(--text-secondary)' }}>
+                        <th style={{ padding: '10px' }}>Fecha/Hora</th>
+                        <th style={{ padding: '10px' }}>Recibo/Pedido</th>
+                        <th style={{ padding: '10px' }}>Cliente</th>
+                        <th style={{ padding: '10px' }}>Suc.</th>
+                        <th style={{ padding: '10px' }}>Medio</th>
+                        <th style={{ padding: '10px', textAlign: 'right' }}>Monto</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {inspectTxs.map(t => (
+                        <tr key={t.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                          <td style={{ padding: '10px' }}>
+                            {new Date(t.createdAt).toLocaleTimeString('es-AR', {hour: '2-digit', minute:'2-digit'})}
+                          </td>
+                          <td style={{ padding: '10px', fontWeight: 600 }}>
+                            {t.receiptNumber || `Pedido #${t.orderId || 'S/N'}`}
+                          </td>
+                          <td style={{ padding: '10px' }}>{t.persona?.name || 'Varios/General'}</td>
+                          <td style={{ padding: '10px' }}>{t.billingType === 'OFFICIAL' ? 'A' : 'X'}</td>
+                          <td style={{ padding: '10px' }}>
+                            <span style={{ 
+                              padding: '2px 6px', 
+                              borderRadius: '4px', 
+                              fontSize: '0.7rem', 
+                              fontWeight: 600,
+                              backgroundColor: t.paymentMethod === 'CASH' ? '#ecfdf5' : t.paymentMethod === 'CHECK' ? '#eff6ff' : '#f1f5f9',
+                              color: t.paymentMethod === 'CASH' ? '#047857' : t.paymentMethod === 'CHECK' ? '#1d4ed8' : '#475569'
+                            }}>
+                              {t.paymentMethod}
+                            </span>
+                          </td>
+                          <td style={{ padding: '10px', textAlign: 'right', fontWeight: 600, fontFamily: 'monospace' }}>
+                            ${Number(t.amount).toLocaleString('es-AR', {minimumFractionDigits:2})}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '20px', borderTop: '1px solid var(--border-color)', paddingTop: '16px' }}>
+              <button type="button" className="btn btn-secondary" onClick={handleCloseInspect} style={{ padding: '8px 20px' }}>
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
   
     </div>
   );
