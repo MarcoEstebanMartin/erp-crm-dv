@@ -1826,6 +1826,20 @@ export const api = {
           count: w.count
         }));
 
+      const activeProductsList = products.filter((p: any) => Number(p.stock) > 0);
+      const deadStockProducts = activeProductsList
+        .filter((p: any) => !productMap.has(p.id))
+        .map((p: any) => ({
+          id: p.id,
+          sku: p.sku,
+          name: p.name,
+          stock: Number(p.stock),
+          qty: 0,
+          revenue: 0
+        }))
+        .sort((a: any, b: any) => b.stock - a.stock)
+        .slice(0, 10);
+
       return {
         totalClients,
         totalDebt,
@@ -1835,7 +1849,8 @@ export const api = {
         topClients,
         topProducts,
         bottomProducts,
-        weeklyInvoicing
+        weeklyInvoicing,
+        deadStockProducts
       };
     }
     

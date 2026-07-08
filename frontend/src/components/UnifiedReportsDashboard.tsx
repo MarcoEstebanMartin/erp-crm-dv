@@ -18,7 +18,7 @@ export default function UnifiedReportsDashboard({
   products,
   financialReport
 }: UnifiedReportsDashboardProps) {
-  const [activeTab, setActiveTab] = useState<'finanzas' | 'vendedores' | 'zonas' | 'productos' | 'crm'>('finanzas');
+  const [activeTab, setActiveTab] = useState<'finanzas' | 'vendedores' | 'zonas' | 'crm'>('finanzas');
   
   // Estados para Zonas
   const [zoneData, setZoneData] = useState<any>({
@@ -41,6 +41,7 @@ export default function UnifiedReportsDashboard({
   const [zoneDatePreset, setZoneDatePreset] = useState<string>('all');
   const [zoneStartDate, setZoneStartDate] = useState<string>('');
   const [zoneEndDate, setZoneEndDate] = useState<string>('');
+  const [bottomProductsTab, setBottomProductsTab] = useState<'lento' | 'sin_ventas'>('lento');
 
   // Filtros para Vendedores
   const [sellerDateFilter, setSellerDateFilter] = useState<string>('all');
@@ -147,19 +148,7 @@ export default function UnifiedReportsDashboard({
     }
   });
 
-  const productStatsList = Object.keys(productStatsMap).map((key: any) => ({
-    id: Number(key),
-    ...productStatsMap[key]
-  }));
 
-  const topProducts = [...productStatsList]
-    .filter(p => p.qty > 0)
-    .sort((a, b) => b.qty - a.qty)
-    .slice(0, 10);
-
-  const deadStockProducts = [...productStatsList]
-    .filter(p => p.qty === 0 && p.stock > 0)
-    .sort((a, b) => b.stock - a.stock);
 
   // Carga de datos de zonas
   const loadZoneData = async () => {
@@ -213,6 +202,7 @@ export default function UnifiedReportsDashboard({
   const zoneTopClients = zoneData.topClients || [];
   const zoneTopProducts = zoneData.topProducts || [];
   const zoneBottomProducts = zoneData.bottomProducts || [];
+  const zoneDeadStockProducts = zoneData.deadStockProducts || [];
   const zoneWeeklyInvoicing = zoneData.weeklyInvoicing || [];
 
   const totalInvoicedInZone = zoneWeeklyInvoicing.reduce((sum: number, w: any) => sum + (w.total || 0), 0);
@@ -248,7 +238,6 @@ export default function UnifiedReportsDashboard({
           { id: 'finanzas', label: 'Resumen Financiero', icon: <DollarSign size={16} /> },
           { id: 'vendedores', label: 'Rendimiento Vendedores', icon: <Users size={16} /> },
           { id: 'zonas', label: 'Análisis de Zonas', icon: <MapPin size={16} /> },
-          { id: 'productos', label: 'Catálogo y Productos', icon: <Package size={16} /> },
           { id: 'crm', label: 'CRM + IA', icon: <Sparkles size={16} /> }
         ].map(tab => (
           <button
@@ -687,31 +676,95 @@ export default function UnifiedReportsDashboard({
                 )}
               </div>
 
-              {/* Productos menos vendidos */}
+              {/* Productos de baja rotación y stock inmovilizado */}
               <div className="card" style={{ padding: '24px', borderRadius: '12px' }}>
-                <h4 style={{ fontSize: '1.1rem', fontWeight: 600, margin: '0 0 16px 0', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <Package size={20} /> Productos de Menor Salida (Lento Movimiento)
-                </h4>
-                {zoneBottomProducts.length === 0 ? (
-                  <p style={{ color: 'var(--text-secondary)', margin: 0 }}>No hay ventas registradas.</p>
-                ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    {zoneBottomProducts.map((p: any, idx: number) => (
-                      <div key={p.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '12px', borderBottom: '1px solid var(--border-color)' }}>
-                        <div>
-                          <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>
-                            <span style={{ color: 'var(--text-secondary)', marginRight: '6px' }}>#{idx + 1}</span>
-                            {p.name}
-                          </div>
-                          <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '2px' }}>SKU: {p.sku}</div>
-                        </div>
-                        <div style={{ textAlign: 'right' }}>
-                          <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>{p.qty} unidades</div>
-                          <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>${p.revenue.toLocaleString()}</div>
-                        </div>
-                      </div>
-                    ))}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px', flexWrap: 'wrap', gap: '8px' }}>
+                  <h4 style={{ fontSize: '1.1rem', fontWeight: 600, margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Package size={20} color="var(--text-secondary)" /> Alertas y Baja Rotación
+                  </h4>
+                  <div style={{ display: 'flex', gap: '2px', backgroundColor: 'var(--bg-light)', padding: '2px', borderRadius: '6px' }}>
+                    <button
+                      onClick={() => setBottomProductsTab('lento')}
+                      style={{
+                        padding: '4px 8px',
+                        fontSize: '0.75rem',
+                        fontWeight: 600,
+                        backgroundColor: bottomProductsTab === 'lento' ? '#fff' : 'transparent',
+                        color: bottomProductsTab === 'lento' ? 'var(--text-primary)' : 'var(--text-secondary)',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        boxShadow: bottomProductsTab === 'lento' ? '0 1px 2px rgba(0,0,0,0.05)' : 'none',
+                        transition: 'all 0.1s'
+                      }}
+                    >
+                      Lento Movimiento
+                    </button>
+                    <button
+                      onClick={() => setBottomProductsTab('sin_ventas')}
+                      style={{
+                        padding: '4px 8px',
+                        fontSize: '0.75rem',
+                        fontWeight: 600,
+                        backgroundColor: bottomProductsTab === 'sin_ventas' ? '#fff' : 'transparent',
+                        color: bottomProductsTab === 'sin_ventas' ? 'var(--text-primary)' : 'var(--text-secondary)',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        boxShadow: bottomProductsTab === 'sin_ventas' ? '0 1px 2px rgba(0,0,0,0.05)' : 'none',
+                        transition: 'all 0.1s'
+                      }}
+                    >
+                      Stock Muerto
+                    </button>
                   </div>
+                </div>
+
+                {bottomProductsTab === 'lento' ? (
+                  zoneBottomProducts.length === 0 ? (
+                    <p style={{ color: 'var(--text-secondary)', margin: 0 }}>No hay ventas registradas.</p>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      {zoneBottomProducts.map((p: any, idx: number) => (
+                        <div key={p.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '12px', borderBottom: '1px solid var(--border-color)' }}>
+                          <div>
+                            <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>
+                              <span style={{ color: 'var(--text-secondary)', marginRight: '6px' }}>#{idx + 1}</span>
+                              {p.name}
+                            </div>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '2px' }}>SKU: {p.sku}</div>
+                          </div>
+                          <div style={{ textAlign: 'right' }}>
+                            <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>{p.qty} unidades</div>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>${p.revenue.toLocaleString()}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )
+                ) : (
+                  zoneDeadStockProducts.length === 0 ? (
+                    <p style={{ color: 'var(--text-secondary)', margin: 0 }}>Excelente. No hay stock inmovilizado en esta zona.</p>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      {zoneDeadStockProducts.map((p: any, idx: number) => (
+                        <div key={p.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '12px', borderBottom: '1px solid var(--border-color)' }}>
+                          <div>
+                            <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>
+                              <span style={{ color: 'var(--text-secondary)', marginRight: '6px' }}>#{idx + 1}</span>
+                              {p.name}
+                            </div>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '2px' }}>SKU: {p.sku}</div>
+                          </div>
+                          <div style={{ textAlign: 'right' }}>
+                            <span className="badge" style={{ backgroundColor: '#FCE8E6', color: '#E30613', fontSize: '0.75rem', fontWeight: 600, padding: '4px 8px', borderRadius: '4px' }}>
+                              {p.stock} u en depósito
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )
                 )}
               </div>
 
@@ -722,65 +775,7 @@ export default function UnifiedReportsDashboard({
         </div>
       )}
 
-      {/* 4. PRODUCTOS */}
-      {activeTab === 'productos' && (
-        <div className="fade-in" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
-          
-          <div className="card" style={{ padding: '24px', borderRadius: '12px' }}>
-            <h4 style={{ fontSize: '1.1rem', fontWeight: 700, margin: '0 0 20px 0', color: '#137333', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <TrendingUp size={20} /> Productos Estrella (Top 10)
-            </h4>
-            {topProducts.length === 0 ? (
-              <p style={{ color: 'var(--text-secondary)' }}>No hay ventas registradas.</p>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                {topProducts.map((p, idx) => (
-                  <div key={p.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '12px', borderBottom: '1px solid var(--border-color)' }}>
-                    <div>
-                      <div style={{ fontWeight: 600, fontSize: '0.95rem' }}>
-                        <span style={{ color: 'var(--text-secondary)', marginRight: '8px' }}>#{idx + 1}</span>
-                        {p.name}
-                      </div>
-                      <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '4px' }}>SKU: {p.sku} | Stock: {p.stock}</div>
-                    </div>
-                    <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontWeight: 700, fontSize: '1rem' }}>{p.qty} vendidos</div>
-                      <div style={{ fontSize: '0.8rem', color: '#137333', fontWeight: 600 }}>${p.revenue.toLocaleString()}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
 
-          <div className="card" style={{ padding: '24px', borderRadius: '12px' }}>
-            <h4 style={{ fontSize: '1.1rem', fontWeight: 700, margin: '0 0 8px 0', color: 'var(--color-danger)' }}>
-              ⚠️ Alerta de Stock Muerto (Cero Ventas)
-            </h4>
-            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '20px' }}>
-              Estos productos tienen stock inmovilizado en depósito pero no registran ventas recientes. Se recomienda hacer promociones o descuentos.
-            </p>
-            {deadStockProducts.length === 0 ? (
-              <p style={{ color: 'var(--text-secondary)' }}>Excelente. No hay stock inmovilizado.</p>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '500px', overflowY: 'auto', paddingRight: '8px' }}>
-                {deadStockProducts.map(p => (
-                  <div key={p.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px', backgroundColor: '#fcfcfc', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-                    <div>
-                      <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{p.name}</div>
-                      <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '2px' }}>SKU: {p.sku}</div>
-                    </div>
-                    <span className="badge" style={{ backgroundColor: '#FCE8E6', color: 'var(--color-danger)', fontSize: '0.85rem', fontWeight: 600 }}>
-                      {p.stock} u en depósito
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-        </div>
-      )}
 
       {/* 5. CRM + IA */}
       {activeTab === 'crm' && (

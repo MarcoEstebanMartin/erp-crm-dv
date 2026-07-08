@@ -350,6 +350,25 @@ export class AdminService {
       select: { id: true, username: true }
     });
 
+    // Query active products in deposit (stock > 0) to check for zero sales in this zone
+    const activeProducts = await prisma.product.findMany({
+      where: { stock: { gt: 0 } },
+      select: { id: true, sku: true, name: true, stock: true }
+    });
+
+    const deadStockProducts = activeProducts
+      .filter(p => !productMap.has(p.id))
+      .map(p => ({
+        id: p.id,
+        sku: p.sku,
+        name: p.name,
+        stock: p.stock,
+        qty: 0,
+        revenue: 0
+      }))
+      .sort((a, b) => b.stock - a.stock)
+      .slice(0, 10);
+
     return {
       totalClients,
       totalDebt,
@@ -359,7 +378,8 @@ export class AdminService {
       topClients,
       topProducts,
       bottomProducts,
-      weeklyInvoicing
+      weeklyInvoicing,
+      deadStockProducts
     };
   }
 }
