@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { api } from '../utils/api';
-import { BarChart2, DollarSign, Users, MapPin, Package, RefreshCw, TrendingUp, Sparkles } from 'lucide-react';
+import { BarChart2, DollarSign, Users, MapPin, Package, RefreshCw, TrendingUp, Sparkles, FileText } from 'lucide-react';
 import CrmDashboard from './CrmDashboard';
+import AfipExportDashboard from '../pages/AfipExportDashboard';
 
 interface UnifiedReportsDashboardProps {
   orders: any[];
@@ -18,7 +19,7 @@ export default function UnifiedReportsDashboard({
   products,
   financialReport
 }: UnifiedReportsDashboardProps) {
-  const [activeTab, setActiveTab] = useState<'finanzas' | 'zonas' | 'crm'>('finanzas');
+  const [activeTab, setActiveTab] = useState<'finanzas' | 'zonas' | 'crm' | 'arca'>('finanzas');
   
   // Estados para Zonas
   const [zoneData, setZoneData] = useState<any>({
@@ -176,7 +177,8 @@ export default function UnifiedReportsDashboard({
         {[
           { id: 'finanzas', label: 'Resumen Financiero', icon: <DollarSign size={16} /> },
           { id: 'zonas', label: 'Análisis de Zonas', icon: <MapPin size={16} /> },
-          { id: 'crm', label: 'CRM + IA', icon: <Sparkles size={16} /> }
+          { id: 'crm', label: 'CRM + IA', icon: <Sparkles size={16} /> },
+          { id: 'arca', label: 'Cierre Fiscal (ARCA)', icon: <FileText size={16} /> }
         ].map(tab => (
           <button
             key={tab.id}
@@ -863,6 +865,13 @@ export default function UnifiedReportsDashboard({
       {activeTab === 'crm' && (
         <div className="fade-in">
           <CrmDashboard />
+        </div>
+      )}
+
+      {/* 6. ARCA */}
+      {activeTab === 'arca' && (
+        <div className="fade-in">
+          <AfipExportDashboard />
         </div>
       )}
     </div>
