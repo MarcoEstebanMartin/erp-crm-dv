@@ -426,6 +426,13 @@ export const api = {
     return res.transactions;
   },
 
+  createExpense: async (amount: number, description: string, paymentMethod: string, billingType: string) => {
+    return await request('/finance/expenses', {
+      method: 'POST',
+      body: JSON.stringify({ amount, description, paymentMethod, billingType })
+    });
+  },
+
   getCashDrawers: async () => {
     
     try {

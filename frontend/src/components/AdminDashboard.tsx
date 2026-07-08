@@ -9,6 +9,7 @@ import PriceListModal from './PriceListModal';
 import ProductsList from './ProductsList';
 import RubrosList from './RubrosList';
 import CajasDashboard from './CajasDashboard';
+import FinanzasDashboard from './FinanzasDashboard';
 import BillingDashboard from './BillingDashboard';
 import ResumenCuentaModal from './modals/ResumenCuentaModal';
 import QuickPriceSearchModal from './modals/QuickPriceSearchModal';
@@ -1574,7 +1575,12 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
         <RepartoDashboard />
       )}
 
-
+      {/* ====================================================================
+          7. CAJAS Y TESORERÍA (FINANZAS)
+          ==================================================================== */}
+      {activeTab === 'finanzas' && (
+        <FinanzasDashboard />
+      )}
 
       {/* ====================================================================
           FACTURACION & IMPUESTOS (BILLING)

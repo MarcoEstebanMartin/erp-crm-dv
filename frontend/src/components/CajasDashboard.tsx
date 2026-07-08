@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../utils/api';
-import { Lock, Unlock, DollarSign, RefreshCw, Eye } from 'lucide-react';
+import { Lock, Unlock, RefreshCw, Eye } from 'lucide-react';
 import ArqueoCajaModal from './ArqueoCajaModal';
 
 export default function CajasDashboard() {
   const [loading, setLoading] = useState(true);
   const [drawers, setDrawers] = useState<any[]>([]);
-  const [cajaGrandeBalance, setCajaGrandeBalance] = useState(0);
   const [historicalDrawers, setHistoricalDrawers] = useState<any[]>([]);
 
   const [actionModal, setActionModal] = useState<{ open: boolean; branch: string; mode: 'open' | 'close'; drawerId?: number } | null>(null);
@@ -57,9 +56,7 @@ export default function CajasDashboard() {
   });
 
   const CAJAS = [
-    { id: 'DEPOSITO', name: 'Caja Depósito', desc: 'Ventas diarias en sucursal y depósito' },
-    { id: 'REPARTO', name: 'Caja Reparto', desc: 'Rendiciones de choferes en Villegas' },
-    { id: 'VENDEDORES', name: 'Caja Vendedores', desc: 'Cobranzas y ventas de los pueblos' }
+    { id: 'DEPOSITO', name: 'Caja Depósito', desc: 'Ventas de mostrador y depósito' }
   ];
 
   useEffect(() => {
@@ -77,8 +74,6 @@ export default function CajasDashboard() {
       // Calculate Caja Grande balance from all closed drawers' real balances, minus whatever exits from Caja Grande (if any)
       // For simplicity, sum of realBalance of all CLOSED drawers
       const closed = allDrawers.filter((d: any) => d.status === 'CLOSED');
-      const totalCajaGrande = closed.reduce((acc: number, curr: any) => acc + (Number(curr.realBalance || 0) - Number(curr.openingBalance || 0)), 0);
-      setCajaGrandeBalance(totalCajaGrande);
       const history = [...closed].sort((a, b) => new Date(b.closedAt).getTime() - new Date(a.closedAt).getTime());
       setHistoricalDrawers(history);
     } catch (err: any) {
@@ -130,23 +125,7 @@ export default function CajasDashboard() {
   return (
     <div style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
       
-      {/* Header Caja Grande */}
-      <div className="card" style={{ marginBottom: '30px', background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)', color: 'white', padding: '30px', borderRadius: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div>
-          <h2 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '10px', color: '#e5e7eb' }}>
-            <DollarSign size={28} color="#10b981" /> Caja Grande (Central)
-          </h2>
-          <p style={{ margin: '8px 0 0 0', opacity: 0.8, fontSize: '0.95rem', color: '#e5e7eb' }}>
-            Fondo consolidado de todos los arqueos y cierres operativos.
-          </p>
-        </div>
-        <div style={{ textAlign: 'right' }}>
-          <div style={{ fontSize: '0.9rem', opacity: 0.8, marginBottom: '4px' }}>Saldo Disponible</div>
-          <div style={{ fontSize: '2.5rem', fontWeight: 'bold', color: '#10b981' }}>
-            ${cajaGrandeBalance.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
-          </div>
-        </div>
-      </div>
+
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 600 }}>Cajas Operativas</h3>
@@ -280,9 +259,11 @@ export default function CajasDashboard() {
       )}
 
 
-      {/* Resumen Semanal */}
-      <div style={{ marginTop: '40px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 600 }}>Balance Consolidado</h3>
+
+
+      {/* Historial */}
+      <div style={{ marginTop: '40px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 600 }}>Historial de Arqueos (Cajas Cerradas)</h3>
         <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
           <div className="form-group" style={{ margin: 0 }}>
             <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginRight: '8px' }}>Desde</span>
@@ -294,47 +275,6 @@ export default function CajasDashboard() {
           </div>
         </div>
       </div>
-      <div style={{ marginTop: '20px' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px' }}>
-          {(() => {
-            let cashTotal = 0;
-            let checkTotal = 0;
-            
-            filteredHistory.forEach((d: any) => {
-              d.transactions?.forEach((t: any) => {
-                if(t.type === 'INCOME') {
-                  if(t.paymentMethod === 'CASH') cashTotal += Number(t.amount);
-                  if(t.paymentMethod === 'CHECK') checkTotal += Number(t.amount);
-                } else if(t.type === 'OUTCOME') {
-                  if(t.paymentMethod === 'CASH') cashTotal -= Number(t.amount);
-                  if(t.paymentMethod === 'CHECK') checkTotal -= Number(t.amount);
-                }
-              });
-            });
-
-            return (
-              <>
-                <div className="card" style={{ padding: '20px', backgroundColor: '#ecfdf5', border: '1px solid #a7f3d0' }}>
-                  <div style={{ fontSize: '0.85rem', color: '#047857', fontWeight: 600, textTransform: 'uppercase', marginBottom: '8px' }}>Ingreso Efectivo</div>
-                  <div style={{ fontSize: '2rem', fontWeight: 700, color: '#065f46' }}>${cashTotal.toLocaleString('es-AR', {minimumFractionDigits:2})}</div>
-                </div>
-                <div className="card" style={{ padding: '20px', backgroundColor: '#eff6ff', border: '1px solid #bfdbfe' }}>
-                  <div style={{ fontSize: '0.85rem', color: '#1d4ed8', fontWeight: 600, textTransform: 'uppercase', marginBottom: '8px' }}>Ingreso Cheques</div>
-                  <div style={{ fontSize: '2rem', fontWeight: 700, color: '#1e3a8a' }}>${checkTotal.toLocaleString('es-AR', {minimumFractionDigits:2})}</div>
-                </div>
-                <div className="card" style={{ padding: '20px', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0' }}>
-                  <div style={{ fontSize: '0.85rem', color: '#475569', fontWeight: 600, textTransform: 'uppercase', marginBottom: '8px' }}>Recaudación Total Periodo</div>
-                  <div style={{ fontSize: '2rem', fontWeight: 700, color: '#0f172a' }}>${(cashTotal + checkTotal).toLocaleString('es-AR', {minimumFractionDigits:2})}</div>
-                </div>
-              </>
-            )
-          })()}
-        </div>
-      </div>
-
-      {/* Historial */}
-      <div style={{ marginTop: '40px' }}>
-        <h3 style={{ margin: '0 0 20px 0', fontSize: '1.25rem', fontWeight: 600 }}>Historial de Arqueos (Cajas Cerradas)</h3>
         <div className="table-responsive card">
           <table className="table" style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
             <thead>
@@ -419,7 +359,6 @@ export default function CajasDashboard() {
             </tbody>
           </table>
         </div>
-      </div>
 
       {/* Modal de Inspección de Caja Histórica */}
       {inspectDrawer && (

@@ -629,3 +629,62 @@ export async function getDrawersHistory(req: AuthenticatedRequest, res: Response
     res.status(500).json({ status: 'error', message: 'Error al obtener el historial de cajas.' });
   }
 }
+
+export async function createExpense(req: AuthenticatedRequest, res: Response): Promise<void> {
+  const { amount, description, paymentMethod, billingType } = req.body;
+  const userId = req.user?.id;
+
+  if (!userId) {
+    res.status(401).json({ status: 'error', message: 'No autenticado.' });
+    return;
+  }
+
+  const expAmount = Number(amount);
+  if (isNaN(expAmount) || expAmount <= 0) {
+    res.status(400).json({ status: 'error', message: 'El monto del gasto debe ser mayor a 0.' });
+    return;
+  }
+
+  if (!description) {
+    res.status(400).json({ status: 'error', message: 'La descripción del gasto es obligatoria.' });
+    return;
+  }
+
+  try {
+    const transaction = await prisma.transaction.create({
+      data: {
+        userId,
+        type: TransactionType.OUTCOME,
+        paymentMethod: paymentMethod as PaymentMethod || PaymentMethod.CASH,
+        billingType: billingType as BillingType || BillingType.INTERNAL,
+        amount: expAmount,
+        description,
+        verified: true, // Auto-verified since it is admin-logged
+      }
+    });
+
+    // Save Audit Log
+    await prisma.auditLog.create({
+      data: {
+        userId,
+        action: 'CREATE_EXPENSE',
+        entityType: 'Transaction',
+        entityId: transaction.id,
+        newValues: {
+          amount: expAmount,
+          description,
+          paymentMethod,
+          billingType
+        }
+      }
+    });
+
+    res.status(201).json({
+      status: 'success',
+      data: { transaction }
+    });
+  } catch (error: any) {
+    console.error('Error al registrar gasto:', error);
+    res.status(500).json({ status: 'error', message: 'Error interno del servidor al registrar el gasto.' });
+  }
+}
