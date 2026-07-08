@@ -35,17 +35,28 @@ export default function ProductsList({ products, searchQuery, setSearchQuery, se
 
     if (field === 'costPrice') {
       updatedProduct.costPrice = numValue;
-      // If we want to maintain 25% rentabilidad, we could do it here, but let's just update cost.
+      // Recalculate listPrice using costPrice and existing rentabilidad
+      const cost = numValue;
+      const margin = p.rubro ? Number(p.rubro.profitMargin) : 1.25;
+      const precioFinal = cost * margin;
+      updatedProduct.listPrice = Math.max(0, Math.round(precioFinal * 100) / 100);
+      updatedProduct.listPriceB = Math.max(0, Math.round(updatedProduct.listPrice * 0.95 * 100) / 100);
+      updatedProduct.listPriceC = Math.max(0, Math.round(updatedProduct.listPrice * 0.90 * 100) / 100);
     } else if (field === 'listPrice') {
-      updatedProduct.listPrice = numValue;
+      // The user edited the "PRECIO SIN IVA" column directly, so numValue is precioSinIva
+      const precioFinal = numValue * 1.21;
+      updatedProduct.listPrice = Math.max(0, Math.round(precioFinal * 100) / 100);
+      updatedProduct.listPriceB = Math.max(0, Math.round(updatedProduct.listPrice * 0.95 * 100) / 100);
+      updatedProduct.listPriceC = Math.max(0, Math.round(updatedProduct.listPrice * 0.90 * 100) / 100);
     } else if (field === 'rentabilidad') {
       // User entered a percentage, e.g., 25
       // rentabilidad = precioFinal / costo -> precioFinal = costo * (1 + rent/100)
-      // precioSinIva = precioFinal / 1.21
       const costo = Number(p.costPrice) || 0;
       const factor = 1 + (numValue / 100);
       const precioFinal = costo * factor;
-      updatedProduct.listPrice = precioFinal / 1.21;
+      updatedProduct.listPrice = Math.max(0, Math.round(precioFinal * 100) / 100);
+      updatedProduct.listPriceB = Math.max(0, Math.round(updatedProduct.listPrice * 0.95 * 100) / 100);
+      updatedProduct.listPriceC = Math.max(0, Math.round(updatedProduct.listPrice * 0.90 * 100) / 100);
     }
 
     await onUpdateProduct(updatedProduct);
@@ -143,8 +154,8 @@ export default function ProductsList({ products, searchQuery, setSearchQuery, se
               filteredProducts
                 .map((p) => {
                   const costo = Number(p.costPrice) || 0;
-                  const precioSinIva = Number(p.listPrice) || 0;
-                  const precioFinal = precioSinIva * 1.21;
+                  const precioFinal = Number(p.listPrice) || 0;
+                  const precioSinIva = precioFinal / 1.21;
                   // Rentabilidad inversa: si precio final = costo * rentabilidad -> rentabilidad = precio final / costo
                   const rentabilidad = costo > 0 ? (precioFinal / costo) : 0;
                   

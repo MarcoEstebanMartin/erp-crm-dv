@@ -127,27 +127,17 @@ export async function updateRubro(req: AuthenticatedRequest, res: Response): Pro
       await prisma.$transaction(async (tx) => {
         for (const p of products) {
           const cost = Number(p.costPrice);
-          const newPrice = cost * val; // PRECIO FINAL = COSTO * RENTABILIDAD
-          
-          // Suponiendo que listPrice es Precio Final, o Precio Sin Iva?
-          // El Excel hace: PRECIO FINAL = COSTO * RENTABILIDAD.
-          // El backend actualmente maneja listPrice. Actualizaremos listPrice a PRECIO SIN IVA (Final / 1.21)
-          // O si listPrice es Precio Final, a newPrice. Dejémoslo igual a la fórmula del BulkUpdatePrices.
-          // Pero la fórmula de bulkUpdatePrices (cuando es margin) es: newPrice = cost * (1 + val / 100)
-          // Aquí la rentabilidad viene como 1.25. 
-          // Ajustaremos a la lógica original: newPrice = cost * (val) si val es un multiplicador (ej. 1.25).
-          // Guardaremos la lógica exacta que se usa en Excel:
-          // PRECIO SIN IVA = PRECIO FINAL / 1.21
-          // listPrice = newPrice / 1.21
-          
-          const precioFinal = cost * val;
-          const precioSinIva = precioFinal / 1.21;
+          const precioFinal = cost * val; // PRECIO FINAL = COSTO * RENTABILIDAD
+          const roundedFinal = Math.max(0, Math.round(precioFinal * 100) / 100);
+          const precioB = Math.max(0, Math.round(roundedFinal * 0.95 * 100) / 100);
+          const precioC = Math.max(0, Math.round(roundedFinal * 0.90 * 100) / 100);
 
           await tx.product.update({ 
             where: { id: p.id }, 
             data: { 
-              listPrice: Math.max(0, Math.round(precioSinIva * 100) / 100),
-              // En un futuro listPrice podria ser el precio de venta sin iva, etc.
+              listPrice: roundedFinal,
+              listPriceB: precioB,
+              listPriceC: precioC
             } 
           });
         }
