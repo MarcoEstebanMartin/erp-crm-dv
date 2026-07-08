@@ -898,7 +898,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
   };
 
   // Pedidos por estado para el Panel Principal
-  const totalOrders = orders.length;
+  // const totalOrders = orders.length;
   const recibidosOrdersCount = orders.filter(o => o.status === 'PENDING' || o.status === 'PREPARING').length;
   const armadosOrdersCount = orders.filter(o => o.status === 'PREPARED' && !o.invoiceNumber).length;
   const facturadosOrdersCount = orders.filter(o => o.invoiceNumber && (!o.deliveryRoute || o.deliveryRoute.status === 'PENDING')).length;
@@ -1162,7 +1162,6 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
           <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
             {[
               { id: 'client', label: 'Clientes' },
-              { id: 'provider', label: 'Proveedores' },
               { id: 'seller', label: 'Vendedores' },
               { id: 'commission_agent', label: 'Comisionistas' },
               { id: 'debtors_by_city', label: '📊 Deudores por Localidad' }

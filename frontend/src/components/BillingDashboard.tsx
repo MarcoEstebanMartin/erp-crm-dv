@@ -15,15 +15,11 @@ interface BillingDashboardProps {
 }
 
 export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: _setActiveTab }: BillingDashboardProps) {
-  const currentUser = api.getCurrentUser();
-  const isAdmin = currentUser?.role === 'ADMIN';
-
   // Sub-pestañas del módulo de facturación
-  const [activeSubTab, setActiveSubTab] = useState<'ventas' | 'compras' | 'percepciones' | 'retenciones' | 'libro-ventas' | 'libro-compras' | 'notas-credito'>('ventas');
+  const [activeSubTab, setActiveSubTab] = useState<'ventas' | 'percepciones' | 'retenciones' | 'notas-credito'>('ventas');
 
   // Listas de datos
   const [salesInvoices, setSalesInvoices] = useState<any[]>([]);
-  const [supplierInvoices, setSupplierInvoices] = useState<any[]>([]);
   const [taxWithholdings, setTaxWithholdings] = useState<any[]>([]);
   const [personas, setPersonas] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
@@ -53,49 +49,13 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
   const [activeCNProductSuggestionIdx, setActiveCNProductSuggestionIdx] = useState(0);
 
   // Filtrar personas
-  const providersOnly = useMemo(() => {
-    return personas.filter(p => p.isProvider);
-  }, [personas]);
-
   const clientsOnly = useMemo(() => {
     return personas.filter(p => p.isClient);
   }, [personas]);
 
-  const supplierMetrics = useMemo(() => {
-    let totalDeuda = 0;
-    let vencidasCount = 0;
-    let totalVencidas = 0;
-    let proximasCount = 0;
-    let totalProximas = 0;
-
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const in7Days = new Date();
-    in7Days.setDate(today.getDate() + 7);
-    in7Days.setHours(23, 59, 59, 999);
-
-    supplierInvoices.forEach((inv) => {
-      if (inv.status === 'PAID') return;
-
-      const total = Number(inv.totalAmount || 0);
-      const paid = Number(inv.paidAmount || 0);
-      const pending = total - paid;
-      totalDeuda += pending;
-
-      if (inv.dueDate) {
-        const due = new Date(inv.dueDate);
-        if (due < today) {
-          vencidasCount++;
-          totalVencidas += pending;
-        } else if (due >= today && due <= in7Days) {
-          proximasCount++;
-          totalProximas += pending;
-        }
-      }
-    });
-
-    return { totalDeuda, vencidasCount, totalVencidas, proximasCount, totalProximas };
-  }, [supplierInvoices]);
+  const providersOnly = useMemo(() => {
+    return personas.filter(p => p.isProvider);
+  }, [personas]);
 
   // Estados para facturación directa
   const [showDirectInvoiceModal, setShowDirectInvoiceModal] = useState(false);
@@ -134,7 +94,6 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
   const [salesInvoiceTypeFilter, setSalesInvoiceTypeFilter] = useState<'ALL' | 'OFFICIAL' | 'INTERNAL'>('ALL');
 
   // Modales
-  const [showSupplierModal, setShowSupplierModal] = useState(false);
   const [showWithholdingModal, setShowWithholdingModal] = useState(false);
   const [viewInvoiceModal, setViewInvoiceModal] = useState<any | null>(null);
 
@@ -146,17 +105,6 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
   const [selectedBranch, setSelectedBranch] = useState('X');
 
   // Estados de formularios
-  const [supplierForm, setSupplierForm] = useState({
-    personaId: '',
-    invoiceNumber: '',
-    invoiceType: 'FACTURA_A',
-    issueDate: new Date().toISOString().split('T')[0],
-    dueDate: new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString().split('T')[0],
-    netAmount: '',
-    taxAmount: '',
-    percepcionAmount: '',
-    totalAmount: ''
-  });
 
   const [withholdingForm, setWithholdingForm] = useState({
     type: 'RETENCION_SUFRIDA',
@@ -207,9 +155,6 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
       if (activeSubTab === 'ventas') {
         const data = await api.getSalesInvoices(filters);
         setSalesInvoices(data);
-      } else if (activeSubTab === 'compras') {
-        const data = await api.getSupplierInvoices(filters);
-        setSupplierInvoices(data);
       } else if (activeSubTab === 'percepciones') {
         const data = await api.getTaxWithholdings(filters);
         // Filtrar percepciones sufridas y practicadas
@@ -825,81 +770,7 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
     }
   };
 
-  // --- CALCULAR AUTO-COMPLETADO DE TOTALES DE COMPRA ---
-  const autoCalculatedTotal = useMemo(() => {
-    const net = Number(supplierForm.netAmount) || 0;
-    const tax = Number(supplierForm.taxAmount) || 0;
-    const perc = Number(supplierForm.percepcionAmount) || 0;
-    return (net + tax + perc).toFixed(2);
-  }, [supplierForm.netAmount, supplierForm.taxAmount, supplierForm.percepcionAmount]);
 
-  // Al cambiar neto en compra, auto-calcular IVA 21% por defecto
-  const handleNetChange = (val: string) => {
-    const net = Number(val) || 0;
-    const tax = (net * 0.21).toFixed(2);
-    setSupplierForm(prev => ({
-      ...prev,
-      netAmount: val,
-      taxAmount: tax,
-      totalAmount: (net + Number(tax) + (Number(prev.percepcionAmount) || 0)).toFixed(2)
-    }));
-  };
-
-  // --- REGISTRAR FACTURA DE COMPRA ---
-  const handleCreateSupplierInvoiceSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setErrorMsg(null);
-    setSuccessMsg(null);
-
-    const { personaId, invoiceNumber, invoiceType, issueDate, dueDate, netAmount, taxAmount, percepcionAmount, totalAmount } = supplierForm;
-
-    if (!personaId || !invoiceNumber || !invoiceType || !issueDate || !netAmount || !taxAmount || !totalAmount) {
-      setErrorMsg('Por favor complete todos los campos obligatorios.');
-      return;
-    }
-
-    const expectedTotal = Number(netAmount) + Number(taxAmount) + (Number(percepcionAmount) || 0);
-    if (Math.abs(Number(totalAmount) - expectedTotal) > 1.00) {
-      if (!window.confirm(`⚠️ El total ($${totalAmount}) no coincide con Neto + IVA + Percepción ($${expectedTotal.toFixed(2)}). ¿Desea guardar de todas formas?`)) {
-        return;
-      }
-    }
-
-    try {
-      setLoading(true);
-      await api.createSupplierInvoice({
-        personaId: Number(personaId),
-        invoiceNumber,
-        invoiceType,
-        issueDate: new Date(issueDate).toISOString(),
-        dueDate: dueDate ? new Date(dueDate).toISOString() : new Date(new Date(issueDate).getTime() + 30 * 24 * 3600 * 1000).toISOString(),
-        netAmount: Number(netAmount),
-        taxAmount: Number(taxAmount),
-        percepcionAmount: Number(percepcionAmount || 0),
-        totalAmount: Number(totalAmount)
-      });
-
-      setSuccessMsg('✅ Factura de compra registrada con éxito en cuenta corriente del proveedor.');
-      setShowSupplierModal(false);
-      // Reset form
-      setSupplierForm({
-        personaId: '',
-        invoiceNumber: '',
-        invoiceType: 'FACTURA_A',
-        issueDate: new Date().toISOString().split('T')[0],
-        dueDate: new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString().split('T')[0],
-        netAmount: '',
-        taxAmount: '',
-        percepcionAmount: '',
-        totalAmount: ''
-      });
-      loadData();
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Error al guardar la factura de compra.');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // --- REGISTRAR PAGO A PROVEEDOR ---
   const handlePaymentSubmit = async (e: React.FormEvent) => {
@@ -1040,11 +911,10 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
         borderRadius: '8px',
         width: 'fit-content'
       }}>
-        {(['ventas', 'notas-credito', 'compras', 'percepciones', 'retenciones'] as const).map((tab) => {
+        {(['ventas', 'notas-credito', 'percepciones', 'retenciones'] as const).map((tab) => {
           const labels = {
             'ventas': 'Comprobantes Venta',
             'notas-credito': 'Notas de Crédito',
-            'compras': 'Comprobantes Compra',
             'percepciones': 'Percepciones',
             'retenciones': 'Retenciones'
           };
@@ -1364,136 +1234,6 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
       )}
 
       {/* ====================================================================
-          SUB-TAB 2: COMPROBANTES DE COMPRA (PROVEEDORES)
-          ==================================================================== */}
-      {activeSubTab === 'compras' && (
-        <div>
-          {/* Tarjetas de Métricas de Proveedores */}
-          {isAdmin && (
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-            gap: '16px',
-            marginBottom: '20px'
-          }}>
-            <div style={{
-              backgroundColor: '#FFF',
-              border: '1px solid var(--border-color)',
-              borderRadius: '8px',
-              padding: '16px',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '4px'
-            }}>
-              <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Deuda Pendiente Total</span>
-              <span style={{ fontSize: '1.4rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                ${supplierMetrics.totalDeuda.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-              </span>
-              <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>Monto a amortizar con proveedores</span>
-            </div>
-
-            <div style={{
-              backgroundColor: '#FFF',
-              border: '1px solid var(--border-color)',
-              borderLeft: '4px solid var(--color-danger)',
-              borderRadius: '8px',
-              padding: '16px',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '4px'
-            }}>
-              <span style={{ fontSize: '0.78rem', color: 'var(--color-danger)', fontWeight: 600 }}>⚠️ Facturas Vencidas</span>
-              <span style={{ fontSize: '1.4rem', fontWeight: 700, color: 'var(--color-danger)' }}>
-                ${supplierMetrics.totalVencidas.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-              </span>
-              <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>
-                {supplierMetrics.vencidasCount} {supplierMetrics.vencidasCount === 1 ? 'comprobante vencido' : 'comprobantes vencidos'}
-              </span>
-            </div>
-
-            <div style={{
-              backgroundColor: '#FFF',
-              border: '1px solid var(--border-color)',
-              borderLeft: '4px solid var(--color-warning)',
-              borderRadius: '8px',
-              padding: '16px',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '4px'
-            }}>
-              <span style={{ fontSize: '0.78rem', color: '#B78103', fontWeight: 600 }}>⏳ Próximos Vencimientos (7d)</span>
-              <span style={{ fontSize: '1.4rem', fontWeight: 700, color: '#B78103' }}>
-                ${supplierMetrics.totalProximas.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-              </span>
-              <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>
-                {supplierMetrics.proximasCount} {supplierMetrics.proximasCount === 1 ? 'comprobante por vencer' : 'comprobantes por vencer'}
-              </span>
-            </div>
-          </div>
-          )}
-
-          <div className="card">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <div>
-                <h3 className="card-title" style={{ margin: '0' }}>📥 Comprobantes y Facturas de Compra</h3>
-                <p style={{ fontSize: '0.8rem', marginTop: '2px' }}>Historial de compras registradas a proveedores alimentando el IVA Crédito Fiscal.</p>
-              </div>
-              <button 
-                className="btn btn-primary" 
-                onClick={() => setShowSupplierModal(true)}
-                style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
-              >
-                <Plus size={16} />
-                Cargar Factura Proveedor
-              </button>
-            </div>
-
-            <div className="table-container">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Fecha Emisión</th>
-                    <th>Fecha Vto.</th>
-                    <th>Tipo</th>
-                    <th>Nro Comprobante</th>
-                    <th>Proveedor</th>
-                    <th>Neto Gravado</th>
-                    <th>IVA</th>
-                    <th>Percep.</th>
-                    <th>Total Compra</th>
-                    <th>Amortizado</th>
-                    <th>Estado</th>
-                    <th>Acciones</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {loading ? (
-                    <tr><td colSpan={12} style={{ textAlign: 'center' }}>Cargando comprobantes de compra...</td></tr>
-                  ) : supplierInvoices.length === 0 ? (
-                    <tr><td colSpan={12} style={{ textAlign: 'center' }}>No se encontraron comprobantes de compra.</td></tr>
-                  ) : (
-                    supplierInvoices.map((inv) => {
-                      const isOverdue = inv.dueDate && new Date(inv.dueDate) < new Date() && inv.status !== 'PAID';
-                      const pendingAmount = Number(inv.totalAmount || 0) - Number(inv.paidAmount || 0);
-
-                      return (
-                        <tr key={inv.id} style={isAdmin && isOverdue ? { backgroundColor: '#FFF5F5' } : undefined}>
-                          <td>{new Date(inv.issueDate).toLocaleDateString('es-AR')}</td>
-                          <td style={isAdmin && isOverdue ? { color: 'var(--color-danger)', fontWeight: 700 } : { fontWeight: 500 }}>
-                            {inv.dueDate ? new Date(inv.dueDate).toLocaleDateString('es-AR') : '-'}
-                            {isAdmin && isOverdue && <span style={{ marginLeft: '4px', fontSize: '0.65rem', backgroundColor: 'var(--color-danger)', color: '#FFF', padding: '1px 4px', borderRadius: '4px', fontWeight: 600 }}>VENCIDO</span>}
-                          </td>
-                          <td>
-                            <span style={{
-                              fontSize: '0.72rem',
-                              fontWeight: 600,
-                              padding: '2px 6px',
-                              borderRadius: '4px',
-                              backgroundColor: '#E8F5E9',
-                              color: '#2E7D32'
-                            }}>
-                              {inv.invoiceType === 'FACTURA_A' ? 'Factura A' : inv.invoiceType === 'FACTURA_B' ? 'Factura B' : 'Factura C'}
-                            </span>
                           </td>
                           <td style={{ fontFamily: 'monospace', fontWeight: 600 }}>{inv.invoiceNumber}</td>
                           <td>
@@ -1824,149 +1564,7 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
         </div>
       )}
 
-      {/* ====================================================================
-          MODAL: REGISTRAR COMPRA (SUPPLIER INVOICE)
-          ==================================================================== */}
-      {showSupplierModal && (
-        <div className="modal-overlay">
-          <div className="modal-content" style={{ maxWidth: '500px' }}>
-            <div className="modal-header">
-              <h3>Ingresar Factura de Proveedor</h3>
-              <button className="btn btn-ghost" style={{ padding: '4px' }} onClick={() => setShowSupplierModal(false)}><X size={18} /></button>
-            </div>
-            <form onSubmit={handleCreateSupplierInvoiceSubmit}>
-              <div className="form-group">
-                <label>Proveedor (Obligatorio)</label>
-                <select
-                  className="select"
-                  value={supplierForm.personaId}
-                  onChange={(e) => setSupplierForm(prev => ({ ...prev, personaId: e.target.value }))}
-                  required
-                >
-                  <option value="">Seleccione un proveedor...</option>
-                  {providersOnly.map(p => (
-                    <option key={p.id} value={p.id}>{p.name} (CUIT: {p.cuit})</option>
-                  ))}
-                </select>
-              </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '12px' }}>
-                <div className="form-group">
-                  <label>Tipo Factura</label>
-                  <select
-                    className="select"
-                    value={supplierForm.invoiceType}
-                    onChange={(e) => setSupplierForm(prev => ({ ...prev, invoiceType: e.target.value }))}
-                  >
-                    <option value="FACTURA_A">Factura A</option>
-                    <option value="FACTURA_B">Factura B</option>
-                    <option value="FACTURA_C">Factura C</option>
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label>Número Comprobante</label>
-                  <input
-                    type="text"
-                    className="input"
-                    placeholder="ej: 0001-00012345"
-                    value={supplierForm.invoiceNumber}
-                    onChange={(e) => setSupplierForm(prev => ({ ...prev, invoiceNumber: e.target.value }))}
-                    required
-                  />
-                </div>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
-                <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label>Fecha de Emisión</label>
-                  <input
-                    type="date"
-                    className="input"
-                    value={supplierForm.issueDate}
-                    onChange={(e) => setSupplierForm(prev => ({ 
-                      ...prev, 
-                      issueDate: e.target.value,
-                      dueDate: new Date(new Date(e.target.value).getTime() + 30 * 24 * 3600 * 1000).toISOString().split('T')[0]
-                    }))}
-                    required
-                  />
-                </div>
-                <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label>Fecha de Vencimiento</label>
-                  <input
-                    type="date"
-                    className="input"
-                    value={supplierForm.dueDate}
-                    onChange={(e) => setSupplierForm(prev => ({ ...prev, dueDate: e.target.value }))}
-                    required
-                  />
-                </div>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <div className="form-group">
-                  <label>Costo Neto Gravado ($)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    className="input"
-                    placeholder="0.00"
-                    value={supplierForm.netAmount}
-                    onChange={(e) => handleNetChange(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="form-group">
-                  <label>IVA Crédito Fiscal ($)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    className="input"
-                    placeholder="0.00"
-                    value={supplierForm.taxAmount}
-                    onChange={(e) => setSupplierForm(prev => ({ ...prev, taxAmount: e.target.value }))}
-                    required
-                  />
-                </div>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <div className="form-group">
-                  <label>Percepciones Sufridas ($)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    className="input"
-                    placeholder="0.00"
-                    value={supplierForm.percepcionAmount}
-                    onChange={(e) => setSupplierForm(prev => ({ ...prev, percepcionAmount: e.target.value }))}
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Total Factura ($)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    className="input"
-                    placeholder={autoCalculatedTotal}
-                    value={supplierForm.totalAmount}
-                    onChange={(e) => setSupplierForm(prev => ({ ...prev, totalAmount: e.target.value }))}
-                    required
-                  />
-                  <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
-                    Suma Neto+IVA+Perc: <span style={{ fontWeight: 600 }}>${autoCalculatedTotal}</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="modal-footer" style={{ marginTop: '20px' }}>
-                <button type="button" className="btn btn-secondary" onClick={() => setShowSupplierModal(false)}>Cancelar</button>
-                <button type="submit" className="btn btn-primary" style={{ backgroundColor: 'var(--color-success)', borderColor: 'var(--color-success)' }}>Registrar Compra</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
 
       {/* ====================================================================
           MODAL: REGISTRAR RETENCION O PERCEPCION MANUAL

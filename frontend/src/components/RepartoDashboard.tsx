@@ -620,9 +620,9 @@ export default function RepartoDashboard() {
   const [showSettleModal, setShowSettleModal] = useState(false);
   const [settleRoute, setSettleRoute] = useState<any | null>(null);
   const [settlements, setSettlements] = useState<any[]>([]);
-  const [settleCashDeclared, setSettleCashDeclared] = useState('');
-  const [settleChecksDeclared, setSettleChecksDeclared] = useState('');
-  const [settleTransfersDeclared, setSettleTransfersDeclared] = useState('');
+  // const [settleCashDeclared, setSettleCashDeclared] = useState('');
+  // const [settleChecksDeclared, setSettleChecksDeclared] = useState('');
+  // const [settleTransfersDeclared, setSettleTransfersDeclared] = useState('');
   const [bankAccounts, setBankAccounts] = useState<any[]>([]);
 
   // Estado para filtrado de localidad
@@ -687,9 +687,9 @@ export default function RepartoDashboard() {
       checkAmount: Number(o.totalAmount)
     }));
     setSettlements(initialSettlements);
-    setSettleCashDeclared('');
-    setSettleChecksDeclared('');
-    setSettleTransfersDeclared('');
+    // setSettleCashDeclared('');
+    // setSettleChecksDeclared('');
+    // setSettleTransfersDeclared('');
     setShowSettleModal(true);
   };
 
@@ -1317,14 +1317,14 @@ export default function RepartoDashboard() {
           MODAL: LIQUIDAR / RENDIR VIAJE (HOJA DE RUTA)
           ==================================================================== */}
       {showSettleModal && settleRoute && (() => {
-        const expectedCash = settlements.filter(s => s.paymentMethod === 'CASH').reduce((sum, s) => sum + s.amount, 0);
-        const expectedTransfers = settlements.filter(s => s.paymentMethod === 'BANK_TRANSFER').reduce((sum, s) => sum + s.amount, 0);
-        const expectedChecks = settlements.filter(s => s.paymentMethod === 'CHECK').reduce((sum, s) => sum + s.amount, 0);
-        const expectedCredit = settlements.filter(s => s.paymentMethod === 'CREDITO').reduce((sum, s) => sum + s.amount, 0);
+        // const expectedCash = settlements.filter(s => s.paymentMethod === 'CASH').reduce((sum, s) => sum + s.amount, 0);
+        // const expectedTransfers = settlements.filter(s => s.paymentMethod === 'BANK_TRANSFER').reduce((sum, s) => sum + s.amount, 0);
+        // const expectedChecks = settlements.filter(s => s.paymentMethod === 'CHECK').reduce((sum, s) => sum + s.amount, 0);
+        // const expectedCredit = settlements.filter(s => s.paymentMethod === 'CREDITO').reduce((sum, s) => sum + s.amount, 0);
 
-        const cashDiff = Number(settleCashDeclared || 0) - expectedCash;
-        const checkDiff = Number(settleChecksDeclared || 0) - expectedChecks;
-        const transferDiff = Number(settleTransfersDeclared || 0) - expectedTransfers;
+        // const cashDiff = Number(settleCashDeclared || 0) - expectedCash;
+        // const checkDiff = Number(settleChecksDeclared || 0) - expectedChecks;
+        // const transferDiff = Number(settleTransfersDeclared || 0) - expectedTransfers;
 
         return (
           <div className="modal-overlay" style={{ zIndex: 1100 }}>
