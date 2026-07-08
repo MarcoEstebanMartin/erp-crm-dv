@@ -713,5 +713,16 @@ export const api = {
       body: JSON.stringify(payload)
     });
     return res.data;
+  },
+
+  getPendingRendiciones: async () => {
+    return await request('/collections/rendiciones');
+  },
+
+  verifyRendicion: async (payload: { sellerId?: number; routeId?: number; realCash: number; realChecks: number }) => {
+    return await request('/collections/rendiciones/verify', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
   }
 };

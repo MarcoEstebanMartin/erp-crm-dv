@@ -136,93 +136,235 @@ export const getReceipt = async (req: AuthenticatedRequest, res: Response) => {
   }
 };
 
-// ADMINISTRACIÓN: Ver las rendiciones pendientes por Vendedor
+// ADMINISTRACIÓN: Ver las rendiciones pendientes por Vendedor y por Repartidor (Chofer)
 export const getPendingRendiciones = async (req: AuthenticatedRequest, res: Response) => {
   try {
     // Buscar todas las transacciones de ingreso (Cobros) que no estén verificadas
     const pendingTransactions = await prisma.transaction.findMany({
       where: {
         type: TransactionType.INCOME,
-        verified: false,
-        receiptNumber: { not: null } // Solo recibos móviles
+        verified: false
       },
       include: {
         user: { select: { id: true, username: true, role: true } },
-        persona: { select: { id: true, name: true } }
+        persona: { select: { id: true, name: true } },
+        order: {
+          include: {
+            deliveryRoute: true
+          }
+        }
       }
     });
 
-    // Agrupar por usuario (vendedor)
-    const grouped = pendingTransactions.reduce((acc: any, tx) => {
-      if (!acc[tx.userId]) {
-        acc[tx.userId] = {
-          user: tx.user,
-          totalToCollect: 0,
-          totalBranchA: 0,
-          totalBranchX: 0,
-          transactions: []
-        };
-      }
-      
-      const amount = Number(tx.amount);
-      acc[tx.userId].totalToCollect += amount;
-      
-      if (tx.billingType === BillingType.OFFICIAL) {
-        acc[tx.userId].totalBranchA += amount;
-      } else {
-        acc[tx.userId].totalBranchX += amount;
-      }
-      
-      acc[tx.userId].transactions.push(tx);
-      
-      return acc;
-    }, {});
+    const sellersGroup: any = {};
+    const routesGroup: any = {};
 
-    res.json(Object.values(grouped));
+    for (const tx of pendingTransactions) {
+      const route = tx.order?.deliveryRoute;
+      const amount = Number(tx.amount);
+      const isOfficial = tx.billingType === BillingType.OFFICIAL;
+      const method = tx.paymentMethod;
+
+      if (route) {
+        if (!routesGroup[route.id]) {
+          routesGroup[route.id] = {
+            routeId: route.id,
+            driverName: route.driverName,
+            vehiclePlate: route.vehiclePlate,
+            totalToCollect: 0,
+            totalBranchA: 0,
+            totalBranchX: 0,
+            totalCash: 0,
+            totalChecks: 0,
+            totalTransfers: 0,
+            transactions: []
+          };
+        }
+        const g = routesGroup[route.id];
+        g.totalToCollect += amount;
+        if (isOfficial) g.totalBranchA += amount;
+        else g.totalBranchX += amount;
+
+        if (method === PaymentMethod.CASH) g.totalCash += amount;
+        else if (method === PaymentMethod.CHECK) g.totalChecks += amount;
+        else if (method === PaymentMethod.BANK_TRANSFER) g.totalTransfers += amount;
+
+        g.transactions.push(tx);
+      } else {
+        const userId = tx.userId;
+        if (!sellersGroup[userId]) {
+          sellersGroup[userId] = {
+            user: tx.user,
+            totalToCollect: 0,
+            totalBranchA: 0,
+            totalBranchX: 0,
+            totalCash: 0,
+            totalChecks: 0,
+            totalTransfers: 0,
+            transactions: []
+          };
+        }
+        const g = sellersGroup[userId];
+        g.totalToCollect += amount;
+        if (isOfficial) g.totalBranchA += amount;
+        else g.totalBranchX += amount;
+
+        if (method === PaymentMethod.CASH) g.totalCash += amount;
+        else if (method === PaymentMethod.CHECK) g.totalChecks += amount;
+        else if (method === PaymentMethod.BANK_TRANSFER) g.totalTransfers += amount;
+
+        g.transactions.push(tx);
+      }
+    }
+
+    res.json({
+      sellers: Object.values(sellersGroup),
+      routes: Object.values(routesGroup)
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Error al obtener rendiciones pendientes' });
   }
 };
 
-// ADMINISTRACIÓN: Verificar y cerrar rendición
+// ADMINISTRACIÓN: Verificar y cerrar rendición mediante arqueo de caja
 export const verifyRendicion = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const adminId = req.user?.id;
-    const { sellerId } = req.body;
+    const { sellerId, routeId, realCash, realChecks } = req.body;
 
-    if (!sellerId) {
-      return res.status(400).json({ error: 'Falta sellerId' });
+    if (!adminId) {
+      return res.status(401).json({ error: 'No autorizado' });
     }
 
-    // Actualizar todas las transacciones pendientes de ese vendedor
-    const result = await prisma.transaction.updateMany({
-      where: {
-        userId: sellerId,
-        type: TransactionType.INCOME,
-        verified: false,
-        receiptNumber: { not: null }
-      },
+    if (!sellerId && !routeId) {
+      return res.status(400).json({ error: 'Debe especificar sellerId o routeId' });
+    }
+
+    const inputCash = Number(realCash || 0);
+    const inputChecks = Number(realChecks || 0);
+
+    if (isNaN(inputCash) || inputCash < 0 || isNaN(inputChecks) || inputChecks < 0) {
+      return res.status(400).json({ error: 'Montos reales ingresados inválidos' });
+    }
+
+    let txs: any[] = [];
+    let branchName = '';
+
+    if (sellerId) {
+      const sellerUser = await prisma.user.findUnique({
+        where: { id: Number(sellerId) }
+      });
+      if (!sellerUser) {
+        return res.status(404).json({ error: 'Vendedor no encontrado' });
+      }
+      branchName = `VENDEDOR: ${(sellerUser.username).toUpperCase()}`;
+
+      // Buscar transacciones asociadas a este vendedor que NO pertenezcan a una hoja de reparto
+      const allSellerTxs = await prisma.transaction.findMany({
+        where: {
+          userId: Number(sellerId),
+          type: TransactionType.INCOME,
+          verified: false
+        },
+        include: {
+          order: true
+        }
+      });
+      txs = allSellerTxs.filter(t => !t.order || t.order.deliveryRouteId === null);
+
+    } else if (routeId) {
+      const route = await prisma.deliveryRoute.findUnique({
+        where: { id: Number(routeId) }
+      });
+      if (!route) {
+        return res.status(404).json({ error: 'Hoja de ruta no encontrada' });
+      }
+      branchName = `REPARTIDOR: ${route.driverName} (Ruta #${routeId})`;
+
+      // Buscar transacciones asociadas a esta hoja de reparto
+      txs = await prisma.transaction.findMany({
+        where: {
+          type: TransactionType.INCOME,
+          verified: false,
+          order: {
+            deliveryRouteId: Number(routeId)
+          }
+        }
+      });
+    }
+
+    if (txs.length === 0) {
+      return res.status(400).json({ error: 'No hay transacciones pendientes para verificar' });
+    }
+
+    // Calcular el saldo teórico esperado
+    let expectedCash = 0;
+    let expectedChecks = 0;
+
+    for (const t of txs) {
+      const amt = Number(t.amount);
+      if (t.paymentMethod === PaymentMethod.CASH) {
+        expectedCash += amt;
+      } else if (t.paymentMethod === PaymentMethod.CHECK) {
+        expectedChecks += amt;
+      }
+    }
+
+    const theoreticalClosing = expectedCash + expectedChecks;
+    const realTotal = inputCash + inputChecks;
+
+    // Crear la caja cerrada asociada a esta rendición
+    const drawer = await prisma.cashDrawer.create({
       data: {
-        verified: true
-        // El dinero pasa contablemente a estar "en la caja principal" al estar verified=true.
-        // Opcional: Podríamos vincularlo a un cashDrawerId de la "Caja Grande" si existiera lógica.
+        userId: adminId,
+        branch: branchName,
+        openingBalance: 0.00,
+        closingBalance: theoreticalClosing,
+        realBalance: realTotal,
+        status: 'CLOSED',
+        openedAt: txs.reduce((min, t) => t.createdAt < min ? t.createdAt : min, txs[0].createdAt),
+        closedAt: new Date()
       }
     });
 
+    // Marcar transacciones como verificadas y asociarlas a la caja
+    await prisma.$transaction(
+      txs.map(t => prisma.transaction.update({
+        where: { id: t.id },
+        data: {
+          verified: true,
+          cashDrawerId: drawer.id
+        }
+      }))
+    );
+
+    // Guardar Audit Log
     await prisma.auditLog.create({
       data: {
-        userId: adminId!,
-        action: 'VERIFY_RENDICION',
-        entityType: 'User',
-        entityId: sellerId,
-        newValues: { transactionsVerified: result.count }
+        userId: adminId,
+        action: 'CLOSE_OPERATIVE_DRAWER_RENDICION',
+        entityType: 'CashDrawer',
+        entityId: drawer.id,
+        newValues: {
+          branch: branchName,
+          expectedCash,
+          expectedChecks,
+          realCash: inputCash,
+          realChecks: inputChecks,
+          transactionsCount: txs.length
+        }
       }
     });
 
-    res.json({ message: 'Rendición verificada exitosamente', count: result.count });
+    res.json({
+      message: 'Rendición y arqueo completados con éxito. Fondos transferidos a la Caja Grande.',
+      drawer,
+      difference: realTotal - theoreticalClosing
+    });
+
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Error al verificar rendición' });
+    console.error('Error al verificar rendición:', error);
+    res.status(500).json({ error: 'Error interno del servidor al procesar la rendición.' });
   }
 };
