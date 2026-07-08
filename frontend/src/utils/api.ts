@@ -1723,12 +1723,106 @@ export const api = {
       const users = mockDb.get('db_users') || [];
       const availableSellers = users.filter((u: any) => u.role === 'VENDEDOR').map((u: any) => ({ id: u.id, username: u.username }));
       
+      // Simulation metrics calculations
+      const filteredClientIds = new Set(filteredClients.map((c: any) => c.id));
+      const orders = (mockDb.get('db_orders') || []).filter((o: any) => o.status === 'DELIVERED' && filteredClientIds.has(o.personaId || o.clientId));
+      const products = mockDb.get('db_products') || [];
+      const productLookup = new Map<number, any>(products.map((p: any) => [p.id, p]));
+
+      const clientMap = new Map<number, any>();
+      const productMap = new Map<number, any>();
+      const weeklyMap = new Map<string, any>();
+
+      for (const order of orders) {
+        const totalAmount = Number(order.totalAmount) || 0;
+        const clientId = order.personaId || order.clientId;
+        const client = filteredClients.find((c: any) => c.id === clientId);
+        const clientName = client ? client.name : `Cliente ${clientId}`;
+        const clientCity = client && client.city ? client.city : 'Sin especificar';
+
+        // 1. Client
+        const clientData = clientMap.get(clientId) || {
+          id: clientId,
+          name: clientName,
+          city: clientCity,
+          totalSpent: 0,
+          ordersCount: 0
+        };
+        clientData.totalSpent += totalAmount;
+        clientData.ordersCount += 1;
+        clientMap.set(clientId, clientData);
+
+        // 2. Weekly
+        const orderDate = new Date(order.createdAt);
+        const day = orderDate.getDay();
+        const diff = orderDate.getDate() - day + (day === 0 ? -6 : 1);
+        const monday = new Date(orderDate.setDate(diff));
+        monday.setHours(0, 0, 0, 0);
+        const weekKey = monday.toISOString().split('T')[0];
+
+        const weekData = weeklyMap.get(weekKey) || {
+          weekStart: weekKey,
+          dateObj: monday,
+          total: 0,
+          count: 0
+        };
+        weekData.total += totalAmount;
+        weekData.count += 1;
+        weeklyMap.set(weekKey, weekData);
+
+        // 3. Products
+        for (const item of (order.items || [])) {
+          const prodId = item.productId;
+          const qty = item.quantity;
+          const subtotal = Number(item.subtotal) || (qty * Number(item.unitPrice || 0));
+
+          const product = productLookup.get(prodId);
+          const sku = product ? product.sku : `SKU-${prodId}`;
+          const name = product ? product.name : `Producto ${prodId}`;
+
+          const prodData = productMap.get(prodId) || {
+            id: prodId,
+            sku,
+            name,
+            qty: 0,
+            revenue: 0
+          };
+          prodData.qty += qty;
+          prodData.revenue += subtotal;
+          productMap.set(prodId, prodData);
+        }
+      }
+
+      const topClients = Array.from(clientMap.values())
+        .sort((a, b) => b.totalSpent - a.totalSpent)
+        .slice(0, 10);
+
+      const topProducts = Array.from(productMap.values())
+        .sort((a, b) => b.qty - a.qty)
+        .slice(0, 10);
+
+      const bottomProducts = Array.from(productMap.values())
+        .sort((a, b) => a.qty - b.qty)
+        .slice(0, 10);
+
+      const weeklyInvoicing = Array.from(weeklyMap.values())
+        .sort((a, b) => a.dateObj.getTime() - b.dateObj.getTime())
+        .map(w => ({
+          weekStart: w.weekStart,
+          total: w.total,
+          count: w.count
+        }));
+
       return {
         totalClients,
         totalDebt,
         clients: filteredClients,
         availableCities,
-        availableSellers
+        availableSellers,
+        topClients,
+        topProducts,
+        bottomProducts,
+        weeklyInvoicing
       };
     }
     

@@ -213,6 +213,119 @@ export class AdminService {
     const totalClients = clients.length;
     const totalDebt = clients.reduce((acc, curr) => acc + Number(curr.outstandingBalance || 0), 0);
 
+    // Query orders for this zone to build metrics
+    const orderWhereClause: any = {
+      status: 'DELIVERED',
+    };
+    if (filters.city && filters.city.trim() !== '') {
+      orderWhereClause.persona = {
+        city: { contains: filters.city, mode: 'insensitive' }
+      };
+    }
+    if (filters.sellerId) {
+      if (!orderWhereClause.persona) {
+        orderWhereClause.persona = {};
+      }
+      orderWhereClause.persona.sellerId = filters.sellerId;
+    }
+
+    const orders = await prisma.order.findMany({
+      where: orderWhereClause,
+      include: {
+        persona: {
+          select: { id: true, name: true, city: true }
+        },
+        items: {
+          include: {
+            product: {
+              select: { id: true, sku: true, name: true }
+            }
+          }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    // Aggregations
+    const clientMap = new Map<number, { id: number; name: string; city: string; totalSpent: number; ordersCount: number }>();
+    const productMap = new Map<number, { id: number; sku: string; name: string; qty: number; revenue: number }>();
+    const weeklyMap = new Map<string, { weekStart: string; dateObj: Date; total: number; count: number }>();
+
+    for (const order of orders) {
+      const totalAmount = Number(order.totalAmount) || 0;
+      const clientId = order.personaId;
+      const clientName = order.persona.name;
+      const clientCity = order.persona.city || 'Sin especificar';
+
+      // 1. Client
+      const clientData = clientMap.get(clientId) || {
+        id: clientId,
+        name: clientName,
+        city: clientCity,
+        totalSpent: 0,
+        ordersCount: 0
+      };
+      clientData.totalSpent += totalAmount;
+      clientData.ordersCount += 1;
+      clientMap.set(clientId, clientData);
+
+      // 2. Weekly
+      const orderDate = new Date(order.createdAt);
+      const day = orderDate.getDay();
+      const diff = orderDate.getDate() - day + (day === 0 ? -6 : 1); // Monday
+      const monday = new Date(orderDate.setDate(diff));
+      monday.setHours(0, 0, 0, 0);
+      const weekKey = monday.toISOString().split('T')[0];
+
+      const weekData = weeklyMap.get(weekKey) || {
+        weekStart: weekKey,
+        dateObj: monday,
+        total: 0,
+        count: 0
+      };
+      weekData.total += totalAmount;
+      weekData.count += 1;
+      weeklyMap.set(weekKey, weekData);
+
+      // 3. Products
+      for (const item of order.items) {
+        const prodId = item.productId;
+        const qty = item.quantity;
+        const subtotal = Number(item.subtotal) || 0;
+
+        const prodData = productMap.get(prodId) || {
+          id: prodId,
+          sku: item.product.sku,
+          name: item.product.name,
+          qty: 0,
+          revenue: 0
+        };
+        prodData.qty += qty;
+        prodData.revenue += subtotal;
+        productMap.set(prodId, prodData);
+      }
+    }
+
+    const topClients = Array.from(clientMap.values())
+      .sort((a, b) => b.totalSpent - a.totalSpent)
+      .slice(0, 10);
+
+    const topProducts = Array.from(productMap.values())
+      .sort((a, b) => b.qty - a.qty)
+      .slice(0, 10);
+
+    const bottomProducts = Array.from(productMap.values())
+      .sort((a, b) => a.qty - b.qty)
+      .slice(0, 10);
+
+    const weeklyInvoicing = Array.from(weeklyMap.values())
+      .sort((a, b) => a.dateObj.getTime() - b.dateObj.getTime())
+      .map(w => ({
+        weekStart: w.weekStart,
+        total: w.total,
+        count: w.count
+      }));
+
     // Get unique cities for filters
     const allCitiesResult = await prisma.persona.findMany({
       where: { isClient: true, city: { not: null } },
@@ -231,7 +344,11 @@ export class AdminService {
       totalDebt,
       clients,
       availableCities: allCitiesResult.map(c => c.city).filter(Boolean),
-      availableSellers: sellers
+      availableSellers: sellers,
+      topClients,
+      topProducts,
+      bottomProducts,
+      weeklyInvoicing
     };
   }
 }
