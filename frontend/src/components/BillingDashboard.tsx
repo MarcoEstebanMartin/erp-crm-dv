@@ -1106,16 +1106,16 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
               />
             </div>
 
-            {activeSubTab === 'ventas' && (
+            {(activeSubTab === 'ventas' || activeSubTab === 'notas-credito') && (
               <select
                 className="input"
                 value={salesInvoiceTypeFilter}
                 onChange={(e) => setSalesInvoiceTypeFilter(e.target.value as any)}
-                style={{ width: '200px', fontSize: '0.85rem' }}
+                style={{ width: '220px', fontSize: '0.85rem' }}
               >
-                <option value="ALL">Todos los Comprobantes</option>
-                <option value="OFFICIAL">Solo Facturas</option>
-                <option value="INTERNAL">Solo Remitos</option>
+                <option value="ALL">Todas las Sucursales</option>
+                <option value="OFFICIAL">Sucursal A (Oficial)</option>
+                <option value="INTERNAL">Sucursal X (Interna)</option>
               </select>
             )}
 
@@ -1193,7 +1193,7 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
                         }}>
                           {inv.invoiceType === 'FACTURA_A' ? 'Factura A' : 
                            inv.invoiceType === 'FACTURA_B' ? 'Factura B' : 
-                           inv.invoiceType === 'FACTURA_C' ? 'Factura C' : 'Remito'}
+                           inv.invoiceType === 'FACTURA_C' ? 'Factura C' : 'Factura X'}
                         </span>
                       </td>
                       <td>
@@ -1223,7 +1223,7 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
                             style={{ padding: '4px 8px', fontSize: '0.78rem' }}
                             onClick={() => setViewInvoiceModal(inv)}
                           >
-                            {inv.invoiceType === 'FACTURA_A' || inv.invoiceType === 'FACTURA_B' || inv.invoiceType === 'FACTURA_C' ? 'Ver Factura' : 'Ver Remito'}
+                            {inv.invoiceType === 'FACTURA_A' || inv.invoiceType === 'FACTURA_B' || inv.invoiceType === 'FACTURA_C' ? 'Ver Factura' : 'Ver Factura X'}
                           </button>
                           <button 
                             className="btn btn-secondary" 
@@ -1293,7 +1293,14 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
                 ) : creditNotes.length === 0 ? (
                   <tr><td colSpan={10} style={{ textAlign: 'center' }}>No se encontraron notas de crédito emitidas.</td></tr>
                 ) : (
-                  creditNotes.map((cn) => (
+                  creditNotes
+                    .filter(cn => {
+                      if (salesInvoiceTypeFilter === 'ALL') return true;
+                      const isOfficial = cn.billingType === 'OFFICIAL';
+                      if (salesInvoiceTypeFilter === 'OFFICIAL') return isOfficial;
+                      return !isOfficial;
+                    })
+                    .map((cn) => (
                     <tr key={cn.id} style={{ transition: 'background-color 0.2s hover' }}>
                       <td>{new Date(cn.createdAt).toLocaleDateString('es-AR')}</td>
                       <td>
@@ -1305,7 +1312,7 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
                           backgroundColor: cn.billingType === 'OFFICIAL' ? '#e8f0fe' : '#f4f4f5',
                           color: cn.billingType === 'OFFICIAL' ? '#1a73e8' : '#71717a'
                         }}>
-                          {cn.billingType === 'OFFICIAL' ? 'OFICIAL' : 'INTERNA'}
+                          {cn.billingType === 'OFFICIAL' ? 'Sucursal A' : 'Sucursal X'}
                         </span>
                       </td>
                       <td>
@@ -3279,7 +3286,7 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
                          viewCreditNoteModal.creditNoteType?.includes('_C') ? 'C' : 'X'}
                       </div>
                       <div style={{ fontSize: '0.62rem', fontWeight: 600, marginTop: '2px', textAlign: 'center' }}>
-                        {isOfficial ? 'COMP. OFICIAL' : 'INTERNO'}
+                        {isOfficial ? 'SUCURSAL A' : 'SUCURSAL X'}
                       </div>
                     </div>
 
@@ -3503,7 +3510,7 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
                   {/* Lado Derecho: Datos Factura */}
                   <div style={{ padding: '12px', fontSize: '0.75rem', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '4px', paddingLeft: '16px', textAlign: 'left' }}>
                     <h1 style={{ fontSize: '1.4rem', fontWeight: 900, margin: '0 0 4px 0', letterSpacing: '0.02em', textTransform: 'uppercase', color: '#000000' }}>
-                      {!isOfficial ? 'REMITO' : 'FACTURA'}
+                      {!isOfficial ? 'FACTURA X' : 'FACTURA'}
                     </h1>
                     <div style={{ marginBottom: '4px' }}>
                       <strong>Punto de Venta: 0005</strong> &nbsp;&nbsp; 
