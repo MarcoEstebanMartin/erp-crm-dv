@@ -218,8 +218,11 @@ export const getPendingRendiciones = async (req: AuthenticatedRequest, res: Resp
     }
 
     res.json({
-      sellers: Object.values(sellersGroup),
-      routes: Object.values(routesGroup)
+      status: 'success',
+      data: {
+        sellers: Object.values(sellersGroup),
+        routes: Object.values(routesGroup)
+      }
     });
   } catch (error) {
     console.error(error);
@@ -358,9 +361,12 @@ export const verifyRendicion = async (req: AuthenticatedRequest, res: Response) 
     });
 
     res.json({
-      message: 'Rendición y arqueo completados con éxito. Fondos transferidos a la Caja Grande.',
-      drawer,
-      difference: realTotal - theoreticalClosing
+      status: 'success',
+      data: {
+        message: 'Rendición y arqueo completados con éxito. Fondos transferidos a la Caja Grande.',
+        drawer,
+        difference: realTotal - theoreticalClosing
+      }
     });
 
   } catch (error) {
