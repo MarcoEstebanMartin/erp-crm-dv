@@ -278,22 +278,17 @@ export default function UnifiedReportsDashboard({
                 <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '8px', color: 'var(--text-secondary)' }}>Filtrar por Localidad</label>
                 <button
                   onClick={() => setCitiesDropdownOpen(!citiesDropdownOpen)}
-                  className="input-field"
+                  className="select"
                   style={{
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
                     width: '100%',
-                    backgroundColor: 'var(--bg-light)',
-                    border: '1px solid var(--border-color)',
-                    borderRadius: '8px',
-                    padding: '8px 12px',
-                    fontSize: '0.9rem',
-                    color: 'var(--text-primary)',
                     cursor: 'pointer',
                     outline: 'none',
                     textAlign: 'left',
-                    height: '40px'
+                    backgroundColor: 'var(--bg-card)',
+                    padding: '10px 16px'
                   }}
                 >
                   <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '90%' }}>
@@ -390,14 +385,14 @@ export default function UnifiedReportsDashboard({
               </div>
               <div style={{ flex: 1, minWidth: '180px' }}>
                 <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '8px', color: 'var(--text-secondary)' }}>Filtrar por Vendedor</label>
-                <select className="input-field" value={selectedSeller} onChange={e => { setSelectedSeller(e.target.value); setHoveredWeekIdx(null); }}>
+                <select className="select" value={selectedSeller} onChange={e => { setSelectedSeller(e.target.value); setHoveredWeekIdx(null); }}>
                   <option value="">Todos los vendedores</option>
                   {sellers.map(s => <option key={s.id} value={s.id}>{s.username}</option>)}
                 </select>
               </div>
               <div style={{ flex: 1, minWidth: '180px' }}>
                 <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '8px', color: 'var(--text-secondary)' }}>Período de Fecha</label>
-                <select className="input-field" value={zoneDatePreset} onChange={e => { setZoneDatePreset(e.target.value); setHoveredWeekIdx(null); }}>
+                <select className="select" value={zoneDatePreset} onChange={e => { setZoneDatePreset(e.target.value); setHoveredWeekIdx(null); }}>
                   <option value="all">Histórico Completo</option>
                   <option value="this_week">Esta semana (Últimos 7 días)</option>
                   <option value="last_30_days">Últimos 30 días</option>
@@ -412,20 +407,20 @@ export default function UnifiedReportsDashboard({
                     <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '8px', color: 'var(--text-secondary)' }}>Desde</label>
                     <input 
                       type="date" 
-                      className="input-field" 
+                      className="input" 
                       value={zoneStartDate} 
                       onChange={e => { setZoneStartDate(e.target.value); setHoveredWeekIdx(null); }} 
-                      style={{ padding: '7.5px 12px' }}
+                      style={{ padding: '10px 12px' }}
                     />
                   </div>
                   <div style={{ flex: 1, minWidth: '130px' }}>
                     <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '8px', color: 'var(--text-secondary)' }}>Hasta</label>
                     <input 
                       type="date" 
-                      className="input-field" 
+                      className="input" 
                       value={zoneEndDate} 
                       onChange={e => { setZoneEndDate(e.target.value); setHoveredWeekIdx(null); }}
-                      style={{ padding: '7.5px 12px' }}
+                      style={{ padding: '10px 12px' }}
                     />
                   </div>
                 </>
