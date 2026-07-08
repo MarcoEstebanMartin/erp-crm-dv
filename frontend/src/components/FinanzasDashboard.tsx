@@ -396,7 +396,7 @@ export default function FinanzasDashboard() {
                     className="input" 
                     value={expensePaymentMethod} 
                     onChange={e => setExpensePaymentMethod(e.target.value)}
-                    style={{ width: '100%', height: '40px' }}
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid var(--border-color)', backgroundColor: '#fff', fontSize: '0.9rem', color: 'var(--text-primary)', height: 'auto', lineHeight: 'normal' }}
                   >
                     <option value="CASH">Efectivo</option>
                     <option value="CHECK">Cheque</option>
@@ -410,7 +410,7 @@ export default function FinanzasDashboard() {
                     className="input" 
                     value={expenseBillingType} 
                     onChange={e => setExpenseBillingType(e.target.value)}
-                    style={{ width: '100%', height: '40px' }}
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid var(--border-color)', backgroundColor: '#fff', fontSize: '0.9rem', color: 'var(--text-primary)', height: 'auto', lineHeight: 'normal' }}
                   >
                     <option value="INTERNAL">Interno (Sucursal X)</option>
                     <option value="OFFICIAL">Oficial (Sucursal A)</option>
