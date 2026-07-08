@@ -13,7 +13,7 @@ import {
   FileText,
   History
 } from 'lucide-react';
-import { api, isSimulationMode } from '../utils/api';
+import { api } from '../utils/api';
 
 interface SidebarProps {
   username: string;
@@ -95,18 +95,11 @@ export default function Sidebar({ username, role, activeTab, setActiveTab, onLog
           }}
         />
         {(() => {
-          const isSimulator = isSimulationMode();
-          
           let dotColor = 'var(--color-success)'; // Verde
-          let tooltip = 'Conectado en Producción';
-
-          if (isSimulator) {
-            dotColor = 'var(--color-warning)'; // Naranja
-            tooltip = 'Simulador';
-          }
+          let tooltip = 'Servidor en Línea';
 
           return (
-            <div className="sidebar-status" title={tooltip} style={{ marginTop: '12px', cursor: 'pointer' }}>
+            <div className="sidebar-status" title={tooltip} style={{ marginTop: '12px' }}>
               <div style={{
                 width: '8px',
                 height: '8px',

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { api, setSimulationMode, testServerConnection } from '../utils/api';
+import { api, testServerConnection } from '../utils/api';
 import { Shield, Eye, EyeOff } from 'lucide-react';
 
 interface LoginProps {
@@ -11,7 +11,6 @@ export default function Login({ onLoginSuccess }: LoginProps) {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [simulation, setSimulation] = useState(true);
   const [serverOnline, setServerOnline] = useState<boolean | null>(null);
   const [logoFailed, setLogoFailed] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -21,26 +20,9 @@ export default function Login({ onLoginSuccess }: LoginProps) {
     async function checkServer() {
       const isOnline = await testServerConnection();
       setServerOnline(isOnline);
-      
-      const savedMode = localStorage.getItem('simulation_mode');
-      if (savedMode === 'false' && isOnline) {
-        setSimulation(false);
-        setSimulationMode(false);
-      } else {
-        // Por defecto o si el servidor está caído, forzamos modo simulación para ingreso local instantáneo
-        setSimulation(true);
-        setSimulationMode(true);
-      }
     }
     checkServer();
   }, []);
-
-  const handleToggleSimulation = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const checked = e.target.checked;
-    setSimulation(checked);
-    setSimulationMode(checked);
-    setError(null);
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -152,23 +134,14 @@ export default function Login({ onLoginSuccess }: LoginProps) {
           </div>
 
           <div className="form-group" style={{ margin: '20px 0 24px 0', alignItems: 'flex-start' }}>
-            <label className="checkbox-container">
-              <input
-                type="checkbox"
-                checked={simulation}
-                onChange={handleToggleSimulation}
-                style={{ cursor: 'pointer' }}
-              />
-              <span>Modo Simulación (Sin Servidor)</span>
-            </label>
             {serverOnline === false && (
-              <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '4px', textAlign: 'left' }}>
-                ℹ️ Servidor desconectado. Modo simulación obligatorio.
+              <span style={{ fontSize: '0.85rem', color: 'var(--color-danger)', fontWeight: 600, marginTop: '4px', textAlign: 'left' }}>
+                ❌ El servidor está desconectado. Por favor, iniciá el backend para poder ingresar.
               </span>
             )}
             {serverOnline === true && (
               <span style={{ fontSize: '0.75rem', color: 'var(--color-success)', marginTop: '4px', textAlign: 'left' }}>
-                🟢 Servidor local en línea detectado.
+                🟢 Conexión con el servidor establecida.
               </span>
             )}
           </div>
@@ -177,7 +150,7 @@ export default function Login({ onLoginSuccess }: LoginProps) {
             type="submit"
             className="btn btn-primary"
             style={{ width: '100%', padding: '14px' }}
-            disabled={loading}
+            disabled={loading || serverOnline === false}
           >
             {loading ? 'Accediendo...' : 'Iniciar sesión'}
           </button>
