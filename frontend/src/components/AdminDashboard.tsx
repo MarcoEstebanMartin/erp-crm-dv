@@ -78,6 +78,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
   const [auditPage, setAuditPage] = useState(1);
   const [auditTotalPages, setAuditTotalPages] = useState(1);
     const [configTab, setConfigTab] = useState<string>('general');
+  const [cajasSubTab, setCajasSubTab] = useState<'rendiciones' | 'diarias'>('rendiciones');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
@@ -1573,12 +1574,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
         <RepartoDashboard />
       )}
 
-      {/* ====================================================================
-          7. CAJAS Y TESORERÍA
-          ==================================================================== */}
-      {activeTab === 'finanzas' && (
-        <CajasDashboard />
-      )}
+
 
       {/* ====================================================================
           FACTURACION & IMPUESTOS (BILLING)
@@ -1602,10 +1598,56 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
       )}
 
       {/* ====================================================================
-          9b. RENDICIONES Y LIQUIDACIONES DE VENDEDORES (RENDICIONES)
+          9b. CAJAS Y RENDICIONES (UNIFICADO)
           ==================================================================== */}
       {activeTab === 'rendiciones' && (
-        <RendicionesDashboard />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          {/* Sub-tab Navigation */}
+          <div style={{ display: 'flex', gap: '12px', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px', marginBottom: '12px', overflowX: 'auto' }}>
+            <button 
+              type="button"
+              className="btn" 
+              style={{ 
+                backgroundColor: cajasSubTab === 'rendiciones' ? 'var(--color-primary)' : 'transparent',
+                color: cajasSubTab === 'rendiciones' ? '#fff' : 'var(--text-primary)',
+                border: cajasSubTab === 'rendiciones' ? '1px solid var(--color-primary)' : '1px solid var(--border-color)',
+                fontWeight: 600,
+                fontSize: '0.85rem',
+                padding: '8px 16px',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap'
+              }}
+              onClick={() => setCajasSubTab('rendiciones')}
+            >
+              📊 Rendiciones y Arqueos
+            </button>
+            <button 
+              type="button"
+              className="btn" 
+              style={{ 
+                backgroundColor: cajasSubTab === 'diarias' ? 'var(--color-primary)' : 'transparent',
+                color: cajasSubTab === 'diarias' ? '#fff' : 'var(--text-primary)',
+                border: cajasSubTab === 'diarias' ? '1px solid var(--color-primary)' : '1px solid var(--border-color)',
+                fontWeight: 600,
+                fontSize: '0.85rem',
+                padding: '8px 16px',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap'
+              }}
+              onClick={() => setCajasSubTab('diarias')}
+            >
+              📅 Cajas Diarias
+            </button>
+          </div>
+
+          {cajasSubTab === 'rendiciones' ? (
+            <RendicionesDashboard />
+          ) : (
+            <CajasDashboard />
+          )}
+        </div>
       )}
 
       {/* ====================================================================
