@@ -702,11 +702,15 @@ export default function RepartoDashboard() {
     setLoading(true);
 
     try {
+      const expectedCash = settlements.filter(s => s.paymentMethod === 'CASH').reduce((sum, s) => sum + s.amount, 0);
+      const expectedTransfers = settlements.filter(s => s.paymentMethod === 'BANK_TRANSFER').reduce((sum, s) => sum + s.amount, 0);
+      const expectedChecks = settlements.filter(s => s.paymentMethod === 'CHECK').reduce((sum, s) => sum + s.amount, 0);
+
       await api.settleDeliveryRoute(settleRoute.id, {
         settlements,
-        cashDeclared: Number(settleCashDeclared || 0),
-        checksDeclared: Number(settleChecksDeclared || 0),
-        transfersDeclared: Number(settleTransfersDeclared || 0)
+        cashDeclared: expectedCash,
+        checksDeclared: expectedChecks,
+        transfersDeclared: expectedTransfers
       });
 
       setSuccessMsg(`✨ Hoja de ruta #${settleRoute.id} liquidada y completada con éxito. Cobros registrados.`);
@@ -922,7 +926,7 @@ export default function RepartoDashboard() {
         </div>
       )}
 
-      {/* PANEL DE CONTROL DE CAJA EN REPARTO */}
+      {/* PANEL DE CONTROL DE REPARTO */}
       <div className="no-print" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px', marginBottom: '8px' }}>
         <div className="card" style={{ padding: '16px', borderRadius: '12px', border: '1px solid var(--border-color)', backgroundColor: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
           <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px', letterSpacing: '0.5px' }}>
@@ -938,22 +942,10 @@ export default function RepartoDashboard() {
 
         <div className="card" style={{ padding: '16px', borderRadius: '12px', border: '1px solid var(--border-color)', backgroundColor: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
           <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px', letterSpacing: '0.5px' }}>
-            DINERO EN LA CALLE (POR RENDIR)
-          </span>
-          <span style={{ fontSize: '1.4rem', fontWeight: 700, color: '#E30613' }}>
-            ${logisticsStats.onStreetAmount.toLocaleString()}
-          </span>
-          <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', display: 'block', marginTop: '6px' }}>
-            Total a conciliar y depositar en caja
-          </span>
-        </div>
-
-        <div className="card" style={{ padding: '16px', borderRadius: '12px', border: '1px solid var(--border-color)', backgroundColor: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-          <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px', letterSpacing: '0.5px' }}>
             PEDIDOS EN ESPERA DE VIAJE
           </span>
           <span style={{ fontSize: '1.4rem', fontWeight: 700, color: '#3c4043' }}>
-            {logisticsStats.pendingOrdersCount} pedidos (${logisticsStats.pendingOrdersAmount.toLocaleString()})
+            {logisticsStats.pendingOrdersCount} {logisticsStats.pendingOrdersCount === 1 ? 'pedido en espera' : 'pedidos en espera'}
           </span>
           <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', display: 'block', marginTop: '6px' }}>
             Disponibles para armar hojas de ruta
@@ -1255,7 +1247,6 @@ export default function RepartoDashboard() {
                               </div>
                               <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>Comprobante: {o.invoiceNumber || 'Remito de Carga'}</div>
                             </div>
-                            <div style={{ fontWeight: 600 }}>${Number(o.totalAmount).toLocaleString()}</div>
                           </div>
                         ))
                       )}
@@ -1339,7 +1330,7 @@ export default function RepartoDashboard() {
           <div className="modal-overlay" style={{ zIndex: 1100 }}>
             <div className="modal-content" style={{ maxWidth: '1000px', width: '90vw', padding: '24px' }}>
               <div className="modal-header">
-                <h3>Rendición y Liquidación de Caja - Viaje #{settleRoute.id}</h3>
+                <h3>Liquidación y Finalización de Viaje - Viaje #{settleRoute.id}</h3>
                 <button type="button" className="btn btn-ghost" style={{ padding: '4px' }} onClick={() => setShowSettleModal(false)}>✕</button>
               </div>
 
@@ -1348,10 +1339,10 @@ export default function RepartoDashboard() {
               </div>
 
               <form onSubmit={handleSettleSubmit}>
-                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '20px', alignItems: 'start' }}>
+                <div style={{ display: 'block' }}>
                   
                   {/* TABLA DE DETALLE DE PEDIDOS */}
-                  <div className="card" style={{ padding: '16px', border: '1px solid var(--border-color)' }}>
+                  <div className="card" style={{ padding: '16px', border: '1px solid var(--border-color)', marginBottom: '20px' }}>
                     <h4 style={{ fontSize: '0.88rem', fontWeight: 600, marginTop: 0, marginBottom: '12px' }}>Listado de Entregas y Cobros</h4>
                     <div style={{ maxHeight: '350px', overflowY: 'auto' }}>
                       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
@@ -1359,7 +1350,6 @@ export default function RepartoDashboard() {
                           <tr style={{ borderBottom: '2px solid var(--border-color)', textAlign: 'left' }}>
                             <th style={{ padding: '8px 4px' }}>Cliente</th>
                             <th style={{ padding: '8px 4px' }}>Comprobante</th>
-                            <th style={{ padding: '8px 4px', textAlign: 'right' }}>Total</th>
                             <th style={{ padding: '8px 4px', width: '160px' }}>Medio de Pago</th>
                             <th style={{ padding: '8px 4px' }}>Detalles Cobro</th>
                           </tr>
@@ -1369,7 +1359,6 @@ export default function RepartoDashboard() {
                             <tr key={set.orderId} style={{ borderBottom: '1px solid #f0f0f0' }}>
                               <td style={{ padding: '8px 4px', fontWeight: 600 }}>{set.clientName}</td>
                               <td style={{ padding: '8px 4px' }}>{set.invoiceNumber}</td>
-                              <td style={{ padding: '8px 4px', fontWeight: 700, textAlign: 'right' }}>${set.amount.toLocaleString()}</td>
                               <td style={{ padding: '8px 4px' }}>
                                 <select
                                   className="input"
@@ -1444,97 +1433,6 @@ export default function RepartoDashboard() {
                     </div>
                   </div>
 
-                  {/* CONTROL DE CAJA Y ARQUEO */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                    <div className="card" style={{ padding: '16px', border: '1px solid var(--border-color)', backgroundColor: '#fcfcfc' }}>
-                      <h4 style={{ fontSize: '0.88rem', fontWeight: 600, marginTop: 0, marginBottom: '12px' }}>Cuadro Resumen (Esperado)</h4>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.78rem' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                          <span>💵 Efectivo Esperado:</span>
-                          <span style={{ fontWeight: 600 }}>${expectedCash.toLocaleString()}</span>
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                          <span>✍️ Cheques Esperados:</span>
-                          <span style={{ fontWeight: 600 }}>${expectedChecks.toLocaleString()}</span>
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                          <span>🏦 Transferencias Esperadas:</span>
-                          <span style={{ fontWeight: 600 }}>${expectedTransfers.toLocaleString()}</span>
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #ddd', paddingBottom: '6px' }}>
-                          <span>💳 A Cuenta Corriente:</span>
-                          <span style={{ fontWeight: 600, color: '#b78103' }}>${expectedCredit.toLocaleString()}</span>
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: '0.82rem', paddingTop: '4px' }}>
-                          <span>Total Rendido:</span>
-                          <span style={{ color: 'var(--color-success)' }}>${(expectedCash + expectedChecks + expectedTransfers).toLocaleString()}</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="card" style={{ padding: '16px', border: '1px solid var(--border-color)' }}>
-                      <h4 style={{ fontSize: '0.88rem', fontWeight: 600, marginTop: 0, marginBottom: '12px' }}>Declarar Valores Físicos</h4>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                        <div className="form-group" style={{ margin: 0 }}>
-                          <label style={{ fontSize: '0.75rem', fontWeight: 600 }}>Efectivo Declarado ($)</label>
-                          <input
-                            type="number"
-                            className="input"
-                            style={{ height: '32px', fontSize: '0.8rem' }}
-                            placeholder="ej: 120000"
-                            value={settleCashDeclared}
-                            onChange={(e) => setSettleCashDeclared(e.target.value)}
-                          />
-                        </div>
-                        <div className="form-group" style={{ margin: 0 }}>
-                          <label style={{ fontSize: '0.75rem', fontWeight: 600 }}>Cheques Declarados ($)</label>
-                          <input
-                            type="number"
-                            className="input"
-                            style={{ height: '32px', fontSize: '0.8rem' }}
-                            placeholder="ej: 30000"
-                            value={settleChecksDeclared}
-                            onChange={(e) => setSettleChecksDeclared(e.target.value)}
-                          />
-                        </div>
-                        <div className="form-group" style={{ margin: 0 }}>
-                          <label style={{ fontSize: '0.75rem', fontWeight: 600 }}>Transferencias Declaradas ($)</label>
-                          <input
-                            type="number"
-                            className="input"
-                            style={{ height: '32px', fontSize: '0.8rem' }}
-                            placeholder="ej: 45000"
-                            value={settleTransfersDeclared}
-                            onChange={(e) => setSettleTransfersDeclared(e.target.value)}
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* CONTROL DE DIFERENCIAS */}
-                    <div className="card" style={{
-                      padding: '16px',
-                      border: '1px solid var(--border-color)',
-                      backgroundColor: (cashDiff === 0 && checkDiff === 0 && transferDiff === 0) ? '#f4fbf7' : '#fffbf0'
-                    }}>
-                      <h4 style={{ fontSize: '0.88rem', fontWeight: 600, marginTop: 0, marginBottom: '8px' }}>Arqueo de Rendición</h4>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.76rem' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', color: cashDiff === 0 ? 'var(--text-secondary)' : cashDiff > 0 ? '#137333' : '#E30613' }}>
-                          <span>Efectivo Diferencia:</span>
-                          <span style={{ fontWeight: 700 }}>{cashDiff === 0 ? '$0' : cashDiff > 0 ? `Sobrante: +$${cashDiff.toLocaleString()}` : `Faltante: -$${Math.abs(cashDiff).toLocaleString()}`}</span>
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', color: checkDiff === 0 ? 'var(--text-secondary)' : checkDiff > 0 ? '#137333' : '#E30613' }}>
-                          <span>Cheques Diferencia:</span>
-                          <span style={{ fontWeight: 700 }}>{checkDiff === 0 ? '$0' : checkDiff > 0 ? `Sobrante: +$${checkDiff.toLocaleString()}` : `Faltante: -$${Math.abs(checkDiff).toLocaleString()}`}</span>
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', color: transferDiff === 0 ? 'var(--text-secondary)' : transferDiff > 0 ? '#137333' : '#E30613' }}>
-                          <span>Transf. Diferencia:</span>
-                          <span style={{ fontWeight: 700 }}>{transferDiff === 0 ? '$0' : transferDiff > 0 ? `Sobrante: +$${transferDiff.toLocaleString()}` : `Faltante: -$${Math.abs(transferDiff).toLocaleString()}`}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
                 </div>
 
                 <div className="modal-footer" style={{ marginTop: '20px', borderTop: '1px solid var(--border-color)', paddingTop: '16px' }}>
@@ -1544,7 +1442,7 @@ export default function RepartoDashboard() {
                     className="btn btn-primary"
                     style={{ backgroundColor: '#E30613', borderColor: '#E30613' }}
                   >
-                    Confirmar Arqueo y Liquidar Viaje
+                    Confirmar y Liquidar Viaje
                   </button>
                 </div>
               </form>
