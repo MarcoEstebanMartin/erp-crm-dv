@@ -856,15 +856,16 @@ tr:hover td {
   .print-table {
     width: 100% !important;
     border-collapse: collapse !important;
-    margin-top: 15px !important;
+    margin-top: 10px !important;
   }
   
   .print-table th, 
   .print-table td {
     border: 1px solid #1D1D1F !important;
-    padding: 6px 8px !important;
+    padding: 3.5px 5px !important;
     text-align: left !important;
-    font-size: 10pt !important;
+    font-size: 8.5pt !important;
+    line-height: 1.2 !important;
   }
   
   .print-table th {
@@ -876,29 +877,29 @@ tr:hover td {
 
   .print-header {
     border-bottom: 2px solid #1D1D1F !important;
-    padding-bottom: 10px !important;
-    margin-bottom: 20px !important;
+    padding-bottom: 8px !important;
+    margin-bottom: 12px !important;
   }
 
   .print-grid {
     display: grid !important;
     grid-template-columns: repeat(2, 1fr) !important;
-    gap: 15px !important;
-    margin-bottom: 20px !important;
+    gap: 10px !important;
+    margin-bottom: 12px !important;
   }
 
   .print-card {
     border: 1px solid #cccccc !important;
     border-radius: 4px !important;
-    padding: 10px !important;
-    margin-bottom: 15px !important;
+    padding: 8px !important;
+    margin-bottom: 8px !important;
     background-color: #fafafa !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
 
   .print-footer-signatures {
-    margin-top: 50px !important;
+    margin-top: 30px !important;
     display: grid !important;
     grid-template-columns: repeat(3, 1fr) !important;
     gap: 30px !important;
@@ -907,7 +908,7 @@ tr:hover td {
 
   .signature-line {
     border-top: 1px solid #000000 !important;
-    margin-top: 45px !important;
+    margin-top: 30px !important;
     padding-top: 5px !important;
     font-size: 9pt !important;
     color: #333333 !important;

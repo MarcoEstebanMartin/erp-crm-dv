@@ -462,7 +462,19 @@ function PrintRouteSheet({ route, locations }: { route: any; locations: any[] })
       {/* Cabecera del Documento */}
       <div className="print-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #1D1D1F', paddingBottom: '10px', marginBottom: '20px' }}>
         <div>
-          <h1 style={{ margin: 0, fontSize: '1.6rem', fontWeight: 700, color: '#1D1D1F' }}>DISTRIBUIDORA DV</h1>
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <img 
+              src="/logo.png" 
+              alt="Logo DV" 
+              style={{ height: '50px', width: 'auto', objectFit: 'contain', display: 'block', alignSelf: 'flex-start' }} 
+              onError={(e) => {
+                e.currentTarget.style.display = 'none';
+                const textEl = e.currentTarget.nextSibling as HTMLElement;
+                if (textEl) textEl.style.display = 'block';
+              }}
+            />
+            <h1 style={{ margin: 0, fontSize: '1.6rem', fontWeight: 700, color: '#1D1D1F', display: 'none' }}>DISTRIBUIDORA DV</h1>
+          </div>
           <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: '#555' }}>Logística y Distribución Mayorista de Alimentos y Bebidas</p>
         </div>
         <div style={{ textAlign: 'right' }}>
@@ -500,7 +512,7 @@ function PrintRouteSheet({ route, locations }: { route: any; locations: any[] })
           <tr style={{ backgroundColor: '#f2f2f2' }}>
             <th style={{ width: '40px', textAlign: 'center', border: '1px solid #1D1D1F', padding: '6px' }}>Parada</th>
             <th style={{ width: '180px', border: '1px solid #1D1D1F', padding: '6px' }}>Cliente</th>
-            <th style={{ border: '1px solid #1D1D1F', padding: '6px' }}>Dirección y Localidad</th>
+            <th style={{ border: '1px solid #1D1D1F', padding: '6px' }}>Dirección</th>
             <th style={{ width: '100px', border: '1px solid #1D1D1F', padding: '6px' }}>Comprobante</th>
             <th style={{ width: '100px', textAlign: 'right', border: '1px solid #1D1D1F', padding: '6px' }}>Importe a Cobrar</th>
             <th style={{ width: '130px', border: '1px solid #1D1D1F', padding: '6px' }}>Cobrado Físico ($)</th>
@@ -521,7 +533,6 @@ function PrintRouteSheet({ route, locations }: { route: any; locations: any[] })
                 </td>
                 <td style={{ border: '1px solid #1D1D1F', padding: '6px' }}>
                   <div>{stop.address}</div>
-                  <div style={{ fontSize: '0.7rem', color: '#555', fontStyle: 'italic' }}>{order?.persona?.city || 'Gral Villegas'}</div>
                 </td>
                 <td style={{ fontFamily: 'monospace', border: '1px solid #1D1D1F', padding: '6px' }}>{stop.invoice}</td>
                 <td style={{ textAlign: 'right', fontWeight: 'bold', border: '1px solid #1D1D1F', padding: '6px' }}>
@@ -590,28 +601,6 @@ function PrintRouteSheet({ route, locations }: { route: any; locations: any[] })
           <h4 style={{ margin: '0 0 6px 0', fontSize: '0.85rem', fontWeight: 700 }}>Observaciones y Novedades del Viaje</h4>
           <div style={{ height: '80px', border: '1px solid #ddd', borderRadius: '3px', backgroundColor: '#fff', padding: '4px', marginTop: '6px' }}>
             {/* Espacio para escribir notas de entrega, rechazos o demoras */}
-          </div>
-        </div>
-      </div>
-
-      {/* Firmas de Conformidad */}
-      <div className="print-footer-signatures" style={{ marginTop: '40px', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '30px', textAlign: 'center', pageBreakInside: 'avoid' }}>
-        <div>
-          <div className="signature-line" style={{ borderTop: '1px solid #000', paddingTop: '4px', fontSize: '0.8rem' }}>
-            <strong>Firma del Chofer</strong>
-            <div style={{ fontSize: '0.65rem', color: '#555' }}>Chofer: {route.driverName}</div>
-          </div>
-        </div>
-        <div>
-          <div className="signature-line" style={{ borderTop: '1px solid #000', paddingTop: '4px', fontSize: '0.8rem' }}>
-            <strong>Control de Salida / Retorno</strong>
-            <div style={{ fontSize: '0.65rem', color: '#555' }}>Firma Responsable Depósito</div>
-          </div>
-        </div>
-        <div>
-          <div className="signature-line" style={{ borderTop: '1px solid #000', paddingTop: '4px', fontSize: '0.8rem' }}>
-            <strong>Recepción Administración</strong>
-            <div style={{ fontSize: '0.65rem', color: '#555' }}>Firma Cajero / Conciliador</div>
           </div>
         </div>
       </div>

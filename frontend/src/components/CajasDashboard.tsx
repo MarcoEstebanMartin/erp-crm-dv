@@ -360,7 +360,7 @@ export default function CajasDashboard() {
                       onMouseEnter={() => setHoveredRowId(d.id)}
                       onMouseLeave={() => setHoveredRowId(null)}
                     >
-                      <td style={{ padding: '12px', fontWeight: 600 }}>{CAJAS.find(c => c.id === d.branch)?.name || d.branch}</td>
+                      <td style={{ padding: '12px', fontWeight: 600 }}>{dynamicCajas.find(c => c.id === d.branch)?.name || d.branch}</td>
                       <td style={{ padding: '12px', fontSize: '0.8rem' }}>{new Date(d.openedAt).toLocaleString('es-AR', {dateStyle:'short', timeStyle:'short'})}</td>
                       <td style={{ padding: '12px', fontSize: '0.8rem' }}>{new Date(d.closedAt).toLocaleString('es-AR', {dateStyle:'short', timeStyle:'short'})}</td>
                       <td style={{ padding: '12px' }}>${Number(d.openingBalance).toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
@@ -399,7 +399,7 @@ export default function CajasDashboard() {
           <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '850px', width: '95%', padding: '24px' }}>
             <div className="modal-header" style={{ marginBottom: '20px' }}>
               <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700 }}>
-                Arqueo Histórico: {CAJAS.find(c => c.id === inspectDrawer.branch)?.name || inspectDrawer.branch}
+                Arqueo Histórico: {dynamicCajas.find(c => c.id === inspectDrawer.branch)?.name || inspectDrawer.branch}
               </h3>
               <button 
                 type="button" 
