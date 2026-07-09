@@ -389,7 +389,7 @@ export class AdminService {
       totalClients,
       totalDebt,
       clients,
-      availableCities: allCitiesResult.map(c => c.city).filter(Boolean),
+      availableCities: [...MAIN_CITIES, 'OTRAS'].sort(),
       availableSellers: sellers,
       topClients,
       clientsWithMovements,
@@ -533,5 +533,51 @@ export class AdminService {
   }
 }
 
-export const adminService = new AdminService();
+const MAIN_CITIES = [
+  'GENERAL VILLEGAS',
+  'EMILIO V. BUNGE',
+  'BANDERALO',
+  'INTENDENTE ALVEAR',
+  'PIEDRITAS',
+  'CEBALLOS',
+  'RUFINO',
+  'BUCHARDO',
+  'CHARLONE',
+  'LARROUDE',
+  'SAUCE',
+  'SANSINENA',
+  'TRES ALGARROBOS',
+  'AMEGHINO',
+  'BLAQUIER',
+  'AMERICA',
+  'FORTIN',
+  'CARLOS TEJEDOR',
+  'OFICINA'
+];
 
+function normalizeCity(city: string | null | undefined): string {
+  if (!city) return 'Sin Localidad';
+  const upper = city.toUpperCase().trim();
+  
+  for (const mainCity of MAIN_CITIES) {
+    if (upper.includes(mainCity)) {
+      return mainCity;
+    }
+  }
+
+  // Alternativas de nombres comunes
+  if (upper.includes('BUNGE')) return 'EMILIO V. BUNGE';
+  if (upper.includes('ALVEAR')) return 'INTENDENTE ALVEAR';
+  if (upper.includes('VILLEGAS')) return 'GENERAL VILLEGAS';
+  if (upper.includes('LARROUDE')) return 'LARROUDE';
+  if (upper.includes('TEJEDOR')) return 'CARLOS TEJEDOR';
+
+  // Si no coincide con ninguna principal y parece una dirección sucia (empieza con paréntesis o tiene números), poner Sin Localidad
+  if (upper.startsWith('(') || /\d/.test(upper)) {
+    return 'Sin Localidad';
+  }
+
+  return upper;
+}
+
+export const adminService = new AdminService();

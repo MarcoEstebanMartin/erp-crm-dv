@@ -94,6 +94,7 @@ export async function updatePersona(req: AuthenticatedRequest, res: Response): P
         province: req.body.province !== undefined ? req.body.province : undefined,
         zipCode: req.body.zipCode !== undefined ? req.body.zipCode : undefined,
         phone: req.body.phone !== undefined ? req.body.phone : undefined,
+        route: req.body.route !== undefined ? req.body.route : undefined,
     }, userId, userRole);
     res.status(200).json({ status: 'success', data: { persona } });
   } catch (error: any) {
@@ -195,5 +196,56 @@ export async function getAfipData(req: AuthenticatedRequest, res: Response): Pro
   } catch (error: any) {
     console.error('Error consultando AFIP:', error);
     res.status(500).json({ status: 'error', message: 'Error al consultar datos en AFIP.' });
+  }
+}
+
+/**
+ * Obtener las facturas pendientes de un cliente.
+ */
+export async function getPersonaPendingInvoices(req: AuthenticatedRequest, res: Response): Promise<void> {
+  const { id } = req.params;
+  const userId = req.user?.id;
+  const userRole = req.user?.role;
+
+  if (!userId || !userRole) {
+    res.status(401).json({ status: 'error', message: 'No autorizado.' });
+    return;
+  }
+
+  try {
+    const invoices = await personaService.getPersonaPendingInvoices(Number(id), userId, userRole);
+    res.status(200).json({ status: 'success', data: { invoices } });
+  } catch (error: any) {
+    console.error('Error obteniendo facturas pendientes:', error);
+    if (error.message === 'Persona no encontrada.') {
+      res.status(404).json({ status: 'error', message: error.message });
+      return;
+    }
+    if (error.message === 'Acceso denegado.') {
+      res.status(403).json({ status: 'error', message: error.message });
+      return;
+    }
+    res.status(500).json({ status: 'error', message: 'Error al obtener facturas pendientes.' });
+  }
+}
+
+/**
+ * Obtener reporte de deudores por ruta y sucursales.
+ */
+export async function getDebtorsReport(req: AuthenticatedRequest, res: Response): Promise<void> {
+  const userId = req.user?.id;
+  const userRole = req.user?.role;
+
+  if (!userId || !userRole) {
+    res.status(401).json({ status: 'error', message: 'No autorizado.' });
+    return;
+  }
+
+  try {
+    const result = await personaService.getDebtorsReport(userId, userRole);
+    res.status(200).json({ status: 'success', data: result });
+  } catch (error: any) {
+    console.error('Error obteniendo reporte de deudores:', error);
+    res.status(500).json({ status: 'error', message: 'Error al obtener el reporte de deudores.' });
   }
 }

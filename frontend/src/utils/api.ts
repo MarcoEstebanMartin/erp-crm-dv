@@ -142,7 +142,7 @@ export const api = {
   },
 
   // --- PERSONAS ---
-  getPersonas: async (role?: string, search?: string) => {    
+  getPersonas: async (role?: string, search?: string) => {    
     let path = '/personas';
     const params = [];
     if (role) params.push(`role=${role}`);
@@ -151,6 +151,11 @@ export const api = {
 
     const res = await request(path);
     return res.personas;
+  },
+
+  getDebtorsReport: async () => {
+    const res = await request('/personas/debtors-report');
+    return res;
   },
 
   getClients: async (search?: string) => {

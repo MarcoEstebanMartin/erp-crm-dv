@@ -396,6 +396,7 @@ export async function getTransactionById(req: AuthenticatedRequest, res: Respons
         persona: { select: { id: true, name: true, isClient: true, isProvider: true } },
         cashDrawer: true,
         bankAccount: true,
+        order: { select: { id: true, invoiceNumber: true } },
       },
     });
 

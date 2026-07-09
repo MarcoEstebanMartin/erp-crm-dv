@@ -62,6 +62,14 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
   const [products, setProducts] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
   const [clients, setClients] = useState<any[]>([]);
+  const [debtorsReport, setDebtorsReport] = useState<any[]>([]);
+  const [availableCities, setAvailableCities] = useState<string[]>([]);
+  const [selectedCities, setSelectedCities] = useState<string[]>([]);
+  const [selectedBranchFilter, setSelectedBranchFilter] = useState<string>('ALL');
+  const [availableSellers, setAvailableSellers] = useState<any[]>([]);
+  const [selectedSellerFilter, setSelectedSellerFilter] = useState<string>('ALL');
+  const [showCityDropdown, setShowCityDropdown] = useState<boolean>(false);
+  const [citySearchQuery, setCitySearchQuery] = useState<string>('');
   const [orders, setOrders] = useState<any[]>([]);
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
   const [financialReport, setFinancialReport] = useState<any | null>(null);
@@ -70,7 +78,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
   const [productModal, setProductModal] = useState({ open: false, mode: 'create', data: { id: 0, sku: '', name: '', description: '', barcode: '', costPrice: 0, listPrice: 0, listPriceB: 0, listPriceC: 0, minStock: 0, isPesable: false, approximateWeight: 0 } });
   const [userModal, setUserModal] = useState({ open: false, username: '', password: '', role: 'VENDEDOR' });
   const [showPassword, setShowPassword] = useState(false);
-  const [clientModal, setClientModal] = useState({ open: false, mode: 'create', data: { id: 0, name: '', cuit: '', address: '', city: '', phone: '', email: '', creditLimit: 0, priceList: 'A', discount: 0, isClient: true, isProvider: false, isSeller: false, isCommissionAgent: false } });
+  const [clientModal, setClientModal] = useState({ open: false, mode: 'create', data: { id: 0, name: '', cuit: '', address: '', city: '', phone: '', email: '', creditLimit: 0, priceList: 'A', discount: 0, isClient: true, isProvider: false, isSeller: false, isCommissionAgent: false, route: '' } });
   const [showResumenModal, setShowResumenModal] = useState<any>(null);
   const [orderDetailsModal, setOrderDetailsModal] = useState<any | null>(null);
   const [editOrderModal, setEditOrderModal] = useState<{ open: boolean; orderId: number; clientId: number; clientName: string; items: { id: number; productId: number; name: string; sku: string; quantity: number; listPrice: number; weight?: number | null; isPesable?: boolean; approximateWeight?: number | null }[] } | null>(null);
@@ -81,6 +89,32 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
   const [paymentAmount, setPaymentAmount] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('CASH');
   const [paymentDescription, setPaymentDescription] = useState('');
+  const [paymentLoading, setPaymentLoading] = useState(false);
+  const [paymentPendingInvoices, setPaymentPendingInvoices] = useState<any[]>([]);
+  const [paymentSelectedInvoiceId, setPaymentSelectedInvoiceId] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (paymentModal && paymentModal.open) {
+      fetchPaymentPendingInvoices(paymentModal.clientId);
+    } else {
+      setPaymentPendingInvoices([]);
+      setPaymentSelectedInvoiceId(null);
+    }
+  }, [paymentModal]);
+
+  const fetchPaymentPendingInvoices = async (clientId: number) => {
+    try {
+      const res = await api.getPersonaPendingInvoices(clientId);
+      if (res?.invoices && Array.isArray(res.invoices)) {
+        setPaymentPendingInvoices(res.invoices);
+      } else {
+        setPaymentPendingInvoices([]);
+      }
+    } catch (err) {
+      console.error('Error fetching pending invoices:', err);
+    }
+  };
+
   const [newContact, setNewContact] = useState({ name: '', phone: '', email: '', role: '' });
   const [showAddContact, setShowAddContact] = useState(false);
 
@@ -182,12 +216,28 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
       setErrorMsg('Monto inválido.');
       return;
     }
+    if (paymentLoading) return;
+
+    // Advertencia de sobrepago si la ficha del cliente está abierta
+    if (clientProfileModal && clientProfileModal.client.id === paymentModal!.clientId) {
+      const balance = Number(clientProfileModal.client.outstandingBalance || 0);
+      const parsedAmount = Number(paymentAmount);
+      if (parsedAmount > balance) {
+        const confirmOverpayment = window.confirm(
+          `El monto a cobrar ($${parsedAmount.toLocaleString()}) supera el saldo pendiente del cliente ($${balance.toLocaleString()}). El cliente quedará con saldo a favor. ¿Deseas continuar?`
+        );
+        if (!confirmOverpayment) return;
+      }
+    }
 
     try {
+      setPaymentLoading(true);
+      setErrorMsg(null);
       await api.registerPayment(paymentModal!.clientId, {
         amount: Number(paymentAmount),
         paymentMethod,
-        description: paymentDescription
+        description: paymentDescription,
+        orderId: paymentSelectedInvoiceId || undefined
       });
       setPaymentModal(null);
       setPaymentAmount('');
@@ -201,6 +251,8 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
       fetchData();
     } catch (err: any) {
       setErrorMsg(err.message || 'Error al registrar cobro.');
+    } finally {
+      setPaymentLoading(false);
     }
   };
 
@@ -296,9 +348,18 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
         const data = await api.getUsers();
         setUsers(data);
       } else if (activeTab === 'clients') {
-        const roleParam = personaRoleFilter === 'debtors_by_city' ? 'client' : personaRoleFilter;
-        const data = await api.getPersonas(roleParam, searchQuery);
-        setClients(data);
+        if (personaRoleFilter === 'debtors_by_city') {
+          const report = await api.getDebtorsReport();
+          setDebtorsReport(report.debtors);
+          const cities = [...(report.availableCities || [])] as string[];
+          const sortedCities = cities.sort();
+          setAvailableCities(sortedCities);
+          setSelectedCities(sortedCities);
+          setAvailableSellers(report.availableSellers || []);
+        } else {
+          const data = await api.getPersonas(personaRoleFilter, searchQuery);
+          setClients(data);
+        }
       } else if (activeTab === 'orders') {
         const data = await api.getOrders();
         // Filtrar orders localmente según el estado lógico seleccionado
@@ -518,6 +579,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
           city: data.city,
           phone: data.phone,
           email: data.email,
+          route: data.route,
           creditLimit: Number(data.creditLimit || 0),
           priceList: data.priceList || 'A',
           discount: Number(data.discount || 0),
@@ -534,6 +596,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
           city: data.city,
           phone: data.phone,
           email: data.email,
+          route: data.route,
           creditLimit: Number(data.creditLimit || 0),
           priceList: data.priceList || 'A',
           discount: Number(data.discount || 0),
@@ -795,19 +858,42 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
 
   // @ts-ignore
   const handlePrintDebtorsReport = () => {
-    // Agrupar deudores por ciudad
-    const debtors = clients.filter(c => Number(c.outstandingBalance || 0) > 0);
-    const groups: { [key: string]: typeof clients } = {};
-    debtors.forEach(c => {
-      const city = c.city || 'Sin Localidad';
+    // Filtrar deudores localmente con las mismas condiciones de la UI
+    const filteredDebtors = debtorsReport.filter(d => {
+      // Filtro de localidad
+      const matchesCity = selectedCities.includes(d.city || 'Sin Localidad');
+
+      // Filtro de sucursal
+      let matchesBranch = true;
+      if (selectedBranchFilter === 'A') {
+        matchesBranch = d.debtA > 0;
+      } else if (selectedBranchFilter === 'X') {
+        matchesBranch = d.debtX > 0;
+      }
+
+      // Filtro de vendedor
+      let matchesSeller = true;
+      if (selectedSellerFilter !== 'ALL') {
+        matchesSeller = d.sellerId?.toString() === selectedSellerFilter;
+      }
+
+      return matchesCity && matchesBranch && matchesSeller;
+    });
+
+    // Agrupar por localidad
+    const groups: { [key: string]: typeof debtorsReport } = {};
+    filteredDebtors.forEach(d => {
+      const city = d.city || 'Sin Localidad';
       if (!groups[city]) groups[city] = [];
-      groups[city].push(c);
+      groups[city].push(d);
     });
 
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
 
-    const totalDeuda = debtors.reduce((acc, c) => acc + Number(c.outstandingBalance || 0), 0);
+    const totalA = filteredDebtors.reduce((acc, d) => acc + d.debtA, 0);
+    const totalX = filteredDebtors.reduce((acc, d) => acc + d.debtX, 0);
+    const totalConsolidado = filteredDebtors.reduce((acc, d) => acc + d.outstandingBalance, 0);
 
     let htmlContent = `
       <html>
@@ -818,8 +904,8 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
             h1 { text-align: center; font-size: 18px; margin-bottom: 5px; }
             .date { text-align: center; margin-bottom: 20px; font-size: 11px; }
             .totals { border: 1px dashed #000; padding: 10px; margin-bottom: 20px; }
-            .city-section { margin-bottom: 25px; }
-            .city-title { font-weight: bold; font-size: 15px; border-bottom: 1px solid #000; padding-bottom: 3px; margin-bottom: 10px; text-transform: uppercase; }
+            .route-section { margin-bottom: 25px; }
+            .route-title { font-weight: bold; font-size: 15px; border-bottom: 1px solid #000; padding-bottom: 3px; margin-bottom: 10px; text-transform: uppercase; }
             table { width: 100%; border-collapse: collapse; margin-top: 5px; }
             th { text-align: left; border-bottom: 1px dashed #000; padding: 5px 0; font-size: 12px; }
             td { padding: 6px 0; font-size: 12px; vertical-align: top; }
@@ -832,25 +918,30 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
           </style>
         </head>
         <body>
-          <h1>DISTRIBUIDORA DV - REPORTE DE DEUDORES</h1>
+          <h1>DISTRIBUIDORA DV - REPORTE DE DEUDORES POR LOCALIDAD</h1>
           <div class="date">Generado el: ${new Date().toLocaleDateString('es-AR')} ${new Date().toLocaleTimeString('es-AR')}</div>
           
           <div class="totals">
-            <strong>TOTAL DEUDORES:</strong> ${debtors.length}<br>
-            <strong>TOTAL DEUDA ACUMULADA:</strong> $${totalDeuda.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+            <strong>TOTAL CLIENTES EN MORA:</strong> ${filteredDebtors.length}<br>
+            <strong>DEUDA SUCURSAL A (OFICIAL):</strong> $${totalA.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}<br>
+            <strong>DEUDA SUCURSAL X (INTERNA):</strong> $${totalX.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}<br>
+            <strong>DEUDA CONSOLIDADA:</strong> $${totalConsolidado.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
           </div>
     `;
 
     Object.keys(groups).sort().forEach(city => {
+      const groupTotal = groups[city].reduce((acc, d) => acc + d.outstandingBalance, 0);
       htmlContent += `
-        <div class="city-section">
-          <div class="city-title">📍 Localidad: ${city}</div>
+        <div class="route-section">
+          <div class="route-title">📍 Localidad: ${city} (Total: $${groupTotal.toLocaleString('es-AR')})</div>
           <table>
             <thead>
               <tr>
-                <th style="width: 40%">Cliente</th>
-                <th style="width: 35%">Dirección / Teléfono</th>
-                <th style="width: 25%" class="text-right">Saldo Deudor</th>
+                <th style="width: 30%">Cliente</th>
+                <th style="width: 25%">Contacto / Teléfono</th>
+                <th style="width: 15%" class="text-right">Suc. A</th>
+                <th style="width: 15%" class="text-right">Suc. X</th>
+                <th style="width: 15%" class="text-right">Total</th>
               </tr>
             </thead>
             <tbody>
@@ -861,14 +952,17 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
           <tr>
             <td>
               <strong>${c.name}</strong><br>
-              <span style="font-size: 10px; color: #555;">CUIT: ${c.cuit || 'S/D'}</span>
+              <span style="font-size: 10px; color: #555;">Ruta: ${c.route || 'Sin Ruta'}</span>
+              ${c.pendingInvoicesCount > 1 ? '<br><span style="font-size: 10px; color: #E30613; font-weight: bold;">⚠️ Debe ' + c.pendingInvoicesCount + ' boletas</span>' : ''}
             </td>
             <td>
-              ${c.address || 'Sin dirección'}<br>
+              ${c.address || 'S/D'}<br>
               Tel: ${c.phone || 'S/D'}
             </td>
-            <td class="text-right" style="font-weight: bold;">
-              $${Number(c.outstandingBalance || 0).toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+            <td class="text-right">$${Math.round(c.debtA).toLocaleString('es-AR')}</td>
+            <td class="text-right">$${Math.round(c.debtX).toLocaleString('es-AR')}</td>
+            <td class="text-right" style="font-weight: bold; color: #E30613;">
+              $${Math.round(c.outstandingBalance).toLocaleString('es-AR')}
             </td>
           </tr>
         `;
@@ -1072,7 +1166,8 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
                         isClient: true, 
                         isProvider: false, 
                         isSeller: false, 
-                        isCommissionAgent: false 
+                        isCommissionAgent: false,
+                        route: ''
                       } 
                     });
                   }
@@ -1172,7 +1267,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
               { id: 'client', label: 'Clientes' },
               { id: 'seller', label: 'Vendedores' },
               { id: 'commission_agent', label: 'Comisionistas' },
-              { id: 'debtors_by_city', label: '📊 Deudores por Localidad' }
+              { id: 'debtors_by_city', label: '📊 Deudores por Ruta' }
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -1187,13 +1282,13 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
 
           {personaRoleFilter === 'debtors_by_city' ? (
             <div>
-              {/* Reporte de Deudores */}
+              {/* Reporte de Deudores por Localidad */}
               <div className="card" style={{ padding: '24px', marginBottom: '20px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
                   <div>
                     <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700 }}>Resumen de Deudores por Localidad</h3>
                     <p style={{ margin: '4px 0 0 0', fontSize: '0.88rem', color: 'var(--text-secondary)' }}>
-                      Planilla de deudores agrupados para el recorrido de cobranzas.
+                      Planilla de deudores agrupados por localidad y desglosados por sucursales.
                     </p>
                   </div>
                   <button className="btn btn-primary" onClick={handlePrintDebtorsReport}>
@@ -1202,93 +1297,349 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
                   </button>
                 </div>
 
-                <div className="dashboard-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '24px' }}>
-                  <div className="card stat-card" style={{ borderLeft: '4px solid var(--color-danger)' }}>
-                    <div className="stat-label">Clientes en Mora</div>
-                    <div className="stat-value" style={{ color: 'var(--color-danger)' }}>
-                      {clients.filter(c => Number(c.outstandingBalance || 0) > 0).length}
-                    </div>
-                    <div className="stat-desc">Clientes con saldo deudor activo</div>
+                {/* Filtros de Localidad (Multi-select) y Sucursal */}
+                <div style={{ 
+                  display: 'flex', 
+                  gap: '12px', 
+                  marginBottom: '24px', 
+                  padding: '16px', 
+                  backgroundColor: 'var(--bg-light, #f8f9fa)', 
+                  borderRadius: '8px', 
+                  border: '1px solid var(--border-color, #e5e5e7)',
+                  flexWrap: 'wrap'
+                }}>
+                  {/* Multi-select Dropdown de Localidades */}
+                  <div style={{ flex: '2 1 300px', display: 'flex', flexDirection: 'column', gap: '6px', position: 'relative' }}>
+                    <label style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Filtrar Localidades (Multi-selección)</label>
+                    <button 
+                      type="button"
+                      className="input" 
+                      onClick={() => setShowCityDropdown(!showCityDropdown)}
+                      style={{ 
+                        textAlign: 'left', 
+                        display: 'flex', 
+                        justifyContent: 'space-between', 
+                        alignItems: 'center', 
+                        padding: '8px 12px',
+                        backgroundColor: '#fff',
+                        cursor: 'pointer',
+                        minHeight: '38px',
+                        border: '1px solid var(--border-color, #e5e5e7)'
+                      }}
+                    >
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '220px' }}>
+                        {selectedCities.length === availableCities.length 
+                          ? 'Todas las localidades' 
+                          : selectedCities.length === 0 
+                            ? 'Ninguna seleccionada' 
+                            : `${selectedCities.length} seleccionada(s)`}
+                      </span>
+                      <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>▼</span>
+                    </button>
+
+                    {showCityDropdown && (
+                      <div style={{ 
+                        position: 'absolute', 
+                        top: '100%', 
+                        left: 0, 
+                        right: 0, 
+                        backgroundColor: '#fff', 
+                        border: '1px solid var(--border-color, #e5e5e7)', 
+                        borderRadius: '8px', 
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.1)', 
+                        zIndex: 100, 
+                        marginTop: '4px',
+                        padding: '12px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '8px'
+                      }}>
+                        {/* Buscador interno de localidades */}
+                        <input 
+                          type="text" 
+                          className="input" 
+                          placeholder="Buscar localidad..." 
+                          value={citySearchQuery} 
+                          onChange={(e) => setCitySearchQuery(e.target.value)}
+                          style={{ padding: '6px 10px', fontSize: '0.8rem' }}
+                          onClick={(e) => e.stopPropagation()}
+                        />
+
+                        {/* Botones de selección rápida */}
+                        <div style={{ display: 'flex', gap: '8px', borderBottom: '1px solid var(--border-color, #e5e5e7)', paddingBottom: '8px' }}>
+                          <button 
+                            type="button"
+                            className="btn btn-ghost" 
+                            style={{ padding: '4px 8px', fontSize: '0.75rem', flex: 1 }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedCities(availableCities);
+                            }}
+                          >
+                            Seleccionar todas
+                          </button>
+                          <button 
+                            type="button"
+                            className="btn btn-ghost" 
+                            style={{ padding: '4px 8px', fontSize: '0.75rem', flex: 1 }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedCities([]);
+                            }}
+                          >
+                            Deseleccionar todas
+                          </button>
+                        </div>
+
+                        {/* Listado con scroll de localidades */}
+                        <div style={{ maxHeight: '200px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                          {availableCities
+                            .filter(c => c.toLowerCase().includes(citySearchQuery.toLowerCase()))
+                            .map(city => {
+                              const isChecked = selectedCities.includes(city);
+                              return (
+                                <label 
+                                  key={city} 
+                                  style={{ 
+                                    display: 'flex', 
+                                    alignItems: 'center', 
+                                    gap: '8px', 
+                                    fontSize: '0.82rem', 
+                                    cursor: 'pointer',
+                                    padding: '4px 0',
+                                    userSelect: 'none'
+                                  }}
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <input 
+                                    type="checkbox" 
+                                    checked={isChecked}
+                                    onChange={() => {
+                                      if (isChecked) {
+                                        setSelectedCities(selectedCities.filter(c => c !== city));
+                                      } else {
+                                        setSelectedCities([...selectedCities, city]);
+                                      }
+                                    }}
+                                    style={{ width: '14px', height: '14px' }}
+                                  />
+                                  <span>{city}</span>
+                                </label>
+                              );
+                            })}
+                        </div>
+                      </div>
+                    )}
                   </div>
-                  <div className="card stat-card" style={{ borderLeft: '4px solid #E30613' }}>
-                    <div className="stat-label">Total Deuda Acumulada</div>
-                    <div className="stat-value" style={{ color: '#E30613' }}>
-                      ${Math.round(clients.filter(c => Number(c.outstandingBalance || 0) > 0).reduce((acc, c) => acc + Number(c.outstandingBalance || 0), 0)).toLocaleString('es-AR')}
-                    </div>
-                    <div className="stat-desc">Saldo a cobrar en calle</div>
+
+                  <div style={{ flex: '1 1 200px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <label style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Filtrar por Vendedor</label>
+                    <select 
+                      className="input" 
+                      value={selectedSellerFilter} 
+                      onChange={(e) => setSelectedSellerFilter(e.target.value)}
+                      style={{ padding: '8px 12px' }}
+                    >
+                      <option value="ALL">Todos los Vendedores</option>
+                      {availableSellers.map(s => (
+                        <option key={s.id} value={s.id.toString()}>{s.username}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div style={{ flex: '1 1 200px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <label style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Filtrar por Sucursal con Deuda</label>
+                    <select 
+                      className="input" 
+                      value={selectedBranchFilter} 
+                      onChange={(e) => setSelectedBranchFilter(e.target.value)}
+                      style={{ padding: '8px 12px' }}
+                    >
+                      <option value="ALL">Todas las Sucursales</option>
+                      <option value="A">Sucursal A (Oficial)</option>
+                      <option value="X">Sucursal X (Interna)</option>
+                    </select>
                   </div>
                 </div>
 
                 {(() => {
-                  const debtors = clients.filter(c => Number(c.outstandingBalance || 0) > 0);
-                  if (debtors.length === 0) {
-                    return <div style={{ textAlign: 'center', padding: '30px', color: 'var(--text-secondary)' }}>No hay deudores registrados actualmente.</div>;
-                  }
+                  // Filtrar localmente deudores
+                  const filteredDebtors = debtorsReport.filter(d => {
+                    const matchesCity = selectedCities.includes(d.city || 'Sin Localidad');
 
-                  // Agrupar
-                  const groups: { [key: string]: typeof clients } = {};
-                  debtors.forEach(c => {
-                    const city = c.city || 'Sin Localidad';
-                    if (!groups[city]) groups[city] = [];
-                    groups[city].push(c);
+                    let matchesBranch = true;
+                    if (selectedBranchFilter === 'A') {
+                      matchesBranch = d.debtA > 0;
+                    } else if (selectedBranchFilter === 'X') {
+                      matchesBranch = d.debtX > 0;
+                    }
+
+                    let matchesSeller = true;
+                    if (selectedSellerFilter !== 'ALL') {
+                      matchesSeller = d.sellerId?.toString() === selectedSellerFilter;
+                    }
+
+                    return matchesCity && matchesBranch && matchesSeller;
                   });
 
-                  return Object.keys(groups).sort().map(city => (
-                    <div key={city} style={{ marginBottom: '24px' }}>
-                      <div style={{ 
-                        fontSize: '1rem', 
-                        fontWeight: 700, 
-                        padding: '8px 12px', 
-                        backgroundColor: 'var(--bg-light)', 
-                        borderLeft: '4px solid var(--accent-color)',
-                        borderRadius: '0 6px 6px 0',
-                        marginBottom: '12px',
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center'
-                      }}>
-                        <span>📍 {city}</span>
-                        <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                          Total: ${Math.round(groups[city].reduce((acc, c) => acc + Number(c.outstandingBalance || 0), 0)).toLocaleString('es-AR')}
-                        </span>
+                  const totalA = filteredDebtors.reduce((acc, d) => acc + d.debtA, 0);
+                  const totalX = filteredDebtors.reduce((acc, d) => acc + d.debtX, 0);
+                  const totalConsolidado = filteredDebtors.reduce((acc, d) => acc + d.outstandingBalance, 0);
+
+                  if (filteredDebtors.length === 0) {
+                    return <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-secondary)' }}>No se encontraron deudores con los filtros seleccionados.</div>;
+                  }
+
+                  // Agrupar por localidad
+                  const groups: { [key: string]: typeof debtorsReport } = {};
+                  filteredDebtors.forEach(d => {
+                    const city = d.city || 'Sin Localidad';
+                    if (!groups[city]) groups[city] = [];
+                    groups[city].push(d);
+                  });
+
+                  return (
+                    <div>
+                      {/* Grid de totales resumidos */}
+                      <div className="dashboard-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+                        <div className="card stat-card" style={{ borderLeft: '4px solid var(--text-secondary, #606060)', padding: '16px' }}>
+                          <div className="stat-label">Clientes en Mora</div>
+                          <div className="stat-value" style={{ fontSize: '1.5rem', fontWeight: 700 }}>
+                            {filteredDebtors.length}
+                          </div>
+                          <div className="stat-desc" style={{ fontSize: '0.78rem' }}>Con saldo deudor activo</div>
+                        </div>
+                        <div className="card stat-card" style={{ borderLeft: '4px solid #137333', padding: '16px' }}>
+                          <div className="stat-label">Deuda Sucursal A (Oficial)</div>
+                          <div className="stat-value" style={{ color: '#137333', fontSize: '1.5rem', fontWeight: 700 }}>
+                            ${totalA.toLocaleString('es-AR')}
+                          </div>
+                          <div className="stat-desc" style={{ fontSize: '0.78rem' }}>Total facturado oficial</div>
+                        </div>
+                        <div className="card stat-card" style={{ borderLeft: '4px solid #3c4043', padding: '16px' }}>
+                          <div className="stat-label">Deuda Sucursal X (Interno)</div>
+                          <div className="stat-value" style={{ color: '#3c4043', fontSize: '1.5rem', fontWeight: 700 }}>
+                            ${totalX.toLocaleString('es-AR')}
+                          </div>
+                          <div className="stat-desc" style={{ fontSize: '0.78rem' }}>Total presupuestos internos</div>
+                        </div>
+                        <div className="card stat-card" style={{ borderLeft: '4px solid #E30613', padding: '16px' }}>
+                          <div className="stat-label">Total Consolidado</div>
+                          <div className="stat-value" style={{ color: '#E30613', fontSize: '1.5rem', fontWeight: 700 }}>
+                            ${totalConsolidado.toLocaleString('es-AR')}
+                          </div>
+                          <div className="stat-desc" style={{ fontSize: '0.78rem' }}>Saldo total a cobrar</div>
+                        </div>
                       </div>
-                      <div className="table-container" style={{ marginTop: '0', border: 'none' }}>
-                        <table>
-                          <thead>
-                            <tr>
-                              <th>Cliente</th>
-                              <th>Dirección</th>
-                              <th>Teléfono</th>
-                              <th style={{ textAlign: 'right' }}>Saldo Deudor</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {groups[city].map(c => (
-                              <tr key={c.id}>
-                                <td style={{ fontWeight: 600 }}>{c.name}</td>
-                                <td>{c.address || 'S/D'}</td>
-                                <td>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                    <span>{c.phone || 'S/D'}</span>
-                                    {c.phone && (
-                                      <a href={getWhatsAppLink(c.phone)} target="_blank" rel="noopener noreferrer" title="Escribir por WhatsApp">
-                                        <svg viewBox="0 0 24 24" width="14" height="14" fill="#25D366">
-                                          <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.513 2.262 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.724-1.455L0 24zm6.59-4.846c1.6.95 3.188 1.449 4.825 1.451 5.436 0 9.86-4.37 9.863-9.755.002-2.61-1.01-5.063-2.85-6.908-1.839-1.844-4.286-2.86-6.903-2.861-5.441 0-9.863 4.37-9.866 9.756-.001 1.748.469 3.456 1.36 5.01L1.932 20.17l4.715-1.016zM17.47 15.3c-.3-.15-1.775-.875-2.05-1.05-.275-.1-.475-.15-.675.15-.2.3-.775 1.05-.95 1.25-.175.2-.35.225-.65.075-.3-.15-1.263-.465-2.403-1.485-.888-.795-1.487-1.77-1.663-2.07-.176-.3-.019-.462.13-.61.135-.133.3-.35.45-.525.15-.175.2-.3.3-.5.1-.2.05-.375-.025-.525-.075-.15-.675-1.625-.925-2.225-.244-.589-.491-.51-.675-.52-.175-.01-.375-.01-.575-.01-.2 0-.525.075-.8 1.05-.275.975-1.05 2.1-1.275 2.55-.225.45-.05.875.1 1.05.887 1.02 2.222 1.944 3.9 2.52.27.093.536.14.79.165.37.037.706.024.97-.015.295-.044.875-.36 1 .71.125.35.125.65.063.8-.062.15-.325.29-1 .15z"/>
-                                        </svg>
-                                      </a>
-                                    )}
-                                  </div>
-                                </td>
-                                <td style={{ textAlign: 'right', fontWeight: 700, color: 'var(--color-danger)' }}>
-                                  ${Math.round(Number(c.outstandingBalance || 0)).toLocaleString('es-AR')}
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
+
+                      {/* Agrupación visual por localidad */}
+                      {Object.keys(groups).sort().map(city => (
+                        <div key={city} style={{ marginBottom: '28px' }}>
+                          <div style={{ 
+                            fontSize: '0.92rem', 
+                            fontWeight: 700, 
+                            padding: '10px 14px', 
+                            backgroundColor: 'var(--bg-light, #f8f9fa)', 
+                            borderLeft: '4px solid var(--accent-color, #E30613)',
+                            borderRadius: '0 6px 6px 0',
+                            marginBottom: '12px',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            border: '1px solid var(--border-color, #e5e5e7)',
+                            borderLeftWidth: '4px'
+                          }}>
+                            <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>📍 Localidad: {city}</span>
+                            <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                              Total Localidad: <strong>${groups[city].reduce((acc, d) => acc + d.outstandingBalance, 0).toLocaleString('es-AR')}</strong>
+                            </span>
+                          </div>
+                          <div className="table-container" style={{ marginTop: '0', border: 'none', boxShadow: 'none' }}>
+                            <table style={{ width: '100%' }}>
+                              <thead>
+                                <tr>
+                                  <th style={{ width: '25%' }}>Cliente</th>
+                                  <th style={{ width: '15%' }}>Ruta de Reparto</th>
+                                  <th style={{ width: '15%', textAlign: 'right' }}>Suc. A (Oficial)</th>
+                                  <th style={{ width: '15%', textAlign: 'right' }}>Suc. X (Interno)</th>
+                                  <th style={{ width: '15%', textAlign: 'right' }}>Saldo Total</th>
+                                  <th style={{ width: '15%', textAlign: 'center' }}>Acciones</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {groups[city].map(d => {
+                                  // Generar link dinámico y profesional para WhatsApp
+                                  const encodedMsg = encodeURIComponent(
+                                    `Estimado/a ${d.name}, le escribimos de Distribuidora DV para recordarle su saldo deudor pendiente de $${d.outstandingBalance.toLocaleString('es-AR')}. (Sucursal A: $${d.debtA.toLocaleString('es-AR')}, Sucursal X: $${d.debtX.toLocaleString('es-AR')}). Muchas gracias.`
+                                  );
+                                  const waLink = d.phone ? `https://wa.me/${d.phone.replace(/\D/g, '')}?text=${encodedMsg}` : null;
+
+                                  return (
+                                    <tr key={d.id} style={{ transition: 'background-color 0.2s' }}>
+                                      <td>
+                                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                          <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{d.name}</span>
+                                          <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                                            {d.address || 'Sin Dirección'}
+                                          </span>
+                                          {d.hasMultiplePendingInvoices && (
+                                            <span style={{ 
+                                              display: 'inline-flex', 
+                                              alignItems: 'center', 
+                                              alignSelf: 'flex-start',
+                                              gap: '4px', 
+                                              fontSize: '0.72rem', 
+                                              backgroundColor: '#FCE8E6', 
+                                              color: '#C5221F', 
+                                              padding: '2px 8px', 
+                                              borderRadius: '12px', 
+                                              fontWeight: 600, 
+                                              marginTop: '4px' 
+                                            }}>
+                                              ⚠️ Debe {d.pendingInvoicesCount} boletas
+                                            </span>
+                                          )}
+                                        </div>
+                                      </td>
+                                      <td>
+                                        <span style={{ fontSize: '0.88rem', color: 'var(--text-primary)' }}>{d.route || 'Sin Ruta'}</span>
+                                      </td>
+                                      <td style={{ textAlign: 'right', fontWeight: 500, color: d.debtA > 0 ? '#137333' : 'var(--text-secondary)' }}>
+                                        {d.debtA > 0 ? `$${Math.round(d.debtA).toLocaleString('es-AR')}` : '-'}
+                                      </td>
+                                      <td style={{ textAlign: 'right', fontWeight: 500, color: d.debtX > 0 ? '#3c4043' : 'var(--text-secondary)' }}>
+                                        {d.debtX > 0 ? `$${Math.round(d.debtX).toLocaleString('es-AR')}` : '-'}
+                                      </td>
+                                      <td style={{ textAlign: 'right', fontWeight: 700, color: '#E30613' }}>
+                                        ${Math.round(d.outstandingBalance).toLocaleString('es-AR')}
+                                      </td>
+                                      <td>
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                                          {waLink && (
+                                            <a href={waLink} target="_blank" rel="noopener noreferrer" className="btn btn-ghost" style={{ padding: '6px', borderRadius: '4px' }} title="Escribir por WhatsApp">
+                                              <svg viewBox="0 0 24 24" width="16" height="16" fill="#25D366">
+                                                <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.513 2.262 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.724-1.455L0 24zm6.59-4.846c1.6.95 3.188 1.449 4.825 1.451 5.436 0 9.86-4.37 9.863-9.755.002-2.61-1.01-5.063-2.85-6.908-1.839-1.844-4.286-2.86-6.903-2.861-5.441 0-9.863 4.37-9.866 9.756-.001 1.748.469 3.456 1.36 5.01L1.932 20.17l4.715-1.016zM17.47 15.3c-.3-.15-1.775-.875-2.05-1.05-.275-.1-.475-.15-.675.15-.2.3-.775 1.05-.95 1.25-.175.2-.35.225-.65.075-.3-.15-1.263-.465-2.403-1.485-.888-.795-1.487-1.77-1.663-2.07-.176-.3-.019-.462.13-.61.135-.133.3-.35.45-.525.15-.175.2-.3.3-.5.1-.2.05-.375-.025-.525-.075-.15-.675-1.625-.925-2.225-.244-.589-.491-.51-.675-.52-.175-.01-.375-.01-.575-.01-.2 0-.525.075-.8 1.05-.275.975-1.05 2.1-1.275 2.55-.225.45-.05.875.1 1.05.887 1.02 2.222 1.944 3.9 2.52.27.093.536.14.79.165.37.037.706.024.97-.015.295-.044.875-.36 1 .71.125.35.125.65.063.8-.062.15-.325.29-1 .15z"/>
+                                              </svg>
+                                            </a>
+                                          )}
+                                          <button className="btn btn-ghost" style={{ padding: '6px 10px', fontSize: '0.78rem' }} onClick={() => handleViewClientProfile(d)}>
+                                            Ficha
+                                          </button>
+                                          <button className="btn btn-ghost" style={{ padding: '6px 10px', fontSize: '0.78rem', color: '#137333' }} onClick={() => setPaymentModal({ open: true, clientId: d.id, clientName: d.name })}>
+                                            Cobrar
+                                          </button>
+                                        </div>
+                                      </td>
+                                    </tr>
+                                  );
+                                })}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  ));
+                  );
                 })()}
               </div>
             </div>
@@ -1321,7 +1672,8 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
                 isClient: personaRoleFilter === 'client',
                 isProvider: personaRoleFilter === 'provider',
                 isSeller: personaRoleFilter === 'seller',
-                isCommissionAgent: personaRoleFilter === 'commission_agent'
+                isCommissionAgent: personaRoleFilter === 'commission_agent',
+                route: ''
               } 
             })}>
               <UserPlus size={16} />
@@ -1433,7 +1785,8 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
                                 isClient: !!c.isClient,
                                 isProvider: !!c.isProvider,
                                 isSeller: !!c.isSeller,
-                                isCommissionAgent: !!c.isCommissionAgent
+                                isCommissionAgent: !!c.isCommissionAgent,
+                                route: c.route || ''
                               } 
                             })}>
                               Editar
@@ -2734,6 +3087,17 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
                 />
               </div>
 
+              <div className="form-group">
+                <label>Ruta de Reparto</label>
+                <input
+                  type="text"
+                  className="input"
+                  placeholder="ej: BUNGE Y BUCHARDO"
+                  value={clientModal.data.route || ''}
+                  onChange={(e) => setClientModal({ ...clientModal, data: { ...clientModal.data, route: e.target.value } })}
+                />
+              </div>
+
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
                 <div className="form-group">
                   <label>Teléfono</label>
@@ -3065,6 +3429,42 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
               <div style={{ fontSize: '0.85rem', marginBottom: '14px', padding: '10px', backgroundColor: 'var(--bg-light)', borderRadius: '6px' }}>
                 Registrando pago para: <strong>{paymentModal.clientName}</strong>
               </div>
+
+              {paymentPendingInvoices.length > 0 && (
+                <div className="form-group">
+                  <label>Imputar a Factura</label>
+                  <select
+                    className="select"
+                    value={paymentSelectedInvoiceId || ''}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val === '') {
+                        setPaymentSelectedInvoiceId(null);
+                        if (clientProfileModal && clientProfileModal.client.id === paymentModal.clientId) {
+                          setPaymentAmount(clientProfileModal.client.outstandingBalance.toString());
+                        } else {
+                          setPaymentAmount('');
+                        }
+                      } else {
+                        const invId = Number(val);
+                        setPaymentSelectedInvoiceId(invId);
+                        const inv = paymentPendingInvoices.find(i => i.id === invId);
+                        if (inv) {
+                          setPaymentAmount(inv.pendingAmount.toString());
+                        }
+                      }
+                    }}
+                  >
+                    <option value="">Entrega a cuenta general (sin factura específica)</option>
+                    {paymentPendingInvoices.map((inv) => (
+                      <option key={inv.id} value={inv.id}>
+                        {inv.invoiceNumber} (Pendiente: ${inv.pendingAmount.toLocaleString()})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
               <div className="form-group">
                 <label>Monto del Cobro ($)</label>
                 <input
@@ -3074,6 +3474,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
                   value={paymentAmount}
                   onChange={(e) => setPaymentAmount(e.target.value)}
                   required
+                  disabled={paymentLoading}
                 />
               </div>
               <div className="form-group">
@@ -3082,6 +3483,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
                   className="select"
                   value={paymentMethod}
                   onChange={(e) => setPaymentMethod(e.target.value)}
+                  disabled={paymentLoading}
                 >
                   <option value="CASH">Efectivo</option>
                   <option value="BANK_TRANSFER">Transferencia Bancaria</option>
@@ -3097,11 +3499,19 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
                   placeholder="ej: Cobro factura de Quilmes"
                   value={paymentDescription}
                   onChange={(e) => setPaymentDescription(e.target.value)}
+                  disabled={paymentLoading}
                 />
               </div>
               <div className="modal-footer">
-                <button type="button" className="btn btn-secondary" onClick={() => setPaymentModal(null)}>Cancelar</button>
-                <button type="submit" className="btn btn-primary" style={{ backgroundColor: 'var(--color-success)', borderColor: 'var(--color-success)' }}>Confirmar Cobro</button>
+                <button type="button" className="btn btn-secondary" onClick={() => setPaymentModal(null)} disabled={paymentLoading}>Cancelar</button>
+                <button 
+                  type="submit" 
+                  className="btn btn-primary" 
+                  style={{ backgroundColor: 'var(--color-success)', borderColor: 'var(--color-success)' }}
+                  disabled={paymentLoading || !paymentAmount || Number(paymentAmount) <= 0}
+                >
+                  {paymentLoading ? 'Procesando...' : 'Confirmar Cobro'}
+                </button>
               </div>
             </form>
           </div>

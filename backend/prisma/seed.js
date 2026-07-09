@@ -11,13 +11,25 @@ async function main() {
   // 1. Limpiar datos existentes en orden inverso de dependencias
   await prisma.auditLog.deleteMany({});
   await prisma.transaction.deleteMany({});
+  await prisma.taxWithholding.deleteMany({});
+  await prisma.cashDrawer.deleteMany({});
+  await prisma.bankAccount.deleteMany({});
   await prisma.stockMovement.deleteMany({});
+  await prisma.orderItemLot.deleteMany({});
   await prisma.orderItem.deleteMany({});
+  await prisma.creditNoteItem.deleteMany({});
+  await prisma.creditNote.deleteMany({});
   await prisma.order.deleteMany({});
+  await prisma.deliveryRoute.deleteMany({});
+  await prisma.productLot.deleteMany({});
+  await prisma.purchaseOrderItem.deleteMany({});
+  await prisma.purchaseOrder.deleteMany({});
+  await prisma.supplierInvoice.deleteMany({});
   await prisma.persona.deleteMany({});
   await prisma.product.deleteMany({});
   await prisma.rubro.deleteMany({});
   await prisma.user.deleteMany({});
+  await prisma.weeklyReport.deleteMany({});
 
   console.log('🧹 Limpieza de tablas completada.');
 
@@ -27,7 +39,7 @@ async function main() {
 
   // Vendedores
   const uDiego = await prisma.user.create({
-    data: { username: 'diego', passwordHash: await pwhash('diego2026-Erp!'), role: 'VENDEDOR' }
+    data: { username: 'diego', passwordHash: await pwhash('lejarza!'), role: 'VENDEDOR' }
   });
   const uFabian = await prisma.user.create({
     data: { username: 'fabian', passwordHash: await pwhash('fabian2026-Erp!'), role: 'VENDEDOR' }
@@ -49,11 +61,11 @@ async function main() {
   
   // Default admin
   const uAdmin = await prisma.user.create({
-    data: { username: 'admin', passwordHash: await pwhash('admin2026-Erp!'), role: 'ADMIN' }
+    data: { username: 'admin', passwordHash: await pwhash('admin!'), role: 'ADMIN' }
   });
 
   // Repartidores y Armado
-  await prisma.user.create({ data: { username: 'miguel', passwordHash: await pwhash('miguel2026-Erp!'), role: 'DEPOSITO' } });
+  await prisma.user.create({ data: { username: 'miguel', passwordHash: await pwhash('miguel!'), role: 'DEPOSITO' } });
   await prisma.user.create({ data: { username: 'matias', passwordHash: await pwhash('matias2026-Erp!'), role: 'DEPOSITO' } });
   await prisma.user.create({ data: { username: 'thiago', passwordHash: await pwhash('thiago2026-Erp!'), role: 'DEPOSITO' } });
   await prisma.user.create({ data: { username: 'rocio', passwordHash: await pwhash('rocio2026-Erp!'), role: 'DEPOSITO' } });
@@ -85,6 +97,7 @@ async function main() {
         city: c.city,
         phone: c.phone,
         email: c.email,
+        route: c.route,
         priceList: c.priceList,
         discount: c.discount,
         creditLimit: c.creditLimit,

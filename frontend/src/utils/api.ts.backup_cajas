@@ -1,0 +1,735 @@
+import { BillingType, OrderStatus, PaymentMethod } from './types';
+
+// Detecta dinámicamente el host para que funcione en localhost y desde el celular en la red local
+export const API_BASE_URL = `http://${window.location.hostname}:3000/api`;
+
+// Verificar si estamos en modo simulación
+function getHeaders() {
+  const token = localStorage.getItem('auth_token');
+  return {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${token}`
+  };
+}
+
+async function request(path: string, options: RequestInit = {}) {
+  
+
+  const url = `${API_BASE_URL}${path}`;
+  const response = await fetch(url, {
+    ...options,
+    headers: {
+      ...getHeaders(),
+      ...options.headers
+    }
+  });
+
+  const json = await response.json();
+  if (json.status === 'error') {
+    throw new Error(json.message);
+  }
+  return json.data;
+}
+
+// Comprobar la conexión con el servidor
+export async function testServerConnection(): Promise<boolean> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/health`, { signal: AbortSignal.timeout(2000) });
+    return res.status === 200;
+  } catch (e) {
+    return false;
+  }
+}
+
+// ==========================================================================
+// INTERFAZ DE MÉTODOS DE LA API (Y SUS SIMULACIONES MOCK)
+// ==========================================================================
+
+export const api = {
+  // --- AUTENTICACIÓN ---
+  login: async (username: string, password: string) => {
+    
+
+    const res = await request('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ username, password })
+    });
+    localStorage.setItem('auth_token', res.token);
+    localStorage.setItem('auth_user', JSON.stringify(res.user));
+    if (res.config) {
+      localStorage.setItem('auth_config', JSON.stringify(res.config));
+    }
+    return res;
+  },
+
+  logout: () => {
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('auth_user');
+    localStorage.removeItem('auth_config');
+  },
+
+  getCurrentUser: () => {
+    const userStr = localStorage.getItem('auth_user');
+    return userStr ? JSON.parse(userStr) : null;
+  },
+
+  getMe: async () => {
+    
+    const token = localStorage.getItem('auth_token');
+    if (!token) return null;
+    try {
+      const res = await request('/auth/me');
+      if (res.data?.user) {
+        localStorage.setItem('auth_user', JSON.stringify(res.data.user));
+      }
+      if (res.data?.config) {
+        localStorage.setItem('auth_config', JSON.stringify(res.data.config));
+      }
+      return res.data?.user;
+    } catch (e) {
+      return null;
+    }
+  },
+
+  getServerConfig: () => {
+    const configStr = localStorage.getItem('auth_config');
+    return configStr ? JSON.parse(configStr) : null;
+  },
+
+  updateServerConfig: async (config: { ignoreStockCheck?: boolean }) => {
+    
+    try {
+      await request('/admin/config', {
+        method: 'POST',
+        body: JSON.stringify(config),
+      });
+      await api.getMe(); // Refrescar config
+    } catch (error) {
+      console.error('Error updating config', error);
+      throw error;
+    }
+  },
+
+  // --- PRODUCTOS e INVENTARIO ---
+  getProducts: async (search?: string) => {
+    
+    const res = await request(search ? `/products?search=${search}` : '/products');
+    return res.products;
+  },
+
+  createProduct: async (productData: any) => {    
+    const res = await request('/products', {
+      method: 'POST',
+      body: JSON.stringify(productData)
+    });
+    return res.product;
+  },
+
+  updateProduct: async (id: number, productData: any) => {    
+    const res = await request(`/products/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(productData)
+    });
+    return res.product;
+  },
+
+  adjustStock: async (id: number, quantityChange: number, reason: string, lotNumber?: string, expirationDate?: string) => {    
+    const res = await request(`/products/${id}/adjust-stock`, {
+      method: 'POST',
+      body: JSON.stringify({ quantityChange, reason, lotNumber, expirationDate })
+    });
+    return res.product;
+  },
+
+  // --- PERSONAS ---
+  getPersonas: async (role?: string, search?: string) => {    
+    let path = '/personas';
+    const params = [];
+    if (role) params.push(`role=${role}`);
+    if (search) params.push(`search=${search}`);
+    if (params.length > 0) path += `?${params.join('&')}`;
+
+    const res = await request(path);
+    return res.personas;
+  },
+
+  getClients: async (search?: string) => {
+    return api.getPersonas('client', search);
+  },
+
+  getAfipData: async (cuit: string) => {
+    
+    const res = await request(`/personas/afip/${cuit}`);
+    return res;
+  },
+
+
+  createPersona: async (personaData: any) => {    
+    const res = await request('/personas', {
+      method: 'POST',
+      body: JSON.stringify(personaData)
+    });
+    return res.persona;
+  },
+
+  createClient: async (clientData: any) => {
+    return api.createPersona({ ...clientData, isClient: true });
+  },
+
+  updatePersona: async (id: number, personaData: any) => {    
+    const res = await request(`/personas/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(personaData)
+    });
+    return res.persona;
+  },
+
+  updateClient: async (id: number, clientData: any) => {
+    return api.updatePersona(id, clientData);
+  },
+
+  registerPayment: async (personaId: number, paymentData: { amount: number, paymentMethod: string, description?: string, branch?: string, type?: string, supplierInvoiceId?: number }) => {    
+    const res = await request(`/personas/${personaId}/payments`, {
+      method: 'POST',
+      body: JSON.stringify(paymentData)
+    });
+    return res;
+  },
+
+  getPersonaLedger: async (personaId: number) => {
+    
+    const res = await request(`/personas/${personaId}/ledger`);
+    return res;
+  },
+
+  getClientLedger: async (clientId: number) => {
+    const res = await api.getPersonaLedger(clientId);
+    return { client: res.persona, ledger: res.ledger };
+  },
+
+  // --- PEDIDOS ---
+  getOrders: async (billingType?: BillingType, status?: OrderStatus) => {    
+    
+    let path = '/orders';
+    const params = [];
+    if (billingType) params.push(`billingType=${billingType}`);
+    if (status) params.push(`status=${status}`);
+    if (params.length > 0) path += `?${params.join('&')}`;
+
+    const res = await request(path);
+    return res.orders;
+  },
+
+  createOrder: async (orderData: { clientId: number, items: { productId: number, quantity: number }[], notes?: string }) => {    
+
+    const res = await request('/orders', {
+      method: 'POST',
+      body: JSON.stringify(orderData)
+    });
+    return res.order;
+  },
+
+  updateOrder: async (id: number, orderData: { items: { productId: number, quantity: number }[] }) => {    
+
+    const res = await request(`/orders/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(orderData)
+    });
+    return res.order;
+  },
+
+  invoiceOrder: async (id: number, billingType: BillingType, paymentMethod?: PaymentMethod, paymentDescription?: string) => {    
+
+    const res = await request(`/orders/${id}/invoice`, {
+      method: 'POST',
+      body: JSON.stringify({ billingType, paymentMethod, paymentDescription })
+    });
+    return res.order;
+  },
+
+  updateOrderWeights: async (id: number, items: { orderItemId: number; weight: number }[]) => {
+    
+
+    const res = await fetch(`${API_BASE_URL}/orders/${id}/weights`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${localStorage.getItem('token')}`,
+      },
+      body: JSON.stringify({ items }),
+    });
+
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({}));
+      throw new Error(errorData.message || 'Error al actualizar pesos');
+    }
+    
+    const data = await res.json();
+    return data.data.order;
+  },
+
+  confirmOrderArmado: async (orderId: number, items: any[]) => {
+    
+    const res = await request(`/orders/${orderId}/confirm-armado`, {
+      method: 'POST',
+      body: JSON.stringify({ items })
+    });
+    return res.data;
+  },
+
+  updateOrderStatus: async (id: number, status: OrderStatus, lotAssignments?: any) => {    
+
+    const res = await request(`/orders/${id}/status`, {
+      method: 'PUT',
+      body: JSON.stringify({ status, lotAssignments })
+    });
+    return res.order;
+  },
+
+  // --- ADMINISTRADOR ---
+  getFinancialReports: async () => {
+    
+
+    const res = await request('/admin/reports');
+    return res.report;
+  },
+
+  getZoneReports: async (filters: { city?: string; cities?: string[]; sellerId?: number; startDate?: string; endDate?: string } = {}) => {
+    const params = [];
+    if (filters.city) params.push(`city=${encodeURIComponent(filters.city)}`);
+    if (filters.cities && filters.cities.length > 0) {
+      params.push(`cities=${encodeURIComponent(filters.cities.join(','))}`);
+    }
+    if (filters.sellerId) params.push(`sellerId=${filters.sellerId}`);
+    if (filters.startDate) params.push(`startDate=${encodeURIComponent(filters.startDate)}`);
+    if (filters.endDate) params.push(`endDate=${encodeURIComponent(filters.endDate)}`);
+    const query = params.length > 0 ? `?${params.join('&')}` : '';
+    
+    return await request(`/admin/reports/zones${query}`);
+  },
+
+  getAuditLogs: async (page = 1, limit = 50) => {
+    
+    const res = await request(`/admin/audit-logs?page=${page}&limit=${limit}`);
+    return res;
+  },
+
+  getUsers: async () => {
+    
+    const res = await request('/admin/users');
+    return res.users;
+  },
+
+  createUser: async (userData: any) => {    
+    const res = await request('/admin/users', {
+      method: 'POST',
+      body: JSON.stringify(userData)
+    });
+    return res.user;
+  },
+
+  toggleUserStatus: async (id: number) => {    
+    const res = await request(`/admin/users/${id}/toggle`, {
+      method: 'POST'
+    });
+    return res.user;
+  },
+
+  // --- FINANZAS (CAJAS Y BANCOS) ---
+  openDrawer: async (branch: string, openingBalance: number) => {    
+
+    const res = await request('/finance/drawers/open', {
+      method: 'POST',
+      body: JSON.stringify({ branch, openingBalance })
+    });
+    return res.drawer;
+  },
+
+  closeDrawer: async (drawerId: number, realBalance: number, receipts?: any[], checks?: any[]) => {    
+
+    const res = await request('/finance/drawers/close', {
+      method: 'POST',
+      body: JSON.stringify({ drawerId, realBalance, receipts, checks })
+    });
+    return res.drawer;
+  },
+
+  getActiveDrawer: async () => {    
+    
+
+    try {
+      const res = await request('/finance/drawers/active');
+      return res.drawer;
+    } catch {
+      return null;
+    }
+  },
+
+  getActiveDrawers: async () => {    
+    
+
+    try {
+      const res = await request('/finance/drawers/active-all');
+      return res.drawers || [];
+    } catch {
+      return [];
+    }
+  },
+
+  closeJointDrawers: async (payload: { realBalanceA: number; realBalanceX: number }) => {    
+
+    const res = await request('/finance/drawers/close-joint', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+    return res.data;
+  },
+
+  getBankAccounts: async () => {
+    
+    const res = await request('/finance/bank-accounts');
+    return res.accounts;
+  },
+
+  createBankAccount: async (bankData: any) => {    
+    const res = await request('/finance/bank-accounts', {
+      method: 'POST',
+      body: JSON.stringify(bankData)
+    });
+    return res.account;
+  },
+
+  transferFunds: async (amount: number, bankAccountId: number, description?: string) => {    
+
+    const res = await request('/finance/bank-accounts/transfer', {
+      method: 'POST',
+      body: JSON.stringify({ amount, bankAccountId, description })
+    });
+    return res;
+  },
+
+  getTransactions: async (filters?: any) => {
+    
+
+    let path = '/finance/transactions';
+    if (filters) {
+      const params = [];
+      if (filters.branch) params.push(`branch=${filters.branch}`);
+      if (filters.cashDrawerId) params.push(`cashDrawerId=${filters.cashDrawerId}`);
+      if (filters.bankAccountId) params.push(`bankAccountId=${filters.bankAccountId}`);
+      if (filters.paymentMethod) params.push(`paymentMethod=${filters.paymentMethod}`);
+      if (filters.verified !== undefined) params.push(`verified=${filters.verified}`);
+      if (params.length > 0) path += `?${params.join('&')}`;
+    }
+
+    const res = await request(path);
+    return res.transactions;
+  },
+
+  createExpense: async (amount: number, description: string, paymentMethod: string, billingType: string) => {
+    return await request('/finance/expenses', {
+      method: 'POST',
+      body: JSON.stringify({ amount, description, paymentMethod, billingType })
+    });
+  },
+
+  getCashDrawers: async () => {
+    
+    try {
+      const res = await request('/finance/drawers/history');
+      return res.drawers || [];
+    } catch {
+      return [];
+    }
+  },
+
+  verifyTransaction: async (id: number, verified: boolean) => {
+    
+
+    const res = await request(`/finance/transactions/${id}/verify`, {
+      method: 'PUT',
+      body: JSON.stringify({ verified })
+    });
+    return res;
+  },
+
+  getProductByBarcode: async (barcode: string) => {
+    
+    const res = await request(`/products/barcode/${barcode}`);
+    return res.product;
+  },
+
+  importPrices: async (rows: any[]) => {    
+
+    const res = await request('/products/import-prices', {
+      method: 'POST',
+      body: JSON.stringify({ products: rows })
+    });
+    return res.data;
+  },
+
+  getRubros: async () => {
+    
+    const res = await request('/rubros');
+    return res.rubros;
+  },
+
+  createRubro: async (rubroData: { name: string; description?: string; profitMargin?: number }) => {    
+    const res = await request('/rubros', {
+      method: 'POST',
+      body: JSON.stringify(rubroData)
+    });
+    return res.rubro;
+  },
+
+  updateRubro: async (id: number, rubroData: { name?: string; description?: string; profitMargin?: number }) => {    
+    const res = await request(`/rubros/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(rubroData)
+    });
+    return res.rubro;
+  },
+
+  deleteRubro: async (id: number) => {    
+    const res = await request(`/rubros/${id}`, {
+      method: 'DELETE'
+    });
+    return res;
+  },
+
+  bulkUpdatePrices: async (params: {
+    rubroId?: number | null;
+    providerId?: number | null;
+    type: 'margin' | 'percentage' | 'fixed';
+    basis?: 'cost' | 'current';
+    value: number;
+    priceList: 'all' | 'listPrice' | 'listPriceB' | 'listPriceC';
+  }) => {    
+
+    const res = await request('/products/bulk-update-prices', {
+      method: 'POST',
+      body: JSON.stringify(params)
+    });
+    return res;
+  },
+
+  getSalesInvoices: async (filters?: any) => {
+    
+
+    let path = '/billing/sales';
+    if (filters) {
+      const params = [];
+      if (filters.startDate) params.push(`startDate=${filters.startDate}`);
+      if (filters.endDate) params.push(`endDate=${filters.endDate}`);
+      if (filters.query) params.push(`query=${filters.query}`);
+      if (params.length > 0) path += `?${params.join('&')}`;
+    }
+    const res = await request(path);
+    return res.invoices;
+  },
+
+  getSupplierInvoices: async (filters?: any) => {
+    
+
+    let path = '/billing/purchases';
+    if (filters) {
+      const params = [];
+      if (filters.startDate) params.push(`startDate=${filters.startDate}`);
+      if (filters.endDate) params.push(`endDate=${filters.endDate}`);
+      if (filters.query) params.push(`query=${filters.query}`);
+      if (params.length > 0) path += `?${params.join('&')}`;
+    }
+    const res = await request(path);
+    return res.invoices;
+  },
+
+  createSupplierInvoice: async (invoiceData: any) => {    
+
+    const res = await request('/billing/purchases', {
+      method: 'POST',
+      body: JSON.stringify(invoiceData)
+    });
+    return res.invoice;
+  },
+
+  getCreditNotes: async (filters?: any) => {
+    
+
+    let path = '/billing/credit-notes';
+    if (filters) {
+      const params = [];
+      if (filters.startDate) params.push(`startDate=${filters.startDate}`);
+      if (filters.endDate) params.push(`endDate=${filters.endDate}`);
+      if (filters.query) params.push(`query=${filters.query}`);
+      if (params.length > 0) path += `?${params.join('&')}`;
+    }
+    const res = await request(path);
+    return res.creditNotes;
+  },
+
+  createCreditNote: async (data: any) => {    
+
+    const res = await request('/billing/credit-notes', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+    return res.creditNote;
+  },
+
+  createDirectInvoice: async (payload: {
+    personaId: number;
+    billingType: string;
+    paymentMethod?: string;
+    bankAccountId?: number;
+    checkNumber?: string;
+    checkIssuer?: string;
+    checkAmount?: number;
+    items: { productId: number; quantity: number }[];
+  }) => {    
+
+    const res = await request('/orders/direct', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+    return res.order;
+  },
+
+  getTaxWithholdings: async (filters?: any) => {
+    
+
+    let path = '/billing/tax-withholdings';
+    if (filters) {
+      const params = [];
+      if (filters.type) params.push(`type=${filters.type}`);
+      if (filters.taxType) params.push(`taxType=${filters.taxType}`);
+      if (filters.startDate) params.push(`startDate=${filters.startDate}`);
+      if (filters.endDate) params.push(`endDate=${filters.endDate}`);
+      if (params.length > 0) path += `?${params.join('&')}`;
+    }
+    const res = await request(path);
+    return res.withholdings;
+  },
+
+  createTaxWithholding: async (withholdingData: any) => {    
+
+    const res = await request('/billing/tax-withholdings', {
+      method: 'POST',
+      body: JSON.stringify(withholdingData)
+    });
+    return res.withholding;
+  },
+
+  getDeliveryRoutes: async (filters?: any) => {
+    
+
+    let path = '/logistics';
+    if (filters && filters.status) path += `?status=${filters.status}`;
+    const res = await request(path);
+    return res.routes;
+  },
+
+  createDeliveryRoute: async (routeData: any) => {    
+
+    const res = await request('/logistics', {
+      method: 'POST',
+      body: JSON.stringify(routeData)
+    });
+    return res.route;
+  },
+
+  updateRouteStatus: async (id: number, status: string) => {    
+
+    const res = await request(`/logistics/${id}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status })
+    });
+    return res.route;
+  },
+
+  settleDeliveryRoute: async (id: number, settleData: { settlements: any[], cashDeclared: number, checksDeclared: number, transfersDeclared: number }) => {    
+
+    const res = await request(`/logistics/${id}/settle`, {
+      method: 'POST',
+      body: JSON.stringify(settleData)
+    });
+    return res;
+  },
+
+  getPurchaseOrders: async (filters?: any) => {
+    
+
+    let path = '/purchases';
+    if (filters && filters.status) path += `?status=${filters.status}`;
+    const res = await request(path);
+    return res.orders;
+  },
+
+  createPurchaseOrder: async (orderData: any) => {    
+
+    const res = await request('/purchases', {
+      method: 'POST',
+      body: JSON.stringify(orderData)
+    });
+    return res.order;
+  },
+
+  receivePurchaseOrder: async (id: number, payload: { invoiceNumber?: string, lotAssignments?: any }) => {    
+
+    const res = await request(`/purchases/${id}/receive`, {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+    return res.order;
+  },
+
+  getCrmAlerts: async () => {
+    
+
+    const res = await request('/crm/alerts');
+    return res.data;
+  },
+
+  uploadPurchaseDocument: async (file: File) => {
+    
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const token = localStorage.getItem('auth_token');
+    const headers = new Headers();
+    if (token) {
+      headers.append('Authorization', `Bearer ${token}`);
+    }
+
+    const response = await fetch(`${API_BASE_URL}/purchases/upload-document`, {
+      method: 'POST',
+      headers,
+      body: formData
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.message || 'Error al procesar el documento');
+    }
+    return data;
+  },
+
+  confirmPurchaseDocument: async (payload: any) => {
+    
+    const res = await request('/purchases/confirm-document', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+    return res.data;
+  },
+
+  getPendingRendiciones: async () => {
+    return await request('/collections/rendiciones');
+  },
+
+  verifyRendicion: async (payload: { sellerId?: number; routeId?: number; realCash: number; realChecks: number }) => {
+    return await request('/collections/rendiciones/verify', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  }
+};

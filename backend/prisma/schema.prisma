@@ -98,6 +98,9 @@ model Persona {
   // Cuenta Corriente (neto: positivo = nos debe, negativo = le debemos)
   outstandingBalance Decimal       @default(0.00) @db.Decimal(12, 2)
 
+  // Ruta de reparto (ej: "BUNGE Y BUCHARDO", "VILLEGAS NORBER", etc.)
+  route              String?
+
   // Relación con vendedor (si es cliente)
   sellerId           Int?
   seller             User?         @relation(fields: [sellerId], references: [id])

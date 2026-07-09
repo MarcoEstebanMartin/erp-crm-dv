@@ -60,15 +60,41 @@ export const registerCollection = async (req: AuthenticatedRequest, res: Respons
       return res.status(401).json({ error: 'No autorizado' });
     }
 
-    const { personaId, amount, paymentMethod, billingType, description } = req.body;
+    const { personaId, amount, paymentMethod, billingType, description, orderId } = req.body;
 
     if (!personaId || !amount || !paymentMethod || !billingType) {
       return res.status(400).json({ error: 'Faltan datos requeridos' });
     }
 
+    const roundedAmount = Math.round(Number(amount));
+
+    // Control de duplicados (Idempotencia)
+    const fifteenSecondsAgo = new Date(Date.now() - 15000);
+    const duplicateTx = await prisma.transaction.findFirst({
+      where: {
+        personaId,
+        amount: roundedAmount,
+        paymentMethod: paymentMethod as PaymentMethod,
+        type: TransactionType.INCOME,
+        createdAt: {
+          gte: fifteenSecondsAgo
+        }
+      }
+    });
+    if (duplicateTx) {
+      return res.status(400).json({ error: 'Ya se registró un cobro idéntico para este cliente hace instantes.' });
+    }
+
     const receiptNumber = await generateReceiptNumber();
 
-    const roundedAmount = Math.round(Number(amount));
+    // Buscar número de factura si se especificó orderId para la descripción
+    let orderNumberDesc = '';
+    if (orderId) {
+      const targetOrder = await prisma.order.findUnique({ where: { id: Number(orderId) } });
+      if (targetOrder) {
+        orderNumberDesc = targetOrder.invoiceNumber || `INT-${targetOrder.id.toString().padStart(8, '0')}`;
+      }
+    }
 
     // Crear la transacción de tipo INCOME
     const transaction = await prisma.transaction.create({
@@ -79,9 +105,12 @@ export const registerCollection = async (req: AuthenticatedRequest, res: Respons
         type: TransactionType.INCOME,
         paymentMethod: paymentMethod as PaymentMethod,
         amount: roundedAmount,
-        description: description || `Cobro generado vía móvil a cliente ${personaId}`,
+        description: description || (orderId 
+          ? `Cobro de Factura ${orderNumberDesc} vía móvil`
+          : `Cobro generado vía móvil a cliente ${personaId}`),
         receiptNumber,
-        verified: false // Pendiente de rendición
+        verified: false, // Pendiente de rendición
+        orderId: orderId ? Number(orderId) : null
       },
       include: {
         persona: true

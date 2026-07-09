@@ -450,6 +450,12 @@ export default function ResumenCuentaModal({ client, onClose }: ResumenCuentaMod
                   {selectedTransaction.paymentMethod}
                 </span>
               </div>
+              {selectedTransaction.order && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f3f4f6', paddingBottom: '6px' }}>
+                  <span style={{ color: 'var(--text-secondary)' }}>Factura Imputada:</span>
+                  <strong>{selectedTransaction.order.invoiceNumber || `INT-${selectedTransaction.order.id.toString().padStart(8, '0')}`}</strong>
+                </div>
+              )}
               {selectedTransaction.description && (
                 <div style={{ borderBottom: '1px solid #f3f4f6', paddingBottom: '6px' }}>
                   <span style={{ color: 'var(--text-secondary)', display: 'block', marginBottom: '2px' }}>Observaciones:</span>

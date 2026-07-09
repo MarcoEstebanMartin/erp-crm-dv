@@ -6,6 +6,7 @@ export const createPersonaSchema = z.object({
     cuit: z.string().optional().nullable(),
     address: z.string().optional().nullable(),
     city: z.string().optional().nullable(),
+    route: z.string().optional().nullable(),
     phone: z.string().optional().nullable(),
     email: z.string().email('Debe ser un email válido').optional().nullable().or(z.literal('')),
     isClient: z.boolean().optional(),
@@ -29,6 +30,7 @@ export const updatePersonaSchema = z.object({
     cuit: z.string().optional().nullable(),
     address: z.string().optional().nullable(),
     city: z.string().optional().nullable(),
+    route: z.string().optional().nullable(),
     phone: z.string().optional().nullable(),
     email: z.string().email().optional().nullable().or(z.literal('')),
     isClient: z.boolean().optional(),
@@ -54,5 +56,6 @@ export const recordPersonaPaymentSchema = z.object({
     branch: z.enum(['A', 'X']).optional(),
     type: z.enum(['INCOME', 'OUTCOME']).optional(),
     supplierInvoiceId: z.union([z.number(), z.string()]).optional().nullable(),
+    orderId: z.number().optional().nullable(),
   }),
 });

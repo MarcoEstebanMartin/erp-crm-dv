@@ -20,10 +20,21 @@ const MobileCobros: React.FC = () => {
   const [billingType, setBillingType] = useState('OFFICIAL'); // OFFICIAL = A, INTERNAL = X
   const [loading, setLoading] = useState(false);
   const [successReceipt, setSuccessReceipt] = useState<any>(null);
+  const [pendingInvoices, setPendingInvoices] = useState<any[]>([]);
+  const [selectedInvoiceId, setSelectedInvoiceId] = useState<number | null>(null);
 
   useEffect(() => {
     fetchPending();
   }, []);
+
+  useEffect(() => {
+    if (selectedPersona) {
+      fetchPendingInvoices(selectedPersona.id);
+    } else {
+      setPendingInvoices([]);
+      setSelectedInvoiceId(null);
+    }
+  }, [selectedPersona]);
 
   const fetchPending = async () => {
     try {
@@ -41,17 +52,46 @@ const MobileCobros: React.FC = () => {
     }
   };
 
+  const fetchPendingInvoices = async (personaId: number) => {
+    try {
+      const res = await axios.get(`${API_BASE_URL}/personas/${personaId}/pending-invoices`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      if (res.data?.status === 'success' && Array.isArray(res.data?.data?.invoices)) {
+        setPendingInvoices(res.data.data.invoices);
+      }
+    } catch (error) {
+      console.error('Error fetching pending invoices', error);
+    }
+  };
+
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedPersona) return;
+    if (loading) return;
+
+    const parsedAmount = parseFloat(amount);
+    if (isNaN(parsedAmount) || parsedAmount <= 0) {
+      alert('Por favor, ingresa un monto válido mayor a cero.');
+      return;
+    }
+
+    // Advertencia de sobrepago
+    if (parsedAmount > selectedPersona.outstandingBalance) {
+      const confirmOverpayment = window.confirm(
+        `El monto a cobrar (${formatCurrency(parsedAmount)}) supera el saldo pendiente del cliente (${formatCurrency(selectedPersona.outstandingBalance)}). El cliente quedará con saldo a favor. ¿Deseas continuar?`
+      );
+      if (!confirmOverpayment) return;
+    }
     
     setLoading(true);
     try {
       const res = await axios.post(`${API_BASE_URL}/collections/register`, {
         personaId: selectedPersona.id,
-        amount: parseFloat(amount),
+        amount: parsedAmount,
         paymentMethod,
         billingType,
+        orderId: selectedInvoiceId
       }, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
@@ -59,9 +99,10 @@ const MobileCobros: React.FC = () => {
       setSuccessReceipt(res.data.transaction);
       // Actualizar listado localmente o refetch
       fetchPending();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error registering collection', error);
-      alert('Hubo un error al registrar el cobro');
+      const errMsg = error.response?.data?.error || 'Hubo un error al registrar el cobro';
+      alert(errMsg);
     } finally {
       setLoading(false);
     }
@@ -89,7 +130,7 @@ const MobileCobros: React.FC = () => {
   };
 
   const formatCurrency = (val: number | string) => {
-    return Number(val).toLocaleString('es-AR', { style: 'currency', currency: 'ARS' });
+    return Number(val).toLocaleString('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0, maximumFractionDigits: 0 });
   };
 
   // Renderizar la vista de éxito
@@ -148,6 +189,37 @@ const MobileCobros: React.FC = () => {
         </div>
 
         <form onSubmit={handleRegister} className="space-y-5">
+          {pendingInvoices.length > 0 && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Imputar a Factura</label>
+              <select
+                value={selectedInvoiceId || ''}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val === '') {
+                    setSelectedInvoiceId(null);
+                    setAmount(selectedPersona.outstandingBalance.toString());
+                  } else {
+                    const invId = Number(val);
+                    setSelectedInvoiceId(invId);
+                    const inv = pendingInvoices.find(i => i.id === invId);
+                    if (inv) {
+                      setAmount(inv.pendingAmount.toString());
+                    }
+                  }
+                }}
+                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 py-3 border bg-white text-base"
+              >
+                <option value="">Entrega a cuenta general (sin factura específica)</option>
+                {pendingInvoices.map((inv) => (
+                  <option key={inv.id} value={inv.id}>
+                    {inv.invoiceNumber} (Pendiente: {formatCurrency(inv.pendingAmount)})
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Monto a Cobrar</label>
             <div className="relative">
