@@ -316,8 +316,8 @@ export default function VendedorDashboard({ activeTab }: VendedorDashboardProps)
                   <tr>
                     <td>${item.product?.name || 'Artículo'}</td>
                     <td class="text-right">${item.quantity}</td>
-                    <td class="text-right">$${price.toLocaleString()}</td>
-                    <td class="text-right">$${(item.quantity * price).toLocaleString()}</td>
+                    <td class="text-right">$${Math.round(price).toLocaleString('es-AR')}</td>
+                    <td class="text-right">$${Math.round(item.quantity * price).toLocaleString('es-AR')}</td>
                   </tr>
                 `;
               }).join('')}
@@ -326,7 +326,7 @@ export default function VendedorDashboard({ activeTab }: VendedorDashboardProps)
           <div class="divider"></div>
           <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 1.1rem;">
             <span>TOTAL A PAGAR:</span>
-            <span>$${order.totalAmount.toLocaleString()}</span>
+            <span>$${Math.round(Number(order.totalAmount)).toLocaleString('es-AR')}</span>
           </div>
           <div style="margin-top: 6px;"><strong>Canal Facturación:</strong> ${order.billingType === 'OFFICIAL' ? 'Sucursal A (Con CAE/AFIP)' : 'Sucursal X (Presupuesto Interno)'}</div>
           <div><strong>Nro Comprobante:</strong> ${order.invoiceNumber || 'No Facturado (Pendiente)'}</div>
@@ -729,7 +729,7 @@ export default function VendedorDashboard({ activeTab }: VendedorDashboardProps)
                             {o.billingType === 'OFFICIAL' ? 'Sucursal A' : 'Sucursal X'}
                           </span>
                         </td>
-                        <td style={{ fontWeight: 600 }}>${o.totalAmount.toLocaleString()}</td>
+                        <td style={{ fontWeight: 600 }}>${Math.round(Number(o.totalAmount)).toLocaleString('es-AR')}</td>
                         <td>
                           {(() => {
                             const statusInfo = getOrderStatusInfo(o);
@@ -1177,7 +1177,7 @@ export default function VendedorDashboard({ activeTab }: VendedorDashboardProps)
             </div>
 
             <div style={{ textAlign: 'right', marginTop: '20px', fontWeight: 'bold', fontSize: '1.1rem' }}>
-              Monto Total: ${orderDetailsModal.totalAmount.toLocaleString()}
+              Monto Total: ${Math.round(Number(orderDetailsModal.totalAmount)).toLocaleString('es-AR')}
             </div>
             
             <div className="modal-footer" style={{ marginTop: '20px' }}>

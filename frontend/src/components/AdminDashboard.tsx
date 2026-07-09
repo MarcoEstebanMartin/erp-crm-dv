@@ -669,8 +669,8 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
                   <tr>
                     <td>${item.product?.name || 'Artículo'}</td>
                     <td class="text-right">${item.quantity}</td>
-                    <td class="text-right">$${price.toLocaleString()}</td>
-                    <td class="text-right">$${(item.quantity * price).toLocaleString()}</td>
+                    <td class="text-right">$${Math.round(price).toLocaleString('es-AR')}</td>
+                    <td class="text-right">$${Math.round(item.quantity * price).toLocaleString('es-AR')}</td>
                   </tr>
                 `;
               }).join('')}
@@ -679,7 +679,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
           <div class="divider"></div>
           <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 1.1rem;">
             <span>TOTAL A PAGAR:</span>
-            <span>$${order.totalAmount.toLocaleString()}</span>
+            <span>$${Math.round(Number(order.totalAmount)).toLocaleString('es-AR')}</span>
           </div>
           <div style="margin-top: 6px;"><strong>Canal Facturación:</strong> ${order.billingType === 'OFFICIAL' ? 'Sucursal A (Con CAE/AFIP)' : 'Sucursal X (Presupuesto Interno)'}</div>
           <div><strong>Nro Comprobante:</strong> ${order.invoiceNumber || 'No Facturado (Pendiente)'}</div>
@@ -1213,7 +1213,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
                   <div className="card stat-card" style={{ borderLeft: '4px solid #E30613' }}>
                     <div className="stat-label">Total Deuda Acumulada</div>
                     <div className="stat-value" style={{ color: '#E30613' }}>
-                      ${clients.filter(c => Number(c.outstandingBalance || 0) > 0).reduce((acc, c) => acc + Number(c.outstandingBalance || 0), 0).toLocaleString()}
+                      ${Math.round(clients.filter(c => Number(c.outstandingBalance || 0) > 0).reduce((acc, c) => acc + Number(c.outstandingBalance || 0), 0)).toLocaleString('es-AR')}
                     </div>
                     <div className="stat-desc">Saldo a cobrar en calle</div>
                   </div>
@@ -1249,7 +1249,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
                       }}>
                         <span>📍 {city}</span>
                         <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                          Total: ${groups[city].reduce((acc, c) => acc + Number(c.outstandingBalance || 0), 0).toLocaleString()}
+                          Total: ${Math.round(groups[city].reduce((acc, c) => acc + Number(c.outstandingBalance || 0), 0)).toLocaleString('es-AR')}
                         </span>
                       </div>
                       <div className="table-container" style={{ marginTop: '0', border: 'none' }}>
@@ -1280,7 +1280,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
                                   </div>
                                 </td>
                                 <td style={{ textAlign: 'right', fontWeight: 700, color: 'var(--color-danger)' }}>
-                                  ${Number(c.outstandingBalance || 0).toLocaleString()}
+                                  ${Math.round(Number(c.outstandingBalance || 0)).toLocaleString('es-AR')}
                                 </td>
                               </tr>
                             ))}
@@ -1510,7 +1510,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
                         <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Items: {o.items.length}</div>
                       </td>
                       <td>{new Date(o.createdAt).toLocaleDateString('es-AR')}</td>
-                      <td style={{ fontWeight: 600 }}>${o.totalAmount.toLocaleString()}</td>
+                      <td style={{ fontWeight: 600 }}>${Math.round(Number(o.totalAmount)).toLocaleString('es-AR')}</td>
                       <td>
                         <span className={o.billingType === 'OFFICIAL' ? 'badge badge-official' : 'badge badge-internal'}>
                           {o.billingType === 'OFFICIAL' ? 'Sucursal A' : 'Sucursal X'}
@@ -2117,7 +2117,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
                             </td>
                             <td>{new Date(o.createdAt).toLocaleDateString('es-AR')} {new Date(o.createdAt).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}</td>
                             <td>{o.seller?.username || 'Sistema'}</td>
-                            <td className="text-right" style={{ fontWeight: 600 }}>${o.totalAmount.toLocaleString()}</td>
+                            <td className="text-right" style={{ fontWeight: 600 }}>${Math.round(Number(o.totalAmount)).toLocaleString('es-AR')}</td>
                             <td>
                               {(() => {
                                 const statusInfo = getOrderStatusInfo(o);
@@ -2283,7 +2283,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
                       <tr key={idx}>
                         <td>{item.product?.name}</td>
                         <td className="text-right">{item.quantity} u.</td>
-                        <td className="text-right">${price.toLocaleString()}</td>
+                        <td className="text-right">${Math.round(price).toLocaleString('es-AR')}</td>
                       </tr>
                     );
                   })}
@@ -2292,7 +2292,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
             </div>
 
             <div style={{ textAlign: 'right', marginTop: '20px', fontWeight: 'bold', fontSize: '1.1rem' }}>
-              Monto Total: ${orderDetailsModal.totalAmount.toLocaleString()}
+              Monto Total: ${Math.round(Number(orderDetailsModal.totalAmount)).toLocaleString('es-AR')}
             </div>
             
             <div className="modal-footer" style={{ marginTop: '20px' }}>
