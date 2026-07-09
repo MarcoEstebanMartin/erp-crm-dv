@@ -127,3 +127,88 @@ export async function getZoneReports(req: AuthenticatedRequest, res: Response): 
     res.status(500).json({ status: 'error', message: 'Error al obtener reportes por zona.' });
   }
 }
+
+/**
+ * Obtener listado de reportes semanales consolidado.
+ */
+export async function getWeeklyReports(req: AuthenticatedRequest, res: Response): Promise<void> {
+  try {
+    const reports = await adminService.getWeeklyReports();
+    res.status(200).json({ status: 'success', data: reports });
+  } catch (error: any) {
+    console.error('Error al obtener reportes semanales:', error);
+    res.status(500).json({ status: 'error', message: 'Error al obtener reportes semanales.' });
+  }
+}
+
+/**
+ * Guardar o actualizar reporte semanal.
+ */
+export async function saveWeeklyReport(req: AuthenticatedRequest, res: Response): Promise<void> {
+  const { weekStart, purchases, sales, credit, buffer } = req.body;
+  try {
+    const report = await adminService.saveWeeklyReport({
+      weekStart,
+      purchases,
+      sales,
+      credit,
+      buffer
+    });
+    res.status(200).json({ status: 'success', data: report });
+  } catch (error: any) {
+    console.error('Error al guardar reporte semanal:', error);
+    res.status(500).json({ status: 'error', message: 'Error al guardar el reporte semanal.' });
+  }
+}
+
+/**
+ * Eliminar un reporte semanal.
+ */
+export async function deleteWeeklyReport(req: AuthenticatedRequest, res: Response): Promise<void> {
+  const { weekStart } = req.params;
+  try {
+    await adminService.deleteWeeklyReport(String(weekStart));
+    res.status(200).json({ status: 'success', message: 'Reporte semanal eliminado correctamente.' });
+  } catch (error: any) {
+    console.error('Error al eliminar reporte semanal:', error);
+    res.status(500).json({ status: 'error', message: 'Error al eliminar el reporte semanal.' });
+  }
+}
+
+/**
+ * Obtener el crédito sugerido para una semana específica en base a la anterior.
+ */
+export async function getSuggestedCredit(req: AuthenticatedRequest, res: Response): Promise<void> {
+  const { weekStart } = req.query;
+  if (!weekStart) {
+    res.status(400).json({ status: 'error', message: 'Falta especificar el parámetro weekStart.' });
+    return;
+  }
+  try {
+    const suggested = await adminService.getSuggestedCreditForWeek(String(weekStart));
+    res.status(200).json({ status: 'success', suggested });
+  } catch (error: any) {
+    console.error('Error al calcular crédito sugerido:', error);
+    res.status(500).json({ status: 'error', message: 'Error al calcular crédito sugerido.' });
+  }
+}
+
+/**
+ * Obtener las ventas calculadas automáticamente desde el ERP para una semana específica.
+ */
+export async function getAutofillSales(req: AuthenticatedRequest, res: Response): Promise<void> {
+  const { weekStart } = req.query;
+  if (!weekStart) {
+    res.status(400).json({ status: 'error', message: 'Falta especificar el parámetro weekStart.' });
+    return;
+  }
+  try {
+    const sales = await adminService.getAutofillSalesForWeek(String(weekStart));
+    res.status(200).json({ status: 'success', data: sales });
+  } catch (error: any) {
+    console.error('Error al autocompletar ventas:', error);
+    res.status(500).json({ status: 'error', message: 'Error al autocompletar ventas.' });
+  }
+}
+
+

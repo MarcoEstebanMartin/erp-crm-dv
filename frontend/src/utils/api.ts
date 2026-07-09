@@ -188,11 +188,16 @@ export const api = {
     return api.updatePersona(id, clientData);
   },
 
-  registerPayment: async (personaId: number, paymentData: { amount: number, paymentMethod: string, description?: string, branch?: string, type?: string, supplierInvoiceId?: number }) => {    
+  registerPayment: async (personaId: number, paymentData: { amount: number, paymentMethod: string, description?: string, branch?: string, type?: string, supplierInvoiceId?: number, orderId?: number }) => {    
     const res = await request(`/personas/${personaId}/payments`, {
       method: 'POST',
       body: JSON.stringify(paymentData)
     });
+    return res;
+  },
+
+  getPersonaPendingInvoices: async (personaId: number) => {
+    const res = await request(`/personas/${personaId}/pending-invoices`);
     return res;
   },
 
@@ -753,5 +758,36 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(payload)
     });
+  },
+
+  getWeeklyReports: async () => {
+    const res = await request('/admin/reports/weekly');
+    return res.data;
+  },
+
+  saveWeeklyReport: async (payload: { weekStart: string; purchases: any[]; sales: any[]; credit: number; buffer: number }) => {
+    const res = await request('/admin/reports/weekly', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+    return res.data;
+  },
+
+  deleteWeeklyReport: async (weekStart: string) => {
+    const res = await request(`/admin/reports/weekly/${weekStart}`, {
+      method: 'DELETE'
+    });
+    return res.data;
+  },
+
+  getSuggestedCredit: async (weekStart: string) => {
+    const res = await request(`/admin/reports/weekly/suggested-credit?weekStart=${encodeURIComponent(weekStart)}`);
+    return res.suggested;
+  },
+
+  getAutofillSales: async (weekStart: string) => {
+    const res = await request(`/admin/reports/weekly/autofill-sales?weekStart=${encodeURIComponent(weekStart)}`);
+    return res.data;
   }
 };
+

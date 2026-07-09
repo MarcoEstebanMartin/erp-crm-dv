@@ -399,6 +399,139 @@ export class AdminService {
       deadStockProducts
     };
   }
+
+  async getAutofillSalesForWeek(weekStart: string) {
+    const startDate = new Date(weekStart + 'T00:00:00');
+    const endDate = new Date(startDate);
+    endDate.setDate(startDate.getDate() + 7);
+
+    const orders = await prisma.order.findMany({
+      where: {
+        status: 'DELIVERED',
+        createdAt: {
+          gte: startDate,
+          lt: endDate
+        }
+      },
+      include: {
+        persona: {
+          select: { city: true }
+        }
+      }
+    });
+
+    const localityMap = new Map<string, { locality: string, date: string, amountA: number, amountX: number }>();
+
+    for (const order of orders) {
+      const city = (order.persona?.city || 'SIN ESPECIFICAR').trim().toUpperCase();
+      const amount = Math.round(Number(order.totalAmount) || 0);
+      const isOfficial = order.billingType === BillingType.OFFICIAL;
+
+      const current = localityMap.get(city) || {
+        locality: city,
+        date: '',
+        amountA: 0,
+        amountX: 0
+      };
+
+      if (isOfficial) {
+        current.amountA += amount;
+      } else {
+        current.amountX += amount;
+      }
+
+      if (order.createdAt) {
+        const orderDateObj = new Date(order.createdAt);
+        const day = String(orderDateObj.getDate()).padStart(2, '0');
+        const month = String(orderDateObj.getMonth() + 1).padStart(2, '0');
+        current.date = `${day}/${month}`;
+      }
+
+      localityMap.set(city, current);
+    }
+
+    return Array.from(localityMap.values()).sort((a, b) => a.locality.localeCompare(b.locality));
+  }
+
+  async getWeeklyReports() {
+    return prisma.weeklyReport.findMany({
+      orderBy: { weekStart: 'asc' }
+    });
+  }
+
+  async saveWeeklyReport(data: {
+    weekStart: string;
+    purchases: any[];
+    sales: any[];
+    credit: number;
+    buffer: number;
+  }) {
+    const { weekStart, purchases, sales, credit, buffer } = data;
+    
+    const parsedPurchases = purchases.map(p => ({
+      company: String(p.company),
+      date: p.date ? String(p.date) : null,
+      amount: Math.round(Number(p.amount) || 0)
+    }));
+
+    const parsedSales = sales.map(s => ({
+      locality: String(s.locality),
+      date: s.date ? String(s.date) : null,
+      amountA: Math.round(Number(s.amountA) || 0),
+      amountX: Math.round(Number(s.amountX) || 0)
+    }));
+
+    return prisma.weeklyReport.upsert({
+      where: { weekStart },
+      create: {
+        weekStart,
+        purchases: parsedPurchases,
+        sales: parsedSales,
+        credit: Math.round(credit),
+        buffer: Math.round(buffer)
+      },
+      update: {
+        purchases: parsedPurchases,
+        sales: parsedSales,
+        credit: Math.round(credit),
+        buffer: Math.round(buffer)
+      }
+    });
+  }
+
+  async deleteWeeklyReport(weekStart: string) {
+    return prisma.weeklyReport.delete({
+      where: { weekStart }
+    });
+  }
+
+  async getSuggestedCreditForWeek(weekStart: string): Promise<number> {
+    const date = new Date(weekStart + 'T00:00:00');
+    date.setDate(date.getDate() - 7);
+    const prevWeekStart = date.toISOString().split('T')[0];
+
+    const prevReport = await prisma.weeklyReport.findUnique({
+      where: { weekStart: prevWeekStart }
+    });
+
+    if (!prevReport) {
+      return 0;
+    }
+
+    const salesList = (prevReport.sales as any[]) || [];
+    const purchasesList = (prevReport.purchases as any[]) || [];
+
+    const prevTotalSales = salesList.reduce((sum, s) => sum + (Number(s.amountA) || 0) + (Number(s.amountX) || 0), 0);
+    const prevActualPurchases = purchasesList.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+    
+    const prevCredit = Number(prevReport.credit) || 0;
+    const prevTotalPurchases = prevActualPurchases + prevCredit;
+    const prevBuffer = Number(prevReport.buffer) || 0;
+
+    const suggested = -(prevTotalSales - prevTotalPurchases - prevBuffer);
+    return Math.round(suggested);
+  }
 }
 
 export const adminService = new AdminService();
+

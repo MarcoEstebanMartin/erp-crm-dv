@@ -442,3 +442,15 @@ model Rubro {
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 }
+
+model WeeklyReport {
+  id              Int      @id @default(autoincrement())
+  weekStart       String   @unique // Formato "YYYY-MM-DD" (Lunes de la semana)
+  purchases       Json     // Lista de compras: [{ company: string, date: string, amount: number }]
+  sales           Json     // Lista de ventas por localidad: [{ locality: string, date: string, amountA: number, amountX: number }]
+  credit          Decimal  @db.Decimal(12, 2) // Rollover de crédito / deuda
+  buffer          Decimal  @default(20000000.00) @db.Decimal(12, 2) // Colchón operativo (Resultado)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+

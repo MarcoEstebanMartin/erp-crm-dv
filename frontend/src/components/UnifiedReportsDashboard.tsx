@@ -1,6 +1,21 @@
 import { useState, useEffect } from 'react';
 import { api } from '../utils/api';
-import { BarChart2, DollarSign, Users, MapPin, Package, RefreshCw, TrendingUp, Sparkles, FileText } from 'lucide-react';
+import { 
+  BarChart2, 
+  DollarSign, 
+  Users, 
+  MapPin, 
+  Package, 
+  RefreshCw, 
+  TrendingUp, 
+  Sparkles, 
+  FileText,
+  Calendar,
+  Plus,
+  Trash2,
+  Save,
+  CheckCircle2
+} from 'lucide-react';
 import CrmDashboard from './CrmDashboard';
 import AfipExportDashboard from '../pages/AfipExportDashboard';
 
@@ -19,7 +34,268 @@ export default function UnifiedReportsDashboard({
   products,
   financialReport
 }: UnifiedReportsDashboardProps) {
-  const [activeTab, setActiveTab] = useState<'finanzas' | 'zonas' | 'crm' | 'arca'>('finanzas');
+  const [activeTab, setActiveTab] = useState<'finanzas' | 'zonas' | 'caja_semanal' | 'crm' | 'arca'>('finanzas');
+
+  // Estados para Caja Semanal Consolidada
+  const [weeklyReports, setWeeklyReports] = useState<any[]>([]);
+  const [weeklyLoading, setWeeklyLoading] = useState(false);
+  const [selectedWeekStart, setSelectedWeekStart] = useState<string>('');
+  const [purchases, setPurchases] = useState<any[]>([]);
+  const [sales, setSales] = useState<any[]>([]);
+  const [credit, setCredit] = useState<number>(0);
+  const [buffer, setBuffer] = useState<number>(20000000);
+  const [isDirty, setIsDirty] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [suggestedCredit, setSuggestedCredit] = useState<number>(0);
+  const [weeksDropdownOpen, setWeeksDropdownOpen] = useState(false);
+
+  const defaultSuppliers = [
+    "REMOTTI- RTO",
+    "NIZA SA",
+    "DIST.JUNIN",
+    "A.G.D.",
+    "CASA NINI",
+    "R.P.B.",
+    "FIDEOS EL RECORD",
+    "SODECAR SA",
+    "CREMIGAL",
+    "FRATELLI BRANCA",
+    "COMISION M.PAGO",
+    "PERC-ING.BRUTOS"
+  ];
+
+  const defaultLocalities = [
+    "RIVADAVIA",
+    "FORTIN OLAVARRIA",
+    "BANDERALO",
+    "BDO.LARROUDE",
+    "TRES ALGARROBOS",
+    "CNEL.CHARLONE",
+    "PIEDRITAS",
+    "AMEGHINO",
+    "BLAQUIER",
+    "SANTA ELEODORA",
+    "EMILIO BUNGE",
+    "INT.ALVEAR",
+    "GENERAL VILLEGAS"
+  ];
+
+  const getMonday = (dStr: string) => {
+    const d = new Date(dStr + 'T00:00:00');
+    const day = d.getDay();
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+    const monday = new Date(d.setDate(diff));
+    return monday.toISOString().split('T')[0];
+  };
+
+  const setupNewWeek = async (weekStart: string, _existingReports: any[]) => {
+    setSelectedWeekStart(weekStart);
+    setPurchases(defaultSuppliers.map(s => ({ company: s, date: '', amount: 0 })));
+    setSales(defaultLocalities.map(l => ({ locality: l, date: '', amountA: 0, amountX: 0 })));
+    setBuffer(20000000);
+    setIsDirty(true);
+    
+    try {
+      const suggested = await api.getSuggestedCredit(weekStart);
+      setCredit(suggested || 0);
+      setSuggestedCredit(suggested || 0);
+    } catch (e) {
+      console.error('Error fetching suggested credit:', e);
+      setCredit(0);
+      setSuggestedCredit(0);
+    }
+  };
+
+  const loadWeeklyReports = async (selectWeek?: string) => {
+    setWeeklyLoading(true);
+    try {
+      const data = await api.getWeeklyReports();
+      setWeeklyReports(data || []);
+      
+      if (data && data.length > 0) {
+        const targetWeek = selectWeek || data[data.length - 1].weekStart;
+        setSelectedWeekStart(targetWeek);
+        const report = data.find((r: any) => r.weekStart === targetWeek);
+        if (report) {
+          setPurchases(report.purchases || []);
+          setSales(report.sales || []);
+          setCredit(Number(report.credit) || 0);
+          setBuffer(Number(report.buffer) || 20000000);
+          setIsDirty(false);
+          try {
+            const suggested = await api.getSuggestedCredit(targetWeek);
+            setSuggestedCredit(suggested || 0);
+          } catch (e) {
+            setSuggestedCredit(0);
+          }
+        } else {
+          setupNewWeek(targetWeek, data);
+        }
+      } else {
+        const currentMonday = getMonday(new Date().toISOString().split('T')[0]);
+        setupNewWeek(currentMonday, []);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setWeeklyLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'caja_semanal') {
+      loadWeeklyReports();
+    }
+  }, [activeTab]);
+
+  const handleSelectWeek = async (weekStart: string) => {
+    if (isDirty) {
+      if (!window.confirm('Tenés cambios sin guardar en esta planilla. ¿Querés descartarlos y cambiar de semana?')) {
+        return;
+      }
+    }
+    const report = weeklyReports.find(r => r.weekStart === weekStart);
+    setSelectedWeekStart(weekStart);
+    if (report) {
+      setPurchases(report.purchases || []);
+      setSales(report.sales || []);
+      setCredit(Number(report.credit) || 0);
+      setBuffer(Number(report.buffer) || 20000000);
+      setIsDirty(false);
+      try {
+        const suggested = await api.getSuggestedCredit(weekStart);
+        setSuggestedCredit(suggested || 0);
+      } catch (e) {
+        setSuggestedCredit(0);
+      }
+    } else {
+      setupNewWeek(weekStart, weeklyReports);
+    }
+    setWeeksDropdownOpen(false);
+  };
+
+  const handleSaveWeekly = async () => {
+    setSaving(true);
+    try {
+      await api.saveWeeklyReport({
+        weekStart: selectedWeekStart,
+        purchases,
+        sales,
+        credit,
+        buffer
+      });
+      alert('Planilla semanal guardada con éxito.');
+      setIsDirty(false);
+      await loadWeeklyReports(selectedWeekStart);
+    } catch (err: any) {
+      alert('Error al guardar la planilla: ' + (err.message || err));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDeleteWeekly = async () => {
+    if (!window.confirm(`¿Estás seguro de que querés eliminar la planilla de la semana ${selectedWeekStart}? Esta acción no se puede deshacer.`)) {
+      return;
+    }
+    try {
+      await api.deleteWeeklyReport(selectedWeekStart);
+      alert('Planilla eliminada con éxito.');
+      setIsDirty(false);
+      await loadWeeklyReports();
+    } catch (err: any) {
+      alert('Error al eliminar la planilla: ' + (err.message || err));
+    }
+  };
+
+  const handleCreateNewWeek = () => {
+    const defaultVal = new Date().toISOString().split('T')[0];
+    const userVal = window.prompt('Ingresá una fecha de la semana que querés crear (se ajustará automáticamente al lunes de esa semana):', defaultVal);
+    if (userVal) {
+      const mon = getMonday(userVal);
+      handleSelectWeek(mon);
+    }
+  };
+
+  const addPurchaseRow = () => {
+    setPurchases(prev => [...prev, { company: '', date: '', amount: 0 }]);
+    setIsDirty(true);
+  };
+
+  const removePurchaseRow = (idx: number) => {
+    setPurchases(prev => prev.filter((_, i) => i !== idx));
+    setIsDirty(true);
+  };
+
+  const handlePurchaseChange = (idx: number, field: string, val: any) => {
+    setPurchases(prev => prev.map((item, i) => i === idx ? { ...item, [field]: val } : item));
+    setIsDirty(true);
+  };
+
+  const addSalesRow = () => {
+    setSales(prev => [...prev, { locality: '', date: '', amountA: 0, amountX: 0 }]);
+    setIsDirty(true);
+  };
+
+  const removeSalesRow = (idx: number) => {
+    setSales(prev => prev.filter((_, i) => i !== idx));
+    setIsDirty(true);
+  };
+
+  const handleSalesChange = (idx: number, field: string, val: any) => {
+    setSales(prev => prev.map((item, i) => i === idx ? { ...item, [field]: val } : item));
+    setIsDirty(true);
+  };
+
+  const handleAutofillSales = async () => {
+    try {
+      const autoSales = await api.getAutofillSales(selectedWeekStart);
+      if (!autoSales || autoSales.length === 0) {
+        alert('No se encontraron ventas entregadas en el sistema para esta semana.');
+        return;
+      }
+
+      setSales(prevSales => {
+        const newSales = [...prevSales];
+        const matchedLocalities = new Set<string>();
+
+        autoSales.forEach((as: any) => {
+          const matchIdx = newSales.findIndex(s => s.locality.trim().toUpperCase() === as.locality.trim().toUpperCase());
+          if (matchIdx >= 0) {
+            newSales[matchIdx] = {
+              ...newSales[matchIdx],
+              amountA: as.amountA,
+              amountX: as.amountX,
+              date: as.date || newSales[matchIdx].date
+            };
+            matchedLocalities.add(as.locality.toUpperCase());
+          }
+        });
+
+        autoSales.forEach((as: any) => {
+          if (!matchedLocalities.has(as.locality.toUpperCase())) {
+            newSales.push({
+              locality: as.locality,
+              date: as.date || '',
+              amountA: as.amountA,
+              amountX: as.amountX
+            });
+          }
+        });
+
+        return newSales;
+      });
+
+      setIsDirty(true);
+      alert('Ventas completadas con éxito en base a los pedidos entregados.');
+    } catch (err: any) {
+      alert('Error al autocompletar ventas: ' + (err.message || err));
+    }
+  };
+
+
+
+
   
   // Estados para Zonas
   const [zoneData, setZoneData] = useState<any>({
@@ -177,9 +453,11 @@ export default function UnifiedReportsDashboard({
         {[
           { id: 'finanzas', label: 'Resumen Financiero', icon: <DollarSign size={16} /> },
           { id: 'zonas', label: 'Análisis de Zonas', icon: <MapPin size={16} /> },
+          { id: 'caja_semanal', label: 'Caja Semanal Consolidada', icon: <Calendar size={16} /> },
           { id: 'crm', label: 'CRM + IA', icon: <Sparkles size={16} /> },
           { id: 'arca', label: 'Cierre Fiscal (ARCA)', icon: <FileText size={16} /> }
         ].map(tab => (
+
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id as any)}
@@ -860,6 +1138,535 @@ export default function UnifiedReportsDashboard({
       )}
 
 
+
+      {/* 4. CAJA SEMANAL CONSOLIDADA */}
+      {activeTab === 'caja_semanal' && (
+        <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+          
+          {/* Barra de Herramientas de la Planilla */}
+          <div className="card" style={{ padding: '16px 20px', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', position: 'relative' }}>
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>SEMANA ACTIVA</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <button 
+                    onClick={() => setWeeksDropdownOpen(!weeksDropdownOpen)}
+                    className="btn btn-secondary"
+                    style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', fontSize: '0.9rem', fontWeight: 600 }}
+                  >
+                    <Calendar size={16} />
+                    Semana del {selectedWeekStart || 'Seleccionar'}
+                    <span style={{ fontSize: '0.6rem' }}>▼</span>
+                  </button>
+                  
+                  {weeksDropdownOpen && (
+                    <>
+                      <div onClick={() => setWeeksDropdownOpen(false)} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 999 }} />
+                      <div style={{
+                        position: 'absolute',
+                        top: '100%',
+                        left: 0,
+                        zIndex: 1000,
+                        backgroundColor: 'var(--bg-card, #fff)',
+                        border: '1px solid var(--border-color)',
+                        borderRadius: '8px',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                        marginTop: '4px',
+                        minWidth: '220px',
+                        maxHeight: '250px',
+                        overflowY: 'auto',
+                        padding: '6px 0'
+                      }}>
+                        <div style={{ padding: '4px 12px 8px 12px', borderBottom: '1px solid var(--border-color)', marginBottom: '6px' }}>
+                          <button 
+                            className="btn btn-ghost"
+                            onClick={handleCreateNewWeek}
+                            style={{ width: '100%', justifyContent: 'center', fontSize: '0.8rem', padding: '6px' }}
+                          >
+                            <Plus size={14} /> Nueva Semana
+                          </button>
+                        </div>
+                        {weeklyReports.length === 0 ? (
+                          <div style={{ padding: '8px 12px', fontSize: '0.8rem', color: 'var(--text-secondary)', textAlign: 'center' }}>No hay semanas guardadas</div>
+                        ) : (
+                          weeklyReports.map((r: any) => (
+                            <button
+                              key={r.weekStart}
+                              onClick={() => handleSelectWeek(r.weekStart)}
+                              style={{
+                                display: 'block',
+                                width: '100%',
+                                padding: '8px 16px',
+                                textAlign: 'left',
+                                border: 'none',
+                                background: r.weekStart === selectedWeekStart ? 'var(--bg-light)' : 'transparent',
+                                color: 'var(--text-primary)',
+                                fontSize: '0.85rem',
+                                cursor: 'pointer',
+                                fontWeight: r.weekStart === selectedWeekStart ? 600 : 400
+                              }}
+                              onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--bg-light)'}
+                              onMouseLeave={e => {
+                                if (r.weekStart !== selectedWeekStart) {
+                                  e.currentTarget.style.backgroundColor = 'transparent';
+                                }
+                              }}
+                            >
+                              Semana {r.weekStart}
+                            </button>
+                          ))
+                        )}
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {isDirty && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', alignSelf: 'flex-end', marginBottom: '6px' }}>
+                  <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#f2994a', animation: 'pulse 1.5s infinite' }} />
+                  <span style={{ fontSize: '0.78rem', color: '#f2994a', fontWeight: 600 }}>Planilla con cambios sin guardar</span>
+                </div>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>COLCHÓN OPERATIVO (RESULTADO)</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-secondary)' }}>$</span>
+                  <input
+                    type="number"
+                    value={buffer}
+                    onChange={e => { setBuffer(Number(e.target.value) || 0); setIsDirty(true); }}
+                    className="input"
+                    style={{ width: '130px', padding: '6px 10px', textAlign: 'right', fontWeight: 600, fontSize: '0.9rem' }}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Planillas de Carga Lateral (Compras vs Ventas) */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(480px, 1fr))', gap: '24px' }}>
+            
+            {/* Columna Compras (Egresos) */}
+            <div className="card" style={{ padding: '24px', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '12px' }}>
+                <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <DollarSign size={18} color="var(--color-primary)" /> COMPRA SEMANAL
+                </h3>
+                <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 600 }}>EGRESOS Y CRÉDITO</span>
+              </div>
+
+              <div className="table-container" style={{ overflow: 'visible' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr style={{ borderBottom: '2px solid var(--border-color)', textAlign: 'left', fontSize: '0.8rem' }}>
+                      <th style={{ padding: '8px 4px', color: 'var(--text-secondary)', fontWeight: 600 }}>EMPRESAS</th>
+                      <th style={{ padding: '8px 4px', color: 'var(--text-secondary)', fontWeight: 600, width: '110px' }}>Fecha</th>
+                      <th style={{ padding: '8px 4px', color: 'var(--text-secondary)', fontWeight: 600, width: '130px', textAlign: 'right' }}>$ Monto</th>
+                      <th style={{ padding: '8px 4px', width: '40px' }}></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {purchases.map((p, idx) => (
+                      <tr key={idx} style={{ borderBottom: '1px solid var(--border-color)' }}>
+                        <td style={{ padding: '6px 4px' }}>
+                          <input
+                            type="text"
+                            value={p.company}
+                            onChange={e => handlePurchaseChange(idx, 'company', e.target.value)}
+                            placeholder="Nombre del proveedor"
+                            className="input-inline-cell"
+                          />
+                        </td>
+                        <td style={{ padding: '6px 4px' }}>
+                          <input
+                            type="text"
+                            value={p.date || ''}
+                            onChange={e => handlePurchaseChange(idx, 'date', e.target.value)}
+                            placeholder="DD/MM/AAAA"
+                            className="input-inline-cell"
+                          />
+                        </td>
+                        <td style={{ padding: '6px 4px' }}>
+                          <input
+                            type="number"
+                            value={p.amount || ''}
+                            onChange={e => handlePurchaseChange(idx, 'amount', Number(e.target.value) || 0)}
+                            placeholder="0"
+                            className="input-inline-cell"
+                            style={{ textAlign: 'right', fontWeight: 600 }}
+                          />
+                        </td>
+                        <td style={{ padding: '6px 4px', textAlign: 'center' }}>
+                          <button
+                            onClick={() => removePurchaseRow(idx)}
+                            style={{ background: 'none', border: 'none', color: '#666', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                            onMouseEnter={e => e.currentTarget.style.color = '#E30613'}
+                            onMouseLeave={e => e.currentTarget.style.color = '#666'}
+                            title="Eliminar fila"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                    
+                    {/* Fila Crédito Rollover */}
+                    <tr style={{ backgroundColor: 'var(--bg-light)', fontWeight: 600 }}>
+                      <td style={{ padding: '10px 8px', color: 'var(--text-primary)' }}>
+                        CRÉDITO (Rollover)
+                      </td>
+                      <td style={{ padding: '10px 4px', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                        Automático
+                      </td>
+                      <td style={{ padding: '6px 4px' }}>
+                        <input
+                          type="number"
+                          value={credit}
+                          onChange={e => { setCredit(Number(e.target.value) || 0); setIsDirty(true); }}
+                          className="input-inline-cell"
+                          style={{ textAlign: 'right', fontWeight: 700, color: '#E30613', backgroundColor: 'transparent' }}
+                        />
+                      </td>
+                      <td style={{ padding: '10px 4px', textAlign: 'center' }}>
+                        {suggestedCredit !== credit && (
+                          <button
+                            onClick={() => { setCredit(suggestedCredit); setIsDirty(true); }}
+                            style={{
+                              background: 'none',
+                              border: 'none',
+                              color: '#1a73e8',
+                              cursor: 'pointer',
+                              fontSize: '0.72rem',
+                              fontWeight: 700,
+                              padding: 0
+                            }}
+                            title={`Restaurar sugerencia: $${suggestedCredit.toLocaleString()}`}
+                          >
+                            Sugerir
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px' }}>
+                <button 
+                  className="btn btn-ghost"
+                  onClick={addPurchaseRow}
+                  style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', padding: '6px 12px' }}
+                >
+                  <Plus size={14} /> Agregar Fila
+                </button>
+                <div style={{ textAlign: 'right' }}>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'block' }}>TOTAL COMPRA (CON CRÉDITO)</span>
+                  <span style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                    ${(purchases.reduce((sum, p) => sum + (Number(p.amount) || 0), 0) + Number(credit)).toLocaleString()}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Columna Ventas (Ingresos) */}
+            <div className="card" style={{ padding: '24px', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
+                <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <TrendingUp size={18} color="#137333" /> VENTA SEMANAL
+                </h3>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <button
+                    onClick={handleAutofillSales}
+                    className="btn btn-ghost"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      fontSize: '0.78rem',
+                      padding: '4px 10px',
+                      fontWeight: 600,
+                      color: '#137333',
+                      borderColor: '#137333',
+                      borderWidth: '1px',
+                      borderStyle: 'solid',
+                      borderRadius: '6px',
+                      backgroundColor: 'transparent'
+                    }}
+                  >
+                    <RefreshCw size={12} />
+                    Autocompletar desde ERP
+                  </button>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 600 }}>INGRESOS POR LOCALIDAD</span>
+                </div>
+              </div>
+
+
+              <div className="table-container">
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr style={{ borderBottom: '2px solid var(--border-color)', textAlign: 'left', fontSize: '0.8rem' }}>
+                      <th style={{ padding: '8px 4px', color: 'var(--text-secondary)', fontWeight: 600 }}>LOCALIDADES</th>
+                      <th style={{ padding: '8px 4px', color: 'var(--text-secondary)', fontWeight: 600, width: '90px' }}>Fecha</th>
+                      <th style={{ padding: '8px 4px', color: 'var(--text-secondary)', fontWeight: 600, width: '95px', textAlign: 'right' }}>Imp. A (Ofi)</th>
+                      <th style={{ padding: '8px 4px', color: 'var(--text-secondary)', fontWeight: 600, width: '95px', textAlign: 'right' }}>Imp. X (Int)</th>
+                      <th style={{ padding: '8px 4px', color: 'var(--text-secondary)', fontWeight: 600, width: '100px', textAlign: 'right' }}>Total</th>
+                      <th style={{ padding: '8px 4px', width: '30px' }}></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sales.map((s, idx) => {
+                      const rowTotal = (Number(s.amountA) || 0) + (Number(s.amountX) || 0);
+                      return (
+                        <tr key={idx} style={{ borderBottom: '1px solid var(--border-color)' }}>
+                          <td style={{ padding: '6px 4px' }}>
+                            <input
+                              type="text"
+                              value={s.locality}
+                              onChange={e => handleSalesChange(idx, 'locality', e.target.value)}
+                              placeholder="Nombre de localidad"
+                              className="input-inline-cell"
+                            />
+                          </td>
+                          <td style={{ padding: '6px 4px' }}>
+                            <input
+                              type="text"
+                              value={s.date || ''}
+                              onChange={e => handleSalesChange(idx, 'date', e.target.value)}
+                              placeholder="DD/MM"
+                              className="input-inline-cell"
+                            />
+                          </td>
+                          <td style={{ padding: '6px 4px' }}>
+                            <input
+                              type="number"
+                              value={s.amountA || ''}
+                              onChange={e => handleSalesChange(idx, 'amountA', Number(e.target.value) || 0)}
+                              placeholder="0"
+                              className="input-inline-cell"
+                              style={{ textAlign: 'right' }}
+                            />
+                          </td>
+                          <td style={{ padding: '6px 4px' }}>
+                            <input
+                              type="number"
+                              value={s.amountX || ''}
+                              onChange={e => handleSalesChange(idx, 'amountX', Number(e.target.value) || 0)}
+                              placeholder="0"
+                              className="input-inline-cell"
+                              style={{ textAlign: 'right' }}
+                            />
+                          </td>
+                          <td style={{ padding: '6px 4px', textAlign: 'right', fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.85rem' }}>
+                            ${rowTotal.toLocaleString()}
+                          </td>
+                          <td style={{ padding: '6px 4px', textAlign: 'center' }}>
+                            <button
+                              onClick={() => removeSalesRow(idx)}
+                              style={{ background: 'none', border: 'none', color: '#666', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                              onMouseEnter={e => e.currentTarget.style.color = '#E30613'}
+                              onMouseLeave={e => e.currentTarget.style.color = '#666'}
+                              title="Eliminar fila"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px' }}>
+                <button 
+                  className="btn btn-ghost"
+                  onClick={addSalesRow}
+                  style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', padding: '6px 12px' }}
+                >
+                  <Plus size={14} /> Agregar Fila
+                </button>
+                <div style={{ textAlign: 'right' }}>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'block' }}>TOTAL VENTAS</span>
+                  <span style={{ fontSize: '1.25rem', fontWeight: 700, color: '#137333' }}>
+                    ${sales.reduce((sum, s) => sum + (Number(s.amountA) || 0) + (Number(s.amountX) || 0), 0).toLocaleString()}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          {/* Tarjeta de Cierre y Acciones */}
+          <div className="card" style={{ padding: '24px', borderRadius: '12px', display: 'grid', gridTemplateColumns: '1fr auto', alignItems: 'center', gap: '24px', backgroundColor: 'var(--bg-light)', border: '1px solid var(--border-color)' }}>
+            <div>
+              <h4 style={{ margin: '0 0 6px 0', fontSize: '1.05rem', fontWeight: 700 }}>Resumen Financiero de la Semana</h4>
+              <div style={{ display: 'flex', gap: '24px', flexWrap: 'wrap', marginTop: '12px' }}>
+                <div>
+                  <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', display: 'block' }}>VENTAS TOTALES (A + X)</span>
+                  <span style={{ fontSize: '1.15rem', fontWeight: 700, color: '#137333' }}>
+                    +${sales.reduce((sum, s) => sum + (Number(s.amountA) || 0) + (Number(s.amountX) || 0), 0).toLocaleString()}
+                  </span>
+                </div>
+                <div style={{ borderLeft: '1px solid var(--border-color)', paddingLeft: '24px' }}>
+                  <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', display: 'block' }}>COMPRAS (PROVEEDORES)</span>
+                  <span style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--text-secondary)' }}>
+                    -${purchases.reduce((sum, p) => sum + (Number(p.amount) || 0), 0).toLocaleString()}
+                  </span>
+                </div>
+                <div style={{ borderLeft: '1px solid var(--border-color)', paddingLeft: '24px' }}>
+                  <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', display: 'block' }}>CRÉDITO INICIAL</span>
+                  <span style={{ fontSize: '1.15rem', fontWeight: 700, color: credit < 0 ? '#E30613' : 'var(--text-primary)' }}>
+                    ${credit.toLocaleString()}
+                  </span>
+                </div>
+                
+                {(() => {
+                  const sTot = sales.reduce((sum, s) => sum + (Number(s.amountA) || 0) + (Number(s.amountX) || 0), 0);
+                  const pTot = purchases.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+                  const netWeekly = sTot - pTot;
+                  const finalCredit = -(sTot - (pTot + credit) - buffer);
+
+                  return (
+                    <>
+                      <div style={{ borderLeft: '1px solid var(--border-color)', paddingLeft: '24px' }}>
+                        <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', display: 'block' }}>FLUJO NETO OPERATIVO</span>
+                        <span style={{ fontSize: '1.15rem', fontWeight: 700, color: netWeekly >= 0 ? '#137333' : '#E30613' }}>
+                          {netWeekly >= 0 ? '+' : ''}${netWeekly.toLocaleString()}
+                        </span>
+                      </div>
+                      <div style={{ borderLeft: '1px solid var(--border-color)', paddingLeft: '24px', backgroundColor: '#e6f4ea', padding: '6px 14px', borderRadius: '8px' }}>
+                        <span style={{ fontSize: '0.75rem', color: '#137333', display: 'block', fontWeight: 600 }}>PROYECTAR CRÉDITO SEMANA SIGUIENTE</span>
+                        <span style={{ fontSize: '1.15rem', fontWeight: 800, color: '#137333' }}>
+                          ${Math.round(finalCredit).toLocaleString()}
+                        </span>
+                      </div>
+                    </>
+                  );
+                })()}
+              </div>
+            </div>
+            
+            <div style={{ display: 'flex', gap: '12px' }}>
+              {weeklyReports.some(r => r.weekStart === selectedWeekStart) && (
+                <button
+                  className="btn btn-secondary"
+                  onClick={handleDeleteWeekly}
+                  disabled={saving}
+                  style={{ borderColor: '#E30613', color: '#E30613', padding: '10px 16px' }}
+                >
+                  <Trash2 size={16} />
+                  Eliminar Cierre
+                </button>
+              )}
+              <button
+                className="btn btn-primary"
+                onClick={handleSaveWeekly}
+                disabled={saving}
+                style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', fontWeight: 600 }}
+              >
+                <Save size={16} />
+                {saving ? 'Guardando...' : 'Guardar Cierre Semanal'}
+              </button>
+            </div>
+          </div>
+
+          {/* Historial y Gráfico de Evolución */}
+          <div className="card" style={{ padding: '24px', borderRadius: '12px' }}>
+            <h4 style={{ margin: '0 0 4px 0', fontSize: '1.1rem', fontWeight: 700 }}>Evolución Financiera Histórica Semanal</h4>
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: '0 0 24px 0' }}>
+              Evolución de la deuda (Crédito) de las últimas semanas cargadas en el sistema.
+            </p>
+
+            {weeklyReports.length < 2 ? (
+              <div style={{ height: '140px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'var(--bg-light)', borderRadius: '8px', border: '1px dashed var(--border-color)', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
+                Se necesitan al menos 2 semanas cerradas para visualizar los gráficos de evolución histórica.
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                
+                {/* Visual Line Chart (CSS/SVG Minimal) */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)' }}>TENDENCIA DE DEUDA (CRÉDITO SEMANAL)</span>
+                  
+                  <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', height: '160px', borderBottom: '1px solid var(--border-color)', paddingBottom: '10px', gap: '12px' }}>
+                    {(() => {
+                      const maxAbs = Math.max(...weeklyReports.map(x => Math.abs(Number(x.credit) || 0)), 1);
+
+                      return weeklyReports.map((r) => {
+                        const crVal = Number(r.credit) || 0;
+                        const absCr = Math.abs(crVal);
+                        const heightPct = Math.max((absCr / maxAbs) * 100, 4);
+                        const isCurrent = r.weekStart === selectedWeekStart;
+
+                        return (
+                          <div
+                            key={r.weekStart}
+                            onClick={() => handleSelectWeek(r.weekStart)}
+                            style={{
+                              flex: 1,
+                              display: 'flex',
+                              flexDirection: 'column',
+                              alignItems: 'center',
+                              cursor: 'pointer',
+                              height: '100%',
+                              justifyContent: 'flex-end'
+                            }}
+                          >
+                            <span style={{ fontSize: '0.7rem', fontWeight: 700, color: isCurrent ? 'var(--color-primary)' : 'var(--text-secondary)', marginBottom: '4px' }}>
+                              -${Math.round(absCr / 1000000)}M
+                            </span>
+                            <div
+                              style={{
+                                width: '100%',
+                                maxWidth: '40px',
+                                height: `${heightPct}%`,
+                                backgroundColor: isCurrent ? '#E30613' : 'var(--text-secondary)',
+                                borderRadius: '4px 4px 0 0',
+                                transition: 'all 0.2s',
+                                opacity: isCurrent ? 1 : 0.6
+                              }}
+                            />
+                            <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '8px', fontWeight: isCurrent ? 700 : 400 }}>
+                              {r.weekStart.substring(5)}
+                            </span>
+                          </div>
+                        );
+                      });
+                    })()}
+                  </div>
+                </div>
+
+              </div>
+            )}
+          </div>
+          
+          <style>{`
+            .input-inline-cell {
+              width: 100%;
+              border: 1px solid transparent;
+              background-color: transparent;
+              padding: 6px 8px;
+              font-size: 0.85rem;
+              color: var(--text-primary);
+              border-radius: 4px;
+              transition: all 0.15s;
+              outline: none;
+            }
+            .input-inline-cell:focus {
+              border-color: var(--border-color);
+              background-color: var(--bg-card);
+              box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            }
+            .input-inline-cell:hover {
+              background-color: var(--bg-light);
+            }
+          `}</style>
+        </div>
+      )}
 
       {/* 5. CRM + IA */}
       {activeTab === 'crm' && (
