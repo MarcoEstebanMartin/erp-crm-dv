@@ -284,6 +284,11 @@ export class PersonaService {
       orderBy: { issueDate: 'asc' },
     });
 
+    const creditNotes = await prisma.creditNote.findMany({
+      where: { personaId: persona.id },
+      orderBy: { createdAt: 'asc' },
+    });
+
     const ledgerItems: any[] = [];
 
     orders.forEach((o) => {
@@ -317,6 +322,17 @@ export class PersonaService {
         reference: `Factura Nro ${si.invoiceNumber}`,
         description: `Compra - Factura ${si.invoiceType.replace('_', ' ')}`,
         amount: Number(si.totalAmount),
+      });
+    });
+
+    creditNotes.forEach((cn) => {
+      ledgerItems.push({
+        id: `credit-note-${cn.id}`,
+        date: cn.createdAt,
+        type: 'CREDIT',
+        reference: `Nota de Crédito #${cn.id}`,
+        description: `${cn.creditNoteType.replace(/_/g, ' ')} ${cn.creditNoteNumber || 'INT-' + cn.id.toString().padStart(8, '0')} (${cn.reason})`,
+        amount: Number(cn.totalAmount),
       });
     });
 

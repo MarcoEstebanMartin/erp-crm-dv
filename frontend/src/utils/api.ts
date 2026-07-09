@@ -220,6 +220,11 @@ export const api = {
     return res.orders;
   },
 
+  getOrderById: async (id: number) => {
+    const res = await request(`/orders/${id}`);
+    return res.order;
+  },
+
   createOrder: async (orderData: { clientId: number, items: { productId: number, quantity: number }[], notes?: string }) => {    
 
     const res = await request('/orders', {
@@ -565,6 +570,11 @@ export const api = {
     }
     const res = await request(path);
     return res.creditNotes;
+  },
+
+  getCreditNoteById: async (id: number) => {
+    const res = await request(`/billing/credit-notes/${id}`);
+    return res.creditNote;
   },
 
   createCreditNote: async (data: any) => {    

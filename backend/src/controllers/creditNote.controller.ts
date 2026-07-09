@@ -281,3 +281,50 @@ export async function createCreditNote(req: AuthenticatedRequest, res: Response)
     });
   }
 }
+
+/**
+ * Obtener detalles de una Nota de Crédito específica por ID.
+ */
+export async function getCreditNoteById(req: AuthenticatedRequest, res: Response): Promise<void> {
+  const { id } = req.params;
+  const userId = req.user?.id;
+  const userRole = req.user?.role;
+
+  if (!userId || !userRole) {
+    res.status(401).json({ status: 'error', message: 'No autorizado.' });
+    return;
+  }
+
+  try {
+    const creditNote = await prisma.creditNote.findUnique({
+      where: { id: Number(id) },
+      include: {
+        persona: true,
+        user: { select: { id: true, username: true } },
+        order: { select: { id: true, invoiceNumber: true } },
+        items: {
+          include: {
+            product: true,
+          },
+        },
+      },
+    });
+
+    if (!creditNote) {
+      res.status(404).json({ status: 'error', message: 'Nota de crédito no encontrada.' });
+      return;
+    }
+
+    res.status(200).json({
+      status: 'success',
+      data: { creditNote },
+    });
+  } catch (error: any) {
+    console.error('Error al obtener la nota de crédito por ID:', error);
+    res.status(500).json({
+      status: 'error',
+      message: 'Error al obtener la nota de crédito.',
+    });
+  }
+}
+
