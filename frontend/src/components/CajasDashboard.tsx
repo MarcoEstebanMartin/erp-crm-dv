@@ -76,7 +76,7 @@ export default function CajasDashboard() {
 
     users.forEach((u: any) => {
       const usernameLower = u.username.toLowerCase();
-      if (usernameLower === 'rocio' || usernameLower === 'thiago') {
+      if (usernameLower === 'rocio' || usernameLower === 'thiago' || usernameLower === 'oficina') {
         return;
       }
       if (u.role === 'VENDEDOR' || u.role === 'DEPOSITO') {
@@ -158,7 +158,7 @@ export default function CajasDashboard() {
   if (loading) return <div style={{ padding: '20px', textAlign: 'center' }}>Cargando cajas...</div>;
 
   return (
-    <div style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
+    <div style={{ padding: '20px', maxWidth: '100%', margin: '0 auto' }}>
       
 
 
@@ -170,7 +170,7 @@ export default function CajasDashboard() {
       </div>
 
       {/* Grid de 3 Cajas */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '12px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '12px' }}>
         {dynamicCajas.map(cajaDef => {
           const activeDrawer = drawers.find(d => 
             d.branch === cajaDef.id || (cajaDef.userId && d.userId === cajaDef.userId)
@@ -186,8 +186,8 @@ export default function CajasDashboard() {
 
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px', gap: '8px' }}>
                 <div style={{ minWidth: 0, flex: 1 }}>
-                  <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={cajaDef.name}>{cajaDef.name}</h3>
-                  <p style={{ margin: '2px 0 0 0', fontSize: '0.78rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={cajaDef.desc}>{cajaDef.desc}</p>
+                  <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 600 }} title={cajaDef.name}>{cajaDef.name}</h3>
+                  <p style={{ margin: '2px 0 0 0', fontSize: '0.78rem', color: 'var(--text-secondary)' }} title={cajaDef.desc}>{cajaDef.desc}</p>
                 </div>
                 <div style={{ 
                   backgroundColor: isOpen ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)', 
