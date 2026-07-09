@@ -75,6 +75,10 @@ export default function CajasDashboard() {
     ];
 
     users.forEach((u: any) => {
+      const usernameLower = u.username.toLowerCase();
+      if (usernameLower === 'rocio' || usernameLower === 'thiago') {
+        return;
+      }
       if (u.role === 'VENDEDOR' || u.role === 'DEPOSITO') {
         const label = u.role === 'VENDEDOR' ? 'Vendedor' : 'Repartidor';
         list.push({
@@ -166,7 +170,7 @@ export default function CajasDashboard() {
       </div>
 
       {/* Grid de 3 Cajas */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '12px' }}>
         {dynamicCajas.map(cajaDef => {
           const activeDrawer = drawers.find(d => 
             d.branch === cajaDef.id || (cajaDef.userId && d.userId === cajaDef.userId)
@@ -174,47 +178,48 @@ export default function CajasDashboard() {
           const isOpen = !!activeDrawer;
 
           return (
-            <div key={cajaDef.id} className="card" style={{ padding: '24px', display: 'flex', flexDirection: 'column', height: '100%', position: 'relative', overflow: 'hidden' }}>
+            <div key={cajaDef.id} className="card" style={{ padding: '16px', display: 'flex', flexDirection: 'column', height: '100%', position: 'relative', overflow: 'hidden' }}>
               
               {isOpen && (
                 <div style={{ position: 'absolute', top: 0, left: 0, width: '4px', height: '100%', backgroundColor: '#10b981' }}></div>
               )}
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '15px' }}>
-                <div>
-                  <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 600 }}>{cajaDef.name}</h3>
-                  <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{cajaDef.desc}</p>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px', gap: '8px' }}>
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={cajaDef.name}>{cajaDef.name}</h3>
+                  <p style={{ margin: '2px 0 0 0', fontSize: '0.78rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={cajaDef.desc}>{cajaDef.desc}</p>
                 </div>
                 <div style={{ 
                   backgroundColor: isOpen ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)', 
                   color: isOpen ? '#10b981' : '#ef4444', 
-                  padding: '6px 12px', 
+                  padding: '4px 8px', 
                   borderRadius: '20px', 
-                  fontSize: '0.85rem', 
+                  fontSize: '0.75rem', 
                   fontWeight: 600,
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '6px'
+                  gap: '4px',
+                  whiteSpace: 'nowrap'
                 }}>
-                  {isOpen ? <Unlock size={14} /> : <Lock size={14} />}
+                  {isOpen ? <Unlock size={12} /> : <Lock size={12} />}
                   {isOpen ? 'Operativa' : 'Cerrada'}
                 </div>
               </div>
 
               <div style={{ flex: 1 }}>
                 {isOpen ? (
-                  <div style={{ padding: '15px', backgroundColor: 'var(--bg-light)', borderRadius: '8px', marginBottom: '20px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                      <span style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Fondo Inicial:</span>
-                      <strong style={{ fontFamily: 'monospace' }}>${Number(activeDrawer.openingBalance).toLocaleString()}</strong>
+                  <div style={{ padding: '10px', backgroundColor: 'var(--bg-light)', borderRadius: '8px', marginBottom: '12px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                      <span style={{ color: 'var(--text-secondary)', fontSize: '0.82rem' }}>Fondo Inicial:</span>
+                      <strong style={{ fontFamily: 'monospace', fontSize: '0.82rem' }}>${Number(activeDrawer.openingBalance).toLocaleString()}</strong>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <span style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Apertura:</span>
-                      <span style={{ fontSize: '0.9rem' }}>{new Date(activeDrawer.openedAt).toLocaleTimeString('es-AR', {hour: '2-digit', minute:'2-digit'})}</span>
+                      <span style={{ color: 'var(--text-secondary)', fontSize: '0.82rem' }}>Apertura:</span>
+                      <span style={{ fontSize: '0.82rem' }}>{new Date(activeDrawer.openedAt).toLocaleTimeString('es-AR', {hour: '2-digit', minute:'2-digit'})}</span>
                     </div>
                   </div>
                 ) : (
-                  <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '20px' }}>
+                  <div style={{ padding: '12px', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.82rem', marginBottom: '12px' }}>
                     La caja se encuentra inactiva. Deberás abrirla con un saldo inicial para operar.
                   </div>
                 )}
@@ -224,7 +229,7 @@ export default function CajasDashboard() {
                 {isOpen ? (
                   <button 
                     className="btn" 
-                    style={{ width: '100%', backgroundColor: '#fef2f2', color: '#ef4444', border: '1px solid #fecaca', borderRadius: '8px' }}
+                    style={{ width: '100%', padding: '8px 12px', fontSize: '0.85rem', backgroundColor: '#fef2f2', color: '#ef4444', border: '1px solid #fecaca', borderRadius: '8px' }}
                     onClick={() => {
                       setAmountInput('');
                       setActionModal({ open: true, branch: cajaDef.id, mode: 'close', drawerId: activeDrawer.id });
@@ -235,7 +240,7 @@ export default function CajasDashboard() {
                 ) : (
                   <button 
                     className="btn btn-primary" 
-                    style={{ width: '100%', backgroundColor: '#10b981', borderColor: '#10b981', borderRadius: '8px' }}
+                    style={{ width: '100%', padding: '8px 12px', fontSize: '0.85rem', backgroundColor: '#10b981', borderColor: '#10b981', borderRadius: '8px' }}
                     onClick={() => {
                       setAmountInput('');
                       setActionModal({ open: true, branch: cajaDef.id, mode: 'open' });
