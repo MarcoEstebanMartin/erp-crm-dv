@@ -641,7 +641,14 @@ export default function RepartoDashboard() {
     const addPersona = (p: any) => {
       if (!p || !p.id) return;
       if (CLIENT_COORDS[p.id]) return; // Ya tiene coordenadas fijas duras
-      if (clientCoordsCache[p.id]) return; // Ya está geocodificado
+      
+      const expectedAddress = p.address || '';
+      const expectedCity = p.city || 'General Villegas';
+      const expectedCacheString = `${expectedAddress}, ${expectedCity}`;
+      
+      if (clientCoordsCache[p.id] && clientCoordsCache[p.id].address === expectedCacheString) {
+        return; // Ya está geocodificado con la misma dirección
+      }
       if (processedIds.has(p.id)) return;
       processedIds.add(p.id);
       personasToGeocode.push(p);
