@@ -949,7 +949,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
       {activeTab === 'dashboard' && (
         <div>
           <div style={{ marginBottom: '24px' }}>
-            <h1 style={{ fontSize: '1.65rem', fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--text-primary)' }}>
+            <h1 style={{ fontSize: '1.65rem', fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--text-primary)', marginBottom: '4px' }}>
               {(() => {
                 const hour = new Date().getHours();
                 const greeting = hour >= 6 && hour < 12 ? '¡Buen día' : hour >= 12 && hour < 20 ? '¡Buenas tardes' : '¡Buenas noches';
@@ -957,6 +957,14 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
                 return `${greeting}, ${user ? user.username : 'Usuario'}!`;
               })()}
             </h1>
+            <div style={{ fontSize: '0.88rem', color: 'var(--text-muted)', fontWeight: 500, letterSpacing: '-0.01em' }}>
+              {(() => {
+                const today = new Date();
+                const options: Intl.DateTimeFormatOptions = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
+                const dateStr = today.toLocaleDateString('es-AR', options);
+                return dateStr.charAt(0).toUpperCase() + dateStr.slice(1);
+              })()}
+            </div>
           </div>
 
           {/* Grilla de Métricas de Pedidos */}
