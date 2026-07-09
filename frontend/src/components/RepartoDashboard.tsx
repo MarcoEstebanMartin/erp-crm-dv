@@ -21,13 +21,32 @@ const CLIENT_COORDS: { [key: number]: { lat: number; lng: number; address: strin
   3: { lat: -35.035, lng: -63.012, address: 'Castelli 580, General Villegas' },
 };
 
-function getClientCoords(clientId: number, clientName: string) {
+function getClientCoords(
+  clientId: number,
+  clientName: string,
+  persona?: any,
+  cache?: { [key: number]: { lat: number; lng: number; address: string } }
+) {
   if (CLIENT_COORDS[clientId]) return CLIENT_COORDS[clientId];
-  // Generar coordenadas deterministas cerca del depósito
+  if (cache && cache[clientId]) return cache[clientId];
+
+  // Generar coordenadas deterministas cerca del depósito como fallback
   const hash = clientName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
   const lat = -35.030 + ((hash % 100 - 50) * 0.0003);
   const lng = -63.010 + (((hash * 7) % 100 - 50) * 0.0003);
-  return { lat, lng, address: `Acceso Villegas S/N, Gral Villegas` };
+
+  // Formatear la dirección real si existe
+  const street = persona?.address;
+  const city = persona?.city;
+
+  let realAddress = street || 'Acceso Villegas S/N';
+  if (city) {
+    realAddress += `, ${city}`;
+  } else if (!realAddress.toLowerCase().includes('villegas')) {
+    realAddress += `, Gral Villegas`;
+  }
+
+  return { lat, lng, address: realAddress };
 }
 
 // resolvedor TSP simple (Nearest Neighbor)
@@ -609,6 +628,93 @@ export default function RepartoDashboard() {
   const [createRouteStreetPoints, setCreateRouteStreetPoints] = useState<[number, number][]>([]);
   const [selectedRouteStreetPoints, setSelectedRouteStreetPoints] = useState<[number, number][]>([]);
 
+  // Carga e integración del geocodificador de Google Maps
+  const [googleLoaded, setGoogleLoaded] = useState(false);
+  const [clientCoordsCache, setClientCoordsCache] = useState<{ [key: number]: { lat: number; lng: number; address: string } }>({});
+
+  const apiKey = (import.meta.env as any)?.VITE_GOOGLE_MAPS_API_KEY || '';
+
+  useEffect(() => {
+    if (apiKey) {
+      loadGoogleMapsScript(apiKey, () => {
+        setGoogleLoaded(true);
+      });
+    }
+  }, [apiKey]);
+
+  // Efecto para geocodificar dinámicamente las direcciones de clientes que no estén en la caché
+  useEffect(() => {
+    if (!googleLoaded) return;
+
+    const personasToGeocode: any[] = [];
+    const processedIds = new Set<number>();
+
+    const addPersona = (p: any) => {
+      if (!p || !p.id) return;
+      if (CLIENT_COORDS[p.id]) return; // Ya tiene coordenadas fijas duras
+      if (clientCoordsCache[p.id]) return; // Ya está geocodificado
+      if (processedIds.has(p.id)) return;
+      processedIds.add(p.id);
+      personasToGeocode.push(p);
+    };
+
+    pendingOrders.forEach(o => addPersona(o.persona));
+    routes.forEach(r => {
+      r.orders?.forEach((o: any) => addPersona(o.persona));
+    });
+    if (selectedRoute?.orders) {
+      selectedRoute.orders.forEach((o: any) => addPersona(o.persona));
+    }
+
+    if (personasToGeocode.length === 0) return;
+
+    const geocoder = new (window as any).google.maps.Geocoder();
+    const newCacheEntries: typeof clientCoordsCache = {};
+
+    let index = 0;
+    const processNext = () => {
+      if (index >= personasToGeocode.length) {
+        if (Object.keys(newCacheEntries).length > 0) {
+          setClientCoordsCache(prev => ({ ...prev, ...newCacheEntries }));
+        }
+        return;
+      }
+
+      const p = personasToGeocode[index];
+      const street = p.address || '';
+      const city = p.city || 'General Villegas';
+      const addressString = `${street}, ${city}, Buenos Aires, Argentina`;
+
+      geocoder.geocode({ address: addressString }, (results: any, status: any) => {
+        if (status === 'OK' && results && results[0]) {
+          const loc = results[0].geometry.location;
+          newCacheEntries[p.id] = {
+            lat: loc.lat(),
+            lng: loc.lng(),
+            address: `${street}, ${city}`
+          };
+        } else {
+          console.warn(`Geocoding failed for client ${p.name} at address ${addressString}: ${status}`);
+          // Fallback con coordenadas deterministas cerca del depósito
+          const hash = p.name.split('').reduce((acc: number, char: string) => acc + char.charCodeAt(0), 0);
+          const lat = -35.030 + ((hash % 100 - 50) * 0.0003);
+          const lng = -63.010 + (((hash * 7) % 100 - 50) * 0.0003);
+          newCacheEntries[p.id] = {
+            lat,
+            lng,
+            address: street ? `${street}, ${city}` : 'Acceso Villegas S/N, Gral Villegas'
+          };
+        }
+        
+        index++;
+        // Retardo para evitar sobrecargar la cuota de la API
+        setTimeout(processNext, 200);
+      });
+    };
+
+    processNext();
+  }, [googleLoaded, pendingOrders, routes, selectedRoute]);
+
   // Formulario de nueva ruta
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [driverName, setDriverName] = useState('');
@@ -739,7 +845,7 @@ export default function RepartoDashboard() {
     const targets = selectedOrderIds.map(id => {
       const order = pendingOrders.find(o => o.id === id);
       const persona = order?.persona || { name: 'Cliente', id: 0 };
-      const coords = getClientCoords(persona.id, persona.name);
+      const coords = getClientCoords(persona.id, persona.name, persona, clientCoordsCache);
       return {
         id,
         lat: coords.lat,
@@ -752,7 +858,7 @@ export default function RepartoDashboard() {
 
     // Resolver TSP desde el depósito central
     return solveTSP(VILLEGAS_DEPOT, targets);
-  }, [selectedOrderIds, pendingOrders]);
+  }, [selectedOrderIds, pendingOrders, clientCoordsCache]);
 
   // Puntos del mapa (depósito -> clientes en orden óptimo -> depósito)
   const mapPoints = useMemo(() => {
@@ -769,7 +875,7 @@ export default function RepartoDashboard() {
 
     const targets = selectedRoute.orders.map((o: any) => {
       const p = o.persona || { name: 'Cliente', id: 0 };
-      const coords = getClientCoords(p.id, p.name);
+      const coords = getClientCoords(p.id, p.name, p, clientCoordsCache);
       return {
         id: o.id,
         lat: coords.lat,
@@ -786,7 +892,7 @@ export default function RepartoDashboard() {
     points.push(VILLEGAS_DEPOT);
 
     return { locations: route, points };
-  }, [selectedRoute]);
+  }, [selectedRoute, clientCoordsCache]);
 
   // --- TRAZADO VIAL OSRM REAL (Efectos asíncronos para cargar coordenadas de calles) ---
   useEffect(() => {
