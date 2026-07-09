@@ -102,7 +102,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
   const [auditPage, setAuditPage] = useState(1);
   const [auditTotalPages, setAuditTotalPages] = useState(1);
     const [configTab, setConfigTab] = useState<string>('general');
-  const [cajasSubTab, setCajasSubTab] = useState<'rendiciones' | 'diarias'>('rendiciones');
+  const [cajasSubTab, setCajasSubTab] = useState<'general' | 'rendiciones' | 'diarias'>('general');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
@@ -1594,47 +1594,6 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
         </div>
       )}
 
-      {/* ====================================================================
-          5. DEPOSITOS (PICKING & STOCK CONTROL)
-          ==================================================================== */}
-      {activeTab === 'deposito' && (
-        <div className="card">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-            <h3 className="card-title" style={{ margin: '0' }}>Armado y Picking de Pedidos</h3>
-            <span className="badge badge-official">Depósito Central</span>
-          </div>
-          <p style={{ fontSize: '0.9rem', marginBottom: '24px' }}>
-            Los pedidos cargados por vendedores se procesan aquí antes de facturarse.
-          </p>
-
-          <div className="table-container" style={{ border: '1px solid var(--border-color)' }}>
-            <table>
-              <thead>
-                <tr>
-                  <th>Nro Pedido</th>
-                  <th>Cliente</th>
-                  <th>Bultos estimados</th>
-                  <th>Estado de Picking</th>
-                </tr>
-              </thead>
-              <tbody>
-                {orders.filter(o => o.status === OrderStatus.PENDING || o.status === OrderStatus.PREPARING || o.status === OrderStatus.PREPARED).map(o => (
-                  <tr key={o.id}>
-                    <td style={{ fontWeight: 700 }}>#{o.id}</td>
-                    <td style={{ fontWeight: 500 }}>{o.client?.name}</td>
-                    <td>{o.items.length} packs/bultos</td>
-                    <td>
-                      <span className={`badge badge-${o.status.toLowerCase()}`}>
-                        {o.status === 'PENDING' ? 'Pendiente' : o.status === 'PREPARING' ? 'En picking' : 'Listo para facturar'}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
 
       {/* ====================================================================
           6. LOGÍSTICA & REPARTO (REPARTO DASHBOARD)
@@ -1645,14 +1604,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
         </Suspense>
       )}
 
-      {/* ====================================================================
-          7. CAJAS Y TESORERÍA (FINANZAS)
-          ==================================================================== */}
-      {activeTab === 'finanzas' && (
-        <Suspense fallback={<LoadingDashboard />}>
-          <FinanzasDashboard />
-        </Suspense>
-      )}
+
 
       {/* ====================================================================
           FACTURACION & IMPUESTOS (BILLING)
@@ -1692,6 +1644,24 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
               type="button"
               className="btn" 
               style={{ 
+                backgroundColor: cajasSubTab === 'general' ? 'var(--color-primary)' : 'transparent',
+                color: cajasSubTab === 'general' ? '#fff' : 'var(--text-primary)',
+                border: cajasSubTab === 'general' ? '1px solid var(--color-primary)' : '1px solid var(--border-color)',
+                fontWeight: 600,
+                fontSize: '0.85rem',
+                padding: '8px 16px',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap'
+              }}
+              onClick={() => setCajasSubTab('general')}
+            >
+              💼 General
+            </button>
+            <button 
+              type="button"
+              className="btn" 
+              style={{ 
                 backgroundColor: cajasSubTab === 'rendiciones' ? 'var(--color-primary)' : 'transparent',
                 color: cajasSubTab === 'rendiciones' ? '#fff' : 'var(--text-primary)',
                 border: cajasSubTab === 'rendiciones' ? '1px solid var(--color-primary)' : '1px solid var(--border-color)',
@@ -1727,7 +1697,9 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
           </div>
 
           <Suspense fallback={<LoadingDashboard />}>
-            {cajasSubTab === 'rendiciones' ? (
+            {cajasSubTab === 'general' ? (
+              <FinanzasDashboard />
+            ) : cajasSubTab === 'rendiciones' ? (
               <RendicionesDashboard />
             ) : (
               <CajasDashboard />

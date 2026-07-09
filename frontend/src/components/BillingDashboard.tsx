@@ -2196,7 +2196,7 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
                           }}>
                             <strong>⚠️ Caja Cerrada:</strong> No tenés una caja operativa abierta.
                             <div style={{ marginTop: '4px' }}>
-                              Para cobrar ventas en efectivo, debés abrir la <strong>Caja Grande</strong> en el Panel de Finanzas.
+                              Para cobrar ventas en efectivo, debés abrir la <strong>Caja Grande</strong> en la solapa General del menú Cajas.
                             </div>
                           </div>
                         )}
