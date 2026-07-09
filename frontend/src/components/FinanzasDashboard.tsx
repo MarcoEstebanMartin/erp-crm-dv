@@ -178,7 +178,7 @@ export default function FinanzasDashboard() {
   if (loading) return <div style={{ padding: '20px', textAlign: 'center' }}>Cargando información financiera...</div>;
 
   return (
-    <div style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
+    <div style={{ padding: '0px', width: '100%', display: 'flex', flexDirection: 'column', gap: '20px' }}>
       
       {/* Header Caja Grande */}
       <div className="card" style={{ marginBottom: '30px', background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)', color: 'white', padding: '30px', borderRadius: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
