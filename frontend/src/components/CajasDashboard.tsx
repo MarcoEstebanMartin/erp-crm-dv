@@ -227,16 +227,25 @@ export default function CajasDashboard() {
 
               <div>
                 {isOpen ? (
-                  <button 
-                    className="btn" 
-                    style={{ width: '100%', padding: '8px 12px', fontSize: '0.85rem', backgroundColor: '#fef2f2', color: '#ef4444', border: '1px solid #fecaca', borderRadius: '8px' }}
-                    onClick={() => {
-                      setAmountInput('');
-                      setActionModal({ open: true, branch: cajaDef.id, mode: 'close', drawerId: activeDrawer.id });
-                    }}
-                  >
-                    Arqueo y Cierre de Caja
-                  </button>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <button 
+                      className="btn btn-secondary" 
+                      style={{ width: '100%', padding: '8px 12px', fontSize: '0.85rem', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                      onClick={() => handleInspectDrawer(activeDrawer)}
+                    >
+                      <Eye size={14} /> Ver Movimientos
+                    </button>
+                    <button 
+                      className="btn" 
+                      style={{ width: '100%', padding: '8px 12px', fontSize: '0.85rem', backgroundColor: '#fef2f2', color: '#ef4444', border: '1px solid #fecaca', borderRadius: '8px' }}
+                      onClick={() => {
+                        setAmountInput('');
+                        setActionModal({ open: true, branch: cajaDef.id, mode: 'close', drawerId: activeDrawer.id });
+                      }}
+                    >
+                      Arqueo y Cierre de Caja
+                    </button>
+                  </div>
                 ) : (
                   <button 
                     className="btn btn-primary" 
@@ -398,13 +407,14 @@ export default function CajasDashboard() {
           </table>
         </div>
 
-      {/* Modal de Inspección de Caja Histórica */}
+      {/* Modal de Inspección de Caja Histórica o Activa */}
       {inspectDrawer && (
         <div className="modal-overlay" onClick={handleCloseInspect}>
           <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '850px', width: '95%', padding: '24px' }}>
             <div className="modal-header" style={{ marginBottom: '20px' }}>
               <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700 }}>
-                Arqueo Histórico: {dynamicCajas.find(c => c.id === inspectDrawer.branch)?.name || inspectDrawer.branch}
+                {inspectDrawer.status === 'OPEN' ? 'Detalle de Caja Activa: ' : 'Arqueo Histórico: '}
+                {dynamicCajas.find(c => c.id === inspectDrawer.branch)?.name || inspectDrawer.branch}
               </h3>
               <button 
                 type="button" 
@@ -421,38 +431,64 @@ export default function CajasDashboard() {
               <div className="card" style={{ padding: '16px', backgroundColor: '#f8fafc', border: '1px solid var(--border-color)' }}>
                 <h4 style={{ margin: '0 0 10px 0', fontSize: '0.85rem', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 600 }}>Información de la Caja</h4>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.85rem' }}>
-                  <div><strong>Estado:</strong> <span style={{ color: '#10b981', fontWeight: 600 }}>CERRADA</span></div>
+                  <div>
+                    <strong>Estado:</strong>{' '}
+                    <span style={{ color: inspectDrawer.status === 'OPEN' ? '#3b82f6' : '#10b981', fontWeight: 600 }}>
+                      {inspectDrawer.status === 'OPEN' ? 'ABIERTA' : 'CERRADA'}
+                    </span>
+                  </div>
                   <div><strong>Apertura:</strong> {new Date(inspectDrawer.openedAt).toLocaleString('es-AR')}</div>
-                  <div><strong>Cierre:</strong> {new Date(inspectDrawer.closedAt).toLocaleString('es-AR')}</div>
+                  {inspectDrawer.status === 'CLOSED' ? (
+                    <div><strong>Cierre:</strong> {new Date(inspectDrawer.closedAt).toLocaleString('es-AR')}</div>
+                  ) : (
+                    <div><strong>Cierre:</strong> <span style={{ color: 'var(--text-secondary)', fontStyle: 'italic' }}>Caja en operación</span></div>
+                  )}
                   <div><strong>Procesado por:</strong> {inspectDrawer.user?.username || 'Desconocido'}</div>
                 </div>
               </div>
 
               {/* Conciliación Financiera */}
               <div className="card" style={{ padding: '16px', backgroundColor: '#f8fafc', border: '1px solid var(--border-color)' }}>
-                <h4 style={{ margin: '0 0 10px 0', fontSize: '0.85rem', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 600 }}>Cierre y Conciliación</h4>
+                <h4 style={{ margin: '0 0 10px 0', fontSize: '0.85rem', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 600 }}>
+                  {inspectDrawer.status === 'OPEN' ? 'Caja Activa (Estado Actual)' : 'Cierre y Conciliación'}
+                </h4>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.85rem' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                     <span style={{ color: 'var(--text-secondary)' }}>Fondo Inicial:</span>
                     <strong style={{ fontFamily: 'monospace' }}>${Number(inspectDrawer.openingBalance).toLocaleString('es-AR', {minimumFractionDigits:0, maximumFractionDigits:0})}</strong>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ color: 'var(--text-secondary)' }}>Esperado (Sistema):</span>
-                    <strong style={{ fontFamily: 'monospace' }}>${Number(inspectDrawer.closingBalance).toLocaleString('es-AR', {minimumFractionDigits:0, maximumFractionDigits:0})}</strong>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ color: 'var(--text-secondary)' }}>Declarado (Arqueo):</span>
-                    <strong style={{ fontFamily: 'monospace' }}>${Number(inspectDrawer.realBalance).toLocaleString('es-AR', {minimumFractionDigits:0, maximumFractionDigits:0})}</strong>
-                  </div>
-                  <div style={{ height: '1px', backgroundColor: '#cbd5e1', margin: '4px 0' }} />
                   {(() => {
-                    const diff = Number(inspectDrawer.realBalance) - Number(inspectDrawer.closingBalance);
+                    const isClosed = inspectDrawer.status === 'CLOSED';
+                    const currentExpected = isClosed 
+                      ? Number(inspectDrawer.closingBalance) 
+                      : Number(inspectDrawer.openingBalance) + inspectTxs.reduce((sum, t) => sum + (t.type === 'INCOME' ? Number(t.amount) : -Number(t.amount)), 0);
+                    
                     return (
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, color: diff === 0 ? '#166534' : diff > 0 ? '#0f766e' : '#b91c1c' }}>
-                        <span>Diferencia:</span>
-                        <span style={{ fontFamily: 'monospace' }}>{diff > 0 ? '+' : ''}${diff.toLocaleString('es-AR', {minimumFractionDigits:0, maximumFractionDigits:0})}</span>
-                      </div>
-                    )
+                      <>
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <span style={{ color: 'var(--text-secondary)' }}>Esperado (Sistema):</span>
+                          <strong style={{ fontFamily: 'monospace' }}>${currentExpected.toLocaleString('es-AR', {minimumFractionDigits:0, maximumFractionDigits:0})}</strong>
+                        </div>
+                        {isClosed && (
+                          <>
+                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                              <span style={{ color: 'var(--text-secondary)' }}>Declarado (Arqueo):</span>
+                              <strong style={{ fontFamily: 'monospace' }}>${Number(inspectDrawer.realBalance).toLocaleString('es-AR', {minimumFractionDigits:0, maximumFractionDigits:0})}</strong>
+                            </div>
+                            <div style={{ height: '1px', backgroundColor: '#cbd5e1', margin: '4px 0' }} />
+                            {(() => {
+                              const diff = Number(inspectDrawer.realBalance) - Number(inspectDrawer.closingBalance);
+                              return (
+                                <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, color: diff === 0 ? '#166534' : diff > 0 ? '#0f766e' : '#b91c1c' }}>
+                                  <span>Diferencia:</span>
+                                  <span style={{ fontFamily: 'monospace' }}>{diff > 0 ? '+' : ''}${diff.toLocaleString('es-AR', {minimumFractionDigits:0, maximumFractionDigits:0})}</span>
+                                </div>
+                              )
+                            })()}
+                          </>
+                        )}
+                      </>
+                    );
                   })()}
                 </div>
               </div>
@@ -461,7 +497,7 @@ export default function CajasDashboard() {
             {/* Listado de Transacciones */}
             <div style={{ border: '1px solid var(--border-color)', borderRadius: '8px', overflow: 'hidden' }}>
               <div style={{ padding: '12px 16px', backgroundColor: 'var(--bg-light)', fontWeight: 600, fontSize: '0.85rem', borderBottom: '1px solid var(--border-color)' }}>
-                Comprobantes y Cobros Conciliados en este Cierre
+                {inspectDrawer.status === 'OPEN' ? 'Movimientos Registrados (Caja Activa)' : 'Comprobantes y Cobros Conciliados en este Cierre'}
               </div>
               
               {loadingTxs ? (

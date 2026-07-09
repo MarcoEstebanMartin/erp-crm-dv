@@ -13,8 +13,7 @@ import {
   Calendar,
   Plus,
   Trash2,
-  Save,
-  CheckCircle2
+  Save
 } from 'lucide-react';
 import CrmDashboard from './CrmDashboard';
 import AfipExportDashboard from '../pages/AfipExportDashboard';
@@ -38,7 +37,6 @@ export default function UnifiedReportsDashboard({
 
   // Estados para Caja Semanal Consolidada
   const [weeklyReports, setWeeklyReports] = useState<any[]>([]);
-  const [weeklyLoading, setWeeklyLoading] = useState(false);
   const [selectedWeekStart, setSelectedWeekStart] = useState<string>('');
   const [purchases, setPurchases] = useState<any[]>([]);
   const [sales, setSales] = useState<any[]>([]);
@@ -107,7 +105,6 @@ export default function UnifiedReportsDashboard({
   };
 
   const loadWeeklyReports = async (selectWeek?: string) => {
-    setWeeklyLoading(true);
     try {
       const data = await api.getWeeklyReports();
       setWeeklyReports(data || []);
@@ -137,8 +134,6 @@ export default function UnifiedReportsDashboard({
       }
     } catch (err) {
       console.error(err);
-    } finally {
-      setWeeklyLoading(false);
     }
   };
 
