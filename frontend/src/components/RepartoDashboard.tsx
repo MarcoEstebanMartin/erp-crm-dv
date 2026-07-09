@@ -759,6 +759,26 @@ export default function RepartoDashboard() {
     }
   };
 
+  const handleDeleteRoute = async (routeId: number) => {
+    if (!window.confirm('¿Estás seguro de que deseas eliminar esta hoja de ruta? Los pedidos asociados serán liberados.')) {
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await api.deleteDeliveryRoute(routeId);
+      setSuccessMsg('Hoja de ruta eliminada y pedidos liberados.');
+      if (selectedRoute?.id === routeId) {
+        setSelectedRoute(null);
+      }
+      await fetchRoutesAndOrders();
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Error al eliminar la hoja de ruta.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchRoutesAndOrders();
   }, []);
@@ -1124,8 +1144,35 @@ export default function RepartoDashboard() {
                            r.status === 'IN_TRANSIT' ? 'En Viaje' : 'Completado'}
                         </span>
                       </td>
-                      <td>
-                        <ChevronRight size={16} />
+                      <td onClick={(e) => e.stopPropagation()}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <button 
+                            className="btn btn-ghost"
+                            onClick={() => setSelectedRoute(r)}
+                            style={{ padding: '4px', minWidth: 'auto', height: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                            title="Ver detalle"
+                          >
+                            <ChevronRight size={16} />
+                          </button>
+                          {r.status === 'PENDING' && (
+                            <button
+                              className="btn btn-ghost"
+                              onClick={() => handleDeleteRoute(r.id)}
+                              style={{ 
+                                padding: '4px', 
+                                minWidth: 'auto', 
+                                height: 'auto', 
+                                color: '#ef4444',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center'
+                              }}
+                              title="Eliminar hoja de ruta"
+                            >
+                              <X size={16} />
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))
@@ -1526,7 +1573,7 @@ export default function RepartoDashboard() {
                                   </div>
                                 )}
                                 {set.paymentMethod === 'CASH' && (
-                                  <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>A Caja Reparto</span>
+                                  <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>A Caja {settleRoute?.driverName}</span>
                                 )}
                                 {set.paymentMethod === 'CREDITO' && (
                                   <span style={{ fontSize: '0.72rem', color: '#b78103', fontWeight: 600 }}>Deuda en C/C</span>

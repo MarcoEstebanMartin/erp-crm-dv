@@ -55,9 +55,39 @@ export default function CajasDashboard() {
     return closedDate >= start && closedDate <= end;
   });
 
-  const CAJAS = [
-    { id: 'DEPOSITO', name: 'Caja Depósito', desc: 'Ventas de mostrador y depósito' }
-  ];
+  const [users, setUsers] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const allUsers = await api.getUsers();
+        setUsers(allUsers || []);
+      } catch (err) {
+        console.error('Error fetching users for cash drawers:', err);
+      }
+    };
+    fetchUsers();
+  }, []);
+
+  const dynamicCajas = React.useMemo(() => {
+    const list = [
+      { id: 'DEPOSITO', name: 'Caja Depósito', desc: 'Ventas de mostrador y depósito', userId: undefined }
+    ];
+
+    users.forEach((u: any) => {
+      if (u.role === 'VENDEDOR' || u.role === 'DEPOSITO') {
+        const label = u.role === 'VENDEDOR' ? 'Vendedor' : 'Repartidor';
+        list.push({
+          id: `CAJA_${u.username.toUpperCase()}`,
+          name: `Caja ${label} - ${u.username}`,
+          desc: `Caja operativa de ${u.username}`,
+          userId: u.id
+        });
+      }
+    });
+
+    return list;
+  }, [users]);
 
   useEffect(() => {
     fetchDrawers();
@@ -107,7 +137,8 @@ export default function CajasDashboard() {
       }
 
       if (actionModal.mode === 'open') {
-        await api.openDrawer(actionModal.branch, amount);
+        const cajaDef = dynamicCajas.find(c => c.id === actionModal.branch);
+        await api.openDrawer(actionModal.branch, amount, cajaDef?.userId);
       } else if (actionModal.mode === 'close' && actionModal.drawerId) {
         await api.closeDrawer(actionModal.drawerId, amount);
       }
@@ -136,8 +167,10 @@ export default function CajasDashboard() {
 
       {/* Grid de 3 Cajas */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px' }}>
-        {CAJAS.map(cajaDef => {
-          const activeDrawer = drawers.find(d => d.branch === cajaDef.id);
+        {dynamicCajas.map(cajaDef => {
+          const activeDrawer = drawers.find(d => 
+            d.branch === cajaDef.id || (cajaDef.userId && d.userId === cajaDef.userId)
+          );
           const isOpen = !!activeDrawer;
 
           return (

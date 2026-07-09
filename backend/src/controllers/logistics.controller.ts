@@ -283,14 +283,39 @@ export async function settleDeliveryRoute(req: AuthenticatedRequest, res: Respon
           let txDescription = `Rendición Reparto - Chofer: ${route.driverName} - Ruta #${route.id} - Pago de ${order.persona.name}`;
 
           if (set.paymentMethod === 'CASH') {
-            const activeDrawer = await tx.cashDrawer.findFirst({
+            // Buscar si existe un usuario registrado cuyo nombre de usuario coincida con el chofer de la ruta
+            const driverUser = await tx.user.findFirst({
               where: {
-                userId: userId,
-                status: 'OPEN'
+                username: {
+                  equals: route.driverName.trim(),
+                  mode: 'insensitive'
+                }
               }
             });
-            if (activeDrawer) {
-              cashDrawerId = activeDrawer.id;
+
+            let driverDrawer = null;
+            if (driverUser) {
+              driverDrawer = await tx.cashDrawer.findFirst({
+                where: {
+                  userId: driverUser.id,
+                  status: 'OPEN'
+                }
+              });
+            }
+
+            if (driverDrawer) {
+              cashDrawerId = driverDrawer.id;
+            } else {
+              // Fallback al cajero/administrador que liquida el viaje
+              const activeDrawer = await tx.cashDrawer.findFirst({
+                where: {
+                  userId: userId,
+                  status: 'OPEN'
+                }
+              });
+              if (activeDrawer) {
+                cashDrawerId = activeDrawer.id;
+              }
             }
           } else if (set.paymentMethod === 'BANK_TRANSFER') {
             bankAccountId = set.bankAccountId || (await tx.bankAccount.findFirst())?.id || null;
@@ -358,5 +383,76 @@ export async function settleDeliveryRoute(req: AuthenticatedRequest, res: Respon
   } catch (error: any) {
     console.error('Error al liquidar hoja de ruta:', error);
     res.status(500).json({ status: 'error', message: error.message || 'Error al liquidar la hoja de ruta.' });
+  }
+}
+
+/**
+ * Eliminar una hoja de ruta de reparto pendiente
+ */
+export async function deleteDeliveryRoute(req: AuthenticatedRequest, res: Response): Promise<void> {
+  const { id } = req.params;
+  const userId = req.user?.id;
+
+  try {
+    const routeId = Number(id);
+
+    // 1. Verificar si la hoja de ruta existe y su estado
+    const route = await prisma.deliveryRoute.findUnique({
+      where: { id: routeId },
+      include: { orders: true }
+    });
+
+    if (!route) {
+      res.status(404).json({
+        status: 'error',
+        message: 'Hoja de ruta no encontrada.',
+      });
+      return;
+    }
+
+    if (route.status !== 'PENDING') {
+      res.status(400).json({
+        status: 'error',
+        message: 'Solo se pueden eliminar hojas de ruta en estado Pendiente.',
+      });
+      return;
+    }
+
+    // 2. Realizar la eliminación dentro de una transacción
+    await prisma.$transaction(async (tx) => {
+      // Disociar todos los pedidos de la hoja de ruta
+      if (route.orders.length > 0) {
+        await tx.order.updateMany({
+          where: { deliveryRouteId: routeId },
+          data: { deliveryRouteId: null }
+        });
+      }
+
+      // Eliminar la hoja de ruta
+      await tx.deliveryRoute.delete({
+        where: { id: routeId }
+      });
+    });
+
+    if (userId) {
+      await logAudit({
+        userId,
+        action: 'DELETE_DELIVERY_ROUTE',
+        entityType: 'DeliveryRoute',
+        entityId: routeId,
+        oldValues: route,
+      });
+    }
+
+    res.status(200).json({
+      status: 'success',
+      message: 'Hoja de ruta eliminada exitosamente y pedidos liberados.',
+    });
+  } catch (error: any) {
+    console.error('Error al eliminar hoja de ruta:', error);
+    res.status(500).json({
+      status: 'error',
+      message: 'Error al eliminar la hoja de ruta de reparto.',
+    });
   }
 }

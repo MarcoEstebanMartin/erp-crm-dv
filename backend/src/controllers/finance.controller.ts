@@ -8,12 +8,18 @@ import { BillingType, PaymentMethod, TransactionType } from '@prisma/client';
  * Abrir una nueva caja operativa.
  */
 export async function openDrawer(req: AuthenticatedRequest, res: Response): Promise<void> {
-  const { branch, openingBalance } = req.body;
-  const userId = req.user?.id;
+  const { branch, openingBalance, userId: bodyUserId } = req.body;
+  const loggedUserId = req.user?.id;
 
-  if (!userId) {
+  if (!loggedUserId) {
     res.status(401).json({ status: 'error', message: 'No autenticado.' });
     return;
+  }
+
+  // Si el usuario es ADMIN, puede abrir la caja de otro usuario. De lo contrario, se usa su propio ID.
+  let targetUserId = loggedUserId;
+  if (req.user?.role === 'ADMIN' && bodyUserId) {
+    targetUserId = Number(bodyUserId);
   }
 
   const drawerBranch = branch || 'CONSOLIDADA';
@@ -24,9 +30,10 @@ export async function openDrawer(req: AuthenticatedRequest, res: Response): Prom
   }
 
   try {
-    // Validar si ya hay una caja abierta para este usuario (cualquier sucursal / consolidada)
+    // Validar si ya hay una caja abierta para este usuario en esta rama
     const existing = await prisma.cashDrawer.findFirst({
       where: {
+        userId: targetUserId,
         branch: drawerBranch,
         status: 'OPEN',
       },
@@ -35,14 +42,14 @@ export async function openDrawer(req: AuthenticatedRequest, res: Response): Prom
     if (existing) {
       res.status(400).json({
         status: 'error',
-        message: `La caja ${drawerBranch} ya se encuentra abierta.`,
+        message: `La caja para el usuario y rama ${drawerBranch} ya se encuentra abierta.`,
       });
       return;
     }
 
     const drawer = await prisma.cashDrawer.create({
       data: {
-        userId,
+        userId: targetUserId,
         branch: drawerBranch,
         openingBalance: Number(openingBalance),
         status: 'OPEN',
@@ -51,7 +58,7 @@ export async function openDrawer(req: AuthenticatedRequest, res: Response): Prom
 
     // Auditoría
     await logAudit({
-      userId,
+      userId: loggedUserId,
       action: 'OPEN_CASH_DRAWER',
       entityType: 'CashDrawer',
       entityId: drawer.id,

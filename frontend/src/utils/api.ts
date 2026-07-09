@@ -336,16 +336,16 @@ export const api = {
   },
 
   // --- FINANZAS (CAJAS Y BANCOS) ---
-  openDrawer: async (branch: string, openingBalance: number) => {    
+  openDrawer: async (branch: string, openingBalance: number, targetUserId?: number) => {    
 
     const res = await request('/finance/drawers/open', {
       method: 'POST',
-      body: JSON.stringify({ branch, openingBalance })
+      body: JSON.stringify({ branch, openingBalance, userId: targetUserId })
     });
     return res.drawer;
   },
 
-  closeDrawer: async (drawerId: number, realBalance: number, receipts?: any[], checks?: any[]) => {    
+  closeDrawer: async (drawerId: number, realBalance: number, receipts?: any[], checks?: any[]) => {    
 
     const res = await request('/finance/drawers/close', {
       method: 'POST',
@@ -646,11 +646,18 @@ export const api = {
     return res.route;
   },
 
-  settleDeliveryRoute: async (id: number, settleData: { settlements: any[], cashDeclared: number, checksDeclared: number, transfersDeclared: number }) => {    
+  settleDeliveryRoute: async (id: number, settleData: { settlements: any[], cashDeclared: number, checksDeclared: number, transfersDeclared: number }) => {    
 
     const res = await request(`/logistics/${id}/settle`, {
       method: 'POST',
       body: JSON.stringify(settleData)
+    });
+    return res;
+  },
+
+  deleteDeliveryRoute: async (id: number) => {
+    const res = await request(`/logistics/${id}`, {
+      method: 'DELETE'
     });
     return res;
   },
