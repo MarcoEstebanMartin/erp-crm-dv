@@ -137,7 +137,7 @@ export default function ResumenCuentaModal({ client, onClose }: ResumenCuentaMod
             <div style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>
               <span style={{ color: 'var(--text-secondary)' }}>Saldo Actual: </span>
               <span style={{ color: Number(client.outstandingBalance) > 0 ? 'var(--color-danger)' : 'var(--text-primary)' }}>
-                ${Number(client.outstandingBalance || 0).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                ${Number(client.outstandingBalance || 0).toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
               </span>
             </div>
           </div>
@@ -165,10 +165,10 @@ export default function ResumenCuentaModal({ client, onClose }: ResumenCuentaMod
                       <td style={{ padding: '10px' }}>{t.date.toLocaleDateString('es-AR')}</td>
                       <td style={{ padding: '10px' }}>{t.description}</td>
                       <td style={{ padding: '10px', textAlign: 'right', color: t.debit > 0 ? 'var(--color-danger)' : 'inherit' }}>
-                        {t.debit > 0 ? `$${t.debit.toLocaleString('es-AR', {minimumFractionDigits: 2})}` : ''}
+                        {t.debit > 0 ? `$${t.debit.toLocaleString('es-AR', {minimumFractionDigits: 0, maximumFractionDigits: 0})}` : ''}
                       </td>
                       <td style={{ padding: '10px', textAlign: 'right', color: t.credit > 0 ? 'var(--text-primary)' : 'inherit' }}>
-                        {t.credit > 0 ? `$${t.credit.toLocaleString('es-AR', {minimumFractionDigits: 2})}` : ''}
+                        {t.credit > 0 ? `$${t.credit.toLocaleString('es-AR', {minimumFractionDigits: 0, maximumFractionDigits: 0})}` : ''}
                       </td>
                     </tr>
                   ))

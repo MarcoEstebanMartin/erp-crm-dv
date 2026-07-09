@@ -363,14 +363,14 @@ export default function CajasDashboard() {
                       <td style={{ padding: '12px', fontWeight: 600 }}>{dynamicCajas.find(c => c.id === d.branch)?.name || d.branch}</td>
                       <td style={{ padding: '12px', fontSize: '0.8rem' }}>{new Date(d.openedAt).toLocaleString('es-AR', {dateStyle:'short', timeStyle:'short'})}</td>
                       <td style={{ padding: '12px', fontSize: '0.8rem' }}>{new Date(d.closedAt).toLocaleString('es-AR', {dateStyle:'short', timeStyle:'short'})}</td>
-                      <td style={{ padding: '12px' }}>${Number(d.openingBalance).toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
-                      <td style={{ padding: '12px', color: 'var(--text-secondary)' }}>${Number(d.closingBalance).toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
-                      <td style={{ padding: '12px', fontWeight: 600 }}>${Number(d.realBalance).toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
-                      <td style={{ padding: '12px', fontWeight: 600, color: '#047857' }}>${rowCash.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
-                      <td style={{ padding: '12px', fontWeight: 600, color: '#1d4ed8' }}>${rowCheck.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
-                      <td style={{ padding: '12px', fontWeight: 700, color: '#0f172a' }}>${netIncome.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
+                      <td style={{ padding: '12px' }}>${Number(d.openingBalance).toLocaleString('es-AR', {minimumFractionDigits:0, maximumFractionDigits:0})}</td>
+                      <td style={{ padding: '12px', color: 'var(--text-secondary)' }}>${Number(d.closingBalance).toLocaleString('es-AR', {minimumFractionDigits:0, maximumFractionDigits:0})}</td>
+                      <td style={{ padding: '12px', fontWeight: 600 }}>${Number(d.realBalance).toLocaleString('es-AR', {minimumFractionDigits:0, maximumFractionDigits:0})}</td>
+                      <td style={{ padding: '12px', fontWeight: 600, color: '#047857' }}>${rowCash.toLocaleString('es-AR', {minimumFractionDigits:0, maximumFractionDigits:0})}</td>
+                      <td style={{ padding: '12px', fontWeight: 600, color: '#1d4ed8' }}>${rowCheck.toLocaleString('es-AR', {minimumFractionDigits:0, maximumFractionDigits:0})}</td>
+                      <td style={{ padding: '12px', fontWeight: 700, color: '#0f172a' }}>${netIncome.toLocaleString('es-AR', {minimumFractionDigits:0, maximumFractionDigits:0})}</td>
                       <td style={{ padding: '12px', fontWeight: 600, color: dif >= 0 ? '#10b981' : '#ef4444' }}>
-                        {dif > 0 ? '+' : ''}${dif.toLocaleString('es-AR', {minimumFractionDigits:2})}
+                        {dif > 0 ? '+' : ''}${dif.toLocaleString('es-AR', {minimumFractionDigits:0, maximumFractionDigits:0})}
                       </td>
                       <td style={{ padding: '12px', textAlign: 'center' }}>
                         <button 
@@ -429,15 +429,15 @@ export default function CajasDashboard() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.85rem' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                     <span style={{ color: 'var(--text-secondary)' }}>Fondo Inicial:</span>
-                    <strong style={{ fontFamily: 'monospace' }}>${Number(inspectDrawer.openingBalance).toLocaleString('es-AR', {minimumFractionDigits:2})}</strong>
+                    <strong style={{ fontFamily: 'monospace' }}>${Number(inspectDrawer.openingBalance).toLocaleString('es-AR', {minimumFractionDigits:0, maximumFractionDigits:0})}</strong>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                     <span style={{ color: 'var(--text-secondary)' }}>Esperado (Sistema):</span>
-                    <strong style={{ fontFamily: 'monospace' }}>${Number(inspectDrawer.closingBalance).toLocaleString('es-AR', {minimumFractionDigits:2})}</strong>
+                    <strong style={{ fontFamily: 'monospace' }}>${Number(inspectDrawer.closingBalance).toLocaleString('es-AR', {minimumFractionDigits:0, maximumFractionDigits:0})}</strong>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                     <span style={{ color: 'var(--text-secondary)' }}>Declarado (Arqueo):</span>
-                    <strong style={{ fontFamily: 'monospace' }}>${Number(inspectDrawer.realBalance).toLocaleString('es-AR', {minimumFractionDigits:2})}</strong>
+                    <strong style={{ fontFamily: 'monospace' }}>${Number(inspectDrawer.realBalance).toLocaleString('es-AR', {minimumFractionDigits:0, maximumFractionDigits:0})}</strong>
                   </div>
                   <div style={{ height: '1px', backgroundColor: '#cbd5e1', margin: '4px 0' }} />
                   {(() => {
@@ -445,7 +445,7 @@ export default function CajasDashboard() {
                     return (
                       <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, color: diff === 0 ? '#166534' : diff > 0 ? '#0f766e' : '#b91c1c' }}>
                         <span>Diferencia:</span>
-                        <span style={{ fontFamily: 'monospace' }}>{diff > 0 ? '+' : ''}${diff.toLocaleString('es-AR', {minimumFractionDigits:2})}</span>
+                        <span style={{ fontFamily: 'monospace' }}>{diff > 0 ? '+' : ''}${diff.toLocaleString('es-AR', {minimumFractionDigits:0, maximumFractionDigits:0})}</span>
                       </div>
                     )
                   })()}
@@ -504,7 +504,7 @@ export default function CajasDashboard() {
                             </span>
                           </td>
                           <td style={{ padding: '10px', textAlign: 'right', fontWeight: 600, fontFamily: 'monospace' }}>
-                            ${Number(t.amount).toLocaleString('es-AR', {minimumFractionDigits:2})}
+                            ${Number(t.amount).toLocaleString('es-AR', {minimumFractionDigits:0, maximumFractionDigits:0})}
                           </td>
                         </tr>
                       ))}

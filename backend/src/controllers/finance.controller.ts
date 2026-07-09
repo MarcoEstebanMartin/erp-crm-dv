@@ -489,7 +489,7 @@ export async function transferFunds(req: AuthenticatedRequest, res: Response): P
       return;
     }
 
-    const transferAmount = Number(amount);
+    const transferAmount = Math.round(Number(amount));
 
     const result = await prisma.$transaction(async (tx) => {
       // 1. Crear egreso en la caja física (OUTCOME)
@@ -646,7 +646,7 @@ export async function createExpense(req: AuthenticatedRequest, res: Response): P
     return;
   }
 
-  const expAmount = Number(amount);
+  const expAmount = Math.round(Number(amount));
   if (isNaN(expAmount) || expAmount <= 0) {
     res.status(400).json({ status: 'error', message: 'El monto del gasto debe ser mayor a 0.' });
     return;

@@ -60,12 +60,12 @@ export class OrderService {
           selectedPrice = Number(product.listPriceC) > 0 ? Number(product.listPriceC) : Number(product.listPrice);
         }
 
-        const finalUnitPrice = selectedPrice * (1 - itemDiscount / 100);
+        const finalUnitPrice = Math.round(selectedPrice * (1 - itemDiscount / 100));
         // Si es pesable y tiene peso explícito lo usa, si no, usa quantity * approximateWeight, si no tiene aprox, asume 1kg por unidad.
         const actualQuantityForPrice = product.isPesable 
-          ? (item.weight ? item.weight : item.quantity * Number((product as any).approximateWeight || 1))
+          ? (item.weight ? Number(item.weight) : item.quantity * Number((product as any).approximateWeight || 1))
           : item.quantity;
-        const subtotal = finalUnitPrice * actualQuantityForPrice;
+        const subtotal = Math.round(finalUnitPrice * actualQuantityForPrice);
         totalSum += subtotal;
 
         orderItemsToCreate.push({
@@ -162,7 +162,7 @@ export class OrderService {
         const weightUpdate = itemWeights.find((w) => w.orderItemId === item.id);
 
         if (item.product.isPesable && weightUpdate && weightUpdate.weight > 0) {
-          subtotal = Number(item.unitPrice) * weightUpdate.weight;
+          subtotal = Math.round(Number(item.unitPrice) * weightUpdate.weight);
           await tx.orderItem.update({
             where: { id: item.id },
             data: { weight: weightUpdate.weight, subtotal },
@@ -219,9 +219,9 @@ export class OrderService {
             weightUpdate = 0;
           } else {
             if (item.product.isPesable && weightUpdate !== null && weightUpdate > 0) {
-              subtotal = Number(item.unitPrice) * weightUpdate;
+              subtotal = Math.round(Number(item.unitPrice) * weightUpdate);
             } else {
-              subtotal = Number(item.unitPrice) * currentQuantity;
+              subtotal = Math.round(Number(item.unitPrice) * currentQuantity);
             }
           }
 

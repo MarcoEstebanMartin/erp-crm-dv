@@ -577,11 +577,12 @@ export async function invoiceOrder(req: AuthenticatedRequest, res: Response): Pr
       }
 
       // Calcular desglose impositivo
-      let net = totalSum / 1.21;
+      const isFacturaA_Official = billingType === BillingType.OFFICIAL && finalInvoiceType === InvoiceType.FACTURA_A;
+      let net = isFacturaA_Official ? (totalSum / 1.21) : Math.round(totalSum / 1.21);
       let tax = totalSum - net;
       let percepcion = 0;
 
-      if (billingType === BillingType.OFFICIAL && finalInvoiceType === InvoiceType.FACTURA_A) {
+      if (isFacturaA_Official) {
         const iibbAliquot = Number(order.persona.iibbAliquot || 0);
         if (iibbAliquot > 0) {
           net = totalSum / (1.21 + (iibbAliquot / 100));
@@ -599,9 +600,9 @@ export async function invoiceOrder(req: AuthenticatedRequest, res: Response): Pr
           invoiceNumber: finalInvoiceNumber,
           cae: finalCae,
           caeDueDate: finalCaeDueDate,
-          netAmount: Number(net.toFixed(2)),
-          taxAmount: Number(tax.toFixed(2)),
-          percepcionAmount: Number(percepcion.toFixed(2)),
+          netAmount: isFacturaA_Official ? Number(net.toFixed(2)) : Math.round(net),
+          taxAmount: isFacturaA_Official ? Number(tax.toFixed(2)) : Math.round(tax),
+          percepcionAmount: isFacturaA_Official ? Number(percepcion.toFixed(2)) : Math.round(percepcion),
           status: OrderStatus.DELIVERED,
         },
       });
@@ -615,7 +616,7 @@ export async function invoiceOrder(req: AuthenticatedRequest, res: Response): Pr
             personaId: order.personaId,
             number: finalInvoiceNumber || `FAC-${order.id}`,
             date: new Date(),
-            amount: Number(percepcion.toFixed(2)),
+            amount: isFacturaA_Official ? Number(percepcion.toFixed(2)) : Math.round(percepcion),
             jurisdiction: order.persona.address?.includes('CABA') ? 'AR-C' : 'AR-B',
           },
         });
@@ -795,8 +796,8 @@ export async function updateOrder(req: AuthenticatedRequest, res: Response): Pro
         }
 
         // Aplicar descuento
-        const finalUnitPrice = selectedPrice * (1 - itemDiscount / 100);
-        const subtotal = finalUnitPrice * item.quantity;
+        const finalUnitPrice = Math.round(selectedPrice * (1 - itemDiscount / 100));
+        const subtotal = Math.round(finalUnitPrice * item.quantity);
         totalSum += subtotal;
 
         orderItemsToCreate.push({
@@ -967,13 +968,13 @@ export async function createDirectInvoice(req: AuthenticatedRequest, res: Respon
         }
 
         // Aplicar descuento fijo / dinámico (redondeando a 2 decimales)
-        const finalUnitPrice = Number((selectedPrice * (1 - itemDiscount / 100)).toFixed(2));
+        const finalUnitPrice = Math.round(selectedPrice * (1 - itemDiscount / 100));
         
         // Si es pesable y tiene peso explícito lo usa, si no, usa quantity * approximateWeight, si no tiene aprox, asume 1kg por unidad.
         const actualQuantityForPrice = product.isPesable 
           ? (item.weight ? Number(item.weight) : item.quantity * Number((product as any).approximateWeight || 1))
           : item.quantity;
-        const subtotal = Number((finalUnitPrice * actualQuantityForPrice).toFixed(2));
+        const subtotal = Math.round(finalUnitPrice * actualQuantityForPrice);
         totalSum += subtotal;
 
         // Descontar del stock general del producto
@@ -992,7 +993,7 @@ export async function createDirectInvoice(req: AuthenticatedRequest, res: Respon
         });
       }
 
-      totalSum = Number(totalSum.toFixed(2));
+      totalSum = Math.round(totalSum);
 
       // 3. Validar límite de crédito y boleta contra boleta
       const creditLimit = Number(persona.creditLimit || 0);
@@ -1019,8 +1020,8 @@ export async function createDirectInvoice(req: AuthenticatedRequest, res: Respon
       let finalCae: string | null = null;
       let finalCaeDueDate: Date | null = null;
 
-      let net = Number((totalSum / 1.21).toFixed(2));
-      let tax = Number((totalSum - net).toFixed(2));
+      let net = Math.round(totalSum / 1.21);
+      let tax = totalSum - net;
       let percepcion = 0;
 
       // Creamos el Order primero para tener un ID y poder asociarlo
@@ -1067,13 +1068,21 @@ export async function createDirectInvoice(req: AuthenticatedRequest, res: Respon
         finalInvoiceNumber = `INT-${order.id.toString().padStart(8, '0')}`;
       }
 
-      if (billingType === BillingType.OFFICIAL && finalInvoiceType === InvoiceType.FACTURA_A) {
+      const isFacturaA_Official = billingType === BillingType.OFFICIAL && finalInvoiceType === InvoiceType.FACTURA_A;
+      if (isFacturaA_Official) {
         const iibbAliquot = Number(persona.iibbAliquot || 0);
         if (iibbAliquot > 0) {
-          net = Number((totalSum / (1.21 + (iibbAliquot / 100))).toFixed(2));
-          tax = Number((net * 0.21).toFixed(2));
-          percepcion = Number((net * (iibbAliquot / 100)).toFixed(2));
+          net = totalSum / (1.21 + (iibbAliquot / 100));
+          tax = net * 0.21;
+          percepcion = net * (iibbAliquot / 100);
+        } else {
+          net = totalSum / 1.21;
+          tax = totalSum - net;
         }
+      } else {
+        net = Math.round(net);
+        tax = Math.round(tax);
+        percepcion = Math.round(percepcion);
       }
 
       // 5. Crear los OrderItems y hacer la asignación automática de lotes (FIFO)
@@ -1144,7 +1153,7 @@ export async function createDirectInvoice(req: AuthenticatedRequest, res: Respon
             personaId,
             number: finalInvoiceNumber || `FAC-${order.id}`,
             date: new Date(),
-            amount: Number(percepcion.toFixed(2)),
+            amount: isFacturaA_Official ? Number(percepcion.toFixed(2)) : Math.round(percepcion),
             jurisdiction: persona.address?.includes('CABA') ? 'AR-C' : 'AR-B',
           },
         });
@@ -1239,9 +1248,9 @@ export async function createDirectInvoice(req: AuthenticatedRequest, res: Respon
           invoiceNumber: finalInvoiceNumber,
           cae: finalCae,
           caeDueDate: finalCaeDueDate,
-          netAmount: Number(net.toFixed(2)),
-          taxAmount: Number(tax.toFixed(2)),
-          percepcionAmount: Number(percepcion.toFixed(2)),
+          netAmount: isFacturaA_Official ? Number(net.toFixed(2)) : Math.round(net),
+          taxAmount: isFacturaA_Official ? Number(tax.toFixed(2)) : Math.round(tax),
+          percepcionAmount: isFacturaA_Official ? Number(percepcion.toFixed(2)) : Math.round(percepcion),
         },
         include: {
           persona: true,

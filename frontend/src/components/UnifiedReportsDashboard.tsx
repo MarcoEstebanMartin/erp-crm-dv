@@ -62,8 +62,8 @@ export default function UnifiedReportsDashboard({
   const totalFacturado = financialReport ? (financialReport.sales.official + financialReport.sales.internal) : 0;
   const officialSales = financialReport ? financialReport.sales.official : 0;
   const internalSales = financialReport ? financialReport.sales.internal : 0;
-  const totalCostoEstimado = (officialSales * 0.75) + (internalSales * 0.73);
-  const totalMargenNeto = totalFacturado - totalCostoEstimado;
+  const totalCostoEstimado = Math.round((officialSales * 0.75) + (internalSales * 0.73));
+  const totalMargenNeto = Math.round(totalFacturado - totalCostoEstimado);
   const pctMargenConsolidado = totalFacturado > 0 ? Math.round((totalMargenNeto / totalFacturado) * 100) : 0;
   const totalSalesSum = deliveredOrders.reduce((sum: number, o: any) => sum + Number(o.totalAmount), 0);
   const ticketAverage = deliveredOrders.length > 0 ? totalSalesSum / deliveredOrders.length : 0;
@@ -249,15 +249,15 @@ export default function UnifiedReportsDashboard({
                   <tr style={{ borderBottom: '1px solid var(--border-color)' }}>
                     <td style={{ padding: '12px', fontWeight: 600 }}>Sucursal A (Oficial)</td>
                     <td style={{ padding: '12px' }}>${officialSales.toLocaleString()}</td>
-                    <td style={{ padding: '12px', color: 'var(--text-secondary)' }}>${(officialSales * 0.75).toLocaleString()}</td>
-                    <td style={{ padding: '12px', fontWeight: 600, color: '#137333' }}>${(officialSales * 0.25).toLocaleString()}</td>
+                    <td style={{ padding: '12px', color: 'var(--text-secondary)' }}>${Math.round(officialSales * 0.75).toLocaleString()}</td>
+                    <td style={{ padding: '12px', fontWeight: 600, color: '#137333' }}>${Math.round(officialSales * 0.25).toLocaleString()}</td>
                     <td style={{ padding: '12px' }}><span className="badge" style={{ backgroundColor: '#e8f0fe', color: '#1a73e8' }}>25%</span></td>
                   </tr>
                   <tr>
                     <td style={{ padding: '12px', fontWeight: 600 }}>Sucursal X (Interno)</td>
                     <td style={{ padding: '12px' }}>${internalSales.toLocaleString()}</td>
-                    <td style={{ padding: '12px', color: 'var(--text-secondary)' }}>${(internalSales * 0.73).toLocaleString()}</td>
-                    <td style={{ padding: '12px', fontWeight: 600, color: '#137333' }}>${(internalSales * 0.27).toLocaleString()}</td>
+                    <td style={{ padding: '12px', color: 'var(--text-secondary)' }}>${Math.round(internalSales * 0.73).toLocaleString()}</td>
+                    <td style={{ padding: '12px', fontWeight: 600, color: '#137333' }}>${Math.round(internalSales * 0.27).toLocaleString()}</td>
                     <td style={{ padding: '12px' }}><span className="badge" style={{ backgroundColor: '#e8f0fe', color: '#1a73e8' }}>27%</span></td>
                   </tr>
                 </tbody>

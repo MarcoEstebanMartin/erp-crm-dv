@@ -84,8 +84,8 @@ export async function emitirFacturaAFIP({
     // total = neto + (neto * 0.21) = neto * 1.21
     // neto = total / 1.21
     // iva = total - neto
-    const neto = Number((total / 1.21).toFixed(2));
-    const iva = Number((total - neto).toFixed(2));
+    const neto = invoiceType === 'A' ? Number((total / 1.21).toFixed(2)) : Math.round(total / 1.21);
+    const iva = invoiceType === 'A' ? Number((total - neto).toFixed(2)) : (total - neto);
 
     // Formatear fecha en AAAAMMDD
     const fechaActual = parseInt(new Date().toISOString().replace(/-/g, '').substring(0, 8));
@@ -187,8 +187,8 @@ export async function emitirNotaCreditoAFIP({
     const nextVoucherNumber = lastVoucher + 1;
 
     // 2. Cálculos impositivos
-    const neto = Number((total / 1.21).toFixed(2));
-    const iva = Number((total - neto).toFixed(2));
+    const neto = invoiceType === 'A' ? Number((total / 1.21).toFixed(2)) : Math.round(total / 1.21);
+    const iva = invoiceType === 'A' ? Number((total - neto).toFixed(2)) : (total - neto);
 
     // Formatear fecha en AAAAMMDD
     const fechaActual = parseInt(new Date().toISOString().replace(/-/g, '').substring(0, 8));

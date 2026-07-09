@@ -837,7 +837,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
           
           <div class="totals">
             <strong>TOTAL DEUDORES:</strong> ${debtors.length}<br>
-            <strong>TOTAL DEUDA ACUMULADA:</strong> $${totalDeuda.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+            <strong>TOTAL DEUDA ACUMULADA:</strong> $${totalDeuda.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
           </div>
     `;
 
@@ -868,7 +868,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
               Tel: ${c.phone || 'S/D'}
             </td>
             <td class="text-right" style="font-weight: bold;">
-              $${Number(c.outstandingBalance || 0).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+              $${Number(c.outstandingBalance || 0).toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
             </td>
           </tr>
         `;

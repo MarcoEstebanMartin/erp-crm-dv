@@ -70,14 +70,15 @@ export async function createPurchaseOrder(req: AuthenticatedRequest, res: Respon
       
       // Validar ítems y calcular total
       const parsedItems = items.map((item: any) => {
-        const subtotal = Number(item.quantity) * Number(item.costPrice);
+        const costPrice = Math.round(Number(item.costPrice));
+        const subtotal = Math.round(Number(item.quantity) * costPrice);
         totalSum += subtotal;
         return {
           productId: Number(item.productId),
           productIdRef: Number(item.productId),
           quantity: Number(item.quantity),
-          costPrice: Number(item.costPrice),
-          subtotal: Number(subtotal.toFixed(2)),
+          costPrice,
+          subtotal,
         };
       });
 
@@ -86,7 +87,7 @@ export async function createPurchaseOrder(req: AuthenticatedRequest, res: Respon
         data: {
           personaId: Number(personaId),
           status: 'PENDING',
-          totalAmount: Number(totalSum.toFixed(2)),
+          totalAmount: Math.round(totalSum),
           items: {
             create: parsedItems,
           },
@@ -218,9 +219,9 @@ export async function receivePurchaseOrder(req: AuthenticatedRequest, res: Respo
       }
 
       // 4. Auto-generar SupplierInvoice y actualizar cuenta corriente
-      const neto = Number(order.totalAmount);
-      const iva = Number((neto * 0.21).toFixed(2));
-      const total = Number((neto + iva).toFixed(2));
+      const neto = Math.round(Number(order.totalAmount));
+      const iva = Math.round(neto * 0.21);
+      const total = neto + iva;
       const nroInvoice = invoiceNumber || `COMP-${order.id.toString().padStart(8, '0')}`;
 
       // Crear factura de proveedor

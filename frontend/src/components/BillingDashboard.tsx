@@ -614,11 +614,12 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
       percepcion = 0;
     }
 
+    const isFacturaA = directInvoiceForm.billingType === 'OFFICIAL' && selectedDirectClient && selectedDirectClient.cuit && selectedDirectClient.cuit.replace(/-/g, '').length === 11;
     return {
-      net: Number(net.toFixed(2)),
-      tax: Number(tax.toFixed(2)),
-      percepcion: Number(percepcion.toFixed(2)),
-      total: Number(total.toFixed(2))
+      net: isFacturaA ? Number(net.toFixed(2)) : Math.round(net),
+      tax: isFacturaA ? Number(tax.toFixed(2)) : Math.round(tax),
+      percepcion: isFacturaA ? Number(percepcion.toFixed(2)) : Math.round(percepcion),
+      total: Math.round(total)
     };
   }, [directCart, directInvoiceForm.billingType, selectedDirectClient]);
 
@@ -1074,14 +1075,14 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
                       </td>
                       <td>{inv.persona?.name || 'Consumidor Final'}</td>
                       <td>{inv.persona?.cuit || 'Sin CUIT'}</td>
-                      <td>${Number(inv.netAmount || 0).toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td>
-                      <td>${Number(inv.taxAmount || 0).toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td>
+                      <td>${Number(inv.netAmount || 0).toLocaleString('es-AR', (inv.billingType === 'OFFICIAL' && inv.invoiceType === 'FACTURA_A') ? { minimumFractionDigits: 2, maximumFractionDigits: 2 } : { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td>
+                      <td>${Number(inv.taxAmount || 0).toLocaleString('es-AR', (inv.billingType === 'OFFICIAL' && inv.invoiceType === 'FACTURA_A') ? { minimumFractionDigits: 2, maximumFractionDigits: 2 } : { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td>
                       <td>
                         {Number(inv.percepcionAmount || 0) > 0 ? (
                           <span style={{ color: 'var(--color-warning)', fontWeight: 500 }}>
-                            ${Number(inv.percepcionAmount).toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                            ${Number(inv.percepcionAmount).toLocaleString('es-AR', (inv.billingType === 'OFFICIAL' && inv.invoiceType === 'FACTURA_A') ? { minimumFractionDigits: 2, maximumFractionDigits: 2 } : { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                           </span>
-                        ) : '$0.00'}
+                        ) : '$0'}
                       </td>
                       <td style={{ fontWeight: 700 }}>
                         ${Number(inv.totalAmount).toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
@@ -1207,10 +1208,10 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
                         </span>
                       </td>
                       <td>
-                        ${Number(cn.netAmount || 0).toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                        ${Number(cn.netAmount || 0).toLocaleString('es-AR', (cn.billingType === 'OFFICIAL' && cn.creditNoteType === 'NOTA_CREDITO_A') ? { minimumFractionDigits: 2, maximumFractionDigits: 2 } : { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                       </td>
                       <td>
-                        ${Number(cn.taxAmount || 0).toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                        ${Number(cn.taxAmount || 0).toLocaleString('es-AR', (cn.billingType === 'OFFICIAL' && cn.creditNoteType === 'NOTA_CREDITO_A') ? { minimumFractionDigits: 2, maximumFractionDigits: 2 } : { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                       </td>
                       <td style={{ fontWeight: 700, color: 'var(--color-success)' }}>
                         -${Number(cn.totalAmount).toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
@@ -2748,8 +2749,10 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
                   {/* Totales */}
                   {(() => {
                     const subtotal = creditNoteCart.reduce((sum, item) => sum + item.subtotal, 0);
-                    const net = subtotal / 1.21;
+                    const isA = creditNoteForm.billingType === 'OFFICIAL' && selectedCNClient && selectedCNClient.cuit && selectedCNClient.cuit.replace(/-/g, '').length === 11;
+                    const net = isA ? subtotal / 1.21 : Math.round(subtotal / 1.21);
                     const tax = subtotal - net;
+                    const decimalOptions = isA ? { minimumFractionDigits: 2, maximumFractionDigits: 2 } : { minimumFractionDigits: 0, maximumFractionDigits: 0 };
 
                     return (
                       <div style={{ 
@@ -2764,12 +2767,12 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
                       }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
                           <span style={{ color: 'var(--text-secondary)' }}>Subtotal Neto:</span>
-                          <span style={{ fontWeight: 600 }}>${net.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span>
+                          <span style={{ fontWeight: 600 }}>${net.toLocaleString('es-AR', decimalOptions)}</span>
                         </div>
                         {creditNoteForm.billingType === 'OFFICIAL' && (
                           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
                             <span style={{ color: 'var(--text-secondary)' }}>IVA Débito Revertido (21%):</span>
-                            <span style={{ fontWeight: 600 }}>${tax.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span>
+                            <span style={{ fontWeight: 600 }}>${tax.toLocaleString('es-AR', decimalOptions)}</span>
                           </div>
                         )}
                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.05rem', borderTop: '1px solid var(--border-color)', paddingTop: '10px', marginTop: '4px' }}>
@@ -2989,28 +2992,34 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
                     </div>
 
                     {/* Importes final */}
-                    <div style={{ fontSize: '0.8rem', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <span>Subtotal Neto:</span>
-                        <span style={{ fontWeight: 600 }}>
-                          ${Number(viewCreditNoteModal.netAmount || viewCreditNoteModal.totalAmount / 1.21).toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-                        </span>
-                      </div>
-                      {isOfficial && (
-                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                          <span>IVA (21%):</span>
-                          <span style={{ fontWeight: 600 }}>
-                            ${Number(viewCreditNoteModal.taxAmount || viewCreditNoteModal.totalAmount - (viewCreditNoteModal.totalAmount / 1.21)).toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-                          </span>
+                    {(() => {
+                      const isFacturaA_Official = viewCreditNoteModal.billingType === 'OFFICIAL' && viewCreditNoteModal.creditNoteType === 'NOTA_CREDITO_A';
+                      const decimalOptions = isFacturaA_Official ? { minimumFractionDigits: 2, maximumFractionDigits: 2 } : { minimumFractionDigits: 0, maximumFractionDigits: 0 };
+                      return (
+                        <div style={{ fontSize: '0.8rem', display: 'flex', flexDirection: 'column', gap: '6px', width: '100%' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <span>Subtotal Neto:</span>
+                            <span style={{ fontWeight: 600 }}>
+                              ${Number(viewCreditNoteModal.netAmount || viewCreditNoteModal.totalAmount / 1.21).toLocaleString('es-AR', decimalOptions)}
+                            </span>
+                          </div>
+                          {isOfficial && (
+                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                              <span>IVA (21%):</span>
+                              <span style={{ fontWeight: 600 }}>
+                                ${Number(viewCreditNoteModal.taxAmount || viewCreditNoteModal.totalAmount - (viewCreditNoteModal.totalAmount / 1.21)).toLocaleString('es-AR', decimalOptions)}
+                              </span>
+                            </div>
+                          )}
+                          <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1.5px solid #000', paddingTop: '6px', fontSize: '1rem', fontWeight: 900 }}>
+                            <span>TOTAL CREDITO:</span>
+                            <span>
+                              -${Number(viewCreditNoteModal.totalAmount).toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                            </span>
+                          </div>
                         </div>
-                      )}
-                      <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1.5px solid #000', paddingTop: '6px', fontSize: '1rem', fontWeight: 900 }}>
-                        <span>TOTAL CREDITO:</span>
-                        <span>
-                          -${Number(viewCreditNoteModal.totalAmount).toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-                        </span>
-                      </div>
-                    </div>
+                      );
+                    })()}
 
                   </div>
 
@@ -3185,10 +3194,12 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
                   </thead>
                   <tbody>
                     {viewInvoiceModal.items && viewInvoiceModal.items.map((item: any, idx: number) => {
-                      const unitPriceWithIva = Number(item.price || item.listPrice || 0);
-                      const totalWithIva = item.quantity * unitPriceWithIva;
-                      const totalWithoutIva = isOfficial ? totalWithIva / 1.21 : totalWithIva;
+                      const isFacturaA_Official = viewInvoiceModal.billingType === 'OFFICIAL' && viewInvoiceModal.invoiceType === 'FACTURA_A';
+                      const unitPriceWithIva = Number(item.price || item.unitPrice || item.listPrice || 0);
+                      const totalWithIva = Number(item.subtotal || item.quantity * unitPriceWithIva);
+                      const totalWithoutIva = isOfficial ? (isFacturaA_Official ? totalWithIva / 1.21 : Math.round(totalWithIva / 1.21)) : totalWithIva;
                       const taxRate = isOfficial ? 21.00 : 0.00;
+                      const decimalOptions = isFacturaA_Official ? { minimumFractionDigits: 2, maximumFractionDigits: 2 } : { minimumFractionDigits: 0, maximumFractionDigits: 0 };
 
                       return (
                         <tr key={idx} style={{ borderBottom: '1px solid #E5E5EA' }}>
@@ -3205,7 +3216,7 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
                             ${unitPriceWithIva.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                           </td>
                           <td style={{ padding: '6px', textAlign: 'right', fontWeight: 600 }}>
-                            ${totalWithoutIva.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                            ${totalWithoutIva.toLocaleString('es-AR', decimalOptions)}
                           </td>
                         </tr>
                       );
@@ -3243,36 +3254,41 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
                   </div>
 
                   {/* Desglose de importes (Lado Derecho) */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.78rem' }}>
-                    
-                    <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #E5E5EA', padding: '3px 0' }}>
-                      <span style={{ color: 'var(--text-secondary)' }}>Neto Gravado:</span>
-                      <span style={{ fontWeight: 600 }}>${Number(viewInvoiceModal.netAmount || 0).toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span>
-                    </div>
-                    
-                    <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #E5E5EA', padding: '3px 0' }}>
-                      <span style={{ color: 'var(--text-secondary)' }}>Exento:</span>
-                      <span style={{ fontWeight: 600 }}>$0,00</span>
-                    </div>
+                  {(() => {
+                    const isFacturaA_Official = viewInvoiceModal.billingType === 'OFFICIAL' && viewInvoiceModal.invoiceType === 'FACTURA_A';
+                    const decimalOptions = isFacturaA_Official ? { minimumFractionDigits: 2, maximumFractionDigits: 2 } : { minimumFractionDigits: 0, maximumFractionDigits: 0 };
+                    return (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.78rem', width: '100%' }}>
+                        
+                        <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #E5E5EA', padding: '3px 0' }}>
+                          <span style={{ color: 'var(--text-secondary)' }}>Neto Gravado:</span>
+                          <span style={{ fontWeight: 600 }}>${Number(viewInvoiceModal.netAmount || 0).toLocaleString('es-AR', decimalOptions)}</span>
+                        </div>
+                        
+                        <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #E5E5EA', padding: '3px 0' }}>
+                          <span style={{ color: 'var(--text-secondary)' }}>Exento:</span>
+                          <span style={{ fontWeight: 600 }}>$0,00</span>
+                        </div>
 
-                    <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #E5E5EA', padding: '3px 0' }}>
-                      <span style={{ color: 'var(--text-secondary)' }}>IVA (21%):</span>
-                      <span style={{ fontWeight: 600 }}>${Number(viewInvoiceModal.taxAmount || 0).toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span>
-                    </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #E5E5EA', padding: '3px 0' }}>
+                          <span style={{ color: 'var(--text-secondary)' }}>IVA (21%):</span>
+                          <span style={{ fontWeight: 600 }}>${Number(viewInvoiceModal.taxAmount || 0).toLocaleString('es-AR', decimalOptions)}</span>
+                        </div>
 
-                    {Number(viewInvoiceModal.percepcionAmount || 0) > 0 && (
-                      <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #E5E5EA', padding: '3px 0' }}>
-                        <span style={{ color: 'var(--text-secondary)' }}>Percep. de IVA RG 5329:</span>
-                        <span style={{ fontWeight: 600 }}>${Number(viewInvoiceModal.percepcionAmount).toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span>
+                        {Number(viewInvoiceModal.percepcionAmount || 0) > 0 && (
+                          <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #E5E5EA', padding: '3px 0' }}>
+                            <span style={{ color: 'var(--text-secondary)' }}>Percep. de IVA RG 5329:</span>
+                            <span style={{ fontWeight: 600 }}>${Number(viewInvoiceModal.percepcionAmount).toLocaleString('es-AR', decimalOptions)}</span>
+                          </div>
+                        )}
+
+                        <div style={{ backgroundColor: '#D6E4F0', border: '1px solid #7F8C8D', display: 'flex', justifyContent: 'space-between', padding: '8px 12px', fontSize: '1.05rem', fontWeight: 'bold', marginTop: '6px', borderRadius: '4px' }}>
+                          <span>TOTAL:</span>
+                          <span>${Number(viewInvoiceModal.totalAmount || 0).toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span>
+                        </div>
                       </div>
-                    )}
-
-                    <div style={{ backgroundColor: '#D6E4F0', border: '1px solid #7F8C8D', display: 'flex', justifyContent: 'space-between', padding: '8px 12px', fontSize: '1.05rem', fontWeight: 'bold', marginTop: '6px', borderRadius: '4px' }}>
-                      <span>TOTAL:</span>
-                      <span>${Number(viewInvoiceModal.totalAmount || 0).toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span>
-                    </div>
-
-                  </div>
+                    );
+                  })()}
 
                 </div>
 

@@ -24,7 +24,7 @@ export class AdminService {
       const amount = Number(order.totalAmount) || 0;
       let cost = 0;
       for (const item of order.items) {
-        cost += Number(item.product.costPrice || 0) * item.quantity;
+        cost += Math.round(Number(item.product.costPrice || 0) * item.quantity);
       }
 
       if (order.billingType === BillingType.OFFICIAL) {
@@ -51,11 +51,11 @@ export class AdminService {
 
     return {
       sales: {
-        official: officialSales,
-        officialCost: officialCost,
+        official: Math.round(officialSales),
+        officialCost: Math.round(officialCost),
         officialCount: officialCount,
-        internal: internalSales,
-        internalCost: internalCost,
+        internal: Math.round(internalSales),
+        internalCost: Math.round(internalCost),
         internalCount: internalCount,
       },
       cashflow: {

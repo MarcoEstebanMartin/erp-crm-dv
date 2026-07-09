@@ -104,11 +104,12 @@ export async function createCreditNote(req: AuthenticatedRequest, res: Response)
           ? (item.weight ? Number(item.weight) : Number(item.quantity) * Number(product.approximateWeight || 1))
           : Number(item.quantity);
 
-        totalAmount += actualQtyOrWeight * Number(item.unitPrice);
+        totalAmount += Math.round(actualQtyOrWeight * Number(item.unitPrice));
       }
 
-      let netAmount = totalAmount / 1.21;
-      let taxAmount = totalAmount - netAmount;
+      const isA = billingType === 'OFFICIAL' && persona.cuit && persona.cuit.replace(/-/g, '').length === 11;
+      let netAmount = isA ? (totalAmount / 1.21) : Math.round(totalAmount / 1.21);
+      let taxAmount = isA ? (totalAmount - netAmount) : (totalAmount - netAmount);
 
       // 3. Determinar tipo de Nota de Crédito
       let creditNoteType = 'NOTA_CREDITO_INTERNA';
@@ -190,7 +191,7 @@ export async function createCreditNote(req: AuthenticatedRequest, res: Response)
             quantity: Number(item.quantity),
             weight: isPesable ? actualQtyOrWeight : null,
             unitPrice: Number(item.unitPrice),
-            subtotal: actualQtyOrWeight * Number(item.unitPrice),
+            subtotal: Math.round(actualQtyOrWeight * Number(item.unitPrice)),
           },
         });
 

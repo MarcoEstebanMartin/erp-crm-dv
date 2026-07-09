@@ -68,6 +68,8 @@ export const registerCollection = async (req: AuthenticatedRequest, res: Respons
 
     const receiptNumber = await generateReceiptNumber();
 
+    const roundedAmount = Math.round(Number(amount));
+
     // Crear la transacción de tipo INCOME
     const transaction = await prisma.transaction.create({
       data: {
@@ -76,7 +78,7 @@ export const registerCollection = async (req: AuthenticatedRequest, res: Respons
         billingType: billingType as BillingType,
         type: TransactionType.INCOME,
         paymentMethod: paymentMethod as PaymentMethod,
-        amount: amount,
+        amount: roundedAmount,
         description: description || `Cobro generado vía móvil a cliente ${personaId}`,
         receiptNumber,
         verified: false // Pendiente de rendición
@@ -91,7 +93,7 @@ export const registerCollection = async (req: AuthenticatedRequest, res: Respons
     await prisma.persona.update({
       where: { id: personaId },
       data: {
-        outstandingBalance: { decrement: amount }
+        outstandingBalance: { decrement: roundedAmount }
       }
     });
 

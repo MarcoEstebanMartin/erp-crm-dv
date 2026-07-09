@@ -194,7 +194,7 @@ export default function FinanzasDashboard() {
           <div style={{ textAlign: 'right' }}>
             <div style={{ fontSize: '0.9rem', opacity: 0.8, marginBottom: '4px' }}>Saldo Disponible</div>
             <div style={{ fontSize: '2.5rem', fontWeight: 'bold', color: '#10b981', fontFamily: 'monospace' }}>
-              ${cajaGrandeBalance.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+              ${cajaGrandeBalance.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
             </div>
           </div>
           <button 
@@ -240,28 +240,28 @@ export default function FinanzasDashboard() {
         <div className="card" style={{ padding: '20px', backgroundColor: '#ecfdf5', border: '1px solid #a7f3d0' }}>
           <div style={{ fontSize: '0.85rem', color: '#047857', fontWeight: 600, textTransform: 'uppercase', marginBottom: '8px' }}>Ingreso Efectivo</div>
           <div style={{ fontSize: '1.8rem', fontWeight: 700, color: '#065f46', fontFamily: 'monospace' }}>
-            ${cashIncome.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+            ${cashIncome.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
           </div>
         </div>
 
         <div className="card" style={{ padding: '20px', backgroundColor: '#eff6ff', border: '1px solid #bfdbfe' }}>
           <div style={{ fontSize: '0.85rem', color: '#1d4ed8', fontWeight: 600, textTransform: 'uppercase', marginBottom: '8px' }}>Ingreso Cheques</div>
           <div style={{ fontSize: '1.8rem', fontWeight: 700, color: '#1e3a8a', fontFamily: 'monospace' }}>
-            ${checkIncome.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+            ${checkIncome.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
           </div>
         </div>
 
         <div className="card" style={{ padding: '20px', backgroundColor: '#fff5f5', border: '1px solid #feb2b2' }}>
           <div style={{ fontSize: '0.85rem', color: '#c53030', fontWeight: 600, textTransform: 'uppercase', marginBottom: '8px' }}>Gastos (Egresos)</div>
           <div style={{ fontSize: '1.8rem', fontWeight: 700, color: '#9b2c2c', fontFamily: 'monospace' }}>
-            ${totalExpenses.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+            ${totalExpenses.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
           </div>
         </div>
 
         <div className="card" style={{ padding: '20px', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0' }}>
           <div style={{ fontSize: '0.85rem', color: '#475569', fontWeight: 600, textTransform: 'uppercase', marginBottom: '8px' }}>Recaudación Neta del Periodo</div>
           <div style={{ fontSize: '1.8rem', fontWeight: 700, color: '#0f172a', fontFamily: 'monospace' }}>
-            ${netIncome.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+            ${netIncome.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
           </div>
         </div>
       </div>
@@ -316,7 +316,7 @@ export default function FinanzasDashboard() {
                       fontFamily: 'monospace',
                       color: item.type === 'INGRESO' ? '#047857' : '#c53030'
                     }}>
-                      {item.type === 'INGRESO' ? '+' : '-'}${item.amount.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                      {item.type === 'INGRESO' ? '+' : '-'}${item.amount.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                     </td>
                   </tr>
                 ))
