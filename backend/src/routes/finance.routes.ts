@@ -12,6 +12,7 @@ import {
   verifyTransaction,
   getDrawersHistory,
   createExpense,
+  getTransactionById,
 } from '../controllers/finance.controller';
 import { authenticateJWT, requireRole } from '../middlewares/auth';
 import { Role } from '@prisma/client';
@@ -32,6 +33,7 @@ router.get('/bank-accounts', authenticateJWT, requireRole([Role.ADMIN, Role.FACT
 router.post('/bank-accounts', authenticateJWT, requireRole([Role.ADMIN]), createBankAccount);
 router.post('/bank-accounts/transfer', authenticateJWT, requireRole([Role.ADMIN, Role.FACTURACION]), transferFunds);
 router.put('/transactions/:id/verify', authenticateJWT, requireRole([Role.ADMIN, Role.FACTURACION]), verifyTransaction);
+router.get('/transactions/:id', authenticateJWT, getTransactionById);
 router.post('/expenses', authenticateJWT, requireRole([Role.ADMIN, Role.FACTURACION]), createExpense);
 
 export default router;

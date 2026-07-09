@@ -225,6 +225,11 @@ export const api = {
     return res.order;
   },
 
+  getTransactionById: async (id: number) => {
+    const res = await request(`/finance/transactions/${id}`);
+    return res.transaction;
+  },
+
   createOrder: async (orderData: { clientId: number, items: { productId: number, quantity: number }[], notes?: string }) => {    
 
     const res = await request('/orders', {

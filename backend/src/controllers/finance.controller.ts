@@ -376,6 +376,49 @@ export async function getTransactions(req: AuthenticatedRequest, res: Response):
 }
 
 /**
+ * Obtener detalles de una transacción por ID.
+ */
+export async function getTransactionById(req: AuthenticatedRequest, res: Response): Promise<void> {
+  const { id } = req.params;
+  const userId = req.user?.id;
+  const userRole = req.user?.role;
+
+  if (!userId || !userRole) {
+    res.status(401).json({ status: 'error', message: 'No autorizado.' });
+    return;
+  }
+
+  try {
+    const transaction = await prisma.transaction.findUnique({
+      where: { id: Number(id) },
+      include: {
+        user: { select: { id: true, username: true } },
+        persona: { select: { id: true, name: true, isClient: true, isProvider: true } },
+        cashDrawer: true,
+        bankAccount: true,
+      },
+    });
+
+    if (!transaction) {
+      res.status(404).json({ status: 'error', message: 'Transacción no encontrada.' });
+      return;
+    }
+
+    res.status(200).json({
+      status: 'success',
+      data: { transaction },
+    });
+  } catch (error: any) {
+    console.error('Error al obtener la transacción por ID:', error);
+    res.status(500).json({
+      status: 'error',
+      message: 'Error al obtener la transacción.',
+    });
+  }
+}
+
+
+/**
  * Obtener listado de cuentas bancarias.
  */
 export async function getBankAccounts(req: AuthenticatedRequest, res: Response): Promise<void> {

@@ -309,7 +309,9 @@ export class PersonaService {
         date: t.createdAt,
         type: ledgerType,
         reference: `Recibo #${t.id}`,
-        description: `${t.type === TransactionType.INCOME ? 'Cobro' : 'Pago'} - ${t.paymentMethod} (${t.description || ''})`,
+        description: t.type === TransactionType.INCOME
+          ? `Recibo N° ${t.receiptNumber || 'INT-' + t.id.toString().padStart(8, '0')}`
+          : `Pago N° ${t.receiptNumber || 'INT-' + t.id.toString().padStart(8, '0')}`,
         amount: Number(t.amount),
       });
     });
