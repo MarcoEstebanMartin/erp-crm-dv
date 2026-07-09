@@ -186,7 +186,7 @@ export async function getSuggestedCredit(req: AuthenticatedRequest, res: Respons
   }
   try {
     const suggested = await adminService.getSuggestedCreditForWeek(String(weekStart));
-    res.status(200).json({ status: 'success', suggested });
+    res.status(200).json({ status: 'success', data: { suggested } });
   } catch (error: any) {
     console.error('Error al calcular crédito sugerido:', error);
     res.status(500).json({ status: 'error', message: 'Error al calcular crédito sugerido.' });
