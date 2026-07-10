@@ -769,12 +769,15 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
             <tbody>
               ${order.items.map((item: any) => {
                 const price = Number(item.unitPrice ?? item.price ?? 0);
+                const isPesable = item.product?.isPesable || (item.weight && Number(item.weight) > 0);
+                const subtotal = item.subtotal ? Number(item.subtotal) : (isPesable ? item.quantity * (item.product?.approximateWeight || 1) * price : item.quantity * price);
+                const cantDisplay = isPesable && item.weight ? `${item.quantity} u (${Number(item.weight).toFixed(2)} kg)` : (isPesable ? `${item.quantity} u (${(item.quantity * (item.product?.approximateWeight || 1)).toLocaleString()} kg aprox)` : `${item.quantity} u`);
                 return `
                   <tr>
                     <td>${item.product?.name || 'Artículo'}</td>
-                    <td class="text-right">${item.quantity}</td>
-                    <td class="text-right">$${Math.round(price).toLocaleString('es-AR')}</td>
-                    <td class="text-right">$${Math.round(item.quantity * price).toLocaleString('es-AR')}</td>
+                    <td class="text-right">${cantDisplay}</td>
+                    <td class="text-right">$${Math.round(price).toLocaleString('es-AR')}${isPesable ? '/Kg' : ''}</td>
+                    <td class="text-right">$${Math.round(subtotal).toLocaleString('es-AR')}</td>
                   </tr>
                 `;
               }).join('')}
@@ -3007,16 +3010,30 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
                     <th>Artículo</th>
                     <th className="text-right">Cantidad</th>
                     <th className="text-right">Precio Unit.</th>
+                    <th className="text-right">Subtotal</th>
                   </tr>
                 </thead>
                 <tbody>
                   {orderDetailsModal.items.map((item: any, idx: number) => {
                     const price = Number(item.unitPrice ?? item.price ?? 0);
+                    const isPesable = item.product?.isPesable || (item.weight && Number(item.weight) > 0);
+                    const subtotal = item.subtotal ? Number(item.subtotal) : (isPesable ? item.quantity * (item.product?.approximateWeight || 1) * price : item.quantity * price);
                     return (
                       <tr key={idx}>
                         <td>{item.product?.name}</td>
-                        <td className="text-right">{item.quantity} u.</td>
-                        <td className="text-right">${Math.round(price).toLocaleString('es-AR')}</td>
+                        <td className="text-right">
+                          {item.quantity} u.
+                          {isPesable && (
+                            <span style={{ fontSize: '0.75rem', color: 'var(--color-danger)', marginLeft: '4px' }}>
+                              ({item.weight ? `${Number(item.weight).toFixed(2)} Kg` : `${(item.quantity * (item.product?.approximateWeight || 1)).toLocaleString()} Kg aprox`})
+                            </span>
+                          )}
+                        </td>
+                        <td className="text-right">
+                          ${Math.round(price).toLocaleString('es-AR')}
+                          {isPesable && ' / Kg'}
+                        </td>
+                        <td className="text-right">${Math.round(subtotal).toLocaleString('es-AR')}</td>
                       </tr>
                     );
                   })}
@@ -4158,8 +4175,21 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
                           return (
                             <div key={item.product.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px', border: '1px solid var(--border-color)', borderRadius: '6px', backgroundColor: '#ffffff' }}>
                               <div style={{ flex: 1, marginRight: '8px' }}>
-                                <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-primary)' }}>{item.product.name}</div>
-                                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>${price.toLocaleString()} x {item.quantity} = ${(price * item.quantity).toLocaleString()}</div>
+                                <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                                  {item.product.name}
+                                  {item.product.isPesable && (
+                                    <span style={{ fontSize: '0.72rem', color: 'var(--color-danger)', marginLeft: '6px', fontWeight: 500 }}>
+                                      ({(item.quantity * (item.product.approximateWeight || 1)).toLocaleString()} Kg aprox.)
+                                    </span>
+                                  )}
+                                </div>
+                                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                                  {item.product.isPesable ? (
+                                    <>${price.toLocaleString()} / Kg x {(item.quantity * (item.product.approximateWeight || 1)).toLocaleString()} Kg = ${Math.round(price * item.quantity * (item.product.approximateWeight || 1)).toLocaleString()}</>
+                                  ) : (
+                                    <>${price.toLocaleString()} x {item.quantity} = ${(price * item.quantity).toLocaleString()}</>
+                                  )}
+                                </div>
                               </div>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                 <button
@@ -4218,7 +4248,13 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
                   }}>
                     <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>Total del Pedido:</span>
                     <span style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                      ${createOrderModal.cart.reduce((acc, curr) => acc + (getQuickItemPrice(curr.product, createOrderModal.client) * curr.quantity), 0).toLocaleString()}
+                      ${createOrderModal.cart.reduce((acc, curr) => {
+                        const price = getQuickItemPrice(curr.product, createOrderModal.client);
+                        const qtyOrWeight = curr.product.isPesable 
+                          ? curr.quantity * (curr.product.approximateWeight || 1)
+                          : curr.quantity;
+                        return acc + Math.round(price * qtyOrWeight);
+                      }, 0).toLocaleString()}
                     </span>
                   </div>
                 </div>

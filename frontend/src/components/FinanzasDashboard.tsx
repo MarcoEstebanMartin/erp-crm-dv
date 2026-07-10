@@ -818,10 +818,11 @@ export default function FinanzasDashboard() {
               <div className="form-group" style={{ margin: 0, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
                 <button 
                   className="btn btn-secondary" 
+                  disabled={reconLoading}
                   onClick={() => fetchReconTransactions(reconBankId, reconStartDate, reconEndDate, reconStartTime, reconEndTime)}
                   style={{ width: '100%', height: '36px', padding: '0 12px', fontSize: '0.85rem', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '6px', borderRadius: '6px', cursor: 'pointer' }}
                 >
-                  <RefreshCw size={14} /> Buscar
+                  <RefreshCw size={14} /> {reconLoading ? 'Cargando...' : 'Buscar'}
                 </button>
               </div>
             </div>

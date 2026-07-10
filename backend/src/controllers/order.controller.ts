@@ -849,12 +849,16 @@ export async function updateOrder(req: AuthenticatedRequest, res: Response): Pro
 
         // Aplicar descuento
         const finalUnitPrice = Math.round(selectedPrice * (1 - itemDiscount / 100));
-        const subtotal = Math.round(finalUnitPrice * item.quantity);
+        const actualQuantityForPrice = product.isPesable 
+          ? (item.weight ? Number(item.weight) : item.quantity * Number((product as any).approximateWeight || 1))
+          : item.quantity;
+        const subtotal = Math.round(finalUnitPrice * actualQuantityForPrice);
         totalSum += subtotal;
 
         orderItemsToCreate.push({
           productId: product.id,
           quantity: item.quantity,
+          weight: product.isPesable ? (item.weight ? Number(item.weight) : null) : null,
           unitPrice: finalUnitPrice,
           subtotal: subtotal
         });

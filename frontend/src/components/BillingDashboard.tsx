@@ -1733,6 +1733,7 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
                   immediatePayment: false,
                   paymentMethod: 'CASH',
                   cashDrawerId: '',
+                  bankAccountId: '',
                   checkNumber: '',
                   checkIssuer: '',
                   isEcheq: false,

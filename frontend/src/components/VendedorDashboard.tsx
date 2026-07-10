@@ -30,7 +30,7 @@ export default function VendedorDashboard({ activeTab }: VendedorDashboardProps)
   const [clientModal, setClientModal] = useState({ open: false, name: '', cuit: '', address: '', city: '', phone: '', email: '' });
   const [orderDetailsModal, setOrderDetailsModal] = useState<any | null>(null);
   const [isPriceListModalOpen, setIsPriceListModalOpen] = useState(false);
-  const [editOrderModal, setEditOrderModal] = useState<{ open: boolean; orderId: number; clientId: number; clientName: string; items: { id: number; productId: number; name: string; sku: string; quantity: number; listPrice: number }[] } | null>(null);
+  const [editOrderModal, setEditOrderModal] = useState<{ open: boolean; orderId: number; clientId: number; clientName: string; items: { id: number; productId: number; name: string; sku: string; quantity: number; listPrice: number; weight?: number | null; isPesable?: boolean; approximateWeight?: number | null }[] } | null>(null);
   
   // Filtros y búsquedas
   const [searchQuery, setSearchQuery] = useState('');
@@ -153,7 +153,13 @@ export default function VendedorDashboard({ activeTab }: VendedorDashboardProps)
   };
 
   const getCartTotal = () => {
-    return cart.reduce((acc, curr) => acc + (getItemPrice(curr.product, selectedClient) * curr.quantity), 0);
+    return cart.reduce((acc, curr) => {
+      const price = getItemPrice(curr.product, selectedClient);
+      const qtyOrWeight = curr.product.isPesable 
+        ? curr.quantity * (curr.product.approximateWeight || 1)
+        : curr.quantity;
+      return acc + Math.round(price * qtyOrWeight);
+    }, 0);
   };
 
   // --- CONFIRMAR PEDIDO (3-CLICS) ---
@@ -226,7 +232,10 @@ export default function VendedorDashboard({ activeTab }: VendedorDashboardProps)
         name: i.product?.name || 'Artículo',
         sku: i.product?.sku || '',
         quantity: i.quantity,
-        listPrice: i.price
+        weight: i.weight,
+        isPesable: i.product?.isPesable,
+        approximateWeight: i.product?.approximateWeight,
+        listPrice: i.price || i.unitPrice || (i.product ? i.product.listPrice : 0)
       }));
       
       setEditOrderModal({
@@ -251,7 +260,8 @@ export default function VendedorDashboard({ activeTab }: VendedorDashboardProps)
     try {
       const itemsPayload = editOrderModal.items.map(item => ({
         productId: item.productId,
-        quantity: item.quantity
+        quantity: item.quantity,
+        weight: item.weight || null
       }));
       
       await api.updateOrder(editOrderModal.orderId, { items: itemsPayload });
@@ -312,12 +322,15 @@ export default function VendedorDashboard({ activeTab }: VendedorDashboardProps)
             <tbody>
               ${order.items.map((item: any) => {
                 const price = Number(item.unitPrice ?? item.price ?? 0);
+                const isPesable = item.product?.isPesable || (item.weight && Number(item.weight) > 0);
+                const subtotal = item.subtotal ? Number(item.subtotal) : (isPesable ? item.quantity * (item.product?.approximateWeight || 1) * price : item.quantity * price);
+                const cantDisplay = isPesable && item.weight ? `${item.quantity} u (${Number(item.weight).toFixed(2)} kg)` : (isPesable ? `${item.quantity} u (${(item.quantity * (item.product?.approximateWeight || 1)).toLocaleString()} kg aprox)` : `${item.quantity} u`);
                 return `
                   <tr>
                     <td>${item.product?.name || 'Artículo'}</td>
-                    <td class="text-right">${item.quantity}</td>
-                    <td class="text-right">$${Math.round(price).toLocaleString('es-AR')}</td>
-                    <td class="text-right">$${Math.round(item.quantity * price).toLocaleString('es-AR')}</td>
+                    <td class="text-right">${cantDisplay}</td>
+                    <td class="text-right">$${Math.round(price).toLocaleString('es-AR')}${isPesable ? '/Kg' : ''}</td>
+                    <td class="text-right">$${Math.round(subtotal).toLocaleString('es-AR')}</td>
                   </tr>
                 `;
               }).join('')}
@@ -639,8 +652,21 @@ export default function VendedorDashboard({ activeTab }: VendedorDashboardProps)
                         return (
                           <div key={item.product.id} className="list-item" style={{ padding: '8px 10px', display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border-color)' }}>
                             <div style={{ flex: 1 }}>
-                              <div style={{ fontSize: '0.85rem', fontWeight: 500 }}>{item.product.name}</div>
-                              <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Subtotal: ${(itemPrice * item.quantity).toLocaleString()} (${itemPrice.toLocaleString()} c/u)</div>
+                              <div style={{ fontSize: '0.85rem', fontWeight: 500 }}>
+                                {item.product.name}
+                                {item.product.isPesable && (
+                                  <span style={{ fontSize: '0.72rem', color: 'var(--color-danger)', marginLeft: '6px', fontWeight: 600 }}>
+                                    ({(item.quantity * (item.product.approximateWeight || 1)).toLocaleString()} Kg aprox.)
+                                  </span>
+                                )}
+                              </div>
+                              <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                                {item.product.isPesable ? (
+                                  <>Subtotal: ${Math.round(itemPrice * item.quantity * (item.product.approximateWeight || 1)).toLocaleString()} (${itemPrice.toLocaleString()} / Kg)</>
+                                ) : (
+                                  <>Subtotal: ${(itemPrice * item.quantity).toLocaleString()} (${itemPrice.toLocaleString()} c/u)</>
+                                )}
+                              </div>
                             </div>
                             
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -1159,16 +1185,30 @@ export default function VendedorDashboard({ activeTab }: VendedorDashboardProps)
                     <th>Artículo</th>
                     <th className="text-right">Cantidad</th>
                     <th className="text-right">Precio Unit.</th>
+                    <th className="text-right">Subtotal</th>
                   </tr>
                 </thead>
                 <tbody>
                   {orderDetailsModal.items.map((item: any, idx: number) => {
                     const price = Number(item.unitPrice ?? item.price ?? 0);
+                    const isPesable = item.product?.isPesable || (item.weight && Number(item.weight) > 0);
+                    const subtotal = item.subtotal ? Number(item.subtotal) : (isPesable ? item.quantity * (item.product?.approximateWeight || 1) * price : item.quantity * price);
                     return (
                       <tr key={idx}>
                         <td>{item.product?.name}</td>
-                        <td className="text-right">{item.quantity} u.</td>
-                        <td className="text-right">${price.toLocaleString()}</td>
+                        <td className="text-right">
+                          {item.quantity} u.
+                          {isPesable && (
+                            <span style={{ fontSize: '0.75rem', color: 'var(--color-danger)', marginLeft: '4px' }}>
+                              ({item.weight ? `${Number(item.weight).toFixed(2)} Kg` : `${(item.quantity * (item.product?.approximateWeight || 1)).toLocaleString()} Kg aprox`})
+                            </span>
+                          )}
+                        </td>
+                        <td className="text-right">
+                          ${price.toLocaleString()}
+                          {isPesable && ' / Kg'}
+                        </td>
+                        <td className="text-right">${Math.round(subtotal).toLocaleString('es-AR')}</td>
                       </tr>
                     );
                   })}
@@ -1245,6 +1285,8 @@ export default function VendedorDashboard({ activeTab }: VendedorDashboardProps)
                                   name: p.name,
                                   sku: p.sku,
                                   quantity: 1,
+                                  isPesable: p.isPesable,
+                                  approximateWeight: p.approximateWeight,
                                   listPrice: p.listPrice
                                 }]
                               });
@@ -1269,7 +1311,28 @@ export default function VendedorDashboard({ activeTab }: VendedorDashboardProps)
                       <div key={item.productId} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid #f0f0f0' }}>
                         <div style={{ flex: 1, marginRight: '10px' }}>
                           <div style={{ fontSize: '0.85rem', fontWeight: 600 }}>{item.name}</div>
-                          <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>${item.listPrice} c/u</div>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>${item.listPrice} c/u {item.isPesable && '(Por Kg)'}</div>
+                          {item.isPesable && (
+                            <div style={{ marginTop: '4px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <span style={{ fontSize: '0.75rem', fontWeight: 600 }}>Peso Exacto (Kg):</span>
+                              <input 
+                                type="number" 
+                                step="0.01"
+                                className="input" 
+                                style={{ width: '80px', padding: '2px 6px', fontSize: '0.8rem' }}
+                                value={item.weight || ''}
+                                onChange={(e) => {
+                                  const val = parseFloat(e.target.value);
+                                  setEditOrderModal({
+                                    ...editOrderModal,
+                                    items: editOrderModal.items.map(i => 
+                                      i.productId === item.productId ? { ...i, weight: isNaN(val) ? null : val } : i
+                                    )
+                                  });
+                                }}
+                              />
+                            </div>
+                          )}
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                           <button
@@ -1333,7 +1396,7 @@ export default function VendedorDashboard({ activeTab }: VendedorDashboardProps)
                 <div style={{ marginTop: '16px', borderTop: '1px solid var(--border-color)', paddingTop: '12px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', fontSize: '1.05rem', marginBottom: '12px' }}>
                     <span>Nuevo Total:</span>
-                    <span>${editOrderModal.items.reduce((acc, i) => acc + (i.listPrice * i.quantity), 0).toLocaleString()}</span>
+                    <span>${editOrderModal.items.reduce((acc, i) => acc + (i.listPrice * (i.isPesable ? (i.weight || (i.quantity * (i.approximateWeight || 1))) : i.quantity)), 0).toLocaleString()}</span>
                   </div>
                 </div>
               </div>
