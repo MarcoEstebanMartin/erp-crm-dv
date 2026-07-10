@@ -1422,7 +1422,7 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
                 ) : (
                   taxWithholdings.map((w) => (
                     <tr key={w.id}>
-                      <td>{new Date(w.date).toLocaleDateString('es-AR')}</td>
+                      <td>{new Date(w.date).toLocaleDateString('es-AR', { timeZone: 'UTC' })}</td>
                       <td>
                         <span style={{
                           fontSize: '0.75rem',

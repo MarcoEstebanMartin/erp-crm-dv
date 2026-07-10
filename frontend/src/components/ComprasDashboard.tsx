@@ -664,7 +664,7 @@ export default function ComprasDashboard() {
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                           {order.items?.map((item: any) => (
                             <span key={item.id} style={{ fontSize: '0.74rem', color: 'var(--text-secondary)' }}>
-                              Lote PO-{order.id} (Vto: {item.expirationDate ? new Date(item.expirationDate).toLocaleDateString('es-AR') : '6 meses'})
+                              Lote PO-{order.id} (Vto: {item.expirationDate ? new Date(item.expirationDate).toLocaleDateString('es-AR', { timeZone: 'UTC' }) : '6 meses'})
                             </span>
                           ))}
                         </div>
@@ -795,8 +795,8 @@ export default function ComprasDashboard() {
                       const isOverdue = inv.dueDate && new Date(inv.dueDate) < new Date() && inv.status !== 'PAID';
                       return (
                         <tr key={inv.id} style={isOverdue ? { backgroundColor: '#FFF5F5' } : undefined}>
-                          <td>{new Date(inv.issueDate).toLocaleDateString('es-AR')}</td>
-                          <td>{inv.dueDate ? new Date(inv.dueDate).toLocaleDateString('es-AR') : 'S/D'}</td>
+                          <td>{new Date(inv.issueDate).toLocaleDateString('es-AR', { timeZone: 'UTC' })}</td>
+                          <td>{inv.dueDate ? new Date(inv.dueDate).toLocaleDateString('es-AR', { timeZone: 'UTC' }) : 'S/D'}</td>
                           <td style={{ fontWeight: 600 }}>{inv.invoiceType?.replace('_', ' ')}</td>
                           <td style={{ fontFamily: 'monospace' }}>{inv.invoiceNumber}</td>
                           <td>

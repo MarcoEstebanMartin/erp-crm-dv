@@ -396,7 +396,7 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
                                         <span>
                                           <strong>Lote: {lot.lotNumber}</strong> (Físico: {lot.stock} u.) 
                                           <span style={{ color: 'var(--text-secondary)', marginLeft: '6px' }}>
-                                            [Vence: {new Date(lot.expirationDate).toLocaleDateString('es-AR')}]
+                                            [Vence: {new Date(lot.expirationDate).toLocaleDateString('es-AR', { timeZone: 'UTC' })}]
                                           </span>
                                         </span>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -600,7 +600,7 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
                               {activeLots.map((l: any) => (
                                 <span key={l.id} className="badge" style={{ fontSize: '0.75rem', backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)' }}>
-                                  {l.lotNumber} ({l.stock} u. - V: {new Date(l.expirationDate).toLocaleDateString('es-AR')})
+                                  {l.lotNumber} ({l.stock} u. - V: {new Date(l.expirationDate).toLocaleDateString('es-AR', { timeZone: 'UTC' })})
                                 </span>
                               ))}
                             </div>
@@ -685,7 +685,7 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
                   <option value="">Sin lote (Stock Genérico / General)</option>
                   {(stockModal.product.lots || []).map((lot: any) => (
                     <option key={lot.id} value={lot.lotNumber}>
-                      Lote: {lot.lotNumber} (Stock: {lot.stock} u. - Vence: {new Date(lot.expirationDate).toLocaleDateString('es-AR')})
+                      Lote: {lot.lotNumber} (Stock: {lot.stock} u. - Vence: {new Date(lot.expirationDate).toLocaleDateString('es-AR', { timeZone: 'UTC' })})
                     </option>
                   ))}
                   {Number(stockModal.quantityChange) > 0 && (

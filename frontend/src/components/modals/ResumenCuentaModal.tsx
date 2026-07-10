@@ -41,9 +41,11 @@ export default function ResumenCuentaModal({ client, onClose }: ResumenCuentaMod
       // Mapear los ítems del ledger del backend a la estructura que requiere el modal
       let txs = ledger.map((item: any) => {
         const isDebit = item.type === 'DEBIT';
+        const isPureDate = item.id.startsWith('withholding-') || item.id.startsWith('supplier-invoice-') || (typeof item.date === 'string' && item.date.includes('T00:00:00.000Z'));
         return {
           id: item.id, // e.g., 'order-12', 'credit-note-5', 'transaction-45'
           date: new Date(item.date),
+          isPureDate,
           reference: item.reference,
           description: item.description,
           debit: isDebit ? Number(item.amount) : 0,
@@ -279,7 +281,7 @@ export default function ResumenCuentaModal({ client, onClose }: ResumenCuentaMod
                             <span style={{ color: 'var(--text-secondary)' }}>{formatMovementId(t.id)}</span>
                           )}
                         </td>
-                        <td style={{ padding: '10px' }}>{t.date.toLocaleDateString('es-AR')}</td>
+                        <td style={{ padding: '10px' }}>{t.isPureDate ? t.date.toLocaleDateString('es-AR', { timeZone: 'UTC' }) : t.date.toLocaleDateString('es-AR')}</td>
                         <td style={{ padding: '10px' }}>
                           {isClickable ? (
                             <>
@@ -567,7 +569,7 @@ export default function ResumenCuentaModal({ client, onClose }: ResumenCuentaMod
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f3f4f6', paddingBottom: '6px' }}>
                 <span style={{ color: 'var(--text-secondary)' }}>Fecha de Carga:</span>
-                <span>{new Date(selectedWithholding.date).toLocaleDateString('es-AR')}</span>
+                <span>{new Date(selectedWithholding.date).toLocaleDateString('es-AR', { timeZone: 'UTC' })}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f3f4f6', paddingBottom: '6px' }}>
                 <span style={{ color: 'var(--text-secondary)' }}>Jurisdicción:</span>
