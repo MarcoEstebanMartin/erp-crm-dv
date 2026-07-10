@@ -6,6 +6,16 @@ import { emitirFacturaAFIP } from '../services/afip.service';
 import { logAudit } from '../utils/audit';
 import { OrderService } from '../services/order.service';
 
+function getJurisdictionCode(provinceOrAddress?: string | null): string {
+  if (!provinceOrAddress) return 'AR-B';
+  const p = provinceOrAddress.toLowerCase();
+  if (p.includes('misiones')) return 'AR-N';
+  if (p.includes('corrientes')) return 'AR-W';
+  if (p.includes('caba') || p.includes('capital') || p.includes('ciudad aut')) return 'AR-C';
+  if (p.includes('buenos aires') || p.includes('bs')) return 'AR-B';
+  return 'AR-B'; // Default
+}
+
 /**
  * Obtener listado de pedidos.
  * - ADMIN / DEPOSITO: Ven todos los pedidos.
@@ -577,18 +587,24 @@ export async function invoiceOrder(req: AuthenticatedRequest, res: Response): Pr
       }
 
       // Calcular desglose impositivo
-      const isFacturaA_Official = billingType === BillingType.OFFICIAL && finalInvoiceType === InvoiceType.FACTURA_A;
-      let net = isFacturaA_Official ? (totalSum / 1.21) : Math.round(totalSum / 1.21);
-      let tax = totalSum - net;
-      let percepcion = 0;
+      let net = order.totalAmount.toNumber();
+      let tax = 0;
+      let percepIIBB = 0;
+      let percepIVA = 0;
 
+      const isFacturaA_Official = billingType === BillingType.OFFICIAL && finalInvoiceType === InvoiceType.FACTURA_A;
       if (isFacturaA_Official) {
+        // Obtener alícuota activa de la percepción de IVA RG 5329
+        const perceptionIVA = await tx.perceptionType.findUnique({
+          where: { code: 'IVA_5329' }
+        });
+        const ivaPercAliquot = (perceptionIVA && perceptionIVA.aliquot) ? Number(perceptionIVA.aliquot) : 3.00;
         const iibbAliquot = Number(order.persona.iibbAliquot || 0);
-        if (iibbAliquot > 0) {
-          net = totalSum / (1.21 + (iibbAliquot / 100));
-          tax = net * 0.21;
-          percepcion = net * (iibbAliquot / 100);
-        }
+
+        net = order.totalAmount.toNumber() / (1.21 + (iibbAliquot / 100) + (ivaPercAliquot / 100));
+        tax = net * 0.21;
+        percepIIBB = net * (iibbAliquot / 100);
+        percepIVA = net * (ivaPercAliquot / 100);
       }
 
       // Actualizar pedido a DELIVERED (Facturado/Finalizado)
@@ -602,13 +618,14 @@ export async function invoiceOrder(req: AuthenticatedRequest, res: Response): Pr
           caeDueDate: finalCaeDueDate,
           netAmount: isFacturaA_Official ? Number(net.toFixed(2)) : Math.round(net),
           taxAmount: isFacturaA_Official ? Number(tax.toFixed(2)) : Math.round(tax),
-          percepcionAmount: isFacturaA_Official ? Number(percepcion.toFixed(2)) : Math.round(percepcion),
+          percepcionAmount: isFacturaA_Official ? Number(percepIIBB.toFixed(2)) : Math.round(percepIIBB),
+          percepcionIvaAmount: isFacturaA_Official ? Number(percepIVA.toFixed(2)) : Math.round(percepIVA),
           status: OrderStatus.DELIVERED,
         },
       });
 
-      // Registrar percepción en TaxWithholding si corresponde
-      if (percepcion > 0) {
+      // Registrar percepción IIBB en TaxWithholding si corresponde
+      if (percepIIBB > 0) {
         await tx.taxWithholding.create({
           data: {
             type: 'PERCEPCION_PRACTICADA',
@@ -616,8 +633,23 @@ export async function invoiceOrder(req: AuthenticatedRequest, res: Response): Pr
             personaId: order.personaId,
             number: finalInvoiceNumber || `FAC-${order.id}`,
             date: new Date(),
-            amount: isFacturaA_Official ? Number(percepcion.toFixed(2)) : Math.round(percepcion),
-            jurisdiction: order.persona.address?.includes('CABA') ? 'AR-C' : 'AR-B',
+            amount: isFacturaA_Official ? Number(percepIIBB.toFixed(2)) : Math.round(percepIIBB),
+            jurisdiction: getJurisdictionCode(order.persona.province || order.persona.address),
+          },
+        });
+      }
+
+      // Registrar percepción IVA RG 5329 en TaxWithholding si corresponde
+      if (percepIVA > 0) {
+        await tx.taxWithholding.create({
+          data: {
+            type: 'PERCEPCION_PRACTICADA',
+            taxType: 'IVA',
+            personaId: order.personaId,
+            number: finalInvoiceNumber || `FAC-${order.id}`,
+            date: new Date(),
+            amount: isFacturaA_Official ? Number(percepIVA.toFixed(2)) : Math.round(percepIVA),
+            jurisdiction: null, // IVA es nacional
           },
         });
       }
@@ -1068,21 +1100,27 @@ export async function createDirectInvoice(req: AuthenticatedRequest, res: Respon
         finalInvoiceNumber = `INT-${order.id.toString().padStart(8, '0')}`;
       }
 
+      let percepIIBB = 0;
+      let percepIVA = 0;
+
       const isFacturaA_Official = billingType === BillingType.OFFICIAL && finalInvoiceType === InvoiceType.FACTURA_A;
       if (isFacturaA_Official) {
+        // Obtener alícuota activa de la percepción de IVA RG 5329
+        const perceptionIVA = await tx.perceptionType.findUnique({
+          where: { code: 'IVA_5329' }
+        });
+        const ivaPercAliquot = (perceptionIVA && perceptionIVA.aliquot) ? Number(perceptionIVA.aliquot) : 3.00;
         const iibbAliquot = Number(persona.iibbAliquot || 0);
-        if (iibbAliquot > 0) {
-          net = totalSum / (1.21 + (iibbAliquot / 100));
-          tax = net * 0.21;
-          percepcion = net * (iibbAliquot / 100);
-        } else {
-          net = totalSum / 1.21;
-          tax = totalSum - net;
-        }
+
+        net = totalSum / (1.21 + (iibbAliquot / 100) + (ivaPercAliquot / 100));
+        tax = net * 0.21;
+        percepIIBB = net * (iibbAliquot / 100);
+        percepIVA = net * (ivaPercAliquot / 100);
       } else {
         net = Math.round(net);
         tax = Math.round(tax);
-        percepcion = Math.round(percepcion);
+        percepIIBB = Math.round(percepIIBB);
+        percepIVA = Math.round(percepIVA);
       }
 
       // 5. Crear los OrderItems y hacer la asignación automática de lotes (FIFO)
@@ -1145,7 +1183,7 @@ export async function createDirectInvoice(req: AuthenticatedRequest, res: Respon
       }
 
       // 6. Registrar percepción IIBB si corresponde
-      if (percepcion > 0) {
+      if (percepIIBB > 0) {
         await tx.taxWithholding.create({
           data: {
             type: 'PERCEPCION_PRACTICADA',
@@ -1153,8 +1191,23 @@ export async function createDirectInvoice(req: AuthenticatedRequest, res: Respon
             personaId,
             number: finalInvoiceNumber || `FAC-${order.id}`,
             date: new Date(),
-            amount: isFacturaA_Official ? Number(percepcion.toFixed(2)) : Math.round(percepcion),
-            jurisdiction: persona.address?.includes('CABA') ? 'AR-C' : 'AR-B',
+            amount: isFacturaA_Official ? Number(percepIIBB.toFixed(2)) : Math.round(percepIIBB),
+            jurisdiction: getJurisdictionCode(persona.province || persona.address),
+          },
+        });
+      }
+
+      // Registrar percepción IVA RG 5329 si corresponde
+      if (percepIVA > 0) {
+        await tx.taxWithholding.create({
+          data: {
+            type: 'PERCEPCION_PRACTICADA',
+            taxType: 'IVA',
+            personaId,
+            number: finalInvoiceNumber || `FAC-${order.id}`,
+            date: new Date(),
+            amount: isFacturaA_Official ? Number(percepIVA.toFixed(2)) : Math.round(percepIVA),
+            jurisdiction: null, // IVA es nacional
           },
         });
       }
@@ -1250,7 +1303,8 @@ export async function createDirectInvoice(req: AuthenticatedRequest, res: Respon
           caeDueDate: finalCaeDueDate,
           netAmount: isFacturaA_Official ? Number(net.toFixed(2)) : Math.round(net),
           taxAmount: isFacturaA_Official ? Number(tax.toFixed(2)) : Math.round(tax),
-          percepcionAmount: isFacturaA_Official ? Number(percepcion.toFixed(2)) : Math.round(percepcion),
+          percepcionAmount: isFacturaA_Official ? Number(percepIIBB.toFixed(2)) : Math.round(percepIIBB),
+          percepcionIvaAmount: isFacturaA_Official ? Number(percepIVA.toFixed(2)) : Math.round(percepIVA),
         },
         include: {
           persona: true,
