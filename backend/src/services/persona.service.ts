@@ -344,6 +344,11 @@ export class PersonaService {
       orderBy: { createdAt: 'asc' },
     });
 
+    const withholdings = await prisma.taxWithholding.findMany({
+      where: { personaId: persona.id, type: 'RETENCION_SUFRIDA' },
+      orderBy: { date: 'asc' },
+    });
+
     const ledgerItems: any[] = [];
 
     orders.forEach((o) => {
@@ -390,6 +395,24 @@ export class PersonaService {
         reference: `Nota de Crédito #${cn.id}`,
         description: `${cn.creditNoteType.replace(/_/g, ' ')} ${cn.creditNoteNumber || 'INT-' + cn.id.toString().padStart(8, '0')} (${cn.reason})`,
         amount: Number(cn.totalAmount),
+      });
+    });
+
+    withholdings.forEach((w) => {
+      ledgerItems.push({
+        id: `withholding-${w.id}`,
+        date: w.date,
+        type: 'CREDIT',
+        reference: `Retención Cert. Nro ${w.number}`,
+        description: `Retención Recibida - ${w.taxType === 'IIBB' ? 'IIBB Bs.As.' : 'Ganancias'}`,
+        amount: Number(w.amount),
+        metadata: {
+          taxType: w.taxType,
+          number: w.number,
+          amount: Number(w.amount),
+          date: w.date,
+          jurisdiction: w.jurisdiction
+        }
       });
     });
 

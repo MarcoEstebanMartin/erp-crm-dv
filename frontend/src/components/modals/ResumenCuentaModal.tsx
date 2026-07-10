@@ -18,6 +18,7 @@ export default function ResumenCuentaModal({ client, onClose }: ResumenCuentaMod
   const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
   const [selectedCreditNote, setSelectedCreditNote] = useState<any | null>(null);
   const [selectedTransaction, setSelectedTransaction] = useState<any | null>(null);
+  const [selectedWithholding, setSelectedWithholding] = useState<any | null>(null);
   const [viewLoading, setViewLoading] = useState(false);
 
   // Obtener datos de la empresa desde localStorage
@@ -47,6 +48,7 @@ export default function ResumenCuentaModal({ client, onClose }: ResumenCuentaMod
           description: item.description,
           debit: isDebit ? Number(item.amount) : 0,
           credit: !isDebit ? Number(item.amount) : 0,
+          metadata: item.metadata
         };
       });
 
@@ -97,6 +99,15 @@ export default function ResumenCuentaModal({ client, onClose }: ResumenCuentaMod
   // Cargar y mostrar detalle del comprobante seleccionado
   const handleViewDetail = async (fullId: string) => {
     if (viewLoading) return;
+
+    if (fullId.startsWith('withholding-')) {
+      const tx = transactions.find(t => t.id === fullId);
+      if (tx && tx.metadata) {
+        setSelectedWithholding(tx.metadata);
+      }
+      return;
+    }
+
     setViewLoading(true);
     try {
       if (fullId.startsWith('order-')) {
@@ -242,7 +253,7 @@ export default function ResumenCuentaModal({ client, onClose }: ResumenCuentaMod
                   </tr>
                 ) : (
                   transactions.map((t, idx) => {
-                    const isClickable = t.id && (t.id.startsWith('order-') || t.id.startsWith('credit-note-') || t.id.startsWith('transaction-'));
+                    const isClickable = t.id && (t.id.startsWith('order-') || t.id.startsWith('credit-note-') || t.id.startsWith('transaction-') || t.id.startsWith('withholding-'));
                     return (
                       <tr key={idx} style={{ borderBottom: '1px solid #eee' }}>
                         {/* ID de control interno clickeable y con no-print */}
@@ -527,6 +538,57 @@ export default function ResumenCuentaModal({ client, onClose }: ResumenCuentaMod
         </div>
       )}
       
+      {/* Modal flotante secundario para visualizar el detalle de la Retención */}
+      {selectedWithholding && (
+        <div className="modal-overlay no-print" style={{ zIndex: 1100 }}>
+          <div className="modal-content" style={{ maxWidth: '400px', width: '90%', padding: '24px', borderRadius: '12px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '1px solid var(--border-color)', paddingBottom: '12px' }}>
+              <h3 style={{ margin: 0 }}>
+                Detalle de Retención
+              </h3>
+              <button
+                className="btn btn-ghost"
+                style={{ padding: '4px' }}
+                onClick={() => setSelectedWithholding(null)}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Info */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '0.9rem', lineHeight: '1.6' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f3f4f6', paddingBottom: '6px' }}>
+                <span style={{ color: 'var(--text-secondary)' }}>Tipo de Impuesto:</span>
+                <strong>{selectedWithholding.taxType === 'IIBB' ? 'Ingresos Brutos (IIBB)' : 'Ganancias'}</strong>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f3f4f6', paddingBottom: '6px' }}>
+                <span style={{ color: 'var(--text-secondary)' }}>Número Certificado:</span>
+                <strong>{selectedWithholding.number}</strong>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f3f4f6', paddingBottom: '6px' }}>
+                <span style={{ color: 'var(--text-secondary)' }}>Fecha de Carga:</span>
+                <span>{new Date(selectedWithholding.date).toLocaleDateString('es-AR')}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f3f4f6', paddingBottom: '6px' }}>
+                <span style={{ color: 'var(--text-secondary)' }}>Jurisdicción:</span>
+                <strong>{selectedWithholding.jurisdiction === 'AR-B' ? 'Prov. Buenos Aires (ARBA)' : 'Nacional / No aplica'}</strong>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px', fontSize: '1.2rem' }}>
+                <strong>Monto Retenido:</strong>
+                <strong style={{ color: 'var(--color-success)' }}>
+                  ${Number(selectedWithholding.amount).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                </strong>
+              </div>
+            </div>
+
+            {/* Botón de cierre */}
+            <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'flex-end' }}>
+              <button className="btn btn-primary" onClick={() => setSelectedWithholding(null)}>Cerrar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Styles for print mode */}
       <style>{`
         .print-only {
