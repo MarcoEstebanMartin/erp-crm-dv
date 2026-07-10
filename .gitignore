@@ -40,5 +40,6 @@ backend/certs/*.crt
 *.pdf
 *.xlsx
 *.xls
+backups_auditoria/
 
 

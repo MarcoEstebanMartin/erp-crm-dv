@@ -482,6 +482,7 @@ interface InvoiceOrderRequest {
   billingType: BillingType;
   paymentMethod?: 'CASH' | 'BANK_TRANSFER' | 'CHECK' | 'OTHER';
   paymentDescription?: string;
+  bankAccountId?: number;
 }
 
 /**
@@ -490,7 +491,7 @@ interface InvoiceOrderRequest {
  */
 export async function invoiceOrder(req: AuthenticatedRequest, res: Response): Promise<void> {
   const { id } = req.params;
-  const { billingType, paymentMethod, paymentDescription }: InvoiceOrderRequest = req.body;
+  const { billingType, paymentMethod, paymentDescription, bankAccountId: reqBankAccountId }: InvoiceOrderRequest = req.body;
   const adminId = req.user?.id;
   const userRole = req.user?.role;
 
@@ -664,25 +665,40 @@ export async function invoiceOrder(req: AuthenticatedRequest, res: Response): Pr
         let bankAccountId: number | undefined = undefined;
 
         if (paymentMethod === PaymentMethod.CASH) {
-          const activeDrawer = await tx.cashDrawer.findFirst({
+          let activeDrawer = await tx.cashDrawer.findFirst({
             where: {
+              userId: adminId,
               status: 'OPEN',
+              branch: {
+                in: [billingType === BillingType.OFFICIAL ? 'A' : 'X', 'CONSOLIDADA']
+              }
             },
           });
+
+          if (!activeDrawer) {
+            activeDrawer = await tx.cashDrawer.findFirst({
+              where: {
+                status: 'OPEN',
+                branch: {
+                  in: [billingType === BillingType.OFFICIAL ? 'A' : 'X', 'CONSOLIDADA']
+                }
+              },
+            });
+          }
           if (!activeDrawer) {
             throw new Error(`Debe abrir la Caja Grande antes de registrar cobros en efectivo.`);
           }
           cashDrawerId = activeDrawer.id;
         } else if (paymentMethod === PaymentMethod.BANK_TRANSFER) {
-          const defaultBank = await tx.bankAccount.findFirst();
-          if (!defaultBank) {
+          const selectedBankId = reqBankAccountId ? Number(reqBankAccountId) : (await tx.bankAccount.findFirst())?.id;
+          if (!selectedBankId) {
             throw new Error(`No se encontró ninguna cuenta bancaria configurada en el sistema.`);
           }
-          bankAccountId = defaultBank.id;
+          bankAccountId = selectedBankId;
 
           // Incrementar saldo del banco
           await tx.bankAccount.update({
-            where: { id: defaultBank.id },
+            where: { id: selectedBankId },
             data: { balance: { increment: totalSum } },
           });
         }

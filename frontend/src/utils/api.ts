@@ -258,11 +258,11 @@ export const api = {
     return res.order;
   },
 
-  invoiceOrder: async (id: number, billingType: BillingType, paymentMethod?: PaymentMethod, paymentDescription?: string) => {    
+  invoiceOrder: async (id: number, billingType: BillingType, paymentMethod?: PaymentMethod, paymentDescription?: string, bankAccountId?: number) => {    
 
     const res = await request(`/orders/${id}/invoice`, {
       method: 'POST',
-      body: JSON.stringify({ billingType, paymentMethod, paymentDescription })
+      body: JSON.stringify({ billingType, paymentMethod, paymentDescription, bankAccountId })
     });
     return res.order;
   },

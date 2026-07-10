@@ -172,37 +172,39 @@ export async function receivePurchaseOrder(req: AuthenticatedRequest, res: Respo
         // b. Manejar asignación a lote
         let createdLotId: number | null = null;
         const assignment = lotAssignments ? lotAssignments[item.productId] : null;
+        const lotNumber = (assignment && assignment.lotNumber) ? String(assignment.lotNumber) : 'S/L';
+        const expirationDate = (assignment && assignment.expirationDate) 
+          ? new Date(assignment.expirationDate) 
+          : new Date('2036-12-31T00:00:00Z');
 
-        if (assignment && assignment.lotNumber && assignment.expirationDate) {
-          // Buscar si el lote existe para el producto
-          let lot = await tx.productLot.findUnique({
-            where: {
-              productId_lotNumber: {
-                productId: item.productId,
-                lotNumber: String(assignment.lotNumber),
-              },
+        // Buscar si el lote existe para el producto
+        let lot = await tx.productLot.findUnique({
+          where: {
+            productId_lotNumber: {
+              productId: item.productId,
+              lotNumber: lotNumber,
+            },
+          },
+        });
+
+        if (lot) {
+          lot = await tx.productLot.update({
+            where: { id: lot.id },
+            data: {
+              stock: { increment: qty },
             },
           });
-
-          if (lot) {
-            lot = await tx.productLot.update({
-              where: { id: lot.id },
-              data: {
-                stock: { increment: qty },
-              },
-            });
-          } else {
-            lot = await tx.productLot.create({
-              data: {
-                productId: item.productId,
-                lotNumber: String(assignment.lotNumber),
-                expirationDate: new Date(assignment.expirationDate),
-                stock: qty,
-              },
-            });
-          }
-          createdLotId = lot.id;
+        } else {
+          lot = await tx.productLot.create({
+            data: {
+              productId: item.productId,
+              lotNumber: lotNumber,
+              expirationDate: expirationDate,
+              stock: qty,
+            },
+          });
         }
+        createdLotId = lot.id;
 
         // c. Registrar movimiento de stock
         await tx.stockMovement.create({

@@ -3501,30 +3501,32 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '14px' }}>
-                <div className="form-group">
-                  <label>Límite de Crédito CC ($)</label>
+              <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1.2fr 1fr', gap: '14px' }}>
+                <div className="form-group" style={{ display: 'flex', flexDirection: 'column' }}>
+                  <label style={{ fontSize: '0.8rem', fontWeight: 600, marginBottom: '6px', height: '18px', display: 'block', whiteSpace: 'nowrap' }}>Límite Crédito CC ($)</label>
                   <input
                     type="number"
                     className="input"
                     value={clientModal.data.creditLimit}
                     onChange={(e) => setClientModal({ ...clientModal, data: { ...clientModal.data, creditLimit: Number(e.target.value) } })}
+                    style={{ height: '38px', padding: '8px 12px', fontSize: '0.9rem', borderRadius: '6px', border: '1px solid var(--border-color)', boxSizing: 'border-box', width: '100%' }}
                   />
                 </div>
-                <div className="form-group">
-                  <label>Lista de Precios</label>
+                <div className="form-group" style={{ display: 'flex', flexDirection: 'column' }}>
+                  <label style={{ fontSize: '0.8rem', fontWeight: 600, marginBottom: '6px', height: '18px', display: 'block', whiteSpace: 'nowrap' }}>Lista de Precios</label>
                   <select
                     className="select"
                     value={clientModal.data.priceList}
                     onChange={(e) => setClientModal({ ...clientModal, data: { ...clientModal.data, priceList: e.target.value } })}
+                    style={{ height: '38px', padding: '8px 12px', fontSize: '0.9rem', borderRadius: '6px', border: '1px solid var(--border-color)', boxSizing: 'border-box', width: '100%', backgroundColor: '#fff', color: 'var(--text-primary)' }}
                   >
                     <option value="A">Lista Estándar A</option>
                     <option value="B">Lista Especial B</option>
                     <option value="C">Lista Distribuidor C</option>
                   </select>
                 </div>
-                <div className="form-group">
-                  <label>Descuento Fijo (%)</label>
+                <div className="form-group" style={{ display: 'flex', flexDirection: 'column' }}>
+                  <label style={{ fontSize: '0.8rem', fontWeight: 600, marginBottom: '6px', height: '18px', display: 'block', whiteSpace: 'nowrap' }}>Descuento Fijo (%)</label>
                   <input
                     type="number"
                     step="0.01"
@@ -3532,6 +3534,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
                     placeholder="ej: 5"
                     value={clientModal.data.discount || 0}
                     onChange={(e) => setClientModal({ ...clientModal, data: { ...clientModal.data, discount: Number(e.target.value) } })}
+                    style={{ height: '38px', padding: '8px 12px', fontSize: '0.9rem', borderRadius: '6px', border: '1px solid var(--border-color)', boxSizing: 'border-box', width: '100%' }}
                   />
                 </div>
               </div>

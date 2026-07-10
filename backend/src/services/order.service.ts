@@ -225,6 +225,26 @@ export class OrderService {
             }
           }
 
+          // Ajustar stock general si hay cambios en la cantidad
+          const diff = item.quantity - currentQuantity;
+          if (diff !== 0) {
+            await tx.product.update({
+              where: { id: item.productId },
+              data: { stock: { increment: diff } },
+            });
+
+            await tx.stockMovement.create({
+              data: {
+                productId: item.productId,
+                quantity: diff,
+                type: diff > 0 ? MovementType.IN : MovementType.OUT,
+                referenceId: `ADJUST-ARMADO-${order.id}`,
+                userId: order.sellerId,
+                reason: `Ajuste en armado de Pedido #${order.id} (${diff > 0 ? 'Devolución de faltante' : 'Descuento adicional'})`,
+              },
+            });
+          }
+
           await tx.orderItem.update({
             where: { id: item.id },
             data: { quantity: currentQuantity, weight: weightUpdate, subtotal },

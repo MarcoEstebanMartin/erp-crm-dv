@@ -66,6 +66,7 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
     immediatePayment: false,
     paymentMethod: 'CASH',
     cashDrawerId: '',
+    bankAccountId: '',
     checkNumber: '',
     checkIssuer: '',
     isEcheq: false
@@ -76,6 +77,7 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
   
   // Soporte de cajas múltiples y buscadores inteligentes
   const [activeDrawers, setActiveDrawers] = useState<any[]>([]);
+  const [bankAccounts, setBankAccounts] = useState<any[]>([]);
   const [clientSearchQuery, setClientSearchQuery] = useState('');
   const [showClientDropdown, setShowClientDropdown] = useState(false);
   const [productSearchQuery, setProductSearchQuery] = useState('');
@@ -157,6 +159,20 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
         setActiveDrawers(activeList);
       } catch (drawerErr) {
         setActiveDrawers([]);
+      }
+
+      // Cargar cuentas bancarias
+      try {
+        const banks = await api.getBankAccounts();
+        setBankAccounts(banks || []);
+        if (banks && banks.length > 0) {
+          setDirectInvoiceForm(prev => ({
+            ...prev,
+            bankAccountId: prev.bankAccountId || banks[0].id.toString()
+          }));
+        }
+      } catch (bankErr) {
+        setBankAccounts([]);
       }
 
       // 2. Cargar datos según la sub-tab activa
@@ -754,7 +770,7 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
     setErrorMsg(null);
     setSuccessMsg(null);
 
-    const { personaId, billingType, immediatePayment, paymentMethod, cashDrawerId } = directInvoiceForm;
+    const { personaId, billingType, immediatePayment, paymentMethod, cashDrawerId, bankAccountId } = directInvoiceForm;
 
     if (!personaId || !billingType || directCart.length === 0) {
       setErrorMsg('Por favor completa todos los campos y añade al menos un producto.');
@@ -779,6 +795,7 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
         billingType,
         paymentMethod: immediatePayment ? paymentMethod : undefined,
         cashDrawerId: immediatePayment && paymentMethod === 'CASH' ? Number(cashDrawerId) : undefined,
+        bankAccountId: immediatePayment && paymentMethod === 'BANK_TRANSFER' ? Number(bankAccountId) : undefined,
         items: directCart.map(item => ({ 
           productId: item.product.id, 
           quantity: item.quantity,
@@ -804,6 +821,7 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
         immediatePayment: false,
         paymentMethod: 'CASH',
         cashDrawerId: '',
+        bankAccountId: bankAccounts[0]?.id?.toString() || '',
         checkNumber: '',
         checkIssuer: '',
         isEcheq: false,
@@ -2162,6 +2180,26 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
                                 />
                                 <span style={{ fontSize: '0.8rem' }}>Es E-Cheq</span>
                               </label>
+                            </div>
+                          )}
+
+                          {directInvoiceForm.paymentMethod === 'BANK_TRANSFER' && (
+                            <div style={{ marginTop: '12px' }}>
+                              <label style={{ fontWeight: 600, fontSize: '0.78rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>Banco / Cuenta de Destino</label>
+                              <select
+                                className="select"
+                                value={directInvoiceForm.bankAccountId}
+                                onChange={(e) => setDirectInvoiceForm(prev => ({ ...prev, bankAccountId: e.target.value }))}
+                                style={{ fontSize: '0.85rem' }}
+                              >
+                                {bankAccounts.length === 0 ? (
+                                  <option value="">No hay cuentas configuradas</option>
+                                ) : (
+                                  bankAccounts.map(b => (
+                                    <option key={b.id} value={b.id}>{b.name} (Saldo: ${Number(b.balance).toLocaleString('es-AR')})</option>
+                                  ))
+                                )}
+                              </select>
                             </div>
                           )}
                         </div>

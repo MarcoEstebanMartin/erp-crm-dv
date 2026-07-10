@@ -207,19 +207,8 @@ export async function createCreditNote(req: AuthenticatedRequest, res: Response)
             },
           });
 
-          // Registrar movimiento de stock
-          await tx.stockMovement.create({
-            data: {
-              productId: Number(item.productId),
-              quantity: Number(item.quantity),
-              type: MovementType.IN,
-              referenceId: `NC-${creditNote.id}`,
-              userId,
-              reason: `Devolución del cliente: ${persona.name} (NC #${creditNoteNumber})`,
-            },
-          });
-
-          // Si hay lotes involucrados en la factura vinculada, devolvemos al primer lote encontrado de ese producto
+          // Si hay lotes involucrados en la factura vinculada, intentamos devolver a ese lote.
+          let assignedLotId: number | null = null;
           if (orderId) {
             const orderItem = await tx.orderItem.findFirst({
               where: {
@@ -232,7 +221,6 @@ export async function createCreditNote(req: AuthenticatedRequest, res: Response)
             });
 
             if (orderItem && orderItem.orderItemLots.length > 0) {
-              // Incrementar en el primer lote que se entregó
               const firstLot = orderItem.orderItemLots[0];
               await tx.productLot.update({
                 where: { id: firstLot.productLotId },
@@ -242,8 +230,60 @@ export async function createCreditNote(req: AuthenticatedRequest, res: Response)
                   },
                 },
               });
+              assignedLotId = firstLot.productLotId;
             }
           }
+
+          // Fallback: Si no pudimos asociar a un lote de la factura (o no hay factura),
+          // buscamos el lote 'S/L' o el primero existente del producto.
+          if (!assignedLotId) {
+            let defaultLot = await tx.productLot.findFirst({
+              where: { productId: Number(item.productId), lotNumber: 'S/L' }
+            });
+
+            if (!defaultLot) {
+              defaultLot = await tx.productLot.findFirst({
+                where: { productId: Number(item.productId) },
+                orderBy: { id: 'asc' }
+              });
+            }
+
+            if (defaultLot) {
+              await tx.productLot.update({
+                where: { id: defaultLot.id },
+                data: {
+                  stock: {
+                    increment: Number(item.quantity),
+                  },
+                },
+              });
+              assignedLotId = defaultLot.id;
+            } else {
+              // Si el producto no tiene absolutamente ningún lote registrado, creamos uno de contingencia
+              const newLot = await tx.productLot.create({
+                data: {
+                  productId: Number(item.productId),
+                  lotNumber: 'S/L',
+                  expirationDate: new Date('2036-12-31T00:00:00Z'),
+                  stock: Number(item.quantity)
+                }
+              });
+              assignedLotId = newLot.id;
+            }
+          }
+
+          // Registrar movimiento de stock
+          await tx.stockMovement.create({
+            data: {
+              productId: Number(item.productId),
+              quantity: Number(item.quantity),
+              type: MovementType.IN,
+              referenceId: `NC-${creditNote.id}`,
+              userId,
+              reason: `Devolución del cliente: ${persona.name} (NC #${creditNoteNumber})`,
+              productLotId: assignedLotId,
+            },
+          });
         }
       }
 

@@ -31,6 +31,8 @@ export default function FacturacionDashboard({ activeTab, setActiveTab }: Factur
     issuer: '',
     isEcheq: false
   });
+  const [bankAccounts, setBankAccounts] = useState<any[]>([]);
+  const [selectedBankId, setSelectedBankId] = useState<string>('');
   
   // Crear cliente modal
   const [clientModal, setClientModal] = useState({ open: false, name: '', cuit: '', address: '', phone: '', email: '' });
@@ -80,6 +82,13 @@ export default function FacturacionDashboard({ activeTab, setActiveTab }: Factur
         // Cargar caja operativa activa
         const active = await api.getActiveDrawer();
         setActiveDrawer(active);
+
+        // Cargar cuentas bancarias
+        const banks = await api.getBankAccounts();
+        setBankAccounts(banks || []);
+        if (banks && banks.length > 0) {
+          setSelectedBankId(banks[0].id.toString());
+        }
       } else if (normalizedTab === 'products') {
         const data = await api.getProducts(searchQuery);
         setProducts(data);
@@ -128,7 +137,8 @@ export default function FacturacionDashboard({ activeTab, setActiveTab }: Factur
         selectedOrder.id,
         billingType,
         immediatePayment ? paymentMethod : undefined,
-        paymentDescription
+        paymentDescription,
+        (immediatePayment && paymentMethod === 'BANK_TRANSFER') ? Number(selectedBankId) : undefined
       );
 
       setSuccessMsg(`✨ Pedido #${selectedOrder.id} facturado con éxito. Comprobante: ${updated.invoiceNumber}`);
@@ -380,6 +390,26 @@ export default function FacturacionDashboard({ activeTab, setActiveTab }: Factur
                         />
                         <span style={{ fontSize: '0.8rem' }}>Es E-Cheq</span>
                       </label>
+                    </div>
+                  )}
+
+                  {immediatePayment && paymentMethod === 'BANK_TRANSFER' && (
+                    <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      <label style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', fontWeight: 500 }}>Banco / Cuenta de Destino</label>
+                      <select
+                        className="select"
+                        value={selectedBankId}
+                        onChange={(e) => setSelectedBankId(e.target.value)}
+                        style={{ fontSize: '0.85rem', width: '100%', padding: '8px 10px', borderRadius: '6px' }}
+                      >
+                        {bankAccounts.length === 0 ? (
+                          <option value="">No hay cuentas configuradas</option>
+                        ) : (
+                          bankAccounts.map(b => (
+                            <option key={b.id} value={b.id}>{b.name} (Saldo: ${Number(b.balance).toLocaleString('es-AR')})</option>
+                          ))
+                        )}
+                      </select>
                     </div>
                   )}
                 </div>

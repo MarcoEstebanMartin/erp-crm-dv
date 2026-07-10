@@ -194,6 +194,7 @@ export async function getActiveDrawer(req: AuthenticatedRequest, res: Response):
   try {
     const drawer = await prisma.cashDrawer.findFirst({
       where: {
+        userId,
         status: 'OPEN',
       },
     });
@@ -221,6 +222,7 @@ export async function getActiveDrawers(req: AuthenticatedRequest, res: Response)
   try {
     const drawers = await prisma.cashDrawer.findMany({
       where: {
+        userId,
         status: 'OPEN',
       },
     });
@@ -431,14 +433,46 @@ export async function getBankAccounts(req: AuthenticatedRequest, res: Response):
     if (accounts.length === 0) {
       await prisma.bankAccount.createMany({
         data: [
-          { name: 'Banco Provincia Corriente', accountNumber: 'CTA-4321/0', balance: 500000.00 },
-          { name: 'Mercado Pago Distribuidora', accountNumber: 'CVU-0000003100012345678901', balance: 150000.00 },
-          { name: 'QR', accountNumber: 'QR-ARCA', balance: 0.00 },
+          { name: 'Mercado Pago Transferencias', accountNumber: 'CVU-0000003100012345678901', balance: 150000.00 },
+          { name: 'QR MP', accountNumber: 'QR-MP-DISTRIB', balance: 0.00 },
+          { name: 'Banco Provincia C.A', accountNumber: 'CTA-BP-CA-5678/9', balance: 250000.00 },
+          { name: 'Banco Provincia C/C', accountNumber: 'CTA-BP-CC-4321/0', balance: 500000.00 },
         ],
       });
       accounts = await prisma.bankAccount.findMany({
         orderBy: { name: 'asc' },
       });
+    } else {
+      // Renombrar cuentas existentes a la nueva nomenclatura
+      const renameMap = [
+        { old: 'Mercado Pago Distribuidora', new: 'Mercado Pago Transferencias' },
+        { old: 'QR', new: 'QR MP' },
+        { old: 'Banco Provincia Corriente', new: 'Banco Provincia C/C' }
+      ];
+
+      for (const mapping of renameMap) {
+        const found = accounts.find(a => a.name === mapping.old);
+        if (found) {
+          await prisma.bankAccount.update({
+            where: { id: found.id },
+            data: { name: mapping.new }
+          });
+        }
+      }
+
+      // Asegurar la existencia de "Banco Provincia C.A"
+      accounts = await prisma.bankAccount.findMany({
+        orderBy: { name: 'asc' },
+      });
+      const hasProvinciaCA = accounts.some(a => a.name === 'Banco Provincia C.A');
+      if (!hasProvinciaCA) {
+        await prisma.bankAccount.create({
+          data: { name: 'Banco Provincia C.A', accountNumber: 'CTA-BP-CA-5678/9', balance: 0.00 }
+        });
+        accounts = await prisma.bankAccount.findMany({
+          orderBy: { name: 'asc' },
+        });
+      }
     }
 
     res.status(200).json({

@@ -1,8 +1,7 @@
 import { Response } from 'express';
 import { AuthenticatedRequest } from '../types';
-import { PrismaClient, TransactionType, PaymentMethod, BillingType } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { TransactionType, PaymentMethod, BillingType } from '@prisma/client';
+import prisma from '../utils/prisma';
 
 // Helper para generar números de recibo
 const generateReceiptNumber = async (): Promise<string> => {
@@ -60,7 +59,7 @@ export const registerCollection = async (req: AuthenticatedRequest, res: Respons
       return res.status(401).json({ error: 'No autorizado' });
     }
 
-    const { personaId, amount, paymentMethod, billingType, description, orderId } = req.body;
+    const { personaId, amount, paymentMethod, billingType, description, orderId, bankAccountId } = req.body;
 
     if (!personaId || !amount || !paymentMethod || !billingType) {
       return res.status(400).json({ error: 'Faltan datos requeridos' });
@@ -110,7 +109,8 @@ export const registerCollection = async (req: AuthenticatedRequest, res: Respons
           : `Cobro generado vía móvil a cliente ${personaId}`),
         receiptNumber,
         verified: false, // Pendiente de rendición
-        orderId: orderId ? Number(orderId) : null
+        orderId: orderId ? Number(orderId) : null,
+        bankAccountId: bankAccountId ? Number(bankAccountId) : null
       },
       include: {
         persona: true
@@ -362,16 +362,49 @@ export const verifyRendicion = async (req: AuthenticatedRequest, res: Response) 
       }
     });
 
-    // Marcar transacciones como verificadas y asociarlas a la caja
-    await prisma.$transaction(
-      txs.map(t => prisma.transaction.update({
-        where: { id: t.id },
-        data: {
-          verified: true,
-          cashDrawerId: drawer.id
+    // Marcar transacciones como verificadas, asociarlas a la caja y actualizar saldo bancario si es transferencia
+    const defaultBank = await prisma.bankAccount.findFirst();
+    const operations: any[] = [];
+
+    for (const t of txs) {
+      if (t.paymentMethod === PaymentMethod.BANK_TRANSFER) {
+        const selectedBankId = t.bankAccountId || defaultBank?.id;
+        
+        operations.push(
+          prisma.transaction.update({
+            where: { id: t.id },
+            data: {
+              verified: true,
+              cashDrawerId: drawer.id,
+              bankAccountId: selectedBankId
+            }
+          })
+        );
+
+        if (selectedBankId) {
+          operations.push(
+            prisma.bankAccount.update({
+              where: { id: selectedBankId },
+              data: {
+                balance: { increment: t.amount }
+              }
+            })
+          );
         }
-      }))
-    );
+      } else {
+        operations.push(
+          prisma.transaction.update({
+            where: { id: t.id },
+            data: {
+              verified: true,
+              cashDrawerId: drawer.id
+            }
+          })
+        );
+      }
+    }
+
+    await prisma.$transaction(operations);
 
     // Guardar Audit Log
     await prisma.auditLog.create({

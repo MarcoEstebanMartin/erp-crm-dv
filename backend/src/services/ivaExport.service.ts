@@ -1,6 +1,4 @@
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import prisma from '../utils/prisma';
 
 // AFIP Format helpers
 const padZero = (num: number | string | null | undefined, length: number) => {
