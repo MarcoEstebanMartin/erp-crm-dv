@@ -57,5 +57,10 @@ export const recordPersonaPaymentSchema = z.object({
     type: z.enum(['INCOME', 'OUTCOME']).optional(),
     supplierInvoiceId: z.union([z.number(), z.string()]).optional().nullable(),
     orderId: z.number().optional().nullable(),
+    retenciones: z.array(z.object({
+      taxType: z.enum(['GANANCIAS', 'IIBB']),
+      number: z.string(),
+      amount: z.number().positive('El monto de la retención debe ser mayor a cero'),
+    })).optional(),
   }),
 });

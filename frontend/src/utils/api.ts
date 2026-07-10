@@ -193,7 +193,7 @@ export const api = {
     return api.updatePersona(id, clientData);
   },
 
-  registerPayment: async (personaId: number, paymentData: { amount: number, paymentMethod: string, description?: string, branch?: string, type?: string, supplierInvoiceId?: number, orderId?: number }) => {    
+  registerPayment: async (personaId: number, paymentData: { amount: number, paymentMethod: string, description?: string, branch?: string, type?: string, supplierInvoiceId?: number, orderId?: number, retenciones?: { taxType: 'GANANCIAS' | 'IIBB', number: string, amount: number }[] }) => {    
     const res = await request(`/personas/${personaId}/payments`, {
       method: 'POST',
       body: JSON.stringify(paymentData)

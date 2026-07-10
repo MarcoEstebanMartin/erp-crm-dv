@@ -93,12 +93,22 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
   const [paymentPendingInvoices, setPaymentPendingInvoices] = useState<any[]>([]);
   const [paymentSelectedInvoiceId, setPaymentSelectedInvoiceId] = useState<number | null>(null);
 
+  // Retenciones sufridas/recibidas en el cobro
+  const [paymentRetencionGananciasAmount, setPaymentRetencionGananciasAmount] = useState('');
+  const [paymentRetencionGananciasNumber, setPaymentRetencionGananciasNumber] = useState('');
+  const [paymentRetencionIibbAmount, setPaymentRetencionIibbAmount] = useState('');
+  const [paymentRetencionIibbNumber, setPaymentRetencionIibbNumber] = useState('');
+
   useEffect(() => {
     if (paymentModal && paymentModal.open) {
       fetchPaymentPendingInvoices(paymentModal.clientId);
     } else {
       setPaymentPendingInvoices([]);
       setPaymentSelectedInvoiceId(null);
+      setPaymentRetencionGananciasAmount('');
+      setPaymentRetencionGananciasNumber('');
+      setPaymentRetencionIibbAmount('');
+      setPaymentRetencionIibbNumber('');
     }
   }, [paymentModal]);
 
@@ -239,15 +249,37 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
     try {
       setPaymentLoading(true);
       setErrorMsg(null);
+
+      const retencionesToSend = [];
+      if (paymentRetencionGananciasAmount && Number(paymentRetencionGananciasAmount) > 0) {
+        retencionesToSend.push({
+          taxType: 'GANANCIAS' as const,
+          number: paymentRetencionGananciasNumber || `RET-GAN-${Date.now()}`,
+          amount: Number(paymentRetencionGananciasAmount)
+        });
+      }
+      if (paymentRetencionIibbAmount && Number(paymentRetencionIibbAmount) > 0) {
+        retencionesToSend.push({
+          taxType: 'IIBB' as const,
+          number: paymentRetencionIibbNumber || `RET-IIBB-${Date.now()}`,
+          amount: Number(paymentRetencionIibbAmount)
+        });
+      }
+
       await api.registerPayment(paymentModal!.clientId, {
         amount: Number(paymentAmount),
         paymentMethod,
         description: paymentDescription,
-        orderId: paymentSelectedInvoiceId || undefined
+        orderId: paymentSelectedInvoiceId || undefined,
+        retenciones: retencionesToSend.length > 0 ? retencionesToSend : undefined
       });
       setPaymentModal(null);
       setPaymentAmount('');
       setPaymentDescription('');
+      setPaymentRetencionGananciasAmount('');
+      setPaymentRetencionGananciasNumber('');
+      setPaymentRetencionIibbAmount('');
+      setPaymentRetencionIibbNumber('');
       setSuccessMsg('Cobro registrado exitosamente en cuenta corriente.');
       
       if (clientProfileModal && clientProfileModal.client.id === paymentModal!.clientId) {
@@ -3836,6 +3868,67 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
                   <option value="CHECK">Cheque</option>
                   <option value="OTHER">Otro</option>
                 </select>
+              </div>
+
+              {/* Sección de Retenciones Sufridas/Recibidas */}
+              <div style={{ borderTop: '1px dashed var(--border-color)', marginTop: '14px', paddingTop: '10px' }}>
+                <h4 style={{ margin: '0 0 10px 0', fontSize: '0.85rem', fontWeight: 600 }}>🏷️ Retenciones Recibidas (Opcional)</h4>
+                
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr', gap: '10px', marginBottom: '8px' }}>
+                  <div>
+                    <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>Monto Ganancias ($)</label>
+                    <input 
+                      type="number"
+                      step="0.01"
+                      className="input"
+                      placeholder="Monto"
+                      style={{ padding: '6px 8px', fontSize: '0.8rem' }}
+                      value={paymentRetencionGananciasAmount}
+                      onChange={(e) => setPaymentRetencionGananciasAmount(e.target.value)}
+                      disabled={paymentLoading}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>Nro Cert. Ganancias</label>
+                    <input 
+                      type="text"
+                      className="input"
+                      placeholder="Nro Certificado"
+                      style={{ padding: '6px 8px', fontSize: '0.8rem' }}
+                      value={paymentRetencionGananciasNumber}
+                      onChange={(e) => setPaymentRetencionGananciasNumber(e.target.value)}
+                      disabled={paymentLoading}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr', gap: '10px', marginBottom: '8px' }}>
+                  <div>
+                    <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>Monto IIBB BsAs ($)</label>
+                    <input 
+                      type="number"
+                      step="0.01"
+                      className="input"
+                      placeholder="Monto"
+                      style={{ padding: '6px 8px', fontSize: '0.8rem' }}
+                      value={paymentRetencionIibbAmount}
+                      onChange={(e) => setPaymentRetencionIibbAmount(e.target.value)}
+                      disabled={paymentLoading}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>Nro Cert. IIBB BsAs</label>
+                    <input 
+                      type="text"
+                      className="input"
+                      placeholder="Nro Certificado"
+                      style={{ padding: '6px 8px', fontSize: '0.8rem' }}
+                      value={paymentRetencionIibbNumber}
+                      onChange={(e) => setPaymentRetencionIibbNumber(e.target.value)}
+                      disabled={paymentLoading}
+                    />
+                  </div>
+                </div>
               </div>
               <div className="form-group">
                 <label>Descripción / Observaciones</label>

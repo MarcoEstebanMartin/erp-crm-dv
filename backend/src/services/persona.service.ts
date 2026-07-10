@@ -260,11 +260,33 @@ export class PersonaService {
         },
       });
 
+      // Guardar retenciones si corresponden
+      let retencionesTotal = 0;
+      if (data.retenciones && Array.isArray(data.retenciones)) {
+        for (const ret of data.retenciones) {
+          retencionesTotal += Number(ret.amount);
+          await tx.taxWithholding.create({
+            data: {
+              type: 'RETENCION_SUFRIDA',
+              taxType: ret.taxType, // "GANANCIAS" | "IIBB"
+              personaId: persona.id,
+              number: ret.number,
+              date: new Date(),
+              amount: Number(ret.amount),
+              jurisdiction: ret.taxType === 'IIBB' ? 'AR-B' : null, // Por defecto Buenos Aires (AR-B)
+            }
+          });
+        }
+      }
+
+      // El total que cancela la cuenta corriente es el monto cobrado + retenciones
+      const totalCredit = paymentAmount + retencionesTotal;
+
       const updatedPersona = await tx.persona.update({
         where: { id: persona.id },
         data: {
           outstandingBalance: {
-            decrement: resolvedType === TransactionType.INCOME ? paymentAmount : -paymentAmount,
+            decrement: resolvedType === TransactionType.INCOME ? totalCredit : -totalCredit,
           },
         },
       });
