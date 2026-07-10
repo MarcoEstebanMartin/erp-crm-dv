@@ -137,6 +137,12 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
   const [auditTotalPages, setAuditTotalPages] = useState(1);
     const [configTab, setConfigTab] = useState<string>('general');
   const [cajasSubTab, setCajasSubTab] = useState<'general' | 'rendiciones' | 'diarias'>('general');
+  
+  // Estados para Percepciones e Impuestos
+  const [perceptions, setPerceptions] = useState<any[]>([]);
+  const [editingPerception, setEditingPerception] = useState<any | null>(null);
+  const [showPerceptionModal, setShowPerceptionModal] = useState(false);
+  const [perceptionForm, setPerceptionForm] = useState({ name: '', aliquot: 0, affectsIvaBook: false, jurisdiction: '' });
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
@@ -387,8 +393,11 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
           const data = await api.getAuditLogs(auditPage, 10);
           setAuditLogs(data.logs);
           setAuditTotalPages(data.pagination.totalPages);
+        } else if (configTab === 'percepciones') {
+          const response = await api.getPerceptions();
+          setPerceptions(response.perceptions || []);
         }
-            }
+      }
     } catch (err: any) {
       setErrorMsg(err.message || 'Error al obtener datos.');
     }
@@ -2285,6 +2294,24 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
             >
               📜 Auditoría (Logs)
             </button>
+            <button 
+              type="button" 
+              className="btn" 
+              style={{ 
+                backgroundColor: configTab === 'percepciones' ? 'var(--color-primary)' : 'transparent',
+                color: configTab === 'percepciones' ? '#fff' : 'var(--text-primary)',
+                border: configTab === 'percepciones' ? '1px solid var(--color-primary)' : '1px solid var(--border-color)',
+                fontWeight: 600,
+                fontSize: '0.85rem',
+                padding: '8px 16px',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap'
+              }}
+              onClick={() => setConfigTab('percepciones')}
+            >
+              📊 Impuestos & Percepciones
+            </button>
           </div>
 
           {/* Sub-tab 1: General & Empresa Unificado */}
@@ -2544,6 +2571,189 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
                 <button className="btn btn-secondary" disabled={auditPage === 1} onClick={() => setAuditPage(p => p - 1)}>Anterior</button>
                 <span style={{ fontSize: '0.85rem' }}>Página {auditPage} de {auditTotalPages}</span>
                 <button className="btn btn-secondary" disabled={auditPage === auditTotalPages} onClick={() => setAuditPage(p => p + 1)}>Siguiente</button>
+              </div>
+            </div>
+          )}
+
+          {/* Sub-tab 7: Impuestos & Percepciones */}
+          {configTab === 'percepciones' && (
+            <div className="card" style={{ padding: '24px' }}>
+              <h3 className="card-title" style={{ margin: '0 0 4px 0' }}>
+                📊 Tipos de Percepciones & Alícuotas
+              </h3>
+              <p style={{ fontSize: '0.85rem', marginBottom: '20px', color: 'var(--text-secondary)' }}>
+                Gestión y parametrización de las alícuotas impositivas para facturación de venta directa y pedidos.
+              </p>
+              
+              <div className="table-container">
+                <table style={{ width: '100%' }}>
+                  <thead>
+                    <tr>
+                      <th>Código</th>
+                      <th>Nombre Percepción</th>
+                      <th>Tipo Impuesto</th>
+                      <th>Alícuota</th>
+                      <th>Afecta Libro IVA</th>
+                      <th>Jurisdicción</th>
+                      <th style={{ textAlign: 'right' }}>Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {perceptions.length === 0 ? (
+                      <tr>
+                        <td colSpan={7} style={{ textAlign: 'center', padding: '24px 0' }}>
+                          No hay tipos de percepciones parametrizadas.
+                        </td>
+                      </tr>
+                    ) : (
+                      perceptions.map((p) => (
+                        <tr key={p.id}>
+                          <td style={{ fontWeight: 600 }}>{p.code}</td>
+                          <td style={{ fontWeight: 600 }}>{p.name}</td>
+                          <td>
+                            <span className={`badge`} style={{ fontSize: '0.75rem', padding: '2px 8px', borderRadius: '4px', display: 'inline-block', fontWeight: 600, backgroundColor: p.taxType === 'IVA' ? '#E30613' : '#7F8C8D', color: '#fff' }}>
+                              {p.taxType}
+                            </span>
+                          </td>
+                          <td style={{ fontWeight: 'bold' }}>{Number(p.aliquot).toFixed(2)}%</td>
+                          <td>
+                            {p.affectsIvaBook ? (
+                              <span style={{ color: '#27AE60', fontWeight: 600 }}>Sí (Libro IVA)</span>
+                            ) : (
+                              <span style={{ color: 'var(--text-secondary)' }}>No</span>
+                            )}
+                          </td>
+                          <td>{p.jurisdiction || 'Nacional / General'}</td>
+                          <td style={{ textAlign: 'right' }}>
+                            <button
+                              type="button"
+                              className="btn btn-secondary btn-sm"
+                              onClick={() => {
+                                setEditingPerception(p);
+                                setPerceptionForm({
+                                  name: p.name,
+                                  aliquot: Number(p.aliquot),
+                                  affectsIvaBook: p.affectsIvaBook,
+                                  jurisdiction: p.jurisdiction || ''
+                                });
+                                setShowPerceptionModal(true);
+                              }}
+                            >
+                              Editar
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* Modal para Editar Percepción */}
+          {showPerceptionModal && editingPerception && (
+            <div className="modal-overlay" style={{ zIndex: 1300 }}>
+              <div className="modal-content" style={{ maxWidth: '450px', width: '90vw' }}>
+                <div className="modal-header">
+                  <h3>Editar {editingPerception.code}</h3>
+                  <button 
+                    type="button" 
+                    className="btn btn-ghost" 
+                    style={{ padding: '4px' }} 
+                    onClick={() => {
+                      setShowPerceptionModal(false);
+                      setEditingPerception(null);
+                    }}
+                  >
+                    ✕
+                  </button>
+                </div>
+                
+                <form onSubmit={async (e) => {
+                  e.preventDefault();
+                  setErrorMsg(null);
+                  setSuccessMsg(null);
+                  try {
+                    await api.updatePerception(editingPerception.id, {
+                      name: perceptionForm.name,
+                      aliquot: Number(perceptionForm.aliquot),
+                      affectsIvaBook: perceptionForm.affectsIvaBook,
+                      jurisdiction: perceptionForm.jurisdiction || null
+                    });
+                    
+                    setSuccessMsg('Percepción impositiva actualizada con éxito.');
+                    setShowPerceptionModal(false);
+                    setEditingPerception(null);
+                    // Refetch
+                    const response = await api.getPerceptions();
+                    setPerceptions(response.perceptions || []);
+                  } catch (err: any) {
+                    setErrorMsg(err.message || 'Error al actualizar la percepción.');
+                  }
+                }}>
+                  <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '16px', padding: '16px 0' }}>
+                    <div className="form-group">
+                      <label>Nombre de la Percepción</label>
+                      <input 
+                        type="text" 
+                        className="input" 
+                        value={perceptionForm.name} 
+                        onChange={(e) => setPerceptionForm(prev => ({ ...prev, name: e.target.value }))}
+                        required
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Alícuota (%)</label>
+                      <input 
+                        type="number" 
+                        step="0.01"
+                        min="0"
+                        max="100"
+                        className="input" 
+                        value={perceptionForm.aliquot} 
+                        onChange={(e) => setPerceptionForm(prev => ({ ...prev, aliquot: Number(e.target.value) }))}
+                        required
+                      />
+                    </div>
+                    <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '8px' }}>
+                      <input 
+                        type="checkbox" 
+                        id="affectsIvaBook"
+                        checked={perceptionForm.affectsIvaBook} 
+                        onChange={(e) => setPerceptionForm(prev => ({ ...prev, affectsIvaBook: e.target.checked }))}
+                      />
+                      <label htmlFor="affectsIvaBook" style={{ margin: 0, cursor: 'pointer' }}>Afecta al Libro IVA</label>
+                    </div>
+                    {editingPerception.taxType === 'IIBB' && (
+                      <div className="form-group">
+                        <label>Jurisdicción (Código AFIP)</label>
+                        <input 
+                          type="text" 
+                          className="input" 
+                          placeholder="Ej: AR-B, AR-N"
+                          value={perceptionForm.jurisdiction} 
+                          onChange={(e) => setPerceptionForm(prev => ({ ...prev, jurisdiction: e.target.value }))}
+                        />
+                      </div>
+                    )}
+                  </div>
+                  <div className="modal-footer" style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', borderTop: '1px solid var(--border-color)', paddingTop: '12px' }}>
+                    <button 
+                      type="button" 
+                      className="btn btn-secondary" 
+                      onClick={() => {
+                        setShowPerceptionModal(false);
+                        setEditingPerception(null);
+                      }}
+                    >
+                      Cancelar
+                    </button>
+                    <button type="submit" className="btn btn-primary">
+                      Guardar Cambios
+                    </button>
+                  </div>
+                </form>
               </div>
             </div>
           )}

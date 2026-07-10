@@ -103,6 +103,7 @@ export const ivaExportService = {
         neto: Number(order.netAmount),
         iva: Number(order.taxAmount),
         percepciones: Number(order.percepcionAmount),
+        percepcionesIva: Number(order.percepcionIvaAmount || 0),
         total: Number(order.totalAmount),
         sign: 1
       });
@@ -118,6 +119,7 @@ export const ivaExportService = {
         neto: Number(cn.netAmount),
         iva: Number(cn.taxAmount),
         percepciones: 0,
+        percepcionesIva: 0,
         total: Number(cn.totalAmount),
         sign: -1
       });
@@ -146,6 +148,7 @@ export const ivaExportService = {
         neto: Number(c.netAmount),
         iva: Number(c.taxAmount),
         percepciones: Number(c.percepcionAmount),
+        percepcionesIva: Number(c.percepcionIvaAmount || 0),
         total: Number(c.totalAmount),
         sign: c.invoiceType.includes('CREDITO') ? -1 : 1
     })).sort((a, b) => a.fecha.getTime() - b.fecha.getTime());
@@ -170,7 +173,8 @@ export const ivaExportService = {
       
       const absNeto = Math.abs(v.neto);
       const absIva = Math.abs(v.iva);
-      const absPerc = Math.abs(v.percepciones);
+      const absPerc = Math.abs(v.percepciones); // IIBB
+      const absPercIva = Math.abs((v as any).percepcionesIva || 0); // IVA RG 5329
       const absTotal = Math.abs(v.total);
 
       // Comprobantes (256 bytes)
@@ -187,7 +191,7 @@ export const ivaExportService = {
         formatCurrency(0) + // 15 No Gravado
         formatCurrency(0) + // 15 Perc No Categorizados
         formatCurrency(0) + // 15 Exentas
-        formatCurrency(0) + // 15 Perc Nacionales
+        formatCurrency(absPercIva) + // 15 Perc Nacionales (IVA)
         formatCurrency(absPerc) + // 15 Perc IIBB
         formatCurrency(0) + // 15 Perc Municipales
         formatCurrency(0) + // 15 Imp Internos
@@ -211,17 +215,17 @@ export const ivaExportService = {
           '\n';
       }
 
-      // Percepciones ARBA/SICORE approx (145 bytes)
-      if (absPerc > 0) {
+      // Percepciones IVA RG 5329 para AFIP (PercepcionesIva.txt)
+      if (absPercIva > 0) {
         percepcionesIvaTxt +=
-          '01' + // 2 Tipo
+          '01' + // 2 Tipo de Percepción (IVA)
           `${d.getDate().toString().padStart(2,'0')}/${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getFullYear()}` + // 10
-          parsedInv.ptoVenta.padStart(15, '0') + // 15? Format might vary
-          parsedInv.cbte.substring(16) + // 4 (part of cbte?)
+          parsedInv.ptoVenta.padStart(15, '0') + // 15
+          parsedInv.cbte.substring(16) + // 4
           padString('', 7) + 
           formatCurrency(absTotal, 15) + 
-          formatCurrency(absNeto, 15) +
-          '\n'; // Placeholder structure, real one requires exact specs
+          formatCurrency(absPercIva, 15) + // Se guarda el monto de percepción de IVA en el archivo
+          '\n';
       }
     }
 
@@ -254,7 +258,7 @@ export const ivaExportService = {
           formatCurrency(absTotal) + // 15
           formatCurrency(0) + // 15 no gravado
           formatCurrency(0) + // 15 exentas
-          formatCurrency(0) + // 15 pago a cuenta IVA
+          formatCurrency(Math.abs(c.percepcionesIva)) + // 15 pago a cuenta IVA (Percepciones IVA sufridas)
           formatCurrency(0) + // 15 pago a cuenta otros
           formatCurrency(absPerc) + // 15 perc IIBB
           formatCurrency(0) + // 15 perc municipales

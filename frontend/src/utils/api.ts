@@ -789,6 +789,17 @@ export const api = {
 
   getAutofillSales: async (weekStart: string) => {
     return await request(`/admin/reports/weekly/autofill-sales?weekStart=${encodeURIComponent(weekStart)}`);
+  },
+
+  getPerceptions: async () => {
+    return await request('/perceptions');
+  },
+
+  updatePerception: async (id: number, perceptionData: { name?: string; aliquot?: number; affectsIvaBook?: boolean; jurisdiction?: string | null }) => {
+    return await request(`/perceptions/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(perceptionData)
+    });
   }
 };
 

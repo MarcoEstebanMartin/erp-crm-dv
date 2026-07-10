@@ -24,6 +24,7 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
   const [personas, setPersonas] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
   const [creditNotes, setCreditNotes] = useState<any[]>([]);
+  const [ivaPerceptionAliquot, setIvaPerceptionAliquot] = useState(3.00);
 
   // Estados para Notas de Crédito
   const [showCreditNoteModal, setShowCreditNoteModal] = useState(false);
@@ -133,6 +134,17 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
       // Cargar productos para facturación directa
       const allProducts = await api.getProducts('');
       setProducts(allProducts);
+
+      // Cargar alícuota de percepción de IVA activa
+      try {
+        const response = await api.getPerceptions();
+        const pIva = response.perceptions?.find((p: any) => p.code === 'IVA_5329');
+        if (pIva) {
+          setIvaPerceptionAliquot(Number(pIva.aliquot));
+        }
+      } catch (e) {
+        console.error('Error fetching perceptions rate', e);
+      }
 
       // Cargar cajas operativas activas
       try {
@@ -592,36 +604,38 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
     let subtotalSum = directCart.reduce((sum, item) => sum + item.subtotal, 0);
     let net = subtotalSum;
     let tax = 0;
-    let percepcion = 0;
+    let percepIIBB = 0;
+    let percepIVA = 0;
     let total = subtotalSum;
 
     if (directInvoiceForm.billingType === 'OFFICIAL') {
-      net = subtotalSum / 1.21;
-      tax = subtotalSum - net;
-
       const isFacturaA = selectedDirectClient && selectedDirectClient.cuit && selectedDirectClient.cuit.replace(/-/g, '').length === 11;
       if (isFacturaA) {
         const iibbAliquot = Number(selectedDirectClient.iibbAliquot || 0);
-        if (iibbAliquot > 0) {
-          net = subtotalSum / (1.21 + (iibbAliquot / 100));
-          tax = net * 0.21;
-          percepcion = net * (iibbAliquot / 100);
-        }
+        net = subtotalSum / (1.21 + (iibbAliquot / 100) + (ivaPerceptionAliquot / 100));
+        tax = net * 0.21;
+        percepIIBB = net * (iibbAliquot / 100);
+        percepIVA = net * (ivaPerceptionAliquot / 100);
+      } else {
+        net = subtotalSum / 1.21;
+        tax = subtotalSum - net;
       }
     } else {
       net = subtotalSum;
       tax = 0;
-      percepcion = 0;
+      percepIIBB = 0;
+      percepIVA = 0;
     }
 
     const isFacturaA = directInvoiceForm.billingType === 'OFFICIAL' && selectedDirectClient && selectedDirectClient.cuit && selectedDirectClient.cuit.replace(/-/g, '').length === 11;
     return {
       net: isFacturaA ? Number(net.toFixed(2)) : Math.round(net),
       tax: isFacturaA ? Number(tax.toFixed(2)) : Math.round(tax),
-      percepcion: isFacturaA ? Number(percepcion.toFixed(2)) : Math.round(percepcion),
+      percepcion: isFacturaA ? Number(percepIIBB.toFixed(2)) : Math.round(percepIIBB),
+      percepcionIva: isFacturaA ? Number(percepIVA.toFixed(2)) : Math.round(percepIVA),
       total: Math.round(total)
     };
-  }, [directCart, directInvoiceForm.billingType, selectedDirectClient]);
+  }, [directCart, directInvoiceForm.billingType, selectedDirectClient, ivaPerceptionAliquot]);
 
   // --- MANEJADORES DE SELECCION ---
   const handleSelectClient = (c: any) => {
@@ -2227,6 +2241,12 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
                               <span style={{ fontWeight: 600, color: 'var(--color-warning)' }}>${directBillingTotals.percepcion.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span>
                             </div>
                           )}
+                          {directBillingTotals.percepcionIva > 0 && (
+                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                              <span style={{ color: 'var(--text-secondary)' }}>Percep. IVA RG 5329 ({ivaPerceptionAliquot}%):</span>
+                              <span style={{ fontWeight: 600, color: 'var(--color-warning)' }}>${directBillingTotals.percepcionIva.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span>
+                            </div>
+                          )}
                           <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '8px', marginTop: '4px', display: 'flex', justifyContent: 'space-between', fontSize: '1.05rem', fontWeight: 700 }}>
                             <span>Total Facturado:</span>
                             <span className={directInvoiceForm.billingType === 'OFFICIAL' ? 'text-official' : 'text-internal'} style={{ fontWeight: 800, fontSize: '1.2rem' }}>${directBillingTotals.total.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span>
@@ -3277,8 +3297,17 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
 
                         {Number(viewInvoiceModal.percepcionAmount || 0) > 0 && (
                           <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #E5E5EA', padding: '3px 0' }}>
-                            <span style={{ color: 'var(--text-secondary)' }}>Percep. de IVA RG 5329:</span>
+                            <span style={{ color: 'var(--text-secondary)' }}>
+                              Percep. IIBB ({viewInvoiceModal.persona?.province || (viewInvoiceModal.persona?.address?.includes('CABA') ? 'CABA' : 'Bs.As.')}):
+                            </span>
                             <span style={{ fontWeight: 600 }}>${Number(viewInvoiceModal.percepcionAmount).toLocaleString('es-AR', decimalOptions)}</span>
+                          </div>
+                        )}
+
+                        {Number(viewInvoiceModal.percepcionIvaAmount || 0) > 0 && (
+                          <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #E5E5EA', padding: '3px 0' }}>
+                            <span style={{ color: 'var(--text-secondary)' }}>Percep. de IVA RG 5329:</span>
+                            <span style={{ fontWeight: 600 }}>${Number(viewInvoiceModal.percepcionIvaAmount).toLocaleString('es-AR', decimalOptions)}</span>
                           </div>
                         )}
 

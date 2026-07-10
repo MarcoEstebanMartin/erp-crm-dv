@@ -30,6 +30,7 @@ async function main() {
   await prisma.rubro.deleteMany({});
   await prisma.user.deleteMany({});
   await prisma.weeklyReport.deleteMany({});
+  await prisma.perceptionType.deleteMany({});
 
   console.log('🧹 Limpieza de tablas completada.');
 
@@ -195,6 +196,20 @@ async function main() {
   } else {
     console.log('⚠️ No se encontró products_data.json en prisma folder.');
   }
+
+  // 6. Crear los Tipos de Percepciones por Defecto
+  console.log('🌱 Creando tipos de percepciones...');
+  const perceptionsData = [
+    { code: 'IVA_5329', name: 'Percepción de IVA RG 5329', taxType: 'IVA', aliquot: 3.00, affectsIvaBook: true, jurisdiction: null },
+    { code: 'IIBB_MN', name: 'Percepción IIBB Misiones', taxType: 'IIBB', aliquot: 3.31, affectsIvaBook: false, jurisdiction: 'AR-N' },
+    { code: 'IIBB_CR', name: 'Percepción IIBB Corrientes', taxType: 'IIBB', aliquot: 2.90, affectsIvaBook: false, jurisdiction: 'AR-W' },
+    { code: 'IIBB_BA', name: 'Percepción IIBB Buenos Aires (ARBA)', taxType: 'IIBB', aliquot: 4.00, affectsIvaBook: false, jurisdiction: 'AR-B' }
+  ];
+  for (const p of perceptionsData) {
+    await prisma.perceptionType.create({ data: p });
+  }
+  console.log('🌱 Tipos de percepciones creados con éxito.');
+
   console.log('✨ Proceso de siembra finalizado con éxito.');
 }
 
