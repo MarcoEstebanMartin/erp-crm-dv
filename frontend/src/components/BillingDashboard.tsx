@@ -98,6 +98,11 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
   const [showWithholdingModal, setShowWithholdingModal] = useState(false);
   const [viewInvoiceModal, setViewInvoiceModal] = useState<any | null>(null);
 
+  // Estados para autocompletado de clientes en el modal de retenciones
+  const [withholdingClientSearchQuery, setWithholdingClientSearchQuery] = useState('');
+  const [showWithholdingClientDropdown, setShowWithholdingClientDropdown] = useState(false);
+  const [activeWithholdingClientSuggestionIdx, setActiveWithholdingClientSuggestionIdx] = useState(0);
+
   // Estados para Registro de Pagos a Proveedores
   const [paymentModal, setPaymentModal] = useState<{ open: boolean; invoice: any } | null>(null);
   const [paymentAmount, setPaymentAmount] = useState('');
@@ -299,6 +304,19 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
     ).slice(0, 10);
   }, [cnClientSearchQuery, clientsOnly, selectedCNClient]);
 
+  // --- AUTOCOMPLETADO DE CLIENTES EN RETENCIONES ---
+  const filteredWithholdingClients = useMemo(() => {
+    const selected = personas.find(p => p.id === Number(withholdingForm.personaId));
+    if (!withholdingClientSearchQuery || (selected && selected.name === withholdingClientSearchQuery)) {
+      return [];
+    }
+    const q = withholdingClientSearchQuery.toLowerCase();
+    return clientsOnly.filter(c => 
+      c.name.toLowerCase().includes(q) || 
+      (c.cuit && c.cuit.replace(/-/g, '').includes(q))
+    ).slice(0, 10);
+  }, [withholdingClientSearchQuery, clientsOnly, personas, withholdingForm.personaId]);
+
   // --- AUTOCOMPLETADO DE PRODUCTOS EN NOTA DE CREDITO ---
   const filteredCNProductsSuggestions = useMemo(() => {
     const selectedProd = products.find(p => p.id === Number(selectedCNProduct));
@@ -320,6 +338,19 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
   useEffect(() => {
     setActiveCNClientSuggestionIdx(0);
   }, [cnClientSearchQuery]);
+
+  useEffect(() => {
+    setActiveWithholdingClientSuggestionIdx(0);
+  }, [withholdingClientSearchQuery]);
+
+  const handleSelectWithholdingClient = (client: any) => {
+    setWithholdingClientSearchQuery(client.name);
+    setWithholdingForm(prev => ({
+      ...prev,
+      personaId: String(client.id)
+    }));
+    setShowWithholdingClientDropdown(false);
+  };
 
   const handleSelectCNClient = async (client: any) => {
     setCnClientSearchQuery(client.name);
@@ -832,9 +863,9 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
     setErrorMsg(null);
     setSuccessMsg(null);
 
-    const { type, taxType, personaId, number, date, amount, jurisdiction } = withholdingForm;
+    const { taxType, personaId, number, date, amount } = withholdingForm;
 
-    if (!type || !taxType || !personaId || !number || !date || !amount) {
+    if (!taxType || !personaId || !number || !date || !amount) {
       setErrorMsg('Por favor complete todos los campos obligatorios.');
       return;
     }
@@ -842,16 +873,16 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
     try {
       setLoading(true);
       await api.createTaxWithholding({
-        type,
+        type: 'RETENCION_SUFRIDA',
         taxType,
         personaId: Number(personaId),
         number,
         date: new Date(date).toISOString(),
         amount: Number(amount),
-        jurisdiction: taxType === 'IIBB' ? jurisdiction : null
+        jurisdiction: taxType === 'IIBB' ? 'AR-B' : null
       });
 
-      setSuccessMsg('✅ Movimiento de retención/percepción registrado con éxito.');
+      setSuccessMsg('✅ Movimiento de retención registrado con éxito.');
       setShowWithholdingModal(false);
       // Reset form
       setWithholdingForm({
@@ -863,6 +894,7 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
         amount: '',
         jurisdiction: 'AR-B'
       });
+      setWithholdingClientSearchQuery('');
       loadData();
     } catch (err: any) {
       setErrorMsg(err.message || 'Error al registrar el comprobante impositivo.');
@@ -1426,7 +1458,16 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
             <button 
               className="btn btn-primary" 
               onClick={() => {
-                setWithholdingForm(prev => ({ ...prev, type: 'RETENCION_SUFRIDA' }));
+                setWithholdingForm({
+                  type: 'RETENCION_SUFRIDA',
+                  taxType: 'IIBB',
+                  personaId: '',
+                  number: '',
+                  date: new Date().toISOString().split('T')[0],
+                  amount: '',
+                  jurisdiction: 'AR-B'
+                });
+                setWithholdingClientSearchQuery('');
                 setShowWithholdingModal(true);
               }}
               style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
@@ -1592,27 +1633,11 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
         <div className="modal-overlay">
           <div className="modal-content" style={{ maxWidth: '480px' }}>
             <div className="modal-header">
-              <h3>
-                {withholdingForm.type.startsWith('PERCEPCION') ? 'Cargar Percepción Impuesto' : 'Ingresar Certificado de Retención'}
-              </h3>
+              <h3>Ingresar Certificado de Retención</h3>
               <button className="btn btn-ghost" style={{ padding: '4px' }} onClick={() => setShowWithholdingModal(false)}><X size={18} /></button>
             </div>
             <form onSubmit={handleCreateWithholdingSubmit}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <div className="form-group">
-                  <label>Tipo Movimiento</label>
-                  <select
-                    className="select"
-                    value={withholdingForm.type}
-                    onChange={(e) => setWithholdingForm(prev => ({ ...prev, type: e.target.value }))}
-                    required
-                  >
-                    <option value="RETENCION_SUFRIDA">Retención Sufrida (Cliente nos retiene)</option>
-                    <option value="RETENCION_PRACTICADA">Retención Practicada (Retenemos a Proveedor)</option>
-                    <option value="PERCEPCION_SUFRIDA">Percepción Sufrida (Proveedor nos recarga)</option>
-                    <option value="PERCEPCION_PRACTICADA">Percepción Practicada (Recargamos en Venta)</option>
-                  </select>
-                </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '12px' }}>
                 <div className="form-group">
                   <label>Impuesto</label>
                   <select
@@ -1622,33 +1647,72 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
                     required
                   >
                     <option value="IIBB">Ingresos Brutos (IIBB)</option>
-                    <option value="IVA">IVA</option>
                     <option value="GANANCIAS">Ganancias</option>
                   </select>
                 </div>
               </div>
 
-              <div className="form-group">
-                <label>
-                  {['RETENCION_SUFRIDA', 'PERCEPCION_PRACTICADA'].includes(withholdingForm.type) ? 'Cliente' : 'Proveedor'}
-                </label>
-                <select
-                  className="select"
-                  value={withholdingForm.personaId}
-                  onChange={(e) => setWithholdingForm(prev => ({ ...prev, personaId: e.target.value }))}
-                  required
-                >
-                  <option value="">Seleccione Persona...</option>
-                  {['RETENCION_SUFRIDA', 'PERCEPCION_PRACTICADA'].includes(withholdingForm.type) ? (
-                    clientsOnly.map(p => (
-                      <option key={p.id} value={p.id}>{p.name} (CUIT: {p.cuit})</option>
-                    ))
-                  ) : (
-                    providersOnly.map(p => (
-                      <option key={p.id} value={p.id}>{p.name} (CUIT: {p.cuit})</option>
-                    ))
-                  )}
-                </select>
+              {/* Buscador de Cliente Filtrable con Input */}
+              <div className="form-group" style={{ position: 'relative' }}>
+                <label>Cliente</label>
+                <input
+                  type="text"
+                  className="input"
+                  placeholder="Escribí para buscar cliente por nombre o CUIT..."
+                  value={withholdingClientSearchQuery}
+                  onChange={(e) => {
+                    setWithholdingClientSearchQuery(e.target.value);
+                    setShowWithholdingClientDropdown(true);
+                  }}
+                  onFocus={() => setShowWithholdingClientDropdown(true)}
+                  onBlur={() => setTimeout(() => setShowWithholdingClientDropdown(false), 250)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'ArrowDown') {
+                      e.preventDefault();
+                      setShowWithholdingClientDropdown(true);
+                      setActiveWithholdingClientSuggestionIdx((prev: number) => 
+                        filteredWithholdingClients.length > 0 ? (prev + 1) % filteredWithholdingClients.length : 0
+                      );
+                    } else if (e.key === 'ArrowUp') {
+                      e.preventDefault();
+                      setShowWithholdingClientDropdown(true);
+                      setActiveWithholdingClientSuggestionIdx((prev: number) => 
+                        filteredWithholdingClients.length > 0 ? (prev - 1 + filteredWithholdingClients.length) % filteredWithholdingClients.length : 0
+                      );
+                    } else if (e.key === 'Enter') {
+                      if (showWithholdingClientDropdown && filteredWithholdingClients.length > 0) {
+                        e.preventDefault();
+                        handleSelectWithholdingClient(filteredWithholdingClients[activeWithholdingClientSuggestionIdx]);
+                      }
+                    }
+                  }}
+                  style={{ fontSize: '0.9rem' }}
+                  required={!withholdingForm.personaId}
+                />
+                {showWithholdingClientDropdown && filteredWithholdingClients.length > 0 && (
+                  <div className="suggestions-list" style={{ position: 'absolute', zIndex: 100, width: '100%', maxHeight: '200px', overflowY: 'auto', backgroundColor: '#fff', border: '1px solid var(--border-color)', borderRadius: '4px', boxShadow: 'var(--shadow-md)' }}>
+                    {filteredWithholdingClients.map((c, idx) => {
+                      const isActive = idx === activeWithholdingClientSuggestionIdx;
+                      return (
+                        <div
+                          key={c.id}
+                          className={`suggestion-item ${isActive ? 'active' : ''}`}
+                          onMouseDown={() => handleSelectWithholdingClient(c)}
+                          onMouseEnter={() => setActiveWithholdingClientSuggestionIdx(idx)}
+                          style={{
+                            backgroundColor: isActive ? '#e8f0fe' : 'inherit',
+                            cursor: 'pointer',
+                            padding: '8px 12px',
+                            fontSize: '0.85rem',
+                            borderBottom: '1px solid #f0f0f0'
+                          }}
+                        >
+                          <strong>{c.name}</strong> <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>(CUIT: {c.cuit || 'S/D'})</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '12px' }}>
@@ -1675,7 +1739,7 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '12px' }}>
                 <div className="form-group">
                   <label>Importe ($)</label>
                   <input
@@ -1688,21 +1752,6 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
                     required
                   />
                 </div>
-                {withholdingForm.taxType === 'IIBB' && (
-                  <div className="form-group">
-                    <label>Jurisdicción (IIBB)</label>
-                    <select
-                      className="select"
-                      value={withholdingForm.jurisdiction}
-                      onChange={(e) => setWithholdingForm(prev => ({ ...prev, jurisdiction: e.target.value }))}
-                    >
-                      <option value="AR-B">Prov. Buenos Aires (ARBA)</option>
-                      <option value="AR-C">CABA (AGIP)</option>
-                      <option value="AR-S">Santa Fe</option>
-                      <option value="AR-X">Córdoba</option>
-                    </select>
-                  </div>
-                )}
               </div>
 
               <div className="modal-footer" style={{ marginTop: '20px' }}>
