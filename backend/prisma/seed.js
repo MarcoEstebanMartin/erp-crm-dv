@@ -51,6 +51,9 @@ async function main() {
   const uMariaJose = await prisma.user.create({
     data: { username: 'maria_jose', passwordHash: await pwhash('mariajose2026-Erp!'), role: 'VENDEDOR' }
   });
+  const uOficina = await prisma.user.create({
+    data: { username: 'OFICINA', passwordHash: await pwhash('oficina2026-Erp!'), role: 'VENDEDOR' }
+  });
 
   // Administración (Dario y Agustin)
   const uDario = await prisma.user.create({
@@ -71,14 +74,15 @@ async function main() {
   await prisma.user.create({ data: { username: 'thiago', passwordHash: await pwhash('thiago2026-Erp!'), role: 'DEPOSITO' } });
   await prisma.user.create({ data: { username: 'rocio', passwordHash: await pwhash('rocio2026-Erp!'), role: 'DEPOSITO' } });
 
-  console.log('👥 11 Usuarios del equipo creados y listos.');
+  console.log('👥 12 Usuarios del equipo creados y listos.');
 
   // Map of seller name in JSON -> Seller user ID in DB
   const sellerIdMap = {
     'Diego': uDiego.id,
     'Fabian': uFabian.id,
     'Norberto': uNorberto.id,
-    'Maria Jose': uMariaJose.id
+    'Maria Jose': uMariaJose.id,
+    'OFICINA': uOficina.id
   };
 
   // 3. Cargar Clientes desde el JSON importado de Excel

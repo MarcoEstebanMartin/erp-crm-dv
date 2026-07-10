@@ -22089,9 +22089,9 @@
     "discount": 0,
     "creditLimit": 0,
     "outstandingBalance": 0,
-    "isClient": true,
+    "isClient": false,
     "isProvider": false,
-    "isSeller": false,
+    "isSeller": true,
     "isCommissionAgent": false,
     "route": "OFICINA",
     "sellerName": null
