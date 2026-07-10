@@ -1866,14 +1866,14 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
                   <th>CUIT</th>
                   <th>Contacto</th>
                   <th>Saldo C/C</th>
-                  <th>Vendedor</th>
+                  {personaRoleFilter === 'client' && <th>Vendedor</th>}
                   <th>Acción</th>
                 </tr>
               </thead>
               <tbody>
                 {clients.length === 0 ? (
                   <tr>
-                    <td colSpan={6} style={{ textAlign: 'center', padding: '24px 0' }}>No se encontraron personas registradas.</td>
+                    <td colSpan={personaRoleFilter === 'client' ? 6 : 5} style={{ textAlign: 'center', padding: '24px 0' }}>No se encontraron personas registradas.</td>
                   </tr>
                 ) : (
                   clients.map((c) => {
@@ -1922,9 +1922,11 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
                         <td style={{ fontWeight: 600, color: balanceColor }}>
                           {balanceText}
                         </td>
-                        <td style={{ fontWeight: 500 }}>
-                          {c.seller?.username || 'Sin vendedor'}
-                        </td>
+                        {personaRoleFilter === 'client' && (
+                          <td style={{ fontWeight: 500 }}>
+                            {c.seller?.username || 'Sin vendedor'}
+                          </td>
+                        )}
                         <td>
                           <div style={{ display: 'flex', gap: '8px' }}>
                             <button className="btn btn-secondary" style={{ padding: '6px 10px', fontSize: '0.8rem' }} onClick={() => handleViewClientProfile(c)}>
