@@ -1758,8 +1758,8 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
                                               </svg>
                                             </a>
                                           )}
-                                          <button className="btn btn-ghost" style={{ padding: '6px 10px', fontSize: '0.78rem' }} onClick={() => handleViewClientProfile(d)}>
-                                            Ficha
+                                          <button className="btn btn-ghost" style={{ padding: '6px 10px', fontSize: '0.78rem' }} onClick={() => setShowResumenModal(d)}>
+                                            Resumen de cuenta
                                           </button>
                                           <button className="btn btn-ghost" style={{ padding: '6px 10px', fontSize: '0.78rem', color: '#137333' }} onClick={() => setPaymentModal({ open: true, clientId: d.id, clientName: d.name })}>
                                             Cobrar
