@@ -1048,7 +1048,7 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
                 className="input"
                 value={salesInvoiceTypeFilter}
                 onChange={(e) => setSalesInvoiceTypeFilter(e.target.value as any)}
-                style={{ width: '240px', fontSize: '0.85rem', height: '36px' }}
+                style={{ width: '240px', fontSize: '0.85rem', height: '36px', padding: '0 10px', lineHeight: 'normal', boxSizing: 'border-box' }}
               >
                 <option value="ALL">Todas las Sucursales</option>
                 <option value="OFFICIAL">Sucursal A (Oficial)</option>
