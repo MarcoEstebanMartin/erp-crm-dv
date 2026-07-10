@@ -18,3 +18,9 @@ Este archivo define las reglas de comportamiento, estética y calidad profesiona
 - **Copias de Seguridad (Backups)**: Antes de realizar operaciones de riesgo con expresiones regulares, scripts automatizados o reemplazos masivos, hacer una copia de seguridad del archivo (ej. `.bak`) en la carpeta del proyecto.
 - **Verificación de Reversiones**: Nunca utilizar `git checkout` o `git restore` sobre código de trabajo sin antes revisar el estado del repositorio (`git status`) para evitar la pérdida accidental de cambios no confirmados.
 
+## 4. Base de Datos y Migraciones (Prisma / PostgreSQL)
+- **Migraciones como Única Fuente de Verdad**: Todo cambio estructural en la base de datos debe realizarse a través de migraciones de Prisma (`npx prisma migrate dev`), nunca alterando la base de datos de producción o test de forma directa o manual.
+- **Mapeo de Objetos SQL Nativos**: Si se requieren objetos nativos de PostgreSQL (como la secuencia `movement_seq`), deben declararse al principio del archivo SQL de la migración utilizando cláusulas seguras (`CREATE SEQUENCE IF NOT EXISTS`).
+- **Despliegues en Nuevos Entornos / Producción**: Utilizar siempre `npx prisma migrate deploy` para aplicar las migraciones de forma silenciosa y automática en servidores de test, staging o producción.
+- **Evitar Colisiones en Seeds**: En los scripts de semilla (seed), evitar definir manualmente valores para campos autogenerados o secuenciales (como `movementId`), dejando que la base de datos se encargue de ello de manera automática.
+
