@@ -612,10 +612,14 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
       const isFacturaA = selectedDirectClient && selectedDirectClient.cuit && selectedDirectClient.cuit.replace(/-/g, '').length === 11;
       if (isFacturaA) {
         const iibbAliquot = Number(selectedDirectClient.iibbAliquot || 0);
-        net = subtotalSum / (1.21 + (iibbAliquot / 100) + (ivaPerceptionAliquot / 100));
+        // La percepción de IVA aplica en facturas mayores a $100.000
+        const applyIvaPerc = subtotalSum > 100000;
+        const currentIvaPerc = applyIvaPerc ? ivaPerceptionAliquot : 0;
+
+        net = subtotalSum / (1.21 + (iibbAliquot / 100) + (currentIvaPerc / 100));
         tax = net * 0.21;
         percepIIBB = net * (iibbAliquot / 100);
-        percepIVA = net * (ivaPerceptionAliquot / 100);
+        percepIVA = net * (currentIvaPerc / 100);
       } else {
         net = subtotalSum / 1.21;
         tax = subtotalSum - net;

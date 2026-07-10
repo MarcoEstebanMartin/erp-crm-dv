@@ -598,10 +598,14 @@ export async function invoiceOrder(req: AuthenticatedRequest, res: Response): Pr
         const perceptionIVA = await tx.perceptionType.findUnique({
           where: { code: 'IVA_5329' }
         });
-        const ivaPercAliquot = (perceptionIVA && perceptionIVA.aliquot) ? Number(perceptionIVA.aliquot) : 3.00;
+        
+        // La percepción de IVA aplica en facturas mayores a $100.000
+        const totalAmountNum = order.totalAmount.toNumber();
+        const applyIvaPerc = totalAmountNum > 100000;
+        const ivaPercAliquot = applyIvaPerc ? ((perceptionIVA && perceptionIVA.aliquot) ? Number(perceptionIVA.aliquot) : 3.00) : 0;
         const iibbAliquot = Number(order.persona.iibbAliquot || 0);
 
-        net = order.totalAmount.toNumber() / (1.21 + (iibbAliquot / 100) + (ivaPercAliquot / 100));
+        net = totalAmountNum / (1.21 + (iibbAliquot / 100) + (ivaPercAliquot / 100));
         tax = net * 0.21;
         percepIIBB = net * (iibbAliquot / 100);
         percepIVA = net * (ivaPercAliquot / 100);
@@ -1109,7 +1113,10 @@ export async function createDirectInvoice(req: AuthenticatedRequest, res: Respon
         const perceptionIVA = await tx.perceptionType.findUnique({
           where: { code: 'IVA_5329' }
         });
-        const ivaPercAliquot = (perceptionIVA && perceptionIVA.aliquot) ? Number(perceptionIVA.aliquot) : 3.00;
+        
+        // La percepción de IVA aplica en facturas mayores a $100.000
+        const applyIvaPerc = totalSum > 100000;
+        const ivaPercAliquot = applyIvaPerc ? ((perceptionIVA && perceptionIVA.aliquot) ? Number(perceptionIVA.aliquot) : 3.00) : 0;
         const iibbAliquot = Number(persona.iibbAliquot || 0);
 
         net = totalSum / (1.21 + (iibbAliquot / 100) + (ivaPercAliquot / 100));
