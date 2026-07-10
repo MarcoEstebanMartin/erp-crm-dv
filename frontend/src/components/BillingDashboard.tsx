@@ -1031,7 +1031,7 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
                 className="input"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                style={{ width: '135px', fontSize: '0.85rem' }}
+                style={{ width: '165px', fontSize: '0.85rem', height: '36px' }}
               />
               <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>a</span>
               <input
@@ -1039,7 +1039,7 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
                 className="input"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
-                style={{ width: '135px', fontSize: '0.85rem' }}
+                style={{ width: '165px', fontSize: '0.85rem', height: '36px' }}
               />
             </div>
 
@@ -1048,7 +1048,7 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
                 className="input"
                 value={salesInvoiceTypeFilter}
                 onChange={(e) => setSalesInvoiceTypeFilter(e.target.value as any)}
-                style={{ width: '220px', fontSize: '0.85rem' }}
+                style={{ width: '240px', fontSize: '0.85rem', height: '36px' }}
               >
                 <option value="ALL">Todas las Sucursales</option>
                 <option value="OFFICIAL">Sucursal A (Oficial)</option>
