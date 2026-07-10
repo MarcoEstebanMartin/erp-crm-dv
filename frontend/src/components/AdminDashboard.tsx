@@ -1619,7 +1619,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
                     >
                       <option value="ALL">Todos los Vendedores</option>
                       {availableSellers.map(s => (
-                        <option key={s.id} value={s.id.toString()}>{s.username}</option>
+                        <option key={s.id} value={s.id.toString()}>{s.username.replace('_', ' ').toUpperCase()}</option>
                       ))}
                     </select>
                   </div>

@@ -662,7 +662,7 @@ export default function UnifiedReportsDashboard({
                 <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '8px', color: 'var(--text-secondary)' }}>Filtrar por Vendedor</label>
                 <select className="select" value={selectedSeller} onChange={e => { setSelectedSeller(e.target.value); setHoveredWeekIdx(null); }}>
                   <option value="">Todos los vendedores</option>
-                  {sellers.map(s => <option key={s.id} value={s.id}>{s.username}</option>)}
+                  {sellers.map(s => <option key={s.id} value={s.id}>{s.username.replace('_', ' ').toUpperCase()}</option>)}
                 </select>
               </div>
               <div style={{ flex: 1, minWidth: '180px' }}>

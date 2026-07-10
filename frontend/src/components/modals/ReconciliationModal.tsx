@@ -148,7 +148,7 @@ export const ReconciliationModal: React.FC<ReconciliationModalProps> = ({
                     <option value="">Depósito Local (No requerido)</option>
                   ) : (
                     sellers.map((u: any) => (
-                      <option key={u.id} value={u.id.toString()}>{u.username} ({u.role})</option>
+                      <option key={u.id} value={u.id.toString()}>{u.username.replace('_', ' ').toUpperCase()} ({u.role})</option>
                     ))
                   )}
                 </select>
