@@ -90,12 +90,30 @@ export default function ResumenCuentaModal({ client, onClose }: ResumenCuentaMod
     window.print();
   };
 
-  // Extraer el identificador numérico puro para control interno
-  const formatMovementId = (fullId: string) => {
-    if (!fullId) return '-';
-    const parts = fullId.split('-');
-    const numStr = parts[parts.length - 1];
-    return /^\d+$/.test(numStr) ? numStr : fullId;
+  // Extraer el identificador de control interno único formateado con prefijo para evitar ID duplicados
+  const formatMovementId = (t: any) => {
+    if (!t || !t.id) return '-';
+    const parts = t.id.split('-');
+    const idNum = parts[parts.length - 1];
+    
+    if (t.id.startsWith('order-')) {
+      return `FAC-${idNum}`;
+    }
+    if (t.id.startsWith('transaction-')) {
+      const isReceipt = t.description?.toLowerCase().includes('recibo') || t.reference?.toLowerCase().includes('recibo');
+      return isReceipt ? `REC-${idNum}` : `PAG-${idNum}`;
+    }
+    if (t.id.startsWith('supplier-invoice-')) {
+      return `COM-${idNum}`;
+    }
+    if (t.id.startsWith('credit-note-')) {
+      return `NCE-${idNum}`;
+    }
+    if (t.id.startsWith('withholding-')) {
+      return `RET-${idNum}`;
+    }
+    
+    return t.id;
   };
 
   // Cargar y mostrar detalle del comprobante seleccionado
@@ -275,10 +293,10 @@ export default function ResumenCuentaModal({ client, onClose }: ResumenCuentaMod
                               disabled={viewLoading}
                               onClick={() => handleViewDetail(t.id)}
                             >
-                              {formatMovementId(t.id)}
+                              {formatMovementId(t)}
                             </button>
                           ) : (
-                            <span style={{ color: 'var(--text-secondary)' }}>{formatMovementId(t.id)}</span>
+                            <span style={{ color: 'var(--text-secondary)' }}>{formatMovementId(t)}</span>
                           )}
                         </td>
                         <td style={{ padding: '10px' }}>{t.isPureDate ? t.date.toLocaleDateString('es-AR', { timeZone: 'UTC' }) : t.date.toLocaleDateString('es-AR')}</td>
