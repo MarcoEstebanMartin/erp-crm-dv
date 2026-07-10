@@ -51,7 +51,7 @@ export default function ResumenCuentaModal({ client, onClose }: ResumenCuentaMod
           description: item.description,
           debit: isDebit ? Number(item.amount) : 0,
           credit: !isDebit ? Number(item.amount) : 0,
-          metadata: item.metadata
+          metadata: item.metadata ? { ...item.metadata, movementId: item.movementId } : { movementId: item.movementId }
         };
       });
 
@@ -343,6 +343,7 @@ export default function ResumenCuentaModal({ client, onClose }: ResumenCuentaMod
 
             {/* Datos Informativos */}
             <div style={{ fontSize: '0.85rem', marginBottom: '16px', lineHeight: '1.6', backgroundColor: 'var(--bg-light)', padding: '12px', borderRadius: '6px' }}>
+              <p style={{ margin: '4px 0' }}><strong>ID Movimiento:</strong> {selectedOrder.movementId || '-'}</p>
               <p style={{ margin: '4px 0' }}><strong>ID Operación Interna:</strong> {selectedOrder.id}</p>
               <p style={{ margin: '4px 0' }}><strong>Fecha Emisión:</strong> {new Date(selectedOrder.createdAt).toLocaleString('es-AR')}</p>
               <p style={{ margin: '4px 0' }}><strong>Tipo Emisión:</strong> {selectedOrder.billingType === 'AFIP' ? 'Comprobante Oficial AFIP' : 'Interno / Presupuesto'}</p>
@@ -417,6 +418,7 @@ export default function ResumenCuentaModal({ client, onClose }: ResumenCuentaMod
 
             {/* Datos Informativos */}
             <div style={{ fontSize: '0.85rem', marginBottom: '16px', lineHeight: '1.6', backgroundColor: 'var(--bg-light)', padding: '12px', borderRadius: '6px' }}>
+              <p style={{ margin: '4px 0' }}><strong>ID Movimiento:</strong> {selectedCreditNote.movementId || '-'}</p>
               <p style={{ margin: '4px 0' }}><strong>ID Operación Interna:</strong> {selectedCreditNote.id}</p>
               <p style={{ margin: '4px 0' }}><strong>Fecha Emisión:</strong> {new Date(selectedCreditNote.createdAt).toLocaleString('es-AR')}</p>
               <p style={{ margin: '4px 0' }}><strong>Motivo:</strong> {selectedCreditNote.reason === 'DEVOLUCION' ? 'Devolución de mercadería' : selectedCreditNote.reason === 'DESCUENTO' ? 'Descuento / Bonificación' : 'Error de Facturación'}</p>
@@ -486,6 +488,10 @@ export default function ResumenCuentaModal({ client, onClose }: ResumenCuentaMod
 
             {/* Info */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '0.9rem', lineHeight: '1.6' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f3f4f6', paddingBottom: '6px' }}>
+                <span style={{ color: 'var(--text-secondary)' }}>ID Movimiento:</span>
+                <strong>{selectedTransaction.movementId || '-'}</strong>
+              </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f3f4f6', paddingBottom: '6px' }}>
                 <span style={{ color: 'var(--text-secondary)' }}>ID Operación Interna:</span>
                 <strong style={{ fontFamily: 'monospace' }}>{selectedTransaction.id}</strong>
@@ -557,6 +563,10 @@ export default function ResumenCuentaModal({ client, onClose }: ResumenCuentaMod
 
             {/* Info */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '0.9rem', lineHeight: '1.6' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f3f4f6', paddingBottom: '6px' }}>
+                <span style={{ color: 'var(--text-secondary)' }}>ID Movimiento:</span>
+                <strong>{selectedWithholding.movementId || '-'}</strong>
+              </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f3f4f6', paddingBottom: '6px' }}>
                 <span style={{ color: 'var(--text-secondary)' }}>Tipo de Impuesto:</span>
                 <strong>{selectedWithholding.taxType === 'IIBB' ? 'Ingresos Brutos (IIBB)' : 'Ganancias'}</strong>
