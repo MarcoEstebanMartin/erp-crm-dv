@@ -10,7 +10,9 @@
     "listPriceC": 8351,
     "stock": 100,
     "minStock": 10,
-    "category": "REMOTTI"
+    "category": "REMOTTI",
+    "isPesable": true,
+    "approximateWeight": 4
   },
   {
     "sku": "PROD-0004",
@@ -23,7 +25,9 @@
     "listPriceC": 16157,
     "stock": 100,
     "minStock": 10,
-    "category": "REMOTTI"
+    "category": "REMOTTI",
+    "isPesable": true,
+    "approximateWeight": 5
   },
   {
     "sku": "PROD-0005",
@@ -36,7 +40,9 @@
     "listPriceC": 13978,
     "stock": 100,
     "minStock": 10,
-    "category": "REMOTTI"
+    "category": "REMOTTI",
+    "isPesable": true,
+    "approximateWeight": 5
   },
   {
     "sku": "PROD-0006",
@@ -49,7 +55,9 @@
     "listPriceC": 13535,
     "stock": 100,
     "minStock": 10,
-    "category": "REMOTTI"
+    "category": "REMOTTI",
+    "isPesable": true,
+    "approximateWeight": 4
   },
   {
     "sku": "PROD-0007",
@@ -62,7 +70,9 @@
     "listPriceC": 16157,
     "stock": 100,
     "minStock": 10,
-    "category": "REMOTTI"
+    "category": "REMOTTI",
+    "isPesable": true,
+    "approximateWeight": 6
   },
   {
     "sku": "PROD-0008",
@@ -75,7 +85,9 @@
     "listPriceC": 10920,
     "stock": 100,
     "minStock": 10,
-    "category": "REMOTTI"
+    "category": "REMOTTI",
+    "isPesable": true,
+    "approximateWeight": 4
   },
   {
     "sku": "PROD-0009",
@@ -88,7 +100,9 @@
     "listPriceC": 9734,
     "stock": 100,
     "minStock": 10,
-    "category": "REMOTTI"
+    "category": "REMOTTI",
+    "isPesable": true,
+    "approximateWeight": 4
   },
   {
     "sku": "PROD-0010",
@@ -101,7 +115,9 @@
     "listPriceC": 11660,
     "stock": 100,
     "minStock": 10,
-    "category": "REMOTTI"
+    "category": "REMOTTI",
+    "isPesable": true,
+    "approximateWeight": 4
   },
   {
     "sku": "PROD-0011",
@@ -114,7 +130,9 @@
     "listPriceC": 17991,
     "stock": 100,
     "minStock": 10,
-    "category": "REMOTTI"
+    "category": "REMOTTI",
+    "isPesable": true,
+    "approximateWeight": 4
   },
   {
     "sku": "PROD-0012",
@@ -127,7 +145,9 @@
     "listPriceC": 13982,
     "stock": 100,
     "minStock": 10,
-    "category": "REMOTTI"
+    "category": "REMOTTI",
+    "isPesable": true,
+    "approximateWeight": 4
   },
   {
     "sku": "PROD-0013",
@@ -140,7 +160,9 @@
     "listPriceC": 16686,
     "stock": 100,
     "minStock": 10,
-    "category": "REMOTTI"
+    "category": "REMOTTI",
+    "isPesable": true,
+    "approximateWeight": 4
   },
   {
     "sku": "PROD-0014",
@@ -153,7 +175,9 @@
     "listPriceC": 8973,
     "stock": 100,
     "minStock": 10,
-    "category": "REMOTTI"
+    "category": "REMOTTI",
+    "isPesable": true,
+    "approximateWeight": 4
   },
   {
     "sku": "PROD-0015",
@@ -166,7 +190,9 @@
     "listPriceC": 16376,
     "stock": 100,
     "minStock": 10,
-    "category": "REMOTTI"
+    "category": "REMOTTI",
+    "isPesable": true,
+    "approximateWeight": 2
   },
   {
     "sku": "PROD-0016",
@@ -179,7 +205,9 @@
     "listPriceC": 16836,
     "stock": 100,
     "minStock": 10,
-    "category": "REMOTTI"
+    "category": "REMOTTI",
+    "isPesable": true,
+    "approximateWeight": 3
   },
   {
     "sku": "PROD-0017",
@@ -192,7 +220,9 @@
     "listPriceC": 15584,
     "stock": 100,
     "minStock": 10,
-    "category": "REMOTTI"
+    "category": "REMOTTI",
+    "isPesable": true,
+    "approximateWeight": 6
   },
   {
     "sku": "PROD-0018",
@@ -205,7 +235,9 @@
     "listPriceC": 17627,
     "stock": 100,
     "minStock": 10,
-    "category": "REMOTTI"
+    "category": "REMOTTI",
+    "isPesable": true,
+    "approximateWeight": 2
   },
   {
     "sku": "PROD-0019",
@@ -218,7 +250,9 @@
     "listPriceC": 21104,
     "stock": 100,
     "minStock": 10,
-    "category": "REMOTTI"
+    "category": "REMOTTI",
+    "isPesable": true,
+    "approximateWeight": 3
   },
   {
     "sku": "PROD-0020",
@@ -231,7 +265,9 @@
     "listPriceC": 449,
     "stock": 100,
     "minStock": 10,
-    "category": "LECHES"
+    "category": "LECHES",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0021",
@@ -244,7 +280,9 @@
     "listPriceC": 1701,
     "stock": 100,
     "minStock": 10,
-    "category": "LECHES"
+    "category": "LECHES",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0022",
@@ -257,7 +295,9 @@
     "listPriceC": 3887,
     "stock": 100,
     "minStock": 10,
-    "category": "LECHES"
+    "category": "LECHES",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0023",
@@ -270,7 +310,9 @@
     "listPriceC": 7773,
     "stock": 100,
     "minStock": 10,
-    "category": "LECHES"
+    "category": "LECHES",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0024",
@@ -283,7 +325,9 @@
     "listPriceC": 1421,
     "stock": 100,
     "minStock": 10,
-    "category": "LECHES"
+    "category": "LECHES",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0025",
@@ -296,7 +340,9 @@
     "listPriceC": 1421,
     "stock": 100,
     "minStock": 10,
-    "category": "LECHES"
+    "category": "LECHES",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0026",
@@ -309,7 +355,9 @@
     "listPriceC": 1391,
     "stock": 100,
     "minStock": 10,
-    "category": "LECHES"
+    "category": "LECHES",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0027",
@@ -322,7 +370,9 @@
     "listPriceC": 1391,
     "stock": 100,
     "minStock": 10,
-    "category": "LECHES"
+    "category": "LECHES",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0028",
@@ -335,7 +385,9 @@
     "listPriceC": 1660,
     "stock": 100,
     "minStock": 10,
-    "category": "SANCOR Y CREMIGAL"
+    "category": "SANCOR Y CREMIGAL",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0029",
@@ -348,7 +400,9 @@
     "listPriceC": 1660,
     "stock": 100,
     "minStock": 10,
-    "category": "SANCOR Y CREMIGAL"
+    "category": "SANCOR Y CREMIGAL",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0030",
@@ -361,7 +415,9 @@
     "listPriceC": 23603,
     "stock": 100,
     "minStock": 10,
-    "category": "SANCOR Y CREMIGAL"
+    "category": "SANCOR Y CREMIGAL",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0031",
@@ -374,7 +430,9 @@
     "listPriceC": 1209,
     "stock": 100,
     "minStock": 10,
-    "category": "SANCOR Y CREMIGAL"
+    "category": "SANCOR Y CREMIGAL",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0032",
@@ -387,7 +445,9 @@
     "listPriceC": 1848,
     "stock": 100,
     "minStock": 10,
-    "category": "SANCOR Y CREMIGAL"
+    "category": "SANCOR Y CREMIGAL",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0033",
@@ -400,7 +460,9 @@
     "listPriceC": 1875,
     "stock": 100,
     "minStock": 10,
-    "category": "SANCOR Y CREMIGAL"
+    "category": "SANCOR Y CREMIGAL",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0034",
@@ -413,7 +475,9 @@
     "listPriceC": 33597,
     "stock": 100,
     "minStock": 10,
-    "category": "SANCOR Y CREMIGAL"
+    "category": "SANCOR Y CREMIGAL",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0035",
@@ -426,7 +490,9 @@
     "listPriceC": 1448,
     "stock": 100,
     "minStock": 10,
-    "category": "SANCOR Y CREMIGAL"
+    "category": "SANCOR Y CREMIGAL",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0036",
@@ -439,7 +505,9 @@
     "listPriceC": 2786,
     "stock": 100,
     "minStock": 10,
-    "category": "SANCOR Y CREMIGAL"
+    "category": "SANCOR Y CREMIGAL",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0037",
@@ -452,7 +520,9 @@
     "listPriceC": 65978,
     "stock": 100,
     "minStock": 10,
-    "category": "SANCOR Y CREMIGAL"
+    "category": "SANCOR Y CREMIGAL",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0038",
@@ -465,7 +535,9 @@
     "listPriceC": 1348,
     "stock": 100,
     "minStock": 10,
-    "category": "SANCOR Y CREMIGAL"
+    "category": "SANCOR Y CREMIGAL",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0039",
@@ -478,7 +550,9 @@
     "listPriceC": 2162,
     "stock": 100,
     "minStock": 10,
-    "category": "SANCOR Y CREMIGAL"
+    "category": "SANCOR Y CREMIGAL",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0040",
@@ -491,7 +565,9 @@
     "listPriceC": 9342,
     "stock": 100,
     "minStock": 10,
-    "category": "SANCOR Y CREMIGAL"
+    "category": "SANCOR Y CREMIGAL",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0041",
@@ -504,7 +580,9 @@
     "listPriceC": 10474,
     "stock": 100,
     "minStock": 10,
-    "category": "SANCOR Y CREMIGAL"
+    "category": "SANCOR Y CREMIGAL",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0042",
@@ -517,7 +595,9 @@
     "listPriceC": 18850,
     "stock": 100,
     "minStock": 10,
-    "category": "SANCOR Y CREMIGAL"
+    "category": "SANCOR Y CREMIGAL",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0043",
@@ -530,7 +610,9 @@
     "listPriceC": 1672,
     "stock": 100,
     "minStock": 10,
-    "category": "SANCOR Y CREMIGAL"
+    "category": "SANCOR Y CREMIGAL",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0044",
@@ -543,7 +625,9 @@
     "listPriceC": 1672,
     "stock": 100,
     "minStock": 10,
-    "category": "SANCOR Y CREMIGAL"
+    "category": "SANCOR Y CREMIGAL",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0045",
@@ -556,7 +640,9 @@
     "listPriceC": 1672,
     "stock": 100,
     "minStock": 10,
-    "category": "SANCOR Y CREMIGAL"
+    "category": "SANCOR Y CREMIGAL",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0046",
@@ -569,7 +655,9 @@
     "listPriceC": 1672,
     "stock": 100,
     "minStock": 10,
-    "category": "SANCOR Y CREMIGAL"
+    "category": "SANCOR Y CREMIGAL",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0047",
@@ -582,7 +670,9 @@
     "listPriceC": 1672,
     "stock": 100,
     "minStock": 10,
-    "category": "SANCOR Y CREMIGAL"
+    "category": "SANCOR Y CREMIGAL",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0002",
@@ -595,7 +685,9 @@
     "listPriceC": 12470,
     "stock": 100,
     "minStock": 10,
-    "category": "REMOTTI"
+    "category": "REMOTTI",
+    "isPesable": true,
+    "approximateWeight": 4
   },
   {
     "sku": "PROD-0050",
@@ -608,7 +700,9 @@
     "listPriceC": 3132,
     "stock": 100,
     "minStock": 10,
-    "category": "QUESOS RALLADOS"
+    "category": "QUESOS RALLADOS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0051",
@@ -621,7 +715,9 @@
     "listPriceC": 24773,
     "stock": 100,
     "minStock": 10,
-    "category": "QUESOS RALLADOS"
+    "category": "QUESOS RALLADOS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0052",
@@ -634,7 +730,9 @@
     "listPriceC": 24143,
     "stock": 100,
     "minStock": 10,
-    "category": "SODECAR"
+    "category": "SODECAR",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0053",
@@ -647,7 +745,9 @@
     "listPriceC": 8129,
     "stock": 100,
     "minStock": 10,
-    "category": "SODECAR"
+    "category": "SODECAR",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0054",
@@ -660,7 +760,9 @@
     "listPriceC": 5553,
     "stock": 100,
     "minStock": 10,
-    "category": "SODECAR"
+    "category": "SODECAR",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0055",
@@ -673,7 +775,9 @@
     "listPriceC": 16059,
     "stock": 100,
     "minStock": 10,
-    "category": "SODECAR"
+    "category": "SODECAR",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0056",
@@ -686,7 +790,9 @@
     "listPriceC": 48581,
     "stock": 100,
     "minStock": 10,
-    "category": "SODECAR"
+    "category": "SODECAR",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0057",
@@ -699,7 +805,9 @@
     "listPriceC": 22454,
     "stock": 100,
     "minStock": 10,
-    "category": "SODECAR"
+    "category": "SODECAR",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0058",
@@ -712,7 +820,9 @@
     "listPriceC": 17651,
     "stock": 100,
     "minStock": 10,
-    "category": "SODECAR"
+    "category": "SODECAR",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0059",
@@ -725,7 +835,9 @@
     "listPriceC": 14052,
     "stock": 100,
     "minStock": 10,
-    "category": "SODECAR"
+    "category": "SODECAR",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0060",
@@ -738,7 +850,9 @@
     "listPriceC": 18144,
     "stock": 100,
     "minStock": 10,
-    "category": "SODECAR"
+    "category": "SODECAR",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0061",
@@ -751,7 +865,9 @@
     "listPriceC": 3149,
     "stock": 100,
     "minStock": 10,
-    "category": "CONSERVAS"
+    "category": "CONSERVAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0062",
@@ -764,7 +880,9 @@
     "listPriceC": 655,
     "stock": 100,
     "minStock": 10,
-    "category": "CONSERVAS"
+    "category": "CONSERVAS",
+    "isPesable": true,
+    "approximateWeight": 3
   },
   {
     "sku": "PROD-0063",
@@ -777,7 +895,9 @@
     "listPriceC": 2531,
     "stock": 100,
     "minStock": 10,
-    "category": "CONSERVAS"
+    "category": "CONSERVAS",
+    "isPesable": true,
+    "approximateWeight": 4
   },
   {
     "sku": "PROD-0064",
@@ -790,7 +910,9 @@
     "listPriceC": 2091,
     "stock": 100,
     "minStock": 10,
-    "category": "CONSERVAS"
+    "category": "CONSERVAS",
+    "isPesable": true,
+    "approximateWeight": 3
   },
   {
     "sku": "PROD-0065",
@@ -803,7 +925,9 @@
     "listPriceC": 864,
     "stock": 100,
     "minStock": 10,
-    "category": "CONSERVAS"
+    "category": "CONSERVAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0066",
@@ -816,7 +940,9 @@
     "listPriceC": 1144,
     "stock": 100,
     "minStock": 10,
-    "category": "CONSERVAS"
+    "category": "CONSERVAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0067",
@@ -829,7 +955,9 @@
     "listPriceC": 975,
     "stock": 100,
     "minStock": 10,
-    "category": "CONSERVAS"
+    "category": "CONSERVAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0068",
@@ -842,7 +970,9 @@
     "listPriceC": 1466,
     "stock": 100,
     "minStock": 10,
-    "category": "CONSERVAS"
+    "category": "CONSERVAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0069",
@@ -855,7 +985,9 @@
     "listPriceC": 3376,
     "stock": 100,
     "minStock": 10,
-    "category": "CONSERVAS"
+    "category": "CONSERVAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0070",
@@ -868,7 +1000,9 @@
     "listPriceC": 1735,
     "stock": 100,
     "minStock": 10,
-    "category": "CONSERVAS"
+    "category": "CONSERVAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0071",
@@ -881,7 +1015,9 @@
     "listPriceC": 2821,
     "stock": 100,
     "minStock": 10,
-    "category": "CONSERVAS"
+    "category": "CONSERVAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0072",
@@ -894,7 +1030,9 @@
     "listPriceC": 975,
     "stock": 100,
     "minStock": 10,
-    "category": "CONSERVAS"
+    "category": "CONSERVAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0073",
@@ -907,7 +1045,9 @@
     "listPriceC": 931,
     "stock": 100,
     "minStock": 10,
-    "category": "CONSERVAS"
+    "category": "CONSERVAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0074",
@@ -920,7 +1060,9 @@
     "listPriceC": 2382,
     "stock": 100,
     "minStock": 10,
-    "category": "CONSERVAS"
+    "category": "CONSERVAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0075",
@@ -933,7 +1075,9 @@
     "listPriceC": 6836,
     "stock": 100,
     "minStock": 10,
-    "category": "CONSERVAS"
+    "category": "CONSERVAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0076",
@@ -946,7 +1090,9 @@
     "listPriceC": 8852,
     "stock": 100,
     "minStock": 10,
-    "category": "CONSERVAS"
+    "category": "CONSERVAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0077",
@@ -959,7 +1105,9 @@
     "listPriceC": 7766,
     "stock": 100,
     "minStock": 10,
-    "category": "CONSERVAS"
+    "category": "CONSERVAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0078",
@@ -972,7 +1120,9 @@
     "listPriceC": 1392,
     "stock": 100,
     "minStock": 10,
-    "category": "CONSERVAS"
+    "category": "CONSERVAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0079",
@@ -985,7 +1135,9 @@
     "listPriceC": 2699,
     "stock": 100,
     "minStock": 10,
-    "category": "CONSERVAS"
+    "category": "CONSERVAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0080",
@@ -998,7 +1150,9 @@
     "listPriceC": 2082,
     "stock": 100,
     "minStock": 10,
-    "category": "CONSERVAS"
+    "category": "CONSERVAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0081",
@@ -1011,7 +1165,9 @@
     "listPriceC": 1886,
     "stock": 100,
     "minStock": 10,
-    "category": "CONSERVAS"
+    "category": "CONSERVAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0082",
@@ -1024,7 +1180,9 @@
     "listPriceC": 608,
     "stock": 100,
     "minStock": 10,
-    "category": "CONSERVAS"
+    "category": "CONSERVAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0083",
@@ -1037,7 +1195,9 @@
     "listPriceC": 2339,
     "stock": 100,
     "minStock": 10,
-    "category": "CONSERVAS"
+    "category": "CONSERVAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0084",
@@ -1050,7 +1210,9 @@
     "listPriceC": 920,
     "stock": 100,
     "minStock": 10,
-    "category": "CONSERVAS"
+    "category": "CONSERVAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0085",
@@ -1063,7 +1225,9 @@
     "listPriceC": 975,
     "stock": 100,
     "minStock": 10,
-    "category": "CONSERVAS"
+    "category": "CONSERVAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0086",
@@ -1076,7 +1240,9 @@
     "listPriceC": 806,
     "stock": 100,
     "minStock": 10,
-    "category": "CONSERVAS"
+    "category": "CONSERVAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0087",
@@ -1089,7 +1255,9 @@
     "listPriceC": 4895,
     "stock": 100,
     "minStock": 10,
-    "category": "CONSERVAS"
+    "category": "CONSERVAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0088",
@@ -1102,7 +1270,9 @@
     "listPriceC": 13328,
     "stock": 100,
     "minStock": 10,
-    "category": "CONSERVAS"
+    "category": "CONSERVAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0089",
@@ -1115,7 +1285,9 @@
     "listPriceC": 1546,
     "stock": 100,
     "minStock": 10,
-    "category": "CONSERVAS"
+    "category": "CONSERVAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0090",
@@ -1128,7 +1300,9 @@
     "listPriceC": 1546,
     "stock": 100,
     "minStock": 10,
-    "category": "CONSERVAS"
+    "category": "CONSERVAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0091",
@@ -1141,7 +1315,9 @@
     "listPriceC": 1546,
     "stock": 100,
     "minStock": 10,
-    "category": "CONSERVAS"
+    "category": "CONSERVAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0092",
@@ -1154,7 +1330,9 @@
     "listPriceC": 1546,
     "stock": 100,
     "minStock": 10,
-    "category": "CONSERVAS"
+    "category": "CONSERVAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0049",
@@ -1167,7 +1345,9 @@
     "listPriceC": 2527,
     "stock": 100,
     "minStock": 10,
-    "category": "SANCOR Y CREMIGAL"
+    "category": "SANCOR Y CREMIGAL",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0095",
@@ -1180,7 +1360,9 @@
     "listPriceC": 2870,
     "stock": 100,
     "minStock": 10,
-    "category": "A.G.D Y NIZA"
+    "category": "A.G.D Y NIZA",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0096",
@@ -1193,7 +1375,9 @@
     "listPriceC": 2818,
     "stock": 100,
     "minStock": 10,
-    "category": "A.G.D Y NIZA"
+    "category": "A.G.D Y NIZA",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0097",
@@ -1206,7 +1390,9 @@
     "listPriceC": 840,
     "stock": 100,
     "minStock": 10,
-    "category": "A.G.D Y NIZA"
+    "category": "A.G.D Y NIZA",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0098",
@@ -1219,7 +1405,9 @@
     "listPriceC": 1189,
     "stock": 100,
     "minStock": 10,
-    "category": "A.G.D Y NIZA"
+    "category": "A.G.D Y NIZA",
+    "isPesable": true,
+    "approximateWeight": 2
   },
   {
     "sku": "PROD-0099",
@@ -1232,7 +1420,9 @@
     "listPriceC": 5397,
     "stock": 100,
     "minStock": 10,
-    "category": "A.G.D Y NIZA"
+    "category": "A.G.D Y NIZA",
+    "isPesable": true,
+    "approximateWeight": 4
   },
   {
     "sku": "PROD-0100",
@@ -1245,7 +1435,9 @@
     "listPriceC": 10781,
     "stock": 100,
     "minStock": 10,
-    "category": "A.G.D Y NIZA"
+    "category": "A.G.D Y NIZA",
+    "isPesable": true,
+    "approximateWeight": 6
   },
   {
     "sku": "PROD-0101",
@@ -1258,7 +1450,9 @@
     "listPriceC": 17696,
     "stock": 100,
     "minStock": 10,
-    "category": "A.G.D Y NIZA"
+    "category": "A.G.D Y NIZA",
+    "isPesable": true,
+    "approximateWeight": 5
   },
   {
     "sku": "PROD-0102",
@@ -1271,7 +1465,9 @@
     "listPriceC": 3489,
     "stock": 100,
     "minStock": 10,
-    "category": "A.G.D Y NIZA"
+    "category": "A.G.D Y NIZA",
+    "isPesable": true,
+    "approximateWeight": 4
   },
   {
     "sku": "PROD-0103",
@@ -1284,7 +1480,9 @@
     "listPriceC": 11632,
     "stock": 100,
     "minStock": 10,
-    "category": "A.G.D Y NIZA"
+    "category": "A.G.D Y NIZA",
+    "isPesable": true,
+    "approximateWeight": 4
   },
   {
     "sku": "PROD-0104",
@@ -1297,7 +1495,9 @@
     "listPriceC": 15278,
     "stock": 100,
     "minStock": 10,
-    "category": "A.G.D Y NIZA"
+    "category": "A.G.D Y NIZA",
+    "isPesable": true,
+    "approximateWeight": 3
   },
   {
     "sku": "PROD-0105",
@@ -1310,7 +1510,9 @@
     "listPriceC": 3621,
     "stock": 100,
     "minStock": 10,
-    "category": "A.G.D Y NIZA"
+    "category": "A.G.D Y NIZA",
+    "isPesable": true,
+    "approximateWeight": 3
   },
   {
     "sku": "PROD-0106",
@@ -1323,7 +1525,9 @@
     "listPriceC": 4745,
     "stock": 100,
     "minStock": 10,
-    "category": "A.G.D Y NIZA"
+    "category": "A.G.D Y NIZA",
+    "isPesable": true,
+    "approximateWeight": 1
   },
   {
     "sku": "PROD-0107",
@@ -1336,7 +1540,9 @@
     "listPriceC": 11632,
     "stock": 100,
     "minStock": 10,
-    "category": "A.G.D Y NIZA"
+    "category": "A.G.D Y NIZA",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0108",
@@ -1349,7 +1555,9 @@
     "listPriceC": 8961,
     "stock": 100,
     "minStock": 10,
-    "category": "A.G.D Y NIZA"
+    "category": "A.G.D Y NIZA",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0109",
@@ -1362,7 +1570,9 @@
     "listPriceC": 7182,
     "stock": 100,
     "minStock": 10,
-    "category": "A.G.D Y NIZA"
+    "category": "A.G.D Y NIZA",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0110",
@@ -1375,7 +1585,9 @@
     "listPriceC": 1434,
     "stock": 100,
     "minStock": 10,
-    "category": "A.G.D Y NIZA"
+    "category": "A.G.D Y NIZA",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0111",
@@ -1388,7 +1600,9 @@
     "listPriceC": 1458,
     "stock": 100,
     "minStock": 10,
-    "category": "A.G.D Y NIZA"
+    "category": "A.G.D Y NIZA",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0112",
@@ -1401,7 +1615,9 @@
     "listPriceC": 20636,
     "stock": 100,
     "minStock": 10,
-    "category": "A.G.D Y NIZA"
+    "category": "A.G.D Y NIZA",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0113",
@@ -1414,7 +1630,9 @@
     "listPriceC": 15749,
     "stock": 100,
     "minStock": 10,
-    "category": "A.G.D Y NIZA"
+    "category": "A.G.D Y NIZA",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0114",
@@ -1427,7 +1645,9 @@
     "listPriceC": 15934,
     "stock": 100,
     "minStock": 10,
-    "category": "A.G.D Y NIZA"
+    "category": "A.G.D Y NIZA",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0115",
@@ -1440,7 +1660,9 @@
     "listPriceC": 12515,
     "stock": 100,
     "minStock": 10,
-    "category": "A.G.D Y NIZA"
+    "category": "A.G.D Y NIZA",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0116",
@@ -1453,7 +1675,9 @@
     "listPriceC": 4924,
     "stock": 100,
     "minStock": 10,
-    "category": "A.G.D Y NIZA"
+    "category": "A.G.D Y NIZA",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0117",
@@ -1466,7 +1690,9 @@
     "listPriceC": 14979,
     "stock": 100,
     "minStock": 10,
-    "category": "A.G.D Y NIZA"
+    "category": "A.G.D Y NIZA",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0118",
@@ -1479,7 +1705,9 @@
     "listPriceC": 2516,
     "stock": 100,
     "minStock": 10,
-    "category": "A.G.D Y NIZA"
+    "category": "A.G.D Y NIZA",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0119",
@@ -1492,7 +1720,9 @@
     "listPriceC": 976,
     "stock": 100,
     "minStock": 10,
-    "category": "A.G.D Y NIZA"
+    "category": "A.G.D Y NIZA",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0120",
@@ -1505,7 +1735,9 @@
     "listPriceC": 16854,
     "stock": 100,
     "minStock": 10,
-    "category": "A.G.D Y NIZA"
+    "category": "A.G.D Y NIZA",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0121",
@@ -1518,7 +1750,9 @@
     "listPriceC": 1531,
     "stock": 100,
     "minStock": 10,
-    "category": "A.G.D Y NIZA"
+    "category": "A.G.D Y NIZA",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0122",
@@ -1531,7 +1765,9 @@
     "listPriceC": 4016,
     "stock": 100,
     "minStock": 10,
-    "category": "CAFE"
+    "category": "CAFE",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0123",
@@ -1544,7 +1780,9 @@
     "listPriceC": 6022,
     "stock": 100,
     "minStock": 10,
-    "category": "CAFE"
+    "category": "CAFE",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0124",
@@ -1557,7 +1795,9 @@
     "listPriceC": 2415,
     "stock": 100,
     "minStock": 10,
-    "category": "CAFE"
+    "category": "CAFE",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0125",
@@ -1570,7 +1810,9 @@
     "listPriceC": 1551,
     "stock": 100,
     "minStock": 10,
-    "category": "CAFE"
+    "category": "CAFE",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0126",
@@ -1583,7 +1825,9 @@
     "listPriceC": 3150,
     "stock": 100,
     "minStock": 10,
-    "category": "CAFE"
+    "category": "CAFE",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0127",
@@ -1596,7 +1840,9 @@
     "listPriceC": 4048,
     "stock": 100,
     "minStock": 10,
-    "category": "CAFE"
+    "category": "CAFE",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0128",
@@ -1609,7 +1855,9 @@
     "listPriceC": 4048,
     "stock": 100,
     "minStock": 10,
-    "category": "CAFE"
+    "category": "CAFE",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0129",
@@ -1622,7 +1870,9 @@
     "listPriceC": 4079,
     "stock": 100,
     "minStock": 10,
-    "category": "CAFE"
+    "category": "CAFE",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0130",
@@ -1635,7 +1885,9 @@
     "listPriceC": 1691,
     "stock": 100,
     "minStock": 10,
-    "category": "CAFE"
+    "category": "CAFE",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0131",
@@ -1648,7 +1900,9 @@
     "listPriceC": 9777,
     "stock": 100,
     "minStock": 10,
-    "category": "CAFE"
+    "category": "CAFE",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0132",
@@ -1661,7 +1915,9 @@
     "listPriceC": 8064,
     "stock": 100,
     "minStock": 10,
-    "category": "CAFE"
+    "category": "CAFE",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0133",
@@ -1674,7 +1930,9 @@
     "listPriceC": 8023,
     "stock": 100,
     "minStock": 10,
-    "category": "CAFE"
+    "category": "CAFE",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0134",
@@ -1687,7 +1945,9 @@
     "listPriceC": 8023,
     "stock": 100,
     "minStock": 10,
-    "category": "CAFE"
+    "category": "CAFE",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0135",
@@ -1700,7 +1960,9 @@
     "listPriceC": 7391,
     "stock": 100,
     "minStock": 10,
-    "category": "ARROZ"
+    "category": "ARROZ",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0136",
@@ -1713,7 +1975,9 @@
     "listPriceC": 12306,
     "stock": 100,
     "minStock": 10,
-    "category": "ARROZ"
+    "category": "ARROZ",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0137",
@@ -1726,7 +1990,9 @@
     "listPriceC": 7698,
     "stock": 100,
     "minStock": 10,
-    "category": "ARROZ"
+    "category": "ARROZ",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0138",
@@ -1739,7 +2005,9 @@
     "listPriceC": 14686,
     "stock": 100,
     "minStock": 10,
-    "category": "YERBAS"
+    "category": "YERBAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0139",
@@ -1752,7 +2020,9 @@
     "listPriceC": 25191,
     "stock": 100,
     "minStock": 10,
-    "category": "YERBAS"
+    "category": "YERBAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0094",
@@ -1765,7 +2035,9 @@
     "listPriceC": 4545,
     "stock": 100,
     "minStock": 10,
-    "category": "A.G.D Y NIZA"
+    "category": "A.G.D Y NIZA",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0165",
@@ -1778,7 +2050,9 @@
     "listPriceC": 942.3,
     "stock": 100,
     "minStock": 10,
-    "category": "PASTAS SECAS"
+    "category": "PASTAS SECAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0166",
@@ -1791,7 +2065,9 @@
     "listPriceC": 1631.7,
     "stock": 100,
     "minStock": 10,
-    "category": "PASTAS SECAS"
+    "category": "PASTAS SECAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0167",
@@ -1804,7 +2080,9 @@
     "listPriceC": 1631.7,
     "stock": 100,
     "minStock": 10,
-    "category": "PASTAS SECAS"
+    "category": "PASTAS SECAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0168",
@@ -1817,7 +2095,9 @@
     "listPriceC": 1631.7,
     "stock": 100,
     "minStock": 10,
-    "category": "PASTAS SECAS"
+    "category": "PASTAS SECAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0169",
@@ -1830,7 +2110,9 @@
     "listPriceC": 1631.7,
     "stock": 100,
     "minStock": 10,
-    "category": "PASTAS SECAS"
+    "category": "PASTAS SECAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0170",
@@ -1843,7 +2125,9 @@
     "listPriceC": 1718.1,
     "stock": 100,
     "minStock": 10,
-    "category": "PASTAS SECAS"
+    "category": "PASTAS SECAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0171",
@@ -1856,7 +2140,9 @@
     "listPriceC": 1483.2,
     "stock": 100,
     "minStock": 10,
-    "category": "PASTAS SECAS"
+    "category": "PASTAS SECAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0172",
@@ -1869,7 +2155,9 @@
     "listPriceC": 1573.2,
     "stock": 100,
     "minStock": 10,
-    "category": "PASTAS SECAS"
+    "category": "PASTAS SECAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0173",
@@ -1882,7 +2170,9 @@
     "listPriceC": 1029.6,
     "stock": 100,
     "minStock": 10,
-    "category": "PASTAS SECAS"
+    "category": "PASTAS SECAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0174",
@@ -1895,7 +2185,9 @@
     "listPriceC": 1161.9,
     "stock": 100,
     "minStock": 10,
-    "category": "PASTAS SECAS"
+    "category": "PASTAS SECAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0175",
@@ -1908,7 +2200,9 @@
     "listPriceC": 1161.9,
     "stock": 100,
     "minStock": 10,
-    "category": "PASTAS SECAS"
+    "category": "PASTAS SECAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0176",
@@ -1921,7 +2215,9 @@
     "listPriceC": 1790.1,
     "stock": 100,
     "minStock": 10,
-    "category": "PASTAS SECAS"
+    "category": "PASTAS SECAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0177",
@@ -1934,7 +2230,9 @@
     "listPriceC": 1790.1,
     "stock": 100,
     "minStock": 10,
-    "category": "PASTAS SECAS"
+    "category": "PASTAS SECAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0178",
@@ -1947,7 +2245,9 @@
     "listPriceC": 1700.1,
     "stock": 100,
     "minStock": 10,
-    "category": "PASTAS SECAS"
+    "category": "PASTAS SECAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0179",
@@ -1960,7 +2260,9 @@
     "listPriceC": 1700.1,
     "stock": 100,
     "minStock": 10,
-    "category": "PASTAS SECAS"
+    "category": "PASTAS SECAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0180",
@@ -1973,7 +2275,9 @@
     "listPriceC": 1700.1,
     "stock": 100,
     "minStock": 10,
-    "category": "PASTAS SECAS"
+    "category": "PASTAS SECAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0181",
@@ -1986,7 +2290,9 @@
     "listPriceC": 3977.1,
     "stock": 100,
     "minStock": 10,
-    "category": "PASTAS SECAS"
+    "category": "PASTAS SECAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0182",
@@ -1999,7 +2305,9 @@
     "listPriceC": 3977.1,
     "stock": 100,
     "minStock": 10,
-    "category": "PASTAS SECAS"
+    "category": "PASTAS SECAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0183",
@@ -2012,7 +2320,9 @@
     "listPriceC": 3977.1,
     "stock": 100,
     "minStock": 10,
-    "category": "PASTAS SECAS"
+    "category": "PASTAS SECAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0184",
@@ -2025,7 +2335,9 @@
     "listPriceC": 3977.1,
     "stock": 100,
     "minStock": 10,
-    "category": "PASTAS SECAS"
+    "category": "PASTAS SECAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0185",
@@ -2038,7 +2350,9 @@
     "listPriceC": 3977.1,
     "stock": 100,
     "minStock": 10,
-    "category": "PASTAS SECAS"
+    "category": "PASTAS SECAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0141",
@@ -2051,7 +2365,9 @@
     "listPriceC": 2156,
     "stock": 100,
     "minStock": 10,
-    "category": "YERBAS"
+    "category": "YERBAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0142",
@@ -2064,7 +2380,9 @@
     "listPriceC": 25014,
     "stock": 100,
     "minStock": 10,
-    "category": "YERBAS"
+    "category": "YERBAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0143",
@@ -2077,7 +2395,9 @@
     "listPriceC": 13220,
     "stock": 100,
     "minStock": 10,
-    "category": "YERBAS"
+    "category": "YERBAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0144",
@@ -2090,7 +2410,9 @@
     "listPriceC": 39044,
     "stock": 100,
     "minStock": 10,
-    "category": "YERBAS"
+    "category": "YERBAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0145",
@@ -2103,7 +2425,9 @@
     "listPriceC": 20593,
     "stock": 100,
     "minStock": 10,
-    "category": "YERBAS"
+    "category": "YERBAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0146",
@@ -2116,7 +2440,9 @@
     "listPriceC": 13306,
     "stock": 100,
     "minStock": 10,
-    "category": "AZUCAR"
+    "category": "AZUCAR",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0147",
@@ -2129,7 +2455,9 @@
     "listPriceC": 9859,
     "stock": 100,
     "minStock": 10,
-    "category": "AZUCAR"
+    "category": "AZUCAR",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0148",
@@ -2142,7 +2470,9 @@
     "listPriceC": 12519,
     "stock": 100,
     "minStock": 10,
-    "category": "AZUCAR"
+    "category": "AZUCAR",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0149",
@@ -2155,7 +2485,9 @@
     "listPriceC": 1242,
     "stock": 100,
     "minStock": 10,
-    "category": "EDULCORANTES"
+    "category": "EDULCORANTES",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0150",
@@ -2168,7 +2500,9 @@
     "listPriceC": 1242,
     "stock": 100,
     "minStock": 10,
-    "category": "EDULCORANTES"
+    "category": "EDULCORANTES",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0151",
@@ -2181,7 +2515,9 @@
     "listPriceC": 1079,
     "stock": 100,
     "minStock": 10,
-    "category": "PESCADERIA"
+    "category": "PESCADERIA",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0152",
@@ -2194,7 +2530,9 @@
     "listPriceC": 1079,
     "stock": 100,
     "minStock": 10,
-    "category": "PESCADERIA"
+    "category": "PESCADERIA",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0153",
@@ -2207,7 +2545,9 @@
     "listPriceC": 2399,
     "stock": 100,
     "minStock": 10,
-    "category": "PESCADERIA"
+    "category": "PESCADERIA",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0154",
@@ -2220,7 +2560,9 @@
     "listPriceC": 2399,
     "stock": 100,
     "minStock": 10,
-    "category": "PESCADERIA"
+    "category": "PESCADERIA",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0155",
@@ -2233,7 +2575,9 @@
     "listPriceC": 4040,
     "stock": 100,
     "minStock": 10,
-    "category": "PESCADERIA"
+    "category": "PESCADERIA",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0156",
@@ -2246,7 +2590,9 @@
     "listPriceC": 4040,
     "stock": 100,
     "minStock": 10,
-    "category": "PESCADERIA"
+    "category": "PESCADERIA",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0157",
@@ -2259,7 +2605,9 @@
     "listPriceC": 3587,
     "stock": 100,
     "minStock": 10,
-    "category": "PESCADERIA"
+    "category": "PESCADERIA",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0158",
@@ -2272,7 +2620,9 @@
     "listPriceC": 3699,
     "stock": 100,
     "minStock": 10,
-    "category": "PESCADERIA"
+    "category": "PESCADERIA",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0159",
@@ -2285,7 +2635,9 @@
     "listPriceC": 3099,
     "stock": 100,
     "minStock": 10,
-    "category": "PESCADERIA"
+    "category": "PESCADERIA",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0160",
@@ -2298,7 +2650,9 @@
     "listPriceC": 942,
     "stock": 100,
     "minStock": 10,
-    "category": "PASTAS SECAS"
+    "category": "PASTAS SECAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0161",
@@ -2311,7 +2665,9 @@
     "listPriceC": 1617,
     "stock": 100,
     "minStock": 10,
-    "category": "PASTAS SECAS"
+    "category": "PASTAS SECAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0162",
@@ -2324,7 +2680,9 @@
     "listPriceC": 1352,
     "stock": 100,
     "minStock": 10,
-    "category": "PASTAS SECAS"
+    "category": "PASTAS SECAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0163",
@@ -2337,7 +2695,9 @@
     "listPriceC": 1030,
     "stock": 100,
     "minStock": 10,
-    "category": "PASTAS SECAS"
+    "category": "PASTAS SECAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0164",
@@ -2350,7 +2710,9 @@
     "listPriceC": 1030,
     "stock": 100,
     "minStock": 10,
-    "category": "PASTAS SECAS"
+    "category": "PASTAS SECAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0186",
@@ -2363,7 +2725,9 @@
     "listPriceC": 18034.2,
     "stock": 100,
     "minStock": 10,
-    "category": "PAPELES"
+    "category": "PAPELES",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0187",
@@ -2376,7 +2740,9 @@
     "listPriceC": 18187.42,
     "stock": 100,
     "minStock": 10,
-    "category": "PAPELES"
+    "category": "PAPELES",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0188",
@@ -2389,7 +2755,9 @@
     "listPriceC": 19927.94,
     "stock": 100,
     "minStock": 10,
-    "category": "PAPELES"
+    "category": "PAPELES",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0189",
@@ -2402,7 +2770,9 @@
     "listPriceC": 22173.37,
     "stock": 100,
     "minStock": 10,
-    "category": "PAPELES"
+    "category": "PAPELES",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0190",
@@ -2415,7 +2785,9 @@
     "listPriceC": 23207.04,
     "stock": 100,
     "minStock": 10,
-    "category": "PAPELES"
+    "category": "PAPELES",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0191",
@@ -2428,7 +2800,9 @@
     "listPriceC": 12517.85,
     "stock": 100,
     "minStock": 10,
-    "category": "PAPELES"
+    "category": "PAPELES",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0192",
@@ -2441,7 +2815,9 @@
     "listPriceC": 22848.1,
     "stock": 100,
     "minStock": 10,
-    "category": "PAPELES"
+    "category": "PAPELES",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0193",
@@ -2454,7 +2830,9 @@
     "listPriceC": 18840.11,
     "stock": 100,
     "minStock": 10,
-    "category": "PAPELES"
+    "category": "PAPELES",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0194",
@@ -2467,7 +2845,9 @@
     "listPriceC": 9188.26,
     "stock": 100,
     "minStock": 10,
-    "category": "REGALERIA"
+    "category": "REGALERIA",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0195",
@@ -2480,7 +2860,9 @@
     "listPriceC": 17074.8,
     "stock": 100,
     "minStock": 10,
-    "category": "REGALERIA"
+    "category": "REGALERIA",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0196",
@@ -2493,7 +2875,9 @@
     "listPriceC": 7799.4,
     "stock": 100,
     "minStock": 10,
-    "category": "REGALERIA"
+    "category": "REGALERIA",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0197",
@@ -2506,7 +2890,9 @@
     "listPriceC": 7809.43,
     "stock": 100,
     "minStock": 10,
-    "category": "BEBIDAS"
+    "category": "BEBIDAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0198",
@@ -2519,7 +2905,9 @@
     "listPriceC": 7809.43,
     "stock": 100,
     "minStock": 10,
-    "category": "BEBIDAS"
+    "category": "BEBIDAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0199",
@@ -2532,7 +2920,9 @@
     "listPriceC": 9574.2,
     "stock": 100,
     "minStock": 10,
-    "category": "BEBIDAS"
+    "category": "BEBIDAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0200",
@@ -2545,7 +2935,9 @@
     "listPriceC": 4112.64,
     "stock": 100,
     "minStock": 10,
-    "category": "BEBIDAS"
+    "category": "BEBIDAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0201",
@@ -2558,7 +2950,9 @@
     "listPriceC": 6299.1,
     "stock": 100,
     "minStock": 10,
-    "category": "BEBIDAS"
+    "category": "BEBIDAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0202",
@@ -2571,7 +2965,9 @@
     "listPriceC": 3948.32,
     "stock": 100,
     "minStock": 10,
-    "category": "BEBIDAS"
+    "category": "BEBIDAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0203",
@@ -2584,7 +2980,9 @@
     "listPriceC": 8808.21,
     "stock": 100,
     "minStock": 10,
-    "category": "BEBIDAS"
+    "category": "BEBIDAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0204",
@@ -2597,7 +2995,9 @@
     "listPriceC": 5853.6,
     "stock": 100,
     "minStock": 10,
-    "category": "BEBIDAS"
+    "category": "BEBIDAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0205",
@@ -2610,7 +3010,9 @@
     "listPriceC": 5853.6,
     "stock": 100,
     "minStock": 10,
-    "category": "BEBIDAS"
+    "category": "BEBIDAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0206",
@@ -2623,7 +3025,9 @@
     "listPriceC": 5395.5,
     "stock": 100,
     "minStock": 10,
-    "category": "BEBIDAS"
+    "category": "BEBIDAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0207",
@@ -2636,7 +3040,9 @@
     "listPriceC": 7194.6,
     "stock": 100,
     "minStock": 10,
-    "category": "BEBIDAS"
+    "category": "BEBIDAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0208",
@@ -2649,7 +3055,9 @@
     "listPriceC": 11078.42,
     "stock": 100,
     "minStock": 10,
-    "category": "BEBIDAS"
+    "category": "BEBIDAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0209",
@@ -2662,7 +3070,9 @@
     "listPriceC": 13299.98,
     "stock": 100,
     "minStock": 10,
-    "category": "BEBIDAS"
+    "category": "BEBIDAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0210",
@@ -2675,7 +3085,9 @@
     "listPriceC": 4868.1,
     "stock": 100,
     "minStock": 10,
-    "category": "BEBIDAS"
+    "category": "BEBIDAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0211",
@@ -2688,7 +3100,9 @@
     "listPriceC": 5768.1,
     "stock": 100,
     "minStock": 10,
-    "category": "BEBIDAS"
+    "category": "BEBIDAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0212",
@@ -2701,7 +3115,9 @@
     "listPriceC": 6983.1,
     "stock": 100,
     "minStock": 10,
-    "category": "BEBIDAS"
+    "category": "BEBIDAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0213",
@@ -2714,7 +3130,9 @@
     "listPriceC": 9409.5,
     "stock": 100,
     "minStock": 10,
-    "category": "BEBIDAS"
+    "category": "BEBIDAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0214",
@@ -2727,7 +3145,9 @@
     "listPriceC": 8502.52,
     "stock": 100,
     "minStock": 10,
-    "category": "BEBIDAS"
+    "category": "BEBIDAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0215",
@@ -2740,7 +3160,9 @@
     "listPriceC": 3248.8,
     "stock": 100,
     "minStock": 10,
-    "category": "BEBIDAS"
+    "category": "BEBIDAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0216",
@@ -2753,7 +3175,9 @@
     "listPriceC": 3248.8,
     "stock": 100,
     "minStock": 10,
-    "category": "BEBIDAS"
+    "category": "BEBIDAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0217",
@@ -2766,7 +3190,9 @@
     "listPriceC": 3248.8,
     "stock": 100,
     "minStock": 10,
-    "category": "BEBIDAS"
+    "category": "BEBIDAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0218",
@@ -2779,7 +3205,9 @@
     "listPriceC": 1851.61,
     "stock": 100,
     "minStock": 10,
-    "category": "BEBIDAS"
+    "category": "BEBIDAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0219",
@@ -2792,7 +3220,9 @@
     "listPriceC": 1851.61,
     "stock": 100,
     "minStock": 10,
-    "category": "BEBIDAS"
+    "category": "BEBIDAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0220",
@@ -2805,7 +3235,9 @@
     "listPriceC": 2176.58,
     "stock": 100,
     "minStock": 10,
-    "category": "BEBIDAS"
+    "category": "BEBIDAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0221",
@@ -2818,7 +3250,9 @@
     "listPriceC": 1851.61,
     "stock": 100,
     "minStock": 10,
-    "category": "BEBIDAS"
+    "category": "BEBIDAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0222",
@@ -2831,7 +3265,9 @@
     "listPriceC": 1699.2,
     "stock": 100,
     "minStock": 10,
-    "category": "BEBIDAS"
+    "category": "BEBIDAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0223",
@@ -2844,7 +3280,9 @@
     "listPriceC": 1699.2,
     "stock": 100,
     "minStock": 10,
-    "category": "BEBIDAS"
+    "category": "BEBIDAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0224",
@@ -2857,7 +3295,9 @@
     "listPriceC": 1699.2,
     "stock": 100,
     "minStock": 10,
-    "category": "BEBIDAS"
+    "category": "BEBIDAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0225",
@@ -2870,7 +3310,9 @@
     "listPriceC": 1699.2,
     "stock": 100,
     "minStock": 10,
-    "category": "BEBIDAS"
+    "category": "BEBIDAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0226",
@@ -2883,7 +3325,9 @@
     "listPriceC": 15245.23,
     "stock": 100,
     "minStock": 10,
-    "category": "BEBIDAS"
+    "category": "BEBIDAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0227",
@@ -2896,7 +3340,9 @@
     "listPriceC": 2926.58,
     "stock": 100,
     "minStock": 10,
-    "category": "BEBIDAS"
+    "category": "BEBIDAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0228",
@@ -2909,7 +3355,9 @@
     "listPriceC": 2127.92,
     "stock": 100,
     "minStock": 10,
-    "category": "BEBIDAS"
+    "category": "BEBIDAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0229",
@@ -2922,7 +3370,9 @@
     "listPriceC": 1731.35,
     "stock": 100,
     "minStock": 10,
-    "category": "BEBIDAS"
+    "category": "BEBIDAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0230",
@@ -2935,7 +3385,9 @@
     "listPriceC": 1959.01,
     "stock": 100,
     "minStock": 10,
-    "category": "BEBIDAS"
+    "category": "BEBIDAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0231",
@@ -2948,7 +3400,9 @@
     "listPriceC": 1542.24,
     "stock": 100,
     "minStock": 10,
-    "category": "BEBIDAS"
+    "category": "BEBIDAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0232",
@@ -2961,7 +3415,9 @@
     "listPriceC": 7297.18,
     "stock": 100,
     "minStock": 10,
-    "category": "BEBIDAS"
+    "category": "BEBIDAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0233",
@@ -2974,7 +3430,9 @@
     "listPriceC": 7297.18,
     "stock": 100,
     "minStock": 10,
-    "category": "BEBIDAS"
+    "category": "BEBIDAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0234",
@@ -2987,7 +3445,9 @@
     "listPriceC": 6770.25,
     "stock": 100,
     "minStock": 10,
-    "category": "BEBIDAS"
+    "category": "BEBIDAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0235",
@@ -3000,7 +3460,9 @@
     "listPriceC": 8613.59,
     "stock": 100,
     "minStock": 10,
-    "category": "BEBIDAS"
+    "category": "BEBIDAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0236",
@@ -3013,7 +3475,9 @@
     "listPriceC": 7586.35,
     "stock": 100,
     "minStock": 10,
-    "category": "BEBIDAS"
+    "category": "BEBIDAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0237",
@@ -3026,7 +3490,9 @@
     "listPriceC": 19034.1,
     "stock": 100,
     "minStock": 10,
-    "category": "BEBIDAS"
+    "category": "BEBIDAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0238",
@@ -3039,7 +3505,9 @@
     "listPriceC": 9495.9,
     "stock": 100,
     "minStock": 10,
-    "category": "BEBIDAS"
+    "category": "BEBIDAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0239",
@@ -3052,7 +3520,9 @@
     "listPriceC": 15122.7,
     "stock": 100,
     "minStock": 10,
-    "category": "BEBIDAS"
+    "category": "BEBIDAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0240",
@@ -3065,7 +3535,9 @@
     "listPriceC": 7251.17,
     "stock": 100,
     "minStock": 10,
-    "category": "BEBIDAS"
+    "category": "BEBIDAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0241",
@@ -3078,7 +3550,9 @@
     "listPriceC": 5175.68,
     "stock": 100,
     "minStock": 10,
-    "category": "BEBIDAS"
+    "category": "BEBIDAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0242",
@@ -3091,7 +3565,9 @@
     "listPriceC": 8046,
     "stock": 100,
     "minStock": 10,
-    "category": "BEBIDAS"
+    "category": "BEBIDAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0243",
@@ -3104,7 +3580,9 @@
     "listPriceC": 8046,
     "stock": 100,
     "minStock": 10,
-    "category": "BEBIDAS"
+    "category": "BEBIDAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0244",
@@ -3117,7 +3595,9 @@
     "listPriceC": 8046,
     "stock": 100,
     "minStock": 10,
-    "category": "BEBIDAS"
+    "category": "BEBIDAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0245",
@@ -3130,7 +3610,9 @@
     "listPriceC": 8046,
     "stock": 100,
     "minStock": 10,
-    "category": "BEBIDAS"
+    "category": "BEBIDAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0246",
@@ -3143,7 +3625,9 @@
     "listPriceC": 12483.9,
     "stock": 100,
     "minStock": 10,
-    "category": "BEBIDAS"
+    "category": "BEBIDAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0247",
@@ -3156,7 +3640,9 @@
     "listPriceC": 5394.6,
     "stock": 100,
     "minStock": 10,
-    "category": "BEBIDAS"
+    "category": "BEBIDAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0248",
@@ -3169,7 +3655,9 @@
     "listPriceC": 5394.6,
     "stock": 100,
     "minStock": 10,
-    "category": "BEBIDAS"
+    "category": "BEBIDAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0249",
@@ -3182,7 +3670,9 @@
     "listPriceC": 2518.2,
     "stock": 100,
     "minStock": 10,
-    "category": "BEBIDAS"
+    "category": "BEBIDAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0250",
@@ -3195,7 +3685,9 @@
     "listPriceC": 1510.2,
     "stock": 100,
     "minStock": 10,
-    "category": "BEBIDAS"
+    "category": "BEBIDAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0251",
@@ -3208,7 +3700,9 @@
     "listPriceC": 7532.1,
     "stock": 100,
     "minStock": 10,
-    "category": "BEBIDAS"
+    "category": "BEBIDAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0252",
@@ -3221,7 +3715,9 @@
     "listPriceC": 1510.2,
     "stock": 100,
     "minStock": 10,
-    "category": "BEBIDAS"
+    "category": "BEBIDAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0253",
@@ -3234,7 +3730,9 @@
     "listPriceC": 7532.1,
     "stock": 100,
     "minStock": 10,
-    "category": "BEBIDAS"
+    "category": "BEBIDAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0254",
@@ -3247,7 +3745,9 @@
     "listPriceC": 7532.1,
     "stock": 100,
     "minStock": 10,
-    "category": "BEBIDAS"
+    "category": "BEBIDAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0255",
@@ -3260,7 +3760,9 @@
     "listPriceC": 1510.2,
     "stock": 100,
     "minStock": 10,
-    "category": "BEBIDAS"
+    "category": "BEBIDAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0256",
@@ -3273,7 +3775,9 @@
     "listPriceC": 6075.32,
     "stock": 100,
     "minStock": 10,
-    "category": "BEBIDAS"
+    "category": "BEBIDAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0257",
@@ -3286,7 +3790,9 @@
     "listPriceC": 3887.1,
     "stock": 100,
     "minStock": 10,
-    "category": "BEBIDAS"
+    "category": "BEBIDAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0258",
@@ -3299,7 +3805,9 @@
     "listPriceC": 22165.61,
     "stock": 100,
     "minStock": 10,
-    "category": "BEBIDAS"
+    "category": "BEBIDAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0259",
@@ -3312,7 +3820,9 @@
     "listPriceC": 7156.8,
     "stock": 100,
     "minStock": 10,
-    "category": "BEBIDAS"
+    "category": "BEBIDAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0260",
@@ -3325,7 +3835,9 @@
     "listPriceC": 5869.8,
     "stock": 100,
     "minStock": 10,
-    "category": "BEBIDAS"
+    "category": "BEBIDAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0261",
@@ -3338,7 +3850,9 @@
     "listPriceC": 5869.8,
     "stock": 100,
     "minStock": 10,
-    "category": "BEBIDAS"
+    "category": "BEBIDAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0262",
@@ -3351,7 +3865,9 @@
     "listPriceC": 5869.8,
     "stock": 100,
     "minStock": 10,
-    "category": "BEBIDAS"
+    "category": "BEBIDAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0263",
@@ -3364,7 +3880,9 @@
     "listPriceC": 13109.96,
     "stock": 100,
     "minStock": 10,
-    "category": "BEBIDAS"
+    "category": "BEBIDAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0264",
@@ -3377,7 +3895,9 @@
     "listPriceC": 16805.83,
     "stock": 100,
     "minStock": 10,
-    "category": "BEBIDAS"
+    "category": "BEBIDAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0265",
@@ -3390,7 +3910,9 @@
     "listPriceC": 23412.67,
     "stock": 100,
     "minStock": 10,
-    "category": "BEBIDAS"
+    "category": "BEBIDAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0266",
@@ -3403,7 +3925,9 @@
     "listPriceC": 7310.7,
     "stock": 100,
     "minStock": 10,
-    "category": "BEBIDAS"
+    "category": "BEBIDAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0267",
@@ -3416,7 +3940,9 @@
     "listPriceC": 7310.95,
     "stock": 100,
     "minStock": 10,
-    "category": "BEBIDAS"
+    "category": "BEBIDAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0268",
@@ -3429,7 +3955,9 @@
     "listPriceC": 3594.6,
     "stock": 100,
     "minStock": 10,
-    "category": "BEBIDAS"
+    "category": "BEBIDAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0269",
@@ -3442,7 +3970,9 @@
     "listPriceC": 3594.6,
     "stock": 100,
     "minStock": 10,
-    "category": "BEBIDAS"
+    "category": "BEBIDAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0270",
@@ -3455,7 +3985,9 @@
     "listPriceC": 2970.65,
     "stock": 100,
     "minStock": 10,
-    "category": "BEBIDAS"
+    "category": "BEBIDAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0140",
@@ -3468,7 +4000,9 @@
     "listPriceC": 2331,
     "stock": 100,
     "minStock": 10,
-    "category": "YERBAS"
+    "category": "YERBAS",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0001",
@@ -3481,7 +4015,9 @@
     "listPriceC": 10273,
     "stock": 100,
     "minStock": 10,
-    "category": "REMOTTI"
+    "category": "REMOTTI",
+    "isPesable": true,
+    "approximateWeight": 4
   },
   {
     "sku": "PROD-0048",
@@ -3494,7 +4030,9 @@
     "listPriceC": 31714,
     "stock": 100,
     "minStock": 10,
-    "category": "SANCOR Y CREMIGAL"
+    "category": "SANCOR Y CREMIGAL",
+    "isPesable": false,
+    "approximateWeight": null
   },
   {
     "sku": "PROD-0093",
@@ -3507,6 +4045,8 @@
     "listPriceC": 3393,
     "stock": 100,
     "minStock": 10,
-    "category": "A.G.D Y NIZA"
+    "category": "A.G.D Y NIZA",
+    "isPesable": false,
+    "approximateWeight": null
   }
 ]

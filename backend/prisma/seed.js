@@ -178,6 +178,8 @@ async function main() {
           listPriceC: prod.listPriceC,
           stock: prod.stock,
           minStock: prod.minStock,
+          isPesable: prod.isPesable !== undefined ? Boolean(prod.isPesable) : false,
+          approximateWeight: prod.approximateWeight !== undefined ? prod.approximateWeight : null,
           rubroId: rubroId
         },
       });
