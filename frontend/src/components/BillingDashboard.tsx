@@ -16,7 +16,7 @@ interface BillingDashboardProps {
 
 export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: _setActiveTab }: BillingDashboardProps) {
   // Sub-pestañas del módulo de facturación
-  const [activeSubTab, setActiveSubTab] = useState<'ventas' | 'percepciones' | 'retenciones' | 'notas-credito'>('ventas');
+  const [activeSubTab, setActiveSubTab] = useState<'ventas' | 'retenciones' | 'notas-credito'>('ventas');
 
   // Listas de datos
   const [salesInvoices, setSalesInvoices] = useState<any[]>([]);
@@ -54,9 +54,9 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
     return personas.filter(p => p.isClient);
   }, [personas]);
 
-  const providersOnly = useMemo(() => {
-    return personas.filter(p => p.isProvider);
-  }, [personas]);
+  // const providersOnly = useMemo(() => {
+  //   return personas.filter(p => p.isProvider);
+  // }, [personas]);
 
   // Estados para facturación directa
   const [showDirectInvoiceModal, setShowDirectInvoiceModal] = useState(false);
@@ -172,11 +172,6 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
       if (activeSubTab === 'ventas') {
         const data = await api.getSalesInvoices(filters);
         setSalesInvoices(data);
-      } else if (activeSubTab === 'percepciones') {
-        const data = await api.getTaxWithholdings(filters);
-        // Filtrar percepciones sufridas y practicadas
-        const perceptions = data.filter((w: any) => w.type.startsWith('PERCEPCION_'));
-        setTaxWithholdings(perceptions);
       } else if (activeSubTab === 'retenciones') {
         const data = await api.getTaxWithholdings(filters);
         // Filtrar retenciones sufridas y practicadas
@@ -962,11 +957,10 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
         borderRadius: '8px',
         width: 'fit-content'
       }}>
-        {(['ventas', 'notas-credito', 'percepciones', 'retenciones'] as const).map((tab) => {
+        {(['ventas', 'notas-credito', 'retenciones'] as const).map((tab) => {
           const labels = {
             'ventas': 'Comprobantes Venta',
             'notas-credito': 'Notas de Crédito',
-            'percepciones': 'Percepciones',
             'retenciones': 'Retenciones'
           };
           const isActive = activeSubTab === tab;
@@ -1369,81 +1363,7 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
         </div>
       )}
 
-      {/* ====================================================================
-          SUB-TAB 3: PERCEPCIONES (PRACTICADAS Y SUFRIDAS)
-          ==================================================================== */}
-      {activeSubTab === 'percepciones' && (
-        <div className="card">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-            <div>
-              <h3 className="card-title" style={{ margin: '0' }}>📈 Registro de Percepciones (IIBB / IVA)</h3>
-              <p style={{ fontSize: '0.8rem', marginTop: '2px' }}>Percepciones aplicadas en nuestras facturas de venta y sufridas en las facturas de proveedores.</p>
-            </div>
-            <button 
-              className="btn btn-primary" 
-              onClick={() => {
-                setWithholdingForm(prev => ({ ...prev, type: 'PERCEPCION_SUFRIDA' }));
-                setShowWithholdingModal(true);
-              }}
-              style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
-            >
-              <Plus size={16} />
-              Nueva Percepción Manual
-            </button>
-          </div>
 
-          <div className="table-container">
-            <table>
-              <thead>
-                <tr>
-                  <th>Fecha</th>
-                  <th>Tipo Movimiento</th>
-                  <th>Impuesto</th>
-                  <th>Comprobante</th>
-                  <th>Persona / CUIT</th>
-                  <th>Jurisdicción</th>
-                  <th>Importe</th>
-                </tr>
-              </thead>
-              <tbody>
-                {loading ? (
-                  <tr><td colSpan={7} style={{ textAlign: 'center' }}>Cargando percepciones...</td></tr>
-                ) : taxWithholdings.length === 0 ? (
-                  <tr><td colSpan={7} style={{ textAlign: 'center' }}>No se encontraron percepciones en el período.</td></tr>
-                ) : (
-                  taxWithholdings.map((w) => (
-                    <tr key={w.id}>
-                      <td>{new Date(w.date).toLocaleDateString('es-AR')}</td>
-                      <td>
-                        <span style={{
-                          fontSize: '0.75rem',
-                          fontWeight: 600,
-                          padding: '2px 6px',
-                          borderRadius: '4px',
-                          backgroundColor: w.type === 'PERCEPCION_SUFRIDA' ? 'var(--color-info-bg)' : 'var(--color-warning-bg)',
-                          color: w.type === 'PERCEPCION_SUFRIDA' ? 'var(--color-info)' : 'var(--color-warning)'
-                        }}>
-                          {w.type === 'PERCEPCION_SUFRIDA' ? 'Sufrida (Crédito Proveedor)' : 'Practicada (Venta Cliente)'}
-                        </span>
-                      </td>
-                      <td style={{ fontWeight: 600 }}>{w.taxType}</td>
-                      <td style={{ fontFamily: 'monospace' }}>{w.number}</td>
-                      <td>
-                        <div>{w.persona?.name}</div>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>CUIT: {w.persona?.cuit}</div>
-                      </td>
-                      <td style={{ fontWeight: 600 }}>{w.jurisdiction || 'Nacional'}</td>
-                      <td style={{ fontWeight: 700, color: w.type === 'PERCEPCION_SUFRIDA' ? 'var(--text-primary)' : 'var(--accent-color)' }}>
-                        ${Number(w.amount).toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
 
       {/* ====================================================================
           SUB-TAB 4: RETENCIONES (SUFRIDAS Y PRACTICADAS)

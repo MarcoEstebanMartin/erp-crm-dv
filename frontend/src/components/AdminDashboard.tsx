@@ -932,9 +932,9 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
 
-    const totalA = filteredDebtors.reduce((acc, d) => acc + d.debtA, 0);
-    const totalX = filteredDebtors.reduce((acc, d) => acc + d.debtX, 0);
-    const totalConsolidado = filteredDebtors.reduce((acc, d) => acc + d.outstandingBalance, 0);
+    // const totalA = filteredDebtors.reduce((acc, d) => acc + d.debtA, 0);
+    // const totalX = filteredDebtors.reduce((acc, d) => acc + d.debtX, 0);
+    // const totalConsolidado = filteredDebtors.reduce((acc, d) => acc + d.outstandingBalance, 0);
 
     const formatCityName = (name: string) => {
       return name
