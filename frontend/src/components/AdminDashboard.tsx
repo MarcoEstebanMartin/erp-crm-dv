@@ -895,89 +895,278 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
     const totalX = filteredDebtors.reduce((acc, d) => acc + d.debtX, 0);
     const totalConsolidado = filteredDebtors.reduce((acc, d) => acc + d.outstandingBalance, 0);
 
+    const formatCityName = (name: string) => {
+      return name
+        .toLowerCase()
+        .split(' ')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ');
+    };
+
+    let reportTitle = 'Reporte de Deudores';
+    if (selectedCities.length === 1) {
+      reportTitle = `Reporte de Deudores de ${formatCityName(selectedCities[0])}`;
+    } else if (selectedCities.length > 1 && selectedCities.length <= 3) {
+      reportTitle = `Reporte de Deudores de ${selectedCities.map(formatCityName).join(' / ')}`;
+    } else {
+      reportTitle = 'Reporte de Deudores por Localidad';
+    }
+
     let htmlContent = `
       <html>
         <head>
-          <title>Reporte de Deudores por Localidad</title>
+          <title>${reportTitle}</title>
           <style>
-            body { font-family: 'Courier New', Courier, monospace; color: #000; padding: 20px; font-size: 13px; }
-            h1 { text-align: center; font-size: 18px; margin-bottom: 5px; }
-            .date { text-align: center; margin-bottom: 20px; font-size: 11px; }
-            .totals { border: 1px dashed #000; padding: 10px; margin-bottom: 20px; }
-            .route-section { margin-bottom: 25px; }
-            .route-title { font-weight: bold; font-size: 15px; border-bottom: 1px solid #000; padding-bottom: 3px; margin-bottom: 10px; text-transform: uppercase; }
-            table { width: 100%; border-collapse: collapse; margin-top: 5px; }
-            th { text-align: left; border-bottom: 1px dashed #000; padding: 5px 0; font-size: 12px; }
-            td { padding: 6px 0; font-size: 12px; vertical-align: top; }
-            .text-right { text-align: right; }
-            .divider { border-top: 1px dashed #000; margin: 15px 0; }
+            body {
+              font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+              color: #1f2937;
+              padding: 20px;
+              font-size: 12px;
+              line-height: 1.5;
+            }
+            .header-container {
+              border-bottom: 2px solid #111827;
+              padding-bottom: 12px;
+              margin-bottom: 20px;
+            }
+            h1 {
+              font-size: 20px;
+              font-weight: 700;
+              margin: 0 0 6px 0;
+              color: #111827;
+              letter-spacing: -0.02em;
+            }
+            .date {
+              font-size: 11px;
+              color: #6b7280;
+            }
+            .totals-grid {
+              display: grid;
+              grid-template-columns: repeat(4, 1fr);
+              gap: 16px;
+              margin-bottom: 24px;
+              background-color: #f9fafb;
+              border: 1px solid #e5e7eb;
+              border-radius: 6px;
+              padding: 12px 16px;
+            }
+            .total-card {
+              display: flex;
+              flex-direction: column;
+            }
+            .total-label {
+              font-size: 10px;
+              text-transform: uppercase;
+              letter-spacing: 0.05em;
+              color: #6b7280;
+              font-weight: 600;
+              margin-bottom: 4px;
+            }
+            .total-val {
+              font-size: 16px;
+              font-weight: 700;
+              color: #111827;
+            }
+            .total-val.consolidated {
+              color: #e30613;
+            }
+            .route-section {
+              margin-bottom: 25px;
+              page-break-inside: avoid;
+            }
+            .route-title {
+              font-size: 14px;
+              font-weight: 700;
+              color: #111827;
+              border-bottom: 1px solid #e5e7eb;
+              padding-bottom: 4px;
+              margin-bottom: 12px;
+              text-transform: uppercase;
+            }
+            .branch-container {
+              margin-bottom: 20px;
+            }
+            .branch-header {
+              font-size: 11px;
+              font-weight: 700;
+              color: #374151;
+              background-color: #f3f4f6;
+              padding: 4px 8px;
+              border-radius: 4px;
+              margin-bottom: 6px;
+              text-transform: uppercase;
+              letter-spacing: 0.05em;
+              display: inline-block;
+            }
+            table {
+              width: 100%;
+              border-collapse: collapse;
+              margin-bottom: 10px;
+            }
+            th {
+              text-align: left;
+              border-bottom: 1px solid #e5e7eb;
+              padding: 4px 6px;
+              font-size: 10px;
+              font-weight: 600;
+              color: #6b7280;
+              text-transform: uppercase;
+              letter-spacing: 0.05em;
+            }
+            td {
+              padding: 6px;
+              font-size: 11px;
+              color: #1f2937;
+              border-bottom: 1px solid #f3f4f6;
+              vertical-align: middle;
+            }
+            .client-name {
+              font-weight: 600;
+              color: #111827;
+            }
+            .client-badge {
+              font-size: 9px;
+              color: #e30613;
+              font-weight: 600;
+              margin-left: 6px;
+              background-color: #fef2f2;
+              padding: 2px 6px;
+              border-radius: 4px;
+              border: 1px solid #fee2e2;
+              display: inline-block;
+            }
+            .client-contact {
+              color: #4b5563;
+            }
+            .amount {
+              font-weight: 600;
+              text-align: right;
+              color: #111827;
+            }
+            .text-right {
+              text-align: right;
+            }
+            .divider {
+              border-top: 1px solid #e5e7eb;
+              margin: 20px 0;
+            }
             @media print {
-              body { padding: 0; }
-              button { display: none; }
+              body {
+                padding: 0;
+              }
+              .totals-grid {
+                background-color: transparent !important;
+                border: 1px solid #e5e7eb;
+              }
             }
           </style>
         </head>
         <body>
-          <h1>DISTRIBUIDORA DV - REPORTE DE DEUDORES POR LOCALIDAD</h1>
-          <div class="date">Generado el: ${new Date().toLocaleDateString('es-AR')} ${new Date().toLocaleTimeString('es-AR')}</div>
+          <div class="header-container">
+            <h1>${reportTitle}</h1>
+            <div class="date">Generado el ${new Date().toLocaleDateString('es-AR')} a las ${new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}</div>
+          </div>
           
-          <div class="totals">
-            <strong>TOTAL CLIENTES EN MORA:</strong> ${filteredDebtors.length}<br>
-            <strong>DEUDA SUCURSAL A (OFICIAL):</strong> $${totalA.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}<br>
-            <strong>DEUDA SUCURSAL X (INTERNA):</strong> $${totalX.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}<br>
-            <strong>DEUDA CONSOLIDADA:</strong> $${totalConsolidado.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+          <div class="totals-grid">
+            <div class="total-card">
+              <span class="total-label">Clientes en Mora</span>
+              <span class="total-val">${filteredDebtors.length}</span>
+            </div>
+            <div class="total-card">
+              <span class="total-label">Deuda Sucursal A</span>
+              <span class="total-val">$${Math.round(totalA).toLocaleString('es-AR')}</span>
+            </div>
+            <div class="total-card">
+              <span class="total-label">Deuda Sucursal X</span>
+              <span class="total-val">$${Math.round(totalX).toLocaleString('es-AR')}</span>
+            </div>
+            <div class="total-card">
+              <span class="total-label">Deuda Consolidada</span>
+              <span class="total-val consolidated">$${Math.round(totalConsolidado).toLocaleString('es-AR')}</span>
+            </div>
           </div>
     `;
 
     Object.keys(groups).sort().forEach(city => {
+      const debtorsA = groups[city].filter(c => Math.round(c.debtA) > 0);
+      const debtorsX = groups[city].filter(c => Math.round(c.debtX) > 0);
+
+      const totalCityA = debtorsA.reduce((acc, d) => acc + d.debtA, 0);
+      const totalCityX = debtorsX.reduce((acc, d) => acc + d.debtX, 0);
       const groupTotal = groups[city].reduce((acc, d) => acc + d.outstandingBalance, 0);
+
       htmlContent += `
         <div class="route-section">
-          <div class="route-title">📍 Localidad: ${city} (Total: $${groupTotal.toLocaleString('es-AR')})</div>
-          <table>
-            <thead>
-              <tr>
-                <th style="width: 30%">Cliente</th>
-                <th style="width: 25%">Contacto / Teléfono</th>
-                <th style="width: 15%" class="text-right">Suc. A</th>
-                <th style="width: 15%" class="text-right">Suc. X</th>
-                <th style="width: 15%" class="text-right">Total</th>
-              </tr>
-            </thead>
-            <tbody>
-      `;
+          ${selectedCities.length > 1 ? `
+            <div class="route-title">📍 Localidad: ${city} (Total: $${Math.round(groupTotal).toLocaleString('es-AR')})</div>
+          ` : ''}
+          
+          <!-- SUCURSAL A -->
+          ${debtorsA.length > 0 ? `
+            <div class="branch-container">
+              <div class="branch-header">Sucursal A (Oficial) - Subtotal: $${Math.round(totalCityA).toLocaleString('es-AR')}</div>
+              <table>
+                <thead>
+                  <tr>
+                    <th style="width: 45%">Cliente</th>
+                    <th style="width: 40%">Contacto</th>
+                    <th style="width: 15%" class="text-right">Importe</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${debtorsA.map(c => `
+                    <tr>
+                      <td>
+                        <span class="client-name">${c.name}</span>
+                        ${c.pendingInvoicesCount > 1 ? `<span class="client-badge">Debe ${c.pendingInvoicesCount} bol.</span>` : ''}
+                      </td>
+                      <td class="client-contact">
+                        ${c.address || 'S/D'}${c.phone ? ` - Tel: ${c.phone}` : ''}
+                      </td>
+                      <td class="amount">$${Math.round(c.debtA).toLocaleString('es-AR')}</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          ` : ''}
 
-      groups[city].forEach(c => {
-        htmlContent += `
-          <tr>
-            <td>
-              <strong>${c.name}</strong><br>
-              <span style="font-size: 10px; color: #555;">Ruta: ${c.route || 'Sin Ruta'}</span>
-              ${c.pendingInvoicesCount > 1 ? '<br><span style="font-size: 10px; color: #E30613; font-weight: bold;">⚠️ Debe ' + c.pendingInvoicesCount + ' boletas</span>' : ''}
-            </td>
-            <td>
-              ${c.address || 'S/D'}<br>
-              Tel: ${c.phone || 'S/D'}
-            </td>
-            <td class="text-right">$${Math.round(c.debtA).toLocaleString('es-AR')}</td>
-            <td class="text-right">$${Math.round(c.debtX).toLocaleString('es-AR')}</td>
-            <td class="text-right" style="font-weight: bold; color: #E30613;">
-              $${Math.round(c.outstandingBalance).toLocaleString('es-AR')}
-            </td>
-          </tr>
-        `;
-      });
-
-      htmlContent += `
-            </tbody>
-          </table>
+          <!-- SUCURSAL X -->
+          ${debtorsX.length > 0 ? `
+            <div class="branch-container">
+              <div class="branch-header">Sucursal X (Interna) - Subtotal: $${Math.round(totalCityX).toLocaleString('es-AR')}</div>
+              <table>
+                <thead>
+                  <tr>
+                    <th style="width: 45%">Cliente</th>
+                    <th style="width: 40%">Contacto</th>
+                    <th style="width: 15%" class="text-right">Importe</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${debtorsX.map(c => `
+                    <tr>
+                      <td>
+                        <span class="client-name">${c.name}</span>
+                        ${c.pendingInvoicesCount > 1 ? `<span class="client-badge">Debe ${c.pendingInvoicesCount} bol.</span>` : ''}
+                      </td>
+                      <td class="client-contact">
+                        ${c.address || 'S/D'}${c.phone ? ` - Tel: ${c.phone}` : ''}
+                      </td>
+                      <td class="amount">$${Math.round(c.debtX).toLocaleString('es-AR')}</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          ` : ''}
         </div>
       `;
     });
 
     htmlContent += `
           <div class="divider"></div>
-          <div style="text-align: center; font-size: 10px; margin-top: 30px;">
+          <div style="text-align: center; font-size: 10px; margin-top: 30px; color: #9ca3af;">
             Fin del reporte - Distribuidora DV
           </div>
           <script>
