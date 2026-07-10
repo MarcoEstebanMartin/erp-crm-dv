@@ -155,22 +155,57 @@ export default function ResumenCuentaModal({ client, onClose }: ResumenCuentaMod
 
         {/* Printable Area */}
         <div className="print-only-container" style={{ backgroundColor: '#fff', padding: '20px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-          <div style={{ textAlign: 'center', marginBottom: '30px', borderBottom: '2px solid #000', paddingBottom: '10px' }}>
-            <h2 style={{ margin: 0 }}>RESUMEN DE CUENTA CORRIENTE</h2>
-            <p style={{ margin: '5px 0' }}><strong>{client.name}</strong></p>
-            {client.cuit && <p style={{ margin: '0' }}>CUIT: {client.cuit} | Tel: {client.phone}</p>}
+          
+          {/* Header con Logo e Info de la Distribuidora */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px', borderBottom: '2px solid #111827', paddingBottom: '15px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+              <img 
+                src="/logo.png" 
+                alt="Logo Distribuidora" 
+                style={{ height: '48px', width: 'auto', objectFit: 'contain' }} 
+              />
+              <div style={{ textAlign: 'left', lineHeight: '1.3' }}>
+                <strong style={{ fontSize: '1.1rem', color: '#111827', letterSpacing: '-0.01em' }}>DISTRIBUIDORA DV</strong>
+                <div style={{ fontSize: '0.78rem', color: '#4b5563' }}>Venta y Distribución de Alimentos y Bebidas</div>
+                <div style={{ fontSize: '0.72rem', color: '#6b7280' }}>9 de Julio 293, Intendente Alvear, La Pampa</div>
+                <div style={{ fontSize: '0.72rem', color: '#6b7280' }}>CUIT: 30-71123456-9 | Tel: 2302-419189</div>
+              </div>
+            </div>
+            <div style={{ textAlign: 'right', lineHeight: '1.3' }}>
+              <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: '#111827', letterSpacing: '-0.02em' }}>RESUMEN DE CUENTA</h2>
+              <div style={{ fontSize: '0.78rem', color: '#6b7280', marginTop: '2px' }}>
+                Emisión: <strong>{new Date().toLocaleDateString('es-AR')}</strong>
+              </div>
+            </div>
           </div>
 
-          <div style={{ marginBottom: '20px', display: 'flex', justifyContent: 'space-between' }}>
+          {/* Datos del Cliente y Saldo */}
+          <div style={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center', 
+            backgroundColor: '#f9fafb', 
+            border: '1px solid #e5e7eb', 
+            borderRadius: '6px', 
+            padding: '12px 16px',
+            marginBottom: '20px'
+          }}>
             <div>
-              <span style={{ color: 'var(--text-secondary)' }}>Fecha de Emisión: </span>
-              <strong>{new Date().toLocaleDateString('es-AR')}</strong>
+              <div style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#6b7280', fontWeight: 600, marginBottom: '2px' }}>Cliente</div>
+              <strong style={{ fontSize: '1.1rem', color: '#111827' }}>{client.name}</strong>
+              {(client.cuit || client.phone) && (
+                <div style={{ fontSize: '0.78rem', color: '#4b5563', marginTop: '2px' }}>
+                  {client.cuit && <span>CUIT: {client.cuit}</span>}
+                  {client.cuit && client.phone && <span style={{ margin: '0 6px' }}>|</span>}
+                  {client.phone && <span>Tel: {client.phone}</span>}
+                </div>
+              )}
             </div>
-            <div style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>
-              <span style={{ color: 'var(--text-secondary)' }}>Saldo Actual: </span>
-              <span style={{ color: Number(client.outstandingBalance) > 0 ? 'var(--color-danger)' : 'var(--text-primary)' }}>
+            <div style={{ textAlign: 'right' }}>
+              <div style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#6b7280', fontWeight: 600, marginBottom: '2px' }}>Saldo Actual</div>
+              <strong style={{ fontSize: '1.25rem', color: Number(client.outstandingBalance) > 0 ? '#E30613' : '#111827' }}>
                 ${Number(client.outstandingBalance || 0).toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-              </span>
+              </strong>
             </div>
           </div>
 
