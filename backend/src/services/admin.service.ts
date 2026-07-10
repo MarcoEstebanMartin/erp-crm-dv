@@ -551,8 +551,7 @@ const MAIN_CITIES = [
   'BLAQUIER',
   'AMERICA',
   'FORTIN',
-  'CARLOS TEJEDOR',
-  'OFICINA'
+  'CARLOS TEJEDOR'
 ];
 
 function normalizeCity(city: string | null | undefined): string {
