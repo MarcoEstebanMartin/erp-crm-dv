@@ -20,6 +20,13 @@ export default function ResumenCuentaModal({ client, onClose }: ResumenCuentaMod
   const [selectedTransaction, setSelectedTransaction] = useState<any | null>(null);
   const [viewLoading, setViewLoading] = useState(false);
 
+  // Obtener datos de la empresa desde localStorage
+  const companyName = (localStorage.getItem('company_nombre_fantasia') || localStorage.getItem('company_razon_social') || 'Distribuidora Don Venancio').toUpperCase();
+  const companyCuit = localStorage.getItem('company_cuit') || '';
+  const companyDireccion = localStorage.getItem('company_direccion') || '';
+  const companyTelefono = localStorage.getItem('company_telefono') || '';
+  const companyEmail = localStorage.getItem('company_email') || '';
+
   useEffect(() => {
     fetchTransactions();
   }, [dateRange, customStart, customEnd]);
@@ -165,10 +172,15 @@ export default function ResumenCuentaModal({ client, onClose }: ResumenCuentaMod
                 style={{ height: '48px', width: 'auto', objectFit: 'contain' }} 
               />
               <div style={{ textAlign: 'left', lineHeight: '1.3' }}>
-                <strong style={{ fontSize: '1.1rem', color: '#111827', letterSpacing: '-0.01em' }}>DISTRIBUIDORA DV</strong>
-                <div style={{ fontSize: '0.78rem', color: '#4b5563' }}>Venta y Distribución de Alimentos y Bebidas</div>
-                <div style={{ fontSize: '0.72rem', color: '#6b7280' }}>9 de Julio 293, Intendente Alvear, La Pampa</div>
-                <div style={{ fontSize: '0.72rem', color: '#6b7280' }}>CUIT: 30-71123456-9 | Tel: 2302-419189</div>
+                <strong style={{ fontSize: '1.1rem', color: '#111827', letterSpacing: '-0.01em' }}>{companyName}</strong>
+                {companyDireccion && <div style={{ fontSize: '0.72rem', color: '#6b7280' }}>{companyDireccion}</div>}
+                <div style={{ fontSize: '0.72rem', color: '#6b7280' }}>
+                  {companyCuit && <span>CUIT: {companyCuit}</span>}
+                  {companyCuit && (companyTelefono || companyEmail) && <span style={{ margin: '0 6px' }}>|</span>}
+                  {companyTelefono && <span>Tel: {companyTelefono}</span>}
+                  {companyTelefono && companyEmail && <span style={{ margin: '0 6px' }}>|</span>}
+                  {companyEmail && <span>Email: {companyEmail}</span>}
+                </div>
               </div>
             </div>
             <div style={{ textAlign: 'right', lineHeight: '1.3' }}>
