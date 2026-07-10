@@ -44,6 +44,7 @@ export default function ResumenCuentaModal({ client, onClose }: ResumenCuentaMod
         const isPureDate = item.id.startsWith('withholding-') || item.id.startsWith('supplier-invoice-') || (typeof item.date === 'string' && item.date.includes('T00:00:00.000Z'));
         return {
           id: item.id, // e.g., 'order-12', 'credit-note-5', 'transaction-45'
+          movementId: item.movementId,
           date: new Date(item.date),
           isPureDate,
           reference: item.reference,
@@ -90,30 +91,9 @@ export default function ResumenCuentaModal({ client, onClose }: ResumenCuentaMod
     window.print();
   };
 
-  // Extraer el identificador de control interno único formateado con prefijo para evitar ID duplicados
+  // Mostrar el identificador numérico secuencial global (movementId) obtenido de la base de datos
   const formatMovementId = (t: any) => {
-    if (!t || !t.id) return '-';
-    const parts = t.id.split('-');
-    const idNum = parts[parts.length - 1];
-    
-    if (t.id.startsWith('order-')) {
-      return `FAC-${idNum}`;
-    }
-    if (t.id.startsWith('transaction-')) {
-      const isReceipt = t.description?.toLowerCase().includes('recibo') || t.reference?.toLowerCase().includes('recibo');
-      return isReceipt ? `REC-${idNum}` : `PAG-${idNum}`;
-    }
-    if (t.id.startsWith('supplier-invoice-')) {
-      return `COM-${idNum}`;
-    }
-    if (t.id.startsWith('credit-note-')) {
-      return `NCE-${idNum}`;
-    }
-    if (t.id.startsWith('withholding-')) {
-      return `RET-${idNum}`;
-    }
-    
-    return t.id;
+    return t && t.movementId ? String(t.movementId) : '-';
   };
 
   // Cargar y mostrar detalle del comprobante seleccionado

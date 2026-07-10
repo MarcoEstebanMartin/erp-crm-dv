@@ -160,6 +160,7 @@ model Product {
 
 model Order {
   id            Int         @id @default(autoincrement())
+  movementId    Int         @default(dbgenerated("nextval('movement_seq')"))
   personaId     Int
   persona       Persona     @relation(fields: [personaId], references: [id])
   sellerId      Int
@@ -282,6 +283,7 @@ model BankAccount {
 
 model Transaction {
   id            Int             @id @default(autoincrement())
+  movementId    Int             @default(dbgenerated("nextval('movement_seq')"))
   orderId       Int?
   order         Order?          @relation(fields: [orderId], references: [id])
   personaId     Int?
@@ -334,6 +336,7 @@ model AuditLog {
 
 model SupplierInvoice {
   id               Int           @id @default(autoincrement())
+  movementId       Int           @default(dbgenerated("nextval('movement_seq')"))
   personaId        Int
   persona          Persona       @relation(fields: [personaId], references: [id])
   invoiceNumber    String        // Nro comprobante ej: "0001-00004321"
@@ -354,6 +357,7 @@ model SupplierInvoice {
 
 model TaxWithholding {
   id                Int      @id @default(autoincrement())
+  movementId        Int      @default(dbgenerated("nextval('movement_seq')"))
   type              String   // "PERCEPCION_SUFRIDA" | "PERCEPCION_PRACTICADA" | "RETENCION_SUFRIDA" | "RETENCION_PRACTICADA"
   taxType           String   // "IIBB" | "IVA" | "GANANCIAS"
   personaId         Int
@@ -404,6 +408,7 @@ model PurchaseOrderItem {
 
 model CreditNote {
   id               Int              @id @default(autoincrement())
+  movementId       Int              @default(dbgenerated("nextval('movement_seq')"))
   personaId        Int
   persona          Persona          @relation(fields: [personaId], references: [id])
   orderId          Int?             // Vinculación opcional a una factura/pedido específico

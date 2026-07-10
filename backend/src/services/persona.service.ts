@@ -354,6 +354,7 @@ export class PersonaService {
     orders.forEach((o) => {
       ledgerItems.push({
         id: `order-${o.id}`,
+        movementId: o.movementId,
         date: o.createdAt,
         type: 'DEBIT',
         reference: `Pedido #${o.id}`,
@@ -366,6 +367,7 @@ export class PersonaService {
       const ledgerType = t.type === TransactionType.INCOME ? 'CREDIT' : 'DEBIT';
       ledgerItems.push({
         id: `transaction-${t.id}`,
+        movementId: t.movementId,
         date: t.createdAt,
         type: ledgerType,
         reference: `Recibo #${t.id}`,
@@ -379,6 +381,7 @@ export class PersonaService {
     supplierInvoices.forEach((si) => {
       ledgerItems.push({
         id: `supplier-invoice-${si.id}`,
+        movementId: si.movementId,
         date: si.issueDate,
         type: 'CREDIT',
         reference: `Factura Nro ${si.invoiceNumber}`,
@@ -390,6 +393,7 @@ export class PersonaService {
     creditNotes.forEach((cn) => {
       ledgerItems.push({
         id: `credit-note-${cn.id}`,
+        movementId: cn.movementId,
         date: cn.createdAt,
         type: 'CREDIT',
         reference: `Nota de Crédito #${cn.id}`,
@@ -401,6 +405,7 @@ export class PersonaService {
     withholdings.forEach((w) => {
       ledgerItems.push({
         id: `withholding-${w.id}`,
+        movementId: w.movementId,
         date: w.date,
         type: 'CREDIT',
         reference: `Retención Cert. Nro ${w.number}`,
