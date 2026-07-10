@@ -940,36 +940,6 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
               font-size: 11px;
               color: #6b7280;
             }
-            .totals-grid {
-              display: grid;
-              grid-template-columns: repeat(4, 1fr);
-              gap: 16px;
-              margin-bottom: 24px;
-              background-color: #f9fafb;
-              border: 1px solid #e5e7eb;
-              border-radius: 6px;
-              padding: 12px 16px;
-            }
-            .total-card {
-              display: flex;
-              flex-direction: column;
-            }
-            .total-label {
-              font-size: 10px;
-              text-transform: uppercase;
-              letter-spacing: 0.05em;
-              color: #6b7280;
-              font-weight: 600;
-              margin-bottom: 4px;
-            }
-            .total-val {
-              font-size: 16px;
-              font-weight: 700;
-              color: #111827;
-            }
-            .total-val.consolidated {
-              color: #e30613;
-            }
             .route-section {
               margin-bottom: 25px;
               page-break-inside: avoid;
@@ -1054,10 +1024,6 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
               body {
                 padding: 0;
               }
-              .totals-grid {
-                background-color: transparent !important;
-                border: 1px solid #e5e7eb;
-              }
             }
           </style>
         </head>
@@ -1065,25 +1031,6 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
           <div class="header-container">
             <h1>${reportTitle}</h1>
             <div class="date">Generado el ${new Date().toLocaleDateString('es-AR')} a las ${new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}</div>
-          </div>
-          
-          <div class="totals-grid">
-            <div class="total-card">
-              <span class="total-label">Clientes en Mora</span>
-              <span class="total-val">${filteredDebtors.length}</span>
-            </div>
-            <div class="total-card">
-              <span class="total-label">Deuda Sucursal A</span>
-              <span class="total-val">$${Math.round(totalA).toLocaleString('es-AR')}</span>
-            </div>
-            <div class="total-card">
-              <span class="total-label">Deuda Sucursal X</span>
-              <span class="total-val">$${Math.round(totalX).toLocaleString('es-AR')}</span>
-            </div>
-            <div class="total-card">
-              <span class="total-label">Deuda Consolidada</span>
-              <span class="total-val consolidated">$${Math.round(totalConsolidado).toLocaleString('es-AR')}</span>
-            </div>
           </div>
     `;
 
