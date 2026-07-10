@@ -764,7 +764,11 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
     const isDrawerInvalid = immediatePayment && paymentMethod === 'CASH' && (!cashDrawerId || activeDrawers.length === 0);
 
     if (isDrawerInvalid) {
-      setErrorMsg('No se puede cobrar en efectivo. Verifique que la Caja Grande esté abierta.');
+      if (activeDrawers.length === 0) {
+        setErrorMsg('No se puede cobrar en efectivo. Verifique que posee una caja operativa abierta.');
+      } else {
+        setErrorMsg('No se puede cobrar en efectivo. Por favor, seleccione una caja operativa.');
+      }
       return;
     }
 
@@ -2172,20 +2176,34 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
                     return (
                       <>
                         {isDrawerInvalid && (
-                          <div style={{
-                            backgroundColor: '#FDF6F6',
-                            color: '#C5221F',
-                            border: '1px solid #FAD2D2',
-                            borderRadius: '6px',
-                            padding: '12px',
-                            fontSize: '0.78rem',
-                            lineHeight: '1.4'
-                          }}>
-                            <strong>⚠️ Caja Cerrada:</strong> No tenés una caja operativa abierta.
-                            <div style={{ marginTop: '4px' }}>
-                              Para cobrar ventas en efectivo, debés abrir la <strong>Caja Grande</strong> en la solapa General del menú Finanzas.
+                          activeDrawers.length === 0 ? (
+                            <div style={{
+                              backgroundColor: '#FDF6F6',
+                              color: '#C5221F',
+                              border: '1px solid #FAD2D2',
+                              borderRadius: '6px',
+                              padding: '12px',
+                              fontSize: '0.78rem',
+                              lineHeight: '1.4'
+                            }}>
+                              <strong>⚠️ Caja Cerrada:</strong> No tenés una caja operativa abierta.
+                              <div style={{ marginTop: '4px' }}>
+                                Para cobrar ventas en efectivo, debés abrir una caja operativa en la solapa <strong>Cajas Diarias</strong> del menú Finanzas.
+                              </div>
                             </div>
-                          </div>
+                          ) : (
+                            <div style={{
+                              backgroundColor: '#FFFDF0',
+                              color: '#B06000',
+                              border: '1px solid #FFE7C4',
+                              borderRadius: '6px',
+                              padding: '12px',
+                              fontSize: '0.78rem',
+                              lineHeight: '1.4'
+                            }}>
+                              <strong>⚠️ Seleccionar Caja:</strong> Debés seleccionar una caja operativa abierta para ingresar el pago.
+                            </div>
+                          )
                         )}
 
                         {/* Desglose de Totales */}

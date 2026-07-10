@@ -403,7 +403,7 @@ export default function FacturacionDashboard({ activeTab, setActiveTab }: Factur
                         }}>
                           <div>
                             <strong>⚠️ Caja Cerrada:</strong> No tenés una caja operativa abierta. 
-                            Debés abrir la <strong>Caja Grande</strong> desde el menú de Finanzas para cobrar en efectivo.
+                            Debés abrir una caja operativa en la solapa <strong>Cajas Diarias</strong> del menú Finanzas para cobrar en efectivo.
                           </div>
                         </div>
                       )}
