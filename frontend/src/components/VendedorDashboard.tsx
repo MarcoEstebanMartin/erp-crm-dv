@@ -40,7 +40,7 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
   const [loading, setLoading] = useState(false);
 
   // Filtro de localidad y bitácora de visitas
-  const [selectedCityFilter, setSelectedCityFilter] = useState<string>('');
+  const [selectedCityFilters, setSelectedCityFilters] = useState<string[]>([]);
   const [sessionVisits, setSessionVisits] = useState<{[key: number]: { status: string; reason?: string }}>({});
   const [noSaleModal, setNoSaleModal] = useState<{ open: boolean; clientId: number; clientName: string; reason: string; notes: string } | null>(null);
 
@@ -128,7 +128,7 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
   const filteredClientsForSelect = clients.filter(c => {
     const matchesSearch = c.name.toLowerCase().includes(clientFilter.toLowerCase()) || 
       (c.cuit && c.cuit.includes(clientFilter));
-    const matchesCity = selectedCityFilter === '' || cleanCityName(c.city) === selectedCityFilter;
+    const matchesCity = selectedCityFilters.length === 0 || selectedCityFilters.includes(cleanCityName(c.city));
     return matchesSearch && matchesCity;
   });
 
@@ -502,26 +502,74 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
                 </h3>
                 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                    <input
-                      type="text"
-                      className="input"
-                      placeholder="🔍 Filtrar por nombre..."
-                      value={clientFilter}
-                      onChange={(e) => setClientFilter(e.target.value)}
-                      style={{ fontSize: '0.85rem', padding: '10px' }}
-                    />
-                    <select
-                      className="input"
-                      value={selectedCityFilter}
-                      onChange={(e) => setSelectedCityFilter(e.target.value)}
-                      style={{ fontSize: '0.85rem', padding: '10px', height: '40px', backgroundColor: '#fff', color: 'var(--text-primary)' }}
+                  <input
+                    type="text"
+                    className="input"
+                    placeholder="🔍 Filtrar cliente por nombre..."
+                    value={clientFilter}
+                    onChange={(e) => setClientFilter(e.target.value)}
+                    style={{ fontSize: '0.85rem', padding: '10px' }}
+                  />
+
+                  {/* Chips horizontales de localidad */}
+                  <div style={{ 
+                    display: 'flex', 
+                    gap: '6px', 
+                    overflowX: 'auto', 
+                    padding: '4px 2px', 
+                    WebkitOverflowScrolling: 'touch',
+                    scrollbarWidth: 'none',
+                  }}>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedCityFilters([])}
+                      style={{
+                        padding: '4px 10px',
+                        borderRadius: '15px',
+                        fontSize: '0.75rem',
+                        fontWeight: 600,
+                        border: '1px solid',
+                        borderColor: selectedCityFilters.length === 0 ? 'var(--text-primary)' : 'var(--border-color)',
+                        backgroundColor: selectedCityFilters.length === 0 ? 'var(--text-primary)' : '#fff',
+                        color: selectedCityFilters.length === 0 ? '#fff' : 'var(--text-secondary)',
+                        whiteSpace: 'nowrap',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease'
+                      }}
                     >
-                      <option value="">Todas las Localidades</option>
-                      {uniqueCities.map((city) => (
-                        <option key={city} value={city}>{city}</option>
-                      ))}
-                    </select>
+                      Todas
+                    </button>
+                    {uniqueCities.map(city => {
+                      const isActive = selectedCityFilters.includes(city);
+                      return (
+                        <button
+                          key={city}
+                          type="button"
+                          onClick={() => {
+                            if (isActive) {
+                              setSelectedCityFilters(selectedCityFilters.filter(c => c !== city));
+                            } else {
+                              setSelectedCityFilters([...selectedCityFilters, city]);
+                            }
+                          }}
+                          style={{
+                            padding: '4px 10px',
+                            borderRadius: '15px',
+                            fontSize: '0.75rem',
+                            fontWeight: 600,
+                            border: '1px solid',
+                            borderColor: isActive ? 'var(--accent-color)' : 'var(--border-color)',
+                            backgroundColor: isActive ? 'rgba(227, 6, 19, 0.06)' : '#fff',
+                            color: isActive ? 'var(--accent-color)' : 'var(--text-secondary)',
+                            whiteSpace: 'nowrap',
+                            cursor: 'pointer',
+                            transition: 'all 0.15s ease'
+                          }}
+                        >
+                          {city}
+                        </button>
+                      );
+                    })}
                   </div>
                   <div className="client-select-row">
                     <div style={{ flex: 1, position: 'relative' }}>
@@ -909,7 +957,7 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
           ==================================================================== */}
       {activeTab === 'clients' && (
         <div>
-          <div className="actions-bar" style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+          <div className="actions-bar" style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '12px' }}>
             <div className="search-input-wrapper" style={{ flex: '1 1 200px' }}>
               <input
                 type="text"
@@ -919,25 +967,73 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
-            
-            <div className="form-group" style={{ margin: 0, minWidth: '180px' }}>
-              <select
-                className="input"
-                style={{ height: '40px', fontSize: '0.85rem', padding: '8px 12px', backgroundColor: '#fff', color: 'var(--text-primary)' }}
-                value={selectedCityFilter}
-                onChange={(e) => setSelectedCityFilter(e.target.value)}
-              >
-                <option value="">-- Todas las Localidades --</option>
-                {uniqueCities.map((city) => (
-                  <option key={city} value={city}>{city}</option>
-                ))}
-              </select>
-            </div>
 
             <button className="btn btn-primary" onClick={() => setClientModal({ open: true, name: '', cuit: '', address: '', city: '', phone: '', email: '' })}>
               <UserPlus size={16} />
               <span>Nuevo Cliente</span>
             </button>
+          </div>
+
+          {/* Chips horizontales de localidad */}
+          <div style={{ 
+            display: 'flex', 
+            gap: '8px', 
+            overflowX: 'auto', 
+            padding: '8px 4px', 
+            marginBottom: '16px', 
+            WebkitOverflowScrolling: 'touch',
+            scrollbarWidth: 'none',
+          }}>
+            <button
+              type="button"
+              onClick={() => setSelectedCityFilters([])}
+              style={{
+                padding: '6px 14px',
+                borderRadius: '20px',
+                fontSize: '0.8rem',
+                fontWeight: 600,
+                border: '1px solid',
+                borderColor: selectedCityFilters.length === 0 ? 'var(--text-primary)' : 'var(--border-color)',
+                backgroundColor: selectedCityFilters.length === 0 ? 'var(--text-primary)' : '#fff',
+                color: selectedCityFilters.length === 0 ? '#fff' : 'var(--text-secondary)',
+                whiteSpace: 'nowrap',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease'
+              }}
+            >
+              Todas
+            </button>
+            {uniqueCities.map(city => {
+              const isActive = selectedCityFilters.includes(city);
+              return (
+                <button
+                  key={city}
+                  type="button"
+                  onClick={() => {
+                    if (isActive) {
+                      setSelectedCityFilters(selectedCityFilters.filter(c => c !== city));
+                    } else {
+                      setSelectedCityFilters([...selectedCityFilters, city]);
+                    }
+                  }}
+                  style={{
+                    padding: '6px 14px',
+                    borderRadius: '20px',
+                    fontSize: '0.8rem',
+                    fontWeight: 600,
+                    border: '1px solid',
+                    borderColor: isActive ? 'var(--accent-color)' : 'var(--border-color)',
+                    backgroundColor: isActive ? 'rgba(227, 6, 19, 0.08)' : '#fff',
+                    color: isActive ? 'var(--accent-color)' : 'var(--text-secondary)',
+                    whiteSpace: 'nowrap',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  {city}
+                </button>
+              );
+            })}
           </div>
 
           <div className="table-container">
@@ -954,7 +1050,7 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
               <tbody>
                 {(() => {
                   const filtered = clients.filter(c => {
-                    return selectedCityFilter === '' || cleanCityName(c.city) === selectedCityFilter;
+                    return selectedCityFilters.length === 0 || selectedCityFilters.includes(cleanCityName(c.city));
                   });
 
                   return filtered.length === 0 ? (
