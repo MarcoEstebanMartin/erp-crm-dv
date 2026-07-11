@@ -64,3 +64,13 @@ export const recordPersonaPaymentSchema = z.object({
     })).optional(),
   }),
 });
+
+export const recordVisitSchema = z.object({
+  params: z.object({
+    id: z.string().regex(/^\d+$/, 'El ID debe ser numérico'),
+  }),
+  body: z.object({
+    reason: z.string().min(1, 'El motivo es requerido'),
+    notes: z.string().optional().nullable(),
+  }),
+});

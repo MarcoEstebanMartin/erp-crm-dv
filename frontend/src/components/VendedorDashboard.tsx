@@ -12,7 +12,7 @@ interface VendedorDashboardProps {
   setActiveTab: (tab: string) => void;
 }
 
-export default function VendedorDashboard({ activeTab }: VendedorDashboardProps) {
+export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorDashboardProps) {
   const [clients, setClients] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
   const [orders, setOrders] = useState<any[]>([]);
@@ -39,11 +39,50 @@ export default function VendedorDashboard({ activeTab }: VendedorDashboardProps)
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  // Filtro de localidad y bitácora de visitas
+  const [selectedCityFilter, setSelectedCityFilter] = useState<string>('');
+  const [sessionVisits, setSessionVisits] = useState<{[key: number]: { status: string; reason?: string }}>({});
+  const [noSaleModal, setNoSaleModal] = useState<{ open: boolean; clientId: number; clientName: string; reason: string; notes: string } | null>(null);
+
+  const getTodayKey = () => {
+    const today = new Date();
+    return `visits_${today.getFullYear()}-${today.getMonth() + 1}-${today.getDate()}`;
+  };
+
+  useEffect(() => {
+    const key = getTodayKey();
+    const stored = localStorage.getItem(key);
+    if (stored) {
+      try {
+        setSessionVisits(JSON.parse(stored));
+      } catch (e) {
+        console.error(e);
+      }
+    }
+  }, []);
+
+  const uniqueCities = React.useMemo(() => {
+    return [...new Set(clients.map(c => c.city).filter(Boolean))].sort();
+  }, [clients]);
+
+  const getClientChecklistStatus = (clientId: number) => {
+    const today = new Date().toDateString();
+    const hasOrderToday = orders.some(o => 
+      o.clientId === clientId && 
+      new Date(o.createdAt).toDateString() === today && 
+      o.status !== 'CANCELLED'
+    );
+    if (hasOrderToday) return { status: 'VENTA' };
+    return sessionVisits[clientId] || null;
+  };
+
   // Filtrar clientes para la selección del pedido
-  const filteredClientsForSelect = clients.filter(c => 
-    c.name.toLowerCase().includes(clientFilter.toLowerCase()) || 
-    (c.cuit && c.cuit.includes(clientFilter))
-  );
+  const filteredClientsForSelect = clients.filter(c => {
+    const matchesSearch = c.name.toLowerCase().includes(clientFilter.toLowerCase()) || 
+      (c.cuit && c.cuit.includes(clientFilter));
+    const matchesCity = selectedCityFilter === '' || c.city === selectedCityFilter;
+    return matchesSearch && matchesCity;
+  });
 
   const getWhatsAppLink = (phone: string) => {
     const cleanPhone = phone.replace(/\D/g, '');
@@ -188,6 +227,14 @@ export default function VendedorDashboard({ activeTab }: VendedorDashboardProps)
         items,
         notes: orderNotes
       });
+
+      // Registrar venta en sessionVisits
+      const updatedVisits = {
+        ...sessionVisits,
+        [selectedClient.id]: { status: 'VENTA' }
+      };
+      setSessionVisits(updatedVisits);
+      localStorage.setItem(getTodayKey(), JSON.stringify(updatedVisits));
 
       setSuccessMsg(`✅ ¡Pedido cargado con éxito! Se envió a depósito para su armado.`);
       setCart([]);
@@ -407,14 +454,27 @@ export default function VendedorDashboard({ activeTab }: VendedorDashboardProps)
                 </h3>
                 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  <input
-                    type="text"
-                    className="input"
-                    placeholder="🔍 Filtrar cliente por nombre o CUIT..."
-                    value={clientFilter}
-                    onChange={(e) => setClientFilter(e.target.value)}
-                    style={{ fontSize: '0.85rem', padding: '10px' }}
-                  />
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                    <input
+                      type="text"
+                      className="input"
+                      placeholder="🔍 Filtrar por nombre..."
+                      value={clientFilter}
+                      onChange={(e) => setClientFilter(e.target.value)}
+                      style={{ fontSize: '0.85rem', padding: '10px' }}
+                    />
+                    <select
+                      className="input"
+                      value={selectedCityFilter}
+                      onChange={(e) => setSelectedCityFilter(e.target.value)}
+                      style={{ fontSize: '0.85rem', padding: '10px', height: '40px', backgroundColor: '#fff', color: 'var(--text-primary)' }}
+                    >
+                      <option value="">Todas las Localidades</option>
+                      {uniqueCities.map((city) => (
+                        <option key={city} value={city}>{city}</option>
+                      ))}
+                    </select>
+                  </div>
                   <div className="client-select-row">
                     <div style={{ flex: 1, position: 'relative' }}>
                       <select
@@ -801,8 +861,8 @@ export default function VendedorDashboard({ activeTab }: VendedorDashboardProps)
           ==================================================================== */}
       {activeTab === 'clients' && (
         <div>
-          <div className="actions-bar">
-            <div className="search-input-wrapper">
+          <div className="actions-bar" style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+            <div className="search-input-wrapper" style={{ flex: '1 1 200px' }}>
               <input
                 type="text"
                 className="input"
@@ -811,6 +871,21 @@ export default function VendedorDashboard({ activeTab }: VendedorDashboardProps)
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
+            
+            <div className="form-group" style={{ margin: 0, minWidth: '180px' }}>
+              <select
+                className="input"
+                style={{ height: '40px', fontSize: '0.85rem', padding: '8px 12px', backgroundColor: '#fff', color: 'var(--text-primary)' }}
+                value={selectedCityFilter}
+                onChange={(e) => setSelectedCityFilter(e.target.value)}
+              >
+                <option value="">-- Todas las Localidades --</option>
+                {uniqueCities.map((city) => (
+                  <option key={city} value={city}>{city}</option>
+                ))}
+              </select>
+            </div>
+
             <button className="btn btn-primary" onClick={() => setClientModal({ open: true, name: '', cuit: '', address: '', city: '', phone: '', email: '' })}>
               <UserPlus size={16} />
               <span>Nuevo Cliente</span>
@@ -824,35 +899,91 @@ export default function VendedorDashboard({ activeTab }: VendedorDashboardProps)
                   <th>Nombre/Razón Social</th>
                   <th>Dirección de Entrega</th>
                   <th>Teléfono</th>
+                  <th style={{ width: '130px' }}>Estado Visita</th>
+                  <th style={{ width: '180px', textAlign: 'right' }}>Acciones</th>
                 </tr>
               </thead>
               <tbody>
-                {clients.length === 0 ? (
-                  <tr>
-                    <td colSpan={3} style={{ textAlign: 'center', padding: '24px 0' }}>No se encontraron clientes asociados a tu cuenta.</td>
-                  </tr>
-                ) : (
-                  clients.map((c) => {
-                    return (
-                      <tr key={c.id}>
-                        <td style={{ fontWeight: 600 }}>{c.name}</td>
-                        <td>{c.address || 'Sin dirección'}</td>
-                        <td>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <span>{c.phone || 'Sin teléfono'}</span>
-                            {c.phone && (
-                              <a href={getWhatsAppLink(c.phone)} target="_blank" rel="noopener noreferrer" title="Escribir por WhatsApp">
-                                <svg viewBox="0 0 24 24" width="14" height="14" fill="#25D366">
-                                  <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.513 2.262 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.724-1.455L0 24zm6.59-4.846c1.6.95 3.188 1.449 4.825 1.451 5.436 0 9.86-4.37 9.863-9.755.002-2.61-1.01-5.063-2.85-6.908-1.839-1.844-4.286-2.86-6.903-2.861-5.441 0-9.863 4.37-9.866 9.756-.001 1.748.469 3.456 1.36 5.01L1.932 20.17l4.715-1.016zM17.47 15.3c-.3-.15-1.775-.875-2.05-1.05-.275-.1-.475-.15-.675.15-.2.3-.775 1.05-.95 1.25-.175.2-.35.225-.65.075-.3-.15-1.263-.465-2.403-1.485-.888-.795-1.487-1.77-1.663-2.07-.176-.3-.019-.462.13-.61.135-.133.3-.35.45-.525.15-.175.2-.3.3-.5.1-.2.05-.375-.025-.525-.075-.15-.675-1.625-.925-2.225-.244-.589-.491-.51-.675-.52-.175-.01-.375-.01-.575-.01-.2 0-.525.075-.8 1.05-.275.975-1.05 2.1-1.275 2.55-.225.45-.05.875.1 1.05.887 1.02 2.222 1.944 3.9 2.52.27.093.536.14.79.165.37.037.706.024.97-.015.295-.044.875-.36 1 .71.125.35.125.65.063.8-.062.15-.325.29-1 .15z"/>
-                                </svg>
-                              </a>
+                {(() => {
+                  const filtered = clients.filter(c => {
+                    return selectedCityFilter === '' || c.city === selectedCityFilter;
+                  });
+
+                  return filtered.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} style={{ textAlign: 'center', padding: '24px 0' }}>No se encontraron clientes asociados a tu cuenta.</td>
+                    </tr>
+                  ) : (
+                    filtered.map((c) => {
+                      const visitStatus = getClientChecklistStatus(c.id);
+                      return (
+                        <tr key={c.id}>
+                          <td style={{ fontWeight: 600 }}>{c.name}</td>
+                          <td>{c.address || 'Sin dirección'}</td>
+                          <td>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <span>{c.phone || 'Sin teléfono'}</span>
+                              {c.phone && (
+                                <a href={getWhatsAppLink(c.phone)} target="_blank" rel="noopener noreferrer" title="Escribir por WhatsApp">
+                                  <svg viewBox="0 0 24 24" width="14" height="14" fill="#25D366">
+                                    <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.513 2.262 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.724-1.455L0 24zm6.59-4.846c1.6.95 3.188 1.449 4.825 1.451 5.436 0 9.86-4.37 9.863-9.755.002-2.61-1.01-5.063-2.85-6.908-1.839-1.844-4.286-2.86-6.903-2.861-5.441 0-9.863 4.37-9.866 9.756-.001 1.748.469 3.456 1.36 5.01L1.932 20.17l4.715-1.016zM17.47 15.3c-.3-.15-1.775-.875-2.05-1.05-.275-.1-.475-.15-.675.15-.2.3-.775 1.05-.95 1.25-.175.2-.35.225-.65.075-.3-.15-1.263-.465-2.403-1.485-.888-.795-1.487-1.77-1.663-2.07-.176-.3-.019-.462.13-.61.135-.133.3-.35.45-.525.15-.175.2-.3.3-.5.1-.2.05-.375-.025-.525-.075-.15-.675-1.625-.925-2.225-.244-.589-.491-.51-.675-.52-.175-.01-.375-.01-.575-.01-.2 0-.525.075-.8 1.05-.275.975-1.05 2.1-1.275 2.55-.225.45-.05.875.1 1.05.887 1.02 2.222 1.944 3.9 2.52.27.093.536.14.79.165.37.037.706.024.97-.015.295-.044.875-.36 1 .71.125.35.125.65.063.8-.062.15-.325.29-1 .15z"/>
+                                  </svg>
+                                </a>
+                              )}
+                            </div>
+                          </td>
+                          <td>
+                            {visitStatus ? (
+                              visitStatus.status === 'VENTA' ? (
+                                <span style={{ fontSize: '0.72rem', fontWeight: 700, padding: '3px 8px', borderRadius: '12px', backgroundColor: 'rgba(52, 199, 89, 0.15)', color: 'var(--color-success)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                  <CheckCircle2 size={12} /> Compró
+                                </span>
+                              ) : (
+                                <span 
+                                  title={`Motivo: ${visitStatus.reason}`} 
+                                  style={{ fontSize: '0.72rem', fontWeight: 700, padding: '3px 8px', borderRadius: '12px', backgroundColor: 'rgba(142, 142, 147, 0.15)', color: 'var(--text-secondary)', display: 'inline-flex', alignItems: 'center', gap: '4px', cursor: 'help' }}
+                                >
+                                  ⚠️ No Compró
+                                </span>
+                              )
+                            ) : (
+                              <span style={{ fontSize: '0.72rem', fontWeight: 600, padding: '3px 8px', borderRadius: '12px', backgroundColor: 'rgba(0, 122, 255, 0.1)', color: '#007AFF', display: 'inline-flex', alignItems: 'center' }}>
+                                ⚪ Pendiente
+                              </span>
                             )}
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
+                          </td>
+                          <td>
+                            <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
+                              <button 
+                                className="btn btn-secondary" 
+                                style={{ padding: '6px 10px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px' }}
+                                onClick={() => {
+                                  setSelectedClient(c);
+                                  setClientFilter(c.name);
+                                  setActiveTab('orders');
+                                  setSubTab('create');
+                                }}
+                              >
+                                <ShoppingCart size={14} />
+                                <span>Vender</span>
+                              </button>
+
+                              {!visitStatus && (
+                                <button 
+                                  className="btn btn-ghost" 
+                                  style={{ padding: '6px 10px', fontSize: '0.8rem', color: 'var(--accent-color)', borderColor: 'rgba(227, 6, 19, 0.1)' }}
+                                  onClick={() => setNoSaleModal({ open: true, clientId: c.id, clientName: c.name, reason: 'Pasó de largo, no compró', notes: '' })}
+                                >
+                                  ✕ No Venta
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  );
+                })()}
               </tbody>
             </table>
           </div>
@@ -1406,6 +1537,79 @@ export default function VendedorDashboard({ activeTab }: VendedorDashboardProps)
               <button type="button" className="btn btn-secondary" onClick={() => setEditOrderModal(null)}>Cancelar</button>
               <button type="button" className="btn btn-primary" onClick={handleEditOrderSubmit}>Guardar Cambios</button>
             </div>
+          </div>
+        </div>
+      )}
+      {/* MODAL REGISTRAR NO VENTA */}
+      {noSaleModal && noSaleModal.open && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ maxWidth: '450px' }}>
+            <div className="modal-header">
+              <h3>Registrar Visita sin Venta</h3>
+              <button className="btn btn-ghost" style={{ padding: '4px' }} onClick={() => setNoSaleModal(null)}>✕</button>
+            </div>
+            <form onSubmit={async (e) => {
+              e.preventDefault();
+              try {
+                setLoading(true);
+                await api.recordClientVisit(noSaleModal.clientId, noSaleModal.reason, noSaleModal.notes);
+                
+                // Actualizar estado local y localStorage
+                const updatedVisits = {
+                  ...sessionVisits,
+                  [noSaleModal.clientId]: { status: 'NO_COMPRO', reason: noSaleModal.reason }
+                };
+                setSessionVisits(updatedVisits);
+                localStorage.setItem(getTodayKey(), JSON.stringify(updatedVisits));
+                
+                setSuccessMsg(`Visita registrada para ${noSaleModal.clientName}.`);
+                setNoSaleModal(null);
+                fetchData();
+              } catch (err: any) {
+                setErrorMsg(err.message || 'Error al registrar visita.');
+              } finally {
+                setLoading(false);
+              }
+            }}>
+              <div style={{ marginBottom: '14px', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                Cliente: <strong>{noSaleModal.clientName}</strong>
+              </div>
+
+              <div className="form-group">
+                <label>Motivo de No Venta</label>
+                <select
+                  className="select"
+                  value={noSaleModal.reason}
+                  onChange={(e) => setNoSaleModal({ ...noSaleModal, reason: e.target.value })}
+                  style={{ backgroundColor: '#fff', color: 'var(--text-primary)' }}
+                >
+                  <option value="Pasó de largo, no compró">Pasó de largo, no compró</option>
+                  <option value="Estaba cerrado">Estaba cerrado</option>
+                  <option value="Cerró el local definitivamente">Cerró el local definitivamente</option>
+                  <option value="No se encontraba el dueño">No se encontraba el dueño</option>
+                  <option value="Ya compró a otro proveedor">Ya compró a otro proveedor</option>
+                  <option value="Otro motivo (especificar en notas)">Otro motivo (especificar en notas)</option>
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label>Notas / Comentarios</label>
+                <textarea
+                  className="input"
+                  style={{ minHeight: '80px', padding: '10px', fontSize: '0.85rem' }}
+                  placeholder="ej: El dueño regresa el jueves por la mañana..."
+                  value={noSaleModal.notes || ''}
+                  onChange={(e) => setNoSaleModal({ ...noSaleModal, notes: e.target.value })}
+                />
+              </div>
+
+              <div className="modal-footer">
+                <button type="button" className="btn btn-secondary" onClick={() => setNoSaleModal(null)}>Cancelar</button>
+                <button type="submit" className="btn btn-primary" style={{ backgroundColor: 'var(--accent-color)', borderColor: 'var(--accent-color)' }} disabled={loading}>
+                  {loading ? 'Registrando...' : 'Registrar Visita'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

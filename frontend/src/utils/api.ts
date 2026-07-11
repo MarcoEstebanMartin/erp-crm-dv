@@ -167,6 +167,14 @@ export const api = {
     return res.sellers;
   },
 
+  recordClientVisit: async (id: number, reason: string, notes?: string | null) => {
+    const res = await request(`/personas/${id}/visit`, {
+      method: 'POST',
+      body: JSON.stringify({ reason, notes })
+    });
+    return res;
+  },
+
   getAfipData: async (cuit: string) => {
     
     const res = await request(`/personas/afip/${cuit}`);

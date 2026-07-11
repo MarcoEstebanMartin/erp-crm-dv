@@ -10,6 +10,7 @@ import {
   getPersonaPendingInvoices,
   getDebtorsReport,
   getSellers,
+  recordVisit,
 } from '../controllers/persona.controller';
 import { authenticateJWT, requireRole } from '../middlewares/auth';
 import { Role } from '@prisma/client';
@@ -17,7 +18,8 @@ import { validateRequest } from '../middlewares/validateRequest';
 import {
   createPersonaSchema,
   updatePersonaSchema,
-  recordPersonaPaymentSchema
+  recordPersonaPaymentSchema,
+  recordVisitSchema,
 } from '../validators/persona.validator';
 
 const router = Router();
@@ -36,5 +38,6 @@ router.get('/:id/pending-invoices', authenticateJWT, getPersonaPendingInvoices);
 router.post('/', authenticateJWT, requireRole([Role.ADMIN, Role.VENDEDOR]), validateRequest(createPersonaSchema), createPersona);
 router.put('/:id', authenticateJWT, requireRole([Role.ADMIN, Role.VENDEDOR]), validateRequest(updatePersonaSchema), updatePersona);
 router.post('/:id/payments', authenticateJWT, requireRole([Role.ADMIN, Role.VENDEDOR]), validateRequest(recordPersonaPaymentSchema), recordPersonaPayment);
+router.post('/:id/visit', authenticateJWT, requireRole([Role.ADMIN, Role.VENDEDOR]), validateRequest(recordVisitSchema), recordVisit);
 
 export default router;

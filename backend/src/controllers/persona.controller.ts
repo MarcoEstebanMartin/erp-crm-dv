@@ -268,3 +268,34 @@ export async function getSellers(req: AuthenticatedRequest, res: Response): Prom
     res.status(500).json({ status: 'error', message: 'Error al obtener vendedores.' });
   }
 }
+
+/**
+ * Registrar una visita fallida a un cliente (No Venta).
+ */
+export async function recordVisit(req: AuthenticatedRequest, res: Response): Promise<void> {
+  const { id } = req.params;
+  const userId = req.user?.id;
+  const userRole = req.user?.role;
+  const { reason, notes } = req.body;
+
+  if (!userId || !userRole) {
+    res.status(401).json({ status: 'error', message: 'No autorizado.' });
+    return;
+  }
+
+  try {
+    const result = await personaService.recordVisit(Number(id), reason, notes, userId, userRole);
+    res.status(201).json(result);
+  } catch (error: any) {
+    console.error('Error registrando visita fallida:', error);
+    if (error.message === 'Persona no encontrada.') {
+      res.status(404).json({ status: 'error', message: error.message });
+      return;
+    }
+    if (error.message === 'Acceso denegado.') {
+      res.status(403).json({ status: 'error', message: error.message });
+      return;
+    }
+    res.status(500).json({ status: 'error', message: 'Error al registrar visita.' });
+  }
+}

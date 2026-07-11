@@ -661,6 +661,33 @@ export class PersonaService {
       },
     });
   }
+
+  /**
+   * Registrar una visita fallida (No Venta) para un cliente.
+   */
+  async recordVisit(id: number, reason: string, notes: string | null | undefined, userId: number, userRole: string) {
+    const persona = await prisma.persona.findUnique({ where: { id } });
+    if (!persona) throw new Error('Persona no encontrada.');
+
+    if (userRole === Role.VENDEDOR && persona.isClient && persona.sellerId !== userId) {
+      throw new Error('Acceso denegado.');
+    }
+
+    await logAudit({
+      userId,
+      action: 'CLIENT_VISIT_FAIL',
+      entityType: 'Persona',
+      entityId: persona.id,
+      newValues: {
+        status: 'NO_COMPRO',
+        reason,
+        notes: notes || null,
+        date: new Date()
+      }
+    });
+
+    return { status: 'success', message: 'Visita registrada con éxito.' };
+  }
 }
 
 const MAIN_CITIES = [
