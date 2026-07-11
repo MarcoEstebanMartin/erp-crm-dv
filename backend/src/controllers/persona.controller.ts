@@ -249,3 +249,22 @@ export async function getDebtorsReport(req: AuthenticatedRequest, res: Response)
     res.status(500).json({ status: 'error', message: 'Error al obtener el reporte de deudores.' });
   }
 }
+
+/**
+ * Obtener listado de vendedores activos.
+ */
+export async function getSellers(req: AuthenticatedRequest, res: Response): Promise<void> {
+  const userId = req.user?.id;
+  if (!userId) {
+    res.status(401).json({ status: 'error', message: 'No autorizado.' });
+    return;
+  }
+
+  try {
+    const sellers = await personaService.getSellers();
+    res.status(200).json({ status: 'success', data: { sellers } });
+  } catch (error: any) {
+    console.error('Error obteniendo vendedores:', error);
+    res.status(500).json({ status: 'error', message: 'Error al obtener vendedores.' });
+  }
+}

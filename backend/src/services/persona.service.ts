@@ -642,6 +642,25 @@ export class PersonaService {
 
     return { debtors, availableRoutes, availableCities, availableSellers: sellers };
   }
+
+  /**
+   * Obtener todos los vendedores activos de la base de datos.
+   */
+  async getSellers() {
+    return prisma.user.findMany({
+      where: {
+        role: Role.VENDEDOR,
+        isActive: true,
+      },
+      select: {
+        id: true,
+        username: true,
+      },
+      orderBy: {
+        username: 'asc',
+      },
+    });
+  }
 }
 
 const MAIN_CITIES = [

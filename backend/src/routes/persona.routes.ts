@@ -9,6 +9,7 @@ import {
   getAfipData,
   getPersonaPendingInvoices,
   getDebtorsReport,
+  getSellers,
 } from '../controllers/persona.controller';
 import { authenticateJWT, requireRole } from '../middlewares/auth';
 import { Role } from '@prisma/client';
@@ -24,6 +25,7 @@ const router = Router();
 // Rutas accesibles por cualquier usuario autenticado (Vendedor, Depósito, Admin)
 router.get('/', authenticateJWT, getPersonas);
 router.get('/debtors-report', authenticateJWT, getDebtorsReport);
+router.get('/sellers', authenticateJWT, getSellers);
 router.get('/afip/:cuit', authenticateJWT, getAfipData);
 router.get('/:id', authenticateJWT, getPersonaById);
 router.get('/:id/ledger', authenticateJWT, getPersonaLedger);

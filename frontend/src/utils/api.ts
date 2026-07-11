@@ -162,6 +162,11 @@ export const api = {
     return api.getPersonas('client', search);
   },
 
+  getSellersList: async () => {
+    const res = await request('/personas/sellers');
+    return res.sellers;
+  },
+
   getAfipData: async (cuit: string) => {
     
     const res = await request(`/personas/afip/${cuit}`);

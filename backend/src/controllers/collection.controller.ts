@@ -1,6 +1,6 @@
 import { Response } from 'express';
 import { AuthenticatedRequest } from '../types';
-import { TransactionType, PaymentMethod, BillingType } from '@prisma/client';
+import { TransactionType, PaymentMethod, BillingType, Role } from '@prisma/client';
 import prisma from '../utils/prisma';
 
 // Helper para generar números de recibo
@@ -24,17 +24,21 @@ const generateReceiptNumber = async (): Promise<string> => {
 export const getPendingCollections = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user?.id;
+    const userRole = req.user?.role;
     if (!userId) {
       return res.status(401).json({ error: 'No autorizado' });
     }
 
-    // Aquí buscaríamos las cuentas corrientes con saldo deudor o pedidos pendientes.
-    // Simplificando, devolvemos las Personas con saldo > 0.
+    const whereClause: any = {
+      outstandingBalance: { gt: 0 }
+    };
+
+    if (userRole === Role.VENDEDOR) {
+      whereClause.sellerId = userId;
+    }
+
     const personas = await prisma.persona.findMany({
-      where: {
-        outstandingBalance: { gt: 0 }
-        // Se podría filtrar por zona, ruta, o cliente asignado al vendedor
-      },
+      where: whereClause,
       select: {
         id: true,
         name: true,
@@ -55,6 +59,7 @@ export const getPendingCollections = async (req: AuthenticatedRequest, res: Resp
 export const registerCollection = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user?.id;
+    const userRole = req.user?.role;
     if (!userId) {
       return res.status(401).json({ error: 'No autorizado' });
     }
@@ -63,6 +68,15 @@ export const registerCollection = async (req: AuthenticatedRequest, res: Respons
 
     if (!personaId || !amount || !paymentMethod || !billingType) {
       return res.status(400).json({ error: 'Faltan datos requeridos' });
+    }
+
+    // Verificar que el cliente exista y pertenezca al vendedor (si el rol es VENDEDOR)
+    const client = await prisma.persona.findUnique({ where: { id: Number(personaId) } });
+    if (!client) {
+      return res.status(404).json({ error: 'Cliente no encontrado' });
+    }
+    if (userRole === Role.VENDEDOR && client.isClient && client.sellerId !== userId) {
+      return res.status(403).json({ error: 'Acceso denegado. No podés registrar cobros para clientes de otros vendedores.' });
     }
 
     const roundedAmount = Math.round(Number(amount));

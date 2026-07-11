@@ -78,7 +78,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
   const [productModal, setProductModal] = useState({ open: false, mode: 'create', data: { id: 0, sku: '', name: '', description: '', barcode: '', costPrice: 0, listPrice: 0, listPriceB: 0, listPriceC: 0, minStock: 0, isPesable: false, approximateWeight: 0 } });
   const [userModal, setUserModal] = useState({ open: false, username: '', password: '', role: 'VENDEDOR' });
   const [showPassword, setShowPassword] = useState(false);
-  const [clientModal, setClientModal] = useState({ open: false, mode: 'create', data: { id: 0, name: '', cuit: '', address: '', city: '', phone: '', email: '', creditLimit: 0, priceList: 'A', discount: 0, isClient: true, isProvider: false, isSeller: false, isCommissionAgent: false, route: '' } });
+  const [clientModal, setClientModal] = useState({ open: false, mode: 'create', data: { id: 0, name: '', cuit: '', address: '', city: '', phone: '', email: '', creditLimit: 0, priceList: 'A', discount: 0, isClient: true, isProvider: false, isSeller: false, isCommissionAgent: false, route: '', sellerId: null as number | null } });
   const [showResumenModal, setShowResumenModal] = useState<any>(null);
   const [orderDetailsModal, setOrderDetailsModal] = useState<any | null>(null);
   const [editOrderModal, setEditOrderModal] = useState<{ open: boolean; orderId: number; clientId: number; clientName: string; items: { id: number; productId: number; name: string; sku: string; quantity: number; listPrice: number; weight?: number | null; isPesable?: boolean; approximateWeight?: number | null }[] } | null>(null);
@@ -386,6 +386,13 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
         const data = await api.getUsers();
         setUsers(data);
       } else if (activeTab === 'clients') {
+        try {
+          const sellers = await api.getSellersList();
+          setAvailableSellers(sellers || []);
+        } catch (e) {
+          console.error("Error al cargar vendedores:", e);
+        }
+
         if (personaRoleFilter === 'debtors_by_city') {
           const report = await api.getDebtorsReport();
           setDebtorsReport(report.debtors);
@@ -393,7 +400,6 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
           const sortedCities = cities.sort();
           setAvailableCities(sortedCities);
           setSelectedCities(sortedCities);
-          setAvailableSellers(report.availableSellers || []);
         } else {
           const data = await api.getPersonas(personaRoleFilter, searchQuery);
           setClients(data);
@@ -627,7 +633,8 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
           isClient: !!data.isClient,
           isProvider: !!data.isProvider,
           isSeller: !!data.isSeller,
-          isCommissionAgent: !!data.isCommissionAgent
+          isCommissionAgent: !!data.isCommissionAgent,
+          sellerId: data.sellerId ? Number(data.sellerId) : null
         });
       } else {
         await api.updatePersona(data.id, {
@@ -644,7 +651,8 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
           isClient: !!data.isClient,
           isProvider: !!data.isProvider,
           isSeller: !!data.isSeller,
-          isCommissionAgent: !!data.isCommissionAgent
+          isCommissionAgent: !!data.isCommissionAgent,
+          sellerId: data.sellerId ? Number(data.sellerId) : null
         });
       }
       setClientModal({ ...clientModal, open: false });
@@ -1347,7 +1355,8 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
                         isProvider: false, 
                         isSeller: false, 
                         isCommissionAgent: false,
-                        route: ''
+                        route: '',
+                        sellerId: null
                       } 
                     });
                   }
@@ -1853,7 +1862,8 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
                 isProvider: personaRoleFilter === 'provider',
                 isSeller: personaRoleFilter === 'seller',
                 isCommissionAgent: personaRoleFilter === 'commission_agent',
-                route: ''
+                route: '',
+                sellerId: null
               } 
             })}>
               <UserPlus size={16} />
@@ -1968,7 +1978,8 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
                                 isProvider: !!c.isProvider,
                                 isSeller: !!c.isSeller,
                                 isCommissionAgent: !!c.isCommissionAgent,
-                                route: c.route || ''
+                                route: c.route || '',
+                                sellerId: c.sellerId || null
                               } 
                             })}>
                               Editar
@@ -3494,6 +3505,23 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
                   onChange={(e) => setClientModal({ ...clientModal, data: { ...clientModal.data, route: e.target.value } })}
                 />
               </div>
+
+              {clientModal.data.isClient && (
+                <div className="form-group">
+                  <label>Vendedor Asignado</label>
+                  <select
+                    className="select"
+                    value={clientModal.data.sellerId || ''}
+                    onChange={(e) => setClientModal({ ...clientModal, data: { ...clientModal.data, sellerId: e.target.value ? Number(e.target.value) : null } })}
+                    style={{ height: '38px', padding: '8px 12px', fontSize: '0.9rem', borderRadius: '6px', border: '1px solid var(--border-color)', boxSizing: 'border-box', width: '100%', backgroundColor: '#fff', color: 'var(--text-primary)' }}
+                  >
+                    <option value="">Sin Vendedor / Oficina</option>
+                    {availableSellers.map(s => (
+                      <option key={s.id} value={s.id}>{s.username.replace('_', ' ').toUpperCase()}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
                 <div className="form-group">
