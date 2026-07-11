@@ -61,8 +61,56 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
     }
   }, []);
 
+  const cleanCityName = (city: string | null | undefined): string => {
+    if (!city) return 'OTRAS';
+    const upper = city.toUpperCase().trim();
+    
+    // Si contiene paréntesis al inicio o es muy corto o es un número/guión, probablemente sea una indicación o basura
+    if (upper.startsWith('(') || upper === '-' || upper === '0' || upper.length <= 3 || !/[A-Z]/.test(upper)) {
+      const KNOWN = [
+        'BUNGE', 'VILLEGAS', 'PIEDRITAS', 'ALVEAR', 'LARROUDE', 'TEJEDOR', 'SAUZE', 'CHARLONE', 'BUCHARDO', 'REALICO', 'AMEGHINO'
+      ];
+      for (const k of KNOWN) {
+        if (upper.includes(k)) {
+          if (k === 'BUNGE') return 'EMILIO V. BUNGE';
+          if (k === 'VILLEGAS') return 'GENERAL VILLEGAS';
+          if (k === 'ALVEAR') return 'INTENDENTE ALVEAR';
+          if (k === 'SAUZE') return 'VILLA SAUZE';
+          if (k === 'CHARLONE') return 'CORONEL CHARLONE';
+          if (k === 'BUCHARDO') return 'BUCHARDO';
+          return k;
+        }
+      }
+      return 'OTRAS';
+    }
+
+    const MAIN_MAPPINGS: { [key: string]: string } = {
+      'BUNGE': 'EMILIO V. BUNGE',
+      'VILLEGAS': 'GENERAL VILLEGAS',
+      'ALVEAR': 'INTENDENTE ALVEAR',
+      'SAUZE': 'VILLA SAUZE',
+      'CHARLONE': 'CORONEL CHARLONE',
+      'BUCHARDO': 'BUCHARDO',
+      'AMERICA': 'AMERICA',
+      'LARROUDE': 'BERNARDO LARROUDE'
+    };
+
+    for (const key in MAIN_MAPPINGS) {
+      if (upper.includes(key)) {
+        return MAIN_MAPPINGS[key];
+      }
+    }
+
+    return upper;
+  };
+
   const uniqueCities = React.useMemo(() => {
-    return [...new Set(clients.map(c => c.city).filter(Boolean))].sort();
+    const cleaned = clients.map(c => cleanCityName(c.city));
+    const unique = [...new Set(cleaned)];
+    const hasOtros = unique.includes('OTRAS');
+    const sorted = unique.filter(c => c !== 'OTRAS').sort();
+    if (hasOtros) sorted.push('OTRAS');
+    return sorted;
   }, [clients]);
 
   const getClientChecklistStatus = (clientId: number) => {
@@ -80,7 +128,7 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
   const filteredClientsForSelect = clients.filter(c => {
     const matchesSearch = c.name.toLowerCase().includes(clientFilter.toLowerCase()) || 
       (c.cuit && c.cuit.includes(clientFilter));
-    const matchesCity = selectedCityFilter === '' || c.city === selectedCityFilter;
+    const matchesCity = selectedCityFilter === '' || cleanCityName(c.city) === selectedCityFilter;
     return matchesSearch && matchesCity;
   });
 
@@ -906,7 +954,7 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
               <tbody>
                 {(() => {
                   const filtered = clients.filter(c => {
-                    return selectedCityFilter === '' || c.city === selectedCityFilter;
+                    return selectedCityFilter === '' || cleanCityName(c.city) === selectedCityFilter;
                   });
 
                   return filtered.length === 0 ? (
