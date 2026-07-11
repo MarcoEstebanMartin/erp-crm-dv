@@ -590,7 +590,7 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
                         </option>
                         {filteredClientsForSelect.map(c => (
                           <option key={c.id} value={c.id}>
-                            {c.name} {c.cuit ? `(CUIT: ${c.cuit})` : ''}
+                            {c.name}
                           </option>
                         ))}
                       </select>
