@@ -2,7 +2,7 @@ const API_BASE_URL = `http://${window.location.hostname}:3000/api`;
 
 export const apiClient = {
   async get(endpoint: string) {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('auth_token');
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       headers: {
         'Authorization': `Bearer ${token}`
@@ -16,7 +16,7 @@ export const apiClient = {
   },
 
   async post(endpoint: string, body: any) {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('auth_token');
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       method: 'POST',
       headers: {
@@ -33,7 +33,7 @@ export const apiClient = {
   },
 
   async put(endpoint: string, body: any) {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('auth_token');
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       method: 'PUT',
       headers: {
@@ -50,7 +50,7 @@ export const apiClient = {
   },
 
   async delete(endpoint: string) {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('auth_token');
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       method: 'DELETE',
       headers: {
@@ -65,7 +65,7 @@ export const apiClient = {
   },
 
   async postFormData(endpoint: string, formData: FormData) {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('auth_token');
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       method: 'POST',
       headers: {

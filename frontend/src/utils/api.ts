@@ -253,16 +253,16 @@ export const api = {
     return res.transaction;
   },
 
-  createOrder: async (orderData: { clientId: number, items: { productId: number, quantity: number }[], notes?: string }) => {    
-
+  createOrder: async (orderData: { clientId: number, items: { productId: number, quantity: number }[], notes?: string }) => {    
+    const { clientId, ...rest } = orderData;
     const res = await request('/orders', {
       method: 'POST',
-      body: JSON.stringify(orderData)
+      body: JSON.stringify({ personaId: clientId, ...rest })
     });
     return res.order;
   },
 
-  updateOrder: async (id: number, orderData: { items: { productId: number, quantity: number }[] }) => {    
+  updateOrder: async (id: number, orderData: { items: { productId: number, quantity: number }[] }) => {    
 
     const res = await request(`/orders/${id}`, {
       method: 'PUT',
@@ -287,7 +287,7 @@ export const api = {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${localStorage.getItem('token')}`,
+        Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
       },
       body: JSON.stringify({ items }),
     });

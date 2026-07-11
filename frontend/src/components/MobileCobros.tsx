@@ -39,7 +39,7 @@ const MobileCobros: React.FC = () => {
   const fetchPending = async () => {
     try {
       const res = await axios.get(`${API_BASE_URL}/collections/pending`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        headers: { Authorization: `Bearer ${localStorage.getItem('auth_token')}` }
       });
       if (Array.isArray(res.data)) {
         setPersonas(res.data);
@@ -55,7 +55,7 @@ const MobileCobros: React.FC = () => {
   const fetchPendingInvoices = async (personaId: number) => {
     try {
       const res = await axios.get(`${API_BASE_URL}/personas/${personaId}/pending-invoices`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        headers: { Authorization: `Bearer ${localStorage.getItem('auth_token')}` }
       });
       if (res.data?.status === 'success' && Array.isArray(res.data?.data?.invoices)) {
         setPendingInvoices(res.data.data.invoices);
@@ -93,7 +93,7 @@ const MobileCobros: React.FC = () => {
         billingType,
         orderId: selectedInvoiceId
       }, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        headers: { Authorization: `Bearer ${localStorage.getItem('auth_token')}` }
       });
       
       setSuccessReceipt(res.data.transaction);
