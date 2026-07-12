@@ -31,6 +31,11 @@ export async function getDeliveryRoutes(req: AuthenticatedRequest, res: Response
         orders: {
           include: {
             persona: true,
+            items: {
+              include: {
+                product: true,
+              },
+            },
           },
         },
       },

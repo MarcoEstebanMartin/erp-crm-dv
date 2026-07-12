@@ -1021,6 +1021,7 @@ export default function RepartoDashboard() {
   const [selectedOrderIds, setSelectedOrderIds] = useState<number[]>([]);
   const [loadedDrivers, setLoadedDrivers] = useState<string[]>([]);
   const [loadedVehicles, setLoadedVehicles] = useState<{ plate: string; description: string }[]>([]);
+  const [expandedStops, setExpandedStops] = useState<{ [key: string]: boolean }>({});
 
   // Estados para liquidación de hoja de ruta
   const [showSettleModal, setShowSettleModal] = useState(false);
@@ -1242,7 +1243,8 @@ export default function RepartoDashboard() {
         lng: coords.lng,
         name: p.name,
         address: coords.address,
-        invoice: o.invoiceNumber || `Pedido #${o.id}`
+        invoice: o.invoiceNumber || `Pedido #${o.id}`,
+        items: o.items
       };
     });
 
@@ -1586,42 +1588,109 @@ export default function RepartoDashboard() {
               <div>
                 <h4 style={{ fontSize: '0.88rem', fontWeight: 600, marginBottom: '8px' }}>Secuencia de Paradas (TSP)</h4>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  {activeRouteTspDetails.locations.map((stop, idx) => (
-                    <div 
-                      key={idx} 
-                      style={{ 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        gap: '10px', 
-                        padding: '10px 14px', 
-                        backgroundColor: '#F8F8FA', 
-                        borderRadius: '6px',
-                        fontSize: '0.82rem'
-                      }}
-                    >
-                      <div style={{ 
-                        width: '24px', 
-                        height: '24px', 
-                        borderRadius: '50%', 
-                        backgroundColor: 'var(--accent-color)', 
-                        color: '#fff', 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        justifyContent: 'center',
-                        fontWeight: 700,
-                        fontSize: '0.78rem'
-                      }}>
-                        {idx + 1}
+                  {activeRouteTspDetails.locations.map((stop: any, idx: number) => {
+                    const stopKey = `${selectedRoute.id}-${idx}`;
+                    const isExpanded = !!expandedStops[stopKey];
+                    return (
+                      <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        <div 
+                          onClick={() => setExpandedStops(prev => ({ ...prev, [stopKey]: !isExpanded }))}
+                          style={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: '10px', 
+                            padding: '10px 14px', 
+                            backgroundColor: '#F8F8FA', 
+                            borderRadius: '6px',
+                            fontSize: '0.82rem',
+                            cursor: 'pointer',
+                            userSelect: 'none',
+                            border: '1px solid var(--border-color)',
+                            transition: 'border-color 0.2s'
+                          }}
+                          onMouseOver={(e) => e.currentTarget.style.borderColor = '#ccc'}
+                          onMouseOut={(e) => e.currentTarget.style.borderColor = 'var(--border-color)'}
+                        >
+                          <div style={{ 
+                            width: '24px', 
+                            height: '24px', 
+                            borderRadius: '50%', 
+                            backgroundColor: 'var(--accent-color)', 
+                            color: '#fff', 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            justifyContent: 'center',
+                            fontWeight: 700,
+                            fontSize: '0.78rem'
+                          }}>
+                            {idx + 1}
+                          </div>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              {stop.name}
+                              <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: 400 }}>
+                                (ver mercadería)
+                              </span>
+                            </div>
+                            <div style={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>{stop.address}</div>
+                          </div>
+                          <div style={{ fontWeight: 600, fontFamily: 'monospace' }}>
+                            {stop.invoice}
+                          </div>
+                        </div>
+
+                        {/* Detalle colapsable de artículos del pedido */}
+                        {isExpanded && (
+                          <div style={{ 
+                            marginLeft: '34px', 
+                            padding: '10px 12px', 
+                            borderLeft: '2px solid var(--color-primary, #E30613)', 
+                            backgroundColor: '#fff',
+                            borderRadius: '0 4px 4px 0',
+                            fontSize: '0.78rem',
+                            borderBottom: '1px solid var(--border-color)',
+                            borderRight: '1px solid var(--border-color)'
+                          }}>
+                            <div style={{ fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px', fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                              Mercadería del Pedido:
+                            </div>
+                            {!stop.items || stop.items.length === 0 ? (
+                              <div style={{ color: 'var(--text-secondary)' }}>No hay artículos registrados para este pedido.</div>
+                            ) : (
+                              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                                <thead>
+                                  <tr style={{ borderBottom: '1px solid var(--border-color)', color: 'var(--text-secondary)', fontSize: '0.72rem' }}>
+                                    <th style={{ padding: '4px 0', fontWeight: 600 }}>Producto</th>
+                                    <th style={{ padding: '4px 0', textAlign: 'center', fontWeight: 600, width: '60px' }}>Cant.</th>
+                                    <th style={{ padding: '4px 0', textAlign: 'right', fontWeight: 600, width: '80px' }}>P. Unit</th>
+                                    <th style={{ padding: '4px 0', textAlign: 'right', fontWeight: 600, width: '85px' }}>Subtotal</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {stop.items.map((item: any) => (
+                                    <tr key={item.id} style={{ borderBottom: '1px solid #f1f5f9', fontSize: '0.75rem' }}>
+                                      <td style={{ padding: '4px 0', color: 'var(--text-primary)' }}>
+                                        {item.product?.name || `Producto #${item.productId}`}
+                                      </td>
+                                      <td style={{ padding: '4px 0', textAlign: 'center', fontWeight: 500, fontFamily: 'monospace' }}>
+                                        {item.quantity}
+                                      </td>
+                                      <td style={{ padding: '4px 0', textAlign: 'right', fontFamily: 'monospace' }}>
+                                        {Number(item.unitPrice).toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}
+                                      </td>
+                                      <td style={{ padding: '4px 0', textAlign: 'right', fontWeight: 600, fontFamily: 'monospace' }}>
+                                        {Number(item.subtotal).toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            )}
+                          </div>
+                        )}
                       </div>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontWeight: 600 }}>{stop.name}</div>
-                        <div style={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>{stop.address}</div>
-                      </div>
-                      <div style={{ fontWeight: 600, fontFamily: 'monospace' }}>
-                        {stop.invoice}
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
 
