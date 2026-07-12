@@ -1074,7 +1074,25 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
                       return (
                         <tr key={c.id}>
                           <td style={{ fontWeight: 600 }}>{c.name}</td>
-                          <td>{c.address || 'Sin dirección'}</td>
+                          <td>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                              <span>{c.address || 'Sin dirección'}</span>
+                              {c.route && (
+                                <span style={{ 
+                                  display: 'inline-block', 
+                                  padding: '2px 6px', 
+                                  fontSize: '0.65rem', 
+                                  fontWeight: 600, 
+                                  backgroundColor: 'rgba(0,0,0,0.06)', 
+                                  color: 'var(--text-secondary)', 
+                                  borderRadius: '4px',
+                                  textTransform: 'uppercase'
+                                }}>
+                                  📍 {c.route}
+                                </span>
+                              )}
+                            </div>
+                          </td>
                           <td>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                               <span>{c.phone || 'Sin teléfono'}</span>

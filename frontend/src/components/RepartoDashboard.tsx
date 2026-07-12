@@ -727,8 +727,9 @@ export default function RepartoDashboard() {
   // const [settleTransfersDeclared, setSettleTransfersDeclared] = useState('');
   const [bankAccounts, setBankAccounts] = useState<any[]>([]);
 
-  // Estado para filtrado de localidad
+  // Estado para filtrado de localidad y zona
   const [selectedCityFilter, setSelectedCityFilter] = useState('ALL');
+  const [selectedZoneFilter, setSelectedZoneFilter] = useState('ALL');
 
   // Estados de carga y feedback
   const [_loading, setLoading] = useState(false);
@@ -790,10 +791,34 @@ export default function RepartoDashboard() {
     return Array.from(citiesSet).sort();
   }, [pendingOrders]);
 
-  const filteredPendingOrders = useMemo(() => {
-    if (selectedCityFilter === 'ALL') return pendingOrders;
-    return pendingOrders.filter(o => o.persona?.city?.toUpperCase().trim() === selectedCityFilter);
+  const uniqueZones = useMemo(() => {
+    if (selectedCityFilter === 'ALL') return [];
+    const zonesSet = new Set<string>();
+    pendingOrders
+      .filter(o => o.persona?.city?.toUpperCase().trim() === selectedCityFilter)
+      .forEach(o => {
+        const route = o.persona?.route;
+        if (route) {
+          zonesSet.add(route.toUpperCase().trim());
+        }
+      });
+    return Array.from(zonesSet).sort();
   }, [pendingOrders, selectedCityFilter]);
+
+  const filteredPendingOrders = useMemo(() => {
+    let list = pendingOrders;
+    if (selectedCityFilter !== 'ALL') {
+      list = list.filter(o => o.persona?.city?.toUpperCase().trim() === selectedCityFilter);
+      if (selectedZoneFilter !== 'ALL') {
+        list = list.filter(o => o.persona?.route?.toUpperCase().trim() === selectedZoneFilter);
+      }
+    }
+    return list;
+  }, [pendingOrders, selectedCityFilter, selectedZoneFilter]);
+
+  useEffect(() => {
+    setSelectedZoneFilter('ALL');
+  }, [selectedCityFilter]);
 
   const handleOpenSettleModal = (route: any) => {
     setSettleRoute(route);
@@ -1343,17 +1368,32 @@ export default function RepartoDashboard() {
                       <label style={{ fontWeight: 600, fontSize: '0.85rem' }}>
                         Pedidos Disponibles ({filteredPendingOrders.length})
                       </label>
-                      <select 
-                        className="input" 
-                        style={{ width: '160px', padding: '2px 6px', fontSize: '0.78rem', height: '28px' }}
-                        value={selectedCityFilter}
-                        onChange={(e) => setSelectedCityFilter(e.target.value)}
-                      >
-                        <option value="ALL">Todas las localidades</option>
-                        {uniqueCities.map(city => (
-                          <option key={city} value={city}>{city}</option>
-                        ))}
-                      </select>
+                      <div style={{ display: 'flex', gap: '6px' }}>
+                        <select 
+                          className="input" 
+                          style={{ width: '150px', padding: '2px 6px', fontSize: '0.78rem', height: '28px' }}
+                          value={selectedCityFilter}
+                          onChange={(e) => setSelectedCityFilter(e.target.value)}
+                        >
+                          <option value="ALL">Todas las localidades</option>
+                          {uniqueCities.map(city => (
+                            <option key={city} value={city}>{city}</option>
+                          ))}
+                        </select>
+                        {selectedCityFilter !== 'ALL' && uniqueZones.length > 0 && (
+                          <select 
+                            className="input" 
+                            style={{ width: '120px', padding: '2px 6px', fontSize: '0.78rem', height: '28px' }}
+                            value={selectedZoneFilter}
+                            onChange={(e) => setSelectedZoneFilter(e.target.value)}
+                          >
+                            <option value="ALL">Todas las zonas</option>
+                            {uniqueZones.map(zone => (
+                              <option key={zone} value={zone}>{zone}</option>
+                            ))}
+                          </select>
+                        )}
+                      </div>
                     </div>
                     
                     <div style={{ 

@@ -41,9 +41,27 @@ async function syncPersonas() {
   const excelData = xlsx.utils.sheet_to_json(workbook.Sheets[sheetName]);
   console.log(`📄 Leídas ${excelData.length} filas del archivo Excel.`);
 
-  // 3. Load DB personas
+  // 3. Load DB personas and Vendedor users
   const dbPersonas = await prisma.persona.findMany();
   console.log(`🗄️ ${dbPersonas.length} personas encontradas en la base de datos.`);
+
+  const sellers = await prisma.user.findMany({
+    where: { role: 'VENDEDOR' }
+  });
+  const sellerMap = new Map();
+  sellers.forEach(s => {
+    sellerMap.set(s.username, s.id);
+  });
+
+  const mapExcelSellerToUsername = (vendedor) => {
+    if (!vendedor) return 'OFICINA';
+    const clean = vendedor.toUpperCase().trim();
+    if (clean.includes('DIEGO') || clean.includes('LEJARZA')) return 'diego';
+    if (clean.includes('FABIAN') || clean.includes('MAYA')) return 'fabian';
+    if (clean.includes('NORBERTO')) return 'norberto';
+    if (clean.includes('MARIA') || clean.includes('VIDELA') || clean.includes('MARIA JOS')) return 'maria_jose';
+    return 'OFICINA';
+  };
 
   let updatedCount = 0;
 
@@ -62,6 +80,10 @@ async function syncPersonas() {
       const excelCuit = row['CUIT'] ? String(row['CUIT']).trim() : null;
       const excelPhone = row['Teléfono'] ? String(row['Teléfono']).trim() : null;
       const excelEmail = row['Email']?.trim() || null;
+      const excelSeller = row['Vendedor']?.trim();
+
+      const targetUsername = mapExcelSellerToUsername(excelSeller);
+      const expectedSellerId = sellerMap.get(targetUsername) || null;
 
       // Construct address
       let address = excelDireccion || '';
@@ -76,8 +98,9 @@ async function syncPersonas() {
       const hasCuitChange = dbMatch.cuit !== excelCuit && excelCuit !== null;
       const hasPhoneChange = dbMatch.phone !== excelPhone && excelPhone !== null;
       const hasEmailChange = dbMatch.email !== excelEmail && excelEmail !== null;
+      const hasSellerChange = dbMatch.sellerId !== expectedSellerId;
 
-      if (hasCityChange || hasAddressChange || hasCuitChange || hasPhoneChange || hasEmailChange) {
+      if (hasCityChange || hasAddressChange || hasCuitChange || hasPhoneChange || hasEmailChange || hasSellerChange) {
         await prisma.persona.update({
           where: { id: dbMatch.id },
           data: {
@@ -85,7 +108,8 @@ async function syncPersonas() {
             address: address,
             cuit: excelCuit || dbMatch.cuit,
             phone: excelPhone || dbMatch.phone,
-            email: excelEmail || dbMatch.email
+            email: excelEmail || dbMatch.email,
+            sellerId: expectedSellerId
           }
         });
         updatedCount++;

@@ -5,6 +5,7 @@ import { getOrderStatusInfo } from '../utils/orderStatusHelper';
 import PriceListModal from './PriceListModal';
 import ProductsList from './ProductsList';
 import RubrosList from './RubrosList';
+import StockDashboard from './StockDashboard';
 
 // Carga diferida de sub-dashboards pesados
 const UnifiedReportsDashboard = lazy(() => import('./UnifiedReportsDashboard'));
@@ -131,7 +132,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
   // Estados para accesos directos y acciones rápidas
   const [isPriceListModalOpen, setIsPriceListModalOpen] = useState(false);
   const [isQuickSearchModalOpen, setIsQuickSearchModalOpen] = useState(false);
-  const [catalogTab, setCatalogTab] = useState<'products'|'rubros'>('products');
+  const [catalogTab, setCatalogTab] = useState<'products'|'rubros'|'stock'>('products');
   const [clientSearchModal, setClientSearchModal] = useState<{ open: boolean; action: 'ledger' | 'payment' | 'order' } | null>(null);
   const [quickClientQuery, setQuickClientQuery] = useState('');
   
@@ -1791,7 +1792,22 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
                                         </div>
                                       </td>
                                       <td>
-                                        <span style={{ fontSize: '0.88rem', color: 'var(--text-primary)' }}>{d.route || 'Sin Ruta'}</span>
+                                        {d.route ? (
+                                          <span style={{ 
+                                            display: 'inline-block', 
+                                            padding: '3px 8px', 
+                                            fontSize: '0.72rem', 
+                                            fontWeight: 600, 
+                                            backgroundColor: 'rgba(0,0,0,0.05)', 
+                                            color: 'var(--text-primary)', 
+                                            borderRadius: '4px',
+                                            textTransform: 'uppercase'
+                                          }}>
+                                            📍 {d.route}
+                                          </span>
+                                        ) : (
+                                          <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Sin Ruta</span>
+                                        )}
                                       </td>
                                       <td style={{ textAlign: 'right', fontWeight: 500, color: d.debtA > 0 ? '#137333' : 'var(--text-secondary)' }}>
                                         {d.debtA > 0 ? `$${Math.round(d.debtA).toLocaleString('es-AR')}` : '-'}
@@ -1908,7 +1924,23 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
                       <tr key={c.id}>
                         <td>
                           <div style={{ fontWeight: 600 }}>{c.name}</div>
-                          <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{c.address || 'Sin dirección'}</div>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                            <span>{c.address || 'Sin dirección'}</span>
+                            {c.route && (
+                              <span style={{ 
+                                display: 'inline-block', 
+                                padding: '2px 6px', 
+                                fontSize: '0.65rem', 
+                                fontWeight: 600, 
+                                backgroundColor: 'rgba(0,0,0,0.06)', 
+                                color: 'var(--text-secondary)', 
+                                borderRadius: '4px',
+                                textTransform: 'uppercase'
+                              }}>
+                                📍 {c.route}
+                              </span>
+                            )}
+                          </div>
                         </td>
                         <td style={{ fontFamily: 'monospace', whiteSpace: 'nowrap' }}>{c.cuit || ''}</td>
                         <td>
@@ -2121,6 +2153,13 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
               {catalogTab === 'products' && <div style={{ position: 'absolute', bottom: '-13px', left: 0, right: 0, height: '2px', backgroundColor: 'var(--color-primary)' }} />}
             </div>
             <div 
+              style={{ cursor: 'pointer', fontWeight: catalogTab === 'stock' ? 600 : 400, color: catalogTab === 'stock' ? 'var(--color-primary)' : 'var(--text-secondary)', position: 'relative' }}
+              onClick={() => setCatalogTab('stock')}
+            >
+              Control y Valorización de Stock
+              {catalogTab === 'stock' && <div style={{ position: 'absolute', bottom: '-13px', left: 0, right: 0, height: '2px', backgroundColor: 'var(--color-primary)' }} />}
+            </div>
+            <div 
               style={{ cursor: 'pointer', fontWeight: catalogTab === 'rubros' ? 600 : 400, color: catalogTab === 'rubros' ? 'var(--color-primary)' : 'var(--text-secondary)', position: 'relative' }}
               onClick={() => setCatalogTab('rubros')}
             >
@@ -2139,6 +2178,12 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
             />
           )}
 
+          {catalogTab === 'stock' && (
+            <StockDashboard 
+              products={products}
+              onRefresh={fetchData}
+            />
+          )}
 
           {catalogTab === 'rubros' && (
             <RubrosList 
@@ -3496,14 +3541,25 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
               </div>
 
               <div className="form-group">
-                <label>Ruta de Reparto</label>
+                <label>Ruta de Reparto / Zona</label>
                 <input
                   type="text"
+                  list="route-suggestions"
                   className="input"
-                  placeholder="ej: BUNGE Y BUCHARDO"
+                  placeholder="ej: CENTRO 1, TROCHA..."
                   value={clientModal.data.route || ''}
                   onChange={(e) => setClientModal({ ...clientModal, data: { ...clientModal.data, route: e.target.value } })}
                 />
+                <datalist id="route-suggestions">
+                  {(() => {
+                    const cleanCity = (clientModal.data.city || '').toUpperCase().trim();
+                    const isVillegas = cleanCity === 'GENERAL VILLEGAS' || cleanCity === 'GRAL VILLEGAS' || cleanCity === 'VILLEGAS' || cleanCity === '';
+                    const routes = isVillegas 
+                      ? ['FEDERAL', 'PARQUE', 'CENTRO 1', 'CENTRO 2', 'CENTRO 3', 'CENTRO 4', 'FONAVI', 'PROGRESO', 'TROCHA', 'CICLON', 'CRUCE']
+                      : ['BUNGE Y BUCHARDO', 'BUNGE Y CHARLONE', 'BANDERALO Y LARROUDÉ', 'SAUCE Y SANSINENA', 'AMEGHINO Y BLAQUIER', 'AMERICA Y FORTIN', 'PIEDRITAS', 'TRES ALGARROBOS', 'CARLOS TEJEDOR', 'I. ALVEAR', 'RUFINO'];
+                    return routes.map(r => <option key={r} value={r} />);
+                  })()}
+                </datalist>
               </div>
 
               {clientModal.data.isClient && (
