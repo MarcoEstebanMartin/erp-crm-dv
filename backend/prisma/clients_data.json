@@ -30229,6 +30229,25 @@
     "sellerName": "Fabian"
   },
   {
+    "id": 4899,
+    "name": "VIDELA MARIA JOSE",
+    "cuit": "",
+    "address": null,
+    "city": null,
+    "phone": "",
+    "email": "",
+    "priceList": "A",
+    "discount": 0,
+    "creditLimit": 0,
+    "outstandingBalance": 0,
+    "isClient": true,
+    "isProvider": false,
+    "isSeller": true,
+    "isCommissionAgent": false,
+    "route": "I. ALVEAR",
+    "sellerName": "OFICINA"
+  },
+  {
     "id": 4900,
     "name": "VIDELA OLGA ADRIANA",
     "cuit": "27-22956946-0",
@@ -30379,25 +30398,6 @@
     "isCommissionAgent": false,
     "route": "BUNGE Y CHARLONE",
     "sellerName": "Diego"
-  },
-  {
-    "id": 4899,
-    "name": "VIDELA MARIA JOSE",
-    "cuit": "",
-    "address": null,
-    "city": null,
-    "phone": "",
-    "email": "",
-    "priceList": "A",
-    "discount": 0,
-    "creditLimit": 0,
-    "outstandingBalance": 0,
-    "isClient": false,
-    "isProvider": false,
-    "isSeller": true,
-    "isCommissionAgent": false,
-    "route": "I. ALVEAR",
-    "sellerName": "OFICINA"
   },
   {
     "id": 4892,

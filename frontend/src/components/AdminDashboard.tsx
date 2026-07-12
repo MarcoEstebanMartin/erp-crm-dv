@@ -1969,7 +1969,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
                         </td>
                         {personaRoleFilter === 'client' && (
                           <td style={{ fontWeight: 500 }}>
-                            {c.seller?.username || 'Sin vendedor'}
+                            {c.seller ? c.seller.username.replace('_', ' ').toUpperCase() : 'Sin vendedor'}
                           </td>
                         )}
                         <td>
