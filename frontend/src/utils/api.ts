@@ -712,7 +712,7 @@ export const api = {
 
   getLogisticsResources: async () => {
     const res = await request('/logistics/resources');
-    return res.data;
+    return res;
   },
 
   getPurchaseOrders: async (filters?: any) => {
