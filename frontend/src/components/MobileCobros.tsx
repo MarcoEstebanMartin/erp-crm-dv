@@ -45,6 +45,7 @@ const MobileCobros: React.FC<MobileCobrosProps> = ({
     } else {
       setPendingInvoices([]);
       setSelectedInvoiceId(null);
+      setBillingType('OFFICIAL');
     }
   }, [selectedPersona]);
 
@@ -217,6 +218,9 @@ const MobileCobros: React.FC<MobileCobrosProps> = ({
                     const inv = pendingInvoices.find(i => i.id === invId);
                     if (inv) {
                       setAmount(inv.pendingAmount.toString());
+                      if (inv.billingType) {
+                        setBillingType(inv.billingType);
+                      }
                     }
                   }
                 }}
@@ -268,19 +272,26 @@ const MobileCobros: React.FC<MobileCobrosProps> = ({
             <div className="flex bg-gray-100 p-1 rounded-lg">
               <button
                 type="button"
-                className={`flex-1 py-2 rounded-md font-medium text-sm transition-all ${billingType === 'OFFICIAL' ? 'bg-white shadow text-gray-900' : 'text-gray-500'}`}
+                disabled={selectedInvoiceId !== null}
+                className={`flex-1 py-2 rounded-md font-medium text-sm transition-all ${billingType === 'OFFICIAL' ? 'bg-white shadow text-gray-900' : 'text-gray-500'} ${selectedInvoiceId !== null ? 'opacity-60 cursor-not-allowed' : ''}`}
                 onClick={() => setBillingType('OFFICIAL')}
               >
                 Sucursal A (Oficial)
               </button>
               <button
                 type="button"
-                className={`flex-1 py-2 rounded-md font-medium text-sm transition-all ${billingType === 'INTERNAL' ? 'bg-white shadow text-gray-900' : 'text-gray-500'}`}
+                disabled={selectedInvoiceId !== null}
+                className={`flex-1 py-2 rounded-md font-medium text-sm transition-all ${billingType === 'INTERNAL' ? 'bg-white shadow text-gray-900' : 'text-gray-500'} ${selectedInvoiceId !== null ? 'opacity-60 cursor-not-allowed' : ''}`}
                 onClick={() => setBillingType('INTERNAL')}
               >
                 Sucursal X (Interno)
               </button>
             </div>
+            {selectedInvoiceId !== null && (
+              <p className="text-xs text-gray-500 mt-1">
+                La sucursal está determinada automáticamente por la factura seleccionada.
+              </p>
+            )}
           </div>
 
           <button

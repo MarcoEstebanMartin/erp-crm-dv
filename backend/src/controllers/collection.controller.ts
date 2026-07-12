@@ -102,10 +102,13 @@ export const registerCollection = async (req: AuthenticatedRequest, res: Respons
 
     // Buscar número de factura si se especificó orderId para la descripción
     let orderNumberDesc = '';
+    let finalBillingType = billingType;
     if (orderId) {
       const targetOrder = await prisma.order.findUnique({ where: { id: Number(orderId) } });
       if (targetOrder) {
         orderNumberDesc = targetOrder.invoiceNumber || `INT-${targetOrder.id.toString().padStart(8, '0')}`;
+        // Forzar que el recibo herede la sucursal de la factura origen
+        finalBillingType = targetOrder.billingType;
       }
     }
 
@@ -114,7 +117,7 @@ export const registerCollection = async (req: AuthenticatedRequest, res: Respons
       data: {
         userId,
         personaId,
-        billingType: billingType as BillingType,
+        billingType: finalBillingType as BillingType,
         type: TransactionType.INCOME,
         paymentMethod: paymentMethod as PaymentMethod,
         amount: roundedAmount,
