@@ -55,7 +55,7 @@ export default function Sidebar({ username, role, activeTab, setActiveTab, onLog
       case 'VENDEDOR':
         return [
           { id: 'orders', label: 'Toma de Pedidos', icon: <ShoppingCart size={18} /> },
-          { id: 'clients', label: 'Mis Personas', icon: <Users size={18} /> },
+          { id: 'clients', label: 'Mis Rutas', icon: <Users size={18} /> },
           { id: 'cobranzas', label: 'Cobranzas y Recibos', icon: <DollarSign size={18} /> },
           { id: 'products', label: 'Catálogo', icon: <Package size={18} /> },
           { id: 'history', label: 'Historial de Pedidos', icon: <History size={18} /> },

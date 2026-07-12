@@ -24,3 +24,8 @@ Este archivo define las reglas de comportamiento, estética y calidad profesiona
 - **Despliegues en Nuevos Entornos / Producción**: Utilizar siempre `npx prisma migrate deploy` para aplicar las migraciones de forma silenciosa y automática en servidores de test, staging o producción.
 - **Evitar Colisiones en Seeds**: En los scripts de semilla (seed), evitar definir manualmente valores para campos autogenerados o secuenciales (como `movementId`), dejando que la base de datos se encargue de ello de manera automática.
 
+## 5. Comandos Rápidos y Automatización
+- **Comando "abri" / "abrir" / "abre todo"**: Cuando el usuario indique una palabra clave de inicio (como "abri", "abrir", "abre", "abre todo", "iniciar local"), el asistente debe de inmediato y sin necesidad de planes o aprobaciones complejas:
+  1. Ejecutar `ipconfig` en la terminal para obtener la dirección IPv4 local activa.
+  2. Iniciar el entorno de desarrollo local ejecutando `npm run dev` en la raíz del proyecto como tarea en segundo plano.
+  3. Mostrar un resumen claro con el estado de los servidores, la IP local / enlace de acceso directo para el celular (ej. `http://<IP>:5173`) y el recordatorio de las credenciales de prueba disponibles para vendedores y administración.

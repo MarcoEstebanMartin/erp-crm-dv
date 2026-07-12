@@ -1138,7 +1138,12 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
           3. CATALOGO DE PRODUCTOS (READ-ONLY)
           ==================================================================== */}
       {activeTab === 'cobranzas' && (
-        <MobileCobros />
+        <MobileCobros 
+          selectedCityFilters={selectedCityFilters}
+          setSelectedCityFilters={setSelectedCityFilters}
+          uniqueCities={uniqueCities}
+          cleanCityName={cleanCityName}
+        />
       )}
 
       {activeTab === 'products' && (

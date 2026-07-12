@@ -12,7 +12,19 @@ interface Persona {
   phone: string | null;
 }
 
-const MobileCobros: React.FC = () => {
+interface MobileCobrosProps {
+  selectedCityFilters?: string[];
+  setSelectedCityFilters?: (filters: string[]) => void;
+  uniqueCities?: string[];
+  cleanCityName?: (city: string | null | undefined) => string;
+}
+
+const MobileCobros: React.FC<MobileCobrosProps> = ({
+  selectedCityFilters = [],
+  setSelectedCityFilters,
+  uniqueCities = [],
+  cleanCityName,
+}) => {
   const [personas, setPersonas] = useState<Persona[]>([]);
   const [selectedPersona, setSelectedPersona] = useState<Persona | null>(null);
   const [amount, setAmount] = useState('');
@@ -283,20 +295,95 @@ const MobileCobros: React.FC = () => {
     );
   }
 
+  // Filtrar localmente por ruta/ciudad seleccionada
+  const filteredPersonas = personas.filter(p => {
+    if (selectedCityFilters.length === 0) return true;
+    const cleanCity = cleanCityName ? cleanCityName(p.city) : (p.city || '').toUpperCase().trim();
+    return selectedCityFilters.includes(cleanCity);
+  });
+
   // Renderizar Listado de Clientes con Saldo
   return (
     <div className="p-4 max-w-md mx-auto bg-gray-50 min-h-screen">
       <h2 className="text-2xl font-bold text-gray-800 mb-1 mt-4">Cobranzas</h2>
-      <p className="text-gray-500 mb-6">Selecciona un cliente para registrar un cobro</p>
+      <p className="text-gray-500 mb-4">Selecciona un cliente para registrar un cobro</p>
 
-      {personas.length === 0 ? (
+      {/* Chips horizontales de localidad (sincronizados) */}
+      {uniqueCities.length > 0 && setSelectedCityFilters && (
+        <div style={{ 
+          display: 'flex', 
+          gap: '8px', 
+          overflowX: 'auto', 
+          padding: '8px 4px', 
+          marginBottom: '16px', 
+          WebkitOverflowScrolling: 'touch',
+          scrollbarWidth: 'none',
+        }}>
+          <button
+            type="button"
+            onClick={() => setSelectedCityFilters([])}
+            style={{
+              padding: '6px 14px',
+              borderRadius: '20px',
+              fontSize: '0.8rem',
+              fontWeight: 600,
+              border: '1px solid',
+              borderColor: selectedCityFilters.length === 0 ? 'var(--text-primary)' : 'var(--border-color)',
+              backgroundColor: selectedCityFilters.length === 0 ? 'var(--text-primary)' : '#fff',
+              color: selectedCityFilters.length === 0 ? '#fff' : 'var(--text-secondary)',
+              whiteSpace: 'nowrap',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease'
+            }}
+          >
+            Todas
+          </button>
+          {uniqueCities.map(city => {
+            const isActive = selectedCityFilters.includes(city);
+            return (
+              <button
+                key={city}
+                type="button"
+                onClick={() => {
+                  if (isActive) {
+                    setSelectedCityFilters(selectedCityFilters.filter(c => c !== city));
+                  } else {
+                    setSelectedCityFilters([...selectedCityFilters, city]);
+                  }
+                }}
+                style={{
+                  padding: '6px 14px',
+                  borderRadius: '20px',
+                  fontSize: '0.8rem',
+                  fontWeight: 600,
+                  border: '1px solid',
+                  borderColor: isActive ? 'var(--accent-color)' : 'var(--border-color)',
+                  backgroundColor: isActive ? 'rgba(227, 6, 19, 0.08)' : '#fff',
+                  color: isActive ? 'var(--accent-color)' : 'var(--text-secondary)',
+                  whiteSpace: 'nowrap',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                {city}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {filteredPersonas.length === 0 ? (
         <div className="text-center py-10 bg-white rounded-lg border border-gray-100 shadow-sm">
           <FileText className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-          <p className="text-gray-500">No hay saldos pendientes.</p>
+          <p className="text-gray-500">
+            {personas.length === 0 
+              ? 'No hay saldos pendientes.' 
+              : 'No hay saldos pendientes en las rutas seleccionadas.'}
+          </p>
         </div>
       ) : (
         <div className="space-y-3">
-          {personas.map((p) => (
+          {filteredPersonas.map((p) => (
             <div 
               key={p.id} 
               onClick={() => {
