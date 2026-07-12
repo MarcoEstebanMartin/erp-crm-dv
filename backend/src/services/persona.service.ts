@@ -87,6 +87,8 @@ export class PersonaService {
         discount: data.discount !== undefined ? Number(data.discount) : 0.00,
         contacts: data.contacts !== undefined ? data.contacts : null,
         sellerId: finalSellerId,
+        latitude: data.latitude !== undefined ? (data.latitude !== null ? Number(data.latitude) : null) : null,
+        longitude: data.longitude !== undefined ? (data.longitude !== null ? Number(data.longitude) : null) : null,
       },
     });
 
@@ -138,6 +140,8 @@ export class PersonaService {
         discount: data.discount !== undefined ? Number(data.discount) : undefined,
         contacts: data.contacts !== undefined ? data.contacts : undefined,
         sellerId: finalSellerId,
+        latitude: data.latitude !== undefined ? (data.latitude !== null ? Number(data.latitude) : null) : undefined,
+        longitude: data.longitude !== undefined ? (data.longitude !== null ? Number(data.longitude) : null) : undefined,
       },
     });
 

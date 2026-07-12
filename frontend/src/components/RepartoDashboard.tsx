@@ -21,29 +21,159 @@ const CLIENT_COORDS: { [key: number]: { lat: number; lng: number; address: strin
   3: { lat: -35.035, lng: -63.012, address: 'Castelli 580, General Villegas' },
 };
 
+// Coordenadas base por localidad para geocodificación y fallbacks correctos
+const CITY_BASE_COORDS: { [key: string]: { lat: number; lng: number } } = {
+  'general villegas': { lat: -35.030, lng: -63.010 },
+  'emilio bunge': { lat: -34.764, lng: -63.031 },
+  'piedritas': { lat: -34.887, lng: -62.880 },
+  'banderaló': { lat: -35.016, lng: -63.267 },
+  'banderalo': { lat: -35.016, lng: -63.267 },
+  'coronel charlone': { lat: -34.685, lng: -63.250 },
+  'florentino ameghino': { lat: -34.846, lng: -62.468 },
+  'blaquier': { lat: -34.680, lng: -62.410 },
+  'fortín olavarría': { lat: -35.702, lng: -62.903 },
+  'fortin olavarría': { lat: -35.702, lng: -62.903 },
+  'fortin': { lat: -35.702, lng: -62.903 },
+  'intendente alvear': { lat: -35.238, lng: -63.585 },
+  'bernardo larroudé': { lat: -35.027, lng: -63.565 },
+  'bernardo larroude': { lat: -35.027, lng: -63.565 },
+  'villa sauze': { lat: -35.150, lng: -63.380 },
+  'villa saboya': { lat: -34.630, lng: -62.770 },
+  'santa regina': { lat: -34.621, lng: -62.969 },
+  'tres algarrobos': { lat: -35.185, lng: -62.753 },
+  'carlos tejedor': { lat: -35.402, lng: -62.427 }
+};
+
+// Detección de la localidad real a partir del nombre de ciudad, ruta o dirección
+function detectRealCity(persona: any): string {
+  const city = (persona?.city || '').trim().toLowerCase();
+  const route = (persona?.route || '').trim().toLowerCase();
+  const address = (persona?.address || '').trim().toLowerCase();
+
+  const knownCities = [
+    { key: 'villegas', name: 'General Villegas' },
+    { key: 'bunge', name: 'Emilio Bunge' },
+    { key: 'piedritas', name: 'Piedritas' },
+    { key: 'banderalo', name: 'Banderaló' },
+    { key: 'banderaló', name: 'Banderaló' },
+    { key: 'charlone', name: 'Coronel Charlone' },
+    { key: 'ameghino', name: 'Florentino Ameghino' },
+    { key: 'blaquier', name: 'Blaquier' },
+    { key: 'fortin', name: 'Fortín Olavarría' },
+    { key: 'fortín', name: 'Fortín Olavarría' },
+    { key: 'alvear', name: 'Intendente Alvear' },
+    { key: 'larroude', name: 'Bernardo Larroudé' },
+    { key: 'larroudé', name: 'Bernardo Larroudé' },
+    { key: 'sauze', name: 'Villa Sauze' },
+    { key: 'saboya', name: 'Villa Saboya' },
+    { key: 'regina', name: 'Santa Regina' },
+    { key: 'algarrobos', name: 'Tres Algarrobos' },
+    { key: 'tejedor', name: 'Carlos Tejedor' }
+  ];
+
+  for (const c of knownCities) {
+    if (city.includes(c.key)) return c.name;
+  }
+
+  // Buscar en ruta si es "otros"
+  if (city === 'otros' || !city) {
+    for (const c of knownCities) {
+      if (route.includes(c.key)) return c.name;
+    }
+    for (const c of knownCities) {
+      if (address.includes(c.key)) return c.name;
+    }
+  }
+
+  return persona?.city || 'General Villegas';
+}
+
+function getCityBaseCoords(persona: any): { lat: number; lng: number } {
+  const cityName = detectRealCity(persona).toLowerCase();
+  for (const key in CITY_BASE_COORDS) {
+    if (cityName.includes(key) || key.includes(cityName)) {
+      return CITY_BASE_COORDS[key];
+    }
+  }
+  return { lat: -35.030, lng: -63.010 }; // Default base
+}
+
+// Limpiar dirección quitando placeholders que confunden a Google Geocoder
+function cleanStreetAddress(address: string, cityName: string): string {
+  if (!address) return '';
+  let clean = address.trim();
+
+  // Quitar provincia o ciudad duplicada al final
+  clean = clean.replace(/,\s*buenos\s*aires/gi, '');
+  const escapedCity = cityName.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+  const cityRegex = new RegExp(`,\\s*${escapedCity}`, 'gi');
+  clean = clean.replace(cityRegex, '');
+
+  const placeholders = [
+    'zona urbana',
+    'zona rural',
+    's/n',
+    'sin numero',
+    'sin nro',
+    'rural',
+    'acceso',
+    'zona quintas',
+    'conocido',
+    'acceso principal'
+  ];
+
+  const lower = clean.toLowerCase();
+  for (const p of placeholders) {
+    if (lower === p || lower === `${p}.`) {
+      return '';
+    }
+  }
+
+  return clean;
+}
+
+// Jitter determinista para que marcadores en el mismo punto de la ciudad no se solapen
+function applyJitter(lat: number, lng: number, id: number): { lat: number; lng: number } {
+  if (!id) return { lat, lng };
+  const offsetIndex = id % 8;
+  const angle = (offsetIndex * Math.PI) / 4;
+  const radius = 0.00045; // ~40 metros
+  return {
+    lat: lat + Math.sin(angle) * radius,
+    lng: lng + Math.cos(angle) * radius
+  };
+}
+
 function getClientCoords(
   clientId: number,
   clientName: string,
   persona?: any,
   cache?: { [key: number]: { lat: number; lng: number; address: string } }
 ) {
+  // 1. Usar coordenadas de la base de datos si existen y son válidas
+  if (persona && typeof persona.latitude === 'number' && typeof persona.longitude === 'number') {
+    return { lat: persona.latitude, lng: persona.longitude, address: persona.address || '' };
+  }
+  // 2. Usar coordenadas estáticas
   if (CLIENT_COORDS[clientId]) return CLIENT_COORDS[clientId];
+  // 3. Usar coordenadas de la caché
   if (cache && cache[clientId]) return cache[clientId];
 
-  // Generar coordenadas deterministas cerca del depósito como fallback
+  // 4. Generar coordenadas deterministas cerca de la base de su ciudad real como fallback
   const hash = clientName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-  const lat = -35.030 + ((hash % 100 - 50) * 0.0003);
-  const lng = -63.010 + (((hash * 7) % 100 - 50) * 0.0003);
+  const base = getCityBaseCoords(persona);
+  const lat = base.lat + ((hash % 100 - 50) * 0.0003);
+  const lng = base.lng + (((hash * 7) % 100 - 50) * 0.0003);
 
-  // Formatear la dirección real si existe
+  // Formatear dirección
   const street = persona?.address;
-  const city = persona?.city;
+  const city = detectRealCity(persona);
 
   let realAddress = street || 'Acceso Villegas S/N';
   if (city) {
-    realAddress += `, ${city}`;
-  } else if (!realAddress.toLowerCase().includes('villegas')) {
-    realAddress += `, Gral Villegas`;
+    if (!realAddress.toLowerCase().includes(city.toLowerCase())) {
+      realAddress += `, ${city}`;
+    }
   }
 
   return { lat, lng, address: realAddress };
@@ -123,7 +253,16 @@ const loadGoogleMapsScript = (apiKey: string, callback: () => void) => {
 };
 
 // Sub-componente para renderizar con Google Maps
-function GoogleRouteMap({ locations, routePoints }: { locations: any[], routePoints: [number, number][] }) {
+// Sub-componente para renderizar con Google Maps
+function GoogleRouteMap({ 
+  locations, 
+  routePoints, 
+  onUpdateClientCoords 
+}: { 
+  locations: any[], 
+  routePoints: [number, number][], 
+  onUpdateClientCoords?: (clientId: number, lat: number, lng: number) => void 
+}) {
   const mapRef = useRef<HTMLDivElement>(null);
   const apiKey = (import.meta.env as any)?.VITE_GOOGLE_MAPS_API_KEY || '';
   const [metrics, setMetrics] = useState<{ distance: string; duration: string } | null>(null);
@@ -191,14 +330,24 @@ function GoogleRouteMap({ locations, routePoints }: { locations: any[], routePoi
             scale: 12,
             labelOrigin: new google.maps.Point(0, 0)
           },
-          title: `${idx + 1}º Parada: ${loc.name}`
+          title: `${idx + 1}º Parada: ${loc.name}`,
+          draggable: true // Hacer marcadores arrastrables
         });
 
         bounds.extend(marker.getPosition());
+        
         marker.addListener('click', () => {
           infoWindow.setContent(`<b>${idx + 1}º Parada: ${loc.name}</b><br/>Comprobante: ${loc.invoice}<br/>Dirección: ${loc.address}`);
           infoWindow.open(map, marker);
         });
+
+        if (onUpdateClientCoords && loc.clientId) {
+          marker.addListener('dragend', (e: any) => {
+            const newLat = e.latLng.lat();
+            const newLng = e.latLng.lng();
+            onUpdateClientCoords(loc.clientId, newLat, newLng);
+          });
+        }
       });
 
       // Función auxiliar para dibujar ruta estática en caso de fallback
@@ -331,7 +480,15 @@ function GoogleRouteMap({ locations, routePoints }: { locations: any[], routePoi
 }
 
 // Sub-componente para inyectar Leaflet y renderizar el mapa
-function LeafletRouteMap({ locations, routePoints }: { locations: any[], routePoints: [number, number][] }) {
+function LeafletRouteMap({ 
+  locations, 
+  routePoints, 
+  onUpdateClientCoords 
+}: { 
+  locations: any[], 
+  routePoints: [number, number][], 
+  onUpdateClientCoords?: (clientId: number, lat: number, lng: number) => void 
+}) {
   const mapRef = useRef<any>(null);
   
   useEffect(() => {
@@ -402,9 +559,19 @@ function LeafletRouteMap({ locations, routePoints }: { locations: any[], routePo
           iconAnchor: [12, 12]
         });
 
-        L.marker([loc.lat, loc.lng], { icon: numberedIcon })
+        const leafletMarker = L.marker([loc.lat, loc.lng], { 
+          icon: numberedIcon,
+          draggable: true // Hacer marcadores arrastrables
+        })
           .addTo(map)
           .bindPopup(`<b>${idx + 1}º Parada: ${loc.name}</b><br/>Comprobante: ${loc.invoice}<br/>Dirección: ${loc.address}`);
+
+        if (onUpdateClientCoords && loc.clientId) {
+          leafletMarker.on('dragend', (e: any) => {
+            const { lat, lng } = e.target.getLatLng();
+            onUpdateClientCoords(loc.clientId, lat, lng);
+          });
+        }
       });
       
       // Trazar línea de ruta
@@ -436,13 +603,21 @@ function LeafletRouteMap({ locations, routePoints }: { locations: any[], routePo
 }
 
 // Wrapper unificado que decide cuál renderizar
-function RouteMap({ locations, routePoints }: { locations: any[], routePoints: [number, number][] }) {
+function RouteMap({ 
+  locations, 
+  routePoints, 
+  onUpdateClientCoords 
+}: { 
+  locations: any[], 
+  routePoints: [number, number][], 
+  onUpdateClientCoords?: (clientId: number, lat: number, lng: number) => void 
+}) {
   const apiKey = (import.meta.env as any)?.VITE_GOOGLE_MAPS_API_KEY || '';
   
   if (apiKey) {
-    return <GoogleRouteMap locations={locations} routePoints={routePoints} />;
+    return <GoogleRouteMap locations={locations} routePoints={routePoints} onUpdateClientCoords={onUpdateClientCoords} />;
   }
-  return <LeafletRouteMap locations={locations} routePoints={routePoints} />;
+  return <LeafletRouteMap locations={locations} routePoints={routePoints} onUpdateClientCoords={onUpdateClientCoords} />;
 }
 
 // Componente de impresión de Hoja de Ruta (oculto en pantalla, visible al imprimir)
@@ -640,11 +815,12 @@ export default function RepartoDashboard() {
 
     const addPersona = (p: any) => {
       if (!p || !p.id) return;
+      if (typeof p.latitude === 'number' && typeof p.longitude === 'number') return; // Ya tiene coordenadas guardadas
       if (CLIENT_COORDS[p.id]) return; // Ya tiene coordenadas fijas duras
       
       const expectedAddress = p.address || '';
-      const expectedCity = p.city || 'General Villegas';
-      const expectedCacheString = `${expectedAddress}, ${expectedCity}`;
+      const cityName = detectRealCity(p);
+      const expectedCacheString = `${expectedAddress}, ${cityName}`;
       
       if (clientCoordsCache[p.id] && clientCoordsCache[p.id].address === expectedCacheString) {
         return; // Ya está geocodificado con la misma dirección
@@ -677,39 +853,165 @@ export default function RepartoDashboard() {
       }
 
       const p = personasToGeocode[index];
-      const street = p.address || '';
-      const city = p.city || 'General Villegas';
-      const addressString = `${street}, ${city}, Buenos Aires, Argentina`;
-
-      geocoder.geocode({ address: addressString }, (results: any, status: any) => {
-        if (status === 'OK' && results && results[0]) {
-          const loc = results[0].geometry.location;
-          newCacheEntries[p.id] = {
-            lat: loc.lat(),
-            lng: loc.lng(),
-            address: `${street}, ${city}`
-          };
-        } else {
-          console.warn(`Geocoding failed for client ${p.name} at address ${addressString}: ${status}`);
-          // Fallback con coordenadas deterministas cerca del depósito
-          const hash = p.name.split('').reduce((acc: number, char: string) => acc + char.charCodeAt(0), 0);
-          const lat = -35.030 + ((hash % 100 - 50) * 0.0003);
-          const lng = -63.010 + (((hash * 7) % 100 - 50) * 0.0003);
-          newCacheEntries[p.id] = {
-            lat,
-            lng,
-            address: street ? `${street}, ${city}` : 'Acceso Villegas S/N, Gral Villegas'
-          };
-        }
+      const cityName = detectRealCity(p);
+      const cleanStreet = cleanStreetAddress(p.address || '', cityName);
+      
+      const handleSuccess = async (lat: number, lng: number, cacheAddress: string) => {
+        // Aplicar jitter determinista para evitar solapamiento exacto
+        const jittered = applyJitter(lat, lng, p.id);
         
+        newCacheEntries[p.id] = {
+          lat: jittered.lat,
+          lng: jittered.lng,
+          address: cacheAddress
+        };
+
+        // Guardar las coordenadas geocodificadas en la base de datos de manera silenciosa
+        try {
+          await api.updatePersona(p.id, { latitude: lat, longitude: lng });
+          
+          // Actualizamos en los estados locales para redibujar de inmediato sin recargar
+          setPendingOrders(prev => prev.map(o => {
+            if (o.persona?.id === p.id) {
+              return { ...o, persona: { ...o.persona, latitude: lat, longitude: lng } };
+            }
+            return o;
+          }));
+          
+          setRoutes(prev => prev.map(r => {
+            if (r.orders) {
+              const updatedOrders = r.orders.map((o: any) => {
+                if (o.persona?.id === p.id) {
+                  return { ...o, persona: { ...o.persona, latitude: lat, longitude: lng } };
+                }
+                return o;
+              });
+              return { ...r, orders: updatedOrders };
+            }
+            return r;
+          }));
+          
+          if (selectedRoute && selectedRoute.orders) {
+            const updatedOrders = selectedRoute.orders.map((o: any) => {
+              if (o.persona?.id === p.id) {
+                return { ...o, persona: { ...o.persona, latitude: lat, longitude: lng } };
+              }
+              return o;
+            });
+            setSelectedRoute((prev: any) => prev ? { ...prev, orders: updatedOrders } : null);
+          }
+        } catch (err) {
+          console.error("Error al guardar coordenadas geocodificadas:", err);
+        }
+
         index++;
-        // Retardo para evitar sobrecargar la cuota de la API
         setTimeout(processNext, 200);
-      });
+      };
+
+      const handleFailure = (reason: string) => {
+        console.warn(`Geocoding failed for client ${p.name} at ${p.address || ''}: ${reason}`);
+        
+        // Fallback final: usar coordenadas base de la ciudad y aplicar jitter
+        const base = getCityBaseCoords(p);
+        const jittered = applyJitter(base.lat, base.lng, p.id);
+        
+        newCacheEntries[p.id] = {
+          lat: jittered.lat,
+          lng: jittered.lng,
+          address: p.address ? `${p.address}, ${cityName}` : `Acceso ${cityName}`
+        };
+
+        index++;
+        setTimeout(processNext, 200);
+      };
+
+      if (!cleanStreet) {
+        // Geocodificar solo ciudad
+        const query = `${cityName}, Buenos Aires, Argentina`;
+        geocoder.geocode({ address: query }, (results: any, status: any) => {
+          if (status === 'OK' && results && results[0]) {
+            const loc = results[0].geometry.location;
+            handleSuccess(loc.lat(), loc.lng(), `${p.address || 'ZONA URBANA'}, ${cityName}`);
+          } else {
+            handleFailure(status);
+          }
+        });
+      } else {
+        // Geocodificar calle + ciudad
+        const query = `${cleanStreet}, ${cityName}, Buenos Aires, Argentina`;
+        geocoder.geocode({ address: query }, (results: any, status: any) => {
+          if (status === 'OK' && results && results[0]) {
+            const loc = results[0].geometry.location;
+            handleSuccess(loc.lat(), loc.lng(), `${p.address}, ${cityName}`);
+          } else {
+            // Si falla la dirección exacta, fallback a geocodificar solo la ciudad
+            const cityQuery = `${cityName}, Buenos Aires, Argentina`;
+            geocoder.geocode({ address: cityQuery }, (results2: any, status2: any) => {
+              if (status2 === 'OK' && results2 && results2[0]) {
+                const loc2 = results2[0].geometry.location;
+                handleSuccess(loc2.lat(), loc2.lng(), `${p.address}, ${cityName}`);
+              } else {
+                handleFailure(status2);
+              }
+            });
+          }
+        });
+      }
     };
 
     processNext();
   }, [googleLoaded, pendingOrders, routes, selectedRoute]);
+
+  const handleUpdateClientCoords = async (clientId: number, lat: number, lng: number) => {
+    try {
+      await api.updatePersona(clientId, { latitude: lat, longitude: lng });
+      
+      // Actualizar la caché local de coordenadas
+      setClientCoordsCache(prev => ({
+        ...prev,
+        [clientId]: {
+          ...prev[clientId],
+          lat,
+          lng
+        }
+      }));
+      
+      // Actualizar en el estado de pendingOrders para recalcularTSP
+      setPendingOrders(prev => prev.map(o => {
+        if (o.persona?.id === clientId) {
+          return { ...o, persona: { ...o.persona, latitude: lat, longitude: lng } };
+        }
+        return o;
+      }));
+
+      // Actualizar en el estado de routes
+      setRoutes(prev => prev.map(r => {
+        if (r.orders) {
+          const updatedOrders = r.orders.map((o: any) => {
+            if (o.persona?.id === clientId) {
+              return { ...o, persona: { ...o.persona, latitude: lat, longitude: lng } };
+            }
+            return o;
+          });
+          return { ...r, orders: updatedOrders };
+        }
+        return r;
+      }));
+
+      // Actualizar en el estado de selectedRoute
+      if (selectedRoute && selectedRoute.orders) {
+        const updatedOrders = selectedRoute.orders.map((o: any) => {
+          if (o.persona?.id === clientId) {
+            return { ...o, persona: { ...o.persona, latitude: lat, longitude: lng } };
+          }
+          return o;
+        });
+        setSelectedRoute((prev: any) => prev ? { ...prev, orders: updatedOrders } : null);
+      }
+    } catch (err) {
+      console.error("Error al actualizar las coordenadas del cliente:", err);
+    }
+  };
 
   // Formulario de nueva ruta
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -889,6 +1191,7 @@ export default function RepartoDashboard() {
       const coords = getClientCoords(persona.id, persona.name, persona, clientCoordsCache);
       return {
         id,
+        clientId: persona.id,
         lat: coords.lat,
         lng: coords.lng,
         name: persona.name,
@@ -919,6 +1222,7 @@ export default function RepartoDashboard() {
       const coords = getClientCoords(p.id, p.name, p, clientCoordsCache);
       return {
         id: o.id,
+        clientId: p.id,
         lat: coords.lat,
         lng: coords.lng,
         name: p.name,
@@ -1255,7 +1559,11 @@ export default function RepartoDashboard() {
                 <RouteMap 
                   locations={activeRouteTspDetails.locations} 
                   routePoints={selectedRouteStreetPoints.length > 0 ? selectedRouteStreetPoints : activeRouteTspDetails.points} 
+                  onUpdateClientCoords={handleUpdateClientCoords}
                 />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '8px', padding: '8px', backgroundColor: 'var(--bg-light, #fafafa)', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
+                  <div><strong>📍 Consejo:</strong> Si un punto en el mapa está mal ubicado, podés arrastrar su marcador para corregirlo permanentemente en el sistema.</div>
+                </div>
               </div>
 
               {/* Paradas del Camión en el Orden de TSP */}
@@ -1456,10 +1764,12 @@ export default function RepartoDashboard() {
                       <RouteMap 
                         locations={currentTspRoute} 
                         routePoints={createRouteStreetPoints.length > 0 ? createRouteStreetPoints : mapPoints} 
+                        onUpdateClientCoords={handleUpdateClientCoords}
                       />
                       
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', padding: '8px', backgroundColor: '#FFFEE0', borderRadius: '4px', border: '1px solid #EAE2B7' }}>
-                        <strong>💡 Sugerencia TSP:</strong> La ruta se calcula minimizando distancias espaciales saliendo del Depósito Central.
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.72rem', color: 'var(--text-secondary)', padding: '8px', backgroundColor: 'var(--bg-light, #fafafa)', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
+                        <div><strong>💡 Sugerencia TSP:</strong> La ruta se calcula minimizando distancias espaciales saliendo del Depósito Central.</div>
+                        <div><strong>📍 Tip:</strong> Si un punto en el mapa está mal ubicado, podés arrastrar su marcador para corregir la geolocalización del cliente de forma permanente.</div>
                       </div>
                     </div>
                   ) : (

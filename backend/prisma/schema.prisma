@@ -101,6 +101,10 @@ model Persona {
   // Ruta de reparto (ej: "BUNGE Y BUCHARDO", "VILLEGAS NORBER", etc.)
   route              String?
 
+  // Coordenadas geográficas para reparto
+  latitude           Float?
+  longitude          Float?
+
   // Relación con vendedor (si es cliente)
   sellerId           Int?
   seller             User?         @relation(fields: [sellerId], references: [id])
@@ -350,6 +354,7 @@ model SupplierInvoice {
   percepcionAmount Decimal       @default(0.00) @db.Decimal(12, 2) // Percepciones IIBB sufridas
   percepcionIvaAmount Decimal    @default(0.00) @db.Decimal(12, 2) // Percepciones IVA sufridas
   totalAmount      Decimal       @db.Decimal(12, 2) // Total
+  billingType      BillingType   @default(INTERNAL)
   createdAt        DateTime      @default(now())
   updatedAt        DateTime      @updatedAt
   transactions     Transaction[]
