@@ -196,10 +196,17 @@ const MobileCobros: React.FC<MobileCobrosProps> = ({
         <h2 className="text-2xl font-bold text-gray-800 mb-1">Registrar Cobro</h2>
         <p className="text-gray-500 mb-6">{selectedPersona.name}</p>
 
-        <div className="bg-red-50 border border-red-100 p-4 rounded-lg mb-6 flex justify-between items-center">
-          <span className="text-red-700 font-medium">Saldo Pendiente</span>
-          <span className="text-red-700 font-bold text-lg">{formatCurrency(selectedPersona.outstandingBalance)}</span>
-        </div>
+        {selectedPersona.outstandingBalance < 0 ? (
+          <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-lg mb-6 flex justify-between items-center">
+            <span className="text-emerald-700 font-medium">Saldo a Favor</span>
+            <span className="text-emerald-700 font-bold text-lg">{formatCurrency(Math.abs(selectedPersona.outstandingBalance))}</span>
+          </div>
+        ) : (
+          <div className="bg-red-50 border border-red-100 p-4 rounded-lg mb-6 flex justify-between items-center">
+            <span className="text-red-700 font-medium">Saldo Pendiente</span>
+            <span className="text-red-700 font-bold text-lg">{formatCurrency(selectedPersona.outstandingBalance)}</span>
+          </div>
+        )}
 
         <form onSubmit={handleRegister} className="space-y-5">
           {pendingInvoices.length > 0 && (
@@ -408,12 +415,25 @@ const MobileCobros: React.FC<MobileCobrosProps> = ({
                 <p className="text-xs text-gray-400 mt-1">{p.address || p.city}</p>
               </div>
               <div className="text-right">
-                <p className="text-sm font-medium text-red-600">{formatCurrency(p.outstandingBalance)}</p>
-                <div className="mt-1 flex justify-end">
-                  <div className="bg-red-50 text-red-600 p-1.5 rounded-full">
-                    <CreditCard className="w-4 h-4" />
-                  </div>
-                </div>
+                {p.outstandingBalance < 0 ? (
+                  <>
+                    <p className="text-sm font-medium text-green-600">{formatCurrency(Math.abs(p.outstandingBalance))} (A Favor)</p>
+                    <div className="mt-1 flex justify-end">
+                      <div className="bg-green-50 text-green-600 p-1.5 rounded-full">
+                        <CreditCard className="w-4 h-4" />
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-sm font-medium text-red-600">{formatCurrency(p.outstandingBalance)}</p>
+                    <div className="mt-1 flex justify-end">
+                      <div className="bg-red-50 text-red-600 p-1.5 rounded-full">
+                        <CreditCard className="w-4 h-4" />
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           ))}

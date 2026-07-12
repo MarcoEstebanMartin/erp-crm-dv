@@ -1808,7 +1808,7 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
                               >
                                 <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{c.name}</div>
                                 <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
-                                  CUIT: {c.cuit || 'S/D'} | Saldo CC: ${Number(c.outstandingBalance || 0).toLocaleString()} | Lista: {c.priceList || 'A'}
+                                  CUIT: {c.cuit || 'S/D'} | Saldo CC: {Number(c.outstandingBalance || 0) < 0 ? `$${Math.abs(Number(c.outstandingBalance)).toLocaleString()} (A Favor)` : `$${Number(c.outstandingBalance || 0).toLocaleString()}`} | Lista: {c.priceList || 'A'}
                                 </div>
                               </div>
                             );
@@ -1846,8 +1846,17 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
                       </div>
                       <div>
                         <strong>Saldo Cuenta Corriente:</strong>{' '}
-                        <span style={{ color: Number(selectedDirectClient.outstandingBalance || 0) > 0 ? 'var(--color-danger)' : 'inherit', fontWeight: 600 }}>
-                          ${Number(selectedDirectClient.outstandingBalance || 0).toLocaleString()}
+                        <span style={{ 
+                          color: Number(selectedDirectClient.outstandingBalance || 0) > 0 
+                            ? 'var(--color-danger)' 
+                            : Number(selectedDirectClient.outstandingBalance || 0) < 0 
+                              ? 'var(--color-success)' 
+                              : 'inherit', 
+                          fontWeight: 600 
+                        }}>
+                          {Number(selectedDirectClient.outstandingBalance || 0) < 0 
+                            ? `$${Math.abs(Number(selectedDirectClient.outstandingBalance)).toLocaleString()} (A Favor)` 
+                            : `$${Number(selectedDirectClient.outstandingBalance || 0).toLocaleString()}`}
                         </span>
                       </div>
                       <div><strong>Límite de Crédito:</strong> ${Number(selectedDirectClient.creditLimit || 0).toLocaleString()}</div>
@@ -2403,7 +2412,7 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
                               >
                                 <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{c.name}</div>
                                 <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
-                                  CUIT: {c.cuit || 'S/D'} | Saldo CC: ${Number(c.outstandingBalance || 0).toLocaleString()} | Lista: {c.priceList || 'A'}
+                                  CUIT: {c.cuit || 'S/D'} | Saldo CC: {Number(c.outstandingBalance || 0) < 0 ? `$${Math.abs(Number(c.outstandingBalance)).toLocaleString()} (A Favor)` : `$${Number(c.outstandingBalance || 0).toLocaleString()}`} | Lista: {c.priceList || 'A'}
                                 </div>
                               </div>
                             );

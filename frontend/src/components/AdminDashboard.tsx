@@ -1898,8 +1898,8 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
                       balanceText = `Saldo Deudor: $${balance.toLocaleString()}`;
                       balanceColor = 'var(--color-danger)';
                     } else if (balance < 0) {
-                      balanceText = `A Pagar: $${Math.abs(balance).toLocaleString()}`;
-                      balanceColor = '#E30613';
+                      balanceText = `A Favor: $${Math.abs(balance).toLocaleString()}`;
+                      balanceColor = 'var(--color-success)';
                     } else {
                       balanceText = '$0';
                     }
@@ -3694,7 +3694,9 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
                         fontWeight: 700,
                         color: (clientProfileModal.client.outstandingBalance || 0) > 0 ? 'var(--color-danger)' : (clientProfileModal.client.outstandingBalance || 0) < 0 ? 'var(--color-success)' : 'var(--text-secondary)'
                       }}>
-                        ${Number(clientProfileModal.client.outstandingBalance || 0).toLocaleString()}
+                        {Number(clientProfileModal.client.outstandingBalance || 0) < 0 
+                          ? `$${Math.abs(Number(clientProfileModal.client.outstandingBalance)).toLocaleString()} (A Favor)` 
+                          : `$${Number(clientProfileModal.client.outstandingBalance || 0).toLocaleString()}`}
                       </span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -4087,9 +4089,15 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
                       <div style={{ 
                         fontSize: '0.85rem', 
                         fontWeight: 600,
-                        color: (c.outstandingBalance || 0) > 0 ? 'var(--color-danger)' : 'var(--text-primary)'
+                        color: (c.outstandingBalance || 0) > 0 
+                          ? 'var(--color-danger)' 
+                          : (c.outstandingBalance || 0) < 0 
+                            ? 'var(--color-success)' 
+                            : 'var(--text-primary)'
                       }}>
-                        ${Number(c.outstandingBalance || 0).toLocaleString()}
+                        {Number(c.outstandingBalance || 0) < 0 
+                          ? `$${Math.abs(Number(c.outstandingBalance)).toLocaleString()} (A Favor)` 
+                          : `$${Number(c.outstandingBalance || 0).toLocaleString()}`}
                       </div>
                       <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>Saldo CC</div>
                     </div>

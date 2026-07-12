@@ -619,7 +619,18 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
                       )}
                     </div>
                     <div className="client-info-stats">
-                      <span><strong>Saldo C/C:</strong> <span style={{ color: (selectedClient.outstandingBalance || 0) > 0 ? 'var(--color-danger)' : 'var(--text-primary)', fontWeight: 600 }}>${(selectedClient.outstandingBalance || 0).toLocaleString()}</span></span>
+                      <span><strong>Saldo C/C:</strong> <span style={{ 
+                        color: (selectedClient.outstandingBalance || 0) > 0 
+                          ? 'var(--color-danger)' 
+                          : (selectedClient.outstandingBalance || 0) < 0 
+                            ? 'var(--color-success)' 
+                            : 'var(--text-primary)', 
+                        fontWeight: 600 
+                      }}>
+                        {Number(selectedClient.outstandingBalance || 0) < 0 
+                          ? `$${Math.abs(Number(selectedClient.outstandingBalance)).toLocaleString()} (A Favor)` 
+                          : `$${Number(selectedClient.outstandingBalance || 0).toLocaleString()}`}
+                      </span></span>
                       <span><strong>Límite Crédito:</strong> <span style={{ fontWeight: 600 }}>${(selectedClient.creditLimit || 0).toLocaleString()}</span></span>
                       <span><strong>Lista:</strong> <span style={{ fontWeight: 600 }}>{selectedClient.priceList === 'C' ? 'Distribuidor C' : selectedClient.priceList === 'B' ? 'Especial B' : 'Estándar A'}</span></span>
                       {Number(selectedClient.discount || 0) > 0 && (
