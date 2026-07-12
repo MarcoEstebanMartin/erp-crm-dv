@@ -3571,7 +3571,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
                     onChange={(e) => setClientModal({ ...clientModal, data: { ...clientModal.data, sellerId: e.target.value ? Number(e.target.value) : null } })}
                     style={{ height: '38px', padding: '8px 12px', fontSize: '0.9rem', borderRadius: '6px', border: '1px solid var(--border-color)', boxSizing: 'border-box', width: '100%', backgroundColor: '#fff', color: 'var(--text-primary)' }}
                   >
-                    <option value="">Sin Vendedor / Oficina</option>
+                    <option value="">Sin Vendedor</option>
                     {availableSellers.map(s => (
                       <option key={s.id} value={s.id}>{s.username.replace('_', ' ').toUpperCase()}</option>
                     ))}
