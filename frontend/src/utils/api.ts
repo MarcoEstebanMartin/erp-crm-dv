@@ -133,12 +133,22 @@ export const api = {
     return res.product;
   },
 
-  adjustStock: async (id: number, quantityChange: number, reason: string, lotNumber?: string, expirationDate?: string) => {    
+  adjustStock: async (id: number, quantityChange: number, reason: string, lotNumber?: string, expirationDate?: string) => {    
     const res = await request(`/products/${id}/adjust-stock`, {
       method: 'POST',
       body: JSON.stringify({ quantityChange, reason, lotNumber, expirationDate })
     });
     return res.product;
+  },
+
+  getProductMovements: async (id: number) => {
+    const res = await request(`/products/${id}/movements`);
+    return res.movements;
+  },
+
+  getGlobalStockMovements: async () => {
+    const res = await request('/products/stock/movements');
+    return res.movements;
   },
 
   // --- PERSONAS ---
@@ -698,6 +708,11 @@ export const api = {
       method: 'DELETE'
     });
     return res;
+  },
+
+  getLogisticsResources: async () => {
+    const res = await request('/logistics/resources');
+    return res.data;
   },
 
   getPurchaseOrders: async (filters?: any) => {

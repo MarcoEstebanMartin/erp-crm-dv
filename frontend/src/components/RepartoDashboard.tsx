@@ -1019,6 +1019,8 @@ export default function RepartoDashboard() {
   const [vehiclePlate, setVehiclePlate] = useState('');
   const [vehicleDescription, setVehicleDescription] = useState('');
   const [selectedOrderIds, setSelectedOrderIds] = useState<number[]>([]);
+  const [loadedDrivers, setLoadedDrivers] = useState<string[]>([]);
+  const [loadedVehicles, setLoadedVehicles] = useState<{ plate: string; description: string }[]>([]);
 
   // Estados para liquidación de hoja de ruta
   const [showSettleModal, setShowSettleModal] = useState(false);
@@ -1078,8 +1080,21 @@ export default function RepartoDashboard() {
     }
   };
 
+  const fetchLogisticsResources = async () => {
+    try {
+      const data = await api.getLogisticsResources();
+      if (data) {
+        setLoadedDrivers(data.drivers || []);
+        setLoadedVehicles(data.vehicles || []);
+      }
+    } catch (err) {
+      console.error("Error al cargar recursos de logística:", err);
+    }
+  };
+
   useEffect(() => {
     fetchRoutesAndOrders();
+    fetchLogisticsResources();
   }, []);
 
   const uniqueCities = useMemo(() => {
@@ -1294,6 +1309,7 @@ export default function RepartoDashboard() {
       setVehicleDescription('');
       setSelectedOrderIds([]);
       fetchRoutesAndOrders();
+      fetchLogisticsResources();
     } catch (err: any) {
       setErrorMsg(err.message || 'Error al guardar la hoja de ruta.');
     } finally {
@@ -1645,8 +1661,14 @@ export default function RepartoDashboard() {
                       placeholder="ej: Carlos Giménez"
                       value={driverName}
                       onChange={(e) => setDriverName(e.target.value)}
+                      list="drivers-datalist"
                       required
                     />
+                    <datalist id="drivers-datalist">
+                      {loadedDrivers.map((d) => (
+                        <option key={d} value={d} />
+                      ))}
+                    </datalist>
                   </div>
                   <div className="form-group">
                     <label>Patente del Vehículo</label>
@@ -1655,9 +1677,23 @@ export default function RepartoDashboard() {
                       className="input" 
                       placeholder="ej: AF-123-ZZ"
                       value={vehiclePlate}
-                      onChange={(e) => setVehiclePlate(e.target.value)}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setVehiclePlate(val);
+                        // Autocompletar la descripción si coincide
+                        const found = loadedVehicles.find(v => v.plate.trim().toUpperCase() === val.trim().toUpperCase());
+                        if (found) {
+                          setVehicleDescription(found.description);
+                        }
+                      }}
+                      list="vehicles-datalist"
                       required
                     />
+                    <datalist id="vehicles-datalist">
+                      {loadedVehicles.map((v) => (
+                        <option key={v.plate} value={v.plate}>{v.description}</option>
+                      ))}
+                    </datalist>
                   </div>
                   <div className="form-group">
                     <label>Descripción Vehículo</label>

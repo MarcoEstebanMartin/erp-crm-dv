@@ -2,7 +2,7 @@ import { Response } from 'express';
 import prisma from '../utils/prisma';
 import { AuthenticatedRequest } from '../types';
 import { logAudit } from '../utils/audit';
-import { BillingType, InvoiceType, OrderStatus, TransactionType, PaymentMethod } from '@prisma/client';
+import { BillingType, InvoiceType, OrderStatus, TransactionType, PaymentMethod, Role } from '@prisma/client';
 import { emitirFacturaAFIP } from '../services/afip.service';
 
 /**
@@ -453,6 +453,76 @@ export async function deleteDeliveryRoute(req: AuthenticatedRequest, res: Respon
     res.status(500).json({
       status: 'error',
       message: 'Error al eliminar la hoja de ruta de reparto.',
+    });
+  }
+}
+
+/**
+ * Obtener listado de choferes y vehículos únicos en el sistema
+ */
+export async function getLogisticsResources(req: AuthenticatedRequest, res: Response): Promise<void> {
+  try {
+    // 1. Obtener usuarios con rol DEPOSITO activos
+    const depositoUsers = await prisma.user.findMany({
+      where: {
+        role: Role.DEPOSITO,
+        isActive: true
+      },
+      select: {
+        username: true
+      }
+    });
+
+    // 2. Obtener choferes y vehículos de Hojas de Ruta pasadas
+    const pastRoutes = await prisma.deliveryRoute.findMany({
+      select: {
+        driverName: true,
+        vehiclePlate: true,
+        vehicleDescription: true
+      }
+    });
+
+    // Consolidar choferes únicos
+    const driverSet = new Set<string>();
+    depositoUsers.forEach(u => driverSet.add(u.username));
+    pastRoutes.forEach(r => {
+      if (r.driverName) driverSet.add(r.driverName.trim());
+    });
+    
+    // Valores por defecto de fallback
+    if (driverSet.size === 0) {
+      ['Pepe', 'Miguel', 'Matías', 'Thiago'].forEach(d => driverSet.add(d));
+    }
+    const drivers = Array.from(driverSet).sort();
+
+    // Consolidar vehículos únicos (por patente)
+    const vehicleMap = new Map<string, string>();
+    pastRoutes.forEach(r => {
+      if (r.vehiclePlate) {
+        vehicleMap.set(r.vehiclePlate.trim().toUpperCase(), r.vehicleDescription?.trim() || '');
+      }
+    });
+    
+    // Valores por defecto de fallback
+    if (vehicleMap.size === 0) {
+      vehicleMap.set('1234', 'Sprinter');
+      vehicleMap.set('5678', 'Fiorino');
+      vehicleMap.set('AA999ZZ', 'Camión Ford');
+    }
+    const vehicles = Array.from(vehicleMap.entries()).map(([plate, desc]) => ({
+      plate,
+      description: desc
+    })).sort((a, b) => a.plate.localeCompare(b.plate));
+
+    res.status(200).json({
+      status: 'success',
+      data: { drivers, vehicles }
+    });
+  } catch (error: any) {
+    console.error('Error al obtener recursos de logística:', error);
+    res.status(500).json({
+      status: 'error',
+      message: 'Error al obtener recursos de logística.'
     });
   }
 }
