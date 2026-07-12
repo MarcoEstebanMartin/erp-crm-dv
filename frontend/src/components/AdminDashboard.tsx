@@ -4112,7 +4112,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
                       const action = clientSearchModal.action;
                       setClientSearchModal(null);
                       if (action === 'ledger') {
-                        handleViewClientProfile(c);
+                        setShowResumenModal(c);
                       } else if (action === 'payment') {
                         setPaymentModal({ open: true, clientId: c.id, clientName: c.name });
                         setPaymentAmount('');
