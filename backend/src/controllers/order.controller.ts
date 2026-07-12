@@ -50,7 +50,7 @@ export async function getOrders(req: AuthenticatedRequest, res: Response): Promi
       where: whereClause,
       include: {
         persona: {
-          select: { id: true, name: true, cuit: true },
+          select: { id: true, name: true, cuit: true, city: true, route: true, address: true },
         },
         seller: {
           select: { id: true, username: true },
@@ -1167,7 +1167,7 @@ export async function createDirectInvoice(req: AuthenticatedRequest, res: Respon
         await tx.stockMovement.create({
           data: {
             productId: itemData.productId,
-            quantity: itemData.quantity,
+            quantity: -itemData.quantity,
             type: MovementType.OUT,
             referenceId: `FAC-${order.id}`,
             userId: adminId,
