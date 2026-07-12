@@ -467,11 +467,23 @@ export async function deleteDeliveryRoute(req: AuthenticatedRequest, res: Respon
  */
 export async function getLogisticsResources(req: AuthenticatedRequest, res: Response): Promise<void> {
   try {
-    // 1. Obtener usuarios con rol DEPOSITO activos
-    const depositoUsers = await prisma.user.findMany({
+    // Helper to format usernames nicely
+    const capitalizeUsername = (username: string): string => {
+      const parts = username.replace(/[_-]/g, ' ').split(' ');
+      return parts
+        .map(p => p.charAt(0).toUpperCase() + p.slice(1).toLowerCase())
+        .join(' ');
+    };
+
+    // 1. Obtener todos los usuarios activos excepto cuentas de sistema/oficina
+    const activeUsers = await prisma.user.findMany({
       where: {
-        role: Role.DEPOSITO,
-        isActive: true
+        isActive: true,
+        NOT: {
+          username: {
+            in: ['admin', 'OFICINA', 'oficina']
+          }
+        }
       },
       select: {
         username: true
@@ -489,31 +501,46 @@ export async function getLogisticsResources(req: AuthenticatedRequest, res: Resp
 
     // Consolidar choferes únicos
     const driverSet = new Set<string>();
-    depositoUsers.forEach(u => driverSet.add(u.username));
+    activeUsers.forEach(u => {
+      driverSet.add(capitalizeUsername(u.username));
+    });
     pastRoutes.forEach(r => {
-      if (r.driverName) driverSet.add(r.driverName.trim());
+      if (r.driverName) {
+        driverSet.add(r.driverName.trim());
+      }
     });
     
-    // Valores por defecto de fallback
+    // Valores por defecto de fallback (si por alguna razón no hay usuarios)
     if (driverSet.size === 0) {
-      ['Pepe', 'Miguel', 'Matías', 'Thiago'].forEach(d => driverSet.add(d));
+      ['Miguel', 'Norberto', 'Fabian', 'Matias', 'Thiago', 'Agustin'].forEach(d => driverSet.add(d));
     }
     const drivers = Array.from(driverSet).sort();
 
     // Consolidar vehículos únicos (por patente)
     const vehicleMap = new Map<string, string>();
+    
+    // Carga de vehículos de reparto preconfigurados
+    const defaultVehicles = [
+      { plate: 'AB 919 WO', description: 'MERCEDES ACCELO 1016' },
+      { plate: 'AE 178 EC', description: 'MERCEDES ACCELO 815' },
+      { plate: 'FUL 385', description: 'MERCEDES 710' },
+      { plate: 'AI 148 CP', description: 'KYC MAMUT' },
+      { plate: 'AG 422 GS', description: 'PEUGEOT PARTNER BLANCA' },
+      { plate: 'AE 764 FE', description: 'PEUGEOT PARTNER' }
+    ];
+    defaultVehicles.forEach(v => {
+      vehicleMap.set(v.plate.toUpperCase(), v.description);
+    });
+
     pastRoutes.forEach(r => {
       if (r.vehiclePlate) {
-        vehicleMap.set(r.vehiclePlate.trim().toUpperCase(), r.vehicleDescription?.trim() || '');
+        const plate = r.vehiclePlate.trim().toUpperCase();
+        if (!vehicleMap.has(plate)) {
+          vehicleMap.set(plate, r.vehicleDescription?.trim() || '');
+        }
       }
     });
     
-    // Valores por defecto de fallback
-    if (vehicleMap.size === 0) {
-      vehicleMap.set('1234', 'Sprinter');
-      vehicleMap.set('5678', 'Fiorino');
-      vehicleMap.set('AA999ZZ', 'Camión Ford');
-    }
     const vehicles = Array.from(vehicleMap.entries()).map(([plate, desc]) => ({
       plate,
       description: desc

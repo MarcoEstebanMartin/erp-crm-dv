@@ -1022,6 +1022,7 @@ export default function RepartoDashboard() {
   const [loadedDrivers, setLoadedDrivers] = useState<string[]>([]);
   const [loadedVehicles, setLoadedVehicles] = useState<{ plate: string; description: string }[]>([]);
   const [expandedStops, setExpandedStops] = useState<{ [key: string]: boolean }>({});
+  const [selectedVehicleKey, setSelectedVehicleKey] = useState('');
 
   // Estados para liquidación de hoja de ruta
   const [showSettleModal, setShowSettleModal] = useState(false);
@@ -1309,6 +1310,7 @@ export default function RepartoDashboard() {
       setDriverName('');
       setVehiclePlate('');
       setVehicleDescription('');
+      setSelectedVehicleKey('');
       setSelectedOrderIds([]);
       fetchRoutesAndOrders();
       fetchLogisticsResources();
@@ -1431,7 +1433,14 @@ export default function RepartoDashboard() {
               <h3 className="card-title" style={{ margin: '0' }}>🚚 Hojas de Ruta de Reparto</h3>
               <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Historial logístico de despachos.</p>
             </div>
-            <button className="btn btn-primary" onClick={() => setShowCreateModal(true)}>
+            <button className="btn btn-primary" onClick={() => {
+              setDriverName('');
+              setVehiclePlate('');
+              setVehicleDescription('');
+              setSelectedVehicleKey('');
+              setSelectedOrderIds([]);
+              setShowCreateModal(true);
+            }}>
               <Plus size={16} />
               Crear Hoja de Ruta
             </button>
@@ -1724,56 +1733,75 @@ export default function RepartoDashboard() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                   <div className="form-group">
                     <label>Nombre del Chofer</label>
-                    <input 
-                      type="text" 
+                    <select 
                       className="input" 
-                      placeholder="ej: Carlos Giménez"
                       value={driverName}
                       onChange={(e) => setDriverName(e.target.value)}
-                      list="drivers-datalist"
                       required
-                    />
-                    <datalist id="drivers-datalist">
+                    >
+                      <option value="">-- Seleccionar Chofer --</option>
                       {loadedDrivers.map((d) => (
-                        <option key={d} value={d} />
+                        <option key={d} value={d}>{d}</option>
                       ))}
-                    </datalist>
+                    </select>
                   </div>
                   <div className="form-group">
-                    <label>Patente del Vehículo</label>
-                    <input 
-                      type="text" 
+                    <label>Vehículo de Reparto</label>
+                    <select 
                       className="input" 
-                      placeholder="ej: AF-123-ZZ"
-                      value={vehiclePlate}
+                      value={selectedVehicleKey}
                       onChange={(e) => {
                         const val = e.target.value;
-                        setVehiclePlate(val);
-                        // Autocompletar la descripción si coincide
-                        const found = loadedVehicles.find(v => v.plate.trim().toUpperCase() === val.trim().toUpperCase());
-                        if (found) {
-                          setVehicleDescription(found.description);
+                        setSelectedVehicleKey(val);
+                        if (val === 'CUSTOM') {
+                          setVehiclePlate('');
+                          setVehicleDescription('');
+                        } else if (val) {
+                          const found = loadedVehicles.find(v => v.plate === val);
+                          if (found) {
+                            setVehiclePlate(found.plate);
+                            setVehicleDescription(found.description);
+                          }
+                        } else {
+                          setVehiclePlate('');
+                          setVehicleDescription('');
                         }
                       }}
-                      list="vehicles-datalist"
                       required
-                    />
-                    <datalist id="vehicles-datalist">
+                    >
+                      <option value="">-- Seleccionar Vehículo --</option>
                       {loadedVehicles.map((v) => (
-                        <option key={v.plate} value={v.plate}>{v.description}</option>
+                        <option key={v.plate} value={v.plate}>{v.description} ({v.plate})</option>
                       ))}
-                    </datalist>
+                      <option value="CUSTOM">Otro (Ingreso manual...)</option>
+                    </select>
                   </div>
-                  <div className="form-group">
-                    <label>Descripción Vehículo</label>
-                    <input 
-                      type="text" 
-                      className="input" 
-                      placeholder="ej: Sprinter Roja"
-                      value={vehicleDescription}
-                      onChange={(e) => setVehicleDescription(e.target.value)}
-                    />
-                  </div>
+                  {selectedVehicleKey === 'CUSTOM' && (
+                    <>
+                      <div className="form-group" style={{ animation: 'fadeIn 0.2s ease' }}>
+                        <label>Patente del Vehículo</label>
+                        <input 
+                          type="text" 
+                          className="input" 
+                          placeholder="ej: AF-123-ZZ"
+                          value={vehiclePlate}
+                          onChange={(e) => setVehiclePlate(e.target.value.toUpperCase())}
+                          required
+                        />
+                      </div>
+                      <div className="form-group" style={{ animation: 'fadeIn 0.2s ease' }}>
+                        <label>Descripción Vehículo</label>
+                        <input 
+                          type="text" 
+                          className="input" 
+                          placeholder="ej: Sprinter Roja"
+                          value={vehicleDescription}
+                          onChange={(e) => setVehicleDescription(e.target.value)}
+                          required
+                        />
+                      </div>
+                    </>
+                  )}
 
                   {/* Listado de pedidos preparados disponibles */}
                   <div style={{ marginTop: '10px' }}>
