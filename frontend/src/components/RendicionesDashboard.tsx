@@ -54,6 +54,8 @@ const RendicionesDashboard: React.FC = () => {
   const [realChecks, setRealChecks] = useState<string>('');
   const [actionLoading, setActionLoading] = useState(false);
   const [showTxs, setShowTxs] = useState(false);
+  const [activeDrawers, setActiveDrawers] = useState<any[]>([]);
+  const [selectedDrawerId, setSelectedDrawerId] = useState<string>('');
 
   const fetchRendiciones = async () => {
     setLoading(true);
@@ -74,12 +76,25 @@ const RendicionesDashboard: React.FC = () => {
     fetchRendiciones();
   }, []);
 
-  const handleOpenAudit = (type: 'seller' | 'route', data: any) => {
+  const handleOpenAudit = async (type: 'seller' | 'route', data: any) => {
     setAuditTarget({ type, data });
     setRealCash('');
     setRealChecks('');
     setShowTxs(false);
     setErrorMsg(null);
+    setSelectedDrawerId('');
+    setActiveDrawers([]);
+
+    // Cargar cajas operativas abiertas
+    try {
+      const active = await api.getActiveDrawers();
+      setActiveDrawers(active || []);
+      if (active && active.length > 0) {
+        setSelectedDrawerId(String(active[0].id));
+      }
+    } catch (err) {
+      console.error("Error al cargar cajas activas:", err);
+    }
   };
 
   const handleCloseAudit = () => {
@@ -87,6 +102,8 @@ const RendicionesDashboard: React.FC = () => {
     setRealCash('');
     setRealChecks('');
     setShowTxs(false);
+    setActiveDrawers([]);
+    setSelectedDrawerId('');
   };
 
   const handleVerifySubmit = async (e: React.FormEvent) => {
@@ -101,6 +118,11 @@ const RendicionesDashboard: React.FC = () => {
       return;
     }
 
+    if (cashVal > 0 && !selectedDrawerId) {
+      setErrorMsg('Debes seleccionar una caja operativa abierta para depositar el efectivo.');
+      return;
+    }
+
     setActionLoading(true);
     setErrorMsg(null);
     try {
@@ -108,6 +130,10 @@ const RendicionesDashboard: React.FC = () => {
         realCash: cashVal,
         realChecks: checksVal
       };
+
+      if (selectedDrawerId) {
+        payload.destinationDrawerId = Number(selectedDrawerId);
+      }
 
       if (auditTarget.type === 'seller') {
         payload.sellerId = auditTarget.data.user.id;
@@ -506,6 +532,32 @@ const RendicionesDashboard: React.FC = () => {
                       2. Conteo Físico Recibido
                     </h4>
                     
+                    {activeDrawers.length === 0 ? (
+                      <div style={{ color: 'var(--color-danger, #ef4444)', fontSize: '0.82rem', fontWeight: 600, marginBottom: '16px', padding: '10px', backgroundColor: '#fef2f2', borderRadius: '6px', border: '1px solid #fca5a5' }}>
+                        ⚠️ No tenés ninguna caja operativa abierta. Abrí una caja desde Finanzas para rendir efectivo.
+                      </div>
+                    ) : (
+                      <div className="form-group" style={{ marginBottom: '16px' }}>
+                        <label style={{ fontSize: '0.8rem', fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
+                          Caja Operativa Destino
+                        </label>
+                        <select 
+                          className="select" 
+                          style={{ width: '100%', fontSize: '0.9rem' }}
+                          value={selectedDrawerId}
+                          onChange={(e) => setSelectedDrawerId(e.target.value)}
+                          required
+                        >
+                          <option value="">-- Seleccionar Caja --</option>
+                          {activeDrawers.map((d: any) => (
+                            <option key={d.id} value={d.id}>
+                              {d.branch === 'A' ? 'Caja A (Oficial)' : d.branch === 'X' ? 'Caja X (Interna)' : `Caja: ${d.branch}`} (Saldo: ${d.openingBalance})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+                    
                     <div className="form-group" style={{ marginBottom: '12px' }}>
                       <label style={{ fontSize: '0.8rem', fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
                         Efectivo Declarado ($)
@@ -661,7 +713,7 @@ const RendicionesDashboard: React.FC = () => {
                 <button 
                   type="submit" 
                   className="btn" 
-                  disabled={actionLoading}
+                  disabled={actionLoading || (Number(realCash || 0) > 0 && !selectedDrawerId)}
                   style={{ 
                     padding: '10px 22px', 
                     fontSize: '0.88rem',

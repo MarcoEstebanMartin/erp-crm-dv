@@ -1919,7 +1919,7 @@ export default function RepartoDashboard() {
                                   </div>
                                 )}
                                 {set.paymentMethod === 'CASH' && (
-                                  <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>A Caja {settleRoute?.driverName}</span>
+                                  <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>En custodia del chofer (A rendir)</span>
                                 )}
                                 {set.paymentMethod === 'CREDITO' && (
                                   <span style={{ fontSize: '0.72rem', color: '#b78103', fontWeight: 600 }}>Deuda en C/C</span>

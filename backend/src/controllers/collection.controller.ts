@@ -282,7 +282,7 @@ export const getPendingRendiciones = async (req: AuthenticatedRequest, res: Resp
 export const verifyRendicion = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const adminId = req.user?.id;
-    const { sellerId, routeId, realCash, realChecks } = req.body;
+    const { sellerId, routeId, realCash, realChecks, destinationDrawerId } = req.body;
 
     if (!adminId) {
       return res.status(401).json({ error: 'No autorizado' });
@@ -382,6 +382,39 @@ export const verifyRendicion = async (req: AuthenticatedRequest, res: Response) 
     // Marcar transacciones como verificadas, asociarlas a la caja y actualizar saldo bancario si es transferencia
     const defaultBank = await prisma.bankAccount.findFirst();
     const operations: any[] = [];
+
+    // Si se especificó una caja de destino abierta y hay efectivo real recibido, creamos la transacción de ingreso
+    let targetDrawerId = destinationDrawerId ? Number(destinationDrawerId) : null;
+    
+    // Fallback: si no se envió pero hay una sola caja abierta, buscar una activa por defecto
+    if (!targetDrawerId && inputCash > 0) {
+      const openDrawer = await prisma.cashDrawer.findFirst({
+        where: {
+          userId: adminId,
+          status: 'OPEN'
+        }
+      });
+      if (openDrawer) {
+        targetDrawerId = openDrawer.id;
+      }
+    }
+
+    if (targetDrawerId && inputCash > 0) {
+      operations.push(
+        prisma.transaction.create({
+          data: {
+            userId: adminId,
+            cashDrawerId: targetDrawerId,
+            billingType: BillingType.INTERNAL, // Interna por transferencia
+            type: TransactionType.INCOME,
+            paymentMethod: PaymentMethod.CASH,
+            amount: inputCash,
+            description: `Ingreso Rendición de Fondos - ${branchName}`,
+            verified: true
+          }
+        })
+      );
+    }
 
     for (const t of txs) {
       if (t.paymentMethod === PaymentMethod.BANK_TRANSFER) {
