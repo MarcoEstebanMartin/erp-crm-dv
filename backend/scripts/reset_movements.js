@@ -23,8 +23,9 @@ async function resetMovements() {
     await prisma.purchaseOrderItem.deleteMany({});
     await prisma.purchaseOrder.deleteMany({});
     await prisma.cashDrawer.deleteMany({});
+    await prisma.weeklyReport.deleteMany({});
     
-    console.log('🧹 1. Tablas transaccionales vaciadas con éxito.');
+    console.log('🧹 1. Tablas transaccionales vaciadas con éxito (incluyendo reportes semanales).');
 
     // 2. Reiniciar los saldos de cuentas corrientes de Clientes y Proveedores a 0.00
     await prisma.persona.updateMany({
@@ -49,6 +50,32 @@ async function resetMovements() {
       }
     });
     console.log('📦 4. Stock actual de todos los productos reiniciado a 0.');
+
+    // 5. Reiniciar las secuencias de autoincremento para empezar desde 1
+    const sequencesToReset = [
+      'Order_id_seq',
+      'OrderItem_id_seq',
+      'ProductLot_id_seq',
+      'OrderItemLot_id_seq',
+      'StockMovement_id_seq',
+      'CashDrawer_id_seq',
+      'Transaction_id_seq',
+      'AuditLog_id_seq',
+      'SupplierInvoice_id_seq',
+      'TaxWithholding_id_seq',
+      'DeliveryRoute_id_seq',
+      'PurchaseOrder_id_seq',
+      'PurchaseOrderItem_id_seq',
+      'CreditNote_id_seq',
+      'CreditNoteItem_id_seq',
+      'WeeklyReport_id_seq',
+      'movement_seq'
+    ];
+
+    for (const seq of sequencesToReset) {
+      await prisma.$executeRawUnsafe(`ALTER SEQUENCE IF EXISTS "${seq}" RESTART WITH 1;`);
+    }
+    console.log('🔄 5. Secuencias de ID y movimientos reiniciadas a 1.');
 
     console.log('\n✨ ¡Reinicio completado con éxito! Todo listo para nuevas pruebas.');
   } catch (error) {
