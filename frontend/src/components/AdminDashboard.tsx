@@ -3306,7 +3306,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
                   <input
                     type="text"
                     className="input"
-                    placeholder="ej: PROD-COCA-02"
+                    placeholder="ej: 0001"
                     value={productModal.data.sku}
                     onChange={(e) => setProductModal({ ...productModal, data: { ...productModal.data, sku: e.target.value } })}
                     disabled={productModal.mode === 'edit'}

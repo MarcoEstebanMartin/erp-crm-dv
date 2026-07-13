@@ -1,6 +1,6 @@
 [
   {
-    "sku": "PROD-0001",
+    "sku": "0001",
     "name": "MELINCUE BARRA TYBO x KG",
     "description": "MELINCUE",
     "barcode": "7790000000001",
@@ -14,7 +14,7 @@
     "subcategory": "MELINCUE"
   },
   {
-    "sku": "PROD-0002",
+    "sku": "0002",
     "name": "MELINCUE CHEDDAR X KG",
     "description": "MELINCUE",
     "barcode": "7790000000002",
@@ -28,7 +28,7 @@
     "subcategory": "MELINCUE"
   },
   {
-    "sku": "PROD-0003",
+    "sku": "0003",
     "name": "MELINCUE CREMOSO x KG",
     "description": "MELINCUE",
     "barcode": "7790000000003",
@@ -42,7 +42,7 @@
     "subcategory": "MELINCUE"
   },
   {
-    "sku": "PROD-0004",
+    "sku": "0004",
     "name": "MELINCUE FONTINA PICANTE x Kg",
     "description": "MELINCUE",
     "barcode": "7790000000004",
@@ -56,7 +56,7 @@
     "subcategory": "MELINCUE"
   },
   {
-    "sku": "PROD-0005",
+    "sku": "0005",
     "name": "MELINCUE FONTINA SUAVE kg",
     "description": "MELINCUE",
     "barcode": "7790000000005",
@@ -70,7 +70,7 @@
     "subcategory": "MELINCUE"
   },
   {
-    "sku": "PROD-0006",
+    "sku": "0006",
     "name": "MELINCUE GOUDA x Kg",
     "description": "MELINCUE",
     "barcode": "7790000000006",
@@ -84,7 +84,7 @@
     "subcategory": "MELINCUE"
   },
   {
-    "sku": "PROD-0007",
+    "sku": "0007",
     "name": "MELINCUE GOYA x Kg",
     "description": "MELINCUE",
     "barcode": "7790000000007",
@@ -98,7 +98,7 @@
     "subcategory": "MELINCUE"
   },
   {
-    "sku": "PROD-0008",
+    "sku": "0008",
     "name": "MELINCUE MOZZARELLA BARRA x KG",
     "description": "MELINCUE",
     "barcode": "7790000000008",
@@ -112,7 +112,7 @@
     "subcategory": "MELINCUE"
   },
   {
-    "sku": "PROD-0009",
+    "sku": "0009",
     "name": "MELINCUE P.SALUT EQUILIBRIO x KG",
     "description": "MELINCUE",
     "barcode": "7790000000009",
@@ -126,7 +126,7 @@
     "subcategory": "MELINCUE"
   },
   {
-    "sku": "PROD-0010",
+    "sku": "0010",
     "name": "MELINCUE P.SALUT S/SAL Kg",
     "description": "MELINCUE",
     "barcode": "7790000000010",
@@ -140,7 +140,7 @@
     "subcategory": "MELINCUE"
   },
   {
-    "sku": "PROD-0011",
+    "sku": "0011",
     "name": "MELINCUE PARRIQUESO kg",
     "description": "MELINCUE",
     "barcode": "7790000000011",
@@ -154,7 +154,7 @@
     "subcategory": "MELINCUE"
   },
   {
-    "sku": "PROD-0012",
+    "sku": "0012",
     "name": "MELINCUE PATEGRAS x KG",
     "description": "MELINCUE",
     "barcode": "7790000000012",
@@ -168,7 +168,7 @@
     "subcategory": "MELINCUE"
   },
   {
-    "sku": "PROD-0013",
+    "sku": "0013",
     "name": "MELINCUE PEPATO x Kg",
     "description": "MELINCUE",
     "barcode": "7790000000013",
@@ -182,7 +182,7 @@
     "subcategory": "MELINCUE"
   },
   {
-    "sku": "PROD-0014",
+    "sku": "0014",
     "name": "MELINCUE POR SALUT x KG",
     "description": "MELINCUE",
     "barcode": "7790000000014",
@@ -196,7 +196,7 @@
     "subcategory": "MELINCUE"
   },
   {
-    "sku": "PROD-0015",
+    "sku": "0015",
     "name": "MELINCUE QUESO AZUL x KG",
     "description": "MELINCUE",
     "barcode": "7790000000015",
@@ -210,7 +210,7 @@
     "subcategory": "MELINCUE"
   },
   {
-    "sku": "PROD-0016",
+    "sku": "0016",
     "name": "MELINCUE REGG.1/2 HORMA x KG",
     "description": "MELINCUE",
     "barcode": "7790000000016",
@@ -224,7 +224,7 @@
     "subcategory": "MELINCUE"
   },
   {
-    "sku": "PROD-0017",
+    "sku": "0017",
     "name": "MELINCUE REGG.HORMA ENTERA X KG",
     "description": "MELINCUE",
     "barcode": "7790000000017",
@@ -238,7 +238,7 @@
     "subcategory": "MELINCUE"
   },
   {
-    "sku": "PROD-0018",
+    "sku": "0018",
     "name": "MELINCUE SARDO BLOQUE x KG",
     "description": "MELINCUE",
     "barcode": "7790000000018",
@@ -252,7 +252,7 @@
     "subcategory": "MELINCUE"
   },
   {
-    "sku": "PROD-0019",
+    "sku": "0019",
     "name": "MELINCUE SBRINZ 1/2 HORMA x KG",
     "description": "MELINCUE",
     "barcode": "7790000000019",
@@ -266,7 +266,7 @@
     "subcategory": "MELINCUE"
   },
   {
-    "sku": "PROD-0020",
+    "sku": "0020",
     "name": "BAGGIO LATTE CHOCOLATADA x 200ml",
     "description": "CHOCOLATADAS",
     "barcode": "7790000000020",
@@ -280,7 +280,7 @@
     "subcategory": "CHOCOLATADAS"
   },
   {
-    "sku": "PROD-0021",
+    "sku": "0021",
     "name": "BAGGIO LATTE CHOCOLATADA x1LT",
     "description": "CHOCOLATADAS",
     "barcode": "7790000000021",
@@ -294,7 +294,7 @@
     "subcategory": "CHOCOLATADAS"
   },
   {
-    "sku": "PROD-0022",
+    "sku": "0022",
     "name": "CREMIGAL LECHE EN POLVO x 400grs",
     "description": "LECHES EN POLVO",
     "barcode": "7790000000022",
@@ -308,7 +308,7 @@
     "subcategory": "LECHES EN POLVO"
   },
   {
-    "sku": "PROD-0023",
+    "sku": "0023",
     "name": "CREMIGAL LECHE EN POLVO x 800grs",
     "description": "LECHES EN POLVO",
     "barcode": "7790000000023",
@@ -322,7 +322,7 @@
     "subcategory": "LECHES EN POLVO"
   },
   {
-    "sku": "PROD-0024",
+    "sku": "0024",
     "name": "LECHE UAT DESC. SACHET x LT CREMIGAL",
     "description": "LECHES LIQUIDAS",
     "barcode": "7790000000024",
@@ -336,7 +336,7 @@
     "subcategory": "LECHES LIQUIDAS"
   },
   {
-    "sku": "PROD-0025",
+    "sku": "0025",
     "name": "LECHE UAT ENTERA SACHET x LT CREMIGAL",
     "description": "LECHES LIQUIDAS",
     "barcode": "7790000000025",
@@ -350,7 +350,7 @@
     "subcategory": "LECHES LIQUIDAS"
   },
   {
-    "sku": "PROD-0026",
+    "sku": "0026",
     "name": "CREMIGAL YOGURT SACHET x 900ml FRUTILLA",
     "description": "YOGURT",
     "barcode": "7790000000026",
@@ -364,7 +364,7 @@
     "subcategory": "YOGURT"
   },
   {
-    "sku": "PROD-0027",
+    "sku": "0027",
     "name": "CREMIGAL YOGURT SACHET x 900ml VAINILLA",
     "description": "YOGURT",
     "barcode": "7790000000027",
@@ -378,7 +378,7 @@
     "subcategory": "YOGURT"
   },
   {
-    "sku": "PROD-0028",
+    "sku": "0028",
     "name": "CREMIGAL CREMA DE LECHE DOBLE x 190gr",
     "description": "CREMAS",
     "barcode": "7790000000028",
@@ -392,7 +392,7 @@
     "subcategory": "CREMAS"
   },
   {
-    "sku": "PROD-0029",
+    "sku": "0029",
     "name": "CREMIGAL CREMA DE LECHE x 190gr",
     "description": "CREMAS",
     "barcode": "7790000000029",
@@ -406,7 +406,7 @@
     "subcategory": "CREMAS"
   },
   {
-    "sku": "PROD-0030",
+    "sku": "0030",
     "name": "CREMIGAL CREMA x 3.5 KG",
     "description": "CREMAS",
     "barcode": "7790000000030",
@@ -420,7 +420,7 @@
     "subcategory": "CREMAS"
   },
   {
-    "sku": "PROD-0031",
+    "sku": "0031",
     "name": "DULCE DE LECHE CREMIGAL x 250gr",
     "description": "DULCES DE LECHE",
     "barcode": "7790000000031",
@@ -434,7 +434,7 @@
     "subcategory": "DULCES DE LECHE"
   },
   {
-    "sku": "PROD-0032",
+    "sku": "0032",
     "name": "DULCE DE LECHE CREMIGAL x 400 gr",
     "description": "DULCES DE LECHE",
     "barcode": "7790000000032",
@@ -448,7 +448,7 @@
     "subcategory": "DULCES DE LECHE"
   },
   {
-    "sku": "PROD-0033",
+    "sku": "0033",
     "name": "DULCE DE LECHE REPOSTERO CREMIGAL x 400gr",
     "description": "DULCES DE LECHE",
     "barcode": "7790000000033",
@@ -462,7 +462,7 @@
     "subcategory": "DULCES DE LECHE"
   },
   {
-    "sku": "PROD-0034",
+    "sku": "0034",
     "name": "CREMIGAL MANTECA x 2.5 KG",
     "description": "MANTECAS",
     "barcode": "7790000000034",
@@ -476,7 +476,7 @@
     "subcategory": "MANTECAS"
   },
   {
-    "sku": "PROD-0035",
+    "sku": "0035",
     "name": "MANTECA CREMIGAL x 100gr",
     "description": "MANTECAS",
     "barcode": "7790000000035",
@@ -490,7 +490,7 @@
     "subcategory": "MANTECAS"
   },
   {
-    "sku": "PROD-0036",
+    "sku": "0036",
     "name": "MANTECA CREMIGAL x 200gr",
     "description": "MANTECAS",
     "barcode": "7790000000036",
@@ -504,7 +504,7 @@
     "subcategory": "MANTECAS"
   },
   {
-    "sku": "PROD-0037",
+    "sku": "0037",
     "name": "MELINCUE MANTECA 5KG",
     "description": "MANTECAS",
     "barcode": "7790000000037",
@@ -518,7 +518,7 @@
     "subcategory": "MANTECAS"
   },
   {
-    "sku": "PROD-0038",
+    "sku": "0038",
     "name": "AL.BAS.MIEL G.ROSALIA 250gr",
     "description": "MIEL",
     "barcode": "7790000000038",
@@ -532,7 +532,7 @@
     "subcategory": "MIEL"
   },
   {
-    "sku": "PROD-0039",
+    "sku": "0039",
     "name": "AL.BAS.MIEL G.ROSALIA 500gr",
     "description": "MIEL",
     "barcode": "7790000000039",
@@ -546,7 +546,7 @@
     "subcategory": "MIEL"
   },
   {
-    "sku": "PROD-0040",
+    "sku": "0040",
     "name": "CREMIGAL MOZZARELLA CILINDRO x KG",
     "description": "QUESOS",
     "barcode": "7790000000040",
@@ -560,7 +560,7 @@
     "subcategory": "QUESOS"
   },
   {
-    "sku": "PROD-0041",
+    "sku": "0041",
     "name": "CREMIGAL QUESO POR SALUT SIN SAL x KG",
     "description": "QUESOS",
     "barcode": "7790000000041",
@@ -574,7 +574,7 @@
     "subcategory": "QUESOS"
   },
   {
-    "sku": "PROD-0042",
+    "sku": "0042",
     "name": "SARDO SANCOR QUESO x KG",
     "description": "QUESOS",
     "barcode": "7790000000042",
@@ -588,7 +588,7 @@
     "subcategory": "QUESOS"
   },
   {
-    "sku": "PROD-0043",
+    "sku": "0043",
     "name": "CREMIGAL Q.UNTABLE AZUL x 190gr",
     "description": "QUESOS UNTABLES",
     "barcode": "7790000000043",
@@ -602,7 +602,7 @@
     "subcategory": "QUESOS UNTABLES"
   },
   {
-    "sku": "PROD-0044",
+    "sku": "0044",
     "name": "CREMIGAL Q.UNTABLE CHEDDAR x 190 gr",
     "description": "QUESOS UNTABLES",
     "barcode": "7790000000044",
@@ -616,7 +616,7 @@
     "subcategory": "QUESOS UNTABLES"
   },
   {
-    "sku": "PROD-0045",
+    "sku": "0045",
     "name": "CREMIGAL Q.UNTABLE CLASICO x 190 gr",
     "description": "QUESOS UNTABLES",
     "barcode": "7790000000045",
@@ -630,7 +630,7 @@
     "subcategory": "QUESOS UNTABLES"
   },
   {
-    "sku": "PROD-0046",
+    "sku": "0046",
     "name": "CREMIGAL Q.UNTABLE JAMON x 190gr",
     "description": "QUESOS UNTABLES",
     "barcode": "7790000000046",
@@ -644,7 +644,7 @@
     "subcategory": "QUESOS UNTABLES"
   },
   {
-    "sku": "PROD-0047",
+    "sku": "0047",
     "name": "CREMIGAL Q.UNTABLE LIGHT x 190 gr",
     "description": "QUESOS UNTABLES",
     "barcode": "7790000000047",
@@ -658,7 +658,7 @@
     "subcategory": "QUESOS UNTABLES"
   },
   {
-    "sku": "PROD-0048",
+    "sku": "0048",
     "name": "CREMIGAL QUESO CREMA ORIGINAL x 4KG",
     "description": "QUESOS UNTABLES",
     "barcode": "7790000000048",
@@ -672,7 +672,7 @@
     "subcategory": "QUESOS UNTABLES"
   },
   {
-    "sku": "PROD-0049",
+    "sku": "0049",
     "name": "CREMIGAL QUESO CREMA x 290gr",
     "description": "QUESOS UNTABLES",
     "barcode": "7790000000049",
@@ -686,7 +686,7 @@
     "subcategory": "QUESOS UNTABLES"
   },
   {
-    "sku": "PROD-0050",
+    "sku": "0050",
     "name": "MELINCUE RALLADO X 120 GR",
     "description": "1.21 - QUESOS RALLADOS",
     "barcode": "7790000000050",
@@ -700,7 +700,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0051",
+    "sku": "0051",
     "name": "MELINCUE RALLADO X 40 gr",
     "description": "1.21 - QUESOS RALLADOS",
     "barcode": "7790000000051",
@@ -714,7 +714,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0052",
+    "sku": "0052",
     "name": "BONDIOLA VAC. HORMA x KG",
     "description": "FIAMBRES",
     "barcode": "7790000000052",
@@ -728,7 +728,7 @@
     "subcategory": "FIAMBRES"
   },
   {
-    "sku": "PROD-0053",
+    "sku": "0053",
     "name": "FIAMBRE DE CERDO H. CHICA x KG",
     "description": "FIAMBRES",
     "barcode": "7790000000053",
@@ -742,7 +742,7 @@
     "subcategory": "FIAMBRES"
   },
   {
-    "sku": "PROD-0054",
+    "sku": "0054",
     "name": "FIAMBRE DE CERDO RECTANGULAR x KG",
     "description": "FIAMBRES",
     "barcode": "7790000000054",
@@ -756,7 +756,7 @@
     "subcategory": "FIAMBRES"
   },
   {
-    "sku": "PROD-0055",
+    "sku": "0055",
     "name": "JAMON COCIDO TIPO NATURAL PLATEADO x KG",
     "description": "FIAMBRES",
     "barcode": "7790000000055",
@@ -770,7 +770,7 @@
     "subcategory": "FIAMBRES"
   },
   {
-    "sku": "PROD-0056",
+    "sku": "0056",
     "name": "JAMON CRUDO LA CASONA x KG",
     "description": "FIAMBRES",
     "barcode": "7790000000056",
@@ -784,7 +784,7 @@
     "subcategory": "FIAMBRES"
   },
   {
-    "sku": "PROD-0057",
+    "sku": "0057",
     "name": "PERNIL DE CERDO LA RESIDENCIA x KG",
     "description": "FIAMBRES",
     "barcode": "7790000000057",
@@ -798,7 +798,7 @@
     "subcategory": "FIAMBRES"
   },
   {
-    "sku": "PROD-0058",
+    "sku": "0058",
     "name": "SALAME CANTIMPALO LC. x KG",
     "description": "FIAMBRES",
     "barcode": "7790000000058",
@@ -812,7 +812,7 @@
     "subcategory": "FIAMBRES"
   },
   {
-    "sku": "PROD-0059",
+    "sku": "0059",
     "name": "SALAME MILAN LA CASONA x KG",
     "description": "FIAMBRES",
     "barcode": "7790000000059",
@@ -826,7 +826,7 @@
     "subcategory": "FIAMBRES"
   },
   {
-    "sku": "PROD-0060",
+    "sku": "0060",
     "name": "SALAME x METRO BASTON P.GRUESO x KG",
     "description": "FIAMBRES",
     "barcode": "7790000000060",
@@ -840,7 +840,7 @@
     "subcategory": "FIAMBRES"
   },
   {
-    "sku": "PROD-0061",
+    "sku": "0061",
     "name": "CUMANÁ ANANA ROD x 565gr",
     "description": "1.5 - CONSERVAS",
     "barcode": "7790000000061",
@@ -854,7 +854,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0062",
+    "sku": "0062",
     "name": "CUMANA ARVEJAS LATA x300gr",
     "description": "1.5 - CONSERVAS",
     "barcode": "7790000000062",
@@ -868,7 +868,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0063",
+    "sku": "0063",
     "name": "CUMANA CHAMPIGNON ENTEROS x 400gr",
     "description": "1.5 - CONSERVAS",
     "barcode": "7790000000063",
@@ -882,7 +882,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0064",
+    "sku": "0064",
     "name": "CUMANA CHAMPIGNON LAM. x400g",
     "description": "1.5 - CONSERVAS",
     "barcode": "7790000000064",
@@ -896,7 +896,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0065",
+    "sku": "0065",
     "name": "CUMANA CHOCLO CREMOSO BLANCO x300",
     "description": "1.5 - CONSERVAS",
     "barcode": "7790000000065",
@@ -910,7 +910,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0066",
+    "sku": "0066",
     "name": "CUMANA CHOCLO GRANO AMARILLO x300gr",
     "description": "1.5 - CONSERVAS",
     "barcode": "7790000000066",
@@ -924,7 +924,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0067",
+    "sku": "0067",
     "name": "CUMANA GARBANZOS LATA x 300gr",
     "description": "1.5 - CONSERVAS",
     "barcode": "7790000000067",
@@ -938,7 +938,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0068",
+    "sku": "0068",
     "name": "CUMANA MORRON x 185gr",
     "description": "1.5 - CONSERVAS",
     "barcode": "7790000000068",
@@ -952,7 +952,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0069",
+    "sku": "0069",
     "name": "CUMANA PALMITOS ENTEROS x396gr",
     "description": "1.5 - CONSERVAS",
     "barcode": "7790000000069",
@@ -966,7 +966,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0070",
+    "sku": "0070",
     "name": "CUMANA PALMITOS TROZ. x396gr",
     "description": "1.5 - CONSERVAS",
     "barcode": "7790000000070",
@@ -980,7 +980,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0071",
+    "sku": "0071",
     "name": "CUMANA PERA MITADES S/TACC x820gr",
     "description": "1.5 - CONSERVAS",
     "barcode": "7790000000071",
@@ -994,7 +994,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0072",
+    "sku": "0072",
     "name": "CUMANA POROTOS LATA x 300gr",
     "description": "1.5 - CONSERVAS",
     "barcode": "7790000000072",
@@ -1008,7 +1008,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0073",
+    "sku": "0073",
     "name": "CUMANA TOMATE PERITA ENT. x 400gr",
     "description": "1.5 - CONSERVAS",
     "barcode": "7790000000073",
@@ -1022,7 +1022,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0074",
+    "sku": "0074",
     "name": "LA GIOCONDA COCTEL 4 FRUTAS x820gr",
     "description": "1.5 - CONSERVAS",
     "barcode": "7790000000074",
@@ -1036,7 +1036,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0075",
+    "sku": "0075",
     "name": "LA HUERTA PULPA TOMATE 12x520gr",
     "description": "1.5 - CONSERVAS",
     "barcode": "7790000000075",
@@ -1050,7 +1050,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0076",
+    "sku": "0076",
     "name": "LA HUERTA PURE DE TOMATE 12x530gr",
     "description": "1.5 - CONSERVAS",
     "barcode": "7790000000076",
@@ -1064,7 +1064,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0077",
+    "sku": "0077",
     "name": "LA HUERTA PURE DE TOMATE 18x210gr",
     "description": "1.5 - CONSERVAS",
     "barcode": "7790000000077",
@@ -1078,7 +1078,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0078",
+    "sku": "0078",
     "name": "LA HUERTA PURE DE TOMATE x 1.030gr",
     "description": "1.5 - CONSERVAS",
     "barcode": "7790000000078",
@@ -1092,7 +1092,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0079",
+    "sku": "0079",
     "name": "M.ROJO COCTEL FRUTAL x820gr",
     "description": "1.5 - CONSERVAS",
     "barcode": "7790000000079",
@@ -1106,7 +1106,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0080",
+    "sku": "0080",
     "name": "M.ROJO DURAZNOS MITADES x820gr",
     "description": "1.5 - CONSERVAS",
     "barcode": "7790000000080",
@@ -1120,7 +1120,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0081",
+    "sku": "0081",
     "name": "M.ROJO DURAZNOS TROZOS X820gr",
     "description": "1.5 - CONSERVAS",
     "barcode": "7790000000081",
@@ -1134,7 +1134,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0082",
+    "sku": "0082",
     "name": "MAROLIO ARVEJAS TETRA 340gr",
     "description": "1.5 - CONSERVAS",
     "barcode": "7790000000082",
@@ -1148,7 +1148,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0083",
+    "sku": "0083",
     "name": "MAROLIO CHAMP. ENT. FRASCO x 280 gr",
     "description": "1.5 - CONSERVAS",
     "barcode": "7790000000083",
@@ -1162,7 +1162,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0084",
+    "sku": "0084",
     "name": "MAROLIO JARDINERA TETRA 340gr",
     "description": "1.5 - CONSERVAS",
     "barcode": "7790000000084",
@@ -1176,7 +1176,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0085",
+    "sku": "0085",
     "name": "MAROLIO PERITA LATA TOMATE x400gr",
     "description": "1.5 - CONSERVAS",
     "barcode": "7790000000085",
@@ -1190,7 +1190,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0086",
+    "sku": "0086",
     "name": "MAROLIO POROTOS ALUBIA LATA X 340gr",
     "description": "1.5 - CONSERVAS",
     "barcode": "7790000000086",
@@ -1204,7 +1204,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0087",
+    "sku": "0087",
     "name": "MEMBRILLO 2KG LA HUERTA SIN TACC",
     "description": "1.5 - CONSERVAS",
     "barcode": "7790000000087",
@@ -1218,7 +1218,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0088",
+    "sku": "0088",
     "name": "MEMBRILLO 5KG LA HUERTA SIN TACC",
     "description": "1.5 - CONSERVAS",
     "barcode": "7790000000088",
@@ -1232,7 +1232,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0089",
+    "sku": "0089",
     "name": "MERMELADA CIRUELA x 454cc LA HUERTA",
     "description": "1.5 - CONSERVAS",
     "barcode": "7790000000089",
@@ -1246,7 +1246,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0090",
+    "sku": "0090",
     "name": "MERMELADA DAMAZCO x 454cc LA HUERTA",
     "description": "1.5 - CONSERVAS",
     "barcode": "7790000000090",
@@ -1260,7 +1260,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0091",
+    "sku": "0091",
     "name": "MERMELADA DURAZNO x 454cc LA HUERTA",
     "description": "1.5 - CONSERVAS",
     "barcode": "7790000000091",
@@ -1274,7 +1274,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0092",
+    "sku": "0092",
     "name": "MERMELADA MULTIFRUTA x 454cc LA HUERTA",
     "description": "1.5 - CONSERVAS",
     "barcode": "7790000000092",
@@ -1288,7 +1288,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0093",
+    "sku": "0093",
     "name": "COCINERO ACEITE GIRASOL x 900 ml",
     "description": "ACEITES Y VINAGRES",
     "barcode": "7790000000093",
@@ -1302,7 +1302,7 @@
     "subcategory": "ACEITES Y VINAGRES"
   },
   {
-    "sku": "PROD-0094",
+    "sku": "0094",
     "name": "COCINERO ACEITE MEZCLA x 1.5cc",
     "description": "ACEITES Y VINAGRES",
     "barcode": "7790000000094",
@@ -1316,7 +1316,7 @@
     "subcategory": "ACEITES Y VINAGRES"
   },
   {
-    "sku": "PROD-0095",
+    "sku": "0095",
     "name": "COCINERO ACEITE MEZCLA x 900 ml",
     "description": "ACEITES Y VINAGRES",
     "barcode": "7790000000095",
@@ -1330,7 +1330,7 @@
     "subcategory": "ACEITES Y VINAGRES"
   },
   {
-    "sku": "PROD-0096",
+    "sku": "0096",
     "name": "MAROLIO ACEITE MEZCLA x 900ml",
     "description": "ACEITES Y VINAGRES",
     "barcode": "7790000000096",
@@ -1344,7 +1344,7 @@
     "subcategory": "ACEITES Y VINAGRES"
   },
   {
-    "sku": "PROD-0097",
+    "sku": "0097",
     "name": "MAROLIO VINAG ALC.BCO x 500 ml",
     "description": "ACEITES Y VINAGRES",
     "barcode": "7790000000097",
@@ -1358,7 +1358,7 @@
     "subcategory": "ACEITES Y VINAGRES"
   },
   {
-    "sku": "PROD-0098",
+    "sku": "0098",
     "name": "MAROLIO VINAGRE ALCOHOL BCO x LT",
     "description": "ACEITES Y VINAGRES",
     "barcode": "7790000000098",
@@ -1372,7 +1372,7 @@
     "subcategory": "ACEITES Y VINAGRES"
   },
   {
-    "sku": "PROD-0099",
+    "sku": "0099",
     "name": "NATURA ACEITE PVCx1500CC",
     "description": "ACEITES Y VINAGRES",
     "barcode": "7790000000099",
@@ -1386,7 +1386,7 @@
     "subcategory": "ACEITES Y VINAGRES"
   },
   {
-    "sku": "PROD-0100",
+    "sku": "0100",
     "name": "NATURA ACEITE PVCx3LT",
     "description": "ACEITES Y VINAGRES",
     "barcode": "7790000000100",
@@ -1400,7 +1400,7 @@
     "subcategory": "ACEITES Y VINAGRES"
   },
   {
-    "sku": "PROD-0101",
+    "sku": "0101",
     "name": "NATURA ACEITE PVCx5LT",
     "description": "ACEITES Y VINAGRES",
     "barcode": "7790000000101",
@@ -1414,7 +1414,7 @@
     "subcategory": "ACEITES Y VINAGRES"
   },
   {
-    "sku": "PROD-0102",
+    "sku": "0102",
     "name": "NATURA ACEITE PVCx900CC",
     "description": "ACEITES Y VINAGRES",
     "barcode": "7790000000102",
@@ -1428,7 +1428,7 @@
     "subcategory": "ACEITES Y VINAGRES"
   },
   {
-    "sku": "PROD-0103",
+    "sku": "0103",
     "name": "NATURA BI OLIVA SUAVE PET X500ml",
     "description": "ACEITES Y VINAGRES",
     "barcode": "7790000000103",
@@ -1442,7 +1442,7 @@
     "subcategory": "ACEITES Y VINAGRES"
   },
   {
-    "sku": "PROD-0104",
+    "sku": "0104",
     "name": "NATURA OLIVA ANDx500cc VIDRIO",
     "description": "ACEITES Y VINAGRES",
     "barcode": "7790000000104",
@@ -1456,7 +1456,7 @@
     "subcategory": "ACEITES Y VINAGRES"
   },
   {
-    "sku": "PROD-0105",
+    "sku": "0105",
     "name": "NATURA ROCIO GIRASOL AEROSOL x 126cc",
     "description": "ACEITES Y VINAGRES",
     "barcode": "7790000000105",
@@ -1470,7 +1470,7 @@
     "subcategory": "ACEITES Y VINAGRES"
   },
   {
-    "sku": "PROD-0106",
+    "sku": "0106",
     "name": "NATURA ROCIO OLIVA AEROSOL X120cc",
     "description": "ACEITES Y VINAGRES",
     "barcode": "7790000000106",
@@ -1484,7 +1484,7 @@
     "subcategory": "ACEITES Y VINAGRES"
   },
   {
-    "sku": "PROD-0107",
+    "sku": "0107",
     "name": "NATURA TRI OLIVA FUERTE PET X500",
     "description": "ACEITES Y VINAGRES",
     "barcode": "7790000000107",
@@ -1498,7 +1498,7 @@
     "subcategory": "ACEITES Y VINAGRES"
   },
   {
-    "sku": "PROD-0108",
+    "sku": "0108",
     "name": "CADA DIA MAYONESA 12x250gr",
     "description": "ADEREZOS",
     "barcode": "7790000000108",
@@ -1512,7 +1512,7 @@
     "subcategory": "ADEREZOS"
   },
   {
-    "sku": "PROD-0109",
+    "sku": "0109",
     "name": "CADA DIA MAYONESA 20x125gr",
     "description": "ADEREZOS",
     "barcode": "7790000000109",
@@ -1526,7 +1526,7 @@
     "subcategory": "ADEREZOS"
   },
   {
-    "sku": "PROD-0110",
+    "sku": "0110",
     "name": "NATURA BARBACOA x 250gr",
     "description": "ADEREZOS",
     "barcode": "7790000000110",
@@ -1540,7 +1540,7 @@
     "subcategory": "ADEREZOS"
   },
   {
-    "sku": "PROD-0111",
+    "sku": "0111",
     "name": "NATURA KETCHUP X 250GR",
     "description": "ADEREZOS",
     "barcode": "7790000000111",
@@ -1554,7 +1554,7 @@
     "subcategory": "ADEREZOS"
   },
   {
-    "sku": "PROD-0112",
+    "sku": "0112",
     "name": "NATURA MAYOLIVA 20X 125gr",
     "description": "ADEREZOS",
     "barcode": "7790000000112",
@@ -1568,7 +1568,7 @@
     "subcategory": "ADEREZOS"
   },
   {
-    "sku": "PROD-0113",
+    "sku": "0113",
     "name": "NATURA MAYONESA 12x250gr",
     "description": "ADEREZOS",
     "barcode": "7790000000113",
@@ -1582,7 +1582,7 @@
     "subcategory": "ADEREZOS"
   },
   {
-    "sku": "PROD-0114",
+    "sku": "0114",
     "name": "NATURA MAYONESA 192x8cc.",
     "description": "ADEREZOS",
     "barcode": "7790000000114",
@@ -1596,7 +1596,7 @@
     "subcategory": "ADEREZOS"
   },
   {
-    "sku": "PROD-0115",
+    "sku": "0115",
     "name": "NATURA MAYONESA 20x125cc.",
     "description": "ADEREZOS",
     "barcode": "7790000000115",
@@ -1610,7 +1610,7 @@
     "subcategory": "ADEREZOS"
   },
   {
-    "sku": "PROD-0116",
+    "sku": "0116",
     "name": "NATURA MAYONESA X KG",
     "description": "ADEREZOS",
     "barcode": "7790000000116",
@@ -1624,7 +1624,7 @@
     "subcategory": "ADEREZOS"
   },
   {
-    "sku": "PROD-0117",
+    "sku": "0117",
     "name": "NATURA MAYONESA X2900gr SACH",
     "description": "ADEREZOS",
     "barcode": "7790000000117",
@@ -1638,7 +1638,7 @@
     "subcategory": "ADEREZOS"
   },
   {
-    "sku": "PROD-0118",
+    "sku": "0118",
     "name": "NATURA MAYONESA X500GR",
     "description": "ADEREZOS",
     "barcode": "7790000000118",
@@ -1652,7 +1652,7 @@
     "subcategory": "ADEREZOS"
   },
   {
-    "sku": "PROD-0119",
+    "sku": "0119",
     "name": "NATURA MOSTAZA X250gr",
     "description": "ADEREZOS",
     "barcode": "7790000000119",
@@ -1666,7 +1666,7 @@
     "subcategory": "ADEREZOS"
   },
   {
-    "sku": "PROD-0120",
+    "sku": "0120",
     "name": "NATURA SALSA GOLF 20 X125gr",
     "description": "ADEREZOS",
     "barcode": "7790000000120",
@@ -1680,7 +1680,7 @@
     "subcategory": "ADEREZOS"
   },
   {
-    "sku": "PROD-0121",
+    "sku": "0121",
     "name": "NATURA SALSA GOLF X250gr",
     "description": "ADEREZOS",
     "barcode": "7790000000121",
@@ -1694,7 +1694,7 @@
     "subcategory": "ADEREZOS"
   },
   {
-    "sku": "PROD-0122",
+    "sku": "0122",
     "name": "ARLISTAN CAFE INST.X 100GR",
     "description": "1.7 - CAFE",
     "barcode": "7790000000122",
@@ -1708,7 +1708,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0123",
+    "sku": "0123",
     "name": "ARLISTAN CAFE INST.X 170GR",
     "description": "1.7 - CAFE",
     "barcode": "7790000000123",
@@ -1722,7 +1722,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0124",
+    "sku": "0124",
     "name": "CEREAL BOLITAS CHOCOLINO LA VIRG x 200gr",
     "description": "1.7 - CAFE",
     "barcode": "7790000000124",
@@ -1736,7 +1736,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0125",
+    "sku": "0125",
     "name": "EL POCILLO MALTA x 115gr",
     "description": "1.7 - CAFE",
     "barcode": "7790000000125",
@@ -1750,7 +1750,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0126",
+    "sku": "0126",
     "name": "EL POCILLO MALTA x 170GR",
     "description": "1.7 - CAFE",
     "barcode": "7790000000126",
@@ -1764,7 +1764,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0127",
+    "sku": "0127",
     "name": "LA VIRG CAFE INST. CLASICO FRASCO x 100GR",
     "description": "1.7 - CAFE",
     "barcode": "7790000000127",
@@ -1778,7 +1778,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0128",
+    "sku": "0128",
     "name": "LA VIRG CAFE INST. SUAVE FRASCO x 100 gr",
     "description": "1.7 - CAFE",
     "barcode": "7790000000128",
@@ -1792,7 +1792,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0129",
+    "sku": "0129",
     "name": "LA VIRG CAFE SAQ.TORRADO X20X5GR",
     "description": "1.7 - CAFE",
     "barcode": "7790000000129",
@@ -1806,7 +1806,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0130",
+    "sku": "0130",
     "name": "LA VIRG CHOCOLINO CACAO x 180gr",
     "description": "1.7 - CAFE",
     "barcode": "7790000000130",
@@ -1820,7 +1820,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0131",
+    "sku": "0131",
     "name": "LA VIRG TE BOLDO SAQ 6X25GR",
     "description": "1.7 - CAFE",
     "barcode": "7790000000131",
@@ -1834,7 +1834,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0132",
+    "sku": "0132",
     "name": "LA VIRG TE COMUN SAQ 10X25GR",
     "description": "1.7 - CAFE",
     "barcode": "7790000000132",
@@ -1848,7 +1848,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0133",
+    "sku": "0133",
     "name": "LA VIRG TE MANZANILLA SAQ 6X25GR",
     "description": "1.7 - CAFE",
     "barcode": "7790000000133",
@@ -1862,7 +1862,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0134",
+    "sku": "0134",
     "name": "LA VIRG TE MENTA SAQ 6X25GR",
     "description": "1.7 - CAFE",
     "barcode": "7790000000134",
@@ -1876,7 +1876,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0135",
+    "sku": "0135",
     "name": "EL.DIQUE ARROZ 12X500gr",
     "description": "1.8 - ARROZ",
     "barcode": "7790000000135",
@@ -1890,7 +1890,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0136",
+    "sku": "0136",
     "name": "MAROLIO ARROZ 10X1 KG.",
     "description": "1.8 - ARROZ",
     "barcode": "7790000000136",
@@ -1904,7 +1904,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0137",
+    "sku": "0137",
     "name": "MAROLIO ARROZ 12 X 500gr",
     "description": "1.8 - ARROZ",
     "barcode": "7790000000137",
@@ -1918,7 +1918,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0138",
+    "sku": "0138",
     "name": "AMANDA YERBA 10x500gr",
     "description": "1.9 - YERBAS",
     "barcode": "7790000000138",
@@ -1932,7 +1932,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0139",
+    "sku": "0139",
     "name": "AMANDA YERBA 10x1KG",
     "description": "1.9 - YERBAS",
     "barcode": "7790000000139",
@@ -1946,7 +1946,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0140",
+    "sku": "0140",
     "name": "AMANDA YERBA ORGANICA x 500gr",
     "description": "1.9 - YERBAS",
     "barcode": "7790000000140",
@@ -1960,7 +1960,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0141",
+    "sku": "0141",
     "name": "AMANDA YERBA PREMIUM CAJA x500gr",
     "description": "1.9 - YERBAS",
     "barcode": "7790000000141",
@@ -1974,7 +1974,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0142",
+    "sku": "0142",
     "name": "ANDRESITO YERBA 10x1Kg",
     "description": "1.9 - YERBAS",
     "barcode": "7790000000142",
@@ -1988,7 +1988,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0143",
+    "sku": "0143",
     "name": "ANDRESITO YERBA 10x500 grs",
     "description": "1.9 - YERBAS",
     "barcode": "7790000000143",
@@ -2002,7 +2002,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0144",
+    "sku": "0144",
     "name": "PLAYADITO YERBA 10X1 kg",
     "description": "1.9 - YERBAS",
     "barcode": "7790000000144",
@@ -2016,7 +2016,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0145",
+    "sku": "0145",
     "name": "PLAYADITO YERBA 10X500gr",
     "description": "1.9 - YERBAS",
     "barcode": "7790000000145",
@@ -2030,7 +2030,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0146",
+    "sku": "0146",
     "name": "LEDESMA AZUCAR 10 X 1KG",
     "description": "2 - AZUCAR",
     "barcode": "7790000000146",
@@ -2044,7 +2044,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0147",
+    "sku": "0147",
     "name": "LEDESMA AZUCAR MASCABO 6 x 800GR",
     "description": "2 - AZUCAR",
     "barcode": "7790000000147",
@@ -2058,7 +2058,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0148",
+    "sku": "0148",
     "name": "SAN VICENTE AZUCAR 10X1kg",
     "description": "2 - AZUCAR",
     "barcode": "7790000000148",
@@ -2072,7 +2072,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0149",
+    "sku": "0149",
     "name": "SI-DIET C/STEVIA x 250 ml",
     "description": "2.1 - EDULCORANTES",
     "barcode": "7790000000149",
@@ -2086,7 +2086,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0150",
+    "sku": "0150",
     "name": "SI-DIET TRADIC x 250ml",
     "description": "2.1 - EDULCORANTES",
     "barcode": "7790000000150",
@@ -2100,7 +2100,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0151",
+    "sku": "0151",
     "name": "CUMANA ATUN DESM.ACEITEx170g",
     "description": "2.3 - PESCADERIA",
     "barcode": "7790000000151",
@@ -2114,7 +2114,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0152",
+    "sku": "0152",
     "name": "CUMANA ATUN DESM.NAT x170g",
     "description": "2.3 - PESCADERIA",
     "barcode": "7790000000152",
@@ -2128,7 +2128,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0153",
+    "sku": "0153",
     "name": "CUMANA ATUN LOMO ACEITE x170gr",
     "description": "2.3 - PESCADERIA",
     "barcode": "7790000000153",
@@ -2142,7 +2142,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0154",
+    "sku": "0154",
     "name": "CUMANA ATUN LOMO NAT. x 170gr",
     "description": "2.3 - PESCADERIA",
     "barcode": "7790000000154",
@@ -2156,7 +2156,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0155",
+    "sku": "0155",
     "name": "CUMANA CABALLA ACEITE x 380g",
     "description": "2.3 - PESCADERIA",
     "barcode": "7790000000155",
@@ -2170,7 +2170,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0156",
+    "sku": "0156",
     "name": "CUMANA CABALLA NATURAL x380gr",
     "description": "2.3 - PESCADERIA",
     "barcode": "7790000000156",
@@ -2184,7 +2184,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0157",
+    "sku": "0157",
     "name": "CUMANA JUREL ACEITE x 425gr",
     "description": "2.3 - PESCADERIA",
     "barcode": "7790000000157",
@@ -2198,7 +2198,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0158",
+    "sku": "0158",
     "name": "LA CAMPAGNOLA CABALLA ACEITE x 300gr",
     "description": "2.3 - PESCADERIA",
     "barcode": "7790000000158",
@@ -2212,7 +2212,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0159",
+    "sku": "0159",
     "name": "MARECHIARE MERLUZA NAT X380gr",
     "description": "2.3 - PESCADERIA",
     "barcode": "7790000000159",
@@ -2226,7 +2226,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0160",
+    "sku": "0160",
     "name": "308 AVE MARIA SEMOLA x 500gr",
     "description": "2.4 - PASTAS SECAS",
     "barcode": "7790000000160",
@@ -2240,7 +2240,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0161",
+    "sku": "0161",
     "name": "308 CABELLO HUEVO X500gr",
     "description": "2.4 - PASTAS SECAS",
     "barcode": "7790000000161",
@@ -2254,7 +2254,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0162",
+    "sku": "0162",
     "name": "308 CABELLO SEMOLA x 500gr",
     "description": "2.4 - PASTAS SECAS",
     "barcode": "7790000000162",
@@ -2268,7 +2268,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0163",
+    "sku": "0163",
     "name": "308 CODO GDE HUEVO x 500gr",
     "description": "2.4 - PASTAS SECAS",
     "barcode": "7790000000163",
@@ -2282,7 +2282,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0164",
+    "sku": "0164",
     "name": "308 MOSTACHOL HUEVO x 500gr",
     "description": "2.4 - PASTAS SECAS",
     "barcode": "7790000000164",
@@ -2296,7 +2296,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0165",
+    "sku": "0165",
     "name": "308 MUNICION SEMOLA x 500 gr",
     "description": "2.4 - PASTAS SECAS",
     "barcode": "7790000000165",
@@ -2310,7 +2310,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0166",
+    "sku": "0166",
     "name": "308 NIDO HUEVO No1 x500gr",
     "description": "2.4 - PASTAS SECAS",
     "barcode": "7790000000166",
@@ -2324,7 +2324,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0167",
+    "sku": "0167",
     "name": "308 NIDO HUEVO No2 x500gr",
     "description": "2.4 - PASTAS SECAS",
     "barcode": "7790000000167",
@@ -2338,7 +2338,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0168",
+    "sku": "0168",
     "name": "308 NIDO HUEVO No3 x500gr",
     "description": "2.4 - PASTAS SECAS",
     "barcode": "7790000000168",
@@ -2352,7 +2352,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0169",
+    "sku": "0169",
     "name": "308 NIDO HUEVO No4 X500gr",
     "description": "2.4 - PASTAS SECAS",
     "barcode": "7790000000169",
@@ -2366,7 +2366,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0170",
+    "sku": "0170",
     "name": "308 NIDOS ESPINACA X500gr",
     "description": "2.4 - PASTAS SECAS",
     "barcode": "7790000000170",
@@ -2380,7 +2380,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0171",
+    "sku": "0171",
     "name": "308 TALLARIN AL HUEVO N°2 x 500 gr",
     "description": "2.4 - PASTAS SECAS",
     "barcode": "7790000000171",
@@ -2394,7 +2394,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0172",
+    "sku": "0172",
     "name": "308 TALLARIN N°2 MORRON x500gr",
     "description": "2.4 - PASTAS SECAS",
     "barcode": "7790000000172",
@@ -2408,7 +2408,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0173",
+    "sku": "0173",
     "name": "308 TIRABUZON HUEVO x 500gr",
     "description": "2.4 - PASTAS SECAS",
     "barcode": "7790000000173",
@@ -2422,7 +2422,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0174",
+    "sku": "0174",
     "name": "308 TIRABUZON TRISABOR x 500gr",
     "description": "2.4 - PASTAS SECAS",
     "barcode": "7790000000174",
@@ -2436,7 +2436,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0175",
+    "sku": "0175",
     "name": "308 TRISABOR MOSTACHOL x 500gr",
     "description": "2.4 - PASTAS SECAS",
     "barcode": "7790000000175",
@@ -2450,7 +2450,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0176",
+    "sku": "0176",
     "name": "EL RECORD NIDO ESPINACA x 500gr",
     "description": "2.4 - PASTAS SECAS",
     "barcode": "7790000000176",
@@ -2464,7 +2464,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0177",
+    "sku": "0177",
     "name": "EL RECORD NIDO MORRON x 500gr",
     "description": "2.4 - PASTAS SECAS",
     "barcode": "7790000000177",
@@ -2478,7 +2478,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0178",
+    "sku": "0178",
     "name": "EL RECORD NIDO No2 HUEVO x 500gr",
     "description": "2.4 - PASTAS SECAS",
     "barcode": "7790000000178",
@@ -2492,7 +2492,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0179",
+    "sku": "0179",
     "name": "EL RECORD NIDO No3 HUEVO x 500gr",
     "description": "2.4 - PASTAS SECAS",
     "barcode": "7790000000179",
@@ -2506,7 +2506,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0180",
+    "sku": "0180",
     "name": "EL RECORD NIDO No6 HUEVO x 500gr",
     "description": "2.4 - PASTAS SECAS",
     "barcode": "7790000000180",
@@ -2520,7 +2520,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0181",
+    "sku": "0181",
     "name": "GIACOMO CARNE x 500 gr",
     "description": "2.4 - PASTAS SECAS",
     "barcode": "7790000000181",
@@ -2534,7 +2534,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0182",
+    "sku": "0182",
     "name": "GIACOMO JAMON Y QUESO x 500gr",
     "description": "2.4 - PASTAS SECAS",
     "barcode": "7790000000182",
@@ -2548,7 +2548,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0183",
+    "sku": "0183",
     "name": "GIACOMO MIX LEGUMBRES x 500gr",
     "description": "2.4 - PASTAS SECAS",
     "barcode": "7790000000183",
@@ -2562,7 +2562,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0184",
+    "sku": "0184",
     "name": "GIACOMO TRIDICCI x 500gr",
     "description": "2.4 - PASTAS SECAS",
     "barcode": "7790000000184",
@@ -2576,7 +2576,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0185",
+    "sku": "0185",
     "name": "GIACOMO VERDURA x 500gr",
     "description": "2.4 - PASTAS SECAS",
     "barcode": "7790000000185",
@@ -2590,7 +2590,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0186",
+    "sku": "0186",
     "name": "CAMPANITA PAPEL HIGIENICO BCO 12x4x30",
     "description": "HIGIENICOS",
     "barcode": "7790000000186",
@@ -2604,7 +2604,7 @@
     "subcategory": "HIGIENICOS"
   },
   {
-    "sku": "PROD-0187",
+    "sku": "0187",
     "name": "ELEGANTE PAPEL HIGIENICO 12X4x30",
     "description": "HIGIENICOS",
     "barcode": "7790000000187",
@@ -2618,7 +2618,7 @@
     "subcategory": "HIGIENICOS"
   },
   {
-    "sku": "PROD-0188",
+    "sku": "0188",
     "name": "HIGIENOL PAPEL HIGIENICO FRESH 12x4x30",
     "description": "HIGIENICOS",
     "barcode": "7790000000188",
@@ -2632,7 +2632,7 @@
     "subcategory": "HIGIENICOS"
   },
   {
-    "sku": "PROD-0189",
+    "sku": "0189",
     "name": "HIGIENOL PAPEL HIGIENICO TEXT 12x4x30",
     "description": "HIGIENICOS",
     "barcode": "7790000000189",
@@ -2646,7 +2646,7 @@
     "subcategory": "HIGIENICOS"
   },
   {
-    "sku": "PROD-0190",
+    "sku": "0190",
     "name": "CAMPANITA PRACTIROLLO 1X12X200PAÑOS",
     "description": "ROLLOS DE COCINA",
     "barcode": "7790000000190",
@@ -2660,7 +2660,7 @@
     "subcategory": "ROLLOS DE COCINA"
   },
   {
-    "sku": "PROD-0191",
+    "sku": "0191",
     "name": "ELEGANTE ROLLO COC 8X3X50 PAÑOS",
     "description": "ROLLOS DE COCINA",
     "barcode": "7790000000191",
@@ -2674,7 +2674,7 @@
     "subcategory": "ROLLOS DE COCINA"
   },
   {
-    "sku": "PROD-0192",
+    "sku": "0192",
     "name": "ELEGANTE ROLLO COC GIG 1X12X200 PAÑOS",
     "description": "ROLLOS DE COCINA",
     "barcode": "7790000000192",
@@ -2688,7 +2688,7 @@
     "subcategory": "ROLLOS DE COCINA"
   },
   {
-    "sku": "PROD-0193",
+    "sku": "0193",
     "name": "SOL MAYOR ROLLO COC GIG 1X12X200 PAÑOS",
     "description": "ROLLOS DE COCINA",
     "barcode": "7790000000193",
@@ -2702,7 +2702,7 @@
     "subcategory": "ROLLOS DE COCINA"
   },
   {
-    "sku": "PROD-0194",
+    "sku": "0194",
     "name": "ALAMBRADO MALBEC 1x750 ml ESTUCHE",
     "description": "2.6 - REGALERIA",
     "barcode": "7790000000194",
@@ -2716,7 +2716,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0195",
+    "sku": "0195",
     "name": "S.JULIA CHENIN DULCE 1x750ml C/2 VASOS",
     "description": "2.6 - REGALERIA",
     "barcode": "7790000000195",
@@ -2730,7 +2730,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0196",
+    "sku": "0196",
     "name": "STA. JULIA MALBEC 1x750 ml ESTUCHE",
     "description": "2.6 - REGALERIA",
     "barcode": "7790000000196",
@@ -2744,7 +2744,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0197",
+    "sku": "0197",
     "name": "MOCORETA JUGO NJA 6X1500cc",
     "description": "AGUAS SABORIZADAS Y JUGOS",
     "barcode": "7790000000197",
@@ -2758,7 +2758,7 @@
     "subcategory": "AGUAS SABORIZADAS Y JUGOS"
   },
   {
-    "sku": "PROD-0198",
+    "sku": "0198",
     "name": "MOCORETA JUGO POM 6X1500cc",
     "description": "AGUAS SABORIZADAS Y JUGOS",
     "barcode": "7790000000198",
@@ -2772,7 +2772,7 @@
     "subcategory": "AGUAS SABORIZADAS Y JUGOS"
   },
   {
-    "sku": "PROD-0199",
+    "sku": "0199",
     "name": "SALDAN SODA SIFON 6x2 LTS",
     "description": "AGUAS Y SODAS",
     "barcode": "7790000000199",
@@ -2786,7 +2786,7 @@
     "subcategory": "AGUAS Y SODAS"
   },
   {
-    "sku": "PROD-0200",
+    "sku": "0200",
     "name": "VIDA AGUA DE MESA 6x1.5LTS",
     "description": "AGUAS Y SODAS",
     "barcode": "7790000000200",
@@ -2800,7 +2800,7 @@
     "subcategory": "AGUAS Y SODAS"
   },
   {
-    "sku": "PROD-0201",
+    "sku": "0201",
     "name": "AMERICANO GANCIA x 950ml",
     "description": "APERITIVOS Y BEBIDAS ESPECIALES",
     "barcode": "7790000000201",
@@ -2814,7 +2814,7 @@
     "subcategory": "APERITIVOS Y BEBIDAS ESPECIALES"
   },
   {
-    "sku": "PROD-0202",
+    "sku": "0202",
     "name": "AMERICANO GANCIA X450ml",
     "description": "APERITIVOS Y BEBIDAS ESPECIALES",
     "barcode": "7790000000202",
@@ -2828,7 +2828,7 @@
     "subcategory": "APERITIVOS Y BEBIDAS ESPECIALES"
   },
   {
-    "sku": "PROD-0203",
+    "sku": "0203",
     "name": "CAMPARI APERITIVO x 750ml",
     "description": "APERITIVOS Y BEBIDAS ESPECIALES",
     "barcode": "7790000000203",
@@ -2842,7 +2842,7 @@
     "subcategory": "APERITIVOS Y BEBIDAS ESPECIALES"
   },
   {
-    "sku": "PROD-0204",
+    "sku": "0204",
     "name": "CARPANO BIANCO X950ml",
     "description": "APERITIVOS Y BEBIDAS ESPECIALES",
     "barcode": "7790000000204",
@@ -2856,7 +2856,7 @@
     "subcategory": "APERITIVOS Y BEBIDAS ESPECIALES"
   },
   {
-    "sku": "PROD-0205",
+    "sku": "0205",
     "name": "CARPANO ROSSO X950ml",
     "description": "APERITIVOS Y BEBIDAS ESPECIALES",
     "barcode": "7790000000205",
@@ -2870,7 +2870,7 @@
     "subcategory": "APERITIVOS Y BEBIDAS ESPECIALES"
   },
   {
-    "sku": "PROD-0206",
+    "sku": "0206",
     "name": "CAZALIS LEGER X950ml",
     "description": "APERITIVOS Y BEBIDAS ESPECIALES",
     "barcode": "7790000000206",
@@ -2884,7 +2884,7 @@
     "subcategory": "APERITIVOS Y BEBIDAS ESPECIALES"
   },
   {
-    "sku": "PROD-0207",
+    "sku": "0207",
     "name": "CINZANO ROSSO X950ml",
     "description": "APERITIVOS Y BEBIDAS ESPECIALES",
     "barcode": "7790000000207",
@@ -2898,7 +2898,7 @@
     "subcategory": "APERITIVOS Y BEBIDAS ESPECIALES"
   },
   {
-    "sku": "PROD-0208",
+    "sku": "0208",
     "name": "GIN SPIRITO BLUE x700ml",
     "description": "APERITIVOS Y BEBIDAS ESPECIALES",
     "barcode": "7790000000208",
@@ -2912,7 +2912,7 @@
     "subcategory": "APERITIVOS Y BEBIDAS ESPECIALES"
   },
   {
-    "sku": "PROD-0209",
+    "sku": "0209",
     "name": "GORDON`S GIN x700ml",
     "description": "APERITIVOS Y BEBIDAS ESPECIALES",
     "barcode": "7790000000209",
@@ -2926,7 +2926,7 @@
     "subcategory": "APERITIVOS Y BEBIDAS ESPECIALES"
   },
   {
-    "sku": "PROD-0210",
+    "sku": "0210",
     "name": "PADILLA CAÑA DURAZ x700ml",
     "description": "APERITIVOS Y BEBIDAS ESPECIALES",
     "barcode": "7790000000210",
@@ -2940,7 +2940,7 @@
     "subcategory": "APERITIVOS Y BEBIDAS ESPECIALES"
   },
   {
-    "sku": "PROD-0211",
+    "sku": "0211",
     "name": "SERNOVA VODKA x700ml",
     "description": "APERITIVOS Y BEBIDAS ESPECIALES",
     "barcode": "7790000000211",
@@ -2954,7 +2954,7 @@
     "subcategory": "APERITIVOS Y BEBIDAS ESPECIALES"
   },
   {
-    "sku": "PROD-0212",
+    "sku": "0212",
     "name": "SERNOVA WILD BERRIES x700ml",
     "description": "APERITIVOS Y BEBIDAS ESPECIALES",
     "barcode": "7790000000212",
@@ -2968,7 +2968,7 @@
     "subcategory": "APERITIVOS Y BEBIDAS ESPECIALES"
   },
   {
-    "sku": "PROD-0213",
+    "sku": "0213",
     "name": "SMIRNOFF RASPBERRY x 700ml",
     "description": "APERITIVOS Y BEBIDAS ESPECIALES",
     "barcode": "7790000000213",
@@ -2982,7 +2982,7 @@
     "subcategory": "APERITIVOS Y BEBIDAS ESPECIALES"
   },
   {
-    "sku": "PROD-0214",
+    "sku": "0214",
     "name": "SMIRNOFF VODKA x700ml",
     "description": "APERITIVOS Y BEBIDAS ESPECIALES",
     "barcode": "7790000000214",
@@ -2996,7 +2996,7 @@
     "subcategory": "APERITIVOS Y BEBIDAS ESPECIALES"
   },
   {
-    "sku": "PROD-0215",
+    "sku": "0215",
     "name": "DR. LEMON C/VODKA 1 LT",
     "description": "CEPAS",
     "barcode": "7790000000215",
@@ -3010,7 +3010,7 @@
     "subcategory": "CEPAS"
   },
   {
-    "sku": "PROD-0216",
+    "sku": "0216",
     "name": "DR. LEMON LIMON 1 LT",
     "description": "CEPAS",
     "barcode": "7790000000216",
@@ -3024,7 +3024,7 @@
     "subcategory": "CEPAS"
   },
   {
-    "sku": "PROD-0217",
+    "sku": "0217",
     "name": "DR. LEMON POMELO 1 LT",
     "description": "CEPAS",
     "barcode": "7790000000217",
@@ -3038,7 +3038,7 @@
     "subcategory": "CEPAS"
   },
   {
-    "sku": "PROD-0218",
+    "sku": "0218",
     "name": "DR.LEMON LIMON LATA X 473",
     "description": "CEPAS",
     "barcode": "7790000000218",
@@ -3052,7 +3052,7 @@
     "subcategory": "CEPAS"
   },
   {
-    "sku": "PROD-0219",
+    "sku": "0219",
     "name": "DR.LEMON VODKA LATA x 473ml",
     "description": "CEPAS",
     "barcode": "7790000000219",
@@ -3066,7 +3066,7 @@
     "subcategory": "CEPAS"
   },
   {
-    "sku": "PROD-0220",
+    "sku": "0220",
     "name": "GANCIA LATA LIMON x 473ml",
     "description": "CEPAS",
     "barcode": "7790000000220",
@@ -3080,7 +3080,7 @@
     "subcategory": "CEPAS"
   },
   {
-    "sku": "PROD-0221",
+    "sku": "0221",
     "name": "PRONTO SHAKE LATA X 473",
     "description": "CEPAS",
     "barcode": "7790000000221",
@@ -3094,7 +3094,7 @@
     "subcategory": "CEPAS"
   },
   {
-    "sku": "PROD-0222",
+    "sku": "0222",
     "name": "TERMA LIMON 1350ml",
     "description": "CEPAS",
     "barcode": "7790000000222",
@@ -3108,7 +3108,7 @@
     "subcategory": "CEPAS"
   },
   {
-    "sku": "PROD-0223",
+    "sku": "0223",
     "name": "TERMA LIMON LIGHT 1.35ml",
     "description": "CEPAS",
     "barcode": "7790000000223",
@@ -3122,7 +3122,7 @@
     "subcategory": "CEPAS"
   },
   {
-    "sku": "PROD-0224",
+    "sku": "0224",
     "name": "TERMA POM.ROSADO 1.35ML",
     "description": "CEPAS",
     "barcode": "7790000000224",
@@ -3136,7 +3136,7 @@
     "subcategory": "CEPAS"
   },
   {
-    "sku": "PROD-0225",
+    "sku": "0225",
     "name": "TERMA SERRANO 1.35ml",
     "description": "CEPAS",
     "barcode": "7790000000225",
@@ -3150,7 +3150,7 @@
     "subcategory": "CEPAS"
   },
   {
-    "sku": "PROD-0226",
+    "sku": "0226",
     "name": "CHANDON CHAMP. EXT.BRUT X750ml",
     "description": "ESPUMANTES Y SIDRAS",
     "barcode": "7790000000226",
@@ -3164,7 +3164,7 @@
     "subcategory": "ESPUMANTES Y SIDRAS"
   },
   {
-    "sku": "PROD-0227",
+    "sku": "0227",
     "name": "CHATEAU MDZA.CHAMPAGNE EXT.BRUTx 750ml",
     "description": "ESPUMANTES Y SIDRAS",
     "barcode": "7790000000227",
@@ -3178,7 +3178,7 @@
     "subcategory": "ESPUMANTES Y SIDRAS"
   },
   {
-    "sku": "PROD-0228",
+    "sku": "0228",
     "name": "LA FARRUCA DURAZNO FIZZ x 710ml",
     "description": "ESPUMANTES Y SIDRAS",
     "barcode": "7790000000228",
@@ -3192,7 +3192,7 @@
     "subcategory": "ESPUMANTES Y SIDRAS"
   },
   {
-    "sku": "PROD-0229",
+    "sku": "0229",
     "name": "LA FARRUCA SIDRA ET.NEGRA x 710ml",
     "description": "ESPUMANTES Y SIDRAS",
     "barcode": "7790000000229",
@@ -3206,7 +3206,7 @@
     "subcategory": "ESPUMANTES Y SIDRAS"
   },
   {
-    "sku": "PROD-0230",
+    "sku": "0230",
     "name": "LA FARRUCA SIDRA S/ALCOHOL x 710ml",
     "description": "ESPUMANTES Y SIDRAS",
     "barcode": "7790000000230",
@@ -3220,7 +3220,7 @@
     "subcategory": "ESPUMANTES Y SIDRAS"
   },
   {
-    "sku": "PROD-0231",
+    "sku": "0231",
     "name": "LA FARRUCA SIDRA VIDRIO x 710ml",
     "description": "ESPUMANTES Y SIDRAS",
     "barcode": "7790000000231",
@@ -3234,7 +3234,7 @@
     "subcategory": "ESPUMANTES Y SIDRAS"
   },
   {
-    "sku": "PROD-0232",
+    "sku": "0232",
     "name": "LAS PERDICES CHAMP.BRUT ROSE x 750ml",
     "description": "ESPUMANTES Y SIDRAS",
     "barcode": "7790000000232",
@@ -3248,7 +3248,7 @@
     "subcategory": "ESPUMANTES Y SIDRAS"
   },
   {
-    "sku": "PROD-0233",
+    "sku": "0233",
     "name": "LAS PERDICES CHAMP.SWEETY x 750ml",
     "description": "ESPUMANTES Y SIDRAS",
     "barcode": "7790000000233",
@@ -3262,7 +3262,7 @@
     "subcategory": "ESPUMANTES Y SIDRAS"
   },
   {
-    "sku": "PROD-0234",
+    "sku": "0234",
     "name": "S.BRIONES SIDRA 1888 x 750ml",
     "description": "ESPUMANTES Y SIDRAS",
     "barcode": "7790000000234",
@@ -3276,7 +3276,7 @@
     "subcategory": "ESPUMANTES Y SIDRAS"
   },
   {
-    "sku": "PROD-0235",
+    "sku": "0235",
     "name": "SANTA JULIA ESPUM DULCE NAT x 750ml",
     "description": "ESPUMANTES Y SIDRAS",
     "barcode": "7790000000235",
@@ -3290,7 +3290,7 @@
     "subcategory": "ESPUMANTES Y SIDRAS"
   },
   {
-    "sku": "PROD-0236",
+    "sku": "0236",
     "name": "SANTA JULIA ESPUMANTE CUVEE x750 ml",
     "description": "ESPUMANTES Y SIDRAS",
     "barcode": "7790000000236",
@@ -3304,7 +3304,7 @@
     "subcategory": "ESPUMANTES Y SIDRAS"
   },
   {
-    "sku": "PROD-0237",
+    "sku": "0237",
     "name": "BRANCA FERNET x1LT",
     "description": "FERNET",
     "barcode": "7790000000237",
@@ -3318,7 +3318,7 @@
     "subcategory": "FERNET"
   },
   {
-    "sku": "PROD-0238",
+    "sku": "0238",
     "name": "BRANCA FERNET x450ml",
     "description": "FERNET",
     "barcode": "7790000000238",
@@ -3332,7 +3332,7 @@
     "subcategory": "FERNET"
   },
   {
-    "sku": "PROD-0239",
+    "sku": "0239",
     "name": "BRANCA FERNET x750ml",
     "description": "FERNET",
     "barcode": "7790000000239",
@@ -3346,7 +3346,7 @@
     "subcategory": "FERNET"
   },
   {
-    "sku": "PROD-0240",
+    "sku": "0240",
     "name": "BRANCA MENTA x750ml",
     "description": "FERNET",
     "barcode": "7790000000240",
@@ -3360,7 +3360,7 @@
     "subcategory": "FERNET"
   },
   {
-    "sku": "PROD-0241",
+    "sku": "0241",
     "name": "VITTONE FERNET SPECIALE x750ml",
     "description": "FERNET",
     "barcode": "7790000000241",
@@ -3374,7 +3374,7 @@
     "subcategory": "FERNET"
   },
   {
-    "sku": "PROD-0242",
+    "sku": "0242",
     "name": "MOCORETA GASEOSA P.AMARILLO 6x2.25 LTS",
     "description": "GASEOSAS",
     "barcode": "7790000000242",
@@ -3388,7 +3388,7 @@
     "subcategory": "GASEOSAS"
   },
   {
-    "sku": "PROD-0243",
+    "sku": "0243",
     "name": "MOCORETA GASEOSA COLA 6x2.25 LTS",
     "description": "GASEOSAS",
     "barcode": "7790000000243",
@@ -3402,7 +3402,7 @@
     "subcategory": "GASEOSAS"
   },
   {
-    "sku": "PROD-0244",
+    "sku": "0244",
     "name": "MOCORETA GASEOSA LIMA LIMON 6x2.25 LTS",
     "description": "GASEOSAS",
     "barcode": "7790000000244",
@@ -3416,7 +3416,7 @@
     "subcategory": "GASEOSAS"
   },
   {
-    "sku": "PROD-0245",
+    "sku": "0245",
     "name": "MOCORETA GASEOSA NARANJA 6x2.25 LTS",
     "description": "GASEOSAS",
     "barcode": "7790000000245",
@@ -3430,7 +3430,7 @@
     "subcategory": "GASEOSAS"
   },
   {
-    "sku": "PROD-0246",
+    "sku": "0246",
     "name": "BORGHETTI AL CONAG x700ml",
     "description": "LICORES",
     "barcode": "7790000000246",
@@ -3444,7 +3444,7 @@
     "subcategory": "LICORES"
   },
   {
-    "sku": "PROD-0247",
+    "sku": "0247",
     "name": "BAGGIO FORZA FRUTAS TROP. 6x500ml",
     "description": "R.P.B",
     "barcode": "7790000000247",
@@ -3458,7 +3458,7 @@
     "subcategory": "R.P.B"
   },
   {
-    "sku": "PROD-0248",
+    "sku": "0248",
     "name": "BAGGIO FORZA FRUTOS ROJOS 6x500ml",
     "description": "R.P.B",
     "barcode": "7790000000248",
@@ -3472,7 +3472,7 @@
     "subcategory": "R.P.B"
   },
   {
-    "sku": "PROD-0249",
+    "sku": "0249",
     "name": "BAGGIO JUGO 100% EXPRIMIDO NAR. x 1LT",
     "description": "R.P.B",
     "barcode": "7790000000249",
@@ -3486,7 +3486,7 @@
     "subcategory": "R.P.B"
   },
   {
-    "sku": "PROD-0250",
+    "sku": "0250",
     "name": "DURAZNO x1LT BAGGIO PRONTO",
     "description": "R.P.B",
     "barcode": "7790000000250",
@@ -3500,7 +3500,7 @@
     "subcategory": "R.P.B"
   },
   {
-    "sku": "PROD-0251",
+    "sku": "0251",
     "name": "DURAZNO18x200ml BAGGIO PRONTO",
     "description": "R.P.B",
     "barcode": "7790000000251",
@@ -3514,7 +3514,7 @@
     "subcategory": "R.P.B"
   },
   {
-    "sku": "PROD-0252",
+    "sku": "0252",
     "name": "MULTIFRUTA x1LT BAGGIO PRONTO",
     "description": "R.P.B",
     "barcode": "7790000000252",
@@ -3528,7 +3528,7 @@
     "subcategory": "R.P.B"
   },
   {
-    "sku": "PROD-0253",
+    "sku": "0253",
     "name": "MULTIFRUTA18x200mlBAGGIO PRONTO",
     "description": "R.P.B",
     "barcode": "7790000000253",
@@ -3542,7 +3542,7 @@
     "subcategory": "R.P.B"
   },
   {
-    "sku": "PROD-0254",
+    "sku": "0254",
     "name": "NARANJA 18x200ml BAGGIO PRONTO",
     "description": "R.P.B",
     "barcode": "7790000000254",
@@ -3556,7 +3556,7 @@
     "subcategory": "R.P.B"
   },
   {
-    "sku": "PROD-0255",
+    "sku": "0255",
     "name": "NARANJA x1LT BAGGIO PRONTO",
     "description": "R.P.B",
     "barcode": "7790000000255",
@@ -3570,7 +3570,7 @@
     "subcategory": "R.P.B"
   },
   {
-    "sku": "PROD-0256",
+    "sku": "0256",
     "name": "BIANCHI FAMIGLIA MALBEC 750ml",
     "description": "VINOS FINOS  - BODEGAS BIANCHI",
     "barcode": "7790000000256",
@@ -3584,7 +3584,7 @@
     "subcategory": "VINOS FINOS  - BODEGAS BIANCHI"
   },
   {
-    "sku": "PROD-0257",
+    "sku": "0257",
     "name": "BIANCHI FINCA LOS PRIMOS MALBEC x 750ml",
     "description": "VINOS FINOS  - BODEGAS BIANCHI",
     "barcode": "7790000000257",
@@ -3598,7 +3598,7 @@
     "subcategory": "VINOS FINOS  - BODEGAS BIANCHI"
   },
   {
-    "sku": "PROD-0258",
+    "sku": "0258",
     "name": "BIANCHI PART. MALB 750ml",
     "description": "VINOS FINOS  - BODEGAS BIANCHI",
     "barcode": "7790000000258",
@@ -3612,7 +3612,7 @@
     "subcategory": "VINOS FINOS  - BODEGAS BIANCHI"
   },
   {
-    "sku": "PROD-0259",
+    "sku": "0259",
     "name": "NICASIA MALBEC x750ml",
     "description": "VINOS FINOS  - BODEGAS CATENA",
     "barcode": "7790000000259",
@@ -3626,7 +3626,7 @@
     "subcategory": "VINOS FINOS  - BODEGAS CATENA"
   },
   {
-    "sku": "PROD-0260",
+    "sku": "0260",
     "name": "LATITUD 33 CABERNET SAVIGNON x750ml",
     "description": "VINOS FINOS  - BODEGAS CHANDON",
     "barcode": "7790000000260",
@@ -3640,7 +3640,7 @@
     "subcategory": "VINOS FINOS  - BODEGAS CHANDON"
   },
   {
-    "sku": "PROD-0261",
+    "sku": "0261",
     "name": "LATITUD 33 CHARDONNAY x 750ml",
     "description": "VINOS FINOS  - BODEGAS CHANDON",
     "barcode": "7790000000261",
@@ -3654,7 +3654,7 @@
     "subcategory": "VINOS FINOS  - BODEGAS CHANDON"
   },
   {
-    "sku": "PROD-0262",
+    "sku": "0262",
     "name": "LATITUD 33 MALBEC x750ml",
     "description": "VINOS FINOS  - BODEGAS CHANDON",
     "barcode": "7790000000262",
@@ -3668,7 +3668,7 @@
     "subcategory": "VINOS FINOS  - BODEGAS CHANDON"
   },
   {
-    "sku": "PROD-0263",
+    "sku": "0263",
     "name": "RUTINI CAB/MAL 750ml",
     "description": "VINOS FINOS  - BODEGAS LA RURAL",
     "barcode": "7790000000263",
@@ -3682,7 +3682,7 @@
     "subcategory": "VINOS FINOS  - BODEGAS LA RURAL"
   },
   {
-    "sku": "PROD-0264",
+    "sku": "0264",
     "name": "RUTINI DOMINIO MALBEC x750ml",
     "description": "VINOS FINOS  - BODEGAS LA RURAL",
     "barcode": "7790000000264",
@@ -3696,7 +3696,7 @@
     "subcategory": "VINOS FINOS  - BODEGAS LA RURAL"
   },
   {
-    "sku": "PROD-0265",
+    "sku": "0265",
     "name": "RUTINI MALBEC 750ml",
     "description": "VINOS FINOS  - BODEGAS LA RURAL",
     "barcode": "7790000000265",
@@ -3710,7 +3710,7 @@
     "subcategory": "VINOS FINOS  - BODEGAS LA RURAL"
   },
   {
-    "sku": "PROD-0266",
+    "sku": "0266",
     "name": "TRUMPETER MALBEC x750ml",
     "description": "VINOS FINOS  - BODEGAS LA RURAL",
     "barcode": "7790000000266",
@@ -3724,7 +3724,7 @@
     "subcategory": "VINOS FINOS  - BODEGAS LA RURAL"
   },
   {
-    "sku": "PROD-0267",
+    "sku": "0267",
     "name": "TRUMPETER SAUV. BCO x750ml",
     "description": "VINOS FINOS  - BODEGAS LA RURAL",
     "barcode": "7790000000267",
@@ -3738,7 +3738,7 @@
     "subcategory": "VINOS FINOS  - BODEGAS LA RURAL"
   },
   {
-    "sku": "PROD-0268",
+    "sku": "0268",
     "name": "LOPEZ MALBEC x750ml",
     "description": "VINOS FINOS  - BODEGAS LOPEZ",
     "barcode": "7790000000268",
@@ -3752,7 +3752,7 @@
     "subcategory": "VINOS FINOS  - BODEGAS LOPEZ"
   },
   {
-    "sku": "PROD-0269",
+    "sku": "0269",
     "name": "LOPEZ SEMILLON BLANCO x750ml",
     "description": "VINOS FINOS  - BODEGAS LOPEZ",
     "barcode": "7790000000269",
@@ -3766,7 +3766,7 @@
     "subcategory": "VINOS FINOS  - BODEGAS LOPEZ"
   },
   {
-    "sku": "PROD-0270",
+    "sku": "0270",
     "name": "VASCO VIEJO MALBEC VINTAGE x 750 ml",
     "description": "VINOS FINOS  - BODEGAS LOPEZ",
     "barcode": "7790000000270",
@@ -3780,7 +3780,7 @@
     "subcategory": "VINOS FINOS  - BODEGAS LOPEZ"
   },
   {
-    "sku": "PROD-0271",
+    "sku": "0271",
     "name": "VASCO VIEJO TINTO x 750ml",
     "description": "VINOS FINOS  - BODEGAS LOPEZ",
     "barcode": "7790000000271",
@@ -3794,7 +3794,7 @@
     "subcategory": "VINOS FINOS  - BODEGAS LOPEZ"
   },
   {
-    "sku": "PROD-0272",
+    "sku": "0272",
     "name": "CHACABUCO CHENIN DULCE BOT. ALUM. x500 ml",
     "description": "VINOS FINOS  - BODEGAS LOS HAROLDOS",
     "barcode": "7790000000272",
@@ -3808,7 +3808,7 @@
     "subcategory": "VINOS FINOS  - BODEGAS LOS HAROLDOS"
   },
   {
-    "sku": "PROD-0273",
+    "sku": "0273",
     "name": "CHACABUCO CHENIN DULCE x750ml",
     "description": "VINOS FINOS  - BODEGAS LOS HAROLDOS",
     "barcode": "7790000000273",
@@ -3822,7 +3822,7 @@
     "subcategory": "VINOS FINOS  - BODEGAS LOS HAROLDOS"
   },
   {
-    "sku": "PROD-0274",
+    "sku": "0274",
     "name": "CHACABUCO MALBEC x750ml",
     "description": "VINOS FINOS  - BODEGAS LOS HAROLDOS",
     "barcode": "7790000000274",
@@ -3836,7 +3836,7 @@
     "subcategory": "VINOS FINOS  - BODEGAS LOS HAROLDOS"
   },
   {
-    "sku": "PROD-0275",
+    "sku": "0275",
     "name": "NAMPE BLANCO DULCE x 750ml",
     "description": "VINOS FINOS  - BODEGAS LOS HAROLDOS",
     "barcode": "7790000000275",
@@ -3850,7 +3850,7 @@
     "subcategory": "VINOS FINOS  - BODEGAS LOS HAROLDOS"
   },
   {
-    "sku": "PROD-0276",
+    "sku": "0276",
     "name": "NAMPE MALBEC x750ml",
     "description": "VINOS FINOS  - BODEGAS LOS HAROLDOS",
     "barcode": "7790000000276",
@@ -3864,7 +3864,7 @@
     "subcategory": "VINOS FINOS  - BODEGAS LOS HAROLDOS"
   },
   {
-    "sku": "PROD-0277",
+    "sku": "0277",
     "name": "V.DE BALBO BCO x1125ml",
     "description": "VINOS FINOS  - BODEGAS LOS HAROLDOS",
     "barcode": "7790000000277",
@@ -3878,7 +3878,7 @@
     "subcategory": "VINOS FINOS  - BODEGAS LOS HAROLDOS"
   },
   {
-    "sku": "PROD-0278",
+    "sku": "0278",
     "name": "V.DE BALBO TTO x1125ml",
     "description": "VINOS FINOS  - BODEGAS LOS HAROLDOS",
     "barcode": "7790000000278",
@@ -3892,7 +3892,7 @@
     "subcategory": "VINOS FINOS  - BODEGAS LOS HAROLDOS"
   },
   {
-    "sku": "PROD-0279",
+    "sku": "0279",
     "name": "ALAMBRADO CABERNET SAUVIG x750ml",
     "description": "VINOS FINOS  - BODEGAS ZUCCARDI",
     "barcode": "7790000000279",
@@ -3906,7 +3906,7 @@
     "subcategory": "VINOS FINOS  - BODEGAS ZUCCARDI"
   },
   {
-    "sku": "PROD-0280",
+    "sku": "0280",
     "name": "ALAMBRADO MALBEC x750ml",
     "description": "VINOS FINOS  - BODEGAS ZUCCARDI",
     "barcode": "7790000000280",
@@ -3920,7 +3920,7 @@
     "subcategory": "VINOS FINOS  - BODEGAS ZUCCARDI"
   },
   {
-    "sku": "PROD-0281",
+    "sku": "0281",
     "name": "SANTA JULIA CAB.FRANC x750ml",
     "description": "VINOS FINOS  - BODEGAS ZUCCARDI",
     "barcode": "7790000000281",
@@ -3934,7 +3934,7 @@
     "subcategory": "VINOS FINOS  - BODEGAS ZUCCARDI"
   },
   {
-    "sku": "PROD-0282",
+    "sku": "0282",
     "name": "SANTA JULIA CABERNET SAUV. x 750ml",
     "description": "VINOS FINOS  - BODEGAS ZUCCARDI",
     "barcode": "7790000000282",
@@ -3948,7 +3948,7 @@
     "subcategory": "VINOS FINOS  - BODEGAS ZUCCARDI"
   },
   {
-    "sku": "PROD-0283",
+    "sku": "0283",
     "name": "SANTA JULIA CHARD. NEW x375ml",
     "description": "VINOS FINOS  - BODEGAS ZUCCARDI",
     "barcode": "7790000000283",
@@ -3962,7 +3962,7 @@
     "subcategory": "VINOS FINOS  - BODEGAS ZUCCARDI"
   },
   {
-    "sku": "PROD-0284",
+    "sku": "0284",
     "name": "SANTA JULIA DULCE TINTO x750ml",
     "description": "VINOS FINOS  - BODEGAS ZUCCARDI",
     "barcode": "7790000000284",
@@ -3976,7 +3976,7 @@
     "subcategory": "VINOS FINOS  - BODEGAS ZUCCARDI"
   },
   {
-    "sku": "PROD-0285",
+    "sku": "0285",
     "name": "SANTA JULIA MALBEC NEW x375ml",
     "description": "VINOS FINOS  - BODEGAS ZUCCARDI",
     "barcode": "7790000000285",
@@ -3990,7 +3990,7 @@
     "subcategory": "VINOS FINOS  - BODEGAS ZUCCARDI"
   },
   {
-    "sku": "PROD-0286",
+    "sku": "0286",
     "name": "SANTA JULIA MALBEC x750ml",
     "description": "VINOS FINOS  - BODEGAS ZUCCARDI",
     "barcode": "7790000000286",
@@ -4004,7 +4004,7 @@
     "subcategory": "VINOS FINOS  - BODEGAS ZUCCARDI"
   },
   {
-    "sku": "PROD-0287",
+    "sku": "0287",
     "name": "SANTA JULIA SAUVIGNON BCO x750ml",
     "description": "VINOS FINOS  - BODEGAS ZUCCARDI",
     "barcode": "7790000000287",
@@ -4018,7 +4018,7 @@
     "subcategory": "VINOS FINOS  - BODEGAS ZUCCARDI"
   },
   {
-    "sku": "PROD-0288",
+    "sku": "0288",
     "name": "ALMA MORA MALBEC x750ml",
     "description": "VINOS FINOS  - GRUPO PEÑAFLOR",
     "barcode": "7790000000288",
@@ -4032,7 +4032,7 @@
     "subcategory": "VINOS FINOS  - GRUPO PEÑAFLOR"
   },
   {
-    "sku": "PROD-0289",
+    "sku": "0289",
     "name": "DADA ART MALBEC 391 x750ml",
     "description": "VINOS FINOS  - GRUPO PEÑAFLOR",
     "barcode": "7790000000289",
@@ -4046,7 +4046,7 @@
     "subcategory": "VINOS FINOS  - GRUPO PEÑAFLOR"
   },
   {
-    "sku": "PROD-0290",
+    "sku": "0290",
     "name": "DADA INCREDIBLENDS x750ml",
     "description": "VINOS FINOS  - GRUPO PEÑAFLOR",
     "barcode": "7790000000290",
@@ -4060,7 +4060,7 @@
     "subcategory": "VINOS FINOS  - GRUPO PEÑAFLOR"
   },
   {
-    "sku": "PROD-0291",
+    "sku": "0291",
     "name": "DADA No1 x750ml",
     "description": "VINOS FINOS  - GRUPO PEÑAFLOR",
     "barcode": "7790000000291",
@@ -4074,7 +4074,7 @@
     "subcategory": "VINOS FINOS  - GRUPO PEÑAFLOR"
   },
   {
-    "sku": "PROD-0292",
+    "sku": "0292",
     "name": "DADA No2 MOKKA x750ml",
     "description": "VINOS FINOS  - GRUPO PEÑAFLOR",
     "barcode": "7790000000292",
@@ -4088,7 +4088,7 @@
     "subcategory": "VINOS FINOS  - GRUPO PEÑAFLOR"
   },
   {
-    "sku": "PROD-0293",
+    "sku": "0293",
     "name": "DON DAVID CHARDONNAY x 750ml",
     "description": "VINOS FINOS  - GRUPO PEÑAFLOR",
     "barcode": "7790000000293",
@@ -4102,7 +4102,7 @@
     "subcategory": "VINOS FINOS  - GRUPO PEÑAFLOR"
   },
   {
-    "sku": "PROD-0294",
+    "sku": "0294",
     "name": "DON DAVID MALBEC x750ml",
     "description": "VINOS FINOS  - GRUPO PEÑAFLOR",
     "barcode": "7790000000294",
@@ -4116,7 +4116,7 @@
     "subcategory": "VINOS FINOS  - GRUPO PEÑAFLOR"
   },
   {
-    "sku": "PROD-0295",
+    "sku": "0295",
     "name": "EL BAUTISMO MALBEC x750ml",
     "description": "VINOS FINOS  - GRUPO PEÑAFLOR",
     "barcode": "7790000000295",
@@ -4130,7 +4130,7 @@
     "subcategory": "VINOS FINOS  - GRUPO PEÑAFLOR"
   },
   {
-    "sku": "PROD-0296",
+    "sku": "0296",
     "name": "ELEMENTOS CABERNET x 750ml",
     "description": "VINOS FINOS  - GRUPO PEÑAFLOR",
     "barcode": "7790000000296",
@@ -4144,7 +4144,7 @@
     "subcategory": "VINOS FINOS  - GRUPO PEÑAFLOR"
   },
   {
-    "sku": "PROD-0297",
+    "sku": "0297",
     "name": "ELEMENTOS MALBEC x750ml",
     "description": "VINOS FINOS  - GRUPO PEÑAFLOR",
     "barcode": "7790000000297",
@@ -4158,7 +4158,7 @@
     "subcategory": "VINOS FINOS  - GRUPO PEÑAFLOR"
   },
   {
-    "sku": "PROD-0298",
+    "sku": "0298",
     "name": "F.L.M FAIR FOR LIFE MALBEC x 750 ml",
     "description": "VINOS FINOS  - GRUPO PEÑAFLOR",
     "barcode": "7790000000298",
@@ -4172,7 +4172,7 @@
     "subcategory": "VINOS FINOS  - GRUPO PEÑAFLOR"
   },
   {
-    "sku": "PROD-0299",
+    "sku": "0299",
     "name": "F.LAS MORAS MALBEC x750ml",
     "description": "VINOS FINOS  - GRUPO PEÑAFLOR",
     "barcode": "7790000000299",
@@ -4186,7 +4186,7 @@
     "subcategory": "VINOS FINOS  - GRUPO PEÑAFLOR"
   },
   {
-    "sku": "PROD-0300",
+    "sku": "0300",
     "name": "FOND DE CAVE MALBEC x750ml",
     "description": "VINOS FINOS  - GRUPO PEÑAFLOR",
     "barcode": "7790000000300",
@@ -4200,7 +4200,7 @@
     "subcategory": "VINOS FINOS  - GRUPO PEÑAFLOR"
   },
   {
-    "sku": "PROD-0301",
+    "sku": "0301",
     "name": "SAN TELMO CAB.SAU x750ml",
     "description": "VINOS FINOS  - GRUPO PEÑAFLOR",
     "barcode": "7790000000301",
@@ -4214,7 +4214,7 @@
     "subcategory": "VINOS FINOS  - GRUPO PEÑAFLOR"
   },
   {
-    "sku": "PROD-0302",
+    "sku": "0302",
     "name": "SAN TELMO MALBEC x750ml",
     "description": "VINOS FINOS  - GRUPO PEÑAFLOR",
     "barcode": "7790000000302",
@@ -4228,7 +4228,7 @@
     "subcategory": "VINOS FINOS  - GRUPO PEÑAFLOR"
   },
   {
-    "sku": "PROD-0303",
+    "sku": "0303",
     "name": "TRAPICHE ALARIS BCO DULCE X 750m",
     "description": "VINOS FINOS  - GRUPO PEÑAFLOR",
     "barcode": "7790000000303",
@@ -4242,7 +4242,7 @@
     "subcategory": "VINOS FINOS  - GRUPO PEÑAFLOR"
   },
   {
-    "sku": "PROD-0304",
+    "sku": "0304",
     "name": "TRAPICHE ALARIS MALBEC x750ml",
     "description": "VINOS FINOS  - GRUPO PEÑAFLOR",
     "barcode": "7790000000304",
@@ -4256,7 +4256,7 @@
     "subcategory": "VINOS FINOS  - GRUPO PEÑAFLOR"
   },
   {
-    "sku": "PROD-0305",
+    "sku": "0305",
     "name": "TRAPICHE IMPURO MAL X 750ml",
     "description": "VINOS FINOS  - GRUPO PEÑAFLOR",
     "barcode": "7790000000305",
@@ -4270,7 +4270,7 @@
     "subcategory": "VINOS FINOS  - GRUPO PEÑAFLOR"
   },
   {
-    "sku": "PROD-0306",
+    "sku": "0306",
     "name": "TRAPICHE ORIGEN MALBEC x 750ml",
     "description": "VINOS FINOS  - GRUPO PEÑAFLOR",
     "barcode": "7790000000306",
@@ -4284,7 +4284,7 @@
     "subcategory": "VINOS FINOS  - GRUPO PEÑAFLOR"
   },
   {
-    "sku": "PROD-0307",
+    "sku": "0307",
     "name": "EMILIA BCO DULCE x750ml",
     "description": "VINOS FINOS - NIETOS SENETINER",
     "barcode": "7790000000307",
@@ -4298,7 +4298,7 @@
     "subcategory": "VINOS FINOS - NIETOS SENETINER"
   },
   {
-    "sku": "PROD-0308",
+    "sku": "0308",
     "name": "EMILIA MALBEC x750ml",
     "description": "VINOS FINOS - NIETOS SENETINER",
     "barcode": "7790000000308",
@@ -4312,7 +4312,7 @@
     "subcategory": "VINOS FINOS - NIETOS SENETINER"
   },
   {
-    "sku": "PROD-0309",
+    "sku": "0309",
     "name": "BALLANTINES x750ml",
     "description": "VINOS FINOS - WHISKIES",
     "barcode": "7790000000309",
@@ -4326,7 +4326,7 @@
     "subcategory": "VINOS FINOS - WHISKIES"
   },
   {
-    "sku": "PROD-0310",
+    "sku": "0310",
     "name": "BLENDERS PRIDE 1LT",
     "description": "VINOS FINOS - WHISKIES",
     "barcode": "7790000000310",
@@ -4340,7 +4340,7 @@
     "subcategory": "VINOS FINOS - WHISKIES"
   },
   {
-    "sku": "PROD-0311",
+    "sku": "0311",
     "name": "J&B RARE x 750ml",
     "description": "VINOS FINOS - WHISKIES",
     "barcode": "7790000000311",
@@ -4354,7 +4354,7 @@
     "subcategory": "VINOS FINOS - WHISKIES"
   },
   {
-    "sku": "PROD-0312",
+    "sku": "0312",
     "name": "JACK DANIELS WHISKY x750ml",
     "description": "VINOS FINOS - WHISKIES",
     "barcode": "7790000000312",
@@ -4368,7 +4368,7 @@
     "subcategory": "VINOS FINOS - WHISKIES"
   },
   {
-    "sku": "PROD-0313",
+    "sku": "0313",
     "name": "SMUGGLER WHISKY x750ml",
     "description": "VINOS FINOS - WHISKIES",
     "barcode": "7790000000313",
@@ -4382,7 +4382,7 @@
     "subcategory": "VINOS FINOS - WHISKIES"
   },
   {
-    "sku": "PROD-0314",
+    "sku": "0314",
     "name": "WHITE HORSE X750ml",
     "description": "VINOS FINOS - WHISKIES",
     "barcode": "7790000000314",
@@ -4396,7 +4396,7 @@
     "subcategory": "VINOS FINOS - WHISKIES"
   },
   {
-    "sku": "PROD-0315",
+    "sku": "0315",
     "name": "AMANDA TERMO TERMOLAR 1 LT",
     "description": "2.8 - NO COMESTIBLES",
     "barcode": "7790000000315",
@@ -4410,7 +4410,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0316",
+    "sku": "0316",
     "name": "BAYGON INSECT. AEROSOL x 300cc",
     "description": "2.8 - NO COMESTIBLES",
     "barcode": "7790000000316",
@@ -4424,7 +4424,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0317",
+    "sku": "0317",
     "name": "FUYI INSECT. AEROSOL x360cc",
     "description": "2.8 - NO COMESTIBLES",
     "barcode": "7790000000317",
@@ -4438,7 +4438,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0318",
+    "sku": "0318",
     "name": "MOSQUI-TRAP INSECT. AEROSOL x 370cc",
     "description": "2.8 - NO COMESTIBLES",
     "barcode": "7790000000318",
@@ -4452,7 +4452,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0319",
+    "sku": "0319",
     "name": "RAID INSECT. AEROSOL x360cc",
     "description": "2.8 - NO COMESTIBLES",
     "barcode": "7790000000319",
@@ -4466,7 +4466,7 @@
     "subcategory": ""
   },
   {
-    "sku": "PROD-0320",
+    "sku": "0320",
     "name": "RAID MATA CUCARACHA AEROSOL EXT x 360cc",
     "description": "2.8 - NO COMESTIBLES",
     "barcode": "7790000000320",

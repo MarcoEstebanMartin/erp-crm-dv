@@ -3006,7 +3006,7 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
                         const isPesable = item.product?.isPesable || (item.weight && Number(item.weight) > 0);
                         return (
                           <tr key={idx} style={{ borderBottom: '1px solid #ddd' }}>
-                            <td style={{ padding: '6px' }}>{item.product?.sku || `PROD-${item.productId}`}</td>
+                            <td style={{ padding: '6px' }}>{item.product?.sku || String(item.productId).padStart(4, '0')}</td>
                             <td style={{ padding: '6px' }}>{item.product?.name || item.name || `Artículo #${item.productId}`}</td>
                             <td style={{ padding: '6px', textAlign: 'center' }}>
                               {item.quantity} u.
