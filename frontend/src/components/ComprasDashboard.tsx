@@ -79,7 +79,7 @@ export default function ComprasDashboard() {
       setPurchaseOrders(orders);
 
       const personas = await api.getPersonas('provider', '');
-      setProviders(personas);
+      setProviders(personas.filter((p: any) => p.isActive !== false));
 
       const allProducts = await api.getProducts('');
       setProducts(allProducts);

@@ -172,7 +172,7 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
     try {
       if (activeTab === 'orders') {
         const clientData = await api.getClients();
-        setClients(clientData);
+        setClients(clientData.filter((c: any) => c.isActive !== false));
         const prodData = await api.getProducts(prodSearchQuery);
         setProducts(prodData);
         const orderData = await api.getOrders();
@@ -181,7 +181,7 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
         setRubros(rubroData);
       } else if (activeTab === 'clients') {
         const clientData = await api.getClients(searchQuery);
-        setClients(clientData);
+        setClients(clientData.filter((c: any) => c.isActive !== false));
       } else if (activeTab === 'products') {
         const prodData = await api.getProducts(searchQuery);
         setProducts(prodData);

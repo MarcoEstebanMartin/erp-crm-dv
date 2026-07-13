@@ -136,7 +136,7 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
     try {
       // 1. Cargar personas para los selectores de los formularios (Clientes y Proveedores)
       const allPersonas = await api.getPersonas('ALL', '');
-      setPersonas(allPersonas);
+      setPersonas(allPersonas.filter((p: any) => p.isActive !== false));
 
       // Cargar productos para facturación directa
       const allProducts = await api.getProducts('');
