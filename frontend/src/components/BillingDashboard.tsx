@@ -1130,7 +1130,7 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
                         }}>
                           {inv.invoiceType === 'FACTURA_A' ? 'Factura A' : 
                            inv.invoiceType === 'FACTURA_B' ? 'Factura B' : 
-                           inv.invoiceType === 'FACTURA_C' ? 'Factura C' : 'Factura X'}
+                           inv.invoiceType === 'FACTURA_C' ? 'Factura C' : 'Factura'}
                         </span>
                       </td>
                       <td>
@@ -1160,7 +1160,7 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
                             style={{ padding: '4px 8px', fontSize: '0.78rem' }}
                             onClick={() => setViewInvoiceModal(inv)}
                           >
-                            {inv.invoiceType === 'FACTURA_A' || inv.invoiceType === 'FACTURA_B' || inv.invoiceType === 'FACTURA_C' ? 'Ver Factura' : 'Ver Factura X'}
+                            Ver Factura
                           </button>
                           <button 
                             className="btn btn-secondary" 
@@ -3176,7 +3176,7 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
                   {/* Lado Derecho: Datos Factura */}
                   <div style={{ padding: '12px', fontSize: '0.75rem', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '4px', paddingLeft: '16px', textAlign: 'left' }}>
                     <h1 style={{ fontSize: '1.4rem', fontWeight: 900, margin: '0 0 4px 0', letterSpacing: '0.02em', textTransform: 'uppercase', color: '#000000' }}>
-                      {!isOfficial ? 'FACTURA X' : 'FACTURA'}
+                      FACTURA
                     </h1>
                     <div style={{ marginBottom: '4px' }}>
                       <strong>Punto de Venta: 0005</strong> &nbsp;&nbsp; 
