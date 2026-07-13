@@ -124,3 +124,29 @@ export async function bulkUpdatePrices(req: AuthenticatedRequest, res: Response)
     res.status(500).json({ status: 'error', message: error.message || 'Error al actualizar precios masivamente.' });
   }
 }
+
+/**
+ * Obtener el historial de movimientos de un producto.
+ */
+export async function getProductMovements(req: AuthenticatedRequest, res: Response): Promise<void> {
+  const { id } = req.params;
+  try {
+    const movements = await productService.getProductMovements(Number(id));
+    res.status(200).json({ status: 'success', data: { movements } });
+  } catch (error: any) {
+    res.status(500).json({ status: 'error', message: 'Error al obtener los movimientos del producto.' });
+  }
+}
+
+/**
+ * Obtener los movimientos de stock globales recientes (últimos 50).
+ */
+export async function getGlobalStockMovements(req: AuthenticatedRequest, res: Response): Promise<void> {
+  try {
+    const movements = await productService.getGlobalStockMovements();
+    res.status(200).json({ status: 'success', data: { movements } });
+  } catch (error: any) {
+    res.status(500).json({ status: 'error', message: 'Error al obtener los movimientos globales de stock.' });
+  }
+}
+

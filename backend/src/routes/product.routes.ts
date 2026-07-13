@@ -8,6 +8,8 @@ import {
   getProductByBarcode,
   importPrices,
   bulkUpdatePrices,
+  getProductMovements,
+  getGlobalStockMovements,
 } from '../controllers/product.controller';
 import { authenticateJWT, requireRole } from '../middlewares/auth';
 import { Role } from '@prisma/client';
@@ -24,8 +26,10 @@ const router = Router();
 
 // Rutas accesibles por cualquier usuario autenticado (Vendedor, Depósito, Admin)
 router.get('/', authenticateJWT, getProducts);
+router.get('/stock/movements', authenticateJWT, getGlobalStockMovements);
 router.get('/barcode/:barcode', authenticateJWT, getProductByBarcode);
 router.get('/:id', authenticateJWT, getProductById);
+router.get('/:id/movements', authenticateJWT, getProductMovements);
 
 // Rutas protegidas para administración de catálogo (Solo ADMIN)
 router.post('/', authenticateJWT, requireRole([Role.ADMIN]), validateRequest(createProductSchema), createProduct);

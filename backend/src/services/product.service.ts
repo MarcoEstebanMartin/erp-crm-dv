@@ -380,6 +380,42 @@ export class ProductService {
 
     return { updatedCount };
   }
+
+  /**
+   * Obtener movimientos de stock para un producto específico.
+   */
+  async getProductMovements(productId: number) {
+    return prisma.stockMovement.findMany({
+      where: { productId },
+      include: {
+        user: {
+          select: { id: true, username: true, role: true }
+        },
+        productLot: true
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+  }
+
+  /**
+   * Obtener los últimos 50 movimientos de stock globales.
+   */
+  async getGlobalStockMovements() {
+    return prisma.stockMovement.findMany({
+      take: 50,
+      include: {
+        product: {
+          select: { id: true, sku: true, name: true }
+        },
+        user: {
+          select: { id: true, username: true, role: true }
+        },
+        productLot: true
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+  }
 }
 
 export const productService = new ProductService();
+

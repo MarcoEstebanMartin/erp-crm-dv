@@ -133,6 +133,7 @@ export const ivaExportService = {
 
     const compras = await prisma.supplierInvoice.findMany({
       where: {
+        billingType: 'OFFICIAL',
         issueDate: { gte: startDate, lte: endDate }
       },
       include: { persona: true }

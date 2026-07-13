@@ -104,7 +104,7 @@ export async function getSupplierInvoices(req: AuthenticatedRequest, res: Respon
  * Registrar un nuevo comprobante de compra (Factura de Proveedor)
  */
 export async function createSupplierInvoice(req: AuthenticatedRequest, res: Response): Promise<void> {
-  const { personaId, invoiceNumber, invoiceType, issueDate, dueDate, netAmount, taxAmount, percepcionAmount, totalAmount } = req.body;
+  const { personaId, invoiceNumber, invoiceType, issueDate, dueDate, netAmount, taxAmount, percepcionAmount, totalAmount, billingType } = req.body;
   const userId = req.user?.id;
 
   if (!personaId || !invoiceNumber || !invoiceType || !issueDate || netAmount === undefined || taxAmount === undefined || totalAmount === undefined) {
@@ -133,6 +133,7 @@ export async function createSupplierInvoice(req: AuthenticatedRequest, res: Resp
           taxAmount: Number(taxAmount),
           percepcionAmount: Number(percepcionAmount || 0),
           totalAmount: Number(totalAmount),
+          billingType: billingType || 'OFFICIAL',
         },
       });
 

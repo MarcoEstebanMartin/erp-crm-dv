@@ -60,7 +60,8 @@ export default function ComprasDashboard() {
     netAmount: '',
     taxAmount: '',
     percepcionAmount: '',
-    totalAmount: ''
+    totalAmount: '',
+    billingType: 'OFFICIAL'
   });
 
   // Modal para Crear/Editar Proveedor
@@ -314,7 +315,7 @@ export default function ComprasDashboard() {
     setErrorMsg(null);
     setSuccessMsg(null);
 
-    const { personaId, invoiceNumber, invoiceType, issueDate, dueDate, netAmount, taxAmount, percepcionAmount, totalAmount } = supplierForm;
+    const { personaId, invoiceNumber, invoiceType, issueDate, dueDate, netAmount, taxAmount, percepcionAmount, totalAmount, billingType } = supplierForm;
 
     if (!personaId || !invoiceNumber || !invoiceType || !issueDate || !netAmount || !taxAmount || !totalAmount) {
       setErrorMsg('Por favor complete todos los campos obligatorios.');
@@ -339,7 +340,8 @@ export default function ComprasDashboard() {
         netAmount: Number(netAmount),
         taxAmount: Number(taxAmount),
         percepcionAmount: Number(percepcionAmount || 0),
-        totalAmount: Number(totalAmount)
+        totalAmount: Number(totalAmount),
+        billingType: billingType || 'OFFICIAL'
       });
 
       setSuccessMsg('✅ Factura de compra registrada con éxito en la cuenta corriente del proveedor.');
@@ -353,7 +355,8 @@ export default function ComprasDashboard() {
         netAmount: '',
         taxAmount: '',
         percepcionAmount: '',
-        totalAmount: ''
+        totalAmount: '',
+        billingType: 'OFFICIAL'
       });
       loadData();
     } catch (err: any) {
@@ -1329,6 +1332,18 @@ export default function ComprasDashboard() {
                     required
                   />
                 </div>
+              </div>
+
+              <div className="form-group" style={{ marginBottom: '12px' }}>
+                <label>Destino (Sucursal)</label>
+                <select
+                  className="select"
+                  value={supplierForm.billingType}
+                  onChange={(e) => setSupplierForm(prev => ({ ...prev, billingType: e.target.value }))}
+                >
+                  <option value="OFFICIAL">Sucursal A (Oficial - Afecta AFIP)</option>
+                  <option value="INTERNAL">Sucursal X (Interna - No AFIP)</option>
+                </select>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>

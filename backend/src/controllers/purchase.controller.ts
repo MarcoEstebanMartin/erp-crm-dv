@@ -127,7 +127,7 @@ export async function createPurchaseOrder(req: AuthenticatedRequest, res: Respon
  */
 export async function receivePurchaseOrder(req: AuthenticatedRequest, res: Response): Promise<void> {
   const { id } = req.params;
-  const { invoiceNumber, lotAssignments } = req.body; // lotAssignments: { productId: { lotNumber, expirationDate } }
+  const { invoiceNumber, lotAssignments, billingType } = req.body; // lotAssignments: { productId: { lotNumber, expirationDate } }
   const userId = req.user?.id;
 
   if (!userId) {
@@ -240,6 +240,7 @@ export async function receivePurchaseOrder(req: AuthenticatedRequest, res: Respo
           taxAmount: iva,
           percepcionAmount: 0.00,
           totalAmount: total,
+          billingType: billingType || 'OFFICIAL',
         },
       });
 
@@ -338,7 +339,7 @@ export async function uploadDocument(req: AuthenticatedRequest, res: Response): 
  * Confirmar el documento procesado e inyectar stock
  */
 export async function confirmDocument(req: AuthenticatedRequest, res: Response): Promise<void> {
-  const { providerId, documentType, documentNumber, issueDate, items, netAmount, taxAmount, percepcionAmount, totalAmount } = req.body;
+  const { providerId, documentType, documentNumber, issueDate, items, netAmount, taxAmount, percepcionAmount, totalAmount, billingType } = req.body;
   const userId = req.user?.id;
 
   if (!providerId || !items || items.length === 0) {
@@ -367,6 +368,7 @@ export async function confirmDocument(req: AuthenticatedRequest, res: Response):
             totalAmount: Number(totalAmount || 0),
             status: 'PENDING',
             paidAmount: 0.00,
+            billingType: billingType || 'INTERNAL',
           }
         });
         createdId = invoice.id;

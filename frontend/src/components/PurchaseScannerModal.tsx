@@ -39,7 +39,8 @@ export const PurchaseScannerModal: React.FC<PurchaseScannerModalProps> = ({
       const response = await api.uploadPurchaseDocument(fileToProcess);
       setExtractedData({
         ...response.extracted,
-        providerId: response.matchedProvider ? response.matchedProvider.id : ''
+        providerId: response.matchedProvider ? response.matchedProvider.id : '',
+        billingType: 'OFFICIAL'
       });
     } catch (err: any) {
       setErrorMsg(err.message || 'Error al procesar el documento con Inteligencia Artificial.');
@@ -62,6 +63,7 @@ export const PurchaseScannerModal: React.FC<PurchaseScannerModalProps> = ({
         documentType: extractedData.documentType,
         documentNumber: extractedData.documentNumber,
         issueDate: extractedData.issueDate,
+        billingType: extractedData.billingType || 'OFFICIAL',
         items: extractedData.items.map((item: any) => ({
           productId: item.matchedProductId ? Number(item.matchedProductId) : null,
           description: item.description,
@@ -178,6 +180,17 @@ export const PurchaseScannerModal: React.FC<PurchaseScannerModalProps> = ({
                         onChange={(e) => setExtractedData({...extractedData, documentNumber: e.target.value})}
                         className="w-full bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:border-[#E30613] focus:ring-1 focus:ring-[#E30613] transition-all"
                       />
+                    </div>
+                    <div className="col-span-2">
+                      <label className="block text-xs text-gray-500 mb-1">Destino (Sucursal)</label>
+                      <select 
+                        value={extractedData.billingType || 'OFFICIAL'} 
+                        onChange={(e) => setExtractedData({...extractedData, billingType: e.target.value})}
+                        className="w-full bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:border-[#E30613] focus:ring-1 focus:ring-[#E30613] transition-all"
+                      >
+                        <option value="OFFICIAL" className="bg-[#1C1C1E] text-white">Sucursal A (Oficial - Afecta Libro de Compras AFIP)</option>
+                        <option value="INTERNAL" className="bg-[#1C1C1E] text-white">Sucursal X (Interna - Solo Afecta Stock / Control Interno)</option>
+                      </select>
                     </div>
                   </div>
                 </div>
