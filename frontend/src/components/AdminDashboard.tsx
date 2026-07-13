@@ -12,7 +12,6 @@ const UnifiedReportsDashboard = lazy(() => import('./UnifiedReportsDashboard'));
 const RendicionesDashboard = lazy(() => import('./RendicionesDashboard'));
 const RepartoDashboard = lazy(() => import('./RepartoDashboard'));
 const ComprasDashboard = lazy(() => import('./ComprasDashboard'));
-const CajasDashboard = lazy(() => import('./CajasDashboard'));
 const FinanzasDashboard = lazy(() => import('./FinanzasDashboard'));
 const BillingDashboard = lazy(() => import('./BillingDashboard'));
 
@@ -151,7 +150,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
   const [auditPage, setAuditPage] = useState(1);
   const [auditTotalPages, setAuditTotalPages] = useState(1);
     const [configTab, setConfigTab] = useState<string>('general');
-  const [cajasSubTab, setCajasSubTab] = useState<'general' | 'rendiciones' | 'diarias'>('general');
+  const [cajasSubTab, setCajasSubTab] = useState<'general' | 'rendiciones'>('general');
   
   // Estados para Percepciones e Impuestos
   const [perceptions, setPerceptions] = useState<any[]>([]);
@@ -2442,33 +2441,13 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
             >
               📊 Rendiciones y Arqueos
             </button>
-            <button 
-              type="button"
-              className="btn" 
-              style={{ 
-                backgroundColor: cajasSubTab === 'diarias' ? 'var(--color-primary)' : 'transparent',
-                color: cajasSubTab === 'diarias' ? '#fff' : 'var(--text-primary)',
-                border: cajasSubTab === 'diarias' ? '1px solid var(--color-primary)' : '1px solid var(--border-color)',
-                fontWeight: 600,
-                fontSize: '0.85rem',
-                padding: '8px 16px',
-                borderRadius: '6px',
-                cursor: 'pointer',
-                whiteSpace: 'nowrap'
-              }}
-              onClick={() => setCajasSubTab('diarias')}
-            >
-              📅 Cajas Diarias
-            </button>
           </div>
 
           <Suspense fallback={<LoadingDashboard />}>
             {cajasSubTab === 'general' ? (
               <FinanzasDashboard />
-            ) : cajasSubTab === 'rendiciones' ? (
-              <RendicionesDashboard />
             ) : (
-              <CajasDashboard />
+              <RendicionesDashboard />
             )}
           </Suspense>
         </div>
