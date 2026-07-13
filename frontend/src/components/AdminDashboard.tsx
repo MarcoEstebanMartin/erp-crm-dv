@@ -1359,7 +1359,8 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
                         isSeller: false, 
                         isCommissionAgent: false,
                         route: '',
-                        sellerId: null
+                        sellerId: null,
+                        isActive: true
                       } 
                     });
                   }
@@ -1881,7 +1882,8 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
                 isSeller: personaRoleFilter === 'seller',
                 isCommissionAgent: personaRoleFilter === 'commission_agent',
                 route: '',
-                sellerId: null
+                sellerId: null,
+                isActive: true
               } 
             })}>
               <UserPlus size={16} />
