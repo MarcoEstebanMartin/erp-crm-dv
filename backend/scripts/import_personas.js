@@ -7,7 +7,7 @@ const bcrypt = require('bcryptjs');
 const prisma = new PrismaClient();
 
 async function importPersonas() {
-  const filePath = path.join(__dirname, '..', 'Vendedores-Clientes.xlsx');
+  const filePath = path.join(__dirname, '..', '..', 'Vendedores-Clientes.xlsx');
   const workbook = xlsx.readFile(filePath);
   const sheetName = workbook.SheetNames[0];
   const data = xlsx.utils.sheet_to_json(workbook.Sheets[sheetName]);
