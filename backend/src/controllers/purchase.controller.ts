@@ -221,9 +221,9 @@ export async function receivePurchaseOrder(req: AuthenticatedRequest, res: Respo
       }
 
       // 4. Auto-generar SupplierInvoice y actualizar cuenta corriente
-      const neto = Math.round(Number(order.totalAmount));
-      const iva = Math.round(neto * 0.21);
-      const total = neto + iva;
+      const total = Math.round(Number(order.totalAmount));
+      const neto = Math.round(total / 1.21);
+      const iva = total - neto;
       const nroInvoice = invoiceNumber || `COMP-${order.id.toString().padStart(8, '0')}`;
 
       // Crear factura de proveedor

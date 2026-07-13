@@ -1523,7 +1523,7 @@ export default function UnifiedReportsDashboard({
                   const sTot = sales.reduce((sum, s) => sum + (Number(s.amountA) || 0) + (Number(s.amountX) || 0), 0);
                   const pTot = purchases.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
                   const netWeekly = sTot - pTot;
-                  const finalCredit = -(sTot - (pTot + credit) - buffer);
+                  const finalCredit = (pTot + credit + buffer) - sTot;
 
                   return (
                     <>

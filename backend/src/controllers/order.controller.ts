@@ -319,6 +319,14 @@ export async function updateOrderStatus(req: AuthenticatedRequest, res: Response
       return;
     }
 
+    if (status === OrderStatus.CANCELLED && order.status === OrderStatus.DELIVERED && order.billingType === BillingType.OFFICIAL) {
+      res.status(400).json({
+        status: 'error',
+        message: 'No se puede cancelar una factura oficial entregada directamente. Se debe emitir una Nota de Crédito para anularla.',
+      });
+      return;
+    }
+
     // Depósito solo puede pasar a PREPARING o PREPARED. No puede cancelar ni marcar como DELIVERED.
     if (userRole === Role.DEPOSITO) {
       if (status !== OrderStatus.PREPARING && status !== OrderStatus.PREPARED) {
@@ -555,11 +563,10 @@ export async function invoiceOrder(req: AuthenticatedRequest, res: Response): Pr
       let finalCae: string | null = null;
       let finalCaeDueDate: Date | null = null;
 
-      if (billingType === BillingType.OFFICIAL) {
-        // Reglas de CUIT/DocType para AFIP
-        const cuitLimpio = order.persona.cuit ? order.persona.cuit.replace(/-/g, '') : '';
-        let docType = 99; // Consumidor Final
+      const cuitLimpio = order.persona.cuit ? order.persona.cuit.replace(/-/g, '') : '';
+      let docType = 99; // Consumidor Final
 
+      if (billingType === BillingType.OFFICIAL) {
         if (cuitLimpio.length === 11) {
           docType = 80;
           finalInvoiceType = InvoiceType.FACTURA_A;
@@ -569,25 +576,11 @@ export async function invoiceOrder(req: AuthenticatedRequest, res: Response): Pr
         } else {
           finalInvoiceType = InvoiceType.FACTURA_B;
         }
-
-        // Llamar a AFIP
-        const afipRes = await emitirFacturaAFIP({
-          clientCuit: cuitLimpio,
-          clientDocType: docType,
-          invoiceType: finalInvoiceType === InvoiceType.FACTURA_A ? 'A' : 'B',
-          total: totalSum,
-        });
-
-        finalInvoiceNumber = afipRes.invoiceNumber;
-        finalCae = afipRes.cae;
-        finalCaeDueDate = afipRes.caeDueDate;
       } else {
-        // Facturación Interna
         finalInvoiceType = InvoiceType.PRESUPUESTO;
-        finalInvoiceNumber = `INT-${order.id.toString().padStart(8, '0')}`;
       }
 
-      // Calcular desglose impositivo
+      // Calcular desglose impositivo primero
       let net = order.totalAmount.toNumber();
       let tax = 0;
       let percepIIBB = 0;
@@ -606,10 +599,39 @@ export async function invoiceOrder(req: AuthenticatedRequest, res: Response): Pr
         const ivaPercAliquot = applyIvaPerc ? ((perceptionIVA && perceptionIVA.aliquot) ? Number(perceptionIVA.aliquot) : 3.00) : 0;
         const iibbAliquot = Number(order.persona.iibbAliquot || 0);
 
-        net = totalAmountNum / (1.21 + (iibbAliquot / 100) + (ivaPercAliquot / 100));
-        tax = net * 0.21;
-        percepIIBB = net * (iibbAliquot / 100);
-        percepIVA = net * (ivaPercAliquot / 100);
+        // Redondear a 2 decimales para precisión contable
+        net = Number((totalAmountNum / (1.21 + (iibbAliquot / 100) + (ivaPercAliquot / 100))).toFixed(2));
+        tax = Number((net * 0.21).toFixed(2));
+        percepIIBB = Number((net * (iibbAliquot / 100)).toFixed(2));
+        percepIVA = Number((net * (ivaPercAliquot / 100)).toFixed(2));
+
+        // Ajustar centavos de diferencia de redondeo contra el total
+        const sumParts = Number((net + tax + percepIIBB + percepIVA).toFixed(2));
+        const diff = Number((totalAmountNum - sumParts).toFixed(2));
+        if (diff !== 0) {
+          tax = Number((tax + diff).toFixed(2));
+        }
+      }
+
+      if (billingType === BillingType.OFFICIAL) {
+        // Llamar a AFIP con desgloses correctos
+        const afipRes = await emitirFacturaAFIP({
+          clientCuit: cuitLimpio,
+          clientDocType: docType,
+          invoiceType: finalInvoiceType === InvoiceType.FACTURA_A ? 'A' : 'B',
+          total: totalSum,
+          neto: isFacturaA_Official ? Number(net.toFixed(2)) : undefined,
+          iva: isFacturaA_Official ? Number(tax.toFixed(2)) : undefined,
+          percepcionAmount: isFacturaA_Official ? Number(percepIIBB.toFixed(2)) : undefined,
+          percepcionIvaAmount: isFacturaA_Official ? Number(percepIVA.toFixed(2)) : undefined,
+        });
+
+        finalInvoiceNumber = afipRes.invoiceNumber;
+        finalCae = afipRes.cae;
+        finalCaeDueDate = afipRes.caeDueDate;
+      } else {
+        // Facturación Interna
+        finalInvoiceNumber = `INT-${order.id.toString().padStart(8, '0')}`;
       }
 
       // Actualizar pedido a DELIVERED (Facturado/Finalizado)
@@ -715,6 +737,7 @@ export async function invoiceOrder(req: AuthenticatedRequest, res: Response): Pr
             description: paymentDescription ? `Cobro en caja de pedido #${order.id} - ${paymentDescription}` : `Cobro en caja de pedido #${order.id} (${billingType === BillingType.OFFICIAL ? 'Sucursal A' : 'Sucursal X'})`,
             cashDrawerId,
             bankAccountId,
+            verified: true, // Facturación administrativa en backoffice -> autoverificado
           },
         });
       } else {
@@ -1094,10 +1117,10 @@ export async function createDirectInvoice(req: AuthenticatedRequest, res: Respon
         },
       });
 
-      if (billingType === BillingType.OFFICIAL) {
-        const cuitLimpio = persona.cuit ? persona.cuit.replace(/-/g, '') : '';
-        let docType = 99;
+      const cuitLimpio = persona.cuit ? persona.cuit.replace(/-/g, '') : '';
+      let docType = 99;
 
+      if (billingType === BillingType.OFFICIAL) {
         if (cuitLimpio.length === 11) {
           docType = 80;
           finalInvoiceType = InvoiceType.FACTURA_A;
@@ -1107,23 +1130,12 @@ export async function createDirectInvoice(req: AuthenticatedRequest, res: Respon
         } else {
           finalInvoiceType = InvoiceType.FACTURA_B;
         }
-
-        // Llamar a AFIP
-        const afipRes = await emitirFacturaAFIP({
-          clientCuit: cuitLimpio,
-          clientDocType: docType,
-          invoiceType: finalInvoiceType === InvoiceType.FACTURA_A ? 'A' : 'B',
-          total: totalSum,
-        });
-
-        finalInvoiceNumber = afipRes.invoiceNumber;
-        finalCae = afipRes.cae;
-        finalCaeDueDate = afipRes.caeDueDate;
       } else {
         finalInvoiceType = InvoiceType.PRESUPUESTO;
-        finalInvoiceNumber = `INT-${order.id.toString().padStart(8, '0')}`;
       }
 
+      net = Math.round(totalSum / 1.21);
+      tax = totalSum - net;
       let percepIIBB = 0;
       let percepIVA = 0;
 
@@ -1139,15 +1151,43 @@ export async function createDirectInvoice(req: AuthenticatedRequest, res: Respon
         const ivaPercAliquot = applyIvaPerc ? ((perceptionIVA && perceptionIVA.aliquot) ? Number(perceptionIVA.aliquot) : 3.00) : 0;
         const iibbAliquot = Number(persona.iibbAliquot || 0);
 
-        net = totalSum / (1.21 + (iibbAliquot / 100) + (ivaPercAliquot / 100));
-        tax = net * 0.21;
-        percepIIBB = net * (iibbAliquot / 100);
-        percepIVA = net * (ivaPercAliquot / 100);
+        // Redondear a 2 decimales para precisión contable
+        net = Number((totalSum / (1.21 + (iibbAliquot / 100) + (ivaPercAliquot / 100))).toFixed(2));
+        tax = Number((net * 0.21).toFixed(2));
+        percepIIBB = Number((net * (iibbAliquot / 100)).toFixed(2));
+        percepIVA = Number((net * (ivaPercAliquot / 100)).toFixed(2));
+
+        // Ajustar centavos de diferencia de redondeo contra el total
+        const sumParts = Number((net + tax + percepIIBB + percepIVA).toFixed(2));
+        const diff = Number((totalSum - sumParts).toFixed(2));
+        if (diff !== 0) {
+          tax = Number((tax + diff).toFixed(2));
+        }
       } else {
         net = Math.round(net);
         tax = Math.round(tax);
         percepIIBB = Math.round(percepIIBB);
         percepIVA = Math.round(percepIVA);
+      }
+
+      if (billingType === BillingType.OFFICIAL) {
+        // Llamar a AFIP con desgloses correctos
+        const afipRes = await emitirFacturaAFIP({
+          clientCuit: cuitLimpio,
+          clientDocType: docType,
+          invoiceType: finalInvoiceType === InvoiceType.FACTURA_A ? 'A' : 'B',
+          total: totalSum,
+          neto: isFacturaA_Official ? Number(net.toFixed(2)) : undefined,
+          iva: isFacturaA_Official ? Number(tax.toFixed(2)) : undefined,
+          percepcionAmount: isFacturaA_Official ? Number(percepIIBB.toFixed(2)) : undefined,
+          percepcionIvaAmount: isFacturaA_Official ? Number(percepIVA.toFixed(2)) : undefined,
+        });
+
+        finalInvoiceNumber = afipRes.invoiceNumber;
+        finalCae = afipRes.cae;
+        finalCaeDueDate = afipRes.caeDueDate;
+      } else {
+        finalInvoiceNumber = `INT-${order.id.toString().padStart(8, '0')}`;
       }
 
       // 5. Crear los OrderItems y hacer la asignación automática de lotes (FIFO)
@@ -1310,6 +1350,7 @@ export async function createDirectInvoice(req: AuthenticatedRequest, res: Respon
             description: txDescription,
             cashDrawerId,
             bankAccountId: bankAccountIdVal,
+            verified: true, // Factura directa en backoffice -> autoverificado
           },
         });
       } else {

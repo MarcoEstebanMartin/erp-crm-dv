@@ -126,11 +126,25 @@ export async function updateRubro(req: AuthenticatedRequest, res: Response): Pro
       
       await prisma.$transaction(async (tx) => {
         for (const p of products) {
+          // Omitir si el producto tiene un profitMargin personalizado
+          if (p.profitMargin !== null) continue;
+
           const cost = Number(p.costPrice);
           const precioFinal = cost * val; // PRECIO FINAL = COSTO * RENTABILIDAD
           const roundedFinal = Math.max(0, Math.round(precioFinal * 100) / 100);
-          const precioB = Math.max(0, Math.round(roundedFinal * 0.95 * 100) / 100);
-          const precioC = Math.max(0, Math.round(roundedFinal * 0.90 * 100) / 100);
+          
+          // Mantener proporciones si ya existían o aplicar los defaults
+          let precioB = Math.max(0, Math.round(roundedFinal * 0.95 * 100) / 100);
+          let precioC = Math.max(0, Math.round(roundedFinal * 0.90 * 100) / 100);
+          
+          if (Number(p.listPriceB) > 0 && Number(p.listPrice) > 0) {
+            const ratioB = Number(p.listPriceB) / Number(p.listPrice);
+            precioB = Math.max(0, Math.round(roundedFinal * ratioB * 100) / 100);
+          }
+          if (Number(p.listPriceC) > 0 && Number(p.listPrice) > 0) {
+            const ratioC = Number(p.listPriceC) / Number(p.listPrice);
+            precioC = Math.max(0, Math.round(roundedFinal * ratioC * 100) / 100);
+          }
 
           await tx.product.update({ 
             where: { id: p.id }, 

@@ -150,3 +150,15 @@ export async function getGlobalStockMovements(req: AuthenticatedRequest, res: Re
   }
 }
 
+/**
+ * Obtener lotes próximos a vencer (vencimiento <= hoy + 30 días) que tengan stock.
+ */
+export async function getExpiringLots(req: AuthenticatedRequest, res: Response): Promise<void> {
+  try {
+    const lots = await productService.getExpiringLots();
+    res.status(200).json({ status: 'success', data: { lots } });
+  } catch (error: any) {
+    res.status(500).json({ status: 'error', message: 'Error al obtener los lotes próximos a vencer.' });
+  }
+}
+

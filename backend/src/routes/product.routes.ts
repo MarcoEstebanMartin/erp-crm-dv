@@ -10,6 +10,7 @@ import {
   bulkUpdatePrices,
   getProductMovements,
   getGlobalStockMovements,
+  getExpiringLots,
 } from '../controllers/product.controller';
 import { authenticateJWT, requireRole } from '../middlewares/auth';
 import { Role } from '@prisma/client';
@@ -27,6 +28,7 @@ const router = Router();
 // Rutas accesibles por cualquier usuario autenticado (Vendedor, Depósito, Admin)
 router.get('/', authenticateJWT, getProducts);
 router.get('/stock/movements', authenticateJWT, getGlobalStockMovements);
+router.get('/stock/expiring-lots', authenticateJWT, getExpiringLots);
 router.get('/barcode/:barcode', authenticateJWT, getProductByBarcode);
 router.get('/:id', authenticateJWT, getProductById);
 router.get('/:id/movements', authenticateJWT, getProductMovements);

@@ -32,31 +32,44 @@ export default function ProductsList({ products, searchQuery, setSearchQuery, se
     }
 
     const updatedProduct = { ...p };
+    const margin = p.profitMargin !== null && p.profitMargin !== undefined
+      ? Number(p.profitMargin) 
+      : (p.rubro && p.rubro.profitMargin !== null && p.rubro.profitMargin !== undefined ? Number(p.rubro.profitMargin) : 1.25);
 
     if (field === 'costPrice') {
       updatedProduct.costPrice = numValue;
-      // Recalculate listPrice using costPrice and existing rentabilidad
-      const cost = numValue;
-      const margin = p.rubro ? Number(p.rubro.profitMargin) : 1.25;
-      const precioFinal = cost * margin;
+      const precioFinal = numValue * margin;
       updatedProduct.listPrice = Math.max(0, Math.round(precioFinal * 100) / 100);
-      updatedProduct.listPriceB = Math.max(0, Math.round(updatedProduct.listPrice * 0.95 * 100) / 100);
-      updatedProduct.listPriceC = Math.max(0, Math.round(updatedProduct.listPrice * 0.90 * 100) / 100);
     } else if (field === 'listPrice') {
-      // The user edited the "PRECIO SIN IVA" column directly, so numValue is precioSinIva
+      // Edición de precio sin IVA
       const precioFinal = numValue * 1.21;
       updatedProduct.listPrice = Math.max(0, Math.round(precioFinal * 100) / 100);
-      updatedProduct.listPriceB = Math.max(0, Math.round(updatedProduct.listPrice * 0.95 * 100) / 100);
-      updatedProduct.listPriceC = Math.max(0, Math.round(updatedProduct.listPrice * 0.90 * 100) / 100);
+      updatedProduct.costPrice = Math.max(0, Math.round((updatedProduct.listPrice / margin) * 100) / 100);
+    } else if (field === 'listPriceFinal') {
+      // Edición de precio final con IVA
+      updatedProduct.listPrice = Math.max(0, Math.round(numValue * 100) / 100);
+      updatedProduct.costPrice = Math.max(0, Math.round((updatedProduct.listPrice / margin) * 100) / 100);
     } else if (field === 'rentabilidad') {
-      // User entered a percentage, e.g., 25
-      // rentabilidad = precioFinal / costo -> precioFinal = costo * (1 + rent/100)
       const costo = Number(p.costPrice) || 0;
       const factor = 1 + (numValue / 100);
       const precioFinal = costo * factor;
+      updatedProduct.profitMargin = factor;
       updatedProduct.listPrice = Math.max(0, Math.round(precioFinal * 100) / 100);
-      updatedProduct.listPriceB = Math.max(0, Math.round(updatedProduct.listPrice * 0.95 * 100) / 100);
-      updatedProduct.listPriceC = Math.max(0, Math.round(updatedProduct.listPrice * 0.90 * 100) / 100);
+    }
+
+    // Recalcular lista B y C proporcionalmente si tenían precio cargado, o aplicar los defaults correspondientes
+    if (Number(p.listPriceB) > 0) {
+      const ratioB = (Number(p.listPrice) > 0) ? (Number(p.listPriceB) / Number(p.listPrice)) : 0.95;
+      updatedProduct.listPriceB = Math.max(0, Math.round(updatedProduct.listPrice * ratioB * 100) / 100);
+    } else {
+      updatedProduct.listPriceB = 0;
+    }
+
+    if (Number(p.listPriceC) > 0) {
+      const ratioC = (Number(p.listPrice) > 0) ? (Number(p.listPriceC) / Number(p.listPrice)) : 0.90;
+      updatedProduct.listPriceC = Math.max(0, Math.round(updatedProduct.listPrice * ratioC * 100) / 100);
+    } else {
+      updatedProduct.listPriceC = 0;
     }
 
     await onUpdateProduct(updatedProduct);
@@ -156,8 +169,12 @@ export default function ProductsList({ products, searchQuery, setSearchQuery, se
                   const costo = Number(p.costPrice) || 0;
                   const precioFinal = Number(p.listPrice) || 0;
                   const precioSinIva = precioFinal / 1.21;
-                  // Rentabilidad inversa: si precio final = costo * rentabilidad -> rentabilidad = precio final / costo
-                  const rentabilidad = costo > 0 ? (precioFinal / costo) : 0;
+                  
+                  const rentabilidad = p.profitMargin !== null && p.profitMargin !== undefined
+                    ? Number(p.profitMargin) 
+                    : (p.rubro && p.rubro.profitMargin !== null && p.rubro.profitMargin !== undefined
+                      ? Number(p.rubro.profitMargin) 
+                      : (costo > 0 ? (precioFinal / costo) : 1.25));
                   
                   return (
                     <tr key={p.id} style={{ borderBottom: '1px solid var(--border-color)', transition: 'background-color 0.2s', cursor: 'default' }} className="hover-bg-muted">
@@ -237,14 +254,48 @@ export default function ProductsList({ products, searchQuery, setSearchQuery, se
                         )}
                       </td>
                       <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 700, color: 'var(--text-primary)' }}>
-                        ${precioFinal.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                        {editingCell?.id === p.id && editingCell?.field === 'listPriceFinal' ? (
+                          <input
+                            type="number"
+                            autoFocus
+                            value={editValue}
+                            onChange={(e) => setEditValue(e.target.value)}
+                            onBlur={() => handleEditSave(p, 'listPriceFinal')}
+                            onKeyDown={(e) => e.key === 'Enter' && handleEditSave(p, 'listPriceFinal')}
+                            style={{ width: '80px', textAlign: 'right', padding: '4px', borderRadius: '4px', border: '1px solid var(--color-primary)' }}
+                          />
+                        ) : (
+                          <div onClick={() => handleEditStart(p.id, 'listPriceFinal', Math.round(precioFinal))} style={{ cursor: 'pointer', padding: '4px', border: '1px solid transparent' }} title="Clic para editar (Precio Final)">
+                            ${precioFinal.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                          </div>
+                        )}
                       </td>
                       <td style={{ padding: '12px 16px', textAlign: 'right' }}>
                         <button 
                           className="btn btn-ghost" 
                           style={{ padding: '6px', borderRadius: '6px', color: 'var(--text-secondary)' }} 
                           title="Editar producto completo"
-                          onClick={() => setProductModal({ open: true, mode: 'edit', data: { id: p.id, sku: p.sku, name: p.name, description: p.description || '', barcode: p.barcode || '', costPrice: p.costPrice, listPrice: p.listPrice, listPriceB: p.listPriceB || 0, listPriceC: p.listPriceC || 0, minStock: p.minStock, isPesable: p.isPesable || false, approximateWeight: p.approximateWeight || 0 } })}
+                          onClick={() => setProductModal({ 
+                            open: true, 
+                            mode: 'edit', 
+                            data: { 
+                              id: p.id, 
+                              sku: p.sku, 
+                              name: p.name, 
+                              description: p.description || '', 
+                              barcode: p.barcode || '', 
+                              costPrice: p.costPrice, 
+                              listPrice: p.listPrice, 
+                              listPriceB: p.listPriceB || 0, 
+                              listPriceC: p.listPriceC || 0, 
+                              profitMargin: p.profitMargin !== null && p.profitMargin !== undefined ? Math.round((Number(p.profitMargin) - 1) * 100) : (p.rubro && p.rubro.profitMargin !== null && p.rubro.profitMargin !== undefined ? Math.round((Number(p.rubro.profitMargin) - 1) * 100) : 25),
+                              minStock: p.minStock, 
+                              isPesable: p.isPesable || false, 
+                              approximateWeight: p.approximateWeight || 0,
+                              rubroId: p.rubroId || '',
+                              providerId: p.providerId || ''
+                            } 
+                          })}
                         >
                           <Edit size={16} />
                         </button>

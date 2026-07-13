@@ -163,7 +163,7 @@ export class PersonaService {
    * Registrar pago/cobro.
    */
   async recordPersonaPayment(id: number, data: any, userId: number, userRole: string) {
-    const { amount, paymentMethod, description, branch, type, supplierInvoiceId, orderId } = data;
+    const { amount, paymentMethod, description, branch, type, supplierInvoiceId, orderId, bankAccountId: reqBankAccountId } = data;
     const selectedBranch = branch || 'X';
 
     const persona = await prisma.persona.findUnique({ where: { id } });
@@ -173,7 +173,7 @@ export class PersonaService {
       throw new Error('Acceso denegado.');
     }
 
-    const paymentAmount = Number(amount);
+    const paymentAmount = Number(Number(amount).toFixed(2));
     const isSupplier = persona.isProvider && !persona.isClient;
     const resolvedType = (type === 'OUTCOME' || type === 'INCOME') ? (type as TransactionType) : (isSupplier ? TransactionType.OUTCOME : TransactionType.INCOME);
 
@@ -225,9 +225,9 @@ export class PersonaService {
 
       let bankAccountId: number | null = null;
       if (paymentMethod === PaymentMethod.BANK_TRANSFER || paymentMethod === PaymentMethod.CHECK) {
-        const bankAcc = await tx.bankAccount.findFirst();
-        if (!bankAcc) throw new Error('No hay ninguna cuenta bancaria registrada en el sistema.');
-        bankAccountId = bankAcc.id;
+        const selectedBankId = reqBankAccountId ? Number(reqBankAccountId) : (await tx.bankAccount.findFirst())?.id;
+        if (!selectedBankId) throw new Error('No hay ninguna cuenta bancaria registrada en el sistema.');
+        bankAccountId = selectedBankId;
 
         await tx.bankAccount.update({
           where: { id: bankAccountId },
@@ -263,6 +263,7 @@ export class PersonaService {
           bankAccountId,
           supplierInvoiceId: supplierInvoiceId ? Number(supplierInvoiceId) : null,
           orderId: orderId ? Number(orderId) : null,
+          verified: true, // Cobro/pago administrativo directo en backoffice -> autoverificado
         },
       });
 
@@ -351,7 +352,10 @@ export class PersonaService {
     });
 
     const withholdings = await prisma.taxWithholding.findMany({
-      where: { personaId: persona.id, type: 'RETENCION_SUFRIDA' },
+      where: { 
+        personaId: persona.id, 
+        type: { in: ['RETENCION_SUFRIDA', 'RETENCION_PRACTICADA'] } 
+      },
       orderBy: { date: 'asc' },
     });
 
@@ -409,13 +413,14 @@ export class PersonaService {
     });
 
     withholdings.forEach((w) => {
+      const type = w.type === 'RETENCION_PRACTICADA' ? 'DEBIT' : 'CREDIT';
       ledgerItems.push({
         id: `withholding-${w.id}`,
         movementId: w.movementId,
         date: w.date,
-        type: 'CREDIT',
-        reference: `Retención Cert. Nro ${w.number}`,
-        description: `Retención Recibida - ${w.taxType === 'IIBB' ? 'IIBB Bs.As.' : 'Ganancias'}`,
+        type: type,
+        reference: `${w.type === 'RETENCION_PRACTICADA' ? 'Retención Practicada' : 'Retención Sufrida'} Cert. Nro ${w.number}`,
+        description: `${w.type === 'RETENCION_PRACTICADA' ? 'Retención Emitida' : 'Retención Recibida'} - ${w.taxType === 'IIBB' ? 'IIBB' : 'Ganancias'}`,
         amount: Number(w.amount),
         metadata: {
           taxType: w.taxType,
@@ -440,6 +445,82 @@ export class PersonaService {
     });
 
     return { persona, ledger };
+  }
+
+  /**
+   * Auditoría de saldos: compara outstandingBalance con el resultado del Ledger para todas las personas.
+   */
+  async checkAllBalances() {
+    const personas = await prisma.persona.findMany({
+      where: { isActive: true }
+    });
+
+    const mismatches = [];
+
+    for (const p of personas) {
+      // Usar getPersonaLedger con el rol ADMIN para evitar denegación de acceso en preventistas
+      const ledgerData = await this.getPersonaLedger(p.id, 0, 'ADMIN');
+      
+      // El saldo teórico es el balance de la última línea del Ledger, o 0 si no hay movimientos.
+      const theoretical = ledgerData.ledger.length > 0 
+        ? ledgerData.ledger[ledgerData.ledger.length - 1].balance 
+        : 0;
+        
+      const actual = Number(p.outstandingBalance || 0);
+      const diff = actual - theoretical;
+
+      // Reportar si la diferencia absoluta es mayor a 0.05 (tolerancia de centavos por redondeos)
+      if (Math.abs(diff) > 0.05) {
+        mismatches.push({
+          id: p.id,
+          name: p.name,
+          isClient: p.isClient,
+          isProvider: p.isProvider,
+          actual: Math.round(actual * 100) / 100,
+          theoretical: Math.round(theoretical * 100) / 100,
+          diff: Math.round(diff * 100) / 100
+        });
+      }
+    }
+
+    return mismatches;
+  }
+
+  /**
+   * Conciliar el saldo de una persona específica basándose en su Ledger.
+   */
+  async reconcileBalance(personaId: number) {
+    const persona = await prisma.persona.findUnique({ where: { id: personaId } });
+    if (!persona) throw new Error('Persona no encontrada.');
+
+    const ledgerData = await this.getPersonaLedger(persona.id, 0, 'ADMIN');
+    const theoretical = ledgerData.ledger.length > 0 
+      ? ledgerData.ledger[ledgerData.ledger.length - 1].balance 
+      : 0;
+
+    const roundedTheoretical = Math.round(theoretical * 100) / 100;
+
+    const updated = await prisma.persona.update({
+      where: { id: persona.id },
+      data: { outstandingBalance: roundedTheoretical }
+    });
+
+    return { persona: updated, theoretical: roundedTheoretical };
+  }
+
+  /**
+   * Conciliar masivamente todas las personas con descuadre contable.
+   */
+  async reconcileAllBalances() {
+    const mismatches = await this.checkAllBalances();
+    const results = [];
+
+    for (const m of mismatches) {
+      const res = await this.reconcileBalance(m.id);
+      results.push(res.persona);
+    }
+
+    return results;
   }
 
   /**

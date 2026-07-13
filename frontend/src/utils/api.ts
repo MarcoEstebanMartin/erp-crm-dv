@@ -357,6 +357,21 @@ export const api = {
     return res;
   },
 
+  checkBalances: async () => {
+    return await request('/admin/reconcile/check');
+  },
+
+  syncBalances: async (personaId?: number) => {
+    return await request('/admin/reconcile/sync', {
+      method: 'POST',
+      body: JSON.stringify({ personaId })
+    });
+  },
+
+  getExpiringLots: async () => {
+    return await request('/products/stock/expiring-lots');
+  },
+
   getUsers: async () => {
     
     const res = await request('/admin/users');

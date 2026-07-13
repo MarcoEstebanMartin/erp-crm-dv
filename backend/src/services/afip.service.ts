@@ -36,6 +36,10 @@ interface InvoiceRequest {
   clientDocType: number; // 80: CUIT, 96: DNI, 99: Consumidor Final
   invoiceType: 'A' | 'B';
   total: number;
+  neto?: number;
+  iva?: number;
+  percepcionAmount?: number;
+  percepcionIvaAmount?: number;
 }
 
 interface InvoiceResult {
@@ -53,6 +57,10 @@ export async function emitirFacturaAFIP({
   clientDocType,
   invoiceType,
   total,
+  neto: reqNeto,
+  iva: reqIva,
+  percepcionAmount,
+  percepcionIvaAmount,
 }: InvoiceRequest): Promise<InvoiceResult> {
   const puntoDeVenta = 1; // Punto de venta por defecto
   const cbteTipo = invoiceType === 'A' ? 1 : 6; // 1: Factura A, 6: Factura B
@@ -64,7 +72,7 @@ export async function emitirFacturaAFIP({
     const dueDate = new Date();
     dueDate.setDate(dueDate.getDate() + 10); // Expira en 10 días
 
-    console.log(`[MOCK AFIP] Creando Factura ${invoiceType} #${mockInvoiceNum} por total ARS ${total}`);
+    console.log(`[MOCK AFIP] Creando Factura ${invoiceType} #${mockInvoiceNum} por total ARS ${total} (Percep IIBB: ${percepcionAmount || 0}, Percep IVA: ${percepcionIvaAmount || 0})`);
 
     return {
       invoiceNumber: `00001-${mockInvoiceNum.toString().padStart(8, '0')}`,
@@ -80,12 +88,11 @@ export async function emitirFacturaAFIP({
     const nextVoucherNumber = lastVoucher + 1;
 
     // 2. Cálculos impositivos para Responsable Inscripto (IVA 21% simplificado para la distribuidora)
-    // total = neto + iva
-    // total = neto + (neto * 0.21) = neto * 1.21
-    // neto = total / 1.21
-    // iva = total - neto
-    const neto = invoiceType === 'A' ? Number((total / 1.21).toFixed(2)) : Math.round(total / 1.21);
-    const iva = invoiceType === 'A' ? Number((total - neto).toFixed(2)) : (total - neto);
+    const neto = reqNeto !== undefined ? reqNeto : (invoiceType === 'A' ? Number((total / 1.21).toFixed(2)) : Math.round(total / 1.21));
+    const iva = reqIva !== undefined ? reqIva : (invoiceType === 'A' ? Number((total - neto).toFixed(2)) : (total - neto));
+    const pIIBB = Number(percepcionAmount || 0);
+    const pIVA = Number(percepcionIvaAmount || 0);
+    const impTrib = Number((pIIBB + pIVA).toFixed(2));
 
     // Formatear fecha en AAAAMMDD
     const fechaActual = parseInt(new Date().toISOString().replace(/-/g, '').substring(0, 8));
@@ -106,7 +113,7 @@ export async function emitirFacturaAFIP({
       ImpNeto: neto,
       ImpOpEx: 0,
       ImpIVA: iva,
-      ImpTrib: 0,
+      ImpTrib: impTrib,
       MonId: 'PES',
       MonCotiz: 1,
     };
@@ -120,6 +127,31 @@ export async function emitirFacturaAFIP({
           Importe: iva,
         },
       ];
+    }
+
+    // Agregar detalle de tributos/percepciones si existen
+    const tributosList = [];
+    if (pIIBB > 0) {
+      tributosList.push({
+        Id: 9, // Otras Percepciones Provinciales (usualmente IIBB)
+        Desc: 'Percepcion de IIBB',
+        BaseImp: neto,
+        Alic: Number(((pIIBB / neto) * 100).toFixed(2)),
+        Importe: pIIBB,
+      });
+    }
+    if (pIVA > 0) {
+      tributosList.push({
+        Id: 7, // Percepción de IVA
+        Desc: 'Percepcion de IVA RG 5329',
+        BaseImp: neto,
+        Alic: Number(((pIVA / neto) * 100).toFixed(2)),
+        Importe: pIVA,
+      });
+    }
+
+    if (tributosList.length > 0) {
+      data.Tributos = tributosList;
     }
 
     // 4. Crear el comprobante ante AFIP

@@ -188,6 +188,19 @@ async function main() {
         },
       });
 
+      let lotId = null;
+      if (prod.stock > 0) {
+        const lot = await prisma.productLot.create({
+          data: {
+            productId: createdProduct.id,
+            lotNumber: 'S/L',
+            expirationDate: new Date('2036-12-31T00:00:00Z'),
+            stock: prod.stock
+          }
+        });
+        lotId = lot.id;
+      }
+
       await prisma.stockMovement.create({
         data: {
           productId: createdProduct.id,
@@ -195,6 +208,7 @@ async function main() {
           type: 'IN',
           reason: 'Carga de stock inicial (Semilla)',
           userId: uAdmin.id,
+          productLotId: lotId
         },
       });
     }

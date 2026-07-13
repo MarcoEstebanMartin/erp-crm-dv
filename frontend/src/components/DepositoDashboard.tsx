@@ -37,6 +37,7 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [expiringLots, setExpiringLots] = useState<any[]>([]);
 
   useEffect(() => {
     fetchData();
@@ -104,6 +105,12 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
         // Filtrar solo los pendientes y en preparación para picking
         const filtered = data.filter((o: any) => o.status === OrderStatus.PENDING || o.status === OrderStatus.PREPARING);
         setOrders(filtered);
+        try {
+          const lotsRes = await api.getExpiringLots();
+          setExpiringLots(lotsRes.lots || []);
+        } catch (lotErr) {
+          console.error('Error al obtener lotes vencidos:', lotErr);
+        }
       } else if (normalizedTab === 'stock-adjust') {
         const data = await api.getProducts(searchQuery);
         setProducts(data);
@@ -492,6 +499,60 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
             </div>
           ) : (
             <div>
+              {expiringLots.length > 0 && (
+                <div className="card" style={{ 
+                  backgroundColor: '#FFF2F2', 
+                  border: '1px solid #FFD1D1', 
+                  borderRadius: '8px', 
+                  padding: '16px', 
+                  marginBottom: '20px'
+                }}>
+                  <h4 style={{ margin: '0 0 8px 0', color: '#C0392B', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    ⚠️ Lotes Próximos a Vencer (Menos de 30 días)
+                  </h4>
+                  <div style={{ maxHeight: '160px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {expiringLots.map((lot) => {
+                      const daysLeft = Math.ceil((new Date(lot.expirationDate).getTime() - new Date().getTime()) / (1000 * 3600 * 24));
+                      const isExpired = daysLeft <= 0;
+                      return (
+                        <div key={lot.id} style={{ 
+                          display: 'flex', 
+                          justifyContent: 'space-between', 
+                          alignItems: 'center', 
+                          fontSize: '0.85rem', 
+                          padding: '6px 10px', 
+                          backgroundColor: '#fff', 
+                          borderRadius: '4px',
+                          borderLeft: isExpired ? '4px solid #C0392B' : '4px solid #F39C12'
+                        }}>
+                          <div>
+                            <strong>{lot.product.name}</strong> <span style={{ color: 'var(--text-secondary)' }}>(SKU: {lot.product.sku})</span>
+                            <div style={{ fontSize: '0.75rem', marginTop: '2px' }}>
+                              Lote: <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>{lot.lotNumber}</span> | Vence: {new Date(lot.expirationDate).toLocaleDateString('es-AR')}
+                            </div>
+                          </div>
+                          <div style={{ textAlign: 'right' }}>
+                            <span style={{ 
+                              fontWeight: 'bold', 
+                              color: isExpired ? '#C0392B' : '#E67E22', 
+                              backgroundColor: isExpired ? '#FDEDEC' : '#FEF9E7',
+                              padding: '2px 8px',
+                              borderRadius: '4px',
+                              fontSize: '0.75rem',
+                              display: 'inline-block',
+                              marginBottom: '2px'
+                            }}>
+                              {isExpired ? 'VENCIDO' : `Vence en ${daysLeft} días`}
+                            </span>
+                            <div style={{ fontWeight: 600 }}>Stock: {lot.stock} u.</div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '20px' }}>
                 Pedidos en cola de distribución cargados por vendedores. Iniciá el picking para armar bultos físicos.
               </p>

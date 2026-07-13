@@ -80,7 +80,7 @@ export const registerCollection = async (req: AuthenticatedRequest, res: Respons
       return res.status(403).json({ error: 'Acceso denegado. No podés registrar cobros para clientes de otros vendedores.' });
     }
 
-    const roundedAmount = Math.round(Number(amount));
+    const roundedAmount = Number(Number(amount).toFixed(2));
 
     // Control de duplicados (Idempotencia)
     const fifteenSecondsAgo = new Date(Date.now() - 15000);
@@ -99,8 +99,6 @@ export const registerCollection = async (req: AuthenticatedRequest, res: Respons
       return res.status(400).json({ error: 'Ya se registró un cobro idéntico para este cliente hace instantes.' });
     }
 
-    const receiptNumber = await generateReceiptNumber();
-
     // Buscar número de factura si se especificó orderId para la descripción
     let orderNumberDesc = '';
     let finalBillingType = billingType;
@@ -113,35 +111,46 @@ export const registerCollection = async (req: AuthenticatedRequest, res: Respons
       }
     }
 
-    // Crear la transacción de tipo INCOME
-    const transaction = await prisma.transaction.create({
-      data: {
-        userId,
-        personaId,
-        billingType: finalBillingType as BillingType,
-        type: TransactionType.INCOME,
-        paymentMethod: paymentMethod as PaymentMethod,
-        amount: roundedAmount,
-        description: description || (orderId 
-          ? `Cobro de Factura ${orderNumberDesc} vía móvil`
-          : `Cobro generado vía móvil a cliente ${personaId}`),
-        receiptNumber,
-        verified: false, // Pendiente de rendición
-        orderId: orderId ? Number(orderId) : null,
-        bankAccountId: bankAccountId ? Number(bankAccountId) : null
-      },
-      include: {
-        persona: true
-      }
-    });
+    // Ejecutar creación de transacción y actualización de saldo de forma atómica
+    const transaction = await prisma.$transaction(async (tx) => {
+      // Crear transacción inicial sin receiptNumber (se generará a partir del movementId autoincremental de la base de datos)
+      const newTx = await tx.transaction.create({
+        data: {
+          userId,
+          personaId,
+          billingType: finalBillingType as BillingType,
+          type: TransactionType.INCOME,
+          paymentMethod: paymentMethod as PaymentMethod,
+          amount: roundedAmount,
+          description: description || (orderId 
+            ? `Cobro de Factura ${orderNumberDesc} vía móvil`
+            : `Cobro generado vía móvil a cliente ${personaId}`),
+          receiptNumber: null, // Se asigna abajo
+          verified: false, // Pendiente de rendición
+          orderId: orderId ? Number(orderId) : null,
+          bankAccountId: bankAccountId ? Number(bankAccountId) : null
+        }
+      });
 
-    // Actualizar cuenta corriente del cliente (disminuir deuda)
-    // El balance positivo significa que el cliente nos debe.
-    await prisma.persona.update({
-      where: { id: personaId },
-      data: {
-        outstandingBalance: { decrement: roundedAmount }
-      }
+      const formattedReceiptNumber = `REC-${newTx.movementId.toString().padStart(8, '0')}`;
+
+      const updatedTx = await tx.transaction.update({
+        where: { id: newTx.id },
+        data: { receiptNumber: formattedReceiptNumber },
+        include: {
+          persona: true
+        }
+      });
+
+      // Actualizar cuenta corriente del cliente (disminuir deuda)
+      await tx.persona.update({
+        where: { id: personaId },
+        data: {
+          outstandingBalance: { decrement: roundedAmount }
+        }
+      });
+
+      return updatedTx;
     });
 
     // Audit Log

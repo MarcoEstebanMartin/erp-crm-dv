@@ -75,8 +75,12 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
   const [financialReport, setFinancialReport] = useState<any | null>(null);
   
+  // Listas de Rubros y Proveedores para el catálogo
+  const [rubrosList, setRubrosList] = useState<any[]>([]);
+  const [providersList, setProvidersList] = useState<any[]>([]);
+  
   // Modales
-  const [productModal, setProductModal] = useState({ open: false, mode: 'create', data: { id: 0, sku: '', name: '', description: '', barcode: '', costPrice: 0, listPrice: 0, listPriceB: 0, listPriceC: 0, minStock: 0, isPesable: false, approximateWeight: 0 } });
+  const [productModal, setProductModal] = useState({ open: false, mode: 'create', data: { id: 0, sku: '', name: '', description: '', barcode: '', costPrice: 0, listPrice: 0, listPriceB: 0, listPriceC: 0, profitMargin: 25 as string | number, minStock: 0, isPesable: false, approximateWeight: 0, rubroId: '' as string | number, providerId: '' as string | number } });
   const [userModal, setUserModal] = useState({ open: false, username: '', password: '', role: 'VENDEDOR' });
   const [showPassword, setShowPassword] = useState(false);
   const [clientModal, setClientModal] = useState({ open: false, mode: 'create', data: { id: 0, name: '', cuit: '', address: '', city: '', phone: '', email: '', creditLimit: 0, priceList: 'A', discount: 0, isClient: true, isProvider: false, isSeller: false, isCommissionAgent: false, route: '', sellerId: null as number | null, isActive: true } });
@@ -156,6 +160,8 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
   const [perceptionForm, setPerceptionForm] = useState({ name: '', aliquot: 0, affectsIvaBook: false, jurisdiction: '' });
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [reconcileMismatches, setReconcileMismatches] = useState<any[]>([]);
+  const [loadingReconcile, setLoadingReconcile] = useState(false);
 
   // Estados de Configuración de la Empresa (Persistidos en localStorage)
   const [companyRazonSocial, setCompanyRazonSocial] = useState<string>(() => localStorage.getItem('company_razon_social') || 'Distribuidora de Bebidas SRL');
@@ -383,6 +389,14 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
       } else if (activeTab === 'products') {
         const data = await api.getProducts(searchQuery);
         setProducts(data);
+        try {
+          const rList = await api.getRubros();
+          setRubrosList(rList || []);
+          const pList = await api.getPersonas('provider');
+          setProvidersList(pList || []);
+        } catch (e) {
+          console.error("Error al cargar rubros o proveedores:", e);
+        }
       } else if (activeTab === 'users' || activeTab === 'personal') {
         const data = await api.getUsers();
         setUsers(data);
@@ -435,10 +449,37 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
         } else if (configTab === 'percepciones') {
           const response = await api.getPerceptions();
           setPerceptions(response.perceptions || []);
+        } else if (configTab === 'reconcile') {
+          setLoadingReconcile(true);
+          try {
+            const res = await api.checkBalances();
+            setReconcileMismatches(res.mismatches || []);
+          } catch (err: any) {
+            setErrorMsg(err.message || 'Error al obtener la auditoría de saldos.');
+          } finally {
+            setLoadingReconcile(false);
+          }
         }
       }
     } catch (err: any) {
       setErrorMsg(err.message || 'Error al obtener datos.');
+    }
+  };
+
+  const handleSyncBalance = async (personaId?: number) => {
+    if (!window.confirm(personaId ? '¿Deseas conciliar el saldo de esta cuenta?' : '¿Deseas conciliar TODOS los saldos inconsistentes del sistema?')) {
+      return;
+    }
+    setLoadingReconcile(true);
+    try {
+      const res = await api.syncBalances(personaId);
+      alert(personaId ? 'Saldo conciliado exitosamente.' : `Conciliación completada. Se corrigieron ${res.count || 0} cuentas.`);
+      const checkRes = await api.checkBalances();
+      setReconcileMismatches(checkRes.mismatches || []);
+    } catch (err: any) {
+      alert(err.message || 'Error al conciliar saldos.');
+    } finally {
+      setLoadingReconcile(false);
     }
   };
 
@@ -522,31 +563,132 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
     e.target.value = '';
   };
 
+  const handleModalPriceChange = (field: string, valueStr: string) => {
+    const value = valueStr === '' ? '' : Number(valueStr);
+    const updatedData = { ...productModal.data, [field]: value };
+
+    const cost = Number(updatedData.costPrice) || 0;
+    const rentPercentage = updatedData.profitMargin !== '' && updatedData.profitMargin !== undefined ? Number(updatedData.profitMargin) : 25;
+    const margin = 1 + (rentPercentage / 100);
+
+    if (field === 'costPrice') {
+      // Cost changed -> update selling prices
+      const listPrice = cost * margin;
+      updatedData.listPrice = Math.max(0, Math.round(listPrice * 100) / 100);
+      
+      const ratioB = Number(productModal.data.listPrice) > 0 && Number(productModal.data.listPriceB) > 0
+        ? Number(productModal.data.listPriceB) / Number(productModal.data.listPrice) : 0.95;
+      const ratioC = Number(productModal.data.listPrice) > 0 && Number(productModal.data.listPriceC) > 0
+        ? Number(productModal.data.listPriceC) / Number(productModal.data.listPrice) : 0.90;
+      updatedData.listPriceB = Math.max(0, Math.round(updatedData.listPrice * ratioB * 100) / 100);
+      updatedData.listPriceC = Math.max(0, Math.round(updatedData.listPrice * ratioC * 100) / 100);
+
+    } else if (field === 'profitMargin') {
+      // Rentabilidad changed -> update selling prices based on cost
+      const newMargin = valueStr === '' ? 1 : 1 + (Number(valueStr) / 100);
+      const listPrice = cost * newMargin;
+      updatedData.listPrice = Math.max(0, Math.round(listPrice * 100) / 100);
+
+      const ratioB = Number(productModal.data.listPrice) > 0 && Number(productModal.data.listPriceB) > 0
+        ? Number(productModal.data.listPriceB) / Number(productModal.data.listPrice) : 0.95;
+      const ratioC = Number(productModal.data.listPrice) > 0 && Number(productModal.data.listPriceC) > 0
+        ? Number(productModal.data.listPriceC) / Number(productModal.data.listPrice) : 0.90;
+      updatedData.listPriceB = Math.max(0, Math.round(updatedData.listPrice * ratioB * 100) / 100);
+      updatedData.listPriceC = Math.max(0, Math.round(updatedData.listPrice * ratioC * 100) / 100);
+
+    } else if (field === 'priceSinIva') {
+      // Price without VAT changed -> update listPrice and cost
+      const finalPrice = (Number(value) || 0) * 1.21;
+      updatedData.listPrice = Math.max(0, Math.round(finalPrice * 100) / 100);
+      updatedData.costPrice = Math.max(0, Math.round((updatedData.listPrice / margin) * 100) / 100);
+
+      const ratioB = Number(productModal.data.listPrice) > 0 && Number(productModal.data.listPriceB) > 0
+        ? Number(productModal.data.listPriceB) / Number(productModal.data.listPrice) : 0.95;
+      const ratioC = Number(productModal.data.listPrice) > 0 && Number(productModal.data.listPriceC) > 0
+        ? Number(productModal.data.listPriceC) / Number(productModal.data.listPrice) : 0.90;
+      updatedData.listPriceB = Math.max(0, Math.round(updatedData.listPrice * ratioB * 100) / 100);
+      updatedData.listPriceC = Math.max(0, Math.round(updatedData.listPrice * ratioC * 100) / 100);
+
+    } else if (field === 'listPrice') {
+      // Final listPrice changed -> update cost
+      const listPriceVal = Number(value) || 0;
+      updatedData.costPrice = Math.max(0, Math.round((listPriceVal / margin) * 100) / 100);
+
+      const ratioB = Number(productModal.data.listPrice) > 0 && Number(productModal.data.listPriceB) > 0
+        ? Number(productModal.data.listPriceB) / Number(productModal.data.listPrice) : 0.95;
+      const ratioC = Number(productModal.data.listPrice) > 0 && Number(productModal.data.listPriceC) > 0
+        ? Number(productModal.data.listPriceC) / Number(productModal.data.listPrice) : 0.90;
+      updatedData.listPriceB = Math.max(0, Math.round(listPriceVal * ratioB * 100) / 100);
+      updatedData.listPriceC = Math.max(0, Math.round(listPriceVal * ratioC * 100) / 100);
+    }
+
+    setProductModal({
+      ...productModal,
+      data: updatedData
+    });
+  };
+
+  const handleModalRubroChange = (rubroIdVal: string) => {
+    const rubroId = rubroIdVal === '' ? '' : Number(rubroIdVal);
+    const updatedData = { ...productModal.data, rubroId };
+
+    if (rubroId) {
+      const selectedRubro = rubrosList.find(r => Number(r.id) === rubroId);
+      if (selectedRubro) {
+        const marginFactor = Number(selectedRubro.profitMargin) || 1.25;
+        const rentPercent = Math.round((marginFactor - 1) * 100);
+        updatedData.profitMargin = rentPercent;
+
+        const cost = Number(updatedData.costPrice) || 0;
+        const listPrice = cost * marginFactor;
+        updatedData.listPrice = Math.max(0, Math.round(listPrice * 100) / 100);
+
+        const ratioB = Number(productModal.data.listPrice) > 0 && Number(productModal.data.listPriceB) > 0
+          ? Number(productModal.data.listPriceB) / Number(productModal.data.listPrice) : 0.95;
+        const ratioC = Number(productModal.data.listPrice) > 0 && Number(productModal.data.listPriceC) > 0
+          ? Number(productModal.data.listPriceC) / Number(productModal.data.listPrice) : 0.90;
+        updatedData.listPriceB = Math.max(0, Math.round(updatedData.listPrice * ratioB * 100) / 100);
+        updatedData.listPriceC = Math.max(0, Math.round(updatedData.listPrice * ratioC * 100) / 100);
+      }
+    }
+
+    setProductModal({
+      ...productModal,
+      data: updatedData
+    });
+  };
+
   // --- OPERACIONES DE PRODUCTO ---
   const handleProductSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const { mode, data } = productModal;
-    if (!data.sku || !data.name || !data.costPrice || !data.listPrice) {
+    if (!data.sku || !data.name || data.costPrice === undefined || data.listPrice === undefined) {
       setErrorMsg('Completar SKU, Nombre, Costo y Lista.');
       return;
     }
 
+    const payload = {
+      sku: data.sku,
+      name: data.name,
+      description: data.description,
+      barcode: data.barcode || null,
+      costPrice: Number(data.costPrice),
+      listPrice: Number(data.listPrice),
+      listPriceB: Number(data.listPriceB || 0),
+      listPriceC: Number(data.listPriceC || 0),
+      profitMargin: data.profitMargin !== undefined && data.profitMargin !== '' ? (1 + Number(data.profitMargin) / 100) : null,
+      rubroId: data.rubroId ? Number(data.rubroId) : null,
+      providerId: data.providerId ? Number(data.providerId) : null,
+      minStock: Number(data.minStock || 0),
+      isPesable: Boolean(data.isPesable),
+      approximateWeight: data.approximateWeight ? Number(data.approximateWeight) : 0
+    };
+
     try {
       if (mode === 'create') {
-        await api.createProduct(data);
+        await api.createProduct(payload);
       } else {
-        await api.updateProduct(data.id, {
-          name: data.name,
-          description: data.description,
-          barcode: data.barcode || null,
-          costPrice: Number(data.costPrice),
-          listPrice: Number(data.listPrice),
-          listPriceB: Number(data.listPriceB || 0),
-          listPriceC: Number(data.listPriceC || 0),
-          minStock: Number(data.minStock),
-          isPesable: Boolean(data.isPesable),
-          approximateWeight: data.approximateWeight ? Number(data.approximateWeight) : 0
-        });
+        await api.updateProduct(data.id, payload);
       }
       setProductModal({ ...productModal, open: false });
       setSuccessMsg('Producto guardado correctamente.');
@@ -566,12 +708,14 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
         listPrice: Number(updatedProduct.listPrice),
         listPriceB: Number(updatedProduct.listPriceB || 0),
         listPriceC: Number(updatedProduct.listPriceC || 0),
+        profitMargin: updatedProduct.profitMargin !== undefined ? (updatedProduct.profitMargin ? Number(updatedProduct.profitMargin) : null) : undefined,
+        rubroId: updatedProduct.rubroId !== undefined ? (updatedProduct.rubroId ? Number(updatedProduct.rubroId) : null) : undefined,
+        providerId: updatedProduct.providerId !== undefined ? (updatedProduct.providerId ? Number(updatedProduct.providerId) : null) : undefined,
         minStock: Number(updatedProduct.minStock),
         isPesable: Boolean(updatedProduct.isPesable),
         approximateWeight: updatedProduct.approximateWeight ? Number(updatedProduct.approximateWeight) : 0
       });
-      // Update local state directly to reflect changes immediately
-      setProducts(prev => prev.map(p => p.id === updatedProduct.id ? updatedProduct : p));
+      fetchData();
       setSuccessMsg('Producto actualizado correctamente.');
     } catch (err: any) {
       setErrorMsg(err.message || 'Error al actualizar producto.');
@@ -2428,6 +2572,24 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
             >
               📊 Impuestos & Percepciones
             </button>
+            <button 
+              type="button" 
+              className="btn" 
+              style={{ 
+                backgroundColor: configTab === 'reconcile' ? 'var(--color-primary)' : 'transparent',
+                color: configTab === 'reconcile' ? '#fff' : 'var(--text-primary)',
+                border: configTab === 'reconcile' ? '1px solid var(--color-primary)' : '1px solid var(--border-color)',
+                fontWeight: 600,
+                fontSize: '0.85rem',
+                padding: '8px 16px',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap'
+              }}
+              onClick={() => setConfigTab('reconcile')}
+            >
+              ⚖️ Auditoría de Saldos
+            </button>
           </div>
 
           {/* Sub-tab 1: General & Empresa Unificado */}
@@ -2871,6 +3033,103 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
                   </div>
                 </form>
               </div>
+            </div>
+          )}
+
+          {/* Sub-tab 8: Reconciliación de Saldos */}
+          {configTab === 'reconcile' && (
+            <div className="card" style={{ padding: '24px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                <div>
+                  <h3 className="card-title" style={{ margin: '0 0 4px 0' }}>
+                    ⚖️ Auditoría Contable (Conciliación de Saldos)
+                  </h3>
+                  <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0 }}>
+                    Compara el saldo en Cuenta Corriente actual contra la suma de movimientos históricos en el Libro Diario.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  disabled={loadingReconcile}
+                  onClick={() => handleSyncBalance()}
+                  style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+                >
+                  {loadingReconcile ? 'Conciliando...' : '🔄 Conciliar Todos los Saldos'}
+                </button>
+              </div>
+
+              {loadingReconcile ? (
+                <div style={{ padding: '40px 0', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                  Analizando base de datos contable y recalculando extractos...
+                </div>
+              ) : reconcileMismatches.length === 0 ? (
+                <div style={{ 
+                  padding: '40px 0', 
+                  textAlign: 'center', 
+                  color: '#27AE60', 
+                  backgroundColor: '#E8F8F5', 
+                  borderRadius: '8px', 
+                  border: '1px solid #A3E4D7',
+                  fontWeight: 600,
+                  fontSize: '0.9rem' 
+                }}>
+                  🎉 ¡No se detectaron discrepancias de saldos! Todas las Cuentas Corrientes coinciden al 100% con sus Libros Diarios.
+                </div>
+              ) : (
+                <div className="table-container">
+                  <table style={{ width: '100%' }}>
+                    <thead>
+                      <tr>
+                        <th>Cliente / Proveedor</th>
+                        <th>Tipo Persona</th>
+                        <th style={{ textAlign: 'right' }}>Saldo ERP</th>
+                        <th style={{ textAlign: 'right' }}>Saldo Real (Ledger)</th>
+                        <th style={{ textAlign: 'right' }}>Descuadre</th>
+                        <th style={{ textAlign: 'right' }}>Acciones</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {reconcileMismatches.map((m) => (
+                        <tr key={m.id}>
+                          <td style={{ fontWeight: 600 }}>{m.name}</td>
+                          <td>
+                            <span className="badge" style={{ 
+                              fontSize: '0.75rem', 
+                              padding: '2px 8px', 
+                              borderRadius: '4px', 
+                              backgroundColor: m.isClient ? '#E8F8F5' : '#FEF9E7', 
+                              color: m.isClient ? '#27AE60' : '#D4AC0D',
+                              fontWeight: 600 
+                            }}>
+                              {m.isClient && m.isProvider ? 'Cliente y Proveedor' : m.isClient ? 'Cliente' : 'Proveedor'}
+                            </span>
+                          </td>
+                          <td style={{ textAlign: 'right', fontFamily: 'monospace' }}>
+                            ${m.actual.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </td>
+                          <td style={{ textAlign: 'right', fontFamily: 'monospace', fontWeight: 600 }}>
+                            ${m.theoretical.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </td>
+                          <td style={{ textAlign: 'right', fontFamily: 'monospace', color: '#E30613', fontWeight: 'bold' }}>
+                            ${m.diff.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </td>
+                          <td style={{ textAlign: 'right' }}>
+                            <button
+                              type="button"
+                              className="btn btn-secondary btn-sm"
+                              disabled={loadingReconcile}
+                              onClick={() => handleSyncBalance(m.id)}
+                            >
+                              Conciliar Cuenta
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           )}
 
@@ -3349,6 +3608,38 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
                 </div>
               </div>
 
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+                <div className="form-group">
+                  <label>Rubro (Categoría)</label>
+                  <select
+                    className="select"
+                    value={productModal.data.rubroId || ''}
+                    onChange={(e) => handleModalRubroChange(e.target.value)}
+                    style={{ width: '100%', borderRadius: '8px', padding: '10px 14px' }}
+                  >
+                    <option value="">-- Sin Rubro --</option>
+                    {rubrosList.map(r => (
+                      <option key={r.id} value={r.id}>{r.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label>Proveedor</label>
+                  <select
+                    className="select"
+                    value={productModal.data.providerId || ''}
+                    onChange={(e) => setProductModal({ ...productModal, data: { ...productModal.data, providerId: e.target.value === '' ? '' : Number(e.target.value) } })}
+                    style={{ width: '100%', borderRadius: '8px', padding: '10px 14px' }}
+                  >
+                    <option value="">-- Sin Proveedor --</option>
+                    {providersList.map(p => (
+                      <option key={p.id} value={p.id}>{p.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
               <div className="form-group">
                 <label>Nombre del Producto</label>
                 <input
@@ -3401,24 +3692,47 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
                 <div className="form-group">
-                  <label>Precio Costo ($ ARS)</label>
+                  <label>Precio Costo (C/IVA)</label>
                   <input
                     type="number"
                     step="0.01"
                     className="input"
-                    value={productModal.data.costPrice || ''}
-                    onChange={(e) => setProductModal({ ...productModal, data: { ...productModal.data, costPrice: Number(e.target.value) } })}
+                    value={productModal.data.costPrice !== undefined ? productModal.data.costPrice : ''}
+                    onChange={(e) => handleModalPriceChange('costPrice', e.target.value)}
                     required
                   />
                 </div>
                 <div className="form-group">
-                  <label>Precio Lista A ($ ARS)</label>
+                  <label>Rentabilidad (%)</label>
+                  <input
+                    type="number"
+                    className="input"
+                    placeholder="ej: 25"
+                    value={productModal.data.profitMargin !== undefined ? productModal.data.profitMargin : ''}
+                    onChange={(e) => handleModalPriceChange('profitMargin', e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+                <div className="form-group">
+                  <label>Precio Venta Sin IVA</label>
                   <input
                     type="number"
                     step="0.01"
                     className="input"
-                    value={productModal.data.listPrice || ''}
-                    onChange={(e) => setProductModal({ ...productModal, data: { ...productModal.data, listPrice: Number(e.target.value) } })}
+                    value={productModal.data.listPrice ? Math.round((Number(productModal.data.listPrice) / 1.21) * 100) / 100 : ''}
+                    onChange={(e) => handleModalPriceChange('priceSinIva', e.target.value)}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Precio Venta Final (Lista A - C/IVA)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    className="input"
+                    value={productModal.data.listPrice !== undefined ? productModal.data.listPrice : ''}
+                    onChange={(e) => handleModalPriceChange('listPrice', e.target.value)}
                     required
                   />
                 </div>

@@ -65,7 +65,7 @@ export class ProductService {
    * Crear un nuevo producto.
    */
   async createProduct(data: any, userId?: number) {
-    const { sku, name, description, barcode, costPrice, listPrice, listPriceB, listPriceC, minStock, rubroId, providerId, isPesable, approximateWeight } = data;
+    const { sku, name, description, barcode, costPrice, listPrice, listPriceB, listPriceC, profitMargin, minStock, rubroId, providerId, isPesable, approximateWeight } = data;
 
     const existing = await prisma.product.findUnique({ where: { sku } });
     if (existing) {
@@ -89,6 +89,7 @@ export class ProductService {
         listPrice: Number(listPrice),
         listPriceB: listPriceB ? Number(listPriceB) : 0.00,
         listPriceC: listPriceC ? Number(listPriceC) : 0.00,
+        profitMargin: profitMargin !== undefined ? (profitMargin ? Number(profitMargin) : null) : null,
         stock: 0,
         minStock: minStock ? Number(minStock) : 0,
         isPesable: Boolean(isPesable),
@@ -135,6 +136,7 @@ export class ProductService {
         listPrice: data.listPrice !== undefined ? Number(data.listPrice) : undefined,
         listPriceB: data.listPriceB !== undefined ? Number(data.listPriceB) : undefined,
         listPriceC: data.listPriceC !== undefined ? Number(data.listPriceC) : undefined,
+        profitMargin: data.profitMargin !== undefined ? (data.profitMargin ? Number(data.profitMargin) : null) : undefined,
         minStock: data.minStock !== undefined ? Number(data.minStock) : undefined,
         isPesable: data.isPesable !== undefined ? Boolean(data.isPesable) : undefined,
         approximateWeight: data.approximateWeight !== undefined ? (data.approximateWeight ? Number(data.approximateWeight) : null) : undefined,
@@ -259,18 +261,59 @@ export class ProductService {
 
     await prisma.$transaction(async (tx) => {
       for (const row of rows) {
-        const { sku, name, costPrice, listPrice, listPriceB, listPriceC, barcode } = row;
+        const { sku, name, costPrice, listPrice, listPriceB, listPriceC, profitMargin, barcode } = row;
 
         const existing = await tx.product.findUnique({ where: { sku } });
 
         if (existing) {
           const updateData: any = {};
           if (name !== undefined) updateData.name = name;
-          if (costPrice !== undefined) updateData.costPrice = Number(costPrice);
-          if (listPrice !== undefined) updateData.listPrice = Number(listPrice);
-          if (listPriceB !== undefined) updateData.listPriceB = Number(listPriceB);
-          if (listPriceC !== undefined) updateData.listPriceC = Number(listPriceC);
           if (barcode !== undefined) updateData.barcode = barcode ? String(barcode).trim() : null;
+
+          let targetProfitMargin = profitMargin !== undefined ? (profitMargin ? Number(profitMargin) : null) : undefined;
+
+          if (costPrice !== undefined) {
+            updateData.costPrice = Number(costPrice);
+          }
+
+          if (listPrice !== undefined) {
+            updateData.listPrice = Number(listPrice);
+            if (listPriceB !== undefined) updateData.listPriceB = Number(listPriceB);
+            if (listPriceC !== undefined) updateData.listPriceC = Number(listPriceC);
+
+            // Si se actualizan costo y precio final, recalculamos el margen
+            const finalCost = costPrice !== undefined ? Number(costPrice) : Number(existing.costPrice);
+            if (targetProfitMargin === undefined) {
+              targetProfitMargin = finalCost > 0 ? (Number(listPrice) / finalCost) : null;
+            }
+          } else if (costPrice !== undefined) {
+            // Solo se actualizó el costo. Recalculamos el precio usando la rentabilidad del producto o del rubro.
+            const finalMargin = targetProfitMargin !== undefined
+              ? (targetProfitMargin || 1.25)
+              : (existing.profitMargin ? Number(existing.profitMargin) : (existing.rubroId ? (await tx.rubro.findUnique({ where: { id: existing.rubroId } }))?.profitMargin || 1.25 : 1.25));
+
+            const finalPrice = Number(costPrice) * Number(finalMargin);
+            updateData.listPrice = Math.max(0, Math.round(finalPrice * 100) / 100);
+
+            // Mantener proporciones para B y C
+            if (listPriceB !== undefined) {
+              updateData.listPriceB = Number(listPriceB);
+            } else if (Number(existing.listPriceB) > 0) {
+              const ratioB = Number(existing.listPrice) > 0 ? Number(existing.listPriceB) / Number(existing.listPrice) : 0.95;
+              updateData.listPriceB = Math.max(0, Math.round(updateData.listPrice * ratioB * 100) / 100);
+            }
+
+            if (listPriceC !== undefined) {
+              updateData.listPriceC = Number(listPriceC);
+            } else if (Number(existing.listPriceC) > 0) {
+              const ratioC = Number(existing.listPrice) > 0 ? Number(existing.listPriceC) / Number(existing.listPrice) : 0.90;
+              updateData.listPriceC = Math.max(0, Math.round(updateData.listPrice * ratioC * 100) / 100);
+            }
+          }
+
+          if (targetProfitMargin !== undefined) {
+            updateData.profitMargin = targetProfitMargin;
+          }
 
           const updated = await tx.product.update({
             where: { sku },
@@ -291,14 +334,21 @@ export class ProductService {
             }
           }
 
+          const cost = Number(costPrice);
+          const finalPrice = Number(listPrice);
+          const margin = profitMargin !== undefined 
+            ? (profitMargin ? Number(profitMargin) : null) 
+            : (cost > 0 ? (finalPrice / cost) : null);
+
           const created = await tx.product.create({
             data: {
               sku,
               name,
-              costPrice: Number(costPrice),
-              listPrice: Number(listPrice),
+              costPrice: cost,
+              listPrice: finalPrice,
               listPriceB: listPriceB !== undefined ? Number(listPriceB) : 0.00,
               listPriceC: listPriceC !== undefined ? Number(listPriceC) : 0.00,
+              profitMargin: margin,
               barcode: barcode ? String(barcode).trim() : null,
               stock: 0,
               minStock: 0,
@@ -413,6 +463,29 @@ export class ProductService {
         productLot: true
       },
       orderBy: { createdAt: 'desc' }
+    });
+  }
+
+  /**
+   * Obtener lotes próximos a vencer (vencimiento <= hoy + 30 días) que tengan stock.
+   */
+  async getExpiringLots() {
+    const targetDate = new Date();
+    targetDate.setDate(targetDate.getDate() + 30);
+
+    return prisma.productLot.findMany({
+      where: {
+        stock: { gt: 0 },
+        expirationDate: {
+          lte: targetDate
+        }
+      },
+      include: {
+        product: {
+          select: { id: true, sku: true, name: true, barcode: true }
+        }
+      },
+      orderBy: { expirationDate: 'asc' }
     });
   }
 }

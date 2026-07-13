@@ -12,6 +12,8 @@ import {
   deleteWeeklyReport,
   getSuggestedCredit,
   getAutofillSales,
+  checkBalancesReport,
+  syncBalances,
 } from '../controllers/admin.controller';
 import { authenticateJWT, requireRole } from '../middlewares/auth';
 import { Role } from '@prisma/client';
@@ -44,6 +46,8 @@ router.get('/users', getUsers);
 router.post('/users', validateRequest(createUserSchema), createUser);
 router.post('/users/:id/toggle', validateRequest(toggleUserStatusSchema), toggleUserStatus);
 router.post('/config', updateConfig);
+router.get('/reconcile/check', checkBalancesReport);
+router.post('/reconcile/sync', syncBalances);
 
 export default router;
 

@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import { AuthenticatedRequest } from '../types';
 import { adminService } from '../services/admin.service';
+import { personaService } from '../services/persona.service';
 import fs from 'fs';
 import path from 'path';
 
@@ -208,6 +209,38 @@ export async function getAutofillSales(req: AuthenticatedRequest, res: Response)
   } catch (error: any) {
     console.error('Error al autocompletar ventas:', error);
     res.status(500).json({ status: 'error', message: 'Error al autocompletar ventas.' });
+  }
+}
+
+/**
+ * Obtener reporte de auditoría de saldos inconsistentes (Solo ADMIN).
+ */
+export async function checkBalancesReport(req: AuthenticatedRequest, res: Response): Promise<void> {
+  try {
+    const mismatches = await personaService.checkAllBalances();
+    res.status(200).json({ status: 'success', data: { mismatches } });
+  } catch (error: any) {
+    console.error('Error en auditoría de saldos:', error);
+    res.status(500).json({ status: 'error', message: 'Error al procesar la auditoría de saldos.' });
+  }
+}
+
+/**
+ * Conciliar saldos contables (Solo ADMIN).
+ */
+export async function syncBalances(req: AuthenticatedRequest, res: Response): Promise<void> {
+  const { personaId } = req.body;
+  try {
+    if (personaId) {
+      const result = await personaService.reconcileBalance(Number(personaId));
+      res.status(200).json({ status: 'success', data: { persona: result.persona, theoretical: result.theoretical } });
+    } else {
+      const reconciled = await personaService.reconcileAllBalances();
+      res.status(200).json({ status: 'success', data: { count: reconciled.length, reconciled } });
+    }
+  } catch (error: any) {
+    console.error('Error al conciliar saldos:', error);
+    res.status(500).json({ status: 'error', message: error.message || 'Error al conciliar saldos.' });
   }
 }
 

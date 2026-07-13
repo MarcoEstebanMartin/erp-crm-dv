@@ -10,6 +10,7 @@ export const createProductSchema = z.object({
     listPrice: z.number().min(0, 'El precio de lista no puede ser negativo'),
     listPriceB: z.number().min(0).optional().nullable(),
     listPriceC: z.number().min(0).optional().nullable(),
+    profitMargin: z.number().min(1).optional().nullable(),
     minStock: z.number().min(0).optional().nullable(),
     rubroId: z.number().int().positive().optional().nullable(),
     providerId: z.number().int().positive().optional().nullable(),
@@ -28,6 +29,7 @@ export const updateProductSchema = z.object({
     listPrice: z.number().min(0).optional(),
     listPriceB: z.number().min(0).optional().nullable(),
     listPriceC: z.number().min(0).optional().nullable(),
+    profitMargin: z.number().min(1).optional().nullable(),
     minStock: z.number().min(0).optional().nullable(),
     rubroId: z.number().int().positive().optional().nullable(),
     providerId: z.number().int().positive().optional().nullable(),
@@ -56,6 +58,7 @@ export const importPricesSchema = z.object({
         listPrice: z.number().min(0).optional(),
         listPriceB: z.number().min(0).optional().nullable(),
         listPriceC: z.number().min(0).optional().nullable(),
+        profitMargin: z.number().min(1).optional().nullable(),
         barcode: z.string().optional().nullable(),
       })
     ).min(1, 'Debe proveer al menos un producto'),

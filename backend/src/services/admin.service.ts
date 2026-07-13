@@ -24,7 +24,8 @@ export class AdminService {
       const amount = Number(order.totalAmount) || 0;
       let cost = 0;
       for (const item of order.items) {
-        cost += Math.round(Number(item.product.costPrice || 0) * item.quantity);
+        const qtyOrWeight = item.product.isPesable && item.weight ? Number(item.weight) : item.quantity;
+        cost += Math.round(Number(item.product.costPrice || 0) * qtyOrWeight);
       }
 
       if (order.billingType === BillingType.OFFICIAL) {
@@ -262,7 +263,7 @@ export class AdminService {
         items: {
           include: {
             product: {
-              select: { id: true, sku: true, name: true }
+              select: { id: true, sku: true, name: true, isPesable: true }
             }
           }
         }
@@ -316,7 +317,7 @@ export class AdminService {
       // 3. Products
       for (const item of order.items) {
         const prodId = item.productId;
-        const qty = item.quantity;
+        const qty = item.product.isPesable && item.weight ? Number(item.weight) : item.quantity;
         const subtotal = Number(item.subtotal) || 0;
 
         const prodData = productMap.get(prodId) || {
@@ -528,7 +529,7 @@ export class AdminService {
     const prevTotalPurchases = prevActualPurchases + prevCredit;
     const prevBuffer = Number(prevReport.buffer) || 0;
 
-    const suggested = -(prevTotalSales - prevTotalPurchases - prevBuffer);
+    const suggested = (prevTotalPurchases + prevBuffer) - prevTotalSales;
     return Math.round(suggested);
   }
 }
