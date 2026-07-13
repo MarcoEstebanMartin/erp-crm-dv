@@ -18,6 +18,7 @@ export const createPersonaSchema = z.object({
     discount: z.number().min(0).max(100).optional(),
     contacts: z.any().optional(),
     sellerId: z.union([z.number(), z.string()]).optional().nullable(),
+    isActive: z.boolean().optional(),
   }),
 });
 
@@ -42,6 +43,7 @@ export const updatePersonaSchema = z.object({
     discount: z.number().min(0).max(100).optional(),
     contacts: z.any().optional(),
     sellerId: z.union([z.number(), z.string()]).optional().nullable(),
+    isActive: z.boolean().optional(),
   }),
 });
 

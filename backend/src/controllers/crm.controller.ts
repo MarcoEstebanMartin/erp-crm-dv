@@ -14,6 +14,7 @@ export async function getCRMAlerts(req: AuthenticatedRequest, res: Response): Pr
     const inactiveClients = await prisma.persona.findMany({
       where: {
         isClient: true,
+        isActive: true,
         orders: {
           none: {
             createdAt: {
@@ -68,7 +69,7 @@ export async function getCRMAlerts(req: AuthenticatedRequest, res: Response): Pr
     // 3. Sugerencias de Consumo Personalizadas por Cliente
     // Para cada cliente activo, sugerir productos que compra frecuentemente pero no compró en su último pedido.
     const activeClients = await prisma.persona.findMany({
-      where: { isClient: true },
+      where: { isClient: true, isActive: true },
       include: {
         orders: {
           include: {

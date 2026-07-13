@@ -30,7 +30,8 @@ export const getPendingCollections = async (req: AuthenticatedRequest, res: Resp
     }
 
     const whereClause: any = {
-      outstandingBalance: { gt: 0 }
+      outstandingBalance: { gt: 0 },
+      isActive: true
     };
 
     if (userRole === Role.VENDEDOR) {
