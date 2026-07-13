@@ -79,7 +79,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
   const [productModal, setProductModal] = useState({ open: false, mode: 'create', data: { id: 0, sku: '', name: '', description: '', barcode: '', costPrice: 0, listPrice: 0, listPriceB: 0, listPriceC: 0, minStock: 0, isPesable: false, approximateWeight: 0 } });
   const [userModal, setUserModal] = useState({ open: false, username: '', password: '', role: 'VENDEDOR' });
   const [showPassword, setShowPassword] = useState(false);
-  const [clientModal, setClientModal] = useState({ open: false, mode: 'create', data: { id: 0, name: '', cuit: '', address: '', city: '', phone: '', email: '', creditLimit: 0, priceList: 'A', discount: 0, isClient: true, isProvider: false, isSeller: false, isCommissionAgent: false, route: '', sellerId: null as number | null } });
+  const [clientModal, setClientModal] = useState({ open: false, mode: 'create', data: { id: 0, name: '', cuit: '', address: '', city: '', phone: '', email: '', creditLimit: 0, priceList: 'A', discount: 0, isClient: true, isProvider: false, isSeller: false, isCommissionAgent: false, route: '', sellerId: null as number | null, isActive: true } });
   const [showResumenModal, setShowResumenModal] = useState<any>(null);
   const [orderDetailsModal, setOrderDetailsModal] = useState<any | null>(null);
   const [editOrderModal, setEditOrderModal] = useState<{ open: boolean; orderId: number; clientId: number; clientName: string; items: { id: number; productId: number; name: string; sku: string; quantity: number; listPrice: number; weight?: number | null; isPesable?: boolean; approximateWeight?: number | null }[] } | null>(null);
@@ -635,7 +635,8 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
           isProvider: !!data.isProvider,
           isSeller: !!data.isSeller,
           isCommissionAgent: !!data.isCommissionAgent,
-          sellerId: data.sellerId ? Number(data.sellerId) : null
+          sellerId: data.sellerId ? Number(data.sellerId) : null,
+          isActive: data.isActive !== false
         });
       } else {
         await api.updatePersona(data.id, {
@@ -653,7 +654,8 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
           isProvider: !!data.isProvider,
           isSeller: !!data.isSeller,
           isCommissionAgent: !!data.isCommissionAgent,
-          sellerId: data.sellerId ? Number(data.sellerId) : null
+          sellerId: data.sellerId ? Number(data.sellerId) : null,
+          isActive: data.isActive !== false
         });
       }
       setClientModal({ ...clientModal, open: false });
@@ -1896,13 +1898,14 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
                   <th>Contacto</th>
                   <th>Saldo C/C</th>
                   {personaRoleFilter === 'client' && <th>Vendedor</th>}
+                  <th>Estado</th>
                   <th>Acción</th>
                 </tr>
               </thead>
               <tbody>
                 {clients.length === 0 ? (
                   <tr>
-                    <td colSpan={personaRoleFilter === 'client' ? 6 : 5} style={{ textAlign: 'center', padding: '24px 0' }}>No se encontraron personas registradas.</td>
+                    <td colSpan={personaRoleFilter === 'client' ? 7 : 6} style={{ textAlign: 'center', padding: '24px 0' }}>No se encontraron personas registradas.</td>
                   </tr>
                 ) : (
                   clients.map((c) => {
@@ -1973,6 +1976,23 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
                           </td>
                         )}
                         <td>
+                          <span style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            fontWeight: 500,
+                            color: c.isActive !== false ? 'var(--color-success)' : 'var(--color-danger)'
+                          }}>
+                            <span style={{
+                              width: '8px',
+                              height: '8px',
+                              borderRadius: '50%',
+                              backgroundColor: c.isActive !== false ? 'var(--color-success)' : 'var(--color-danger)'
+                            }} />
+                            {c.isActive !== false ? 'Activo' : 'Inactivo'}
+                          </span>
+                        </td>
+                        <td>
                           <div style={{ display: 'flex', gap: '8px' }}>
                             <button className="btn btn-secondary" style={{ padding: '6px 10px', fontSize: '0.8rem' }} onClick={() => handleViewClientProfile(c)}>
                               Ver Ficha
@@ -2011,7 +2031,8 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
                                 isSeller: !!c.isSeller,
                                 isCommissionAgent: !!c.isCommissionAgent,
                                 route: c.route || '',
-                                sellerId: c.sellerId || null
+                                sellerId: c.sellerId || null,
+                                isActive: c.isActive !== false
                               } 
                             })}>
                               Editar
@@ -3516,6 +3537,18 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
                     <span>Comisionista</span>
                   </label>
                 </div>
+              </div>
+
+              <div className="form-group" style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600 }}>Estado de la Persona</label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.9rem', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={clientModal.data.isActive !== false}
+                    onChange={(e) => setClientModal({ ...clientModal, data: { ...clientModal.data, isActive: e.target.checked } })}
+                  />
+                  <span>Persona Activa (Habilitada para facturación/reparto)</span>
+                </label>
               </div>
 
               <div className="form-group">
