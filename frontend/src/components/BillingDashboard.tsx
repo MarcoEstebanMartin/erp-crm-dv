@@ -387,9 +387,11 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
   };
 
   const handleSelectCNOrder = (orderIdStr: string) => {
+    const order = clientOrders.find(o => o.id === Number(orderIdStr));
     setCreditNoteForm(prev => ({
       ...prev,
-      orderId: orderIdStr
+      orderId: orderIdStr,
+      billingType: order ? (order.billingType || 'INTERNAL') : 'INTERNAL'
     }));
 
     if (!orderIdStr) {
@@ -397,7 +399,6 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
       return;
     }
 
-    const order = clientOrders.find(o => o.id === Number(orderIdStr));
     if (order && order.items) {
       const itemsToDev = order.items.map((item: any) => {
         const prod = products.find(p => p.id === item.productId);
@@ -2784,13 +2785,18 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
                       className="input" 
                       value={creditNoteForm.billingType} 
                       onChange={(e) => setCreditNoteForm(prev => ({ ...prev, billingType: e.target.value }))}
-                      disabled={selectedCNClient && !selectedCNClient.cuit} 
+                      disabled={!!creditNoteForm.orderId || (selectedCNClient && !selectedCNClient.cuit)} 
                     >
                       <option value="INTERNAL">Interno (Presupuesto / Sin AFIP)</option>
                       {selectedCNClient?.cuit && (
                         <option value="OFFICIAL">Oficial (AFIP - Nota de Crédito A o B)</option>
                       )}
                     </select>
+                    {creditNoteForm.orderId && (
+                      <span style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', marginTop: '4px', display: 'block' }}>
+                        La sucursal está determinada automáticamente por la factura seleccionada.
+                      </span>
+                    )}
                   </div>
 
                   <div className="form-group" style={{ margin: 0 }}>

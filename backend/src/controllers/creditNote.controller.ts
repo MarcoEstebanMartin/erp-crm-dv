@@ -85,6 +85,17 @@ export async function createCreditNote(req: AuthenticatedRequest, res: Response)
         throw new Error('El cliente seleccionado no existe.');
       }
 
+      // Validar y sobreescribir billingType si hay orden/factura vinculada
+      let finalBillingType = billingType;
+      if (orderId) {
+        const linkedOrder = await tx.order.findUnique({
+          where: { id: Number(orderId) },
+        });
+        if (linkedOrder) {
+          finalBillingType = linkedOrder.billingType;
+        }
+      }
+
       // 2. Calcular montos
       let totalAmount = 0;
       for (const item of items) {
@@ -107,7 +118,7 @@ export async function createCreditNote(req: AuthenticatedRequest, res: Response)
         totalAmount += Math.round(actualQtyOrWeight * Number(item.unitPrice));
       }
 
-      const isA = billingType === 'OFFICIAL' && persona.cuit && persona.cuit.replace(/-/g, '').length === 11;
+      const isA = finalBillingType === 'OFFICIAL' && persona.cuit && persona.cuit.replace(/-/g, '').length === 11;
       let netAmount = isA ? (totalAmount / 1.21) : Math.round(totalAmount / 1.21);
       let taxAmount = isA ? (totalAmount - netAmount) : (totalAmount - netAmount);
 
@@ -117,7 +128,7 @@ export async function createCreditNote(req: AuthenticatedRequest, res: Response)
       let cae = null;
       let caeDueDate = null;
 
-      if (billingType === 'OFFICIAL') {
+      if (finalBillingType === 'OFFICIAL') {
         const cuitLimpio = persona.cuit ? persona.cuit.replace(/-/g, '') : '';
         let docType = 99; // Consumidor Final
         let isA = false;
@@ -158,7 +169,7 @@ export async function createCreditNote(req: AuthenticatedRequest, res: Response)
           personaId: Number(personaId),
           orderId: orderId ? Number(orderId) : null,
           userId,
-          billingType: billingType as BillingType,
+          billingType: finalBillingType as BillingType,
           creditNoteType,
           creditNoteNumber,
           cae,
