@@ -337,7 +337,13 @@ export class PersonaService {
     });
 
     const transactions = await prisma.transaction.findMany({
-      where: { personaId: persona.id },
+      where: { 
+        personaId: persona.id,
+        OR: [
+          { type: TransactionType.OUTCOME },
+          { type: TransactionType.INCOME, verified: true }
+        ]
+      },
       orderBy: { createdAt: 'asc' },
     });
 

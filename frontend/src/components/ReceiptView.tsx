@@ -75,10 +75,21 @@ const ReceiptView: React.FC<ReceiptViewProps> = ({ receiptId }) => {
         </div>
 
         {/* Amount & Status */}
-        <div className="p-6 text-center border-b border-gray-100">
-          <CheckCircle className="w-8 h-8 text-green-500 mx-auto mb-2" />
+        <div className="p-6 text-center border-b border-gray-100 flex flex-col items-center">
+          <CheckCircle className="w-8 h-8 text-green-500 mb-2" />
           <p className="text-gray-500 uppercase tracking-widest text-xs font-semibold mb-1">Pago Exitoso</p>
           <h2 className="text-4xl font-extrabold text-gray-900">{formatCurrency(receipt.amount)}</h2>
+          {receipt.verified ? (
+            <div className="mt-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-green-50 text-green-700 border border-green-200">
+              <span className="w-2 h-2 rounded-full bg-green-500"></span>
+              Cobro Verificado y Acreditado
+            </div>
+          ) : (
+            <div className="mt-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-yellow-50 text-yellow-800 border border-yellow-200">
+              <span className="w-2 h-2 rounded-full bg-yellow-500 animate-pulse"></span>
+              Cobro Registrado - Pendiente de Verificación
+            </div>
+          )}
         </div>
 
         {/* Details */}

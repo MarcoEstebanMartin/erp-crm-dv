@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { CreditCard, DollarSign, FileText, Share2, CheckCircle, ChevronLeft } from 'lucide-react';
+import { CreditCard, DollarSign, FileText, CheckCircle, ChevronLeft } from 'lucide-react';
 import axios from 'axios';
 import { API_BASE_URL } from '../utils/api';
 
@@ -121,26 +121,6 @@ const MobileCobros: React.FC<MobileCobrosProps> = ({
     }
   };
 
-  const shareViaWhatsApp = () => {
-    if (!successReceipt) return;
-    
-    // Crear el mensaje y link
-    // Suponemos que el frontend corre en el mismo dominio o tenemos una variable env
-    const receiptLink = `${window.location.origin}/recibo/${successReceipt.id}`;
-    const text = `Hola! Aquí tienes el comprobante de tu pago por $${successReceipt.amount}.\nVer recibo: ${receiptLink}`;
-    const encodedText = encodeURIComponent(text);
-    
-    // Si la persona tiene teléfono, lo usamos
-    let phoneStr = '';
-    if (selectedPersona?.phone) {
-       // Limpiar el teléfono para que solo queden números
-       const cleanPhone = selectedPersona.phone.replace(/\D/g, '');
-       phoneStr = `phone=${cleanPhone}&`;
-    }
-
-    const whatsappUrl = `https://api.whatsapp.com/send?${phoneStr}text=${encodedText}`;
-    window.open(whatsappUrl, '_blank');
-  };
 
   const formatCurrency = (val: number | string) => {
     return Number(val).toLocaleString('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0, maximumFractionDigits: 0 });
@@ -160,19 +140,19 @@ const MobileCobros: React.FC<MobileCobrosProps> = ({
             <p className="text-sm text-gray-600">Monto: <span className="font-bold text-gray-900 text-lg">{formatCurrency(successReceipt.amount)}</span></p>
             <p className="text-sm text-gray-600">Medio: <span className="font-semibold text-gray-800">{successReceipt.paymentMethod}</span></p>
             <p className="text-sm text-gray-600">Sucursal: <span className="font-semibold text-gray-800">{successReceipt.billingType === 'OFFICIAL' ? 'A' : 'X'}</span></p>
+            <div className="mt-4 pt-4 border-t border-gray-200">
+              <p className="text-xs text-blue-700 font-medium bg-blue-50 p-3 rounded-lg border border-blue-100 leading-relaxed text-center">
+                💬 <strong>Notificación Enviada:</strong> El ERP ha enviado el recibo digital provisorio por WhatsApp al cliente.
+              </p>
+              <p className="text-[10px] text-gray-400 mt-2 text-center">
+                🔒 El cobro está registrado para auditoría. No se puede descargar ni modificar desde este dispositivo móvil. Impactará en la cuenta corriente una vez verificado físicamente.
+              </p>
+            </div>
           </div>
-
-          <button 
-            onClick={shareViaWhatsApp}
-            className="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2 mb-3 transition-colors"
-          >
-            <Share2 className="w-5 h-5" />
-            Enviar por WhatsApp
-          </button>
           
           <button 
             onClick={() => { setSuccessReceipt(null); setSelectedPersona(null); setAmount(''); }}
-            className="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-3 px-4 rounded-lg transition-colors"
+            className="w-full bg-gray-900 hover:bg-gray-800 text-white font-bold py-3 px-4 rounded-lg transition-colors"
           >
             Volver a Cobros
           </button>

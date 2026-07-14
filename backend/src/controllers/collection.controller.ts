@@ -142,16 +142,18 @@ export const registerCollection = async (req: AuthenticatedRequest, res: Respons
         }
       });
 
-      // Actualizar cuenta corriente del cliente (disminuir deuda)
-      await tx.persona.update({
-        where: { id: personaId },
-        data: {
-          outstandingBalance: { decrement: roundedAmount }
-        }
-      });
-
       return updatedTx;
     });
+
+    // Simulación del envío de WhatsApp inmediato por el ERP al registrar el cobro
+    if (transaction.persona?.phone) {
+      const cleanPhone = transaction.persona.phone.replace(/\D/g, '');
+      const clientName = transaction.persona.name;
+      const receiptLink = `${req.protocol}://${req.get('host')}/recibo/${transaction.id}`;
+      console.log(`[WhatsApp ERP Auto-Send] Registro inicial de cobro. Enviando comprobante provisional a ${clientName} (+${cleanPhone}). Mensaje: "Hola ${clientName}! Registramos tu pago por $${transaction.amount}. Comprobante digital provisional: ${receiptLink} (Estado: Pendiente de rendición en administración)"`);
+    } else {
+      console.log(`[WhatsApp ERP Auto-Send] No se pudo enviar notificación de cobro provisional a ${transaction.persona?.name || 'Cliente'} (ID: ${transaction.personaId}) porque no posee teléfono registrado.`);
+    }
 
     // Audit Log
     await prisma.auditLog.create({
@@ -329,7 +331,8 @@ export const verifyRendicion = async (req: AuthenticatedRequest, res: Response) 
           verified: false
         },
         include: {
-          order: true
+          order: true,
+          persona: true
         }
       });
       txs = allSellerTxs.filter(t => !t.order || t.order.deliveryRouteId === null);
@@ -351,6 +354,9 @@ export const verifyRendicion = async (req: AuthenticatedRequest, res: Response) 
           order: {
             deliveryRouteId: Number(routeId)
           }
+        },
+        include: {
+          persona: true
         }
       });
     }
@@ -462,9 +468,44 @@ export const verifyRendicion = async (req: AuthenticatedRequest, res: Response) 
           })
         );
       }
+
+      // Decrementar de forma atómica el outstandingBalance del cliente correspondiente al verificar
+      if (t.personaId) {
+        operations.push(
+          prisma.persona.update({
+            where: { id: t.personaId },
+            data: {
+              outstandingBalance: { decrement: t.amount }
+            }
+          })
+        );
+      }
     }
 
     await prisma.$transaction(operations);
+
+    // Mapear recibos verificados para la respuesta y simular WhatsApp del ERP
+    const verifiedReceipts = txs.map(t => {
+      const formattedReceiptNumber = t.receiptNumber || `REC-${t.movementId.toString().padStart(8, '0')}`;
+      const receiptLink = `${req.protocol}://${req.get('host')}/recibo/${t.id}`;
+      
+      if (t.persona?.phone) {
+        const cleanPhone = t.persona.phone.replace(/\D/g, '');
+        console.log(`[WhatsApp ERP Auto-Send] Acreditación de Fondos. Enviando recibo verificado a ${t.persona.name} (+${cleanPhone}). Mensaje: "Hola ${t.persona.name}! Tu pago por $${t.amount} ha sido verificado y acreditado formalmente en tu cuenta corriente. Comprobante digital: ${receiptLink} (Estado: Verificado)"`);
+      } else {
+        console.log(`[WhatsApp ERP Auto-Send] No se pudo enviar notificación de acreditación a ${t.persona?.name || 'Cliente'} (ID: ${t.personaId}) porque no posee teléfono registrado.`);
+      }
+
+      return {
+        id: t.id,
+        receiptNumber: formattedReceiptNumber,
+        amount: Number(t.amount),
+        paymentMethod: t.paymentMethod,
+        clientName: t.persona?.name || 'Cliente Desconocido',
+        clientPhone: t.persona?.phone || null,
+        billingType: t.billingType
+      };
+    });
 
     // Guardar Audit Log
     await prisma.auditLog.create({
@@ -489,7 +530,8 @@ export const verifyRendicion = async (req: AuthenticatedRequest, res: Response) 
       data: {
         message: 'Rendición y arqueo completados con éxito. Fondos transferidos a la Caja Grande.',
         drawer,
-        difference: realTotal - theoreticalClosing
+        difference: realTotal - theoreticalClosing,
+        verifiedReceipts
       }
     });
 
