@@ -19,8 +19,13 @@ export default function FinanzasDashboard() {
   const [reconTransactions, setReconTransactions] = useState<any[]>([]);
   const [reconLoading, setReconLoading] = useState(false);
   const [selectedTxs, setSelectedTxs] = useState<Set<number>>(new Set());
-  const [csvMatches, setCsvMatches] = useState<{ [txId: number]: { idOperacion: string; description: string; date: Date } }>({});
-  const [csvStats, setCsvStats] = useState<{ totalRows: number; matchedCount: number } | null>(null);
+  // NUEVOS ESTADOS DE CONCILIACIÓN MP
+  const [clients, setClients] = useState<any[]>([]);
+  const [csvRows, setCsvRows] = useState<any[]>([]);
+  const [reconciledRows, setReconciledRows] = useState<Set<string>>(new Set());
+  const [manualMatches, setManualMatches] = useState<{ [rowId: string]: any }>({});
+  const [csvSearchQuery, setCsvSearchQuery] = useState('');
+  const [csvFilterTab, setCsvFilterTab] = useState<'all' | 'exact' | 'rounding' | 'unregistered' | 'no_match' | 'reconciled'>('all');
 
   // Date Filters
   const [filterStartDate, setFilterStartDate] = useState(() => {
@@ -116,9 +121,10 @@ export default function FinanzasDashboard() {
   };
 
   // --- CONCILIACIÓN BANCARIA Y CHEQUEO DE TRANSFERENCIAS ---
-  const fetchReconTransactions = async (bankId: string, startDt: string, endDt: string, startTm: string, endTm: string) => {
+  const fetchReconciliationData = async (bankId: string, startDt: string, endDt: string, startTm: string, endTm: string) => {
     setReconLoading(true);
     try {
+      // 1. Cargar transacciones de transferencia pendientes
       const filters = {
         bankAccountId: Number(bankId),
         paymentMethod: 'BANK_TRANSFER'
@@ -135,14 +141,24 @@ export default function FinanzasDashboard() {
       
       setReconTransactions(filtered);
       setSelectedTxs(new Set());
-      setCsvMatches({});
-      setCsvStats(null);
+      setCsvRows([]);
+      setReconciledRows(new Set());
+      setManualMatches({});
+      
+      // 2. Cargar listado de clientes
+      const allClients = await api.getPersonas('client');
+      setClients(allClients || []);
     } catch (err) {
       console.error(err);
-      alert('Error al cargar las transacciones para conciliar.');
+      alert('Error al cargar datos para conciliar.');
     } finally {
       setReconLoading(false);
     }
+  };
+
+  // Mantener compatibilidad con llamadas internas si las hay
+  const fetchReconTransactions = (bankId: string, startDt: string, endDt: string, startTm: string, endTm: string) => {
+    return fetchReconciliationData(bankId, startDt, endDt, startTm, endTm);
   };
 
   const handleCSVUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -164,10 +180,18 @@ export default function FinanzasDashboard() {
       const separator = firstLine.includes(';') ? ';' : ',';
       const headers = firstLine.split(separator).map(h => h.trim().replace(/^"|"$/g, '').toLowerCase());
       
-      const amountIdx = headers.findIndex(h => h.includes('monto') || h.includes('amount') || h.includes('neto') || h.includes('total') || h.includes('valor'));
-      const dateIdx = headers.findIndex(h => h.includes('fecha') || h.includes('date') || h.includes('creacion') || h.includes('liberado') || h.includes('hora'));
-      const idIdx = headers.findIndex(h => h.includes('id') || h.includes('operacion') || h.includes('transaccion') || h.includes('referencia') || h.includes('codigo'));
-      const descriptionIdx = headers.findIndex(h => h.includes('concepto') || h.includes('descripcion') || h.includes('detalle') || h.includes('titulo'));
+      let amountIdx = headers.indexOf('transaction_amount');
+      if (amountIdx === -1) amountIdx = headers.findIndex(h => h.includes('amount') || h.includes('monto') || h.includes('neto') || h.includes('total') || h.includes('valor'));
+      
+      let dateIdx = headers.indexOf('transaction_date');
+      if (dateIdx === -1) dateIdx = headers.findIndex(h => h.includes('date') || h.includes('fecha') || h.includes('creacion') || h.includes('liberado') || h.includes('hora'));
+      
+      let idIdx = headers.indexOf('source_id');
+      if (idIdx === -1) idIdx = headers.findIndex(h => h.includes('id') || h.includes('operacion') || h.includes('transaccion') || h.includes('referencia') || h.includes('codigo'));
+      
+      const payerNameIdx = headers.indexOf('payer_name');
+      const payerCuitIdx = headers.indexOf('payer_id_number');
+      const extRefIdx = headers.indexOf('external_reference');
       
       if (amountIdx === -1) {
         alert('No se pudo identificar la columna de Monto en el archivo CSV.');
@@ -183,65 +207,206 @@ export default function FinanzasDashboard() {
           cells = line.split(';').map(c => c.replace(/^"|"$/g, '').trim());
         }
         
+        if (cells.length <= Math.max(amountIdx, dateIdx, idIdx)) return null;
+
+        const rawAmount = cells[amountIdx] ? parseFloat(cells[amountIdx].replace(/[$.]/g, '').replace(',', '.')) : 0;
+        
         return {
           id: idIdx !== -1 && cells[idIdx] ? cells[idIdx] : `row-${rowIdx}`,
-          amount: cells[amountIdx] ? Math.round(Math.abs(parseFloat(cells[amountIdx].replace(/[$.]/g, '').replace(',', '.')))) : 0,
+          amount: Math.abs(rawAmount),
+          isIncome: rawAmount > 0,
           date: dateIdx !== -1 && cells[dateIdx] ? new Date(cells[dateIdx]) : new Date(),
-          description: descriptionIdx !== -1 && cells[descriptionIdx] ? cells[descriptionIdx] : ''
+          payerName: payerNameIdx !== -1 && cells[payerNameIdx] ? cells[payerNameIdx] : '',
+          payerCuit: payerCuitIdx !== -1 && cells[payerCuitIdx] ? cells[payerCuitIdx].replace(/\D/g, '') : '',
+          externalReference: extRefIdx !== -1 && cells[extRefIdx] ? cells[extRefIdx] : ''
         };
-      }).filter(r => !isNaN(r.amount) && r.amount > 0);
+      }).filter((r): r is any => r !== null && r.amount > 0 && r.isIncome);
       
-      const matches: any = {};
+      setCsvRows(parsedRows);
+
+      // Calcular cruces iniciales para estadísticas
       let matchedCount = 0;
-      const matchedTxIds = new Set<number>();
-      
-      reconTransactions.forEach((tx: any) => {
-        const txAmount = Math.round(Number(tx.amount));
-        const txDate = new Date(tx.createdAt);
-        
-        const match = parsedRows.find(row => {
-          const amountMatch = row.amount === txAmount;
-          if (!amountMatch) return false;
-          
-          const timeDiff = Math.abs(row.date.getTime() - txDate.getTime());
-          return timeDiff < 86400000;
-        });
-        
-        if (match) {
-          matches[tx.id] = {
-            idOperacion: match.id,
-            description: match.description,
-            date: match.date
-          };
+      parsedRows.forEach((row: any) => {
+        const matchInfo = getRowMatchStatus(row);
+        if (matchInfo.status === 'exact' || matchInfo.status === 'rounding') {
           matchedCount++;
-          matchedTxIds.add(tx.id);
         }
       });
-      
-      setCsvMatches(matches);
-      setCsvStats({
-        totalRows: parsedRows.length,
-        matchedCount
-      });
-      
-      setSelectedTxs(matchedTxIds);
     };
     
     reader.readAsText(file);
   };
 
-  const handleVerifyBatch = async () => {
-    if (selectedTxs.size === 0) return;
-    
-    setLoading(true);
-    try {
-      const idsArray = Array.from(selectedTxs);
+  // Motor dinámico de detección de coincidencias
+  const getRowMatchStatus = (row: any) => {
+    // 1. Si ya se concilió en esta sesión
+    if (reconciledRows.has(row.id)) {
+      return { status: 'reconciled' };
+    }
+
+    // 2. Coincidencia Manual
+    if (manualMatches[row.id]) {
+      return { status: 'unregistered', client: manualMatches[row.id], manual: true };
+    }
+
+    // 3. Buscar coincidencia exacta por transacción del ERP (no verificada)
+    const exactMatch = reconTransactions.find((tx: any) => {
+      if (tx.verified) return false;
+      const txAmount = Math.round(Number(tx.amount));
+      const rowAmount = Math.round(row.amount);
+      if (txAmount !== rowAmount) return false;
+
+      // Fecha cercana (máximo 3 días de diferencia)
+      const timeDiff = Math.abs(new Date(tx.createdAt).getTime() - row.date.getTime());
+      return timeDiff < 3 * 24 * 60 * 60 * 1000;
+    });
+
+    if (exactMatch) {
+      return { status: 'exact', tx: exactMatch };
+    }
+
+    // 4. Buscar coincidencia aproximada por redondeo (± $1.500 o 2% de diferencia)
+    const roundingMatch = reconTransactions.find((tx: any) => {
+      if (tx.verified) return false;
       
+      const txAmount = Number(tx.amount);
+      const rowAmount = row.amount;
+      const diff = Math.abs(txAmount - rowAmount);
+      const pctDiff = (diff / rowAmount) * 100;
+
+      if (diff > 1500 && pctDiff > 2) return false;
+
+      // Fecha cercana (máximo 5 días de diferencia)
+      const timeDiff = Math.abs(new Date(tx.createdAt).getTime() - row.date.getTime());
+      return timeDiff < 5 * 24 * 60 * 60 * 1000;
+    });
+
+    if (roundingMatch) {
+      const diff = Number(roundingMatch.amount) - row.amount;
+      return { status: 'rounding', tx: roundingMatch, diff };
+    }
+
+    // 5. Buscar cliente en ERP por CUIT del pagador
+    if (row.payerCuit) {
+      const clientByCuit = clients.find((c: any) => {
+        if (!c.cuit) return false;
+        return c.cuit.replace(/\D/g, '') === row.payerCuit;
+      });
+      if (clientByCuit) {
+        return { status: 'unregistered', client: clientByCuit };
+      }
+    }
+
+    // 6. Buscar cliente en ERP por nombre (búsqueda parcial insensible a mayúsculas/minúsculas)
+    if (row.payerName && row.payerName.length > 3) {
+      const cleanPayer = row.payerName.toLowerCase();
+      const clientByName = clients.find((c: any) => {
+        const cleanClientName = c.name.toLowerCase();
+        return cleanClientName.includes(cleanPayer) || cleanPayer.includes(cleanClientName);
+      });
+      if (clientByName) {
+        return { status: 'unregistered', client: clientByName };
+      }
+    }
+
+    return { status: 'no_match' };
+  };
+
+  const handleVerifyWithAdjustment = async (txId: number, csvAmount: number) => {
+    setReconLoading(true);
+    try {
+      await api.verifyTransaction(txId, true, csvAmount);
+      
+      // Actualizar visualización local
+      setReconciledRows(prev => {
+        const next = new Set(prev);
+        // Encontrar qué fila de CSV se asociaba a esta tx y marcarla
+        const matchedRow = csvRows.find(row => {
+          const match = getRowMatchStatus(row);
+          return (match.status === 'rounding' && match.tx?.id === txId) || (match.status === 'exact' && match.tx?.id === txId);
+        });
+        if (matchedRow) next.add(matchedRow.id);
+        return next;
+      });
+
+      alert('Cobro conciliado y verificado con ajuste por redondeo en la cuenta corriente.');
+      
+      fetchFinancialData();
+      if (reconBankId) {
+        fetchReconTransactions(reconBankId, reconStartDate, reconEndDate, reconStartTime, reconEndTime);
+      }
+    } catch (err: any) {
+      console.error(err);
+      alert('Error al conciliar con ajuste.');
+    } finally {
+      setReconLoading(false);
+    }
+  };
+
+  const handleRegisterPaymentFromCsvRow = async (row: any, clientObj: any) => {
+    if (!clientObj) return;
+    setReconLoading(true);
+    try {
+      await api.registerPayment(clientObj.id, {
+        amount: row.amount,
+        paymentMethod: 'BANK_TRANSFER',
+        description: `Cobro MP Conciliación - Op ${row.id} - Payer: ${row.payerName}`,
+        branch: 'X',
+        type: 'INCOME',
+        bankAccountId: Number(reconBankId)
+      });
+      
+      setReconciledRows(prev => {
+        const next = new Set(prev);
+        next.add(row.id);
+        return next;
+      });
+
+      alert(`Cobro de $${row.amount.toLocaleString('es-AR')} registrado y conciliado para ${clientObj.name}.`);
+      
+      fetchFinancialData();
+      if (reconBankId) {
+        fetchReconTransactions(reconBankId, reconStartDate, reconEndDate, reconStartTime, reconEndTime);
+      }
+    } catch (err: any) {
+      console.error(err);
+      alert(err.message || 'Error al registrar cobro.');
+    } finally {
+      setReconLoading(false);
+    }
+  };
+
+  const handleReconcileAllExactMatches = async () => {
+    const exactMatches: { txId: number, csvRowId: string }[] = [];
+    csvRows.forEach((row: any) => {
+      const match = getRowMatchStatus(row);
+      if (match.status === 'exact' && match.tx) {
+        exactMatches.push({ txId: match.tx.id, csvRowId: row.id });
+      }
+    });
+
+    if (exactMatches.length === 0) {
+      alert('No se encontraron transferencias con coincidencia exacta para conciliar en lote.');
+      return;
+    }
+
+    if (!window.confirm(`¿Desea conciliar las ${exactMatches.length} transferencias con coincidencia exacta de manera masiva?`)) {
+      return;
+    }
+
+    setReconLoading(true);
+    try {
       await Promise.all(
-        idsArray.map(id => api.verifyTransaction(id, true))
+        exactMatches.map(item => api.verifyTransaction(item.txId, true))
       );
       
-      alert(`Se conciliaron ${idsArray.length} transferencias con éxito.`);
+      setReconciledRows(prev => {
+        const next = new Set(prev);
+        exactMatches.forEach(item => next.add(item.csvRowId));
+        return next;
+      });
+
+      alert(`Se conciliaron ${exactMatches.length} transferencias de forma masiva.`);
       
       fetchFinancialData();
       if (reconBankId) {
@@ -249,9 +414,9 @@ export default function FinanzasDashboard() {
       }
     } catch (err) {
       console.error(err);
-      alert('Ocurrió un error al conciliar las transferencias seleccionadas.');
+      alert('Ocurrió un error al conciliar el lote.');
     } finally {
-      setLoading(false);
+      setReconLoading(false);
     }
   };
 
@@ -365,6 +530,70 @@ export default function FinanzasDashboard() {
       ledger: ledgerItems,
       transfers: transfersInPeriod
     };
+  };
+
+  const ManualClientSearch = ({ row }: { row: any }) => {
+    const [searchVal, setSearchVal] = useState('');
+    const [showSuggestions, setShowSuggestions] = useState(false);
+    
+    const filteredSuggestions = searchVal.trim().length > 1
+      ? clients.filter((c: any) => 
+          c.name.toLowerCase().includes(searchVal.toLowerCase()) || 
+          (c.cuit && c.cuit.includes(searchVal))
+        ).slice(0, 5)
+      : [];
+
+    return (
+      <div style={{ position: 'relative', width: '100%', marginTop: '6px' }}>
+        <input
+          type="text"
+          className="input"
+          placeholder="Buscar cliente por Nombre o CUIT..."
+          value={searchVal}
+          onChange={e => {
+            setSearchVal(e.target.value);
+            setShowSuggestions(true);
+          }}
+          onFocus={() => setShowSuggestions(true)}
+          style={{ padding: '6px 10px', fontSize: '0.78rem', height: '30px', borderRadius: '4px', border: '1px solid var(--border-color)', width: '100%' }}
+        />
+        {showSuggestions && filteredSuggestions.length > 0 && (
+          <div className="suggestions-list" style={{ 
+            position: 'absolute', 
+            top: '32px', 
+            left: 0, 
+            right: 0, 
+            zIndex: 100, 
+            backgroundColor: '#ffffff', 
+            border: '1px solid var(--border-color)', 
+            borderRadius: '4px',
+            boxShadow: 'var(--shadow-md)',
+            maxHeight: '150px',
+            overflowY: 'auto'
+          }}>
+            {filteredSuggestions.map((c: any) => (
+              <div
+                key={c.id}
+                className="suggestion-item"
+                style={{ 
+                  padding: '6px 10px', 
+                  cursor: 'pointer', 
+                  fontSize: '0.78rem',
+                  borderBottom: '1px solid #f1f5f9',
+                  textAlign: 'left'
+                }}
+                onMouseDown={() => {
+                  setManualMatches((prev: any) => ({ ...prev, [row.id]: c }));
+                  setShowSuggestions(false);
+                }}
+              >
+                <strong>{c.name}</strong> - CUIT: {c.cuit || 'S/D'} (Saldo: ${Number(c.outstandingBalance).toLocaleString()})
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
   };
 
   const { cashIncome, checkIncome, totalExpenses, totalTransfers, netIncome, ledger, transfers } = getFilteredMetricsAndLedger();
@@ -765,10 +994,10 @@ export default function FinanzasDashboard() {
       {/* MODAL DE CONCILIACIÓN BANCARIA */}
       {reconModalOpen && (
         <div className="modal-overlay" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div className="modal-content" style={{ maxWidth: '1050px', width: '95%', padding: '24px', maxHeight: '90vh', overflowY: 'auto', borderRadius: '12px' }}>
+          <div className="modal-content" style={{ maxWidth: '1150px', width: '95%', padding: '24px', maxHeight: '90vh', overflowY: 'auto', borderRadius: '12px' }}>
             <div className="modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '1px solid var(--border-color)', paddingBottom: '12px' }}>
               <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <CheckSquare size={22} color="#10b981" /> Conciliación y Caja de Transferencias
+                <CheckSquare size={22} color="#10b981" /> Conciliación de Transferencias (Mercado Pago)
               </h3>
               <button 
                 type="button" 
@@ -789,7 +1018,7 @@ export default function FinanzasDashboard() {
                   value={reconBankId} 
                   onChange={e => {
                     setReconBankId(e.target.value);
-                    fetchReconTransactions(e.target.value, reconStartDate, reconEndDate, reconStartTime, reconEndTime);
+                    fetchReconciliationData(e.target.value, reconStartDate, reconEndDate, reconStartTime, reconEndTime);
                   }}
                   style={{ width: '100%', fontSize: '0.85rem', height: '36px', padding: '6px 10px', borderRadius: '6px' }}
                 >
@@ -819,7 +1048,7 @@ export default function FinanzasDashboard() {
                 <button 
                   className="btn btn-secondary" 
                   disabled={reconLoading}
-                  onClick={() => fetchReconTransactions(reconBankId, reconStartDate, reconEndDate, reconStartTime, reconEndTime)}
+                  onClick={() => fetchReconciliationData(reconBankId, reconStartDate, reconEndDate, reconStartTime, reconEndTime)}
                   style={{ width: '100%', height: '36px', padding: '0 12px', fontSize: '0.85rem', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '6px', borderRadius: '6px', cursor: 'pointer' }}
                 >
                   <RefreshCw size={14} /> {reconLoading ? 'Cargando...' : 'Buscar'}
@@ -832,18 +1061,10 @@ export default function FinanzasDashboard() {
               <div>
                 <h4 style={{ margin: 0, fontSize: '0.9rem', fontWeight: 600 }}>Cargar Reporte Mercado Pago (.csv)</h4>
                 <p style={{ margin: '4px 0 0 0', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
-                  Sube el reporte de ventas de Mercado Pago para detectar cobros automáticamente en la grilla.
+                  Sube el reporte de ventas de Mercado Pago para detectar cobros automáticamente.
                 </p>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                {csvStats && (
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: '0.75rem', color: '#0f766e', fontWeight: 600 }}>Cruce Exitoso</div>
-                    <div style={{ fontSize: '0.82rem', color: '#115e59', fontWeight: 700 }}>
-                      {csvStats.matchedCount} de {csvStats.totalRows} filas detectadas
-                    </div>
-                  </div>
-                )}
                 <label className="btn btn-secondary" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', padding: '8px 12px', cursor: 'pointer', margin: 0 }}>
                   <Upload size={14} /> Seleccionar Archivo
                   <input type="file" accept=".csv" onChange={handleCSVUpload} style={{ display: 'none' }} />
@@ -851,156 +1072,436 @@ export default function FinanzasDashboard() {
               </div>
             </div>
 
-            {/* Listado de Transacciones a Auditar */}
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                  Mostrando {reconTransactions.length} transferencias en el rango seleccionado.
-                </span>
-                {reconTransactions.length > 0 && (
-                  <button 
-                    type="button" 
-                    className="btn btn-ghost"
-                    onClick={toggleSelectAllTxs}
-                    style={{ fontSize: '0.78rem', padding: '2px 8px' }}
-                  >
-                    {selectedTxs.size === reconTransactions.length ? 'Deseleccionar Todos' : 'Seleccionar Todos'}
-                  </button>
+            {/* Panel de Estadísticas en Vivo si hay CSV cargado */}
+            {csvRows.length > 0 && (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '12px', marginBottom: '20px' }}>
+                <div className="card" style={{ padding: '12px', textAlign: 'center', border: '1px solid var(--border-color)', borderRadius: '6px', backgroundColor: 'var(--bg-card)' }}>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>Movimientos MP</div>
+                  <div style={{ fontSize: '1.2rem', fontWeight: 700, fontFamily: 'monospace' }}>{csvRows.length}</div>
+                </div>
+                <div className="card" style={{ padding: '12px', textAlign: 'center', border: '1px solid var(--border-color)', borderRadius: '6px', backgroundColor: 'var(--bg-card)' }}>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>Total Recibido MP</div>
+                  <div style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--color-success)', fontFamily: 'monospace' }}>
+                    ${csvRows.reduce((acc, r) => acc + r.amount, 0).toLocaleString('es-AR', { maximumFractionDigits: 0 })}
+                  </div>
+                </div>
+                <div className="card" style={{ padding: '12px', textAlign: 'center', border: '1px solid var(--border-color)', borderRadius: '6px', backgroundColor: 'var(--bg-card)' }}>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>Coincidencias Exactas</div>
+                  <div style={{ fontSize: '1.2rem', fontWeight: 700, color: '#10b981', fontFamily: 'monospace' }}>
+                    {csvRows.filter(r => getRowMatchStatus(r).status === 'exact').length}
+                  </div>
+                </div>
+                <div className="card" style={{ padding: '12px', textAlign: 'center', border: '1px solid var(--border-color)', borderRadius: '6px', backgroundColor: 'var(--bg-card)' }}>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>Redondeos</div>
+                  <div style={{ fontSize: '1.2rem', fontWeight: 700, color: '#f59e0b', fontFamily: 'monospace' }}>
+                    {csvRows.filter(r => getRowMatchStatus(r).status === 'rounding').length}
+                  </div>
+                </div>
+                <div className="card" style={{ padding: '12px', textAlign: 'center', border: '1px solid var(--border-color)', borderRadius: '6px', backgroundColor: 'var(--bg-card)' }}>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>Clientes Identificados</div>
+                  <div style={{ fontSize: '1.2rem', fontWeight: 700, color: '#3b82f6', fontFamily: 'monospace' }}>
+                    {csvRows.filter(r => {
+                      const st = getRowMatchStatus(r);
+                      return st.status === 'unregistered' && !st.manual;
+                    }).length}
+                  </div>
+                </div>
+                <div className="card" style={{ padding: '12px', textAlign: 'center', border: '1px solid var(--border-color)', borderRadius: '6px', backgroundColor: 'var(--bg-card)' }}>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>Conciliados</div>
+                  <div style={{ fontSize: '1.2rem', fontWeight: 700, color: '#10b981', fontFamily: 'monospace' }}>
+                    {reconciledRows.size}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Workspace de conciliación */}
+            <div style={{ display: 'flex', gap: '24px', flexWrap: 'wrap', alignItems: 'stretch', textAlign: 'left' }}>
+              {/* PANEL IZQUIERDO: MOVIMIENTOS MP (60%) */}
+              <div style={{ flex: '2 1 550px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                {csvRows.length > 0 ? (
+                  <>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+                      <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700 }}>Movimientos en el Extracto de Mercado Pago</h4>
+                      {/* Batch confirm button */}
+                      {csvRows.filter(r => getRowMatchStatus(r).status === 'exact').length > 0 && (
+                        <button
+                          type="button"
+                          className="btn"
+                          style={{
+                            backgroundColor: '#10b981',
+                            borderColor: '#10b981',
+                            color: 'white',
+                            fontSize: '0.78rem',
+                            padding: '6px 12px',
+                            fontWeight: 600,
+                            borderRadius: '6px',
+                            cursor: 'pointer'
+                          }}
+                          onClick={handleReconcileAllExactMatches}
+                        >
+                          ⚡ Conciliar Exactos en Lote ({csvRows.filter(r => getRowMatchStatus(r).status === 'exact').length})
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Controles de Búsqueda y Pestañas */}
+                    <div style={{ display: 'flex', gap: '10px', flexDirection: 'column' }}>
+                      <input
+                        type="text"
+                        className="input"
+                        placeholder="Filtrar por nombre, CUIT o ID de operación..."
+                        value={csvSearchQuery}
+                        onChange={e => setCsvSearchQuery(e.target.value)}
+                        style={{ padding: '8px 12px', fontSize: '0.82rem', borderRadius: '6px', height: '36px' }}
+                      />
+                      <div style={{ display: 'flex', gap: '4px', overflowX: 'auto', paddingBottom: '4px', borderBottom: '1px solid var(--border-color)' }}>
+                        {[
+                          { id: 'all', label: `Todos (${csvRows.length})` },
+                          { id: 'exact', label: `Exacto (${csvRows.filter(r => getRowMatchStatus(r).status === 'exact').length})` },
+                          { id: 'rounding', label: `Redondeo (${csvRows.filter(r => getRowMatchStatus(r).status === 'rounding').length})` },
+                          { id: 'unregistered', label: `Identificado (${csvRows.filter(r => getRowMatchStatus(r).status === 'unregistered').length})` },
+                          { id: 'no_match', label: `Sin Match (${csvRows.filter(r => getRowMatchStatus(r).status === 'no_match').length})` },
+                          { id: 'reconciled', label: `Conciliados (${reconciledRows.size})` }
+                        ].map(tab => (
+                          <button
+                            key={tab.id}
+                            type="button"
+                            className={`btn ${csvFilterTab === tab.id ? 'btn-primary' : 'btn-ghost'}`}
+                            onClick={() => setCsvFilterTab(tab.id as any)}
+                            style={{
+                              fontSize: '0.72rem',
+                              padding: '4px 8px',
+                              height: '28px',
+                              borderRadius: '4px',
+                              whiteSpace: 'nowrap',
+                              backgroundColor: csvFilterTab === tab.id ? 'var(--accent-color)' : 'transparent',
+                              color: csvFilterTab === tab.id ? 'white' : 'var(--text-secondary)',
+                              fontWeight: csvFilterTab === tab.id ? 600 : 400
+                            }}
+                          >
+                            {tab.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Listado de Filas MP */}
+                    <div style={{ maxHeight: '420px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '10px', paddingRight: '4px' }}>
+                      {csvRows
+                        .filter(row => {
+                          const statusInfo = getRowMatchStatus(row);
+                          if (csvFilterTab === 'reconciled') return statusInfo.status === 'reconciled';
+                          if (csvFilterTab === 'exact') return statusInfo.status === 'exact';
+                          if (csvFilterTab === 'rounding') return statusInfo.status === 'rounding';
+                          if (csvFilterTab === 'unregistered') return statusInfo.status === 'unregistered';
+                          if (csvFilterTab === 'no_match') return statusInfo.status === 'no_match';
+                          return true;
+                        })
+                        .filter(row => {
+                          if (!csvSearchQuery.trim()) return true;
+                          const q = csvSearchQuery.toLowerCase();
+                          return (
+                            row.payerName.toLowerCase().includes(q) ||
+                            row.payerCuit.includes(q) ||
+                            row.id.includes(q) ||
+                            row.amount.toString().includes(q)
+                          );
+                        })
+                        .map(row => {
+                          const matchInfo = getRowMatchStatus(row);
+                          return (
+                            <div
+                              key={row.id}
+                              style={{
+                                padding: '14px',
+                                border: '1px solid var(--border-color)',
+                                borderRadius: '8px',
+                                backgroundColor:
+                                  matchInfo.status === 'reconciled'
+                                    ? '#f8fafc'
+                                    : matchInfo.status === 'exact'
+                                    ? '#eaf9ee'
+                                    : matchInfo.status === 'rounding'
+                                    ? '#fff8e1'
+                                    : matchInfo.status === 'unregistered'
+                                    ? '#e8f0fe'
+                                    : '#ffffff',
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                gap: '16px',
+                                alignItems: 'center',
+                                transition: 'all 0.2s ease',
+                                opacity: matchInfo.status === 'reconciled' ? 0.75 : 1
+                              }}
+                            >
+                              {/* Info de la transferencia MP */}
+                              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                  <span style={{ fontSize: '0.82rem', fontWeight: 700 }}>
+                                    {row.payerName || 'PAGADOR DESCONOCIDO'}
+                                  </span>
+                                  {row.payerCuit && (
+                                    <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', backgroundColor: '#e2e8f0', padding: '1px 5px', borderRadius: '4px', fontFamily: 'monospace' }}>
+                                      {row.payerCuit}
+                                    </span>
+                                  )}
+                                </div>
+                                <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', display: 'flex', gap: '8px' }}>
+                                  <span>ID MP: <strong style={{ fontFamily: 'monospace' }}>{row.id}</strong></span>
+                                  <span>•</span>
+                                  <span>{new Date(row.date).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' })}</span>
+                                </div>
+
+                                {/* Matching Info block */}
+                                <div style={{ marginTop: '8px', fontSize: '0.75rem' }}>
+                                  {matchInfo.status === 'reconciled' && (
+                                    <span style={{ color: '#137333', fontWeight: 600 }}>✅ Conciliado correctamente.</span>
+                                  )}
+                                  
+                                  {matchInfo.status === 'exact' && matchInfo.tx && (
+                                    <div style={{ color: '#137333' }}>
+                                      <span>Coincide con transacción ERP <strong>#{matchInfo.tx.receiptNumber || matchInfo.tx.id}</strong></span>
+                                      <div style={{ fontSize: '0.7rem', opacity: 0.8 }}>
+                                        Cliente: {matchInfo.tx.persona?.name} | {new Date(matchInfo.tx.createdAt).toLocaleDateString('es-AR')}
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {matchInfo.status === 'rounding' && matchInfo.tx && (
+                                    <div style={{ color: '#b78103' }}>
+                                      <span>Difiere por redondeo con transacción ERP <strong>#{matchInfo.tx.receiptNumber || matchInfo.tx.id}</strong> (${Number(matchInfo.tx.amount).toLocaleString('es-AR')} en ERP)</span>
+                                      <div style={{ fontWeight: 600, fontSize: '0.72rem', marginTop: '2px' }}>
+                                        Diferencia: ${(row.amount - Number(matchInfo.tx.amount)).toLocaleString('es-AR', { signDisplay: 'always' })} (Ajustará la cuenta corriente)
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {matchInfo.status === 'unregistered' && matchInfo.client && (
+                                    <div style={{ color: '#1a73e8' }}>
+                                      <span>Cliente ERP Encontrado: <strong>{matchInfo.client.name}</strong></span>
+                                      <div style={{ fontSize: '0.7rem' }}>
+                                        Saldo Cuenta Corriente: <strong>${Number(matchInfo.client.outstandingBalance).toLocaleString()}</strong>
+                                        {matchInfo.manual && <span style={{ marginLeft: '6px', color: '#651fff', fontWeight: 600 }}>(Vinculado manualmente)</span>}
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {matchInfo.status === 'no_match' && (
+                                    <div>
+                                      <span style={{ color: 'var(--text-secondary)', display: 'block', marginBottom: '2px' }}>No se encontró cliente. Vincula uno manualmente para registrar el cobro:</span>
+                                      <ManualClientSearch row={row} />
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Monto y Acciones */}
+                              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'space-between', gap: '8px', minWidth: '130px' }}>
+                                <div style={{ fontSize: '1.1rem', fontWeight: 700, fontFamily: 'monospace' }}>
+                                  ${row.amount.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                                </div>
+
+                                {/* Botones de acción */}
+                                <div>
+                                  {matchInfo.status === 'exact' && matchInfo.tx && (
+                                    <button
+                                      type="button"
+                                      className="btn"
+                                      onClick={() => handleVerifyWithAdjustment(matchInfo.tx.id, row.amount)}
+                                      style={{ backgroundColor: '#10b981', color: 'white', border: 'none', padding: '6px 10px', fontSize: '0.72rem', fontWeight: 600, borderRadius: '4px', cursor: 'pointer' }}
+                                    >
+                                      Conciliar
+                                    </button>
+                                  )}
+
+                                  {matchInfo.status === 'rounding' && matchInfo.tx && (
+                                    <button
+                                      type="button"
+                                      className="btn"
+                                      onClick={() => handleVerifyWithAdjustment(matchInfo.tx.id, row.amount)}
+                                      style={{ backgroundColor: '#f59e0b', color: 'white', border: 'none', padding: '6px 10px', fontSize: '0.72rem', fontWeight: 600, borderRadius: '4px', cursor: 'pointer' }}
+                                    >
+                                      Ajustar y Conciliar
+                                    </button>
+                                  )}
+
+                                  {matchInfo.status === 'unregistered' && matchInfo.client && (
+                                    <button
+                                      type="button"
+                                      className="btn"
+                                      onClick={() => handleRegisterPaymentFromCsvRow(row, matchInfo.client)}
+                                      style={{ backgroundColor: '#3b82f6', color: 'white', border: 'none', padding: '6px 10px', fontSize: '0.72rem', fontWeight: 600, borderRadius: '4px', cursor: 'pointer' }}
+                                    >
+                                      Registrar Cobro
+                                    </button>
+                                  )}
+
+                                  {matchInfo.status === 'reconciled' && (
+                                    <span style={{ fontSize: '0.72rem', color: '#10b981', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                                      <Check size={14} /> Listo
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                    </div>
+                  </>
+                ) : (
+                  <div style={{ height: '300px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', border: '2px dashed #cbd5e1', borderRadius: '12px', padding: '24px', color: 'var(--text-secondary)', textAlign: 'center', backgroundColor: '#fafafa' }}>
+                    <Upload size={38} color="var(--text-muted)" style={{ marginBottom: '12px' }} />
+                    <h4 style={{ margin: 0, fontWeight: 600 }}>Carga el reporte de Mercado Pago para empezar</h4>
+                    <p style={{ margin: '8px 0 0 0', fontSize: '0.8rem', maxWidth: '380px' }}>
+                      Arrastra o selecciona el archivo CSV diario obtenido desde Mercado Pago. El sistema cruzará cada fila con los registros del ERP de forma inteligente.
+                    </p>
+                  </div>
                 )}
               </div>
 
-              <div className="table-responsive" style={{ border: '1px solid var(--border-color)', borderRadius: '8px', overflow: 'hidden', maxHeight: '300px', overflowY: 'auto' }}>
-                <table className="table" style={{ width: '100%', fontSize: '0.82rem', borderCollapse: 'collapse' }}>
-                  <thead>
-                    <tr style={{ backgroundColor: 'var(--bg-light)', borderBottom: '1px solid var(--border-color)', position: 'sticky', top: 0, zIndex: 10 }}>
-                      <th style={{ padding: '10px 12px', width: '40px', textAlign: 'center' }}></th>
-                      <th style={{ padding: '10px 12px' }}>Fecha/Hora</th>
-                      <th style={{ padding: '10px 12px' }}>Cliente / Recibo</th>
-                      <th style={{ padding: '10px 12px' }}>Estado</th>
-                      <th style={{ padding: '10px 12px', textAlign: 'right' }}>Monto</th>
-                      <th style={{ padding: '10px 12px', textAlign: 'center' }}>Acción</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {reconTransactions.length === 0 ? (
-                      <tr>
-                        <td colSpan={6} style={{ textAlign: 'center', padding: '30px', color: 'var(--text-secondary)' }}>
-                          No se encontraron transferencias en el rango seleccionado. Modifique los filtros de fecha/hora.
-                        </td>
-                      </tr>
-                    ) : (
-                      reconTransactions.map((t: any) => {
-                        const isSelected = selectedTxs.has(t.id);
-                        const match = csvMatches[t.id];
-                        const isVerified = t.verified;
-                        
-                        return (
-                          <tr 
-                            key={t.id} 
-                            style={{ 
-                              borderBottom: '1px solid var(--border-color)', 
-                              backgroundColor: isVerified ? '#f8fafc' : (match ? '#f0fdf4' : '#fff')
-                            }}
-                          >
-                            <td style={{ padding: '10px 12px', textAlign: 'center', verticalAlign: 'middle' }}>
-                              {!isVerified && (
-                                <input 
-                                  type="checkbox" 
-                                  checked={isSelected} 
-                                  onChange={() => toggleSelectTx(t.id)} 
-                                  style={{ cursor: 'pointer' }}
-                                />
-                              )}
-                            </td>
-                            <td style={{ padding: '10px 12px', verticalAlign: 'middle' }}>
-                              {new Date(t.createdAt).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' })}
-                            </td>
-                            <td style={{ padding: '10px 12px', verticalAlign: 'middle' }}>
+              {/* PANEL DERECHO: DETALLE ERP (40%) */}
+              <div style={{ flex: '1 1 350px', borderLeft: '1px solid var(--border-color)', paddingLeft: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div>
+                  <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700 }}>Transferencias en ERP</h4>
+                  <p style={{ margin: '4px 0 0 0', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                    Listado de transferencias registradas en el ERP para este banco y periodo.
+                  </p>
+                </div>
+
+                {/* Filtro rápido ERP */}
+                <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span>Pendientes de verificar: <strong>{reconTransactions.filter((t: any) => !t.verified).length}</strong></span>
+                  {reconTransactions.length > 0 && (
+                    <button
+                      type="button"
+                      className="btn btn-ghost"
+                      onClick={toggleSelectAllTxs}
+                      style={{ fontSize: '0.7rem', padding: '2px 6px', height: '24px' }}
+                    >
+                      {selectedTxs.size === reconTransactions.length ? 'Deseleccionar' : 'Seleccionar Todo'}
+                    </button>
+                  )}
+                </div>
+
+                {/* Grilla de transacciones ERP */}
+                <div style={{ maxHeight: '420px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {reconTransactions.length === 0 ? (
+                    <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.78rem' }}>
+                      No hay transacciones registradas en este periodo.
+                    </div>
+                  ) : (
+                    reconTransactions.map((t: any) => {
+                      const isSelected = selectedTxs.has(t.id);
+                      const isVerified = t.verified;
+                      return (
+                        <div
+                          key={t.id}
+                          style={{
+                            padding: '10px 12px',
+                            border: '1px solid var(--border-color)',
+                            borderRadius: '6px',
+                            backgroundColor: isVerified ? '#f8fafc' : '#ffffff',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            fontSize: '0.78rem'
+                          }}
+                        >
+                          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                            {!isVerified && (
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={() => toggleSelectTx(t.id)}
+                                style={{ cursor: 'pointer' }}
+                              />
+                            )}
+                            <div>
                               <div style={{ fontWeight: 600 }}>{t.persona?.name || 'Cliente de Mostrador'}</div>
-                              <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>
-                                {t.receiptNumber ? `Recibo: ${t.receiptNumber}` : (t.orderId ? `Pedido #${t.orderId}` : 'Cobro Directo')}
+                              <div style={{ fontSize: '0.68rem', color: 'var(--text-secondary)' }}>
+                                {t.receiptNumber ? `Recibo: ${t.receiptNumber}` : 'Cobro Directo'} | {new Date(t.createdAt).toLocaleDateString('es-AR')}
                               </div>
-                            </td>
-                            <td style={{ padding: '10px 12px', verticalAlign: 'middle' }}>
+                            </div>
+                          </div>
+
+                          <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
+                            <span style={{ fontFamily: 'monospace', fontWeight: 700 }}>
+                              ${Number(t.amount).toLocaleString('es-AR')}
+                            </span>
+                            <div>
                               {isVerified ? (
-                                <span style={{ padding: '2px 6px', borderRadius: '12px', fontSize: '0.7rem', backgroundColor: '#e2e8f0', color: '#475569', fontWeight: 600 }}>
-                                  VERIFICADO
-                                </span>
-                              ) : (
-                                <span style={{ padding: '2px 6px', borderRadius: '12px', fontSize: '0.7rem', backgroundColor: '#fee2e2', color: '#991b1b', fontWeight: 600 }}>
-                                  PENDIENTE
-                                </span>
-                              )}
-                              {match && (
-                                <div style={{ fontSize: '0.72rem', color: '#15803d', fontWeight: 600, marginTop: '2px', display: 'flex', alignItems: 'center', gap: '3px' }}>
-                                  <Check size={12} /> Coincidencia MP ({match.idOperacion})
-                                </div>
-                              )}
-                            </td>
-                            <td style={{ padding: '10px 12px', verticalAlign: 'middle', textAlign: 'right', fontWeight: 700, fontFamily: 'monospace', fontSize: '0.88rem' }}>
-                              ${Number(t.amount).toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-                            </td>
-                            <td style={{ padding: '10px 12px', textAlign: 'center', verticalAlign: 'middle' }}>
-                              {!isVerified ? (
-                                <button 
-                                  className="btn btn-ghost" 
+                                <span
+                                  style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', cursor: 'pointer' }}
                                   onClick={async () => {
-                                    try {
-                                      await api.verifyTransaction(t.id, true);
-                                      alert('Transferencia verificada con éxito.');
-                                      fetchFinancialData();
-                                      fetchReconTransactions(reconBankId, reconStartDate, reconEndDate, reconStartTime, reconEndTime);
-                                    } catch (err) {
-                                      alert('Error al verificar.');
-                                    }
-                                  }}
-                                  style={{ padding: '4px 8px', fontSize: '0.72rem', color: '#10b981', border: '1px solid #10b981', borderRadius: '4px', backgroundColor: 'transparent' }}
-                                >
-                                  Verificar
-                                </button>
-                              ) : (
-                                <button 
-                                  className="btn btn-ghost"
-                                  onClick={async () => {
-                                    if (window.confirm('¿Desear revertir la verificación de esta transferencia?')) {
+                                    if (window.confirm('¿Desea revertir la verificación de esta transferencia?')) {
                                       try {
                                         await api.verifyTransaction(t.id, false);
-                                        alert('Verificación revertida.');
                                         fetchFinancialData();
                                         fetchReconTransactions(reconBankId, reconStartDate, reconEndDate, reconStartTime, reconEndTime);
-                                      } catch (err) {
+                                      } catch {
                                         alert('Error al revertir.');
                                       }
                                     }
                                   }}
-                                  style={{ padding: '4px 8px', fontSize: '0.72rem', color: '#64748b' }}
+                                  title="Haga clic para revertir"
                                 >
-                                  Revertir
+                                  ✅ VERIFICADA (Revertir)
+                                </span>
+                              ) : (
+                                <button
+                                  type="button"
+                                  className="btn btn-ghost"
+                                  onClick={async () => {
+                                    try {
+                                      await api.verifyTransaction(t.id, true);
+                                      fetchFinancialData();
+                                      fetchReconTransactions(reconBankId, reconStartDate, reconEndDate, reconStartTime, reconEndTime);
+                                    } catch {
+                                      alert('Error al verificar.');
+                                    }
+                                  }}
+                                  style={{ padding: '2px 6px', fontSize: '0.65rem', color: '#10b981', border: '1px solid #10b981', borderRadius: '4px', backgroundColor: 'transparent' }}
+                                >
+                                  Verificar
                                 </button>
                               )}
-                            </td>
-                          </tr>
-                        );
-                      })
-                    )}
-                  </tbody>
-                </table>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+
+                {/* Botón de lote para el panel derecho */}
+                {selectedTxs.size > 0 && (
+                  <button
+                    type="button"
+                    className="btn"
+                    onClick={async () => {
+                      setReconLoading(true);
+                      try {
+                        await Promise.all(Array.from(selectedTxs).map(id => api.verifyTransaction(id, true)));
+                        alert(`Se verificaron ${selectedTxs.size} transferencias.`);
+                        fetchFinancialData();
+                        fetchReconTransactions(reconBankId, reconStartDate, reconEndDate, reconStartTime, reconEndTime);
+                      } catch {
+                        alert('Error en lote.');
+                      } finally {
+                        setReconLoading(false);
+                      }
+                    }}
+                    style={{ backgroundColor: '#10b981', color: 'white', border: 'none', width: '100%', padding: '10px', fontSize: '0.8rem', fontWeight: 600, borderRadius: '6px', cursor: 'pointer' }}
+                  >
+                    Verificar {selectedTxs.size} Seleccionados ERP
+                  </button>
+                )}
               </div>
             </div>
 
             {/* Acciones del Modal */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--border-color)', marginTop: '24px', paddingTop: '16px' }}>
-              <div>
-                {selectedTxs.size > 0 && (
-                  <button 
-                    className="btn" 
-                    onClick={handleVerifyBatch}
-                    style={{ backgroundColor: '#10b981', color: 'white', display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.88rem', padding: '10px 16px', fontWeight: 600, border: 'none', borderRadius: '6px', cursor: 'pointer' }}
-                  >
-                    <CheckSquare size={16} /> Conciliar {selectedTxs.size} Seleccionados
-                  </button>
-                )}
-              </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', borderTop: '1px solid var(--border-color)', marginTop: '24px', paddingTop: '16px' }}>
               <button 
                 type="button" 
                 className="btn btn-secondary" 

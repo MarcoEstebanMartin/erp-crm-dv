@@ -641,7 +641,7 @@ export async function transferFunds(req: AuthenticatedRequest, res: Response): P
  */
 export async function verifyTransaction(req: AuthenticatedRequest, res: Response): Promise<void> {
   const { id } = req.params;
-  const { verified } = req.body;
+  const { verified, adjustedAmount } = req.body;
 
   try {
     const txId = Number(id);
@@ -659,15 +659,56 @@ export async function verifyTransaction(req: AuthenticatedRequest, res: Response
       return;
     }
 
-    const updatedTx = await prisma.transaction.update({
-      where: { id: txId },
-      data: { verified: Boolean(verified) },
-      include: {
-        user: { select: { id: true, username: true } },
-        persona: { select: { id: true, name: true, isClient: true, isProvider: true } },
-        cashDrawer: true,
-        bankAccount: true,
+    const updatedTx = await prisma.$transaction(async (tx) => {
+      let finalAmount = Number(transaction.amount);
+
+      if (adjustedAmount !== undefined && adjustedAmount !== null && Boolean(verified)) {
+        const newAmount = Number(Number(adjustedAmount).toFixed(2));
+        const oldAmount = Number(transaction.amount);
+        const diff = newAmount - oldAmount;
+
+        if (diff !== 0) {
+          // Ajustar Cuenta Corriente del Cliente si es un cobro (INCOME)
+          if (transaction.personaId && transaction.type === 'INCOME') {
+            await tx.persona.update({
+              where: { id: transaction.personaId },
+              data: {
+                outstandingBalance: {
+                  decrement: diff,
+                },
+              },
+            });
+          }
+
+          // Ajustar saldo de Cuenta Bancaria si es un ingreso (INCOME)
+          if (transaction.bankAccountId && transaction.type === 'INCOME') {
+            await tx.bankAccount.update({
+              where: { id: transaction.bankAccountId },
+              data: {
+                balance: {
+                  increment: diff,
+                },
+              },
+            });
+          }
+
+          finalAmount = newAmount;
+        }
       }
+
+      return tx.transaction.update({
+        where: { id: txId },
+        data: { 
+          verified: Boolean(verified),
+          amount: finalAmount,
+        },
+        include: {
+          user: { select: { id: true, username: true } },
+          persona: { select: { id: true, name: true, isClient: true, isProvider: true } },
+          cashDrawer: true,
+          bankAccount: true,
+        }
+      });
     });
 
     // Auditoría
@@ -679,7 +720,9 @@ export async function verifyTransaction(req: AuthenticatedRequest, res: Response
       newValues: {
         verified: Boolean(verified),
         amount: updatedTx.amount,
+        originalAmount: transaction.amount,
         bankAccountId: updatedTx.bankAccountId,
+        adjusted: adjustedAmount !== undefined && adjustedAmount !== null,
       },
     });
 

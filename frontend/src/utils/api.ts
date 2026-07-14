@@ -216,7 +216,7 @@ export const api = {
     return api.updatePersona(id, clientData);
   },
 
-  registerPayment: async (personaId: number, paymentData: { amount: number, paymentMethod: string, description?: string, branch?: string, type?: string, supplierInvoiceId?: number, orderId?: number, retenciones?: { taxType: 'GANANCIAS' | 'IIBB', number: string, amount: number }[] }) => {    
+  registerPayment: async (personaId: number, paymentData: { amount: number, paymentMethod: string, description?: string, branch?: string, type?: string, supplierInvoiceId?: number, orderId?: number, bankAccountId?: number | null, retenciones?: { taxType: 'GANANCIAS' | 'IIBB', number: string, amount: number }[] }) => {    
     const res = await request(`/personas/${personaId}/payments`, {
       method: 'POST',
       body: JSON.stringify(paymentData)
@@ -501,12 +501,10 @@ export const api = {
     }
   },
 
-  verifyTransaction: async (id: number, verified: boolean) => {
-    
-
+  verifyTransaction: async (id: number, verified: boolean, adjustedAmount?: number) => {
     const res = await request(`/finance/transactions/${id}/verify`, {
       method: 'PUT',
-      body: JSON.stringify({ verified })
+      body: JSON.stringify({ verified, adjustedAmount })
     });
     return res;
   },
