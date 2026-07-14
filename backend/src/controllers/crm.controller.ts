@@ -130,6 +130,27 @@ export async function getCRMAlerts(req: AuthenticatedRequest, res: Response): Pr
       };
     }).filter(item => item.suggestedProducts.length > 0);
 
+    // 4. Lotes por vencer (próximos 30 días con stock > 0)
+    const thirtyDaysFromNow = new Date();
+    thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
+    const today = new Date();
+
+    const expiringLots = await prisma.productLot.findMany({
+      where: {
+        stock: { gt: 0 },
+        expirationDate: {
+          gte: today,
+          lte: thirtyDaysFromNow
+        }
+      },
+      include: {
+        product: true
+      },
+      orderBy: {
+        expirationDate: 'asc'
+      }
+    });
+
     res.status(200).json({
       status: 'success',
       data: {
@@ -143,6 +164,15 @@ export async function getCRMAlerts(req: AuthenticatedRequest, res: Response): Pr
         })),
         replenishmentSuggestions,
         consumerSuggestions,
+        expiringLots: expiringLots.map(l => ({
+          id: l.id,
+          lotNumber: l.lotNumber,
+          expirationDate: l.expirationDate,
+          stock: l.stock,
+          productId: l.productId,
+          productName: l.product.name,
+          sku: l.product.sku
+        })),
       },
     });
   } catch (error: any) {

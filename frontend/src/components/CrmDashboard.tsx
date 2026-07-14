@@ -9,7 +9,8 @@ import {
   Loader2,
   RefreshCw,
   TrendingUp,
-  X
+  X,
+  AlertTriangle
 } from 'lucide-react';
 
 export default function CrmDashboard() {
@@ -333,6 +334,68 @@ export default function CrmDashboard() {
           </div>
         </div>
 
+      </div>
+
+      {/* LOTES POR VENCER (PRÓXIMOS 30 DÍAS) */}
+      <div className="card" style={{ borderLeft: '4px solid var(--accent-color)', marginTop: '20px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', color: 'var(--accent-color)' }}>
+          <AlertTriangle size={20} style={{ color: '#E30613' }} />
+          <h3 className="card-title" style={{ margin: '0' }}>Alerta de Lotes Próximos a Vencer (Límite: 30 Días)</h3>
+        </div>
+
+        <p style={{ fontSize: '0.85rem', marginBottom: '20px', color: 'var(--text-secondary)' }}>
+          Lotes físicos activos en góndola/depósito que vencerán pronto. Se recomienda priorizar su rotación o aplicar descuentos.
+        </p>
+
+        <div className="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Artículo</th>
+                <th>Código SKU</th>
+                <th>Número de Lote</th>
+                <th>Vencimiento</th>
+                <th style={{ textAlign: 'center' }}>Stock Remanente</th>
+                <th>Estado / Días Restantes</th>
+              </tr>
+            </thead>
+            <tbody>
+              {!alerts?.expiringLots || alerts.expiringLots.length === 0 ? (
+                <tr><td colSpan={6} style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '16px' }}>No hay lotes con stock activo próximos a vencer en los próximos 30 días.</td></tr>
+              ) : (
+                alerts.expiringLots.map((lot: any) => {
+                  const daysLeft = Math.ceil((new Date(lot.expirationDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+                  const isCritical = daysLeft <= 10;
+                  
+                  return (
+                    <tr key={lot.id}>
+                      <td style={{ fontWeight: 600 }}>{lot.productName}</td>
+                      <td style={{ fontFamily: 'monospace', fontSize: '0.85rem' }}>{lot.sku}</td>
+                      <td style={{ fontWeight: 500 }}>{lot.lotNumber}</td>
+                      <td>{new Date(lot.expirationDate).toLocaleDateString('es-AR', { timeZone: 'UTC' })}</td>
+                      <td style={{ textAlign: 'center', fontWeight: 700 }}>{lot.stock} u.</td>
+                      <td>
+                        <span 
+                          className="badge" 
+                          style={{ 
+                            backgroundColor: isCritical ? '#FCE8E6' : '#FEF3C7', 
+                            color: isCritical ? '#E30613' : '#B45309',
+                            fontWeight: 600,
+                            fontSize: '0.75rem',
+                            padding: '4px 8px',
+                            borderRadius: '4px'
+                          }}
+                        >
+                          {isCritical ? `⚠️ Crítico: ${daysLeft} días` : `Próximo: ${daysLeft} días`}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* ====================================================================

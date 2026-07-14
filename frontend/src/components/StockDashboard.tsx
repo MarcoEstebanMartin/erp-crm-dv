@@ -34,6 +34,10 @@ export default function StockDashboard({ products, onRefresh }: StockDashboardPr
   const [loadingGlobalMovements, setLoadingGlobalMovements] = useState(false);
   const [showGlobalMovements, setShowGlobalMovements] = useState(false);
 
+  // Modo Inventario Rápido
+  const [isQuickInventoryMode, setIsQuickInventoryMode] = useState(false);
+  const [pendingAdjustments, setPendingAdjustments] = useState<{ [key: string]: number }>({});
+
   // Modal de ajuste de stock
   const [adjustModal, setAdjustModal] = useState<{
     open: boolean;
@@ -137,6 +141,89 @@ export default function StockDashboard({ products, onRefresh }: StockDashboardPr
     }
   };
 
+  // Guardar todos los ajustes del modo inventario rápido
+  const handleSaveQuickInventory = async () => {
+    setLoadingAdjust(true);
+    setErrorMessage(null);
+    setSuccessMessage(null);
+
+    const adjustmentsToMake: Array<{
+      productId: number;
+      quantityChange: number;
+      reason: string;
+      lotNumber?: string;
+      expirationDate?: string;
+      productName: string;
+    }> = [];
+
+    // Recorrer los ajustes pendientes
+    for (const [key, val] of Object.entries(pendingAdjustments)) {
+      if (key.startsWith('lot-')) {
+        const lotId = Number(key.replace('lot-', ''));
+        for (const p of products) {
+          const lot = (p.lots || []).find((l: any) => l.id === lotId);
+          if (lot) {
+            const diff = val - lot.stock;
+            if (diff !== 0) {
+              adjustmentsToMake.push({
+                productId: p.id,
+                quantityChange: diff,
+                reason: 'Ajuste rápido de inventario (Lote)',
+                lotNumber: lot.lotNumber,
+                productName: p.name
+              });
+            }
+            break;
+          }
+        }
+      } else if (key.startsWith('prod-')) {
+        const productId = Number(key.replace('prod-', ''));
+        const p = products.find(prod => prod.id === productId);
+        if (p) {
+          const diff = val - p.stock;
+          if (diff !== 0) {
+            adjustmentsToMake.push({
+              productId: p.id,
+              quantityChange: diff,
+              reason: 'Ajuste rápido de inventario (Stock inicial)',
+              lotNumber: 'S/L',
+              expirationDate: '2036-12-31',
+              productName: p.name
+            });
+          }
+        }
+      }
+    }
+
+    if (adjustmentsToMake.length === 0) {
+      setErrorMessage('No hay cambios pendientes de guardar.');
+      setLoadingAdjust(false);
+      return;
+    }
+
+    try {
+      // Realizar los ajustes de forma secuencial
+      for (const adj of adjustmentsToMake) {
+        await api.adjustStock(
+          adj.productId,
+          adj.quantityChange,
+          adj.reason,
+          adj.lotNumber,
+          adj.expirationDate
+        );
+      }
+
+      setSuccessMessage(`Se aplicaron con éxito ${adjustmentsToMake.length} ajustes de inventario.`);
+      setPendingAdjustments({});
+      setIsQuickInventoryMode(false);
+      await onRefresh();
+    } catch (err: any) {
+      setErrorMessage(err.message || 'Ocurrió un error al guardar los ajustes.');
+    } finally {
+      setLoadingAdjust(false);
+    }
+  };
+
   // Extraer rubro de forma segura
   const extractRubroLabel = (p: any): string => {
     if (!p.rubro) return 'Sin Rubro';
@@ -176,9 +263,21 @@ export default function StockDashboard({ products, onRefresh }: StockDashboardPr
     return matchesSearch && matchesRubro && matchesStock;
   });
 
+  // Obtener el stock reflejando los ajustes pendientes en tiempo real
+  const getDisplayedStock = (p: any) => {
+    if (p.lots && p.lots.length > 0) {
+      return p.lots.reduce((sum: number, lot: any) => {
+        const pending = pendingAdjustments[`lot-${lot.id}`];
+        return sum + (pending !== undefined ? pending : lot.stock);
+      }, 0);
+    }
+    const pending = pendingAdjustments[`prod-${p.id}`];
+    return pending !== undefined ? pending : p.stock;
+  };
+
   // Cálculos de valorización para los productos FILTRADOS
   const stats = filteredProducts.reduce((acc, p) => {
-    const stockQty = Number(p.stock) || 0;
+    const stockQty = getDisplayedStock(p);
     const cost = Number(p.costPrice) || 0;
     const listPrice = Number(p.listPrice) || 0;
     const minStock = Number(p.minStock) || 0;
@@ -441,6 +540,33 @@ export default function StockDashboard({ products, onRefresh }: StockDashboardPr
           </button>
         </div>
 
+        {/* Toggle Modo Inventario Rápido */}
+        <button 
+          className="btn" 
+          type="button"
+          style={{ 
+            borderRadius: '8px', 
+            padding: '10px 14px',
+            backgroundColor: isQuickInventoryMode ? '#FEF3C7' : 'var(--bg-app)',
+            color: isQuickInventoryMode ? '#B45309' : 'var(--text-primary)',
+            border: isQuickInventoryMode ? '1px solid #F59E0B' : '1px solid var(--border-color)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            fontWeight: 600,
+            cursor: 'pointer'
+          }}
+          onClick={() => {
+            if (isQuickInventoryMode) {
+              setPendingAdjustments({});
+            }
+            setIsQuickInventoryMode(!isQuickInventoryMode);
+          }}
+          title="Modificar múltiples stock a la vez"
+        >
+          <span>{isQuickInventoryMode ? '🚫 Cancelar Inventario' : '📝 Modo Inventario Rápido'}</span>
+        </button>
+
         {/* Acciones del Historial Global */}
         <button 
           className="btn btn-secondary" 
@@ -479,13 +605,18 @@ export default function StockDashboard({ products, onRefresh }: StockDashboardPr
               </tr>
             ) : (
               filteredProducts.map((p) => {
-                const isOutOfStock = p.stock <= 0;
-                const isLowStock = !isOutOfStock && p.stock <= p.minStock;
+                const displayedStock = getDisplayedStock(p);
+                const isOutOfStock = displayedStock <= 0;
+                const isLowStock = !isOutOfStock && displayedStock <= p.minStock;
                 const cost = Number(p.costPrice) || 0;
                 const listPrice = Number(p.listPrice) || 0;
-                const stockValCost = p.stock * cost;
-                const stockValRetail = p.stock * listPrice;
-                const activeLots = (p.lots || []).filter((l: any) => l.stock > 0);
+                const stockValCost = displayedStock * cost;
+                const stockValRetail = displayedStock * listPrice;
+                const activeLots = (p.lots || []).filter((l: any) => {
+                  const pending = pendingAdjustments[`lot-${l.id}`];
+                  const st = pending !== undefined ? pending : l.stock;
+                  return st > 0;
+                });
 
                 return (
                   <tr key={p.id} style={{ borderBottom: '1px solid var(--border-color)', transition: 'background-color 0.2s' }} className="hover-bg-muted">
@@ -503,6 +634,40 @@ export default function StockDashboard({ products, onRefresh }: StockDashboardPr
                         </span>
                         {p.description && <span>• {p.description}</span>}
                       </div>
+
+                      {isQuickInventoryMode && p.lots && p.lots.length > 1 && (
+                        <div style={{ 
+                          marginTop: '8px', 
+                          padding: '10px', 
+                          backgroundColor: '#F3F4F6', 
+                          borderRadius: '6px', 
+                          fontSize: '0.78rem',
+                          border: '1px dashed #D1D5DB'
+                        }}>
+                          <div style={{ fontWeight: 700, marginBottom: '6px', color: 'var(--text-secondary)' }}>
+                            Ajuste de Lotes Coexistentes:
+                          </div>
+                          {p.lots.map((lot: any) => {
+                            const val = pendingAdjustments[`lot-${lot.id}`] !== undefined ? pendingAdjustments[`lot-${lot.id}`] : lot.stock;
+                            return (
+                              <div key={lot.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px', gap: '10px' }}>
+                                <span>Lote <strong>{lot.lotNumber}</strong> <span style={{ color: 'var(--text-muted)' }}>(Vence: {new Date(lot.expirationDate).toLocaleDateString('es-AR', { timeZone: 'UTC' })})</span></span>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                  <input
+                                    type="number"
+                                    className="input"
+                                    style={{ width: '70px', padding: '2px 4px', height: '24px', fontSize: '0.78rem', textAlign: 'center' }}
+                                    value={val}
+                                    onChange={(e) => setPendingAdjustments({ ...pendingAdjustments, [`lot-${lot.id}`]: Number(e.target.value) })}
+                                    min={0}
+                                  />
+                                  <span>u.</span>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
                     </td>
 
                     {/* Lotes activos */}
@@ -512,6 +677,9 @@ export default function StockDashboard({ products, onRefresh }: StockDashboardPr
                       ) : (
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
                           {activeLots.map((l: any) => {
+                            const pending = pendingAdjustments[`lot-${l.id}`];
+                            const st = pending !== undefined ? pending : l.stock;
+
                             const isL_Exp = new Date(l.expirationDate) <= new Date();
                             const thirtyDays = new Date();
                             thirtyDays.setDate(thirtyDays.getDate() + 30);
@@ -545,7 +713,7 @@ export default function StockDashboard({ products, onRefresh }: StockDashboardPr
                                 }}
                                 title={`Vence: ${new Date(l.expirationDate).toLocaleDateString('es-AR', { timeZone: 'UTC' })}`}
                               >
-                                {l.lotNumber} ({l.stock} u.)
+                                {l.lotNumber} ({st} u.)
                               </span>
                             );
                           })}
@@ -555,22 +723,49 @@ export default function StockDashboard({ products, onRefresh }: StockDashboardPr
 
                     {/* Stock Físico */}
                     <td style={{ padding: '12px 16px', textAlign: 'center' }}>
-                      <span style={{ 
-                        fontWeight: 700, 
-                        fontSize: '0.92rem', 
-                        color: isOutOfStock 
-                          ? 'var(--color-danger)' 
-                          : isLowStock 
-                            ? 'var(--color-warning)' 
-                            : 'var(--text-primary)'
-                      }}>
-                        {p.stock} u.
-                      </span>
-                      {isOutOfStock && (
-                        <div style={{ fontSize: '0.68rem', color: 'var(--color-danger)', fontWeight: 600, marginTop: '2px' }}>SIN STOCK</div>
-                      )}
-                      {isLowStock && (
-                        <div style={{ fontSize: '0.68rem', color: 'var(--color-warning)', fontWeight: 600, marginTop: '2px' }}>BAJO MÍN ({p.minStock})</div>
+                      {isQuickInventoryMode && (!p.lots || p.lots.length <= 1) ? (
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
+                          <input
+                            type="number"
+                            className="input"
+                            style={{ width: '80px', padding: '4px 8px', fontSize: '0.88rem', height: '32px', textAlign: 'center', border: '1px solid var(--accent-color)', borderRadius: '6px' }}
+                            value={
+                              p.lots && p.lots.length === 1
+                                ? (pendingAdjustments[`lot-${p.lots[0].id}`] !== undefined ? pendingAdjustments[`lot-${p.lots[0].id}`] : p.lots[0].stock)
+                                : (pendingAdjustments[`prod-${p.id}`] !== undefined ? pendingAdjustments[`prod-${p.id}`] : p.stock)
+                            }
+                            onChange={(e) => {
+                              const val = Number(e.target.value);
+                              if (p.lots && p.lots.length === 1) {
+                                setPendingAdjustments({ ...pendingAdjustments, [`lot-${p.lots[0].id}`]: val });
+                              } else {
+                                setPendingAdjustments({ ...pendingAdjustments, [`prod-${p.id}`]: val });
+                              }
+                            }}
+                            min={0}
+                          />
+                          <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>u.</span>
+                        </div>
+                      ) : (
+                        <>
+                          <span style={{ 
+                            fontWeight: 700, 
+                            fontSize: '0.92rem', 
+                            color: isOutOfStock 
+                              ? 'var(--color-danger)' 
+                              : isLowStock 
+                                ? 'var(--color-warning)' 
+                                : 'var(--text-primary)'
+                          }}>
+                            {displayedStock} u.
+                          </span>
+                          {isOutOfStock && (
+                            <div style={{ fontSize: '0.68rem', color: 'var(--color-danger)', fontWeight: 600, marginTop: '2px' }}>SIN STOCK</div>
+                          )}
+                          {isLowStock && (
+                            <div style={{ fontSize: '0.68rem', color: 'var(--color-warning)', fontWeight: 600, marginTop: '2px' }}>BAJO MÍN ({p.minStock})</div>
+                          )}
+                        </>
                       )}
                     </td>
 
@@ -956,6 +1151,65 @@ export default function StockDashboard({ products, onRefresh }: StockDashboardPr
         </div>
       )}
 
+      {/* PANEL FLOTANTE DE GUARDADO DE INVENTARIO */}
+      {Object.keys(pendingAdjustments).length > 0 && (
+        <div style={{
+          position: 'fixed',
+          bottom: '24px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          backgroundColor: '#FFFFFF',
+          border: '1px solid #D1D5DB',
+          boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
+          padding: '16px 24px',
+          borderRadius: '12px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          gap: '24px',
+          zIndex: 1000,
+          animation: 'slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
+        }}>
+          <div>
+            <div style={{ fontWeight: 700, fontSize: '0.92rem', color: 'var(--text-primary)' }}>
+              Conciliación de Inventario Pendiente
+            </div>
+            <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+              Has modificado {Object.keys(pendingAdjustments).length} productos/lotes. Presiona guardar para registrar los movimientos.
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button 
+              type="button" 
+              className="btn btn-secondary" 
+              style={{ padding: '8px 16px', fontSize: '0.85rem' }} 
+              onClick={() => setPendingAdjustments({})}
+              disabled={loadingAdjust}
+            >
+              Descartar
+            </button>
+            <button 
+              type="button" 
+              className="btn btn-primary" 
+              style={{ padding: '8px 20px', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '6px' }} 
+              onClick={handleSaveQuickInventory}
+              disabled={loadingAdjust}
+            >
+              {loadingAdjust ? (
+                <>
+                  <span className="spin-anim" style={{ display: 'inline-block', width: '12px', height: '12px', border: '2px solid white', borderTopColor: 'transparent', borderRadius: '50%', marginRight: '6px' }}></span>
+                  <span>Guardando...</span>
+                </>
+              ) : (
+                <>
+                  💾 Guardar Ajustes
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* ESTILOS EXTRA DE ANIMACIÓN */}
       <style>{`
         @keyframes slideLeft {
@@ -965,6 +1219,10 @@ export default function StockDashboard({ products, onRefresh }: StockDashboardPr
         @keyframes slideDown {
           from { opacity: 0; transform: translateY(-8px); }
           to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes slideUp {
+          from { opacity: 0; transform: translate(-50%, 20px); }
+          to { opacity: 1; transform: translate(-50%, 0); }
         }
         .hover-bg-muted:hover {
           background-color: var(--bg-app) !important;
