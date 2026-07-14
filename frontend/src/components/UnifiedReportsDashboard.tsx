@@ -449,7 +449,7 @@ export default function UnifiedReportsDashboard({
           { id: 'finanzas', label: 'Resumen Financiero', icon: <DollarSign size={16} /> },
           { id: 'zonas', label: 'Análisis de Zonas', icon: <MapPin size={16} /> },
           { id: 'caja_semanal', label: 'Caja Semanal Consolidada', icon: <Calendar size={16} /> },
-          { id: 'crm', label: 'CRM + IA', icon: <Sparkles size={16} /> },
+          { id: 'crm', label: 'Alertas + IA', icon: <Sparkles size={16} /> },
           { id: 'arca', label: 'Cierre Fiscal (ARCA)', icon: <FileText size={16} /> }
         ].map(tab => (
 
@@ -1663,7 +1663,7 @@ export default function UnifiedReportsDashboard({
         </div>
       )}
 
-      {/* 5. CRM + IA */}
+      {/* 5. Alertas + IA */}
       {activeTab === 'crm' && (
         <div className="fade-in">
           <CrmDashboard />
