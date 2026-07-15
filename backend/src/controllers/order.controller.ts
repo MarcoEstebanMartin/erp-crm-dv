@@ -355,6 +355,8 @@ export async function updateOrderStatus(req: AuthenticatedRequest, res: Response
 
     // Si se cancela un pedido, debemos reponer el stock reservado
     const updated = await prisma.$transaction(async (tx) => {
+      let finalTotalAmount = Number(order.totalAmount);
+
       // 1. Si pasa a PREPARED, validar y procesar lotes
       if (status === OrderStatus.PREPARED) {
         if (!lotAssignments) {
@@ -366,13 +368,61 @@ export async function updateOrderStatus(req: AuthenticatedRequest, res: Response
           include: { product: true }
         });
 
+        let recalculatedTotal = 0;
+
         for (const item of items) {
           const assignments = lotAssignments[item.id] || [];
           const totalAssigned = assignments.reduce((sum: number, a: any) => sum + Number(a.quantity), 0);
 
-          if (totalAssigned !== item.quantity) {
-            throw new Error(`Asignación incompleta para "${item.product.name}". Cantidad pedida: ${item.quantity}, Asignada: ${totalAssigned}.`);
+          if (totalAssigned > item.quantity) {
+            throw new Error(`Asignación inválida para "${item.product.name}". Cantidad asignada (${totalAssigned}) supera la cantidad pedida (${item.quantity}).`);
           }
+
+          // Si hay faltante (totalAssigned < item.quantity), devolver stock general y crear movimiento
+          const diff = item.quantity - totalAssigned;
+          if (diff > 0) {
+            await tx.product.update({
+              where: { id: item.productId },
+              data: { stock: { increment: diff } }
+            });
+
+            await tx.stockMovement.create({
+              data: {
+                productId: item.productId,
+                quantity: diff,
+                type: MovementType.IN,
+                referenceId: `PICK-SHORT-${order.id}`,
+                userId: userId,
+                reason: `Devolución por faltante en preparación de Pedido #${order.id}`,
+              }
+            });
+          }
+
+          // Recalcular subtotal del item
+          let newSubtotal = Number(item.subtotal);
+          let newWeight = item.weight ? Number(item.weight) : null;
+          if (totalAssigned === 0) {
+            newSubtotal = 0;
+            newWeight = 0;
+          } else {
+            if (item.product.isPesable && newWeight !== null && newWeight > 0) {
+              newSubtotal = Math.round(Number(item.unitPrice) * newWeight);
+            } else {
+              newSubtotal = Math.round(Number(item.unitPrice) * totalAssigned);
+            }
+          }
+
+          // Actualizar OrderItem con la cantidad y subtotal real armado
+          await tx.orderItem.update({
+            where: { id: item.id },
+            data: {
+              quantity: totalAssigned,
+              subtotal: newSubtotal,
+              weight: newWeight
+            }
+          });
+
+          recalculatedTotal += newSubtotal;
 
           for (const assignment of assignments) {
             const { lotId, quantity } = assignment;
@@ -407,12 +457,15 @@ export async function updateOrderStatus(req: AuthenticatedRequest, res: Response
             });
           }
         }
+
+        finalTotalAmount = recalculatedTotal;
       }
 
       const uOrder = await tx.order.update({
         where: { id: order.id },
         data: { 
           status: status as OrderStatus,
+          totalAmount: finalTotalAmount,
           bultosCount: bultosCount !== undefined ? Number(bultosCount) : undefined,
           bultosDetails: bultosDetails !== undefined ? bultosDetails : undefined
         },

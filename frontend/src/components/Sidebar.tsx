@@ -26,52 +26,104 @@ interface SidebarProps {
 
 export default function Sidebar({ username, role, activeTab, setActiveTab, onLogout }: SidebarProps) {
   
-  // Definir elementos del menú basados en el rol
-  const getMenuItems = () => {
+  // Definir secciones del menú basadas en el rol
+  const getMenuSections = () => {
     switch (role) {
       case 'ADMIN':
         return [
-          { id: 'dashboard', label: 'Panel Principal', icon: <LayoutDashboard size={18} /> },
-          { id: 'clients', label: 'Personas', icon: <Users size={18} /> },
-          { id: 'logistica', label: 'Logística y Flota', icon: <Truck size={18} /> },
-          { id: 'billing', label: 'Facturación', icon: <FileText size={18} /> },
-          { id: 'orders', label: 'Pedidos', icon: <ShoppingCart size={18} /> },
-          { id: 'products', label: 'Productos', icon: <Package size={18} /> },
-          { id: 'rendiciones', label: 'Finanzas', icon: <DollarSign size={18} /> },
-          { id: 'compras', label: 'Proveedores', icon: <Receipt size={18} /> },
-          { id: 'reportes', label: 'Reportes y Analíticas', icon: <TrendingUp size={18} /> },
-          { id: 'config', label: 'Configuración', icon: <Settings size={18} /> },
+          {
+            title: null,
+            items: [
+              { id: 'dashboard', label: 'Panel Principal', icon: <LayoutDashboard size={18} /> },
+            ]
+          },
+          {
+            title: 'Comercial y Ventas',
+            items: [
+              { id: 'orders', label: 'Gestión de Pedidos', icon: <ShoppingCart size={18} /> },
+              { id: 'clients', label: 'Clientes y Rutas', icon: <Users size={18} /> },
+              { id: 'compras', label: 'Proveedores', icon: <Receipt size={18} /> },
+            ]
+          },
+          {
+            title: 'Operaciones y Depósito',
+            items: [
+              { id: 'deposito', label: 'Preparación (Picking)', icon: <Warehouse size={18} /> },
+              { id: 'products', label: 'Inventario y Catálogo', icon: <Package size={18} /> },
+              { id: 'logistica', label: 'Logística y Flota', icon: <Truck size={18} /> },
+            ]
+          },
+          {
+            title: 'Administración',
+            items: [
+              { id: 'billing', label: 'Facturación', icon: <FileText size={18} /> },
+              { id: 'rendiciones', label: 'Finanzas y Caja', icon: <DollarSign size={18} /> },
+              { id: 'reportes', label: 'Reportes y Analíticas', icon: <TrendingUp size={18} /> },
+              { id: 'config', label: 'Configuración', icon: <Settings size={18} /> },
+            ]
+          }
         ];
       case 'FACTURACION':
         return [
-          { id: 'dashboard', label: 'Panel Principal', icon: <LayoutDashboard size={18} /> },
-          { id: 'clients', label: 'Personas', icon: <Users size={18} /> },
-          { id: 'logistica', label: 'Logística y Flota', icon: <Truck size={18} /> },
-          { id: 'billing', label: 'Facturación', icon: <FileText size={18} /> },
-          { id: 'orders', label: 'Pedidos', icon: <ShoppingCart size={18} /> },
-          { id: 'products', label: 'Productos', icon: <Package size={18} /> },
-          { id: 'rendiciones', label: 'Finanzas', icon: <DollarSign size={18} /> },
-          { id: 'compras', label: 'Proveedores', icon: <Receipt size={18} /> },
+          {
+            title: null,
+            items: [
+              { id: 'dashboard', label: 'Panel Principal', icon: <LayoutDashboard size={18} /> },
+            ]
+          },
+          {
+            title: 'Comercial y Ventas',
+            items: [
+              { id: 'orders', label: 'Gestión de Pedidos', icon: <ShoppingCart size={18} /> },
+              { id: 'clients', label: 'Clientes y Rutas', icon: <Users size={18} /> },
+              { id: 'compras', label: 'Proveedores', icon: <Receipt size={18} /> },
+            ]
+          },
+          {
+            title: 'Operaciones y Depósito',
+            items: [
+              { id: 'deposito', label: 'Preparación (Picking)', icon: <Warehouse size={18} /> },
+              { id: 'products', label: 'Inventario y Catálogo', icon: <Package size={18} /> },
+              { id: 'logistica', label: 'Logística y Flota', icon: <Truck size={18} /> },
+            ]
+          },
+          {
+            title: 'Administración',
+            items: [
+              { id: 'billing', label: 'Facturación', icon: <FileText size={18} /> },
+              { id: 'rendiciones', label: 'Finanzas y Caja', icon: <DollarSign size={18} /> },
+            ]
+          }
         ];
       case 'VENDEDOR':
         return [
-          { id: 'orders', label: 'Toma de Pedidos', icon: <ShoppingCart size={18} /> },
-          { id: 'clients', label: 'Mis Rutas', icon: <Users size={18} /> },
-          { id: 'cobranzas', label: 'Cobranzas y Recibos', icon: <DollarSign size={18} /> },
-          { id: 'products', label: 'Catálogo', icon: <Package size={18} /> },
-          { id: 'history', label: 'Historial de Pedidos', icon: <History size={18} /> },
+          {
+            title: 'Mi Operación',
+            items: [
+              { id: 'orders', label: 'Toma de Pedidos', icon: <ShoppingCart size={18} /> },
+              { id: 'clients', label: 'Mis Rutas', icon: <Users size={18} /> },
+              { id: 'cobranzas', label: 'Cobranzas y Recibos', icon: <DollarSign size={18} /> },
+              { id: 'products', label: 'Catálogo de Precios', icon: <Package size={18} /> },
+              { id: 'history', label: 'Historial de Pedidos', icon: <History size={18} /> },
+            ]
+          }
         ];
       case 'DEPOSITO':
         return [
-          { id: 'deposito', label: 'Preparación (Picking)', icon: <Warehouse size={18} /> },
-          { id: 'products', label: 'Control de Stock', icon: <Package size={18} /> },
+          {
+            title: 'Mi Operación',
+            items: [
+              { id: 'deposito', label: 'Preparación (Picking)', icon: <Warehouse size={18} /> },
+              { id: 'products', label: 'Inventario y Stock', icon: <Package size={18} /> },
+            ]
+          }
         ];
       default:
         return [];
     }
   };
 
-  const menuItems = getMenuItems();
+  const menuSections = getMenuSections();
 
   const handleLogoutClick = () => {
     api.logout();
@@ -113,15 +165,32 @@ export default function Sidebar({ username, role, activeTab, setActiveTab, onLog
       </div>
 
       <nav className="sidebar-menu" style={{ flex: 1, overflowY: 'auto', paddingRight: '4px' }}>
-        {menuItems.map((item) => (
-          <div
-            key={item.id}
-            className={`sidebar-link ${activeTab === item.id ? 'sidebar-link-active' : ''}`}
-            onClick={() => setActiveTab(item.id)}
-            style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', borderRadius: '6px', cursor: 'pointer', marginBottom: '4px' }}
-          >
-            {item.icon}
-            <span style={{ fontSize: '0.88rem', fontWeight: activeTab === item.id ? 600 : 400 }}>{item.label}</span>
+        {menuSections.map((section, sIdx) => (
+          <div key={sIdx} style={{ marginBottom: '14px' }}>
+            {section.title && (
+              <div style={{ 
+                fontSize: '0.72rem', 
+                fontWeight: 700, 
+                color: 'var(--text-secondary)', 
+                letterSpacing: '0.05em', 
+                padding: '4px 14px', 
+                textTransform: 'uppercase',
+                marginBottom: '6px'
+              }}>
+                {section.title}
+              </div>
+            )}
+            {section.items.map((item) => (
+              <div
+                key={item.id}
+                className={`sidebar-link ${activeTab === item.id ? 'sidebar-link-active' : ''}`}
+                onClick={() => setActiveTab(item.id)}
+                style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', borderRadius: '6px', cursor: 'pointer', marginBottom: '4px' }}
+              >
+                {item.icon}
+                <span style={{ fontSize: '0.88rem', fontWeight: activeTab === item.id ? 600 : 400 }}>{item.label}</span>
+              </div>
+            ))}
           </div>
         ))}
       </nav>

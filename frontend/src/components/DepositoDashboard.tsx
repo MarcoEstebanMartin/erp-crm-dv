@@ -8,6 +8,31 @@ interface DepositoDashboardProps {
   setActiveTab: (tab: string) => void;
 }
 
+// Reproducción de sonido de éxito/error usando Web Audio API
+const playBeep = (type: 'success' | 'error') => {
+  try {
+    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    
+    if (type === 'success') {
+      osc.frequency.setValueAtTime(880, ctx.currentTime); // Sonido agudo (La 5)
+      gain.gain.setValueAtTime(0.08, ctx.currentTime);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.12);
+    } else {
+      osc.frequency.setValueAtTime(220, ctx.currentTime); // Sonido grave (La 3)
+      gain.gain.setValueAtTime(0.12, ctx.currentTime);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.25);
+    }
+  } catch (e) {
+    console.error('Audio context error:', e);
+  }
+};
+
 export default function DepositoDashboard({ activeTab }: DepositoDashboardProps) {
   const normalizedTab = activeTab === 'deposito' ? 'prepare-orders' : 'stock-adjust';
   
@@ -79,6 +104,103 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
       }
     }
   }, [products, searchQuery, normalizedTab]);
+
+  // --- LOGICA DE ESCANEO DE CODIGO DE BARRA / SKU (PICKING MANOS LIBRES) ---
+  const processScannedCode = (code: string) => {
+    if (!selectedOrder) return;
+
+    // Buscar coincidencia en productos del pedido
+    const item = selectedOrder.items.find((i: any) => 
+      i.product && (
+        i.product.barcode === code || 
+        i.product.sku === code || 
+        i.product.name.toLowerCase() === code.toLowerCase()
+      )
+    );
+
+    if (!item) {
+      playBeep('error');
+      setErrorMsg(`Producto con código o SKU "${code}" no pertenece a este pedido.`);
+      return;
+    }
+
+    const productLots = item.product?.lots || [];
+    if (productLots.length === 0) {
+      playBeep('error');
+      setErrorMsg(`El producto "${item.product.name}" no tiene lotes registrados en depósito.`);
+      return;
+    }
+
+    const itemAssignments = { ...(lotAssignments[item.id] || {}) };
+    const assignedSum = Object.values(itemAssignments).reduce((sum: number, qty) => sum + (qty || 0), 0);
+
+    if (assignedSum >= item.quantity) {
+      playBeep('error');
+      setErrorMsg(`La cantidad para "${item.product.name}" ya está completamente asignada.`);
+      return;
+    }
+
+    // FIFO: Asignar al primer lote con stock disponible
+    let assigned = false;
+    for (const lot of productLots) {
+      const currentLotQty = itemAssignments[lot.id] || 0;
+      if (lot.stock > currentLotQty) {
+        itemAssignments[lot.id] = currentLotQty + 1;
+        assigned = true;
+        break;
+      }
+    }
+
+    if (!assigned) {
+      playBeep('error');
+      setErrorMsg(`No hay suficiente stock físico en los lotes del producto "${item.product.name}".`);
+      return;
+    }
+
+    setLotAssignments(prev => ({
+      ...prev,
+      [item.id]: itemAssignments
+    }));
+
+    playBeep('success');
+    setSuccessMsg(`Escaneado: +1 u. de "${item.product.name}"`);
+  };
+
+  useEffect(() => {
+    if (!selectedOrder) return;
+
+    let buffer = '';
+    let lastKeyTime = Date.now();
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ignorar entrada si está posicionado en algún input o select
+      const activeEl = document.activeElement;
+      if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || activeEl.tagName === 'SELECT')) {
+        return;
+      }
+
+      const now = Date.now();
+      // Si el tiempo de separación entre teclas supera los 150ms, consideramos que es un nuevo escaneo
+      if (now - lastKeyTime > 150) {
+        buffer = '';
+      }
+      lastKeyTime = now;
+
+      if (e.key === 'Enter') {
+        const code = buffer.trim();
+        if (code.length > 0) {
+          processScannedCode(code);
+        }
+        buffer = '';
+        e.preventDefault();
+      } else if (e.key.length === 1) {
+        buffer += e.key;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedOrder, lotAssignments]);
 
   // Sincronizar lotAssignments al seleccionar o cambiar el pedido
   useEffect(() => {
@@ -206,28 +328,32 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
     setErrorMsg(null);
     
     // Validar asignaciones
-    let isAllValid = true;
-    const assignmentsPayload: any = {};
+    let hasShortages = false;
+    let totalAssignedAll = 0;
     
     for (const item of selectedOrder.items) {
       const itemAssignments = lotAssignments[item.id] || {};
       const assignedSum = Object.values(itemAssignments).reduce((sum: number, qty) => sum + (qty || 0), 0);
-      if (assignedSum !== item.quantity) {
-        isAllValid = false;
-        break;
+      
+      if (assignedSum > item.quantity) {
+        setErrorMsg(`La cantidad asignada para "${item.product?.name}" (${assignedSum}) excede la cantidad pedida (${item.quantity}).`);
+        return;
       }
       
-      assignmentsPayload[item.id] = Object.entries(itemAssignments)
-        .filter(([_, qty]) => (qty as number) > 0)
-        .map(([lotId, qty]) => ({
-          lotId: Number(lotId),
-          quantity: qty
-        }));
+      if (assignedSum < item.quantity) {
+        hasShortages = true;
+      }
+      totalAssignedAll += assignedSum;
     }
 
-    if (!isAllValid) {
-      setErrorMsg("Por favor, completá la asignación de lotes para todos los artículos. La cantidad asignada debe coincidir con la pedida.");
+    if (totalAssignedAll === 0) {
+      setErrorMsg("No podés finalizar el armado con 0 unidades asignadas en total.");
       return;
+    }
+
+    if (hasShortages) {
+      const confirmShortage = window.confirm("Atención: Hay productos con faltantes (se asignó menos de la cantidad pedida). ¿Deseás continuar y cerrar el bulto con estos faltantes? El stock sobrante se liberará.");
+      if (!confirmShortage) return;
     }
 
     // Inicializar sugerencias de bulto y abrir el modal
@@ -240,8 +366,13 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
       const itemZone = item.product?.rubro?.pickingZone || 'CAJAS';
       const unitsPerBox = item.product?.unitsPerBox || 1;
       
-      if (unitsPerBox > 1 && item.quantity % unitsPerBox === 0) {
-        suggestedCajas += (item.quantity / unitsPerBox);
+      const itemAssignments = lotAssignments[item.id] || {};
+      const assignedQty = Object.values(itemAssignments).reduce((sum: number, qty) => sum + (qty || 0), 0);
+      
+      if (assignedQty === 0) return; // No sugerir bultos si no se armó nada de este item
+
+      if (unitsPerBox > 1 && assignedQty % unitsPerBox === 0) {
+        suggestedCajas += (assignedQty / unitsPerBox);
       } else {
         if (itemZone === 'FRIO') suggestedFrio = 1; // Al menos 1 bandeja de frío si hay sueltos
         else if (itemZone === 'TABLA') suggestedTabla += 1;
@@ -400,11 +531,15 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
     }
   };
 
-  // Verificar si todas las asignaciones de todos los artículos son correctas para activar el cierre de bulto
+  // Verificar si todas las asignaciones de todos los artículos son menores o iguales a la pedida y hay al menos algo asignado
   const isOrderFullyAssigned = selectedOrder?.items.every((item: any) => {
     const itemAssignments = lotAssignments[item.id] || {};
     const assignedSum = Object.values(itemAssignments).reduce((sum: number, qty) => sum + (qty || 0), 0);
-    return assignedSum === item.quantity;
+    return assignedSum <= item.quantity;
+  }) && selectedOrder?.items.some((item: any) => {
+    const itemAssignments = lotAssignments[item.id] || {};
+    const assignedSum = Object.values(itemAssignments).reduce((sum: number, qty) => sum + (qty || 0), 0);
+    return assignedSum > 0;
   }) || false;
 
   return (
@@ -449,6 +584,22 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
               return selectedOrder.items.filter((i: any) => (i.product?.rubro?.pickingZone || 'CAJAS') === zId).length;
             };
 
+            const totalItemsCount = selectedOrder.items.length;
+            const itemsPreparedCount = selectedOrder.items.filter((item: any) => {
+              const itemAssignments = lotAssignments[item.id] || {};
+              const assignedSum = Object.values(itemAssignments).reduce((sum: number, qty) => sum + (qty || 0), 0);
+              return assignedSum === item.quantity;
+            }).length;
+            const itemsPartialCount = selectedOrder.items.filter((item: any) => {
+              const itemAssignments = lotAssignments[item.id] || {};
+              const assignedSum = Object.values(itemAssignments).reduce((sum: number, qty) => sum + (qty || 0), 0);
+              return assignedSum > 0 && assignedSum < item.quantity;
+            }).length;
+            
+            const progressPercent = totalItemsCount > 0 
+              ? Math.round(((itemsPreparedCount + itemsPartialCount) / totalItemsCount) * 100) 
+              : 0;
+
             return (
               <div className="card">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
@@ -464,6 +615,32 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
                   <div>
                     <p><strong>Fecha pedido:</strong> {new Date(selectedOrder.createdAt).toLocaleDateString('es-AR')}</p>
                     <p><strong>Vendedor:</strong> {selectedOrder.seller?.username || 'S/D'}</p>
+                  </div>
+                </div>
+
+                {/* Barra de progreso de armado */}
+                <div style={{ 
+                  marginBottom: '24px', 
+                  backgroundColor: 'var(--bg-secondary)', 
+                  padding: '14px 18px', 
+                  borderRadius: '6px', 
+                  border: '1px solid var(--border-color)' 
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                    <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
+                      Progreso de Preparación
+                    </span>
+                    <span style={{ fontSize: '0.88rem', fontWeight: 800, color: progressPercent === 100 ? 'var(--color-success)' : 'var(--text-primary)' }}>
+                      {itemsPreparedCount} listos, {itemsPartialCount} parciales de {totalItemsCount} productos ({progressPercent}%)
+                    </span>
+                  </div>
+                  <div style={{ width: '100%', height: '6px', backgroundColor: 'rgba(0,0,0,0.06)', borderRadius: '3px', overflow: 'hidden' }}>
+                    <div style={{ 
+                      width: `${progressPercent}%`, 
+                      height: '100%', 
+                      backgroundColor: progressPercent === 100 ? 'var(--color-success)' : '#4A5568', 
+                      transition: 'width 0.4s cubic-bezier(0.4, 0, 0.2, 1)' 
+                    }} />
                   </div>
                 </div>
 
@@ -564,7 +741,15 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
 
                         return (
                           <tr key={idx} style={{ backgroundColor: isLowStock ? 'var(--accent-bg-light)' : 'transparent', borderBottom: '1px solid var(--border-color)' }}>
-                            <td style={{ padding: '16px 12px' }}>
+                            <td style={{ 
+                              padding: '16px 12px', 
+                              borderLeft: assignedSum === item.quantity 
+                                ? '4px solid var(--color-success)' 
+                                : assignedSum > 0 
+                                  ? '4px solid var(--color-warning)' 
+                                  : '4px solid #CBD5E0',
+                              transition: 'border-left-color 0.3s ease'
+                            }}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '8px' }}>
                                 <span style={{ fontWeight: 600, fontSize: '0.95rem' }}>{item.product?.name}</span>
                                 <span style={{
@@ -648,9 +833,17 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
                               }}>
                                 <span style={{ 
                                   fontWeight: 600, 
-                                  color: isValidAssignment ? 'var(--color-success)' : 'var(--accent-color)' 
+                                  color: assignedSum === item.quantity 
+                                    ? 'var(--color-success)' 
+                                    : assignedSum > 0 
+                                      ? 'var(--color-warning)' 
+                                      : 'var(--accent-color)' 
                                 }}>
-                                  {isValidAssignment ? '✓ Asignado correctamente' : `⚠️ Pendiente de asignación`}
+                                  {assignedSum === item.quantity 
+                                    ? '✓ Completado' 
+                                    : assignedSum > 0 
+                                      ? `⚠️ Armado parcial (Faltante de ${item.quantity - assignedSum} u.)` 
+                                      : `⚠️ Pendiente de asignación`}
                                 </span>
                                 <span style={{ fontWeight: 700 }}>
                                   {assignedSum} de {item.quantity} u.

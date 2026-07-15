@@ -14,6 +14,7 @@ const LogisticaDashboard = lazy(() => import('./LogisticaDashboard'));
 const ComprasDashboard = lazy(() => import('./ComprasDashboard'));
 const FinanzasDashboard = lazy(() => import('./FinanzasDashboard'));
 const BillingDashboard = lazy(() => import('./BillingDashboard'));
+const DepositoDashboard = lazy(() => import('./DepositoDashboard'));
 
 const LoadingDashboard = () => (
   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '300px', gap: '12px', padding: '40px', backgroundColor: 'var(--background-card)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
@@ -2524,6 +2525,15 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
         </Suspense>
       )}
 
+      {/* ====================================================================
+          OPERACIONES & DEPOSITO (PICKING LIST)
+          ==================================================================== */}
+      {activeTab === 'deposito' && (
+        <Suspense fallback={<LoadingDashboard />}>
+          <DepositoDashboard activeTab="deposito" setActiveTab={setActiveTab} />
+        </Suspense>
+      )}
+
 
 
       {/* ====================================================================
@@ -3683,6 +3693,8 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
           </div>
         </div>
       )}
+
+
 
       {/* 1. Detalles de pedido */}
       {orderDetailsModal && (
