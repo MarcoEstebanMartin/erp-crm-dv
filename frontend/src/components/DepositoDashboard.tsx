@@ -200,9 +200,8 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
     
     setLotAssignments(newAssignments);
   };
-
-  };
   
+
   const handleFinishPicking = async (orderId: number) => {
     setErrorMsg(null);
     
@@ -579,17 +578,6 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
                                   {packingType}
                                 </span>
                               </div>
-                      const isLowStock = item.product ? item.product.stock < item.quantity : false;
-                      const productLots = item.product?.lots || [];
-                      const itemAssignments = lotAssignments[item.id] || {};
-                      
-                      const assignedSum = Object.values(itemAssignments).reduce((sum: number, qty) => sum + (qty || 0), 0);
-                      const isValidAssignment = assignedSum === item.quantity;
-                      
-                      return (
-                        <tr key={idx} style={{ backgroundColor: isLowStock ? 'var(--accent-bg-light)' : 'transparent', borderBottom: '1px solid var(--border-color)' }}>
-                          <td style={{ padding: '16px 12px' }}>
-                            <div style={{ fontWeight: 600, fontSize: '0.95rem' }}>{item.product?.name}</div>
                             
                             {/* Selector de Lotes */}
                             <div style={{ 

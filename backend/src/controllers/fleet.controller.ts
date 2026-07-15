@@ -238,38 +238,16 @@ export async function createMaintenance(req: AuthenticatedRequest, res: Response
 
       // 1. Si afecta finanzas, crear el movimiento contable correspondiente
       if (affectFinance) {
-        let cashDrawerId: number | null = null;
-        let finalBankAccountId: number | null = null;
-
-        if (paymentMethod === PaymentMethod.CASH) {
-          // Buscar caja abierta para este usuario administrador/administrativo
-          const drawer = await tx.cashDrawer.findFirst({
-            where: { userId, status: 'OPEN' }
-          });
-
-          if (!drawer) {
-            throw new Error('Debe abrir una caja (Arqueo) para registrar un gasto en efectivo.');
-          }
-          cashDrawerId = drawer.id;
-        } else if (paymentMethod === PaymentMethod.BANK_TRANSFER || paymentMethod === PaymentMethod.CHECK) {
-          if (!bankAccountId) {
-            throw new Error('Debe seleccionar una cuenta bancaria para registrar este pago.');
-          }
-          finalBankAccountId = Number(bankAccountId);
-        }
-
-        // Crear la transacción de salida (OUTCOME)
+        // Crear la transacción de salida (OUTCOME) exactamente igual que en la Caja Grande (gasto contable verificado global)
         const transaction = await tx.transaction.create({
           data: {
             userId,
             type: TransactionType.OUTCOME,
             paymentMethod: paymentMethod as PaymentMethod || PaymentMethod.CASH,
             billingType: billingType as BillingType || BillingType.INTERNAL,
-            amount: Number(cost),
+            amount: Math.round(Number(cost)),
             description: `Gasto de Flota (${vehicle.plate}) - ${description}`,
-            verified: true, // Se auto-verifica porque la carga el administrador
-            cashDrawerId,
-            bankAccountId: finalBankAccountId,
+            verified: true, // Auto-verificada
             personaId: supplierId ? Number(supplierId) : null
           }
         });

@@ -741,7 +741,7 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
                         ))}
                       </select>
                     </div>
-                    <button className="btn btn-secondary" style={{ padding: '8px 12px' }} title="Nuevo Cliente" onClick={() => setClientModal({ open: true, name: '', cuit: '', address: '', city: '', phone: '', email: '' })}>
+                    <button className="btn btn-secondary" style={{ padding: '8px 12px' }} title="Nuevo Cliente" onClick={() => setClientModal({ open: true, name: '', cuit: '', address: '', city: '', phone: '', email: '', route: '', saleRouteId: '', latitude: null, longitude: null })}>
                       <UserPlus size={16} />
                     </button>
                   </div>

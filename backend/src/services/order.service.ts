@@ -27,15 +27,30 @@ export class OrderService {
     }
 
     return await prisma.$transaction(async (tx) => {
+      const productIds = items.map(item => item.productId);
+      
+      // 1. Cargar todos los productos involucrados en la transacción en una sola consulta
+      const dbProducts = await tx.product.findMany({
+        where: { id: { in: productIds } },
+        include: { rubro: true }
+      });
+
+      // 2. Cargar todas las reglas aplicables en la transacción en una sola consulta
+      const dbRules = await tx.discountRule.findMany({
+        where: {
+          OR: [
+            { personaId: persona.id },
+            { priceList: persona.priceList }
+          ]
+        }
+      });
+
       let totalSum = 0;
       const orderItemsToCreate = [];
       const stockUpdates = [];
 
       for (const item of items) {
-        const product = await tx.product.findUnique({
-          where: { id: item.productId },
-        });
-
+        const product = dbProducts.find(p => p.id === item.productId);
         if (!product) {
           throw new Error(`Producto ID ${item.productId} no encontrado.`);
         }
@@ -46,9 +61,15 @@ export class OrderService {
           );
         }
 
-        const pricing = await PricingService.calculatePriceAndDiscount(product.id, persona.id, billingType);
+        // Calcular precio en memoria usando el nuevo método libre de queries N+1
+        const pricing = PricingService.calculatePriceAndDiscountInMemory(
+          product,
+          persona,
+          dbRules,
+          billingType
+        );
         const finalUnitPrice = pricing.finalPrice;
-        // Si es pesable y tiene peso explícito lo usa, si no, usa quantity * approximateWeight, si no tiene aprox, asume 1kg por unidad.
+        
         const actualQuantityForPrice = product.isPesable 
           ? (item.weight ? Number(item.weight) : item.quantity * Number((product as any).approximateWeight || 1))
           : item.quantity;
@@ -80,6 +101,7 @@ export class OrderService {
         }
       }
 
+      // 3. Crear el pedido
       const order = await tx.order.create({
         data: {
           personaId,
@@ -91,19 +113,19 @@ export class OrderService {
         },
       });
 
-      for (const oItem of orderItemsToCreate) {
-        await tx.orderItem.create({
-          data: {
-            orderId: order.id,
-            productId: oItem.productId,
-            quantity: oItem.quantity,
-            weight: oItem.weight,
-            unitPrice: oItem.unitPrice,
-            subtotal: oItem.subtotal,
-          },
-        });
-      }
+      // 4. Inserción masiva de ítems del pedido (optimizada en una sola llamada)
+      await tx.orderItem.createMany({
+        data: orderItemsToCreate.map(oItem => ({
+          orderId: order.id,
+          productId: oItem.productId,
+          quantity: oItem.quantity,
+          weight: oItem.weight,
+          unitPrice: oItem.unitPrice,
+          subtotal: oItem.subtotal,
+        }))
+      });
 
+      // 5. Actualizar stock general y registrar movimientos
       for (const stockUp of stockUpdates) {
         await tx.product.update({
           where: { id: stockUp.productId },

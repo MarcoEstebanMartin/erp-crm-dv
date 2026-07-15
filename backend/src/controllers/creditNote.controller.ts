@@ -118,9 +118,9 @@ export async function createCreditNote(req: AuthenticatedRequest, res: Response)
         totalAmount += Math.round(actualQtyOrWeight * Number(item.unitPrice));
       }
 
-      const isA = finalBillingType === 'OFFICIAL' && persona.cuit && persona.cuit.replace(/-/g, '').length === 11;
-      let netAmount = isA ? (totalAmount / 1.21) : Math.round(totalAmount / 1.21);
-      let taxAmount = isA ? (totalAmount - netAmount) : (totalAmount - netAmount);
+      const isOfficial = finalBillingType === 'OFFICIAL';
+      let netAmount = isOfficial ? Number((totalAmount / 1.21).toFixed(2)) : Math.round(totalAmount / 1.21);
+      let taxAmount = isOfficial ? Number((totalAmount - netAmount).toFixed(2)) : (totalAmount - netAmount);
 
       // 3. Determinar tipo de Nota de Crédito
       let creditNoteType = 'NOTA_CREDITO_INTERNA';
@@ -218,8 +218,10 @@ export async function createCreditNote(req: AuthenticatedRequest, res: Response)
             },
           });
 
-          // Si hay lotes involucrados en la factura vinculada, intentamos devolver a ese lote.
+          // Si hay lotes involucrados en la factura vinculada, intentamos devolver proporcionalmente a esos lotes.
           let assignedLotId: number | null = null;
+          let remainingToReturn = Number(item.quantity);
+
           if (orderId) {
             const orderItem = await tx.orderItem.findFirst({
               where: {
@@ -232,22 +234,50 @@ export async function createCreditNote(req: AuthenticatedRequest, res: Response)
             });
 
             if (orderItem && orderItem.orderItemLots.length > 0) {
-              const firstLot = orderItem.orderItemLots[0];
-              await tx.productLot.update({
-                where: { id: firstLot.productLotId },
-                data: {
-                  stock: {
-                    increment: Number(item.quantity),
+              // Asignar proporcionalmente a los lotes originales del pedido
+              for (const oil of orderItem.orderItemLots) {
+                if (remainingToReturn <= 0) break;
+                
+                const toReturn = Math.min(oil.quantity, remainingToReturn);
+                if (toReturn > 0) {
+                  await tx.productLot.update({
+                    where: { id: oil.productLotId },
+                    data: {
+                      stock: {
+                        increment: toReturn,
+                      },
+                    },
+                  });
+                  remainingToReturn -= toReturn;
+                  if (!assignedLotId) {
+                    assignedLotId = oil.productLotId;
+                  }
+                }
+              }
+
+              // Si queda remanente (ej. se devolvió más cantidad), sumarlo al primer lote
+              if (remainingToReturn > 0) {
+                const firstLot = orderItem.orderItemLots[0];
+                await tx.productLot.update({
+                  where: { id: firstLot.productLotId },
+                  data: {
+                    stock: {
+                      increment: remainingToReturn,
+                    },
                   },
-                },
-              });
-              assignedLotId = firstLot.productLotId;
+                });
+                remainingToReturn = 0;
+                if (!assignedLotId) {
+                  assignedLotId = firstLot.productLotId;
+                }
+              }
             }
           }
 
-          // Fallback: Si no pudimos asociar a un lote de la factura (o no hay factura),
+          // Fallback: Si no pudimos asociar a ningún lote de la factura (o no hay factura o queda remanente),
           // buscamos el lote 'S/L' o el primero existente del producto.
-          if (!assignedLotId) {
+          if (!assignedLotId || remainingToReturn > 0) {
+            const qtyToIncrement = remainingToReturn > 0 ? remainingToReturn : Number(item.quantity);
             let defaultLot = await tx.productLot.findFirst({
               where: { productId: Number(item.productId), lotNumber: 'S/L' }
             });
@@ -264,7 +294,7 @@ export async function createCreditNote(req: AuthenticatedRequest, res: Response)
                 where: { id: defaultLot.id },
                 data: {
                   stock: {
-                    increment: Number(item.quantity),
+                    increment: qtyToIncrement,
                   },
                 },
               });
@@ -276,7 +306,7 @@ export async function createCreditNote(req: AuthenticatedRequest, res: Response)
                   productId: Number(item.productId),
                   lotNumber: 'S/L',
                   expirationDate: new Date('2036-12-31T00:00:00Z'),
-                  stock: Number(item.quantity)
+                  stock: qtyToIncrement
                 }
               });
               assignedLotId = newLot.id;

@@ -125,4 +125,70 @@ export class PricingService {
       percentageInternal: Number(config.percentageInternal)
     };
   }
+
+  /**
+   * Calcula el precio unitario final en memoria para un producto, cliente y reglas precargadas,
+   * sin realizar consultas a la base de datos (evita N+1 queries).
+   */
+  static calculatePriceAndDiscountInMemory(
+    product: any,
+    persona: Persona,
+    rules: any[],
+    billingType?: BillingType
+  ): { basePrice: number; discount: number; finalPrice: number; ruleName: string | null } {
+    let basePrice = Number(product.listPrice);
+    if (persona.priceList === 'B') {
+      basePrice = Number(product.listPriceB) > 0 ? Number(product.listPriceB) : Number(product.listPrice);
+    } else if (persona.priceList === 'C') {
+      basePrice = Number(product.listPriceC) > 0 ? Number(product.listPriceC) : Number(product.listPrice);
+    }
+
+    let discount = Number(persona.discount || 0);
+    let ruleName: string | null = null;
+    let maxSpecificity = -1;
+
+    for (const rule of rules) {
+      if (rule.billingType && billingType && rule.billingType !== billingType) {
+        continue;
+      }
+
+      let specificity = 0;
+
+      if (rule.productId) {
+        if (rule.productId !== product.id) continue;
+        specificity += 100;
+      }
+
+      if (rule.rubroId) {
+        if (rule.rubroId !== product.rubroId) continue;
+        specificity += 50;
+      }
+
+      if (rule.personaId) {
+        specificity += 10;
+      } else if (rule.priceList) {
+        specificity += 5;
+      }
+
+      if (rule.billingType) {
+        specificity += 2;
+      }
+
+      if (specificity > maxSpecificity) {
+        maxSpecificity = specificity;
+        discount = Number(rule.discount);
+        ruleName = rule.name;
+      }
+    }
+
+    // Mantener la precisión de 2 decimales para evitar pérdidas por redondeos unitarios prematuros
+    const finalPrice = Number((basePrice * (1 - discount / 100)).toFixed(2));
+
+    return {
+      basePrice,
+      discount,
+      finalPrice,
+      ruleName
+    };
+  }
 }

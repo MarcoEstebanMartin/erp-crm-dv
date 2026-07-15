@@ -25,6 +25,7 @@ interface Client {
   phone: string | null;
   outstandingBalance: number | string;
   routeSequence: number | null;
+  route?: string | null;
   routeVisits?: any[];
 }
 

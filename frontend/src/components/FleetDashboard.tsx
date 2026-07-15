@@ -459,7 +459,9 @@ export default function FleetDashboard() {
                           {v.plate}
                         </span>
                         {hasCritical && (
-                          <AlertTriangle size={13} color="#E30613" title="Vencimiento crítico cercano" />
+                          <span title="Vencimiento crítico cercano">
+                            <AlertTriangle size={13} color="#E30613" />
+                          </span>
                         )}
                         {getStatusBadge(v.status)}
                       </div>

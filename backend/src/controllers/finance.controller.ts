@@ -141,10 +141,12 @@ export async function closeDrawer(req: AuthenticatedRequest, res: Response): Pro
     let cashOutcome = 0;
 
     transactions.forEach((t) => {
-      if (t.type === TransactionType.INCOME) {
-        cashIncome += Number(t.amount);
-      } else {
-        cashOutcome += Number(t.amount);
+      if (t.paymentMethod === PaymentMethod.CASH) {
+        if (t.type === TransactionType.INCOME) {
+          cashIncome += Number(t.amount);
+        } else {
+          cashOutcome += Number(t.amount);
+        }
       }
     });
 
@@ -272,8 +274,10 @@ export async function closeJointDrawers(req: AuthenticatedRequest, res: Response
       let cashIncome = 0;
       let cashOutcome = 0;
       transactions.forEach((t) => {
-        if (t.type === TransactionType.INCOME) cashIncome += Number(t.amount);
-        else cashOutcome += Number(t.amount);
+        if (t.paymentMethod === PaymentMethod.CASH) {
+          if (t.type === TransactionType.INCOME) cashIncome += Number(t.amount);
+          else cashOutcome += Number(t.amount);
+        }
       });
       const theoretical = Number(drawer.openingBalance) + cashIncome - cashOutcome;
 

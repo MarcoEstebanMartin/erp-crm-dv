@@ -223,7 +223,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
     setSuccessMsg(null);
     try {
       await api.createDiscountRule({
-        name: discountRuleForm.name || undefined,
+        name: discountRuleForm.name || '',
         personaId: discountRuleForm.personaId ? Number(discountRuleForm.personaId) : null,
         priceList: discountRuleForm.priceList || null,
         rubroId: discountRuleForm.rubroId ? Number(discountRuleForm.rubroId) : null,

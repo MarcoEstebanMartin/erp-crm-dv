@@ -426,27 +426,26 @@ export async function updateOrderStatus(req: AuthenticatedRequest, res: Response
         });
 
         for (const item of items) {
-          const prod = await tx.product.findUnique({ where: { id: item.productId } });
-          if (prod) {
-            await tx.product.update({
-              where: { id: prod.id },
-              data: { stock: prod.stock + item.quantity },
-            });
+          // Devolución atómica de stock para evitar condiciones de carrera (race conditions)
+          await tx.product.update({
+            where: { id: item.productId },
+            data: { stock: { increment: item.quantity } },
+          });
 
-            await tx.stockMovement.create({
-              data: {
-                productId: prod.id,
-                quantity: item.quantity,
-                type: MovementType.IN,
-                referenceId: `CANCEL-${order.id}`,
-                userId: userId,
-                reason: `Devolución por cancelación de pedido #${order.id}`,
-              },
-            });
-          }
+          await tx.stockMovement.create({
+            data: {
+              productId: item.productId,
+              quantity: item.quantity,
+              type: MovementType.IN,
+              referenceId: `CANCEL-${order.id}`,
+              userId: userId,
+              reason: `Devolución por cancelación de pedido #${order.id}`,
+            },
+          });
 
-          // Si el pedido estaba PREPARED o DELIVERED, también tenía lotes asignados. Los devolvemos.
-          if (order.status === OrderStatus.PREPARED || order.status === OrderStatus.DELIVERED) {
+          // Si el pedido estaba PREPARING, PREPARED o DELIVERED, tenía lotes asignados. Los devolvemos.
+          const hasLotsAssigned = order.status === OrderStatus.PREPARING || order.status === OrderStatus.PREPARED || order.status === OrderStatus.DELIVERED;
+          if (hasLotsAssigned) {
             for (const itemLot of item.orderItemLots) {
               await tx.productLot.update({
                 where: { id: itemLot.productLotId },
@@ -461,22 +460,16 @@ export async function updateOrderStatus(req: AuthenticatedRequest, res: Response
           }
         }
 
-        // Si el pedido estaba entregado (DELIVERED), revertir su saldo en la cuenta corriente
+        // Si el pedido estaba entregado (DELIVERED), revertir su saldo en la cuenta corriente de forma incondicional
         if (order.status === OrderStatus.DELIVERED) {
-          const payment = await tx.transaction.findFirst({
-            where: { orderId: order.id, type: TransactionType.INCOME }
-          });
-          
-          if (!payment) {
-            await tx.persona.update({
-              where: { id: order.personaId },
-              data: {
-                outstandingBalance: {
-                  decrement: Number(order.totalAmount)
-                }
+          await tx.persona.update({
+            where: { id: order.personaId },
+            data: {
+              outstandingBalance: {
+                decrement: Number(order.totalAmount)
               }
-            });
-          }
+            }
+          });
         }
       }
 
