@@ -841,6 +841,37 @@ export const api = {
       method: 'PUT',
       body: JSON.stringify(perceptionData)
     });
+  },
+
+  // --- REGLAS DE PRECIOS & DESCUENTOS ---
+  getPricingRules: async () => {
+    return await request('/pricing/rules');
+  },
+
+  createDiscountRule: async (ruleData: { name: string; personaId?: number | null; priceList?: string | null; rubroId?: number | null; productId?: number | null; billingType?: string | null; discount: number }) => {
+    return await request('/pricing/rules', {
+      method: 'POST',
+      body: JSON.stringify(ruleData)
+    });
+  },
+
+  deleteDiscountRule: async (id: number) => {
+    return await request(`/pricing/rules/${id}`, {
+      method: 'DELETE'
+    });
+  },
+
+  createSplitBillingConfig: async (configData: { personaId: number; rubroId: number; percentageOfficial?: number; percentageInternal?: number }) => {
+    return await request('/pricing/split', {
+      method: 'POST',
+      body: JSON.stringify(configData)
+    });
+  },
+
+  deleteSplitBillingConfig: async (id: number) => {
+    return await request(`/pricing/split/${id}`, {
+      method: 'DELETE'
+    });
   }
 };
 

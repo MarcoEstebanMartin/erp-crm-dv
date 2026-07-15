@@ -126,6 +126,8 @@ model Persona {
   purchaseOrders     PurchaseOrder[]
   creditNotes        CreditNote[]
   products           Product[]
+  discountRules       DiscountRule[]
+  splitBillingConfigs SplitBillingConfig[]
 
   @@index([sellerId])
   @@index([isClient])
@@ -161,6 +163,7 @@ model Product {
   rubro              Rubro?              @relation(fields: [rubroId], references: [id])
   providerId         Int?
   provider           Persona?            @relation(fields: [providerId], references: [id])
+  discountRules      DiscountRule[]
 
   @@index([rubroId])
   @@index([providerId])
@@ -458,6 +461,8 @@ model Rubro {
   description  String?
   profitMargin Decimal   @default(1.25) @db.Decimal(5, 2)
   products     Product[]
+  discountRules DiscountRule[]
+  splitBillingConfigs SplitBillingConfig[]
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 }
@@ -484,4 +489,52 @@ model PerceptionType {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 }
+
+model DiscountRule {
+  id           Int          @id @default(autoincrement())
+  name         String?      // Nombre descriptivo (ej: "Descuento 3% Especial Quesos", "Fanberlian General 4%")
+  
+  // Condicionales de aplicación (nulos = aplica a todo)
+  personaId    Int?         // Cliente específico (ej. FANBERLIAN)
+  persona      Persona?     @relation(fields: [personaId], references: [id], onDelete: Cascade)
+  
+  priceList    String?      // Código de lista de precios (ej. "ESPECIAL_QUESOS") para agrupar clientes
+  
+  rubroId      Int?         // Rubro de producto al que aplica (ej. Remotti, Quesos Melincue)
+  rubro        Rubro?       @relation(fields: [rubroId], references: [id], onDelete: Cascade)
+  
+  productId    Int?         // Producto específico al que aplica
+  product      Product?     @relation(fields: [productId], references: [id], onDelete: Cascade)
+  
+  billingType  BillingType? // Si aplica solo a Sucursal A (OFFICIAL) o Sucursal X (INTERNAL)
+  
+  // Beneficio
+  discount     Decimal      @db.Decimal(5, 2) // Porcentaje de descuento (ej. 3.00, 4.00)
+  
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  @@index([personaId])
+  @@index([priceList])
+  @@index([rubroId])
+  @@index([productId])
+}
+
+model SplitBillingConfig {
+  id                 Int      @id @default(autoincrement())
+  personaId          Int      // Cliente al que aplica (ej. FANBERLIAN)
+  persona            Persona  @relation(fields: [personaId], references: [id], onDelete: Cascade)
+  
+  rubroId            Int      // Rubro que se divide (ej. Remotti, Quesos Melincué)
+  rubro              Rubro    @relation(fields: [rubroId], references: [id], onDelete: Cascade)
+  
+  percentageOfficial Decimal  @default(50.00) @db.Decimal(5, 2) // % en Sucursal A (Oficial)
+  percentageInternal Decimal  @default(50.00) @db.Decimal(5, 2) // % en Sucursal X (Interno)
+  
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@unique([personaId, rubroId])
+}
+
 

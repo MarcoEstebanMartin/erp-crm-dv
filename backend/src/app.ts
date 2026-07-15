@@ -18,6 +18,7 @@ import rubroRoutes from './routes/rubro.routes';
 import ivaRoutes from './routes/iva.routes';
 import collectionRoutes from './routes/collection.routes';
 import perceptionRoutes from './routes/perception.routes';
+import pricingRoutes from './routes/pricing.routes';
 
 dotenv.config();
 
@@ -43,6 +44,7 @@ app.use('/api/rubros', rubroRoutes);
 app.use('/api/iva', ivaRoutes);
 app.use('/api/collections', collectionRoutes);
 app.use('/api/perceptions', perceptionRoutes);
+app.use('/api/pricing', pricingRoutes);
 
 // Ruta de comprobación de estado (Healthcheck)
 app.get('/api/health', (req: Request, res: Response) => {

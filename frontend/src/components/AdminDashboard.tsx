@@ -152,6 +152,25 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
     const [configTab, setConfigTab] = useState<string>('general');
   const [cajasSubTab, setCajasSubTab] = useState<'general' | 'rendiciones'>('general');
   
+  // Estados para Reglas de Precios y Descuentos
+  const [pricingRules, setPricingRules] = useState<{ discountRules: any[]; splitConfigs: any[] }>({ discountRules: [], splitConfigs: [] });
+  const [loadingPricing, setLoadingPricing] = useState(false);
+  const [discountRuleForm, setDiscountRuleForm] = useState({
+    name: '',
+    personaId: '' as any,
+    priceList: '',
+    rubroId: '' as any,
+    productId: '' as any,
+    billingType: '',
+    discount: 0
+  });
+  const [splitConfigForm, setSplitConfigForm] = useState({
+    personaId: '' as any,
+    rubroId: '' as any,
+    percentageOfficial: 50.00,
+    percentageInternal: 50.00
+  });
+
   // Estados para Percepciones e Impuestos
   const [perceptions, setPerceptions] = useState<any[]>([]);
   const [editingPerception, setEditingPerception] = useState<any | null>(null);
@@ -194,6 +213,86 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
       setErrorMsg('Error al guardar configuración del servidor.');
     }
     setTimeout(() => setSuccessMsg(null), 3000);
+  };
+
+  const handleCreateDiscountRule = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMsg(null);
+    setSuccessMsg(null);
+    try {
+      await api.createDiscountRule({
+        name: discountRuleForm.name || undefined,
+        personaId: discountRuleForm.personaId ? Number(discountRuleForm.personaId) : null,
+        priceList: discountRuleForm.priceList || null,
+        rubroId: discountRuleForm.rubroId ? Number(discountRuleForm.rubroId) : null,
+        productId: discountRuleForm.productId ? Number(discountRuleForm.productId) : null,
+        billingType: discountRuleForm.billingType || null,
+        discount: Number(discountRuleForm.discount)
+      });
+      setSuccessMsg('Regla de descuento creada con éxito.');
+      setDiscountRuleForm({
+        name: '',
+        personaId: '' as any,
+        priceList: '',
+        rubroId: '' as any,
+        productId: '' as any,
+        billingType: '',
+        discount: 0
+      });
+      fetchData();
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Error al crear la regla de descuento.');
+    }
+  };
+
+  const handleDeleteDiscountRule = async (id: number) => {
+    if (!window.confirm('¿Estás seguro de eliminar esta regla de descuento?')) return;
+    setErrorMsg(null);
+    setSuccessMsg(null);
+    try {
+      await api.deleteDiscountRule(id);
+      setSuccessMsg('Regla de descuento eliminada.');
+      fetchData();
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Error al eliminar la regla.');
+    }
+  };
+
+  const handleCreateSplitConfig = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMsg(null);
+    setSuccessMsg(null);
+    try {
+      await api.createSplitBillingConfig({
+        personaId: Number(splitConfigForm.personaId),
+        rubroId: Number(splitConfigForm.rubroId),
+        percentageOfficial: Number(splitConfigForm.percentageOfficial),
+        percentageInternal: Number(splitConfigForm.percentageInternal)
+      });
+      setSuccessMsg('Configuración de división de facturación creada.');
+      setSplitConfigForm({
+        personaId: '' as any,
+        rubroId: '' as any,
+        percentageOfficial: 50.00,
+        percentageInternal: 50.00
+      });
+      fetchData();
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Error al crear la configuración de división.');
+    }
+  };
+
+  const handleDeleteSplitConfig = async (id: number) => {
+    if (!window.confirm('¿Estás seguro de eliminar esta configuración de división?')) return;
+    setErrorMsg(null);
+    setSuccessMsg(null);
+    try {
+      await api.deleteSplitBillingConfig(id);
+      setSuccessMsg('Configuración de división eliminada.');
+      fetchData();
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Error al eliminar la configuración.');
+    }
   };
 
   // Estados de Personas (Clientes)
@@ -457,6 +556,23 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
             setErrorMsg(err.message || 'Error al obtener la auditoría de saldos.');
           } finally {
             setLoadingReconcile(false);
+          }
+        } else if (configTab === 'prices') {
+          setLoadingPricing(true);
+          try {
+            const res = await api.getPricingRules();
+            setPricingRules(res || { discountRules: [], splitConfigs: [] });
+            
+            const allClients = await api.getPersonas('client');
+            setClients(allClients.filter((c: any) => c.isActive !== false));
+            const allProducts = await api.getProducts('');
+            setProducts(allProducts);
+            const allRubros = await api.getRubros();
+            setRubrosList(allRubros);
+          } catch (err: any) {
+            setErrorMsg(err.message || 'Error al obtener reglas de precios.');
+          } finally {
+            setLoadingPricing(false);
           }
         }
       }
@@ -968,18 +1084,37 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
   const getQuickItemPrice = (product: any, client: any) => {
     if (!client) return Math.round(Number(product.listPrice));
     let price = Number(product.listPrice);
-    let discount = Number(client.discount || 0);
     if (client.priceList === 'B') {
       price = Number(product.listPriceB) > 0 ? Number(product.listPriceB) : Number(product.listPrice);
+    } else if (client.priceList === 'C') {
+      price = Number(product.listPriceC) > 0 ? Number(product.listPriceC) : Number(product.listPrice);
+    }
+
+    let discount = Number(client.discount || 0);
+    const isQuesoRemottiOrMelincue = product.rubro?.name === 'REMOTTI' || product.description?.toUpperCase() === 'REMOTTI' || product.name?.toUpperCase().includes('REMOTTI') || product.description?.toUpperCase() === 'MELINCUE' || product.name?.toUpperCase().includes('MELINCUE');
+
+    const isFanberlian = client.name?.toUpperCase().includes('FANBERLIAN');
+    if (isFanberlian) {
+      if (isQuesoRemottiOrMelincue) {
+        discount = 3; // 3% de descuento en quesos
+      } else {
+        discount = 4; // 4% de descuento general en el resto
+      }
+    } else if (client.priceList === 'ESPECIAL_QUESOS') {
+      if (isQuesoRemottiOrMelincue) {
+        discount = 3; // 3% de descuento en quesos
+      } else {
+        discount = 0;
+      }
+    } else if (client.priceList === 'B') {
       const isMelincue = product.description?.toUpperCase() === 'MELINCUE' || product.name?.toUpperCase().includes('MELINCUE');
       if (isMelincue) {
         discount = 3;
       } else {
         discount = 0;
       }
-    } else if (client.priceList === 'C') {
-      price = Number(product.listPriceC) > 0 ? Number(product.listPriceC) : Number(product.listPrice);
     }
+
     return Math.round(price * (1 - discount / 100));
   };
 
@@ -2569,6 +2704,24 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
             >
               ⚖️ Auditoría de Saldos
             </button>
+            <button 
+              type="button" 
+              className="btn" 
+              style={{ 
+                backgroundColor: configTab === 'prices' ? 'var(--color-primary)' : 'transparent',
+                color: configTab === 'prices' ? '#fff' : 'var(--text-primary)',
+                border: configTab === 'prices' ? '1px solid var(--color-primary)' : '1px solid var(--border-color)',
+                fontWeight: 600,
+                fontSize: '0.85rem',
+                padding: '8px 16px',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap'
+              }}
+              onClick={() => setConfigTab('prices')}
+            >
+              🏷️ Reglas de Precios
+            </button>
           </div>
 
           {/* Sub-tab 1: General & Empresa Unificado */}
@@ -3109,6 +3262,286 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
                   </table>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Sub-tab 9: Reglas de Precios y Descuentos Dinámicos */}
+          {configTab === 'prices' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+              
+              {/* Sección 1: Reglas de Descuento */}
+              <div className="card" style={{ padding: '24px' }}>
+                <h3 className="card-title" style={{ margin: '0 0 6px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  🏷️ Reglas de Descuento Comercial
+                </h3>
+                <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: '0 0 20px 0' }}>
+                  Define descuentos porcentuales específicos para clientes individuales, agrupaciones por lista de precios, rubros de productos o artículos concretos.
+                </p>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 2fr', gap: '24px', alignItems: 'start' }}>
+                  
+                  {/* Formulario descuento */}
+                  <form onSubmit={handleCreateDiscountRule} style={{ borderRight: '1px solid var(--border-color)', paddingRight: '24px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <h4 style={{ margin: '0 0 8px 0', fontSize: '0.9rem', fontWeight: 600 }}>Nueva Regla de Descuento</h4>
+                    
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <label style={{ fontSize: '0.75rem', fontWeight: 600, marginBottom: '4px' }}>Nombre Descriptivo</label>
+                      <input 
+                        type="text" 
+                        className="input" 
+                        placeholder="ej: Descuento Quesos 3%"
+                        value={discountRuleForm.name}
+                        onChange={(e) => setDiscountRuleForm({ ...discountRuleForm, name: e.target.value })}
+                        style={{ height: '36px', padding: '6px 12px', fontSize: '0.85rem', borderRadius: '6px', border: '1px solid var(--border-color)', boxSizing: 'border-box' }}
+                      />
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <label style={{ fontSize: '0.75rem', fontWeight: 600, marginBottom: '4px' }}>Aplicar a Cliente</label>
+                      <select 
+                        className="select"
+                        value={discountRuleForm.personaId}
+                        onChange={(e) => setDiscountRuleForm({ ...discountRuleForm, personaId: e.target.value })}
+                        style={{ height: '36px', padding: '6px 12px', fontSize: '0.85rem', borderRadius: '6px', border: '1px solid var(--border-color)', boxSizing: 'border-box', backgroundColor: '#fff' }}
+                      >
+                        <option value="">-- Todos los Clientes --</option>
+                        {clients.map(c => (
+                          <option key={c.id} value={c.id}>{c.name}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <label style={{ fontSize: '0.75rem', fontWeight: 600, marginBottom: '4px' }}>O aplicar a Lista de Precios</label>
+                      <select 
+                        className="select"
+                        value={discountRuleForm.priceList}
+                        onChange={(e) => setDiscountRuleForm({ ...discountRuleForm, priceList: e.target.value })}
+                        style={{ height: '36px', padding: '6px 12px', fontSize: '0.85rem', borderRadius: '6px', border: '1px solid var(--border-color)', boxSizing: 'border-box', backgroundColor: '#fff' }}
+                      >
+                        <option value="">-- Ninguna --</option>
+                        <option value="A">Lista A (Estándar)</option>
+                        <option value="B">Lista B (Especial)</option>
+                        <option value="C">Lista C (Distribuidor)</option>
+                        <option value="ESPECIAL_QUESOS">Lista Especial Quesos (3%)</option>
+                      </select>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <label style={{ fontSize: '0.75rem', fontWeight: 600, marginBottom: '4px' }}>Rubro de Productos</label>
+                      <select 
+                        className="select"
+                        value={discountRuleForm.rubroId}
+                        onChange={(e) => setDiscountRuleForm({ ...discountRuleForm, rubroId: e.target.value })}
+                        style={{ height: '36px', padding: '6px 12px', fontSize: '0.85rem', borderRadius: '6px', border: '1px solid var(--border-color)', boxSizing: 'border-box', backgroundColor: '#fff' }}
+                      >
+                        <option value="">-- Todos los Rubros --</option>
+                        {rubrosList.map(r => (
+                          <option key={r.id} value={r.id}>{r.name}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <label style={{ fontSize: '0.75rem', fontWeight: 600, marginBottom: '4px' }}>Sucursal / Caja</label>
+                      <select 
+                        className="select"
+                        value={discountRuleForm.billingType}
+                        onChange={(e) => setDiscountRuleForm({ ...discountRuleForm, billingType: e.target.value })}
+                        style={{ height: '36px', padding: '6px 12px', fontSize: '0.85rem', borderRadius: '6px', border: '1px solid var(--border-color)', boxSizing: 'border-box', backgroundColor: '#fff' }}
+                      >
+                        <option value="">-- Ambas --</option>
+                        <option value="OFFICIAL">Sucursal A (Oficial)</option>
+                        <option value="INTERNAL">Sucursal X (Interna)</option>
+                      </select>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <label style={{ fontSize: '0.75rem', fontWeight: 600, marginBottom: '4px' }}>Porcentaje de Descuento (%)</label>
+                      <input 
+                        type="number" 
+                        step="0.01"
+                        className="input" 
+                        value={discountRuleForm.discount}
+                        onChange={(e) => setDiscountRuleForm({ ...discountRuleForm, discount: Number(e.target.value) })}
+                        style={{ height: '36px', padding: '6px 12px', fontSize: '0.85rem', borderRadius: '6px', border: '1px solid var(--border-color)', boxSizing: 'border-box' }}
+                        required
+                      />
+                    </div>
+
+                    <button type="submit" className="btn btn-primary" style={{ marginTop: '8px', height: '36px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                      ➕ Crear Regla
+                    </button>
+                  </form>
+
+                  {/* Tabla descuento */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <h4 style={{ margin: '0 0 8px 0', fontSize: '0.9rem', fontWeight: 600 }}>Reglas Activas</h4>
+                    {loadingPricing ? (
+                      <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '20px' }}>Cargando reglas...</div>
+                    ) : pricingRules.discountRules.length === 0 ? (
+                      <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '20px', border: '1px dashed var(--border-color)', borderRadius: '6px' }}>No hay reglas de descuento cargadas.</div>
+                    ) : (
+                      <div className="table-container" style={{ maxHeight: '420px', overflowY: 'auto' }}>
+                        <table style={{ width: '100%', fontSize: '0.8rem' }}>
+                          <thead>
+                            <tr>
+                              <th>Nombre / Ámbito</th>
+                              <th>Rubro / Prod.</th>
+                              <th>Sucursal</th>
+                              <th style={{ textAlign: 'right' }}>Descuento</th>
+                              <th style={{ textAlign: 'right' }}>Acciones</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {pricingRules.discountRules.map(r => (
+                              <tr key={r.id}>
+                                <td style={{ fontWeight: 600 }}>
+                                  {r.name || 'Descuento Sin Nombre'}
+                                  <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: 'normal' }}>
+                                    {r.persona ? `Cliente: ${r.persona.name}` : r.priceList ? `Lista: ${r.priceList}` : 'Global'}
+                                  </div>
+                                </td>
+                                <td>
+                                  {r.product ? `Art: ${r.product.sku}` : r.rubro ? `Rubro: ${r.rubro.name}` : 'Todos'}
+                                </td>
+                                <td>
+                                  {r.billingType === 'OFFICIAL' ? 'Sucursal A' : r.billingType === 'INTERNAL' ? 'Sucursal X' : 'Cualquiera'}
+                                </td>
+                                <td style={{ textAlign: 'right', fontWeight: 'bold', color: '#27AE60' }}>
+                                  {Number(r.discount)}%
+                                </td>
+                                <td style={{ textAlign: 'right' }}>
+                                  <button type="button" className="btn btn-ghost btn-sm" onClick={() => handleDeleteDiscountRule(r.id)} style={{ color: '#E30613', padding: '4px' }}>Eliminar</button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Sección 2: Facturación Dividida (Split Billing) */}
+              <div className="card" style={{ padding: '24px' }}>
+                <h3 className="card-title" style={{ margin: '0 0 6px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  ⚖️ División Automática de Facturación (Split Billing)
+                </h3>
+                <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: '0 0 20px 0' }}>
+                  Configura reglas para dividir pedidos armados automáticamente. Los productos de los rubros indicados se dividirán entre Oficial (Sucursal A) e Interna (Sucursal X) en los porcentajes definidos.
+                </p>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 2fr', gap: '24px', alignItems: 'start' }}>
+                  
+                  {/* Formulario split */}
+                  <form onSubmit={handleCreateSplitConfig} style={{ borderRight: '1px solid var(--border-color)', paddingRight: '24px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <h4 style={{ margin: '0 0 8px 0', fontSize: '0.9rem', fontWeight: 600 }}>Nueva Regla de División</h4>
+                    
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <label style={{ fontSize: '0.75rem', fontWeight: 600, marginBottom: '4px' }}>Cliente (Requerido)</label>
+                      <select 
+                        className="select"
+                        value={splitConfigForm.personaId}
+                        onChange={(e) => setSplitConfigForm({ ...splitConfigForm, personaId: e.target.value })}
+                        style={{ height: '36px', padding: '6px 12px', fontSize: '0.85rem', borderRadius: '6px', border: '1px solid var(--border-color)', boxSizing: 'border-box', backgroundColor: '#fff' }}
+                        required
+                      >
+                        <option value="">-- Seleccionar Cliente --</option>
+                        {clients.map(c => (
+                          <option key={c.id} value={c.id}>{c.name}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <label style={{ fontSize: '0.75rem', fontWeight: 600, marginBottom: '4px' }}>Rubro a Dividir (Requerido)</label>
+                      <select 
+                        className="select"
+                        value={splitConfigForm.rubroId}
+                        onChange={(e) => setSplitConfigForm({ ...splitConfigForm, rubroId: e.target.value })}
+                        style={{ height: '36px', padding: '6px 12px', fontSize: '0.85rem', borderRadius: '6px', border: '1px solid var(--border-color)', boxSizing: 'border-box', backgroundColor: '#fff' }}
+                        required
+                      >
+                        <option value="">-- Seleccionar Rubro --</option>
+                        {rubrosList.map(r => (
+                          <option key={r.id} value={r.id}>{r.name}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column' }}>
+                        <label style={{ fontSize: '0.75rem', fontWeight: 600, marginBottom: '4px' }}>% Sucursal A (Oficial)</label>
+                        <input 
+                          type="number" 
+                          className="input" 
+                          value={splitConfigForm.percentageOfficial}
+                          onChange={(e) => setSplitConfigForm({ ...splitConfigForm, percentageOfficial: Number(e.target.value) })}
+                          style={{ height: '36px', padding: '6px 12px', fontSize: '0.85rem', borderRadius: '6px', border: '1px solid var(--border-color)', boxSizing: 'border-box' }}
+                          required
+                        />
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column' }}>
+                        <label style={{ fontSize: '0.75rem', fontWeight: 600, marginBottom: '4px' }}>% Sucursal X (Interno)</label>
+                        <input 
+                          type="number" 
+                          className="input" 
+                          value={splitConfigForm.percentageInternal}
+                          onChange={(e) => setSplitConfigForm({ ...splitConfigForm, percentageInternal: Number(e.target.value) })}
+                          style={{ height: '36px', padding: '6px 12px', fontSize: '0.85rem', borderRadius: '6px', border: '1px solid var(--border-color)', boxSizing: 'border-box' }}
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <button type="submit" className="btn btn-primary" style={{ marginTop: '8px', height: '36px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                      ➕ Crear Configuración
+                    </button>
+                  </form>
+
+                  {/* Tabla split */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <h4 style={{ margin: '0 0 8px 0', fontSize: '0.9rem', fontWeight: 600 }}>Configuraciones de División Activas</h4>
+                    {loadingPricing ? (
+                      <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '20px' }}>Cargando divisiones...</div>
+                    ) : pricingRules.splitConfigs.length === 0 ? (
+                      <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '20px', border: '1px dashed var(--border-color)', borderRadius: '6px' }}>No hay configuraciones de división de facturación.</div>
+                    ) : (
+                      <div className="table-container" style={{ maxHeight: '420px', overflowY: 'auto' }}>
+                        <table style={{ width: '100%', fontSize: '0.8rem' }}>
+                          <thead>
+                            <tr>
+                              <th>Cliente</th>
+                              <th>Rubro</th>
+                              <th style={{ textAlign: 'center' }}>Distribución A / X</th>
+                              <th style={{ textAlign: 'right' }}>Acciones</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {pricingRules.splitConfigs.map(c => (
+                              <tr key={c.id}>
+                                <td style={{ fontWeight: 600 }}>{c.persona.name}</td>
+                                <td>{c.rubro.name}</td>
+                                <td style={{ textAlign: 'center', fontWeight: 'bold' }}>
+                                  <span style={{ color: '#2980B9' }}>{Number(c.percentageOfficial)}% A</span>
+                                  <span style={{ margin: '0 6px', color: 'var(--text-secondary)' }}>/</span>
+                                  <span style={{ color: '#E67E22' }}>{Number(c.percentageInternal)}% X</span>
+                                </td>
+                                <td style={{ textAlign: 'right' }}>
+                                  <button type="button" className="btn btn-ghost btn-sm" onClick={() => handleDeleteSplitConfig(c.id)} style={{ color: '#E30613', padding: '4px' }}>Eliminar</button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
             </div>
           )}
 
@@ -3952,6 +4385,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
                     <option value="A">Lista Estándar A</option>
                     <option value="B">Lista Especial B</option>
                     <option value="C">Lista Distribuidor C</option>
+                    <option value="ESPECIAL_QUESOS">Lista Especial Quesos (3%)</option>
                   </select>
                 </div>
                 <div className="form-group" style={{ display: 'flex', flexDirection: 'column' }}>

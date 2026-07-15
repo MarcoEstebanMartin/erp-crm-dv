@@ -142,18 +142,37 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
   const getItemPrice = (product: any, client: any) => {
     if (!client) return Math.round(Number(product.listPrice));
     let price = Number(product.listPrice);
-    let discount = Number(client.discount || 0);
     if (client.priceList === 'B') {
       price = Number(product.listPriceB) > 0 ? Number(product.listPriceB) : Number(product.listPrice);
+    } else if (client.priceList === 'C') {
+      price = Number(product.listPriceC) > 0 ? Number(product.listPriceC) : Number(product.listPrice);
+    }
+
+    let discount = Number(client.discount || 0);
+    const isQuesoRemottiOrMelincue = product.rubro?.name === 'REMOTTI' || product.description?.toUpperCase() === 'REMOTTI' || product.name?.toUpperCase().includes('REMOTTI') || product.description?.toUpperCase() === 'MELINCUE' || product.name?.toUpperCase().includes('MELINCUE');
+
+    const isFanberlian = client.name?.toUpperCase().includes('FANBERLIAN');
+    if (isFanberlian) {
+      if (isQuesoRemottiOrMelincue) {
+        discount = 3; // 3% de descuento en quesos
+      } else {
+        discount = 4; // 4% de descuento general en el resto
+      }
+    } else if (client.priceList === 'ESPECIAL_QUESOS') {
+      if (isQuesoRemottiOrMelincue) {
+        discount = 3; // 3% de descuento en quesos
+      } else {
+        discount = 0;
+      }
+    } else if (client.priceList === 'B') {
       const isMelincue = product.description?.toUpperCase() === 'MELINCUE' || product.name?.toUpperCase().includes('MELINCUE');
       if (isMelincue) {
         discount = 3;
       } else {
         discount = 0;
       }
-    } else if (client.priceList === 'C') {
-      price = Number(product.listPriceC) > 0 ? Number(product.listPriceC) : Number(product.listPrice);
     }
+
     return Math.round(price * (1 - discount / 100));
   };
 

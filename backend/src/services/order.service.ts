@@ -1,5 +1,6 @@
 import prisma from '../utils/prisma';
 import { Role, BillingType, InvoiceType, OrderStatus, MovementType } from '@prisma/client';
+import { PricingService } from './pricing.service';
 
 interface CreateOrderDto {
   sellerId: number;
@@ -45,22 +46,8 @@ export class OrderService {
           );
         }
 
-        let selectedPrice = Number(product.listPrice);
-        let itemDiscount = Number(persona.discount || 0);
-
-        if (persona.priceList === 'B') {
-          selectedPrice = Number(product.listPriceB) > 0 ? Number(product.listPriceB) : Number(product.listPrice);
-          const isMelincue = product.description?.toUpperCase() === 'MELINCUE' || product.name?.toUpperCase().includes('MELINCUE');
-          if (isMelincue) {
-            itemDiscount = 3;
-          } else {
-            itemDiscount = 0;
-          }
-        } else if (persona.priceList === 'C') {
-          selectedPrice = Number(product.listPriceC) > 0 ? Number(product.listPriceC) : Number(product.listPrice);
-        }
-
-        const finalUnitPrice = Math.round(selectedPrice * (1 - itemDiscount / 100));
+        const pricing = await PricingService.calculatePriceAndDiscount(product.id, persona.id, billingType);
+        const finalUnitPrice = pricing.finalPrice;
         // Si es pesable y tiene peso explícito lo usa, si no, usa quantity * approximateWeight, si no tiene aprox, asume 1kg por unidad.
         const actualQuantityForPrice = product.isPesable 
           ? (item.weight ? Number(item.weight) : item.quantity * Number((product as any).approximateWeight || 1))
