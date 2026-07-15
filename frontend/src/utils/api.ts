@@ -930,6 +930,58 @@ export const api = {
 
   getTodayVisits: async () => {
     return await request('/sale-routes/visits/today');
+  },
+
+  // --- FLOTA DE VEHÍCULOS ---
+  getVehicles: async () => {
+    const res = await request('/fleet');
+    return res.vehicles;
+  },
+
+  createVehicle: async (data: any) => {
+    return await request('/fleet', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  },
+
+  updateVehicle: async (id: number, data: any) => {
+    return await request(`/fleet/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    });
+  },
+
+  deleteVehicle: async (id: number) => {
+    return await request(`/fleet/${id}`, {
+      method: 'DELETE'
+    });
+  },
+
+  createVehicleMaintenance: async (vehicleId: number, data: any) => {
+    return await request(`/fleet/${vehicleId}/maintenances`, {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  },
+
+  deleteVehicleMaintenance: async (id: number) => {
+    return await request(`/fleet/maintenances/${id}`, {
+      method: 'DELETE'
+    });
+  },
+
+  createVehicleExpiry: async (vehicleId: number, data: any) => {
+    return await request(`/fleet/${vehicleId}/expirations`, {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  },
+
+  deleteVehicleExpiry: async (id: number) => {
+    return await request(`/fleet/expirations/${id}`, {
+      method: 'DELETE'
+    });
   }
 };
 

@@ -58,25 +58,40 @@ export async function getDeliveryRoutes(req: AuthenticatedRequest, res: Response
  * Crear una nueva hoja de ruta de reparto
  */
 export async function createDeliveryRoute(req: AuthenticatedRequest, res: Response): Promise<void> {
-  const { driverName, vehiclePlate, vehicleDescription, date, orderIds } = req.body;
+  const { driverName, vehiclePlate, vehicleDescription, vehicleId, date, orderIds } = req.body;
   const userId = req.user?.id;
 
-  if (!driverName || !vehiclePlate || !orderIds || !Array.isArray(orderIds)) {
+  if (!driverName || (!vehiclePlate && !vehicleId) || !orderIds || !Array.isArray(orderIds)) {
     res.status(400).json({
       status: 'error',
-      message: 'Chofer, patente y listado de pedidos son obligatorios.',
+      message: 'Chofer, patente (o vehículo de la flota) y listado de pedidos son obligatorios.',
     });
     return;
   }
 
   try {
+    let finalPlate = vehiclePlate;
+    let finalDesc = vehicleDescription;
+    let vId = vehicleId ? Number(vehicleId) : null;
+
+    if (vId) {
+      const dbVehicle = await prisma.vehicle.findUnique({ where: { id: vId } });
+      if (dbVehicle) {
+        if (!finalPlate) finalPlate = dbVehicle.plate;
+        if (!finalDesc) finalDesc = `${dbVehicle.brand} ${dbVehicle.model}`;
+      } else {
+        vId = null; // Si por alguna razón no existe, no asociar
+      }
+    }
+
     const route = await prisma.$transaction(async (tx) => {
       // 1. Crear la hoja de ruta
       const newRoute = await tx.deliveryRoute.create({
         data: {
           driverName,
-          vehiclePlate,
-          vehicleDescription,
+          vehiclePlate: finalPlate || '',
+          vehicleDescription: finalDesc || null,
+          vehicleId: vId,
           date: date ? new Date(date) : new Date(),
           status: 'PENDING',
         },

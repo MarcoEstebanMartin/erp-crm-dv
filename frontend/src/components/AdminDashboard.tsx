@@ -10,11 +10,10 @@ import StockDashboard from './StockDashboard';
 // Carga diferida de sub-dashboards pesados
 const UnifiedReportsDashboard = lazy(() => import('./UnifiedReportsDashboard'));
 const RendicionesDashboard = lazy(() => import('./RendicionesDashboard'));
-const RepartoDashboard = lazy(() => import('./RepartoDashboard'));
+const LogisticaDashboard = lazy(() => import('./LogisticaDashboard'));
 const ComprasDashboard = lazy(() => import('./ComprasDashboard'));
 const FinanzasDashboard = lazy(() => import('./FinanzasDashboard'));
 const BillingDashboard = lazy(() => import('./BillingDashboard'));
-const SaleRoutesDashboard = lazy(() => import('./SaleRoutesDashboard'));
 
 const LoadingDashboard = () => (
   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '300px', gap: '12px', padding: '40px', backgroundColor: 'var(--background-card)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
@@ -51,7 +50,8 @@ import {
   BookOpen,
   Receipt,
   Search,
-  DollarSign
+  DollarSign,
+  Truck
 } from 'lucide-react';
 
 interface AdminDashboardProps {
@@ -1688,6 +1688,15 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
                     setClientSearchModal({ open: true, action: 'payment' });
                     setQuickClientQuery('');
                   }
+                },
+                {
+                  title: 'Gasto de Flota',
+                  desc: 'Combustible, service o taller',
+                  icon: <Truck size={20} style={{ color: 'var(--text-secondary)' }} />,
+                  onClick: () => {
+                    localStorage.setItem('open_fleet_gasto_modal', 'true');
+                    setActiveTab('logistica');
+                  }
                 }
               ].map((act) => (
                 <button
@@ -2505,11 +2514,11 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
 
 
       {/* ====================================================================
-          6. LOGÍSTICA & REPARTO (REPARTO DASHBOARD)
+          6. LOGÍSTICA Y FLOTA (MÓDULO UNIFICADO)
           ==================================================================== */}
-      {activeTab === 'reparto' && (
+      {activeTab === 'logistica' && (
         <Suspense fallback={<LoadingDashboard />}>
-          <RepartoDashboard />
+          <LogisticaDashboard />
         </Suspense>
       )}
 
@@ -2597,16 +2606,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
         </div>
       )}
 
-      {/* ====================================================================
-          9.B. RUTAS DE PREVENTA (Vendedores)
-          ==================================================================== */}
-      {activeTab === 'sale-routes' && (
-        <div className="tab-pane active" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          <Suspense fallback={<LoadingDashboard />}>
-            <SaleRoutesDashboard />
-          </Suspense>
-        </div>
-      )}
+
 
       {/* ====================================================================
           10. CONFIGURACIÓN UNIFICADA (General, Empresa, Impresión, Empleados, CRM, Auditoría)
