@@ -65,7 +65,7 @@ export class ProductService {
    * Crear un nuevo producto.
    */
   async createProduct(data: any, userId?: number) {
-    const { sku, name, description, barcode, costPrice, listPrice, listPriceB, listPriceC, profitMargin, minStock, rubroId, providerId, isPesable, approximateWeight } = data;
+    const { sku, name, description, barcode, costPrice, listPrice, listPriceB, listPriceC, profitMargin, minStock, rubroId, providerId, isPesable, approximateWeight, unitsPerBox } = data;
 
     const existing = await prisma.product.findUnique({ where: { sku } });
     if (existing) {
@@ -93,6 +93,7 @@ export class ProductService {
         stock: 0,
         minStock: minStock ? Number(minStock) : 0,
         isPesable: Boolean(isPesable),
+        unitsPerBox: unitsPerBox !== undefined ? Number(unitsPerBox) : 1,
         approximateWeight: approximateWeight ? Number(approximateWeight) : null,
         rubroId: rubroId ? Number(rubroId) : null,
         providerId: providerId ? Number(providerId) : null,
@@ -139,6 +140,7 @@ export class ProductService {
         profitMargin: data.profitMargin !== undefined ? (data.profitMargin ? Number(data.profitMargin) : null) : undefined,
         minStock: data.minStock !== undefined ? Number(data.minStock) : undefined,
         isPesable: data.isPesable !== undefined ? Boolean(data.isPesable) : undefined,
+        unitsPerBox: data.unitsPerBox !== undefined ? Number(data.unitsPerBox) : undefined,
         approximateWeight: data.approximateWeight !== undefined ? (data.approximateWeight ? Number(data.approximateWeight) : null) : undefined,
         rubroId: data.rubroId !== undefined ? (data.rubroId ? Number(data.rubroId) : null) : undefined,
         providerId: data.providerId !== undefined ? (data.providerId ? Number(data.providerId) : null) : undefined,

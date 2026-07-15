@@ -61,7 +61,14 @@ export async function getOrders(req: AuthenticatedRequest, res: Response): Promi
         },
         items: {
           include: {
-            product: { select: { id: true, name: true, sku: true } },
+            product: {
+              include: {
+                lots: {
+                  orderBy: { expirationDate: 'asc' },
+                },
+                rubro: true,
+              },
+            },
             orderItemLots: {
               include: {
                 productLot: true,
@@ -109,7 +116,14 @@ export async function getOrderById(req: AuthenticatedRequest, res: Response): Pr
         },
         items: {
           include: {
-            product: true,
+            product: {
+              include: {
+                lots: {
+                  orderBy: { expirationDate: 'asc' },
+                },
+                rubro: true,
+              },
+            },
             orderItemLots: {
               include: {
                 productLot: true,
@@ -296,7 +310,7 @@ export async function confirmArmado(req: AuthenticatedRequest, res: Response): P
  */
 export async function updateOrderStatus(req: AuthenticatedRequest, res: Response): Promise<void> {
   const { id } = req.params;
-  const { status, lotAssignments } = req.body;
+  const { status, lotAssignments, bultosCount, bultosDetails } = req.body;
   const userId = req.user?.id;
   const userRole = req.user?.role;
 
@@ -397,7 +411,11 @@ export async function updateOrderStatus(req: AuthenticatedRequest, res: Response
 
       const uOrder = await tx.order.update({
         where: { id: order.id },
-        data: { status: status as OrderStatus },
+        data: { 
+          status: status as OrderStatus,
+          bultosCount: bultosCount !== undefined ? Number(bultosCount) : undefined,
+          bultosDetails: bultosDetails !== undefined ? bultosDetails : undefined
+        },
       });
 
       if (status === OrderStatus.CANCELLED && order.status !== OrderStatus.CANCELLED) {

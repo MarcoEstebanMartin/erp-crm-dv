@@ -22,6 +22,8 @@ export const updateOrderStatusSchema = z.object({
       lotId: z.number().or(z.string()),
       quantity: z.number().positive()
     }))).optional(),
+    bultosCount: z.number().int().nonnegative().optional(),
+    bultosDetails: z.any().optional(),
   }),
 });
 

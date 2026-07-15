@@ -81,7 +81,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
   const [providersList, setProvidersList] = useState<any[]>([]);
   
   // Modales
-  const [productModal, setProductModal] = useState({ open: false, mode: 'create', data: { id: 0, sku: '', name: '', description: '', barcode: '', costPrice: 0, listPrice: 0, listPriceB: 0, listPriceC: 0, profitMargin: 25 as string | number, minStock: 0, isPesable: false, approximateWeight: 0, rubroId: '' as string | number, providerId: '' as string | number } });
+  const [productModal, setProductModal] = useState({ open: false, mode: 'create', data: { id: 0, sku: '', name: '', description: '', barcode: '', costPrice: 0, listPrice: 0, listPriceB: 0, listPriceC: 0, profitMargin: 25 as string | number, minStock: 0, isPesable: false, approximateWeight: 0, unitsPerBox: 1, rubroId: '' as string | number, providerId: '' as string | number } });
   const [userModal, setUserModal] = useState({ open: false, username: '', password: '', role: 'VENDEDOR' });
   const [showPassword, setShowPassword] = useState(false);
   const [clientModal, setClientModal] = useState({ open: false, mode: 'create', data: { id: 0, name: '', cuit: '', address: '', city: '', phone: '', email: '', creditLimit: 0, priceList: 'A', discount: 0, isClient: true, isProvider: false, isSeller: false, isCommissionAgent: false, route: '', saleRouteId: null as number | null, sellerId: null as number | null, isActive: true } });
@@ -800,6 +800,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
       providerId: data.providerId ? Number(data.providerId) : null,
       minStock: Number(data.minStock || 0),
       isPesable: Boolean(data.isPesable),
+      unitsPerBox: Number(data.unitsPerBox || 1),
       approximateWeight: data.approximateWeight ? Number(data.approximateWeight) : 0
     };
 
@@ -832,6 +833,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
         providerId: updatedProduct.providerId !== undefined ? (updatedProduct.providerId ? Number(updatedProduct.providerId) : null) : undefined,
         minStock: Number(updatedProduct.minStock),
         isPesable: Boolean(updatedProduct.isPesable),
+        unitsPerBox: Number(updatedProduct.unitsPerBox || 1),
         approximateWeight: updatedProduct.approximateWeight ? Number(updatedProduct.approximateWeight) : 0
       });
       fetchData();
@@ -4195,14 +4197,27 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
                 </div>
               </div>
 
-              <div className="form-group">
-                <label>Stock Mínimo (Alerta de reposición)</label>
-                <input
-                  type="number"
-                  className="input"
-                  value={productModal.data.minStock || ''}
-                  onChange={(e) => setProductModal({ ...productModal, data: { ...productModal.data, minStock: Number(e.target.value) } })}
-                />
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+                <div className="form-group">
+                  <label>Stock Mínimo (Alerta de reposición)</label>
+                  <input
+                    type="number"
+                    className="input"
+                    value={productModal.data.minStock || ''}
+                    onChange={(e) => setProductModal({ ...productModal, data: { ...productModal.data, minStock: Number(e.target.value) } })}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Unidades por Caja (Fraccionado)</label>
+                  <input
+                    type="number"
+                    className="input"
+                    placeholder="ej: 12"
+                    min={1}
+                    value={productModal.data.unitsPerBox || 1}
+                    onChange={(e) => setProductModal({ ...productModal, data: { ...productModal.data, unitsPerBox: Number(e.target.value) } })}
+                  />
+                </div>
               </div>
 
               <div className="modal-footer">

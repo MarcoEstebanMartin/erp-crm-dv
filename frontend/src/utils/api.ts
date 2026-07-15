@@ -320,11 +320,11 @@ export const api = {
     return res.data;
   },
 
-  updateOrderStatus: async (id: number, status: OrderStatus, lotAssignments?: any) => {    
+  updateOrderStatus: async (id: number, status: OrderStatus, lotAssignments?: any, bultosCount?: number, bultosDetails?: any) => {    
 
     const res = await request(`/orders/${id}/status`, {
       method: 'PUT',
-      body: JSON.stringify({ status, lotAssignments })
+      body: JSON.stringify({ status, lotAssignments, bultosCount, bultosDetails })
     });
     return res.order;
   },
@@ -378,7 +378,7 @@ export const api = {
     return res.users;
   },
 
-  createUser: async (userData: any) => {    
+  createUser: async (userData: any) => {    
     const res = await request('/admin/users', {
       method: 'POST',
       body: JSON.stringify(userData)
@@ -386,7 +386,7 @@ export const api = {
     return res.user;
   },
 
-  toggleUserStatus: async (id: number) => {    
+  toggleUserStatus: async (id: number) => {    
     const res = await request(`/admin/users/${id}/toggle`, {
       method: 'POST'
     });
@@ -412,7 +412,7 @@ export const api = {
     return res.drawer;
   },
 
-  getActiveDrawer: async () => {    
+  getActiveDrawer: async () => {    
     
 
     try {
@@ -423,7 +423,7 @@ export const api = {
     }
   },
 
-  getActiveDrawers: async () => {    
+  getActiveDrawers: async () => {    
     
 
     try {
@@ -434,7 +434,7 @@ export const api = {
     }
   },
 
-  closeJointDrawers: async (payload: { realBalanceA: number; realBalanceX: number }) => {    
+  closeJointDrawers: async (payload: { realBalanceA: number; realBalanceX: number }) => {    
 
     const res = await request('/finance/drawers/close-joint', {
       method: 'POST',
@@ -449,7 +449,7 @@ export const api = {
     return res.accounts;
   },
 
-  createBankAccount: async (bankData: any) => {    
+  createBankAccount: async (bankData: any) => {    
     const res = await request('/finance/bank-accounts', {
       method: 'POST',
       body: JSON.stringify(bankData)
@@ -457,7 +457,7 @@ export const api = {
     return res.account;
   },
 
-  transferFunds: async (amount: number, bankAccountId: number, description?: string) => {    
+  transferFunds: async (amount: number, bankAccountId: number, description?: string) => {    
 
     const res = await request('/finance/bank-accounts/transfer', {
       method: 'POST',
@@ -515,7 +515,7 @@ export const api = {
     return res.product;
   },
 
-  importPrices: async (rows: any[]) => {    
+  importPrices: async (rows: any[]) => {    
 
     const res = await request('/products/import-prices', {
       method: 'POST',
@@ -530,7 +530,7 @@ export const api = {
     return res.rubros;
   },
 
-  createRubro: async (rubroData: { name: string; description?: string; profitMargin?: number }) => {    
+  createRubro: async (rubroData: { name: string; description?: string; profitMargin?: number; pickingZone?: string }) => {    
     const res = await request('/rubros', {
       method: 'POST',
       body: JSON.stringify(rubroData)
@@ -538,7 +538,7 @@ export const api = {
     return res.rubro;
   },
 
-  updateRubro: async (id: number, rubroData: { name?: string; description?: string; profitMargin?: number }) => {    
+  updateRubro: async (id: number, rubroData: { name?: string; description?: string; profitMargin?: number; pickingZone?: string }) => {    
     const res = await request(`/rubros/${id}`, {
       method: 'PUT',
       body: JSON.stringify(rubroData)

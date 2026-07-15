@@ -15,10 +15,12 @@ export default function RubrosList({ onRubroUpdated }: RubrosListProps) {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editMargin, setEditMargin] = useState<string>('');
   const [editName, setEditName] = useState<string>('');
+  const [editPickingZone, setEditPickingZone] = useState<string>('CAJAS');
 
   const [isCreating, setIsCreating] = useState(false);
   const [newRubroName, setNewRubroName] = useState('');
   const [newRubroMargin, setNewRubroMargin] = useState('25');
+  const [newRubroPickingZone, setNewRubroPickingZone] = useState<string>('CAJAS');
 
   const fetchRubros = async () => {
     try {
@@ -39,6 +41,7 @@ export default function RubrosList({ onRubroUpdated }: RubrosListProps) {
   const handleEditClick = (rubro: any) => {
     setEditingId(rubro.id);
     setEditName(rubro.name);
+    setEditPickingZone(rubro.pickingZone || 'CAJAS');
     // Extraer el porcentaje de rentabilidad base 1 (ej: 1.25 -> 25)
     const marginNum = rubro.profitMargin || 1.25;
     const percentage = Math.round((marginNum - 1) * 100);
@@ -67,7 +70,8 @@ export default function RubrosList({ onRubroUpdated }: RubrosListProps) {
     try {
       await api.updateRubro(id, {
         name: editName,
-        profitMargin: multiplier
+        profitMargin: multiplier,
+        pickingZone: editPickingZone
       });
       setSuccessMsg(`Rubro "${editName}" actualizado. Precios recalculados.`);
       setEditingId(null);
@@ -91,12 +95,14 @@ export default function RubrosList({ onRubroUpdated }: RubrosListProps) {
     try {
       await api.createRubro({
         name: newRubroName,
-        profitMargin: multiplier
+        profitMargin: multiplier,
+        pickingZone: newRubroPickingZone
       });
       setSuccessMsg(`Rubro "${newRubroName}" creado con éxito.`);
       setIsCreating(false);
       setNewRubroName('');
       setNewRubroMargin('25');
+      setNewRubroPickingZone('CAJAS');
       fetchRubros();
       onRubroUpdated();
       setTimeout(() => setSuccessMsg(null), 3000);
@@ -142,6 +148,7 @@ export default function RubrosList({ onRubroUpdated }: RubrosListProps) {
               <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>ID</th>
               <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>RUBRO</th>
               <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>RENTABILIDAD (%)</th>
+              <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>ZONA PICKING</th>
               <th style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>ACCIÓN</th>
             </tr>
           </thead>
@@ -174,6 +181,18 @@ export default function RubrosList({ onRubroUpdated }: RubrosListProps) {
                     <span style={{ marginLeft: '8px', color: 'var(--text-secondary)', fontWeight: 600 }}>%</span>
                   </div>
                 </td>
+                <td style={{ padding: '12px 16px', textAlign: 'center' }}>
+                  <select
+                    className="select"
+                    value={newRubroPickingZone}
+                    onChange={(e) => setNewRubroPickingZone(e.target.value)}
+                    style={{ padding: '6px 10px', fontSize: '0.9rem', borderRadius: '6px', minWidth: '130px' }}
+                  >
+                    <option value="CAJAS">📦 Cajas / Secos</option>
+                    <option value="FRIO">❄️ Frío / Lácteos</option>
+                    <option value="TABLA">🍾 Bebidas / Tabla</option>
+                  </select>
+                </td>
                 <td style={{ padding: '12px 16px', textAlign: 'right' }}>
                   <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
                     <button className="btn btn-primary" style={{ padding: '6px 12px', borderRadius: '6px' }} onClick={handleCreateNew}>
@@ -189,11 +208,11 @@ export default function RubrosList({ onRubroUpdated }: RubrosListProps) {
 
             {loading && !rubros.length ? (
               <tr>
-                <td colSpan={4} style={{ textAlign: 'center', padding: '32px 0', color: 'var(--text-secondary)' }}>Cargando rubros...</td>
+                <td colSpan={5} style={{ textAlign: 'center', padding: '32px 0', color: 'var(--text-secondary)' }}>Cargando rubros...</td>
               </tr>
             ) : rubros.length === 0 && !isCreating ? (
               <tr>
-                <td colSpan={4} style={{ textAlign: 'center', padding: '32px 0', color: 'var(--text-secondary)' }}>No hay rubros configurados.</td>
+                <td colSpan={5} style={{ textAlign: 'center', padding: '32px 0', color: 'var(--text-secondary)' }}>No hay rubros configurados.</td>
               </tr>
             ) : (
               rubros.map((r: any) => {
@@ -234,6 +253,36 @@ export default function RubrosList({ onRubroUpdated }: RubrosListProps) {
                       ) : (
                         <span style={{ backgroundColor: 'var(--bg-card)', padding: '4px 12px', borderRadius: '20px', fontWeight: 600, fontSize: '0.85rem', color: 'var(--color-primary)', border: '1px solid var(--border-color)' }}>
                           {percentage}%
+                        </span>
+                      )}
+                    </td>
+                    
+                    <td style={{ padding: '12px 16px', textAlign: 'center' }}>
+                      {isEditing ? (
+                        <select
+                          className="select"
+                          value={editPickingZone}
+                          onChange={(e) => setEditPickingZone(e.target.value)}
+                          style={{ padding: '6px 10px', fontSize: '0.9rem', borderRadius: '6px', minWidth: '130px' }}
+                        >
+                          <option value="CAJAS">📦 Cajas / Secos</option>
+                          <option value="FRIO">❄️ Frío / Lácteos</option>
+                          <option value="TABLA">🍾 Bebidas / Tabla</option>
+                        </select>
+                      ) : (
+                        <span style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          padding: '4px 10px',
+                          borderRadius: '6px',
+                          fontSize: '0.8rem',
+                          fontWeight: 600,
+                          backgroundColor: r.pickingZone === 'FRIO' ? 'rgba(0, 122, 255, 0.08)' : r.pickingZone === 'TABLA' ? 'rgba(255, 149, 0, 0.08)' : 'rgba(142, 142, 147, 0.08)',
+                          color: r.pickingZone === 'FRIO' ? '#007AFF' : r.pickingZone === 'TABLA' ? '#FF9500' : '#8E8E93',
+                          border: r.pickingZone === 'FRIO' ? '1px solid rgba(0, 122, 255, 0.15)' : r.pickingZone === 'TABLA' ? '1px solid rgba(255, 149, 0, 0.15)' : '1px solid rgba(142, 142, 147, 0.15)'
+                        }}>
+                          {r.pickingZone === 'FRIO' ? '❄️ Frío' : r.pickingZone === 'TABLA' ? '🍾 Tabla' : '📦 Cajas'}
                         </span>
                       )}
                     </td>

@@ -38,6 +38,17 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [expiringLots, setExpiringLots] = useState<any[]>([]);
+  
+  // WMS Picking States
+  const [selectedZone, setSelectedZone] = useState<string>('ALL');
+  const [showBultoModal, setShowBultoModal] = useState(false);
+  const [bultosData, setBultosData] = useState({
+    frio: 0,
+    secos: 0,
+    tabla: 0,
+    cajasCerradas: 0
+  });
+  const [labelsToPrint, setLabelsToPrint] = useState<any[]>([]);
 
   useEffect(() => {
     fetchData();
@@ -91,6 +102,7 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
       });
       setLotAssignments(initial);
       setPesableWeights(initialWeights);
+      setSelectedZone('ALL');
     } else {
       setLotAssignments({});
       setPesableWeights({});
@@ -189,6 +201,8 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
     setLotAssignments(newAssignments);
   };
 
+  };
+  
   const handleFinishPicking = async (orderId: number) => {
     setErrorMsg(null);
     
@@ -217,6 +231,58 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
       return;
     }
 
+    // Inicializar sugerencias de bulto y abrir el modal
+    let suggestedFrio = 0;
+    let suggestedSecos = 0;
+    let suggestedTabla = 0;
+    let suggestedCajas = 0;
+
+    selectedOrder.items.forEach((item: any) => {
+      const itemZone = item.product?.rubro?.pickingZone || 'CAJAS';
+      const unitsPerBox = item.product?.unitsPerBox || 1;
+      
+      if (unitsPerBox > 1 && item.quantity % unitsPerBox === 0) {
+        suggestedCajas += (item.quantity / unitsPerBox);
+      } else {
+        if (itemZone === 'FRIO') suggestedFrio = 1; // Al menos 1 bandeja de frío si hay sueltos
+        else if (itemZone === 'TABLA') suggestedTabla += 1;
+        else suggestedSecos = 1; // Al menos 1 bandeja de secos si hay sueltos
+      }
+    });
+
+    setBultosData({
+      frio: suggestedFrio,
+      secos: suggestedSecos,
+      tabla: suggestedTabla,
+      cajasCerradas: suggestedCajas
+    });
+    setShowBultoModal(true);
+  };
+
+  const handleConfirmBultosAndFinish = async () => {
+    if (!selectedOrder) return;
+    setErrorMsg(null);
+    setLoading(true);
+
+    const totalBultos = Number(bultosData.frio) + Number(bultosData.secos) + Number(bultosData.tabla) + Number(bultosData.cajasCerradas);
+    if (totalBultos <= 0) {
+      setErrorMsg("Debés ingresar al menos 1 bulto para finalizar el pedido.");
+      setLoading(false);
+      return;
+    }
+
+    // Armar asignaciones para payload
+    const assignmentsPayload: any = {};
+    for (const item of selectedOrder.items) {
+      const itemAssignments = lotAssignments[item.id] || {};
+      assignmentsPayload[item.id] = Object.entries(itemAssignments)
+        .filter(([_, qty]) => (qty as number) > 0)
+        .map(([lotId, qty]) => ({
+          lotId: Number(lotId),
+          quantity: qty
+        }));
+    }
+
     try {
       // 1. Enviar pesos exactos si existen
       const weightItems = Object.entries(pesableWeights).map(([orderItemId, weight]) => ({
@@ -225,15 +291,78 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
       })).filter(i => i.weight > 0);
       
       if (weightItems.length > 0) {
-        await api.updateOrderWeights(orderId, weightItems);
+        await api.updateOrderWeights(selectedOrder.id, weightItems);
       }
       
-      await api.updateOrderStatus(orderId, OrderStatus.PREPARED, assignmentsPayload);
-      setSuccessMsg(`Pedido #${orderId} preparado correctamente. Esperando facturación.`);
+      // 2. Finalizar pedido enviando la cantidad de bultos y el desglose
+      await api.updateOrderStatus(selectedOrder.id, OrderStatus.PREPARED, assignmentsPayload, totalBultos, bultosData);
+      
+      // 3. Generar etiquetas de bulto
+      const generatedLabels: any[] = [];
+      let index = 1;
+
+      for (let i = 0; i < bultosData.frio; i++) {
+        generatedLabels.push({
+          index: index++,
+          total: totalBultos,
+          zone: '❄️ SECTOR FRÍO (FRACCIONADO)',
+          client: selectedOrder.persona?.name || selectedOrder.client?.name || 'Cliente',
+          route: selectedOrder.persona?.route || 'RETIRO EN DEPÓSITO',
+          sequence: selectedOrder.persona?.routeSequence ? `VISITA #${selectedOrder.persona.routeSequence}` : 'S/D',
+          orderId: selectedOrder.id
+        });
+      }
+      for (let i = 0; i < bultosData.secos; i++) {
+        generatedLabels.push({
+          index: index++,
+          total: totalBultos,
+          zone: '📥 SECTOR SECOS (FRACCIONADO)',
+          client: selectedOrder.persona?.name || selectedOrder.client?.name || 'Cliente',
+          route: selectedOrder.persona?.route || 'RETIRO EN DEPÓSITO',
+          sequence: selectedOrder.persona?.routeSequence ? `VISITA #${selectedOrder.persona.routeSequence}` : 'S/D',
+          orderId: selectedOrder.id
+        });
+      }
+      for (let i = 0; i < bultosData.tabla; i++) {
+        generatedLabels.push({
+          index: index++,
+          total: totalBultos,
+          zone: '🍾 BEBIDAS / TABLA (CONSOLID.)',
+          client: selectedOrder.persona?.name || selectedOrder.client?.name || 'Cliente',
+          route: selectedOrder.persona?.route || 'RETIRO EN DEPÓSITO',
+          sequence: selectedOrder.persona?.routeSequence ? `VISITA #${selectedOrder.persona.routeSequence}` : 'S/D',
+          orderId: selectedOrder.id
+        });
+      }
+      for (let i = 0; i < bultosData.cajasCerradas; i++) {
+        generatedLabels.push({
+          index: index++,
+          total: totalBultos,
+          zone: '📦 CAJA CERRADA / ORIGINAL',
+          client: selectedOrder.persona?.name || selectedOrder.client?.name || 'Cliente',
+          route: selectedOrder.persona?.route || 'RETIRO EN DEPÓSITO',
+          sequence: selectedOrder.persona?.routeSequence ? `VISITA #${selectedOrder.persona.routeSequence}` : 'S/D',
+          orderId: selectedOrder.id
+        });
+      }
+
+      setSuccessMsg(`Pedido #${selectedOrder.id} preparado con éxito. Se enviaron ${totalBultos} bultos.`);
+      setShowBultoModal(false);
       setSelectedOrder(null);
       fetchData();
+
+      // Iniciar el proceso de impresión
+      if (generatedLabels.length > 0) {
+        setLabelsToPrint(generatedLabels);
+        setTimeout(() => {
+          window.print();
+          setLabelsToPrint([]);
+        }, 500);
+      }
     } catch (err: any) {
-      setErrorMsg(err.message || 'Error al finalizar picking.');
+      setErrorMsg(err.message || 'Error al guardar detalles de bultos.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -314,48 +443,142 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
           ==================================================================== */}
       {normalizedTab === 'prepare-orders' && (
         <div>
-          {selectedOrder ? (
-            <div className="card">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                <h3>Preparando Pedido #{selectedOrder.id}</h3>
-                <button className="btn btn-secondary" onClick={() => setSelectedOrder(null)}>Regresar al Listado</button>
-              </div>
+          {selectedOrder ? (() => {
+            const filteredItems = selectedOrder.items.filter((item: any) => selectedZone === 'ALL' || (item.product?.rubro?.pickingZone || 'CAJAS') === selectedZone);
+            const countZone = (zId: string) => {
+              if (zId === 'ALL') return selectedOrder.items.length;
+              return selectedOrder.items.filter((i: any) => (i.product?.rubro?.pickingZone || 'CAJAS') === zId).length;
+            };
 
-              <div style={{ marginBottom: '20px', fontSize: '0.9rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                <div>
-                  <p><strong>Cliente:</strong> {selectedOrder.client?.name}</p>
-                  <p><strong>Dirección:</strong> {selectedOrder.client?.address || 'Retiro en depósito'}</p>
+            return (
+              <div className="card">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                  <h3>Preparando Pedido #{selectedOrder.id}</h3>
+                  <button className="btn btn-secondary" onClick={() => setSelectedOrder(null)}>Regresar al Listado</button>
                 </div>
-                <div>
-                  <p><strong>Fecha pedido:</strong> {new Date(selectedOrder.createdAt).toLocaleDateString('es-AR')}</p>
-                  <p><strong>Vendedor:</strong> {selectedOrder.seller?.username || 'S/D'}</p>
-                </div>
-              </div>
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                <h4 style={{ fontSize: '0.95rem', margin: 0 }}>Lista de Artículos a Preparar (Picking List)</h4>
-                <button 
-                  type="button" 
-                  className="btn btn-secondary" 
-                  style={{ padding: '6px 12px', fontSize: '0.8rem', backgroundColor: 'var(--bg-secondary)' }}
-                  onClick={handleFIFOAutoFillAll}
-                >
-                  ⚡ Auto-completar Todo (FIFO)
-                </button>
-              </div>
-              
-              <div className="table-container" style={{ border: '1px solid var(--border-color)', marginBottom: '20px' }}>
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Artículo y Trazabilidad de Lotes</th>
-                      <th>Cantidad Pedida</th>
-                      <th>Stock General</th>
-                      <th>Código SKU</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {selectedOrder.items.map((item: any, idx: number) => {
+                <div style={{ marginBottom: '20px', fontSize: '0.9rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                  <div>
+                    <p><strong>Cliente:</strong> {selectedOrder.client?.name || selectedOrder.persona?.name}</p>
+                    <p><strong>Dirección:</strong> {selectedOrder.client?.address || selectedOrder.persona?.address || 'Retiro en depósito'}</p>
+                  </div>
+                  <div>
+                    <p><strong>Fecha pedido:</strong> {new Date(selectedOrder.createdAt).toLocaleDateString('es-AR')}</p>
+                    <p><strong>Vendedor:</strong> {selectedOrder.seller?.username || 'S/D'}</p>
+                  </div>
+                </div>
+
+                {/* Filtros de Sectores del Depósito */}
+                <div style={{ 
+                  display: 'flex', 
+                  gap: '8px', 
+                  marginBottom: '16px', 
+                  borderBottom: '1px solid var(--border-color)',
+                  paddingBottom: '12px',
+                  flexWrap: 'wrap'
+                }}>
+                  {[
+                    { id: 'ALL', label: '🌐 Todos los Sectores', color: '#1e293b' },
+                    { id: 'FRIO', label: '❄️ Sector Frío', color: '#007AFF' },
+                    { id: 'TABLA', label: '🍾 Sector Tabla/Bebidas', color: '#FF9500' },
+                    { id: 'CAJAS', label: '📦 Sector Secos/Cajas', color: '#8E8E93' }
+                  ].map(zone => {
+                    const count = countZone(zone.id);
+                    return (
+                      <button
+                        key={zone.id}
+                        type="button"
+                        className="btn"
+                        style={{
+                          padding: '6px 14px',
+                          fontSize: '0.85rem',
+                          borderRadius: '20px',
+                          backgroundColor: selectedZone === zone.id ? zone.color : 'var(--bg-secondary)',
+                          color: selectedZone === zone.id ? '#fff' : 'var(--text-primary)',
+                          border: selectedZone === zone.id ? `1px solid ${zone.color}` : '1px solid var(--border-color)',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          transition: 'all 0.2s'
+                        }}
+                        onClick={() => setSelectedZone(zone.id)}
+                      >
+                        {zone.label} ({count})
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                  <h4 style={{ fontSize: '0.95rem', margin: 0 }}>Lista de Artículos a Preparar (Picking List)</h4>
+                  <button 
+                    type="button" 
+                    className="btn btn-secondary" 
+                    style={{ padding: '6px 12px', fontSize: '0.8rem', backgroundColor: 'var(--bg-secondary)' }}
+                    onClick={handleFIFOAutoFillAll}
+                  >
+                    ⚡ Auto-completar Todo (FIFO)
+                  </button>
+                </div>
+                
+                <div className="table-container" style={{ border: '1px solid var(--border-color)', marginBottom: '20px' }}>
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Artículo y Trazabilidad de Lotes</th>
+                        <th>Cantidad Pedida</th>
+                        <th>Stock General</th>
+                        <th>Código SKU</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredItems.map((item: any, idx: number) => {
+                        const isLowStock = item.product ? item.product.stock < item.quantity : false;
+                        const productLots = item.product?.lots || [];
+                        const itemAssignments = lotAssignments[item.id] || {};
+                        
+                        const assignedSum = Object.values(itemAssignments).reduce((sum: number, qty) => sum + (qty || 0), 0);
+                        const isValidAssignment = assignedSum === item.quantity;
+                        
+                        const itemZone = item.product?.rubro?.pickingZone || 'CAJAS';
+                        const unitsPerBox = item.product?.unitsPerBox || 1;
+                        
+                        // Determinar tipo de empaque para visualización
+                        let packingType = '';
+                        let badgeStyle: React.CSSProperties = {};
+                        
+                        if (unitsPerBox > 1 && item.quantity % unitsPerBox === 0) {
+                          const boxes = item.quantity / unitsPerBox;
+                          packingType = `📦 ${boxes} Caja(s) Cerrada(s)`;
+                          badgeStyle = { backgroundColor: 'rgba(52, 199, 89, 0.08)', color: '#34C759', border: '1px solid rgba(52, 199, 89, 0.15)' };
+                        } else {
+                          if (itemZone === 'FRIO') {
+                            packingType = '❄️ Fracc. Frío';
+                            badgeStyle = { backgroundColor: 'rgba(0, 122, 255, 0.08)', color: '#007AFF', border: '1px solid rgba(0, 122, 255, 0.15)' };
+                          } else if (itemZone === 'TABLA') {
+                            packingType = '🍾 Tabla/Consol.';
+                            badgeStyle = { backgroundColor: 'rgba(255, 149, 0, 0.08)', color: '#FF9500', border: '1px solid rgba(255, 149, 0, 0.15)' };
+                          } else {
+                            packingType = '📥 Fracc. Secos';
+                            badgeStyle = { backgroundColor: 'rgba(142, 142, 147, 0.08)', color: '#8E8E93', border: '1px solid rgba(142, 142, 147, 0.15)' };
+                          }
+                        }
+
+                        return (
+                          <tr key={idx} style={{ backgroundColor: isLowStock ? 'var(--accent-bg-light)' : 'transparent', borderBottom: '1px solid var(--border-color)' }}>
+                            <td style={{ padding: '16px 12px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '8px' }}>
+                                <span style={{ fontWeight: 600, fontSize: '0.95rem' }}>{item.product?.name}</span>
+                                <span style={{
+                                  padding: '2px 8px',
+                                  borderRadius: '4px',
+                                  fontSize: '0.7rem',
+                                  fontWeight: 700,
+                                  textTransform: 'uppercase',
+                                  ...badgeStyle
+                                }}>
+                                  {packingType}
+                                </span>
+                              </div>
                       const isLowStock = item.product ? item.product.stock < item.quantity : false;
                       const productLots = item.product?.lots || [];
                       const itemAssignments = lotAssignments[item.id] || {};
@@ -497,7 +720,8 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
                 </button>
               </div>
             </div>
-          ) : (
+            );
+          })() : (
             <div>
               {expiringLots.length > 0 && (
                 <div className="card" style={{ 
@@ -807,6 +1031,218 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
           </div>
         </div>
       )}
+
+      {/* MODAL DE CONTROL Y CIERRE DE BULTOS */}
+      {showBultoModal && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ maxWidth: '450px' }}>
+            <div className="modal-header">
+              <h3>Confirmación de Bultos Físicos</h3>
+              <button className="btn btn-ghost" style={{ padding: '4px' }} onClick={() => setShowBultoModal(false)}>✕</button>
+            </div>
+            
+            <div style={{ padding: '10px 0 20px 0' }}>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '16px' }}>
+                Ingresá la cantidad de paquetes, bandejas o bultos armados para pegar las etiquetas de reparto:
+              </p>
+              
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                
+                {/* Bandejas de Frio */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', backgroundColor: 'var(--bg-secondary)', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '1.2rem' }}>❄️</span>
+                    <div>
+                      <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>Bandejas de Frío (Lácteos sueltos)</div>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Productos sueltos de heladera</span>
+                    </div>
+                  </div>
+                  <input
+                    type="number"
+                    className="input"
+                    style={{ width: '70px', textAlign: 'center', fontWeight: 'bold' }}
+                    min={0}
+                    value={bultosData.frio || ''}
+                    onChange={(e) => setBultosData({ ...bultosData, frio: Math.max(0, Number(e.target.value)) })}
+                    placeholder="0"
+                  />
+                </div>
+
+                {/* Bandejas de Secos */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', backgroundColor: 'var(--bg-secondary)', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '1.2rem' }}>📥</span>
+                    <div>
+                      <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>Bandejas de Secos (Mercadería suelta)</div>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Paquetes o latas sueltas</span>
+                    </div>
+                  </div>
+                  <input
+                    type="number"
+                    className="input"
+                    style={{ width: '70px', textAlign: 'center', fontWeight: 'bold' }}
+                    min={0}
+                    value={bultosData.secos || ''}
+                    onChange={(e) => setBultosData({ ...bultosData, secos: Math.max(0, Number(e.target.value)) })}
+                    placeholder="0"
+                  />
+                </div>
+
+                {/* Atados de Tabla */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', backgroundColor: 'var(--bg-secondary)', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '1.2rem' }}>🍾</span>
+                    <div>
+                      <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>Bebidas / Tabla (Atados/Bolsones)</div>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Packs grandes o bolsas pesadas</span>
+                    </div>
+                  </div>
+                  <input
+                    type="number"
+                    className="input"
+                    style={{ width: '70px', textAlign: 'center', fontWeight: 'bold' }}
+                    min={0}
+                    value={bultosData.tabla || ''}
+                    onChange={(e) => setBultosData({ ...bultosData, tabla: Math.max(0, Number(e.target.value)) })}
+                    placeholder="0"
+                  />
+                </div>
+
+                {/* Cajas Cerradas */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', backgroundColor: 'var(--bg-secondary)', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '1.2rem' }}>📦</span>
+                    <div>
+                      <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>Cajas Cerradas (Bultos cerrados)</div>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Cajas originales de fábrica</span>
+                    </div>
+                  </div>
+                  <input
+                    type="number"
+                    className="input"
+                    style={{ width: '70px', textAlign: 'center', fontWeight: 'bold' }}
+                    min={0}
+                    value={bultosData.cajasCerradas || ''}
+                    onChange={(e) => setBultosData({ ...bultosData, cajasCerradas: Math.max(0, Number(e.target.value)) })}
+                    placeholder="0"
+                  />
+                </div>
+
+              </div>
+              
+              <div style={{ marginTop: '20px', borderTop: '1px solid var(--border-color)', paddingTop: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontWeight: 600, fontSize: '1rem' }}>Total Bultos:</span>
+                <span style={{ 
+                  fontSize: '1.4rem', 
+                  fontWeight: 800, 
+                  backgroundColor: 'rgba(227, 6, 19, 0.08)', 
+                  color: 'var(--accent-color)', 
+                  padding: '2px 14px', 
+                  borderRadius: '20px',
+                  border: '1px solid rgba(227, 6, 19, 0.1)'
+                }}>
+                  {Number(bultosData.frio) + Number(bultosData.secos) + Number(bultosData.tabla) + Number(bultosData.cajasCerradas)}
+                </span>
+              </div>
+            </div>
+
+            <div className="modal-footer">
+              <button type="button" className="btn btn-secondary" onClick={() => setShowBultoModal(false)}>Cancelar</button>
+              <button 
+                type="button" 
+                className="btn btn-primary" 
+                onClick={handleConfirmBultosAndFinish}
+                disabled={loading || (Number(bultosData.frio) + Number(bultosData.secos) + Number(bultosData.tabla) + Number(bultosData.cajasCerradas)) <= 0}
+              >
+                {loading ? 'Finalizando...' : 'Confirmar y Generar Etiquetas 🖨️'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Contenedor de impresión de etiquetas térmicas */}
+      {labelsToPrint.length > 0 && (
+        <div className="print-only-layout" style={{ display: 'none' }}>
+          {labelsToPrint.map((label, idx) => (
+            <div key={idx} className="label-card" style={{
+              width: '80mm',
+              height: '80mm',
+              border: '2px solid #000',
+              padding: '16px',
+              margin: '0 auto 20px auto',
+              boxSizing: 'border-box',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+              fontFamily: 'monospace',
+              fontSize: '11px',
+              backgroundColor: '#fff',
+              color: '#000',
+              pageBreakAfter: 'always'
+            }}>
+              <div>
+                <div style={{ borderBottom: '1px solid #000', paddingBottom: '6px', marginBottom: '8px', textAlign: 'center' }}>
+                  <span style={{ fontSize: '14px', fontWeight: 'bold' }}>ARMADO DE PEDIDOS</span>
+                </div>
+                <div style={{ marginBottom: '6px' }}>
+                  <strong>CLIENTE:</strong>
+                  <div style={{ fontSize: '13px', fontWeight: 'bold', marginTop: '2px' }}>{label.client}</div>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '6px' }}>
+                  <div>
+                    <strong>RUTA:</strong>
+                    <div style={{ fontWeight: 'bold' }}>{label.route}</div>
+                  </div>
+                  <div>
+                    <strong>ORDEN RUTA:</strong>
+                    <div style={{ fontWeight: 'bold', fontSize: '12px' }}>{label.sequence}</div>
+                  </div>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '6px' }}>
+                  <div>
+                    <strong>PEDIDO:</strong>
+                    <div style={{ fontWeight: 'bold' }}>#{label.orderId}</div>
+                  </div>
+                  <div>
+                    <strong>FECHA:</strong>
+                    <div>{new Date().toLocaleDateString('es-AR')}</div>
+                  </div>
+                </div>
+              </div>
+              <div style={{ borderTop: '2px dashed #000', paddingTop: '10px', marginTop: '10px' }}>
+                <div style={{ fontSize: '12px', fontWeight: 'bold', textAlign: 'center', backgroundColor: '#e2e8f0', padding: '4px', borderRadius: '4px', border: '1px solid #000', marginBottom: '6px' }}>
+                  {label.zone}
+                </div>
+                <div style={{ fontSize: '16px', fontWeight: 'bold', textAlign: 'center' }}>
+                  BULTO: {label.index} de {label.total}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <style dangerouslySetInnerHTML={{__html: `
+        @media print {
+          /* Ocultar todo el sitio principal para imprimir solo las etiquetas */
+          body > * {
+            display: none !important;
+          }
+          .print-only-layout {
+            display: block !important;
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100% !important;
+          }
+          .label-card {
+            page-break-after: always;
+            box-shadow: none !important;
+            border: 2px solid #000 !important;
+          }
+        }
+      `}} />
     </div>
   );
 }

@@ -27,7 +27,7 @@ export async function getRubros(req: AuthenticatedRequest, res: Response): Promi
  * Crear un nuevo rubro (Solo ADMIN).
  */
 export async function createRubro(req: AuthenticatedRequest, res: Response): Promise<void> {
-  const { name, description, profitMargin } = req.body;
+  const { name, description, profitMargin, pickingZone } = req.body;
   const userId = req.user?.id;
 
   if (!name) {
@@ -52,7 +52,8 @@ export async function createRubro(req: AuthenticatedRequest, res: Response): Pro
       data: { 
         name, 
         description,
-        profitMargin: profitMargin !== undefined ? Number(profitMargin) : undefined
+        profitMargin: profitMargin !== undefined ? Number(profitMargin) : undefined,
+        pickingZone: pickingZone !== undefined ? pickingZone : undefined
       },
     });
 
@@ -83,7 +84,7 @@ export async function createRubro(req: AuthenticatedRequest, res: Response): Pro
  */
 export async function updateRubro(req: AuthenticatedRequest, res: Response): Promise<void> {
   const { id } = req.params;
-  const { name, description, profitMargin } = req.body;
+  const { name, description, profitMargin, pickingZone } = req.body;
   const userId = req.user?.id;
 
   try {
@@ -116,6 +117,7 @@ export async function updateRubro(req: AuthenticatedRequest, res: Response): Pro
         name: name !== undefined ? name : undefined,
         description: description !== undefined ? description : undefined,
         profitMargin: profitMargin !== undefined ? Number(profitMargin) : undefined,
+        pickingZone: pickingZone !== undefined ? pickingZone : undefined,
       },
     });
 
