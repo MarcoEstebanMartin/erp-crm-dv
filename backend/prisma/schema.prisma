@@ -70,6 +70,8 @@ model User {
   personas       Persona[]
   cashDrawers    CashDrawer[]
   creditNotes    CreditNote[]
+  saleRoutes     SaleRoute[]
+  routeVisits    SaleRouteVisit[]
 }
 
 model Persona {
@@ -101,7 +103,12 @@ model Persona {
   // Ruta de reparto (ej: "BUNGE Y BUCHARDO", "VILLEGAS NORBER", etc.)
   route              String?
 
-  // Coordenadas geográficas para reparto
+  // Relación con Ruta de Preventa estructurada
+  saleRouteId        Int?
+  saleRoute          SaleRoute?    @relation(fields: [saleRouteId], references: [id], onDelete: SetNull)
+  routeSequence      Int?          // Orden en la secuencia de visita (1, 2, 3...)
+
+  // Coordenadas geográficas para reparto y preventa
   latitude           Float?
   longitude          Float?
 
@@ -128,10 +135,12 @@ model Persona {
   products           Product[]
   discountRules       DiscountRule[]
   splitBillingConfigs SplitBillingConfig[]
+  routeVisits        SaleRouteVisit[]
 
   @@index([sellerId])
   @@index([isClient])
   @@index([isProvider])
+  @@index([saleRouteId])
 }
 
 model Product {
@@ -535,6 +544,45 @@ model SplitBillingConfig {
   updatedAt          DateTime @updatedAt
 
   @@unique([personaId, rubroId])
+}
+
+model SaleRoute {
+  id          Int              @id @default(autoincrement())
+  name        String           // Ej: "General Villegas - Centro 1"
+  sellerId    Int?             // Vendedor asignado principal
+  seller      User?            @relation(fields: [sellerId], references: [id], onDelete: SetNull)
+  dayOfWeek   String?          // LUNES, MARTES, MIERCOLES, JUEVES, VIERNES, SABADO, DOMINGO
+  isActive    Boolean          @default(true)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  clients     Persona[]
+  routeVisits SaleRouteVisit[]
+
+  @@index([sellerId])
+}
+
+model SaleRouteVisit {
+  id           Int        @id @default(autoincrement())
+  date         DateTime   @default(now())
+  sellerId     Int
+  seller       User       @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  personaId    Int
+  persona      Persona    @relation(fields: [personaId], references: [id], onDelete: Cascade)
+  saleRouteId  Int?
+  saleRoute    SaleRoute? @relation(fields: [saleRouteId], references: [id], onDelete: SetNull)
+  status       String     // "ORDERED" (Compró) | "NO_BUY" (No compró)
+  noBuyReason  String?    // Motivo si es NO_BUY (ej: "Sin dinero", "Cerrado")
+  notes        String?    // Comentarios opcionales
+  latitude     Float?     // GPS de la visita
+  longitude    Float?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@index([sellerId])
+  @@index([personaId])
+  @@index([saleRouteId])
+  @@index([date])
 }
 
 

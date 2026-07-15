@@ -14,6 +14,7 @@ const RepartoDashboard = lazy(() => import('./RepartoDashboard'));
 const ComprasDashboard = lazy(() => import('./ComprasDashboard'));
 const FinanzasDashboard = lazy(() => import('./FinanzasDashboard'));
 const BillingDashboard = lazy(() => import('./BillingDashboard'));
+const SaleRoutesDashboard = lazy(() => import('./SaleRoutesDashboard'));
 
 const LoadingDashboard = () => (
   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '300px', gap: '12px', padding: '40px', backgroundColor: 'var(--background-card)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
@@ -67,6 +68,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
   const [selectedCities, setSelectedCities] = useState<string[]>([]);
   const [selectedBranchFilter, setSelectedBranchFilter] = useState<string>('ALL');
   const [availableSellers, setAvailableSellers] = useState<any[]>([]);
+  const [availableSaleRoutes, setAvailableSaleRoutes] = useState<any[]>([]);
   const [selectedSellerFilter, setSelectedSellerFilter] = useState<string>('ALL');
   const [showCityDropdown, setShowCityDropdown] = useState<boolean>(false);
   const [citySearchQuery, setCitySearchQuery] = useState<string>('');
@@ -82,7 +84,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
   const [productModal, setProductModal] = useState({ open: false, mode: 'create', data: { id: 0, sku: '', name: '', description: '', barcode: '', costPrice: 0, listPrice: 0, listPriceB: 0, listPriceC: 0, profitMargin: 25 as string | number, minStock: 0, isPesable: false, approximateWeight: 0, rubroId: '' as string | number, providerId: '' as string | number } });
   const [userModal, setUserModal] = useState({ open: false, username: '', password: '', role: 'VENDEDOR' });
   const [showPassword, setShowPassword] = useState(false);
-  const [clientModal, setClientModal] = useState({ open: false, mode: 'create', data: { id: 0, name: '', cuit: '', address: '', city: '', phone: '', email: '', creditLimit: 0, priceList: 'A', discount: 0, isClient: true, isProvider: false, isSeller: false, isCommissionAgent: false, route: '', sellerId: null as number | null, isActive: true } });
+  const [clientModal, setClientModal] = useState({ open: false, mode: 'create', data: { id: 0, name: '', cuit: '', address: '', city: '', phone: '', email: '', creditLimit: 0, priceList: 'A', discount: 0, isClient: true, isProvider: false, isSeller: false, isCommissionAgent: false, route: '', saleRouteId: null as number | null, sellerId: null as number | null, isActive: true } });
   const [showResumenModal, setShowResumenModal] = useState<any>(null);
   const [orderDetailsModal, setOrderDetailsModal] = useState<any | null>(null);
   const [editOrderModal, setEditOrderModal] = useState<{ open: boolean; orderId: number; clientId: number; clientName: string; items: { id: number; productId: number; name: string; sku: string; quantity: number; listPrice: number; weight?: number | null; isPesable?: boolean; approximateWeight?: number | null }[] } | null>(null);
@@ -502,8 +504,10 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
         try {
           const sellers = await api.getSellersList();
           setAvailableSellers(sellers || []);
+          const routesRes = await api.getSaleRoutes();
+          setAvailableSaleRoutes(routesRes.routes || []);
         } catch (e) {
-          console.error("Error al cargar vendedores:", e);
+          console.error("Error al cargar datos de preventa:", e);
         }
 
         if (personaRoleFilter === 'debtors_by_city') {
@@ -887,6 +891,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
           phone: data.phone,
           email: data.email,
           route: data.route,
+          saleRouteId: data.saleRouteId ? Number(data.saleRouteId) : null,
           creditLimit: Number(data.creditLimit || 0),
           priceList: data.priceList || 'A',
           discount: Number(data.discount || 0),
@@ -906,6 +911,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
           phone: data.phone,
           email: data.email,
           route: data.route,
+          saleRouteId: data.saleRouteId ? Number(data.saleRouteId) : null,
           creditLimit: Number(data.creditLimit || 0),
           priceList: data.priceList || 'A',
           discount: Number(data.discount || 0),
@@ -1637,6 +1643,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
                         isSeller: false, 
                         isCommissionAgent: false,
                         route: '',
+                        saleRouteId: null,
                         sellerId: null,
                         isActive: true
                       } 
@@ -2160,6 +2167,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
                 isSeller: personaRoleFilter === 'seller',
                 isCommissionAgent: personaRoleFilter === 'commission_agent',
                 route: '',
+                saleRouteId: null,
                 sellerId: null,
                 isActive: true
               } 
@@ -2311,6 +2319,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
                                 isSeller: !!c.isSeller,
                                 isCommissionAgent: !!c.isCommissionAgent,
                                 route: c.route || '',
+                                saleRouteId: c.saleRouteId || null,
                                 sellerId: c.sellerId || null,
                                 isActive: c.isActive !== false
                               } 
@@ -2584,6 +2593,17 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
             ) : (
               <RendicionesDashboard />
             )}
+          </Suspense>
+        </div>
+      )}
+
+      {/* ====================================================================
+          9.B. RUTAS DE PREVENTA (Vendedores)
+          ==================================================================== */}
+      {activeTab === 'sale-routes' && (
+        <div className="tab-pane active" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <Suspense fallback={<LoadingDashboard />}>
+            <SaleRoutesDashboard />
           </Suspense>
         </div>
       )}
@@ -4322,6 +4342,23 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
                   })()}
                 </datalist>
               </div>
+
+              {clientModal.data.isClient && (
+                <div className="form-group">
+                  <label>Ruta de Preventa (Vendedor)</label>
+                  <select
+                    className="select"
+                    value={clientModal.data.saleRouteId || ''}
+                    onChange={(e) => setClientModal({ ...clientModal, data: { ...clientModal.data, saleRouteId: e.target.value ? Number(e.target.value) : null } })}
+                    style={{ height: '38px', padding: '8px 12px', fontSize: '0.9rem', borderRadius: '6px', border: '1px solid var(--border-color)', boxSizing: 'border-box', width: '100%', backgroundColor: '#fff', color: 'var(--text-primary)' }}
+                  >
+                    <option value="">Sin Ruta de Preventa</option>
+                    {availableSaleRoutes.map(r => (
+                      <option key={r.id} value={r.id}>{r.name} ({r.seller?.username || 'Sin Vendedor'})</option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               {clientModal.data.isClient && (
                 <div className="form-group">

@@ -872,6 +872,64 @@ export const api = {
     return await request(`/pricing/split/${id}`, {
       method: 'DELETE'
     });
+  },
+
+  // --- RUTAS DE PREVENTA & VISITAS ---
+  getSaleRoutes: async () => {
+    return await request('/sale-routes');
+  },
+
+  getSellerSaleRoutes: async () => {
+    return await request('/sale-routes/my-routes');
+  },
+
+  getSaleRouteById: async (id: number) => {
+    return await request(`/sale-routes/${id}`);
+  },
+
+  createSaleRoute: async (routeData: { name: string; sellerId?: number | null; dayOfWeek?: string | null }) => {
+    return await request('/sale-routes', {
+      method: 'POST',
+      body: JSON.stringify(routeData)
+    });
+  },
+
+  updateSaleRoute: async (id: number, routeData: { name?: string; sellerId?: number | null; dayOfWeek?: string | null; isActive?: boolean }) => {
+    return await request(`/sale-routes/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(routeData)
+    });
+  },
+
+  deleteSaleRoute: async (id: number) => {
+    return await request(`/sale-routes/${id}`, {
+      method: 'DELETE'
+    });
+  },
+
+  updateClientSequence: async (id: number, clientIds: number[]) => {
+    return await request(`/sale-routes/${id}/sequence`, {
+      method: 'PUT',
+      body: JSON.stringify({ clientIds })
+    });
+  },
+
+  addClientToRoute: async (id: number, clientId: number) => {
+    return await request(`/sale-routes/${id}/clients`, {
+      method: 'POST',
+      body: JSON.stringify({ clientId })
+    });
+  },
+
+  recordRouteVisit: async (id: number, visitData: { personaId: number; status: 'ORDERED' | 'NO_BUY'; noBuyReason?: string | null; notes?: string | null; latitude?: number | null; longitude?: number | null }) => {
+    return await request(`/sale-routes/${id}/visit`, {
+      method: 'POST',
+      body: JSON.stringify(visitData)
+    });
+  },
+
+  getTodayVisits: async () => {
+    return await request('/sale-routes/visits/today');
   }
 };
 

@@ -31,6 +31,9 @@ export class PersonaService {
         seller: {
           select: { id: true, username: true },
         },
+        saleRoute: {
+          select: { id: true, name: true, dayOfWeek: true },
+        },
       },
       orderBy: { name: 'asc' },
     });
@@ -45,6 +48,9 @@ export class PersonaService {
       include: {
         seller: {
           select: { id: true, username: true },
+        },
+        saleRoute: {
+          select: { id: true, name: true, dayOfWeek: true },
         },
       },
     });
@@ -88,6 +94,8 @@ export class PersonaService {
         discount: data.discount !== undefined ? Number(data.discount) : 0.00,
         contacts: data.contacts !== undefined ? data.contacts : null,
         sellerId: finalSellerId,
+        saleRouteId: data.saleRouteId !== undefined ? (data.saleRouteId !== null ? Number(data.saleRouteId) : null) : null,
+        routeSequence: data.routeSequence !== undefined ? (data.routeSequence !== null ? Number(data.routeSequence) : null) : null,
         latitude: data.latitude !== undefined ? (data.latitude !== null ? Number(data.latitude) : null) : null,
         longitude: data.longitude !== undefined ? (data.longitude !== null ? Number(data.longitude) : null) : null,
       },
@@ -142,6 +150,8 @@ export class PersonaService {
         discount: data.discount !== undefined ? Number(data.discount) : undefined,
         contacts: data.contacts !== undefined ? data.contacts : undefined,
         sellerId: finalSellerId,
+        saleRouteId: data.saleRouteId !== undefined ? (data.saleRouteId ? Number(data.saleRouteId) : null) : undefined,
+        routeSequence: data.routeSequence !== undefined ? (data.routeSequence ? Number(data.routeSequence) : null) : undefined,
         latitude: data.latitude !== undefined ? (data.latitude !== null ? Number(data.latitude) : null) : undefined,
         longitude: data.longitude !== undefined ? (data.longitude !== null ? Number(data.longitude) : null) : undefined,
       },

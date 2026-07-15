@@ -3,7 +3,7 @@ import React from 'react';
 import { api } from '../utils/api';
 import { getOrderStatusInfo } from '../utils/orderStatusHelper';
 
-import { Trash2, ShoppingCart, UserPlus, CheckCircle2, Eye, Edit, Printer } from 'lucide-react';
+import { Trash2, ShoppingCart, UserPlus, CheckCircle2, Eye, Edit, Printer, MapPin, Calendar, TrendingUp, X, Phone, DollarSign, Navigation, ArrowRight, Loader2 } from 'lucide-react';
 import PriceListModal from './PriceListModal';
 import MobileCobros from './MobileCobros';
 
@@ -27,7 +27,7 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
   const [orderNotes, setOrderNotes] = useState('');
   
   // Modales
-  const [clientModal, setClientModal] = useState({ open: false, name: '', cuit: '', address: '', city: '', phone: '', email: '' });
+  const [clientModal, setClientModal] = useState({ open: false, name: '', cuit: '', address: '', city: '', phone: '', email: '', saleRouteId: '' as string | number, latitude: null as number | null, longitude: null as number | null });
   const [orderDetailsModal, setOrderDetailsModal] = useState<any | null>(null);
   const [isPriceListModalOpen, setIsPriceListModalOpen] = useState(false);
   const [editOrderModal, setEditOrderModal] = useState<{ open: boolean; orderId: number; clientId: number; clientName: string; items: { id: number; productId: number; name: string; sku: string; quantity: number; listPrice: number; weight?: number | null; isPesable?: boolean; approximateWeight?: number | null }[] } | null>(null);
@@ -43,6 +43,13 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
   const [selectedCityFilters, setSelectedCityFilters] = useState<string[]>([]);
   const [sessionVisits, setSessionVisits] = useState<{[key: number]: { status: string; reason?: string }}>({});
   const [noSaleModal, setNoSaleModal] = useState<{ open: boolean; clientId: number; clientName: string; reason: string; notes: string } | null>(null);
+
+  // Estados para rutas de preventa del vendedor
+  const [vendedorRoutes, setVendedorRoutes] = useState<any[]>([]);
+  const [selectedRouteId, setSelectedRouteId] = useState<number | null>(null);
+  const [activeRouteDetail, setActiveRouteDetail] = useState<any | null>(null);
+  const [todayVisits, setTodayVisits] = useState<any[]>([]);
+  const [capturingGps, setCapturingGps] = useState(false);
 
   const getTodayKey = () => {
     const today = new Date();
@@ -199,8 +206,38 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
         const rubroData = await api.getRubros();
         setRubros(rubroData);
       } else if (activeTab === 'clients') {
-        const clientData = await api.getClients(searchQuery);
-        setClients(clientData.filter((c: any) => c.isActive !== false));
+        // Cargar rutas del vendedor
+        const routesData = await api.getSellerSaleRoutes();
+        setVendedorRoutes(routesData.routes || []);
+        
+        // Cargar visitas de hoy
+        const visitsData = await api.getTodayVisits();
+        setTodayVisits(visitsData.visits || []);
+
+        // Determinar qué ruta seleccionar por defecto si no hay ninguna seleccionada
+        let routeIdToLoad = selectedRouteId;
+        if (!routeIdToLoad && routesData.routes && routesData.routes.length > 0) {
+          const daysMap: {[key: number]: string} = {
+            0: 'DOMINGO', 1: 'LUNES', 2: 'MARTES', 3: 'MIERCOLES', 4: 'JUEVES', 5: 'VIERNES', 6: 'SABADO'
+          };
+          const todayDayName = daysMap[new Date().getDay()];
+          const todayRoute = routesData.routes.find((r: any) => r.dayOfWeek === todayDayName);
+          if (todayRoute) {
+            routeIdToLoad = todayRoute.id;
+          } else {
+            routeIdToLoad = routesData.routes[0].id;
+          }
+          setSelectedRouteId(routeIdToLoad);
+        }
+
+        if (routeIdToLoad) {
+          const routeDetail = await api.getSaleRouteById(routeIdToLoad);
+          setActiveRouteDetail(routeDetail.route);
+          setClients(routeDetail.route.clients || []);
+        } else {
+          setClients([]);
+          setActiveRouteDetail(null);
+        }
       } else if (activeTab === 'products') {
         const prodData = await api.getProducts(searchQuery);
         setProducts(prodData);
@@ -295,6 +332,18 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
         notes: orderNotes
       });
 
+      // Registrar visita en base de datos si hay ruta activa
+      if (selectedRouteId) {
+        try {
+          await api.recordRouteVisit(selectedRouteId, {
+            personaId: selectedClient.id,
+            status: 'ORDERED'
+          });
+        } catch (e) {
+          console.error("Error al registrar visita silenciosa de venta:", e);
+        }
+      }
+
       // Registrar venta en sessionVisits
       const updatedVisits = {
         ...sessionVisits,
@@ -317,6 +366,72 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
     }
   };
 
+  // --- FUNCIONES DE PREVENTA DEL VENDEDOR ---
+  const handleSelectRoute = async (routeId: number) => {
+    setSelectedRouteId(routeId);
+    setLoading(true);
+    try {
+      const routeDetail = await api.getSaleRouteById(routeId);
+      setActiveRouteDetail(routeDetail.route);
+      setClients(routeDetail.route.clients || []);
+    } catch (err: any) {
+      setErrorMsg('Error al cargar la ruta: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRecordNoSale = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!noSaleModal || !selectedRouteId) return;
+
+    setLoading(true);
+    try {
+      let lat = null;
+      let lng = null;
+
+      // Intentar obtener geolocalización
+      if (navigator.geolocation) {
+        await new Promise<void>((resolve) => {
+          navigator.geolocation.getCurrentPosition(
+            (pos) => {
+              lat = pos.coords.latitude;
+              lng = pos.coords.longitude;
+              resolve();
+            },
+            () => resolve(),
+            { timeout: 3000 }
+          );
+        });
+      }
+
+      await api.recordRouteVisit(selectedRouteId, {
+        personaId: noSaleModal.clientId,
+        status: 'NO_BUY',
+        noBuyReason: noSaleModal.reason,
+        notes: noSaleModal.notes,
+        latitude: lat,
+        longitude: lng
+      });
+
+      // Actualizar también visitas de hoy
+      const visitsData = await api.getTodayVisits();
+      setTodayVisits(visitsData.visits || []);
+
+      setSuccessMsg(`Visita registrada con éxito.`);
+      setNoSaleModal(null);
+      
+      // Recargar ruta activa
+      const routeDetail = await api.getSaleRouteById(selectedRouteId);
+      setActiveRouteDetail(routeDetail.route);
+      setClients(routeDetail.route.clients || []);
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Error al registrar visita.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // --- REGISTRAR NUEVO CLIENTE EN CALLE ---
   const handleCreateClient = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -326,8 +441,19 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
     }
 
     try {
-      const client = await api.createClient(clientModal);
-      setClientModal({ open: false, name: '', cuit: '', address: '', city: '', phone: '', email: '' });
+      const client = await api.createClient({
+        name: clientModal.name,
+        cuit: clientModal.cuit,
+        address: clientModal.address,
+        city: clientModal.city,
+        phone: clientModal.phone,
+        email: clientModal.email,
+        saleRouteId: clientModal.saleRouteId ? Number(clientModal.saleRouteId) : null,
+        latitude: clientModal.latitude,
+        longitude: clientModal.longitude
+      });
+      
+      setClientModal({ open: false, name: '', cuit: '', address: '', city: '', phone: '', email: '', saleRouteId: '', latitude: null, longitude: null });
       setSelectedClient(client); // Auto-seleccionar cliente creado
       fetchData();
     } catch (err: any) {
@@ -986,198 +1112,222 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
           2. MIS CLIENTES
           ==================================================================== */}
       {activeTab === 'clients' && (
-        <div>
-          <div className="actions-bar" style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '12px' }}>
-            <div className="search-input-wrapper" style={{ flex: '1 1 200px' }}>
-              <input
-                type="text"
-                className="input"
-                placeholder="🔍 Buscar mis clientes..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
-
-            <button className="btn btn-primary" onClick={() => setClientModal({ open: true, name: '', cuit: '', address: '', city: '', phone: '', email: '' })}>
-              <UserPlus size={16} />
-              <span>Nuevo Cliente</span>
-            </button>
-          </div>
-
-          {/* Chips horizontales de localidad */}
-          <div style={{ 
-            display: 'flex', 
-            gap: '8px', 
-            overflowX: 'auto', 
-            padding: '8px 4px', 
-            marginBottom: '16px', 
-            WebkitOverflowScrolling: 'touch',
-            scrollbarWidth: 'none',
-          }}>
-            <button
-              type="button"
-              onClick={() => setSelectedCityFilters([])}
-              style={{
-                padding: '6px 14px',
-                borderRadius: '20px',
-                fontSize: '0.8rem',
-                fontWeight: 600,
-                border: '1px solid',
-                borderColor: selectedCityFilters.length === 0 ? 'var(--text-primary)' : 'var(--border-color)',
-                backgroundColor: selectedCityFilters.length === 0 ? 'var(--text-primary)' : '#fff',
-                color: selectedCityFilters.length === 0 ? '#fff' : 'var(--text-secondary)',
-                whiteSpace: 'nowrap',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease'
-              }}
-            >
-              Todas
-            </button>
-            {uniqueCities.map(city => {
-              const isActive = selectedCityFilters.includes(city);
-              return (
-                <button
-                  key={city}
-                  type="button"
-                  onClick={() => {
-                    if (isActive) {
-                      setSelectedCityFilters(selectedCityFilters.filter(c => c !== city));
-                    } else {
-                      setSelectedCityFilters([...selectedCityFilters, city]);
-                    }
-                  }}
-                  style={{
-                    padding: '6px 14px',
-                    borderRadius: '20px',
-                    fontSize: '0.8rem',
-                    fontWeight: 600,
-                    border: '1px solid',
-                    borderColor: isActive ? 'var(--accent-color)' : 'var(--border-color)',
-                    backgroundColor: isActive ? 'rgba(227, 6, 19, 0.08)' : '#fff',
-                    color: isActive ? 'var(--accent-color)' : 'var(--text-secondary)',
-                    whiteSpace: 'nowrap',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease'
-                  }}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          {/* Fila superior: Selector de ruta y Nuevo Cliente */}
+          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center' }}>
+            {vendedorRoutes.length > 0 ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: '1 1 300px' }}>
+                <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>📍 Ruta Activa:</span>
+                <select
+                  className="select"
+                  value={selectedRouteId || ''}
+                  onChange={(e) => handleSelectRoute(Number(e.target.value))}
+                  style={{ height: '36px', padding: '6px 12px', borderRadius: '6px', fontSize: '0.85rem' }}
                 >
-                  {city}
-                </button>
-              );
-            })}
+                  {vendedorRoutes.map(r => (
+                    <option key={r.id} value={r.id}>{r.name} ({r.dayOfWeek || 'Flexible'})</option>
+                  ))}
+                </select>
+              </div>
+            ) : (
+              <div style={{ fontSize: '0.85rem', color: '#E30613', fontWeight: 600 }}>
+                ⚠️ No tienes rutas de preventa asignadas.
+              </div>
+            )}
+
+            <button className="btn btn-primary" onClick={() => setClientModal({ open: true, name: '', cuit: '', address: '', city: '', phone: '', email: '', saleRouteId: selectedRouteId || '', latitude: null, longitude: null })}>
+              <UserPlus size={16} />
+              <span>Nuevo Cliente (Calle)</span>
+            </button>
           </div>
 
-          <div className="table-container">
-            <table>
-              <thead>
-                <tr>
-                  <th>Nombre/Razón Social</th>
-                  <th>Dirección de Entrega</th>
-                  <th>Teléfono</th>
-                  <th style={{ width: '130px' }}>Estado Visita</th>
-                  <th style={{ width: '180px', textAlign: 'right' }}>Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(() => {
-                  const filtered = clients.filter(c => {
-                    return selectedCityFilters.length === 0 || selectedCityFilters.includes(cleanCityName(c.city));
-                  });
+          {/* Barra de Progreso de la Ruta */}
+          {activeRouteDetail && (
+            (() => {
+              const total = clients.length;
+              const visitados = clients.filter(c => {
+                const hasOrder = orders.some(o => 
+                  o.clientId === c.id && 
+                  new Date(o.createdAt).toDateString() === new Date().toDateString() &&
+                  o.status !== 'CANCELLED'
+                );
+                const hasNoBuy = todayVisits.some(v => v.personaId === c.id);
+                return hasOrder || hasNoBuy;
+              }).length;
+              const porcentaje = total > 0 ? Math.round((visitados / total) * 100) : 0;
 
-                  return filtered.length === 0 ? (
-                    <tr>
-                      <td colSpan={5} style={{ textAlign: 'center', padding: '24px 0' }}>No se encontraron clientes asociados a tu cuenta.</td>
-                    </tr>
-                  ) : (
-                    filtered.map((c) => {
-                      const visitStatus = getClientChecklistStatus(c.id);
-                      return (
-                        <tr key={c.id}>
-                          <td style={{ fontWeight: 600 }}>{c.name}</td>
-                          <td>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                              <span>{c.address || 'Sin dirección'}</span>
-                              {c.route && (
-                                <span style={{ 
-                                  display: 'inline-block', 
-                                  padding: '2px 6px', 
-                                  fontSize: '0.65rem', 
-                                  fontWeight: 600, 
-                                  backgroundColor: 'rgba(0,0,0,0.06)', 
-                                  color: 'var(--text-secondary)', 
-                                  borderRadius: '4px',
-                                  textTransform: 'uppercase'
-                                }}>
-                                  📍 {c.route}
-                                </span>
-                              )}
-                            </div>
-                          </td>
-                          <td>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                              <span>{c.phone || 'Sin teléfono'}</span>
-                              {c.phone && (
-                                <a href={getWhatsAppLink(c.phone)} target="_blank" rel="noopener noreferrer" title="Escribir por WhatsApp">
-                                  <svg viewBox="0 0 24 24" width="14" height="14" fill="#25D366">
-                                    <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.513 2.262 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.724-1.455L0 24zm6.59-4.846c1.6.95 3.188 1.449 4.825 1.451 5.436 0 9.86-4.37 9.863-9.755.002-2.61-1.01-5.063-2.85-6.908-1.839-1.844-4.286-2.86-6.903-2.861-5.441 0-9.863 4.37-9.866 9.756-.001 1.748.469 3.456 1.36 5.01L1.932 20.17l4.715-1.016zM17.47 15.3c-.3-.15-1.775-.875-2.05-1.05-.275-.1-.475-.15-.675.15-.2.3-.775 1.05-.95 1.25-.175.2-.35.225-.65.075-.3-.15-1.263-.465-2.403-1.485-.888-.795-1.487-1.77-1.663-2.07-.176-.3-.019-.462.13-.61.135-.133.3-.35.45-.525.15-.175.2-.3.3-.5.1-.2.05-.375-.025-.525-.075-.15-.675-1.625-.925-2.225-.244-.589-.491-.51-.675-.52-.175-.01-.375-.01-.575-.01-.2 0-.525.075-.8 1.05-.275.975-1.05 2.1-1.275 2.55-.225.45-.05.875.1 1.05.887 1.02 2.222 1.944 3.9 2.52.27.093.536.14.79.165.37.037.706.024.97-.015.295-.044.875-.36 1 .71.125.35.125.65.063.8-.062.15-.325.29-1 .15z"/>
-                                  </svg>
-                                </a>
-                              )}
-                            </div>
-                          </td>
-                          <td>
-                            {visitStatus ? (
-                              visitStatus.status === 'VENTA' ? (
-                                <span style={{ fontSize: '0.72rem', fontWeight: 700, padding: '3px 8px', borderRadius: '12px', backgroundColor: 'rgba(52, 199, 89, 0.15)', color: 'var(--color-success)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                                  <CheckCircle2 size={12} /> Compró
-                                </span>
-                              ) : (
-                                <span 
-                                  title={`Motivo: ${visitStatus.reason}`} 
-                                  style={{ fontSize: '0.72rem', fontWeight: 700, padding: '3px 8px', borderRadius: '12px', backgroundColor: 'rgba(142, 142, 147, 0.15)', color: 'var(--text-secondary)', display: 'inline-flex', alignItems: 'center', gap: '4px', cursor: 'help' }}
-                                >
-                                  ⚠️ No Compró
-                                </span>
-                              )
-                            ) : (
-                              <span style={{ fontSize: '0.72rem', fontWeight: 600, padding: '3px 8px', borderRadius: '12px', backgroundColor: 'rgba(0, 122, 255, 0.1)', color: '#007AFF', display: 'inline-flex', alignItems: 'center' }}>
-                                ⚪ Pendiente
-                              </span>
-                            )}
-                          </td>
-                          <td>
-                            <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
-                              <button 
-                                className="btn btn-secondary" 
-                                style={{ padding: '6px 10px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px' }}
-                                onClick={() => {
-                                  setSelectedClient(c);
-                                  setClientFilter(c.name);
-                                  setActiveTab('orders');
-                                  setSubTab('create');
-                                }}
-                              >
-                                <ShoppingCart size={14} />
-                                <span>Vender</span>
-                              </button>
+              return (
+                <div style={{ padding: '12px 16px', border: '1px solid var(--border-color)', borderRadius: '8px', backgroundColor: 'var(--bg-light)', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                    <span>Efectividad de la Ruta de Hoy</span>
+                    <span>{visitados} / {total} Clientes Visitados ({porcentaje}%)</span>
+                  </div>
+                  <div style={{ width: '100%', height: '8px', backgroundColor: 'rgba(0,0,0,0.06)', borderRadius: '4px', overflow: 'hidden' }}>
+                    <div style={{ width: `${porcentaje}%`, height: '100%', backgroundColor: porcentaje === 100 ? 'var(--color-success)' : 'var(--accent-color)', borderRadius: '4px', transition: 'width 0.4s ease' }} />
+                  </div>
+                </div>
+              );
+            })()
+          )}
 
-                              {!visitStatus && (
-                                <button 
-                                  className="btn btn-ghost" 
-                                  style={{ padding: '6px 10px', fontSize: '0.8rem', color: 'var(--accent-color)', borderColor: 'rgba(227, 6, 19, 0.1)' }}
-                                  onClick={() => setNoSaleModal({ open: true, clientId: c.id, clientName: c.name, reason: 'Pasó de largo, no compró', notes: '' })}
-                                >
-                                  ✕ No Venta
-                                </button>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })
-                  );
-                })()}
-              </tbody>
-            </table>
+          {/* Listado de Clientes Secuenciado */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {clients.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '36px 12px', border: '1px dashed var(--border-color)', borderRadius: '8px', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
+                No hay clientes asociados a la ruta activa, o no has seleccionado ninguna ruta.
+              </div>
+            ) : (
+              clients.map((c, index) => {
+                const hasOrderToday = orders.some(o => 
+                  o.clientId === c.id && 
+                  new Date(o.createdAt).toDateString() === new Date().toDateString() &&
+                  o.status !== 'CANCELLED'
+                );
+                
+                const visitToday = todayVisits.find(v => v.personaId === c.id);
+                const visitStatus = hasOrderToday ? 'VENTA' : (visitToday ? 'NO_COMPRO' : 'PENDIENTE');
+
+                return (
+                  <div
+                    key={c.id}
+                    style={{
+                      border: '1px solid var(--border-color)',
+                      borderRadius: '8px',
+                      padding: '12px 16px',
+                      backgroundColor: '#fff',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '10px',
+                      transition: 'transform 0.2s ease, box-shadow 0.2s ease'
+                    }}
+                    className="client-card-hover"
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span style={{ fontSize: '0.72rem', fontWeight: 700, backgroundColor: 'rgba(0,0,0,0.06)', color: 'var(--text-secondary)', padding: '2px 6px', borderRadius: '4px' }}>
+                          #{index + 1}
+                        </span>
+                        <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-primary)' }}>{c.name}</h4>
+                      </div>
+                      
+                      {Number(c.outstandingBalance || 0) > 0 && (
+                        <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#E30613', backgroundColor: 'rgba(227,6,19,0.05)', padding: '3px 8px', borderRadius: '12px', border: '1px solid rgba(227,6,19,0.15)' }}>
+                          Debe: ${Math.round(Number(c.outstandingBalance)).toLocaleString('es-AR')}
+                        </span>
+                      )}
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <MapPin size={12} /> {c.address || 'Sin dirección'} {c.city ? `(${c.city})` : ''}
+                      </span>
+                      {c.phone && (
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <Phone size={12} /> {c.phone}
+                        </span>
+                      )}
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--border-color)', paddingTop: '10px', marginTop: '4px', flexWrap: 'wrap', gap: '8px' }}>
+                      <div>
+                        {visitStatus === 'VENTA' ? (
+                          <span style={{ fontSize: '0.72rem', fontWeight: 700, padding: '4px 10px', borderRadius: '12px', backgroundColor: 'rgba(52, 199, 89, 0.15)', color: 'var(--color-success)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                            <CheckCircle2 size={12} /> Compró
+                          </span>
+                        ) : visitStatus === 'NO_COMPRO' ? (
+                          <span
+                            title={`Motivo: ${visitToday?.noBuyReason || 'No especificado'}`}
+                            style={{ fontSize: '0.72rem', fontWeight: 700, padding: '4px 10px', borderRadius: '12px', backgroundColor: 'rgba(142, 142, 147, 0.15)', color: 'var(--text-secondary)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                          >
+                            ⚠️ No Compró ({visitToday?.noBuyReason})
+                          </span>
+                        ) : (
+                          <span style={{ fontSize: '0.72rem', fontWeight: 600, padding: '4px 10px', borderRadius: '12px', backgroundColor: 'rgba(0, 122, 255, 0.1)', color: '#007AFF', display: 'inline-flex', alignItems: 'center' }}>
+                            ⚪ Pendiente
+                          </span>
+                        )}
+                      </div>
+
+                      <div style={{ display: 'flex', gap: '6px' }}>
+                        {c.phone && (
+                          <a
+                            href={getWhatsAppLink(c.phone)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="btn btn-secondary"
+                            style={{ padding: '6px', minWidth: 'auto', borderRadius: '6px' }}
+                            title="Escribir por WhatsApp"
+                          >
+                            <svg viewBox="0 0 24 24" width="14" height="14" fill="#25D366">
+                              <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.513 2.262 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.724-1.455L0 24zm6.59-4.846c1.6.95 3.188 1.449 4.825 1.451 5.436 0 9.86-4.37 9.863-9.755.002-2.61-1.01-5.063-2.85-6.908-1.839-1.844-4.286-2.86-6.903-2.861-5.441 0-9.863 4.37-9.866 9.756-.001 1.748.469 3.456 1.36 5.01L1.932 20.17l4.715-1.016zM17.47 15.3c-.3-.15-1.775-.875-2.05-1.05-.275-.1-.475-.15-.675.15-.2.3-.775 1.05-.95 1.25-.175.2-.35.225-.65.075-.3-.15-1.263-.465-2.403-1.485-.888-.795-1.487-1.77-1.663-2.07-.176-.3-.019-.462.13-.61.135-.133.3-.35.45-.525.15-.175.2-.3.3-.5.1-.2.05-.375-.025-.525-.075-.15-.675-1.625-.925-2.225-.244-.589-.491-.51-.675-.52-.175-.01-.375-.01-.575-.01-.2 0-.525.075-.8 1.05-.275.975-1.05 2.1-1.275 2.55-.225.45-.05.875.1 1.05.887 1.02 2.222 1.944 3.9 2.52.27.093.536.14.79.165.37.037.706.024.97-.015.295-.044.875-.36 1 .71.125.35.125.65.063.8-.062.15-.325.29-1 .15z"/>
+                            </svg>
+                          </a>
+                        )}
+
+                        {c.latitude && c.longitude ? (
+                          <a
+                            href={`https://www.google.com/maps/search/?api=1&query=${c.latitude},${c.longitude}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="btn btn-secondary"
+                            style={{ padding: '6px', minWidth: 'auto', borderRadius: '6px' }}
+                            title="Ver ubicación en mapa"
+                          >
+                            <Navigation size={14} />
+                          </a>
+                        ) : (
+                          <button
+                            disabled
+                            className="btn btn-secondary"
+                            style={{ padding: '6px', minWidth: 'auto', borderRadius: '6px', opacity: 0.3 }}
+                            title="Sin coordenadas GPS"
+                          >
+                            <Navigation size={14} />
+                          </button>
+                        )}
+
+                        <button
+                          className="btn btn-secondary"
+                          onClick={() => setNoSaleModal({ open: true, clientId: c.id, clientName: c.name, reason: 'Local Cerrado', notes: '' })}
+                          style={{ padding: '6px 10px', fontSize: '0.72rem', borderRadius: '6px' }}
+                          disabled={visitStatus !== 'PENDIENTE'}
+                        >
+                          No Compra
+                        </button>
+                        
+                        {Number(c.outstandingBalance || 0) > 0 && (
+                          <button
+                            className="btn btn-secondary"
+                            onClick={() => {
+                              setSelectedClient(c);
+                              setActiveTab('cobranzas');
+                            }}
+                            style={{ padding: '6px 10px', fontSize: '0.72rem', borderRadius: '6px', color: '#E30613' }}
+                          >
+                            Cobrar
+                          </button>
+                        )}
+
+                        <button
+                          className="btn btn-primary"
+                          onClick={() => {
+                            setSelectedClient(c);
+                            setActiveTab('orders');
+                            setSubTab('create');
+                          }}
+                          style={{ padding: '6px 12px', fontSize: '0.72rem', borderRadius: '6px', display: 'flex', alignItems: 'center', gap: '3px' }}
+                          disabled={visitStatus === 'VENTA'}
+                        >
+                          <span>Vender</span>
+                          <ArrowRight size={12} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            )}
           </div>
         </div>
       )}
@@ -1400,6 +1550,69 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
                   />
                 </div>
               </div>
+
+              <div className="form-group" style={{ display: 'flex', gap: '8px', alignItems: 'flex-end' }}>
+                <div style={{ flex: 1 }}>
+                  <label>GPS (Latitud, Longitud)</label>
+                  <input
+                    type="text"
+                    className="input"
+                    readOnly
+                    placeholder="Ubicación no capturada"
+                    value={clientModal.latitude && clientModal.longitude ? `${clientModal.latitude.toFixed(6)}, ${clientModal.longitude.toFixed(6)}` : ''}
+                    style={{ backgroundColor: 'var(--bg-light)', color: 'var(--text-secondary)' }}
+                  />
+                </div>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  disabled={capturingGps}
+                  onClick={async () => {
+                    setCapturingGps(true);
+                    if (navigator.geolocation) {
+                      navigator.geolocation.getCurrentPosition(
+                        (position) => {
+                          setClientModal(prev => ({
+                            ...prev,
+                            latitude: position.coords.latitude,
+                            longitude: position.coords.longitude
+                          }));
+                          setCapturingGps(false);
+                          alert('📍 Ubicación capturada con éxito.');
+                        },
+                        (error) => {
+                          setCapturingGps(false);
+                          alert('Error al obtener ubicación: Permiso denegado o GPS apagado.');
+                        },
+                        { enableHighAccuracy: true, timeout: 5000 }
+                      );
+                    } else {
+                      setCapturingGps(false);
+                      alert('El navegador no soporta geolocalización.');
+                    }
+                  }}
+                  style={{ height: '38px', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '4px' }}
+                >
+                  {capturingGps ? 'Obteniendo...' : '📍 Capturar GPS'}
+                </button>
+              </div>
+
+              {vendedorRoutes.length > 0 && (
+                <div className="form-group">
+                  <label>Asignar a Ruta de Preventa</label>
+                  <select
+                    className="select"
+                    value={clientModal.saleRouteId}
+                    onChange={(e) => setClientModal({ ...clientModal, saleRouteId: e.target.value })}
+                    style={{ height: '38px', padding: '8px 12px', fontSize: '0.9rem', borderRadius: '6px', border: '1px solid var(--border-color)', boxSizing: 'border-box', width: '100%', backgroundColor: '#fff', color: 'var(--text-primary)' }}
+                  >
+                    <option value="">-- No Asignar a Ruta --</option>
+                    {vendedorRoutes.map(r => (
+                      <option key={r.id} value={r.id}>{r.name} ({r.dayOfWeek || 'Flexible'})</option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               <div className="modal-footer">
                 <button type="button" className="btn btn-secondary" onClick={() => setClientModal({ ...clientModal, open: false })}>Cancelar</button>
@@ -1745,29 +1958,7 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
               <h3>Registrar Visita sin Venta</h3>
               <button className="btn btn-ghost" style={{ padding: '4px' }} onClick={() => setNoSaleModal(null)}>✕</button>
             </div>
-            <form onSubmit={async (e) => {
-              e.preventDefault();
-              try {
-                setLoading(true);
-                await api.recordClientVisit(noSaleModal.clientId, noSaleModal.reason, noSaleModal.notes);
-                
-                // Actualizar estado local y localStorage
-                const updatedVisits = {
-                  ...sessionVisits,
-                  [noSaleModal.clientId]: { status: 'NO_COMPRO', reason: noSaleModal.reason }
-                };
-                setSessionVisits(updatedVisits);
-                localStorage.setItem(getTodayKey(), JSON.stringify(updatedVisits));
-                
-                setSuccessMsg(`Visita registrada para ${noSaleModal.clientName}.`);
-                setNoSaleModal(null);
-                fetchData();
-              } catch (err: any) {
-                setErrorMsg(err.message || 'Error al registrar visita.');
-              } finally {
-                setLoading(false);
-              }
-            }}>
+            <form onSubmit={handleRecordNoSale}>
               <div style={{ marginBottom: '14px', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
                 Cliente: <strong>{noSaleModal.clientName}</strong>
               </div>
