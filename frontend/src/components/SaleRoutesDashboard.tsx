@@ -254,7 +254,7 @@ export default function SaleRoutesDashboard() {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', gap: '16px' }}>
         <Loader2 className="animate-spin" size={32} style={{ color: 'var(--text-secondary)' }} />
-        <span style={{ fontSize: '14px', color: '#666', fontWeight: 500 }}>Cargando rutas de preventa...</span>
+        <span style={{ fontSize: '14px', color: '#666', fontWeight: 500 }}>Cargando rutas de venta...</span>
       </div>
     );
   }
@@ -264,7 +264,7 @@ export default function SaleRoutesDashboard() {
       {/* Cabecera */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '12px' }}>
         <div>
-          <h2 style={{ margin: 0, fontSize: '1.4rem', fontWeight: 700 }}>Rutas de Preventa (Vendedores)</h2>
+          <h2 style={{ margin: 0, fontSize: '1.4rem', fontWeight: 700 }}>Rutas de Venta (Vendedores)</h2>
           <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Configura el recorrido secuencial de visitas de los vendedores en la calle.</p>
         </div>
         <button 
@@ -427,9 +427,10 @@ export default function SaleRoutesDashboard() {
                         <tr style={{ backgroundColor: 'var(--bg-light)' }}>
                           <th style={{ width: '40px', textAlign: 'center' }}>#</th>
                           <th>Cliente</th>
-                          <th>Ubicación</th>
-                          <th style={{ width: '100px', textAlign: 'right' }}>Deuda</th>
-                          <th style={{ width: '130px', textAlign: 'center' }}>Secuencia</th>
+                          <th>Zona de Reparto (Chofer)</th>
+                          <th>Dirección / Ciudad</th>
+                          <th style={{ width: '90px', textAlign: 'right' }}>Deuda</th>
+                          <th style={{ width: '120px', textAlign: 'center' }}>Secuencia</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -449,6 +450,15 @@ export default function SaleRoutesDashboard() {
                                   <span style={{ fontWeight: 600 }}>{c.name}</span>
                                   <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>CUIT: {c.cuit || 'Sin CUIT'}</span>
                                 </div>
+                              </td>
+                              <td>
+                                {c.route ? (
+                                  <span style={{ fontSize: '0.75rem', fontWeight: 700, backgroundColor: 'rgba(0,0,0,0.05)', color: 'var(--text-secondary)', padding: '3px 8px', borderRadius: '4px', textTransform: 'uppercase' }}>
+                                    📍 {c.route}
+                                  </span>
+                                ) : (
+                                  <span style={{ fontSize: '0.72rem', color: '#999', fontStyle: 'italic' }}>Sin Zona</span>
+                                )}
                               </td>
                               <td>
                                 <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -521,7 +531,7 @@ export default function SaleRoutesDashboard() {
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, color: 'var(--text-secondary)', padding: '24px' }}>
               <MapPin size={32} style={{ marginBottom: '8px', opacity: 0.5 }} />
               <span style={{ fontSize: '0.9rem', fontWeight: 500 }}>No hay ninguna ruta seleccionada</span>
-              <span style={{ fontSize: '0.78rem', marginTop: '4px' }}>Selecciona una ruta de preventa a la izquierda o crea una nueva.</span>
+              <span style={{ fontSize: '0.78rem', marginTop: '4px' }}>Selecciona una ruta de venta a la izquierda o crea una nueva.</span>
             </div>
           )}
         </div>
@@ -635,7 +645,7 @@ export default function SaleRoutesDashboard() {
             overflow: 'hidden'
           }}>
             <div style={{ padding: '16px', borderBottom: '1px solid var(--border-color)', fontWeight: 700, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span>{routeModal.mode === 'create' ? 'Nueva Ruta de Preventa' : 'Editar Ruta de Preventa'}</span>
+              <span>{routeModal.mode === 'create' ? 'Nueva Ruta de Venta' : 'Editar Ruta de Venta'}</span>
               <button 
                 onClick={() => setRouteModal({ ...routeModal, open: false })}
                 style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}

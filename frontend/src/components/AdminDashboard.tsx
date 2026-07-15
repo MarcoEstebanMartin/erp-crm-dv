@@ -4322,7 +4322,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
               </div>
 
               <div className="form-group">
-                <label>Ruta de Reparto / Zona</label>
+                <label>Zona de Reparto (Chofer)</label>
                 <input
                   type="text"
                   list="route-suggestions"
@@ -4345,14 +4345,14 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
 
               {clientModal.data.isClient && (
                 <div className="form-group">
-                  <label>Ruta de Preventa (Vendedor)</label>
+                  <label>Ruta de Venta (Vendedor)</label>
                   <select
                     className="select"
                     value={clientModal.data.saleRouteId || ''}
                     onChange={(e) => setClientModal({ ...clientModal, data: { ...clientModal.data, saleRouteId: e.target.value ? Number(e.target.value) : null } })}
                     style={{ height: '38px', padding: '8px 12px', fontSize: '0.9rem', borderRadius: '6px', border: '1px solid var(--border-color)', boxSizing: 'border-box', width: '100%', backgroundColor: '#fff', color: 'var(--text-primary)' }}
                   >
-                    <option value="">Sin Ruta de Preventa</option>
+                    <option value="">Sin Ruta de Venta</option>
                     {availableSaleRoutes.map(r => (
                       <option key={r.id} value={r.id}>{r.name} ({r.seller?.username || 'Sin Vendedor'})</option>
                     ))}

@@ -27,7 +27,7 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
   const [orderNotes, setOrderNotes] = useState('');
   
   // Modales
-  const [clientModal, setClientModal] = useState({ open: false, name: '', cuit: '', address: '', city: '', phone: '', email: '', saleRouteId: '' as string | number, latitude: null as number | null, longitude: null as number | null });
+  const [clientModal, setClientModal] = useState({ open: false, name: '', cuit: '', address: '', city: '', phone: '', email: '', route: '', saleRouteId: '' as string | number, latitude: null as number | null, longitude: null as number | null });
   const [orderDetailsModal, setOrderDetailsModal] = useState<any | null>(null);
   const [isPriceListModalOpen, setIsPriceListModalOpen] = useState(false);
   const [editOrderModal, setEditOrderModal] = useState<{ open: boolean; orderId: number; clientId: number; clientName: string; items: { id: number; productId: number; name: string; sku: string; quantity: number; listPrice: number; weight?: number | null; isPesable?: boolean; approximateWeight?: number | null }[] } | null>(null);
@@ -448,12 +448,13 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
         city: clientModal.city,
         phone: clientModal.phone,
         email: clientModal.email,
+        route: clientModal.route,
         saleRouteId: clientModal.saleRouteId ? Number(clientModal.saleRouteId) : null,
         latitude: clientModal.latitude,
         longitude: clientModal.longitude
       });
       
-      setClientModal({ open: false, name: '', cuit: '', address: '', city: '', phone: '', email: '', saleRouteId: '', latitude: null, longitude: null });
+      setClientModal({ open: false, name: '', cuit: '', address: '', city: '', phone: '', email: '', route: '', saleRouteId: '', latitude: null, longitude: null });
       setSelectedClient(client); // Auto-seleccionar cliente creado
       fetchData();
     } catch (err: any) {
@@ -1131,11 +1132,11 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
               </div>
             ) : (
               <div style={{ fontSize: '0.85rem', color: '#E30613', fontWeight: 600 }}>
-                ⚠️ No tienes rutas de preventa asignadas.
+                ⚠️ No tienes rutas de venta asignadas.
               </div>
             )}
 
-            <button className="btn btn-primary" onClick={() => setClientModal({ open: true, name: '', cuit: '', address: '', city: '', phone: '', email: '', saleRouteId: selectedRouteId || '', latitude: null, longitude: null })}>
+            <button className="btn btn-primary" onClick={() => setClientModal({ open: true, name: '', cuit: '', address: '', city: '', phone: '', email: '', route: '', saleRouteId: selectedRouteId || '', latitude: null, longitude: null })}>
               <UserPlus size={16} />
               <span>Nuevo Cliente (Calle)</span>
             </button>
@@ -1222,11 +1223,18 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
                       <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                         <MapPin size={12} /> {c.address || 'Sin dirección'} {c.city ? `(${c.city})` : ''}
                       </span>
-                      {c.phone && (
-                        <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                          <Phone size={12} /> {c.phone}
-                        </span>
-                      )}
+                      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+                        {c.route && (
+                          <span style={{ fontSize: '0.7rem', fontWeight: 700, backgroundColor: 'rgba(0,0,0,0.06)', color: 'var(--text-secondary)', padding: '2px 6px', borderRadius: '4px', textTransform: 'uppercase' }}>
+                            📍 Reparto: {c.route}
+                          </span>
+                        )}
+                        {c.phone && (
+                          <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <Phone size={12} /> {c.phone}
+                          </span>
+                        )}
+                      </div>
                     </div>
 
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--border-color)', paddingTop: '10px', marginTop: '4px', flexWrap: 'wrap', gap: '8px' }}>
@@ -1530,6 +1538,31 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
                 />
               </div>
 
+              <div className="form-group">
+                <label>Zona de Reparto (Chofer)</label>
+                <input
+                  type="text"
+                  list="route-suggestions-mobile"
+                  className="input"
+                  placeholder="ej: CENTRO 1, TROCHA..."
+                  value={clientModal.route || ''}
+                  onChange={(e) => setClientModal({ ...clientModal, route: e.target.value })}
+                />
+                <datalist id="route-suggestions-mobile">
+                  <option value="FEDERAL" />
+                  <option value="PARQUE" />
+                  <option value="CENTRO 1" />
+                  <option value="CENTRO 2" />
+                  <option value="CENTRO 3" />
+                  <option value="CENTRO 4" />
+                  <option value="FONAVI" />
+                  <option value="PROGRESO" />
+                  <option value="TROCHA" />
+                  <option value="CICLON" />
+                  <option value="CRUCE" />
+                </datalist>
+              </div>
+
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
                 <div className="form-group">
                   <label>Teléfono</label>
@@ -1599,7 +1632,7 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
 
               {vendedorRoutes.length > 0 && (
                 <div className="form-group">
-                  <label>Asignar a Ruta de Preventa</label>
+                  <label>Asignar a Ruta de Venta</label>
                   <select
                     className="select"
                     value={clientModal.saleRouteId}
