@@ -22,6 +22,10 @@ export class PersonaService {
       whereClause.OR = [
         { name: { contains: search, mode: 'insensitive' } },
         { cuit: { contains: search, mode: 'insensitive' } },
+        { city: { contains: search, mode: 'insensitive' } },
+        { route: { contains: search, mode: 'insensitive' } },
+        { address: { contains: search, mode: 'insensitive' } },
+        { saleRoute: { name: { contains: search, mode: 'insensitive' } } }
       ];
     }
 

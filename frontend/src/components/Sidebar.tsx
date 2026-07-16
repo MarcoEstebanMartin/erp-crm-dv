@@ -32,7 +32,7 @@ export default function Sidebar({ username, role, activeTab, setActiveTab, onLog
       case 'ADMIN':
         return [
           { id: 'dashboard', label: 'Panel Principal', icon: <LayoutDashboard size={18} /> },
-          { id: 'clients', label: 'Clientes', icon: <Users size={18} /> },
+          { id: 'clients', label: 'Personas', icon: <Users size={18} /> },
           { id: 'orders', label: 'Gestión de Pedidos', icon: <ShoppingCart size={18} /> },
           { id: 'deposito', label: 'Preparación (Picking)', icon: <Warehouse size={18} /> },
           { id: 'products', label: 'Productos', icon: <Package size={18} /> },
@@ -46,7 +46,7 @@ export default function Sidebar({ username, role, activeTab, setActiveTab, onLog
       case 'FACTURACION':
         return [
           { id: 'dashboard', label: 'Panel Principal', icon: <LayoutDashboard size={18} /> },
-          { id: 'clients', label: 'Clientes', icon: <Users size={18} /> },
+          { id: 'clients', label: 'Personas', icon: <Users size={18} /> },
           { id: 'orders', label: 'Gestión de Pedidos', icon: <ShoppingCart size={18} /> },
           { id: 'deposito', label: 'Preparación (Picking)', icon: <Warehouse size={18} /> },
           { id: 'products', label: 'Productos', icon: <Package size={18} /> },

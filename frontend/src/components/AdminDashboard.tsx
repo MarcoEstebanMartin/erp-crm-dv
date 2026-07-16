@@ -71,6 +71,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
   const [availableSellers, setAvailableSellers] = useState<any[]>([]);
   const [availableSaleRoutes, setAvailableSaleRoutes] = useState<any[]>([]);
   const [selectedSellerFilter, setSelectedSellerFilter] = useState<string>('ALL');
+  const [selectedCityFilter, setSelectedCityFilter] = useState<string>('ALL');
   const [showCityDropdown, setShowCityDropdown] = useState<boolean>(false);
   const [citySearchQuery, setCitySearchQuery] = useState<string>('');
   const [orders, setOrders] = useState<any[]>([]);
@@ -1763,7 +1764,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
                 key={tab.id}
                 className={`btn ${personaRoleFilter === tab.id ? 'btn-primary' : 'btn-secondary'}`}
                 style={{ padding: '6px 14px', fontSize: '0.82rem', borderRadius: '20px' }}
-                onClick={() => { setPersonaRoleFilter(tab.id); setClients([]); }}
+                onClick={() => { setPersonaRoleFilter(tab.id); setClients([]); setSelectedCityFilter('ALL'); }}
               >
                 {tab.label}
               </button>
@@ -2155,11 +2156,29 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
               <input
                 type="text"
                 className="input"
-                placeholder="Buscar por nombre o CUIT..."
+                placeholder="Buscar por nombre, CUIT, localidad..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
+
+            {/* Selector de Localidades */}
+            <select
+              className="select"
+              value={selectedCityFilter}
+              onChange={(e) => setSelectedCityFilter(e.target.value)}
+              style={{ minWidth: '180px', height: '38px' }}
+            >
+              <option value="ALL">Todas las Localidades</option>
+              {(() => {
+                const uniqueCities = Array.from(
+                  new Set(clients.map((c: any) => c.city).filter(Boolean))
+                ).sort();
+                return uniqueCities.map((city: any) => (
+                  <option key={city} value={city}>{city}</option>
+                ));
+              })()}
+            </select>
             <button className="btn btn-primary" onClick={() => setClientModal({ 
               open: true, 
               mode: 'create', 
@@ -2203,12 +2222,20 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
                 </tr>
               </thead>
               <tbody>
-                {clients.length === 0 ? (
-                  <tr>
-                    <td colSpan={personaRoleFilter === 'client' ? 7 : 6} style={{ textAlign: 'center', padding: '24px 0' }}>No se encontraron personas registradas.</td>
-                  </tr>
-                ) : (
-                  clients.map((c) => {
+                {(() => {
+                  const filteredClients = clients.filter(
+                    (c: any) => selectedCityFilter === 'ALL' || c.city === selectedCityFilter
+                  );
+
+                  if (filteredClients.length === 0) {
+                    return (
+                      <tr>
+                        <td colSpan={personaRoleFilter === 'client' ? 7 : 6} style={{ textAlign: 'center', padding: '24px 0' }}>No se encontraron personas registradas.</td>
+                      </tr>
+                    );
+                  }
+
+                  return filteredClients.map((c) => {
                     const balance = Number(c.outstandingBalance || 0);
                     let balanceText = '';
                     let balanceColor = 'var(--text-secondary)';
@@ -2342,8 +2369,8 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
                         </td>
                       </tr>
                     );
-                  })
-                )}
+                  });
+                })()}
               </tbody>
             </table>
           </div>
