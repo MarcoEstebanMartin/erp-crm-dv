@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { 
   LogOut, 
   LayoutDashboard, 
@@ -12,7 +13,9 @@ import {
   Settings, 
   FileText,
   History,
-  MapPin
+  MapPin,
+  ChevronDown,
+  ChevronRight
 } from 'lucide-react';
 import { api } from '../utils/api';
 
@@ -25,6 +28,31 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ username, role, activeTab, setActiveTab, onLogout }: SidebarProps) {
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(() => {
+    // Inicializar expandido si la pestaña activa pertenece a este grupo
+    const initial: Record<string, boolean> = {};
+    if (['orders', 'deposito', 'billing', 'logistica'].includes(activeTab)) {
+      initial['pedidos-logistica'] = true;
+    }
+    return initial;
+  });
+
+  // Auto-expandir grupo si la pestaña activa cambia externamente
+  useEffect(() => {
+    if (['orders', 'deposito', 'billing', 'logistica'].includes(activeTab)) {
+      setExpandedGroups(prev => ({
+        ...prev,
+        'pedidos-logistica': true
+      }));
+    }
+  }, [activeTab]);
+
+  const toggleGroup = (groupId: string) => {
+    setExpandedGroups(prev => ({
+      ...prev,
+      [groupId]: !prev[groupId]
+    }));
+  };
   
   // Definir elementos del menú basados en el rol
   const getMenuItems = () => {
@@ -33,13 +61,21 @@ export default function Sidebar({ username, role, activeTab, setActiveTab, onLog
         return [
           { id: 'dashboard', label: 'Panel Principal', icon: <LayoutDashboard size={18} /> },
           { id: 'clients', label: 'Personas', icon: <Users size={18} /> },
-          { id: 'orders', label: 'Gestión de Pedidos', icon: <ShoppingCart size={18} /> },
-          { id: 'deposito', label: 'Preparación (Picking)', icon: <Warehouse size={18} /> },
+          {
+            id: 'pedidos-logistica',
+            label: 'Pedidos y Logística',
+            icon: <ShoppingCart size={18} />,
+            isGroup: true,
+            children: [
+              { id: 'orders', label: 'Gestión de Pedidos', icon: <ShoppingCart size={16} /> },
+              { id: 'deposito', label: 'Preparación (Picking)', icon: <Warehouse size={16} /> },
+              { id: 'billing', label: 'Facturación', icon: <FileText size={16} /> },
+              { id: 'logistica', label: 'Logística y Flota', icon: <Truck size={16} /> },
+            ]
+          },
           { id: 'products', label: 'Productos', icon: <Package size={18} /> },
           { id: 'compras', label: 'Proveedores', icon: <Receipt size={18} /> },
           { id: 'rendiciones', label: 'Finanzas', icon: <DollarSign size={18} /> },
-          { id: 'logistica', label: 'Logística y Flota', icon: <Truck size={18} /> },
-          { id: 'billing', label: 'Facturación', icon: <FileText size={18} /> },
           { id: 'reportes', label: 'Reportes y Analíticas', icon: <TrendingUp size={18} /> },
           { id: 'config', label: 'Configuración', icon: <Settings size={18} /> },
         ];
@@ -47,13 +83,21 @@ export default function Sidebar({ username, role, activeTab, setActiveTab, onLog
         return [
           { id: 'dashboard', label: 'Panel Principal', icon: <LayoutDashboard size={18} /> },
           { id: 'clients', label: 'Personas', icon: <Users size={18} /> },
-          { id: 'orders', label: 'Gestión de Pedidos', icon: <ShoppingCart size={18} /> },
-          { id: 'deposito', label: 'Preparación (Picking)', icon: <Warehouse size={18} /> },
+          {
+            id: 'pedidos-logistica',
+            label: 'Pedidos y Logística',
+            icon: <ShoppingCart size={18} />,
+            isGroup: true,
+            children: [
+              { id: 'orders', label: 'Gestión de Pedidos', icon: <ShoppingCart size={16} /> },
+              { id: 'deposito', label: 'Preparación (Picking)', icon: <Warehouse size={16} /> },
+              { id: 'billing', label: 'Facturación', icon: <FileText size={16} /> },
+              { id: 'logistica', label: 'Logística y Flota', icon: <Truck size={16} /> },
+            ]
+          },
           { id: 'products', label: 'Productos', icon: <Package size={18} /> },
           { id: 'compras', label: 'Proveedores', icon: <Receipt size={18} /> },
           { id: 'rendiciones', label: 'Finanzas', icon: <DollarSign size={18} /> },
-          { id: 'logistica', label: 'Logística y Flota', icon: <Truck size={18} /> },
-          { id: 'billing', label: 'Facturación', icon: <FileText size={18} /> },
         ];
       case 'VENDEDOR':
         return [
@@ -115,17 +159,79 @@ export default function Sidebar({ username, role, activeTab, setActiveTab, onLog
       </div>
 
       <nav className="sidebar-menu" style={{ flex: 1, overflowY: 'auto', paddingRight: '4px' }}>
-        {menuItems.map((item) => (
-          <div
-            key={item.id}
-            className={`sidebar-link ${activeTab === item.id ? 'sidebar-link-active' : ''}`}
-            onClick={() => setActiveTab(item.id)}
-            style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', borderRadius: '6px', cursor: 'pointer', marginBottom: '4px' }}
-          >
-            {item.icon}
-            <span style={{ fontSize: '0.88rem', fontWeight: activeTab === item.id ? 600 : 400 }}>{item.label}</span>
-          </div>
-        ))}
+        {menuItems.map((item: any) => {
+          if (item.isGroup) {
+            const isExpanded = !!expandedGroups[item.id];
+            const isGroupActive = item.children.some((child: any) => child.id === activeTab);
+            
+            return (
+              <div key={item.id} className="sidebar-group-container">
+                <div 
+                  className={`sidebar-link sidebar-group-header`}
+                  onClick={() => toggleGroup(item.id)}
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', borderRadius: '6px', cursor: 'pointer', marginBottom: '4px' }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    {!isExpanded && isGroupActive && <div className="sidebar-group-active-dot" />}
+                    <span style={{ display: 'flex', alignItems: 'center', color: isGroupActive ? 'var(--text-primary)' : 'inherit' }}>
+                      {item.icon}
+                    </span>
+                    <span style={{ 
+                      fontSize: '0.88rem', 
+                      fontWeight: isGroupActive ? 600 : 500,
+                      color: isGroupActive ? 'var(--text-primary)' : 'inherit'
+                    }}>
+                      {item.label}
+                    </span>
+                  </div>
+                  {isExpanded ? (
+                    <ChevronDown size={14} className="chevron-icon" />
+                  ) : (
+                    <ChevronRight size={14} className="chevron-icon" />
+                  )}
+                </div>
+                
+                <div className={`sidebar-group-children ${isExpanded ? 'expanded' : ''}`}>
+                  {item.children.map((child: any) => (
+                    <div
+                      key={child.id}
+                      className={`sidebar-link sidebar-sub-link ${activeTab === child.id ? 'sidebar-link-active' : ''}`}
+                      onClick={() => setActiveTab(child.id)}
+                      style={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: '10px', 
+                        padding: '8px 14px 8px 36px', 
+                        borderRadius: '6px', 
+                        cursor: 'pointer', 
+                        marginBottom: '2px' 
+                      }}
+                    >
+                      <span style={{ display: 'flex', alignItems: 'center' }}>
+                        {child.icon}
+                      </span>
+                      <span style={{ fontSize: '0.84rem', fontWeight: activeTab === child.id ? 600 : 400 }}>
+                        {child.label}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          }
+
+          return (
+            <div
+              key={item.id}
+              className={`sidebar-link ${activeTab === item.id ? 'sidebar-link-active' : ''}`}
+              onClick={() => setActiveTab(item.id)}
+              style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', borderRadius: '6px', cursor: 'pointer', marginBottom: '4px' }}
+            >
+              {item.icon}
+              <span style={{ fontSize: '0.88rem', fontWeight: activeTab === item.id ? 600 : 400 }}>{item.label}</span>
+            </div>
+          );
+        })}
       </nav>
 
       <div className="sidebar-user" style={{ borderTop: '1px solid var(--border-color)', paddingTop: '16px', marginTop: 'auto' }}>
