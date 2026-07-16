@@ -38,13 +38,32 @@ export class SaleRouteService {
   }
 
   /**
+   * Obtiene los límites de inicio y fin de la fecha actual en la zona de Argentina (UTC-3)
+   * mapeados de vuelta a objetos Date en UTC compatibles con la base de datos.
+   */
+  private getArgentinaTodayBounds(): { start: Date; end: Date } {
+    const argentinaOffset = -3; // UTC-3
+    const now = new Date();
+    
+    // Obtener la hora actual simulada en Argentina
+    const dateInArgentina = new Date(now.getTime() + (argentinaOffset * 60 + now.getTimezoneOffset()) * 60000);
+    
+    const todayStart = new Date(dateInArgentina);
+    todayStart.setHours(0, 0, 0, 0);
+    const startUtc = new Date(todayStart.getTime() - (argentinaOffset * 60 + now.getTimezoneOffset()) * 60000);
+    
+    const todayEnd = new Date(dateInArgentina);
+    todayEnd.setHours(23, 59, 59, 999);
+    const endUtc = new Date(todayEnd.getTime() - (argentinaOffset * 60 + now.getTimezoneOffset()) * 60000);
+    
+    return { start: startUtc, end: endUtc };
+  }
+
+  /**
    * Obtener ruta por ID, con clientes ordenados secuencialmente y estado de visita de hoy.
    */
   async getSaleRouteById(id: number) {
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
-    const todayEnd = new Date();
-    todayEnd.setHours(23, 59, 59, 999);
+    const bounds = this.getArgentinaTodayBounds();
 
     const route = await prisma.saleRoute.findUnique({
       where: { id },
@@ -62,8 +81,8 @@ export class SaleRouteService {
             routeVisits: {
               where: {
                 date: {
-                  gte: todayStart,
-                  lte: todayEnd,
+                  gte: bounds.start,
+                  lte: bounds.end,
                 },
               },
               take: 1,
@@ -237,18 +256,15 @@ export class SaleRouteService {
     const client = await prisma.persona.findUnique({ where: { id: personaId } });
     if (!client) throw new Error('Cliente no encontrado.');
 
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
-    const todayEnd = new Date();
-    todayEnd.setHours(23, 59, 59, 999);
+    const bounds = this.getArgentinaTodayBounds();
 
     // Buscar si ya existe una visita hoy para este cliente
     const existingVisit = await prisma.saleRouteVisit.findFirst({
       where: {
         personaId,
         date: {
-          gte: todayStart,
-          lte: todayEnd,
+          gte: bounds.start,
+          lte: bounds.end,
         },
       },
     });
@@ -296,17 +312,14 @@ export class SaleRouteService {
    * Obtener las visitas del día de hoy realizadas por el vendedor.
    */
   async getTodayVisits(sellerId: number) {
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
-    const todayEnd = new Date();
-    todayEnd.setHours(23, 59, 59, 999);
+    const bounds = this.getArgentinaTodayBounds();
 
     return prisma.saleRouteVisit.findMany({
       where: {
         sellerId,
         date: {
-          gte: todayStart,
-          lte: todayEnd,
+          gte: bounds.start,
+          lte: bounds.end,
         },
       },
       select: {

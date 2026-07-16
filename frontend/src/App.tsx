@@ -3,6 +3,7 @@ import { api } from './utils/api';
 import Sidebar from './components/Sidebar';
 import Login from './components/Login';
 import ReceiptView from './components/ReceiptView';
+import QuickPriceSearchModal from './components/modals/QuickPriceSearchModal';
 
 // Carga diferida de los dashboards principales
 const AdminDashboard = lazy(() => import('./components/AdminDashboard'));
@@ -32,6 +33,19 @@ const LoadingSpinner = () => (
 function App() {
   const [user, setUser] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<string>('');
+  const [isQuickSearchModalOpen, setIsQuickSearchModalOpen] = useState(false);
+
+  // Atajo de teclado global Ctrl + Q para consulta de precios
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.key.toLowerCase() === 'q') {
+        e.preventDefault();
+        setIsQuickSearchModalOpen(prev => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   // Cargar usuario persistido al montar
   useEffect(() => {
@@ -137,6 +151,11 @@ function App() {
           to { opacity: 1; transform: translateY(0); }
         }
       `}</style>
+
+      <QuickPriceSearchModal
+        isOpen={isQuickSearchModalOpen}
+        onClose={() => setIsQuickSearchModalOpen(false)}
+      />
     </div>
   );
 }
