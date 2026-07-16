@@ -7,6 +7,25 @@ import ProductsList from './ProductsList';
 import RubrosList from './RubrosList';
 import StockDashboard from './StockDashboard';
 
+const OFFICIAL_CITIES = [
+  "GENERAL VILLEGAS",
+  "CARLOS TEJEDOR",
+  "FLORENTINO AMEGHINO",
+  "VILLA SAUCE",
+  "SANSINENA",
+  "PIEDRITAS",
+  "CORONEL CHARLONE",
+  "EMILIO BUNGE",
+  "BUCHARDO",
+  "BANDERALÓ",
+  "BERNARDO LARROUDÉ",
+  "TRES ALGARROBOS",
+  "RIVADAVIA",
+  "FORTIN OLAVARRIA",
+  "INTENDENTE ALVEAR",
+  "RUFINO"
+];
+
 // Carga diferida de sub-dashboards pesados
 const UnifiedReportsDashboard = lazy(() => import('./UnifiedReportsDashboard'));
 const RendicionesDashboard = lazy(() => import('./RendicionesDashboard'));
@@ -2170,14 +2189,10 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
               style={{ minWidth: '180px', height: '38px' }}
             >
               <option value="ALL">Todas las Localidades</option>
-              {(() => {
-                const uniqueCities = Array.from(
-                  new Set(clients.map((c: any) => c.city).filter(Boolean))
-                ).sort();
-                return uniqueCities.map((city: any) => (
-                  <option key={city} value={city}>{city}</option>
-                ));
-              })()}
+              {OFFICIAL_CITIES.map((city) => (
+                <option key={city} value={city}>{city}</option>
+              ))}
+              <option value="OTRAS">Otras</option>
             </select>
             <button className="btn btn-primary" onClick={() => setClientModal({ 
               open: true, 
@@ -2223,9 +2238,13 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
               </thead>
               <tbody>
                 {(() => {
-                  const filteredClients = clients.filter(
-                    (c: any) => selectedCityFilter === 'ALL' || c.city === selectedCityFilter
-                  );
+                  const filteredClients = clients.filter((c: any) => {
+                    if (selectedCityFilter === 'ALL') return true;
+                    if (selectedCityFilter === 'OTRAS') {
+                      return !c.city || !OFFICIAL_CITIES.includes(c.city.toUpperCase().trim());
+                    }
+                    return c.city && c.city.toUpperCase().trim() === selectedCityFilter;
+                  });
 
                   if (filteredClients.length === 0) {
                     return (
