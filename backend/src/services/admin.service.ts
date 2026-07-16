@@ -265,7 +265,16 @@ export class AdminService {
         items: {
           include: {
             product: {
-              select: { id: true, sku: true, name: true, isPesable: true }
+              select: { 
+                id: true, 
+                sku: true, 
+                name: true, 
+                isPesable: true,
+                rubroId: true,
+                rubro: {
+                  select: { id: true, name: true }
+                }
+              }
             }
           }
         }
@@ -275,8 +284,11 @@ export class AdminService {
 
     // Aggregations
     const clientMap = new Map<number, { id: number; name: string; city: string; sellerName: string; totalSpent: number; ordersCount: number }>();
-    const productMap = new Map<number, { id: number; sku: string; name: string; qty: number; revenue: number }>();
+    const productMap = new Map<number, { id: number; sku: string; name: string; qty: number; revenue: number; rubroId: number | null; rubroName: string }>();
     const weeklyMap = new Map<string, { weekStart: string; dateObj: Date; total: number; count: number }>();
+    const weeklyRubroMap = new Map<string, Map<string, number>>();
+    const rubrosAccumulatedMap = new Map<string, { id: number | null; name: string; totalSales: number; itemsCount: number }>();
+    const clientRubroMap = new Map<number, Map<string, number>>();
 
     for (const order of orders) {
       const totalAmount = Number(order.totalAmount) || 0;
@@ -316,22 +328,54 @@ export class AdminService {
       weekData.count += 1;
       weeklyMap.set(weekKey, weekData);
 
-      // 3. Products
+      // 3. Products & Rubros
+      let clientRubro = clientRubroMap.get(clientId);
+      if (!clientRubro) {
+        clientRubro = new Map<string, number>();
+        clientRubroMap.set(clientId, clientRubro);
+      }
+
       for (const item of order.items) {
         const prodId = item.productId;
         const qty = item.product.isPesable && item.weight ? Number(item.weight) : item.quantity;
         const subtotal = Number(item.subtotal) || 0;
+        const rubroName = item.product.rubro?.name || 'OTROS';
+        const rubroId = item.product.rubroId || null;
 
         const prodData = productMap.get(prodId) || {
           id: prodId,
           sku: item.product.sku,
           name: item.product.name,
           qty: 0,
-          revenue: 0
+          revenue: 0,
+          rubroId,
+          rubroName
         };
         prodData.qty += qty;
         prodData.revenue += subtotal;
         productMap.set(prodId, prodData);
+
+        // Weekly rubro map
+        let weekRubro = weeklyRubroMap.get(weekKey);
+        if (!weekRubro) {
+          weekRubro = new Map<string, number>();
+          weeklyRubroMap.set(weekKey, weekRubro);
+        }
+        weekRubro.set(rubroName, (weekRubro.get(rubroName) || 0) + subtotal);
+
+        // Rubros accumulated map
+        const rAcc = rubrosAccumulatedMap.get(rubroName) || {
+          id: rubroId,
+          name: rubroName,
+          totalSales: 0,
+          itemsCount: 0
+        };
+        rAcc.totalSales += subtotal;
+        rAcc.itemsCount += 1;
+        rubrosAccumulatedMap.set(rubroName, rAcc);
+
+        // Client rubro purchases map
+        clientRubro.set(rubroName, (clientRubro.get(rubroName) || 0) + subtotal);
       }
     }
 
@@ -350,19 +394,63 @@ export class AdminService {
 
     const weeklyInvoicing = Array.from(weeklyMap.values())
       .sort((a, b) => a.dateObj.getTime() - b.dateObj.getTime())
-      .map(w => ({
-        weekStart: w.weekStart,
-        total: w.total,
-        count: w.count
-      }));
+      .map(w => {
+        const weekRubro = weeklyRubroMap.get(w.weekStart);
+        const rubrosBreakdown: { [name: string]: number } = {};
+        if (weekRubro) {
+          for (const [rName, amount] of weekRubro.entries()) {
+            rubrosBreakdown[rName] = Math.round(amount);
+          }
+        }
+        return {
+          weekStart: w.weekStart,
+          total: w.total,
+          count: w.count,
+          rubros: rubrosBreakdown
+        };
+      });
 
-    // Get unique cities for filters
-    const allCitiesResult = await prisma.persona.findMany({
-      where: { isClient: true, city: { not: null } },
-      select: { city: true },
-      distinct: ['city']
-    });
-    
+    const totalInvoicedInZone = weeklyInvoicing.reduce((sum, w) => sum + w.total, 0);
+
+    // Calculate Rubro Metrics and Trends
+    const rubroMetrics = Array.from(rubrosAccumulatedMap.values())
+      .map(r => {
+        const weekSales = weeklyInvoicing.map(w => w.rubros[r.name] || 0);
+        let trend = 0;
+        if (weekSales.length > 1) {
+          const half = Math.floor(weekSales.length / 2);
+          const firstHalf = weekSales.slice(0, half);
+          const secondHalf = weekSales.slice(half);
+          const sum1 = firstHalf.reduce((s, v) => s + v, 0);
+          const sum2 = secondHalf.reduce((s, v) => s + v, 0);
+          const avg1 = sum1 / firstHalf.length;
+          const avg2 = sum2 / secondHalf.length;
+          trend = avg1 > 0 ? Math.round(((avg2 - avg1) / avg1) * 100) : 0;
+        }
+
+        const topProdsInRubro = Array.from(productMap.values())
+          .filter(p => p.rubroName === r.name)
+          .sort((a, b) => b.revenue - a.revenue)
+          .slice(0, 3)
+          .map(p => ({
+            id: p.id,
+            sku: p.sku,
+            name: p.name,
+            qty: p.qty,
+            revenue: Math.round(p.revenue)
+          }));
+
+        return {
+          id: r.id,
+          name: r.name,
+          totalSales: Math.round(r.totalSales),
+          percentageOfTotal: totalInvoicedInZone > 0 ? Math.round((r.totalSales / totalInvoicedInZone) * 100) : 0,
+          trend,
+          topProducts: topProdsInRubro
+        };
+      })
+      .sort((a, b) => b.totalSales - a.totalSales);
+
     // Get unique sellers
     const sellers = await prisma.user.findMany({
       where: { role: 'VENDEDOR' },
@@ -372,7 +460,15 @@ export class AdminService {
     // Query active products in deposit (stock > 0) to check for zero sales in this zone
     const activeProducts = await prisma.product.findMany({
       where: { stock: { gt: 0 } },
-      select: { id: true, sku: true, name: true, stock: true }
+      select: { 
+        id: true, 
+        sku: true, 
+        name: true, 
+        stock: true,
+        rubro: {
+          select: { name: true }
+        }
+      }
     });
 
     const deadStockProducts = activeProducts
@@ -382,11 +478,105 @@ export class AdminService {
         sku: p.sku,
         name: p.name,
         stock: p.stock,
+        rubroName: p.rubro?.name || 'OTROS',
         qty: 0,
         revenue: 0
       }))
       .sort((a, b) => b.stock - a.stock)
       .slice(0, 10);
+
+    // Generate Smart Recommendations
+    const salesRecommendations: any[] = [];
+    
+    // 1. Alertas de caída crítica
+    for (const r of rubroMetrics) {
+      if (r.totalSales > 10000 && r.trend <= -12) {
+        const topProduct = r.topProducts[0]?.name || 'productos de la línea';
+        salesRecommendations.push({
+          type: 'CRITICAL_DROP',
+          title: `Caída de ventas en ${r.name}`,
+          description: `Las ventas de la categoría ${r.name} bajaron un ${Math.abs(r.trend)}% en el período.`,
+          action: `Reforzar la oferta de ${r.name}. Impulsar proactivamente el artículo estrella: ${topProduct}.`,
+          script: `Vendedor: "¿Cómo venís de stock de la línea de ${r.name}? Justo tenemos en oferta ${topProduct} esta semana, si te interesa llevar más te puedo acomodar el precio. Te va a convenir antes de que aumente."`,
+          rubroName: r.name,
+          severity: 'high'
+        });
+      }
+    }
+
+    // 2. Oportunidades de venta cruzada (Cross-selling) en la zona
+    const correlationPairs = [
+      { a: 'REMOTTI', b: 'SODECAR' },
+      { a: 'SANCOR y CREMIGAL', b: 'SODECAR' },
+      { a: 'SODECAR', b: 'REMOTTI' },
+      { a: 'PASTAS SECAS', b: 'A.G.D Y NIZA' },
+      { a: 'LECHES', b: 'CAFE' }
+    ];
+
+    const topZoneClients = clientsWithMovements.slice(0, 15);
+    for (const client of topZoneClients) {
+      const clientRubros = clientRubroMap.get(client.id);
+      if (!clientRubros) continue;
+
+      for (const pair of correlationPairs) {
+        const spentA = clientRubros.get(pair.a) || 0;
+        const spentB = clientRubros.get(pair.b) || 0;
+
+        if (spentA > 15000 && spentB === 0) {
+          const rubroBProducts = Array.from(productMap.values())
+            .filter(p => p.rubroName === pair.b)
+            .sort((a, b) => b.revenue - a.revenue);
+          const suggestProduct = rubroBProducts[0]?.name || `línea de ${pair.b}`;
+
+          salesRecommendations.push({
+            type: 'CROSS_SELLING',
+            title: `Venta cruzada: ${client.name}`,
+            description: `El cliente es muy fuerte comprando ${pair.a} ($${Math.round(spentA).toLocaleString()}), pero no registra compras de ${pair.b}.`,
+            action: `Ofrecer una muestra de ${suggestProduct} o combo especial en la próxima visita.`,
+            script: `Vendedor: "Hola, vi que nos estás comprando muy bien la mercadería de ${pair.a}. Quería aprovechar para dejarte una muestra de la línea de ${pair.b} que estamos trayendo directo de fábrica, tiene excelente salida y te va a dejar mejor margen. ¿Te armo un combo chico para probar?"`,
+            rubroName: pair.b,
+            clientName: client.name,
+            severity: 'medium'
+          });
+
+          // Limitar a máximo 4 recomendaciones de venta cruzada para no abrumar
+          if (salesRecommendations.filter(rec => rec.type === 'CROSS_SELLING').length >= 4) {
+            break;
+          }
+        }
+      }
+      if (salesRecommendations.filter(rec => rec.type === 'CROSS_SELLING').length >= 4) {
+        break;
+      }
+    }
+
+    // 3. Sugerencias de rotación de stock inmovilizado
+    for (const deadProd of deadStockProducts) {
+      const rAcc = rubrosAccumulatedMap.get(deadProd.rubroName);
+      // Si el rubro tiene ventas activas pero este producto está clavado
+      if (rAcc && rAcc.totalSales > 15000 && deadProd.stock >= 5) {
+        const sameCategoryProds = Array.from(productMap.values())
+          .filter(p => p.rubroName === deadProd.rubroName)
+          .sort((a, b) => b.revenue - a.revenue);
+        const topPartner = sameCategoryProds[0]?.name || 'línea estrella';
+
+        salesRecommendations.push({
+          type: 'DEAD_STOCK',
+          title: `Rotación de Stock: ${deadProd.name}`,
+          description: `La categoría ${deadProd.rubroName} tiene ventas de $${Math.round(rAcc.totalSales).toLocaleString()} en la zona, pero ${deadProd.name} tiene ${deadProd.stock} unidades paradas en depósito.`,
+          action: `Armar un combo promocional: Llevando ${topPartner}, bonificar 15% en la segunda unidad de ${deadProd.name}.`,
+          script: `Vendedor: "Mirá, esta semana tenemos una oferta promocional de fábrica. Llevando la cantidad habitual de ${topPartner}, te puedo dejar ${deadProd.name} con un 15% de descuento en la factura. Es una gran oportunidad para rotar stock con mejor precio."`,
+          rubroName: deadProd.rubroName,
+          productName: deadProd.name,
+          severity: 'low'
+        });
+
+        // Limitar a 3 recomendaciones de stock
+        if (salesRecommendations.filter(rec => rec.type === 'DEAD_STOCK').length >= 3) {
+          break;
+        }
+      }
+    }
 
     return {
       totalClients,
@@ -399,6 +589,8 @@ export class AdminService {
       topProducts,
       bottomProducts,
       weeklyInvoicing,
+      rubroMetrics,
+      salesRecommendations,
       deadStockProducts
     };
   }

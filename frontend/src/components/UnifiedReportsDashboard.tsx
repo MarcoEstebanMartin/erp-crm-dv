@@ -321,7 +321,9 @@ export default function UnifiedReportsDashboard({
     clientsWithMovements: [],
     topProducts: [],
     bottomProducts: [],
-    weeklyInvoicing: []
+    weeklyInvoicing: [],
+    rubroMetrics: [],
+    salesRecommendations: []
   });
   const [zoneLoading, setZoneLoading] = useState(false);
   const [cities, setCities] = useState<string[]>([]);
@@ -330,6 +332,7 @@ export default function UnifiedReportsDashboard({
   const [citiesDropdownOpen, setCitiesDropdownOpen] = useState(false);
   const [selectedSeller, setSelectedSeller] = useState<string>('');
   const [hoveredWeekIdx, setHoveredWeekIdx] = useState<number | null>(null);
+  const [selectedRubroChart, setSelectedRubroChart] = useState<string>('all');
   
   // Date states for Zonas
   const [zoneDatePreset, setZoneDatePreset] = useState<string>('all');
@@ -440,8 +443,20 @@ export default function UnifiedReportsDashboard({
   const totalOrdersInZone = zoneWeeklyInvoicing.reduce((sum: number, w: any) => sum + (w.count || 0), 0);
   const avgTicketInZone = totalOrdersInZone > 0 ? Math.round(totalInvoicedInZone / totalOrdersInZone) : 0;
 
+  // Find all available rubro names from the rubro metrics
+  const availableRubros = zoneData.rubroMetrics?.map((r: any) => r.name) || [];
+
+  // Determine the active total based on selected rubro
+  const getWeeklyVal = (w: any) => {
+    if (!w) return 0;
+    if (selectedRubroChart === 'all') {
+      return w.total || 0;
+    }
+    return w.rubros?.[selectedRubroChart] || 0;
+  };
+
   // Find max weekly amount for chart height scaling
-  const maxWeeklyAmount = Math.max(...zoneWeeklyInvoicing.map((w: any) => w.total || 0), 1);
+  const maxWeeklyAmount = Math.max(...zoneWeeklyInvoicing.map((w: any) => getWeeklyVal(w)), 1);
 
   // Determine which week's details to show (hovered one, or default to the latest one)
   const activeWeek = hoveredWeekIdx !== null && zoneWeeklyInvoicing[hoveredWeekIdx] 
@@ -785,7 +800,23 @@ export default function UnifiedReportsDashboard({
 
           {/* Gráfico de Facturación Semanal */}
           <div className="card" style={{ padding: '24px', borderRadius: '12px' }}>
-            <h4 style={{ fontSize: '1.1rem', fontWeight: 600, margin: '0 0 4px 0' }}>Evolución de Facturación Semanal</h4>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px', flexWrap: 'wrap', gap: '12px' }}>
+              <h4 style={{ fontSize: '1.1rem', fontWeight: 600, margin: 0 }}>Evolución de Facturación Semanal</h4>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Visualizar por:</span>
+                <select 
+                  className="select" 
+                  value={selectedRubroChart} 
+                  onChange={e => { setSelectedRubroChart(e.target.value); setHoveredWeekIdx(null); }}
+                  style={{ padding: '6px 12px', fontSize: '0.8rem', width: 'auto', minWidth: '160px', height: '32px' }}
+                >
+                  <option value="all">Todas las categorías</option>
+                  {availableRubros.map((r: string) => (
+                    <option key={r} value={r}>{r}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
             <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: '0 0 24px 0' }}>
               Ventas entregadas consolidadas por semana. Pasa el cursor sobre las barras para ver el detalle de cada semana.
             </p>
@@ -801,7 +832,8 @@ export default function UnifiedReportsDashboard({
                   <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', height: '180px', paddingBottom: '8px', borderBottom: '1px solid var(--border-color)', gap: '8px' }}>
                     {zoneWeeklyInvoicing.map((week: any, idx: number) => {
                       const isActive = activeWeek && activeWeek.weekStart === week.weekStart;
-                      const heightPct = week.total > 0 ? Math.max((week.total / maxWeeklyAmount) * 100, 3) : 0;
+                      const weeklyVal = getWeeklyVal(week);
+                      const heightPct = weeklyVal > 0 ? Math.max((weeklyVal / maxWeeklyAmount) * 100, 3) : 0;
                       return (
                         <div 
                           key={week.weekStart}
@@ -849,9 +881,11 @@ export default function UnifiedReportsDashboard({
                     </span>
                   </div>
                   <div>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block' }}>Facturación total</span>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block' }}>
+                      {selectedRubroChart === 'all' ? 'Facturación total' : `Facturación ${selectedRubroChart}`}
+                    </span>
                     <span style={{ fontSize: '1.4rem', fontWeight: 700, color: '#137333' }}>
-                      ${activeWeek ? activeWeek.total.toLocaleString() : '0'}
+                      ${activeWeek ? getWeeklyVal(activeWeek).toLocaleString() : '0'}
                     </span>
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
@@ -864,7 +898,7 @@ export default function UnifiedReportsDashboard({
                     <div>
                       <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block' }}>Ticket Prom.</span>
                       <span style={{ fontSize: '1.1rem', fontWeight: 600 }}>
-                        ${activeWeek && activeWeek.count > 0 ? Math.round(activeWeek.total / activeWeek.count).toLocaleString() : '0'}
+                        ${activeWeek && activeWeek.count > 0 ? Math.round(getWeeklyVal(activeWeek) / activeWeek.count).toLocaleString() : '0'}
                       </span>
                     </div>
                   </div>
@@ -872,6 +906,187 @@ export default function UnifiedReportsDashboard({
 
               </div>
             )}
+          </div>
+
+          {/* NUEVO: Copiloto de Ventas y Resumen de Rubros */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '24px' }}>
+            
+            {/* COPILOTO DE VENTAS */}
+            <div className="card" style={{ padding: '24px', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                <div style={{ padding: '8px', borderRadius: '8px', backgroundColor: '#e8f0fe', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Sparkles size={20} color="#1a73e8" />
+                </div>
+                <div>
+                  <h4 style={{ fontSize: '1.1rem', fontWeight: 600, margin: 0, color: 'var(--text-primary)' }}>Copiloto de Ventas (Recomendaciones)</h4>
+                  <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: 0 }}>Acciones comerciales detectadas para esta zona</p>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxHeight: '420px', overflowY: 'auto', paddingRight: '4px' }}>
+                {!zoneData.salesRecommendations || zoneData.salesRecommendations.length === 0 ? (
+                  <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-secondary)', backgroundColor: 'var(--bg-light)', borderRadius: '8px', border: '1px dashed var(--border-color)', fontSize: '0.85rem' }}>
+                    No se detectaron alertas o desvíos en esta zona para el período actual. ¡Buen trabajo!
+                  </div>
+                ) : (
+                  zoneData.salesRecommendations.map((rec: any, idx: number) => {
+                    const isHigh = rec.severity === 'high';
+                    const isMed = rec.severity === 'medium';
+                    let borderLeftColor = '#f2994a'; // low (orange)
+                    let iconBg = '#fef3e6';
+                    let iconColor = '#f2994a';
+                    if (isHigh) {
+                      borderLeftColor = '#E30613'; // high (red)
+                      iconBg = '#fdebee';
+                      iconColor = '#E30613';
+                    } else if (isMed) {
+                      borderLeftColor = '#1a73e8'; // medium (blue)
+                      iconBg = '#e8f0fe';
+                      iconColor = '#1a73e8';
+                    }
+
+                    return (
+                      <div 
+                        key={idx} 
+                        style={{ 
+                          padding: '16px', 
+                          borderRadius: '8px', 
+                          backgroundColor: 'var(--bg-card)', 
+                          border: '1px solid var(--border-color)', 
+                          borderLeft: `4px solid ${borderLeftColor}`,
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '10px'
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>{rec.title}</span>
+                          <span 
+                            style={{ 
+                              fontSize: '0.7rem', 
+                              fontWeight: 600, 
+                              padding: '2px 8px', 
+                              borderRadius: '12px', 
+                              backgroundColor: iconBg, 
+                              color: iconColor,
+                              textTransform: 'uppercase'
+                            }}
+                          >
+                            {rec.type === 'CRITICAL_DROP' ? 'Alerta' : rec.type === 'CROSS_SELLING' ? 'Oportunidad' : 'Stock'}
+                          </span>
+                        </div>
+                        <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.4 }}>
+                          {rec.description}
+                        </p>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--text-primary)', fontWeight: 500 }}>
+                          <strong style={{ color: 'var(--text-secondary)' }}>Sugerencia:</strong> {rec.action}
+                        </div>
+                        {rec.script && (
+                          <div 
+                            style={{ 
+                              padding: '12px', 
+                              borderRadius: '6px', 
+                              backgroundColor: 'var(--bg-light)', 
+                              border: '1px solid var(--border-color)',
+                              fontSize: '0.8rem',
+                              fontStyle: 'italic',
+                              color: 'var(--text-secondary)',
+                              position: 'relative'
+                            }}
+                          >
+                            <span style={{ display: 'block', fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '4px', textTransform: 'uppercase', fontStyle: 'normal' }}>
+                              💬 Bajada para Vendedores:
+                            </span>
+                            "{rec.script}"
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+
+            {/* RENDIMIENTO POR RUBROS */}
+            <div className="card" style={{ padding: '24px', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                <div style={{ padding: '8px', borderRadius: '8px', backgroundColor: '#e6f4ea', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Package size={20} color="#137333" />
+                </div>
+                <div>
+                  <h4 style={{ fontSize: '1.1rem', fontWeight: 600, margin: 0, color: 'var(--text-primary)' }}>Rendimiento por Categoría (Rubros)</h4>
+                  <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: 0 }}>Ventas, participación y crecimiento en el período</p>
+                </div>
+              </div>
+
+              <div style={{ flex: 1, overflowY: 'auto', maxHeight: '420px', paddingRight: '4px' }}>
+                {!zoneData.rubroMetrics || zoneData.rubroMetrics.length === 0 ? (
+                  <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-secondary)', backgroundColor: 'var(--bg-light)', borderRadius: '8px', border: '1px dashed var(--border-color)', fontSize: '0.85rem' }}>
+                    No se registran ventas categorizadas en esta zona.
+                  </div>
+                ) : (
+                  <div className="table-container" style={{ margin: 0, boxShadow: 'none', border: 'none' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                      <thead>
+                        <tr style={{ borderBottom: '2px solid var(--border-color)', textAlign: 'left', fontSize: '0.8rem' }}>
+                          <th style={{ padding: '8px 4px', color: 'var(--text-secondary)' }}>Rubro</th>
+                          <th style={{ padding: '8px 4px', color: 'var(--text-secondary)', textAlign: 'right' }}>Total Ventas</th>
+                          <th style={{ padding: '8px 4px', color: 'var(--text-secondary)', textAlign: 'center' }}>Share</th>
+                          <th style={{ padding: '8px 4px', color: 'var(--text-secondary)', textAlign: 'right' }}>Tendencia</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {zoneData.rubroMetrics.map((r: any, idx: number) => {
+                          const isPositive = r.trend > 0;
+                          return (
+                            <tr key={idx} style={{ borderBottom: '1px solid var(--border-color)', fontSize: '0.85rem' }}>
+                              <td style={{ padding: '10px 4px', fontWeight: 600 }}>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                  <span>{r.name}</span>
+                                  {r.topProducts && r.topProducts.length > 0 && (
+                                    <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: 400 }}>
+                                      Top: {r.topProducts[0]?.name.substring(0, 24)}...
+                                    </span>
+                                  )}
+                                </div>
+                              </td>
+                              <td style={{ padding: '10px 4px', textAlign: 'right', fontWeight: 600, color: '#137333' }}>
+                                ${r.totalSales.toLocaleString()}
+                              </td>
+                              <td style={{ padding: '10px 4px', textAlign: 'center' }}>
+                                <span className="badge" style={{ backgroundColor: 'var(--bg-light)', color: 'var(--text-primary)', fontWeight: 600, fontSize: '0.75rem' }}>
+                                  {r.percentageOfTotal}%
+                                </span>
+                              </td>
+                              <td style={{ padding: '10px 4px', textAlign: 'right' }}>
+                                {r.trend === 0 ? (
+                                  <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600 }}>stable</span>
+                                ) : (
+                                  <span 
+                                    style={{ 
+                                      fontSize: '0.75rem', 
+                                      fontWeight: 700, 
+                                      color: isPositive ? '#137333' : '#E30613',
+                                      backgroundColor: isPositive ? '#e6f4ea' : '#fdebee',
+                                      padding: '2px 6px',
+                                      borderRadius: '4px',
+                                      display: 'inline-block'
+                                    }}
+                                  >
+                                    {isPositive ? `▲ +${r.trend}%` : `▼ ${r.trend}%`}
+                                  </span>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </div>
+
           </div>
 
           {/* Secciones de Tabla y Columnas */}
