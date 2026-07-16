@@ -9,22 +9,40 @@ import StockDashboard from './StockDashboard';
 
 const OFFICIAL_CITIES = [
   "GENERAL VILLEGAS",
-  "CARLOS TEJEDOR",
-  "FLORENTINO AMEGHINO",
-  "VILLA SAUCE",
-  "SANSINENA",
-  "PIEDRITAS",
-  "CORONEL CHARLONE",
-  "EMILIO BUNGE",
-  "BUCHARDO",
+  "EMILIO V. BUNGE",
   "BANDERALÓ",
   "BERNARDO LARROUDÉ",
+  "PIEDRITAS",
+  "CORONEL CHARLONE",
+  "BUCHARDO",
   "TRES ALGARROBOS",
+  "CARLOS TEJEDOR",
+  "FLORENTINO AMEGHINO",
+  "BLAQUIER",
   "RIVADAVIA",
-  "FORTIN OLAVARRIA",
+  "FORTÍN OLAVARRÍA",
   "INTENDENTE ALVEAR",
-  "RUFINO"
+  "RUFINO",
+  "CEBALLOS",
+  "REALICÓ",
+  "VILLA SAUZE",
+  "SANSINENA",
+  "SANTA ELEODORA",
+  "SANTA REGINA",
+  "VILLA SABOYA",
+  "CAÑADA SECA",
+  "CABA"
 ];
+
+const normalizeString = (str: string | null | undefined): string => {
+  if (!str) return '';
+  return str
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toUpperCase()
+    .trim();
+};
+
 
 // Carga diferida de sub-dashboards pesados
 const UnifiedReportsDashboard = lazy(() => import('./UnifiedReportsDashboard'));
@@ -2240,10 +2258,12 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
                 {(() => {
                   const filteredClients = clients.filter((c: any) => {
                     if (selectedCityFilter === 'ALL') return true;
+                    const normCity = normalizeString(c.city);
+                    const normSelectedFilter = normalizeString(selectedCityFilter);
                     if (selectedCityFilter === 'OTRAS') {
-                      return !c.city || !OFFICIAL_CITIES.includes(c.city.toUpperCase().trim());
+                      return !c.city || !OFFICIAL_CITIES.map(o => normalizeString(o)).includes(normCity);
                     }
-                    return c.city && c.city.toUpperCase().trim() === selectedCityFilter;
+                    return normCity === normSelectedFilter;
                   });
 
                   if (filteredClients.length === 0) {
@@ -4410,7 +4430,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
                     const isVillegas = cleanCity === 'GENERAL VILLEGAS' || cleanCity === 'GRAL VILLEGAS' || cleanCity === 'VILLEGAS' || cleanCity === '';
                     const routes = isVillegas 
                       ? ['FEDERAL', 'PARQUE', 'CENTRO 1', 'CENTRO 2', 'CENTRO 3', 'CENTRO 4', 'FONAVI', 'PROGRESO', 'TROCHA', 'CICLON', 'CRUCE']
-                      : ['BUNGE Y BUCHARDO', 'BUNGE Y CHARLONE', 'BANDERALO Y LARROUDÉ', 'SAUCE Y SANSINENA', 'AMEGHINO Y BLAQUIER', 'AMERICA Y FORTIN', 'PIEDRITAS', 'TRES ALGARROBOS', 'CARLOS TEJEDOR', 'I. ALVEAR', 'RUFINO'];
+                      : ['EMILIO V. BUNGE Y BUCHARDO', 'EMILIO V. BUNGE Y CORONEL CHARLONE', 'BANDERALÓ Y LARROUDÉ', 'VILLA SAUZE Y SANSINENA', 'FLORENTINO AMEGHINO Y BLAQUIER', 'RIVADAVIA Y FORTÍN OLAVARRÍA', 'PIEDRITAS', 'TRES ALGARROBOS', 'CARLOS TEJEDOR', 'INTENDENTE ALVEAR', 'RUFINO'];
                     return routes.map(r => <option key={r} value={r} />);
                   })()}
                 </datalist>

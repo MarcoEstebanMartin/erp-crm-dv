@@ -2,6 +2,8 @@ import prisma from '../utils/prisma';
 import bcrypt from 'bcryptjs';
 import { Role, BillingType, TransactionType } from '@prisma/client';
 import { logAudit } from '../utils/audit';
+import { standardizeCityName } from '../utils/normalize';
+
 
 export class AdminService {
   /**
@@ -424,7 +426,7 @@ export class AdminService {
     const localityMap = new Map<string, { locality: string, date: string, amountA: number, amountX: number }>();
 
     for (const order of orders) {
-      const city = (order.persona?.city || 'SIN ESPECIFICAR').trim().toUpperCase();
+      const city = standardizeCityName(order.persona?.city || 'SIN ESPECIFICAR');
       const amount = Math.round(Number(order.totalAmount) || 0);
       const isOfficial = order.billingType === BillingType.OFFICIAL;
 

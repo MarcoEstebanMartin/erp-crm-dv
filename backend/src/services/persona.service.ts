@@ -1,6 +1,8 @@
 import prisma from '../utils/prisma';
 import { logAudit } from '../utils/audit';
 import { Role, PaymentMethod, TransactionType, BillingType, OrderStatus } from '@prisma/client';
+import { standardizeCityName, standardizeRouteName, getOfficialCityOrOther, OFFICIAL_CITIES } from '../utils/normalize';
+
 
 export class PersonaService {
   /**
@@ -82,12 +84,12 @@ export class PersonaService {
         name: data.name,
         cuit: data.cuit,
         address: data.address,
-        city: data.city,
+        city: data.city !== undefined && data.city !== null ? standardizeCityName(data.city) : data.city,
         province: data.province,
         zipCode: data.zipCode,
         phone: data.phone,
         email: data.email,
-        route: data.route,
+        route: data.route !== undefined && data.route !== null ? standardizeRouteName(data.route) : data.route,
         isClient: data.isClient !== undefined ? Boolean(data.isClient) : true,
         isProvider: data.isProvider !== undefined ? Boolean(data.isProvider) : false,
         isSeller: data.isSeller !== undefined ? Boolean(data.isSeller) : false,
@@ -138,12 +140,12 @@ export class PersonaService {
         name: data.name !== undefined ? data.name : undefined,
         cuit: data.cuit !== undefined ? data.cuit : undefined,
         address: data.address !== undefined ? data.address : undefined,
-        city: data.city !== undefined ? data.city : undefined,
+        city: data.city !== undefined ? (data.city !== null ? standardizeCityName(data.city) : null) : undefined,
         province: data.province !== undefined ? data.province : undefined,
         zipCode: data.zipCode !== undefined ? data.zipCode : undefined,
         phone: data.phone !== undefined ? data.phone : undefined,
         email: data.email !== undefined ? data.email : undefined,
-        route: data.route !== undefined ? data.route : undefined,
+        route: data.route !== undefined ? (data.route !== null ? standardizeRouteName(data.route) : null) : undefined,
         isClient: data.isClient !== undefined ? Boolean(data.isClient) : undefined,
         isProvider: data.isProvider !== undefined ? Boolean(data.isProvider) : undefined,
         isSeller: data.isSeller !== undefined ? Boolean(data.isSeller) : undefined,
@@ -739,7 +741,7 @@ export class PersonaService {
     });
 
     const availableRoutes = [...new Set(debtors.map(d => d.route).filter(r => r && r !== 'Sin Ruta'))].sort();
-    const availableCities = [...MAIN_CITIES, 'OTRAS'].sort();
+    const availableCities = [...OFFICIAL_CITIES, 'OTRAS'].sort();
 
     // Obtener preventistas
     const sellers = await prisma.user.findMany({
@@ -797,48 +799,6 @@ export class PersonaService {
   }
 }
 
-const MAIN_CITIES = [
-  'GENERAL VILLEGAS',
-  'EMILIO V. BUNGE',
-  'BANDERALO',
-  'INTENDENTE ALVEAR',
-  'PIEDRITAS',
-  'CEBALLOS',
-  'RUFINO',
-  'BUCHARDO',
-  'CHARLONE',
-  'LARROUDE',
-  'SAUCE',
-  'SANSINENA',
-  'TRES ALGARROBOS',
-  'AMEGHINO',
-  'BLAQUIER',
-  'AMERICA',
-  'FORTIN',
-  'CARLOS TEJEDOR'
-];
-
-function normalizeCityName(str: string | null | undefined): string {
-  if (!str) return 'OTRAS';
-  const upper = str.toUpperCase().trim();
-  
-  for (const mainCity of MAIN_CITIES) {
-    if (upper.includes(mainCity)) {
-      return mainCity;
-    }
-  }
-
-  // Alternativas de nombres comunes o abreviaciones
-  if (upper.includes('BUNGE')) return 'EMILIO V. BUNGE';
-  if (upper.includes('ALVEAR') || upper.includes('I. ALVEAR') || upper.includes('I.ALVEAR')) return 'INTENDENTE ALVEAR';
-  if (upper.includes('VILLEGAS')) return 'GENERAL VILLEGAS';
-  if (upper.includes('LARROUDE')) return 'LARROUDE';
-  if (upper.includes('TEJEDOR')) return 'CARLOS TEJEDOR';
-  if (upper.includes('SAUZE')) return 'SAUCE';
-
-  return 'OTRAS';
-}
-
 function resolveCity(
   city: string | null | undefined,
   address: string | null | undefined,
@@ -846,19 +806,19 @@ function resolveCity(
 ): string {
   // 1. Intentar con el campo 'city'
   if (city) {
-    const norm = normalizeCityName(city);
+    const norm = getOfficialCityOrOther(city);
     if (norm !== 'OTRAS') return norm;
   }
 
   // 2. Intentar con el campo 'address'
   if (address) {
-    const norm = normalizeCityName(address);
+    const norm = getOfficialCityOrOther(address);
     if (norm !== 'OTRAS') return norm;
   }
 
   // 3. Intentar con el campo 'route'
   if (route) {
-    const norm = normalizeCityName(route);
+    const norm = getOfficialCityOrOther(route);
     if (norm !== 'OTRAS') return norm;
   }
 

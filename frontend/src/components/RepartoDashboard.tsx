@@ -24,6 +24,7 @@ const CLIENT_COORDS: { [key: number]: { lat: number; lng: number; address: strin
 // Coordenadas base por localidad para geocodificación y fallbacks correctos
 const CITY_BASE_COORDS: { [key: string]: { lat: number; lng: number } } = {
   'general villegas': { lat: -35.030, lng: -63.010 },
+  'emilio v. bunge': { lat: -34.764, lng: -63.031 },
   'emilio bunge': { lat: -34.764, lng: -63.031 },
   'piedritas': { lat: -34.887, lng: -62.880 },
   'banderaló': { lat: -35.016, lng: -63.267 },
@@ -41,7 +42,14 @@ const CITY_BASE_COORDS: { [key: string]: { lat: number; lng: number } } = {
   'villa saboya': { lat: -34.630, lng: -62.770 },
   'santa regina': { lat: -34.621, lng: -62.969 },
   'tres algarrobos': { lat: -35.185, lng: -62.753 },
-  'carlos tejedor': { lat: -35.402, lng: -62.427 }
+  'carlos tejedor': { lat: -35.402, lng: -62.427 },
+  'realicó': { lat: -35.037, lng: -64.244 },
+  'realico': { lat: -35.037, lng: -64.244 },
+  'ceballos': { lat: -35.297, lng: -63.766 },
+  'santa eleodora': { lat: -34.851, lng: -62.825 },
+  'cañada seca': { lat: -34.805, lng: -62.791 },
+  'canada seca': { lat: -34.805, lng: -62.791 },
+  'caba': { lat: -34.6037, lng: -58.3816 }
 };
 
 // Detección de la localidad real a partir del nombre de ciudad, ruta o dirección
@@ -52,7 +60,7 @@ function detectRealCity(persona: any): string {
 
   const knownCities = [
     { key: 'villegas', name: 'General Villegas' },
-    { key: 'bunge', name: 'Emilio Bunge' },
+    { key: 'bunge', name: 'Emilio V. Bunge' },
     { key: 'piedritas', name: 'Piedritas' },
     { key: 'banderalo', name: 'Banderaló' },
     { key: 'banderaló', name: 'Banderaló' },
@@ -68,7 +76,14 @@ function detectRealCity(persona: any): string {
     { key: 'saboya', name: 'Villa Saboya' },
     { key: 'regina', name: 'Santa Regina' },
     { key: 'algarrobos', name: 'Tres Algarrobos' },
-    { key: 'tejedor', name: 'Carlos Tejedor' }
+    { key: 'tejedor', name: 'Carlos Tejedor' },
+    { key: 'realico', name: 'Realicó' },
+    { key: 'realicó', name: 'Realicó' },
+    { key: 'ceballos', name: 'Ceballos' },
+    { key: 'eleodora', name: 'Santa Eleodora' },
+    { key: 'canada seca', name: 'Cañada Seca' },
+    { key: 'cañada seca', name: 'Cañada Seca' },
+    { key: 'caba', name: 'CABA' }
   ];
 
   for (const c of knownCities) {

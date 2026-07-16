@@ -18,6 +18,16 @@ import {
 import CrmDashboard from './CrmDashboard';
 import AfipExportDashboard from '../pages/AfipExportDashboard';
 
+const normalizeString = (str: string | null | undefined): string => {
+  if (!str) return '';
+  return str
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toUpperCase()
+    .trim();
+};
+
+
 interface UnifiedReportsDashboardProps {
   orders: any[];
   users: any[];
@@ -63,19 +73,29 @@ export default function UnifiedReportsDashboard({
   ];
 
   const defaultLocalities = [
-    "RIVADAVIA",
-    "FORTIN OLAVARRIA",
-    "BANDERALO",
-    "BDO.LARROUDE",
-    "TRES ALGARROBOS",
-    "CNEL.CHARLONE",
+    "GENERAL VILLEGAS",
+    "EMILIO V. BUNGE",
+    "BANDERALÓ",
+    "BERNARDO LARROUDÉ",
     "PIEDRITAS",
-    "AMEGHINO",
+    "CORONEL CHARLONE",
+    "BUCHARDO",
+    "TRES ALGARROBOS",
+    "CARLOS TEJEDOR",
+    "FLORENTINO AMEGHINO",
     "BLAQUIER",
+    "RIVADAVIA",
+    "FORTÍN OLAVARRÍA",
+    "INTENDENTE ALVEAR",
+    "RUFINO",
+    "CEBALLOS",
+    "REALICÓ",
+    "VILLA SAUZE",
+    "SANSINENA",
     "SANTA ELEODORA",
-    "EMILIO BUNGE",
-    "INT.ALVEAR",
-    "GENERAL VILLEGAS"
+    "SANTA REGINA",
+    "VILLA SABOYA",
+    "CAÑADA SECA"
   ];
 
   const getMonday = (dStr: string) => {
@@ -255,7 +275,7 @@ export default function UnifiedReportsDashboard({
         const matchedLocalities = new Set<string>();
 
         autoSales.forEach((as: any) => {
-          const matchIdx = newSales.findIndex(s => s.locality.trim().toUpperCase() === as.locality.trim().toUpperCase());
+          const matchIdx = newSales.findIndex(s => normalizeString(s.locality) === normalizeString(as.locality));
           if (matchIdx >= 0) {
             newSales[matchIdx] = {
               ...newSales[matchIdx],
@@ -263,12 +283,12 @@ export default function UnifiedReportsDashboard({
               amountX: as.amountX,
               date: as.date || newSales[matchIdx].date
             };
-            matchedLocalities.add(as.locality.toUpperCase());
+            matchedLocalities.add(normalizeString(as.locality));
           }
         });
 
         autoSales.forEach((as: any) => {
-          if (!matchedLocalities.has(as.locality.toUpperCase())) {
+          if (!matchedLocalities.has(normalizeString(as.locality))) {
             newSales.push({
               locality: as.locality,
               date: as.date || '',
