@@ -9,7 +9,9 @@ import {
   X, 
   ArrowUpRight, 
   ArrowDownRight,
-  Layers
+  Layers,
+  Edit2,
+  Trash2
 } from 'lucide-react';
 import { api } from '../utils/api';
 
@@ -60,6 +62,30 @@ export default function StockDashboard({ products, onRefresh }: StockDashboardPr
   const [loadingAdjust, setLoadingAdjust] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  // Estados de Gestión de Lotes
+  const [showEmptyLots, setShowEmptyLots] = useState(false);
+  const [lotManagerModal, setLotManagerModal] = useState<{ open: boolean; product: any | null }>({ open: false, product: null });
+  const [editingLot, setEditingLot] = useState<any | null>(null);
+  const [editLotNumber, setEditLotNumber] = useState('');
+  const [editExpirationDate, setEditExpirationDate] = useState('');
+  const [editLocation, setEditLocation] = useState('');
+  
+  const [showTransferPanel, setShowTransferPanel] = useState(false);
+  const [transferData, setTransferData] = useState<{
+    fromLotId: number | '';
+    toLotNumber: string;
+    toExpirationDate: string;
+    isNewDestLot: boolean;
+    quantity: number;
+  }>({
+    fromLotId: '',
+    toLotNumber: '',
+    toExpirationDate: '',
+    isNewDestLot: false,
+    quantity: 0
+  });
+
 
   useEffect(() => {
     if (showGlobalMovements) {
@@ -223,6 +249,96 @@ export default function StockDashboard({ products, onRefresh }: StockDashboardPr
       setLoadingAdjust(false);
     }
   };
+
+  // Mantener actualizado el producto en el modal de gestión de lotes cuando cambian los props (ej: tras refresh)
+  useEffect(() => {
+    if (lotManagerModal.open && lotManagerModal.product) {
+      const fresh = products.find(p => p.id === lotManagerModal.product.id);
+      if (fresh) {
+        setLotManagerModal(prev => ({ ...prev, product: fresh }));
+      }
+    }
+  }, [products, lotManagerModal.open]);
+
+  // Actualizar datos del lote (Código, Fecha Vencimiento, Ubicación)
+  const handleUpdateLotSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingLot) return;
+
+    setLoadingAdjust(true);
+    setErrorMessage(null);
+    setSuccessMessage(null);
+
+    try {
+      await api.updateLot(editingLot.id, {
+        lotNumber: editLotNumber,
+        expirationDate: editExpirationDate,
+        location: editLocation
+      });
+
+      setSuccessMessage(`Lote "${editLotNumber}" actualizado con éxito.`);
+      setEditingLot(null);
+      await onRefresh();
+    } catch (err: any) {
+      setErrorMessage(err.message || 'Error al actualizar el lote.');
+    } finally {
+      setLoadingAdjust(false);
+    }
+  };
+
+  // Eliminar lote físico (si tiene stock 0)
+  const handleDeleteLot = async (lotId: number, lotNumber: string) => {
+    if (!window.confirm(`¿Estás seguro de que deseas eliminar permanentemente el lote "${lotNumber}"?`)) return;
+
+    setLoadingAdjust(true);
+    setErrorMessage(null);
+    setSuccessMessage(null);
+
+    try {
+      await api.deleteLot(lotId);
+      setSuccessMessage(`Lote "${lotNumber}" eliminado con éxito.`);
+      await onRefresh();
+    } catch (err: any) {
+      setErrorMessage(err.message || 'Error al eliminar el lote.');
+    } finally {
+      setLoadingAdjust(false);
+    }
+  };
+
+  // Transferir stock entre lotes del mismo producto
+  const handleTransferSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!lotManagerModal.product || transferData.fromLotId === '') return;
+
+    setLoadingAdjust(true);
+    setErrorMessage(null);
+    setSuccessMessage(null);
+
+    try {
+      await api.transferLotStock(lotManagerModal.product.id, {
+        fromLotId: Number(transferData.fromLotId),
+        toLotNumber: transferData.toLotNumber,
+        toExpirationDate: transferData.isNewDestLot ? transferData.toExpirationDate : undefined,
+        quantity: Number(transferData.quantity)
+      });
+
+      setSuccessMessage(`Transferencia de stock de lote aplicada con éxito.`);
+      setShowTransferPanel(false);
+      setTransferData({
+        fromLotId: '',
+        toLotNumber: '',
+        toExpirationDate: '',
+        isNewDestLot: false,
+        quantity: 0
+      });
+      await onRefresh();
+    } catch (err: any) {
+      setErrorMessage(err.message || 'Error al transferir stock.');
+    } finally {
+      setLoadingAdjust(false);
+    }
+  };
+
 
   // Extraer rubro de forma segura
   const extractRubroLabel = (p: any): string => {
@@ -567,6 +683,33 @@ export default function StockDashboard({ products, onRefresh }: StockDashboardPr
           <span>{isQuickInventoryMode ? '🚫 Cancelar Inventario' : '📝 Modo Inventario Rápido'}</span>
         </button>
 
+        {isQuickInventoryMode && (
+          <label style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '6px', 
+            fontSize: '0.8rem', 
+            color: 'var(--text-secondary)',
+            cursor: 'pointer',
+            padding: '0 12px',
+            height: '38px',
+            backgroundColor: 'var(--bg-muted)',
+            borderRadius: '8px',
+            border: '1px solid var(--border-color)',
+            userSelect: 'none',
+            transition: 'all 0.2s'
+          }} className="hover-bg-card">
+            <input 
+              type="checkbox" 
+              checked={showEmptyLots} 
+              onChange={(e) => setShowEmptyLots(e.target.checked)} 
+              style={{ cursor: 'pointer' }}
+            />
+            <span>Ver lotes vacíos (0 u.)</span>
+          </label>
+        )}
+
+
         {/* Acciones del Historial Global */}
         <button 
           className="btn btn-secondary" 
@@ -647,7 +790,9 @@ export default function StockDashboard({ products, onRefresh }: StockDashboardPr
                           <div style={{ fontWeight: 700, marginBottom: '6px', color: 'var(--text-secondary)' }}>
                             Ajuste de Lotes Coexistentes:
                           </div>
-                          {p.lots.map((lot: any) => {
+                          {p.lots
+                            .filter((lot: any) => showEmptyLots || lot.stock > 0 || pendingAdjustments[`lot-${lot.id}`] !== undefined)
+                            .map((lot: any) => {
                             const val = pendingAdjustments[`lot-${lot.id}`] !== undefined ? pendingAdjustments[`lot-${lot.id}`] : lot.stock;
                             return (
                               <div key={lot.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px', gap: '10px' }}>
@@ -794,6 +939,26 @@ export default function StockDashboard({ products, onRefresh }: StockDashboardPr
                           title="Ver Kárdex / Movimientos"
                         >
                           <History size={15} />
+                        </button>
+                        <button 
+                          className="btn btn-secondary" 
+                          style={{ 
+                            padding: '4px 10px', 
+                            fontSize: '0.78rem', 
+                            height: '28px', 
+                            borderRadius: '6px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px'
+                          }}
+                          onClick={() => setLotManagerModal({
+                            open: true,
+                            product: p
+                          })}
+                          title="Gestionar Lotes (Editar, Eliminar, Transferir)"
+                        >
+                          <Layers size={13} />
+                          <span>Lotes</span>
                         </button>
                         <button 
                           className="btn btn-secondary" 
@@ -1150,6 +1315,361 @@ export default function StockDashboard({ products, onRefresh }: StockDashboardPr
           </div>
         </div>
       )}
+
+      {/* ====================================================================
+          MODAL DE GESTIÓN DE LOTES
+          ==================================================================== */}
+      {lotManagerModal.open && lotManagerModal.product && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ borderRadius: '16px', padding: '24px', maxWidth: '650px', width: '90%' }}>
+            <div className="modal-header" style={{ marginBottom: '20px' }}>
+              <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700 }}>Gestionar Lotes</h3>
+              <button 
+                type="button"
+                className="btn btn-ghost" 
+                style={{ padding: '4px', borderRadius: '50%', border: 'none', cursor: 'pointer' }} 
+                onClick={() => {
+                  setLotManagerModal({ open: false, product: null });
+                  setEditingLot(null);
+                  setShowTransferPanel(false);
+                }}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div style={{ 
+              backgroundColor: 'var(--bg-app)', 
+              padding: '14px', 
+              borderRadius: '8px', 
+              fontSize: '0.85rem', 
+              marginBottom: '20px',
+              border: '1px solid var(--border-color)',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
+              <div>
+                <div style={{ marginBottom: '4px' }}><strong>Artículo:</strong> {lotManagerModal.product.name}</div>
+                <div><strong>SKU:</strong> {lotManagerModal.product.sku}</div>
+              </div>
+              <button
+                type="button"
+                className="btn"
+                style={{ 
+                  borderRadius: '6px', 
+                  fontSize: '0.78rem', 
+                  padding: '6px 12px',
+                  backgroundColor: showTransferPanel ? 'var(--bg-muted)' : 'var(--text-primary)',
+                  color: showTransferPanel ? 'var(--text-primary)' : 'var(--bg-app)',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontWeight: 600
+                }}
+                onClick={() => {
+                  setShowTransferPanel(!showTransferPanel);
+                  setEditingLot(null);
+                  // Inicializar los datos del transfer
+                  const lotsWithStock = (lotManagerModal.product.lots || []).filter((l: any) => l.stock > 0);
+                  setTransferData({
+                    fromLotId: lotsWithStock.length > 0 ? lotsWithStock[0].id : '',
+                    toLotNumber: '',
+                    toExpirationDate: '',
+                    isNewDestLot: false,
+                    quantity: 0
+                  });
+                }}
+              >
+                {showTransferPanel ? 'Ver Lista de Lotes' : '⇅ Transferir Stock'}
+              </button>
+            </div>
+
+            {/* SECCIÓN 1: PANEL DE TRANSFERENCIA */}
+            {showTransferPanel ? (
+              <form onSubmit={handleTransferSubmit} style={{ animation: 'slideDown 0.2s ease-out' }}>
+                <h4 style={{ margin: '0 0 16px 0', fontSize: '0.9rem', fontWeight: 600 }}>Transferir / Reasignar Stock entre Lotes</h4>
+                
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+                  {/* Lote Origen */}
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label>Lote de Origen</label>
+                    <select
+                      className="select"
+                      value={transferData.fromLotId}
+                      onChange={(e) => setTransferData({ ...transferData, fromLotId: Number(e.target.value) })}
+                      required
+                      style={{ borderRadius: '8px', width: '100%' }}
+                    >
+                      <option value="">Seleccione origen...</option>
+                      {(lotManagerModal.product.lots || [])
+                        .filter((l: any) => l.stock > 0)
+                        .map((l: any) => (
+                          <option key={l.id} value={l.id}>
+                            Lote: {l.lotNumber} ({l.stock} u. disponibles)
+                          </option>
+                        ))
+                      }
+                    </select>
+                  </div>
+
+                  {/* Cantidad */}
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label>Cantidad a transferir</label>
+                    <input
+                      type="number"
+                      className="input"
+                      value={transferData.quantity || ''}
+                      onChange={(e) => setTransferData({ ...transferData, quantity: Number(e.target.value) })}
+                      required
+                      min={1}
+                      max={
+                        transferData.fromLotId !== '' 
+                          ? (lotManagerModal.product.lots || []).find((l: any) => l.id === transferData.fromLotId)?.stock || 1
+                          : undefined
+                      }
+                      style={{ borderRadius: '8px', width: '100%' }}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+                  {/* Lote Destino */}
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label>Lote de Destino</label>
+                    <select
+                      className="select"
+                      value={transferData.isNewDestLot ? '__new__' : transferData.toLotNumber}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val === '__new__') {
+                          setTransferData({ ...transferData, isNewDestLot: true, toLotNumber: '', toExpirationDate: '' });
+                        } else {
+                          setTransferData({ ...transferData, isNewDestLot: false, toLotNumber: val });
+                        }
+                      }}
+                      required
+                      style={{ borderRadius: '8px', width: '100%' }}
+                    >
+                      <option value="">Seleccione destino...</option>
+                      {(lotManagerModal.product.lots || [])
+                        .filter((l: any) => l.id !== transferData.fromLotId)
+                        .map((l: any) => (
+                          <option key={l.id} value={l.lotNumber}>
+                            Lote: {l.lotNumber} (Stock: {l.stock} u.)
+                          </option>
+                        ))
+                      }
+                      <option value="__new__">+ Crear nuevo lote...</option>
+                    </select>
+                  </div>
+
+                  {/* Fecha de vencimiento (si es nuevo lote) */}
+                  {transferData.isNewDestLot && (
+                    <div className="form-group" style={{ marginBottom: 0, animation: 'slideDown 0.15s ease-out' }}>
+                      <label>Fecha Vencimiento (Nuevo Lote)</label>
+                      <input
+                        type="date"
+                        className="input"
+                        value={transferData.toExpirationDate}
+                        onChange={(e) => setTransferData({ ...transferData, toExpirationDate: e.target.value })}
+                        required
+                        style={{ borderRadius: '8px', width: '100%' }}
+                      />
+                    </div>
+                  )}
+
+                  {/* Input Código Lote Nuevo */}
+                  {transferData.isNewDestLot && (
+                    <div className="form-group" style={{ marginBottom: 0, animation: 'slideDown 0.15s ease-out' }}>
+                      <label>Código del Nuevo Lote</label>
+                      <input
+                        type="text"
+                        className="input"
+                        placeholder="Ej: L-2026-02"
+                        value={transferData.toLotNumber}
+                        onChange={(e) => setTransferData({ ...transferData, toLotNumber: e.target.value })}
+                        required
+                        style={{ borderRadius: '8px', width: '100%' }}
+                      />
+                    </div>
+                  )}
+                </div>
+
+                <div className="modal-footer" style={{ borderTop: '1px solid var(--border-color)', paddingTop: '16px', marginTop: '20px' }}>
+                  <button 
+                    type="button" 
+                    className="btn btn-secondary" 
+                    onClick={() => setShowTransferPanel(false)}
+                    style={{ borderRadius: '8px' }}
+                  >
+                    Volver
+                  </button>
+                  <button 
+                    type="submit" 
+                    className="btn btn-primary" 
+                    disabled={loadingAdjust}
+                    style={{ borderRadius: '8px' }}
+                  >
+                    {loadingAdjust ? 'Transfiriendo...' : 'Confirmar Transferencia'}
+                  </button>
+                </div>
+              </form>
+            ) : editingLot ? (
+              /* SECCIÓN 2: FORMULARIO DE EDICIÓN DE LOTE */
+              <form onSubmit={handleUpdateLotSubmit} style={{ animation: 'slideDown 0.2s ease-out' }}>
+                <h4 style={{ margin: '0 0 16px 0', fontSize: '0.9rem', fontWeight: 600 }}>Editar Propiedades del Lote</h4>
+                
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label>Código de Lote</label>
+                    <input
+                      type="text"
+                      className="input"
+                      value={editLotNumber}
+                      onChange={(e) => setEditLotNumber(e.target.value)}
+                      required
+                      style={{ borderRadius: '8px', width: '100%' }}
+                    />
+                  </div>
+
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label>Ubicación Física</label>
+                    <input
+                      type="text"
+                      className="input"
+                      value={editLocation}
+                      onChange={(e) => setEditLocation(e.target.value)}
+                      placeholder="Ej: A-3, B-12"
+                      style={{ borderRadius: '8px', width: '100%' }}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label>Fecha de Vencimiento</label>
+                    <input
+                      type="date"
+                      className="input"
+                      value={editExpirationDate}
+                      onChange={(e) => setEditExpirationDate(e.target.value)}
+                      required
+                      style={{ borderRadius: '8px', width: '100%' }}
+                    />
+                  </div>
+                  
+                  <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'flex-start', paddingBottom: '4px' }}>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                      Los cambios afectarán únicamente a las propiedades del lote. No se alterará la cantidad de stock.
+                    </span>
+                  </div>
+                </div>
+
+                <div className="modal-footer" style={{ borderTop: '1px solid var(--border-color)', paddingTop: '16px', marginTop: '20px' }}>
+                  <button 
+                    type="button" 
+                    className="btn btn-secondary" 
+                    onClick={() => setEditingLot(null)}
+                    style={{ borderRadius: '8px' }}
+                  >
+                    Cancelar
+                  </button>
+                  <button 
+                    type="submit" 
+                    className="btn btn-primary" 
+                    disabled={loadingAdjust}
+                    style={{ borderRadius: '8px' }}
+                  >
+                    {loadingAdjust ? 'Guardando...' : 'Guardar Cambios'}
+                  </button>
+                </div>
+              </form>
+            ) : (
+              /* SECCIÓN 3: LISTADO DE LOTES */
+              <div>
+                <h4 style={{ margin: '0 0 12px 0', fontSize: '0.9rem', fontWeight: 600 }}>Lotes Registrados</h4>
+                <div style={{ overflowX: 'auto', border: '1px solid var(--border-color)', borderRadius: '8px', maxHeight: '300px' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
+                    <thead style={{ backgroundColor: 'var(--bg-muted)', position: 'sticky', top: 0, zIndex: 1 }}>
+                      <tr style={{ borderBottom: '1px solid var(--border-color)' }}>
+                        <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 600, color: 'var(--text-secondary)' }}>Código Lote</th>
+                        <th style={{ padding: '10px 12px', textAlign: 'center', fontWeight: 600, color: 'var(--text-secondary)' }}>Stock</th>
+                        <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 600, color: 'var(--text-secondary)' }}>Vencimiento</th>
+                        <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 600, color: 'var(--text-secondary)' }}>Ubicación</th>
+                        <th style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 600, color: 'var(--text-secondary)' }}>Acciones</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(lotManagerModal.product.lots || []).length === 0 ? (
+                        <tr>
+                          <td colSpan={5} style={{ padding: '20px', textAlign: 'center', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                            Sin lotes registrados
+                          </td>
+                        </tr>
+                      ) : (
+                        (lotManagerModal.product.lots || []).map((lot: any) => {
+                          const isExpired = new Date(lot.expirationDate) <= new Date();
+                          return (
+                            <tr key={lot.id} style={{ borderBottom: '1px solid var(--border-color)', transition: 'background-color 0.15s' }} className="hover-bg-muted">
+                              <td style={{ padding: '10px 12px', fontWeight: 600 }}>{lot.lotNumber}</td>
+                              <td style={{ padding: '10px 12px', textAlign: 'center', fontWeight: 700 }}>{lot.stock} u.</td>
+                              <td style={{ padding: '10px 12px', color: isExpired ? 'var(--color-danger)' : 'var(--text-primary)' }}>
+                                {new Date(lot.expirationDate).toLocaleDateString('es-AR', { timeZone: 'UTC' })}
+                                {isExpired && <span style={{ marginLeft: '4px', fontSize: '0.68rem', backgroundColor: 'var(--color-danger-bg)', color: 'var(--color-danger)', padding: '2px 4px', borderRadius: '4px' }}>Vencido</span>}
+                              </td>
+                              <td style={{ padding: '10px 12px', fontFamily: 'monospace' }}>{lot.location}</td>
+                              <td style={{ padding: '10px 12px', textAlign: 'right' }}>
+                                <div style={{ display: 'flex', gap: '4px', justifyContent: 'flex-end' }}>
+                                  <button
+                                    type="button"
+                                    className="btn btn-ghost"
+                                    style={{ padding: '4px', color: 'var(--text-secondary)' }}
+                                    onClick={() => {
+                                      setEditingLot(lot);
+                                      setEditLotNumber(lot.lotNumber);
+                                      setEditLocation(lot.location || 'S/U');
+                                      setEditExpirationDate(new Date(lot.expirationDate).toISOString().split('T')[0]);
+                                    }}
+                                    title="Editar datos de lote"
+                                  >
+                                    <Edit2 size={14} />
+                                  </button>
+                                  {lot.stock === 0 && (
+                                    <button
+                                      type="button"
+                                      className="btn btn-ghost"
+                                      style={{ padding: '4px', color: '#E30613' }}
+                                      onClick={() => handleDeleteLot(lot.id, lot.lotNumber)}
+                                      title="Eliminar lote"
+                                    >
+                                      <Trash2 size={14} />
+                                    </button>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '16px' }}>
+                  <button 
+                    type="button" 
+                    className="btn btn-secondary" 
+                    onClick={() => setLotManagerModal({ open: false, product: null })}
+                    style={{ borderRadius: '8px' }}
+                  >
+                    Cerrar
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
 
       {/* PANEL FLOTANTE DE GUARDADO DE INVENTARIO */}
       {Object.keys(pendingAdjustments).length > 0 && (

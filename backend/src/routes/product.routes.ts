@@ -12,6 +12,11 @@ import {
   getGlobalStockMovements,
   getExpiringLots,
 } from '../controllers/product.controller';
+import {
+  updateLot,
+  deleteLot,
+  transferLotStock,
+} from '../controllers/lot.controller';
 import { authenticateJWT, requireRole } from '../middlewares/auth';
 import { Role } from '@prisma/client';
 import { validateRequest } from '../middlewares/validateRequest';
@@ -22,6 +27,11 @@ import {
   importPricesSchema, 
   bulkUpdatePricesSchema 
 } from '../validators/product.validator';
+import {
+  updateLotSchema,
+  deleteLotSchema,
+  transferLotStockSchema
+} from '../validators/lot.validator';
 
 const router = Router();
 
@@ -42,4 +52,10 @@ router.put('/:id', authenticateJWT, requireRole([Role.ADMIN]), validateRequest(u
 // Ajuste de stock (ADMIN y DEPOSITO)
 router.post('/:id/adjust-stock', authenticateJWT, requireRole([Role.ADMIN, Role.DEPOSITO]), validateRequest(adjustStockSchema), adjustStock);
 
+// Administración de Lotes (ADMIN y DEPOSITO)
+router.put('/lots/:lotId', authenticateJWT, requireRole([Role.ADMIN, Role.DEPOSITO]), validateRequest(updateLotSchema), updateLot);
+router.delete('/lots/:lotId', authenticateJWT, requireRole([Role.ADMIN]), validateRequest(deleteLotSchema), deleteLot);
+router.post('/:productId/lots/transfer', authenticateJWT, requireRole([Role.ADMIN, Role.DEPOSITO]), validateRequest(transferLotStockSchema), transferLotStock);
+
 export default router;
+

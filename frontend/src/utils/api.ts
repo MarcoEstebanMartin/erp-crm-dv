@@ -141,6 +141,29 @@ export const api = {
     return res.product;
   },
 
+  updateLot: async (lotId: number, lotData: { lotNumber?: string; expirationDate?: string; location?: string }) => {
+    const res = await request(`/products/lots/${lotId}`, {
+      method: 'PUT',
+      body: JSON.stringify(lotData)
+    });
+    return res.lot;
+  },
+
+  deleteLot: async (lotId: number) => {
+    const res = await request(`/products/lots/${lotId}`, {
+      method: 'DELETE'
+    });
+    return res;
+  },
+
+  transferLotStock: async (productId: number, transferData: { fromLotId: number; toLotNumber: string; toExpirationDate?: string; quantity: number }) => {
+    const res = await request(`/products/${productId}/lots/transfer`, {
+      method: 'POST',
+      body: JSON.stringify(transferData)
+    });
+    return res.data;
+  },
+
   getProductMovements: async (id: number) => {
     const res = await request(`/products/${id}/movements`);
     return res.movements;
