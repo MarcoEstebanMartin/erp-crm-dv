@@ -38,7 +38,14 @@ export class PersonaService {
           select: { id: true, username: true },
         },
         saleRoute: {
-          select: { id: true, name: true, dayOfWeek: true },
+          select: { 
+            id: true, 
+            name: true, 
+            dayOfWeek: true,
+            seller: {
+              select: { id: true, username: true }
+            }
+          },
         },
       },
       orderBy: { name: 'asc' },
@@ -56,7 +63,14 @@ export class PersonaService {
           select: { id: true, username: true },
         },
         saleRoute: {
-          select: { id: true, name: true, dayOfWeek: true },
+          select: { 
+            id: true, 
+            name: true, 
+            dayOfWeek: true,
+            seller: {
+              select: { id: true, username: true }
+            }
+          },
         },
       },
     });

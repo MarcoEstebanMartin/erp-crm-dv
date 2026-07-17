@@ -646,7 +646,13 @@ export default function ClientsTab({
                         <td style={{ fontWeight: 600, color: balanceColor }}>{balanceText}</td>
                         {personaRoleFilter === 'client' && (
                           <td style={{ fontWeight: 500 }}>
-                            {c.seller ? c.seller.username.replace('_', ' ').toUpperCase() : 'Sin vendedor'}
+                            {c.saleRoute?.seller ? (
+                              c.saleRoute.seller.username.replace('_', ' ').toUpperCase()
+                            ) : c.seller ? (
+                              c.seller.username.replace('_', ' ').toUpperCase()
+                            ) : (
+                              'Sin vendedor'
+                            )}
                           </td>
                         )}
                         {personaRoleFilter === 'client' && (
