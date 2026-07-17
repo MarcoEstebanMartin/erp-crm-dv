@@ -84,7 +84,8 @@ export default function ClientsTab({
         setAvailableCities(sortedCities);
         setSelectedCities(sortedCities);
       } else {
-        const data = await api.getPersonas(personaRoleFilter, searchQuery);
+        const roleParam = personaRoleFilter === 'client_inactive' ? 'client' : personaRoleFilter;
+        const data = await api.getPersonas(roleParam, searchQuery);
         setClients(data || []);
       }
     } catch (err) {
@@ -130,6 +131,7 @@ export default function ClientsTab({
       <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
         {[
           { id: 'client', label: 'Clientes' },
+          { id: 'client_inactive', label: 'Clientes Inactivos' },
           { id: 'seller', label: 'Vendedores' },
           { id: 'commission_agent', label: 'Comisionistas' },
           { id: 'debtors_by_city', label: '📊 Deudores por Ruta' },
@@ -547,18 +549,18 @@ export default function ClientsTab({
                 creditLimit: 0, 
                 priceList: 'A', 
                 discount: 0,
-                isClient: personaRoleFilter === 'client',
+                isClient: ['client', 'client_inactive'].includes(personaRoleFilter),
                 isProvider: personaRoleFilter === 'provider',
                 isSeller: personaRoleFilter === 'seller',
                 isCommissionAgent: personaRoleFilter === 'commission_agent',
                 route: '',
                 saleRouteId: null,
                 sellerId: null,
-                isActive: true
+                isActive: personaRoleFilter !== 'client_inactive'
               } 
             })}>
               <UserPlus size={16} />
-              <span>Registrar {personaRoleFilter === 'client' ? 'Cliente' : personaRoleFilter === 'provider' ? 'Proveedor' : personaRoleFilter === 'seller' ? 'Vendedor' : 'Comisionista'}</span>
+              <span>Registrar {['client', 'client_inactive'].includes(personaRoleFilter) ? 'Cliente' : personaRoleFilter === 'provider' ? 'Proveedor' : personaRoleFilter === 'seller' ? 'Vendedor' : 'Comisionista'}</span>
             </button>
           </div>
 
@@ -570,15 +572,16 @@ export default function ClientsTab({
                   <th>CUIT</th>
                   <th>Contacto</th>
                   <th>Saldo C/C</th>
-                  {personaRoleFilter === 'client' && <th>Vendedor</th>}
-                  {personaRoleFilter === 'client' && <th>Ruta</th>}
-                  <th>Estado</th>
+                  {['client', 'client_inactive'].includes(personaRoleFilter) && <th>Ruta</th>}
                   <th>Acción</th>
                 </tr>
               </thead>
               <tbody>
                 {(() => {
                   const filteredClients = clients.filter((c: any) => {
+                    if (personaRoleFilter === 'client' && c.isActive === false) return false;
+                    if (personaRoleFilter === 'client_inactive' && c.isActive !== false) return false;
+
                     if (selectedCityFilter === 'ALL') return true;
                     const normCity = normalizeString(c.city);
                     const normSelectedFilter = normalizeString(selectedCityFilter);
@@ -591,7 +594,7 @@ export default function ClientsTab({
                   if (filteredClients.length === 0) {
                     return (
                       <tr>
-                        <td colSpan={personaRoleFilter === 'client' ? 7 : 6} style={{ textAlign: 'center', padding: '24px 0' }}>
+                        <td colSpan={['client', 'client_inactive'].includes(personaRoleFilter) ? 6 : 5} style={{ textAlign: 'center', padding: '24px 0' }}>
                           No se encontraron personas registradas.
                         </td>
                       </tr>
@@ -644,18 +647,7 @@ export default function ClientsTab({
                           )}
                         </td>
                         <td style={{ fontWeight: 600, color: balanceColor }}>{balanceText}</td>
-                        {personaRoleFilter === 'client' && (
-                          <td style={{ fontWeight: 500 }}>
-                            {c.saleRoute?.seller ? (
-                              c.saleRoute.seller.username.replace('_', ' ').toUpperCase()
-                            ) : c.seller ? (
-                              c.seller.username.replace('_', ' ').toUpperCase()
-                            ) : (
-                              'Sin vendedor'
-                            )}
-                          </td>
-                        )}
-                        {personaRoleFilter === 'client' && (
+                        {['client', 'client_inactive'].includes(personaRoleFilter) && (
                           <td style={{ fontWeight: 500 }}>
                             {c.saleRoute?.name ? (
                               <span style={{ 
@@ -688,23 +680,6 @@ export default function ClientsTab({
                             )}
                           </td>
                         )}
-                        <td>
-                          <span style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '6px',
-                            fontWeight: 500,
-                            color: c.isActive !== false ? 'var(--color-success)' : 'var(--color-danger)'
-                          }}>
-                            <span style={{
-                              width: '8px',
-                              height: '8px',
-                              borderRadius: '50%',
-                              backgroundColor: c.isActive !== false ? 'var(--color-success)' : 'var(--color-danger)'
-                            }} />
-                            {c.isActive !== false ? 'Activo' : 'Inactivo'}
-                          </span>
-                        </td>
                         <td>
                           <div style={{ display: 'flex', gap: '8px' }}>
                             <button className="btn btn-secondary" style={{ padding: '6px 10px', fontSize: '0.8rem' }} onClick={() => handleViewClientProfile(c)}>

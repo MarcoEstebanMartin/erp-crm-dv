@@ -27,6 +27,7 @@ interface Client {
   routeSequence: number | null;
   route?: string | null;
   routeVisits?: any[];
+  isActive?: boolean;
 }
 
 interface SaleRoute {
@@ -80,7 +81,7 @@ export default function SaleRoutesDashboard() {
 
       setRoutes(routesData.routes || []);
       setSellers(sellersData || []);
-      setAllClients(clientsData.personas || []);
+      setAllClients((clientsData || []).filter((c: any) => c.isActive !== false));
 
       if (routesData.routes && routesData.routes.length > 0) {
         // Cargar por defecto la primera ruta
@@ -204,7 +205,7 @@ export default function SaleRoutesDashboard() {
       await api.updatePersona(clientId, { saleRouteId: null, routeSequence: null });
       // Recargar clientes disponibles y la ruta actual
       const clientsData = await api.getPersonas('client');
-      setAllClients(clientsData.personas || []);
+      setAllClients((clientsData || []).filter((c: any) => c.isActive !== false));
       await reloadRoutesOnly();
     } catch (e: any) {
       alert('Error al quitar cliente: ' + e.message);
@@ -218,7 +219,7 @@ export default function SaleRoutesDashboard() {
       await api.addClientToRoute(selectedRoute.id, clientId);
       // Recargar clientes disponibles y la ruta actual
       const clientsData = await api.getPersonas('client');
-      setAllClients(clientsData.personas || []);
+      setAllClients((clientsData || []).filter((c: any) => c.isActive !== false));
       await reloadRoutesOnly();
     } catch (e: any) {
       alert('Error al agregar cliente a la ruta: ' + e.message);

@@ -1521,7 +1521,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
 
 
   const filteredQuickClients = clients.filter(c => {
-    if (!c.isClient) return false;
+    if (!c.isClient || c.isActive === false) return false;
     const query = quickClientQuery.toLowerCase();
     return c.name.toLowerCase().includes(query) || (c.cuit && c.cuit.includes(query));
   });
