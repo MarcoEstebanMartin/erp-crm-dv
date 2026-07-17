@@ -48,13 +48,24 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
     reason: '',
     lotNumber: '',
     isNewLot: false,
-    expirationDate: ''
+    expirationDate: '',
+    location: ''
   });
   
   // Asignaciones de lote para el pedido en picking
   // Formato: { [orderItemId: number]: { [lotId: number]: number } }
   const [lotAssignments, setLotAssignments] = useState<{ [orderItemId: number]: { [lotId: number]: number } }>({});
   
+  // Ubicaciones de estantería confirmadas físicamente para este picking
+  // Formato: { [lotId: number]: boolean }
+  const [confirmedLocations, setConfirmedLocations] = useState<{ [lotId: number]: boolean }>({});
+
+  // Limpiar ubicaciones confirmadas y asignaciones cuando cambia el pedido activo
+  useEffect(() => {
+    setConfirmedLocations({});
+    setLotAssignments({});
+  }, [selectedOrder]);
+
   // Pesos exactos para productos pesables
   const [pesableWeights, setPesableWeights] = useState<{ [orderItemId: number]: number }>({});
   
@@ -98,7 +109,8 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
           reason: 'Ajuste por escaneo rápido',
           lotNumber: '',
           isNewLot: false,
-          expirationDate: ''
+          expirationDate: '',
+          location: ''
         });
         setSearchQuery('');
       }
@@ -109,7 +121,35 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
   const processScannedCode = (code: string) => {
     if (!selectedOrder) return;
 
-    // Buscar coincidencia en productos del pedido
+    const cleanCode = code.trim().toUpperCase();
+
+    // 1. Verificar si el código corresponde a una ubicación de estantería de algún lote del pedido
+    let foundLocationLotId: number | null = null;
+    let foundLocationName = '';
+    let foundProductName = '';
+    
+    for (const item of selectedOrder.items) {
+      const productLots = item.product?.lots || [];
+      const matchingLot = productLots.find((l: any) => l.location && l.location.trim().toUpperCase() === cleanCode);
+      if (matchingLot) {
+        foundLocationLotId = matchingLot.id;
+        foundLocationName = matchingLot.location;
+        foundProductName = item.product?.name || '';
+        break;
+      }
+    }
+
+    if (foundLocationLotId !== null) {
+      setConfirmedLocations(prev => ({
+        ...prev,
+        [foundLocationLotId!]: true
+      }));
+      playBeep('success');
+      setSuccessMsg(`Ubicación confirmada para "${foundProductName}": "${foundLocationName}"`);
+      return;
+    }
+
+    // 2. Buscar coincidencia en productos del pedido
     const item = selectedOrder.items.find((i: any) => 
       i.product && (
         i.product.barcode === code || 
@@ -120,7 +160,7 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
 
     if (!item) {
       playBeep('error');
-      setErrorMsg(`Producto con código o SKU "${code}" no pertenece a este pedido.`);
+      setErrorMsg(`Producto o ubicación con código "${code}" no pertenece a este pedido.`);
       return;
     }
 
@@ -140,11 +180,19 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
       return;
     }
 
-    // FIFO: Asignar al primer lote con stock disponible
+    // FIFO: Asignar al primer lote con stock disponible CUYA UBICACIÓN esté confirmada
     let assigned = false;
     for (const lot of productLots) {
       const currentLotQty = itemAssignments[lot.id] || 0;
       if (lot.stock > currentLotQty) {
+        // Validar si requiere confirmación de ubicación física
+        const needsConfirmation = lot.location && lot.location !== 'S/U';
+        const isConfirmed = confirmedLocations[lot.id];
+        
+        if (needsConfirmation && !isConfirmed) {
+          continue; // Saltar lote no confirmado físicamente
+        }
+
         itemAssignments[lot.id] = currentLotQty + 1;
         assigned = true;
         break;
@@ -153,7 +201,13 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
 
     if (!assigned) {
       playBeep('error');
-      setErrorMsg(`No hay suficiente stock físico en los lotes del producto "${item.product.name}".`);
+      // Ver si saltamos lotes por no estar confirmados
+      const unconfirmedLots = productLots.filter((l: any) => l.location && l.location !== 'S/U' && !confirmedLocations[l.id] && l.stock > (itemAssignments[l.id] || 0));
+      if (unconfirmedLots.length > 0) {
+        setErrorMsg(`Para preparar "${item.product.name}", primero debés confirmar la ubicación física: ${unconfirmedLots.map((l: any) => l.location).join(', ')}.`);
+      } else {
+        setErrorMsg(`No hay suficiente stock en los lotes de "${item.product.name}".`);
+      }
       return;
     }
 
@@ -291,6 +345,11 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
       if (toTake > 0) {
         itemAssignments[lot.id] = toTake;
         remaining -= toTake;
+        
+        // Auto-confirmar ubicación para los lotes seleccionados manualmente en pantalla
+        if (lot.location && lot.location !== 'S/U') {
+          setConfirmedLocations(prev => ({ ...prev, [lot.id]: true }));
+        }
       }
     }
 
@@ -303,6 +362,7 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
   const handleFIFOAutoFillAll = () => {
     if (!selectedOrder) return;
     const newAssignments = { ...lotAssignments };
+    const newConfirmations = { ...confirmedLocations };
     
     selectedOrder.items.forEach((item: any) => {
       const productLots = item.product?.lots || [];
@@ -315,11 +375,16 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
         if (toTake > 0) {
           itemAssignments[lot.id] = toTake;
           remaining -= toTake;
+          
+          if (lot.location && lot.location !== 'S/U') {
+            newConfirmations[lot.id] = true;
+          }
         }
       }
       newAssignments[item.id] = itemAssignments;
     });
     
+    setConfirmedLocations(newConfirmations);
     setLotAssignments(newAssignments);
   };
   
@@ -511,7 +576,8 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
         Number(stockModal.quantityChange),
         stockModal.reason || 'Ajuste manual depósito',
         stockModal.lotNumber || undefined,
-        stockModal.isNewLot ? stockModal.expirationDate : undefined
+        stockModal.isNewLot ? stockModal.expirationDate : undefined,
+        stockModal.location || undefined
       );
       setSuccessMsg(`Stock de ${stockModal.product.name} ajustado con éxito.`);
       setStockModal({
@@ -521,7 +587,8 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
         reason: '',
         lotNumber: '',
         isNewLot: false,
-        expirationDate: ''
+        expirationDate: '',
+        location: ''
       });
       fetchData();
     } catch (err: any) {
@@ -794,24 +861,67 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                   {productLots.map((lot: any) => {
                                     const qty = itemAssignments[lot.id] || 0;
+                                    const isConfirmed = !lot.location || lot.location === 'S/U' || confirmedLocations[lot.id];
                                     return (
                                       <div key={lot.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem' }}>
-                                        <span>
+                                        <span style={{ display: 'inline-flex', alignItems: 'center', flexWrap: 'wrap', gap: '4px' }}>
                                           <strong>Lote: {lot.lotNumber}</strong> (Físico: {lot.stock} u.) 
-                                          <span style={{ color: 'var(--text-secondary)', marginLeft: '6px' }}>
+                                          <span style={{ color: 'var(--text-secondary)' }}>
                                             [Vence: {new Date(lot.expirationDate).toLocaleDateString('es-AR', { timeZone: 'UTC' })}]
                                           </span>
+                                          {lot.location && lot.location !== 'S/U' && (
+                                            <span style={{ 
+                                              display: 'inline-flex',
+                                              alignItems: 'center',
+                                              padding: '2px 6px',
+                                              backgroundColor: isConfirmed ? '#e6f4ea' : '#fef7e0',
+                                              border: isConfirmed ? '1px solid #137333' : '1px solid #b06000',
+                                              borderRadius: '4px',
+                                              fontWeight: 600,
+                                              fontSize: '0.72rem',
+                                              color: isConfirmed ? '#137333' : '#b06000',
+                                              marginLeft: '6px'
+                                            }}>
+                                              Estante: {lot.location}
+                                              <button
+                                                type="button"
+                                                onClick={() => setConfirmedLocations(prev => ({ ...prev, [lot.id]: !prev[lot.id] }))}
+                                                style={{
+                                                  marginLeft: '6px',
+                                                  background: 'none',
+                                                  border: 'none',
+                                                  color: isConfirmed ? '#137333' : '#b06000',
+                                                  cursor: 'pointer',
+                                                  padding: 0,
+                                                  fontWeight: 700,
+                                                  fontSize: '0.7rem'
+                                                }}
+                                                title={isConfirmed ? "Haga clic para desconfirmar" : "Haga clic para confirmar ubicación manualmente"}
+                                              >
+                                                {isConfirmed ? '✓' : 'Confirmar'}
+                                              </button>
+                                            </span>
+                                          )}
                                         </span>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                           <input
                                             type="number"
                                             className="input"
-                                            style={{ width: '70px', padding: '4px 6px', fontSize: '0.8rem', height: '28px', textAlign: 'center' }}
+                                            style={{ 
+                                              width: '70px', 
+                                              padding: '4px 6px', 
+                                              fontSize: '0.8rem', 
+                                              height: '28px', 
+                                              textAlign: 'center',
+                                              opacity: isConfirmed ? 1 : 0.6
+                                            }}
                                             min={0}
                                             max={lot.stock}
                                             value={qty || ''}
                                             onChange={(e) => handleLotQtyChange(item.id, lot.id, Number(e.target.value), lot.stock)}
                                             placeholder="0"
+                                            disabled={!isConfirmed}
+                                            title={!isConfirmed ? "Debés confirmar la ubicación física antes de ingresar cantidad" : ""}
                                           />
                                           <span style={{ color: 'var(--text-secondary)' }}>u.</span>
                                         </div>
@@ -1092,7 +1202,7 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
                           </span>
                         </td>
                         <td>
-                          <button className="btn btn-secondary" style={{ padding: '6px 12px', fontSize: '0.8rem' }} onClick={() => setStockModal({ open: true, product: p, quantityChange: 0, reason: '', lotNumber: '', isNewLot: false, expirationDate: '' })}>
+                          <button className="btn btn-secondary" style={{ padding: '6px 12px', fontSize: '0.8rem' }} onClick={() => setStockModal({ open: true, product: p, quantityChange: 0, reason: '', lotNumber: '', isNewLot: false, expirationDate: '', location: '' })}>
                             Modificar Stock
                           </button>
                         </td>
@@ -1112,7 +1222,7 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
           <div className="modal-content">
             <div className="modal-header">
               <h3>Ajustar Stock Físico</h3>
-              <button className="btn btn-ghost" style={{ padding: '4px' }} onClick={() => setStockModal({ open: false, product: null, quantityChange: 0, reason: '', lotNumber: '', isNewLot: false, expirationDate: '' })}>✕</button>
+              <button className="btn btn-ghost" style={{ padding: '4px' }} onClick={() => setStockModal({ open: false, product: null, quantityChange: 0, reason: '', lotNumber: '', isNewLot: false, expirationDate: '', location: '' })}>✕</button>
             </div>
             <form onSubmit={handleStockAdjustSubmit}>
               <div style={{ marginBottom: '16px', fontSize: '0.9rem' }}>
@@ -1142,9 +1252,10 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
                   onChange={(e) => {
                     const val = e.target.value;
                     if (val === '__new__') {
-                      setStockModal({ ...stockModal, isNewLot: true, lotNumber: '', expirationDate: '' });
+                      setStockModal({ ...stockModal, isNewLot: true, lotNumber: '', expirationDate: '', location: '' });
                     } else {
-                      setStockModal({ ...stockModal, isNewLot: false, lotNumber: val, expirationDate: '' });
+                      const lot = (stockModal.product.lots || []).find((l: any) => l.lotNumber === val);
+                      setStockModal({ ...stockModal, isNewLot: false, lotNumber: val, expirationDate: '', location: lot ? (lot.location || '') : '' });
                     }
                   }}
                 >
@@ -1159,6 +1270,19 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
                   )}
                 </select>
               </div>
+
+              {(stockModal.lotNumber || stockModal.isNewLot) && (
+                <div className="form-group">
+                  <label>Ubicación en Estantería (Ej: A-03-2)</label>
+                  <input
+                    type="text"
+                    className="input"
+                    placeholder="Ej: A-03-2 o FRIO-01"
+                    value={stockModal.location || ''}
+                    onChange={(e) => setStockModal({ ...stockModal, location: e.target.value })}
+                  />
+                </div>
+              )}
 
               {stockModal.isNewLot && (
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
@@ -1203,7 +1327,7 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
               </div>
 
               <div className="modal-footer">
-                <button type="button" className="btn btn-secondary" onClick={() => setStockModal({ open: false, product: null, quantityChange: 0, reason: '', lotNumber: '', isNewLot: false, expirationDate: '' })}>Cancelar</button>
+                <button type="button" className="btn btn-secondary" onClick={() => setStockModal({ open: false, product: null, quantityChange: 0, reason: '', lotNumber: '', isNewLot: false, expirationDate: '', location: '' })}>Cancelar</button>
                 <button type="submit" className="btn btn-primary" disabled={loading}>
                   {loading ? 'Ajustando...' : 'Aplicar Ajuste'}
                 </button>

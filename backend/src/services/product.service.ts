@@ -165,7 +165,7 @@ export class ProductService {
    * Ajustar stock físicamente (Transacción atómica).
    */
   async adjustStock(id: number, data: any, userId: number) {
-    const { quantityChange, reason, lotNumber, expirationDate } = data;
+    const { quantityChange, reason, lotNumber, expirationDate, location } = data;
     const change = Number(quantityChange);
 
     const result = await prisma.$transaction(async (tx) => {
@@ -197,6 +197,7 @@ export class ProductService {
                   lotNumber: trimmedLot,
                   expirationDate: new Date(expirationDate),
                   stock: 0,
+                  location: location ? location.trim() : 'S/U',
                 },
               });
             }
@@ -209,7 +210,10 @@ export class ProductService {
 
           const updatedLot = await tx.productLot.update({
             where: { id: lot.id },
-            data: { stock: lot.stock + change },
+            data: { 
+              stock: lot.stock + change,
+              location: location ? location.trim() : lot.location,
+            },
           });
           lotId = updatedLot.id;
         }

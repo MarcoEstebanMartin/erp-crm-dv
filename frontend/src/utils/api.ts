@@ -133,10 +133,10 @@ export const api = {
     return res.product;
   },
 
-  adjustStock: async (id: number, quantityChange: number, reason: string, lotNumber?: string, expirationDate?: string) => {    
+  adjustStock: async (id: number, quantityChange: number, reason: string, lotNumber?: string, expirationDate?: string, location?: string) => {    
     const res = await request(`/products/${id}/adjust-stock`, {
       method: 'POST',
-      body: JSON.stringify({ quantityChange, reason, lotNumber, expirationDate })
+      body: JSON.stringify({ quantityChange, reason, lotNumber, expirationDate, location })
     });
     return res.product;
   },
@@ -617,6 +617,7 @@ export const api = {
       if (filters.startDate) params.push(`startDate=${filters.startDate}`);
       if (filters.endDate) params.push(`endDate=${filters.endDate}`);
       if (filters.query) params.push(`query=${filters.query}`);
+      if (filters.status) params.push(`status=${filters.status}`);
       if (params.length > 0) path += `?${params.join('&')}`;
     }
     const res = await request(path);
@@ -628,11 +629,25 @@ export const api = {
     return res.creditNote;
   },
 
-  createCreditNote: async (data: any) => {    
+  createCreditNote: async (data: any) => {    
 
     const res = await request('/billing/credit-notes', {
       method: 'POST',
       body: JSON.stringify(data)
+    });
+    return res.creditNote;
+  },
+
+  approveCreditNote: async (id: number) => {
+    const res = await request(`/billing/credit-notes/${id}/approve`, {
+      method: 'POST'
+    });
+    return res.creditNote;
+  },
+
+  rejectCreditNote: async (id: number) => {
+    const res = await request(`/billing/credit-notes/${id}/reject`, {
+      method: 'POST'
     });
     return res.creditNote;
   },

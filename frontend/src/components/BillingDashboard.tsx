@@ -95,6 +95,11 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [salesInvoiceTypeFilter, setSalesInvoiceTypeFilter] = useState<'ALL' | 'OFFICIAL' | 'INTERNAL'>('ALL');
+  const [statusFilter, setStatusFilter] = useState<string>('ALL');
+
+  // Usuario actual y rol
+  const currentUser = useMemo(() => api.getCurrentUser(), []);
+  const isAdmin = currentUser?.role === 'ADMIN';
 
   // Modales
   const [showWithholdingModal, setShowWithholdingModal] = useState(false);
@@ -195,7 +200,11 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
         setTaxWithholdings(retenciones);
 
       } else if (activeSubTab === 'notas-credito') {
-        const data = await api.getCreditNotes(filters);
+        const cnFilters = { ...filters };
+        if (statusFilter !== 'ALL') {
+          cnFilters.status = statusFilter;
+        }
+        const data = await api.getCreditNotes(cnFilters);
         setCreditNotes(data);
       }
     } catch (err: any) {
@@ -205,9 +214,41 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
     }
   };
 
+  const handleApproveCreditNote = async (id: number) => {
+    if (!window.confirm('¿Está seguro de que desea APROBAR esta Nota de Crédito? Se emitirá el comprobante oficial/interno, se registrará el stock y se descontará del saldo del cliente.')) {
+      return;
+    }
+    try {
+      setLoading(true);
+      await api.approveCreditNote(id);
+      setSuccessMsg('Nota de Crédito aprobada correctamente.');
+      loadData();
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Error al aprobar la Nota de Crédito.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRejectCreditNote = async (id: number) => {
+    if (!window.confirm('¿Está seguro de que desea RECHAZAR esta Nota de Crédito? Quedará anulada de manera permanente.')) {
+      return;
+    }
+    try {
+      setLoading(true);
+      await api.rejectCreditNote(id);
+      setSuccessMsg('Nota de Crédito rechazada.');
+      loadData();
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Error al rechazar la Nota de Crédito.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     loadData();
-  }, [activeSubTab, startDate, endDate, query]);
+  }, [activeSubTab, startDate, endDate, query, statusFilter]);
 
   // Limpiar mensajes al cambiar de pestaña
   useEffect(() => {
@@ -221,6 +262,7 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
     setStartDate('');
     setEndDate('');
     setSalesInvoiceTypeFilter('ALL');
+    setStatusFilter('ALL');
   };
 
   // --- EFECTO PARA CLIENTE PRESELECCIONADO ---
@@ -1057,7 +1099,21 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
               </select>
             )}
 
-            {(query || startDate || endDate || salesInvoiceTypeFilter !== 'ALL') && (
+            {activeSubTab === 'notas-credito' && (
+              <select
+                className="input"
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                style={{ width: '220px', fontSize: '0.85rem', height: '36px', padding: '0 10px', lineHeight: 'normal', boxSizing: 'border-box' }}
+              >
+                <option value="ALL">Todos los Estados</option>
+                <option value="PENDING_APPROVAL">Pendientes</option>
+                <option value="APPROVED">Aprobadas</option>
+                <option value="REJECTED">Rechazadas</option>
+              </select>
+            )}
+
+            {(query || startDate || endDate || salesInvoiceTypeFilter !== 'ALL' || statusFilter !== 'ALL') && (
               <button className="btn btn-secondary" style={{ padding: '8px 12px', fontSize: '0.85rem' }} onClick={handleClearFilters}>
                 Limpiar Filtros
               </button>
@@ -1222,14 +1278,15 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
                   <th>Neto Gravado</th>
                   <th>IVA (21%)</th>
                   <th>Total Creditado</th>
-                  <th>Detalle</th>
+                  <th>Estado</th>
+                  <th>Acciones</th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan={10} style={{ textAlign: 'center' }}>Cargando notas de crédito...</td></tr>
+                  <tr><td colSpan={11} style={{ textAlign: 'center' }}>Cargando notas de crédito...</td></tr>
                 ) : creditNotes.length === 0 ? (
-                  <tr><td colSpan={10} style={{ textAlign: 'center' }}>No se encontraron notas de crédito emitidas.</td></tr>
+                  <tr><td colSpan={11} style={{ textAlign: 'center' }}>No se encontraron notas de crédito emitidas.</td></tr>
                 ) : (
                   creditNotes
                     .filter(cn => {
@@ -1284,13 +1341,52 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
                         -${Number(cn.totalAmount).toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                       </td>
                       <td>
-                        <button 
-                          className="btn btn-secondary" 
-                          style={{ padding: '4px 8px', fontSize: '0.78rem' }}
-                          onClick={() => setViewCreditNoteModal(cn)}
-                        >
-                          Ver Detalle
-                        </button>
+                        {cn.status === 'PENDING_APPROVAL' && (
+                          <span style={{ fontSize: '0.75rem', fontWeight: 600, padding: '2px 6px', borderRadius: '4px', backgroundColor: '#fef7e0', color: '#b06000' }}>
+                            Pendiente
+                          </span>
+                        )}
+                        {cn.status === 'APPROVED' && (
+                          <span style={{ fontSize: '0.75rem', fontWeight: 600, padding: '2px 6px', borderRadius: '4px', backgroundColor: '#e6f4ea', color: '#137333' }}>
+                            Aprobada
+                          </span>
+                        )}
+                        {cn.status === 'REJECTED' && (
+                          <span style={{ fontSize: '0.75rem', fontWeight: 600, padding: '2px 6px', borderRadius: '4px', backgroundColor: '#fce8e6', color: '#c5221f' }}>
+                            Rechazada
+                          </span>
+                        )}
+                      </td>
+                      <td>
+                        <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                          <button 
+                            className="btn btn-secondary" 
+                            style={{ padding: '4px 8px', fontSize: '0.78rem' }}
+                            onClick={() => setViewCreditNoteModal(cn)}
+                          >
+                            Detalle
+                          </button>
+                          {cn.status === 'PENDING_APPROVAL' && isAdmin && (
+                            <>
+                              <button 
+                                className="btn btn-success" 
+                                style={{ padding: '4px 8px', fontSize: '0.78rem', backgroundColor: '#137333', color: '#fff', border: 'none' }}
+                                onClick={() => handleApproveCreditNote(cn.id)}
+                                title="Aprobar Nota"
+                              >
+                                Aprobar
+                              </button>
+                              <button 
+                                className="btn btn-danger" 
+                                style={{ padding: '4px 8px', fontSize: '0.78rem', backgroundColor: '#c5221f', color: '#fff', border: 'none' }}
+                                onClick={() => handleRejectCreditNote(cn.id)}
+                                title="Rechazar Nota"
+                              >
+                                Rechazar
+                              </button>
+                            </>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))
@@ -3094,16 +3190,43 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
 
               {/* Botones de Acción */}
               <div className="no-print" style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '16px', borderTop: '1px solid var(--border-color)', paddingTop: '14px' }}>
+                {viewCreditNoteModal.status === 'PENDING_APPROVAL' && isAdmin && (
+                  <>
+                    <button 
+                      type="button" 
+                      className="btn btn-danger" 
+                      onClick={() => {
+                        handleRejectCreditNote(viewCreditNoteModal.id);
+                        setViewCreditNoteModal(null);
+                      }}
+                    >
+                      Rechazar Nota
+                    </button>
+                    <button 
+                      type="button" 
+                      className="btn btn-success" 
+                      style={{ backgroundColor: '#137333', color: '#fff', border: 'none' }}
+                      onClick={() => {
+                        handleApproveCreditNote(viewCreditNoteModal.id);
+                        setViewCreditNoteModal(null);
+                      }}
+                    >
+                      Aprobar Nota
+                    </button>
+                  </>
+                )}
                 <button type="button" className="btn btn-secondary" onClick={() => setViewCreditNoteModal(null)}>Cerrar</button>
-                <button 
-                  type="button" 
-                  className="btn btn-primary" 
-                  onClick={() => window.print()}
-                  style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
-                >
-                  <Printer size={16} />
-                  Imprimir Comprobante
-                </button>
+                {viewCreditNoteModal.status === 'APPROVED' && (
+                  <button 
+                    type="button" 
+                    className="btn btn-primary" 
+                    onClick={() => window.print()}
+                    style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+                  >
+                    <Printer size={16} />
+                    Imprimir Comprobante
+                  </button>
+                )}
               </div>
 
             </div>

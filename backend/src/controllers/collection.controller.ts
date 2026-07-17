@@ -3,24 +3,6 @@ import { AuthenticatedRequest } from '../types';
 import { TransactionType, PaymentMethod, BillingType, Role } from '@prisma/client';
 import prisma from '../utils/prisma';
 
-// Helper para generar números de recibo
-const generateReceiptNumber = async (): Promise<string> => {
-  const lastTx = await prisma.transaction.findFirst({
-    where: { receiptNumber: { not: null } },
-    orderBy: { id: 'desc' }
-  });
-  
-  let nextNum = 1;
-  if (lastTx?.receiptNumber) {
-    const parts = lastTx.receiptNumber.split('-');
-    if (parts.length === 2) {
-      nextNum = parseInt(parts[1], 10) + 1;
-    }
-  }
-  
-  return `REC-${nextNum.toString().padStart(8, '0')}`;
-};
-
 export const getPendingCollections = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user?.id;

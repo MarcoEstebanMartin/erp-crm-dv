@@ -113,6 +113,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
   const [citySearchQuery, setCitySearchQuery] = useState<string>('');
   const [orders, setOrders] = useState<any[]>([]);
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
+  const [auditCategoryFilter, setAuditCategoryFilter] = useState<string>('ALL');
   const [financialReport, setFinancialReport] = useState<any | null>(null);
   
   // Listas de Rubros y Proveedores para el catálogo
@@ -3014,74 +3015,197 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
           )}
 
           {/* Sub-tab 6: Auditoría */}
-          {configTab === 'audit' && (
-            <div>
-              <div className="actions-bar" style={{ justifyContent: 'flex-end' }}>
-                <button className="btn btn-secondary" onClick={() => { setAuditPage(1); fetchData(); }}>
-                  <RotateCcw size={16} />
-                  <span>Recargar Logs</span>
-                </button>
-              </div>
+          {configTab === 'audit' && (() => {
+            // Helper to format audit logs details
+            const formatAuditDetails = (log: any) => {
+              const action = log.action || '';
+              const oldVal = log.oldValues;
+              const newVal = log.newValues;
+              const entityType = log.entityType || '';
 
-              <div className="table-container">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Fecha/Hora</th>
-                      <th>Usuario</th>
-                      <th>Rol</th>
-                      <th>Acción</th>
-                      <th>Entidad</th>
-                      <th>Detalles</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {auditLogs.length === 0 ? (
+              if (!oldVal && !newVal) return <span style={{ color: 'var(--text-secondary)' }}>Sin datos de detalle</span>;
+
+              // Caso 1: Cambio de precios
+              if ((action.includes('PRICE') || action.includes('PRODUCT') || action.includes('PRICING')) && newVal && typeof newVal === 'object') {
+                const listPriceOld = oldVal?.listPrice;
+                const listPriceNew = newVal?.listPrice;
+                const costPriceOld = oldVal?.costPrice;
+                const costPriceNew = newVal?.costPrice;
+                
+                if (listPriceNew !== undefined || costPriceNew !== undefined) {
+                  return (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      {costPriceNew !== undefined && Number(costPriceOld) !== Number(costPriceNew) && (
+                        <div>
+                          <strong>Costo:</strong> <span style={{ textDecoration: 'line-through', color: 'var(--color-danger)' }}>${Number(costPriceOld || 0).toLocaleString('es-AR')}</span> → <span style={{ color: 'var(--color-success)', fontWeight: 600 }}>${Number(costPriceNew).toLocaleString('es-AR')}</span>
+                        </div>
+                      )}
+                      {listPriceNew !== undefined && Number(listPriceOld) !== Number(listPriceNew) && (
+                        <div>
+                          <strong>Venta:</strong> <span style={{ textDecoration: 'line-through', color: 'var(--color-danger)' }}>${Number(listPriceOld || 0).toLocaleString('es-AR')}</span> → <span style={{ color: 'var(--color-success)', fontWeight: 600 }}>${Number(listPriceNew).toLocaleString('es-AR')}</span>
+                        </div>
+                      )}
+                    </div>
+                  );
+                }
+              }
+
+              // Caso 2: Modificación de saldo de cliente (Persona)
+              if (action.includes('BALANCE') || entityType === 'Persona' || (newVal && newVal.outstandingBalance !== undefined)) {
+                const oldBal = oldVal?.outstandingBalance;
+                const newBal = newVal?.outstandingBalance;
+                if (newBal !== undefined && Number(oldBal) !== Number(newBal)) {
+                  return (
+                    <div>
+                      <strong>Saldo Cta. Cte.:</strong> <span style={{ textDecoration: 'line-through', color: 'var(--color-danger)' }}>${Number(oldBal || 0).toLocaleString('es-AR')}</span> → <span style={{ color: 'var(--color-success)', fontWeight: 600 }}>${Number(newBal).toLocaleString('es-AR')}</span>
+                    </div>
+                  );
+                }
+              }
+
+              // Caso 3: Nota de crédito
+              if (action.includes('CREDIT_NOTE') || entityType === 'CreditNote') {
+                const totalAmount = newVal?.totalAmount || oldVal?.totalAmount;
+                const status = newVal?.status || oldVal?.status;
+                const reason = newVal?.reason || oldVal?.reason;
+                return (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                    {totalAmount && <div><strong>Monto:</strong> <span style={{ color: 'var(--color-success)', fontWeight: 600 }}>${Number(totalAmount).toLocaleString('es-AR')}</span></div>}
+                    {reason && <div><strong>Motivo:</strong> {reason}</div>}
+                    {status && <div><strong>Estado:</strong> <span style={{ fontWeight: 600 }}>{status}</span></div>}
+                  </div>
+                );
+              }
+
+              // Fallback genérico para otros campos (diff de JSON)
+              try {
+                if (oldVal && newVal && typeof oldVal === 'object' && typeof newVal === 'object') {
+                  const diffs: any[] = [];
+                  const keys = new Set([...Object.keys(oldVal), ...Object.keys(newVal)]);
+                  const excludeKeys = ['updatedAt', 'createdAt', 'passwordHash'];
+                  
+                  keys.forEach(key => {
+                    if (excludeKeys.includes(key)) return;
+                    const o = oldVal[key];
+                    const n = newVal[key];
+                    if (JSON.stringify(o) !== JSON.stringify(n)) {
+                      diffs.push(
+                        <div key={key} style={{ marginTop: '2px' }}>
+                          <strong>{key}:</strong> {o !== undefined ? JSON.stringify(o) : 'n/a'} → <span style={{ fontWeight: 600, color: 'var(--color-primary)' }}>{JSON.stringify(n)}</span>
+                        </div>
+                      );
+                    }
+                  });
+                  
+                  if (diffs.length > 0) {
+                    return <div style={{ display: 'flex', flexDirection: 'column' }}>{diffs}</div>;
+                  }
+                }
+              } catch (e) {
+                // Fallback
+              }
+
+              return (
+                <div>
+                  {oldVal && <div><strong>Antes:</strong> {JSON.stringify(oldVal)}</div>}
+                  {newVal && <div style={{ marginTop: '2px' }}><strong>Ahora:</strong> {JSON.stringify(newVal)}</div>}
+                </div>
+              );
+            };
+
+            // Client-side filtering of logs
+            const filteredAuditLogs = auditLogs.filter(log => {
+              const action = (log.action || '').toUpperCase();
+              const entity = (log.entityType || '').toUpperCase();
+              if (auditCategoryFilter === 'PRICES') {
+                return action.includes('PRICE') || action.includes('PRICING') || (entity === 'PRODUCT' && action.includes('UPDATE'));
+              }
+              if (auditCategoryFilter === 'FINANCIAL') {
+                return action.includes('BALANCE') || action.includes('PAYMENT') || action.includes('TRANSACTION') || action.includes('COBRO') || entity === 'TRANSACTION';
+              }
+              if (auditCategoryFilter === 'CREDIT_NOTE') {
+                return action.includes('CREDIT_NOTE') || entity === 'CREDITNOTE';
+              }
+              if (auditCategoryFilter === 'ORDERS') {
+                return action.includes('ORDER') || entity === 'ORDER';
+              }
+              return true;
+            });
+
+            return (
+              <div>
+                <div className="actions-bar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <select
+                      className="input"
+                      value={auditCategoryFilter}
+                      onChange={(e) => setAuditCategoryFilter(e.target.value)}
+                      style={{ width: '220px', fontSize: '0.85rem', height: '36px', padding: '0 10px', lineHeight: 'normal' }}
+                    >
+                      <option value="ALL">Todos los Eventos</option>
+                      <option value="PRICES">Cambios de Precios</option>
+                      <option value="FINANCIAL">Finanzas y Saldos</option>
+                      <option value="CREDIT_NOTE">Notas de Crédito</option>
+                      <option value="ORDERS">Pedidos</option>
+                    </select>
+                  </div>
+                  <button className="btn btn-secondary" onClick={() => { setAuditPage(1); fetchData(); }}>
+                    <RotateCcw size={16} />
+                    <span>Recargar Logs</span>
+                  </button>
+                </div>
+
+                <div className="table-container">
+                  <table>
+                    <thead>
                       <tr>
-                        <td colSpan={6} style={{ textAlign: 'center', padding: '24px 0' }}>No se registraron logs de auditoría aún.</td>
+                        <th>Fecha/Hora</th>
+                        <th>Usuario</th>
+                        <th>Rol</th>
+                        <th>Acción</th>
+                        <th>Entidad</th>
+                        <th>Detalles</th>
                       </tr>
-                    ) : (
-                      auditLogs.map((log) => (
-                        <tr key={log.id}>
-                          <td style={{ fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
-                            {new Date(log.createdAt).toLocaleString('es-AR')}
-                          </td>
-                          <td style={{ fontWeight: 600 }}>{log.user?.username || 'Sistema'}</td>
-                          <td>
-                            <span className="badge badge-internal" style={{ fontSize: '0.7rem' }}>
-                              {log.user?.role || 'SYSTEM'}
-                            </span>
-                          </td>
-                          <td style={{ fontWeight: 600, fontSize: '0.85rem' }}>{log.action}</td>
-                          <td>
-                            {log.entityType} (ID: {log.entityId})
-                          </td>
-                          <td style={{ fontSize: '0.75rem', fontFamily: 'monospace', maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            {log.oldValues && (
-                              <div style={{ color: 'var(--text-secondary)' }}>
-                                <strong>Antes:</strong> {JSON.stringify(log.oldValues)}
-                              </div>
-                            )}
-                            {log.newValues && (
-                              <div style={{ color: 'var(--text-primary)', marginTop: '2px' }}>
-                                <strong>Ahora:</strong> {JSON.stringify(log.newValues)}
-                              </div>
-                            )}
-                          </td>
+                    </thead>
+                    <tbody>
+                      {filteredAuditLogs.length === 0 ? (
+                        <tr>
+                          <td colSpan={6} style={{ textAlign: 'center', padding: '24px 0' }}>No se encontraron registros de auditoría para la categoría seleccionada.</td>
                         </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
+                      ) : (
+                        filteredAuditLogs.map((log) => (
+                          <tr key={log.id}>
+                            <td style={{ fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
+                              {new Date(log.createdAt).toLocaleString('es-AR')}
+                            </td>
+                            <td style={{ fontWeight: 600 }}>{log.user?.username || 'Sistema'}</td>
+                            <td>
+                              <span className="badge badge-internal" style={{ fontSize: '0.7rem' }}>
+                                {log.user?.role || 'SYSTEM'}
+                              </span>
+                            </td>
+                            <td style={{ fontWeight: 600, fontSize: '0.85rem' }}>{log.action}</td>
+                            <td>
+                              {log.entityType} (ID: {log.entityId})
+                            </td>
+                            <td style={{ fontSize: '0.75rem', fontFamily: 'sans-serif', maxWidth: '350px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              {formatAuditDetails(log)}
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
 
-              <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', marginTop: '20px', alignItems: 'center' }}>
-                <button className="btn btn-secondary" disabled={auditPage === 1} onClick={() => setAuditPage(p => p - 1)}>Anterior</button>
-                <span style={{ fontSize: '0.85rem' }}>Página {auditPage} de {auditTotalPages}</span>
-                <button className="btn btn-secondary" disabled={auditPage === auditTotalPages} onClick={() => setAuditPage(p => p + 1)}>Siguiente</button>
+                <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', marginTop: '20px', alignItems: 'center' }}>
+                  <button className="btn btn-secondary" disabled={auditPage === 1} onClick={() => setAuditPage(p => p - 1)}>Anterior</button>
+                  <span style={{ fontSize: '0.85rem' }}>Página {auditPage} de {auditTotalPages}</span>
+                  <button className="btn btn-secondary" disabled={auditPage === auditTotalPages} onClick={() => setAuditPage(p => p + 1)}>Siguiente</button>
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           {/* Sub-tab 7: Impuestos & Percepciones */}
           {configTab === 'percepciones' && (

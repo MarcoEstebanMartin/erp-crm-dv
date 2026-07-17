@@ -35,6 +35,12 @@ enum OrderStatus {
   CANCELLED
 }
 
+enum CreditNoteStatus {
+  PENDING_APPROVAL
+  APPROVED
+  REJECTED
+}
+
 enum MovementType {
   IN
   OUT
@@ -239,6 +245,7 @@ model ProductLot {
   lotNumber      String
   expirationDate DateTime
   stock          Int             @default(0)
+  location       String          @default("S/U")
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
 
@@ -449,6 +456,7 @@ model CreditNote {
   order            Order?           @relation(fields: [orderId], references: [id])
   userId           Int
   user             User             @relation(fields: [userId], references: [id])
+  status           CreditNoteStatus @default(PENDING_APPROVAL)
   billingType      BillingType      @default(INTERNAL)
   creditNoteType   String           // "NOTA_CREDITO_A" | "NOTA_CREDITO_B" | "NOTA_CREDITO_C" | "NOTA_CREDITO_INTERNA"
   creditNoteNumber String?          // Nro comprobante ej: "00001-00000124"

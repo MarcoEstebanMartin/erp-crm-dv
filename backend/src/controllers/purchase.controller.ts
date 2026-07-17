@@ -176,6 +176,7 @@ export async function receivePurchaseOrder(req: AuthenticatedRequest, res: Respo
         const expirationDate = (assignment && assignment.expirationDate) 
           ? new Date(assignment.expirationDate) 
           : new Date('2036-12-31T00:00:00Z');
+        const location = (assignment && assignment.location) ? String(assignment.location) : 'S/U';
 
         // Buscar si el lote existe para el producto
         let lot = await tx.productLot.findUnique({
@@ -192,6 +193,7 @@ export async function receivePurchaseOrder(req: AuthenticatedRequest, res: Respo
             where: { id: lot.id },
             data: {
               stock: { increment: qty },
+              location: location !== 'S/U' ? location : lot.location, // Conservar existente si no se provee nueva ubicación
             },
           });
         } else {
@@ -201,6 +203,7 @@ export async function receivePurchaseOrder(req: AuthenticatedRequest, res: Respo
               lotNumber: lotNumber,
               expirationDate: expirationDate,
               stock: qty,
+              location: location,
             },
           });
         }
