@@ -277,26 +277,15 @@ export async function settleDeliveryRoute(req: AuthenticatedRequest, res: Respon
             }
           });
 
-          // Si es cobro diferido (CREDITO), incrementamos Cuenta Corriente
-          if (set.paymentMethod === 'CREDITO') {
-            await tx.persona.update({
-              where: { id: order.personaId },
-              data: { outstandingBalance: { increment: totalAmount } }
-            });
-          }
+          // Incrementamos Cuenta Corriente del cliente (siempre que pase de PREPARED a DELIVERED para registrar el débito)
+          await tx.persona.update({
+            where: { id: order.personaId },
+            data: { outstandingBalance: { increment: totalAmount } }
+          });
         }
 
         // Registrar los cobros si no es crédito
         if (set.paymentMethod && set.paymentMethod !== 'CREDITO') {
-          // Si el pedido ya estaba en DELIVERED, significa que ya se le había cargado la deuda en Cuenta Corriente
-          // Por ende, registrar el cobro reduce la deuda (outstandingBalance).
-          if (order.status === OrderStatus.DELIVERED) {
-            await tx.persona.update({
-              where: { id: order.personaId },
-              data: { outstandingBalance: { decrement: totalAmount } }
-            });
-          }
-
           // Determinar Caja Operativa (para CASH)
           let cashDrawerId: number | null = null;
           let bankAccountId: number | null = null;
@@ -339,25 +328,17 @@ export async function settleDeliveryRoute(req: AuthenticatedRequest, res: Respon
             }
           } else if (set.paymentMethod === 'BANK_TRANSFER') {
             bankAccountId = set.bankAccountId || (await tx.bankAccount.findFirst())?.id || null;
-            if (bankAccountId) {
-              await tx.bankAccount.update({
-                where: { id: bankAccountId },
-                data: { balance: { increment: totalAmount } }
-              });
-            }
+            // No incrementamos el balance de cuenta bancaria aquí. Se incrementará en verifyRendicion cuando sea verificado por administración.
           } else if (set.paymentMethod === 'CHECK') {
             const defaultBank = await tx.bankAccount.findFirst();
             if (defaultBank) {
               bankAccountId = defaultBank.id;
-              await tx.bankAccount.update({
-                where: { id: defaultBank.id },
-                data: { balance: { increment: Number(set.checkAmount || totalAmount) } }
-              });
             }
+            // No incrementamos el balance de cuenta bancaria aquí. Se incrementará en verifyRendicion cuando sea verificado por administración.
             txDescription = `Rendición Reparto - Cheque N° ${set.checkNumber || 'S/N'} (Emisor: ${set.checkIssuer || 'Desconocido'}) - Chofer: ${route.driverName} - Ruta #${route.id}`;
           }
 
-          // Crear transacción financiera
+          // Crear transacción financiera (verified: false, pendiente de rendición)
           await tx.transaction.create({
             data: {
               orderId: order.id,

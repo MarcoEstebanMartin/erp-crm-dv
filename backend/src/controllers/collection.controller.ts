@@ -433,7 +433,7 @@ export const verifyRendicion = async (req: AuthenticatedRequest, res: Response) 
     }
 
     for (const t of txs) {
-      if (t.paymentMethod === PaymentMethod.BANK_TRANSFER) {
+      if (t.paymentMethod === PaymentMethod.BANK_TRANSFER || t.paymentMethod === PaymentMethod.CHECK) {
         const selectedBankId = t.bankAccountId || defaultBank?.id;
         
         operations.push(
