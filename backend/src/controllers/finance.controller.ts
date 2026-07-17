@@ -437,10 +437,10 @@ export async function getBankAccounts(req: AuthenticatedRequest, res: Response):
     if (accounts.length === 0) {
       await prisma.bankAccount.createMany({
         data: [
-          { name: 'Mercado Pago Transferencias', accountNumber: 'CVU-0000003100012345678901', balance: 150000.00 },
+          { name: 'Mercado Pago Transferencias', accountNumber: '0000003100085432453321 (alias: donvenancio2024)', balance: 150000.00 },
           { name: 'QR MP', accountNumber: 'QR-MP-DISTRIB', balance: 0.00 },
-          { name: 'Banco Provincia C.A', accountNumber: 'CTA-BP-CA-5678/9', balance: 250000.00 },
-          { name: 'Banco Provincia C/C', accountNumber: 'CTA-BP-CC-4321/0', balance: 500000.00 },
+          { name: 'Banco Provincia C.A', accountNumber: '520358/9', balance: 250000.00 },
+          { name: 'Banco Provincia C/C', accountNumber: '10300/6', balance: 500000.00 },
         ],
       });
       accounts = await prisma.bankAccount.findMany({
@@ -471,12 +471,35 @@ export async function getBankAccounts(req: AuthenticatedRequest, res: Response):
       const hasProvinciaCA = accounts.some(a => a.name === 'Banco Provincia C.A');
       if (!hasProvinciaCA) {
         await prisma.bankAccount.create({
-          data: { name: 'Banco Provincia C.A', accountNumber: 'CTA-BP-CA-5678/9', balance: 0.00 }
-        });
-        accounts = await prisma.bankAccount.findMany({
-          orderBy: { name: 'asc' },
+          data: { name: 'Banco Provincia C.A', accountNumber: '520358/9', balance: 0.00 }
         });
       }
+
+      // Actualizar cuentas existentes con los números reales solicitados por el usuario si difieren
+      accounts = await prisma.bankAccount.findMany({
+        orderBy: { name: 'asc' },
+      });
+
+      const updates = [
+        { name: 'Mercado Pago Transferencias', accountNumber: '0000003100085432453321 (alias: donvenancio2024)' },
+        { name: 'Banco Provincia C/C', accountNumber: '10300/6' },
+        { name: 'Banco Provincia C.A', accountNumber: '520358/9' }
+      ];
+
+      for (const update of updates) {
+        const found = accounts.find(a => a.name === update.name);
+        if (found && found.accountNumber !== update.accountNumber) {
+          await prisma.bankAccount.update({
+            where: { id: found.id },
+            data: { accountNumber: update.accountNumber }
+          });
+        }
+      }
+
+      // Volver a cargar las cuentas actualizadas
+      accounts = await prisma.bankAccount.findMany({
+        orderBy: { name: 'asc' },
+      });
     }
 
     res.status(200).json({
