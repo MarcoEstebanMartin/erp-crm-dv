@@ -651,7 +651,7 @@ export default function ClientsTab({
                         )}
                         {personaRoleFilter === 'client' && (
                           <td style={{ fontWeight: 500 }}>
-                            {c.route ? (
+                            {c.saleRoute?.name ? (
                               <span style={{ 
                                 display: 'inline-block', 
                                 padding: '3px 8px', 
@@ -662,7 +662,20 @@ export default function ClientsTab({
                                 borderRadius: '4px',
                                 textTransform: 'uppercase'
                               }}>
-                                📍 {c.route}
+                                📍 {c.saleRoute.name}
+                              </span>
+                            ) : c.route ? (
+                              <span style={{ 
+                                display: 'inline-block', 
+                                padding: '3px 8px', 
+                                fontSize: '0.75rem', 
+                                fontWeight: 600, 
+                                backgroundColor: 'rgba(0,0,0,0.03)', 
+                                color: 'var(--text-secondary)', 
+                                borderRadius: '4px',
+                                textTransform: 'uppercase'
+                              }}>
+                                🚛 {c.route}
                               </span>
                             ) : (
                               <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Sin Ruta</span>
