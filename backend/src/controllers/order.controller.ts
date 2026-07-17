@@ -1250,6 +1250,8 @@ export async function updateOrder(req: AuthenticatedRequest, res: Response): Pro
       }
 
       // Validar regla de "boleta contra boleta" (deben una y deben pagar la proxima)
+      // Se desactiva temporalmente para edición de pedidos PENDING ya cargados, de lo contrario un vendedor no podría corregir un pedido pendiente si el cliente tiene saldo de reparto.
+      /*
       if (outstandingBalance > 0) {
         if (userRole !== Role.ADMIN) {
           throw new Error(
@@ -1257,6 +1259,7 @@ export async function updateOrder(req: AuthenticatedRequest, res: Response): Pro
           );
         }
       }
+      */
 
       // 3. Eliminar items viejos y crear los nuevos
       await tx.orderItem.deleteMany({ where: { orderId: order.id } });

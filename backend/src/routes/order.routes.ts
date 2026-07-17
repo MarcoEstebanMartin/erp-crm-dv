@@ -13,7 +13,7 @@ import {
 import { authenticateJWT, requireRole } from '../middlewares/auth';
 import { Role } from '@prisma/client';
 import { validateRequest } from '../middlewares/validateRequest';
-import { createOrderSchema, updateOrderStatusSchema, invoiceOrderSchema } from '../validators/order.validator';
+import { createOrderSchema, updateOrderStatusSchema, invoiceOrderSchema, updateOrderSchema } from '../validators/order.validator';
 
 const router = Router();
 
@@ -28,7 +28,7 @@ router.post('/direct', authenticateJWT, requireRole([Role.ADMIN, Role.FACTURACIO
 router.post('/', authenticateJWT, requireRole([Role.ADMIN, Role.VENDEDOR]), validateRequest(createOrderSchema), createOrder);
 
 // Editar pedido PENDING (Solo ADMIN y VENDEDOR)
-router.put('/:id', authenticateJWT, requireRole([Role.ADMIN, Role.VENDEDOR]), validateRequest(createOrderSchema), updateOrder);
+router.put('/:id', authenticateJWT, requireRole([Role.ADMIN, Role.VENDEDOR]), validateRequest(updateOrderSchema), updateOrder);
 
 // Actualización de estado del pedido (Picking - ADMIN y DEPOSITO)
 router.put('/:id/status', authenticateJWT, requireRole([Role.ADMIN, Role.DEPOSITO]), validateRequest(updateOrderStatusSchema), updateOrderStatus);

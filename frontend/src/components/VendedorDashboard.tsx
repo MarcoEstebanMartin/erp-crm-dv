@@ -38,6 +38,14 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+
+  const showToast = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => {
+      setToast(null);
+    }, 2500);
+  };
 
   // Filtro de localidad y bitácora de visitas
   const [selectedCityFilters, setSelectedCityFilters] = useState<string[]>([]);
@@ -252,24 +260,29 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
   // --- CARRITO DE COMPRAS ---
   const addToCart = (product: any) => {
     const existing = cart.find(item => item.product.id === product.id);
+    let newQty = 1;
     if (existing) {
       if (existing.quantity >= product.stock) {
         setErrorMsg(`Stock máximo disponible para ${product.name} alcanzado.`);
+        showToast(`Stock máximo de ${product.name} alcanzado.`, 'error');
         return;
       }
+      newQty = existing.quantity + 1;
       setCart(cart.map(item => 
         item.product.id === product.id 
-          ? { ...item, quantity: item.quantity + 1 }
+          ? { ...item, quantity: newQty }
           : item
       ));
     } else {
       if (product.stock <= 0) {
         setErrorMsg(`No hay stock disponible de ${product.name}.`);
+        showToast(`Sin stock de ${product.name}.`, 'error');
         return;
       }
       setCart([...cart, { product, quantity: 1 }]);
     }
     setErrorMsg(null);
+    showToast(`Agregado: ${product.name} (x${newQty}) al carrito.`, 'success');
   };
 
 
@@ -868,77 +881,108 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
                           };
                           
                           const imgSrc = p.imageUrl || getFallbackImage(p);
+                          const cartItem = cart.find(item => item.product.id === p.id);
 
-                          return (
-                            <div key={p.id} className="product-card" style={{ 
-                              backgroundColor: '#fff', 
-                              borderRadius: '4px', 
-                              border: '1px solid transparent', 
-                              overflow: 'hidden', 
-                              display: 'flex', 
-                              flexDirection: 'column',
-                              alignItems: 'center',
-                              padding: '12px',
-                              transition: 'box-shadow 0.2s ease, transform 0.2s ease',
-                              cursor: 'pointer'
-                            }}
-                            onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 16px rgba(0,0,0,0.06)'; }}
-                            onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}
-                            onClick={() => { if(p.stock > 0) addToCart(p); }}
-                            >
-                              <div style={{ position: 'relative', height: '130px', width: '100%', backgroundColor: '#fff', marginBottom: '8px' }}>
-                                <img src={imgSrc} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'contain' }} loading="lazy" />
-                                {p.stock <= p.minStock && p.stock > 0 && (
-                                   <span style={{ position: 'absolute', top: '0', right: '0', background: 'var(--color-warning)', color: '#fff', fontSize: '0.65rem', padding: '2px 6px', borderRadius: '4px', fontWeight: 700 }}>Poco Stock</span>
-                                )}
-                                {p.stock <= 0 && (
-                                   <span style={{ position: 'absolute', top: '0', right: '0', background: 'var(--color-danger)', color: '#fff', fontSize: '0.65rem', padding: '2px 6px', borderRadius: '4px', fontWeight: 700 }}>Agotado</span>
-                                )}
-                              </div>
-                              
-                              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', textAlign: 'center', flex: 1 }}>
-                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1 }}>
-                                  <span style={{ fontWeight: 800, fontSize: '1.3rem', color: hasCustomPrice ? 'var(--color-success)' : 'var(--text-primary)', lineHeight: '1' }}>
-                                    ${price.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-                                    {p.isPesable && <span style={{ fontSize: '0.8rem', fontWeight: 500, color: 'var(--text-secondary)' }}> / Kg</span>}
-                                  </span>
-                                  
-                                  {hasCustomPrice && (
-                                    <span style={{ fontSize: '0.75rem', color: 'var(--color-danger)', textDecoration: 'line-through', marginTop: '2px', fontWeight: 600 }}>
-                                      Antes: ${Number(p.listPrice).toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}{p.isPesable ? ' / Kg' : ''}
-                                    </span>
-                                  )}
-                                  
-                                  <div style={{ fontWeight: 600, fontSize: '0.8rem', marginTop: '8px', lineHeight: '1.2', color: 'var(--text-primary)' }}>
-                                    {p.name}
-                                  </div>
-                                </div>
+                           return (
+                             <div key={p.id} className="product-card" style={{ 
+                               backgroundColor: '#fff', 
+                               borderRadius: '4px', 
+                               border: cartItem ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid transparent', 
+                               overflow: 'hidden', 
+                               display: 'flex', 
+                               flexDirection: 'column',
+                               alignItems: 'center',
+                               padding: '12px',
+                               transition: 'all 0.2s ease',
+                               cursor: 'pointer',
+                               boxShadow: cartItem ? '0 4px 12px rgba(16, 185, 129, 0.08)' : 'none'
+                             }}
+                             onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = cartItem ? '0 6px 16px rgba(16, 185, 129, 0.15)' : '0 6px 16px rgba(0,0,0,0.06)'; }}
+                             onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = cartItem ? '0 4px 12px rgba(16, 185, 129, 0.08)' : 'none'; }}
+                             onClick={() => { if(p.stock > 0) addToCart(p); }}
+                             >
+                               <div style={{ position: 'relative', height: '130px', width: '100%', backgroundColor: '#fff', marginBottom: '8px' }}>
+                                 <img src={imgSrc} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'contain' }} loading="lazy" />
+                                 {cartItem && (
+                                   <div style={{
+                                     position: 'absolute',
+                                     top: '0',
+                                     left: '0',
+                                     backgroundColor: '#10B981',
+                                     color: '#fff',
+                                     fontSize: '0.65rem',
+                                     fontWeight: 700,
+                                     padding: '2px 8px',
+                                     borderRadius: '4px',
+                                     boxShadow: '0 2px 4px rgba(0,0,0,0.15)',
+                                     zIndex: 2,
+                                     display: 'flex',
+                                     alignItems: 'center',
+                                     gap: '4px'
+                                   }}>
+                                     <ShoppingCart size={10} />
+                                     <span>{cartItem.quantity} en carrito</span>
+                                   </div>
+                                 )}
+                                 {p.stock <= p.minStock && p.stock > 0 && (
+                                    <span style={{ position: 'absolute', top: '0', right: '0', background: 'var(--color-warning)', color: '#fff', fontSize: '0.65rem', padding: '2px 6px', borderRadius: '4px', fontWeight: 700 }}>Poco Stock</span>
+                                 )}
+                                 {p.stock <= 0 && (
+                                    <span style={{ position: 'absolute', top: '0', right: '0', background: 'var(--color-danger)', color: '#fff', fontSize: '0.65rem', padding: '2px 6px', borderRadius: '4px', fontWeight: 700 }}>Agotado</span>
+                                 )}
+                               </div>
+                               
+                               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', textAlign: 'center', flex: 1 }}>
+                                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1 }}>
+                                   <span style={{ fontWeight: 800, fontSize: '1.3rem', color: hasCustomPrice ? 'var(--color-success)' : 'var(--text-primary)', lineHeight: '1' }}>
+                                     ${price.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                                     {p.isPesable && <span style={{ fontSize: '0.8rem', fontWeight: 500, color: 'var(--text-secondary)' }}> / Kg</span>}
+                                   </span>
+                                   
+                                   {hasCustomPrice && (
+                                     <span style={{ fontSize: '0.75rem', color: 'var(--color-danger)', textDecoration: 'line-through', marginTop: '2px', fontWeight: 600 }}>
+                                       Antes: ${Number(p.listPrice).toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}{p.isPesable ? ' / Kg' : ''}
+                                     </span>
+                                   )}
+                                   
+                                   <div style={{ fontWeight: 600, fontSize: '0.8rem', marginTop: '8px', lineHeight: '1.2', color: 'var(--text-primary)' }}>
+                                     {p.name}
+                                   </div>
+                                 </div>
 
-                                <button
-                                  type="button"
-                                  style={{
-                                    marginTop: '12px',
-                                    width: '100%',
-                                    padding: '8px',
-                                    borderRadius: '20px',
-                                    backgroundColor: p.stock <= 0 ? 'var(--border-color)' : 'var(--text-primary)',
-                                    color: p.stock <= 0 ? 'var(--text-secondary)' : '#fff',
-                                    border: 'none',
-                                    fontWeight: 700,
-                                    fontSize: '0.75rem',
-                                    cursor: p.stock <= 0 ? 'not-allowed' : 'pointer',
-                                    transition: 'opacity 0.2s'
-                                  }}
-                                  onClick={(e) => { e.stopPropagation(); addToCart(p); }}
-                                  disabled={p.stock <= 0}
-                                  onMouseEnter={(e) => { if (p.stock > 0) e.currentTarget.style.opacity = '0.9'; }}
-                                  onMouseLeave={(e) => { if (p.stock > 0) e.currentTarget.style.opacity = '1'; }}
-                                >
-                                  {p.stock <= 0 ? 'AGOTADO' : '+ AGREGAR'}
-                                </button>
-                              </div>
-                            </div>
-                          );
+                                 <button
+                                   type="button"
+                                   style={{
+                                     marginTop: '12px',
+                                     width: '100%',
+                                     padding: '8px',
+                                     borderRadius: '20px',
+                                     backgroundColor: p.stock <= 0 
+                                       ? 'var(--border-color)' 
+                                       : cartItem 
+                                         ? '#10B981' 
+                                         : 'var(--text-primary)',
+                                     color: p.stock <= 0 ? 'var(--text-secondary)' : '#fff',
+                                     border: 'none',
+                                     fontWeight: 700,
+                                     fontSize: '0.75rem',
+                                     cursor: p.stock <= 0 ? 'not-allowed' : 'pointer',
+                                     transition: 'all 0.2s ease'
+                                   }}
+                                   onClick={(e) => { e.stopPropagation(); addToCart(p); }}
+                                   disabled={p.stock <= 0}
+                                   onMouseEnter={(e) => { if (p.stock > 0) e.currentTarget.style.opacity = '0.9'; }}
+                                   onMouseLeave={(e) => { if (p.stock > 0) e.currentTarget.style.opacity = '1'; }}
+                                 >
+                                   {p.stock <= 0 
+                                     ? 'AGOTADO' 
+                                     : cartItem 
+                                       ? `AGREGAR OTRO (+${cartItem.quantity})` 
+                                       : '+ AGREGAR'}
+                                 </button>
+                               </div>
+                             </div>
+                           );
                         })
                       );
                     })()}
@@ -2033,6 +2077,31 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
               </div>
             </form>
           </div>
+        </div>
+      )}
+
+      {/* Alerta flotante Toast */}
+      {toast && (
+        <div style={{
+          position: 'fixed',
+          top: '20px',
+          right: '20px',
+          backgroundColor: toast.type === 'success' ? '#10B981' : toast.type === 'error' ? '#EF4444' : '#3B82F6',
+          color: '#fff',
+          padding: '12px 24px',
+          borderRadius: '8px',
+          boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.15), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+          zIndex: 9999,
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          fontWeight: 600,
+          fontSize: '0.9rem',
+          pointerEvents: 'none',
+          transition: 'opacity 0.25s ease-in-out'
+        }}>
+          {toast.type === 'success' && <CheckCircle2 size={16} />}
+          <span>{toast.message}</span>
         </div>
       )}
     </div>
