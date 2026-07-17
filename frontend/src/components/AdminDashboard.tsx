@@ -127,6 +127,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
   const [userModal, setUserModal] = useState({ open: false, username: '', password: '', role: 'VENDEDOR' });
   const [showPassword, setShowPassword] = useState(false);
   const [clientModal, setClientModal] = useState({ open: false, mode: 'create', data: { id: 0, name: '', cuit: '', address: '', city: '', phone: '', email: '', creditLimit: 0, priceList: 'A', discount: 0, isClient: true, isProvider: false, isSeller: false, isCommissionAgent: false, route: '', saleRouteId: null as number | null, sellerId: null as number | null, isActive: true } });
+  const [clientsVersion, setClientsVersion] = useState(0);
   const [showResumenModal, setShowResumenModal] = useState<any>(null);
   const [orderDetailsModal, setOrderDetailsModal] = useState<any | null>(null);
   const [editOrderModal, setEditOrderModal] = useState<{ open: boolean; orderId: number; clientId: number; clientName: string; items: { id: number; productId: number; name: string; sku: string; quantity: number; listPrice: number; weight?: number | null; isPesable?: boolean; approximateWeight?: number | null }[] } | null>(null);
@@ -970,6 +971,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
       setClientModal({ ...clientModal, open: false });
       setSuccessMsg('Persona guardada exitosamente.');
       fetchData();
+      setClientsVersion(prev => prev + 1);
     } catch (err: any) {
       setErrorMsg(err.message || 'Error al guardar persona.');
     }
@@ -1582,6 +1584,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
           setShowResumenModal={setShowResumenModal}
           setPaymentModal={setPaymentModal}
           handleViewClientProfile={handleViewClientProfile}
+          clientsVersion={clientsVersion}
         />
       )}
 

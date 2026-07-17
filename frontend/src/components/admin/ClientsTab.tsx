@@ -9,6 +9,7 @@ interface ClientsTabProps {
   setShowResumenModal: (client: any) => void;
   setPaymentModal: (modal: any) => void;
   handleViewClientProfile: (client: any) => void;
+  clientsVersion?: number;
 }
 
 const OFFICIAL_CITIES = [
@@ -52,7 +53,8 @@ export default function ClientsTab({
   setClientModal,
   setShowResumenModal,
   setPaymentModal,
-  handleViewClientProfile
+  handleViewClientProfile,
+  clientsVersion
 }: ClientsTabProps) {
   // Local tab state
   const [personaRoleFilter, setPersonaRoleFilter] = useState<string>('client');
@@ -112,7 +114,7 @@ export default function ClientsTab({
 
   useEffect(() => {
     loadTabContent();
-  }, [personaRoleFilter, searchQuery]);
+  }, [personaRoleFilter, searchQuery, clientsVersion]);
 
   const getWhatsAppLink = (phone: string) => {
     const cleanPhone = phone.replace(/\D/g, '');
