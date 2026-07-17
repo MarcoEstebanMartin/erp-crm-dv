@@ -900,11 +900,12 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
                                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1 }}>
                                   <span style={{ fontWeight: 800, fontSize: '1.3rem', color: hasCustomPrice ? 'var(--color-success)' : 'var(--text-primary)', lineHeight: '1' }}>
                                     ${price.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                                    {p.isPesable && <span style={{ fontSize: '0.8rem', fontWeight: 500, color: 'var(--text-secondary)' }}> / Kg</span>}
                                   </span>
                                   
                                   {hasCustomPrice && (
                                     <span style={{ fontSize: '0.75rem', color: 'var(--color-danger)', textDecoration: 'line-through', marginTop: '2px', fontWeight: 600 }}>
-                                      Antes: ${Number(p.listPrice).toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                                      Antes: ${Number(p.listPrice).toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}{p.isPesable ? ' / Kg' : ''}
                                     </span>
                                   )}
                                   

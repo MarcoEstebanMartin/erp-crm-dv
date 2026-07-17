@@ -1755,8 +1755,8 @@
     "listPriceC": 18850,
     "stock": 0,
     "minStock": 10,
-    "isPesable": false,
-    "approximateWeight": null,
+    "isPesable": true,
+    "approximateWeight": 3.5,
     "category": "OTROS"
   },
   {
@@ -2859,8 +2859,8 @@
     "listPriceC": 9342,
     "stock": 0,
     "minStock": 10,
-    "isPesable": false,
-    "approximateWeight": null,
+    "isPesable": true,
+    "approximateWeight": 3.5,
     "category": "OTROS"
   },
   {
@@ -2875,8 +2875,8 @@
     "listPriceC": 10474,
     "stock": 0,
     "minStock": 10,
-    "isPesable": false,
-    "approximateWeight": null,
+    "isPesable": true,
+    "approximateWeight": 3.5,
     "category": "OTROS"
   },
   {
@@ -3307,8 +3307,8 @@
     "listPriceC": 24143,
     "stock": 0,
     "minStock": 10,
-    "isPesable": false,
-    "approximateWeight": null,
+    "isPesable": true,
+    "approximateWeight": 1.8,
     "category": "SODECAR"
   },
   {
@@ -3323,8 +3323,8 @@
     "listPriceC": 8129,
     "stock": 0,
     "minStock": 10,
-    "isPesable": false,
-    "approximateWeight": null,
+    "isPesable": true,
+    "approximateWeight": 3,
     "category": "SODECAR"
   },
   {
@@ -3339,8 +3339,8 @@
     "listPriceC": 5553,
     "stock": 0,
     "minStock": 10,
-    "isPesable": false,
-    "approximateWeight": null,
+    "isPesable": true,
+    "approximateWeight": 4,
     "category": "SODECAR"
   },
   {
@@ -3355,8 +3355,8 @@
     "listPriceC": 16059,
     "stock": 0,
     "minStock": 10,
-    "isPesable": false,
-    "approximateWeight": null,
+    "isPesable": true,
+    "approximateWeight": 5.5,
     "category": "SODECAR"
   },
   {
@@ -3371,8 +3371,8 @@
     "listPriceC": 48581,
     "stock": 0,
     "minStock": 10,
-    "isPesable": false,
-    "approximateWeight": null,
+    "isPesable": true,
+    "approximateWeight": 5,
     "category": "SODECAR"
   },
   {
@@ -3387,8 +3387,8 @@
     "listPriceC": 22454,
     "stock": 0,
     "minStock": 10,
-    "isPesable": false,
-    "approximateWeight": null,
+    "isPesable": true,
+    "approximateWeight": 6,
     "category": "SODECAR"
   },
   {
@@ -3403,8 +3403,8 @@
     "listPriceC": 17651,
     "stock": 0,
     "minStock": 10,
-    "isPesable": false,
-    "approximateWeight": null,
+    "isPesable": true,
+    "approximateWeight": 1.2,
     "category": "SODECAR"
   },
   {
@@ -3419,8 +3419,8 @@
     "listPriceC": 14052,
     "stock": 0,
     "minStock": 10,
-    "isPesable": false,
-    "approximateWeight": null,
+    "isPesable": true,
+    "approximateWeight": 1.5,
     "category": "SODECAR"
   },
   {
@@ -3435,8 +3435,8 @@
     "listPriceC": 18144,
     "stock": 0,
     "minStock": 10,
-    "isPesable": false,
-    "approximateWeight": null,
+    "isPesable": true,
+    "approximateWeight": 1,
     "category": "SODECAR"
   },
   {
