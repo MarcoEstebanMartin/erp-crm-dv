@@ -74,10 +74,9 @@ Vigencia tecnológica del ERP.
 
 ## 3. Recomendaciones Técnicas Inmediatas y Acciones Realizadas
 
-* **Limpieza de la Raíz y Directorios (Ejecutado - 08/07/2026):** Se crearon carpetas organizadas para despejar el desorden de scripts temporales:
-  * **Directorio raíz**: Se movieron más de 45 scripts (`fix_*.js`, `patch_*.js`, `*.py`, `*.csv`, `*.bak`) a [`/scripts/`](file:///c:/Users/Usuario/Desktop/ERP-CRM%20DV/scripts).
-  * **Backend**: Se movieron los scripts de chequeo y migración a [`/backend/scripts/`](file:///c:/Users/Usuario/Desktop/ERP-CRM%20DV/backend/scripts) y se actualizó su `package.json` para apuntar a la nueva ruta.
-  * **Frontend**: Se limpió `frontend/src/` moviendo los archivos de respaldo `*.bak` y `*.bak2` a [`/frontend/src/backup/`](file:///c:/Users/Usuario/Desktop/ERP-CRM%20DV/frontend/src/backup).
-* **Separación de Lógica (Pendiente):** Mover la lógica pesada del backend desde los controladores a servicios dedicados en `backend/src/services`.
-* **Estilos Centralizados (Pendiente):** Usar variables CSS globales en el frontend para asegurar consistencia visual y agilidad ante cambios de diseño.
-* **Transacciones de Prisma (Pendiente):** Proteger operaciones financieras complejas (que involucren balances, cajas y transacciones simultáneas) envolviéndolas en `prisma.$transaction`.
+* **Limpieza de la Raíz y Directorios (Ejecutado - 08/07/2026 & 17/07/2026):** Se crearon carpetas organizadas para despejar el desorden de scripts temporales y se eliminaron definitivamente los archivos `.bak` sueltos en el código fuente.
+  * **Directorio raíz**: Se archivaron los scripts obsoletos/temporales en `/scripts/archive/` y `/backend/scripts/archive/`.
+  * **Frontend**: Se eliminaron los duplicados `.bak` de los directorios activos.
+* **Separación de Lógica (Parcialmente Ejecutado - 17/07/2026):** Mover la lógica pesada del backend desde los controladores a servicios dedicados en `backend/src/services` (la lógica de órdenes, productos y rutas ya está migrada; quedan finanzas y facturación).
+* **Estilos Centralizados (Ejecutado - 17/07/2026):** Definición de variables globales en [index.css](file:///c:/Users/Usuario/Desktop/ERP-CRM%20DV/frontend/src/index.css) (`--color-corp-red`) y migración de las más de 80 referencias manuales inline a la variable.
+* **Transacciones de Prisma (Parcialmente Ejecutado - 17/07/2026):** Optimización de inserciones de stock y logs masivos (`createMany`) en `order.service.ts` para agrupar queries.
