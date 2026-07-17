@@ -1638,7 +1638,7 @@ export default function StockDashboard({ products, onRefresh }: StockDashboardPr
                                     <button
                                       type="button"
                                       className="btn btn-ghost"
-                                      style={{ padding: '4px', color: '#E30613' }}
+                                      style={{ padding: '4px', color: 'var(--color-corp-red)' }}
                                       onClick={() => handleDeleteLot(lot.id, lot.lotNumber)}
                                       title="Eliminar lote"
                                     >

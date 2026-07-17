@@ -173,9 +173,9 @@ export default function ConfigTab({
     }
   };
 
-  const handleToggleUserActive = async (username: string, active: boolean) => {
+  const handleToggleUserActive = async (id: number, username: string, active: boolean) => {
     try {
-      await api.updateUserStatus(username, active);
+      await api.toggleUserStatus(id);
       setSuccessMsg(`Usuario ${username} ${active ? 'activado' : 'desactivado'} con éxito.`);
       const dataUsers = await api.getUsers();
       setUsers(dataUsers);
@@ -464,10 +464,10 @@ export default function ConfigTab({
                     </td>
                     <td style={{ textAlign: 'right' }}>
                       <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                        <button className="btn btn-secondary btn-sm" onClick={() => handleToggleUserActive(u.username, u.isActive === false)}>
+                        <button className="btn btn-secondary btn-sm" onClick={() => handleToggleUserActive(u.id, u.username, u.isActive === false)}>
                           {u.isActive !== false ? 'Desactivar' : 'Activar'}
                         </button>
-                        <button className="btn btn-ghost btn-sm" style={{ color: '#E30613' }} onClick={() => handleDeleteUser(u.username)}>Eliminar</button>
+                        <button className="btn btn-ghost btn-sm" style={{ color: 'var(--color-corp-red)' }} onClick={() => handleDeleteUser(u.username)}>Eliminar</button>
                       </div>
                     </td>
                   </tr>
@@ -752,7 +752,7 @@ export default function ConfigTab({
                             <td>{r.billingType === 'OFFICIAL' ? 'Sucursal A' : r.billingType === 'INTERNAL' ? 'Sucursal X' : 'Cualquiera'}</td>
                             <td style={{ textAlign: 'right', fontWeight: 'bold', color: '#27AE60' }}>{Number(r.discount)}%</td>
                             <td style={{ textAlign: 'right' }}>
-                              <button type="button" className="btn btn-ghost btn-sm" onClick={() => handleDeleteDiscountRule(r.id)} style={{ color: '#E30613', padding: '4px' }}>Eliminar</button>
+                              <button type="button" className="btn btn-ghost btn-sm" onClick={() => handleDeleteDiscountRule(r.id)} style={{ color: 'var(--color-corp-red)', padding: '4px' }}>Eliminar</button>
                             </td>
                           </tr>
                         ))}
@@ -868,7 +868,7 @@ export default function ConfigTab({
                               <span style={{ color: '#E67E22' }}>{Number(c.percentageInternal)}% X</span>
                             </td>
                             <td style={{ textAlign: 'right' }}>
-                              <button type="button" className="btn btn-ghost btn-sm" onClick={() => handleDeleteSplitConfig(c.id)} style={{ color: '#E30613', padding: '4px' }}>Eliminar</button>
+                              <button type="button" className="btn btn-ghost btn-sm" onClick={() => handleDeleteSplitConfig(c.id)} style={{ color: 'var(--color-corp-red)', padding: '4px' }}>Eliminar</button>
                             </td>
                           </tr>
                         ))}

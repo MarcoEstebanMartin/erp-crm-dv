@@ -175,7 +175,7 @@ export const JointCloseModal: React.FC<JointCloseModalProps> = ({
 
           <div className="modal-footer" style={{ marginTop: '20px', borderTop: '1px solid var(--border-color)', paddingTop: '16px', display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
             <button type="button" className="btn btn-secondary" onClick={() => setShowJointCloseModal(false)}>Cancelar</button>
-            <button type="submit" className="btn btn-primary" style={{ backgroundColor: '#E30613', borderColor: '#E30613', color: '#ffffff' }}>
+            <button type="submit" className="btn btn-primary" style={{ backgroundColor: 'var(--color-corp-red)', borderColor: 'var(--color-corp-red)', color: '#ffffff' }}>
               Confirmar Cierre de Caja
             </button>
           </div>

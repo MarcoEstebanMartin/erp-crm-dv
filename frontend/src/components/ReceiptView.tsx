@@ -68,7 +68,7 @@ const ReceiptView: React.FC<ReceiptViewProps> = ({ receiptId }) => {
         {/* Header (Logo / Empresa) */}
         <div className="bg-gray-900 text-white p-6 text-center">
           <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-3">
-            <span className="text-[#E30613] font-bold text-2xl">DV</span>
+            <span className="text-[var(--color-corp-red)] font-bold text-2xl">DV</span>
           </div>
           <h1 className="text-xl font-bold">Distribuidora de Alimentos y Bebidas</h1>
           <p className="text-gray-400 text-sm mt-1">Comprobante de Pago Oficial</p>

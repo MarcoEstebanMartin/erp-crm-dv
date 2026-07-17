@@ -1020,6 +1020,31 @@ export const api = {
     return await request(`/fleet/expirations/${id}`, {
       method: 'DELETE'
     });
+  },
+
+  // Alias y métodos de compatibilidad para evitar errores de compilación
+  deleteUser: async (username: string) => {
+    throw new Error('Los usuarios no se pueden eliminar por integridad física e histórica del sistema. Por favor, desactívelo.');
+  },
+
+  createPerception: async (perceptionData: any) => {
+    throw new Error('La creación de impuestos/percepciones no está disponible en la versión actual. Modifique un impuesto existente en su lugar.');
+  },
+
+  reconcileAllClientBalances: async () => {
+    return await api.checkBalances();
+  },
+
+  recalculateAndFixClientBalance: async (personaId: number) => {
+    return await api.syncBalances(personaId);
+  },
+
+  createSplitConfig: async (configData: any) => {
+    return await api.createSplitBillingConfig(configData);
+  },
+
+  deleteSplitConfig: async (id: number) => {
+    return await api.deleteSplitBillingConfig(id);
   }
 };
 

@@ -125,24 +125,25 @@ export class OrderService {
         }))
       });
 
-      // 5. Actualizar stock general y registrar movimientos
+      // 5. Actualizar stock general
       for (const stockUp of stockUpdates) {
         await tx.product.update({
           where: { id: stockUp.productId },
           data: { stock: stockUp.newStock },
         });
-
-        await tx.stockMovement.create({
-          data: {
-            productId: stockUp.productId,
-            quantity: stockUp.quantityDecreased,
-            type: MovementType.OUT,
-            referenceId: `ORDER-${order.id}`,
-            userId: sellerId,
-            reason: `Venta - Reserva de Pedido #${order.id}`,
-          },
-        });
       }
+
+      // 6. Inserción masiva de movimientos de stock (optimizada en una sola llamada)
+      await tx.stockMovement.createMany({
+        data: stockUpdates.map(stockUp => ({
+          productId: stockUp.productId,
+          quantity: stockUp.quantityDecreased,
+          type: MovementType.OUT,
+          referenceId: `ORDER-${order.id}`,
+          userId: sellerId,
+          reason: `Venta - Reserva de Pedido #${order.id}`,
+        }))
+      });
 
       return order;
     });

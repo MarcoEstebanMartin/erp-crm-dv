@@ -16,8 +16,8 @@ const LoadingSpinner = () => (
       width: '32px',
       height: '32px',
       borderRadius: '50%',
-      border: '2px solid rgba(227, 6, 19, 0.1)',
-      borderTopColor: '#E30613',
+      border: '2px solid rgba(var(--color-corp-red-rgb), 0.1)',
+      borderTopColor: 'var(--color-corp-red)',
       animation: 'spin 0.8s linear infinite'
     }} />
     <span style={{ fontSize: '14px', color: '#666', fontWeight: 500 }}>Cargando panel...</span>

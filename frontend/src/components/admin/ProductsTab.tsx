@@ -51,14 +51,14 @@ export default function ProductsTab({
           searchQuery={searchQuery} 
           setSearchQuery={setSearchQuery} 
           setProductModal={setProductModal}
-          onUpdateProduct={handleUpdateProductInline}
+          onUpdateProduct={async (updatedProduct: any) => handleUpdateProductInline(updatedProduct)}
         />
       )}
 
       {catalogTab === 'stock' && (
         <StockDashboard 
           products={products}
-          onRefresh={fetchData}
+          onRefresh={async () => fetchData()}
         />
       )}
 

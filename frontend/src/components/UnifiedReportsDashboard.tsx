@@ -788,12 +788,12 @@ export default function UnifiedReportsDashboard({
               <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Monto promedio por pedido</span>
             </div>
 
-            <div className="card" style={{ padding: '20px', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '8px', borderLeft: '4px solid #E30613' }}>
+            <div className="card" style={{ padding: '20px', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '8px', borderLeft: '4px solid var(--color-corp-red)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)' }}>DEUDA EN LA ZONA</span>
-                <MapPin size={18} color="#E30613" />
+                <MapPin size={18} color="var(--color-corp-red)" />
               </div>
-              <span style={{ fontSize: '1.8rem', fontWeight: 700, color: '#E30613' }}>${(zoneData.totalDebt || 0).toLocaleString()}</span>
+              <span style={{ fontSize: '1.8rem', fontWeight: 700, color: 'var(--color-corp-red)' }}>${(zoneData.totalDebt || 0).toLocaleString()}</span>
               <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Saldo total pendiente</span>
             </div>
           </div>
@@ -936,9 +936,9 @@ export default function UnifiedReportsDashboard({
                     let iconBg = '#fef3e6';
                     let iconColor = '#f2994a';
                     if (isHigh) {
-                      borderLeftColor = '#E30613'; // high (red)
+                      borderLeftColor = 'var(--color-corp-red)'; // high (red)
                       iconBg = '#fdebee';
-                      iconColor = '#E30613';
+                      iconColor = 'var(--color-corp-red)';
                     } else if (isMed) {
                       borderLeftColor = '#1a73e8'; // medium (blue)
                       iconBg = '#e8f0fe';
@@ -1066,7 +1066,7 @@ export default function UnifiedReportsDashboard({
                                     style={{ 
                                       fontSize: '0.75rem', 
                                       fontWeight: 700, 
-                                      color: isPositive ? '#137333' : '#E30613',
+                                      color: isPositive ? '#137333' : 'var(--color-corp-red)',
                                       backgroundColor: isPositive ? '#e6f4ea' : '#fdebee',
                                       padding: '2px 6px',
                                       borderRadius: '4px',
@@ -1349,7 +1349,7 @@ export default function UnifiedReportsDashboard({
                             <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '2px' }}>SKU: {p.sku}</div>
                           </div>
                           <div style={{ textAlign: 'right' }}>
-                            <span className="badge" style={{ backgroundColor: '#FCE8E6', color: '#E30613', fontSize: '0.75rem', fontWeight: 600, padding: '4px 8px', borderRadius: '4px' }}>
+                            <span className="badge" style={{ backgroundColor: '#FCE8E6', color: 'var(--color-corp-red)', fontSize: '0.75rem', fontWeight: 600, padding: '4px 8px', borderRadius: '4px' }}>
                               {p.stock} u en depósito
                             </span>
                           </div>
@@ -1534,7 +1534,7 @@ export default function UnifiedReportsDashboard({
                           <button
                             onClick={() => removePurchaseRow(idx)}
                             style={{ background: 'none', border: 'none', color: '#666', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
-                            onMouseEnter={e => e.currentTarget.style.color = '#E30613'}
+                            onMouseEnter={e => e.currentTarget.style.color = 'var(--color-corp-red)'}
                             onMouseLeave={e => e.currentTarget.style.color = '#666'}
                             title="Eliminar fila"
                           >
@@ -1558,7 +1558,7 @@ export default function UnifiedReportsDashboard({
                           value={credit}
                           onChange={e => { setCredit(Number(e.target.value) || 0); setIsDirty(true); }}
                           className="input-inline-cell"
-                          style={{ textAlign: 'right', fontWeight: 700, color: '#E30613', backgroundColor: 'transparent' }}
+                          style={{ textAlign: 'right', fontWeight: 700, color: 'var(--color-corp-red)', backgroundColor: 'transparent' }}
                         />
                       </td>
                       <td style={{ padding: '10px 4px', textAlign: 'center' }}>
@@ -1697,7 +1697,7 @@ export default function UnifiedReportsDashboard({
                             <button
                               onClick={() => removeSalesRow(idx)}
                               style={{ background: 'none', border: 'none', color: '#666', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
-                              onMouseEnter={e => e.currentTarget.style.color = '#E30613'}
+                              onMouseEnter={e => e.currentTarget.style.color = 'var(--color-corp-red)'}
                               onMouseLeave={e => e.currentTarget.style.color = '#666'}
                               title="Eliminar fila"
                             >
@@ -1749,7 +1749,7 @@ export default function UnifiedReportsDashboard({
                 </div>
                 <div style={{ borderLeft: '1px solid var(--border-color)', paddingLeft: '24px' }}>
                   <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', display: 'block' }}>CRÉDITO INICIAL</span>
-                  <span style={{ fontSize: '1.15rem', fontWeight: 700, color: credit < 0 ? '#E30613' : 'var(--text-primary)' }}>
+                  <span style={{ fontSize: '1.15rem', fontWeight: 700, color: credit < 0 ? 'var(--color-corp-red)' : 'var(--text-primary)' }}>
                     ${credit.toLocaleString()}
                   </span>
                 </div>
@@ -1764,7 +1764,7 @@ export default function UnifiedReportsDashboard({
                     <>
                       <div style={{ borderLeft: '1px solid var(--border-color)', paddingLeft: '24px' }}>
                         <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', display: 'block' }}>FLUJO NETO OPERATIVO</span>
-                        <span style={{ fontSize: '1.15rem', fontWeight: 700, color: netWeekly >= 0 ? '#137333' : '#E30613' }}>
+                        <span style={{ fontSize: '1.15rem', fontWeight: 700, color: netWeekly >= 0 ? '#137333' : 'var(--color-corp-red)' }}>
                           {netWeekly >= 0 ? '+' : ''}${netWeekly.toLocaleString()}
                         </span>
                       </div>
@@ -1786,7 +1786,7 @@ export default function UnifiedReportsDashboard({
                   className="btn btn-secondary"
                   onClick={handleDeleteWeekly}
                   disabled={saving}
-                  style={{ borderColor: '#E30613', color: '#E30613', padding: '10px 16px' }}
+                  style={{ borderColor: 'var(--color-corp-red)', color: 'var(--color-corp-red)', padding: '10px 16px' }}
                 >
                   <Trash2 size={16} />
                   Eliminar Cierre
@@ -1854,7 +1854,7 @@ export default function UnifiedReportsDashboard({
                                 width: '100%',
                                 maxWidth: '40px',
                                 height: `${heightPct}%`,
-                                backgroundColor: isCurrent ? '#E30613' : 'var(--text-secondary)',
+                                backgroundColor: isCurrent ? 'var(--color-corp-red)' : 'var(--text-secondary)',
                                 borderRadius: '4px 4px 0 0',
                                 transition: 'all 0.2s',
                                 opacity: isCurrent ? 1 : 0.6

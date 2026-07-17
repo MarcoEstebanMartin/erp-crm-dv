@@ -650,8 +650,8 @@ export default function FinanzasDashboard() {
               type="button" 
               className="btn btn-primary"
               style={{ 
-                backgroundColor: '#E30613', 
-                borderColor: '#E30613',
+                backgroundColor: 'var(--color-corp-red)', 
+                borderColor: 'var(--color-corp-red)',
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '6px',
@@ -974,7 +974,7 @@ export default function FinanzasDashboard() {
                   className="btn" 
                   disabled={submittingExpense}
                   style={{ 
-                    backgroundColor: '#E30613', 
+                    backgroundColor: 'var(--color-corp-red)', 
                     color: '#fff', 
                     border: 'none', 
                     padding: '10px 20px',

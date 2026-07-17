@@ -528,7 +528,7 @@ export default function ComprasDashboard() {
               <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Control de abastecimiento impositivo y comercial con actualización automática de costos.</p>
             </div>
             <div style={{ display: 'flex', gap: '10px' }}>
-              <label className="btn" style={{ backgroundColor: '#E30613', color: 'white', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', padding: '0 16px', borderRadius: '8px' }}>
+              <label className="btn" style={{ backgroundColor: 'var(--color-corp-red)', color: 'white', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', padding: '0 16px', borderRadius: '8px' }}>
                 <span style={{ fontWeight: 600, fontSize: '0.85rem' }}>📸 Escanear Factura (IA)</span>
                 <input 
                   type="file" 

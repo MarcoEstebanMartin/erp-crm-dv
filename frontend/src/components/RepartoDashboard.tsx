@@ -372,7 +372,7 @@ function GoogleRouteMap({
           const routePath = new google.maps.Polyline({
             path: pathCoords,
             geodesic: true,
-            strokeColor: '#E30613',
+            strokeColor: 'var(--color-corp-red)',
             strokeOpacity: 0.85,
             strokeWeight: 4,
           });
@@ -388,7 +388,7 @@ function GoogleRouteMap({
           map: map,
           suppressMarkers: true,
           polylineOptions: {
-            strokeColor: '#E30613',
+            strokeColor: 'var(--color-corp-red)',
             strokeOpacity: 0.85,
             strokeWeight: 4,
           }
@@ -591,7 +591,7 @@ function LeafletRouteMap({
       
       // Trazar línea de ruta
       if (routePoints.length > 1) {
-        L.polyline(routePoints, { color: '#E30613', weight: 4, opacity: 0.85 }).addTo(map);
+        L.polyline(routePoints, { color: 'var(--color-corp-red)', weight: 4, opacity: 0.85 }).addTo(map);
         // Ajustar límites del mapa
         map.fitBounds(L.polyline(routePoints).getBounds(), { padding: [40, 40] });
       }
@@ -668,7 +668,7 @@ function PrintRouteSheet({ route, locations }: { route: any; locations: any[] })
           <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: '#555' }}>Logística y Distribución Mayorista de Alimentos y Bebidas</p>
         </div>
         <div style={{ textAlign: 'right' }}>
-          <h2 style={{ margin: 0, fontSize: '1.4rem', fontWeight: 700, color: '#E30613' }}>HOJA DE RUTA #{route.id}</h2>
+          <h2 style={{ margin: 0, fontSize: '1.4rem', fontWeight: 700, color: 'var(--color-corp-red)' }}>HOJA DE RUTA #{route.id}</h2>
           <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: '#555' }}>Fecha: {new Date(route.date || route.createdAt).toLocaleDateString('es-AR')}</p>
         </div>
       </div>
@@ -1668,7 +1668,7 @@ export default function RepartoDashboard() {
                           <div style={{ 
                             marginLeft: '34px', 
                             padding: '10px 12px', 
-                            borderLeft: '2px solid var(--color-primary, #E30613)', 
+                            borderLeft: '2px solid var(--color-primary, var(--color-corp-red))', 
                             backgroundColor: '#fff',
                             borderRadius: '0 4px 4px 0',
                             fontSize: '0.78rem',
@@ -2087,7 +2087,7 @@ export default function RepartoDashboard() {
                   <button
                     type="submit"
                     className="btn btn-primary"
-                    style={{ backgroundColor: '#E30613', borderColor: '#E30613' }}
+                    style={{ backgroundColor: 'var(--color-corp-red)', borderColor: 'var(--color-corp-red)' }}
                   >
                     Confirmar y Liquidar Viaje
                   </button>

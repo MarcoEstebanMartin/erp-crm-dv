@@ -437,7 +437,7 @@ export const ReconciliationModal: React.FC<ReconciliationModalProps> = ({
           <button
             type="button"
             className="btn btn-primary"
-            style={{ backgroundColor: '#E30613', borderColor: '#E30613', color: '#ffffff' }}
+            style={{ backgroundColor: 'var(--color-corp-red)', borderColor: 'var(--color-corp-red)', color: '#ffffff' }}
             disabled={reconProcessing || reconReceipts.length === 0}
             onClick={() => handleProcessReconciliation()}
           >

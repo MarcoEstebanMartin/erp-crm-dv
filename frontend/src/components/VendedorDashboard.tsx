@@ -621,7 +621,7 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
           borderRadius: 'var(--radius-sm)',
           fontSize: '0.85rem',
           marginBottom: '20px',
-          border: '1px solid rgba(227, 6, 19, 0.15)'
+          border: '1px solid rgba(var(--color-corp-red-rgb), 0.15)'
         }}>
           {errorMsg}
         </div>
@@ -718,7 +718,7 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
                             fontWeight: 600,
                             border: '1px solid',
                             borderColor: isActive ? 'var(--accent-color)' : 'var(--border-color)',
-                            backgroundColor: isActive ? 'rgba(227, 6, 19, 0.06)' : '#fff',
+                            backgroundColor: isActive ? 'rgba(var(--color-corp-red-rgb), 0.06)' : '#fff',
                             color: isActive ? 'var(--accent-color)' : 'var(--text-secondary)',
                             whiteSpace: 'nowrap',
                             cursor: 'pointer',
@@ -1176,7 +1176,7 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
                 </select>
               </div>
             ) : (
-              <div style={{ fontSize: '0.85rem', color: '#E30613', fontWeight: 600 }}>
+              <div style={{ fontSize: '0.85rem', color: 'var(--color-corp-red)', fontWeight: 600 }}>
                 ⚠️ No tienes rutas de venta asignadas.
               </div>
             )}
@@ -1258,7 +1258,7 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
                       </div>
                       
                       {Number(c.outstandingBalance || 0) > 0 && (
-                        <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#E30613', backgroundColor: 'rgba(227,6,19,0.05)', padding: '3px 8px', borderRadius: '12px', border: '1px solid rgba(227,6,19,0.15)' }}>
+                        <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--color-corp-red)', backgroundColor: 'rgba(var(--color-corp-red-rgb),0.05)', padding: '3px 8px', borderRadius: '12px', border: '1px solid rgba(var(--color-corp-red-rgb),0.15)' }}>
                           Debe: ${Math.round(Number(c.outstandingBalance)).toLocaleString('es-AR')}
                         </span>
                       )}
@@ -1356,7 +1356,7 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
                               setSelectedClient(c);
                               setActiveTab('cobranzas');
                             }}
-                            style={{ padding: '6px 10px', fontSize: '0.72rem', borderRadius: '6px', color: '#E30613' }}
+                            style={{ padding: '6px 10px', fontSize: '0.72rem', borderRadius: '6px', color: 'var(--color-corp-red)' }}
                           >
                             Cobrar
                           </button>

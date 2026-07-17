@@ -88,7 +88,7 @@ export default function CreditNotesTab({
   }, [creditNoteForm.personaId, personas]);
 
   const handleSelectCNClient = (c: any) => {
-    setCreditNoteForm(prev => ({
+    setCreditNoteForm((prev: any) => ({
       ...prev,
       personaId: String(c.id),
       billingType: c.cuit ? 'OFFICIAL' : 'INTERNAL'
@@ -665,7 +665,7 @@ export default function CreditNotesTab({
                     <select 
                       className="input" 
                       value={creditNoteForm.reason} 
-                      onChange={(e) => setCreditNoteForm(prev => ({ ...prev, reason: e.target.value }))}
+                      onChange={(e) => setCreditNoteForm((prev: any) => ({ ...prev, reason: e.target.value }))}
                     >
                       <option value="DEVOLUCION">Devolución física de mercadería</option>
                       <option value="DESCUENTO">Diferencia de precio / Bonificación</option>
@@ -678,7 +678,7 @@ export default function CreditNotesTab({
                     <select 
                       className="input" 
                       value={creditNoteForm.billingType} 
-                      onChange={(e) => setCreditNoteForm(prev => ({ ...prev, billingType: e.target.value }))}
+                      onChange={(e) => setCreditNoteForm((prev: any) => ({ ...prev, billingType: e.target.value }))}
                       disabled={!!creditNoteForm.orderId || (selectedCNClient && !selectedCNClient.cuit)} 
                     >
                       <option value="INTERNAL">Interno (Presupuesto / Sin AFIP)</option>
@@ -699,7 +699,7 @@ export default function CreditNotesTab({
                       className="input" 
                       rows={3} 
                       value={creditNoteForm.comments}
-                      onChange={(e) => setCreditNoteForm(prev => ({ ...prev, comments: e.target.value }))}
+                      onChange={(e) => setCreditNoteForm((prev: any) => ({ ...prev, comments: e.target.value }))}
                       placeholder="Ingresar comentarios internos o motivos detallados..."
                       style={{ resize: 'none', fontSize: '0.85rem' }}
                     />

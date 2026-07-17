@@ -339,7 +339,7 @@ export default function CrmDashboard() {
       {/* LOTES POR VENCER (PRÓXIMOS 30 DÍAS) */}
       <div className="card" style={{ borderLeft: '4px solid var(--accent-color)', marginTop: '20px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', color: 'var(--accent-color)' }}>
-          <AlertTriangle size={20} style={{ color: '#E30613' }} />
+          <AlertTriangle size={20} style={{ color: 'var(--color-corp-red)' }} />
           <h3 className="card-title" style={{ margin: '0' }}>Alerta de Lotes Próximos a Vencer (Límite: 30 Días)</h3>
         </div>
 
@@ -379,7 +379,7 @@ export default function CrmDashboard() {
                           className="badge" 
                           style={{ 
                             backgroundColor: isCritical ? '#FCE8E6' : '#FEF3C7', 
-                            color: isCritical ? '#E30613' : '#B45309',
+                            color: isCritical ? 'var(--color-corp-red)' : '#B45309',
                             fontWeight: 600,
                             fontSize: '0.75rem',
                             padding: '4px 8px',

@@ -284,7 +284,7 @@ const MobileCobros: React.FC<MobileCobrosProps> = ({
           <button
             type="submit"
             disabled={loading || !amount || parseFloat(amount) <= 0}
-            className="w-full bg-[#E30613] hover:bg-red-700 text-white font-bold py-4 px-4 rounded-lg flex justify-center items-center gap-2 mt-8 disabled:opacity-50 transition-colors shadow-md"
+            className="w-full bg-[var(--color-corp-red)] hover:bg-red-700 text-white font-bold py-4 px-4 rounded-lg flex justify-center items-center gap-2 mt-8 disabled:opacity-50 transition-colors shadow-md"
           >
             {loading ? 'Procesando...' : 'Confirmar Cobro'}
           </button>
@@ -356,7 +356,7 @@ const MobileCobros: React.FC<MobileCobrosProps> = ({
                   fontWeight: 600,
                   border: '1px solid',
                   borderColor: isActive ? 'var(--accent-color)' : 'var(--border-color)',
-                  backgroundColor: isActive ? 'rgba(227, 6, 19, 0.08)' : '#fff',
+                  backgroundColor: isActive ? 'rgba(var(--color-corp-red-rgb), 0.08)' : '#fff',
                   color: isActive ? 'var(--accent-color)' : 'var(--text-secondary)',
                   whiteSpace: 'nowrap',
                   cursor: 'pointer',

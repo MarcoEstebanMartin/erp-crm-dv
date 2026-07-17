@@ -383,7 +383,7 @@ export default function SaleRoutesDashboard() {
                   <button 
                     className="btn btn-sm"
                     onClick={() => handleDeleteRoute(selectedRoute.id)}
-                    style={{ color: '#E30613', border: '1px solid rgba(227,6,19,0.2)', backgroundColor: 'rgba(227,6,19,0.02)' }}
+                    style={{ color: 'var(--color-corp-red)', border: '1px solid rgba(var(--color-corp-red-rgb),0.2)', backgroundColor: 'rgba(var(--color-corp-red-rgb),0.02)' }}
                   >
                     <Trash2 size={14} />
                   </button>
@@ -398,7 +398,7 @@ export default function SaleRoutesDashboard() {
                 </div>
                 <div style={{ padding: '12px 16px', borderRight: '1px solid var(--border-color)', textAlign: 'center' }}>
                   <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 500 }}>Deuda Total</span>
-                  <div style={{ fontSize: '1.25rem', fontWeight: 700, color: stats.totalDeuda > 0 ? '#E30613' : 'var(--text-primary)', marginTop: '2px' }}>
+                  <div style={{ fontSize: '1.25rem', fontWeight: 700, color: stats.totalDeuda > 0 ? 'var(--color-corp-red)' : 'var(--text-primary)', marginTop: '2px' }}>
                     ${Math.round(stats.totalDeuda).toLocaleString('es-AR')}
                   </div>
                 </div>
@@ -468,7 +468,7 @@ export default function SaleRoutesDashboard() {
                                   <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>{c.city || 'Sin ciudad'}</span>
                                 </div>
                               </td>
-                              <td style={{ textAlign: 'right', fontWeight: 600, color: Number(c.outstandingBalance) > 0 ? '#E30613' : 'inherit' }}>
+                              <td style={{ textAlign: 'right', fontWeight: 600, color: Number(c.outstandingBalance) > 0 ? 'var(--color-corp-red)' : 'inherit' }}>
                                 ${Math.round(Number(c.outstandingBalance)).toLocaleString('es-AR')}
                               </td>
                               <td>
@@ -507,10 +507,10 @@ export default function SaleRoutesDashboard() {
                                     onClick={() => handleRemoveClientFromRoute(c.id)}
                                     style={{
                                       padding: '3px',
-                                      border: '1px solid rgba(227,6,19,0.2)',
+                                      border: '1px solid rgba(var(--color-corp-red-rgb),0.2)',
                                       borderRadius: '4px',
-                                      backgroundColor: 'rgba(227,6,19,0.02)',
-                                      color: '#E30613',
+                                      backgroundColor: 'rgba(var(--color-corp-red-rgb),0.02)',
+                                      color: 'var(--color-corp-red)',
                                       cursor: 'pointer',
                                       marginLeft: '4px'
                                     }}

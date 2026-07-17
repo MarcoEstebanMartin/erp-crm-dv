@@ -10,8 +10,8 @@ const MiniSpinner = () => (
       width: '20px',
       height: '20px',
       borderRadius: '50%',
-      border: '2px solid rgba(227, 6, 19, 0.1)',
-      borderTopColor: '#E30613',
+      border: '2px solid rgba(var(--color-corp-red-rgb), 0.1)',
+      borderTopColor: 'var(--color-corp-red)',
       animation: 'spin 0.8s linear infinite'
     }} />
     <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Cargando sección...</span>
@@ -67,7 +67,7 @@ export default function LogisticaDashboard() {
                   gap: '8px',
                   padding: '10px 16px',
                   border: 'none',
-                  borderBottom: isActive ? '2px solid #E30613' : '2px solid transparent',
+                  borderBottom: isActive ? '2px solid var(--color-corp-red)' : '2px solid transparent',
                   backgroundColor: 'transparent',
                   color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
                   fontWeight: isActive ? 600 : 500,

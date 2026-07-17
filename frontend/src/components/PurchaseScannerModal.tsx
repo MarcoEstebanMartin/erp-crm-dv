@@ -118,7 +118,7 @@ export const PurchaseScannerModal: React.FC<PurchaseScannerModalProps> = ({
           <div className="w-1/2 p-6 overflow-y-auto custom-scrollbar">
             {loading && !extractedData ? (
               <div className="flex flex-col items-center justify-center h-full text-center space-y-4">
-                <Loader className="w-10 h-10 text-[#E30613] animate-spin" />
+                <Loader className="w-10 h-10 text-[var(--color-corp-red)] animate-spin" />
                 <div>
                   <p className="text-white font-medium text-lg">Procesando Documento...</p>
                   <p className="text-sm text-gray-400">Nuestra IA está leyendo los datos fiscales y artículos.</p>
@@ -126,7 +126,7 @@ export const PurchaseScannerModal: React.FC<PurchaseScannerModalProps> = ({
               </div>
             ) : errorMsg && !extractedData ? (
               <div className="flex flex-col items-center justify-center h-full text-center space-y-4">
-                <AlertCircle className="w-12 h-12 text-[#E30613]" />
+                <AlertCircle className="w-12 h-12 text-[var(--color-corp-red)]" />
                 <p className="text-red-400 font-medium">{errorMsg}</p>
                 <button onClick={() => file && processDocument(file)} className="px-4 py-2 bg-white/5 rounded-lg text-sm text-white hover:bg-white/10">Reintentar</button>
               </div>
@@ -135,7 +135,7 @@ export const PurchaseScannerModal: React.FC<PurchaseScannerModalProps> = ({
                 
                 {errorMsg && (
                   <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl flex items-start space-x-3">
-                    <AlertCircle className="w-5 h-5 text-[#E30613] flex-shrink-0 mt-0.5" />
+                    <AlertCircle className="w-5 h-5 text-[var(--color-corp-red)] flex-shrink-0 mt-0.5" />
                     <p className="text-sm text-red-200">{errorMsg}</p>
                   </div>
                 )}
@@ -150,7 +150,7 @@ export const PurchaseScannerModal: React.FC<PurchaseScannerModalProps> = ({
                         type="text" 
                         value={extractedData.supplierName || ''} 
                         onChange={(e) => setExtractedData({...extractedData, supplierName: e.target.value})}
-                        className="w-full bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:border-[#E30613] focus:ring-1 focus:ring-[#E30613] transition-all"
+                        className="w-full bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:border-[var(--color-corp-red)] focus:ring-1 focus:ring-[var(--color-corp-red)] transition-all"
                       />
                     </div>
                     <div>
@@ -160,7 +160,7 @@ export const PurchaseScannerModal: React.FC<PurchaseScannerModalProps> = ({
                         value={extractedData.providerId || ''} 
                         onChange={(e) => setExtractedData({...extractedData, providerId: e.target.value})}
                         placeholder="Ej: 1"
-                        className="w-full bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:border-[#E30613] focus:ring-1 focus:ring-[#E30613] transition-all"
+                        className="w-full bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:border-[var(--color-corp-red)] focus:ring-1 focus:ring-[var(--color-corp-red)] transition-all"
                       />
                     </div>
                     <div>
@@ -169,7 +169,7 @@ export const PurchaseScannerModal: React.FC<PurchaseScannerModalProps> = ({
                         type="text" 
                         value={extractedData.documentType || ''} 
                         onChange={(e) => setExtractedData({...extractedData, documentType: e.target.value})}
-                        className="w-full bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:border-[#E30613] focus:ring-1 focus:ring-[#E30613] transition-all"
+                        className="w-full bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:border-[var(--color-corp-red)] focus:ring-1 focus:ring-[var(--color-corp-red)] transition-all"
                       />
                     </div>
                     <div>
@@ -178,7 +178,7 @@ export const PurchaseScannerModal: React.FC<PurchaseScannerModalProps> = ({
                         type="text" 
                         value={extractedData.documentNumber || ''} 
                         onChange={(e) => setExtractedData({...extractedData, documentNumber: e.target.value})}
-                        className="w-full bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:border-[#E30613] focus:ring-1 focus:ring-[#E30613] transition-all"
+                        className="w-full bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:border-[var(--color-corp-red)] focus:ring-1 focus:ring-[var(--color-corp-red)] transition-all"
                       />
                     </div>
                     <div className="col-span-2">
@@ -186,7 +186,7 @@ export const PurchaseScannerModal: React.FC<PurchaseScannerModalProps> = ({
                       <select 
                         value={extractedData.billingType || 'OFFICIAL'} 
                         onChange={(e) => setExtractedData({...extractedData, billingType: e.target.value})}
-                        className="w-full bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:border-[#E30613] focus:ring-1 focus:ring-[#E30613] transition-all"
+                        className="w-full bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:border-[var(--color-corp-red)] focus:ring-1 focus:ring-[var(--color-corp-red)] transition-all"
                       >
                         <option value="OFFICIAL" className="bg-[#1C1C1E] text-white">Sucursal A (Oficial - Afecta Libro de Compras AFIP)</option>
                         <option value="INTERNAL" className="bg-[#1C1C1E] text-white">Sucursal X (Interna - Solo Afecta Stock / Control Interno)</option>
@@ -222,7 +222,7 @@ export const PurchaseScannerModal: React.FC<PurchaseScannerModalProps> = ({
                                   newItems[idx].matchedProductId = e.target.value;
                                   setExtractedData({...extractedData, items: newItems});
                                 }}
-                                className={`w-20 bg-black/20 border rounded-lg px-2 py-1.5 text-xs text-white focus:border-[#E30613] focus:ring-1 focus:ring-[#E30613] transition-all ${item.matchedProductId ? 'border-green-500/50' : 'border-red-500/50'}`}
+                                className={`w-20 bg-black/20 border rounded-lg px-2 py-1.5 text-xs text-white focus:border-[var(--color-corp-red)] focus:ring-1 focus:ring-[var(--color-corp-red)] transition-all ${item.matchedProductId ? 'border-green-500/50' : 'border-red-500/50'}`}
                               />
                               <span className="text-xs text-gray-400 truncate">
                                 {item.matchedProductName || 'Sin vincular - no se sumará stock'}
@@ -236,8 +236,8 @@ export const PurchaseScannerModal: React.FC<PurchaseScannerModalProps> = ({
                 </div>
 
                 {/* Totales */}
-                <div className="bg-[#E30613]/10 rounded-xl p-5 border border-[#E30613]/20 space-y-3">
-                  <h3 className="text-sm font-semibold text-[#E30613] uppercase tracking-wider mb-4">Totales</h3>
+                <div className="bg-[var(--color-corp-red)]/10 rounded-xl p-5 border border-[var(--color-corp-red)]/20 space-y-3">
+                  <h3 className="text-sm font-semibold text-[var(--color-corp-red)] uppercase tracking-wider mb-4">Totales</h3>
                   <div className="flex justify-between items-center text-sm">
                     <span className="text-gray-400">Neto Gravado</span>
                     <span className="text-white font-medium">${extractedData.netAmount}</span>
@@ -252,7 +252,7 @@ export const PurchaseScannerModal: React.FC<PurchaseScannerModalProps> = ({
                   </div>
                   <div className="pt-3 border-t border-white/10 flex justify-between items-center text-lg">
                     <span className="text-white font-semibold">Total</span>
-                    <span className="text-[#E30613] font-bold">${extractedData.totalAmount}</span>
+                    <span className="text-[var(--color-corp-red)] font-bold">${extractedData.totalAmount}</span>
                   </div>
                 </div>
 
@@ -273,7 +273,7 @@ export const PurchaseScannerModal: React.FC<PurchaseScannerModalProps> = ({
           <button 
             onClick={handleConfirm}
             disabled={loading || !extractedData}
-            className="px-6 py-2.5 bg-[#E30613] hover:bg-red-600 rounded-xl text-sm font-medium text-white shadow-lg shadow-red-500/20 transition-all flex items-center space-x-2 disabled:opacity-50"
+            className="px-6 py-2.5 bg-[var(--color-corp-red)] hover:bg-red-600 rounded-xl text-sm font-medium text-white shadow-lg shadow-red-500/20 transition-all flex items-center space-x-2 disabled:opacity-50"
           >
             {loading ? (
               <Loader className="w-4 h-4 animate-spin" />

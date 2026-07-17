@@ -294,7 +294,7 @@ export default function FleetDashboard() {
       dotColor = '#eab308'; // Amarillo
       label = 'En Taller';
     } else if (status === 'OUT_OF_SERVICE') {
-      dotColor = '#E30613'; // Rojo corporativo
+      dotColor = 'var(--color-corp-red)'; // Rojo corporativo
       label = 'Parado';
     }
     return (
@@ -355,17 +355,17 @@ export default function FleetDashboard() {
       {/* Alertas críticas generales */}
       {criticalExpirations.length > 0 && (
         <div style={{ 
-          border: '1px solid rgba(227, 6, 19, 0.2)', 
-          backgroundColor: 'rgba(227, 6, 19, 0.03)', 
+          border: '1px solid rgba(var(--color-corp-red-rgb), 0.2)', 
+          backgroundColor: 'rgba(var(--color-corp-red-rgb), 0.03)', 
           borderRadius: '8px', 
           padding: '12px 18px',
           display: 'flex',
           gap: '12px',
           alignItems: 'flex-start'
         }}>
-          <AlertCircle size={20} color="#E30613" style={{ flexShrink: 0, marginTop: '2px' }} />
+          <AlertCircle size={20} color="var(--color-corp-red)" style={{ flexShrink: 0, marginTop: '2px' }} />
           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-            <span style={{ fontSize: '0.88rem', fontWeight: 600, color: '#E30613' }}>
+            <span style={{ fontSize: '0.88rem', fontWeight: 600, color: 'var(--color-corp-red)' }}>
               Documentación Vencida o Próxima a Vencer
             </span>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px 24px', marginTop: '4px' }}>
@@ -375,7 +375,7 @@ export default function FleetDashboard() {
                   <span key={expiry.id} style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
                     🚗 <strong>{vehicle.plate}</strong> ({vehicle.brand} {vehicle.model}): {getExpiryLabel(expiry.type)} - 
                     <span style={{ 
-                      color: '#E30613', 
+                      color: 'var(--color-corp-red)', 
                       fontWeight: 600, 
                       marginLeft: '4px',
                       textDecoration: isOverdue ? 'underline' : 'none'
@@ -387,7 +387,7 @@ export default function FleetDashboard() {
                 );
               })}
               {criticalExpirations.length > 4 && (
-                <span style={{ fontSize: '0.8rem', color: '#E30613', fontWeight: 600 }}>
+                <span style={{ fontSize: '0.8rem', color: 'var(--color-corp-red)', fontWeight: 600 }}>
                   + {criticalExpirations.length - 4} alertas más
                 </span>
               )}
@@ -450,7 +450,7 @@ export default function FleetDashboard() {
                       cursor: 'pointer',
                       backgroundColor: isSelected ? 'rgba(0, 0, 0, 0.015)' : 'transparent',
                       transition: 'background 0.2s',
-                      borderLeft: isSelected ? '3px solid #E30613' : '3px solid transparent'
+                      borderLeft: isSelected ? '3px solid var(--color-corp-red)' : '3px solid transparent'
                     }}
                   >
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
@@ -460,7 +460,7 @@ export default function FleetDashboard() {
                         </span>
                         {hasCritical && (
                           <span title="Vencimiento crítico cercano">
-                            <AlertTriangle size={13} color="#E30613" />
+                            <AlertTriangle size={13} color="var(--color-corp-red)" />
                           </span>
                         )}
                         {getStatusBadge(v.status)}
@@ -526,7 +526,7 @@ export default function FleetDashboard() {
                   <button 
                     className="btn" 
                     onClick={() => handleDeleteVehicleClick(selectedVehicle.id)}
-                    style={{ padding: '6px 12px', fontSize: '0.8rem', border: '1px solid rgba(227,6,19,0.2)', borderRadius: '4px', backgroundColor: 'rgba(227,6,19,0.02)', color: '#E30613', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                    style={{ padding: '6px 12px', fontSize: '0.8rem', border: '1px solid rgba(var(--color-corp-red-rgb),0.2)', borderRadius: '4px', backgroundColor: 'rgba(var(--color-corp-red-rgb),0.02)', color: 'var(--color-corp-red)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
                   >
                     <Trash2 size={14} /> Borrar
                   </button>
@@ -541,7 +541,7 @@ export default function FleetDashboard() {
                   </h3>
                   <button 
                     onClick={() => setShowExpiryModal(true)}
-                    style={{ fontSize: '0.78rem', color: '#E30613', border: 'none', backgroundColor: 'transparent', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}
+                    style={{ fontSize: '0.78rem', color: 'var(--color-corp-red)', border: 'none', backgroundColor: 'transparent', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}
                   >
                     <Plus size={14} /> Agregar Alerta
                   </button>
@@ -561,9 +561,9 @@ export default function FleetDashboard() {
                       let textDateColor = 'var(--text-secondary)';
                       
                       if (isOverdue) {
-                        boxBorder = 'rgba(227, 6, 19, 0.2)';
-                        boxBg = 'rgba(227, 6, 19, 0.02)';
-                        textDateColor = '#E30613';
+                        boxBorder = 'rgba(var(--color-corp-red-rgb), 0.2)';
+                        boxBg = 'rgba(var(--color-corp-red-rgb), 0.02)';
+                        textDateColor = 'var(--color-corp-red)';
                       } else if (isClose) {
                         boxBorder = 'rgba(234, 179, 8, 0.3)';
                         boxBg = 'rgba(234, 179, 8, 0.02)';
@@ -599,7 +599,7 @@ export default function FleetDashboard() {
                             <button 
                               onClick={() => handleDeleteExpiry(exp.id)}
                               style={{ border: 'none', backgroundColor: 'transparent', color: 'var(--text-secondary)', cursor: 'pointer', padding: '4px' }}
-                              onMouseEnter={(e) => e.currentTarget.style.color = '#E30613'}
+                              onMouseEnter={(e) => e.currentTarget.style.color = 'var(--color-corp-red)'}
                               onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-secondary)'}
                             >
                               <Trash2 size={13} />
@@ -620,7 +620,7 @@ export default function FleetDashboard() {
                   </h3>
                   <button 
                     onClick={() => setShowMaintenanceModal(true)}
-                    style={{ fontSize: '0.78rem', color: '#E30613', border: 'none', backgroundColor: 'transparent', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}
+                    style={{ fontSize: '0.78rem', color: 'var(--color-corp-red)', border: 'none', backgroundColor: 'transparent', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}
                   >
                     <Plus size={14} /> Registrar Actividad
                   </button>
@@ -676,7 +676,7 @@ export default function FleetDashboard() {
                           <button 
                             onClick={() => handleDeleteMaintenance(m.id)}
                             style={{ border: 'none', backgroundColor: 'transparent', color: 'var(--text-secondary)', cursor: 'pointer', padding: '4px' }}
-                            onMouseEnter={(e) => e.currentTarget.style.color = '#E30613'}
+                            onMouseEnter={(e) => e.currentTarget.style.color = 'var(--color-corp-red)'}
                             onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-secondary)'}
                           >
                             <Trash2 size={13} />
@@ -811,7 +811,7 @@ export default function FleetDashboard() {
                 </button>
                 <button 
                   type="submit" 
-                  style={{ padding: '8px 16px', fontSize: '0.84rem', border: 'none', borderRadius: '4px', backgroundColor: '#E30613', color: '#fff', cursor: 'pointer', fontWeight: 600 }}
+                  style={{ padding: '8px 16px', fontSize: '0.84rem', border: 'none', borderRadius: '4px', backgroundColor: 'var(--color-corp-red)', color: '#fff', cursor: 'pointer', fontWeight: 600 }}
                 >
                   Guardar
                 </button>
@@ -1001,7 +1001,7 @@ export default function FleetDashboard() {
                 </button>
                 <button 
                   type="submit" 
-                  style={{ padding: '8px 16px', fontSize: '0.84rem', border: 'none', borderRadius: '4px', backgroundColor: '#E30613', color: '#fff', cursor: 'pointer', fontWeight: 600 }}
+                  style={{ padding: '8px 16px', fontSize: '0.84rem', border: 'none', borderRadius: '4px', backgroundColor: 'var(--color-corp-red)', color: '#fff', cursor: 'pointer', fontWeight: 600 }}
                 >
                   Confirmar Actividad
                 </button>
@@ -1071,7 +1071,7 @@ export default function FleetDashboard() {
                 </button>
                 <button 
                   type="submit" 
-                  style={{ padding: '8px 16px', fontSize: '0.84rem', border: 'none', borderRadius: '4px', backgroundColor: '#E30613', color: '#fff', cursor: 'pointer', fontWeight: 600 }}
+                  style={{ padding: '8px 16px', fontSize: '0.84rem', border: 'none', borderRadius: '4px', backgroundColor: 'var(--color-corp-red)', color: '#fff', cursor: 'pointer', fontWeight: 600 }}
                 >
                   Guardar Alerta
                 </button>

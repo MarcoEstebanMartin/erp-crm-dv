@@ -388,9 +388,9 @@ export default function ClientsTab({
                       <div className="stat-value" style={{ color: '#3c4043', fontSize: '1.5rem', fontWeight: 700 }}>${totalX.toLocaleString('es-AR')}</div>
                       <div className="stat-desc" style={{ fontSize: '0.78rem' }}>Total presupuestos internos</div>
                     </div>
-                    <div className="card stat-card" style={{ borderLeft: '4px solid #E30613', padding: '16px' }}>
+                    <div className="card stat-card" style={{ borderLeft: '4px solid var(--color-corp-red)', padding: '16px' }}>
                       <div className="stat-label">Total Consolidado</div>
-                      <div className="stat-value" style={{ color: '#E30613', fontSize: '1.5rem', fontWeight: 700 }}>${totalConsolidado.toLocaleString('es-AR')}</div>
+                      <div className="stat-value" style={{ color: 'var(--color-corp-red)', fontSize: '1.5rem', fontWeight: 700 }}>${totalConsolidado.toLocaleString('es-AR')}</div>
                       <div className="stat-desc" style={{ fontSize: '0.78rem' }}>Saldo total a cobrar</div>
                     </div>
                   </div>
@@ -402,7 +402,7 @@ export default function ClientsTab({
                         fontWeight: 700, 
                         padding: '10px 14px', 
                         backgroundColor: 'var(--bg-light, #f8f9fa)', 
-                        borderLeft: '4px solid var(--accent-color, #E30613)',
+                        borderLeft: '4px solid var(--accent-color, var(--color-corp-red))',
                         borderRadius: '0 6px 6px 0',
                         marginBottom: '12px',
                         display: 'flex',
@@ -486,7 +486,7 @@ export default function ClientsTab({
                                   <td style={{ textAlign: 'right', fontWeight: 500, color: d.debtX > 0 ? '#3c4043' : 'var(--text-secondary)' }}>
                                     {d.debtX > 0 ? `$${Math.round(d.debtX).toLocaleString('es-AR')}` : '-'}
                                   </td>
-                                  <td style={{ textAlign: 'right', fontWeight: 700, color: '#E30613' }}>
+                                  <td style={{ textAlign: 'right', fontWeight: 700, color: 'var(--color-corp-red)' }}>
                                     ${Math.round(d.outstandingBalance).toLocaleString('es-AR')}
                                   </td>
                                   <td>

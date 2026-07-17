@@ -226,7 +226,7 @@ export default function ResumenCuentaModal({ client, onClose }: ResumenCuentaMod
             </div>
             <div style={{ textAlign: 'right' }}>
               <div style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#6b7280', fontWeight: 600, marginBottom: '2px' }}>Saldo Actual</div>
-              <strong style={{ fontSize: '1.25rem', color: Number(client.outstandingBalance) > 0 ? '#E30613' : '#111827' }}>
+              <strong style={{ fontSize: '1.25rem', color: Number(client.outstandingBalance) > 0 ? 'var(--color-corp-red)' : '#111827' }}>
                 ${Number(client.outstandingBalance || 0).toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
               </strong>
             </div>

@@ -955,7 +955,7 @@ const RendicionesDashboard: React.FC = () => {
                     padding: '10px 22px', 
                     fontSize: '0.88rem',
                     fontWeight: 600,
-                    backgroundColor: '#E30613', // Rojo corporativo reservado exclusivamente para la acción crítica
+                    backgroundColor: 'var(--color-corp-red)', // Rojo corporativo reservado exclusivamente para la acción crítica
                     color: '#fff',
                     border: 'none',
                     borderRadius: '6px',
@@ -964,7 +964,7 @@ const RendicionesDashboard: React.FC = () => {
                     transition: 'background-color 0.2s'
                   }}
                   onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#b90510'}
-                  onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#E30613'}
+                  onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'var(--color-corp-red)'}
                 >
                   {actionLoading ? 'Verificando Arqueo...' : 'Confirmar Arqueo y Transferir a Caja Grande'}
                 </button>

@@ -5,6 +5,10 @@
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
 
 :root {
+  /* Color Corporativo */
+  --color-corp-red: #E30613;
+  --color-corp-red-rgb: 227, 6, 19;
+
   /* Paleta de Colores (Minimalista y Elegante - Stripe/Vercel/Linear style) */
   --bg-app: #F9FAFB;          /* Gris muy claro neutral (Gray 50) */
   --bg-card: #FFFFFF;         /* Blanco puro */

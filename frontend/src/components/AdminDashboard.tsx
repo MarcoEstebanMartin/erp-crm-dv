@@ -61,8 +61,8 @@ const LoadingDashboard = () => (
       width: '24px',
       height: '24px',
       borderRadius: '50%',
-      border: '2px solid rgba(227, 6, 19, 0.1)',
-      borderTopColor: '#E30613',
+      border: '2px solid rgba(var(--color-corp-red-rgb), 0.1)',
+      borderTopColor: 'var(--color-corp-red)',
       animation: 'spin 0.8s linear infinite'
     }} />
     <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Cargando sección...</span>
@@ -1381,7 +1381,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
             }
             .client-badge {
               font-size: 9px;
-              color: #e30613;
+              color: var(--color-corp-red);
               font-weight: 600;
               margin-left: 6px;
               background-color: #fef2f2;
@@ -1539,7 +1539,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
           borderRadius: 'var(--radius-sm)',
           fontSize: '0.85rem',
           marginBottom: '20px',
-          border: '1px solid rgba(227, 6, 19, 0.15)'
+          border: '1px solid rgba(var(--color-corp-red-rgb), 0.15)'
         }}>
           {errorMsg}
         </div>
