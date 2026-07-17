@@ -227,9 +227,49 @@ export async function settleDeliveryRoute(req: AuthenticatedRequest, res: Respon
       return;
     }
 
+    // 1. Pre-facturar por AFIP fuera de la transacción de DB para evitar bloqueos y timeouts
+    const afipResults: Record<number, {
+      invoiceType: InvoiceType;
+      invoiceNumber: string;
+      cae: string | null;
+      caeDueDate: Date | null;
+    }> = {};
+
+    for (const order of route.orders) {
+      const set = settlements.find((s: any) => s.orderId === order.id);
+      if (!set) continue;
+
+      if (order.status === OrderStatus.PREPARED && order.billingType === BillingType.OFFICIAL) {
+        try {
+          const persona = order.persona;
+          const invoiceType = (persona?.cuit && persona.cuit.length > 5) ? InvoiceType.FACTURA_A : InvoiceType.FACTURA_B;
+          
+          const afipRes = await emitirFacturaAFIP({
+            total: Number(order.totalAmount),
+            clientDocType: invoiceType === InvoiceType.FACTURA_A ? 80 : 99,
+            clientCuit: invoiceType === InvoiceType.FACTURA_A ? (persona?.cuit?.replace(/\D/g, '') || '0') : '0',
+            invoiceType: invoiceType === InvoiceType.FACTURA_A ? 'A' : 'B',
+          });
+
+          afipResults[order.id] = {
+            invoiceType,
+            invoiceNumber: afipRes.invoiceNumber,
+            cae: afipRes.cae,
+            caeDueDate: afipRes.caeDueDate ? new Date(afipRes.caeDueDate) : null
+          };
+        } catch (err: any) {
+          res.status(400).json({
+            status: 'error',
+            message: `Error emitiendo factura AFIP para pedido #${order.id}: ${err.message}`
+          });
+          return;
+        }
+      }
+    }
+
     // Procesar liquidación en una transacción de base de datos
     await prisma.$transaction(async (tx) => {
-      // 1. Iterar sobre las órdenes
+      // 2. Iterar sobre las órdenes
       for (const order of route.orders) {
         const set = settlements.find((s: any) => s.orderId === order.id);
         if (!set) continue;
@@ -244,25 +284,14 @@ export async function settleDeliveryRoute(req: AuthenticatedRequest, res: Respon
           let finalCaeDueDate = null;
 
           if (order.billingType === BillingType.OFFICIAL) {
-            // Llamar a AFIP o al Mock
-            try {
-              const persona = await tx.persona.findUnique({ where: { id: order.personaId } });
-              const invoiceType = (persona?.cuit && persona.cuit.length > 5) ? InvoiceType.FACTURA_A : InvoiceType.FACTURA_B;
-              
-              const afipRes = await emitirFacturaAFIP({
-                total: Number(order.totalAmount),
-                clientDocType: invoiceType === InvoiceType.FACTURA_A ? 80 : 99,
-                clientCuit: invoiceType === InvoiceType.FACTURA_A ? (persona?.cuit?.replace(/\D/g, '') || '0') : '0',
-                invoiceType: invoiceType === InvoiceType.FACTURA_A ? 'A' : 'B',
-              });
-
-              finalInvoiceType = invoiceType;
-              finalInvoiceNumber = afipRes.invoiceNumber;
-              finalCae = afipRes.cae;
-              finalCaeDueDate = afipRes.caeDueDate;
-            } catch (err: any) {
-              throw new Error(`Error emitiendo factura AFIP para pedido #${order.id}: ${err.message}`);
+            const afipInfo = afipResults[order.id];
+            if (!afipInfo) {
+              throw new Error(`Falta información de AFIP para pedido #${order.id}`);
             }
+            finalInvoiceType = afipInfo.invoiceType;
+            finalInvoiceNumber = afipInfo.invoiceNumber;
+            finalCae = afipInfo.cae;
+            finalCaeDueDate = afipInfo.caeDueDate;
           }
           
           // Actualizar pedido a DELIVERED

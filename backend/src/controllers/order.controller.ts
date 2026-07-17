@@ -626,99 +626,201 @@ export async function invoiceOrder(req: AuthenticatedRequest, res: Response): Pr
       }
     }
 
-    const result = await prisma.$transaction(async (tx) => {
-      // 1. Detectar si hay reglas de división para este cliente
-      const rubroIds = Array.from(new Set(order.items.map(i => i.product.rubroId).filter(id => id !== null))) as number[];
-      const splitConfigs = await tx.splitBillingConfig.findMany({
-        where: {
-          personaId: order.personaId,
-          rubroId: { in: rubroIds }
-        }
-      });
+    // 1. Detectar si hay reglas de división para este cliente (fuera de la transacción de DB)
+    const rubroIds = Array.from(new Set(order.items.map(i => i.product.rubroId).filter(id => id !== null))) as number[];
+    const splitConfigs = await prisma.splitBillingConfig.findMany({
+      where: {
+        personaId: order.personaId,
+        rubroId: { in: rubroIds }
+      }
+    });
 
-      const hasSplit = splitConfigs.length > 0;
-      
-      let officialOrderTotal = 0;
-      let internalOrderTotal = 0;
-      let internalOrderId: number | null = null;
-      let splitApplied = false;
+    const hasSplit = splitConfigs.length > 0;
+    
+    let officialOrderTotal = 0;
+    let internalOrderTotal = 0;
+    let splitApplied = false;
 
-      const oficialItemsData = [];
-      const internoItemsData = [];
+    const oficialItemsData: any[] = [];
+    const internoItemsData: any[] = [];
 
-      if (hasSplit) {
-        // LÓGICA DE SPLIT BILLING
-        for (const item of order.items) {
-          const config = splitConfigs.find(c => c.rubroId === item.product.rubroId);
-          if (config) {
-            // Dividir al 50%
-            const qtyOficial = Math.ceil(item.quantity / 2);
-            const qtyInterno = Math.floor(item.quantity / 2);
+    if (hasSplit) {
+      // LÓGICA DE SPLIT BILLING
+      for (const item of order.items) {
+        const config = splitConfigs.find(c => c.rubroId === item.product.rubroId);
+        if (config) {
+          // Dividir al 50%
+          const qtyOficial = Math.ceil(item.quantity / 2);
+          const qtyInterno = Math.floor(item.quantity / 2);
 
-            let weightOficial: number | null = null;
-            let weightInterno: number | null = null;
+          let weightOficial: number | null = null;
+          let weightInterno: number | null = null;
 
-            if (item.weight) {
-              weightOficial = Number((Number(item.weight) / 2).toFixed(3));
-              weightInterno = Number((Number(item.weight) - weightOficial).toFixed(3));
-            }
+          if (item.weight) {
+            weightOficial = Number((Number(item.weight) / 2).toFixed(3));
+            weightInterno = Number((Number(item.weight) - weightOficial).toFixed(3));
+          }
 
-            // Calcular precios unitarios correspondientes (descuento del 3% para quesos en ambas sucursales)
-            const pricingOficial = await PricingService.calculatePriceAndDiscount(item.productId, order.personaId, BillingType.OFFICIAL);
-            const pricingInterno = await PricingService.calculatePriceAndDiscount(item.productId, order.personaId, BillingType.INTERNAL);
+          // Calcular precios unitarios correspondientes (descuento del 3% para quesos en ambas sucursales)
+          const pricingOficial = await PricingService.calculatePriceAndDiscount(item.productId, order.personaId, BillingType.OFFICIAL);
+          const pricingInterno = await PricingService.calculatePriceAndDiscount(item.productId, order.personaId, BillingType.INTERNAL);
 
-            if (qtyOficial > 0) {
-              const actualQty = item.product.isPesable ? (weightOficial || qtyOficial) : qtyOficial;
-              const subtotal = Math.round(pricingOficial.finalPrice * actualQty);
-              oficialItemsData.push({
-                orderItemId: item.id,
-                productId: item.productId,
-                quantity: qtyOficial,
-                weight: weightOficial,
-                unitPrice: pricingOficial.finalPrice,
-                subtotal
-              });
-            }
-
-            if (qtyInterno > 0) {
-              const actualQty = item.product.isPesable ? (weightInterno || qtyInterno) : qtyInterno;
-              const subtotal = Math.round(pricingInterno.finalPrice * actualQty);
-              internoItemsData.push({
-                productId: item.productId,
-                quantity: qtyInterno,
-                weight: weightInterno,
-                unitPrice: pricingInterno.finalPrice,
-                subtotal
-              });
-            }
-          } else {
-            // No tiene regla de split: va al 100% a la oficial (Sucursal A) o según corresponda
-            const pricing = await PricingService.calculatePriceAndDiscount(item.productId, order.personaId, billingType);
-            const actualQty = item.product.isPesable ? (item.weight ? Number(item.weight) : item.quantity) : item.quantity;
-            const subtotal = Math.round(pricing.finalPrice * actualQty);
-
-            const itemData = {
+          if (qtyOficial > 0) {
+            const actualQty = item.product.isPesable ? (weightOficial || qtyOficial) : qtyOficial;
+            const subtotal = Math.round(pricingOficial.finalPrice * actualQty);
+            oficialItemsData.push({
               orderItemId: item.id,
               productId: item.productId,
-              quantity: item.quantity,
-              weight: item.weight ? Number(item.weight) : null,
-              unitPrice: pricing.finalPrice,
+              quantity: qtyOficial,
+              weight: weightOficial,
+              unitPrice: pricingOficial.finalPrice,
               subtotal
-            };
+            });
+          }
 
-            if (billingType === BillingType.OFFICIAL) {
-              oficialItemsData.push(itemData);
-            } else {
-              internoItemsData.push(itemData);
-            }
+          if (qtyInterno > 0) {
+            const actualQty = item.product.isPesable ? (weightInterno || qtyInterno) : qtyInterno;
+            const subtotal = Math.round(pricingInterno.finalPrice * actualQty);
+            internoItemsData.push({
+              productId: item.productId,
+              quantity: qtyInterno,
+              weight: weightInterno,
+              unitPrice: pricingInterno.finalPrice,
+              subtotal
+            });
+          }
+        } else {
+          // No tiene regla de split: va al 100% a la oficial (Sucursal A) o según corresponda
+          const pricing = await PricingService.calculatePriceAndDiscount(item.productId, order.personaId, billingType);
+          const actualQty = item.product.isPesable ? (item.weight ? Number(item.weight) : item.quantity) : item.quantity;
+          const subtotal = Math.round(pricing.finalPrice * actualQty);
+
+          const itemData = {
+            orderItemId: item.id,
+            productId: item.productId,
+            quantity: item.quantity,
+            weight: item.weight ? Number(item.weight) : null,
+            unitPrice: pricing.finalPrice,
+            subtotal
+          };
+
+          if (billingType === BillingType.OFFICIAL) {
+            oficialItemsData.push(itemData);
+          } else {
+            internoItemsData.push(itemData);
           }
         }
+      }
 
+      // Si tenemos ítems para la orden interna, calculamos total
+      if (internoItemsData.length > 0) {
+        splitApplied = true;
+        internalOrderTotal = internoItemsData.reduce((sum, item) => sum + item.subtotal, 0);
+      }
+
+      officialOrderTotal = oficialItemsData.reduce((sum, item) => sum + item.subtotal, 0);
+    } else {
+      // LÓGICA ESTÁNDAR: Recalcular precios pero sin split
+      officialOrderTotal = 0;
+      for (const item of order.items) {
+        const pricing = await PricingService.calculatePriceAndDiscount(item.productId, order.personaId, billingType);
+        const actualQty = item.product.isPesable ? (item.weight ? Number(item.weight) : item.quantity) : item.quantity;
+        const subtotal = Math.round(pricing.finalPrice * actualQty);
+
+        oficialItemsData.push({
+          orderItemId: item.id,
+          productId: item.productId,
+          quantity: item.quantity,
+          weight: item.weight ? Number(item.weight) : null,
+          unitPrice: pricing.finalPrice,
+          subtotal
+        });
+
+        officialOrderTotal += subtotal;
+      }
+    }
+
+    let finalInvoiceType: InvoiceType = InvoiceType.PRESUPUESTO;
+    let finalInvoiceNumber: string | null = null;
+    let finalCae: string | null = null;
+    let finalCaeDueDate: Date | null = null;
+
+    const cuitLimpio = order.persona.cuit ? order.persona.cuit.replace(/-/g, '') : '';
+    let docType = 99; // Consumidor Final
+
+    if (billingType === BillingType.OFFICIAL) {
+      if (cuitLimpio.length === 11) {
+        docType = 80;
+        finalInvoiceType = InvoiceType.FACTURA_A;
+      } else if (cuitLimpio.length === 7 || cuitLimpio.length === 8) {
+        docType = 96;
+        finalInvoiceType = InvoiceType.FACTURA_B;
+      } else {
+        finalInvoiceType = InvoiceType.FACTURA_B;
+      }
+    } else {
+      finalInvoiceType = InvoiceType.PRESUPUESTO;
+    }
+
+    // Calcular desglose impositivo
+    let net = officialOrderTotal;
+    let tax = 0;
+    let percepIIBB = 0;
+    let percepIVA = 0;
+
+    const isFacturaA_Official = billingType === BillingType.OFFICIAL && finalInvoiceType === InvoiceType.FACTURA_A;
+    if (isFacturaA_Official) {
+      const perceptionIVA = await prisma.perceptionType.findUnique({
+        where: { code: 'IVA_5329' }
+      });
+      
+      const applyIvaPerc = officialOrderTotal > 100000;
+      const ivaPercAliquot = applyIvaPerc ? ((perceptionIVA && perceptionIVA.aliquot) ? Number(perceptionIVA.aliquot) : 3.00) : 0;
+      const iibbAliquot = Number(order.persona.iibbAliquot || 0);
+
+      net = Number((officialOrderTotal / (1.21 + (iibbAliquot / 100) + (ivaPercAliquot / 100))).toFixed(2));
+      tax = Number((net * 0.21).toFixed(2));
+      percepIIBB = Number((net * (iibbAliquot / 100)).toFixed(2));
+      percepIVA = Number((net * (ivaPercAliquot / 100)).toFixed(2));
+
+      const sumParts = Number((net + tax + percepIIBB + percepIVA).toFixed(2));
+      const diff = Number((officialOrderTotal - sumParts).toFixed(2));
+      if (diff !== 0) {
+        tax = Number((tax + diff).toFixed(2));
+      }
+    }
+
+    if (billingType === BillingType.OFFICIAL) {
+      try {
+        const afipRes = await emitirFacturaAFIP({
+          clientCuit: cuitLimpio,
+          clientDocType: docType,
+          invoiceType: finalInvoiceType === InvoiceType.FACTURA_A ? 'A' : 'B',
+          total: officialOrderTotal,
+          neto: isFacturaA_Official ? Number(net.toFixed(2)) : undefined,
+          iva: isFacturaA_Official ? Number(tax.toFixed(2)) : undefined,
+          percepcionAmount: isFacturaA_Official ? Number(percepIIBB.toFixed(2)) : undefined,
+          percepcionIvaAmount: isFacturaA_Official ? Number(percepIVA.toFixed(2)) : undefined,
+        });
+
+        finalInvoiceNumber = afipRes.invoiceNumber;
+        finalCae = afipRes.cae;
+        finalCaeDueDate = afipRes.caeDueDate;
+      } catch (err: any) {
+        res.status(400).json({ status: 'error', message: `Error AFIP al facturar pedido: ${err.message}` });
+        return;
+      }
+    } else {
+      finalInvoiceNumber = `INT-${order.id.toString().padStart(8, '0')}`;
+    }
+
+    // Iniciar transacción de base de datos
+    const result = await prisma.$transaction(async (tx) => {
+      let internalOrderId: number | null = null;
+
+      if (hasSplit) {
         // Si tenemos ítems para la orden interna, la creamos
         if (internoItemsData.length > 0) {
-          splitApplied = true;
-          internalOrderTotal = internoItemsData.reduce((sum, item) => sum + item.subtotal, 0);
-          
           const internalOrder = await tx.order.create({
             data: {
               personaId: order.personaId,
@@ -852,95 +954,17 @@ export async function invoiceOrder(req: AuthenticatedRequest, res: Response): Pr
             id: { notIn: oficialItemsIds }
           }
         });
-
-        officialOrderTotal = oficialItemsData.reduce((sum, item) => sum + item.subtotal, 0);
       } else {
-        // LÓGICA ESTÁNDAR: Recalcular precios pero sin split
-        officialOrderTotal = 0;
-        for (const item of order.items) {
-          const pricing = await PricingService.calculatePriceAndDiscount(item.productId, order.personaId, billingType);
-          const actualQty = item.product.isPesable ? (item.weight ? Number(item.weight) : item.quantity) : item.quantity;
-          const subtotal = Math.round(pricing.finalPrice * actualQty);
-
+        // LÓGICA ESTÁNDAR: Actualizar precios de la orden oficial sin split
+        for (const item of oficialItemsData) {
           await tx.orderItem.update({
-            where: { id: item.id },
+            where: { id: item.orderItemId },
             data: {
-              unitPrice: pricing.finalPrice,
-              subtotal
+              unitPrice: item.unitPrice,
+              subtotal: item.subtotal
             }
           });
-
-          officialOrderTotal += subtotal;
         }
-      }
-
-      let finalInvoiceType: InvoiceType = InvoiceType.PRESUPUESTO;
-      let finalInvoiceNumber: string | null = null;
-      let finalCae: string | null = null;
-      let finalCaeDueDate: Date | null = null;
-
-      const cuitLimpio = order.persona.cuit ? order.persona.cuit.replace(/-/g, '') : '';
-      let docType = 99; // Consumidor Final
-
-      if (billingType === BillingType.OFFICIAL) {
-        if (cuitLimpio.length === 11) {
-          docType = 80;
-          finalInvoiceType = InvoiceType.FACTURA_A;
-        } else if (cuitLimpio.length === 7 || cuitLimpio.length === 8) {
-          docType = 96;
-          finalInvoiceType = InvoiceType.FACTURA_B;
-        } else {
-          finalInvoiceType = InvoiceType.FACTURA_B;
-        }
-      } else {
-        finalInvoiceType = InvoiceType.PRESUPUESTO;
-      }
-
-      // Calcular desglose impositivo primero
-      let net = officialOrderTotal;
-      let tax = 0;
-      let percepIIBB = 0;
-      let percepIVA = 0;
-
-      const isFacturaA_Official = billingType === BillingType.OFFICIAL && finalInvoiceType === InvoiceType.FACTURA_A;
-      if (isFacturaA_Official) {
-        const perceptionIVA = await tx.perceptionType.findUnique({
-          where: { code: 'IVA_5329' }
-        });
-        
-        const applyIvaPerc = officialOrderTotal > 100000;
-        const ivaPercAliquot = applyIvaPerc ? ((perceptionIVA && perceptionIVA.aliquot) ? Number(perceptionIVA.aliquot) : 3.00) : 0;
-        const iibbAliquot = Number(order.persona.iibbAliquot || 0);
-
-        net = Number((officialOrderTotal / (1.21 + (iibbAliquot / 100) + (ivaPercAliquot / 100))).toFixed(2));
-        tax = Number((net * 0.21).toFixed(2));
-        percepIIBB = Number((net * (iibbAliquot / 100)).toFixed(2));
-        percepIVA = Number((net * (ivaPercAliquot / 100)).toFixed(2));
-
-        const sumParts = Number((net + tax + percepIIBB + percepIVA).toFixed(2));
-        const diff = Number((officialOrderTotal - sumParts).toFixed(2));
-        if (diff !== 0) {
-          tax = Number((tax + diff).toFixed(2));
-        }
-      }
-
-      if (billingType === BillingType.OFFICIAL) {
-        const afipRes = await emitirFacturaAFIP({
-          clientCuit: cuitLimpio,
-          clientDocType: docType,
-          invoiceType: finalInvoiceType === InvoiceType.FACTURA_A ? 'A' : 'B',
-          total: officialOrderTotal,
-          neto: isFacturaA_Official ? Number(net.toFixed(2)) : undefined,
-          iva: isFacturaA_Official ? Number(tax.toFixed(2)) : undefined,
-          percepcionAmount: isFacturaA_Official ? Number(percepIIBB.toFixed(2)) : undefined,
-          percepcionIvaAmount: isFacturaA_Official ? Number(percepIVA.toFixed(2)) : undefined,
-        });
-
-        finalInvoiceNumber = afipRes.invoiceNumber;
-        finalCae = afipRes.cae;
-        finalCaeDueDate = afipRes.caeDueDate;
-      } else {
-        finalInvoiceNumber = `INT-${order.id.toString().padStart(8, '0')}`;
       }
 
       // Actualizar pedido original a DELIVERED
@@ -951,7 +975,7 @@ export async function invoiceOrder(req: AuthenticatedRequest, res: Response): Pr
           invoiceType: finalInvoiceType,
           invoiceNumber: finalInvoiceNumber,
           cae: finalCae,
-          caeDueDate: finalCaeDueDate,
+          caeDueDate: finalCaeDueDate ? new Date(finalCaeDueDate) : null,
           totalAmount: officialOrderTotal,
           netAmount: isFacturaA_Official ? Number(net.toFixed(2)) : Math.round(net),
           taxAmount: isFacturaA_Official ? Number(tax.toFixed(2)) : Math.round(tax),
@@ -1330,169 +1354,157 @@ export async function createDirectInvoice(req: AuthenticatedRequest, res: Respon
   }
 
   try {
-    const result = await prisma.$transaction(async (tx) => {
-      // 1. Obtener cliente/persona
-      const persona = await tx.persona.findUnique({ where: { id: personaId } });
-      if (!persona) {
-        throw new Error('Cliente no encontrado.');
+    // 1. Obtener cliente/persona
+    const persona = await prisma.persona.findUnique({ where: { id: personaId } });
+    if (!persona) {
+      res.status(404).json({ status: 'error', message: 'Cliente no encontrado.' });
+      return;
+    }
+
+    // 2. Procesar ítems to check stock and calculate totalSum outside transaction
+    let totalSum = 0;
+    const orderItemsData: any[] = [];
+
+    for (const item of items) {
+      const product = await prisma.product.findUnique({ where: { id: item.productId } });
+      if (!product) {
+        res.status(404).json({ status: 'error', message: `Producto ID ${item.productId} no encontrado.` });
+        return;
       }
 
-      // 2. Procesar ítems y descontar stock general y por lotes (FIFO)
-      let totalSum = 0;
-      const orderItemsData = [];
-
-      for (const item of items) {
-        const product = await tx.product.findUnique({ where: { id: item.productId } });
-        if (!product) {
-          throw new Error(`Producto ID ${item.productId} no encontrado.`);
-        }
-
-        if (product.stock < item.quantity && process.env.IGNORE_STOCK_CHECK !== 'true') {
-          throw new Error(`Stock insuficiente para "${product.name}" (Disponible: ${product.stock}, Solicitado: ${item.quantity}).`);
-        }
-
-        // Determinar precio unitario base según la lista del cliente
-        let selectedPrice = Number(product.listPrice);
-        let itemDiscount = Number(persona.discount || 0);
-
-        if (persona.priceList === 'B') {
-          selectedPrice = Number(product.listPriceB) > 0 ? Number(product.listPriceB) : Number(product.listPrice);
-          const isMelincue = product.description?.toUpperCase() === 'MELINCUE' || product.name?.toUpperCase().includes('MELINCUE');
-          if (isMelincue) {
-            itemDiscount = 3;
-          } else {
-            itemDiscount = 0;
-          }
-        } else if (persona.priceList === 'C') {
-          selectedPrice = Number(product.listPriceC) > 0 ? Number(product.listPriceC) : Number(product.listPrice);
-        }
-
-        // Aplicar descuento fijo / dinámico (redondeando a 2 decimales)
-        const finalUnitPrice = Math.round(selectedPrice * (1 - itemDiscount / 100));
-        
-        // Si es pesable y tiene peso explícito lo usa, si no, usa quantity * approximateWeight, si no tiene aprox, asume 1kg por unidad.
-        const actualQuantityForPrice = product.isPesable 
-          ? (item.weight ? Number(item.weight) : item.quantity * Number((product as any).approximateWeight || 1))
-          : item.quantity;
-        const subtotal = Math.round(finalUnitPrice * actualQuantityForPrice);
-        totalSum += subtotal;
-
-        // Descontar del stock general del producto
-        await tx.product.update({
-          where: { id: product.id },
-          data: { stock: { decrement: item.quantity } },
+      if (product.stock < item.quantity && process.env.IGNORE_STOCK_CHECK !== 'true') {
+        res.status(400).json({
+          status: 'error',
+          message: `Stock insuficiente para "${product.name}" (Disponible: ${product.stock}, Solicitado: ${item.quantity}).`
         });
-
-        orderItemsData.push({
-          productId: product.id,
-          quantity: item.quantity,
-          weight: product.isPesable ? (item.weight ? Number(item.weight) : item.quantity * Number((product as any).approximateWeight || 1)) : null,
-          unitPrice: finalUnitPrice,
-          subtotal,
-          productName: product.name,
-        });
+        return;
       }
 
-      totalSum = Math.round(totalSum);
+      // Determinar precio unitario base según la lista del cliente
+      let selectedPrice = Number(product.listPrice);
+      let itemDiscount = Number(persona.discount || 0);
 
-      // 3. Validar límite de crédito y boleta contra boleta
-      const creditLimit = Number(persona.creditLimit || 0);
-      const outstandingBalance = Number(persona.outstandingBalance || 0);
-      if (creditLimit > 0 && (outstandingBalance + totalSum) > creditLimit) {
-        if (userRole !== Role.ADMIN) {
-          throw new Error(
-            `Límite de crédito excedido. Saldo actual: $${outstandingBalance.toLocaleString()}, Disponible: $${(creditLimit - outstandingBalance).toLocaleString()}, Requerido: $${totalSum.toLocaleString()}.`
-          );
-        }
-      }
-
-      if (!paymentMethod && outstandingBalance > 0) {
-        if (userRole !== Role.ADMIN) {
-          throw new Error(
-            `Regla Boleta contra Boleta: El cliente posee una boleta pendiente ($${outstandingBalance.toLocaleString()}). Debe registrar su cobro para poder facturar a crédito.`
-          );
-        }
-      }
-
-      // 4. Determinar datos impositivos y generar Factura AFIP o Interna
-      let finalInvoiceType: InvoiceType = InvoiceType.PRESUPUESTO;
-      let finalInvoiceNumber: string | null = null;
-      let finalCae: string | null = null;
-      let finalCaeDueDate: Date | null = null;
-
-      let net = Math.round(totalSum / 1.21);
-      let tax = totalSum - net;
-      let percepcion = 0;
-
-      // Creamos el Order primero para tener un ID y poder asociarlo
-      const order = await tx.order.create({
-        data: {
-          personaId,
-          sellerId: adminId,
-          status: OrderStatus.DELIVERED,
-          billingType,
-          totalAmount: totalSum,
-          netAmount: 0,
-          taxAmount: 0,
-          percepcionAmount: 0,
-        },
-      });
-
-      const cuitLimpio = persona.cuit ? persona.cuit.replace(/-/g, '') : '';
-      let docType = 99;
-
-      if (billingType === BillingType.OFFICIAL) {
-        if (cuitLimpio.length === 11) {
-          docType = 80;
-          finalInvoiceType = InvoiceType.FACTURA_A;
-        } else if (cuitLimpio.length === 7 || cuitLimpio.length === 8) {
-          docType = 96;
-          finalInvoiceType = InvoiceType.FACTURA_B;
+      if (persona.priceList === 'B') {
+        selectedPrice = Number(product.listPriceB) > 0 ? Number(product.listPriceB) : Number(product.listPrice);
+        const isMelincue = product.description?.toUpperCase() === 'MELINCUE' || product.name?.toUpperCase().includes('MELINCUE');
+        if (isMelincue) {
+          itemDiscount = 3;
         } else {
-          finalInvoiceType = InvoiceType.FACTURA_B;
+          itemDiscount = 0;
         }
-      } else {
-        finalInvoiceType = InvoiceType.PRESUPUESTO;
+      } else if (persona.priceList === 'C') {
+        selectedPrice = Number(product.listPriceC) > 0 ? Number(product.listPriceC) : Number(product.listPrice);
       }
 
-      net = Math.round(totalSum / 1.21);
-      tax = totalSum - net;
-      let percepIIBB = 0;
-      let percepIVA = 0;
+      // Aplicar descuento fijo / dinámico (redondeando a 2 decimales)
+      const finalUnitPrice = Math.round(selectedPrice * (1 - itemDiscount / 100));
+      
+      // Si es pesable y tiene peso explícito lo usa, si no, usa quantity * approximateWeight, si no tiene aprox, asume 1kg por unidad.
+      const actualQuantityForPrice = product.isPesable 
+        ? (item.weight ? Number(item.weight) : item.quantity * Number((product as any).approximateWeight || 1))
+        : item.quantity;
+      const subtotal = Math.round(finalUnitPrice * actualQuantityForPrice);
+      totalSum += subtotal;
 
-      const isFacturaA_Official = billingType === BillingType.OFFICIAL && finalInvoiceType === InvoiceType.FACTURA_A;
-      if (isFacturaA_Official) {
-        // Obtener alícuota activa de la percepción de IVA RG 5329
-        const perceptionIVA = await tx.perceptionType.findUnique({
-          where: { code: 'IVA_5329' }
+      orderItemsData.push({
+        productId: product.id,
+        quantity: item.quantity,
+        weight: product.isPesable ? (item.weight ? Number(item.weight) : item.quantity * Number((product as any).approximateWeight || 1)) : null,
+        unitPrice: finalUnitPrice,
+        subtotal,
+        productName: product.name,
+      });
+    }
+
+    totalSum = Math.round(totalSum);
+
+    // 3. Validar límite de crédito y boleta contra boleta
+    const creditLimit = Number(persona.creditLimit || 0);
+    const outstandingBalance = Number(persona.outstandingBalance || 0);
+    if (creditLimit > 0 && (outstandingBalance + totalSum) > creditLimit) {
+      if (userRole !== Role.ADMIN) {
+        res.status(400).json({
+          status: 'error',
+          message: `Límite de crédito excedido. Saldo actual: $${outstandingBalance.toLocaleString()}, Disponible: $${(creditLimit - outstandingBalance).toLocaleString()}, Requerido: $${totalSum.toLocaleString()}.`
         });
-        
-        // La percepción de IVA aplica en facturas mayores a $100.000
-        const applyIvaPerc = totalSum > 100000;
-        const ivaPercAliquot = applyIvaPerc ? ((perceptionIVA && perceptionIVA.aliquot) ? Number(perceptionIVA.aliquot) : 3.00) : 0;
-        const iibbAliquot = Number(persona.iibbAliquot || 0);
-
-        // Redondear a 2 decimales para precisión contable
-        net = Number((totalSum / (1.21 + (iibbAliquot / 100) + (ivaPercAliquot / 100))).toFixed(2));
-        tax = Number((net * 0.21).toFixed(2));
-        percepIIBB = Number((net * (iibbAliquot / 100)).toFixed(2));
-        percepIVA = Number((net * (ivaPercAliquot / 100)).toFixed(2));
-
-        // Ajustar centavos de diferencia de redondeo contra el total
-        const sumParts = Number((net + tax + percepIIBB + percepIVA).toFixed(2));
-        const diff = Number((totalSum - sumParts).toFixed(2));
-        if (diff !== 0) {
-          tax = Number((tax + diff).toFixed(2));
-        }
-      } else {
-        net = Math.round(net);
-        tax = Math.round(tax);
-        percepIIBB = Math.round(percepIIBB);
-        percepIVA = Math.round(percepIVA);
+        return;
       }
+    }
 
-      if (billingType === BillingType.OFFICIAL) {
-        // Llamar a AFIP con desgloses correctos
+    if (!paymentMethod && outstandingBalance > 0) {
+      if (userRole !== Role.ADMIN) {
+        res.status(400).json({
+          status: 'error',
+          message: `Regla Boleta contra Boleta: El cliente posee una boleta pendiente ($${outstandingBalance.toLocaleString()}). Debe registrar su cobro para poder facturar a crédito.`
+        });
+        return;
+      }
+    }
+
+    // 4. Determinar datos impositivos y generar Factura AFIP o Interna
+    let finalInvoiceType: InvoiceType = InvoiceType.PRESUPUESTO;
+    let finalInvoiceNumber: string | null = null;
+    let finalCae: string | null = null;
+    let finalCaeDueDate: Date | null = null;
+
+    let net = Math.round(totalSum / 1.21);
+    let tax = totalSum - net;
+
+    const cuitLimpio = persona.cuit ? persona.cuit.replace(/-/g, '') : '';
+    let docType = 99;
+
+    if (billingType === BillingType.OFFICIAL) {
+      if (cuitLimpio.length === 11) {
+        docType = 80;
+        finalInvoiceType = InvoiceType.FACTURA_A;
+      } else if (cuitLimpio.length === 7 || cuitLimpio.length === 8) {
+        docType = 96;
+        finalInvoiceType = InvoiceType.FACTURA_B;
+      } else {
+        finalInvoiceType = InvoiceType.FACTURA_B;
+      }
+    } else {
+      finalInvoiceType = InvoiceType.PRESUPUESTO;
+    }
+
+    net = Math.round(totalSum / 1.21);
+    tax = totalSum - net;
+    let percepIIBB = 0;
+    let percepIVA = 0;
+
+    const isFacturaA_Official = billingType === BillingType.OFFICIAL && finalInvoiceType === InvoiceType.FACTURA_A;
+    if (isFacturaA_Official) {
+      // Obtener alícuota activa de la percepción de IVA RG 5329
+      const perceptionIVA = await prisma.perceptionType.findUnique({
+        where: { code: 'IVA_5329' }
+      });
+      
+      // La percepción de IVA aplica en facturas mayores a $100.000
+      const applyIvaPerc = totalSum > 100000;
+      const ivaPercAliquot = applyIvaPerc ? ((perceptionIVA && perceptionIVA.aliquot) ? Number(perceptionIVA.aliquot) : 3.00) : 0;
+      const iibbAliquot = Number(persona.iibbAliquot || 0);
+
+      // Redondear a 2 decimales para precisión contable
+      net = Number((totalSum / (1.21 + (iibbAliquot / 100) + (ivaPercAliquot / 100))).toFixed(2));
+      tax = Number((net * 0.21).toFixed(2));
+      percepIIBB = Number((net * (iibbAliquot / 100)).toFixed(2));
+      percepIVA = Number((net * (ivaPercAliquot / 100)).toFixed(2));
+
+      // Ajustar centavos de diferencia de redondeo contra el total
+      const sumParts = Number((net + tax + percepIIBB + percepIVA).toFixed(2));
+      const diff = Number((totalSum - sumParts).toFixed(2));
+      if (diff !== 0) {
+        tax = Number((tax + diff).toFixed(2));
+      }
+    } else {
+      net = Math.round(net);
+      tax = Math.round(tax);
+      percepIIBB = Math.round(percepIIBB);
+      percepIVA = Math.round(percepIVA);
+    }
+
+    if (billingType === BillingType.OFFICIAL) {
+      try {
         const afipRes = await emitirFacturaAFIP({
           clientCuit: cuitLimpio,
           clientDocType: docType,
@@ -1507,8 +1519,48 @@ export async function createDirectInvoice(req: AuthenticatedRequest, res: Respon
         finalInvoiceNumber = afipRes.invoiceNumber;
         finalCae = afipRes.cae;
         finalCaeDueDate = afipRes.caeDueDate;
-      } else {
+      } catch (err: any) {
+        res.status(400).json({ status: 'error', message: `Error AFIP al emitir factura: ${err.message}` });
+        return;
+      }
+    }
+
+    // Iniciar transacción de base de datos
+    const result = await prisma.$transaction(async (tx) => {
+      // Creamos el Order primero para tener un ID y poder asociarlo
+      const order = await tx.order.create({
+        data: {
+          personaId,
+          sellerId: adminId,
+          status: OrderStatus.DELIVERED,
+          billingType,
+          totalAmount: totalSum,
+          netAmount: billingType === BillingType.OFFICIAL && finalInvoiceType === InvoiceType.FACTURA_A ? Number(net.toFixed(2)) : Math.round(net),
+          taxAmount: billingType === BillingType.OFFICIAL && finalInvoiceType === InvoiceType.FACTURA_A ? Number(tax.toFixed(2)) : Math.round(tax),
+          percepcionAmount: billingType === BillingType.OFFICIAL && finalInvoiceType === InvoiceType.FACTURA_A ? Number(percepIIBB.toFixed(2)) : Math.round(percepIIBB),
+          percepcionIvaAmount: billingType === BillingType.OFFICIAL && finalInvoiceType === InvoiceType.FACTURA_A ? Number(percepIVA.toFixed(2)) : Math.round(percepIVA),
+          invoiceType: finalInvoiceType,
+          cae: finalCae,
+          caeDueDate: finalCaeDueDate ? new Date(finalCaeDueDate) : null,
+        },
+      });
+
+      // Si no es oficial, generamos el invoiceNumber interno usando el ID autogenerado de la orden
+      if (!finalInvoiceNumber) {
         finalInvoiceNumber = `INT-${order.id.toString().padStart(8, '0')}`;
+      }
+
+      await tx.order.update({
+        where: { id: order.id },
+        data: { invoiceNumber: finalInvoiceNumber }
+      });
+
+      // Descontar del stock general y registrar ítems en la base de datos
+      for (const itemData of orderItemsData) {
+        await tx.product.update({
+          where: { id: itemData.productId },
+          data: { stock: { decrement: itemData.quantity } },
+        });
       }
 
       // 5. Crear los OrderItems y hacer la asignación automática de lotes (FIFO)
