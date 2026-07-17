@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { api } from '../../utils/api';
 import { UserPlus, Printer, Search } from 'lucide-react';
+import SaleRoutesDashboard from '../SaleRoutesDashboard';
 
 interface ClientsTabProps {
   setActiveTab: (tab: string) => void;
@@ -131,7 +132,8 @@ export default function ClientsTab({
           { id: 'client', label: 'Clientes' },
           { id: 'seller', label: 'Vendedores' },
           { id: 'commission_agent', label: 'Comisionistas' },
-          { id: 'debtors_by_city', label: '📊 Deudores por Ruta' }
+          { id: 'debtors_by_city', label: '📊 Deudores por Ruta' },
+          { id: 'sale_routes', label: 'Rutas de Preventa' }
         ].map((tab) => (
           <button
             key={tab.id}
@@ -503,6 +505,8 @@ export default function ClientsTab({
             })()}
           </div>
         </div>
+      ) : personaRoleFilter === 'sale_routes' ? (
+        <SaleRoutesDashboard />
       ) : (
         <>
           <div className="actions-bar" style={{ display: 'flex', gap: '12px', marginBottom: '16px', flexWrap: 'wrap' }}>
@@ -567,6 +571,7 @@ export default function ClientsTab({
                   <th>Contacto</th>
                   <th>Saldo C/C</th>
                   {personaRoleFilter === 'client' && <th>Vendedor</th>}
+                  {personaRoleFilter === 'client' && <th>Ruta</th>}
                   <th>Estado</th>
                   <th>Acción</th>
                 </tr>
@@ -614,20 +619,6 @@ export default function ClientsTab({
                           <div style={{ fontWeight: 600 }}>{c.name}</div>
                           <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                             <span>{c.address || 'Sin dirección'}</span>
-                            {c.route && (
-                              <span style={{ 
-                                display: 'inline-block', 
-                                padding: '2px 6px', 
-                                fontSize: '0.65rem', 
-                                fontWeight: 600, 
-                                backgroundColor: 'rgba(0,0,0,0.06)', 
-                                color: 'var(--text-secondary)', 
-                                borderRadius: '4px',
-                                textTransform: 'uppercase'
-                              }}>
-                                📍 {c.route}
-                              </span>
-                            )}
                           </div>
                         </td>
                         <td style={{ fontFamily: 'monospace', whiteSpace: 'nowrap' }}>{c.cuit || ''}</td>
@@ -658,6 +649,26 @@ export default function ClientsTab({
                             {c.seller ? c.seller.username.replace('_', ' ').toUpperCase() : 'Sin vendedor'}
                           </td>
                         )}
+                        {personaRoleFilter === 'client' && (
+                          <td style={{ fontWeight: 500 }}>
+                            {c.route ? (
+                              <span style={{ 
+                                display: 'inline-block', 
+                                padding: '3px 8px', 
+                                fontSize: '0.75rem', 
+                                fontWeight: 600, 
+                                backgroundColor: 'rgba(0,0,0,0.05)', 
+                                color: 'var(--text-primary)', 
+                                borderRadius: '4px',
+                                textTransform: 'uppercase'
+                              }}>
+                                📍 {c.route}
+                              </span>
+                            ) : (
+                              <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Sin Ruta</span>
+                            )}
+                          </td>
+                        )}
                         <td>
                           <span style={{
                             display: 'inline-flex',
@@ -683,18 +694,7 @@ export default function ClientsTab({
                             <button className="btn btn-secondary" style={{ padding: '6px 10px', fontSize: '0.8rem' }} onClick={() => setShowResumenModal(c)}>
                               Resumen de Cta
                             </button>
-                            {c.isClient && (
-                              <button 
-                                className="btn btn-primary" 
-                                style={{ padding: '6px 10px', fontSize: '0.8rem', backgroundColor: 'var(--text-primary)', color: '#fff', borderColor: 'var(--text-primary)' }} 
-                                onClick={() => {
-                                  localStorage.setItem('preselected_billing_client', String(c.id));
-                                  setActiveTab('billing');
-                                }}
-                              >
-                                Facturar
-                              </button>
-                            )}
+
                             <button className="btn btn-ghost" style={{ padding: '6px 10px', fontSize: '0.8rem' }} onClick={() => setClientModal({ 
                               open: true, 
                               mode: 'edit', 
