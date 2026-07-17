@@ -204,7 +204,7 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
   const fetchData = async () => {
     setErrorMsg(null);
     try {
-      if (activeTab === 'orders') {
+      if (activeTab === 'orders' || activeTab === 'history') {
         const clientData = await api.getClients();
         setClients(clientData.filter((c: any) => c.isActive !== false));
         const prodData = await api.getProducts(prodSearchQuery);
@@ -496,7 +496,7 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
         open: true,
         orderId: order.id,
         clientId: order.clientId,
-        clientName: order.client?.name || 'Cliente',
+        clientName: order.client?.name || order.persona?.name || 'Cliente',
         items
       });
     } catch (err: any) {
@@ -560,9 +560,9 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
             <div><strong>PEDIDO NRO: ${order.id}</strong></div>
           </div>
           <div class="divider"></div>
-          <div><strong>Cliente:</strong> ${order.client?.name}</div>
-          <div><strong>CUIT:</strong> ${order.client?.cuit || 'Consumidor Final'}</div>
-          <div><strong>Dirección:</strong> ${order.client?.address || 'Retira en local'}</div>
+          <div><strong>Cliente:</strong> ${order.client?.name || order.persona?.name || 'S/D'}</div>
+          <div><strong>CUIT:</strong> ${order.client?.cuit || order.persona?.cuit || 'Consumidor Final'}</div>
+          <div><strong>Dirección:</strong> ${order.client?.address || order.persona?.address || 'Retira en local'}</div>
           <div class="divider"></div>
           <table>
             <thead>
@@ -1106,7 +1106,7 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
                     orders.map((o) => (
                       <tr key={o.id}>
                         <td style={{ fontSize: '0.8rem' }}>{new Date(o.createdAt).toLocaleDateString('es-AR')}</td>
-                        <td style={{ fontWeight: 500 }}>{o.client.name}</td>
+                        <td style={{ fontWeight: 500 }}>{o.client?.name || o.persona?.name || 'S/D'}</td>
                         <td style={{ fontFamily: 'monospace' }}>{o.invoiceNumber || 'Pendiente'}</td>
                         <td>
                           <span className={o.billingType === 'OFFICIAL' ? 'badge badge-official' : 'badge badge-internal'}>
@@ -1771,8 +1771,8 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
             )}
 
             <div style={{ marginBottom: '16px', fontSize: '0.85rem' }}>
-              <p><strong>Cliente:</strong> {orderDetailsModal.client?.name}</p>
-              <p><strong>Dirección:</strong> {orderDetailsModal.client?.address || 'S/D'}</p>
+              <p><strong>Cliente:</strong> {orderDetailsModal.client?.name || orderDetailsModal.persona?.name || 'S/D'}</p>
+              <p><strong>Dirección:</strong> {orderDetailsModal.client?.address || orderDetailsModal.persona?.address || 'S/D'}</p>
               <p><strong>Estado:</strong> {(() => {
                 const statusInfo = getOrderStatusInfo(orderDetailsModal);
                 return (
