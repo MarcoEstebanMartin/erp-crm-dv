@@ -62,6 +62,7 @@ export default function ClientsTab({
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCityFilter, setSelectedCityFilter] = useState<string>('ALL');
+  const [selectedRouteFilter, setSelectedRouteFilter] = useState<string>('ALL');
 
   // Debtors report state
   const [debtorsReport, setDebtorsReport] = useState<any[]>([]);
@@ -115,6 +116,11 @@ export default function ClientsTab({
   useEffect(() => {
     loadTabContent();
   }, [personaRoleFilter, searchQuery, clientsVersion]);
+
+  useEffect(() => {
+    setSelectedCityFilter('ALL');
+    setSelectedRouteFilter('ALL');
+  }, [personaRoleFilter]);
 
   const getWhatsAppLink = (phone: string) => {
     const cleanPhone = phone.replace(/\D/g, '');
@@ -537,6 +543,21 @@ export default function ClientsTab({
               <option value="OTRAS">Otras</option>
             </select>
 
+            {['client', 'client_inactive'].includes(personaRoleFilter) && (
+              <select
+                className="select"
+                value={selectedRouteFilter}
+                onChange={(e) => setSelectedRouteFilter(e.target.value)}
+                style={{ minWidth: '180px', height: '38px' }}
+              >
+                <option value="ALL">Todas las Rutas</option>
+                {availableSaleRoutes.map((route) => (
+                  <option key={route.id} value={route.id}>{route.name}</option>
+                ))}
+                <option value="SIN_RUTA">Sin Ruta</option>
+              </select>
+            )}
+
             <button className="btn btn-primary" onClick={() => setClientModal({ 
               open: true, 
               mode: 'create', 
@@ -584,13 +605,28 @@ export default function ClientsTab({
                     if (personaRoleFilter === 'client' && c.isActive === false) return false;
                     if (personaRoleFilter === 'client_inactive' && c.isActive !== false) return false;
 
-                    if (selectedCityFilter === 'ALL') return true;
-                    const normCity = normalizeString(c.city);
-                    const normSelectedFilter = normalizeString(selectedCityFilter);
-                    if (selectedCityFilter === 'OTRAS') {
-                      return !c.city || !OFFICIAL_CITIES.map(o => normalizeString(o)).includes(normCity);
+                    // Filtro de Localidad
+                    if (selectedCityFilter !== 'ALL') {
+                      const normCity = normalizeString(c.city);
+                      const normSelectedFilter = normalizeString(selectedCityFilter);
+                      if (selectedCityFilter === 'OTRAS') {
+                        const isOfficial = OFFICIAL_CITIES.map(o => normalizeString(o)).includes(normCity);
+                        if (c.city && isOfficial) return false;
+                      } else {
+                        if (normCity !== normSelectedFilter) return false;
+                      }
                     }
-                    return normCity === normSelectedFilter;
+
+                    // Filtro de Ruta
+                    if (['client', 'client_inactive'].includes(personaRoleFilter) && selectedRouteFilter !== 'ALL') {
+                      if (selectedRouteFilter === 'SIN_RUTA') {
+                        if (c.saleRouteId) return false;
+                      } else {
+                        if (Number(c.saleRouteId) !== Number(selectedRouteFilter)) return false;
+                      }
+                    }
+
+                    return true;
                   });
 
                   if (filteredClients.length === 0) {
