@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { api } from '../utils/api';
+import { api, API_BASE_URL } from '../utils/api';
 import { X, Check, AlertCircle, Loader, FileText, Search, CornerDownRight, HelpCircle } from 'lucide-react';
 
 interface PurchaseScannerModalProps {
@@ -19,6 +19,7 @@ export const PurchaseScannerModal: React.FC<PurchaseScannerModalProps> = ({
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [extractedData, setExtractedData] = useState<any>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [isPdf, setIsPdf] = useState(false);
   const [localFiles, setLocalFiles] = useState<any[]>([]);
   const [selectedLocalFile, setSelectedLocalFile] = useState<string | null>(null);
   
@@ -48,6 +49,7 @@ export const PurchaseScannerModal: React.FC<PurchaseScannerModalProps> = ({
     if (isOpen && file) {
       url = URL.createObjectURL(file);
       setPreviewUrl(url);
+      setIsPdf(file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf'));
       setSelectedLocalFile(null);
       processUploadedDocument(file);
     }
@@ -78,7 +80,8 @@ export const PurchaseScannerModal: React.FC<PurchaseScannerModalProps> = ({
     setErrorMsg(null);
     setExtractedData(null);
     setSelectedLocalFile(filename);
-    setPreviewUrl(null); // No hay preview de imagen para archivos del servidor
+    setIsPdf(filename.toLowerCase().endsWith('.pdf'));
+    setPreviewUrl(`${API_BASE_URL}/purchases/files/${encodeURIComponent(filename)}`);
     try {
       const response = await api.processPurchaseLocalFile(filename);
       setExtractedData({
@@ -301,18 +304,33 @@ export const PurchaseScannerModal: React.FC<PurchaseScannerModalProps> = ({
             alignItems: 'center'
           }}>
             {previewUrl ? (
-              <img 
-                src={previewUrl} 
-                alt="Vista previa del documento" 
-                style={{
-                  maxWidth: '100%',
-                  maxHeight: '70vh',
-                  objectFit: 'contain',
-                  borderRadius: '12px',
-                  boxShadow: 'var(--shadow-lg)',
-                  border: '1px solid var(--border-color)'
-                }} 
-              />
+              isPdf ? (
+                <iframe
+                  src={previewUrl}
+                  title="Vista previa del documento PDF"
+                  style={{
+                    width: '100%',
+                    height: '75vh',
+                    border: '1px solid var(--border-color)',
+                    borderRadius: '12px',
+                    boxShadow: 'var(--shadow-lg)',
+                    backgroundColor: '#FFFFFF'
+                  }}
+                />
+              ) : (
+                <img 
+                  src={previewUrl} 
+                  alt="Vista previa del documento" 
+                  style={{
+                    maxWidth: '100%',
+                    maxHeight: '70vh',
+                    objectFit: 'contain',
+                    borderRadius: '12px',
+                    boxShadow: 'var(--shadow-lg)',
+                    border: '1px solid var(--border-color)'
+                  }} 
+                />
+              )
             ) : selectedLocalFile ? (
               <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 <div style={{
