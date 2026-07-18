@@ -115,12 +115,23 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
     'D1-RKB-N3': { label: 'D1 - Rack B Nivel 3', icon: '📦', color: '#8E8E93', bg: 'rgba(142, 142, 147, 0.08)', description: 'Rack B, Nivel superior (Reserva / Altura)' },
     'D1-RACK': { label: 'D1 - Racks Entrada (Gral)', icon: '📦', color: '#8E8E93', bg: 'rgba(142, 142, 147, 0.08)', description: 'Racks de entrada general' },
     
-    // Depósito 1 - Cámaras de Frío
-    'D1-CAM1-E1': { label: 'D1 - Cámara G. Estante 1', icon: '❄️', color: '#007AFF', bg: 'rgba(0, 122, 255, 0.08)', description: 'Cámara Grande, Estante superior (Lácteos)' },
-    'D1-CAM1-E2': { label: 'D1 - Cámara G. Estante 2', icon: '❄️', color: '#007AFF', bg: 'rgba(0, 122, 255, 0.08)', description: 'Cámara Grande, Estante inferior (Fiambres)' },
+    // Depósito 1 - Cámara Grande (Frio 1)
+    'D1-CAM1-RKA-N1': { label: 'D1 - C.Grande Rack A Nivel 1', icon: '❄️', color: '#007AFF', bg: 'rgba(0, 122, 255, 0.08)', description: 'Cámara Grande, Rack A (Izquierdo) Nivel Inferior' },
+    'D1-CAM1-RKA-N2': { label: 'D1 - C.Grande Rack A Nivel 2', icon: '❄️', color: '#007AFF', bg: 'rgba(0, 122, 255, 0.08)', description: 'Cámara Grande, Rack A (Izquierdo) Nivel Superior' },
+    'D1-CAM1-RKB-N1': { label: 'D1 - C.Grande Rack B Nivel 1', icon: '❄️', color: '#007AFF', bg: 'rgba(0, 122, 255, 0.08)', description: 'Cámara Grande, Rack B (Derecho) Nivel Inferior' },
+    'D1-CAM1-RKB-N2': { label: 'D1 - C.Grande Rack B Nivel 2', icon: '❄️', color: '#007AFF', bg: 'rgba(0, 122, 255, 0.08)', description: 'Cámara Grande, Rack B (Derecho) Nivel Superior' },
     'D1-CAM1': { label: 'D1 - Cámara Grande (Gral)', icon: '❄️', color: '#007AFF', bg: 'rgba(0, 122, 255, 0.08)', description: 'Cámara Grande de frío general' },
-    'D1-CAM2': { label: 'D1 - Cámara Mediana', icon: '❄️', color: '#34C759', bg: 'rgba(52, 199, 89, 0.08)', description: 'Cámara Mediana (Fiambres de respaldo e insumos)' },
     
+    // Depósito 1 - Cámara Mediana (Frio 2)
+    'D1-CAM2-N1': { label: 'D1 - C.Mediana Nivel 1', icon: '❄️', color: '#34C759', bg: 'rgba(52, 199, 89, 0.08)', description: 'Cámara Mediana, Nivel del Suelo' },
+    'D1-CAM2-N2': { label: 'D1 - C.Mediana Nivel 2', icon: '❄️', color: '#34C759', bg: 'rgba(52, 199, 89, 0.08)', description: 'Cámara Mediana, Estante Alto' },
+    'D1-CAM2': { label: 'D1 - Cámara Mediana (Gral)', icon: '❄️', color: '#34C759', bg: 'rgba(52, 199, 89, 0.08)', description: 'Cámara Mediana general' },
+    
+    // Depósito 1 - Cámara Chica Nº 3 (Secos / Cajas sin frio)
+    'D1-CAM3-N1': { label: 'D1 - C.Chica 3 Nivel 1', icon: '📦', color: '#FF2D55', bg: 'rgba(255, 45, 85, 0.08)', description: 'Cámara Chica 3, Estante Inferior (Cajas pesadas)' },
+    'D1-CAM3-N2': { label: 'D1 - C.Chica 3 Nivel 2', icon: '📦', color: '#FF2D55', bg: 'rgba(255, 45, 85, 0.08)', description: 'Cámara Chica 3, Estante Superior (Cajas livianas)' },
+    'D1-CAM3': { label: 'D1 - Cámara Chica 3 (Secos)', icon: '📦', color: '#FF2D55', bg: 'rgba(255, 45, 85, 0.08)', description: 'Cámara Chica Nº 3 al lado de la mediana para cajas secas' },
+
     // Depósito 1 - Estanterías / Góndolas
     'D1-EST-M1': { label: 'D1 - Góndola Módulo 1', icon: '🍾', color: '#FF9500', bg: 'rgba(255, 149, 0, 0.08)', description: 'Bebidas Blancas (Gin, Vodka Sernova)' },
     'D1-EST-M2': { label: 'D1 - Góndola Módulo 2', icon: '🍾', color: '#FF9500', bg: 'rgba(255, 149, 0, 0.08)', description: 'Licores y Aperitivos' },
@@ -803,6 +814,9 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
     }
     if (cleanLoc.startsWith('D1-CAM2')) {
       return 30; // Cámara Mediana D1
+    }
+    if (cleanLoc.startsWith('D1-CAM3')) {
+      return 35; // Cámara Chica 3 D1 (cajas secas)
     }
     if (cleanLoc.startsWith('D1-CAM1')) {
       return 40; // Cámara Grande D1 (Frío - al final del recorrido D1)
@@ -2347,45 +2361,110 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
                     <text x="310" y="375" fill="#b45309" fontSize="8.5px" style={{ pointerEvents: 'none' }}>Salsas y condimentos</text>
                   </g>
 
-                  {/* CÁMARAS DE FRÍO (RIGHT SIDE) */}
+                  {/* CÁMARAS Y ESPACIOS DE FRÍO / SECOS (RIGHT SIDE) */}
                   <g>
                     {/* Cámara Grande */}
-                    <rect x="490" y="40" width="285" height="230" fill="#ffffff" stroke="#007AFF" strokeWidth="1.5" rx="8" />
-                    <text x="495" y="32" fill="#007AFF" fontSize="11px" fontWeight="bold">❄️ CÁMARA GRANDE DE FRÍO (4.2°C)</text>
+                    <rect x="480" y="40" width="295" height="230" fill="none" stroke="#007AFF" strokeWidth="1.5" rx="8" style={{ strokeDasharray: '4 2' }} />
+                    <text x="485" y="32" fill="#007AFF" fontSize="11px" fontWeight="bold">❄️ CÁMARA GRANDE DE FRÍO (CAM1)</text>
 
-                    {/* Estante 1 - Lácteos */}
-                    {(() => {
-                      const active = selectedMapLocation === 'D1-CAM1-E1';
-                      return (
-                        <rect x="502" y="55" width="260" height="90" fill={active ? 'rgba(0, 122, 255, 0.18)' : 'rgba(0, 122, 255, 0.03)'} stroke="#007AFF" strokeWidth={active ? 2.5 : 1} style={{ cursor: 'pointer' }} onClick={() => setSelectedMapLocation(active ? '' : 'D1-CAM1-E1')} rx="4" />
-                      );
-                    })()}
-                    <text x="515" y="95" fill="#007AFF" fontSize="12px" fontWeight="bold" style={{ pointerEvents: 'none' }}>Estante 1: Lácteos / Yogur</text>
-                    <text x="515" y="115" fill="#0056b3" fontSize="9px" style={{ pointerEvents: 'none' }}>Cadena crítica (Queso crema, postres)</text>
-                    
-                    {/* Estante 2 - Fiambres */}
-                    {(() => {
-                      const active = selectedMapLocation === 'D1-CAM1-E2';
-                      return (
-                        <rect x="502" y="165" width="260" height="90" fill={active ? 'rgba(0, 122, 255, 0.18)' : 'rgba(0, 122, 255, 0.03)'} stroke="#007AFF" strokeWidth={active ? 2.5 : 1} style={{ cursor: 'pointer' }} onClick={() => setSelectedMapLocation(active ? '' : 'D1-CAM1-E2')} rx="4" />
-                      );
-                    })()}
-                    <text x="515" y="205" fill="#007AFF" fontSize="12px" fontWeight="bold" style={{ pointerEvents: 'none' }}>Estante 2: Fiambres / Salamines</text>
-                    <text x="515" y="225" fill="#0056b3" fontSize="9px" style={{ pointerEvents: 'none' }}>Hormas de queso tybo, jamones</text>
+                    {/* Rack A (Izquierdo en Cámara Grande) */}
+                    <g>
+                      <rect x="492" y="52" width="130" height="205" fill="#ffffff" stroke="#cbd5e1" strokeWidth="1" rx="4" />
+                      <text x="498" y="47" fill="#0056b3" fontSize="8.5px" fontWeight="bold">RACK INTERNO A</text>
+                      {/* Nivel 2 */}
+                      {(() => {
+                        const active = selectedMapLocation === 'D1-CAM1-RKA-N2';
+                        return (
+                          <rect x="498" y="60" width="118" height="90" fill={active ? 'rgba(0, 122, 255, 0.18)' : 'rgba(0, 122, 255, 0.02)'} stroke="#007AFF" strokeWidth={active ? 2.5 : 1} style={{ cursor: 'pointer' }} onClick={() => setSelectedMapLocation(active ? '' : 'D1-CAM1-RKA-N2')} rx="3" />
+                        );
+                      })()}
+                      <text x="504" y="90" fill="#007AFF" fontSize="10px" fontWeight="bold" style={{ pointerEvents: 'none' }}>Nivel 2 (Alto)</text>
+                      <text x="504" y="105" fill="#0056b3" fontSize="8px" style={{ pointerEvents: 'none' }}>Lácteos / Yogur</text>
+                      
+                      {/* Nivel 1 */}
+                      {(() => {
+                        const active = selectedMapLocation === 'D1-CAM1-RKA-N1';
+                        return (
+                          <rect x="498" y="158" width="118" height="90" fill={active ? 'rgba(0, 122, 255, 0.18)' : 'rgba(0, 122, 255, 0.02)'} stroke="#007AFF" strokeWidth={active ? 2.5 : 1} style={{ cursor: 'pointer' }} onClick={() => setSelectedMapLocation(active ? '' : 'D1-CAM1-RKA-N1')} rx="3" />
+                        );
+                      })()}
+                      <text x="504" y="188" fill="#007AFF" fontSize="10px" fontWeight="bold" style={{ pointerEvents: 'none' }}>Nivel 1 (Suelo)</text>
+                      <text x="504" y="203" fill="#0056b3" fontSize="8px" style={{ pointerEvents: 'none' }}>Queso Crema / Potes</text>
+                    </g>
+
+                    {/* Rack B (Derecho en Cámara Grande) */}
+                    <g>
+                      <rect x="635" y="52" width="130" height="205" fill="#ffffff" stroke="#cbd5e1" strokeWidth="1" rx="4" />
+                      <text x="641" y="47" fill="#0056b3" fontSize="8.5px" fontWeight="bold">RACK INTERNO B</text>
+                      {/* Nivel 2 */}
+                      {(() => {
+                        const active = selectedMapLocation === 'D1-CAM1-RKB-N2';
+                        return (
+                          <rect x="641" y="60" width="118" height="90" fill={active ? 'rgba(0, 122, 255, 0.18)' : 'rgba(0, 122, 255, 0.02)'} stroke="#007AFF" strokeWidth={active ? 2.5 : 1} style={{ cursor: 'pointer' }} onClick={() => setSelectedMapLocation(active ? '' : 'D1-CAM1-RKB-N2')} rx="3" />
+                        );
+                      })()}
+                      <text x="647" y="90" fill="#007AFF" fontSize="10px" fontWeight="bold" style={{ pointerEvents: 'none' }}>Nivel 2 (Alto)</text>
+                      <text x="647" y="105" fill="#0056b3" fontSize="8px" style={{ pointerEvents: 'none' }}>Fiambres / Embutidos</text>
+                      
+                      {/* Nivel 1 */}
+                      {(() => {
+                        const active = selectedMapLocation === 'D1-CAM1-RKB-N1';
+                        return (
+                          <rect x="641" y="158" width="118" height="90" fill={active ? 'rgba(0, 122, 255, 0.18)' : 'rgba(0, 122, 255, 0.02)'} stroke="#007AFF" strokeWidth={active ? 2.5 : 1} style={{ cursor: 'pointer' }} onClick={() => setSelectedMapLocation(active ? '' : 'D1-CAM1-RKB-N1')} rx="3" />
+                        );
+                      })()}
+                      <text x="647" y="188" fill="#007AFF" fontSize="10px" fontWeight="bold" style={{ pointerEvents: 'none' }}>Nivel 1 (Suelo)</text>
+                      <text x="647" y="203" fill="#0056b3" fontSize="8px" style={{ pointerEvents: 'none' }}>Hormas de Queso Tybo</text>
+                    </g>
                   </g>
 
-                  {/* Cámara Mediana */}
-                  {(() => {
-                    const active = selectedMapLocation === 'D1-CAM2';
-                    return (
-                      <g onClick={() => setSelectedMapLocation(active ? '' : 'D1-CAM2')} style={{ cursor: 'pointer' }}>
-                        <rect x="490" y="290" width="285" height="120" fill={active ? 'rgba(52, 199, 89, 0.18)' : 'rgba(52, 199, 89, 0.03)'} stroke="#34C759" strokeWidth={active ? 2.5 : 1.5} rx="8" />
-                        <text x="505" y="325" fill="#1e7e34" fontSize="13px" fontWeight="bold">❄️ Cámara Mediana (Respaldo)</text>
-                        <text x="505" y="350" fill="#28a745" fontSize="10px">Insumos de armado y fiambres en reserva</text>
-                        <text x="505" y="375" fill="#1e7e34" fontSize="11px" fontWeight="bold">Temp: 5.0°C</text>
-                      </g>
-                    );
-                  })()}
+                  {/* CÁMARA MEDIANA (FRÍO 2 - Abajo Izquierda) */}
+                  <g>
+                    <rect x="480" y="290" width="140" height="120" fill="none" stroke="#34C759" strokeWidth="1.5" rx="6" style={{ strokeDasharray: '4 2' }} />
+                    <text x="485" y="282" fill="#1e7e34" fontSize="10px" fontWeight="bold">❄️ C. MEDIANA (CAM2)</text>
+                    {/* Nivel 2 */}
+                    {(() => {
+                      const active = selectedMapLocation === 'D1-CAM2-N2';
+                      return (
+                        <rect x="488" y="300" width="124" height="48" fill={active ? 'rgba(52, 199, 89, 0.18)' : '#ffffff'} stroke="#34C759" strokeWidth={active ? 2.5 : 1} style={{ cursor: 'pointer' }} onClick={() => setSelectedMapLocation(active ? '' : 'D1-CAM2-N2')} rx="4" />
+                      );
+                    })()}
+                    <text x="496" y="322" fill="#1e7e34" fontSize="9px" fontWeight="bold" style={{ pointerEvents: 'none' }}>Nivel 2 (Alto)</text>
+                    <text x="496" y="335" fill="#28a745" fontSize="7.5px" style={{ pointerEvents: 'none' }}>Fiambres en Reserva</text>
+                    {/* Nivel 1 */}
+                    {(() => {
+                      const active = selectedMapLocation === 'D1-CAM2-N1';
+                      return (
+                        <rect x="488" y="355" width="124" height="48" fill={active ? 'rgba(52, 199, 89, 0.18)' : '#ffffff'} stroke="#34C759" strokeWidth={active ? 2.5 : 1} style={{ cursor: 'pointer' }} onClick={() => setSelectedMapLocation(active ? '' : 'D1-CAM2-N1')} rx="4" />
+                      );
+                    })()}
+                    <text x="496" y="377" fill="#1e7e34" fontSize="9px" fontWeight="bold" style={{ pointerEvents: 'none' }}>Nivel 1 (Suelo)</text>
+                    <text x="496" y="390" fill="#28a745" fontSize="7.5px" style={{ pointerEvents: 'none' }}>Insumos de Armado</text>
+                  </g>
+
+                  {/* CÁMARA CHICA Nº 3 (SECOS - Abajo Derecha) */}
+                  <g>
+                    <rect x="635" y="290" width="140" height="120" fill="none" stroke="#FF2D55" strokeWidth="1.5" rx="6" style={{ strokeDasharray: '4 2' }} />
+                    <text x="640" y="282" fill="#FF2D55" fontSize="10px" fontWeight="bold">📦 C. CHICA 3 (SECOS)</text>
+                    {/* Nivel 2 */}
+                    {(() => {
+                      const active = selectedMapLocation === 'D1-CAM3-N2';
+                      return (
+                        <rect x="643" y="300" width="124" height="48" fill={active ? 'rgba(255, 45, 85, 0.18)' : '#ffffff'} stroke="#FF2D55" strokeWidth={active ? 2.5 : 1} style={{ cursor: 'pointer' }} onClick={() => setSelectedMapLocation(active ? '' : 'D1-CAM3-N2')} rx="4" />
+                      );
+                    })()}
+                    <text x="651" y="322" fill="#e11d48" fontSize="9px" fontWeight="bold" style={{ pointerEvents: 'none' }}>Nivel 2 (Alto)</text>
+                    <text x="651" y="335" fill="#f43f5e" fontSize="7.5px" style={{ pointerEvents: 'none' }}>Cajas Secas Livianas</text>
+                    {/* Nivel 1 */}
+                    {(() => {
+                      const active = selectedMapLocation === 'D1-CAM3-N1';
+                      return (
+                        <rect x="643" y="355" width="124" height="48" fill={active ? 'rgba(255, 45, 85, 0.18)' : '#ffffff'} stroke="#FF2D55" strokeWidth={active ? 2.5 : 1} style={{ cursor: 'pointer' }} onClick={() => setSelectedMapLocation(active ? '' : 'D1-CAM3-N1')} rx="4" />
+                      );
+                    })()}
+                    <text x="651" y="377" fill="#e11d48" fontSize="9px" fontWeight="bold" style={{ pointerEvents: 'none' }}>Nivel 1 (Suelo)</text>
+                    <text x="651" y="390" fill="#f43f5e" fontSize="7.5px" style={{ pointerEvents: 'none' }}>Cajas Secas Pesadas</text>
+                  </g>
 
                   {/* Pasillos de Maniobra */}
                   <g style={{ pointerEvents: 'none' }}>
