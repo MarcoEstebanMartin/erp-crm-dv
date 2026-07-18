@@ -8,13 +8,15 @@ interface ProductsTabProps {
   fetchData: () => void;
   setProductModal: (modal: any) => void;
   handleUpdateProductInline: (updatedProduct: any) => void;
+  onOpenImportZip?: () => void;
 }
 
 export default function ProductsTab({
   products,
   fetchData,
   setProductModal,
-  handleUpdateProductInline
+  handleUpdateProductInline,
+  onOpenImportZip
 }: ProductsTabProps) {
   const [catalogTab, setCatalogTab] = useState<'products' | 'rubros' | 'stock'>('products');
   const [searchQuery, setSearchQuery] = useState('');
@@ -52,6 +54,7 @@ export default function ProductsTab({
           setSearchQuery={setSearchQuery} 
           setProductModal={setProductModal}
           onUpdateProduct={async (updatedProduct: any) => handleUpdateProductInline(updatedProduct)}
+          onOpenImportZip={onOpenImportZip}
         />
       )}
 

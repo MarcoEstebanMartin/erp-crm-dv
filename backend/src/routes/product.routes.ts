@@ -11,6 +11,8 @@ import {
   getProductMovements,
   getGlobalStockMovements,
   getExpiringLots,
+  uploadProductImage,
+  importProductsZip,
 } from '../controllers/product.controller';
 import {
   updateLot,
@@ -32,6 +34,7 @@ import {
   deleteLotSchema,
   transferLotStockSchema
 } from '../validators/lot.validator';
+import { uploadSingleImage, uploadZipFile } from '../middlewares/upload';
 
 const router = Router();
 
@@ -48,6 +51,10 @@ router.post('/', authenticateJWT, requireRole([Role.ADMIN]), validateRequest(cre
 router.post('/import-prices', authenticateJWT, requireRole([Role.ADMIN]), validateRequest(importPricesSchema), importPrices);
 router.post('/bulk-update-prices', authenticateJWT, requireRole([Role.ADMIN]), validateRequest(bulkUpdatePricesSchema), bulkUpdatePrices);
 router.put('/:id', authenticateJWT, requireRole([Role.ADMIN]), validateRequest(updateProductSchema), updateProduct);
+
+// Rutas para imágenes de productos (Solo ADMIN)
+router.post('/:id/image', authenticateJWT, requireRole([Role.ADMIN]), uploadSingleImage, uploadProductImage);
+router.post('/import-images-zip', authenticateJWT, requireRole([Role.ADMIN]), uploadZipFile, importProductsZip);
 
 // Ajuste de stock (ADMIN y DEPOSITO)
 router.post('/:id/adjust-stock', authenticateJWT, requireRole([Role.ADMIN, Role.DEPOSITO]), validateRequest(adjustStockSchema), adjustStock);

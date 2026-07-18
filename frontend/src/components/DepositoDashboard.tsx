@@ -1563,7 +1563,7 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
                             </td>
                             <td style={{ verticalAlign: 'middle' }}>
                               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                                {item.orderDetails.map((det, dIdx) => (
+                                {item.orderDetails.map((det: any, dIdx: number) => (
                                   <span key={dIdx} style={{
                                     fontSize: '0.72rem',
                                     fontWeight: 600,
@@ -3384,7 +3384,7 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
                             {item.totalQuantity} u.
                           </td>
                           <td style={{ border: '1px solid #000', padding: '4px', fontSize: '9px', color: '#444' }}>
-                            {item.orderDetails.map(det => `#${det.orderId}(${det.quantity}u)`).join(' | ')}
+                            {item.orderDetails.map((det: any) => `#${det.orderId}(${det.quantity}u)`).join(' | ')}
                           </td>
                         </tr>
                       );

@@ -8,6 +8,7 @@ import ClientsTab from './admin/ClientsTab';
 import OrdersTab from './admin/OrdersTab';
 import ProductsTab from './admin/ProductsTab';
 import ConfigTab from './admin/ConfigTab';
+import ImportZipModal from './modals/ImportZipModal';
 
 const OFFICIAL_CITIES = [
   "GENERAL VILLEGAS",
@@ -124,7 +125,10 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
   const [providersList, setProvidersList] = useState<any[]>([]);
   
   // Modales
-  const [productModal, setProductModal] = useState({ open: false, mode: 'create', data: { id: 0, sku: '', name: '', description: '', barcode: '', costPrice: 0, listPrice: 0, listPriceB: 0, listPriceC: 0, profitMargin: 25 as string | number, minStock: 0, isPesable: false, approximateWeight: 0, unitsPerBox: 1, rubroId: '' as string | number, providerId: '' as string | number } });
+  const [productModal, setProductModal] = useState({ open: false, mode: 'create', data: { id: 0, sku: '', name: '', description: '', barcode: '', costPrice: 0, listPrice: 0, listPriceB: 0, listPriceC: 0, profitMargin: 25 as string | number, minStock: 0, isPesable: false, approximateWeight: 0, unitsPerBox: 1, rubroId: '' as string | number, providerId: '' as string | number, imageUrl: null as string | null } });
+  const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
+  const [imagePreviewUrl, setImagePreviewUrl] = useState<string>('');
+  const [importZipModalOpen, setImportZipModalOpen] = useState(false);
   const [userModal, setUserModal] = useState({ open: false, username: '', password: '', role: 'VENDEDOR' });
   const [showPassword, setShowPassword] = useState(false);
   const [clientModal, setClientModal] = useState({ open: false, mode: 'create', data: { id: 0, name: '', cuit: '', address: '', city: '', phone: '', email: '', creditLimit: 0, priceList: 'A', discount: 0, isClient: true, isProvider: false, isSeller: false, isCommissionAgent: false, route: '', saleRouteId: null as number | null, sellerId: null as number | null, isActive: true } });
@@ -161,6 +165,17 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
       setPaymentRetencionIibbNumber('');
     }
   }, [paymentModal]);
+
+  useEffect(() => {
+    if (productModal.open) {
+      setSelectedImageFile(null);
+      if (productModal.mode === 'edit' && productModal.data.imageUrl) {
+        setImagePreviewUrl(`http://${window.location.hostname}:3000${productModal.data.imageUrl}`);
+      } else {
+        setImagePreviewUrl('');
+      }
+    }
+  }, [productModal.open, productModal.data.id]);
 
   const fetchPaymentPendingInvoices = async (clientId: number) => {
     try {
@@ -849,11 +864,18 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
     };
 
     try {
+      let savedProduct;
       if (mode === 'create') {
-        await api.createProduct(payload);
+        savedProduct = await api.createProduct(payload);
       } else {
-        await api.updateProduct(data.id, payload);
+        savedProduct = await api.updateProduct(data.id, payload);
       }
+
+      // Subir la imagen si se seleccionó una
+      if (selectedImageFile) {
+        await api.uploadProductImage(savedProduct.id, selectedImageFile);
+      }
+
       setProductModal({ ...productModal, open: false });
       setSuccessMsg('Producto guardado correctamente.');
       fetchData();
@@ -1612,6 +1634,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
           fetchData={fetchData}
           setProductModal={setProductModal}
           handleUpdateProductInline={handleUpdateProductInline}
+          onOpenImportZip={() => setImportZipModalOpen(true)}
         />
       )}
 
@@ -2402,6 +2425,60 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
                 </div>
               </div>
 
+              <div className="form-group" style={{ gridColumn: '1 / -1', marginTop: '10px' }}>
+                <label>Imagen del Producto</label>
+                <div style={{ display: 'flex', gap: '16px', alignItems: 'center', backgroundColor: 'var(--bg-muted)', padding: '12px', borderRadius: '8px', border: '1px dashed var(--border-color)' }}>
+                  {imagePreviewUrl ? (
+                    <div style={{ position: 'relative', width: '80px', height: '80px', minWidth: '80px', borderRadius: '6px', overflow: 'hidden', border: '1px solid var(--border-color)', backgroundColor: '#fff' }}>
+                      <img src={imagePreviewUrl} alt="Vista previa" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      <button 
+                        type="button" 
+                        style={{ position: 'absolute', top: '2px', right: '2px', backgroundColor: 'rgba(227, 6, 19, 0.9)', color: '#fff', border: 'none', borderRadius: '50%', width: '18px', height: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '9px', padding: 0 }}
+                        onClick={() => {
+                          setSelectedImageFile(null);
+                          setImagePreviewUrl('');
+                          setProductModal({
+                            ...productModal,
+                            data: { ...productModal.data, imageUrl: null }
+                          });
+                        }}
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ) : (
+                    <div style={{ width: '80px', height: '80px', minWidth: '80px', borderRadius: '6px', border: '2px dashed var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: '0.8rem', backgroundColor: 'var(--bg-body)' }}>
+                      Sin Foto
+                    </div>
+                  )}
+                  <div style={{ flex: 1 }}>
+                    <input 
+                      type="file" 
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          setSelectedImageFile(file);
+                          const reader = new FileReader();
+                          reader.onloadend = () => {
+                            setImagePreviewUrl(reader.result as string);
+                          };
+                          reader.readAsDataURL(file);
+                        }
+                      }}
+                      style={{ display: 'none' }}
+                      id="product-image-upload"
+                    />
+                    <label htmlFor="product-image-upload" className="btn btn-secondary" style={{ display: 'inline-block', cursor: 'pointer', borderRadius: '6px', fontSize: '0.8rem', padding: '6px 12px', margin: 0 }}>
+                      Seleccionar Imagen
+                    </label>
+                    <p style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '4px', margin: 0 }}>
+                      PNG, JPG o WEBP. Estandarizado por SKU.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
               <div className="modal-footer">
                 <button type="button" className="btn btn-secondary" onClick={() => setProductModal({ ...productModal, open: false })}>Cancelar</button>
                 <button type="submit" className="btn btn-primary">Guardar Cambios</button>
@@ -2850,6 +2927,11 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
           </div>
         </div>
       )}
+
+      <ImportZipModal 
+        isOpen={importZipModalOpen} 
+        onClose={() => { setImportZipModalOpen(false); fetchData(); }} 
+      />
 
       {/* 5. Ficha de Cliente y Extracto de Cuenta Corriente */}
       {clientProfileModal && clientProfileModal.open && (

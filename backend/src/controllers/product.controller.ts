@@ -1,6 +1,11 @@
 import { Response } from 'express';
 import { AuthenticatedRequest } from '../types';
 import { productService } from '../services/product.service';
+import prisma from '../utils/prisma';
+import { logAudit } from '../utils/audit';
+import path from 'path';
+import fs from 'fs';
+import AdmZip from 'adm-zip';
 
 /**
  * Obtener todos los productos (Buscador inteligente por SKU o Nombre).
@@ -159,6 +164,157 @@ export async function getExpiringLots(req: AuthenticatedRequest, res: Response):
     res.status(200).json({ status: 'success', data: { lots } });
   } catch (error: any) {
     res.status(500).json({ status: 'error', message: 'Error al obtener los lotes próximos a vencer.' });
+  }
+}
+
+/**
+ * Subir la imagen de un producto individual.
+ */
+export async function uploadProductImage(req: AuthenticatedRequest, res: Response): Promise<void> {
+  const { id } = req.params;
+  try {
+    if (!req.file) {
+      res.status(400).json({ status: 'error', message: 'No se ha subido ningún archivo de imagen.' });
+      return;
+    }
+
+    const productId = Number(id);
+    const product = await prisma.product.findUnique({ where: { id: productId } });
+    if (!product) {
+      res.status(404).json({ status: 'error', message: 'Producto no encontrado.' });
+      return;
+    }
+
+    // Normalizar extensión del archivo original
+    const ext = path.extname(req.file.originalname).toLowerCase() || '.png';
+    // Guardar imagen usando el SKU del producto
+    const filename = `${product.sku}${ext}`;
+    const uploadPath = path.join(__dirname, '../../uploads/products', filename);
+
+    // Escribir el buffer a disco
+    fs.writeFileSync(uploadPath, req.file.buffer);
+
+    // Ruta URL relativa que sirve Express estático
+    const imageUrl = `/uploads/products/${filename}`;
+
+    // Actualizar base de datos
+    const updatedProduct = await prisma.product.update({
+      where: { id: productId },
+      data: { imageUrl },
+    });
+
+    // Registrar auditoría si tenemos el usuario autenticado
+    if (req.user?.id) {
+      await logAudit({
+        userId: req.user.id,
+        action: 'UPDATE_PRODUCT_IMAGE',
+        entityType: 'Product',
+        entityId: productId,
+        oldValues: { imageUrl: product.imageUrl },
+        newValues: { imageUrl },
+      });
+    }
+
+    res.status(200).json({ status: 'success', data: { product: updatedProduct } });
+  } catch (error: any) {
+    console.error('Error al subir imagen de producto:', error);
+    res.status(500).json({ status: 'error', message: 'Error al subir la imagen del producto.' });
+  }
+}
+
+/**
+ * Importar imágenes en lote a partir de un archivo comprimido ZIP.
+ * Asocia las imágenes basándose en que el nombre del archivo coincida con el SKU.
+ */
+export async function importProductsZip(req: AuthenticatedRequest, res: Response): Promise<void> {
+  try {
+    if (!req.file) {
+      res.status(400).json({ status: 'error', message: 'No se ha subido ningún archivo ZIP.' });
+      return;
+    }
+
+    const zip = new AdmZip(req.file.buffer);
+    const zipEntries = zip.getEntries();
+
+    let processedCount = 0;
+    let skippedCount = 0;
+    const skippedEntries: string[] = [];
+
+    const uploadDir = path.join(__dirname, '../../uploads/products');
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+
+    // Procesar cada entrada del archivo ZIP
+    for (const entry of zipEntries) {
+      // Ignorar directorios, archivos del sistema (como __MACOSX) y vacíos
+      if (entry.isDirectory || entry.entryName.startsWith('__MACOSX/') || entry.entryName.includes('.DS_Store')) {
+        continue;
+      }
+
+      const fileExt = path.extname(entry.name).toLowerCase();
+      const allowedExts = ['.png', '.jpg', '.jpeg', '.webp'];
+
+      if (!allowedExts.includes(fileExt)) {
+        continue;
+      }
+
+      // El nombre del archivo sin extensión representa el SKU
+      const sku = path.basename(entry.name, fileExt).trim();
+
+      if (!sku) {
+        continue;
+      }
+
+      // Buscar si el producto existe por SKU en la base de datos
+      const product = await prisma.product.findUnique({
+        where: { sku },
+      });
+
+      if (product) {
+        const filename = `${sku}${fileExt}`;
+        const destPath = path.join(uploadDir, filename);
+
+        // Guardar archivo físico
+        fs.writeFileSync(destPath, entry.getData());
+
+        // Actualizar URL en la BD
+        const imageUrl = `/uploads/products/${filename}`;
+        await prisma.product.update({
+          where: { id: product.id },
+          data: { imageUrl },
+        });
+
+        // Registrar auditoría si tenemos el usuario autenticado
+        if (req.user?.id) {
+          await logAudit({
+            userId: req.user.id,
+            action: 'IMPORT_PRODUCT_IMAGE_ZIP',
+            entityType: 'Product',
+            entityId: product.id,
+            oldValues: { imageUrl: product.imageUrl },
+            newValues: { imageUrl },
+          });
+        }
+
+        processedCount++;
+      } else {
+        skippedCount++;
+        skippedEntries.push(entry.name);
+      }
+    }
+
+    res.status(200).json({
+      status: 'success',
+      data: {
+        totalProcessed: processedCount,
+        totalSkipped: skippedCount,
+        skippedFiles: skippedEntries,
+      },
+    });
+  } catch (error: any) {
+    console.error('Error al procesar archivo ZIP de imágenes:', error);
+    res.status(500).json({ status: 'error', message: 'Error al procesar el archivo ZIP de imágenes.' });
   }
 }
 
