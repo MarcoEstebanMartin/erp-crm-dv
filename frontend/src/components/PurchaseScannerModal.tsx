@@ -58,16 +58,32 @@ export const PurchaseScannerModal: React.FC<PurchaseScannerModalProps> = ({
     };
   }, [isOpen, file]);
 
+  const initExtractedData = (response: any) => {
+    const rawPercAmount = Number(response.extracted.percepcionAmount || 0);
+    const rawIIBB = Number(response.extracted.percepcionIIBBAmount || 0);
+    const rawIva = Number(response.extracted.percepcionIvaAmount || 0);
+    const jurisdiction = response.extracted.percepcionJurisdiction || '';
+
+    const isPampa = jurisdiction.toLowerCase().includes('pampa') || jurisdiction.toUpperCase() === 'AR-L';
+    const isBsAs = jurisdiction.toLowerCase().includes('buenos') || jurisdiction.toLowerCase().includes('bs') || jurisdiction.toUpperCase() === 'AR-B';
+
+    return {
+      ...response.extracted,
+      providerId: response.matchedProvider ? response.matchedProvider.id : '',
+      percepcionPampa: isPampa ? (rawIIBB || rawPercAmount) : 0,
+      percepcionBsAs: isBsAs ? (rawIIBB || rawPercAmount) : 0,
+      percepcionIva: rawIva || 0,
+      impuestosInternos: 0
+    };
+  };
+
   const processUploadedDocument = async (fileToProcess: File) => {
     setLoading(true);
     setErrorMsg(null);
     setExtractedData(null);
     try {
       const response = await api.uploadPurchaseDocument(fileToProcess);
-      setExtractedData({
-        ...response.extracted,
-        providerId: response.matchedProvider ? response.matchedProvider.id : '',
-      });
+      setExtractedData(initExtractedData(response));
     } catch (err: any) {
       setErrorMsg(err.message || 'Error al procesar el documento con Inteligencia Artificial.');
     } finally {
@@ -84,10 +100,7 @@ export const PurchaseScannerModal: React.FC<PurchaseScannerModalProps> = ({
     setPreviewUrl(`${API_BASE_URL}/purchases/files/${encodeURIComponent(filename)}`);
     try {
       const response = await api.processPurchaseLocalFile(filename);
-      setExtractedData({
-        ...response.extracted,
-        providerId: response.matchedProvider ? response.matchedProvider.id : '',
-      });
+      setExtractedData(initExtractedData(response));
     } catch (err: any) {
       setErrorMsg(err.message || 'Error al procesar el archivo del servidor.');
     } finally {
@@ -147,9 +160,10 @@ export const PurchaseScannerModal: React.FC<PurchaseScannerModalProps> = ({
         })),
         netAmount: Number(extractedData.netAmount),
         taxAmount: Number(extractedData.taxAmount),
-        percepcionAmount: Number(extractedData.percepcionIIBBAmount || extractedData.percepcionAmount || 0),
-        percepcionIvaAmount: Number(extractedData.percepcionIvaAmount || 0),
-        percepcionJurisdiction: extractedData.percepcionJurisdiction || null,
+        percepcionPampa: Number(extractedData.percepcionPampa || 0),
+        percepcionBsAs: Number(extractedData.percepcionBsAs || 0),
+        percepcionIva: Number(extractedData.percepcionIva || 0),
+        impuestosInternos: Number(extractedData.impuestosInternos || 0),
         totalAmount: Number(extractedData.totalAmount)
       });
       onSuccess();
@@ -845,58 +859,55 @@ export const PurchaseScannerModal: React.FC<PurchaseScannerModalProps> = ({
 
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '13px', margin: '8px 0' }}>
                     <div>
-                      <label style={{ display: 'block', fontSize: '10px', color: 'var(--text-secondary)', marginBottom: '4px', textTransform: 'uppercase', fontWeight: 600 }}>Perc. IIBB (Ing. Brutos)</label>
+                      <label style={{ display: 'block', fontSize: '10px', color: 'var(--text-secondary)', marginBottom: '4px', textTransform: 'uppercase', fontWeight: 600 }}>IIBB La Pampa</label>
                       <input 
                         type="number" 
-                        value={extractedData.percepcionIIBBAmount ?? extractedData.percepcionAmount ?? 0} 
+                        value={extractedData.percepcionPampa ?? 0} 
                         onChange={(e) => setExtractedData({
                           ...extractedData, 
-                          percepcionIIBBAmount: Number(e.target.value),
-                          percepcionAmount: Number(e.target.value) + Number(extractedData.percepcionIvaAmount || 0)
+                          percepcionPampa: Number(e.target.value)
                         })}
                         style={{ width: '100%', padding: '6px 8px', fontSize: '12px', border: '1px solid var(--border-color)', borderRadius: '6px', backgroundColor: '#fff', color: 'var(--text-primary)' }}
                       />
                     </div>
                     <div>
-                      <label style={{ display: 'block', fontSize: '10px', color: 'var(--text-secondary)', marginBottom: '4px', textTransform: 'uppercase', fontWeight: 600 }}>Jurisdicción IIBB</label>
-                      <select 
-                        value={extractedData.percepcionJurisdiction || ''} 
-                        onChange={(e) => setExtractedData({...extractedData, percepcionJurisdiction: e.target.value || null})}
+                      <label style={{ display: 'block', fontSize: '10px', color: 'var(--text-secondary)', marginBottom: '4px', textTransform: 'uppercase', fontWeight: 600 }}>Percepcion IIBB Bs As</label>
+                      <input 
+                        type="number" 
+                        value={extractedData.percepcionBsAs ?? 0} 
+                        onChange={(e) => setExtractedData({
+                          ...extractedData, 
+                          percepcionBsAs: Number(e.target.value)
+                        })}
                         style={{ width: '100%', padding: '6px 8px', fontSize: '12px', border: '1px solid var(--border-color)', borderRadius: '6px', backgroundColor: '#fff', color: 'var(--text-primary)' }}
-                      >
-                        <option value="">Seleccione Prov...</option>
-                        <option value="AR-B">Buenos Aires (AR-B)</option>
-                        <option value="AR-C">CABA (AR-C)</option>
-                        <option value="AR-S">Santa Fe (AR-S)</option>
-                        <option value="AR-X">Córdoba (AR-X)</option>
-                        <option value="AR-E">Entre Ríos (AR-E)</option>
-                        <option value="AR-M">Mendoza (AR-M)</option>
-                        <option value="AR-W">Corrientes (AR-W)</option>
-                        <option value="AR-N">Misiones (AR-N)</option>
-                        <option value="AR-T">Tucumán (AR-T)</option>
-                        <option value="AR-H">Chaco (AR-H)</option>
-                        <option value="AR-P">Formosa (AR-P)</option>
-                        <option value="AR-G">Santiago del Estero (AR-G)</option>
-                      </select>
+                      />
                     </div>
                   </div>
 
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '13px', margin: '8px 0' }}>
                     <div>
-                      <label style={{ display: 'block', fontSize: '10px', color: 'var(--text-secondary)', marginBottom: '4px', textTransform: 'uppercase', fontWeight: 600 }}>Perc. IVA Sufrida</label>
+                      <label style={{ display: 'block', fontSize: '10px', color: 'var(--text-secondary)', marginBottom: '4px', textTransform: 'uppercase', fontWeight: 600 }}>Percep. de IVA RG 5329</label>
                       <input 
                         type="number" 
-                        value={extractedData.percepcionIvaAmount ?? 0} 
+                        value={extractedData.percepcionIva ?? 0} 
                         onChange={(e) => setExtractedData({
                           ...extractedData, 
-                          percepcionIvaAmount: Number(e.target.value),
-                          percepcionAmount: Number(extractedData.percepcionIIBBAmount || extractedData.percepcionAmount || 0) + Number(e.target.value)
+                          percepcionIva: Number(e.target.value)
                         })}
                         style={{ width: '100%', padding: '6px 8px', fontSize: '12px', border: '1px solid var(--border-color)', borderRadius: '6px', backgroundColor: '#fff', color: 'var(--text-primary)' }}
                       />
                     </div>
                     <div>
-                      {/* Espacio reservado */}
+                      <label style={{ display: 'block', fontSize: '10px', color: 'var(--text-secondary)', marginBottom: '4px', textTransform: 'uppercase', fontWeight: 600 }}>Impuestos Internos</label>
+                      <input 
+                        type="number" 
+                        value={extractedData.impuestosInternos ?? 0} 
+                        onChange={(e) => setExtractedData({
+                          ...extractedData, 
+                          impuestosInternos: Number(e.target.value)
+                        })}
+                        style={{ width: '100%', padding: '6px 8px', fontSize: '12px', border: '1px solid var(--border-color)', borderRadius: '6px', backgroundColor: '#fff', color: 'var(--text-primary)' }}
+                      />
                     </div>
                   </div>
                   

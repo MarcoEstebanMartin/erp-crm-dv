@@ -61,6 +61,10 @@ export default function ComprasDashboard() {
     netAmount: '',
     taxAmount: '',
     percepcionAmount: '',
+    percepcionPampa: '',
+    percepcionBsAs: '',
+    percepcionIva: '',
+    impuestosInternos: '',
     totalAmount: '',
     billingType: 'OFFICIAL'
   });
@@ -301,18 +305,25 @@ export default function ComprasDashboard() {
   const autoCalculatedTotal = useMemo(() => {
     const net = Number(supplierForm.netAmount) || 0;
     const tax = Number(supplierForm.taxAmount) || 0;
-    const perc = Number(supplierForm.percepcionAmount) || 0;
-    return (net + tax + perc).toFixed(2);
-  }, [supplierForm.netAmount, supplierForm.taxAmount, supplierForm.percepcionAmount]);
+    const pampa = Number(supplierForm.percepcionPampa) || 0;
+    const bsas = Number(supplierForm.percepcionBsAs) || 0;
+    const iva = Number(supplierForm.percepcionIva) || 0;
+    const internos = Number(supplierForm.impuestosInternos) || 0;
+    return (net + tax + pampa + bsas + iva + internos).toFixed(2);
+  }, [supplierForm.netAmount, supplierForm.taxAmount, supplierForm.percepcionPampa, supplierForm.percepcionBsAs, supplierForm.percepcionIva, supplierForm.impuestosInternos]);
 
   const handleNetChange = (val: string) => {
     const net = Number(val) || 0;
     const tax = (net * 0.21).toFixed(2);
+    const pampa = Number(supplierForm.percepcionPampa) || 0;
+    const bsas = Number(supplierForm.percepcionBsAs) || 0;
+    const iva = Number(supplierForm.percepcionIva) || 0;
+    const internos = Number(supplierForm.impuestosInternos) || 0;
     setSupplierForm(prev => ({
       ...prev,
       netAmount: val,
       taxAmount: tax,
-      totalAmount: (net + Number(tax) + (Number(prev.percepcionAmount) || 0)).toFixed(2)
+      totalAmount: (net + Number(tax) + pampa + bsas + iva + internos).toFixed(2)
     }));
   };
 
@@ -321,16 +332,21 @@ export default function ComprasDashboard() {
     setErrorMsg(null);
     setSuccessMsg(null);
 
-    const { personaId, invoiceNumber, invoiceType, issueDate, dueDate, netAmount, taxAmount, percepcionAmount, totalAmount, billingType } = supplierForm;
+    const { personaId, invoiceNumber, invoiceType, issueDate, dueDate, netAmount, taxAmount, percepcionPampa, percepcionBsAs, percepcionIva, impuestosInternos, totalAmount, billingType } = supplierForm;
 
     if (!personaId || !invoiceNumber || !invoiceType || !issueDate || !netAmount || !taxAmount || !totalAmount) {
       setErrorMsg('Por favor complete todos los campos obligatorios.');
       return;
     }
 
-    const expectedTotal = Number(netAmount) + Number(taxAmount) + (Number(percepcionAmount) || 0);
+    const pampaVal = Number(percepcionPampa || 0);
+    const bsasVal = Number(percepcionBsAs || 0);
+    const ivaVal = Number(percepcionIva || 0);
+    const internosVal = Number(impuestosInternos || 0);
+
+    const expectedTotal = Number(netAmount) + Number(taxAmount) + pampaVal + bsasVal + ivaVal + internosVal;
     if (Math.abs(Number(totalAmount) - expectedTotal) > 1.00) {
-      if (!window.confirm(`⚠️ El total ($${totalAmount}) no coincide con Neto + IVA + Percepción ($${expectedTotal.toFixed(2)}). ¿Desea guardar de todas formas?`)) {
+      if (!window.confirm(`⚠️ El total ($${totalAmount}) no coincide con Neto + IVA + Percepciones + Imp. Internos ($${expectedTotal.toFixed(2)}). ¿Desea guardar de todas formas?`)) {
         return;
       }
     }
@@ -345,7 +361,11 @@ export default function ComprasDashboard() {
         dueDate: dueDate ? new Date(dueDate).toISOString() : new Date(new Date(issueDate).getTime() + 30 * 24 * 3600 * 1000).toISOString(),
         netAmount: Number(netAmount),
         taxAmount: Number(taxAmount),
-        percepcionAmount: Number(percepcionAmount || 0),
+        percepcionAmount: pampaVal + bsasVal, // Guardamos la suma en el campo IIBB
+        percepcionPampa: pampaVal,
+        percepcionBsAs: bsasVal,
+        percepcionIva: ivaVal,
+        impuestosInternos: internosVal,
         totalAmount: Number(totalAmount),
         billingType: billingType || 'OFFICIAL'
       });
@@ -361,6 +381,10 @@ export default function ComprasDashboard() {
         netAmount: '',
         taxAmount: '',
         percepcionAmount: '',
+        percepcionPampa: '',
+        percepcionBsAs: '',
+        percepcionIva: '',
+        impuestosInternos: '',
         totalAmount: '',
         billingType: 'OFFICIAL'
       });
@@ -1427,30 +1451,83 @@ export default function ComprasDashboard() {
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <div className="form-group">
-                  <label>Percepciones Sufridas ($)</label>
+                  <label>IIBB La Pampa ($)</label>
                   <input
                     type="number"
                     step="0.01"
                     className="input"
                     placeholder="0.00"
-                    value={supplierForm.percepcionAmount}
-                    onChange={(e) => setSupplierForm(prev => ({ ...prev, percepcionAmount: e.target.value }))}
+                    value={supplierForm.percepcionPampa}
+                    onChange={(e) => setSupplierForm(prev => ({ 
+                      ...prev, 
+                      percepcionPampa: e.target.value,
+                      totalAmount: (Number(supplierForm.netAmount || 0) + Number(supplierForm.taxAmount || 0) + Number(e.target.value) + Number(prev.percepcionBsAs || 0) + Number(prev.percepcionIva || 0) + Number(prev.impuestosInternos || 0)).toFixed(2)
+                    }))}
                   />
                 </div>
                 <div className="form-group">
-                  <label>Total Factura ($)</label>
+                  <label>Percepcion IIBB Bs As ($)</label>
                   <input
                     type="number"
                     step="0.01"
                     className="input"
-                    placeholder={autoCalculatedTotal}
-                    value={supplierForm.totalAmount}
-                    onChange={(e) => setSupplierForm(prev => ({ ...prev, totalAmount: e.target.value }))}
-                    required
+                    placeholder="0.00"
+                    value={supplierForm.percepcionBsAs}
+                    onChange={(e) => setSupplierForm(prev => ({ 
+                      ...prev, 
+                      percepcionBsAs: e.target.value,
+                      totalAmount: (Number(supplierForm.netAmount || 0) + Number(supplierForm.taxAmount || 0) + Number(prev.percepcionPampa || 0) + Number(e.target.value) + Number(prev.percepcionIva || 0) + Number(prev.impuestosInternos || 0)).toFixed(2)
+                    }))}
                   />
-                  <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
-                    Suma Neto+IVA+Perc: <span style={{ fontWeight: 600 }}>${autoCalculatedTotal}</span>
-                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div className="form-group">
+                  <label>Percep. de IVA RG 5329 ($)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    className="input"
+                    placeholder="0.00"
+                    value={supplierForm.percepcionIva}
+                    onChange={(e) => setSupplierForm(prev => ({ 
+                      ...prev, 
+                      percepcionIva: e.target.value,
+                      totalAmount: (Number(supplierForm.netAmount || 0) + Number(supplierForm.taxAmount || 0) + Number(prev.percepcionPampa || 0) + Number(prev.percepcionBsAs || 0) + Number(e.target.value) + Number(prev.impuestosInternos || 0)).toFixed(2)
+                    }))}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Impuestos Internos ($)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    className="input"
+                    placeholder="0.00"
+                    value={supplierForm.impuestosInternos}
+                    onChange={(e) => setSupplierForm(prev => ({ 
+                      ...prev, 
+                      impuestosInternos: e.target.value,
+                      totalAmount: (Number(supplierForm.netAmount || 0) + Number(supplierForm.taxAmount || 0) + Number(prev.percepcionPampa || 0) + Number(prev.percepcionBsAs || 0) + Number(prev.percepcionIva || 0) + Number(e.target.value)).toFixed(2)
+                    }))}
+                  />
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label>Total Factura ($)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  className="input"
+                  placeholder={autoCalculatedTotal}
+                  value={supplierForm.totalAmount}
+                  onChange={(e) => setSupplierForm(prev => ({ ...prev, totalAmount: e.target.value }))}
+                  required
+                />
+                <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                  Suma Neto+IVA+Perc+Imp.Int: <span style={{ fontWeight: 600 }}>${autoCalculatedTotal}</span>
                 </div>
               </div>
 
