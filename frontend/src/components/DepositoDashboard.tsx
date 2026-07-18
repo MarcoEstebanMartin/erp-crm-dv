@@ -97,7 +97,7 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
   const [consolidatedZone, setConsolidatedZone] = useState<string>('ALL');
 
   // --- SUB-PESTAÑAS DE DEPÓSITO Y ESTADOS WMS / REABASTECIMIENTO ---
-  const [subTab, setSubTab] = useState<string>('');
+  const [subTab, setSubTab] = useState<string>('picking');
   const [selectedMapLocation, setSelectedMapLocation] = useState<string>('');
   const [allProducts, setAllProducts] = useState<any[]>([]); // Todos los productos para WMS y Reabastecimiento
   const [pendingPurchaseOrders, setPendingPurchaseOrders] = useState<any[]>([]);
@@ -138,9 +138,9 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
 
   useEffect(() => {
     fetchData();
-  }, [normalizedTab, searchQuery, subTab]);
+  }, [searchQuery, subTab]);
 
-  // Sincronizar subTab y limpiar mensajes al cambiar de pestaña principal
+  // Limpiar mensajes y estados locales
   useEffect(() => {
     setSuccessMsg(null);
     setErrorMsg(null);
@@ -148,16 +148,17 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
     setShowConsolidatedView(false);
     setSelectedMapLocation('');
     
-    if (normalizedTab === 'prepare-orders') {
-      setSubTab('picking');
-    } else {
+    // Si la pestaña principal cambia, ajustamos el subTab por defecto
+    if (activeTab === 'products') {
       setSubTab('stock-list');
+    } else {
+      setSubTab('picking');
     }
-  }, [normalizedTab, activeTab]);
+  }, [activeTab]);
 
   // Auto-abrir modal de ajuste si se escanea/busca un SKU o código de barra exacto
   useEffect(() => {
-    if (normalizedTab === 'stock-adjust' && products.length === 1 && searchQuery.trim() !== '') {
+    if (subTab === 'stock-list' && products.length === 1 && searchQuery.trim() !== '') {
       const match = products[0];
       const term = searchQuery.trim();
       if (match.barcode === term || match.sku === term) {
@@ -347,41 +348,42 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
   const fetchData = async () => {
     setErrorMsg(null);
     try {
-      if (normalizedTab === 'prepare-orders') {
+      // 1. Cargar pedidos si estamos en la cola de picking o calculando reabastecimiento
+      if (subTab === 'picking' || subTab === 'replenishment') {
         const data = await api.getOrders();
-        // Filtrar solo los pendientes y en preparación para picking
         const filtered = data.filter((o: any) => o.status === OrderStatus.PENDING || o.status === OrderStatus.PREPARING);
         setOrders(filtered);
-        
+      }
+
+      // 2. Cargar lotes vencidos si estamos en picking o en vencimientos
+      if (subTab === 'picking' || subTab === 'lot-expiration') {
         try {
           const lotsRes = await api.getExpiringLots();
           setExpiringLots(lotsRes.lots || []);
         } catch (lotErr) {
           console.error('Error al obtener lotes vencidos:', lotErr);
         }
+      }
 
-        // Cargar todos los productos y compras si estamos en reabastecimiento
-        if (subTab === 'replenishment') {
-          setLoading(true);
-          const allProds = await api.getProducts('');
-          setAllProducts(allProds);
-          
-          try {
-            const pendingPurchs = await api.getPurchaseOrders({ status: 'PENDING' });
-            setPendingPurchaseOrders(pendingPurchs || []);
-          } catch (poErr) {
-            console.error('Error al obtener órdenes de compra pendientes:', poErr);
-          }
-          setLoading(false);
-        }
-      } else if (normalizedTab === 'stock-adjust') {
+      // 3. Cargar productos filtrados para el listado de stock
+      if (subTab === 'stock-list') {
         const data = await api.getProducts(searchQuery);
         setProducts(data);
+      }
 
-        // Si estamos en mapa o vencimientos, cargar todos los productos
-        if (subTab === 'wms-map' || subTab === 'lot-expiration') {
-          const allProds = await api.getProducts('');
-          setAllProducts(allProds);
+      // 4. Cargar todos los productos para mapa WMS, reabastecimiento o vencimientos
+      if (subTab === 'wms-map' || subTab === 'lot-expiration' || subTab === 'replenishment') {
+        const allProds = await api.getProducts('');
+        setAllProducts(allProds);
+      }
+
+      // 5. Cargar órdenes de compra pendientes para reabastecimiento
+      if (subTab === 'replenishment') {
+        try {
+          const pendingPurchs = await api.getPurchaseOrders({ status: 'PENDING' });
+          setPendingPurchaseOrders(pendingPurchs || []);
+        } catch (poErr) {
+          console.error('Error al obtener órdenes de compra pendientes:', poErr);
         }
       }
     } catch (err: any) {
@@ -876,55 +878,48 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
       {/* Sub-tabs de Navegación interna (ocultos durante la preparación activa o en impresión) */}
       {!selectedOrder && !showConsolidatedView && (
         <div className="subtabs-nav no-print">
-          {normalizedTab === 'prepare-orders' ? (
-            <>
-              <button
-                className={`subtab-btn ${subTab === 'picking' ? 'active' : ''}`}
-                onClick={() => setSubTab('picking')}
-              >
-                <ClipboardList size={16} />
-                <span>Cola de Preparación</span>
-              </button>
-              <button
-                className={`subtab-btn ${subTab === 'replenishment' ? 'active' : ''}`}
-                onClick={() => setSubTab('replenishment')}
-              >
-                <ShoppingCart size={16} />
-                <span>Sugerencias de Compra (Reabastecimiento)</span>
-              </button>
-            </>
-          ) : (
-            <>
-              <button
-                className={`subtab-btn ${subTab === 'stock-list' ? 'active' : ''}`}
-                onClick={() => setSubTab('stock-list')}
-              >
-                <Warehouse size={16} />
-                <span>Inventario y Ajustes</span>
-              </button>
-              <button
-                className={`subtab-btn ${subTab === 'wms-map' ? 'active' : ''}`}
-                onClick={() => setSubTab('wms-map')}
-              >
-                <Map size={16} />
-                <span>Mapa Visual (WMS)</span>
-              </button>
-              <button
-                className={`subtab-btn ${subTab === 'lot-expiration' ? 'active' : ''}`}
-                onClick={() => setSubTab('lot-expiration')}
-              >
-                <Calendar size={16} />
-                <span>Lotes y Vencimientos</span>
-              </button>
-            </>
-          )}
+          <button
+            className={`subtab-btn ${subTab === 'picking' ? 'active' : ''}`}
+            onClick={() => setSubTab('picking')}
+          >
+            <ClipboardList size={16} />
+            <span>Cola de Preparación</span>
+          </button>
+          <button
+            className={`subtab-btn ${subTab === 'wms-map' ? 'active' : ''}`}
+            onClick={() => setSubTab('wms-map')}
+          >
+            <Map size={16} />
+            <span>Mapa Visual (WMS)</span>
+          </button>
+          <button
+            className={`subtab-btn ${subTab === 'lot-expiration' ? 'active' : ''}`}
+            onClick={() => setSubTab('lot-expiration')}
+          >
+            <Calendar size={16} />
+            <span>Lotes y Vencimientos</span>
+          </button>
+          <button
+            className={`subtab-btn ${subTab === 'replenishment' ? 'active' : ''}`}
+            onClick={() => setSubTab('replenishment')}
+          >
+            <ShoppingCart size={16} />
+            <span>Sugerencias de Compra</span>
+          </button>
+          <button
+            className={`subtab-btn ${subTab === 'stock-list' ? 'active' : ''}`}
+            onClick={() => setSubTab('stock-list')}
+          >
+            <Warehouse size={16} />
+            <span>Inventario y Ajustes</span>
+          </button>
         </div>
       )}
 
       {/* ====================================================================
           1. PREPARACIÓN DE PEDIDOS (PICKING LIST)
           ==================================================================== */}
-      {normalizedTab === 'prepare-orders' && (subTab === 'picking' || selectedOrder || showConsolidatedView) && (
+      {(subTab === 'picking' || selectedOrder || showConsolidatedView) && (
         <div>
           {selectedOrder ? (() => {
             const filteredItems = selectedOrder.items.filter((item: any) => selectedZone === 'ALL' || (item.product?.rubro?.pickingZone || 'CAJAS') === selectedZone);
@@ -1835,7 +1830,7 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
       {/* ====================================================================
           1.2 SUGERENCIAS DE COMPRA (REABASTECIMIENTO)
           ==================================================================== */}
-      {normalizedTab === 'prepare-orders' && subTab === 'replenishment' && !selectedOrder && !showConsolidatedView && (
+      {subTab === 'replenishment' && !selectedOrder && !showConsolidatedView && (
         <div>
           <div className="card">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
@@ -2039,7 +2034,7 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
           2. CONTROL DE STOCK (DEPÓSITO)
           ==================================================================== */}
       {/* 2.1 INVENTARIO Y CONTROL DE STOCK */}
-      {normalizedTab === 'stock-adjust' && subTab === 'stock-list' && (
+      {subTab === 'stock-list' && !selectedOrder && !showConsolidatedView && (
         <div>
           <div className="actions-bar">
             <div className="search-input-wrapper">
@@ -2135,7 +2130,7 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
       {/* ====================================================================
           2.2 MAPA VISUAL (WMS)
           ==================================================================== */}
-      {normalizedTab === 'stock-adjust' && subTab === 'wms-map' && (
+      {subTab === 'wms-map' && !selectedOrder && !showConsolidatedView && (
         <div className="wms-container">
           {/* Card del Mapa */}
           <div className="wms-map-card">
@@ -2345,7 +2340,7 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
       {/* ====================================================================
           2.3 CONTROL DE LOTES Y VENCIMIENTOS
           ==================================================================== */}
-      {normalizedTab === 'stock-adjust' && subTab === 'lot-expiration' && (
+      {subTab === 'lot-expiration' && !selectedOrder && !showConsolidatedView && (
         <div>
           {/* Tarjeta de alertas */}
           {expiringLots.length > 0 && (
