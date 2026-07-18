@@ -490,8 +490,9 @@ export default function ComprasDashboard() {
   };
 
   // WhatsApp helper
-  const getWhatsAppLink = (phone: string) => {
-    const cleanPhone = phone.replace(/\D/g, '');
+  const getWhatsAppLink = (phone: any) => {
+    if (!phone) return '';
+    const cleanPhone = String(phone).replace(/\D/g, '');
     return `https://wa.me/${cleanPhone}`;
   };
 
