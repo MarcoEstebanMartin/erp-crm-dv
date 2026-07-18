@@ -20,29 +20,11 @@ export const PurchaseScannerModal: React.FC<PurchaseScannerModalProps> = ({
   const [extractedData, setExtractedData] = useState<any>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isPdf, setIsPdf] = useState(false);
-  const [localFiles, setLocalFiles] = useState<any[]>([]);
-  const [selectedLocalFile, setSelectedLocalFile] = useState<string | null>(null);
   
   // Estados para buscador de productos de cada ítem
   const [productSearchResults, setProductSearchResults] = useState<{ [key: number]: any[] }>({});
   const [productSearchQueries, setProductSearchQueries] = useState<{ [key: number]: string }>({});
   const [activeSearchIndex, setActiveSearchIndex] = useState<number | null>(null);
-
-  // Cargar lista de archivos locales de la carpeta ARCHIVOS
-  const loadLocalFiles = async () => {
-    try {
-      const files = await api.getPurchaseLocalFiles();
-      setLocalFiles(files || []);
-    } catch (err) {
-      console.error('Error al obtener archivos locales:', err);
-    }
-  };
-
-  useEffect(() => {
-    if (isOpen) {
-      loadLocalFiles();
-    }
-  }, [isOpen]);
 
   useEffect(() => {
     let url: string | null = null;
@@ -50,7 +32,6 @@ export const PurchaseScannerModal: React.FC<PurchaseScannerModalProps> = ({
       url = URL.createObjectURL(file);
       setPreviewUrl(url);
       setIsPdf(file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf'));
-      setSelectedLocalFile(null);
       processUploadedDocument(file);
     }
     return () => {
@@ -86,23 +67,6 @@ export const PurchaseScannerModal: React.FC<PurchaseScannerModalProps> = ({
       setExtractedData(initExtractedData(response));
     } catch (err: any) {
       setErrorMsg(err.message || 'Error al procesar el documento con Inteligencia Artificial.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const processLocalDocument = async (filename: string) => {
-    setLoading(true);
-    setErrorMsg(null);
-    setExtractedData(null);
-    setSelectedLocalFile(filename);
-    setIsPdf(filename.toLowerCase().endsWith('.pdf'));
-    setPreviewUrl(`${API_BASE_URL}/purchases/files/${encodeURIComponent(filename)}`);
-    try {
-      const response = await api.processPurchaseLocalFile(filename);
-      setExtractedData(initExtractedData(response));
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Error al procesar el archivo del servidor.');
     } finally {
       setLoading(false);
     }
@@ -260,49 +224,7 @@ export const PurchaseScannerModal: React.FC<PurchaseScannerModalProps> = ({
           </button>
         </div>
 
-        {/* Local Files Bar */}
-        {localFiles.length > 0 && (
-          <div style={{
-            backgroundColor: '#FFFFFF',
-            borderBottom: '1px solid var(--border-color)',
-            padding: '12px 24px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '12px',
-            overflowX: 'auto'
-          }}>
-            <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
-              📁 Carpeta ARCHIVOS:
-            </span>
-            <div style={{ display: 'flex', gap: '8px' }}>
-              {localFiles.map((f, i) => (
-                <button
-                  key={i}
-                  onClick={() => processLocalDocument(f.name)}
-                  disabled={loading}
-                  style={{
-                    fontSize: '12px',
-                    padding: '6px 12px',
-                    borderRadius: '6px',
-                    border: selectedLocalFile === f.name ? '1px solid var(--color-corp-red)' : '1px solid var(--border-color)',
-                    backgroundColor: selectedLocalFile === f.name ? 'rgba(227, 6, 19, 0.05)' : '#FFFFFF',
-                    color: selectedLocalFile === f.name ? 'var(--color-corp-red)' : 'var(--text-secondary)',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    fontWeight: selectedLocalFile === f.name ? 600 : 400,
-                    transition: 'all 0.15s ease',
-                    opacity: loading ? 0.5 : 1
-                  }}
-                >
-                  <FileText size={14} />
-                  {f.name} ({formatBytes(f.size)})
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
+
 
         {/* Content */}
         <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>

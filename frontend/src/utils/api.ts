@@ -931,18 +931,7 @@ export const api = {
     return data.data;
   },
 
-  getPurchaseLocalFiles: async () => {
-    const res = await request('/purchases/local-files');
-    return res.files;
-  },
 
-  processPurchaseLocalFile: async (filename: string) => {
-    const res = await request('/purchases/process-local-file', {
-      method: 'POST',
-      body: JSON.stringify({ filename })
-    });
-    return res.data;
-  },
 
   confirmPurchaseDocument: async (payload: any) => {
     
