@@ -69,7 +69,7 @@ export async function createPersona(req: AuthenticatedRequest, res: Response): P
     res.status(201).json({ status: 'success', data: { persona } });
   } catch (error: any) {
     console.error('Error creando persona:', error);
-    res.status(500).json({ status: 'error', message: 'Error al crear la persona.' });
+    res.status(500).json({ status: 'error', message: error.message || 'Error al crear la persona.' });
   }
 }
 
@@ -106,7 +106,7 @@ export async function updatePersona(req: AuthenticatedRequest, res: Response): P
       res.status(403).json({ status: 'error', message: error.message });
       return;
     }
-    res.status(500).json({ status: 'error', message: 'Error al actualizar la persona.' });
+    res.status(500).json({ status: 'error', message: error.message || 'Error al actualizar la persona.' });
   }
 }
 
