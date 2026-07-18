@@ -3,6 +3,8 @@ import prisma from '../utils/prisma';
 import { AuthenticatedRequest } from '../types';
 import { logAudit } from '../utils/audit';
 import { geminiService } from '../services/gemini.service';
+import fs from 'fs';
+import path from 'path';
 
 /**
  * Obtener órdenes de compra
@@ -299,36 +301,127 @@ export async function uploadDocument(req: AuthenticatedRequest, res: Response): 
 
     const extractedData = await geminiService.extractInvoiceData(mimeType, base64Data);
 
-    // Intentar matchear proveedor
+    // Intentar matchear proveedor con CUIT normalizado
     let matchedProvider = null;
+    let cuitClean = '';
     if (extractedData.cuit) {
+      cuitClean = extractedData.cuit.replace(/\D/g, '');
+      let formattedCuit = cuitClean;
+      if (cuitClean.length === 11) {
+        formattedCuit = `${cuitClean.substring(0, 2)}-${cuitClean.substring(2, 10)}-${cuitClean.substring(10)}`;
+      }
       matchedProvider = await prisma.persona.findFirst({
-        where: { cuit: extractedData.cuit, isProvider: true }
+        where: {
+          OR: [
+            { cuit: cuitClean },
+            { cuit: formattedCuit },
+            { cuit: { contains: cuitClean } }
+          ],
+          isProvider: true
+        }
       });
     }
     if (!matchedProvider && extractedData.supplierName) {
-      // Búsqueda simple por nombre
       matchedProvider = await prisma.persona.findFirst({
         where: { name: { contains: extractedData.supplierName, mode: 'insensitive' }, isProvider: true }
       });
     }
 
-    // Intentar matchear productos
+    // Auto-determinar Sucursal (A = OFFICIAL, X = INTERNAL)
+    const companyCuitClean = '20163165059';
+    const receiverCuitClean = extractedData.receiverCuit ? extractedData.receiverCuit.replace(/\D/g, '') : '';
+    
+    let defaultBillingType: 'OFFICIAL' | 'INTERNAL' = 'INTERNAL';
+    
+    const isOfficialInvoice = ['FACTURA_A', 'FACTURA_B', 'FACTURA_C'].includes(extractedData.documentType);
+    const matchesCompanyCuit = receiverCuitClean === companyCuitClean;
+    const matchesCompanyName = extractedData.receiverName && 
+      (extractedData.receiverName.toUpperCase().includes('MARTIN PABLO') || 
+       extractedData.receiverName.toUpperCase().includes('DON VENANCIO'));
+
+    if (isOfficialInvoice && (matchesCompanyCuit || matchesCompanyName)) {
+      defaultBillingType = 'OFFICIAL';
+    }
+
+    const providerId = matchedProvider ? matchedProvider.id : null;
+
+    // Intentar matchear productos con mapeos previos, SKU/código de barras o descripción
     const enrichedItems = await Promise.all(extractedData.items.map(async (item) => {
-      let matchedProduct = await prisma.product.findFirst({
-        where: { name: { contains: item.description, mode: 'insensitive' } }
-      });
+      let matchedProduct = null;
+      let matchMethod = 'NONE';
+
+      // 1. Intentar matchear por código de mapeo previo si tenemos el proveedor
+      if (providerId && item.code) {
+        const mapping = await prisma.providerProductMapping.findFirst({
+          where: {
+            providerId,
+            providerCode: String(item.code)
+          },
+          include: { product: true }
+        });
+        if (mapping) {
+          matchedProduct = mapping.product;
+          matchMethod = 'PREVIOUS_MAPPING';
+        }
+      }
+
+      // 2. Intentar matchear por SKU o Barcode exacto usando el código extraído
+      if (!matchedProduct && item.code) {
+        const cleanCode = String(item.code).trim();
+        matchedProduct = await prisma.product.findFirst({
+          where: {
+            OR: [
+              { sku: cleanCode },
+              { barcode: cleanCode }
+            ]
+          }
+        });
+        if (matchedProduct) {
+          matchMethod = 'CODE_MATCH';
+        }
+      }
+
+      // 3. Intentar matchear por coincidencia en descripción
+      if (!matchedProduct && item.description) {
+        const words = item.description.split(/\s+/).filter(w => w.length > 2);
+        
+        matchedProduct = await prisma.product.findFirst({
+          where: {
+            name: { contains: item.description, mode: 'insensitive' }
+          }
+        });
+        
+        if (matchedProduct) {
+          matchMethod = 'DESCRIPTION_EXACT';
+        } else if (words.length > 0) {
+          const queryWords = words.slice(0, 2).join(' ');
+          matchedProduct = await prisma.product.findFirst({
+            where: {
+              name: { contains: queryWords, mode: 'insensitive' }
+            }
+          });
+          if (matchedProduct) {
+            matchMethod = 'DESCRIPTION_PARTIAL';
+          }
+        }
+      }
+
       return {
         ...item,
         matchedProductId: matchedProduct ? matchedProduct.id : null,
         matchedProductName: matchedProduct ? matchedProduct.name : null,
+        matchMethod,
       };
     }));
 
     res.status(200).json({
       status: 'success',
       data: {
-        extracted: { ...extractedData, items: enrichedItems },
+        extracted: { 
+          ...extractedData, 
+          items: enrichedItems,
+          billingType: defaultBillingType
+        },
         matchedProvider,
       }
     });
@@ -411,7 +504,7 @@ export async function confirmDocument(req: AuthenticatedRequest, res: Response):
         refId = `PO-${po.id}`;
       }
 
-      // Actualizar Stock y Costos para todos
+      // Actualizar Stock, Costos, Lotes y Mapeos de Productos
       for (const item of items) {
         if (!item.productId) continue; // Si no lo vincularon, ignorar
 
@@ -422,6 +515,58 @@ export async function confirmDocument(req: AuthenticatedRequest, res: Response):
             costPrice: item.unitPrice > 0 ? Number(item.unitPrice) : undefined, // Actualizar costo solo si hay
           }
         });
+
+        // Crear/Actualizar Lote de Producto
+        const lotNumber = documentNumber || `LOT-${Date.now()}`;
+        const expirationDate = new Date(Date.now() + 365 * 24 * 3600 * 1000); // 1 año por defecto
+        
+        const lot = await tx.productLot.findFirst({
+          where: {
+            productId: item.productId,
+            lotNumber: lotNumber
+          }
+        });
+
+        if (lot) {
+          await tx.productLot.update({
+            where: { id: lot.id },
+            data: {
+              stock: { increment: Number(item.quantity) }
+            }
+          });
+        } else {
+          await tx.productLot.create({
+            data: {
+              productId: item.productId,
+              lotNumber: lotNumber,
+              expirationDate: expirationDate,
+              stock: Number(item.quantity),
+              location: 'S/U'
+            }
+          });
+        }
+
+        // Registrar / actualizar el mapeo del código de proveedor con el producto local
+        if (item.code) {
+          await tx.providerProductMapping.upsert({
+            where: {
+              providerId_providerCode: {
+                providerId: Number(providerId),
+                providerCode: String(item.code)
+              }
+            },
+            update: {
+              productId: Number(item.productId),
+              providerName: item.description || ''
+            },
+            create: {
+              providerId: Number(providerId),
+              providerCode: String(item.code),
+              productId: Number(item.productId),
+              providerName: item.description || ''
+            }
+          });
+        }
 
         // Crear Movimiento de Stock
         await tx.stockMovement.create({
@@ -436,12 +581,212 @@ export async function confirmDocument(req: AuthenticatedRequest, res: Response):
         });
       }
 
+      // Actualizar cuenta corriente del proveedor (decrementando saldo deudor, aumenta lo que le debemos)
+      await tx.persona.update({
+        where: { id: Number(providerId) },
+        data: {
+          outstandingBalance: {
+            decrement: Number(totalAmount || 0),
+          },
+        },
+      });
+
       return { createdId, refId };
     });
 
     res.status(200).json({ status: 'success', data: result });
   } catch (error: any) {
     console.error('Error confirming document:', error);
+    res.status(500).json({ status: 'error', message: error.message });
+  }
+}
+
+/**
+ * Listar archivos locales de la carpeta ARCHIVOS
+ */
+export async function listLocalFiles(req: AuthenticatedRequest, res: Response): Promise<void> {
+  try {
+    const dirPath = path.join('c:', 'Users', 'Usuario', 'Desktop', 'ERP-CRM DV', 'ARCHIVOS');
+    if (!fs.existsSync(dirPath)) {
+      res.status(200).json({ status: 'success', files: [] });
+      return;
+    }
+
+    const files = fs.readdirSync(dirPath);
+    const documentFiles = files.filter(file => {
+      const ext = path.extname(file).toLowerCase();
+      return ['.pdf', '.png', '.jpg', '.jpeg'].includes(ext);
+    });
+
+    const fileDetails = documentFiles.map(file => {
+      const stats = fs.statSync(path.join(dirPath, file));
+      return {
+        name: file,
+        size: stats.size,
+        createdAt: stats.birthtime,
+      };
+    });
+
+    res.status(200).json({
+      status: 'success',
+      files: fileDetails
+    });
+  } catch (error: any) {
+    console.error('Error in listLocalFiles:', error);
+    res.status(500).json({ status: 'error', message: error.message });
+  }
+}
+
+/**
+ * Procesar un archivo local de la carpeta ARCHIVOS usando Gemini
+ */
+export async function processLocalFile(req: AuthenticatedRequest, res: Response): Promise<void> {
+  const { filename } = req.body;
+  if (!filename) {
+    res.status(400).json({ status: 'error', message: 'No se especificó ningún nombre de archivo.' });
+    return;
+  }
+
+  try {
+    const filePath = path.join('c:', 'Users', 'Usuario', 'Desktop', 'ERP-CRM DV', 'ARCHIVOS', filename);
+    if (!fs.existsSync(filePath)) {
+      res.status(404).json({ status: 'error', message: `El archivo ${filename} no existe en la carpeta ARCHIVOS.` });
+      return;
+    }
+
+    const ext = path.extname(filename).toLowerCase();
+    let mimeType = 'application/pdf';
+    if (ext === '.png') mimeType = 'image/png';
+    else if (ext === '.jpg' || ext === '.jpeg') mimeType = 'image/jpeg';
+
+    const fileBuffer = fs.readFileSync(filePath);
+    const base64Data = fileBuffer.toString('base64');
+
+    const extractedData = await geminiService.extractInvoiceData(mimeType, base64Data);
+
+    // Intentar matchear proveedor con CUIT normalizado
+    let matchedProvider = null;
+    let cuitClean = '';
+    if (extractedData.cuit) {
+      cuitClean = extractedData.cuit.replace(/\D/g, '');
+      let formattedCuit = cuitClean;
+      if (cuitClean.length === 11) {
+        formattedCuit = `${cuitClean.substring(0, 2)}-${cuitClean.substring(2, 10)}-${cuitClean.substring(10)}`;
+      }
+      matchedProvider = await prisma.persona.findFirst({
+        where: {
+          OR: [
+            { cuit: cuitClean },
+            { cuit: formattedCuit },
+            { cuit: { contains: cuitClean } }
+          ],
+          isProvider: true
+        }
+      });
+    }
+    if (!matchedProvider && extractedData.supplierName) {
+      matchedProvider = await prisma.persona.findFirst({
+        where: { name: { contains: extractedData.supplierName, mode: 'insensitive' }, isProvider: true }
+      });
+    }
+
+    // Auto-determinar Sucursal (A = OFFICIAL, X = INTERNAL)
+    const companyCuitClean = '20163165059';
+    const receiverCuitClean = extractedData.receiverCuit ? extractedData.receiverCuit.replace(/\D/g, '') : '';
+    
+    let defaultBillingType: 'OFFICIAL' | 'INTERNAL' = 'INTERNAL';
+    
+    const isOfficialInvoice = ['FACTURA_A', 'FACTURA_B', 'FACTURA_C'].includes(extractedData.documentType);
+    const matchesCompanyCuit = receiverCuitClean === companyCuitClean;
+    const matchesCompanyName = extractedData.receiverName && 
+      (extractedData.receiverName.toUpperCase().includes('MARTIN PABLO') || 
+       extractedData.receiverName.toUpperCase().includes('DON VENANCIO'));
+
+    if (isOfficialInvoice && (matchesCompanyCuit || matchesCompanyName)) {
+      defaultBillingType = 'OFFICIAL';
+    }
+
+    const providerId = matchedProvider ? matchedProvider.id : null;
+
+    // Intentar matchear productos con mapeos previos, SKU/código de barras o descripción
+    const enrichedItems = await Promise.all(extractedData.items.map(async (item) => {
+      let matchedProduct = null;
+      let matchMethod = 'NONE';
+
+      if (providerId && item.code) {
+        const mapping = await prisma.providerProductMapping.findFirst({
+          where: {
+            providerId,
+            providerCode: String(item.code)
+          },
+          include: { product: true }
+        });
+        if (mapping) {
+          matchedProduct = mapping.product;
+          matchMethod = 'PREVIOUS_MAPPING';
+        }
+      }
+
+      if (!matchedProduct && item.code) {
+        const cleanCode = String(item.code).trim();
+        matchedProduct = await prisma.product.findFirst({
+          where: {
+            OR: [
+              { sku: cleanCode },
+              { barcode: cleanCode }
+            ]
+          }
+        });
+        if (matchedProduct) {
+          matchMethod = 'CODE_MATCH';
+        }
+      }
+
+      if (!matchedProduct && item.description) {
+        const words = item.description.split(/\s+/).filter(w => w.length > 2);
+        
+        matchedProduct = await prisma.product.findFirst({
+          where: {
+            name: { contains: item.description, mode: 'insensitive' }
+          }
+        });
+        
+        if (matchedProduct) {
+          matchMethod = 'DESCRIPTION_EXACT';
+        } else if (words.length > 0) {
+          const queryWords = words.slice(0, 2).join(' ');
+          matchedProduct = await prisma.product.findFirst({
+            where: {
+              name: { contains: queryWords, mode: 'insensitive' }
+            }
+          });
+          if (matchedProduct) {
+            matchMethod = 'DESCRIPTION_PARTIAL';
+          }
+        }
+      }
+
+      return {
+        ...item,
+        matchedProductId: matchedProduct ? matchedProduct.id : null,
+        matchedProductName: matchedProduct ? matchedProduct.name : null,
+        matchMethod,
+      };
+    }));
+
+    res.status(200).json({
+      status: 'success',
+      data: {
+        extracted: { 
+          ...extractedData, 
+          items: enrichedItems,
+          billingType: defaultBillingType
+        },
+        matchedProvider,
+      }
+    });
+  } catch (error: any) {
+    console.error('Error in processLocalFile:', error);
     res.status(500).json({ status: 'error', message: error.message });
   }
 }

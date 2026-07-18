@@ -54,6 +54,7 @@ const ComprasDashboard = lazy(() => import('./ComprasDashboard'));
 const FinanzasDashboard = lazy(() => import('./FinanzasDashboard'));
 const BillingDashboard = lazy(() => import('./BillingDashboard'));
 const DepositoDashboard = lazy(() => import('./DepositoDashboard'));
+const GastosDashboard = lazy(() => import('./GastosDashboard'));
 
 const LoadingDashboard = () => (
   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '300px', gap: '12px', padding: '40px', backgroundColor: 'var(--background-card)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
@@ -195,7 +196,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
   const [auditPage, setAuditPage] = useState(1);
   const [auditTotalPages, setAuditTotalPages] = useState(1);
     const [configTab, setConfigTab] = useState<string>('general');
-  const [cajasSubTab, setCajasSubTab] = useState<'general' | 'rendiciones'>('general');
+  const [cajasSubTab, setCajasSubTab] = useState<'general' | 'rendiciones' | 'gastos'>('general');
   
   // Estados para Reglas de Precios y Descuentos
   const [pricingRules, setPricingRules] = useState<{ discountRules: any[]; splitConfigs: any[] }>({ discountRules: [], splitConfigs: [] });
@@ -1705,13 +1706,33 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
             >
               📊 Rendiciones y Arqueos
             </button>
+            <button 
+              type="button"
+              className="btn" 
+              style={{ 
+                backgroundColor: cajasSubTab === 'gastos' ? 'var(--color-primary)' : 'transparent',
+                color: cajasSubTab === 'gastos' ? '#fff' : 'var(--text-primary)',
+                border: cajasSubTab === 'gastos' ? '1px solid var(--color-primary)' : '1px solid var(--border-color)',
+                fontWeight: 600,
+                fontSize: '0.85rem',
+                padding: '8px 16px',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap'
+              }}
+              onClick={() => setCajasSubTab('gastos')}
+            >
+              💸 Control de Gastos
+            </button>
           </div>
 
           <Suspense fallback={<LoadingDashboard />}>
             {cajasSubTab === 'general' ? (
               <FinanzasDashboard />
-            ) : (
+            ) : cajasSubTab === 'rendiciones' ? (
               <RendicionesDashboard />
+            ) : (
+              <GastosDashboard />
             )}
           </Suspense>
         </div>

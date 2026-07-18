@@ -8,6 +8,7 @@ import {
   Package, 
   RefreshCw, 
   TrendingUp, 
+  TrendingDown,
   Sparkles, 
   FileText,
   Calendar,
@@ -27,6 +28,15 @@ const normalizeString = (str: string | null | undefined): string => {
     .trim();
 };
 
+const getMonthName = (m: number): string => {
+  const months = [
+    'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+  ];
+  return months[m - 1];
+};
+
+
 
 interface UnifiedReportsDashboardProps {
   orders: any[];
@@ -44,6 +54,28 @@ export default function UnifiedReportsDashboard({
   financialReport
 }: UnifiedReportsDashboardProps) {
   const [activeTab, setActiveTab] = useState<'finanzas' | 'zonas' | 'caja_semanal' | 'crm' | 'arca'>('finanzas');
+
+  // Estados para reporte financiero con filtros mensuales
+  const [reportYear, setReportYear] = useState<number>(2026);
+  const [reportMonth, setReportMonth] = useState<number>(5); // Mayo 2026 por defecto para ver los datos cargados
+  const [localReport, setLocalReport] = useState<any>(null);
+  const [reportLoading, setReportLoading] = useState(false);
+
+  useEffect(() => {
+    fetchLocalFinancialReport();
+  }, [reportYear, reportMonth]);
+
+  const fetchLocalFinancialReport = async () => {
+    setReportLoading(true);
+    try {
+      const data = await api.getFinancialReports(reportYear, reportMonth);
+      setLocalReport(data);
+    } catch (e) {
+      console.error("Error al cargar reporte financiero consolidado:", e);
+    } finally {
+      setReportLoading(false);
+    }
+  };
 
   // Estados para Caja Semanal Consolidada
   const [weeklyReports, setWeeklyReports] = useState<any[]>([]);
@@ -353,12 +385,27 @@ export default function UnifiedReportsDashboard({
   const deliveredOrders = orders.filter((o: any) => o.status === 'DELIVERED');
   
   // 1. FINANZAS
-  const totalFacturado = financialReport ? (financialReport.sales.official + financialReport.sales.internal) : 0;
-  const officialSales = financialReport ? financialReport.sales.official : 0;
-  const internalSales = financialReport ? financialReport.sales.internal : 0;
-  const totalCostoEstimado = Math.round((officialSales * 0.75) + (internalSales * 0.73));
-  const totalMargenNeto = Math.round(totalFacturado - totalCostoEstimado);
+  const currentReport = localReport || financialReport;
+  const totalFacturado = currentReport?.sales ? ((currentReport.sales.official || 0) + (currentReport.sales.internal || 0)) : 0;
+  const officialSales = currentReport?.sales?.official || 0;
+  const internalSales = currentReport?.sales?.internal || 0;
+  
+  // Costos reales obtenidos desde el backend (CMV)
+  const officialCostReal = currentReport?.sales?.officialCost || 0;
+  const internalCostReal = currentReport?.sales?.internalCost || 0;
+  const totalCostoReal = Math.round(officialCostReal + internalCostReal);
+  
+  // Margen Comercial Bruto
+  const totalMargenBruto = Math.round(totalFacturado - totalCostoReal);
+  const pctMargenBruto = totalFacturado > 0 ? Math.round((totalMargenBruto / totalFacturado) * 100) : 0;
+  
+  // Gastos Operativos Reales
+  const totalGastosReal = currentReport?.expenses?.total || 0;
+  
+  // Utilidad Neta y Margen Neto Final
+  const totalMargenNeto = Math.round(totalMargenBruto - totalGastosReal);
   const pctMargenConsolidado = totalFacturado > 0 ? Math.round((totalMargenNeto / totalFacturado) * 100) : 0;
+
   const totalSalesSum = deliveredOrders.reduce((sum: number, o: any) => sum + Number(o.totalAmount), 0);
   const ticketAverage = deliveredOrders.length > 0 ? totalSalesSum / deliveredOrders.length : 0;
   // 3. PRODUCTOS
@@ -516,62 +563,163 @@ export default function UnifiedReportsDashboard({
       {/* 1. FINANZAS */}
       {activeTab === 'finanzas' && (
         <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
-            <div className="card" style={{ padding: '20px', borderRadius: '12px' }}>
-              <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '8px' }}>VENTAS FACTURADAS</span>
-              <span style={{ fontSize: '1.8rem', fontWeight: 700 }}>${totalFacturado.toLocaleString()}</span>
-              <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'block', marginTop: '4px' }}>{deliveredOrders.length} pedidos entregados</span>
+          
+          {/* Barra de Filtros de Reporte */}
+          <div className="card" style={{ padding: '16px 20px', borderRadius: '12px', border: '1px solid var(--border-color)', display: 'flex', gap: '16px', alignItems: 'center' }}>
+            <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Seleccionar período:</span>
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <select 
+                value={reportYear} 
+                onChange={e => setReportYear(Number(e.target.value))}
+                className="select"
+                style={{ padding: '6px 12px', borderRadius: '6px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-card)', fontSize: '0.85rem' }}
+                disabled={reportLoading}
+              >
+                <option value={2026}>2026</option>
+                <option value={2025}>2025</option>
+                <option value={2024}>2024</option>
+              </select>
+              <select 
+                value={reportMonth} 
+                onChange={e => setReportMonth(Number(e.target.value))}
+                className="select"
+                style={{ padding: '6px 12px', borderRadius: '6px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-card)', fontSize: '0.85rem' }}
+                disabled={reportLoading}
+              >
+                {[1,2,3,4,5,6,7,8,9,10,11,12].map(m => (
+                  <option key={m} value={m}>{getMonthName(m)}</option>
+                ))}
+              </select>
             </div>
+            {reportLoading && (
+              <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Cargando analíticas...</span>
+            )}
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
             <div className="card" style={{ padding: '20px', borderRadius: '12px' }}>
-              <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '8px' }}>COSTO ESTIMADO</span>
-              <span style={{ fontSize: '1.8rem', fontWeight: 700, color: '#5f6368' }}>${totalCostoEstimado.toLocaleString()}</span>
-              <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'block', marginTop: '4px' }}>Costo ponderado de mercadería</span>
+              <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '8px' }}>VENTAS FACTURADAS</span>
+              <span style={{ fontSize: '1.6rem', fontWeight: 700 }}>${totalFacturado.toLocaleString('es-AR')}</span>
+              <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'block', marginTop: '4px' }}>Ventas del mes seleccionado</span>
             </div>
-            <div className="card" style={{ padding: '20px', borderRadius: '12px', borderLeft: '4px solid #137333' }}>
-              <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '8px' }}>MARGEN NETO</span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <span style={{ fontSize: '1.8rem', fontWeight: 700, color: '#137333' }}>${totalMargenNeto.toLocaleString()}</span>
-                <span className="badge" style={{ backgroundColor: '#e6f4ea', color: '#137333', fontSize: '0.8rem', padding: '4px 8px' }}>{pctMargenConsolidado}%</span>
+            
+            <div className="card" style={{ padding: '20px', borderRadius: '12px' }}>
+              <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '8px' }}>COSTO MERCADERÍA (CMV)</span>
+              <span style={{ fontSize: '1.6rem', fontWeight: 700, color: '#5f6368' }}>${totalCostoReal.toLocaleString('es-AR')}</span>
+              <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'block', marginTop: '4px' }}>Costo real de productos entregados</span>
+            </div>
+
+            <div className="card" style={{ padding: '20px', borderRadius: '12px' }}>
+              <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '8px' }}>UTILIDAD BRUTA</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '1.6rem', fontWeight: 700, color: '#137333' }}>${totalMargenBruto.toLocaleString('es-AR')}</span>
+                <span className="badge" style={{ backgroundColor: '#e6f4ea', color: '#137333', fontSize: '0.75rem', padding: '2px 6px' }}>{pctMargenBruto}%</span>
               </div>
+              <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'block', marginTop: '4px' }}>Margen sobre ventas</span>
             </div>
+
             <div className="card" style={{ padding: '20px', borderRadius: '12px' }}>
-              <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '8px' }}>TICKET PROMEDIO</span>
-              <span style={{ fontSize: '1.8rem', fontWeight: 700, color: '#1a73e8' }}>${Math.round(ticketAverage).toLocaleString()}</span>
+              <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '8px' }}>GASTOS OPERATIVOS</span>
+              <span style={{ fontSize: '1.6rem', fontWeight: 700, color: 'var(--color-corp-red)' }}>${totalGastosReal.toLocaleString('es-AR')}</span>
+              <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'block', marginTop: '4px' }}>Egresos y sueldos del período</span>
+            </div>
+
+            <div className="card" style={{ padding: '20px', borderRadius: '12px', borderLeft: '4px solid #137333' }}>
+              <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '8px' }}>RENTABILIDAD NETA</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '1.6rem', fontWeight: 700, color: totalMargenNeto >= 0 ? '#137333' : 'var(--color-corp-red)' }}>
+                  ${totalMargenNeto.toLocaleString('es-AR')}
+                </span>
+                <span className="badge" style={{ 
+                  backgroundColor: totalMargenNeto >= 0 ? '#e6f4ea' : 'var(--color-danger-bg)', 
+                  color: totalMargenNeto >= 0 ? '#137333' : 'var(--color-danger)', 
+                  fontSize: '0.75rem', 
+                  padding: '2px 6px' 
+                }}>{pctMargenConsolidado}%</span>
+              </div>
+              <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'block', marginTop: '4px' }}>Ganancia neta final exacta</span>
             </div>
           </div>
 
-          <div className="card" style={{ padding: '24px', borderRadius: '12px' }}>
-            <h4 style={{ fontSize: '1.1rem', fontWeight: 600, marginTop: 0, marginBottom: '16px' }}>Desglose por Sucursal/Canal</h4>
-            <div className="table-container">
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr style={{ borderBottom: '2px solid var(--border-color)', textAlign: 'left' }}>
-                    <th style={{ padding: '12px', color: 'var(--text-secondary)', fontWeight: 600 }}>Sucursal</th>
-                    <th style={{ padding: '12px', color: 'var(--text-secondary)', fontWeight: 600 }}>Vendido (Facturado)</th>
-                    <th style={{ padding: '12px', color: 'var(--text-secondary)', fontWeight: 600 }}>Costo Estimado</th>
-                    <th style={{ padding: '12px', color: 'var(--text-secondary)', fontWeight: 600 }}>Margen Neto</th>
-                    <th style={{ padding: '12px', color: 'var(--text-secondary)', fontWeight: 600 }}>% Margen</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr style={{ borderBottom: '1px solid var(--border-color)' }}>
-                    <td style={{ padding: '12px', fontWeight: 600 }}>Sucursal A (Oficial)</td>
-                    <td style={{ padding: '12px' }}>${officialSales.toLocaleString()}</td>
-                    <td style={{ padding: '12px', color: 'var(--text-secondary)' }}>${Math.round(officialSales * 0.75).toLocaleString()}</td>
-                    <td style={{ padding: '12px', fontWeight: 600, color: '#137333' }}>${Math.round(officialSales * 0.25).toLocaleString()}</td>
-                    <td style={{ padding: '12px' }}><span className="badge" style={{ backgroundColor: '#e8f0fe', color: '#1a73e8' }}>25%</span></td>
-                  </tr>
-                  <tr>
-                    <td style={{ padding: '12px', fontWeight: 600 }}>Sucursal X (Interno)</td>
-                    <td style={{ padding: '12px' }}>${internalSales.toLocaleString()}</td>
-                    <td style={{ padding: '12px', color: 'var(--text-secondary)' }}>${Math.round(internalSales * 0.73).toLocaleString()}</td>
-                    <td style={{ padding: '12px', fontWeight: 600, color: '#137333' }}>${Math.round(internalSales * 0.27).toLocaleString()}</td>
-                    <td style={{ padding: '12px' }}><span className="badge" style={{ backgroundColor: '#e8f0fe', color: '#1a73e8' }}>27%</span></td>
-                  </tr>
-                </tbody>
-              </table>
+          <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '20px', alignItems: 'stretch' }}>
+            
+            {/* Tabla de Desglose de Canales */}
+            <div className="card" style={{ padding: '24px', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
+              <h4 style={{ fontSize: '1rem', fontWeight: 600, marginTop: 0, marginBottom: '16px' }}>Margen Comercial por Sucursal</h4>
+              <div className="table-container">
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                  <thead>
+                    <tr style={{ borderBottom: '2px solid var(--border-color)', textAlign: 'left' }}>
+                      <th style={{ padding: '12px', color: 'var(--text-secondary)', fontWeight: 600 }}>Sucursal</th>
+                      <th style={{ padding: '12px', color: 'var(--text-secondary)', fontWeight: 600 }}>Vendido</th>
+                      <th style={{ padding: '12px', color: 'var(--text-secondary)', fontWeight: 600 }}>Costo Real (CMV)</th>
+                      <th style={{ padding: '12px', color: 'var(--text-secondary)', fontWeight: 600 }}>Margen Bruto</th>
+                      <th style={{ padding: '12px', color: 'var(--text-secondary)', fontWeight: 600, textAlign: 'center' }}>% Margen</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr style={{ borderBottom: '1px solid var(--border-color)' }}>
+                      <td style={{ padding: '12px', fontWeight: 600 }}>Sucursal A (Oficial)</td>
+                      <td style={{ padding: '12px' }}>${officialSales.toLocaleString('es-AR')}</td>
+                      <td style={{ padding: '12px', color: 'var(--text-secondary)' }}>${officialCostReal.toLocaleString('es-AR')}</td>
+                      <td style={{ padding: '12px', fontWeight: 600, color: '#137333' }}>${Math.round(officialSales - officialCostReal).toLocaleString('es-AR')}</td>
+                      <td style={{ padding: '12px', textAlign: 'center' }}>
+                        <span className="badge" style={{ backgroundColor: '#e8f0fe', color: '#1a73e8', fontWeight: 600 }}>
+                          {officialSales > 0 ? Math.round(((officialSales - officialCostReal) / officialSales) * 100) : 0}%
+                        </span>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style={{ padding: '12px', fontWeight: 600 }}>Sucursal X (Interno)</td>
+                      <td style={{ padding: '12px' }}>${internalSales.toLocaleString('es-AR')}</td>
+                      <td style={{ padding: '12px', color: 'var(--text-secondary)' }}>${internalCostReal.toLocaleString('es-AR')}</td>
+                      <td style={{ padding: '12px', fontWeight: 600, color: '#137333' }}>${Math.round(internalSales - internalCostReal).toLocaleString('es-AR')}</td>
+                      <td style={{ padding: '12px', textAlign: 'center' }}>
+                        <span className="badge" style={{ backgroundColor: '#e8f0fe', color: '#1a73e8', fontWeight: 600 }}>
+                          {internalSales > 0 ? Math.round(((internalSales - internalCostReal) / internalSales) * 100) : 0}%
+                        </span>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
+
+            {/* Resumen de Egresos por Categoría */}
+            <div className="card" style={{ padding: '24px', borderRadius: '12px', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column' }}>
+              <h4 style={{ fontSize: '1rem', fontWeight: 600, marginTop: 0, marginBottom: '16px' }}>Desglose de Egresos del Período</h4>
+              {currentReport?.expenses?.byCategory && currentReport.expenses.byCategory.length > 0 ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', overflowY: 'auto', maxHeight: '180px', flex: 1 }}>
+                  {currentReport.expenses.byCategory.map((cat: any, idx: number) => {
+                    const pct = totalGastosReal > 0 ? (cat.value / totalGastosReal) * 100 : 0;
+                    return (
+                      <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem' }}>
+                          <span style={{ fontWeight: 500 }}>{cat.name}</span>
+                          <span style={{ fontWeight: 600 }}>${cat.value.toLocaleString('es-AR')} ({pct.toFixed(0)}%)</span>
+                        </div>
+                        <div style={{ width: '100%', height: '5px', backgroundColor: '#f3f4f6', borderRadius: '2px', overflow: 'hidden' }}>
+                          <div style={{ 
+                            width: `${pct}%`, 
+                            height: '100%', 
+                            backgroundColor: idx === 0 ? 'var(--color-corp-red)' : 'var(--color-primary)',
+                            borderRadius: '2px' 
+                          }} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', minHeight: '120px', color: 'var(--text-secondary)', gap: '8px' }}>
+                  <TrendingDown size={28} style={{ color: 'var(--text-muted)' }} />
+                  <span style={{ fontSize: '0.8rem' }}>Sin gastos registrados en este período.</span>
+                </div>
+              )}
+            </div>
+
           </div>
+
         </div>
       )}
 

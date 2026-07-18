@@ -9,10 +9,15 @@ import path from 'path';
  * Obtener reporte consolidado financiero (Solo ADMIN).
  */
 export async function getFinancialReports(req: AuthenticatedRequest, res: Response): Promise<void> {
+  const { year, month } = req.query;
   try {
-    const report = await adminService.getFinancialReports();
+    const report = await adminService.getFinancialReports(
+      year ? Number(year) : undefined,
+      month ? Number(month) : undefined
+    );
     res.status(200).json({ status: 'success', data: { report } });
   } catch (error: any) {
+    console.error('Error al procesar reporte financiero:', error);
     res.status(500).json({ status: 'error', message: 'Error al procesar el reporte financiero.' });
   }
 }

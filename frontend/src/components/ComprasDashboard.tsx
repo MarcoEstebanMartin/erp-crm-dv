@@ -528,7 +528,29 @@ export default function ComprasDashboard() {
               <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Control de abastecimiento impositivo y comercial con actualización automática de costos.</p>
             </div>
             <div style={{ display: 'flex', gap: '10px' }}>
-              <label className="btn" style={{ backgroundColor: 'var(--color-corp-red)', color: 'white', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', padding: '0 16px', borderRadius: '8px' }}>
+              <button 
+                type="button"
+                className="btn"
+                style={{ 
+                  backgroundColor: '#2C2C2E', 
+                  color: 'white', 
+                  border: '1px solid rgba(255,255,255,0.1)', 
+                  cursor: 'pointer', 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '8px', 
+                  padding: '0 16px', 
+                  borderRadius: '8px',
+                  height: '38px'
+                }}
+                onClick={() => {
+                  setScannerFile(null);
+                  setShowScannerModal(true);
+                }}
+              >
+                <span style={{ fontWeight: 600, fontSize: '0.85rem' }}>📂 Procesar ARCHIVOS</span>
+              </button>
+              <label className="btn" style={{ backgroundColor: 'var(--color-corp-red)', color: 'white', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', padding: '0 16px', borderRadius: '8px', height: '38px' }}>
                 <span style={{ fontWeight: 600, fontSize: '0.85rem' }}>📸 Escanear Factura (IA)</span>
                 <input 
                   type="file" 
@@ -543,7 +565,7 @@ export default function ComprasDashboard() {
                   }}
                 />
               </label>
-              <button className="btn btn-primary" onClick={() => setShowCreateModal(true)}>
+              <button className="btn btn-primary" onClick={() => setShowCreateModal(true)} style={{ height: '38px' }}>
                 <Plus size={16} />
                 Nueva Orden de Compra
               </button>

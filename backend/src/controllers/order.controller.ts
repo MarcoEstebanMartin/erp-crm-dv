@@ -626,7 +626,24 @@ export async function invoiceOrder(req: AuthenticatedRequest, res: Response): Pr
       }
     }
 
-    // 1. Detectar si hay reglas de división para este cliente (fuera de la transacción de DB)
+    // 1. Precargar todos los productos involucrados en la transacción
+    const productIds = order.items.map(item => item.productId);
+    const dbProducts = await prisma.product.findMany({
+      where: { id: { in: productIds } },
+      include: { rubro: true }
+    });
+
+    // 2. Precargar todas las reglas de descuento aplicables
+    const dbRules = await prisma.discountRule.findMany({
+      where: {
+        OR: [
+          { personaId: order.personaId },
+          { priceList: order.persona.priceList }
+        ]
+      }
+    });
+
+    // 3. Detectar si hay reglas de división para este cliente
     const rubroIds = Array.from(new Set(order.items.map(i => i.product.rubroId).filter(id => id !== null))) as number[];
     const splitConfigs = await prisma.splitBillingConfig.findMany({
       where: {
@@ -648,6 +665,12 @@ export async function invoiceOrder(req: AuthenticatedRequest, res: Response): Pr
       // LÓGICA DE SPLIT BILLING
       for (const item of order.items) {
         const config = splitConfigs.find(c => c.rubroId === item.product.rubroId);
+        const product = dbProducts.find(p => p.id === item.productId);
+        if (!product) {
+          res.status(400).json({ status: 'error', message: `Producto ID ${item.productId} no encontrado.` });
+          return;
+        }
+
         if (config) {
           // Dividir al 50%
           const qtyOficial = Math.ceil(item.quantity / 2);
@@ -661,12 +684,12 @@ export async function invoiceOrder(req: AuthenticatedRequest, res: Response): Pr
             weightInterno = Number((Number(item.weight) - weightOficial).toFixed(3));
           }
 
-          // Calcular precios unitarios correspondientes (descuento del 3% para quesos en ambas sucursales)
-          const pricingOficial = await PricingService.calculatePriceAndDiscount(item.productId, order.personaId, BillingType.OFFICIAL);
-          const pricingInterno = await PricingService.calculatePriceAndDiscount(item.productId, order.personaId, BillingType.INTERNAL);
+          // Calcular precios unitarios en memoria (sin N+1 queries)
+          const pricingOficial = PricingService.calculatePriceAndDiscountInMemory(product, order.persona, dbRules, BillingType.OFFICIAL);
+          const pricingInterno = PricingService.calculatePriceAndDiscountInMemory(product, order.persona, dbRules, BillingType.INTERNAL);
 
           if (qtyOficial > 0) {
-            const actualQty = item.product.isPesable ? (weightOficial || qtyOficial) : qtyOficial;
+            const actualQty = product.isPesable ? (weightOficial || qtyOficial) : qtyOficial;
             const subtotal = Math.round(pricingOficial.finalPrice * actualQty);
             oficialItemsData.push({
               orderItemId: item.id,
@@ -679,7 +702,7 @@ export async function invoiceOrder(req: AuthenticatedRequest, res: Response): Pr
           }
 
           if (qtyInterno > 0) {
-            const actualQty = item.product.isPesable ? (weightInterno || qtyInterno) : qtyInterno;
+            const actualQty = product.isPesable ? (weightInterno || qtyInterno) : qtyInterno;
             const subtotal = Math.round(pricingInterno.finalPrice * actualQty);
             internoItemsData.push({
               productId: item.productId,
@@ -691,8 +714,8 @@ export async function invoiceOrder(req: AuthenticatedRequest, res: Response): Pr
           }
         } else {
           // No tiene regla de split: va al 100% a la oficial (Sucursal A) o según corresponda
-          const pricing = await PricingService.calculatePriceAndDiscount(item.productId, order.personaId, billingType);
-          const actualQty = item.product.isPesable ? (item.weight ? Number(item.weight) : item.quantity) : item.quantity;
+          const pricing = PricingService.calculatePriceAndDiscountInMemory(product, order.persona, dbRules, billingType as BillingType);
+          const actualQty = product.isPesable ? (item.weight ? Number(item.weight) : item.quantity) : item.quantity;
           const subtotal = Math.round(pricing.finalPrice * actualQty);
 
           const itemData = {
@@ -723,8 +746,14 @@ export async function invoiceOrder(req: AuthenticatedRequest, res: Response): Pr
       // LÓGICA ESTÁNDAR: Recalcular precios pero sin split
       officialOrderTotal = 0;
       for (const item of order.items) {
-        const pricing = await PricingService.calculatePriceAndDiscount(item.productId, order.personaId, billingType);
-        const actualQty = item.product.isPesable ? (item.weight ? Number(item.weight) : item.quantity) : item.quantity;
+        const product = dbProducts.find(p => p.id === item.productId);
+        if (!product) {
+          res.status(400).json({ status: 'error', message: `Producto ID ${item.productId} no encontrado.` });
+          return;
+        }
+
+        const pricing = PricingService.calculatePriceAndDiscountInMemory(product, order.persona, dbRules, billingType as BillingType);
+        const actualQty = product.isPesable ? (item.weight ? Number(item.weight) : item.quantity) : item.quantity;
         const subtotal = Math.round(pricing.finalPrice * actualQty);
 
         oficialItemsData.push({
@@ -737,6 +766,69 @@ export async function invoiceOrder(req: AuthenticatedRequest, res: Response): Pr
         });
 
         officialOrderTotal += subtotal;
+      }
+    }
+
+    // 4. VALIDACIONES PRE-AFIP de Caja y Banco (Evita facturas huérfanas)
+    let activeDrawerOfficialId: number | null = null;
+    let activeDrawerInternalId: number | null = null;
+    let bankAccountOfficialId: number | null = null;
+    let bankAccountInternalId: number | null = null;
+
+    if (paymentMethod) {
+      if (paymentMethod === PaymentMethod.CASH) {
+        // Validar caja para la porción oficial
+        let activeDrawerOfficial = await prisma.cashDrawer.findFirst({
+          where: {
+            userId: adminId,
+            status: 'OPEN',
+            branch: {
+              in: [billingType === BillingType.OFFICIAL ? 'A' : 'X', 'CONSOLIDADA']
+            }
+          },
+        });
+
+        if (!activeDrawerOfficial) {
+          activeDrawerOfficial = await prisma.cashDrawer.findFirst({
+            where: {
+              status: 'OPEN',
+              branch: {
+                in: [billingType === BillingType.OFFICIAL ? 'A' : 'X', 'CONSOLIDADA']
+              }
+            },
+          });
+        }
+
+        if (!activeDrawerOfficial) {
+          res.status(400).json({ status: 'error', message: `Debe abrir la Caja Grande antes de registrar cobros en efectivo.` });
+          return;
+        }
+        activeDrawerOfficialId = activeDrawerOfficial.id;
+
+        // Validar caja para la porción interna si hay split
+        if (splitApplied && internoItemsData.length > 0) {
+          const activeDrawerInternal = await prisma.cashDrawer.findFirst({
+            where: {
+              status: 'OPEN',
+              branch: { in: ['X', 'CONSOLIDADA'] }
+            }
+          });
+          if (!activeDrawerInternal) {
+            res.status(400).json({ status: 'error', message: `Debe abrir la Caja de Sucursal X antes de registrar cobros en efectivo para la parte interna.` });
+            return;
+          }
+          activeDrawerInternalId = activeDrawerInternal.id;
+        }
+      } else if (paymentMethod === PaymentMethod.BANK_TRANSFER) {
+        const selectedBankId = reqBankAccountId ? Number(reqBankAccountId) : (await prisma.bankAccount.findFirst())?.id;
+        if (!selectedBankId) {
+          res.status(400).json({ status: 'error', message: `No se encontró ninguna cuenta bancaria configurada en el sistema.` });
+          return;
+        }
+        bankAccountOfficialId = selectedBankId;
+        if (splitApplied && internoItemsData.length > 0) {
+          bankAccountInternalId = selectedBankId;
+        }
       }
     }
 
@@ -855,24 +947,11 @@ export async function invoiceOrder(req: AuthenticatedRequest, res: Response): Pr
             let bankAccountId: number | undefined = undefined;
 
             if (paymentMethod === PaymentMethod.CASH) {
-              let activeDrawer = await tx.cashDrawer.findFirst({
-                where: {
-                  status: 'OPEN',
-                  branch: { in: ['X', 'CONSOLIDADA'] }
-                }
-              });
-              if (!activeDrawer) {
-                throw new Error(`Debe abrir la Caja de Sucursal X antes de registrar cobros en efectivo para la parte interna.`);
-              }
-              cashDrawerId = activeDrawer.id;
+              cashDrawerId = activeDrawerInternalId || undefined;
             } else if (paymentMethod === PaymentMethod.BANK_TRANSFER) {
-              const selectedBankId = reqBankAccountId ? Number(reqBankAccountId) : (await tx.bankAccount.findFirst())?.id;
-              if (!selectedBankId) {
-                throw new Error(`No se encontró ninguna cuenta bancaria configurada en el sistema.`);
-              }
-              bankAccountId = selectedBankId;
+              bankAccountId = bankAccountInternalId || undefined;
               await tx.bankAccount.update({
-                where: { id: selectedBankId },
+                where: { id: bankAccountId! },
                 data: { balance: { increment: internalOrderTotal } }
               });
             }
@@ -977,10 +1056,10 @@ export async function invoiceOrder(req: AuthenticatedRequest, res: Response): Pr
           cae: finalCae,
           caeDueDate: finalCaeDueDate ? new Date(finalCaeDueDate) : null,
           totalAmount: officialOrderTotal,
-          netAmount: isFacturaA_Official ? Number(net.toFixed(2)) : Math.round(net),
-          taxAmount: isFacturaA_Official ? Number(tax.toFixed(2)) : Math.round(tax),
-          percepcionAmount: isFacturaA_Official ? Number(percepIIBB.toFixed(2)) : Math.round(percepIIBB),
-          percepcionIvaAmount: isFacturaA_Official ? Number(percepIVA.toFixed(2)) : Math.round(percepIVA),
+          netAmount: Number(net.toFixed(2)),
+          taxAmount: Number(tax.toFixed(2)),
+          percepcionAmount: Number(percepIIBB.toFixed(2)),
+          percepcionIvaAmount: Number(percepIVA.toFixed(2)),
           status: OrderStatus.DELIVERED,
         },
         include: { items: { include: { product: true } }, persona: true }
@@ -995,7 +1074,7 @@ export async function invoiceOrder(req: AuthenticatedRequest, res: Response): Pr
             personaId: order.personaId,
             number: finalInvoiceNumber || `FAC-${order.id}`,
             date: new Date(),
-            amount: isFacturaA_Official ? Number(percepIIBB.toFixed(2)) : Math.round(percepIIBB),
+            amount: Number(percepIIBB.toFixed(2)),
             jurisdiction: getJurisdictionCode(order.persona.province || order.persona.address),
           },
         });
@@ -1010,7 +1089,7 @@ export async function invoiceOrder(req: AuthenticatedRequest, res: Response): Pr
             personaId: order.personaId,
             number: finalInvoiceNumber || `FAC-${order.id}`,
             date: new Date(),
-            amount: isFacturaA_Official ? Number(percepIVA.toFixed(2)) : Math.round(percepIVA),
+            amount: Number(percepIVA.toFixed(2)),
             jurisdiction: null,
           },
         });
@@ -1022,38 +1101,11 @@ export async function invoiceOrder(req: AuthenticatedRequest, res: Response): Pr
         let bankAccountId: number | undefined = undefined;
 
         if (paymentMethod === PaymentMethod.CASH) {
-          let activeDrawer = await tx.cashDrawer.findFirst({
-            where: {
-              userId: adminId,
-              status: 'OPEN',
-              branch: {
-                in: [billingType === BillingType.OFFICIAL ? 'A' : 'X', 'CONSOLIDADA']
-              }
-            },
-          });
-
-          if (!activeDrawer) {
-            activeDrawer = await tx.cashDrawer.findFirst({
-              where: {
-                status: 'OPEN',
-                branch: {
-                  in: [billingType === BillingType.OFFICIAL ? 'A' : 'X', 'CONSOLIDADA']
-                }
-              },
-            });
-          }
-          if (!activeDrawer) {
-            throw new Error(`Debe abrir la Caja Grande antes de registrar cobros en efectivo.`);
-          }
-          cashDrawerId = activeDrawer.id;
+          cashDrawerId = activeDrawerOfficialId || undefined;
         } else if (paymentMethod === PaymentMethod.BANK_TRANSFER) {
-          const selectedBankId = reqBankAccountId ? Number(reqBankAccountId) : (await tx.bankAccount.findFirst())?.id;
-          if (!selectedBankId) {
-            throw new Error(`No se encontró ninguna cuenta bancaria configurada en el sistema.`);
-          }
-          bankAccountId = selectedBankId;
+          bankAccountId = bankAccountOfficialId || undefined;
           await tx.bankAccount.update({
-            where: { id: selectedBankId },
+            where: { id: bankAccountId! },
             data: { balance: { increment: officialOrderTotal } },
           });
         }

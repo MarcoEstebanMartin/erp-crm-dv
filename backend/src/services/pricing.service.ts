@@ -88,7 +88,7 @@ export class PricingService {
       }
     }
 
-    const finalPrice = Math.round(basePrice * (1 - discount / 100));
+    const finalPrice = Number((basePrice * (1 - discount / 100)).toFixed(2));
 
     return {
       basePrice,

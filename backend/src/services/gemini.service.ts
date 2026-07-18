@@ -8,10 +8,13 @@ const genAI = new GoogleGenerativeAI(apiKey);
 export interface ExtractedInvoiceData {
   supplierName: string;
   cuit: string | null;
+  receiverCuit: string | null;
+  receiverName: string | null;
   documentType: string;
   documentNumber: string;
   issueDate: string;
   items: Array<{
+    code: string | null;
     description: string;
     quantity: number;
     unitPrice: number;
@@ -49,19 +52,22 @@ export class GeminiService {
     const prompt = `
       Eres un experto en extracción de datos de facturas y remitos comerciales de Argentina.
       Analiza este documento y extrae la siguiente información en formato JSON estrictamente:
-      - supplierName: Razón social del emisor.
-      - cuit: CUIT del emisor (si existe).
+      - supplierName: Razón social del emisor (proveedor).
+      - cuit: CUIT del emisor/proveedor (si existe).
+      - receiverCuit: CUIT del receptor (comprador, ej: 20163165059 o similar).
+      - receiverName: Razón social o Nombre del receptor (comprador, ej: MARTIN PABLO DAVID).
       - documentType: Tipo de documento ("FACTURA_A", "FACTURA_B", "FACTURA_C", "REMITO").
-      - documentNumber: Número del comprobante.
+      - documentNumber: Número del comprobante (formato XXXX-XXXXXXXX).
       - issueDate: Fecha de emisión en formato YYYY-MM-DD.
       - items: Arreglo de objetos con:
+        - code: Código o número de artículo del emisor/proveedor (si existe, ej: "0109000000" o "07300101000").
         - description: Descripción del producto.
         - quantity: Cantidad (número).
-        - unitPrice: Precio unitario (número).
+        - unitPrice: Precio unitario neto o bruto (número).
         - subtotal: Subtotal del ítem (número).
       - netAmount: Importe neto gravado (número).
       - taxAmount: Importe de IVA (número).
-      - percepcionAmount: Importe de Percepciones/Retenciones (número).
+      - percepcionAmount: Importe de Percepciones/Retenciones (como Perc. IVA, Perc. IIBB, etc.) (número).
       - totalAmount: Importe total (número).
 
       Asegúrate de que todos los valores numéricos sean números y no cadenas.

@@ -21,6 +21,7 @@ import perceptionRoutes from './routes/perception.routes';
 import pricingRoutes from './routes/pricing.routes';
 import saleRouteRoutes from './routes/saleRoute.routes';
 import fleetRoutes from './routes/fleet.routes';
+import expenseRoutes from './routes/expense.routes';
 
 dotenv.config();
 
@@ -49,6 +50,7 @@ app.use('/api/perceptions', perceptionRoutes);
 app.use('/api/pricing', pricingRoutes);
 app.use('/api/sale-routes', saleRouteRoutes);
 app.use('/api/fleet', fleetRoutes);
+app.use('/api/expenses', expenseRoutes);
 
 // Ruta de comprobación de estado (Healthcheck)
 app.get('/api/health', (req: Request, res: Response) => {

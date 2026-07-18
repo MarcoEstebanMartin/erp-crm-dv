@@ -9,9 +9,22 @@ export class AdminService {
   /**
    * Obtener reporte consolidado financiero.
    */
-  async getFinancialReports() {
+  async getFinancialReports(year?: number, month?: number) {
+    const whereClause: any = { status: 'DELIVERED' };
+    
+    if (year && month) {
+      const y = Number(year);
+      const m = Number(month);
+      const startOfPeriod = new Date(y, m - 1, 1);
+      const endOfPeriod = new Date(y, m, 0, 23, 59, 59, 999);
+      whereClause.createdAt = {
+        gte: startOfPeriod,
+        lte: endOfPeriod
+      };
+    }
+
     const deliveredOrders = await prisma.order.findMany({
-      where: { status: 'DELIVERED' },
+      where: whereClause,
       include: { items: { include: { product: true } } }
     });
 
@@ -41,16 +54,62 @@ export class AdminService {
       }
     }
 
+    // Filtro para el flujo de fondos (Transactions)
+    const transactionWhereClause: any = {};
+    if (year && month) {
+      const y = Number(year);
+      const m = Number(month);
+      transactionWhereClause.createdAt = {
+        gte: new Date(y, m - 1, 1),
+        lte: new Date(y, m, 0, 23, 59, 59, 999)
+      };
+    }
+
     const transactionsGrouped = await prisma.transaction.groupBy({
       by: ['billingType', 'type'],
+      where: transactionWhereClause,
       _sum: { amount: true },
     });
 
     const paymentMethodsGrouped = await prisma.transaction.groupBy({
       by: ['billingType', 'paymentMethod'],
-      where: { type: TransactionType.INCOME },
+      where: {
+        ...transactionWhereClause,
+        type: TransactionType.INCOME
+      },
       _sum: { amount: true },
     });
+
+    // Obtener gastos del periodo y agruparlos por categoría
+    const expenseWhereClause: any = {};
+    if (year && month) {
+      const y = Number(year);
+      const m = Number(month);
+      expenseWhereClause.date = {
+        gte: new Date(y, m - 1, 1),
+        lte: new Date(y, m, 0, 23, 59, 59, 999)
+      };
+    }
+
+    const expenses = await prisma.expense.findMany({
+      where: expenseWhereClause,
+      include: { category: true }
+    });
+
+    let totalExpenses = 0;
+    const expensesByCategoryMap: { [key: string]: number } = {};
+
+    expenses.forEach((e) => {
+      const amount = Number(e.amount) || 0;
+      totalExpenses += amount;
+      const catName = e.category.name;
+      expensesByCategoryMap[catName] = (expensesByCategoryMap[catName] || 0) + amount;
+    });
+
+    const expensesByCategory = Object.keys(expensesByCategoryMap).map((name) => ({
+      name,
+      value: Math.round(expensesByCategoryMap[name])
+    }));
 
     return {
       sales: {
@@ -72,6 +131,10 @@ export class AdminService {
         method: m.paymentMethod,
         total: m._sum.amount || 0,
       })),
+      expenses: {
+        total: Math.round(totalExpenses),
+        byCategory: expensesByCategory
+      }
     };
   }
 

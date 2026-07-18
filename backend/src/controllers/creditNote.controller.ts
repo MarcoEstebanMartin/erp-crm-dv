@@ -481,6 +481,17 @@ export async function approveCreditNote(req: AuthenticatedRequest, res: Response
     const totalAmount = Number(creditNote.totalAmount);
     const isOfficial = creditNote.billingType === 'OFFICIAL';
 
+    // Validar existencia de todos los productos antes de llamar a la AFIP
+    for (const item of creditNote.items) {
+      const product = await prisma.product.findUnique({
+        where: { id: item.productId }
+      });
+      if (!product) {
+        res.status(400).json({ status: 'error', message: `El producto ID ${item.productId} de la nota de crédito ya no existe en el sistema.` });
+        return;
+      }
+    }
+
     // 2. Facturación oficial AFIP / Interna fuera de la transacción de DB
     if (isOfficial) {
       try {

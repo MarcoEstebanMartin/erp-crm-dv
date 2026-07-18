@@ -353,10 +353,12 @@ export const api = {
   },
 
   // --- ADMINISTRADOR ---
-  getFinancialReports: async () => {
-    
-
-    const res = await request('/admin/reports');
+  getFinancialReports: async (year?: number, month?: number) => {
+    let path = '/admin/reports';
+    if (year && month) {
+      path += `?year=${year}&month=${month}`;
+    }
+    const res = await request(path);
     return res.report;
   },
 
@@ -512,6 +514,65 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ amount, description, paymentMethod, billingType })
     });
+  },
+
+  // --- NUEVAS APIS DE GASTOS DETALLADOS ---
+  getExpenseCategories: async () => {
+    const res = await request('/expenses/categories');
+    return res?.data?.categories || res?.categories || [];
+  },
+
+  createExpenseCategory: async (name: string, description?: string) => {
+    return await request('/expenses/categories', {
+      method: 'POST',
+      body: JSON.stringify({ name, description })
+    });
+  },
+
+  getExpensesList: async (filters: { categoryId?: number; year?: number; month?: number; paymentMethod?: string; startDate?: string; endDate?: string } = {}) => {
+    const params = new URLSearchParams();
+    if (filters.categoryId) params.append('categoryId', String(filters.categoryId));
+    if (filters.year) params.append('year', String(filters.year));
+    if (filters.month) params.append('month', String(filters.month));
+    if (filters.paymentMethod) params.append('paymentMethod', filters.paymentMethod);
+    if (filters.startDate) params.append('startDate', filters.startDate);
+    if (filters.endDate) params.append('endDate', filters.endDate);
+    
+    const res = await request(`/expenses?${params.toString()}`);
+    return res?.data?.expenses || res?.expenses || [];
+  },
+
+  createExpenseNew: async (data: { amount: number; categoryId: number; description: string; date?: string; paymentMethod: string; cashDrawerId?: number; bankAccountId?: number; vehicleId?: number; billingType?: string }) => {
+    return await request('/expenses', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  },
+
+  deleteExpenseNew: async (id: number) => {
+    return await request(`/expenses/${id}`, {
+      method: 'DELETE'
+    });
+  },
+
+  importExpensesExcel: async (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    const token = localStorage.getItem('auth_token');
+    const response = await fetch(`${API_BASE_URL}/expenses/import`, {
+      method: 'POST',
+      body: formData,
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    
+    const json = await response.json();
+    if (json.status === 'error') {
+      throw new Error(json.message);
+    }
+    return json.data;
   },
 
   getCashDrawers: async () => {
@@ -822,6 +883,19 @@ export const api = {
       throw new Error(data.message || 'Error al procesar el documento');
     }
     return data;
+  },
+
+  getPurchaseLocalFiles: async () => {
+    const res = await request('/purchases/local-files');
+    return res.files;
+  },
+
+  processPurchaseLocalFile: async (filename: string) => {
+    const res = await request('/purchases/process-local-file', {
+      method: 'POST',
+      body: JSON.stringify({ filename })
+    });
+    return res.data;
   },
 
   confirmPurchaseDocument: async (payload: any) => {
