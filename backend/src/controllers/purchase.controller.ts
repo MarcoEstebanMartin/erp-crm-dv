@@ -594,6 +594,15 @@ export async function confirmDocument(req: AuthenticatedRequest, res: Response):
           where: { id: Number(providerId) }
         });
         const termDays = provider?.paymentTermDays ?? 30;
+        
+        // Si se envían por separado La Pampa y Bs As:
+        const pampa = Number(req.body.percepcionPampa || 0);
+        const bsas = Number(req.body.percepcionBsAs || 0);
+        const ivarg = Number(req.body.percepcionIva || req.body.percepcionIvaAmount || 0);
+        const impInternos = Number(req.body.impuestosInternos || 0);
+
+        // La percepción total de IIBB es la suma de La Pampa y Bs As (o cae en el valor directo anterior)
+        const finalIIBB = (pampa > 0 || bsas > 0) ? (pampa + bsas) : Number(percepcionAmount || 0);
 
         const invoice = await tx.supplierInvoice.create({
           data: {
@@ -604,8 +613,9 @@ export async function confirmDocument(req: AuthenticatedRequest, res: Response):
             dueDate: new Date(invoiceDate.getTime() + termDays * 24 * 3600 * 1000),
             netAmount: Number(netAmount || 0),
             taxAmount: Number(taxAmount || 0),
-            percepcionAmount: Number(percepcionAmount || 0),
-            percepcionIvaAmount: Number(percepcionIvaAmount || 0),
+            percepcionAmount: finalIIBB,
+            percepcionIvaAmount: ivarg,
+            impuestosInternos: impInternos,
             totalAmount: Number(totalAmount || 0),
             status: 'PENDING',
             paidAmount: 0.00,
@@ -615,8 +625,38 @@ export async function confirmDocument(req: AuthenticatedRequest, res: Response):
         createdId = invoice.id;
         refId = `INV-${invoice.id}`;
 
-        // Crear TaxWithholding para percepciones de IIBB (Ingresos Brutos) si existen
-        if (Number(percepcionAmount || 0) > 0) {
+        // Crear TaxWithholding para La Pampa
+        if (pampa > 0) {
+          await tx.taxWithholding.create({
+            data: {
+              type: 'PERCEPCION_SUFRIDA',
+              taxType: 'IIBB',
+              personaId: providerId,
+              number: documentNumber || `INV-${invoice.id}`,
+              date: invoiceDate,
+              amount: pampa,
+              jurisdiction: 'AR-L', // La Pampa
+            }
+          });
+        }
+
+        // Crear TaxWithholding para Bs As
+        if (bsas > 0) {
+          await tx.taxWithholding.create({
+            data: {
+              type: 'PERCEPCION_SUFRIDA',
+              taxType: 'IIBB',
+              personaId: providerId,
+              number: documentNumber || `INV-${invoice.id}`,
+              date: invoiceDate,
+              amount: bsas,
+              jurisdiction: 'AR-B', // Buenos Aires
+            }
+          });
+        }
+
+        // Si no se enviaron por separado pero se envió percepcionAmount genérica:
+        if (pampa === 0 && bsas === 0 && Number(percepcionAmount || 0) > 0) {
           await tx.taxWithholding.create({
             data: {
               type: 'PERCEPCION_SUFRIDA',
@@ -631,7 +671,7 @@ export async function confirmDocument(req: AuthenticatedRequest, res: Response):
         }
 
         // Crear TaxWithholding para percepciones de IVA si existen
-        if (Number(percepcionIvaAmount || 0) > 0) {
+        if (ivarg > 0) {
           await tx.taxWithholding.create({
             data: {
               type: 'PERCEPCION_SUFRIDA',
@@ -639,7 +679,7 @@ export async function confirmDocument(req: AuthenticatedRequest, res: Response):
               personaId: providerId,
               number: documentNumber || `INV-${invoice.id}`,
               date: invoiceDate,
-              amount: Number(percepcionIvaAmount),
+              amount: ivarg,
               jurisdiction: null,
             }
           });
@@ -769,7 +809,7 @@ export async function listLocalFiles(req: AuthenticatedRequest, res: Response): 
   try {
     const dirPath = path.join('c:', 'Users', 'Usuario', 'Desktop', 'ERP-CRM DV', 'ARCHIVOS');
     if (!fs.existsSync(dirPath)) {
-      res.status(200).json({ status: 'success', files: [] });
+      res.status(200).json({ status: 'success', data: { files: [] } });
       return;
     }
 
@@ -790,7 +830,9 @@ export async function listLocalFiles(req: AuthenticatedRequest, res: Response): 
 
     res.status(200).json({
       status: 'success',
-      files: fileDetails
+      data: {
+        files: fileDetails
+      }
     });
   } catch (error: any) {
     console.error('Error in listLocalFiles:', error);
