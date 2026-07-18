@@ -168,42 +168,116 @@ export const PurchaseScannerModal: React.FC<PurchaseScannerModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/75 backdrop-blur-md flex items-center justify-center z-[100] p-4 animate-fadeIn">
-      <div className="bg-[#1C1C1E] border border-white/10 rounded-2xl shadow-2xl w-full max-w-6xl max-h-[92vh] flex flex-col overflow-hidden">
+    <div style={{
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      backdropFilter: 'blur(8px)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      zIndex: 1000,
+      padding: '20px',
+      animation: 'fadeIn 0.2s ease-out'
+    }}>
+      <style>{`
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+      `}</style>
+      <div style={{
+        backgroundColor: 'var(--bg-card)',
+        borderRadius: '16px',
+        border: '1px solid var(--border-color)',
+        width: '100%',
+        maxWidth: '1200px',
+        height: '90vh',
+        display: 'flex',
+        flexDirection: 'column',
+        boxShadow: '0 25px 50px -12px rgba(0,0,0,0.15)',
+        overflow: 'hidden'
+      }}>
         
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-white/10 bg-black/10">
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          padding: '18px 24px',
+          borderBottom: '1px solid var(--border-color)',
+          backgroundColor: 'var(--accent-bg-light)'
+        }}>
           <div>
-            <h2 className="text-xl font-semibold text-white flex items-center gap-2">
-              <FileText className="w-5 h-5 text-[var(--color-corp-red)]" /> 
+            <h2 style={{ fontSize: '1.2rem', fontWeight: 600, margin: 0, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <FileText size={20} style={{ color: 'var(--color-corp-red)' }} /> 
               Escáner de Facturas (IA)
             </h2>
-            <p className="text-xs text-gray-400 mt-0.5">Cargue y valide facturas de proveedores con extracción inteligente y actualización automática de stock.</p>
+            <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '2px' }}>
+              Cargue y valide facturas de proveedores con extracción inteligente y actualización automática de stock.
+            </p>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-white/5 rounded-xl transition-colors">
-            <X className="w-5 h-5 text-gray-400" />
+          <button 
+            onClick={onClose} 
+            style={{
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              color: 'var(--text-secondary)',
+              padding: '6px',
+              borderRadius: '8px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'background-color 0.15s'
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--border-color)'}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+          >
+            <X size={20} />
           </button>
         </div>
 
         {/* Local Files Bar */}
         {localFiles.length > 0 && (
-          <div className="bg-white/5 border-b border-white/10 px-6 py-3 flex items-center gap-3 overflow-x-auto">
-            <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider whitespace-nowrap">
+          <div style={{
+            backgroundColor: '#FFFFFF',
+            borderBottom: '1px solid var(--border-color)',
+            padding: '12px 24px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            overflowX: 'auto'
+          }}>
+            <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
               📁 Carpeta ARCHIVOS:
             </span>
-            <div className="flex gap-2">
+            <div style={{ display: 'flex', gap: '8px' }}>
               {localFiles.map((f, i) => (
                 <button
                   key={i}
                   onClick={() => processLocalDocument(f.name)}
                   disabled={loading}
-                  className={`text-xs px-3 py-1.5 rounded-lg border transition-all flex items-center gap-1.5 ${
-                    selectedLocalFile === f.name
-                      ? 'bg-[var(--color-corp-red)]/20 border-[var(--color-corp-red)] text-white'
-                      : 'bg-black/20 border-white/10 text-gray-300 hover:bg-white/5'
-                  } disabled:opacity-50`}
+                  style={{
+                    fontSize: '12px',
+                    padding: '6px 12px',
+                    borderRadius: '6px',
+                    border: selectedLocalFile === f.name ? '1px solid var(--color-corp-red)' : '1px solid var(--border-color)',
+                    backgroundColor: selectedLocalFile === f.name ? 'rgba(227, 6, 19, 0.05)' : '#FFFFFF',
+                    color: selectedLocalFile === f.name ? 'var(--color-corp-red)' : 'var(--text-secondary)',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    fontWeight: selectedLocalFile === f.name ? 600 : 400,
+                    transition: 'all 0.15s ease',
+                    opacity: loading ? 0.5 : 1
+                  }}
                 >
-                  <FileText className="w-3.5 h-3.5" />
+                  <FileText size={14} />
                   {f.name} ({formatBytes(f.size)})
                 </button>
               ))}
@@ -212,223 +286,452 @@ export const PurchaseScannerModal: React.FC<PurchaseScannerModalProps> = ({
         )}
 
         {/* Content */}
-        <div className="flex flex-1 overflow-hidden">
+        <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+          
           {/* Left Panel: Preview or Instructions */}
-          <div className="w-1/2 p-6 border-r border-white/10 overflow-y-auto bg-black/20 flex flex-col justify-center items-center">
+          <div style={{
+            width: '50%',
+            padding: '24px',
+            borderRight: '1px solid var(--border-color)',
+            backgroundColor: 'var(--bg-app)',
+            overflowY: 'auto',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            alignItems: 'center'
+          }}>
             {previewUrl ? (
-              <img src={previewUrl} alt="Vista previa del documento" className="w-full h-auto max-h-[70vh] object-contain rounded-lg shadow-lg border border-white/5" />
+              <img 
+                src={previewUrl} 
+                alt="Vista previa del documento" 
+                style={{
+                  maxWidth: '100%',
+                  maxHeight: '70vh',
+                  objectFit: 'contain',
+                  borderRadius: '12px',
+                  boxShadow: 'var(--shadow-lg)',
+                  border: '1px solid var(--border-color)'
+                }} 
+              />
             ) : selectedLocalFile ? (
-              <div className="text-center space-y-4">
-                <div className="w-20 h-20 bg-[var(--color-corp-red)]/10 border border-[var(--color-corp-red)]/20 rounded-2xl flex items-center justify-center mx-auto">
-                  <FileText className="w-10 h-10 text-[var(--color-corp-red)]" />
+              <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div style={{
+                  width: '80px',
+                  height: '80px',
+                  backgroundColor: 'rgba(227, 6, 19, 0.05)',
+                  border: '1px solid rgba(227, 6, 19, 0.1)',
+                  borderRadius: '16px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  margin: '0 auto'
+                }}>
+                  <FileText size={40} style={{ color: 'var(--color-corp-red)' }} />
                 </div>
                 <div>
-                  <h4 className="text-white font-medium text-lg">{selectedLocalFile}</h4>
-                  <p className="text-xs text-gray-400 mt-1">Archivo del servidor cargado para análisis IA</p>
+                  <h4 style={{ color: 'var(--text-primary)', fontWeight: 600, fontSize: '18px', margin: 0 }}>{selectedLocalFile}</h4>
+                  <p style={{ color: 'var(--text-secondary)', fontSize: '13px', marginTop: '4px' }}>Archivo de servidor cargado para análisis IA</p>
                 </div>
               </div>
             ) : (
-              <div className="text-center space-y-4 max-w-sm text-gray-400">
-                <HelpCircle className="w-12 h-12 text-gray-500 mx-auto" />
-                <p className="text-sm">Seleccione un archivo de la carpeta de servidor arriba, o suba uno nuevo utilizando el botón "Escanear Factura" en el panel principal.</p>
+              <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '16px', maxWidth: '320px', color: 'var(--text-secondary)' }}>
+                <HelpCircle size={48} style={{ color: 'var(--text-muted)', margin: '0 auto' }} />
+                <p style={{ fontSize: '14px', lineHeight: '1.5' }}>
+                  Seleccione un archivo de la carpeta de servidor arriba, o suba uno nuevo utilizando el botón "Escanear Factura" en el panel principal.
+                </p>
               </div>
             )}
           </div>
 
           {/* Right Panel: Data Validation */}
-          <div className="w-1/2 p-6 overflow-y-auto custom-scrollbar bg-[#18181A]">
+          <div className="custom-scrollbar" style={{
+            width: '50%',
+            padding: '24px',
+            backgroundColor: '#FFFFFF',
+            overflowY: 'auto',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '24px'
+          }}>
             {loading ? (
-              <div className="flex flex-col items-center justify-center h-full text-center space-y-4 py-20">
-                <Loader className="w-10 h-10 text-[var(--color-corp-red)] animate-spin" />
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', textAlign: 'center', gap: '16px', padding: '80px 20px' }}>
+                <Loader size={40} style={{ color: 'var(--color-corp-red)', animation: 'spin 1s linear infinite' }} />
                 <div>
-                  <p className="text-white font-medium text-lg">Procesando con Gemini 3.5 Flash...</p>
-                  <p className="text-xs text-gray-400 mt-1">Analizando CUITs, artículos y correspondencia fiscal.</p>
+                  <p style={{ color: 'var(--text-primary)', fontWeight: 600, fontSize: '16px', margin: 0 }}>Procesando con Gemini 3.5 Flash...</p>
+                  <p style={{ color: 'var(--text-secondary)', fontSize: '13px', marginTop: '4px' }}>Analizando CUITs, artículos y correspondencia fiscal.</p>
                 </div>
+                <style>{`
+                  @keyframes spin {
+                    to { transform: rotate(360deg); }
+                  }
+                `}</style>
               </div>
             ) : errorMsg && !extractedData ? (
-              <div className="flex flex-col items-center justify-center h-full text-center space-y-4 py-20">
-                <AlertCircle className="w-12 h-12 text-[var(--color-corp-red)]" />
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', textAlign: 'center', gap: '16px', padding: '80px 20px' }}>
+                <AlertCircle size={48} style={{ color: 'var(--color-corp-red)' }} />
                 <div>
-                  <p className="text-red-400 font-medium text-lg">Ocurrió un error</p>
-                  <p className="text-xs text-red-200 mt-1">{errorMsg}</p>
+                  <p style={{ color: 'var(--color-danger)', fontWeight: 600, fontSize: '16px', margin: 0 }}>Ocurrió un error</p>
+                  <p style={{ color: 'var(--text-secondary)', fontSize: '13px', marginTop: '4px', maxWidth: '360px' }}>{errorMsg}</p>
                 </div>
                 <button 
                   onClick={() => file ? processUploadedDocument(file) : selectedLocalFile && processLocalDocument(selectedLocalFile)} 
-                  className="px-4 py-2 bg-white/5 rounded-lg text-sm text-white hover:bg-white/10 transition-all"
+                  style={{
+                    padding: '8px 16px',
+                    backgroundColor: 'var(--accent-bg-light)',
+                    border: '1px solid var(--border-color)',
+                    borderRadius: '8px',
+                    fontSize: '13px',
+                    color: 'var(--text-primary)',
+                    cursor: 'pointer',
+                    fontWeight: 500,
+                    transition: 'all 0.15s ease'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--border-color)'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--accent-bg-light)'}
                 >
                   Reintentar Procesamiento
                 </button>
               </div>
             ) : extractedData ? (
-              <div className="space-y-6 animate-fadeIn">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                 
                 {errorMsg && (
-                  <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl flex items-start space-x-3">
-                    <AlertCircle className="w-5 h-5 text-[var(--color-corp-red)] flex-shrink-0 mt-0.5" />
-                    <p className="text-sm text-red-200">{errorMsg}</p>
+                  <div style={{
+                    padding: '14px 18px',
+                    backgroundColor: 'var(--color-danger-bg)',
+                    border: '1px solid rgba(239, 68, 68, 0.2)',
+                    borderRadius: '10px',
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '12px'
+                  }}>
+                    <AlertCircle size={20} style={{ color: 'var(--color-danger)', flexShrink: 0, marginTop: '2px' }} />
+                    <p style={{ fontSize: '13px', color: 'var(--color-danger)', margin: 0 }}>{errorMsg}</p>
                   </div>
                 )}
 
                 {/* Sucursal Auto-detected Alert */}
                 {extractedData.billingType === 'OFFICIAL' ? (
-                  <div className="p-4 bg-green-500/10 border border-green-500/20 rounded-xl flex items-start gap-3">
-                    <Check className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
+                  <div style={{
+                    padding: '14px 18px',
+                    backgroundColor: 'var(--color-success-bg)',
+                    border: '1px solid rgba(16, 185, 129, 0.2)',
+                    borderRadius: '10px',
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '12px'
+                  }}>
+                    <Check size={20} style={{ color: 'var(--color-success)', flexShrink: 0, marginTop: '2px' }} />
                     <div>
-                      <p className="text-sm font-semibold text-green-400">Sucursal A (Oficial) Pre-seleccionada</p>
-                      <p className="text-xs text-green-200/70 mt-0.5">El CUIT del comprador en la Factura coincide con el de la distribuidora (<strong>20163165059</strong>).</p>
+                      <p style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-success)', margin: 0 }}>Sucursal A (Oficial) Pre-seleccionada</p>
+                      <p style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '4px', margin: 0 }}>
+                        El CUIT del comprador en la Factura coincide con el de la distribuidora (<strong>20163165059</strong>).
+                      </p>
                     </div>
                   </div>
                 ) : (
-                  <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-start gap-3">
-                    <AlertCircle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                  <div style={{
+                    padding: '14px 18px',
+                    backgroundColor: 'var(--color-warning-bg)',
+                    border: '1px solid rgba(245, 158, 11, 0.2)',
+                    borderRadius: '10px',
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '12px'
+                  }}>
+                    <AlertCircle size={20} style={{ color: 'var(--color-warning)', flexShrink: 0, marginTop: '2px' }} />
                     <div>
-                      <p className="text-sm font-semibold text-amber-400">Sucursal X (Interna) Pre-seleccionada</p>
-                      <p className="text-xs text-amber-200/70 mt-0.5">Documento de control interno (Remito o factura no dirigida al CUIT oficial).</p>
+                      <p style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-warning)', margin: 0 }}>Sucursal X (Interna) Pre-seleccionada</p>
+                      <p style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '4px', margin: 0 }}>
+                        Documento de control interno (Remito o factura no dirigida al CUIT oficial).
+                      </p>
                     </div>
                   </div>
                 )}
 
                 {/* Info General */}
-                <div className="bg-white/5 rounded-xl p-5 border border-white/10 space-y-4">
-                  <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Datos Generales Extraídos</h3>
-                  <div className="grid grid-cols-2 gap-4">
+                <div style={{
+                  border: '1px solid var(--border-color)',
+                  borderRadius: '12px',
+                  padding: '20px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '16px',
+                  backgroundColor: 'var(--bg-app)'
+                }}>
+                  <h3 style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>
+                    Datos Generales Extraídos
+                  </h3>
+                  
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                     <div>
-                      <label className="block text-xs text-gray-500 mb-1">Proveedor Detectado</label>
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                        Proveedor Detectado
+                      </label>
                       <input 
                         type="text" 
                         value={extractedData.supplierName || ''} 
                         onChange={(e) => setExtractedData({...extractedData, supplierName: e.target.value})}
-                        className="w-full bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:border-[var(--color-corp-red)] focus:ring-1 focus:ring-[var(--color-corp-red)] transition-all"
+                        style={{
+                          width: '100%',
+                          backgroundColor: '#FFFFFF',
+                          border: '1px solid var(--border-color)',
+                          borderRadius: '8px',
+                          padding: '8px 12px',
+                          fontSize: '13px',
+                          color: 'var(--text-primary)',
+                          boxShadow: 'var(--shadow-sm)'
+                        }}
                       />
                     </div>
                     <div>
-                      <label className="block text-xs text-gray-500 mb-1">ID Proveedor (Sistema)</label>
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                        ID Proveedor (Sistema)
+                      </label>
                       <input 
                         type="number" 
                         value={extractedData.providerId || ''} 
                         onChange={(e) => setExtractedData({...extractedData, providerId: e.target.value})}
                         placeholder="Ej: 936"
-                        className="w-full bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:border-[var(--color-corp-red)] focus:ring-1 focus:ring-[var(--color-corp-red)] transition-all"
+                        style={{
+                          width: '100%',
+                          backgroundColor: '#FFFFFF',
+                          border: '1px solid var(--border-color)',
+                          borderRadius: '8px',
+                          padding: '8px 12px',
+                          fontSize: '13px',
+                          color: 'var(--text-primary)',
+                          boxShadow: 'var(--shadow-sm)'
+                        }}
                       />
                     </div>
                     <div>
-                      <label className="block text-xs text-gray-500 mb-1">Tipo Comprobante</label>
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                        Tipo Comprobante
+                      </label>
                       <input 
                         type="text" 
                         value={extractedData.documentType || ''} 
                         onChange={(e) => setExtractedData({...extractedData, documentType: e.target.value})}
-                        className="w-full bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:border-[var(--color-corp-red)] focus:ring-1 focus:ring-[var(--color-corp-red)] transition-all"
+                        style={{
+                          width: '100%',
+                          backgroundColor: '#FFFFFF',
+                          border: '1px solid var(--border-color)',
+                          borderRadius: '8px',
+                          padding: '8px 12px',
+                          fontSize: '13px',
+                          color: 'var(--text-primary)',
+                          boxShadow: 'var(--shadow-sm)'
+                        }}
                       />
                     </div>
                     <div>
-                      <label className="block text-xs text-gray-500 mb-1">Número Comprobante</label>
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                        Número Comprobante
+                      </label>
                       <input 
                         type="text" 
                         value={extractedData.documentNumber || ''} 
                         onChange={(e) => setExtractedData({...extractedData, documentNumber: e.target.value})}
-                        className="w-full bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:border-[var(--color-corp-red)] focus:ring-1 focus:ring-[var(--color-corp-red)] transition-all"
+                        style={{
+                          width: '100%',
+                          backgroundColor: '#FFFFFF',
+                          border: '1px solid var(--border-color)',
+                          borderRadius: '8px',
+                          padding: '8px 12px',
+                          fontSize: '13px',
+                          color: 'var(--text-primary)',
+                          boxShadow: 'var(--shadow-sm)'
+                        }}
                       />
                     </div>
-                    <div className="col-span-2">
-                      <label className="block text-xs text-gray-500 mb-1">Imputación Contable (Sucursal)</label>
-                      <select 
-                        value={extractedData.billingType || 'OFFICIAL'} 
-                        onChange={(e) => setExtractedData({...extractedData, billingType: e.target.value})}
-                        className="w-full bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:border-[var(--color-corp-red)] focus:ring-1 focus:ring-[var(--color-corp-red)] transition-all"
-                      >
-                        <option value="OFFICIAL" className="bg-[#1C1C1E] text-white">Sucursal A (Oficial - Afecta IVA Ventas/Compras legal)</option>
-                        <option value="INTERNAL" className="bg-[#1C1C1E] text-white">Sucursal X (Interna - Solo Control Físico / Cuenta Corriente)</option>
-                      </select>
+                    <div style={{ gridColumn: 'span 2' }}>
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                        Imputación Contable (Sucursal)
+                      </label>
+                      <div style={{ position: 'relative' }}>
+                        <select 
+                          value={extractedData.billingType || 'OFFICIAL'} 
+                          onChange={(e) => setExtractedData({...extractedData, billingType: e.target.value})}
+                          style={{
+                            width: '100%',
+                            backgroundColor: '#FFFFFF',
+                            border: '1px solid var(--border-color)',
+                            borderRadius: '8px',
+                            padding: '8px 36px 8px 12px',
+                            fontSize: '13px',
+                            color: 'var(--text-primary)',
+                            boxShadow: 'var(--shadow-sm)',
+                            appearance: 'none',
+                            backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%234B5563' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e")`,
+                            backgroundRepeat: 'no-repeat',
+                            backgroundPosition: 'right 12px center',
+                            backgroundSize: '16px'
+                          }}
+                        >
+                          <option value="OFFICIAL">Sucursal A (Oficial - Afecta IVA Ventas/Compras legal)</option>
+                          <option value="INTERNAL">Sucursal X (Interna - Solo Control Físico / Cuenta Corriente)</option>
+                        </select>
+                      </div>
                     </div>
                   </div>
                 </div>
 
                 {/* Items */}
-                <div className="space-y-4">
-                  <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Artículos y Vinculación con Stock</h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  <h3 style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>
+                    Artículos y Vinculación con Stock
+                  </h3>
                   
-                  <div className="space-y-3">
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                     {extractedData.items?.map((item: any, idx: number) => {
                       const showSearch = activeSearchIndex === idx;
                       const results = productSearchResults[idx] || [];
                       const searchQuery = productSearchQueries[idx] || '';
 
+                      const hasMatch = !!item.matchedProductId;
+
                       return (
-                        <div key={idx} className="p-4 bg-white/5 border border-white/10 rounded-xl space-y-3 hover:border-white/20 transition-all">
+                        <div 
+                          key={idx} 
+                          style={{
+                            padding: '16px',
+                            backgroundColor: '#FFFFFF',
+                            border: '1px solid var(--border-color)',
+                            borderRadius: '12px',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '12px',
+                            boxShadow: 'var(--shadow-sm)',
+                            position: 'relative'
+                          }}
+                        >
                           
                           {/* Item Info Extracted */}
-                          <div className="flex justify-between items-start gap-4">
-                            <div>
-                              <div className="flex items-center gap-2">
-                                <span className="text-xs font-mono bg-white/10 text-gray-300 px-1.5 py-0.5 rounded">
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1, minWidth: 0 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                <span style={{
+                                  fontSize: '11px',
+                                  fontFamily: 'monospace',
+                                  backgroundColor: 'var(--accent-bg-light)',
+                                  color: 'var(--text-secondary)',
+                                  padding: '2px 6px',
+                                  borderRadius: '4px',
+                                  fontWeight: 'bold',
+                                  border: '1px solid var(--border-color)',
+                                  whiteSpace: 'nowrap'
+                                }}>
                                   Cod: {item.code || 'S/C'}
                                 </span>
-                                <span className="text-sm font-medium text-white">{item.description}</span>
+                                <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)', lineHeight: '1.4' }}>
+                                  {item.description}
+                                </span>
                               </div>
-                              <p className="text-xs text-gray-400 mt-1">
-                                Cantidad: <span className="text-white font-semibold">{item.quantity}</span> | 
-                                P.U: <span className="text-white">${item.unitPrice}</span>
+                              <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: 0 }}>
+                                Cantidad: <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{item.quantity}</span> | 
+                                P.U: <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>${item.unitPrice}</span>
                               </p>
                             </div>
-                            <div className="text-right">
-                              <span className="text-sm font-semibold text-white">${item.subtotal}</span>
-                              <div className="mt-1">
+                            <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px' }}>
+                              <span style={{ fontSize: '14px', fontWeight: 'bold', color: 'var(--text-primary)' }}>${item.subtotal}</span>
+                              <div>
                                 {item.matchMethod === 'PREVIOUS_MAPPING' && (
-                                  <span className="text-[10px] px-2 py-0.5 rounded bg-green-500/10 text-green-400 font-semibold border border-green-500/20">Mapeo Recordado</span>
+                                  <span style={{ fontSize: '10px', fontWeight: 600, backgroundColor: 'var(--color-success-bg)', color: 'var(--color-success)', padding: '2px 8px', borderRadius: '20px', border: '1px solid rgba(16, 185, 129, 0.2)' }}>Mapeo Recordado</span>
                                 )}
                                 {item.matchMethod === 'CODE_MATCH' && (
-                                  <span className="text-[10px] px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 font-semibold border border-blue-500/20">Código SKU/Barras</span>
+                                  <span style={{ fontSize: '10px', fontWeight: 600, backgroundColor: 'var(--color-info-bg)', color: 'var(--color-info)', padding: '2px 8px', borderRadius: '20px', border: '1px solid rgba(59, 130, 246, 0.2)' }}>Código SKU/Barras</span>
                                 )}
                                 {item.matchMethod === 'DESCRIPTION_EXACT' && (
-                                  <span className="text-[10px] px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-400 font-semibold border border-indigo-500/20">Nombre Exacto</span>
+                                  <span style={{ fontSize: '10px', fontWeight: 600, backgroundColor: 'var(--color-info-bg)', color: 'var(--color-info)', padding: '2px 8px', borderRadius: '20px', border: '1px solid rgba(59, 130, 246, 0.2)' }}>Nombre Exacto</span>
                                 )}
                                 {item.matchMethod === 'DESCRIPTION_PARTIAL' && (
-                                  <span className="text-[10px] px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 font-semibold border border-amber-500/20">Nombre Parcial</span>
+                                  <span style={{ fontSize: '10px', fontWeight: 600, backgroundColor: 'var(--color-warning-bg)', color: 'var(--color-warning)', padding: '2px 8px', borderRadius: '20px', border: '1px solid rgba(245, 158, 11, 0.2)' }}>Nombre Parcial</span>
                                 )}
                                 {item.matchMethod === 'MANUAL' && (
-                                  <span className="text-[10px] px-2 py-0.5 rounded bg-purple-500/10 text-purple-400 font-semibold border border-purple-500/20">Vínculo Manual</span>
+                                  <span style={{ fontSize: '10px', fontWeight: 600, backgroundColor: 'var(--color-info-bg)', color: 'var(--color-info)', padding: '2px 8px', borderRadius: '20px', border: '1px solid rgba(59, 130, 246, 0.2)' }}>Vínculo Manual</span>
                                 )}
                                 {(!item.matchMethod || item.matchMethod === 'NONE') && (
-                                  <span className="text-[10px] px-2 py-0.5 rounded bg-red-500/10 text-red-400 font-semibold border border-red-500/20">Sin Vincular</span>
+                                  <span style={{ fontSize: '10px', fontWeight: 600, backgroundColor: 'var(--color-danger-bg)', color: 'var(--color-danger)', padding: '2px 8px', borderRadius: '20px', border: '1px solid rgba(239, 68, 68, 0.2)' }}>Sin Vincular</span>
                                 )}
                               </div>
                             </div>
                           </div>
 
                           {/* Matching Input */}
-                          <div className="pt-3 border-t border-white/5 space-y-2">
-                            <div className="flex items-center gap-2">
-                              <CornerDownRight className="w-3.5 h-3.5 text-gray-500 flex-shrink-0" />
-                              <div className="flex-1 relative">
+                          <div style={{ paddingTop: '12px', borderTop: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <CornerDownRight size={14} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+                              <div style={{ flex: 1, position: 'relative' }}>
                                 {showSearch ? (
-                                  <div className="space-y-1">
-                                    <div className="relative">
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', position: 'relative' }}>
+                                    <div style={{ position: 'relative' }}>
                                       <input
                                         type="text"
                                         autoFocus
                                         placeholder="Escriba para buscar producto..."
                                         value={searchQuery}
                                         onChange={(e) => handleProductSearch(idx, e.target.value)}
-                                        className="w-full bg-black/40 border border-[var(--color-corp-red)] rounded-lg pl-8 pr-3 py-1.5 text-xs text-white focus:outline-none transition-all"
+                                        style={{
+                                          width: '100%',
+                                          backgroundColor: '#FFFFFF',
+                                          border: '1px solid var(--color-corp-red)',
+                                          borderRadius: '8px',
+                                          padding: '8px 12px 8px 36px',
+                                          fontSize: '12px',
+                                          color: 'var(--text-primary)',
+                                          boxShadow: '0 0 0 2px rgba(227, 6, 19, 0.1)',
+                                          outline: 'none'
+                                        }}
                                       />
-                                      <Search className="w-3.5 h-3.5 text-gray-500 absolute left-2.5 top-2.5" />
+                                      <Search size={14} style={{ color: 'var(--text-muted)', position: 'absolute', left: '12px', top: '10px' }} />
                                     </div>
                                     
                                     {/* Dropdown Results */}
                                     {results.length > 0 && (
-                                      <div className="absolute left-0 right-0 mt-1 bg-[#2C2C2E] border border-white/10 rounded-lg shadow-xl z-50 max-h-48 overflow-y-auto custom-scrollbar">
+                                      <div style={{
+                                        position: 'absolute',
+                                        left: 0,
+                                        right: 0,
+                                        top: '40px',
+                                        backgroundColor: '#FFFFFF',
+                                        border: '1px solid var(--border-color)',
+                                        borderRadius: '8px',
+                                        boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+                                        zIndex: 100,
+                                        maxHeight: '200px',
+                                        overflowY: 'auto'
+                                      }} className="custom-scrollbar">
                                         {results.map((p) => (
                                           <button
                                             key={p.id}
                                             type="button"
                                             onClick={() => handleSelectProduct(idx, p)}
-                                            className="w-full text-left px-3 py-2 text-xs text-white hover:bg-white/5 transition-colors border-b border-white/5 flex justify-between items-center"
+                                            style={{
+                                              width: '100%',
+                                              border: 'none',
+                                              borderBottom: '1px solid var(--border-color)',
+                                              backgroundColor: 'transparent',
+                                              padding: '10px 14px',
+                                              textAlign: 'left',
+                                              cursor: 'pointer',
+                                              display: 'flex',
+                                              justifyContent: 'space-between',
+                                              alignItems: 'center',
+                                              transition: 'background-color 0.1s ease'
+                                            }}
+                                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--accent-bg-light)'}
+                                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                                           >
                                             <div>
-                                              <p className="font-medium">{p.name}</p>
-                                              <p className="text-[10px] text-gray-400 mt-0.5">SKU: {p.sku} | Barras: {p.barcode || 'S/B'}</p>
+                                              <p style={{ fontWeight: 600, fontSize: '12px', color: 'var(--text-primary)', margin: 0 }}>{p.name}</p>
+                                              <p style={{ fontSize: '10px', color: 'var(--text-secondary)', marginTop: '2px', margin: 0 }}>
+                                                SKU: {p.sku} | Barras: {p.barcode || 'S/B'}
+                                              </p>
                                             </div>
-                                            <span className="text-[10px] bg-white/10 px-1.5 py-0.5 rounded text-gray-300">ID: {p.id}</span>
+                                            <span style={{ fontSize: '10px', backgroundColor: 'var(--accent-bg-light)', color: 'var(--text-secondary)', padding: '2px 6px', borderRadius: '4px' }}>
+                                              ID: {p.id}
+                                            </span>
                                           </button>
                                         ))}
                                       </div>
@@ -440,19 +743,40 @@ export const PurchaseScannerModal: React.FC<PurchaseScannerModalProps> = ({
                                       setActiveSearchIndex(idx);
                                       handleProductSearch(idx, item.description);
                                     }}
-                                    className={`w-full bg-black/20 border rounded-lg px-3 py-1.5 text-xs flex justify-between items-center cursor-pointer transition-all ${
-                                      item.matchedProductId 
-                                        ? 'border-green-500/20 text-green-300 hover:border-green-500/40' 
-                                        : 'border-red-500/20 text-red-300 hover:border-red-500/40'
-                                    }`}
+                                    style={{
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'space-between',
+                                      padding: '10px 14px',
+                                      borderRadius: '8px',
+                                      fontSize: '12px',
+                                      cursor: 'pointer',
+                                      transition: 'all 0.15s ease',
+                                      border: hasMatch ? '1px dashed var(--color-success)' : '1px dashed var(--color-danger)',
+                                      backgroundColor: hasMatch ? 'var(--color-success-bg)' : 'var(--color-danger-bg)',
+                                      color: hasMatch ? 'var(--text-primary)' : 'var(--color-danger)',
+                                    }}
+                                    onMouseEnter={(e) => {
+                                      e.currentTarget.style.borderColor = hasMatch ? 'var(--color-success)' : 'var(--color-danger)';
+                                      e.currentTarget.style.backgroundColor = hasMatch ? 'rgba(16, 185, 129, 0.08)' : 'rgba(239, 68, 68, 0.08)';
+                                    }}
+                                    onMouseLeave={(e) => {
+                                      e.currentTarget.style.borderColor = hasMatch ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)';
+                                      e.currentTarget.style.backgroundColor = hasMatch ? 'var(--color-success-bg)' : 'var(--color-danger-bg)';
+                                    }}
                                   >
-                                    <span className="truncate">
-                                      {item.matchedProductId 
+                                    <span style={{
+                                      overflow: 'hidden',
+                                      textOverflow: 'ellipsis',
+                                      whiteSpace: 'nowrap',
+                                      fontWeight: hasMatch ? 500 : 400
+                                    }}>
+                                      {hasMatch 
                                         ? `VINCULADO: ${item.matchedProductName} (ID: ${item.matchedProductId})` 
                                         : '⚠️ Haga clic aquí para buscar y vincular a un producto local.'
                                       }
                                     </span>
-                                    <Search className="w-3.5 h-3.5 text-gray-500" />
+                                    <Search size={14} style={{ color: 'var(--text-muted)', marginLeft: '8px', flexShrink: 0 }} />
                                   </div>
                                 )}
                               </div>
@@ -466,30 +790,56 @@ export const PurchaseScannerModal: React.FC<PurchaseScannerModalProps> = ({
                 </div>
 
                 {/* Totales */}
-                <div className="bg-white/5 rounded-xl p-5 border border-white/10 space-y-3">
-                  <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Totales del Comprobante</h3>
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-gray-400">Neto Gravado</span>
-                    <span className="text-white font-medium">${extractedData.netAmount}</span>
+                <div style={{
+                  border: '1px solid var(--border-color)',
+                  borderRadius: '12px',
+                  padding: '20px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '12px',
+                  backgroundColor: 'var(--bg-app)'
+                }}>
+                  <h3 style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0, marginBottom: '4px' }}>
+                    Totales del Comprobante
+                  </h3>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px' }}>
+                    <span style={{ color: 'var(--text-secondary)' }}>Neto Gravado</span>
+                    <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>${extractedData.netAmount}</span>
                   </div>
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-gray-400">IVA (21%)</span>
-                    <span className="text-white font-medium">${extractedData.taxAmount}</span>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px' }}>
+                    <span style={{ color: 'var(--text-secondary)' }}>IVA (21%)</span>
+                    <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>${extractedData.taxAmount}</span>
                   </div>
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-gray-400">Percepciones Sufridas</span>
-                    <span className="text-white font-medium">${extractedData.percepcionAmount}</span>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px' }}>
+                    <span style={{ color: 'var(--text-secondary)' }}>Percepciones Sufridas</span>
+                    <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>${extractedData.percepcionAmount}</span>
                   </div>
                   
-                  <div className="pt-3 border-t border-white/10 flex justify-between items-center text-base">
-                    <span className="text-white font-medium">Monto Factura</span>
-                    <span className="text-[var(--color-corp-red)] font-bold text-lg">${extractedData.totalAmount}</span>
+                  <div style={{
+                    paddingTop: '12px',
+                    borderTop: '1px solid var(--border-color)',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center'
+                  }}>
+                    <span style={{ color: 'var(--text-primary)', fontWeight: 600, fontSize: '14px' }}>Monto Factura</span>
+                    <span style={{ color: 'var(--color-corp-red)', fontWeight: 'bold', fontSize: '18px' }}>${extractedData.totalAmount}</span>
                   </div>
 
                   {extractedData.providerId && (
-                    <div className="pt-3 border-t border-white/5 text-[10px] text-gray-400 flex items-center gap-1.5">
-                      <AlertCircle className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />
-                      Se registrará la deuda de <strong>${extractedData.totalAmount}</strong> en la CC del proveedor ID: {extractedData.providerId}.
+                    <div style={{
+                      paddingTop: '12px',
+                      borderTop: '1px dashed var(--border-color)',
+                      fontSize: '11px',
+                      color: 'var(--text-secondary)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px'
+                    }}>
+                      <AlertCircle size={14} style={{ color: 'var(--color-warning)', flexShrink: 0 }} />
+                      <span>
+                        Se registrará la deuda de <strong>${extractedData.totalAmount}</strong> en la CC del proveedor ID: {extractedData.providerId}.
+                      </span>
                     </div>
                   )}
                 </div>
@@ -500,23 +850,66 @@ export const PurchaseScannerModal: React.FC<PurchaseScannerModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="p-6 border-t border-white/10 flex justify-end space-x-4 bg-black/20">
+        <div style={{
+          padding: '16px 24px',
+          borderTop: '1px solid var(--border-color)',
+          display: 'flex',
+          justifyContent: 'flex-end',
+          gap: '12px',
+          backgroundColor: 'var(--bg-app)'
+        }}>
           <button 
             onClick={onClose}
             disabled={loading}
-            className="px-5 py-2.5 rounded-xl text-sm font-medium text-white hover:bg-white/5 transition-colors disabled:opacity-50"
+            style={{
+              padding: '10px 20px',
+              borderRadius: '8px',
+              border: '1px solid var(--border-color)',
+              backgroundColor: '#FFFFFF',
+              color: 'var(--text-secondary)',
+              fontSize: '13px',
+              fontWeight: 500,
+              cursor: 'pointer',
+              transition: 'all 0.15s ease',
+              opacity: loading ? 0.5 : 1
+            }}
+            onMouseEnter={(e) => { if (!loading) e.currentTarget.style.backgroundColor = 'var(--accent-bg-light)'; }}
+            onMouseLeave={(e) => { if (!loading) e.currentTarget.style.backgroundColor = '#FFFFFF'; }}
           >
             Cancelar
           </button>
           <button 
             onClick={handleConfirm}
             disabled={loading || !extractedData || extractedData.items?.some((i: any) => !i.matchedProductId)}
-            className="px-5 py-2.5 bg-[var(--color-corp-red)] hover:bg-red-600 rounded-xl text-sm font-medium text-white shadow-lg shadow-red-500/20 transition-all flex items-center space-x-2 disabled:opacity-50"
+            style={{
+              padding: '10px 20px',
+              borderRadius: '8px',
+              border: 'none',
+              backgroundColor: 'var(--color-corp-red)',
+              color: '#FFFFFF',
+              fontSize: '13px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              boxShadow: '0 4px 6px -1px rgba(227, 6, 19, 0.2)',
+              transition: 'all 0.15s ease',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              opacity: (loading || !extractedData || extractedData.items?.some((i: any) => !i.matchedProductId)) ? 0.5 : 1
+            }}
+            onMouseEnter={(e) => {
+              const disabled = loading || !extractedData || extractedData.items?.some((i: any) => !i.matchedProductId);
+              if (!disabled) e.currentTarget.style.backgroundColor = '#C70510';
+            }}
+            onMouseLeave={(e) => {
+              const disabled = loading || !extractedData || extractedData.items?.some((i: any) => !i.matchedProductId);
+              if (!disabled) e.currentTarget.style.backgroundColor = 'var(--color-corp-red)';
+            }}
           >
             {loading ? (
-              <Loader className="w-4 h-4 animate-spin" />
+              <Loader size={16} style={{ animation: 'spin 1s linear infinite' }} />
             ) : (
-              <Check className="w-4 h-4" />
+              <Check size={16} />
             )}
             <span>Confirmar e Inyectar Stock</span>
           </button>
