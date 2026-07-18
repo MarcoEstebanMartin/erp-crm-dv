@@ -125,12 +125,52 @@ export const api = {
     return res.product;
   },
 
-  updateProduct: async (id: number, productData: any) => {    
+  updateProduct: async (id: number, productData: any) => {    
     const res = await request(`/products/${id}`, {
       method: 'PUT',
       body: JSON.stringify(productData)
     });
     return res.product;
+  },
+
+  uploadProductImage: async (productId: number, file: File) => {
+    const formData = new FormData();
+    formData.append('image', file);
+    
+    const token = localStorage.getItem('auth_token');
+    const response = await fetch(`${API_BASE_URL}/products/${productId}/image`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      },
+      body: formData
+    });
+    
+    const json = await response.json();
+    if (json.status === 'error') {
+      throw new Error(json.message);
+    }
+    return json.product;
+  },
+
+  importProductsZip: async (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    const token = localStorage.getItem('auth_token');
+    const response = await fetch(`${API_BASE_URL}/products/import-images-zip`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      },
+      body: formData
+    });
+    
+    const json = await response.json();
+    if (json.status === 'error') {
+      throw new Error(json.message);
+    }
+    return json.data;
   },
 
   adjustStock: async (id: number, quantityChange: number, reason: string, lotNumber?: string, expirationDate?: string, location?: string) => {    
@@ -882,7 +922,7 @@ export const api = {
     if (!response.ok) {
       throw new Error(data.message || 'Error al procesar el documento');
     }
-    return data;
+    return data.data;
   },
 
   getPurchaseLocalFiles: async () => {

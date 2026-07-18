@@ -241,7 +241,7 @@ export const PurchaseScannerModal: React.FC<PurchaseScannerModalProps> = ({
               <div className="flex flex-col items-center justify-center h-full text-center space-y-4 py-20">
                 <Loader className="w-10 h-10 text-[var(--color-corp-red)] animate-spin" />
                 <div>
-                  <p className="text-white font-medium text-lg">Procesando con Gemini Pro 1.5...</p>
+                  <p className="text-white font-medium text-lg">Procesando con Gemini 3.5 Flash...</p>
                   <p className="text-xs text-gray-400 mt-1">Analizando CUITs, artículos y correspondencia fiscal.</p>
                 </div>
               </div>
