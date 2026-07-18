@@ -11,7 +11,8 @@ import {
   ArrowDownRight,
   Layers,
   Edit2,
-  Trash2
+  Trash2,
+  Database
 } from 'lucide-react';
 import { api } from '../utils/api';
 
@@ -406,6 +407,8 @@ export default function StockDashboard({ products, onRefresh }: StockDashboardPr
       acc.outOfStockCount += 1;
     } else if (stockQty <= minStock) {
       acc.lowStockCount += 1;
+    } else {
+      acc.goodStockCount += 1;
     }
 
     return acc;
@@ -414,7 +417,8 @@ export default function StockDashboard({ products, onRefresh }: StockDashboardPr
     totalCost: 0,
     totalRetailVal: 0,
     lowStockCount: 0,
-    outOfStockCount: 0
+    outOfStockCount: 0,
+    goodStockCount: 0
   });
 
   const latentProfit = stats.totalRetailVal - stats.totalCost;
@@ -534,23 +538,35 @@ export default function StockDashboard({ products, onRefresh }: StockDashboardPr
           </div>
         </div>
 
-        {/* Alertas Críticas */}
+        {/* Estado del Catálogo */}
         <div className="card" style={{ padding: '20px', display: 'flex', alignItems: 'center', gap: '16px', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', boxShadow: 'var(--shadow-sm)' }}>
           <div style={{ 
-            backgroundColor: (stats.lowStockCount > 0 || stats.outOfStockCount > 0) ? 'rgba(245, 158, 11, 0.08)' : 'var(--bg-app)', 
+            backgroundColor: 'rgba(59, 130, 246, 0.08)', 
             padding: '12px', 
             borderRadius: '10px', 
-            color: (stats.lowStockCount > 0 || stats.outOfStockCount > 0) ? 'var(--color-warning)' : 'var(--text-muted)' 
+            color: '#3B82F6' 
           }}>
-            <AlertTriangle size={24} />
+            <Database size={24} />
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Productos Críticos</span>
-            <span style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)', marginTop: '2px' }}>
-              {stats.outOfStockCount} <span style={{ fontSize: '0.8rem', color: 'var(--color-danger)', fontWeight: 600 }}>Agotados</span>
-              <span style={{ margin: '0 4px', color: 'var(--text-muted)' }}>|</span>
-              {stats.lowStockCount} <span style={{ fontSize: '0.8rem', color: 'var(--color-warning)', fontWeight: 600 }}>Bajos</span>
+          <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
+            <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Catálogo de Productos</span>
+            <span style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text-primary)', marginTop: '2px' }}>
+              {filteredProducts.length === products.length ? (
+                products.length
+              ) : (
+                <span>{filteredProducts.length} <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 500 }}>de {products.length}</span></span>
+              )}
+              <span style={{ fontSize: '0.8rem', fontWeight: 500, color: 'var(--text-secondary)', marginLeft: '6px' }}>
+                items
+              </span>
             </span>
+            <div style={{ display: 'flex', gap: '8px', fontSize: '11px', marginTop: '4px', flexWrap: 'wrap' }}>
+              <span style={{ color: 'var(--color-success)', fontWeight: 600 }}>{stats.goodStockCount} Bien</span>
+              <span style={{ color: 'var(--text-muted)' }}>•</span>
+              <span style={{ color: 'var(--color-warning)', fontWeight: 600 }}>{stats.lowStockCount} Bajos</span>
+              <span style={{ color: 'var(--text-muted)' }}>•</span>
+              <span style={{ color: 'var(--color-danger)', fontWeight: 600 }}>{stats.outOfStockCount} Agotados</span>
+            </div>
           </div>
         </div>
       </div>
