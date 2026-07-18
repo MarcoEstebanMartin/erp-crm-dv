@@ -287,6 +287,28 @@ export async function receivePurchaseOrder(req: AuthenticatedRequest, res: Respo
 
 
 /**
+ * Retorna las variaciones de búsqueda para palabras clave comunes y sus abreviaturas en base de datos
+ */
+function getSearchVariations(word: string): string[] {
+  const upper = word.toUpperCase();
+  const variations = [upper];
+  
+  if (upper === 'QUESO') {
+    variations.push('Q.', 'Q ', 'Q-');
+  } else if (upper === 'DULCE' || upper === 'LECHE') {
+    variations.push('DDL', 'D.L.');
+  } else if (upper === 'MANTECA') {
+    variations.push('MANTEC');
+  } else if (upper === 'YOGUR') {
+    variations.push('YOG', 'YOGT');
+  } else if (upper === 'CLASICO') {
+    variations.push('CLAS', 'CLASSIC');
+  }
+  
+  return variations;
+}
+
+/**
  * Normaliza textos eliminando acentos y expandiendo abreviaturas comunes de alimentos/bebidas (Q., D.L., etc.)
  */
 function normalizeText(text: string): string {
@@ -408,12 +430,14 @@ async function findMatchedProduct(
     if (words.length > 0) {
       const queryWords = words.slice(0, 3);
       
-      // Consultamos los candidatos en base de datos.
+      // Consultamos los candidatos en base de datos soportando variaciones de abreviaturas
       const partialQuery = queryWords.slice(0, 2);
       const candidateProducts = await prisma.product.findMany({
         where: {
           AND: partialQuery.map(word => ({
-            name: { contains: word, mode: 'insensitive' }
+            OR: getSearchVariations(word).map(variation => ({
+              name: { contains: variation, mode: 'insensitive' }
+            }))
           }))
         }
       });
