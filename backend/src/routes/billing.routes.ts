@@ -3,6 +3,7 @@ import {
   getSalesInvoices,
   getSupplierInvoices,
   createSupplierInvoice,
+  deleteSupplierInvoice,
   getTaxWithholdings,
   createTaxWithholding,
 } from '../controllers/billing.controller';
@@ -18,6 +19,7 @@ router.use(authenticateJWT);
 router.get('/sales', requireRole([Role.ADMIN, Role.FACTURACION]), getSalesInvoices);
 router.get('/purchases', requireRole([Role.ADMIN, Role.FACTURACION]), getSupplierInvoices);
 router.post('/purchases', requireRole([Role.ADMIN, Role.FACTURACION]), createSupplierInvoice);
+router.delete('/purchases/:id', requireRole([Role.ADMIN, Role.FACTURACION]), deleteSupplierInvoice);
 
 router.get('/tax-withholdings', requireRole([Role.ADMIN, Role.FACTURACION]), getTaxWithholdings);
 router.post('/tax-withholdings', requireRole([Role.ADMIN, Role.FACTURACION]), createTaxWithholding);

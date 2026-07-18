@@ -377,3 +377,87 @@ export async function createTaxWithholding(req: AuthenticatedRequest, res: Respo
     });
   }
 }
+
+/**
+ * Eliminar / Anular una factura de compra y revertir su impacto
+ */
+export async function deleteSupplierInvoice(req: AuthenticatedRequest, res: Response): Promise<void> {
+  const { id } = req.params;
+  const userId = req.user?.id;
+
+  try {
+    const invoiceId = Number(id);
+    
+    // 1. Obtener la factura
+    const invoice = await prisma.supplierInvoice.findUnique({
+      where: { id: invoiceId },
+      include: { persona: true }
+    });
+
+    if (!invoice) {
+      res.status(404).json({
+        status: 'error',
+        message: 'Factura de compra no encontrada.',
+      });
+      return;
+    }
+
+    // 2. Si ya tiene pagos aplicados (no está PENDING o paidAmount > 0), bloquear
+    if (invoice.status !== 'PENDING' || Number(invoice.paidAmount) > 0) {
+      res.status(400).json({
+        status: 'error',
+        message: 'No se puede eliminar una factura que ya ha sido saldada o pagada parcialmente. Anule los pagos asociados primero.',
+      });
+      return;
+    }
+
+    // 3. Ejecutar transacción de eliminación
+    await prisma.$transaction(async (tx) => {
+      // Revertir Cuenta Corriente del Proveedor
+      // Sumamos al balance del proveedor (restando la deuda que le habíamos restado)
+      await tx.persona.update({
+        where: { id: invoice.personaId },
+        data: {
+          outstandingBalance: {
+            increment: Number(invoice.totalAmount)
+          }
+        }
+      });
+
+      // Borrar las retenciones/percepciones fiscales asociadas al comprobante y proveedor
+      await tx.taxWithholding.deleteMany({
+        where: {
+          personaId: invoice.personaId,
+          number: invoice.invoiceNumber,
+          type: 'PERCEPCION_SUFRIDA'
+        }
+      });
+
+      // Borrar la factura de compra de la base de datos
+      await tx.supplierInvoice.delete({
+        where: { id: invoiceId }
+      });
+    });
+
+    if (userId) {
+      await logAudit({
+        userId,
+        action: 'DELETE_SUPPLIER_INVOICE',
+        entityType: 'SupplierInvoice',
+        entityId: invoiceId,
+        oldValues: invoice,
+      });
+    }
+
+    res.status(200).json({
+      status: 'success',
+      message: 'Factura de compra eliminada/anulada con éxito. El saldo de cuenta corriente y retenciones fueron revertidos.'
+    });
+  } catch (error: any) {
+    console.error('Error al eliminar factura de compra:', error);
+    res.status(500).json({
+      status: 'error',
+      message: error.message || 'Error al eliminar el comprobante de compra.'
+    });
+  }
+}
