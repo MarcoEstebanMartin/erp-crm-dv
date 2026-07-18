@@ -424,6 +424,48 @@ export async function deleteSupplierInvoice(req: AuthenticatedRequest, res: Resp
         }
       });
 
+      // Revertir Movimientos de Stock y Lotes si existen
+      const refId = `INV-${invoiceId}`;
+      const stockMovements = await tx.stockMovement.findMany({
+        where: { referenceId: refId }
+      });
+
+      for (const movement of stockMovements) {
+        // Restar del stock general del producto
+        await tx.product.update({
+          where: { id: movement.productId },
+          data: {
+            stock: {
+              decrement: movement.quantity
+            }
+          }
+        });
+
+        // Restar del lote correspondiente (el nro de lote coincide con el nro de factura)
+        const lot = await tx.productLot.findFirst({
+          where: {
+            productId: movement.productId,
+            lotNumber: invoice.invoiceNumber
+          }
+        });
+
+        if (lot) {
+          await tx.productLot.update({
+            where: { id: lot.id },
+            data: {
+              stock: {
+                decrement: movement.quantity
+              }
+            }
+          });
+        }
+
+        // Eliminar movimiento de stock
+        await tx.stockMovement.delete({
+          where: { id: movement.id }
+        });
+      }
+
       // Borrar las retenciones/percepciones fiscales asociadas al comprobante y proveedor
       await tx.taxWithholding.deleteMany({
         where: {
