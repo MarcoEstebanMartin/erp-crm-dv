@@ -1090,3 +1090,223 @@ tr:hover td {
   box-shadow: 0 10px 20px rgba(0, 0, 0, 0.04);
   border-color: #cbd5e1;
 }
+
+/* ==========================================================================
+   ESTILOS WMS Y DEPOSITOS OPTIMIZADOS (ERP-CRM DV)
+   ========================================================================== */
+
+/* Sub-navegación interna de depósito */
+.subtabs-nav {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 8px;
+}
+
+.subtab-btn {
+  padding: 8px 16px;
+  font-size: 0.88rem;
+  font-weight: 500;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: var(--transition-fast);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.subtab-btn:hover {
+  background-color: var(--accent-bg-light);
+  color: var(--text-primary);
+}
+
+.subtab-btn.active {
+  background-color: var(--accent-color);
+  color: #ffffff;
+  font-weight: 600;
+}
+
+/* WMS Map Styles */
+.wms-container {
+  display: grid;
+  grid-template-columns: 1.8fr 1fr;
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+@media (max-width: 1024px) {
+  .wms-container {
+    grid-template-columns: 1fr;
+  }
+}
+
+.wms-map-card {
+  padding: 20px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+}
+
+.wms-info-card {
+  padding: 20px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+}
+
+.wms-svg-wrapper {
+  position: relative;
+  width: 100%;
+  border-radius: var(--radius-sm);
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  padding: 10px;
+}
+
+.wms-zone {
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.wms-zone:hover {
+  fill-opacity: 0.85;
+  filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1));
+}
+
+.wms-zone.active {
+  stroke: var(--accent-color);
+  stroke-width: 3px;
+  stroke-dasharray: 4 2;
+  filter: drop-shadow(0 0 8px rgba(0,0,0,0.15));
+}
+
+.wms-zone-title {
+  font-size: 11px;
+  font-weight: bold;
+  pointer-events: none;
+  user-select: none;
+}
+
+.wms-zone-subtitle {
+  font-size: 9px;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* Semáforo de vencimientos */
+.expiry-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.expiry-critical {
+  background-color: var(--color-danger);
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.5);
+}
+
+.expiry-warning {
+  background-color: var(--color-warning);
+  box-shadow: 0 0 8px rgba(245, 158, 11, 0.5);
+}
+
+.expiry-normal {
+  background-color: var(--color-success);
+}
+
+/* Estilos de Impresión de Etiquetas */
+@media print {
+  body.printing-labels {
+    background: white !important;
+    color: black !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+  
+  body.printing-labels .no-print {
+    display: none !important;
+  }
+  
+  body.printing-labels .print-only-layout {
+    display: block !important;
+  }
+  
+  .label-print-page {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 15px !important;
+    padding: 10px !important;
+    page-break-inside: avoid;
+  }
+  
+  .label-print-card {
+    border: 2px solid #000000 !important;
+    padding: 16px !important;
+    border-radius: 8px !important;
+    background: #ffffff !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+    min-height: 190px !important;
+    page-break-inside: avoid !important;
+    font-family: 'Courier New', monospace !important;
+  }
+}
+
+.label-print-card-screen {
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
+  padding: 16px;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 180px;
+  font-family: monospace;
+  position: relative;
+  transition: var(--transition-medium);
+}
+
+.label-print-card-screen:hover {
+  border-color: var(--accent-color);
+}
+
+/* Planificador de compras */
+.replenishment-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 20px;
+  margin-top: 10px;
+}
+
+.provider-card {
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--bg-card);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  transition: var(--transition-medium);
+}
+
+.provider-card:hover {
+  border-color: #cbd5e1;
+}
+
+.provider-card-header {
+  padding: 14px 18px;
+  background-color: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
