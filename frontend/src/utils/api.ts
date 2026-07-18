@@ -26,7 +26,10 @@ async function request(path: string, options: RequestInit = {}) {
 
   const json = await response.json();
   if (json.status === 'error') {
-    throw new Error(json.message);
+    const details = Array.isArray(json.errors)
+      ? ': ' + json.errors.map((e: any) => `${e.field.replace('body.', '')} (${e.message})`).join(', ')
+      : '';
+    throw new Error(`${json.message}${details}`);
   }
   return json.data;
 }
