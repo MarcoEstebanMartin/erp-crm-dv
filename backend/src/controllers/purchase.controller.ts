@@ -572,7 +572,7 @@ export async function uploadDocument(req: AuthenticatedRequest, res: Response): 
  * Confirmar el documento procesado e inyectar stock
  */
 export async function confirmDocument(req: AuthenticatedRequest, res: Response): Promise<void> {
-  const { providerId, documentType, documentNumber, issueDate, items, netAmount, taxAmount, percepcionAmount, totalAmount, billingType } = req.body;
+  const { providerId, documentType, documentNumber, issueDate, items, netAmount, taxAmount, percepcionAmount, percepcionIvaAmount, percepcionJurisdiction, totalAmount, billingType } = req.body;
   const userId = req.user?.id;
 
   if (!providerId || !items || items.length === 0) {
@@ -588,16 +588,24 @@ export async function confirmDocument(req: AuthenticatedRequest, res: Response):
       if (documentType.startsWith('FACTURA')) {
         // Crear SupplierInvoice
         const invoiceDate = new Date(issueDate || Date.now());
+        
+        // Obtener el plazo de pago del proveedor para calcular el vencimiento real
+        const provider = await tx.persona.findUnique({
+          where: { id: Number(providerId) }
+        });
+        const termDays = provider?.paymentTermDays ?? 30;
+
         const invoice = await tx.supplierInvoice.create({
           data: {
             personaId: providerId,
             invoiceNumber: documentNumber || `AI-${Date.now()}`,
             invoiceType: documentType,
             issueDate: invoiceDate,
-            dueDate: new Date(invoiceDate.getTime() + 30 * 24 * 3600 * 1000), // 30 días de plazo por defecto
+            dueDate: new Date(invoiceDate.getTime() + termDays * 24 * 3600 * 1000),
             netAmount: Number(netAmount || 0),
             taxAmount: Number(taxAmount || 0),
             percepcionAmount: Number(percepcionAmount || 0),
+            percepcionIvaAmount: Number(percepcionIvaAmount || 0),
             totalAmount: Number(totalAmount || 0),
             status: 'PENDING',
             paidAmount: 0.00,
@@ -607,16 +615,32 @@ export async function confirmDocument(req: AuthenticatedRequest, res: Response):
         createdId = invoice.id;
         refId = `INV-${invoice.id}`;
 
-        // Crear TaxWithholding para las percepciones si existen
-        if (percepcionAmount > 0) {
+        // Crear TaxWithholding para percepciones de IIBB (Ingresos Brutos) si existen
+        if (Number(percepcionAmount || 0) > 0) {
           await tx.taxWithholding.create({
             data: {
               type: 'PERCEPCION_SUFRIDA',
-              taxType: 'IIBB', // Por defecto, se podría ajustar en el front
+              taxType: 'IIBB',
               personaId: providerId,
-              number: documentNumber,
-              date: new Date(issueDate || Date.now()),
+              number: documentNumber || `INV-${invoice.id}`,
+              date: invoiceDate,
               amount: Number(percepcionAmount),
+              jurisdiction: percepcionJurisdiction || null,
+            }
+          });
+        }
+
+        // Crear TaxWithholding para percepciones de IVA si existen
+        if (Number(percepcionIvaAmount || 0) > 0) {
+          await tx.taxWithholding.create({
+            data: {
+              type: 'PERCEPCION_SUFRIDA',
+              taxType: 'IVA',
+              personaId: providerId,
+              number: documentNumber || `INV-${invoice.id}`,
+              date: invoiceDate,
+              amount: Number(percepcionIvaAmount),
+              jurisdiction: null,
             }
           });
         }
