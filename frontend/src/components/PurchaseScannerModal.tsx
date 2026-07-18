@@ -196,9 +196,9 @@ export const PurchaseScannerModal: React.FC<PurchaseScannerModalProps> = ({
         backgroundColor: 'var(--bg-card)',
         borderRadius: '16px',
         border: '1px solid var(--border-color)',
-        width: '100%',
-        maxWidth: '1200px',
-        height: '90vh',
+        width: '96vw',
+        maxWidth: '1600px',
+        height: '94vh',
         display: 'flex',
         flexDirection: 'column',
         boxShadow: '0 25px 50px -12px rgba(0,0,0,0.15)',
@@ -293,8 +293,8 @@ export const PurchaseScannerModal: React.FC<PurchaseScannerModalProps> = ({
           
           {/* Left Panel: Preview or Instructions */}
           <div style={{
-            width: '50%',
-            padding: '24px',
+            width: '58%',
+            padding: '20px',
             borderRight: '1px solid var(--border-color)',
             backgroundColor: 'var(--bg-app)',
             overflowY: 'auto',
@@ -306,11 +306,11 @@ export const PurchaseScannerModal: React.FC<PurchaseScannerModalProps> = ({
             {previewUrl ? (
               isPdf ? (
                 <iframe
-                  src={previewUrl}
+                  src={`${previewUrl}#toolbar=0&navpanes=0`}
                   title="Vista previa del documento PDF"
                   style={{
                     width: '100%',
-                    height: '75vh',
+                    height: '80vh',
                     border: '1px solid var(--border-color)',
                     borderRadius: '12px',
                     boxShadow: 'var(--shadow-lg)',
@@ -323,7 +323,7 @@ export const PurchaseScannerModal: React.FC<PurchaseScannerModalProps> = ({
                   alt="Vista previa del documento" 
                   style={{
                     maxWidth: '100%',
-                    maxHeight: '70vh',
+                    maxHeight: '78vh',
                     objectFit: 'contain',
                     borderRadius: '12px',
                     boxShadow: 'var(--shadow-lg)',
@@ -363,7 +363,7 @@ export const PurchaseScannerModal: React.FC<PurchaseScannerModalProps> = ({
 
           {/* Right Panel: Data Validation */}
           <div className="custom-scrollbar" style={{
-            width: '50%',
+            width: '42%',
             padding: '24px',
             backgroundColor: '#FFFFFF',
             overflowY: 'auto',
