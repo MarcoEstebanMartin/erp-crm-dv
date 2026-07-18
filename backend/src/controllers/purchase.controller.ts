@@ -286,6 +286,142 @@ export async function receivePurchaseOrder(req: AuthenticatedRequest, res: Respo
 }
 
 /**
+ * Función auxiliar para realizar una vinculación inteligente de productos del proveedor con el catálogo local
+ */
+async function findMatchedProduct(
+  providerId: number | null, 
+  item: { code: string | null; description: string },
+  providerName: string | null
+): Promise<{ matchedProduct: any; matchMethod: string }> {
+  let matchedProduct = null;
+  let matchMethod = 'NONE';
+
+  // 1. Intentar matchear por código de mapeo previo si tenemos el proveedor
+  if (providerId && item.code) {
+    const mapping = await prisma.providerProductMapping.findFirst({
+      where: {
+        providerId,
+        providerCode: String(item.code)
+      },
+      include: { product: true }
+    });
+    if (mapping) {
+      return { matchedProduct: mapping.product, matchMethod: 'PREVIOUS_MAPPING' };
+    }
+  }
+
+  // 2. Intentar matchear por SKU o Barcode exacto usando el código extraído
+  if (item.code) {
+    const cleanCode = String(item.code).trim();
+    matchedProduct = await prisma.product.findFirst({
+      where: {
+        OR: [
+          { sku: cleanCode },
+          { barcode: cleanCode }
+        ]
+      }
+    });
+    if (matchedProduct) {
+      return { matchedProduct, matchMethod: 'CODE_MATCH' };
+    }
+  }
+
+  // 3. Intentar matchear por coincidencia en descripción
+  if (item.description) {
+    // 3a. Coincidencia exacta de la descripción
+    matchedProduct = await prisma.product.findFirst({
+      where: {
+        name: { contains: item.description, mode: 'insensitive' }
+      }
+    });
+    if (matchedProduct) {
+      return { matchedProduct, matchMethod: 'DESCRIPTION_EXACT' };
+    }
+
+    // Limpiar palabras comunes y unidades para buscar por palabras clave
+    const words = item.description
+      .split(/\s+/)
+      .map(w => w.trim().toUpperCase())
+      .filter(w => w.length > 2 && !['CON', 'DEL', 'POR', 'CONTRAS', 'PARA', 'GRS', 'KGS', 'LTS', 'X250', 'X500', 'X400', 'X1KG', '250GR', '500GR', '1KG', 'CLASICO', 'CLÁSICO'].includes(w));
+
+    // Si tenemos proveedor, primero priorizamos productos que pertenecen a este proveedor
+    if (providerId && words.length > 0) {
+      const providerProducts = await prisma.product.findMany({
+        where: { providerId },
+      });
+
+      // Buscar el producto que tenga más coincidencia de palabras del ítem
+      let bestMatch = null;
+      let maxMatchesCount = 0;
+      for (const prod of providerProducts) {
+        let matchesCount = 0;
+        const prodNameUpper = prod.name.toUpperCase();
+        for (const word of words) {
+          if (prodNameUpper.includes(word)) {
+            matchesCount++;
+          }
+        }
+        if (matchesCount > maxMatchesCount) {
+          maxMatchesCount = matchesCount;
+          bestMatch = prod;
+        }
+      }
+      
+      const minRequired = Math.min(2, words.length);
+      if (bestMatch && maxMatchesCount >= minRequired) {
+        return { matchedProduct: bestMatch, matchMethod: 'DESCRIPTION_PARTIAL' };
+      }
+    }
+
+    // 3b. Búsqueda por palabras clave del proveedor en la descripción del producto general
+    let cleanProvName = '';
+    if (providerName) {
+      cleanProvName = providerName
+        .split(/\s+/)
+        .map(w => w.replace(/[^a-zA-Z]/g, '').toUpperCase())
+        .filter(w => w.length > 2 && w !== 'SRL' && w !== 'SA' && w !== 'SH' && w !== 'LTDA')[0] || '';
+    }
+
+    if (words.length > 0) {
+      const queryWords = words.slice(0, 3);
+      
+      const candidateProducts = await prisma.product.findMany({
+        where: {
+          AND: queryWords.map(word => ({
+            name: { contains: word, mode: 'insensitive' }
+          }))
+        }
+      });
+
+      if (candidateProducts.length > 0) {
+        if (cleanProvName) {
+          const brandMatch = candidateProducts.find(p => p.name.toUpperCase().includes(cleanProvName));
+          if (brandMatch) {
+            return { matchedProduct: brandMatch, matchMethod: 'DESCRIPTION_PARTIAL' };
+          }
+        }
+        return { matchedProduct: candidateProducts[0], matchMethod: 'DESCRIPTION_PARTIAL' };
+      }
+    }
+
+    // 3c. Fallback clásico de 2 primeras palabras
+    if (words.length > 0) {
+      const queryWordsStr = words.slice(0, 2).join(' ');
+      matchedProduct = await prisma.product.findFirst({
+        where: {
+          name: { contains: queryWordsStr, mode: 'insensitive' }
+        }
+      });
+      if (matchedProduct) {
+        return { matchedProduct, matchMethod: 'DESCRIPTION_PARTIAL' };
+      }
+    }
+  }
+
+  return { matchedProduct: null, matchMethod: 'NONE' };
+}
+
+/**
  * Endpoint para subir un documento (imagen/pdf) y procesarlo con IA
  */
 export async function uploadDocument(req: AuthenticatedRequest, res: Response): Promise<void> {
@@ -345,66 +481,13 @@ export async function uploadDocument(req: AuthenticatedRequest, res: Response): 
 
     const providerId = matchedProvider ? matchedProvider.id : null;
 
-    // Intentar matchear productos con mapeos previos, SKU/código de barras o descripción
+    // Intentar matchear productos con mapeos previos, SKU/código de barras o descripción inteligente
     const enrichedItems = await Promise.all(extractedData.items.map(async (item) => {
-      let matchedProduct = null;
-      let matchMethod = 'NONE';
-
-      // 1. Intentar matchear por código de mapeo previo si tenemos el proveedor
-      if (providerId && item.code) {
-        const mapping = await prisma.providerProductMapping.findFirst({
-          where: {
-            providerId,
-            providerCode: String(item.code)
-          },
-          include: { product: true }
-        });
-        if (mapping) {
-          matchedProduct = mapping.product;
-          matchMethod = 'PREVIOUS_MAPPING';
-        }
-      }
-
-      // 2. Intentar matchear por SKU o Barcode exacto usando el código extraído
-      if (!matchedProduct && item.code) {
-        const cleanCode = String(item.code).trim();
-        matchedProduct = await prisma.product.findFirst({
-          where: {
-            OR: [
-              { sku: cleanCode },
-              { barcode: cleanCode }
-            ]
-          }
-        });
-        if (matchedProduct) {
-          matchMethod = 'CODE_MATCH';
-        }
-      }
-
-      // 3. Intentar matchear por coincidencia en descripción
-      if (!matchedProduct && item.description) {
-        const words = item.description.split(/\s+/).filter(w => w.length > 2);
-        
-        matchedProduct = await prisma.product.findFirst({
-          where: {
-            name: { contains: item.description, mode: 'insensitive' }
-          }
-        });
-        
-        if (matchedProduct) {
-          matchMethod = 'DESCRIPTION_EXACT';
-        } else if (words.length > 0) {
-          const queryWords = words.slice(0, 2).join(' ');
-          matchedProduct = await prisma.product.findFirst({
-            where: {
-              name: { contains: queryWords, mode: 'insensitive' }
-            }
-          });
-          if (matchedProduct) {
-            matchMethod = 'DESCRIPTION_PARTIAL';
-          }
-        }
-      }
+      const { matchedProduct, matchMethod } = await findMatchedProduct(
+        providerId,
+        item,
+        matchedProvider ? matchedProvider.name : null
+      );
 
       return {
         ...item,
@@ -708,63 +791,13 @@ export async function processLocalFile(req: AuthenticatedRequest, res: Response)
 
     const providerId = matchedProvider ? matchedProvider.id : null;
 
-    // Intentar matchear productos con mapeos previos, SKU/código de barras o descripción
+    // Intentar matchear productos con mapeos previos, SKU/código de barras o descripción inteligente
     const enrichedItems = await Promise.all(extractedData.items.map(async (item) => {
-      let matchedProduct = null;
-      let matchMethod = 'NONE';
-
-      if (providerId && item.code) {
-        const mapping = await prisma.providerProductMapping.findFirst({
-          where: {
-            providerId,
-            providerCode: String(item.code)
-          },
-          include: { product: true }
-        });
-        if (mapping) {
-          matchedProduct = mapping.product;
-          matchMethod = 'PREVIOUS_MAPPING';
-        }
-      }
-
-      if (!matchedProduct && item.code) {
-        const cleanCode = String(item.code).trim();
-        matchedProduct = await prisma.product.findFirst({
-          where: {
-            OR: [
-              { sku: cleanCode },
-              { barcode: cleanCode }
-            ]
-          }
-        });
-        if (matchedProduct) {
-          matchMethod = 'CODE_MATCH';
-        }
-      }
-
-      if (!matchedProduct && item.description) {
-        const words = item.description.split(/\s+/).filter(w => w.length > 2);
-        
-        matchedProduct = await prisma.product.findFirst({
-          where: {
-            name: { contains: item.description, mode: 'insensitive' }
-          }
-        });
-        
-        if (matchedProduct) {
-          matchMethod = 'DESCRIPTION_EXACT';
-        } else if (words.length > 0) {
-          const queryWords = words.slice(0, 2).join(' ');
-          matchedProduct = await prisma.product.findFirst({
-            where: {
-              name: { contains: queryWords, mode: 'insensitive' }
-            }
-          });
-          if (matchedProduct) {
-            matchMethod = 'DESCRIPTION_PARTIAL';
-          }
-        }
-      }
+      const { matchedProduct, matchMethod } = await findMatchedProduct(
+        providerId,
+        item,
+        matchedProvider ? matchedProvider.name : null
+      );
 
       return {
         ...item,
