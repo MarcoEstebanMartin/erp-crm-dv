@@ -269,31 +269,11 @@ export const PurchaseScannerModal: React.FC<PurchaseScannerModalProps> = ({
                   }} 
                 />
               )
-            ) : selectedLocalFile ? (
-              <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <div style={{
-                  width: '80px',
-                  height: '80px',
-                  backgroundColor: 'rgba(227, 6, 19, 0.05)',
-                  border: '1px solid rgba(227, 6, 19, 0.1)',
-                  borderRadius: '16px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  margin: '0 auto'
-                }}>
-                  <FileText size={40} style={{ color: 'var(--color-corp-red)' }} />
-                </div>
-                <div>
-                  <h4 style={{ color: 'var(--text-primary)', fontWeight: 600, fontSize: '18px', margin: 0 }}>{selectedLocalFile}</h4>
-                  <p style={{ color: 'var(--text-secondary)', fontSize: '13px', marginTop: '4px' }}>Archivo de servidor cargado para análisis IA</p>
-                </div>
-              </div>
             ) : (
               <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '16px', maxWidth: '320px', color: 'var(--text-secondary)' }}>
                 <HelpCircle size={48} style={{ color: 'var(--text-muted)', margin: '0 auto' }} />
                 <p style={{ fontSize: '14px', lineHeight: '1.5' }}>
-                  Seleccione un archivo de la carpeta de servidor arriba, o suba uno nuevo utilizando el botón "Escanear Factura" en el panel principal.
+                  Suba un nuevo documento de factura o remito utilizando el botón "Escanear Factura" en el panel principal.
                 </p>
               </div>
             )}
@@ -330,7 +310,7 @@ export const PurchaseScannerModal: React.FC<PurchaseScannerModalProps> = ({
                   <p style={{ color: 'var(--text-secondary)', fontSize: '13px', marginTop: '4px', maxWidth: '360px' }}>{errorMsg}</p>
                 </div>
                 <button 
-                  onClick={() => file ? processUploadedDocument(file) : selectedLocalFile && processLocalDocument(selectedLocalFile)} 
+                  onClick={() => file && processUploadedDocument(file)} 
                   style={{
                     padding: '8px 16px',
                     backgroundColor: 'var(--accent-bg-light)',
