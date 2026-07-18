@@ -91,6 +91,7 @@ model Persona {
   zipCode            String?
   phone              String?
   email              String?
+  rubro              String?
   
   // Roles de Persona
   isClient           Boolean       @default(true)

@@ -431,7 +431,9 @@ export default function ComprasDashboard() {
         creditLimit: 0,
         priceList: 'A',
         discount: 0,
-        paymentTermDays: 30
+        paymentTermDays: 30,
+        rubro: '',
+        contacts: []
       }
     });
   };
@@ -440,7 +442,11 @@ export default function ComprasDashboard() {
     setProviderModal({
       open: true,
       mode: 'edit',
-      data: { ...p }
+      data: { 
+        ...p,
+        rubro: p.rubro || '',
+        contacts: Array.isArray(p.contacts) ? p.contacts : []
+      }
     });
   };
 
@@ -956,36 +962,87 @@ export default function ComprasDashboard() {
             <table>
               <thead>
                 <tr>
-                  <th>Nombre Comercial / Razón Social</th>
-                  <th>CUIT</th>
-                  <th>Dirección / Localidad</th>
-                  <th>Contacto / WhatsApp</th>
-                  <th>Acciones</th>
+                  <th>Proveedor / Razón Social</th>
+                  <th>Rubro / Marcas Provistas</th>
+                  <th>Contactos y Vendedores</th>
+                  <th style={{ width: '100px' }}>Acciones</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredProviders.length === 0 ? (
-                  <tr><td colSpan={5} style={{ textAlign: 'center' }}>No se encontraron proveedores.</td></tr>
+                  <tr><td colSpan={4} style={{ textAlign: 'center' }}>No se encontraron proveedores.</td></tr>
                 ) : (
                   filteredProviders.map(p => (
                     <tr key={p.id}>
                       <td>
-                        <div style={{ fontWeight: 600 }}>{p.name}</div>
-                        <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>{p.email || 'Sin Correo'}</div>
+                        <div style={{ fontWeight: 600, fontSize: '0.88rem', color: 'var(--text-primary)' }}>{p.name}</div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                          📍 {p.address ? `${p.address} (${p.city || 'S/D'})` : 'Sin Dirección'}
+                        </div>
+                        <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '2px', fontFamily: 'monospace' }}>
+                          {p.cuit ? `CUIT: ${p.cuit}` : 'Sin CUIT'}{p.email ? ` | ✉️ ${p.email}` : ''}
+                        </div>
                       </td>
-                      <td style={{ fontFamily: 'monospace' }}>{p.cuit}</td>
-                      <td>{p.address ? `${p.address} (${p.city || 'S/D'})` : 'Sin Dirección'}</td>
                       <td>
-                        {p.phone ? (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <span>{p.phone}</span>
-                            <a href={getWhatsAppLink(p.phone)} target="_blank" rel="noopener noreferrer" title="WhatsApp Proveedor" style={{ display: 'inline-flex', alignItems: 'center' }}>
-                              <svg viewBox="0 0 24 24" width="14" height="14" fill="#25D366">
-                                <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.513 2.262 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.724-1.455L0 24zm6.59-4.846c1.6.95 3.188 1.449 4.825 1.451 5.436 0 9.86-4.37 9.863-9.755.002-2.61-1.01-5.063-2.85-6.908-1.839-1.844-4.286-2.86-6.903-2.861-5.441 0-9.863 4.37-9.866 9.756-.001 1.748.469 3.456 1.36 5.01L1.932 20.17l4.715-1.016zM17.47 15.3c-.3-.15-1.775-.875-2.05-1.05-.275-.1-.475-.15-.675.15-.2.3-.775 1.05-.95 1.25-.175.2-.35.225-.65.075-.3-.15-1.263-.465-2.403-1.485-.888-.795-1.487-1.77-1.663-2.07-.176-.3-.019-.462.13-.61.135-.133.3-.35.45-.525.15-.175.2-.3.3-.5.1-.2.05-.375-.025-.525-.075-.15-.675-1.625-.925-2.225-.244-.589-.491-.51-.675-.52-.175-.01-.375-.01-.575-.01-.2 0-.525.075-.8 1.05-.275.975-1.05 2.1-1.275 2.55-.225.45-.05.875.1 1.05.887 1.02 2.222 1.944 3.9 2.52.27.093.536.14.79.165.37.037.706.024.97-.015.295-.044.875-.36 1 .71.125.35.125.65.063.8-.062.15-.325.29-1 .15z"/>
-                              </svg>
-                            </a>
-                          </div>
-                        ) : 'S/D'}
+                        {p.rubro ? (
+                          <span style={{ 
+                            backgroundColor: 'rgba(227, 6, 19, 0.05)', 
+                            color: 'var(--color-corp-red)', 
+                            padding: '4px 8px', 
+                            borderRadius: '6px', 
+                            fontSize: '0.78rem',
+                            fontWeight: 500,
+                            border: '1px solid rgba(227, 6, 19, 0.1)',
+                            display: 'inline-block'
+                          }}>
+                            {p.rubro}
+                          </span>
+                        ) : (
+                          <span style={{ color: 'var(--text-muted)', fontSize: '0.78rem', fontStyle: 'italic' }}>Sin especificar</span>
+                        )}
+                      </td>
+                      <td>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                          {Array.isArray(p.contacts) && p.contacts.length > 0 ? (
+                            p.contacts.map((c: any, idx: number) => (
+                              <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: '1px', padding: '4px 8px', backgroundColor: '#fcfcfc', border: '1px solid var(--border-color)', borderRadius: '6px' }}>
+                                <div style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-primary)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                  <span>{c.name}</span>
+                                  {c.role && <span style={{ fontSize: '0.68rem', fontWeight: 400, color: 'var(--text-muted)', backgroundColor: 'var(--bg-app)', padding: '1px 4px', borderRadius: '4px' }}>{c.role}</span>}
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.74rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                                  {c.phone && (
+                                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                                      📞 {c.phone}
+                                      <a href={getWhatsAppLink(c.phone)} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignSelf: 'center' }}>
+                                        <svg viewBox="0 0 24 24" width="12" height="12" fill="#25D366">
+                                          <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.513 2.262 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.724-1.455L0 24zm6.59-4.846c1.6.95 3.188 1.449 4.825 1.451 5.436 0 9.86-4.37 9.863-9.755.002-2.61-1.01-5.063-2.85-6.908-1.839-1.844-4.286-2.86-6.903-2.861-5.441 0-9.863 4.37-9.866 9.756-.001 1.748.469 3.456 1.36 5.01L1.932 20.17l4.715-1.016zM17.47 15.3c-.3-.15-1.775-.875-2.05-1.05-.275-.1-.475-.15-.675.15-.2.3-.775 1.05-.95 1.25-.175.2-.35.225-.65.075-.3-.15-1.263-.465-2.403-1.485-.888-.795-1.487-1.77-1.663-2.07-.176-.3-.019-.462.13-.61.135-.133.3-.35.45-.525.15-.175.2-.3.3-.5.1-.2.05-.375-.025-.525-.075-.15-.675-1.625-.925-2.225-.244-.589-.491-.51-.675-.52-.175-.01-.375-.01-.575-.01-.2 0-.525.075-.8 1.05-.275.975-1.05 2.1-1.275 2.55-.225.45-.05.875.1 1.05.887 1.02 2.222 1.944 3.9 2.52.27.093.536.14.79.165.37.037.706.024.97-.015.295-.044.875-.36 1 .71.125.35.125.65.063.8-.062.15-.325.29-1 .15z"/>
+                                        </svg>
+                                      </a>
+                                    </span>
+                                  )}
+                                  {c.email && <span>✉️ {c.email}</span>}
+                                </div>
+                              </div>
+                            ))
+                          ) : p.phone || p.email ? (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                              {p.phone && (
+                                <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                  📞 {p.phone}
+                                  <a href={getWhatsAppLink(p.phone)} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignSelf: 'center' }}>
+                                    <svg viewBox="0 0 24 24" width="12" height="12" fill="#25D366">
+                                      <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.513 2.262 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.724-1.455L0 24zm6.59-4.846c1.6.95 3.188 1.449 4.825 1.451 5.436 0 9.86-4.37 9.863-9.755.002-2.61-1.01-5.063-2.85-6.908-1.839-1.844-4.286-2.86-6.903-2.861-5.441 0-9.863 4.37-9.866 9.756-.001 1.748.469 3.456 1.36 5.01L1.932 20.17l4.715-1.016zM17.47 15.3c-.3-.15-1.775-.875-2.05-1.05-.275-.1-.475-.15-.675.15-.2.3-.775 1.05-.95 1.25-.175.2-.35.225-.65.075-.3-.15-1.263-.465-2.403-1.485-.888-.795-1.487-1.77-1.663-2.07-.176-.3-.019-.462.13-.61.135-.133.3-.35.45-.525.15-.175.2-.3.3-.5.1-.2.05-.375-.025-.525-.075-.15-.675-1.625-.925-2.225-.244-.589-.491-.51-.675-.52-.175-.01-.375-.01-.575-.01-.2 0-.525.075-.8 1.05-.275.975-1.05 2.1-1.275 2.55-.225.45-.05.875.1 1.05.887 1.02 2.222 1.944 3.9 2.52.27.093.536.14.79.165.37.037.706.024.97-.015.295-.044.875-.36 1 .71.125.35.125.65.063.8-.062.15-.325.29-1 .15z"/>
+                                    </svg>
+                                  </a>
+                                </span>
+                              )}
+                              {p.email && <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>✉️ {p.email}</span>}
+                            </div>
+                          ) : (
+                            <span style={{ color: 'var(--text-muted)', fontSize: '0.78rem', fontStyle: 'italic' }}>Sin datos de contacto</span>
+                          )}
+                        </div>
                       </td>
                       <td>
                         <button 
@@ -1560,23 +1617,35 @@ export default function ComprasDashboard() {
           ==================================================================== */}
       {providerModal && (
         <div className="modal-overlay">
-          <div className="modal-content" style={{ maxWidth: '520px' }}>
+          <div className="modal-content" style={{ maxWidth: '600px' }}>
             <div className="modal-header">
               <h3>{providerModal.mode === 'create' ? 'Registrar Nuevo Proveedor' : 'Editar Proveedor'}</h3>
               <button className="btn btn-ghost" style={{ padding: '4px' }} onClick={() => setProviderModal(null)}><X size={18} /></button>
             </div>
             
             <form onSubmit={handleProviderSubmit}>
-              <div className="form-group">
-                <label>Razón Social / Nombre Comercial (Obligatorio)</label>
-                <input 
-                  type="text" 
-                  className="input" 
-                  placeholder="ej: Distribuidora Alimentos S.A." 
-                  value={providerModal.data.name || ''} 
-                  onChange={(e) => setProviderModal(prev => prev ? { ...prev, data: { ...prev.data, name: e.target.value } } : null)}
-                  required
-                />
+              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '12px' }}>
+                <div className="form-group">
+                  <label>Razón Social / Nombre Comercial (Obligatorio)</label>
+                  <input 
+                    type="text" 
+                    className="input" 
+                    placeholder="ej: Distribuidora Alimentos S.A." 
+                    value={providerModal.data.name || ''} 
+                    onChange={(e) => setProviderModal(prev => prev ? { ...prev, data: { ...prev.data, name: e.target.value } } : null)}
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Rubro / Marcas que Provee</label>
+                  <input 
+                    type="text" 
+                    className="input" 
+                    placeholder="ej: Aceites Natura" 
+                    value={providerModal.data.rubro || ''} 
+                    onChange={(e) => setProviderModal(prev => prev ? { ...prev, data: { ...prev.data, rubro: e.target.value } } : null)}
+                  />
+                </div>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
@@ -1591,7 +1660,7 @@ export default function ComprasDashboard() {
                   />
                 </div>
                 <div className="form-group">
-                  <label>Teléfono de Contacto</label>
+                  <label>Teléfono Principal</label>
                   <input 
                     type="text" 
                     className="input" 
@@ -1604,7 +1673,7 @@ export default function ComprasDashboard() {
 
               <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '12px' }}>
                 <div className="form-group">
-                  <label>Correo Electrónico</label>
+                  <label>Correo Electrónico Principal</label>
                   <input 
                     type="email" 
                     className="input" 
@@ -1646,6 +1715,120 @@ export default function ComprasDashboard() {
                     value={providerModal.data.city || ''} 
                     onChange={(e) => setProviderModal(prev => prev ? { ...prev, data: { ...prev.data, city: e.target.value } } : null)}
                   />
+                </div>
+              </div>
+
+              {/* Subformulario y Gestión de Contactos Adicionales */}
+              <div style={{ marginTop: '20px', borderTop: '1px solid var(--border-color)', paddingTop: '16px' }}>
+                <h4 style={{ margin: '0 0 10px 0', fontSize: '0.88rem', fontWeight: 600, color: 'var(--text-secondary)' }}>👥 Contactos Adicionales (Vendedores, Cobros, etc.)</h4>
+                
+                {/* Lista de contactos */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '12px' }}>
+                  {(!providerModal.data.contacts || providerModal.data.contacts.length === 0) ? (
+                    <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontStyle: 'italic', padding: '8px', textAlign: 'center', border: '1px dashed var(--border-color)', borderRadius: '6px' }}>
+                      No hay contactos adicionales cargados.
+                    </div>
+                  ) : (
+                    providerModal.data.contacts.map((c: any, idx: number) => (
+                      <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 12px', backgroundColor: 'var(--bg-app)', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
+                        <div style={{ fontSize: '0.78rem', color: 'var(--text-primary)' }}>
+                          <strong>{c.name}</strong> {c.role ? `(${c.role})` : ''} {c.phone ? ` - 📞 ${c.phone}` : ''} {c.email ? ` - ✉️ ${c.email}` : ''}
+                        </div>
+                        <button 
+                          type="button" 
+                          className="btn btn-ghost text-danger" 
+                          style={{ padding: '2px 6px', fontSize: '0.8rem', cursor: 'pointer' }}
+                          onClick={() => {
+                            const newContacts = [...providerModal.data.contacts];
+                            newContacts.splice(idx, 1);
+                            setProviderModal({
+                              ...providerModal,
+                              data: { ...providerModal.data, contacts: newContacts }
+                            });
+                          }}
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                {/* Agregar contacto */}
+                <div style={{ padding: '12px', border: '1px solid var(--border-color)', borderRadius: '8px', backgroundColor: '#fafafa' }}>
+                  <h5 style={{ margin: '0 0 8px 0', fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-primary)' }}>Agregar Contacto</h5>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
+                    <input 
+                      type="text" 
+                      id="new-contact-name"
+                      placeholder="Nombre (ej: Juan Pérez)" 
+                      className="input" 
+                      style={{ fontSize: '0.78rem', padding: '4px 8px', height: '30px' }}
+                    />
+                    <input 
+                      type="text" 
+                      id="new-contact-role"
+                      placeholder="Rol (ej: Vendedor, Pagos)" 
+                      className="input" 
+                      style={{ fontSize: '0.78rem', padding: '4px 8px', height: '30px' }}
+                    />
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
+                    <input 
+                      type="text" 
+                      id="new-contact-phone"
+                      placeholder="Teléfono" 
+                      className="input" 
+                      style={{ fontSize: '0.78rem', padding: '4px 8px', height: '30px' }}
+                    />
+                    <input 
+                      type="email" 
+                      id="new-contact-email"
+                      placeholder="Email" 
+                      className="input" 
+                      style={{ fontSize: '0.78rem', padding: '4px 8px', height: '30px' }}
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    style={{ padding: '4px 10px', fontSize: '0.76rem', height: '28px', display: 'block', marginLeft: 'auto', border: '1px solid var(--border-color)', backgroundColor: '#fff', cursor: 'pointer' }}
+                    onClick={() => {
+                      const nameInput = document.getElementById('new-contact-name') as HTMLInputElement;
+                      const roleInput = document.getElementById('new-contact-role') as HTMLInputElement;
+                      const phoneInput = document.getElementById('new-contact-phone') as HTMLInputElement;
+                      const emailInput = document.getElementById('new-contact-email') as HTMLInputElement;
+
+                      if (!nameInput || !nameInput.value.trim()) {
+                        alert('El nombre del contacto es obligatorio.');
+                        return;
+                      }
+
+                      const newC = {
+                        name: nameInput.value.trim(),
+                        role: roleInput.value.trim(),
+                        phone: phoneInput.value.trim(),
+                        email: emailInput.value.trim()
+                      };
+
+                      const currentContacts = providerModal.data.contacts || [];
+                      setProviderModal({
+                        ...providerModal,
+                        data: {
+                          ...providerModal.data,
+                          contacts: [...currentContacts, newC]
+                        }
+                      });
+
+                      // Limpiar inputs
+                      nameInput.value = '';
+                      roleInput.value = '';
+                      phoneInput.value = '';
+                      emailInput.value = '';
+                    }}
+                  >
+                    + Añadir a la lista
+                  </button>
                 </div>
               </div>
 

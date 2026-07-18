@@ -103,6 +103,7 @@ export class PersonaService {
         zipCode: data.zipCode,
         phone: data.phone,
         email: data.email,
+        rubro: data.rubro || null,
         route: data.route !== undefined && data.route !== null ? standardizeRouteName(data.route) : data.route,
         isClient: data.isClient !== undefined ? Boolean(data.isClient) : true,
         isProvider: data.isProvider !== undefined ? Boolean(data.isProvider) : false,
@@ -160,6 +161,7 @@ export class PersonaService {
         zipCode: data.zipCode !== undefined ? data.zipCode : undefined,
         phone: data.phone !== undefined ? data.phone : undefined,
         email: data.email !== undefined ? data.email : undefined,
+        rubro: data.rubro !== undefined ? data.rubro : undefined,
         route: data.route !== undefined ? (data.route !== null ? standardizeRouteName(data.route) : null) : undefined,
         isClient: data.isClient !== undefined ? Boolean(data.isClient) : undefined,
         isProvider: data.isProvider !== undefined ? Boolean(data.isProvider) : undefined,
@@ -248,11 +250,26 @@ export class PersonaService {
 
       let cashDrawerId: number | null = null;
       if (paymentMethod === PaymentMethod.CASH) {
-        const activeDrawer = await tx.cashDrawer.findFirst({
+        let activeDrawer = await tx.cashDrawer.findFirst({
           where: { userId, status: 'OPEN' },
         });
-        if (!activeDrawer) throw new Error(`Debés tener la Caja Grande abierta antes de registrar cobros/pagos en efectivo.`);
-        cashDrawerId = activeDrawer.id;
+
+        if (!activeDrawer) {
+          activeDrawer = await tx.cashDrawer.findFirst({
+            where: { status: 'OPEN' }
+          });
+        }
+
+        if (!activeDrawer) {
+          const user = await tx.user.findUnique({ where: { id: userId } });
+          if (user && (user.role === Role.ADMIN || user.role === Role.FACTURACION)) {
+            cashDrawerId = null;
+          } else {
+            throw new Error(`Debés tener una Caja Abierta antes de registrar cobros/pagos en efectivo.`);
+          }
+        } else {
+          cashDrawerId = activeDrawer.id;
+        }
       }
 
       let bankAccountId: number | null = null;
