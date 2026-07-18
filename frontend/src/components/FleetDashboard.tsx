@@ -140,7 +140,19 @@ export default function FleetDashboard() {
       setBankAccounts(bankData);
       
       const supplierData = await api.getPersonas('provider');
-      setSuppliers(supplierData || []);
+      const allowedProviderNames = [
+        "Gonzalo Alvarez",
+        "Jorge Guerrera",
+        "Juan Manuel Ibarra",
+        "YPF Boxes",
+        "Juan Lopez",
+        "Ricardo Beron",
+        "Raul"
+      ];
+      const filteredSuppliers = (supplierData || []).filter((s: any) =>
+        allowedProviderNames.some(name => s.name.toLowerCase().trim() === name.toLowerCase().trim())
+      );
+      setSuppliers(filteredSuppliers);
     } catch (e) {
       console.error('Error al cargar recursos secundarios para flota:', e);
     }

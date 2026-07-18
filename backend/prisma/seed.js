@@ -121,6 +121,21 @@ async function main() {
     });
     
     console.log('🏢 Todos los clientes importados con éxito.');
+
+    // Sembrar Proveedores de Vehículos
+    console.log('🚛 Sembrando proveedores de vehículos...');
+    const vehicleProviders = [
+      { name: "Gonzalo Alvarez", isProvider: true, isClient: false, isActive: true },
+      { name: "Jorge Guerrera", isProvider: true, isClient: false, isActive: true },
+      { name: "Juan Manuel Ibarra", isProvider: true, isClient: false, isActive: true },
+      { name: "YPF Boxes", isProvider: true, isClient: false, isActive: true },
+      { name: "Juan Lopez", isProvider: true, isClient: false, isActive: true },
+      { name: "Ricardo Beron", isProvider: true, isClient: false, isActive: true },
+      { name: "Raul", isProvider: true, isClient: false, isActive: true }
+    ];
+    for (const vp of vehicleProviders) {
+      await prisma.persona.create({ data: vp });
+    }
   } else {
     console.log('⚠️ No se encontró clients_data.json en prisma folder.');
   }

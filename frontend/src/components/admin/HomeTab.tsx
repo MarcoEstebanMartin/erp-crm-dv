@@ -78,7 +78,22 @@ export default function HomeTab({
           api.getBankAccounts()
         ]);
         setVehicles(vehiclesData || []);
-        setSuppliers(suppliersData || []);
+        
+        // Filtrar proveedores de vehículos autorizados
+        const allowedProviderNames = [
+          "Gonzalo Alvarez",
+          "Jorge Guerrera",
+          "Juan Manuel Ibarra",
+          "YPF Boxes",
+          "Juan Lopez",
+          "Ricardo Beron",
+          "Raul"
+        ];
+        const filteredSuppliers = (suppliersData || []).filter((s: any) =>
+          allowedProviderNames.some(name => s.name.toLowerCase().trim() === name.toLowerCase().trim())
+        );
+        setSuppliers(filteredSuppliers);
+        
         setBankAccounts(bankAccountsData || []);
       } catch (err: any) {
         console.error('Error al cargar datos para gasto de flota:', err);
