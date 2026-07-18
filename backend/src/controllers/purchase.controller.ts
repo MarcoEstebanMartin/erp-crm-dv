@@ -285,6 +285,28 @@ export async function receivePurchaseOrder(req: AuthenticatedRequest, res: Respo
   }
 }
 
+
+/**
+ * Normaliza textos eliminando acentos y expandiendo abreviaturas comunes de alimentos/bebidas (Q., D.L., etc.)
+ */
+function normalizeText(text: string): string {
+  if (!text) return '';
+  return text.toUpperCase()
+    .normalize('NFD') // Eliminar tildes
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\bQ\./g, 'QUESO ')
+    .replace(/\bQ\b/g, 'QUESO')
+    .replace(/\bD\.L\./g, 'DULCE DE LECHE ')
+    .replace(/\bD\.L\b/g, 'DULCE DE LECHE')
+    .replace(/\bDDL\b/g, 'DULCE DE LECHE')
+    .replace(/\bMANTEC\b/g, 'MANTECA')
+    .replace(/\bYOG\b|\bYOGT\b/g, 'YOGUR')
+    .replace(/\bCLAS\b|\bCLASSIC\b/g, 'CLASICO')
+    .replace(/[^A-Z0-9\s]/g, ' ') // Quitar símbolos y puntuación restante
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 /**
  * Función auxiliar para realizar una vinculación inteligente de productos del proveedor con el catálogo local
  */
@@ -338,11 +360,12 @@ async function findMatchedProduct(
       return { matchedProduct, matchMethod: 'DESCRIPTION_EXACT' };
     }
 
+    const normItemDesc = normalizeText(item.description);
+    
     // Limpiar palabras comunes y unidades para buscar por palabras clave
-    const words = item.description
+    const words = normItemDesc
       .split(/\s+/)
-      .map(w => w.trim().toUpperCase())
-      .filter(w => w.length > 2 && !['CON', 'DEL', 'POR', 'CONTRAS', 'PARA', 'GRS', 'KGS', 'LTS', 'X250', 'X500', 'X400', 'X1KG', '250GR', '500GR', '1KG', 'CLASICO', 'CLÁSICO'].includes(w));
+      .filter(w => w.length > 2 && !['CON', 'DEL', 'POR', 'CONTRAS', 'PARA', 'GRS', 'KGS', 'LTS', 'X250', 'X500', 'X400', 'X1KG', '250GR', '500GR', '1KG'].includes(w));
 
     // Si tenemos proveedor, primero priorizamos productos que pertenecen a este proveedor
     if (providerId && words.length > 0) {
@@ -350,14 +373,14 @@ async function findMatchedProduct(
         where: { providerId },
       });
 
-      // Buscar el producto que tenga más coincidencia de palabras del ítem
+      // Buscar el producto que tenga más coincidencia de palabras del ítem (comparando nombres normalizados)
       let bestMatch = null;
       let maxMatchesCount = 0;
       for (const prod of providerProducts) {
         let matchesCount = 0;
-        const prodNameUpper = prod.name.toUpperCase();
+        const normProdName = normalizeText(prod.name);
         for (const word of words) {
-          if (prodNameUpper.includes(word)) {
+          if (normProdName.includes(word)) {
             matchesCount++;
           }
         }
@@ -385,35 +408,42 @@ async function findMatchedProduct(
     if (words.length > 0) {
       const queryWords = words.slice(0, 3);
       
+      // Consultamos los candidatos en base de datos.
+      const partialQuery = queryWords.slice(0, 2);
       const candidateProducts = await prisma.product.findMany({
         where: {
-          AND: queryWords.map(word => ({
+          AND: partialQuery.map(word => ({
             name: { contains: word, mode: 'insensitive' }
           }))
         }
       });
 
       if (candidateProducts.length > 0) {
-        if (cleanProvName) {
-          const brandMatch = candidateProducts.find(p => p.name.toUpperCase().includes(cleanProvName));
-          if (brandMatch) {
-            return { matchedProduct: brandMatch, matchMethod: 'DESCRIPTION_PARTIAL' };
+        let bestMatch = null;
+        let maxMatchesCount = 0;
+        for (const prod of candidateProducts) {
+          let matchesCount = 0;
+          const normProdName = normalizeText(prod.name);
+          for (const word of words) {
+            if (normProdName.includes(word)) {
+              matchesCount++;
+            }
+          }
+          
+          if (cleanProvName && normProdName.includes(cleanProvName)) {
+            matchesCount += 2;
+          }
+
+          if (matchesCount > maxMatchesCount) {
+            maxMatchesCount = matchesCount;
+            bestMatch = prod;
           }
         }
-        return { matchedProduct: candidateProducts[0], matchMethod: 'DESCRIPTION_PARTIAL' };
-      }
-    }
 
-    // 3c. Fallback clásico de 2 primeras palabras
-    if (words.length > 0) {
-      const queryWordsStr = words.slice(0, 2).join(' ');
-      matchedProduct = await prisma.product.findFirst({
-        where: {
-          name: { contains: queryWordsStr, mode: 'insensitive' }
+        const minRequired = Math.min(2, words.length);
+        if (bestMatch && maxMatchesCount >= minRequired) {
+          return { matchedProduct: bestMatch, matchMethod: 'DESCRIPTION_PARTIAL' };
         }
-      });
-      if (matchedProduct) {
-        return { matchedProduct, matchMethod: 'DESCRIPTION_PARTIAL' };
       }
     }
   }
