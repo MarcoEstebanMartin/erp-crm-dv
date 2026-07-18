@@ -104,7 +104,7 @@ export async function getSupplierInvoices(req: AuthenticatedRequest, res: Respon
  * Registrar un nuevo comprobante de compra (Factura de Proveedor)
  */
 export async function createSupplierInvoice(req: AuthenticatedRequest, res: Response): Promise<void> {
-  const { personaId, invoiceNumber, invoiceType, issueDate, dueDate, netAmount, taxAmount, percepcionAmount, totalAmount, billingType } = req.body;
+  const { personaId, invoiceNumber, invoiceType, issueDate, dueDate, netAmount, taxAmount, percepcionAmount, percepcionPampa, percepcionBsAs, percepcionIva, impuestosInternos, totalAmount, billingType } = req.body;
   const userId = req.user?.id;
 
   if (!personaId || !invoiceNumber || !invoiceType || !issueDate || netAmount === undefined || taxAmount === undefined || totalAmount === undefined) {
@@ -116,10 +116,34 @@ export async function createSupplierInvoice(req: AuthenticatedRequest, res: Resp
   }
 
   try {
+    // 1. Verificar si el número de factura ya existe para este proveedor (evitar duplicados)
+    const existingInvoice = await prisma.supplierInvoice.findFirst({
+      where: {
+        personaId: Number(personaId),
+        invoiceNumber,
+      },
+    });
+
+    if (existingInvoice) {
+      res.status(400).json({
+        status: 'error',
+        message: `La factura Nro ${invoiceNumber} ya se encuentra registrada para este proveedor.`,
+      });
+      return;
+    }
+
     const resolvedDueDate = dueDate ? new Date(dueDate) : new Date(new Date(issueDate).getTime() + 30 * 24 * 3600 * 1000);
 
+    const pampa = Number(percepcionPampa || 0);
+    const bsas = Number(percepcionBsAs || 0);
+    const ivaVal = Number(percepcionIva || 0);
+    const internos = Number(impuestosInternos || 0);
+
+    // Suma de IIBB es La Pampa + Bs As (o cae a percepcionAmount genérica)
+    const finalIIBB = (pampa > 0 || bsas > 0) ? (pampa + bsas) : Number(percepcionAmount || 0);
+
     const invoice = await prisma.$transaction(async (tx) => {
-      // 1. Crear la factura de compra
+      // 2. Crear la factura de compra
       const inv = await tx.supplierInvoice.create({
         data: {
           personaId: Number(personaId),
@@ -131,15 +155,15 @@ export async function createSupplierInvoice(req: AuthenticatedRequest, res: Resp
           paidAmount: 0.00,
           netAmount: Number(netAmount),
           taxAmount: Number(taxAmount),
-          percepcionAmount: Number(percepcionAmount || 0),
+          percepcionAmount: finalIIBB,
+          percepcionIvaAmount: ivaVal,
+          impuestosInternos: internos,
           totalAmount: Number(totalAmount),
           billingType: billingType || 'OFFICIAL',
         },
       });
 
-      // 2. Incrementar saldo a pagar en Cuenta Corriente del Proveedor (saldo neto negativo)
-      // En nuestro modelo: saldo negativo es a favor del proveedor (deuda nuestra con ellos)
-      // Al comprar, debemos restarle al saldo (ej: si era 0, pasa a -totalAmount)
+      // 3. Incrementar saldo a pagar en Cuenta Corriente del Proveedor (saldo neto negativo)
       await tx.persona.update({
         where: { id: Number(personaId) },
         data: {
@@ -149,9 +173,9 @@ export async function createSupplierInvoice(req: AuthenticatedRequest, res: Resp
         },
       });
 
-      // 3. Si tiene percepciones de IIBB/IVA cargadas, registrarlas en TaxWithholding
-      if (Number(percepcionAmount) > 0) {
-        const prov = await tx.persona.findUnique({ where: { id: Number(personaId) } });
+      // 4. Registrar certificaciones de retenciones/percepciones específicas si existen
+      // La Pampa IIBB
+      if (pampa > 0) {
         await tx.taxWithholding.create({
           data: {
             type: 'PERCEPCION_SUFRIDA',
@@ -159,8 +183,53 @@ export async function createSupplierInvoice(req: AuthenticatedRequest, res: Resp
             personaId: Number(personaId),
             number: invoiceNumber,
             date: new Date(issueDate),
-            amount: Number(percepcionAmount),
-            jurisdiction: prov?.address?.includes('CABA') ? 'AR-C' : 'AR-B', // Inferir jurisdicción
+            amount: pampa,
+            jurisdiction: 'AR-L',
+          },
+        });
+      }
+
+      // Bs As IIBB
+      if (bsas > 0) {
+        await tx.taxWithholding.create({
+          data: {
+            type: 'PERCEPCION_SUFRIDA',
+            taxType: 'IIBB',
+            personaId: Number(personaId),
+            number: invoiceNumber,
+            date: new Date(issueDate),
+            amount: bsas,
+            jurisdiction: 'AR-B',
+          },
+        });
+      }
+
+      // Genérica IIBB si no se enviaron separadas pero existe percepcionAmount
+      if (pampa === 0 && bsas === 0 && finalIIBB > 0) {
+        await tx.taxWithholding.create({
+          data: {
+            type: 'PERCEPCION_SUFRIDA',
+            taxType: 'IIBB',
+            personaId: Number(personaId),
+            number: invoiceNumber,
+            date: new Date(issueDate),
+            amount: finalIIBB,
+            jurisdiction: 'AR-B',
+          },
+        });
+      }
+
+      // IVA Percepcion RG 5329
+      if (ivaVal > 0) {
+        await tx.taxWithholding.create({
+          data: {
+            type: 'PERCEPCION_SUFRIDA',
+            taxType: 'IVA',
+            personaId: Number(personaId),
+            number: invoiceNumber,
+            date: new Date(issueDate),
+            amount: ivaVal,
+            jurisdiction: null,
           },
         });
       }

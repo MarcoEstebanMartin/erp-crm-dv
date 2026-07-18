@@ -586,6 +586,17 @@ export async function confirmDocument(req: AuthenticatedRequest, res: Response):
       let refId = '';
 
       if (documentType.startsWith('FACTURA')) {
+        // Verificar si la factura ya existe para este proveedor (evitar duplicados)
+        const existingInvoice = await tx.supplierInvoice.findFirst({
+          where: {
+            personaId: Number(providerId),
+            invoiceNumber: documentNumber || '',
+          },
+        });
+        if (existingInvoice) {
+          throw new Error(`La factura Nro ${documentNumber} ya se encuentra registrada para este proveedor.`);
+        }
+
         // Crear SupplierInvoice
         const invoiceDate = new Date(issueDate || Date.now());
         
