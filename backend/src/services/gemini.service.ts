@@ -22,7 +22,10 @@ export interface ExtractedInvoiceData {
   }>;
   netAmount: number;
   taxAmount: number;
-  percepcionAmount: number;
+  percepcionAmount: number; // Suma total de percepciones (compatible con lógica previa si fuera necesario)
+  percepcionIIBBAmount: number; // Específico de Ingresos Brutos
+  percepcionIvaAmount: number; // Específico de IVA
+  percepcionJurisdiction: string | null; // Provincia de la percepción IIBB (ej: "Buenos Aires", "CABA", etc.)
   totalAmount: number;
 }
 
@@ -67,7 +70,10 @@ export class GeminiService {
         - subtotal: Subtotal del ítem (número).
       - netAmount: Importe neto gravado (número).
       - taxAmount: Importe de IVA (número).
-      - percepcionAmount: Importe de Percepciones/Retenciones (como Perc. IVA, Perc. IIBB, etc.) (número).
+      - percepcionAmount: Importe total acumulado de todas las percepciones (número).
+      - percepcionIIBBAmount: Importe específico de la percepción de Ingresos Brutos (IIBB) sufrida (número).
+      - percepcionIvaAmount: Importe específico de la percepción de IVA sufrida (número).
+      - percepcionJurisdiction: Jurisdicción o provincia asociada a la percepción de IIBB (ej: "Buenos Aires", "CABA", "Santa Fe", "Misiones", etc.), si se indica expresamente; si no, null.
       - totalAmount: Importe total (número).
 
       Asegúrate de que todos los valores numéricos sean números y no cadenas.
