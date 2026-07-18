@@ -147,7 +147,9 @@ export const PurchaseScannerModal: React.FC<PurchaseScannerModalProps> = ({
         })),
         netAmount: Number(extractedData.netAmount),
         taxAmount: Number(extractedData.taxAmount),
-        percepcionAmount: Number(extractedData.percepcionAmount),
+        percepcionAmount: Number(extractedData.percepcionIIBBAmount || extractedData.percepcionAmount || 0),
+        percepcionIvaAmount: Number(extractedData.percepcionIvaAmount || 0),
+        percepcionJurisdiction: extractedData.percepcionJurisdiction || null,
         totalAmount: Number(extractedData.totalAmount)
       });
       onSuccess();
@@ -820,17 +822,82 @@ export const PurchaseScannerModal: React.FC<PurchaseScannerModalProps> = ({
                   <h3 style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0, marginBottom: '4px' }}>
                     Totales del Comprobante
                   </h3>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px' }}>
-                    <span style={{ color: 'var(--text-secondary)' }}>Neto Gravado</span>
-                    <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>${extractedData.netAmount}</span>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '13px', margin: '8px 0' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '10px', color: 'var(--text-secondary)', marginBottom: '4px', textTransform: 'uppercase', fontWeight: 600 }}>Neto Gravado</label>
+                      <input 
+                        type="number" 
+                        value={extractedData.netAmount ?? 0} 
+                        onChange={(e) => setExtractedData({...extractedData, netAmount: Number(e.target.value)})}
+                        style={{ width: '100%', padding: '6px 8px', fontSize: '12px', border: '1px solid var(--border-color)', borderRadius: '6px', backgroundColor: '#fff', color: 'var(--text-primary)' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '10px', color: 'var(--text-secondary)', marginBottom: '4px', textTransform: 'uppercase', fontWeight: 600 }}>IVA (21%)</label>
+                      <input 
+                        type="number" 
+                        value={extractedData.taxAmount ?? 0} 
+                        onChange={(e) => setExtractedData({...extractedData, taxAmount: Number(e.target.value)})}
+                        style={{ width: '100%', padding: '6px 8px', fontSize: '12px', border: '1px solid var(--border-color)', borderRadius: '6px', backgroundColor: '#fff', color: 'var(--text-primary)' }}
+                      />
+                    </div>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px' }}>
-                    <span style={{ color: 'var(--text-secondary)' }}>IVA (21%)</span>
-                    <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>${extractedData.taxAmount}</span>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '13px', margin: '8px 0' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '10px', color: 'var(--text-secondary)', marginBottom: '4px', textTransform: 'uppercase', fontWeight: 600 }}>Perc. IIBB (Ing. Brutos)</label>
+                      <input 
+                        type="number" 
+                        value={extractedData.percepcionIIBBAmount ?? extractedData.percepcionAmount ?? 0} 
+                        onChange={(e) => setExtractedData({
+                          ...extractedData, 
+                          percepcionIIBBAmount: Number(e.target.value),
+                          percepcionAmount: Number(e.target.value) + Number(extractedData.percepcionIvaAmount || 0)
+                        })}
+                        style={{ width: '100%', padding: '6px 8px', fontSize: '12px', border: '1px solid var(--border-color)', borderRadius: '6px', backgroundColor: '#fff', color: 'var(--text-primary)' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '10px', color: 'var(--text-secondary)', marginBottom: '4px', textTransform: 'uppercase', fontWeight: 600 }}>Jurisdicción IIBB</label>
+                      <select 
+                        value={extractedData.percepcionJurisdiction || ''} 
+                        onChange={(e) => setExtractedData({...extractedData, percepcionJurisdiction: e.target.value || null})}
+                        style={{ width: '100%', padding: '6px 8px', fontSize: '12px', border: '1px solid var(--border-color)', borderRadius: '6px', backgroundColor: '#fff', color: 'var(--text-primary)' }}
+                      >
+                        <option value="">Seleccione Prov...</option>
+                        <option value="AR-B">Buenos Aires (AR-B)</option>
+                        <option value="AR-C">CABA (AR-C)</option>
+                        <option value="AR-S">Santa Fe (AR-S)</option>
+                        <option value="AR-X">Córdoba (AR-X)</option>
+                        <option value="AR-E">Entre Ríos (AR-E)</option>
+                        <option value="AR-M">Mendoza (AR-M)</option>
+                        <option value="AR-W">Corrientes (AR-W)</option>
+                        <option value="AR-N">Misiones (AR-N)</option>
+                        <option value="AR-T">Tucumán (AR-T)</option>
+                        <option value="AR-H">Chaco (AR-H)</option>
+                        <option value="AR-P">Formosa (AR-P)</option>
+                        <option value="AR-G">Santiago del Estero (AR-G)</option>
+                      </select>
+                    </div>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px' }}>
-                    <span style={{ color: 'var(--text-secondary)' }}>Percepciones Sufridas</span>
-                    <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>${extractedData.percepcionAmount}</span>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '13px', margin: '8px 0' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '10px', color: 'var(--text-secondary)', marginBottom: '4px', textTransform: 'uppercase', fontWeight: 600 }}>Perc. IVA Sufrida</label>
+                      <input 
+                        type="number" 
+                        value={extractedData.percepcionIvaAmount ?? 0} 
+                        onChange={(e) => setExtractedData({
+                          ...extractedData, 
+                          percepcionIvaAmount: Number(e.target.value),
+                          percepcionAmount: Number(extractedData.percepcionIIBBAmount || extractedData.percepcionAmount || 0) + Number(e.target.value)
+                        })}
+                        style={{ width: '100%', padding: '6px 8px', fontSize: '12px', border: '1px solid var(--border-color)', borderRadius: '6px', backgroundColor: '#fff', color: 'var(--text-primary)' }}
+                      />
+                    </div>
+                    <div>
+                      {/* Espacio reservado */}
+                    </div>
                   </div>
                   
                   <div style={{
@@ -841,7 +908,12 @@ export const PurchaseScannerModal: React.FC<PurchaseScannerModalProps> = ({
                     alignItems: 'center'
                   }}>
                     <span style={{ color: 'var(--text-primary)', fontWeight: 600, fontSize: '14px' }}>Monto Factura</span>
-                    <span style={{ color: 'var(--color-corp-red)', fontWeight: 'bold', fontSize: '18px' }}>${extractedData.totalAmount}</span>
+                    <input 
+                      type="number" 
+                      value={extractedData.totalAmount ?? 0} 
+                      onChange={(e) => setExtractedData({...extractedData, totalAmount: Number(e.target.value)})}
+                      style={{ width: '140px', padding: '6px 10px', fontSize: '15px', fontWeight: 'bold', border: '1px solid var(--color-corp-red)', borderRadius: '6px', backgroundColor: '#fff', color: 'var(--color-corp-red)', textAlign: 'right' }}
+                    />
                   </div>
 
                   {extractedData.providerId && (
