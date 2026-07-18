@@ -1,6 +1,8 @@
 import express, { Application, Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import path from 'path';
+import fs from 'fs';
 
 // Importación de Rutas
 import authRoutes from './routes/auth.routes';
@@ -27,9 +29,27 @@ dotenv.config();
 
 const app: Application = express();
 
+// Asegurar existencia de carpetas de subida
+const uploadsDir = path.join(__dirname, '../uploads');
+const productsUploadsDir = path.join(uploadsDir, 'products');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir);
+}
+if (!fs.existsSync(productsUploadsDir)) {
+  fs.mkdirSync(productsUploadsDir);
+}
+
 // Middlewares globales
 app.use(cors());
 app.use(express.json());
+app.use('/uploads', express.static(uploadsDir, {
+  maxAge: 7 * 24 * 60 * 60 * 1000, // 7 días en milisegundos
+  cacheControl: true
+}));
+
+const archivosDir = path.join('c:', 'Users', 'Usuario', 'Desktop', 'ERP-CRM DV', 'ARCHIVOS');
+app.use('/api/purchases/files', express.static(archivosDir));
+
 
 // Montar Rutas
 app.use('/api/auth', authRoutes);
