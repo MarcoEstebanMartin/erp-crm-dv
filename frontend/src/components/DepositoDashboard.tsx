@@ -98,6 +98,7 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
 
   // --- SUB-PESTAÑAS DE DEPÓSITO Y ESTADOS WMS / REABASTECIMIENTO ---
   const [subTab, setSubTab] = useState<string>('picking');
+  const [selectedWarehouse, setSelectedWarehouse] = useState<string>('D1');
   const [selectedMapLocation, setSelectedMapLocation] = useState<string>('');
   const [allProducts, setAllProducts] = useState<any[]>([]); // Todos los productos para WMS y Reabastecimiento
   const [pendingPurchaseOrders, setPendingPurchaseOrders] = useState<any[]>([]);
@@ -105,12 +106,42 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
 
   // Estandarización de ubicaciones físicas
   const LOCATION_MAP: Record<string, { label: string; icon: string; color: string; bg: string; description: string }> = {
-    'D1-CAM1': { label: 'D1 - Cámara Grande (Frío)', icon: '❄️', color: '#007AFF', bg: 'rgba(0, 122, 255, 0.08)', description: 'Lácteos, fiambres, quesos y congelados' },
-    'D1-CAM2': { label: 'D1 - Cámara Mediana', icon: '❄️', color: '#34C759', bg: 'rgba(52, 199, 89, 0.08)', description: 'Modular de respaldo e insumos' },
-    'D1-RACK': { label: 'D1 - Racks Entrada (Pallets)', icon: '📦', color: '#8E8E93', bg: 'rgba(142, 142, 147, 0.08)', description: 'Mercadería en pallets: aceites, harinas, secos pesados' },
-    'D1-EST': { label: 'D1 - Estantería Bebidas', icon: '🍾', color: '#FF9500', bg: 'rgba(255, 149, 0, 0.08)', description: 'Bebidas blancas, licores, condimentos y sueltos' },
-    'D2-GEN': { label: 'Depósito 2 - Secos Gral', icon: '🏢', color: '#5856D6', bg: 'rgba(88, 86, 214, 0.08)', description: 'Mercadería de acopio general y cajas cerradas' },
-    'D3-ENV': { label: 'Depósito 3 - Envases', icon: '🔄', color: '#FF2D55', bg: 'rgba(255, 45, 85, 0.08)', description: 'Cajones vacíos, pallets vacíos y logística inversa' },
+    // Depósito 1 - Racks de Entrada
+    'D1-RKA-N1': { label: 'D1 - Rack A Nivel 1', icon: '📦', color: '#8E8E93', bg: 'rgba(142, 142, 147, 0.08)', description: 'Rack A, Nivel del suelo (Pallets pesados)' },
+    'D1-RKA-N2': { label: 'D1 - Rack A Nivel 2', icon: '📦', color: '#8E8E93', bg: 'rgba(142, 142, 147, 0.08)', description: 'Rack A, Nivel medio (Cajas/Pallets)' },
+    'D1-RKA-N3': { label: 'D1 - Rack A Nivel 3', icon: '📦', color: '#8E8E93', bg: 'rgba(142, 142, 147, 0.08)', description: 'Rack A, Nivel superior (Reserva / Altura)' },
+    'D1-RKB-N1': { label: 'D1 - Rack B Nivel 1', icon: '📦', color: '#8E8E93', bg: 'rgba(142, 142, 147, 0.08)', description: 'Rack B, Nivel del suelo (Pallets pesados)' },
+    'D1-RKB-N2': { label: 'D1 - Rack B Nivel 2', icon: '📦', color: '#8E8E93', bg: 'rgba(142, 142, 147, 0.08)', description: 'Rack B, Nivel medio (Cajas/Pallets)' },
+    'D1-RKB-N3': { label: 'D1 - Rack B Nivel 3', icon: '📦', color: '#8E8E93', bg: 'rgba(142, 142, 147, 0.08)', description: 'Rack B, Nivel superior (Reserva / Altura)' },
+    'D1-RACK': { label: 'D1 - Racks Entrada (Gral)', icon: '📦', color: '#8E8E93', bg: 'rgba(142, 142, 147, 0.08)', description: 'Racks de entrada general' },
+    
+    // Depósito 1 - Cámaras de Frío
+    'D1-CAM1-E1': { label: 'D1 - Cámara G. Estante 1', icon: '❄️', color: '#007AFF', bg: 'rgba(0, 122, 255, 0.08)', description: 'Cámara Grande, Estante superior (Lácteos)' },
+    'D1-CAM1-E2': { label: 'D1 - Cámara G. Estante 2', icon: '❄️', color: '#007AFF', bg: 'rgba(0, 122, 255, 0.08)', description: 'Cámara Grande, Estante inferior (Fiambres)' },
+    'D1-CAM1': { label: 'D1 - Cámara Grande (Gral)', icon: '❄️', color: '#007AFF', bg: 'rgba(0, 122, 255, 0.08)', description: 'Cámara Grande de frío general' },
+    'D1-CAM2': { label: 'D1 - Cámara Mediana', icon: '❄️', color: '#34C759', bg: 'rgba(52, 199, 89, 0.08)', description: 'Cámara Mediana (Fiambres de respaldo e insumos)' },
+    
+    // Depósito 1 - Estanterías / Góndolas
+    'D1-EST-M1': { label: 'D1 - Góndola Módulo 1', icon: '🍾', color: '#FF9500', bg: 'rgba(255, 149, 0, 0.08)', description: 'Bebidas Blancas (Gin, Vodka Sernova)' },
+    'D1-EST-M2': { label: 'D1 - Góndola Módulo 2', icon: '🍾', color: '#FF9500', bg: 'rgba(255, 149, 0, 0.08)', description: 'Licores y Aperitivos' },
+    'D1-EST-M3': { label: 'D1 - Góndola Módulo 3', icon: '🍾', color: '#FF9500', bg: 'rgba(255, 149, 0, 0.08)', description: 'Vinos y espumantes sueltos' },
+    'D1-EST-M4': { label: 'D1 - Góndola Módulo 4', icon: '🍾', color: '#FF9500', bg: 'rgba(255, 149, 0, 0.08)', description: 'Conservas y condimentos' },
+    'D1-EST': { label: 'D1 - Estanterías (Gral)', icon: '🍾', color: '#FF9500', bg: 'rgba(255, 149, 0, 0.08)', description: 'Góndolas de pasillo general' },
+    
+    // Depósito 2 - Secos General
+    'D2-RKC-N1': { label: 'D2 - Rack C Nivel 1', icon: '🏢', color: '#5856D6', bg: 'rgba(88, 86, 214, 0.08)', description: 'Depósito 2, Rack C, Nivel del suelo' },
+    'D2-RKC-N2': { label: 'D2 - Rack C Nivel 2', icon: '🏢', color: '#5856D6', bg: 'rgba(88, 86, 214, 0.08)', description: 'Depósito 2, Rack C, Nivel medio' },
+    'D2-RKC-N3': { label: 'D2 - Rack C Nivel 3', icon: '🏢', color: '#5856D6', bg: 'rgba(88, 86, 214, 0.08)', description: 'Depósito 2, Rack C, Nivel superior' },
+    'D2-RKD-N1': { label: 'D2 - Rack D Nivel 1', icon: '🏢', color: '#5856D6', bg: 'rgba(88, 86, 214, 0.08)', description: 'Depósito 2, Rack D, Nivel del suelo' },
+    'D2-RKD-N2': { label: 'D2 - Rack D Nivel 2', icon: '🏢', color: '#5856D6', bg: 'rgba(88, 86, 214, 0.08)', description: 'Depósito 2, Rack D, Nivel medio' },
+    'D2-RKD-N3': { label: 'D2 - Rack D Nivel 3', icon: '🏢', color: '#5856D6', bg: 'rgba(88, 86, 214, 0.08)', description: 'Depósito 2, Rack D, Nivel superior' },
+    'D2-GEN': { label: 'D2 - Secos General', icon: '🏢', color: '#5856D6', bg: 'rgba(88, 86, 214, 0.08)', description: 'Acopio general de mercadería seca' },
+    
+    // Depósito 3 - Envases y Logística Inversa
+    'D3-PALLETS': { label: 'D3 - Área Pallets', icon: '🔄', color: '#FF2D55', bg: 'rgba(255, 45, 85, 0.08)', description: 'Pilas de pallets de madera vacíos' },
+    'D3-CAJONES': { label: 'D3 - Área Cajones', icon: '🔄', color: '#FF2D55', bg: 'rgba(255, 45, 85, 0.08)', description: 'Cajones vacíos de cerveza/gaseosa y retornos' },
+    'D3-ENV': { label: 'D3 - Envases y Retornos (Gral)', icon: '🔄', color: '#FF2D55', bg: 'rgba(255, 45, 85, 0.08)', description: 'Depósito 3 general' },
+    
     'S/U': { label: 'Sin Ubicación', icon: '📍', color: '#8E8E93', bg: 'rgba(142, 142, 147, 0.08)', description: 'Artículos sin ubicación física asignada' }
   };
 
@@ -759,6 +790,48 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
     );
   };
 
+  // Helper para ponderar las ubicaciones físicas y trazar la ruta de picking óptima
+  const getLocationWeight = (loc: string): number => {
+    if (!loc || loc === 'S/U') return 999;
+    const cleanLoc = loc.toUpperCase().trim();
+    
+    if (cleanLoc.startsWith('D1-RKA') || cleanLoc.startsWith('D1-RKB') || cleanLoc === 'D1-RACK') {
+      return 10; // Racks entrada D1
+    }
+    if (cleanLoc.startsWith('D1-EST')) {
+      return 20; // Estanterías D1
+    }
+    if (cleanLoc.startsWith('D1-CAM2')) {
+      return 30; // Cámara Mediana D1
+    }
+    if (cleanLoc.startsWith('D1-CAM1')) {
+      return 40; // Cámara Grande D1 (Frío - al final del recorrido D1)
+    }
+    if (cleanLoc.startsWith('D2-RK') || cleanLoc === 'D2-GEN') {
+      return 50; // Depósito 2
+    }
+    if (cleanLoc.startsWith('D3-') || cleanLoc === 'D3-ENV') {
+      return 60; // Depósito 3
+    }
+    return 100; // Otras ubicaciones personalizadas
+  };
+
+  const sortItemsByOptimalRoute = (items: any[]) => {
+    return [...items].sort((a, b) => {
+      // Intentar obtener ubicación del lote o del producto
+      const locA = getProductLocation(a.product || a);
+      const locB = getProductLocation(b.product || b);
+      
+      const wA = getLocationWeight(locA);
+      const wB = getLocationWeight(locB);
+      
+      if (wA !== wB) return wA - wB;
+      
+      // Si tienen el mismo peso general, ordenar alfabéticamente por código para seguir pasillo
+      return locA.localeCompare(locB);
+    });
+  };
+
   // Agrupar y consolidar todos los artículos de los pedidos seleccionados
   const consolidatedItems = (() => {
     const itemsMap: {
@@ -790,13 +863,7 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
       });
     });
 
-    return Object.values(itemsMap).sort((a, b) => {
-      const locA = getProductLocation(a.product);
-      const locB = getProductLocation(b.product);
-      if (locA === 'S/U') return 1;
-      if (locB === 'S/U') return -1;
-      return locA.localeCompare(locB);
-    });
+    return sortItemsByOptimalRoute(Object.values(itemsMap));
   })();
 
   // Iniciar picking en lote de todos los pedidos seleccionados en estado PENDING
@@ -922,7 +989,9 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
       {(subTab === 'picking' || selectedOrder || showConsolidatedView) && (
         <div>
           {selectedOrder ? (() => {
-            const filteredItems = selectedOrder.items.filter((item: any) => selectedZone === 'ALL' || (item.product?.rubro?.pickingZone || 'CAJAS') === selectedZone);
+            const filteredItems = sortItemsByOptimalRoute(
+              selectedOrder.items.filter((item: any) => selectedZone === 'ALL' || (item.product?.rubro?.pickingZone || 'CAJAS') === selectedZone)
+            );
             const countZone = (zId: string) => {
               if (zId === 'ALL') return selectedOrder.items.length;
               return selectedOrder.items.filter((i: any) => (i.product?.rubro?.pickingZone || 'CAJAS') === zId).length;
@@ -2134,101 +2203,327 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
         <div className="wms-container">
           {/* Card del Mapa */}
           <div className="wms-map-card">
-            <h4 style={{ margin: '0 0 4px 0' }}>Layout de Distribución Física</h4>
-            <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', marginBottom: '16px' }}>
-              Seleccioná una zona en el mapa para ver qué stock hay almacenado físicamente.
-            </p>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
+              <div>
+                <h4 style={{ margin: '0 0 4px 0' }}>Layout de Distribución Física</h4>
+                <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', margin: 0 }}>
+                  Seleccioná un depósito y hacé clic en un rack, nivel o cámara de frío para consultar el stock físico.
+                </p>
+              </div>
+              <div style={{ display: 'flex', gap: '6px' }}>
+                <button 
+                  className={`btn ${selectedWarehouse === 'D1' ? 'btn-primary' : 'btn-secondary'}`}
+                  style={{ fontSize: '0.8rem', padding: '6px 12px' }}
+                  onClick={() => { setSelectedWarehouse('D1'); setSelectedMapLocation(''); }}
+                >
+                  🏢 Depósito 1
+                </button>
+                <button 
+                  className={`btn ${selectedWarehouse === 'D2' ? 'btn-primary' : 'btn-secondary'}`}
+                  style={{ fontSize: '0.8rem', padding: '6px 12px' }}
+                  onClick={() => { setSelectedWarehouse('D2'); setSelectedMapLocation(''); }}
+                >
+                  🏢 Depósito 2
+                </button>
+                <button 
+                  className={`btn ${selectedWarehouse === 'D3' ? 'btn-primary' : 'btn-secondary'}`}
+                  style={{ fontSize: '0.8rem', padding: '6px 12px' }}
+                  onClick={() => { setSelectedWarehouse('D3'); setSelectedMapLocation(''); }}
+                >
+                  🔄 Depósito 3
+                </button>
+              </div>
+            </div>
             
             <div className="wms-svg-wrapper">
-              <svg viewBox="0 0 800 450" width="100%" height="100%" style={{ maxHeight: '420px' }}>
-                {/* FONDO GENERAL */}
-                <rect x="0" y="0" width="800" height="450" fill="#f8fafc" rx="8" />
-                
-                {/* --- DEPÓSITO 1 (PRINCIPAL) --- */}
-                <rect x="20" y="30" width="530" height="390" fill="#ffffff" stroke="#cbd5e1" strokeWidth="2" rx="8" />
-                <text x="35" y="55" fill="var(--text-primary)" fontSize="14px" fontWeight="bold">🏢 DEPÓSITO 1 - PRINCIPAL</text>
-                
-                {/* Racks de Entrada (Pallets) */}
-                {(() => {
-                  const active = selectedMapLocation === 'D1-RACK';
-                  return (
-                    <g onClick={() => setSelectedMapLocation(active ? '' : 'D1-RACK')} style={{ cursor: 'pointer' }}>
-                      <rect x="40" y="80" width="160" height="110" fill={active ? 'rgba(142, 142, 147, 0.25)' : '#e2e8f0'} stroke="#94a3b8" strokeWidth={active ? 2.5 : 1} className="wms-zone" rx="4" />
-                      <line x1="50" y1="110" x2="190" y2="110" stroke="#94a3b8" strokeWidth="2" strokeDasharray="5 5" />
-                      <line x1="50" y1="140" x2="190" y2="140" stroke="#94a3b8" strokeWidth="2" strokeDasharray="5 5" />
-                      <line x1="50" y1="170" x2="190" y2="170" stroke="#94a3b8" strokeWidth="2" strokeDasharray="5 5" />
-                      <text x="50" y="100" fill="#475569" fontSize="12px" fontWeight="bold">Racks Entrada</text>
-                    </g>
-                  );
-                })()}
-                
-                {/* Cámara Grande de Frío (Derecha) */}
-                {(() => {
-                  const active = selectedMapLocation === 'D1-CAM1';
-                  return (
-                    <g onClick={() => setSelectedMapLocation(active ? '' : 'D1-CAM1')} style={{ cursor: 'pointer' }}>
-                      <rect x="340" y="80" width="190" height="170" fill={active ? 'rgba(0, 122, 255, 0.18)' : 'rgba(0, 122, 255, 0.05)'} stroke="#007AFF" strokeWidth={active ? 2.5 : 1.5} className="wms-zone" rx="4" />
-                      <text x="355" y="105" fill="#007AFF" fontSize="13px" fontWeight="bold">❄️ Cámara Grande</text>
-                      <text x="355" y="125" fill="#0056b3" fontSize="10px">Fiambres / Lácteos</text>
-                      <text x="355" y="150" fill="#007AFF" fontSize="11px" fontWeight="bold">Temp: 4.2°C</text>
-                    </g>
-                  );
-                })()}
+              {selectedWarehouse === 'D1' && (
+                <svg viewBox="0 0 800 450" width="100%" height="100%" style={{ maxHeight: '420px' }}>
+                  {/* Fondo general */}
+                  <rect x="0" y="0" width="800" height="450" fill="#f8fafc" rx="8" />
+                  
+                  {/* RACKS ENTRADA (RACK A - Arriba Izquierda) */}
+                  <g>
+                    <rect x="25" y="40" width="230" height="135" fill="#ffffff" stroke="#cbd5e1" strokeWidth="1" strokeDasharray="3 3" rx="6" />
+                    <text x="35" y="32" fill="var(--text-primary)" fontSize="11px" fontWeight="bold">📦 RACK A - ENTRADA</text>
+                    {/* Nivel 3 */}
+                    {(() => {
+                      const active = selectedMapLocation === 'D1-RKA-N3';
+                      return (
+                        <rect x="35" y="50" width="210" height="32" fill={active ? 'rgba(142, 142, 147, 0.25)' : '#ffffff'} stroke="#94a3b8" strokeWidth={active ? 2.5 : 1} style={{ cursor: 'pointer' }} onClick={() => setSelectedMapLocation(active ? '' : 'D1-RKA-N3')} rx="4" />
+                      );
+                    })()}
+                    <text x="45" y="70" fill="#475569" fontSize="10px" fontWeight="bold" style={{ pointerEvents: 'none' }}>Nivel 3 (Alto - Reserva)</text>
+                    {/* Nivel 2 */}
+                    {(() => {
+                      const active = selectedMapLocation === 'D1-RKA-N2';
+                      return (
+                        <rect x="35" y="90" width="210" height="32" fill={active ? 'rgba(142, 142, 147, 0.25)' : '#ffffff'} stroke="#94a3b8" strokeWidth={active ? 2.5 : 1} style={{ cursor: 'pointer' }} onClick={() => setSelectedMapLocation(active ? '' : 'D1-RKA-N2')} rx="4" />
+                      );
+                    })()}
+                    <text x="45" y="110" fill="#475569" fontSize="10px" fontWeight="bold" style={{ pointerEvents: 'none' }}>Nivel 2 (Medio - Cajas)</text>
+                    {/* Nivel 1 */}
+                    {(() => {
+                      const active = selectedMapLocation === 'D1-RKA-N1';
+                      return (
+                        <rect x="35" y="130" width="210" height="32" fill={active ? 'rgba(142, 142, 147, 0.25)' : '#ffffff'} stroke="#94a3b8" strokeWidth={active ? 2.5 : 1} style={{ cursor: 'pointer' }} onClick={() => setSelectedMapLocation(active ? '' : 'D1-RKA-N1')} rx="4" />
+                      );
+                    })()}
+                    <text x="45" y="150" fill="#475569" fontSize="10px" fontWeight="bold" style={{ pointerEvents: 'none' }}>Nivel 1 (Suelo - Pallets)</text>
+                  </g>
 
-                {/* Cámara Mediana (Izquierda Abajo) */}
-                {(() => {
-                  const active = selectedMapLocation === 'D1-CAM2';
-                  return (
-                    <g onClick={() => setSelectedMapLocation(active ? '' : 'D1-CAM2')} style={{ cursor: 'pointer' }}>
-                      <rect x="40" y="270" width="160" height="130" fill={active ? 'rgba(52, 199, 89, 0.18)' : 'rgba(52, 199, 89, 0.05)'} stroke="#34C759" strokeWidth={active ? 2.5 : 1.5} className="wms-zone" rx="4" />
-                      <text x="55" y="295" fill="#1e7e34" fontSize="12px" fontWeight="bold">❄️ Cámara Mediana</text>
-                      <text x="55" y="315" fill="#28a745" fontSize="10px">Insumos / Respaldo</text>
-                    </g>
-                  );
-                })()}
+                  {/* RACKS ENTRADA (RACK B - Abajo Izquierda) */}
+                  <g>
+                    <rect x="25" y="215" width="230" height="135" fill="#ffffff" stroke="#cbd5e1" strokeWidth="1" strokeDasharray="3 3" rx="6" />
+                    <text x="35" y="207" fill="var(--text-primary)" fontSize="11px" fontWeight="bold">📦 RACK B - ENTRADA</text>
+                    {/* Nivel 3 */}
+                    {(() => {
+                      const active = selectedMapLocation === 'D1-RKB-N3';
+                      return (
+                        <rect x="35" y="225" width="210" height="32" fill={active ? 'rgba(142, 142, 147, 0.25)' : '#ffffff'} stroke="#94a3b8" strokeWidth={active ? 2.5 : 1} style={{ cursor: 'pointer' }} onClick={() => setSelectedMapLocation(active ? '' : 'D1-RKB-N3')} rx="4" />
+                      );
+                    })()}
+                    <text x="45" y="245" fill="#475569" fontSize="10px" fontWeight="bold" style={{ pointerEvents: 'none' }}>Nivel 3 (Alto - Reserva)</text>
+                    {/* Nivel 2 */}
+                    {(() => {
+                      const active = selectedMapLocation === 'D1-RKB-N2';
+                      return (
+                        <rect x="35" y="265" width="210" height="32" fill={active ? 'rgba(142, 142, 147, 0.25)' : '#ffffff'} stroke="#94a3b8" strokeWidth={active ? 2.5 : 1} style={{ cursor: 'pointer' }} onClick={() => setSelectedMapLocation(active ? '' : 'D1-RKB-N2')} rx="4" />
+                      );
+                    })()}
+                    <text x="45" y="285" fill="#475569" fontSize="10px" fontWeight="bold" style={{ pointerEvents: 'none' }}>Nivel 2 (Medio - Cajas)</text>
+                    {/* Nivel 1 */}
+                    {(() => {
+                      const active = selectedMapLocation === 'D1-RKB-N1';
+                      return (
+                        <rect x="35" y="305" width="210" height="32" fill={active ? 'rgba(142, 142, 147, 0.25)' : '#ffffff'} stroke="#94a3b8" strokeWidth={active ? 2.5 : 1} style={{ cursor: 'pointer' }} onClick={() => setSelectedMapLocation(active ? '' : 'D1-RKB-N1')} rx="4" />
+                      );
+                    })()}
+                    <text x="45" y="325" fill="#475569" fontSize="10px" fontWeight="bold" style={{ pointerEvents: 'none' }}>Nivel 1 (Suelo - Pallets)</text>
+                  </g>
 
-                {/* Estantería Lateral (Bebidas) */}
-                {(() => {
-                  const active = selectedMapLocation === 'D1-EST';
-                  return (
-                    <g onClick={() => setSelectedMapLocation(active ? '' : 'D1-EST')} style={{ cursor: 'pointer' }}>
-                      <rect x="230" y="200" width="80" height="200" fill={active ? 'rgba(255, 149, 0, 0.18)' : 'rgba(255, 149, 0, 0.05)'} stroke="#FF9500" strokeWidth={active ? 2.5 : 1.5} className="wms-zone" rx="4" />
-                      <text x="240" y="225" fill="#d97706" fontSize="11px" fontWeight="bold">🍾 Góndolas</text>
-                      <text x="240" y="242" fill="#d97706" fontSize="11px" fontWeight="bold">Bebidas</text>
-                      <text x="240" y="265" fill="#b45309" fontSize="9px">Sernova, Gin</text>
-                    </g>
-                  );
-                })()}
+                  {/* ESTANTERÍAS DE PASILLO (MIDDLE - BEBIDAS/LICORES) */}
+                  <g>
+                    <rect x="290" y="40" width="160" height="370" fill="#ffffff" stroke="#cbd5e1" strokeWidth="1" strokeDasharray="3 3" rx="6" />
+                    <text x="295" y="32" fill="var(--text-primary)" fontSize="11px" fontWeight="bold">🍾 GÓNDOLAS BEBIDAS</text>
+                    
+                    {/* Modulo 1 */}
+                    {(() => {
+                      const active = selectedMapLocation === 'D1-EST-M1';
+                      return (
+                        <rect x="300" y="55" width="140" height="75" fill={active ? 'rgba(255, 149, 0, 0.18)' : 'rgba(255, 149, 0, 0.03)'} stroke="#FF9500" strokeWidth={active ? 2.5 : 1} style={{ cursor: 'pointer' }} onClick={() => setSelectedMapLocation(active ? '' : 'D1-EST-M1')} rx="4" />
+                      );
+                    })()}
+                    <text x="310" y="90" fill="#d97706" fontSize="11px" fontWeight="bold" style={{ pointerEvents: 'none' }}>Módulo 1: Gin / Vodka</text>
+                    <text x="310" y="105" fill="#b45309" fontSize="8.5px" style={{ pointerEvents: 'none' }}>Sernova, Gordon's</text>
 
-                {/* Pasillos de Maniobra / Zorras */}
-                <g style={{ pointerEvents: 'none' }}>
-                  <text x="220" y="130" fill="#94a3b8" fontSize="10px" fontStyle="italic" fontWeight="600">Corredor de Picking</text>
-                </g>
+                    {/* Modulo 2 */}
+                    {(() => {
+                      const active = selectedMapLocation === 'D1-EST-M2';
+                      return (
+                        <rect x="300" y="145" width="140" height="75" fill={active ? 'rgba(255, 149, 0, 0.18)' : 'rgba(255, 149, 0, 0.03)'} stroke="#FF9500" strokeWidth={active ? 2.5 : 1} style={{ cursor: 'pointer' }} onClick={() => setSelectedMapLocation(active ? '' : 'D1-EST-M2')} rx="4" />
+                      );
+                    })()}
+                    <text x="310" y="180" fill="#d97706" fontSize="11px" fontWeight="bold" style={{ pointerEvents: 'none' }}>Módulo 2: Licores</text>
+                    <text x="310" y="195" fill="#b45309" fontSize="8.5px" style={{ pointerEvents: 'none' }}>Fernet, Campari</text>
 
-                {/* --- DEPÓSITO 2 (SECUNDARIO) --- */}
-                {(() => {
-                  const active = selectedMapLocation === 'D2-GEN';
-                  return (
-                    <g onClick={() => setSelectedMapLocation(active ? '' : 'D2-GEN')} style={{ cursor: 'pointer' }}>
-                      <rect x="580" y="30" width="200" height="210" fill={active ? 'rgba(88, 86, 214, 0.2)' : '#ffffff'} stroke="#5856D6" strokeWidth={active ? 2.5 : 2} className="wms-zone" rx="8" />
-                      <text x="595" y="55" fill="#5856D6" fontSize="12px" fontWeight="bold">🏢 DEPÓSITO 2</text>
-                      <text x="595" y="75" fill="#4f46e5" fontSize="10px">Almacén Secos Gral</text>
-                    </g>
-                  );
-                })()}
+                    {/* Modulo 3 */}
+                    {(() => {
+                      const active = selectedMapLocation === 'D1-EST-M3';
+                      return (
+                        <rect x="300" y="235" width="140" height="75" fill={active ? 'rgba(255, 149, 0, 0.18)' : 'rgba(255, 149, 0, 0.03)'} stroke="#FF9500" strokeWidth={active ? 2.5 : 1} style={{ cursor: 'pointer' }} onClick={() => setSelectedMapLocation(active ? '' : 'D1-EST-M3')} rx="4" />
+                      );
+                    })()}
+                    <text x="310" y="270" fill="#d97706" fontSize="11px" fontWeight="bold" style={{ pointerEvents: 'none' }}>Módulo 3: Vinos</text>
+                    <text x="310" y="285" fill="#b45309" fontSize="8.5px" style={{ pointerEvents: 'none' }}>Espumantes sueltos</text>
 
-                {/* --- DEPÓSITO 3 (ENVASES/RETORNOS) --- */}
-                {(() => {
-                  const active = selectedMapLocation === 'D3-ENV';
-                  return (
-                    <g onClick={() => setSelectedMapLocation(active ? '' : 'D3-ENV')} style={{ cursor: 'pointer' }}>
-                      <rect x="580" y="260" width="200" height="160" fill={active ? 'rgba(255, 45, 85, 0.2)' : '#ffffff'} stroke="#FF2D55" strokeWidth={active ? 2.5 : 2} className="wms-zone" rx="8" />
-                      <text x="595" y="285" fill="#FF2D55" fontSize="12px" fontWeight="bold">🔄 DEPÓSITO 3</text>
-                      <text x="595" y="305" fill="#e11d48" fontSize="10px">Envases y Retornos</text>
-                    </g>
-                  );
-                })()}
-              </svg>
+                    {/* Modulo 4 */}
+                    {(() => {
+                      const active = selectedMapLocation === 'D1-EST-M4';
+                      return (
+                        <rect x="300" y="325" width="140" height="75" fill={active ? 'rgba(255, 149, 0, 0.18)' : 'rgba(255, 149, 0, 0.03)'} stroke="#FF9500" strokeWidth={active ? 2.5 : 1} style={{ cursor: 'pointer' }} onClick={() => setSelectedMapLocation(active ? '' : 'D1-EST-M4')} rx="4" />
+                      );
+                    })()}
+                    <text x="310" y="360" fill="#d97706" fontSize="11px" fontWeight="bold" style={{ pointerEvents: 'none' }}>Módulo 4: Conservas</text>
+                    <text x="310" y="375" fill="#b45309" fontSize="8.5px" style={{ pointerEvents: 'none' }}>Salsas y condimentos</text>
+                  </g>
+
+                  {/* CÁMARAS DE FRÍO (RIGHT SIDE) */}
+                  <g>
+                    {/* Cámara Grande */}
+                    <rect x="490" y="40" width="285" height="230" fill="#ffffff" stroke="#007AFF" strokeWidth="1.5" rx="8" />
+                    <text x="495" y="32" fill="#007AFF" fontSize="11px" fontWeight="bold">❄️ CÁMARA GRANDE DE FRÍO (4.2°C)</text>
+
+                    {/* Estante 1 - Lácteos */}
+                    {(() => {
+                      const active = selectedMapLocation === 'D1-CAM1-E1';
+                      return (
+                        <rect x="502" y="55" width="260" height="90" fill={active ? 'rgba(0, 122, 255, 0.18)' : 'rgba(0, 122, 255, 0.03)'} stroke="#007AFF" strokeWidth={active ? 2.5 : 1} style={{ cursor: 'pointer' }} onClick={() => setSelectedMapLocation(active ? '' : 'D1-CAM1-E1')} rx="4" />
+                      );
+                    })()}
+                    <text x="515" y="95" fill="#007AFF" fontSize="12px" fontWeight="bold" style={{ pointerEvents: 'none' }}>Estante 1: Lácteos / Yogur</text>
+                    <text x="515" y="115" fill="#0056b3" fontSize="9px" style={{ pointerEvents: 'none' }}>Cadena crítica (Queso crema, postres)</text>
+                    
+                    {/* Estante 2 - Fiambres */}
+                    {(() => {
+                      const active = selectedMapLocation === 'D1-CAM1-E2';
+                      return (
+                        <rect x="502" y="165" width="260" height="90" fill={active ? 'rgba(0, 122, 255, 0.18)' : 'rgba(0, 122, 255, 0.03)'} stroke="#007AFF" strokeWidth={active ? 2.5 : 1} style={{ cursor: 'pointer' }} onClick={() => setSelectedMapLocation(active ? '' : 'D1-CAM1-E2')} rx="4" />
+                      );
+                    })()}
+                    <text x="515" y="205" fill="#007AFF" fontSize="12px" fontWeight="bold" style={{ pointerEvents: 'none' }}>Estante 2: Fiambres / Salamines</text>
+                    <text x="515" y="225" fill="#0056b3" fontSize="9px" style={{ pointerEvents: 'none' }}>Hormas de queso tybo, jamones</text>
+                  </g>
+
+                  {/* Cámara Mediana */}
+                  {(() => {
+                    const active = selectedMapLocation === 'D1-CAM2';
+                    return (
+                      <g onClick={() => setSelectedMapLocation(active ? '' : 'D1-CAM2')} style={{ cursor: 'pointer' }}>
+                        <rect x="490" y="290" width="285" height="120" fill={active ? 'rgba(52, 199, 89, 0.18)' : 'rgba(52, 199, 89, 0.03)'} stroke="#34C759" strokeWidth={active ? 2.5 : 1.5} rx="8" />
+                        <text x="505" y="325" fill="#1e7e34" fontSize="13px" fontWeight="bold">❄️ Cámara Mediana (Respaldo)</text>
+                        <text x="505" y="350" fill="#28a745" fontSize="10px">Insumos de armado y fiambres en reserva</text>
+                        <text x="505" y="375" fill="#1e7e34" fontSize="11px" fontWeight="bold">Temp: 5.0°C</text>
+                      </g>
+                    );
+                  })()}
+
+                  {/* Pasillos de Maniobra */}
+                  <g style={{ pointerEvents: 'none' }}>
+                    <text x="35" y="370" fill="#94a3b8" fontSize="10px" fontStyle="italic" fontWeight="600">Corredor de Entrada (Zorras)</text>
+                    <text x="110" y="395" fill="#94a3b8" fontSize="18px" fontWeight="bold">⬇️ ENTRADA</text>
+                  </g>
+                </svg>
+              )}
+
+              {selectedWarehouse === 'D2' && (
+                <svg viewBox="0 0 800 450" width="100%" height="100%" style={{ maxHeight: '420px' }}>
+                  <rect x="0" y="0" width="800" height="450" fill="#f8fafc" rx="8" />
+                  <text x="30" y="35" fill="var(--text-primary)" fontSize="14px" fontWeight="bold">🏢 DEPÓSITO 2 - ACOPIO DE SECOS GENERAL</text>
+                  
+                  {/* Rack C (Izquierda) */}
+                  <g>
+                    <rect x="45" y="60" width="320" height="320" fill="#ffffff" stroke="#5856D6" strokeWidth="1" strokeDasharray="3 3" rx="6" />
+                    <text x="55" y="52" fill="#5856D6" fontSize="12px" fontWeight="bold">🏢 RACK C - SECOS</text>
+                    {/* Nivel 3 */}
+                    {(() => {
+                      const active = selectedMapLocation === 'D2-RKC-N3';
+                      return (
+                        <rect x="60" y="80" width="290" height="80" fill={active ? 'rgba(88, 86, 214, 0.25)' : '#ffffff'} stroke="#5856D6" strokeWidth={active ? 2.5 : 1} style={{ cursor: 'pointer' }} onClick={() => setSelectedMapLocation(active ? '' : 'D2-RKC-N3')} rx="4" />
+                      );
+                    })()}
+                    <text x="80" y="125" fill="#4f46e5" fontSize="12px" fontWeight="bold" style={{ pointerEvents: 'none' }}>Nivel 3 (Reserva / Altura)</text>
+                    {/* Nivel 2 */}
+                    {(() => {
+                      const active = selectedMapLocation === 'D2-RKC-N2';
+                      return (
+                        <rect x="60" y="180" width="290" height="80" fill={active ? 'rgba(88, 86, 214, 0.25)' : '#ffffff'} stroke="#5856D6" strokeWidth={active ? 2.5 : 1} style={{ cursor: 'pointer' }} onClick={() => setSelectedMapLocation(active ? '' : 'D2-RKC-N2')} rx="4" />
+                      );
+                    })()}
+                    <text x="80" y="225" fill="#4f46e5" fontSize="12px" fontWeight="bold" style={{ pointerEvents: 'none' }}>Nivel 2 (Medio - Cajas de Acopio)</text>
+                    {/* Nivel 1 */}
+                    {(() => {
+                      const active = selectedMapLocation === 'D2-RKC-N1';
+                      return (
+                        <rect x="60" y="280" width="290" height="80" fill={active ? 'rgba(88, 86, 214, 0.25)' : '#ffffff'} stroke="#5856D6" strokeWidth={active ? 2.5 : 1} style={{ cursor: 'pointer' }} onClick={() => setSelectedMapLocation(active ? '' : 'D2-RKC-N1')} rx="4" />
+                      );
+                    })()}
+                    <text x="80" y="325" fill="#4f46e5" fontSize="12px" fontWeight="bold" style={{ pointerEvents: 'none' }}>Nivel 1 (Suelo - Pallets Pesados)</text>
+                  </g>
+
+                  {/* Rack D (Derecha) */}
+                  <g>
+                    <rect x="435" y="60" width="320" height="320" fill="#ffffff" stroke="#5856D6" strokeWidth="1" strokeDasharray="3 3" rx="6" />
+                    <text x="445" y="52" fill="#5856D6" fontSize="12px" fontWeight="bold">🏢 RACK D - SECOS</text>
+                    {/* Nivel 3 */}
+                    {(() => {
+                      const active = selectedMapLocation === 'D2-RKD-N3';
+                      return (
+                        <rect x="450" y="80" width="290" height="80" fill={active ? 'rgba(88, 86, 214, 0.25)' : '#ffffff'} stroke="#5856D6" strokeWidth={active ? 2.5 : 1} style={{ cursor: 'pointer' }} onClick={() => setSelectedMapLocation(active ? '' : 'D2-RKD-N3')} rx="4" />
+                      );
+                    })()}
+                    <text x="470" y="125" fill="#4f46e5" fontSize="12px" fontWeight="bold" style={{ pointerEvents: 'none' }}>Nivel 3 (Reserva / Altura)</text>
+                    {/* Nivel 2 */}
+                    {(() => {
+                      const active = selectedMapLocation === 'D2-RKD-N2';
+                      return (
+                        <rect x="450" y="180" width="290" height="80" fill={active ? 'rgba(88, 86, 214, 0.25)' : '#ffffff'} stroke="#5856D6" strokeWidth={active ? 2.5 : 1} style={{ cursor: 'pointer' }} onClick={() => setSelectedMapLocation(active ? '' : 'D2-RKD-N2')} rx="4" />
+                      );
+                    })()}
+                    <text x="470" y="225" fill="#4f46e5" fontSize="12px" fontWeight="bold" style={{ pointerEvents: 'none' }}>Nivel 2 (Medio - Cajas de Acopio)</text>
+                    {/* Nivel 1 */}
+                    {(() => {
+                      const active = selectedMapLocation === 'D2-RKD-N1';
+                      return (
+                        <rect x="450" y="280" width="290" height="80" fill={active ? 'rgba(88, 86, 214, 0.25)' : '#ffffff'} stroke="#5856D6" strokeWidth={active ? 2.5 : 1} style={{ cursor: 'pointer' }} onClick={() => setSelectedMapLocation(active ? '' : 'D2-RKD-N1')} rx="4" />
+                      );
+                    })()}
+                    <text x="470" y="325" fill="#4f46e5" fontSize="12px" fontWeight="bold" style={{ pointerEvents: 'none' }}>Nivel 1 (Suelo - Pallets Pesados)</text>
+                  </g>
+
+                  {/* Área de Suelo General */}
+                  {(() => {
+                    const active = selectedMapLocation === 'D2-GEN';
+                    return (
+                      <rect x="45" y="395" width="710" height="35" fill={active ? 'rgba(88, 86, 214, 0.15)' : 'rgba(88, 86, 214, 0.02)'} stroke="#5856D6" strokeWidth={active ? 2 : 1} style={{ cursor: 'pointer' }} onClick={() => setSelectedMapLocation(active ? '' : 'D2-GEN')} rx="4" />
+                    );
+                  })()}
+                  <text x="310" y="417" fill="#5856D6" fontSize="11px" fontWeight="bold" style={{ pointerEvents: 'none' }}>📍 Pasillo / Acopio Libre en Suelo General</text>
+                </svg>
+              )}
+
+              {selectedWarehouse === 'D3' && (
+                <svg viewBox="0 0 800 450" width="100%" height="100%" style={{ maxHeight: '420px' }}>
+                  <rect x="0" y="0" width="800" height="450" fill="#f8fafc" rx="8" />
+                  <text x="30" y="35" fill="var(--text-primary)" fontSize="14px" fontWeight="bold">🔄 DEPÓSITO 3 - RETORNABLES Y LOGÍSTICA INVERSA</text>
+
+                  {/* Pilas de Pallets Vacíos */}
+                  {(() => {
+                    const active = selectedMapLocation === 'D3-PALLETS';
+                    return (
+                      <g onClick={() => setSelectedMapLocation(active ? '' : 'D3-PALLETS')} style={{ cursor: 'pointer' }}>
+                        <rect x="50" y="70" width="330" height="260" fill={active ? 'rgba(255, 45, 85, 0.18)' : '#ffffff'} stroke="#FF2D55" strokeWidth={active ? 2.5 : 1.5} rx="8" />
+                        <text x="70" y="110" fill="#e11d48" fontSize="14px" fontWeight="bold">🪵 Pilas de Pallets Madera Vacíos</text>
+                        <text x="70" y="135" fill="#f43f5e" fontSize="11px">Stock de pallets limpios para carga de camiones</text>
+                        {/* Ilustrar pallets apilados */}
+                        <line x1="70" y1="180" x2="350" y2="180" stroke="#cbd5e1" strokeWidth="6" />
+                        <line x1="70" y1="210" x2="350" y2="210" stroke="#cbd5e1" strokeWidth="6" />
+                        <line x1="70" y1="240" x2="350" y2="240" stroke="#cbd5e1" strokeWidth="6" />
+                        <line x1="70" y1="270" x2="350" y2="270" stroke="#cbd5e1" strokeWidth="6" />
+                      </g>
+                    );
+                  })()}
+
+                  {/* Pilas de Cajones Vacíos */}
+                  {(() => {
+                    const active = selectedMapLocation === 'D3-CAJONES';
+                    return (
+                      <g onClick={() => setSelectedMapLocation(active ? '' : 'D3-CAJONES')} style={{ cursor: 'pointer' }}>
+                        <rect x="420" y="70" width="330" height="260" fill={active ? 'rgba(255, 45, 85, 0.18)' : '#ffffff'} stroke="#FF2D55" strokeWidth={active ? 2.5 : 1.5} rx="8" />
+                        <text x="440" y="110" fill="#e11d48" fontSize="14px" fontWeight="bold">🍺 Cajones y Envases de Vidrio Retornables</text>
+                        <text x="440" y="135" fill="#f43f5e" fontSize="11px">Cajones vacíos listos para devolución a fábrica</text>
+                        {/* Ilustrar cajones */}
+                        <rect x="450" y="180" width="60" height="40" fill="#cbd5e1" rx="4" />
+                        <rect x="520" y="180" width="60" height="40" fill="#cbd5e1" rx="4" />
+                        <rect x="590" y="180" width="60" height="40" fill="#cbd5e1" rx="4" />
+                        <rect x="660" y="180" width="60" height="40" fill="#cbd5e1" rx="4" />
+                        <rect x="450" y="240" width="60" height="40" fill="#cbd5e1" rx="4" />
+                        <rect x="520" y="240" width="60" height="40" fill="#cbd5e1" rx="4" />
+                        <rect x="590" y="240" width="60" height="40" fill="#cbd5e1" rx="4" />
+                        <rect x="660" y="240" width="60" height="40" fill="#cbd5e1" rx="4" />
+                      </g>
+                    );
+                  })()}
+
+                  {/* Zona General */}
+                  {(() => {
+                    const active = selectedMapLocation === 'D3-ENV';
+                    return (
+                      <rect x="50" y="360" width="700" height="50" fill={active ? 'rgba(255, 45, 85, 0.15)' : 'rgba(255, 45, 85, 0.02)'} stroke="#FF2D55" strokeWidth={active ? 2 : 1} style={{ cursor: 'pointer' }} onClick={() => setSelectedMapLocation(active ? '' : 'D3-ENV')} rx="4" />
+                    );
+                  })()}
+                  <text x="290" y="390" fill="#FF2D55" fontSize="12px" fontWeight="bold" style={{ pointerEvents: 'none' }}>🔄 Andén de Carga y Descarga de Envases</text>
+                </svg>
+              )}
             </div>
           </div>
           
