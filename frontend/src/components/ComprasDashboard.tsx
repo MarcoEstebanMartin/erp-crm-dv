@@ -28,6 +28,7 @@ export default function ComprasDashboard() {
   const [supplierQuery, setSupplierQuery] = useState('');
   const [supplierStartDate, setSupplierStartDate] = useState('');
   const [supplierEndDate, setSupplierEndDate] = useState('');
+  const [branchFilter, setBranchFilter] = useState<'ALL' | 'OFFICIAL' | 'INTERNAL'>('ALL');
   const [providerSearch, setProviderSearch] = useState('');
 
   // Modales de Órdenes
@@ -107,6 +108,11 @@ export default function ComprasDashboard() {
     setErrorMsg(null);
   }, [activeSubTab]);
 
+  const filteredInvoices = supplierInvoices.filter(inv => {
+    if (branchFilter === 'ALL') return true;
+    return inv.billingType === branchFilter;
+  });
+
   // --- MÉTRIAS DE COMPRAS Y DEUDAS ---
   const supplierMetrics = useMemo(() => {
     let totalDeuda = 0;
@@ -121,7 +127,7 @@ export default function ComprasDashboard() {
     in7Days.setDate(today.getDate() + 7);
     in7Days.setHours(23, 59, 59, 999);
 
-    supplierInvoices.forEach((inv) => {
+    filteredInvoices.forEach((inv) => {
       if (inv.status === 'PAID') return;
 
       const total = Number(inv.totalAmount || 0);
@@ -142,7 +148,7 @@ export default function ComprasDashboard() {
     });
 
     return { totalDeuda, vencidasCount, totalVencidas, proximasCount, totalProximas };
-  }, [supplierInvoices]);
+  }, [filteredInvoices]);
 
   // --- CARRITO ORDEN DE COMPRA ---
   const handleSelectProduct = (prod: any) => {
@@ -381,7 +387,8 @@ export default function ComprasDashboard() {
         email: '',
         creditLimit: 0,
         priceList: 'A',
-        discount: 0
+        discount: 0,
+        paymentTermDays: 30
       }
     });
   };
@@ -788,6 +795,16 @@ export default function ComprasDashboard() {
                     value={supplierEndDate}
                     onChange={(e) => setSupplierEndDate(e.target.value)}
                   />
+                  <select
+                    className="input"
+                    style={{ fontSize: '0.8rem', padding: '6px 12px', width: '150px', backgroundColor: '#fff', color: 'var(--text-primary)' }}
+                    value={branchFilter}
+                    onChange={(e) => setBranchFilter(e.target.value as any)}
+                  >
+                    <option value="ALL">🏢 Sucursal (Todas)</option>
+                    <option value="OFFICIAL">Sucursal A (Oficial)</option>
+                    <option value="INTERNAL">Sucursal X (Interno)</option>
+                  </select>
                 </div>
                 <button className="btn btn-primary" onClick={() => setShowSupplierModal(true)}>
                   <Plus size={16} />
@@ -803,26 +820,39 @@ export default function ComprasDashboard() {
                     <th>Fecha Emisión</th>
                     <th>Fecha Vto.</th>
                     <th>Tipo</th>
+                    <th>Sucursal</th>
                     <th>Nro Comprobante</th>
                     <th>Proveedor</th>
                     <th>Neto Gravado</th>
                     <th>IVA</th>
                     <th>Total Factura</th>
-                    <th>Amortizado</th>
+                    <th>Pagado</th>
                     <th>Estado</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {supplierInvoices.length === 0 ? (
-                    <tr><td colSpan={10} style={{ textAlign: 'center' }}>No se encontraron comprobantes de compra.</td></tr>
+                  {filteredInvoices.length === 0 ? (
+                    <tr><td colSpan={11} style={{ textAlign: 'center' }}>No se encontraron comprobantes de compra.</td></tr>
                   ) : (
-                    supplierInvoices.map((inv) => {
+                    filteredInvoices.map((inv) => {
                       const isOverdue = inv.dueDate && new Date(inv.dueDate) < new Date() && inv.status !== 'PAID';
                       return (
                         <tr key={inv.id} style={isOverdue ? { backgroundColor: '#FFF5F5' } : undefined}>
                           <td>{new Date(inv.issueDate).toLocaleDateString('es-AR', { timeZone: 'UTC' })}</td>
                           <td>{inv.dueDate ? new Date(inv.dueDate).toLocaleDateString('es-AR', { timeZone: 'UTC' }) : 'S/D'}</td>
                           <td style={{ fontWeight: 600 }}>{inv.invoiceType?.replace('_', ' ')}</td>
+                          <td>
+                            <span style={{
+                              fontSize: '0.72rem',
+                              fontWeight: 600,
+                              padding: '2px 6px',
+                              borderRadius: '4px',
+                              backgroundColor: inv.billingType === 'OFFICIAL' ? '#E8F5E9' : '#ECEFF1',
+                              color: inv.billingType === 'OFFICIAL' ? '#2E7D32' : '#37474F'
+                            }}>
+                              {inv.billingType === 'OFFICIAL' ? 'Suc. A (Ofi)' : 'Suc. X (Int)'}
+                            </span>
+                          </td>
                           <td style={{ fontFamily: 'monospace' }}>{inv.invoiceNumber}</td>
                           <td>
                             <div style={{ fontWeight: 600 }}>{inv.persona?.name}</div>
@@ -1480,15 +1510,28 @@ export default function ComprasDashboard() {
                 </div>
               </div>
 
-              <div className="form-group">
-                <label>Correo Electrónico</label>
-                <input 
-                  type="email" 
-                  className="input" 
-                  placeholder="ej: administracion@proveedor.com" 
-                  value={providerModal.data.email || ''} 
-                  onChange={(e) => setProviderModal(prev => prev ? { ...prev, data: { ...prev.data, email: e.target.value } } : null)}
-                />
+              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '12px' }}>
+                <div className="form-group">
+                  <label>Correo Electrónico</label>
+                  <input 
+                    type="email" 
+                    className="input" 
+                    placeholder="ej: administracion@proveedor.com" 
+                    value={providerModal.data.email || ''} 
+                    onChange={(e) => setProviderModal(prev => prev ? { ...prev, data: { ...prev.data, email: e.target.value } } : null)}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Plazo Pago (Días)</label>
+                  <input 
+                    type="number" 
+                    className="input" 
+                    placeholder="ej: 30" 
+                    value={providerModal.data.paymentTermDays ?? 30} 
+                    onChange={(e) => setProviderModal(prev => prev ? { ...prev, data: { ...prev.data, paymentTermDays: Number(e.target.value) } } : null)}
+                    min={0}
+                  />
+                </div>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '12px' }}>
