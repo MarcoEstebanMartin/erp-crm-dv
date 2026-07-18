@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { api } from '../../utils/api';
 import { 
   Receipt, 
@@ -8,7 +8,8 @@ import {
   Search, 
   BookOpen, 
   DollarSign, 
-  Truck 
+  Truck,
+  X
 } from 'lucide-react';
 
 interface HomeTabProps {
@@ -39,6 +40,130 @@ export default function HomeTab({
   const facturadosOrdersCount = useMemo(() => orders.filter(o => o.invoiceNumber && (!o.deliveryRoute || o.deliveryRoute.status === 'PENDING')).length, [orders]);
   const enViajeOrdersCount = useMemo(() => orders.filter(o => o.deliveryRoute && o.deliveryRoute.status === 'IN_TRANSIT').length, [orders]);
   const entregadosOrdersCount = useMemo(() => orders.filter(o => (o.status === 'DELIVERED' && !o.deliveryRouteId) || (o.deliveryRoute && o.deliveryRoute.status === 'COMPLETED')).length, [orders]);
+
+  // Estados para el nuevo modal de Gasto de Flota
+  const [showGastoModal, setShowGastoModal] = useState(false);
+  const [vehicles, setVehicles] = useState<any[]>([]);
+  const [suppliers, setSuppliers] = useState<any[]>([]);
+  const [bankAccounts, setBankAccounts] = useState<any[]>([]);
+  const [loadingData, setLoadingData] = useState(false);
+  const [errorData, setErrorData] = useState<string | null>(null);
+
+  // Formulario de Gasto de Flota
+  const [gastoForm, setGastoForm] = useState({
+    vehicleId: '',
+    type: 'FUEL',
+    description: '',
+    cost: '',
+    odometer: '',
+    date: new Date().toISOString().substring(0, 10),
+    supplierId: '',
+    affectFinance: false,
+    paymentMethod: 'CASH',
+    bankAccountId: '',
+    billingType: 'INTERNAL'
+  });
+
+  // Cargar datos al abrir el modal
+  useEffect(() => {
+    if (!showGastoModal) return;
+
+    const loadModalData = async () => {
+      setLoadingData(true);
+      setErrorData(null);
+      try {
+        const [vehiclesData, suppliersData, bankAccountsData] = await Promise.all([
+          api.getVehicles(),
+          api.getPersonas('provider'),
+          api.getBankAccounts()
+        ]);
+        setVehicles(vehiclesData || []);
+        setSuppliers(suppliersData || []);
+        setBankAccounts(bankAccountsData || []);
+      } catch (err: any) {
+        console.error('Error al cargar datos para gasto de flota:', err);
+        setErrorData(err.message || 'Error al obtener datos de flota y proveedores.');
+      } finally {
+        setLoadingData(false);
+      }
+    };
+
+    loadModalData();
+  }, [showGastoModal]);
+
+  // Vehículo seleccionado actualmente en el formulario
+  const selectedVehicle = useMemo(() => {
+    if (!gastoForm.vehicleId) return null;
+    return vehicles.find(v => v.id === Number(gastoForm.vehicleId)) || null;
+  }, [gastoForm.vehicleId, vehicles]);
+
+  // Sugerir odómetro actual del vehículo seleccionado
+  useEffect(() => {
+    if (selectedVehicle) {
+      setGastoForm(prev => ({
+        ...prev,
+        odometer: prev.odometer ? prev.odometer : String(selectedVehicle.currentOdometer || 0)
+      }));
+    }
+  }, [selectedVehicle]);
+
+  // Guardar Gasto
+  const handleSaveGasto = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!gastoForm.vehicleId) {
+      alert('Debe seleccionar un vehículo.');
+      return;
+    }
+    if (!gastoForm.cost || Number(gastoForm.cost) <= 0) {
+      alert('Debe ingresar un costo válido mayor a cero.');
+      return;
+    }
+    if (!gastoForm.odometer || Number(gastoForm.odometer) < 0) {
+      alert('Debe ingresar un kilometraje válido.');
+      return;
+    }
+    if (gastoForm.affectFinance) {
+      if ((gastoForm.paymentMethod === 'BANK_TRANSFER' || gastoForm.paymentMethod === 'CHECK') && !gastoForm.bankAccountId) {
+        alert('Debe seleccionar la cuenta bancaria de origen para el pago.');
+        return;
+      }
+    }
+
+    try {
+      const vId = Number(gastoForm.vehicleId);
+      await api.createVehicleMaintenance(vId, {
+        type: gastoForm.type,
+        description: gastoForm.description.trim(),
+        cost: Number(gastoForm.cost),
+        odometer: Number(gastoForm.odometer),
+        date: gastoForm.date,
+        supplierId: gastoForm.supplierId ? Number(gastoForm.supplierId) : null,
+        affectFinance: gastoForm.affectFinance,
+        paymentMethod: gastoForm.paymentMethod,
+        bankAccountId: gastoForm.bankAccountId ? Number(gastoForm.bankAccountId) : null,
+        billingType: gastoForm.billingType
+      });
+
+      alert('¡Gasto de flota registrado con éxito!');
+      setShowGastoModal(false);
+      // Limpiar formulario
+      setGastoForm({
+        vehicleId: '',
+        type: 'FUEL',
+        description: '',
+        cost: '',
+        odometer: '',
+        date: new Date().toISOString().substring(0, 10),
+        supplierId: '',
+        affectFinance: false,
+        paymentMethod: 'CASH',
+        bankAccountId: '',
+        billingType: 'INTERNAL'
+      });
+    } catch (err: any) {
+      alert(err.message || 'Error al registrar el gasto de flota.');
+    }
+  };
 
   return (
     <div>
@@ -219,8 +344,7 @@ export default function HomeTab({
               desc: 'Combustible, service o taller',
               icon: <Truck size={20} style={{ color: 'var(--text-secondary)' }} />,
               onClick: () => {
-                localStorage.setItem('open_fleet_gasto_modal', 'true');
-                setActiveTab('logistica');
+                setShowGastoModal(true);
               }
             }
           ].map((act) => (
@@ -263,6 +387,361 @@ export default function HomeTab({
           ))}
         </div>
       </div>
+
+      {/* Modal flotante autocontenido para registrar Gasto de Flota de forma directa */}
+      {showGastoModal && (
+        <div style={{ 
+          position: 'fixed', 
+          top: 0, 
+          left: 0, 
+          width: '100%', 
+          height: '100%', 
+          backgroundColor: 'rgba(0,0,0,0.4)', 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'center', 
+          zIndex: 1000 
+        }}>
+          <div style={{ 
+            backgroundColor: 'var(--bg-card, #fff)', 
+            borderRadius: '8px', 
+            width: '520px', 
+            maxHeight: '90vh',
+            overflowY: 'auto',
+            padding: '24px', 
+            border: '1px solid var(--border-color)', 
+            boxShadow: '0 4px 20px rgba(0,0,0,0.12)' 
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h2 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>
+                Registrar Gasto de Flota
+              </h2>
+              <button 
+                type="button" 
+                onClick={() => setShowGastoModal(false)}
+                style={{ 
+                  background: 'none', 
+                  border: 'none', 
+                  cursor: 'pointer', 
+                  padding: '4px', 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  color: 'var(--text-secondary)',
+                  borderRadius: '50%',
+                  transition: 'background-color 0.2s'
+                }}
+                onMouseOver={(e) => (e.currentTarget.style.backgroundColor = 'var(--bg-light, #f5f5f7)')}
+                onMouseOut={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {loadingData ? (
+              <div style={{ padding: '30px 0', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                Cargando datos de flota y proveedores...
+              </div>
+            ) : errorData ? (
+              <div style={{ padding: '20px', backgroundColor: '#FEE2E2', border: '1px solid #FCA5A5', borderRadius: '6px', color: '#991B1B', fontSize: '0.85rem', marginBottom: '16px' }}>
+                {errorData}
+              </div>
+            ) : (
+              <form onSubmit={handleSaveGasto} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <label style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-primary)' }}>Vehículo de la Flota *</label>
+                  <select 
+                    required
+                    value={gastoForm.vehicleId}
+                    onChange={(e) => setGastoForm({ ...gastoForm, vehicleId: e.target.value, odometer: '' })}
+                    style={{ 
+                      padding: '8px 12px', 
+                      borderRadius: '4px', 
+                      border: '1px solid var(--border-color)', 
+                      fontSize: '0.84rem', 
+                      backgroundColor: 'var(--bg-card, #fff)',
+                      color: 'var(--text-primary)',
+                      outline: 'none'
+                    }}
+                  >
+                    <option value="">-- Seleccionar Vehículo --</option>
+                    {vehicles.map(v => (
+                      <option key={v.id} value={v.id}>{v.plate} - {v.brand} {v.model} ({v.currentOdometer} km)</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <label style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-primary)' }}>Tipo de Gasto *</label>
+                    <select 
+                      value={gastoForm.type}
+                      onChange={(e) => setGastoForm({ ...gastoForm, type: e.target.value })}
+                      style={{ 
+                        padding: '8px 12px', 
+                        borderRadius: '4px', 
+                        border: '1px solid var(--border-color)', 
+                        fontSize: '0.84rem', 
+                        backgroundColor: 'var(--bg-card, #fff)',
+                        color: 'var(--text-primary)'
+                      }}
+                    >
+                      <option value="FUEL">Carga de Combustible</option>
+                      <option value="SERVICE">Service Programado</option>
+                      <option value="REPAIR">Reparación / Taller</option>
+                      <option value="CLEANING">Lavadero / Limpieza</option>
+                      <option value="OTHER">Otros Gastos</option>
+                    </select>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <label style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-primary)' }}>Fecha *</label>
+                    <input 
+                      type="date" 
+                      required 
+                      value={gastoForm.date}
+                      onChange={(e) => setGastoForm({ ...gastoForm, date: e.target.value })}
+                      style={{ 
+                        padding: '8px 12px', 
+                        borderRadius: '4px', 
+                        border: '1px solid var(--border-color)', 
+                        fontSize: '0.84rem', 
+                        backgroundColor: 'var(--bg-card, #fff)',
+                        color: 'var(--text-primary)'
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <label style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                      Kilometraje del Evento (km) *
+                    </label>
+                    <input 
+                      type="number" 
+                      required 
+                      value={gastoForm.odometer}
+                      onChange={(e) => setGastoForm({ ...gastoForm, odometer: e.target.value })}
+                      style={{ 
+                        padding: '8px 12px', 
+                        borderRadius: '4px', 
+                        border: '1px solid var(--border-color)', 
+                        fontSize: '0.84rem', 
+                        backgroundColor: 'var(--bg-card, #fff)',
+                        color: 'var(--text-primary)'
+                      }}
+                      placeholder={selectedVehicle ? String(selectedVehicle.currentOdometer) : '0'}
+                    />
+                    {selectedVehicle && (
+                      <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>
+                        Actual: {selectedVehicle.currentOdometer} km
+                      </span>
+                    )}
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <label style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-primary)' }}>Costo Total ($) *</label>
+                    <input 
+                      type="number" 
+                      step="0.01" 
+                      required 
+                      value={gastoForm.cost}
+                      onChange={(e) => setGastoForm({ ...gastoForm, cost: e.target.value })}
+                      style={{ 
+                        padding: '8px 12px', 
+                        borderRadius: '4px', 
+                        border: '1px solid var(--border-color)', 
+                        fontSize: '0.84rem', 
+                        backgroundColor: 'var(--bg-card, #fff)',
+                        color: 'var(--text-primary)'
+                      }}
+                      placeholder="0.00"
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <label style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-primary)' }}>Descripción / Detalle *</label>
+                  <input 
+                    type="text" 
+                    required 
+                    value={gastoForm.description}
+                    onChange={(e) => setGastoForm({ ...gastoForm, description: e.target.value })}
+                    style={{ 
+                      padding: '8px 12px', 
+                      borderRadius: '4px', 
+                      border: '1px solid var(--border-color)', 
+                      fontSize: '0.84rem', 
+                      backgroundColor: 'var(--bg-card, #fff)',
+                      color: 'var(--text-primary)'
+                    }}
+                    placeholder="ej: Carga 50L Gasoil Infinia o Cambio de aceite"
+                  />
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <label style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-primary)' }}>Proveedor / Taller (Opcional)</label>
+                  <select 
+                    value={gastoForm.supplierId}
+                    onChange={(e) => setGastoForm({ ...gastoForm, supplierId: e.target.value })}
+                    style={{ 
+                      padding: '8px 12px', 
+                      borderRadius: '4px', 
+                      border: '1px solid var(--border-color)', 
+                      fontSize: '0.84rem', 
+                      backgroundColor: 'var(--bg-card, #fff)',
+                      color: 'var(--text-primary)'
+                    }}
+                  >
+                    <option value="">-- Seleccionar Proveedor --</option>
+                    {suppliers.map(s => (
+                      <option key={s.id} value={s.id}>{s.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Integración Financiera */}
+                <div style={{ 
+                  border: '1px solid var(--border-color)', 
+                  borderRadius: '6px', 
+                  padding: '14px', 
+                  backgroundColor: 'var(--bg-light, #f5f5f7)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '12px'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <input 
+                      type="checkbox" 
+                      id="affectFinanceHome"
+                      checked={gastoForm.affectFinance}
+                      onChange={(e) => setGastoForm({ ...gastoForm, affectFinance: e.target.checked })}
+                      style={{ cursor: 'pointer' }}
+                    />
+                    <label htmlFor="affectFinanceHome" style={{ fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', color: 'var(--text-primary)' }}>
+                      Registrar egreso contable en el ERP (Pago)
+                    </label>
+                  </div>
+
+                  {gastoForm.affectFinance && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                          <label style={{ fontSize: '0.74rem', color: 'var(--text-secondary)' }}>Método de Pago</label>
+                          <select 
+                            value={gastoForm.paymentMethod}
+                            onChange={(e) => setGastoForm({ ...gastoForm, paymentMethod: e.target.value })}
+                            style={{ 
+                              padding: '6px 10px', 
+                              borderRadius: '4px', 
+                              border: '1px solid var(--border-color)', 
+                              fontSize: '0.8rem', 
+                              backgroundColor: 'var(--bg-card, #fff)',
+                              color: 'var(--text-primary)'
+                            }}
+                          >
+                            <option value="CASH">Efectivo (Caja Diaria)</option>
+                            <option value="BANK_TRANSFER">Transferencia Bancaria</option>
+                            <option value="CHECK">Cheque</option>
+                            <option value="OTHER">Otro</option>
+                          </select>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                          <label style={{ fontSize: '0.74rem', color: 'var(--text-secondary)' }}>Tipo de Gasto</label>
+                          <select 
+                            value={gastoForm.billingType}
+                            onChange={(e) => setGastoForm({ ...gastoForm, billingType: e.target.value })}
+                            style={{ 
+                              padding: '6px 10px', 
+                              borderRadius: '4px', 
+                              border: '1px solid var(--border-color)', 
+                              fontSize: '0.8rem', 
+                              backgroundColor: 'var(--bg-card, #fff)',
+                              color: 'var(--text-primary)'
+                            }}
+                          >
+                            <option value="INTERNAL">Interno (Sucursal X)</option>
+                            <option value="OFFICIAL">Oficial (Factura A/B)</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      {(gastoForm.paymentMethod === 'BANK_TRANSFER' || gastoForm.paymentMethod === 'CHECK') && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                          <label style={{ fontSize: '0.74rem', color: 'var(--text-secondary)' }}>Cuenta Bancaria</label>
+                          <select 
+                            required
+                            value={gastoForm.bankAccountId}
+                            onChange={(e) => setGastoForm({ ...gastoForm, bankAccountId: e.target.value })}
+                            style={{ 
+                              padding: '6px 10px', 
+                              borderRadius: '4px', 
+                              border: '1px solid var(--border-color)', 
+                              fontSize: '0.8rem', 
+                              backgroundColor: 'var(--bg-card, #fff)',
+                              color: 'var(--text-primary)'
+                            }}
+                          >
+                            <option value="">-- Seleccionar Cuenta --</option>
+                            {bankAccounts.map(b => (
+                              <option key={b.id} value={b.id}>{b.bankName} - {b.accountNumber}</option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
+
+                      {gastoForm.paymentMethod === 'CASH' && (
+                        <span style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          💡 <em>Se descontará del saldo de tu caja diaria activa.</em>
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
+                  <button 
+                    type="button" 
+                    onClick={() => setShowGastoModal(false)}
+                    style={{ 
+                      padding: '8px 16px', 
+                      fontSize: '0.84rem', 
+                      border: '1px solid var(--border-color)', 
+                      borderRadius: '4px', 
+                      backgroundColor: 'transparent', 
+                      color: 'var(--text-primary)',
+                      cursor: 'pointer',
+                      transition: 'background-color 0.2s'
+                    }}
+                    onMouseOver={(e) => (e.currentTarget.style.backgroundColor = 'var(--bg-light, #f5f5f7)')}
+                    onMouseOut={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                  >
+                    Cancelar
+                  </button>
+                  <button 
+                    type="submit" 
+                    style={{ 
+                      padding: '8px 16px', 
+                      fontSize: '0.84rem', 
+                      border: 'none', 
+                      borderRadius: '4px', 
+                      backgroundColor: 'var(--text-primary, #111)', 
+                      color: 'var(--bg-card, #fff)', 
+                      cursor: 'pointer',
+                      fontWeight: 500,
+                      transition: 'opacity 0.2s'
+                    }}
+                    onMouseOver={(e) => (e.currentTarget.style.opacity = '0.9')}
+                    onMouseOut={(e) => (e.currentTarget.style.opacity = '1')}
+                  >
+                    Guardar Gasto
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
