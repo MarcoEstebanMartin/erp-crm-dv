@@ -7,7 +7,8 @@ import {
   Eye,
   Search,
   UserPlus,
-  Edit
+  Edit,
+  Trash2
 } from 'lucide-react';
 import { PurchaseScannerModal } from './PurchaseScannerModal';
 
@@ -391,6 +392,24 @@ export default function ComprasDashboard() {
       loadData();
     } catch (err: any) {
       setErrorMsg(err.message || 'Error al guardar la factura de compra.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteInvoice = async (id: number, invoiceNumber: string) => {
+    if (!window.confirm(`⚠️ ¿Está seguro que desea eliminar/anular la factura Nro ${invoiceNumber}? \n\nEsta acción es irreversible y revertirá la deuda en la cuenta corriente del proveedor, además de borrar las percepciones de AFIP vinculadas.`)) {
+      return;
+    }
+    try {
+      setLoading(true);
+      setErrorMsg(null);
+      setSuccessMsg(null);
+      await api.deleteSupplierInvoice(id);
+      setSuccessMsg('✅ Factura de compra eliminada con éxito y cuenta corriente del proveedor recalculada.');
+      loadData();
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Error al eliminar la factura de compra.');
     } finally {
       setLoading(false);
     }
@@ -852,11 +871,12 @@ export default function ComprasDashboard() {
                     <th>Total Factura</th>
                     <th>Pagado</th>
                     <th>Estado</th>
+                    <th style={{ textAlign: 'center' }}>Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredInvoices.length === 0 ? (
-                    <tr><td colSpan={11} style={{ textAlign: 'center' }}>No se encontraron comprobantes de compra.</td></tr>
+                    <tr><td colSpan={12} style={{ textAlign: 'center' }}>No se encontraron comprobantes de compra.</td></tr>
                   ) : (
                     filteredInvoices.map((inv) => {
                       const isOverdue = inv.dueDate && new Date(inv.dueDate) < new Date() && inv.status !== 'PAID';
@@ -897,6 +917,23 @@ export default function ComprasDashboard() {
                             }}>
                               {inv.status === 'PAID' ? 'Saldada' : isOverdue ? 'Vencida' : 'Pendiente'}
                             </span>
+                          </td>
+                          <td style={{ textAlign: 'center' }}>
+                            <button
+                              onClick={() => handleDeleteInvoice(inv.id, inv.invoiceNumber)}
+                              className="btn-icon"
+                              style={{ 
+                                background: 'none', 
+                                border: 'none', 
+                                padding: '4px', 
+                                cursor: 'pointer', 
+                                color: 'var(--color-danger)',
+                                transition: 'color 0.2s',
+                              }}
+                              title="Anular/Eliminar Factura"
+                            >
+                              <Trash2 size={15} />
+                            </button>
                           </td>
                         </tr>
                       );

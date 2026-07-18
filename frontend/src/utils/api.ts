@@ -723,13 +723,19 @@ export const api = {
     return res.invoices;
   },
 
-  createSupplierInvoice: async (invoiceData: any) => {    
+  createSupplierInvoice: async (invoiceData: any) => {    
 
     const res = await request('/billing/purchases', {
       method: 'POST',
       body: JSON.stringify(invoiceData)
     });
     return res.invoice;
+  },
+
+  deleteSupplierInvoice: async (id: number) => {
+    return await request(`/billing/purchases/${id}`, {
+      method: 'DELETE'
+    });
   },
 
   getCreditNotes: async (filters?: any) => {
