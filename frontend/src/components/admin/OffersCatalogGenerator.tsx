@@ -361,18 +361,24 @@ export default function OffersCatalogGenerator({ products }: OffersCatalogGenera
           offerPrice = Number(customOfferPriceStr);
         }
 
-        // D. Pastilla de Descuento (Sello Oferta con Borde Blanco)
+        // D. Pastilla de Descuento (Sello Circular Promocional con Borde Blanco)
         const discountPercent = Math.round((1 - (offerPrice / regPrice)) * 100);
         if (discountPercent > 0) {
+          const circleX = startX + cardWidth - 8.5;
+          const circleY = startY + 8.5;
+          const radius = 5.5; // Diámetro de 11mm
+          
           doc.setFillColor(227, 6, 19); // Rojo Don Venancio
           doc.setDrawColor(255, 255, 255); // Borde Blanco
           doc.setLineWidth(0.4);
-          doc.roundedRect(startX + cardWidth - 16.5, startY + 4.5, 12, 4.8, 0.8, 0.8, 'FD');
+          doc.circle(circleX, circleY, radius, 'FD');
           
           doc.setFont('helvetica', 'bold');
-          doc.setFontSize(6);
+          doc.setFontSize(6.5);
           doc.setTextColor(255, 255, 255);
-          doc.text(`-${discountPercent}%`, startX + cardWidth - 15, startY + 7.8);
+          const pctText = `-${discountPercent}%`;
+          const pctWidth = doc.getTextWidth(pctText);
+          doc.text(pctText, circleX - (pctWidth / 2), circleY + 2.2);
         }
 
         // E. Título del Producto (Title Case y Slate 800)
@@ -386,46 +392,31 @@ export default function OffersCatalogGenerator({ products }: OffersCatalogGenera
         const linesToShow = wrappedName.slice(0, 2);
         doc.text(linesToShow, startX + 3.5, nameY);
 
-        // F. Contenedor de Precio Promocional (Fondo Rojo Suave e Impactante)
+        // F. Contenedor de Precio Promocional (Fondo Amarillo de Oferta)
         const priceBoxHeight = cols === 2 ? 18 : 15;
         const priceBoxY = startY + cardHeight - priceBoxHeight - 2.5;
         
-        doc.setFillColor(254, 242, 242); // Red 50
+        doc.setFillColor(254, 240, 138); // Amarillo 200 (Alta conversión / Promocional)
         doc.roundedRect(startX + 2.5, priceBoxY, cardWidth - 5, priceBoxHeight, 1.2, 1.2, 'F');
 
-        // 1. Precio Original Tachado
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(cols === 2 ? 7.8 : 6.8);
-        doc.setTextColor(148, 163, 184); // Slate 400
+        // 1. Precio Original Tachado (Antes)
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(cols === 2 ? 8 : 6.8);
+        doc.setTextColor(100, 116, 139); // Slate 500
         const regPriceText = `Antes: $${Math.round(regPrice).toLocaleString('es-AR')}`;
         doc.text(regPriceText, startX + 5, priceBoxY + (cols === 2 ? 5.5 : 5.0));
 
-        // Dibujar línea de tachado sobre el precio original
+        // Dibujar línea de tachado roja gruesa sobre el precio original
         const textWidth = doc.getTextWidth(regPriceText);
         doc.setDrawColor(220, 38, 38); // Rojo Red 600
-        doc.setLineWidth(0.3);
+        doc.setLineWidth(0.4);
         doc.line(startX + 5, priceBoxY + (cols === 2 ? 4.5 : 4.0), startX + 5 + textWidth, priceBoxY + (cols === 2 ? 4.5 : 4.0));
 
-        // 2. Precio de Oferta Destacado en Rojo Corporativo Fuerte
+        // 2. Precio de Oferta Destacado (Ahora) en Rojo y en tamaño GIGANTE
         doc.setFont('helvetica', 'bold');
-        doc.setFontSize(cols === 2 ? 12 : 9.5);
+        doc.setFontSize(cols === 2 ? 14 : 11.5);
         doc.setTextColor(227, 6, 19); // Rojo Don Venancio
-        doc.text(`$${Math.round(offerPrice).toLocaleString('es-AR')}`, startX + 5, priceBoxY + (cols === 2 ? 13.5 : 11.2));
-
-        // 3. Pastilla de Rubro/Categoría (Dentro de la caja de precio, alineado a la derecha)
-        const rubroText = (prod.rubro?.name || 'OTROS').toUpperCase();
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(5);
-        
-        const rubroWidth = doc.getTextWidth(rubroText);
-        const badgeX = startX + cardWidth - rubroWidth - 6;
-        const badgeY = priceBoxY + (cols === 2 ? 7.5 : 6.0);
-        
-        doc.setFillColor(255, 255, 255); // Blanco
-        doc.roundedRect(badgeX, badgeY, rubroWidth + 2.5, 3.8, 0.8, 0.8, 'F');
-        
-        doc.setTextColor(220, 38, 38); // Rojo Don Venancio para dar color promocional
-        doc.text(rubroText, badgeX + 1.2, badgeY + 2.7);
+        doc.text(`AHORA: $${Math.round(offerPrice).toLocaleString('es-AR')}`, startX + 5, priceBoxY + (cols === 2 ? 13.5 : 11.5));
 
         currentCardIndex++;
       }
