@@ -222,10 +222,25 @@ export default function ProductsList({ products, searchQuery, setSearchQuery, se
                     <tr key={p.id} style={{ borderBottom: '1px solid var(--border-color)', transition: 'background-color 0.2s', cursor: 'default' }} className="hover-bg-muted">
                       <td style={{ padding: '12px 16px', fontFamily: 'monospace', fontWeight: 600, fontSize: '0.9rem' }}>{p.sku}</td>
                       <td style={{ padding: '12px 16px' }}>
-                        <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{p.name}</div>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
-                          <span style={{ backgroundColor: 'var(--bg-body)', padding: '2px 6px', borderRadius: '4px', marginRight: '6px' }}>{extractLabel(p.rubro)}</span>
-                          {p.description}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                          {p.imageUrl ? (
+                            <img 
+                              src={`http://${window.location.hostname}:3000${p.imageUrl}`} 
+                              alt={p.name} 
+                              style={{ width: '40px', height: '40px', minWidth: '40px', objectFit: 'contain', borderRadius: '6px', border: '1px solid var(--border-color)', backgroundColor: '#fff', padding: '2px' }} 
+                            />
+                          ) : (
+                            <div style={{ width: '40px', height: '40px', minWidth: '40px', borderRadius: '6px', border: '1px dashed var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'var(--bg-muted)', color: 'var(--text-muted)', fontSize: '0.65rem', fontWeight: 600 }}>
+                              S/F
+                            </div>
+                          )}
+                          <div>
+                            <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{p.name}</div>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                              <span style={{ backgroundColor: 'var(--bg-body)', padding: '2px 6px', borderRadius: '4px', marginRight: '6px' }}>{extractLabel(p.rubro)}</span>
+                              {p.description}
+                            </div>
+                          </div>
                         </div>
                       </td>
                       <td style={{ padding: '12px 16px', textAlign: 'center' }}>
