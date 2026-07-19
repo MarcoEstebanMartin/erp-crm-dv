@@ -214,9 +214,9 @@ export default function OffersCatalogGenerator({ products }: OffersCatalogGenera
 
       // Helper para dibujar encabezado y pie de página premium
       const drawPageHeaderAndFooter = (pdfDoc: jsPDF, pageNum: number) => {
-        // A. Franja Roja Superior Corporativa
-        pdfDoc.setFillColor(227, 6, 19); // Rojo Don Venancio
-        pdfDoc.rect(0, 0, pageWidth, 2.5, 'F');
+        // A. Franja Superior (Sutil y minimalista)
+        pdfDoc.setFillColor(15, 23, 42); // Slate 900
+        pdfDoc.rect(0, 0, pageWidth, 1, 'F');
 
         // B. Logo de Distribuidora sin deformaciones
         if (logoData) {
@@ -234,7 +234,7 @@ export default function OffersCatalogGenerator({ products }: OffersCatalogGenera
         } else {
           pdfDoc.setFont('helvetica', 'bold');
           pdfDoc.setFontSize(14);
-          pdfDoc.setTextColor(227, 6, 19); // Rojo corporativo
+          pdfDoc.setTextColor(15, 23, 42); // Slate 900
           pdfDoc.text('DON VENANCIO', margin, 18);
         }
 
@@ -249,27 +249,29 @@ export default function OffersCatalogGenerator({ products }: OffersCatalogGenera
         pdfDoc.setTextColor(15, 23, 42); // Slate 900
         pdfDoc.text(catalogTitle.toUpperCase(), 54, 18.2);
 
-        // D. Pastilla de fecha (Validity Badge)
+        // D. Pastilla de fecha (Validity Badge - Estilo minimalista)
         const badgeText = validityText.toUpperCase();
         pdfDoc.setFont('helvetica', 'bold');
-        pdfDoc.setFontSize(7.5);
-        const badgeWidth = pdfDoc.getTextWidth(badgeText) + 6;
+        pdfDoc.setFontSize(8); 
+        const badgeWidth = pdfDoc.getTextWidth(badgeText) + 8;
         const badgeX = pageWidth - margin - badgeWidth;
         
-        pdfDoc.setFillColor(227, 6, 19); // Fondo Rojo Fuerte
-        pdfDoc.roundedRect(badgeX, 12, badgeWidth, 6, 1, 1, 'F');
+        pdfDoc.setFillColor(241, 245, 249); // Slate 100
+        pdfDoc.setDrawColor(226, 232, 240); // Borde sutil
+        pdfDoc.setLineWidth(0.3);
+        pdfDoc.roundedRect(badgeX, 12, badgeWidth, 7, 1.5, 1.5, 'FD');
         
-        pdfDoc.setTextColor(255, 255, 255); // Texto Blanco
-        pdfDoc.text(badgeText, badgeX + 3, 16.2);
+        pdfDoc.setTextColor(15, 23, 42); // Slate 900
+        pdfDoc.text(badgeText, badgeX + 4, 16.8);
 
         // Línea divisora fina
-        pdfDoc.setDrawColor(241, 245, 249); // Slate 100
-        pdfDoc.setLineWidth(0.4);
+        pdfDoc.setDrawColor(226, 232, 240); // Slate 200
+        pdfDoc.setLineWidth(0.2);
         pdfDoc.line(margin, 25, pageWidth - margin, 25);
 
         // Pie de Página
-        pdfDoc.setDrawColor(241, 245, 249);
-        pdfDoc.setLineWidth(0.4);
+        pdfDoc.setDrawColor(226, 232, 240);
+        pdfDoc.setLineWidth(0.2);
         pdfDoc.line(margin, pageHeight - 14, pageWidth - margin, pageHeight - 14);
 
         pdfDoc.setFont('helvetica', 'bold');
@@ -309,161 +311,142 @@ export default function OffersCatalogGenerator({ products }: OffersCatalogGenera
         const startX = margin + colIndex * (cardWidth + gap);
         const startY = 30 + rowIndex * (cardHeight + gap); // 30mm después del encabezado
 
-        // A. Fondo de la tarjeta (Gris suave Slate 50)
-        doc.setDrawColor(241, 245, 249); // Slate 100
-        doc.setFillColor(248, 250, 252); // Slate 50
-        doc.roundedRect(startX, startY, cardWidth, cardHeight, 2, 2, 'FD');
+        // A. Fondo de la tarjeta (Sin borde, puramente blanco, súper limpio)
+        doc.setFillColor(255, 255, 255);
+        doc.setDrawColor(241, 245, 249); // Slate 100 ultra fino
+        doc.setLineWidth(0.1);
+        doc.roundedRect(startX, startY, cardWidth, cardHeight, 1, 1, 'FD');
 
-        // B. Contenedor Blanco de la Imagen
-        const imgBgPadding = 3;
+        // B. Contenedor de la Imagen (Centrado)
+        const imgBgPadding = 2;
         const imgBgWidth = cardWidth - (imgBgPadding * 2);
-        const imgBgHeight = cols === 2 ? 50 : 36;
+        const imgBgHeight = cols === 2 ? 65 : 42; // Aumentado para imágenes más grandes
         
-        doc.setFillColor(255, 255, 255); // Blanco
-        doc.roundedRect(startX + imgBgPadding, startY + imgBgPadding, imgBgWidth, imgBgHeight, 1.5, 1.5, 'F');
-
-        // C. Renderizar la foto del producto SIN deformaciones (usando Contain)
         const imgPadding = 2;
         const maxImgWidth = imgBgWidth - (imgPadding * 2);
         const maxImgHeight = imgBgHeight - (imgPadding * 2);
         const imgX = startX + imgBgPadding + imgPadding;
         const imgY = startY + imgBgPadding + imgPadding;
 
+        // Renderizado de foto
         if (prod.imageUrl) {
           try {
             const absoluteImgUrl = `http://${window.location.hostname}:3000${prod.imageUrl}`;
             const imgInfo = await getBase64AndDimensions(absoluteImgUrl);
-            
-            // Calcular tamaño respetando proporciones originales
             const fit = getFitDimensions(imgInfo.width, imgInfo.height, maxImgWidth, maxImgHeight);
             
-            doc.addImage(
-              imgInfo.base64, 
-              imgInfo.format, 
-              imgX + fit.xOffset, 
-              imgY + fit.yOffset, 
-              fit.w, 
-              fit.h, 
-              undefined, 
-              'FAST'
-            );
+            doc.addImage(imgInfo.base64, imgInfo.format, imgX + fit.xOffset, imgY + fit.yOffset, fit.w, fit.h, undefined, 'FAST');
           } catch (e) {
-            // Fallback si falla
             doc.setFont('helvetica', 'normal');
-            doc.setFontSize(7);
+            doc.setFontSize(6);
             doc.setTextColor(148, 163, 184);
-            doc.text('Foto no disponible', imgX + (maxImgWidth / 2) - 11, imgY + (maxImgHeight / 2));
+            doc.text('Foto no disp.', startX + (cardWidth / 2) - 8, imgY + (maxImgHeight / 2));
           }
-        } else {
-          // Placeholder Sin Foto
-          doc.setFont('helvetica', 'normal');
-          doc.setFontSize(7);
-          doc.setTextColor(148, 163, 184);
-          doc.text('Sin Foto', imgX + (maxImgWidth / 2) - 5, imgY + (maxImgHeight / 2));
         }
 
         // Calculemos valores de precio
         const regPrice = Number(prod.listPrice) || 0;
         const customOfferPriceStr = offerPrices[prod.id];
-        let offerPrice = regPrice * 0.9; // Default 10%
+        let offerPrice = regPrice * 0.9;
         if (customOfferPriceStr && !isNaN(Number(customOfferPriceStr))) {
           offerPrice = Number(customOfferPriceStr);
         }
 
-        // D. Pastilla de Descuento (Sello Circular Promocional con Borde Blanco)
+        // C. Etiqueta "OFERTA" (Top-Left, estilo tienda minimalista premium)
         const discountPercent = Math.round((1 - (offerPrice / regPrice)) * 100);
-        if (discountPercent > 0) {
-          const circleX = startX + cardWidth - 8.5;
-          const circleY = startY + 8.5;
-          const radius = 5.5; // Diámetro de 11mm
-          
-          doc.setFillColor(227, 6, 19); // Rojo Don Venancio
-          doc.setDrawColor(255, 255, 255); // Borde Blanco
-          doc.setLineWidth(0.4);
-          doc.circle(circleX, circleY, radius, 'FD');
-          
-          doc.setFont('helvetica', 'bold');
-          doc.setFontSize(6.5);
-          doc.setTextColor(255, 255, 255);
-          const pctText = `-${discountPercent}%`;
-          const pctWidth = doc.getTextWidth(pctText);
-          doc.text(pctText, circleX - (pctWidth / 2), circleY + 2.2);
-        }
-
-        // D2. Cartel Llamativo Personalizable (Sticker en esquina superior izquierda)
-        const customTag = offerLabels[prod.id] || '';
+        const customTag = offerLabels[prod.id] || (discountPercent > 0 ? 'OFERTA' : '');
+        
         if (customTag) {
+          const promoText = customTag.toUpperCase();
           doc.setFont('helvetica', 'bold');
-          doc.setFontSize(cols === 2 ? 6.5 : 5.5);
-          const tagText = customTag.toUpperCase();
-          const tagWidth = doc.getTextWidth(tagText) + 4;
+          doc.setFontSize(cols === 2 ? 6.5 : 5);
+          const badgeWidth = doc.getTextWidth(promoText) + 4;
+          const badgeHeight = cols === 2 ? 5.5 : 4.5;
+          const badgeX = startX + 2;
+          const badgeY = startY + 2;
+
+          // Sombra sutil
+          doc.setFillColor(203, 213, 225); // Slate 300
+          doc.roundedRect(badgeX + 0.3, badgeY + 0.3, badgeWidth, badgeHeight, 0.5, 0.5, 'F');
+
+          // Fondo rojo
+          doc.setFillColor(227, 6, 19); 
+          doc.roundedRect(badgeX, badgeY, badgeWidth, badgeHeight, 0.5, 0.5, 'F');
           
-          // Dibujar cápsula negra llamativa
-          doc.setFillColor(15, 23, 42); // Negro Slate 900
-          doc.roundedRect(startX + 4, startY + 4, tagWidth, 4.5, 0.8, 0.8, 'F');
-          
-          doc.setTextColor(255, 255, 255); // Blanco
-          doc.text(tagText, startX + 6, startY + 7.2);
+          doc.setTextColor(255, 255, 255);
+          doc.text(promoText, badgeX + 2, badgeY + (cols === 2 ? 4.2 : 3.4));
         }
 
-        // E. Título del Producto (Title Case y Slate 800)
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(cols === 2 ? 8.5 : 7.2);
-        doc.setTextColor(30, 41, 59); // Slate 800
+        // Helper para centrar texto
+        const centerX = startX + (cardWidth / 2);
 
-        const nameY = startY + imgBgHeight + 7;
+        // D. Rubro / SKU (Arriba del título, gris claro y centrado)
+        let currentY = startY + imgBgHeight + 7;
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(cols === 2 ? 7.5 : 6); // Aumentado más
+        doc.setTextColor(148, 163, 184); // Slate 400
+        const topSubText = prod.sku ? `SKU: ${prod.sku}` : 'ARTÍCULO';
+        const rubroWidth = doc.getTextWidth(topSubText);
+        doc.text(topSubText, centerX - (rubroWidth / 2), currentY);
+        
+        currentY += (cols === 2 ? 6 : 4);
+
+        // E. Título del producto (Centrado, Slate 800)
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(cols === 2 ? 12 : 9); // Título imponente
+        doc.setTextColor(30, 41, 59); // Slate 800
         const formattedName = toTitleCase(prod.name);
         const wrappedName = doc.splitTextToSize(formattedName, cardWidth - 6);
-        const linesToShow = wrappedName.slice(0, 2);
-        doc.text(linesToShow, startX + 3.5, nameY);
+        
+        wrappedName.slice(0, 2).forEach((line: string, idx: number) => {
+           const lineWidth = doc.getTextWidth(line);
+           doc.text(line, centerX - (lineWidth / 2), currentY + (idx * (cols === 2 ? 5.5 : 4)));
+        });
 
-        // F. Contenedor de Precio Promocional Solapado (Yankee Sticker Style)
-        const priceBoxHeight = cols === 2 ? 18 : 15;
-        const priceBoxY = startY + cardHeight - priceBoxHeight - 2.5;
-
-        // F1. Caja Roja Grande (Precio de Oferta)
-        const redBoxWidth = cols === 2 ? 54 : 35;
-        const redBoxHeight = cols === 2 ? 16.5 : 13.5;
-        const redBoxX = startX + 2.5;
-        const redBoxY = priceBoxY + 0.8;
-
-        doc.setFillColor(227, 6, 19); // Rojo Don Venancio
-        doc.roundedRect(redBoxX, redBoxY, redBoxWidth, redBoxHeight, 1.2, 1.2, 'F');
-
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(cols === 2 ? 6.5 : 5.5);
-        doc.setTextColor(255, 255, 255); // Blanco
-        doc.text('AHORA:', redBoxX + 2.5, redBoxY + (cols === 2 ? 4.5 : 3.8));
-
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(cols === 2 ? 15 : 12);
-        doc.text(`$${Math.round(offerPrice).toLocaleString('es-AR')}`, redBoxX + 2.5, redBoxY + (cols === 2 ? 12.5 : 10.2));
-
-        // F2. Caja Amarilla Pequeña Solapada (Antes)
-        const yellowBoxWidth = cols === 2 ? 28 : 17.5;
-        const yellowBoxHeight = cols === 2 ? 11 : 9.5;
-        const yellowBoxX = startX + cardWidth - yellowBoxWidth - 2.5;
-        const yellowBoxY = priceBoxY - (cols === 2 ? 2.5 : 2.0); // Desplazado hacia arriba para solapamiento
-
-        doc.setFillColor(254, 240, 138); // Amarillo 200
-        doc.roundedRect(yellowBoxX, yellowBoxY, yellowBoxWidth, yellowBoxHeight, 1, 1, 'F');
-
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(cols === 2 ? 5.5 : 4.5);
-        doc.setTextColor(71, 85, 105); // Slate 600
-        doc.text('ANTES:', yellowBoxX + 2, yellowBoxY + (cols === 2 ? 3.8 : 3.5));
-
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(cols === 2 ? 8.2 : 6.8);
-        doc.setTextColor(15, 23, 42); // Slate 900
+        // F. Precios en la misma línea (Centrados, súper limpios)
+        const bottomBoxY = startY + cardHeight - 6; // Ajuste por fuentes grandes
+        
+        const offerPriceText = `$${Math.round(offerPrice).toLocaleString('es-AR')}`;
         const regPriceText = `$${Math.round(regPrice).toLocaleString('es-AR')}`;
-        doc.text(regPriceText, yellowBoxX + 2, yellowBoxY + (cols === 2 ? 8.5 : 7.5));
 
-        // Dibujar línea de tachado roja gruesa sobre el precio original
-        const beforeTextWidth = doc.getTextWidth(regPriceText);
-        doc.setDrawColor(220, 38, 38); // Rojo Red 600
-        doc.setLineWidth(0.4);
-        doc.line(yellowBoxX + 1.8, yellowBoxY + (cols === 2 ? 7.2 : 6.3), yellowBoxX + 2.2 + beforeTextWidth, yellowBoxY + (cols === 2 ? 7.2 : 6.3));
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(cols === 2 ? 17 : 12); // Precio GIGANTE
+        const offerWidth = doc.getTextWidth(offerPriceText);
+        
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(cols === 2 ? 9.5 : 7); // Precio viejo más grande
+        const regWidth = doc.getTextWidth(regPriceText);
+
+        const spacing = 2;
+        const totalPriceWidth = offerWidth + spacing + regWidth;
+        const startPriceX = centerX - (totalPriceWidth / 2);
+
+        // Precio oferta (Rojo)
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(cols === 2 ? 17 : 12);
+        doc.setTextColor(220, 38, 38); // Red 600
+        doc.text(offerPriceText, startPriceX, bottomBoxY - 4);
+
+        // Precio regular (Gris tachado)
+        const regPriceX = startPriceX + offerWidth + spacing;
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(cols === 2 ? 9.5 : 7);
+        doc.setTextColor(148, 163, 184); // Slate 400
+        doc.text(regPriceText, regPriceX, bottomBoxY - 4);
+
+        // Tachado
+        doc.setDrawColor(148, 163, 184);
+        doc.setLineWidth(0.3);
+        const lineY = bottomBoxY - 6.2;
+        doc.line(regPriceX - 0.2, lineY, regPriceX + regWidth + 0.2, lineY);
+
+        // Detalle inferior (Unidades por bulto o stock)
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(cols === 2 ? 7.5 : 5); // Stock legible
+        doc.setTextColor(100, 116, 139); // Slate 500
+        const unText = `Stock Disponible`; 
+        const unWidth = doc.getTextWidth(unText);
+        doc.text(unText, centerX - (unWidth / 2), bottomBoxY);
 
         currentCardIndex++;
       }
