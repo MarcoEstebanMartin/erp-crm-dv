@@ -28,6 +28,7 @@ export default function OffersCatalogGenerator({ products }: OffersCatalogGenera
   const [selectedRubro, setSelectedRubro] = useState('');
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [offerPrices, setOfferPrices] = useState<Record<number, string>>({});
+  const [offerLabels, setOfferLabels] = useState<Record<number, string>>({});
   
   // Estado de carga durante la generación del PDF
   const [generating, setGenerating] = useState(false);
@@ -79,6 +80,14 @@ export default function OffersCatalogGenerator({ products }: OffersCatalogGenera
   // Manejar el cambio de precio de oferta
   const handleOfferPriceChange = (id: number, value: string) => {
     setOfferPrices(prev => ({
+      ...prev,
+      [id]: value
+    }));
+  };
+
+  // Manejar el cambio de etiqueta de oferta (Cartel llamativo)
+  const handleOfferLabelChange = (id: number, value: string) => {
+    setOfferLabels(prev => ({
       ...prev,
       [id]: value
     }));
@@ -381,6 +390,22 @@ export default function OffersCatalogGenerator({ products }: OffersCatalogGenera
           doc.text(pctText, circleX - (pctWidth / 2), circleY + 2.2);
         }
 
+        // D2. Cartel Llamativo Personalizable (Sticker en esquina superior izquierda)
+        const customTag = offerLabels[prod.id] || '';
+        if (customTag) {
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(cols === 2 ? 6.5 : 5.5);
+          const tagText = customTag.toUpperCase();
+          const tagWidth = doc.getTextWidth(tagText) + 4;
+          
+          // Dibujar cápsula negra llamativa
+          doc.setFillColor(15, 23, 42); // Negro Slate 900
+          doc.roundedRect(startX + 4, startY + 4, tagWidth, 4.5, 0.8, 0.8, 'F');
+          
+          doc.setTextColor(255, 255, 255); // Blanco
+          doc.text(tagText, startX + 6, startY + 7.2);
+        }
+
         // E. Título del Producto (Title Case y Slate 800)
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(cols === 2 ? 8.5 : 7.2);
@@ -392,31 +417,53 @@ export default function OffersCatalogGenerator({ products }: OffersCatalogGenera
         const linesToShow = wrappedName.slice(0, 2);
         doc.text(linesToShow, startX + 3.5, nameY);
 
-        // F. Contenedor de Precio Promocional (Fondo Amarillo de Oferta)
+        // F. Contenedor de Precio Promocional Solapado (Yankee Sticker Style)
         const priceBoxHeight = cols === 2 ? 18 : 15;
         const priceBoxY = startY + cardHeight - priceBoxHeight - 2.5;
-        
-        doc.setFillColor(254, 240, 138); // Amarillo 200 (Alta conversión / Promocional)
-        doc.roundedRect(startX + 2.5, priceBoxY, cardWidth - 5, priceBoxHeight, 1.2, 1.2, 'F');
 
-        // 1. Precio Original Tachado (Antes)
+        // F1. Caja Roja Grande (Precio de Oferta)
+        const redBoxWidth = cols === 2 ? 54 : 35;
+        const redBoxHeight = cols === 2 ? 16.5 : 13.5;
+        const redBoxX = startX + 2.5;
+        const redBoxY = priceBoxY + 0.8;
+
+        doc.setFillColor(227, 6, 19); // Rojo Don Venancio
+        doc.roundedRect(redBoxX, redBoxY, redBoxWidth, redBoxHeight, 1.2, 1.2, 'F');
+
         doc.setFont('helvetica', 'bold');
-        doc.setFontSize(cols === 2 ? 8 : 6.8);
-        doc.setTextColor(100, 116, 139); // Slate 500
-        const regPriceText = `Antes: $${Math.round(regPrice).toLocaleString('es-AR')}`;
-        doc.text(regPriceText, startX + 5, priceBoxY + (cols === 2 ? 5.5 : 5.0));
+        doc.setFontSize(cols === 2 ? 6.5 : 5.5);
+        doc.setTextColor(255, 255, 255); // Blanco
+        doc.text('AHORA:', redBoxX + 2.5, redBoxY + (cols === 2 ? 4.5 : 3.8));
+
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(cols === 2 ? 15 : 12);
+        doc.text(`$${Math.round(offerPrice).toLocaleString('es-AR')}`, redBoxX + 2.5, redBoxY + (cols === 2 ? 12.5 : 10.2));
+
+        // F2. Caja Amarilla Pequeña Solapada (Antes)
+        const yellowBoxWidth = cols === 2 ? 28 : 17.5;
+        const yellowBoxHeight = cols === 2 ? 11 : 9.5;
+        const yellowBoxX = startX + cardWidth - yellowBoxWidth - 2.5;
+        const yellowBoxY = priceBoxY - (cols === 2 ? 2.5 : 2.0); // Desplazado hacia arriba para solapamiento
+
+        doc.setFillColor(254, 240, 138); // Amarillo 200
+        doc.roundedRect(yellowBoxX, yellowBoxY, yellowBoxWidth, yellowBoxHeight, 1, 1, 'F');
+
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(cols === 2 ? 5.5 : 4.5);
+        doc.setTextColor(71, 85, 105); // Slate 600
+        doc.text('ANTES:', yellowBoxX + 2, yellowBoxY + (cols === 2 ? 3.8 : 3.5));
+
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(cols === 2 ? 8.2 : 6.8);
+        doc.setTextColor(15, 23, 42); // Slate 900
+        const regPriceText = `$${Math.round(regPrice).toLocaleString('es-AR')}`;
+        doc.text(regPriceText, yellowBoxX + 2, yellowBoxY + (cols === 2 ? 8.5 : 7.5));
 
         // Dibujar línea de tachado roja gruesa sobre el precio original
-        const textWidth = doc.getTextWidth(regPriceText);
+        const beforeTextWidth = doc.getTextWidth(regPriceText);
         doc.setDrawColor(220, 38, 38); // Rojo Red 600
         doc.setLineWidth(0.4);
-        doc.line(startX + 5, priceBoxY + (cols === 2 ? 4.5 : 4.0), startX + 5 + textWidth, priceBoxY + (cols === 2 ? 4.5 : 4.0));
-
-        // 2. Precio de Oferta Destacado (Ahora) en Rojo y en tamaño GIGANTE
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(cols === 2 ? 14 : 11.5);
-        doc.setTextColor(227, 6, 19); // Rojo Don Venancio
-        doc.text(`AHORA: $${Math.round(offerPrice).toLocaleString('es-AR')}`, startX + 5, priceBoxY + (cols === 2 ? 13.5 : 11.5));
+        doc.line(yellowBoxX + 1.8, yellowBoxY + (cols === 2 ? 7.2 : 6.3), yellowBoxX + 2.2 + beforeTextWidth, yellowBoxY + (cols === 2 ? 7.2 : 6.3));
 
         currentCardIndex++;
       }
@@ -575,14 +622,15 @@ export default function OffersCatalogGenerator({ products }: OffersCatalogGenera
                 <th style={{ padding: '10px 12px', width: '60px', textAlign: 'center' }}>Foto</th>
                 <th style={{ padding: '10px 12px', width: '80px', textAlign: 'left' }}>SKU</th>
                 <th style={{ padding: '10px 12px', textAlign: 'left' }}>Producto</th>
-                <th style={{ padding: '10px 12px', textAlign: 'right', width: '130px' }}>Precio Regular (IVA)</th>
-                <th style={{ padding: '10px 12px', textAlign: 'right', width: '150px' }}>Precio de Oferta (IVA)</th>
+                <th style={{ padding: '10px 12px', textAlign: 'right', width: '120px' }}>Precio Regular</th>
+                <th style={{ padding: '10px 12px', textAlign: 'right', width: '130px' }}>Cartel Llamativo</th>
+                <th style={{ padding: '10px 12px', textAlign: 'right', width: '130px' }}>Precio Oferta</th>
               </tr>
             </thead>
             <tbody>
               {filteredProducts.length === 0 ? (
                 <tr>
-                  <td colSpan={6} style={{ textAlign: 'center', padding: '24px', color: 'var(--text-secondary)' }}>
+                  <td colSpan={7} style={{ textAlign: 'center', padding: '24px', color: 'var(--text-secondary)' }}>
                     No se encontraron productos coincidentes.
                   </td>
                 </tr>
@@ -591,6 +639,7 @@ export default function OffersCatalogGenerator({ products }: OffersCatalogGenera
                   const regPrice = Number(p.listPrice) || 0;
                   const isSelected = selectedIds.has(p.id);
                   const offerVal = offerPrices[p.id] || '';
+                  const labelVal = offerLabels[p.id] || '';
 
                   return (
                     <tr 
@@ -603,7 +652,7 @@ export default function OffersCatalogGenerator({ products }: OffersCatalogGenera
                     >
                       <td style={{ padding: '10px 12px', textAlign: 'center', cursor: 'pointer' }} onClick={() => toggleSelect(p.id)}>
                         {isSelected ? (
-                          <CheckSquare size={18} style={{ color: '#E30613' }} />
+                           <CheckSquare size={18} style={{ color: '#E30613' }} />
                         ) : (
                           <Square size={18} style={{ color: 'var(--text-muted)' }} />
                         )}
@@ -639,6 +688,27 @@ export default function OffersCatalogGenerator({ products }: OffersCatalogGenera
                       </td>
 
                       <td style={{ padding: '10px 12px', textAlign: 'right' }}>
+                        <input 
+                          list="tag-suggestions"
+                          type="text" 
+                          className="input" 
+                          placeholder="Ej: OFERTÓN!" 
+                          value={labelVal} 
+                          onChange={(e) => handleOfferLabelChange(p.id, e.target.value)}
+                          disabled={!isSelected}
+                          style={{ 
+                            width: '120px', 
+                            padding: '4px 8px', 
+                            borderRadius: '6px', 
+                            fontSize: '0.85rem',
+                            border: isSelected ? '1px solid var(--color-primary)' : '1px solid var(--border-color)',
+                            backgroundColor: isSelected ? '#fff' : 'var(--bg-muted)',
+                            boxSizing: 'border-box'
+                          }}
+                        />
+                      </td>
+
+                      <td style={{ padding: '10px 12px', textAlign: 'right' }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '6px' }}>
                           <span style={{ fontSize: '0.85rem', color: isSelected ? 'var(--text-primary)' : 'var(--text-muted)' }}>$</span>
                           <input 
@@ -669,6 +739,15 @@ export default function OffersCatalogGenerator({ products }: OffersCatalogGenera
         </div>
       </div>
 
+      <datalist id="tag-suggestions">
+        <option value="¡OFERTÓN!" />
+        <option value="¡SUPER OFERTA!" />
+        <option value="¡ÚLTIMAS UNIDADES!" />
+        <option value="¡ÚLTIMAS 3!" />
+        <option value="¡HASTA AGOTAR STOCK!" />
+        <option value="¡PRECIO EXCLUSIVO!" />
+        <option value="¡LIQUIDACIÓN!" />
+      </datalist>
     </div>
   );
 }
