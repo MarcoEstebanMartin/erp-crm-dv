@@ -102,6 +102,20 @@ export default function OffersCatalogGenerator({ products }: OffersCatalogGenera
     }
   };
 
+  // Helper para convertir nombres a formato elegante de catálogo
+  const toTitleCase = (str: string) => {
+    if (!str) return '';
+    const words = str.toLowerCase().split(' ');
+    const articles = ['de', 'del', 'la', 'las', 'el', 'los', 'un', 'una', 'y', 'en', 'con', 'sin', 'x', 'para', 'ml', 'gr', 'kg', 'lt'];
+    return words.map((word, index) => {
+      const cleanWord = word.replace(/[^a-z0-9ñáéíóúü]/g, '');
+      if (index > 0 && articles.includes(cleanWord)) {
+        return word;
+      }
+      return word.charAt(0).toUpperCase() + word.slice(1);
+    }).join(' ');
+  };
+
   // Generar Catálogo PDF
   const handleGeneratePdf = async () => {
     if (selectedIds.size === 0) {
@@ -130,52 +144,74 @@ export default function OffersCatalogGenerator({ products }: OffersCatalogGenera
         console.warn('No se pudo cargar el logo de la distribuidora para el PDF. Se usará texto.');
       }
 
-      // Configuración de grilla
+      // Configuración de grilla premium
       const cols = columnsCount;
-      const gap = 6;
+      const gap = 5;
       const totalWidthAvailable = pageWidth - (margin * 2);
       const cardWidth = (totalWidthAvailable - (gap * (cols - 1))) / cols;
-      const cardHeight = cols === 2 ? 95 : 72; // Más alto si son 2 columnas
+      const cardHeight = cols === 2 ? 98 : 75; // Altura premium con buen espaciado
       const cardsPerPage = cols === 2 ? 4 : 9; // 2x2 o 3x3 por página
       
       let currentCardIndex = 0;
       let pageNumber = 1;
 
-      // Helper para dibujar encabezado y pie de página
+      // Helper para dibujar encabezado y pie de página premium
       const drawPageHeaderAndFooter = (pdfDoc: jsPDF, pageNum: number) => {
         // Logo o Texto Don Venancio
         if (logoBase64) {
-          pdfDoc.addImage(logoBase64, 'PNG', margin, 12, 35, 12);
+          pdfDoc.addImage(logoBase64, 'PNG', margin, 10, 32, 11);
         } else {
           pdfDoc.setFont('helvetica', 'bold');
           pdfDoc.setFontSize(14);
           pdfDoc.setTextColor(227, 6, 19); // Rojo corporativo
-          pdfDoc.text('DON VENANCIO', margin, 18);
+          pdfDoc.text('DON VENANCIO', margin, 17);
         }
+
+        // Distribuidora Subtitle
+        pdfDoc.setFont('helvetica', 'bold');
+        pdfDoc.setFontSize(6.5);
+        pdfDoc.setTextColor(148, 163, 184); // Slate 400
+        pdfDoc.text('DISTRIBUIDORA DE ALIMENTOS & BEBIDAS', 50, 13);
 
         // Título del catálogo
         pdfDoc.setFont('helvetica', 'bold');
-        pdfDoc.setFontSize(13);
-        pdfDoc.setTextColor(30, 41, 59); // Slate 800
-        pdfDoc.text(catalogTitle.toUpperCase(), 75, 17);
+        pdfDoc.setFontSize(14);
+        pdfDoc.setTextColor(15, 23, 42); // Slate 900
+        pdfDoc.text(catalogTitle.toUpperCase(), 50, 19);
 
-        // Subtítulo / Vigencia
-        pdfDoc.setFont('helvetica', 'normal');
-        pdfDoc.setFontSize(8.5);
-        pdfDoc.setTextColor(100, 116, 139); // Slate 500
-        pdfDoc.text(validityText, 75, 22);
+        // Pastilla de fecha (Validity Badge)
+        const badgeText = validityText.toUpperCase();
+        pdfDoc.setFont('helvetica', 'bold');
+        pdfDoc.setFontSize(7.5);
+        const badgeWidth = pdfDoc.getTextWidth(badgeText) + 6;
+        const badgeX = pageWidth - margin - badgeWidth;
+        
+        pdfDoc.setFillColor(254, 242, 242); // Red 50 (suave)
+        pdfDoc.roundedRect(badgeX, 13, badgeWidth, 6, 1, 1, 'F');
+        
+        pdfDoc.setTextColor(220, 38, 38); // Red 600
+        pdfDoc.text(badgeText, badgeX + 3, 17.2);
 
-        // Línea divisora
-        pdfDoc.setDrawColor(226, 232, 240); // Slate 200
-        pdfDoc.setLineWidth(0.4);
-        pdfDoc.line(margin, 27, pageWidth - margin, 27);
+        // Línea divisora fina
+        pdfDoc.setDrawColor(241, 245, 249); // Slate 100
+        pdfDoc.setLineWidth(0.5);
+        pdfDoc.line(margin, 25, pageWidth - margin, 25);
 
         // Pie de Página
+        pdfDoc.setDrawColor(241, 245, 249);
+        pdfDoc.setLineWidth(0.4);
+        pdfDoc.line(margin, pageHeight - 14, pageWidth - margin, pageHeight - 14);
+
+        pdfDoc.setFont('helvetica', 'bold');
+        pdfDoc.setFontSize(7.5);
+        pdfDoc.setTextColor(71, 85, 105); // Slate 600
+        pdfDoc.text('Distribuidora Don Venancio', margin, pageHeight - 9);
+
         pdfDoc.setFont('helvetica', 'normal');
-        pdfDoc.setFontSize(8);
+        pdfDoc.setFontSize(7.5);
         pdfDoc.setTextColor(148, 163, 184); // Slate 400
-        pdfDoc.text('Distribuidora Don Venancio - Catálogo de Ofertas', margin, pageHeight - 10);
-        pdfDoc.text(`Página ${pageNum}`, pageWidth - margin - 15, pageHeight - 10);
+        pdfDoc.text('•  Ventas y Distribución de Alimentos y Bebidas', margin + 37, pageHeight - 9);
+        pdfDoc.text(`Página ${pageNum}`, pageWidth - margin - 15, pageHeight - 9);
       };
 
       // Dibujar primer encabezado
@@ -201,96 +237,116 @@ export default function OffersCatalogGenerator({ products }: OffersCatalogGenera
         const rowIndex = Math.floor(currentCardIndex / cols);
         
         const startX = margin + colIndex * (cardWidth + gap);
-        const startY = 32 + rowIndex * (cardHeight + gap); // 32mm después del encabezado
+        const startY = 30 + rowIndex * (cardHeight + gap); // 30mm después del encabezado
 
-        // Dibujar borde de la tarjeta (Gris Linear fino)
-        doc.setDrawColor(226, 232, 240); // Slate 200
-        doc.setFillColor(255, 255, 255);
-        doc.roundedRect(startX, startY, cardWidth, cardHeight, 1.5, 1.5, 'FD');
+        // A. Fondo de la tarjeta (Gris suave Linear, sin bordes toscos)
+        doc.setDrawColor(241, 245, 249); // Slate 100
+        doc.setFillColor(248, 250, 252); // Slate 50
+        doc.roundedRect(startX, startY, cardWidth, cardHeight, 2, 2, 'FD');
 
-        // Intentar renderizar la imagen del producto
-        const imgHeight = cols === 2 ? 45 : 30;
-        const imgWidth = cardWidth - 8;
-        const imgX = startX + 4;
-        const imgY = startY + 4;
+        // B. Contenedor Blanco de la Imagen (Para dar efecto de tarjeta integrada)
+        const imgBgPadding = 3.5;
+        const imgBgWidth = cardWidth - (imgBgPadding * 2);
+        const imgBgHeight = cols === 2 ? 52 : 36;
+        
+        doc.setFillColor(255, 255, 255); // Blanco
+        doc.roundedRect(startX + imgBgPadding, startY + imgBgPadding, imgBgWidth, imgBgHeight, 1.5, 1.5, 'F');
+
+        // C. Renderizar la foto del producto centrada dentro de su contenedor
+        const imgPadding = 2.5;
+        const imgWidth = imgBgWidth - (imgPadding * 2);
+        const imgHeight = imgBgHeight - (imgPadding * 2);
+        const imgX = startX + imgBgPadding + imgPadding;
+        const imgY = startY + imgBgPadding + imgPadding;
 
         if (prod.imageUrl) {
           try {
             const absoluteImgUrl = `http://${window.location.hostname}:3000${prod.imageUrl}`;
             const base64 = await getBase64ImageFromUrl(absoluteImgUrl);
-            // Intentar detectar formato (JPG o PNG)
             const format = prod.imageUrl.toLowerCase().endsWith('.png') ? 'PNG' : 'JPEG';
             doc.addImage(base64, format, imgX, imgY, imgWidth, imgHeight, undefined, 'FAST');
           } catch (e) {
-            // Dibujar placeholder si falla la carga
-            doc.setDrawColor(241, 245, 249);
-            doc.setFillColor(248, 250, 252);
-            doc.rect(imgX, imgY, imgWidth, imgHeight, 'F');
-            
+            // Placeholder si falla la carga
             doc.setFont('helvetica', 'normal');
-            doc.setFontSize(7.5);
+            doc.setFontSize(7);
             doc.setTextColor(148, 163, 184);
             doc.text('Foto no disponible', imgX + (imgWidth / 2) - 11, imgY + (imgHeight / 2));
           }
         } else {
-          // Si no tiene imagen, mostrar placeholder de Sin Foto
-          doc.setDrawColor(241, 245, 249);
-          doc.setFillColor(248, 250, 252);
-          doc.rect(imgX, imgY, imgWidth, imgHeight, 'F');
-          
+          // Placeholder Sin Foto
           doc.setFont('helvetica', 'normal');
-          doc.setFontSize(7.5);
+          doc.setFontSize(7);
           doc.setTextColor(148, 163, 184);
           doc.text('Sin Foto', imgX + (imgWidth / 2) - 5, imgY + (imgHeight / 2));
         }
 
-        // Título del Producto (Ajuste de líneas)
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(cols === 2 ? 8.5 : 7.2);
-        doc.setTextColor(30, 41, 59); // Slate 800
-
-        const nameY = imgY + imgHeight + 4;
-        const wrappedName = doc.splitTextToSize(prod.name.toUpperCase(), cardWidth - 6);
-        // Limitar a máximo 2 líneas para no pisar el precio
-        const linesToShow = wrappedName.slice(0, 2);
-        doc.text(linesToShow, startX + 3, nameY);
-
-        // Precios
-        const priceY = startY + cardHeight - 4;
+        // Calculemos valores de precio
         const regPrice = Number(prod.listPrice) || 0;
-        
-        // Determinar precio de oferta (si ingresó uno, usarlo; sino, restar un 10% por defecto)
         const customOfferPriceStr = offerPrices[prod.id];
-        let offerPrice = regPrice * 0.9; // Default 10% descuento
+        let offerPrice = regPrice * 0.9; // Default 10%
         if (customOfferPriceStr && !isNaN(Number(customOfferPriceStr))) {
           offerPrice = Number(customOfferPriceStr);
         }
 
+        // D. Pastilla de Descuento (Badge de % OFF) en la esquina superior del producto
+        const discountPercent = Math.round((1 - (offerPrice / regPrice)) * 100);
+        if (discountPercent > 0) {
+          doc.setFillColor(227, 6, 19); // Rojo Don Venancio
+          doc.roundedRect(startX + cardWidth - 18, startY + 5, 13, 4.5, 0.8, 0.8, 'F');
+          
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(6.5);
+          doc.setTextColor(255, 255, 255);
+          doc.text(`-${discountPercent}%`, startX + cardWidth - 16.5, startY + 8.2);
+        }
+
+        // E. Título del Producto (En formato elegante de catálogo y gris oscuro)
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(cols === 2 ? 8.5 : 7.2);
+        doc.setTextColor(30, 41, 59); // Slate 800
+
+        const nameY = startY + imgBgHeight + 7.5;
+        const formattedName = toTitleCase(prod.name);
+        const wrappedName = doc.splitTextToSize(formattedName, cardWidth - 6);
+        const linesToShow = wrappedName.slice(0, 2);
+        doc.text(linesToShow, startX + 3.5, nameY);
+
+        // F. Área de Precios y Rubro
+        const priceY = startY + cardHeight - 4;
+
         // 1. Precio Original Tachado
         doc.setFont('helvetica', 'normal');
-        doc.setFontSize(cols === 2 ? 8 : 7);
+        doc.setFontSize(cols === 2 ? 8 : 6.8);
         doc.setTextColor(148, 163, 184); // Slate 400
         const regPriceText = `Antes: $${Math.round(regPrice).toLocaleString('es-AR')}`;
-        doc.text(regPriceText, startX + 3, priceY - 3.5);
+        doc.text(regPriceText, startX + 3.5, priceY - 3.5);
 
         // Dibujar línea de tachado sobre el precio original
         const textWidth = doc.getTextWidth(regPriceText);
         doc.setDrawColor(239, 68, 68); // Rojo Red 500
         doc.setLineWidth(0.3);
-        doc.line(startX + 3, priceY - 4.5, startX + 3 + textWidth, priceY - 4.5);
+        doc.line(startX + 3.5, priceY - 4.5, startX + 3.5 + textWidth, priceY - 4.5);
 
-        // 2. Precio de Oferta Destacado
+        // 2. Precio de Oferta Destacado en Rojo Corporativo
         doc.setFont('helvetica', 'bold');
-        doc.setFontSize(cols === 2 ? 11.5 : 9.5);
-        doc.setTextColor(227, 6, 19); // Rojo corporativo
-        doc.text(`$${Math.round(offerPrice).toLocaleString('es-AR')}`, startX + 3, priceY);
+        doc.setFontSize(cols === 2 ? 12 : 9.5);
+        doc.setTextColor(227, 6, 19); // Rojo Don Venancio
+        doc.text(`$${Math.round(offerPrice).toLocaleString('es-AR')}`, startX + 3.5, priceY);
 
-        // Medida del producto (por bulto / kg / etc) si aplica
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(6.5);
-        doc.setTextColor(100, 116, 139);
-        const rubroText = prod.rubro?.name || 'OTROS';
-        doc.text(rubroText.toUpperCase(), startX + cardWidth - doc.getTextWidth(rubroText.toUpperCase()) - 3, priceY);
+        // 3. Pastilla de Rubro/Categoría
+        const rubroText = (prod.rubro?.name || 'OTROS').toUpperCase();
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(5.5);
+        
+        const rubroWidth = doc.getTextWidth(rubroText);
+        const badgeX = startX + cardWidth - rubroWidth - 5;
+        const badgeY = priceY - 3.5;
+        
+        doc.setFillColor(241, 245, 249); // Slate 100
+        doc.roundedRect(badgeX, badgeY, rubroWidth + 2.5, 4, 0.8, 0.8, 'F');
+        
+        doc.setTextColor(71, 85, 105); // Slate 600
+        doc.text(rubroText, badgeX + 1.2, badgeY + 2.8);
 
         currentCardIndex++;
       }
