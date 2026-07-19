@@ -13,6 +13,8 @@ import {
   getExpiringLots,
   uploadProductImage,
   importProductsZip,
+  auditStockDrift,
+  reconcileStockDrift,
 } from '../controllers/product.controller';
 import {
   updateLot,
@@ -63,6 +65,10 @@ router.post('/:id/adjust-stock', authenticateJWT, requireRole([Role.ADMIN, Role.
 router.put('/lots/:lotId', authenticateJWT, requireRole([Role.ADMIN, Role.DEPOSITO]), validateRequest(updateLotSchema), updateLot);
 router.delete('/lots/:lotId', authenticateJWT, requireRole([Role.ADMIN]), validateRequest(deleteLotSchema), deleteLot);
 router.post('/:productId/lots/transfer', authenticateJWT, requireRole([Role.ADMIN, Role.DEPOSITO]), validateRequest(transferLotStockSchema), transferLotStock);
+
+// Conciliación y Auditoría de Stock (ADMIN y FACTURACION)
+router.get('/stock/reconcile-audit', authenticateJWT, requireRole([Role.ADMIN, Role.FACTURACION]), auditStockDrift);
+router.post('/stock/reconcile', authenticateJWT, requireRole([Role.ADMIN]), reconcileStockDrift);
 
 export default router;
 

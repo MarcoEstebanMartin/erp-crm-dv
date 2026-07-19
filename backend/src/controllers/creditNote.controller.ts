@@ -173,17 +173,20 @@ export async function createCreditNote(req: AuthenticatedRequest, res: Response)
       }
     }
 
-    const result = await prisma.$transaction(async (tx) => {
+    // PERSISTENCIA AISLADA DE NOTA DE CRÉDITO:
+    // Creamos la Nota de Crédito en DB de forma simple e inmediata antes de la lógica de stock/lotes y cuenta corriente.
+    // Esto asegura que si falla el descuento de stock de lotes o el balance de cuenta corriente, los datos fiscales (CAE) ya estén seguros localmente.
+    let creditNote;
+    try {
       // Solo generar número interno si es ADMIN (ya aprobada) y no es oficial
       if (finalBillingType !== 'OFFICIAL' && isAdmin) {
-        const count = await tx.creditNote.count({
+        const count = await prisma.creditNote.count({
           where: { billingType: 'INTERNAL', status: CreditNoteStatus.APPROVED },
         });
         creditNoteNumber = `NCI-${(count + 1).toString().padStart(8, '0')}`;
       }
 
-      // 4. Crear la Nota de Crédito en DB
-      const creditNote = await tx.creditNote.create({
+      creditNote = await prisma.creditNote.create({
         data: {
           personaId: Number(personaId),
           orderId: orderId ? Number(orderId) : null,
@@ -201,193 +204,211 @@ export async function createCreditNote(req: AuthenticatedRequest, res: Response)
           comments,
         },
       });
+    } catch (creationError: any) {
+      console.error('❌ Error crítico al crear la Nota de Crédito en DB:', creationError);
+      res.status(500).json({
+        status: 'error',
+        message: `La Nota de Crédito fue aprobada pero falló el registro local básico: ${creationError.message}.`
+      });
+      return;
+    }
 
-      // 5. Crear ítems
-      for (const item of items) {
-        const product = await tx.product.findUnique({
-          where: { id: Number(item.productId) }
-        });
-        if (!product) {
-          throw new Error(`El producto con ID ${item.productId} no existe.`);
-        }
-        const isPesable = product.isPesable;
-        const actualQtyOrWeight = isPesable
-          ? (item.weight ? Number(item.weight) : Number(item.quantity) * Number(product.approximateWeight || 1))
-          : Number(item.quantity);
-
-        await tx.creditNoteItem.create({
-          data: {
-            creditNoteId: creditNote.id,
-            productId: Number(item.productId),
-            quantity: Number(item.quantity),
-            weight: isPesable ? actualQtyOrWeight : null,
-            unitPrice: Number(item.unitPrice),
-            subtotal: Math.round(actualQtyOrWeight * Number(item.unitPrice)),
-          },
-        });
-      }
-
-      // 6 y 7. Afectar stock y saldo corriente SOLO si es ADMIN (ya aprobada)
-      if (isAdmin) {
+    // Transacción secundaria para procesar los ítems, stock de lotes y saldo corriente
+    try {
+      const result = await prisma.$transaction(async (tx) => {
+        // Crear ítems
         for (const item of items) {
           const product = await tx.product.findUnique({
             where: { id: Number(item.productId) }
           });
-          if (!product) continue;
-          
+          if (!product) {
+            throw new Error(`El producto con ID ${item.productId} no existe.`);
+          }
           const isPesable = product.isPesable;
           const actualQtyOrWeight = isPesable
             ? (item.weight ? Number(item.weight) : Number(item.quantity) * Number(product.approximateWeight || 1))
             : Number(item.quantity);
 
-          if (reason === 'DEVOLUCION') {
-            // Actualizar stock general del producto
-            await tx.product.update({
-              where: { id: Number(item.productId) },
-              data: {
-                stock: {
-                  increment: Number(item.quantity),
-                },
-              },
+          await tx.creditNoteItem.create({
+            data: {
+              creditNoteId: creditNote.id,
+              productId: Number(item.productId),
+              quantity: Number(item.quantity),
+              weight: isPesable ? actualQtyOrWeight : null,
+              unitPrice: Number(item.unitPrice),
+              subtotal: Math.round(actualQtyOrWeight * Number(item.unitPrice)),
+            },
+          });
+        }
+
+        // Afectar stock y saldo corriente SOLO si es ADMIN (ya aprobada)
+        if (isAdmin) {
+          for (const item of items) {
+            const product = await tx.product.findUnique({
+              where: { id: Number(item.productId) }
             });
+            if (!product) continue;
+            
+            const isPesable = product.isPesable;
+            const actualQtyOrWeight = isPesable
+              ? (item.weight ? Number(item.weight) : Number(item.quantity) * Number(product.approximateWeight || 1))
+              : Number(item.quantity);
 
-            // Si hay lotes involucrados en la factura vinculada, intentamos devolver proporcionalmente a esos lotes.
-            let assignedLotId: number | null = null;
-            let remainingToReturn = Number(item.quantity);
-
-            if (orderId) {
-              const orderItem = await tx.orderItem.findFirst({
-                where: {
-                  orderId: Number(orderId),
-                  productId: Number(item.productId),
-                },
-                include: {
-                  orderItemLots: true,
+            if (reason === 'DEVOLUCION') {
+              // Actualizar stock general del producto
+              await tx.product.update({
+                where: { id: Number(item.productId) },
+                data: {
+                  stock: {
+                    increment: Number(item.quantity),
+                  },
                 },
               });
 
-              if (orderItem && orderItem.orderItemLots.length > 0) {
-                // Asignar proporcionalmente a los lotes originales del pedido
-                for (const oil of orderItem.orderItemLots) {
-                  if (remainingToReturn <= 0) break;
-                  
-                  const toReturn = Math.min(oil.quantity, remainingToReturn);
-                  if (toReturn > 0) {
+              // Si hay lotes involucrados en la factura vinculada, intentamos devolver proporcionalmente a esos lotes.
+              let assignedLotId: number | null = null;
+              let remainingToReturn = Number(item.quantity);
+
+              if (orderId) {
+                const orderItem = await tx.orderItem.findFirst({
+                  where: {
+                    orderId: Number(orderId),
+                    productId: Number(item.productId),
+                  },
+                  include: {
+                    orderItemLots: true,
+                  },
+                });
+
+                if (orderItem && orderItem.orderItemLots.length > 0) {
+                  // Asignar proporcionalmente a los lotes originales del pedido
+                  for (const oil of orderItem.orderItemLots) {
+                    if (remainingToReturn <= 0) break;
+                    
+                    const toReturn = Math.min(oil.quantity, remainingToReturn);
+                    if (toReturn > 0) {
+                      await tx.productLot.update({
+                        where: { id: oil.productLotId },
+                        data: {
+                          stock: {
+                            increment: toReturn,
+                          },
+                        },
+                      });
+                      remainingToReturn -= toReturn;
+                      if (!assignedLotId) {
+                        assignedLotId = oil.productLotId;
+                      }
+                    }
+                  }
+
+                  // Si queda remanente (ej. se devolvió más cantidad), sumarlo al primer lote
+                  if (remainingToReturn > 0) {
+                    const firstLot = orderItem.orderItemLots[0];
                     await tx.productLot.update({
-                      where: { id: oil.productLotId },
+                      where: { id: firstLot.productLotId },
                       data: {
                         stock: {
-                          increment: toReturn,
+                          increment: remainingToReturn,
                         },
                       },
                     });
-                    remainingToReturn -= toReturn;
+                    remainingToReturn = 0;
                     if (!assignedLotId) {
-                      assignedLotId = oil.productLotId;
+                      assignedLotId = firstLot.productLotId;
                     }
                   }
                 }
+              }
 
-                // Si queda remanente (ej. se devolvió más cantidad), sumarlo al primer lote
-                if (remainingToReturn > 0) {
-                  const firstLot = orderItem.orderItemLots[0];
+              // Fallback: Si no pudimos asociar a ningún lote de la factura (o no hay factura o queda remanente),
+              // buscamos el lote 'S/L' o el primero existente del producto.
+              if (!assignedLotId || remainingToReturn > 0) {
+                const qtyToIncrement = remainingToReturn > 0 ? remainingToReturn : Number(item.quantity);
+                let defaultLot = await tx.productLot.findFirst({
+                  where: { productId: Number(item.productId), lotNumber: 'S/L' }
+                });
+
+                if (!defaultLot) {
+                  defaultLot = await tx.productLot.findFirst({
+                    where: { productId: Number(item.productId) },
+                    orderBy: { id: 'asc' }
+                  });
+                }
+
+                if (defaultLot) {
                   await tx.productLot.update({
-                    where: { id: firstLot.productLotId },
+                    where: { id: defaultLot.id },
                     data: {
                       stock: {
-                        increment: remainingToReturn,
+                        increment: qtyToIncrement,
                       },
                     },
                   });
-                  remainingToReturn = 0;
-                  if (!assignedLotId) {
-                    assignedLotId = firstLot.productLotId;
-                  }
+                  assignedLotId = defaultLot.id;
+                } else {
+                  // Si el producto no tiene absolutamente ningún lote registrado, creamos uno de contingencia
+                  const newLot = await tx.productLot.create({
+                    data: {
+                      productId: Number(item.productId),
+                      lotNumber: 'S/L',
+                      expirationDate: new Date('2036-12-31T00:00:00Z'),
+                      stock: qtyToIncrement
+                    }
+                  });
+                  assignedLotId = newLot.id;
                 }
               }
-            }
 
-            // Fallback: Si no pudimos asociar a ningún lote de la factura (o no hay factura o queda remanente),
-            // buscamos el lote 'S/L' o el primero existente del producto.
-            if (!assignedLotId || remainingToReturn > 0) {
-              const qtyToIncrement = remainingToReturn > 0 ? remainingToReturn : Number(item.quantity);
-              let defaultLot = await tx.productLot.findFirst({
-                where: { productId: Number(item.productId), lotNumber: 'S/L' }
+              // Registrar movimiento de stock
+              await tx.stockMovement.create({
+                data: {
+                  productId: Number(item.productId),
+                  quantity: Number(item.quantity),
+                  type: MovementType.IN,
+                  referenceId: `NC-${creditNote.id}`,
+                  userId,
+                  reason: `Devolución del cliente: ${persona.name} (NC #${creditNoteNumber})`,
+                  productLotId: assignedLotId,
+                },
               });
-
-              if (!defaultLot) {
-                defaultLot = await tx.productLot.findFirst({
-                  where: { productId: Number(item.productId) },
-                  orderBy: { id: 'asc' }
-                });
-              }
-
-              if (defaultLot) {
-                await tx.productLot.update({
-                  where: { id: defaultLot.id },
-                  data: {
-                    stock: {
-                      increment: qtyToIncrement,
-                    },
-                  },
-                });
-                assignedLotId = defaultLot.id;
-              } else {
-                // Si el producto no tiene absolutamente ningún lote registrado, creamos uno de contingencia
-                const newLot = await tx.productLot.create({
-                  data: {
-                    productId: Number(item.productId),
-                    lotNumber: 'S/L',
-                    expirationDate: new Date('2036-12-31T00:00:00Z'),
-                    stock: qtyToIncrement
-                  }
-                });
-                assignedLotId = newLot.id;
-              }
             }
-
-            // Registrar movimiento de stock
-            await tx.stockMovement.create({
-              data: {
-                productId: Number(item.productId),
-                quantity: Number(item.quantity),
-                type: MovementType.IN,
-                referenceId: `NC-${creditNote.id}`,
-                userId,
-                reason: `Devolución del cliente: ${persona.name} (NC #${creditNoteNumber})`,
-                productLotId: assignedLotId,
-              },
-            });
           }
+
+          // Decrementar el saldo pendiente en la cuenta corriente del cliente
+          await tx.persona.update({
+            where: { id: Number(personaId) },
+            data: {
+              outstandingBalance: {
+                decrement: totalAmount,
+              },
+            },
+          });
         }
 
-        // Decrementar el saldo pendiente en la cuenta corriente del cliente
-        await tx.persona.update({
-          where: { id: Number(personaId) },
-          data: {
-            outstandingBalance: {
-              decrement: totalAmount,
-            },
-          },
-        });
-      }
+        return creditNote;
+      });
 
-      return creditNote;
-    });
+      // Auditoría fuera de la transacción
+      await logAudit({
+        userId,
+        action: 'CREATE_CREDIT_NOTE',
+        entityType: 'CreditNote',
+        entityId: result.id,
+        newValues: result,
+      });
 
-    // Auditoría fuera de la transacción
-    await logAudit({
-      userId,
-      action: 'CREATE_CREDIT_NOTE',
-      entityType: 'CreditNote',
-      entityId: result.id,
-      newValues: result,
-    });
-
-    res.status(201).json({
-      status: 'success',
-      data: { creditNote: result },
-    });
+      res.status(201).json({
+        status: 'success',
+        data: { creditNote: result },
+      });
+    } catch (secondaryError: any) {
+      console.error('❌ Error en el flujo secundario de Nota de Crédito:', secondaryError.message);
+      res.status(400).json({
+        status: 'error',
+        message: `La Nota de Crédito fue emitida con éxito (Nro: ${creditNoteNumber || 'S/N'}, CAE: ${cae || 'S/C'}). Sin embargo, ocurrió un error al registrar las transacciones secundarias de stock o cuenta corriente: ${secondaryError.message}. Contacte a administración para conciliar manualmente.`
+      });
+    }
   } catch (error: any) {
     console.error('Error al emitir nota de crédito:', error);
     res.status(500).json({
@@ -515,153 +536,19 @@ export async function approveCreditNote(req: AuthenticatedRequest, res: Response
       }
     }
 
-    const result = await prisma.$transaction(async (tx) => {
+    // PERSISTENCIA AISLADA DE NOTA DE CRÉDITO:
+    // Actualizamos la Nota de Crédito en DB de forma simple e inmediata con el CAE y número.
+    // Esto asegura que si falla la lógica de stock/lotes o balance de cuenta corriente subsiguiente, los datos fiscales (CAE) ya estén seguros localmente.
+    let updatedCreditNotePre;
+    try {
       if (!isOfficial) {
-        const count = await tx.creditNote.count({
+        const count = await prisma.creditNote.count({
           where: { billingType: 'INTERNAL', status: CreditNoteStatus.APPROVED },
         });
         creditNoteNumber = `NCI-${(count + 1).toString().padStart(8, '0')}`;
       }
 
-      // 3. Procesar ítems, stock y movimientos
-      for (const item of creditNote.items) {
-        const product = await tx.product.findUnique({
-          where: { id: item.productId }
-        });
-        if (!product) continue;
-
-        const isPesable = product.isPesable;
-        const actualQtyOrWeight = isPesable
-          ? (item.weight ? Number(item.weight) : Number(item.quantity) * Number(product.approximateWeight || 1))
-          : Number(item.quantity);
-
-        if (creditNote.reason === 'DEVOLUCION') {
-          // Incrementar stock general del producto
-          await tx.product.update({
-            where: { id: item.productId },
-            data: {
-              stock: {
-                increment: item.quantity,
-              },
-            },
-          });
-
-          let assignedLotId: number | null = null;
-          let remainingToReturn = item.quantity;
-
-          if (creditNote.orderId) {
-            const orderItem = await tx.orderItem.findFirst({
-              where: {
-                orderId: creditNote.orderId,
-                productId: item.productId,
-              },
-              include: {
-                orderItemLots: true,
-              },
-            });
-
-            if (orderItem && orderItem.orderItemLots.length > 0) {
-              for (const oil of orderItem.orderItemLots) {
-                if (remainingToReturn <= 0) break;
-                
-                const toReturn = Math.min(oil.quantity, remainingToReturn);
-                if (toReturn > 0) {
-                  await tx.productLot.update({
-                    where: { id: oil.productLotId },
-                    data: {
-                      stock: {
-                        increment: toReturn,
-                      },
-                    },
-                  });
-                  remainingToReturn -= toReturn;
-                  if (!assignedLotId) {
-                    assignedLotId = oil.productLotId;
-                  }
-                }
-              }
-
-              if (remainingToReturn > 0) {
-                const firstLot = orderItem.orderItemLots[0];
-                await tx.productLot.update({
-                  where: { id: firstLot.productLotId },
-                  data: {
-                    stock: {
-                      increment: remainingToReturn,
-                    },
-                  },
-                });
-                remainingToReturn = 0;
-                if (!assignedLotId) {
-                  assignedLotId = firstLot.productLotId;
-                }
-              }
-            }
-          }
-
-          if (!assignedLotId || remainingToReturn > 0) {
-            const qtyToIncrement = remainingToReturn > 0 ? remainingToReturn : item.quantity;
-            let defaultLot = await tx.productLot.findFirst({
-              where: { productId: item.productId, lotNumber: 'S/L' }
-            });
-
-            if (!defaultLot) {
-              defaultLot = await tx.productLot.findFirst({
-                where: { productId: item.productId },
-                orderBy: { id: 'asc' }
-              });
-            }
-
-            if (defaultLot) {
-              await tx.productLot.update({
-                where: { id: defaultLot.id },
-                data: {
-                  stock: {
-                    increment: qtyToIncrement,
-                  },
-                },
-              });
-              assignedLotId = defaultLot.id;
-            } else {
-              const newLot = await tx.productLot.create({
-                data: {
-                  productId: item.productId,
-                  lotNumber: 'S/L',
-                  expirationDate: new Date('2036-12-31T00:00:00Z'),
-                  stock: qtyToIncrement
-                }
-              });
-              assignedLotId = newLot.id;
-            }
-          }
-
-          // Registrar movimiento de stock
-          await tx.stockMovement.create({
-            data: {
-              productId: item.productId,
-              quantity: item.quantity,
-              type: MovementType.IN,
-              referenceId: `NC-${creditNote.id}`,
-              userId: adminId,
-              reason: `Devolución (Aprobación NC #${creditNoteNumber})`,
-              productLotId: assignedLotId,
-            },
-          });
-        }
-      }
-
-      // 4. Decrementar saldo de cuenta corriente del cliente
-      await tx.persona.update({
-        where: { id: creditNote.personaId },
-        data: {
-          outstandingBalance: {
-            decrement: totalAmount,
-          },
-        },
-      });
-
-      // 5. Actualizar la Nota de Crédito en DB
-      const updated = await tx.creditNote.update({
+      updatedCreditNotePre = await prisma.creditNote.update({
         where: { id: creditNote.id },
         data: {
           status: CreditNoteStatus.APPROVED,
@@ -678,25 +565,175 @@ export async function approveCreditNote(req: AuthenticatedRequest, res: Response
               product: true,
             },
           },
-        },
+        }
+      });
+    } catch (saveError: any) {
+      console.error('❌ Error crítico al persistir CAE de Nota de Crédito en DB:', saveError);
+      res.status(500).json({
+        status: 'error',
+        message: `La Nota de Crédito fue aprobada en AFIP (Nro: ${creditNoteNumber}, CAE: ${cae}), pero falló el registro local. Por favor registre estos datos manualmente: ${saveError.message}`
+      });
+      return;
+    }
+
+    // Transacción secundaria para procesar la lógica de stock, lotes y cuenta corriente.
+    try {
+      const result = await prisma.$transaction(async (tx) => {
+        // Procesar ítems, stock y movimientos
+        for (const item of creditNote.items) {
+          const product = await tx.product.findUnique({
+            where: { id: item.productId }
+          });
+          if (!product) continue;
+
+          if (creditNote.reason === 'DEVOLUCION') {
+            // Incrementar stock general del producto
+            await tx.product.update({
+              where: { id: item.productId },
+              data: {
+                stock: {
+                  increment: item.quantity,
+                },
+              },
+            });
+
+            let assignedLotId: number | null = null;
+            let remainingToReturn = item.quantity;
+
+            if (creditNote.orderId) {
+              const orderItem = await tx.orderItem.findFirst({
+                where: {
+                  orderId: creditNote.orderId,
+                  productId: item.productId,
+                },
+                include: {
+                  orderItemLots: true,
+                },
+              });
+
+              if (orderItem && orderItem.orderItemLots.length > 0) {
+                for (const oil of orderItem.orderItemLots) {
+                  if (remainingToReturn <= 0) break;
+                  
+                  const toReturn = Math.min(oil.quantity, remainingToReturn);
+                  if (toReturn > 0) {
+                    await tx.productLot.update({
+                      where: { id: oil.productLotId },
+                      data: {
+                        stock: {
+                          increment: toReturn,
+                        },
+                      },
+                    });
+                    remainingToReturn -= toReturn;
+                    if (!assignedLotId) {
+                      assignedLotId = oil.productLotId;
+                    }
+                  }
+                }
+
+                if (remainingToReturn > 0) {
+                  const firstLot = orderItem.orderItemLots[0];
+                  await tx.productLot.update({
+                    where: { id: firstLot.productLotId },
+                    data: {
+                      stock: {
+                        increment: remainingToReturn,
+                      },
+                    },
+                  });
+                  remainingToReturn = 0;
+                  if (!assignedLotId) {
+                    assignedLotId = firstLot.productLotId;
+                  }
+                }
+              }
+            }
+
+            if (!assignedLotId || remainingToReturn > 0) {
+              const qtyToIncrement = remainingToReturn > 0 ? remainingToReturn : item.quantity;
+              let defaultLot = await tx.productLot.findFirst({
+                where: { productId: item.productId, lotNumber: 'S/L' }
+              });
+
+              if (!defaultLot) {
+                defaultLot = await tx.productLot.findFirst({
+                  where: { productId: item.productId },
+                  orderBy: { id: 'asc' }
+                });
+              }
+
+              if (defaultLot) {
+                await tx.productLot.update({
+                  where: { id: defaultLot.id },
+                  data: {
+                    stock: {
+                      increment: qtyToIncrement,
+                    },
+                  },
+                });
+                assignedLotId = defaultLot.id;
+              } else {
+                const newLot = await tx.productLot.create({
+                  data: {
+                    productId: item.productId,
+                    lotNumber: 'S/L',
+                    expirationDate: new Date('2036-12-31T00:00:00Z'),
+                    stock: qtyToIncrement
+                  }
+                });
+                assignedLotId = newLot.id;
+              }
+            }
+
+            // Registrar movimiento de stock
+            await tx.stockMovement.create({
+              data: {
+                productId: item.productId,
+                quantity: item.quantity,
+                type: MovementType.IN,
+                referenceId: `NC-${creditNote.id}`,
+                userId: adminId,
+                reason: `Devolución (Aprobación NC #${creditNoteNumber})`,
+                productLotId: assignedLotId,
+              },
+            });
+          }
+        }
+
+        // Decrementar saldo de cuenta corriente del cliente
+        await tx.persona.update({
+          where: { id: creditNote.personaId },
+          data: {
+            outstandingBalance: {
+              decrement: totalAmount,
+            },
+          },
+        });
+
+        return updatedCreditNotePre;
       });
 
-      return updated;
-    });
+      // Registrar auditoría fuera de la transacción
+      await logAudit({
+        userId: adminId,
+        action: 'APPROVE_CREDIT_NOTE',
+        entityType: 'CreditNote',
+        entityId: result.id,
+        newValues: result,
+      });
 
-    // Registrar auditoría fuera de la transacción
-    await logAudit({
-      userId: adminId,
-      action: 'APPROVE_CREDIT_NOTE',
-      entityType: 'CreditNote',
-      entityId: result.id,
-      newValues: result,
-    });
-
-    res.status(200).json({
-      status: 'success',
-      data: { creditNote: result },
-    });
+      res.status(200).json({
+        status: 'success',
+        data: { creditNote: result },
+      });
+    } catch (secondaryError: any) {
+      console.error('❌ Error en el flujo secundario de Aprobación de NC:', secondaryError.message);
+      res.status(400).json({
+        status: 'error',
+        message: `La Nota de Crédito oficial fue aprobada con éxito (Nro: ${creditNoteNumber}, CAE: ${cae}). Sin embargo, ocurrió un error al registrar los movimientos secundarios de stock o cuenta corriente: ${secondaryError.message}. Contacte a administración para conciliar manualmente.`
+      });
+    }
   } catch (error: any) {
     console.error('Error al aprobar nota de crédito:', error);
     res.status(500).json({

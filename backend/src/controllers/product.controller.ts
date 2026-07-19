@@ -318,3 +318,43 @@ export async function importProductsZip(req: AuthenticatedRequest, res: Response
   }
 }
 
+/**
+ * Obtener descalces de stock entre el producto y sus lotes (Auditoría).
+ */
+export async function auditStockDrift(req: AuthenticatedRequest, res: Response): Promise<void> {
+  try {
+    const driftProducts = await productService.reconcileStockAudit();
+    res.status(200).json({
+      status: 'success',
+      data: {
+        count: driftProducts.length,
+        products: driftProducts
+      }
+    });
+  } catch (error: any) {
+    console.error('Error al realizar la auditoría de stock:', error);
+    res.status(500).json({ status: 'error', message: 'Error al realizar la auditoría de stock.' });
+  }
+}
+
+/**
+ * Corregir descalces de stock reconciliando contra el lote 'S/L' (Solo ADMIN).
+ */
+export async function reconcileStockDrift(req: AuthenticatedRequest, res: Response): Promise<void> {
+  const userId = req.user?.id;
+  if (!userId) {
+    res.status(401).json({ status: 'error', message: 'No autenticado.' });
+    return;
+  }
+  try {
+    const result = await productService.executeStockReconciliation(userId);
+    res.status(200).json({
+      status: 'success',
+      data: result
+    });
+  } catch (error: any) {
+    console.error('Error al conciliar descalces de stock:', error);
+    res.status(500).json({ status: 'error', message: error.message || 'Error al conciliar descalces de stock.' });
+  }
+}
+

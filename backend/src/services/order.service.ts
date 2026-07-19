@@ -125,12 +125,20 @@ export class OrderService {
         }))
       });
 
-      // 5. Actualizar stock general
+      // 5. Actualizar stock general de manera atómica para evitar race conditions
       for (const stockUp of stockUpdates) {
-        await tx.product.update({
+        const updated = await tx.product.update({
           where: { id: stockUp.productId },
-          data: { stock: stockUp.newStock },
+          data: {
+            stock: {
+              decrement: Math.abs(stockUp.quantityDecreased)
+            }
+          }
         });
+
+        if (updated.stock < 0 && process.env.IGNORE_STOCK_CHECK !== 'true') {
+          throw new Error(`Stock insuficiente para "${updated.name}" debido a una operación concurrente. Por favor reintente la carga del pedido.`);
+        }
       }
 
       // 6. Inserción masiva de movimientos de stock (optimizada en una sola llamada)

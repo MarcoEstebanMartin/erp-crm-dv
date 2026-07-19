@@ -10,6 +10,7 @@ export default function AfipExportDashboard() {
   const [year, setYear] = useState<number>(date.getFullYear());
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [progressMsg, setProgressMsg] = useState<string | null>(null);
 
   const months = [
     { value: 1, label: 'Enero' },
@@ -30,6 +31,9 @@ export default function AfipExportDashboard() {
     try {
       setLoading(true);
       setErrorMsg(null);
+      setProgressMsg('Conectando con el servidor para exportar registros...');
+      await new Promise(r => setTimeout(r, 100));
+
       const res = await fetch(`${API_BASE_URL}/iva/export?month=${month}&year=${year}`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
@@ -38,10 +42,10 @@ export default function AfipExportDashboard() {
       if (!res.ok) throw new Error('Error al generar los archivos AFIP');
       const { data } = await res.json();
       
+      setProgressMsg('Comprimiendo y empaquetando archivos oficiales TXT...');
+      await new Promise(r => setTimeout(r, 100));
+
       const { txt } = data;
-      
-      // We will use JSZip to bundle them if possible, or just download individually.
-      // Since jszip is installed, let's use it dynamically.
       const JSZip = (await import('jszip')).default;
       const zip = new JSZip();
       
@@ -59,10 +63,14 @@ export default function AfipExportDashboard() {
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
+      
+      setProgressMsg('Descarga completada.');
+      await new Promise(r => setTimeout(r, 600));
     } catch (err: any) {
       setErrorMsg(err.message);
     } finally {
       setLoading(false);
+      setProgressMsg(null);
     }
   };
 
@@ -74,6 +82,9 @@ export default function AfipExportDashboard() {
     try {
       setLoading(true);
       setErrorMsg(null);
+      setProgressMsg('Conectando con el servidor y obteniendo datos fiscales...');
+      await new Promise(r => setTimeout(r, 150));
+
       const res = await fetch(`${API_BASE_URL}/iva/export?month=${month}&year=${year}`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
@@ -82,15 +93,10 @@ export default function AfipExportDashboard() {
       if (!res.ok) throw new Error('Error al obtener datos para PDF');
       const { data } = await res.json();
 
-      // Generar SubdiarioVentas
-      const docVentas = new jsPDF('landscape');
-      docVentas.setFontSize(16);
-      docVentas.text('LIBRO I.V.A. - VENTAS', 140, 15, { align: 'center' });
-      
-      docVentas.setFontSize(10);
-      docVentas.text(`Empresa: DISTRIBUIDORA DV`, 14, 25);
-      docVentas.text(`Periodo: 01/${month.toString().padStart(2,'0')}/${year} - 31/${month.toString().padStart(2,'0')}/${year}`, 14, 30);
-      
+      // Procesar Ventas
+      setProgressMsg('Procesando y tabulando Libro IVA Ventas...');
+      await new Promise(r => setTimeout(r, 150));
+
       const ventasRows = data.ventasData.map((v: any) => {
         const d = new Date(v.fecha);
         const fStr = `${d.getDate().toString().padStart(2,'0')}/${(d.getMonth() + 1).toString().padStart(2,'0')}/${d.getFullYear()}`;
@@ -109,6 +115,18 @@ export default function AfipExportDashboard() {
         ];
       });
 
+      // Generar PDF Ventas
+      setProgressMsg('Generando archivo PDF de IVA Ventas...');
+      await new Promise(r => setTimeout(r, 150));
+
+      const docVentas = new jsPDF('landscape');
+      docVentas.setFontSize(16);
+      docVentas.text('LIBRO I.V.A. - VENTAS', 140, 15, { align: 'center' });
+      
+      docVentas.setFontSize(10);
+      docVentas.text(`Empresa: DISTRIBUIDORA DV`, 14, 25);
+      docVentas.text(`Periodo: 01/${month.toString().padStart(2,'0')}/${year} - 31/${month.toString().padStart(2,'0')}/${year}`, 14, 30);
+      
       autoTable(docVentas, {
         startY: 35,
         head: [['Fecha', 'Comprobante', 'Numero', 'Persona', 'CUIT/DNI', 'Neto Gravado', 'Exento', 'IVA', 'Percepciones', 'Retenciones', 'Total']],
@@ -118,15 +136,10 @@ export default function AfipExportDashboard() {
       });
       docVentas.save(`Subdiario_Ventas_${year}_${month.toString().padStart(2,'0')}.pdf`);
 
-      // Generar SubdiarioCompras
-      const docCompras = new jsPDF('landscape');
-      docCompras.setFontSize(16);
-      docCompras.text('LIBRO I.V.A. - COMPRAS', 140, 15, { align: 'center' });
-      
-      docCompras.setFontSize(10);
-      docCompras.text(`Empresa: DISTRIBUIDORA DV`, 14, 25);
-      docCompras.text(`Periodo: 01/${month.toString().padStart(2,'0')}/${year} - 31/${month.toString().padStart(2,'0')}/${year}`, 14, 30);
-      
+      // Procesar Compras
+      setProgressMsg('Procesando y tabulando Libro IVA Compras...');
+      await new Promise(r => setTimeout(r, 150));
+
       const comprasRows = data.comprasData.map((c: any) => {
         const d = new Date(c.fecha);
         const fStr = `${d.getDate().toString().padStart(2,'0')}/${(d.getMonth() + 1).toString().padStart(2,'0')}/${d.getFullYear()}`;
@@ -145,6 +158,18 @@ export default function AfipExportDashboard() {
         ];
       });
 
+      // Generar PDF Compras
+      setProgressMsg('Generando archivo PDF de IVA Compras...');
+      await new Promise(r => setTimeout(r, 150));
+
+      const docCompras = new jsPDF('landscape');
+      docCompras.setFontSize(16);
+      docCompras.text('LIBRO I.V.A. - COMPRAS', 140, 15, { align: 'center' });
+      
+      docCompras.setFontSize(10);
+      docCompras.text(`Empresa: DISTRIBUIDORA DV`, 14, 25);
+      docCompras.text(`Periodo: 01/${month.toString().padStart(2,'0')}/${year} - 31/${month.toString().padStart(2,'0')}/${year}`, 14, 30);
+      
       autoTable(docCompras, {
         startY: 35,
         head: [['Fecha', 'Comprobante', 'Numero', 'Proveedor', 'CUIT', 'Neto Gravado', 'Exento', 'IVA Crédito', 'Percepciones', 'Retenciones', 'Total']],
@@ -154,10 +179,14 @@ export default function AfipExportDashboard() {
       });
       docCompras.save(`Subdiario_Compras_${year}_${month.toString().padStart(2,'0')}.pdf`);
 
+      setProgressMsg('Descargas finalizadas con éxito.');
+      await new Promise(r => setTimeout(r, 600));
+
     } catch (err: any) {
       setErrorMsg(err.message);
     } finally {
       setLoading(false);
+      setProgressMsg(null);
     }
   };
 
@@ -195,6 +224,30 @@ export default function AfipExportDashboard() {
             />
           </div>
         </div>
+
+        {loading && progressMsg && (
+          <div style={{
+            backgroundColor: '#F3F4F6',
+            border: '1px solid #E5E7EB',
+            borderRadius: '8px',
+            padding: '14px 18px',
+            marginBottom: '25px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            animation: 'fadeIn 0.2s ease-in-out'
+          }}>
+            <div style={{
+              width: '18px',
+              height: '18px',
+              border: '2px solid #D1D5DB',
+              borderTopColor: '#111827',
+              borderRadius: '50%',
+              animation: 'spin 0.8s linear infinite'
+            }}></div>
+            <span style={{ fontSize: '0.875rem', color: '#374151', fontWeight: 500 }}>{progressMsg}</span>
+          </div>
+        )}
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
           <button 

@@ -371,14 +371,66 @@ export async function updateOrderStatus(req: AuthenticatedRequest, res: Response
         let recalculatedTotal = 0;
 
         for (const item of items) {
-          const assignments = lotAssignments[item.id] || [];
-          const totalAssigned = assignments.reduce((sum: number, a: any) => sum + Number(a.quantity), 0);
+          const userAssignments = lotAssignments[item.id] || [];
+          const totalUserAssigned = userAssignments.reduce((sum: number, a: any) => sum + Number(a.quantity), 0);
 
-          if (totalAssigned > item.quantity) {
-            throw new Error(`Asignación inválida para "${item.product.name}". Cantidad asignada (${totalAssigned}) supera la cantidad pedida (${item.quantity}).`);
+          if (totalUserAssigned > item.quantity) {
+            throw new Error(`Asignación inválida para "${item.product.name}". Cantidad asignada (${totalUserAssigned}) supera la cantidad pedida (${item.quantity}).`);
           }
 
-          // Si hay faltante (totalAssigned < item.quantity), devolver stock general y crear movimiento
+          const finalAssignments: { lotId: number; quantity: number }[] = [];
+          
+          for (const uAs of userAssignments) {
+            const q = Number(uAs.quantity);
+            if (q > 0) {
+              finalAssignments.push({ lotId: Number(uAs.lotId), quantity: q });
+            }
+          }
+
+          let remainingToAssign = item.quantity - totalUserAssigned;
+          if (remainingToAssign > 0) {
+            const activeLots = await tx.productLot.findMany({
+              where: { 
+                productId: item.productId, 
+                stock: { gt: 0 },
+                id: { notIn: finalAssignments.map(fa => fa.lotId) }
+              },
+              orderBy: { expirationDate: 'asc' },
+            });
+
+            for (const lot of activeLots) {
+              if (remainingToAssign <= 0) break;
+              const allocatedQty = Math.min(lot.stock, remainingToAssign);
+              if (allocatedQty > 0) {
+                finalAssignments.push({ lotId: lot.id, quantity: allocatedQty });
+                remainingToAssign -= allocatedQty;
+              }
+            }
+
+            if (remainingToAssign > 0) {
+              if (process.env.IGNORE_STOCK_CHECK === 'true') {
+                let slLot = await tx.productLot.findFirst({
+                  where: { productId: item.productId, lotNumber: 'S/L' }
+                });
+                if (!slLot) {
+                  slLot = await tx.productLot.create({
+                    data: {
+                      productId: item.productId,
+                      lotNumber: 'S/L',
+                      expirationDate: new Date('2036-12-31T00:00:00Z'),
+                      stock: 0,
+                      location: 'S/U'
+                    }
+                  });
+                }
+                finalAssignments.push({ lotId: slLot.id, quantity: remainingToAssign });
+                remainingToAssign = 0;
+              }
+            }
+          }
+
+          const totalAssigned = finalAssignments.reduce((sum, a) => sum + a.quantity, 0);
+
           const diff = item.quantity - totalAssigned;
           if (diff > 0) {
             await tx.product.update({
@@ -398,7 +450,6 @@ export async function updateOrderStatus(req: AuthenticatedRequest, res: Response
             });
           }
 
-          // Recalcular subtotal del item
           let newSubtotal = Number(item.subtotal);
           let newWeight = item.weight ? Number(item.weight) : null;
           if (totalAssigned === 0) {
@@ -412,7 +463,6 @@ export async function updateOrderStatus(req: AuthenticatedRequest, res: Response
             }
           }
 
-          // Actualizar OrderItem con la cantidad y subtotal real armado
           await tx.orderItem.update({
             where: { id: item.id },
             data: {
@@ -424,37 +474,54 @@ export async function updateOrderStatus(req: AuthenticatedRequest, res: Response
 
           recalculatedTotal += newSubtotal;
 
-          for (const assignment of assignments) {
+          for (const assignment of finalAssignments) {
             const { lotId, quantity } = assignment;
-            const q = Number(quantity);
-            if (q <= 0) continue;
 
             const lot = await tx.productLot.findUnique({
-              where: { id: Number(lotId) },
+              where: { id: lotId },
             });
 
-            if (!lot || lot.productId !== item.productId) {
-              throw new Error(`El lote especificado no pertenece al producto "${item.product.name}".`);
-            }
+            if (!lot) continue;
 
-            if (lot.stock < q && process.env.IGNORE_STOCK_CHECK !== 'true') {
-              throw new Error(`Stock insuficiente en el lote "${lot.lotNumber}" para "${item.product.name}" (Disponible: ${lot.stock}, Solicitado: ${q}).`);
-            }
-
-            // Decrementar stock del lote
             await tx.productLot.update({
               where: { id: lot.id },
-              data: { stock: { decrement: q } },
+              data: { stock: { decrement: quantity } },
             });
 
-            // Crear registro de OrderItemLot
             await tx.orderItemLot.create({
               data: {
                 orderItemId: item.id,
                 productLotId: lot.id,
-                quantity: q,
+                quantity,
               },
             });
+
+            const originalMov = await tx.stockMovement.findFirst({
+              where: {
+                productId: item.productId,
+                referenceId: `ORDER-${order.id}`,
+                productLotId: null
+              }
+            });
+
+            if (originalMov) {
+              await tx.stockMovement.update({
+                where: { id: originalMov.id },
+                data: { productLotId: lot.id }
+              });
+            } else {
+              await tx.stockMovement.create({
+                data: {
+                  productId: item.productId,
+                  quantity: -quantity,
+                  type: MovementType.OUT,
+                  referenceId: `ORDER-${order.id}`,
+                  userId: order.sellerId,
+                  reason: `Venta - Descuento físico de Lote #${lot.lotNumber} para Pedido #${order.id}`,
+                  productLotId: lot.id
+                }
+              });
+            }
           }
         }
 
@@ -800,10 +867,15 @@ export async function invoiceOrder(req: AuthenticatedRequest, res: Response): Pr
         }
 
         if (!activeDrawerOfficial) {
-          res.status(400).json({ status: 'error', message: `Debe abrir la Caja Grande antes de registrar cobros en efectivo.` });
-          return;
+          if (userRole === Role.ADMIN || userRole === Role.FACTURACION) {
+            activeDrawerOfficialId = null;
+          } else {
+            res.status(400).json({ status: 'error', message: `Debe abrir la Caja Grande antes de registrar cobros en efectivo.` });
+            return;
+          }
+        } else {
+          activeDrawerOfficialId = activeDrawerOfficial.id;
         }
-        activeDrawerOfficialId = activeDrawerOfficial.id;
 
         // Validar caja para la porción interna si hay split
         if (splitApplied && internoItemsData.length > 0) {
@@ -814,10 +886,15 @@ export async function invoiceOrder(req: AuthenticatedRequest, res: Response): Pr
             }
           });
           if (!activeDrawerInternal) {
-            res.status(400).json({ status: 'error', message: `Debe abrir la Caja de Sucursal X antes de registrar cobros en efectivo para la parte interna.` });
-            return;
+            if (userRole === Role.ADMIN || userRole === Role.FACTURACION) {
+              activeDrawerInternalId = null;
+            } else {
+              res.status(400).json({ status: 'error', message: `Debe abrir la Caja de Sucursal X antes de registrar cobros en efectivo para la parte interna.` });
+              return;
+            }
+          } else {
+            activeDrawerInternalId = activeDrawerInternal.id;
           }
-          activeDrawerInternalId = activeDrawerInternal.id;
         }
       } else if (paymentMethod === PaymentMethod.BANK_TRANSFER) {
         const selectedBankId = reqBankAccountId ? Number(reqBankAccountId) : (await prisma.bankAccount.findFirst())?.id;
@@ -853,9 +930,8 @@ export async function invoiceOrder(req: AuthenticatedRequest, res: Response): Pr
     } else {
       finalInvoiceType = InvoiceType.PRESUPUESTO;
     }
-
-    // Calcular desglose impositivo
-    let net = officialOrderTotal;
+    // Calcular desglose impositivo (Bottom-Up)
+    let net = 0;
     let tax = 0;
     let percepIIBB = 0;
     let percepIVA = 0;
@@ -870,16 +946,20 @@ export async function invoiceOrder(req: AuthenticatedRequest, res: Response): Pr
       const ivaPercAliquot = applyIvaPerc ? ((perceptionIVA && perceptionIVA.aliquot) ? Number(perceptionIVA.aliquot) : 3.00) : 0;
       const iibbAliquot = Number(order.persona.iibbAliquot || 0);
 
-      net = Number((officialOrderTotal / (1.21 + (iibbAliquot / 100) + (ivaPercAliquot / 100))).toFixed(2));
-      tax = Number((net * 0.21).toFixed(2));
+      // Desglose limpio: dividir el total comercial por 1.21 para obtener el neto
+      net = Number((officialOrderTotal / 1.21).toFixed(2));
+      tax = Number((officialOrderTotal - net).toFixed(2));
+
+      // Las percepciones se calculan directamente sobre el neto y se adicionan
       percepIIBB = Number((net * (iibbAliquot / 100)).toFixed(2));
       percepIVA = Number((net * (ivaPercAliquot / 100)).toFixed(2));
 
-      const sumParts = Number((net + tax + percepIIBB + percepIVA).toFixed(2));
-      const diff = Number((officialOrderTotal - sumParts).toFixed(2));
-      if (diff !== 0) {
-        tax = Number((tax + diff).toFixed(2));
-      }
+      // El total facturado final se incrementa adicionando las percepciones calculadas
+      officialOrderTotal = Number((net + tax + percepIIBB + percepIVA).toFixed(2));
+    } else {
+      // Para Factura B, C o Presupuesto no hay percepciones, dividimos simplemente en neto e IVA 21%
+      net = Number((officialOrderTotal / 1.21).toFixed(2));
+      tax = Number((officialOrderTotal - net).toFixed(2));
     }
 
     if (billingType === BillingType.OFFICIAL) {
@@ -906,148 +986,11 @@ export async function invoiceOrder(req: AuthenticatedRequest, res: Response): Pr
       finalInvoiceNumber = `INT-${order.id.toString().padStart(8, '0')}`;
     }
 
-    // Iniciar transacción de base de datos
-    const result = await prisma.$transaction(async (tx) => {
-      let internalOrderId: number | null = null;
-
-      if (hasSplit) {
-        // Si tenemos ítems para la orden interna, la creamos
-        if (internoItemsData.length > 0) {
-          const internalOrder = await tx.order.create({
-            data: {
-              personaId: order.personaId,
-              sellerId: order.sellerId,
-              billingType: BillingType.INTERNAL,
-              invoiceType: InvoiceType.PRESUPUESTO,
-              invoiceNumber: `INT-${order.id.toString().padStart(5, '0')}-X`,
-              totalAmount: internalOrderTotal,
-              status: OrderStatus.DELIVERED
-            }
-          });
-
-          internalOrderId = internalOrder.id;
-
-          // Crear los ítems de la orden interna
-          for (const item of internoItemsData) {
-            await tx.orderItem.create({
-              data: {
-                orderId: internalOrder.id,
-                productId: item.productId,
-                quantity: item.quantity,
-                weight: item.weight,
-                unitPrice: item.unitPrice,
-                subtotal: item.subtotal
-              }
-            });
-          }
-
-          // Registrar cobro o deuda de la orden interna (Sucursal X)
-          if (paymentMethod) {
-            let cashDrawerId: number | undefined = undefined;
-            let bankAccountId: number | undefined = undefined;
-
-            if (paymentMethod === PaymentMethod.CASH) {
-              cashDrawerId = activeDrawerInternalId || undefined;
-            } else if (paymentMethod === PaymentMethod.BANK_TRANSFER) {
-              bankAccountId = bankAccountInternalId || undefined;
-              await tx.bankAccount.update({
-                where: { id: bankAccountId! },
-                data: { balance: { increment: internalOrderTotal } }
-              });
-            }
-
-            await tx.transaction.create({
-              data: {
-                orderId: internalOrder.id,
-                personaId: order.personaId,
-                userId: adminId,
-                billingType: BillingType.INTERNAL,
-                type: TransactionType.INCOME,
-                paymentMethod,
-                amount: internalOrderTotal,
-                description: `Cobro en caja de pedido interno #${internalOrder.id} (Parte Interna de Pedido Original #${order.id})`,
-                cashDrawerId,
-                bankAccountId,
-                verified: true
-              }
-            });
-          } else {
-            await tx.persona.update({
-              where: { id: order.personaId },
-              data: { outstandingBalance: { increment: internalOrderTotal } }
-            });
-          }
-
-          // Reasignar los movimientos de stock del 50% de la porción interna
-          for (const item of internoItemsData) {
-            const stockMov = await tx.stockMovement.findFirst({
-              where: {
-                productId: item.productId,
-                referenceId: `ORDER-${order.id}`
-              }
-            });
-
-            if (stockMov) {
-              await tx.stockMovement.create({
-                data: {
-                  productId: item.productId,
-                  quantity: -item.quantity,
-                  type: MovementType.OUT,
-                  referenceId: `ORDER-${internalOrder.id}`,
-                  userId: order.sellerId,
-                  reason: `Venta - Pedido Interno #${internalOrder.id} (Parte Interna de Pedido #${order.id})`,
-                  productLotId: stockMov.productLotId
-                }
-              });
-
-              await tx.stockMovement.update({
-                where: { id: stockMov.id },
-                data: {
-                  quantity: stockMov.quantity + item.quantity
-                }
-              });
-            }
-          }
-        }
-
-        // Actualizamos los ítems del pedido original en base de datos
-        for (const item of oficialItemsData) {
-          if (item.orderItemId) {
-            await tx.orderItem.update({
-              where: { id: item.orderItemId },
-              data: {
-                quantity: item.quantity,
-                weight: item.weight,
-                unitPrice: item.unitPrice,
-                subtotal: item.subtotal
-              }
-            });
-          }
-        }
-
-        // Borramos del pedido original los ítems que se hayan trasladado 100% a la interna (si hubiera)
-        const oficialItemsIds = oficialItemsData.map(o => o.orderItemId).filter(id => id !== undefined);
-        await tx.orderItem.deleteMany({
-          where: {
-            orderId: order.id,
-            id: { notIn: oficialItemsIds }
-          }
-        });
-      } else {
-        // LÓGICA ESTÁNDAR: Actualizar precios de la orden oficial sin split
-        for (const item of oficialItemsData) {
-          await tx.orderItem.update({
-            where: { id: item.orderItemId },
-            data: {
-              unitPrice: item.unitPrice,
-              subtotal: item.subtotal
-            }
-          });
-        }
-      }
-
-      // Actualizar pedido original a DELIVERED
-      const updatedOrder = await tx.order.update({
+    // PERSISTENCIA AISLADA DE FACTURACIÓN: Guardamos inmediatamente los datos de facturación y CAE obtenidos de AFIP o generados de forma interna.
+    // Esto asegura que si ocurre algún error financiero posterior (ej. caja cerrada), los datos fiscales no se pierdan.
+    let updatedOrderPre;
+    try {
+      updatedOrderPre = await prisma.order.update({
         where: { id: order.id },
         data: {
           billingType,
@@ -1064,111 +1007,266 @@ export async function invoiceOrder(req: AuthenticatedRequest, res: Response): Pr
         },
         include: { items: { include: { product: true } }, persona: true }
       });
+    } catch (saveCaeError: any) {
+      console.error('❌ Error crítico al persistir CAE de AFIP en base de datos local:', saveCaeError);
+      res.status(500).json({
+        status: 'error',
+        message: `La factura fue emitida en AFIP (Nro: ${finalInvoiceNumber}, CAE: ${finalCae}), pero falló el registro local. Por favor registre estos datos manualmente: ${saveCaeError.message}`
+      });
+      return;
+    }
 
-      // Registrar percepción IIBB
-      if (percepIIBB > 0) {
-        await tx.taxWithholding.create({
-          data: {
-            type: 'PERCEPCION_PRACTICADA',
-            taxType: 'IIBB',
-            personaId: order.personaId,
-            number: finalInvoiceNumber || `FAC-${order.id}`,
-            date: new Date(),
-            amount: Number(percepIIBB.toFixed(2)),
-            jurisdiction: getJurisdictionCode(order.persona.province || order.persona.address),
-          },
-        });
-      }
+    // Transacción secundaria para procesar los flujos financieros, orden interna (split), percepciones de rentas y balances.
+    try {
+      const result = await prisma.$transaction(async (tx) => {
+        let internalOrderId: number | null = null;
 
-      // Registrar percepción IVA
-      if (percepIVA > 0) {
-        await tx.taxWithholding.create({
-          data: {
-            type: 'PERCEPCION_PRACTICADA',
-            taxType: 'IVA',
-            personaId: order.personaId,
-            number: finalInvoiceNumber || `FAC-${order.id}`,
-            date: new Date(),
-            amount: Number(percepIVA.toFixed(2)),
-            jurisdiction: null,
-          },
-        });
-      }
+        if (hasSplit) {
+          // Si tenemos ítems para la orden interna, la creamos
+          if (internoItemsData.length > 0) {
+            const internalOrder = await tx.order.create({
+              data: {
+                personaId: order.personaId,
+                sellerId: order.sellerId,
+                billingType: BillingType.INTERNAL,
+                invoiceType: InvoiceType.PRESUPUESTO,
+                invoiceNumber: `INT-${order.id.toString().padStart(5, '0')}-X`,
+                totalAmount: internalOrderTotal,
+                status: OrderStatus.DELIVERED
+              }
+            });
 
-      // Registrar cobro o deuda de la parte Oficial
-      if (paymentMethod) {
-        let cashDrawerId: number | undefined = undefined;
-        let bankAccountId: number | undefined = undefined;
+            internalOrderId = internalOrder.id;
 
-        if (paymentMethod === PaymentMethod.CASH) {
-          cashDrawerId = activeDrawerOfficialId || undefined;
-        } else if (paymentMethod === PaymentMethod.BANK_TRANSFER) {
-          bankAccountId = bankAccountOfficialId || undefined;
-          await tx.bankAccount.update({
-            where: { id: bankAccountId! },
-            data: { balance: { increment: officialOrderTotal } },
+            // Crear los ítems de la orden interna
+            for (const item of internoItemsData) {
+              await tx.orderItem.create({
+                data: {
+                  orderId: internalOrder.id,
+                  productId: item.productId,
+                  quantity: item.quantity,
+                  weight: item.weight,
+                  unitPrice: item.unitPrice,
+                  subtotal: item.subtotal
+                }
+              });
+            }
+
+            // Registrar cobro o deuda de la orden interna (Sucursal X)
+            if (paymentMethod) {
+              let cashDrawerId: number | undefined = undefined;
+              let bankAccountId: number | undefined = undefined;
+
+              if (paymentMethod === PaymentMethod.CASH) {
+                cashDrawerId = activeDrawerInternalId || undefined;
+              } else if (paymentMethod === PaymentMethod.BANK_TRANSFER) {
+                bankAccountId = bankAccountInternalId || undefined;
+                await tx.bankAccount.update({
+                  where: { id: bankAccountId! },
+                  data: { balance: { increment: internalOrderTotal } }
+                });
+              }
+
+              await tx.transaction.create({
+                data: {
+                  orderId: internalOrder.id,
+                  personaId: order.personaId,
+                  userId: adminId,
+                  billingType: BillingType.INTERNAL,
+                  type: TransactionType.INCOME,
+                  paymentMethod,
+                  amount: internalOrderTotal,
+                  description: `Cobro en caja de pedido interno #${internalOrder.id} (Parte Interna de Pedido Original #${order.id})`,
+                  cashDrawerId,
+                  bankAccountId,
+                  verified: true
+                }
+              });
+            } else {
+              await tx.persona.update({
+                where: { id: order.personaId },
+                data: { outstandingBalance: { increment: internalOrderTotal } }
+              });
+            }
+
+            // Reasignar los movimientos de stock del 50% de la porción interna
+            for (const item of internoItemsData) {
+              const stockMov = await tx.stockMovement.findFirst({
+                where: {
+                  productId: item.productId,
+                  referenceId: `ORDER-${order.id}`
+                }
+              });
+
+              if (stockMov) {
+                await tx.stockMovement.create({
+                  data: {
+                    productId: item.productId,
+                    quantity: -item.quantity,
+                    type: MovementType.OUT,
+                    referenceId: `ORDER-${internalOrder.id}`,
+                    userId: order.sellerId,
+                    reason: `Venta - Pedido Interno #${internalOrder.id} (Parte Interna de Pedido #${order.id})`,
+                    productLotId: stockMov.productLotId
+                  }
+                });
+
+                await tx.stockMovement.update({
+                  where: { id: stockMov.id },
+                  data: {
+                    quantity: stockMov.quantity + item.quantity
+                  }
+                });
+              }
+            }
+          }
+
+          // Actualizamos los ítems del pedido original en base de datos
+          for (const item of oficialItemsData) {
+            if (item.orderItemId) {
+              await tx.orderItem.update({
+                where: { id: item.orderItemId },
+                data: {
+                  quantity: item.quantity,
+                  weight: item.weight,
+                  unitPrice: item.unitPrice,
+                  subtotal: item.subtotal
+                }
+              });
+            }
+          }
+
+          // Borramos del pedido original los ítems que se hayan trasladado 100% a la interna (si hubiera)
+          const oficialItemsIds = oficialItemsData.map(o => o.orderItemId).filter(id => id !== undefined);
+          await tx.orderItem.deleteMany({
+            where: {
+              orderId: order.id,
+              id: { notIn: oficialItemsIds }
+            }
+          });
+        } else {
+          // LÓGICA ESTÁNDAR: Actualizar precios de la orden oficial sin split
+          for (const item of oficialItemsData) {
+            await tx.orderItem.update({
+              where: { id: item.orderItemId },
+              data: {
+                unitPrice: item.unitPrice,
+                subtotal: item.subtotal
+              }
+            });
+          }
+        }
+
+        // Registrar percepción IIBB
+        if (percepIIBB > 0) {
+          await tx.taxWithholding.create({
+            data: {
+              type: 'PERCEPCION_PRACTICADA',
+              taxType: 'IIBB',
+              personaId: order.personaId,
+              number: finalInvoiceNumber || `FAC-${order.id}`,
+              date: new Date(),
+              amount: Number(percepIIBB.toFixed(2)),
+              jurisdiction: getJurisdictionCode(order.persona.province || order.persona.address),
+            },
           });
         }
 
-        await tx.transaction.create({
-          data: {
-            orderId: order.id,
-            personaId: order.personaId,
-            userId: adminId,
-            billingType,
-            type: TransactionType.INCOME,
-            paymentMethod,
-            amount: officialOrderTotal,
-            description: paymentDescription ? `Cobro en caja de pedido #${order.id} - ${paymentDescription}` : `Cobro en caja de pedido #${order.id} (Parte Oficial)`,
-            cashDrawerId,
-            bankAccountId,
-            verified: true,
-          },
-        });
-      } else {
-        await tx.persona.update({
-          where: { id: order.personaId },
-          data: {
-            outstandingBalance: {
-              increment: officialOrderTotal
-            }
+        // Registrar percepción IVA
+        if (percepIVA > 0) {
+          await tx.taxWithholding.create({
+            data: {
+              type: 'PERCEPCION_PRACTICADA',
+              taxType: 'IVA',
+              personaId: order.personaId,
+              number: finalInvoiceNumber || `FAC-${order.id}`,
+              date: new Date(),
+              amount: Number(percepIVA.toFixed(2)),
+              jurisdiction: null,
+            },
+          });
+        }
+
+        // Registrar cobro o deuda de la parte Oficial
+        if (paymentMethod) {
+          let cashDrawerId: number | undefined = undefined;
+          let bankAccountId: number | undefined = undefined;
+
+          if (paymentMethod === PaymentMethod.CASH) {
+            cashDrawerId = activeDrawerOfficialId || undefined;
+          } else if (paymentMethod === PaymentMethod.BANK_TRANSFER) {
+            bankAccountId = bankAccountOfficialId || undefined;
+            await tx.bankAccount.update({
+              where: { id: bankAccountId! },
+              data: { balance: { increment: officialOrderTotal } },
+            });
           }
-        });
-      }
 
-      return {
-        order: updatedOrder,
-        split: splitApplied,
-        internalOrderId,
-        internalOrderTotal
-      };
-    });
+          await tx.transaction.create({
+            data: {
+              orderId: order.id,
+              personaId: order.personaId,
+              userId: adminId,
+              billingType,
+              type: TransactionType.INCOME,
+              paymentMethod,
+              amount: officialOrderTotal,
+              description: paymentDescription ? `Cobro en caja de pedido #${order.id} - ${paymentDescription}` : `Cobro en caja de pedido #${order.id} (Parte Oficial)`,
+              cashDrawerId,
+              bankAccountId,
+              verified: true,
+            },
+          });
+        } else {
+          await tx.persona.update({
+            where: { id: order.personaId },
+            data: {
+              outstandingBalance: {
+                increment: officialOrderTotal
+              }
+            }
+          });
+        }
 
-    // Auditoría
-    await logAudit({
-      userId: adminId,
-      action: 'INVOICE_ORDER',
-      entityType: 'Order',
-      entityId: order.id,
-      newValues: {
-        billingType,
-        invoiceNumber: result.order.invoiceNumber,
-        cae: result.order.cae,
-        total: result.order.totalAmount,
-        split: result.split,
-        internalOrderId: result.internalOrderId
-      },
-    });
+        return {
+          split: splitApplied,
+          internalOrderId,
+          internalOrderTotal
+        };
+      });
 
-    res.status(200).json({
-      status: 'success',
-      data: { 
-        order: result.order,
-        split: result.split,
-        internalOrderId: result.internalOrderId,
-        internalOrderTotal: result.internalOrderTotal
-      },
-    });
+      // Auditoría
+      await logAudit({
+        userId: adminId,
+        action: 'INVOICE_ORDER',
+        entityType: 'Order',
+        entityId: order.id,
+        newValues: {
+          billingType,
+          invoiceNumber: finalInvoiceNumber,
+          cae: finalCae,
+          total: officialOrderTotal,
+          split: result.split,
+          internalOrderId: result.internalOrderId
+        },
+      });
+
+      res.status(200).json({
+        status: 'success',
+        data: { 
+          order: updatedOrderPre,
+          split: result.split,
+          internalOrderId: result.internalOrderId,
+          internalOrderTotal: result.internalOrderTotal
+        },
+      });
+    } catch (secondaryError: any) {
+      console.error('❌ Error en el flujo secundario de facturación:', secondaryError.message);
+      res.status(400).json({
+        status: 'error',
+        message: `La factura oficial de AFIP fue emitida con éxito (Nro: ${finalInvoiceNumber}, CAE: ${finalCae}). Sin embargo, ocurrió un error al registrar las transacciones financieras o la porción interna: ${secondaryError.message}. Contacte a administración para conciliar la caja y cuenta corriente manualmente.`
+      });
+    }
   } catch (error: any) {
     console.error('Error al facturar pedido:', error.message);
     res.status(400).json({
@@ -1521,9 +1619,9 @@ export async function createDirectInvoice(req: AuthenticatedRequest, res: Respon
     } else {
       finalInvoiceType = InvoiceType.PRESUPUESTO;
     }
-
-    net = Math.round(totalSum / 1.21);
-    tax = totalSum - net;
+    // Calcular desglose impositivo (Bottom-Up)
+    net = Number((totalSum / 1.21).toFixed(2));
+    tax = Number((totalSum - net).toFixed(2));
     let percepIIBB = 0;
     let percepIVA = 0;
 
@@ -1539,23 +1637,10 @@ export async function createDirectInvoice(req: AuthenticatedRequest, res: Respon
       const ivaPercAliquot = applyIvaPerc ? ((perceptionIVA && perceptionIVA.aliquot) ? Number(perceptionIVA.aliquot) : 3.00) : 0;
       const iibbAliquot = Number(persona.iibbAliquot || 0);
 
-      // Redondear a 2 decimales para precisión contable
-      net = Number((totalSum / (1.21 + (iibbAliquot / 100) + (ivaPercAliquot / 100))).toFixed(2));
-      tax = Number((net * 0.21).toFixed(2));
+      // Calcular percepciones directamente sobre el neto y adicionarlas al total
       percepIIBB = Number((net * (iibbAliquot / 100)).toFixed(2));
       percepIVA = Number((net * (ivaPercAliquot / 100)).toFixed(2));
-
-      // Ajustar centavos de diferencia de redondeo contra el total
-      const sumParts = Number((net + tax + percepIIBB + percepIVA).toFixed(2));
-      const diff = Number((totalSum - sumParts).toFixed(2));
-      if (diff !== 0) {
-        tax = Number((tax + diff).toFixed(2));
-      }
-    } else {
-      net = Math.round(net);
-      tax = Math.round(tax);
-      percepIIBB = Math.round(percepIIBB);
-      percepIVA = Math.round(percepIVA);
+      totalSum = Number((net + tax + percepIIBB + percepIVA).toFixed(2));
     }
 
     if (billingType === BillingType.OFFICIAL) {
@@ -1580,10 +1665,12 @@ export async function createDirectInvoice(req: AuthenticatedRequest, res: Respon
       }
     }
 
-    // Iniciar transacción de base de datos
-    const result = await prisma.$transaction(async (tx) => {
-      // Creamos el Order primero para tener un ID y poder asociarlo
-      const order = await tx.order.create({
+    // PERSISTENCIA AISLADA DE FACTURACIÓN:
+    // Creamos primero el registro de la orden principal de forma simple y aislada con sus datos fiscales (incluyendo el CAE si es oficial).
+    // Esto asegura que si falla la lógica de lotes o transacciones de caja subsiguiente, la factura ya quede registrada localmente.
+    let order;
+    try {
+      order = await prisma.order.create({
         data: {
           personaId,
           sellerId: adminId,
@@ -1597,238 +1684,303 @@ export async function createDirectInvoice(req: AuthenticatedRequest, res: Respon
           invoiceType: finalInvoiceType,
           cae: finalCae,
           caeDueDate: finalCaeDueDate ? new Date(finalCaeDueDate) : null,
+          invoiceNumber: finalInvoiceNumber // Podrá ser nulo si no es oficial, se actualizará abajo
         },
       });
 
       // Si no es oficial, generamos el invoiceNumber interno usando el ID autogenerado de la orden
       if (!finalInvoiceNumber) {
         finalInvoiceNumber = `INT-${order.id.toString().padStart(8, '0')}`;
+        order = await prisma.order.update({
+          where: { id: order.id },
+          data: { invoiceNumber: finalInvoiceNumber }
+        });
       }
-
-      await tx.order.update({
-        where: { id: order.id },
-        data: { invoiceNumber: finalInvoiceNumber }
+    } catch (creationError: any) {
+      console.error('❌ Error crítico al guardar orden básica en base de datos local:', creationError);
+      res.status(500).json({
+        status: 'error',
+        message: `La factura fue procesada, pero ocurrió un error al registrarla localmente: ${creationError.message}.`
       });
+      return;
+    }
 
-      // Descontar del stock general y registrar ítems en la base de datos
-      for (const itemData of orderItemsData) {
-        await tx.product.update({
-          where: { id: itemData.productId },
-          data: { stock: { decrement: itemData.quantity } },
-        });
-      }
-
-      // 5. Crear los OrderItems y hacer la asignación automática de lotes (FIFO)
-      for (const itemData of orderItemsData) {
-        const orderItem = await tx.orderItem.create({
-          data: {
-            orderId: order.id,
-            productId: itemData.productId,
-            quantity: itemData.quantity,
-            weight: itemData.weight,
-            unitPrice: itemData.unitPrice,
-            subtotal: itemData.subtotal,
-          },
-        });
-
-        // Registrar movimiento de stock general
-        await tx.stockMovement.create({
-          data: {
-            productId: itemData.productId,
-            quantity: -itemData.quantity,
-            type: MovementType.OUT,
-            referenceId: `FAC-${order.id}`,
-            userId: adminId,
-            reason: `Venta directa comprobante ${finalInvoiceNumber || 'INT-' + order.id}`,
-          },
-        });
-
-        // Asignación de lotes FIFO
-        let remainingToAssign = itemData.quantity;
-        const activeLots = await tx.productLot.findMany({
-          where: { productId: itemData.productId, stock: { gt: 0 } },
-          orderBy: { expirationDate: 'asc' },
-        });
-
-        for (const lot of activeLots) {
-          if (remainingToAssign <= 0) break;
-
-          const allocatedQty = Math.min(lot.stock, remainingToAssign);
-          remainingToAssign -= allocatedQty;
-
-          // Decrementar del lote
-          await tx.productLot.update({
-            where: { id: lot.id },
-            data: { stock: { decrement: allocatedQty } },
+    // Transacción secundaria para procesar la lógica de stock, lotes, percepciones de rentas y cobros financieros.
+    try {
+      const result = await prisma.$transaction(async (tx) => {
+        // Descontar del stock general de manera atómica para evitar race conditions
+        for (const itemData of orderItemsData) {
+          const updated = await tx.product.update({
+            where: { id: itemData.productId },
+            data: { stock: { decrement: itemData.quantity } },
           });
 
-          // Crear relación OrderItemLot
-          await tx.orderItemLot.create({
+          if (updated.stock < 0 && process.env.IGNORE_STOCK_CHECK !== 'true') {
+            throw new Error(`Stock insuficiente para "${updated.name}" debido a una operación concurrente. Por favor reintente la venta.`);
+          }
+        }
+
+        // Crear los OrderItems y hacer la asignación automática de lotes (FIFO)
+        for (const itemData of orderItemsData) {
+          const orderItem = await tx.orderItem.create({
             data: {
-              orderItemId: orderItem.id,
-              productLotId: lot.id,
-              quantity: allocatedQty,
+              orderId: order.id,
+              productId: itemData.productId,
+              quantity: itemData.quantity,
+              weight: itemData.weight,
+              unitPrice: itemData.unitPrice,
+              subtotal: itemData.subtotal,
+            },
+          });
+
+          // Registrar movimiento de stock general
+          await tx.stockMovement.create({
+            data: {
+              productId: itemData.productId,
+              quantity: -itemData.quantity,
+              type: MovementType.OUT,
+              referenceId: `FAC-${order.id}`,
+              userId: adminId,
+              reason: `Venta directa comprobante ${finalInvoiceNumber || 'INT-' + order.id}`,
+            },
+          });
+
+          // Asignación de lotes FIFO
+          let remainingToAssign = itemData.quantity;
+          const activeLots = await tx.productLot.findMany({
+            where: { productId: itemData.productId, stock: { gt: 0 } },
+            orderBy: { expirationDate: 'asc' },
+          });
+
+          for (const lot of activeLots) {
+            if (remainingToAssign <= 0) break;
+
+            const allocatedQty = Math.min(lot.stock, remainingToAssign);
+            remainingToAssign -= allocatedQty;
+
+            await tx.productLot.update({
+              where: { id: lot.id },
+              data: { stock: { decrement: allocatedQty } },
+            });
+
+            await tx.orderItemLot.create({
+              data: {
+                orderItemId: orderItem.id,
+                productLotId: lot.id,
+                quantity: allocatedQty,
+              },
+            });
+          }
+
+          if (remainingToAssign > 0) {
+            if (process.env.IGNORE_STOCK_CHECK === 'true') {
+              let slLot = await tx.productLot.findFirst({
+                where: { productId: itemData.productId, lotNumber: 'S/L' }
+              });
+              if (!slLot) {
+                slLot = await tx.productLot.create({
+                  data: {
+                    productId: itemData.productId,
+                    lotNumber: 'S/L',
+                    expirationDate: new Date('2036-12-31T00:00:00Z'),
+                    stock: 0,
+                    location: 'S/U'
+                  }
+                });
+              }
+
+              await tx.productLot.update({
+                where: { id: slLot.id },
+                data: { stock: { decrement: remainingToAssign } },
+              });
+
+              await tx.orderItemLot.create({
+                data: {
+                  orderItemId: orderItem.id,
+                  productLotId: slLot.id,
+                  quantity: remainingToAssign,
+                },
+              });
+
+              remainingToAssign = 0;
+            } else {
+              throw new Error(`Inconsistencia de stock por lotes para "${itemData.productName}". Faltaron asignar ${remainingToAssign} unidades en lotes.`);
+            }
+          }
+
+          // Vincular el primer lote al movimiento de stock original para trazabilidad
+          const originalMov = await tx.stockMovement.findFirst({
+            where: {
+              productId: itemData.productId,
+              referenceId: `FAC-${order.id}`,
+              productLotId: null
+            }
+          });
+          if (originalMov) {
+            const firstAssignedLot = activeLots.length > 0 ? activeLots[0].id : (await tx.productLot.findFirst({ where: { productId: itemData.productId, lotNumber: 'S/L' } }))?.id;
+            if (firstAssignedLot) {
+              await tx.stockMovement.update({
+                where: { id: originalMov.id },
+                data: { productLotId: firstAssignedLot }
+              });
+            }
+          }
+        }
+
+        // Registrar percepción IIBB si corresponde
+        if (percepIIBB > 0) {
+          await tx.taxWithholding.create({
+            data: {
+              type: 'PERCEPCION_PRACTICADA',
+              taxType: 'IIBB',
+              personaId,
+              number: finalInvoiceNumber || `FAC-${order.id}`,
+              date: new Date(),
+              amount: isFacturaA_Official ? Number(percepIIBB.toFixed(2)) : Math.round(percepIIBB),
+              jurisdiction: getJurisdictionCode(persona.province || persona.address),
             },
           });
         }
 
-        if (remainingToAssign > 0 && process.env.IGNORE_STOCK_CHECK !== 'true') {
-          throw new Error(`Inconsistencia de stock por lotes para "${itemData.productName}". Faltaron asignar ${remainingToAssign} unidades en lotes.`);
-        }
-      }
-
-      // 6. Registrar percepción IIBB si corresponde
-      if (percepIIBB > 0) {
-        await tx.taxWithholding.create({
-          data: {
-            type: 'PERCEPCION_PRACTICADA',
-            taxType: 'IIBB',
-            personaId,
-            number: finalInvoiceNumber || `FAC-${order.id}`,
-            date: new Date(),
-            amount: isFacturaA_Official ? Number(percepIIBB.toFixed(2)) : Math.round(percepIIBB),
-            jurisdiction: getJurisdictionCode(persona.province || persona.address),
-          },
-        });
-      }
-
-      // Registrar percepción IVA RG 5329 si corresponde
-      if (percepIVA > 0) {
-        await tx.taxWithholding.create({
-          data: {
-            type: 'PERCEPCION_PRACTICADA',
-            taxType: 'IVA',
-            personaId,
-            number: finalInvoiceNumber || `FAC-${order.id}`,
-            date: new Date(),
-            amount: isFacturaA_Official ? Number(percepIVA.toFixed(2)) : Math.round(percepIVA),
-            jurisdiction: null, // IVA es nacional
-          },
-        });
-      }
-
-      // 7. Cobro en caja (si se pagó en el acto) o registro en Cuenta Corriente
-      if (paymentMethod) {
-        let cashDrawerId: number | undefined = undefined;
-        let bankAccountIdVal: number | undefined = undefined;
-        let txAmount = totalSum;
-        let txDescription = `Cobro en el acto de factura directa #${order.id} (${finalInvoiceNumber})`;
-
-        if (paymentMethod === PaymentMethod.CASH) {
-          let activeDrawer;
-          if (explicitCashDrawerId) {
-            activeDrawer = await tx.cashDrawer.findFirst({
-              where: {
-                id: explicitCashDrawerId,
-                status: 'OPEN',
-              },
-            });
-          } else {
-            activeDrawer = await tx.cashDrawer.findFirst({
-              where: {
-                userId: adminId,
-                status: 'OPEN',
-              },
-            });
-          }
-          
-          if (!activeDrawer) {
-            throw new Error(`Debe abrir la Caja o seleccionar una caja operativa válida antes de registrar cobros en efectivo.`);
-          }
-          cashDrawerId = activeDrawer.id;
-        } else if (paymentMethod === PaymentMethod.BANK_TRANSFER) {
-          const selectedBankId = bankAccountId || (await tx.bankAccount.findFirst())?.id;
-          if (!selectedBankId) {
-            throw new Error(`No se encontró ninguna cuenta bancaria configurada en el sistema.`);
-          }
-          bankAccountIdVal = selectedBankId;
-
-          // Incrementar saldo banco
-          await tx.bankAccount.update({
-            where: { id: selectedBankId },
-            data: { balance: { increment: totalSum } },
-          });
-        } else if (paymentMethod === PaymentMethod.CHECK) {
-          const defaultBank = await tx.bankAccount.findFirst();
-          if (!defaultBank) {
-            throw new Error(`No se encontró ninguna cuenta bancaria configurada en el sistema.`);
-          }
-          bankAccountIdVal = defaultBank.id;
-
-          const finalCheckAmount = checkAmount !== undefined ? Number(checkAmount) : totalSum;
-          txAmount = finalCheckAmount;
-          txDescription = `Cobro con Cheque N° ${checkNumber || 'S/N'} (Emisor: ${checkIssuer || 'Desconocido'}) - Comprobante ${finalInvoiceNumber || 'INT-' + order.id}`;
-
-          // Incrementar saldo banco
-          await tx.bankAccount.update({
-            where: { id: defaultBank.id },
-            data: { balance: { increment: finalCheckAmount } },
+        // Registrar percepción IVA RG 5329 si corresponde
+        if (percepIVA > 0) {
+          await tx.taxWithholding.create({
+            data: {
+              type: 'PERCEPCION_PRACTICADA',
+              taxType: 'IVA',
+              personaId,
+              number: finalInvoiceNumber || `FAC-${order.id}`,
+              date: new Date(),
+              amount: isFacturaA_Official ? Number(percepIVA.toFixed(2)) : Math.round(percepIVA),
+              jurisdiction: null,
+            },
           });
         }
 
-        await tx.transaction.create({
-          data: {
-            orderId: order.id,
-            personaId,
-            userId: adminId,
-            billingType,
-            type: TransactionType.INCOME,
-            paymentMethod,
-            amount: txAmount,
-            description: txDescription,
-            cashDrawerId,
-            bankAccountId: bankAccountIdVal,
-            verified: true, // Factura directa en backoffice -> autoverificado
+        // Cobro en caja (si se pagó en el acto) o registro en Cuenta Corriente
+        if (paymentMethod) {
+          let cashDrawerId: number | undefined = undefined;
+          let bankAccountIdVal: number | undefined = undefined;
+          let txAmount = totalSum;
+          let txDescription = `Cobro en el acto de factura directa #${order.id} (${finalInvoiceNumber})`;
+
+          if (paymentMethod === PaymentMethod.CASH) {
+            let activeDrawer;
+            if (explicitCashDrawerId) {
+              activeDrawer = await tx.cashDrawer.findFirst({
+                where: {
+                  id: explicitCashDrawerId,
+                  status: 'OPEN',
+                },
+              });
+            } else {
+              activeDrawer = await tx.cashDrawer.findFirst({
+                where: {
+                  userId: adminId,
+                  status: 'OPEN',
+                },
+              });
+            }
+            
+            if (!activeDrawer) {
+              if (userRole === Role.ADMIN || userRole === Role.FACTURACION) {
+                cashDrawerId = undefined;
+              } else {
+                throw new Error(`Debe abrir la Caja o seleccionar una caja operativa válida antes de registrar cobros en efectivo.`);
+              }
+            } else {
+              cashDrawerId = activeDrawer.id;
+            }
+          } else if (paymentMethod === PaymentMethod.BANK_TRANSFER) {
+            const selectedBankId = bankAccountId || (await tx.bankAccount.findFirst())?.id;
+            if (!selectedBankId) {
+              throw new Error(`No se encontró ninguna cuenta bancaria configurada en el sistema.`);
+            }
+            bankAccountIdVal = selectedBankId;
+
+            // Incrementar saldo banco
+            await tx.bankAccount.update({
+              where: { id: selectedBankId },
+              data: { balance: { increment: totalSum } },
+            });
+          } else if (paymentMethod === PaymentMethod.CHECK) {
+            const defaultBank = await tx.bankAccount.findFirst();
+            if (!defaultBank) {
+              throw new Error(`No se encontró ninguna cuenta bancaria configurada en el sistema.`);
+            }
+            bankAccountIdVal = defaultBank.id;
+
+            const finalCheckAmount = checkAmount !== undefined ? Number(checkAmount) : totalSum;
+            txAmount = finalCheckAmount;
+            txDescription = `Cobro con Cheque N° ${checkNumber || 'S/N'} (Emisor: ${checkIssuer || 'Desconocido'}) - Comprobante ${finalInvoiceNumber || 'INT-' + order.id}`;
+
+            // Incrementar saldo banco
+            await tx.bankAccount.update({
+              where: { id: defaultBank.id },
+              data: { balance: { increment: finalCheckAmount } },
+            });
+          }
+
+          await tx.transaction.create({
+            data: {
+              orderId: order.id,
+              personaId,
+              userId: adminId,
+              billingType,
+              type: TransactionType.INCOME,
+              paymentMethod,
+              amount: txAmount,
+              description: txDescription,
+              cashDrawerId,
+              bankAccountId: bankAccountIdVal,
+              verified: true,
+            },
+          });
+        } else {
+          // C/C saldo deudor
+          await tx.persona.update({
+            where: { id: personaId },
+            data: { outstandingBalance: { increment: totalSum } },
+          });
+        }
+
+        // Retornar la orden oficial completa que ya tenemos guardada en db
+        const finalOrder = await tx.order.findUnique({
+          where: { id: order.id },
+          include: {
+            persona: true,
+            items: { include: { product: true } },
           },
         });
-      } else {
-        // C/C saldo deudor
-        await tx.persona.update({
-          where: { id: personaId },
-          data: { outstandingBalance: { increment: totalSum } },
-        });
-      }
 
-      // 8. Actualizar desglose final en la orden
-      const finalOrder = await tx.order.update({
-        where: { id: order.id },
-        data: {
-          invoiceType: finalInvoiceType,
+        return finalOrder;
+      });
+
+      // Auditoría
+      await logAudit({
+        userId: adminId,
+        action: 'CREATE_DIRECT_INVOICE',
+        entityType: 'Order',
+        entityId: order.id,
+        newValues: {
+          billingType,
           invoiceNumber: finalInvoiceNumber,
           cae: finalCae,
-          caeDueDate: finalCaeDueDate,
-          netAmount: isFacturaA_Official ? Number(net.toFixed(2)) : Math.round(net),
-          taxAmount: isFacturaA_Official ? Number(tax.toFixed(2)) : Math.round(tax),
-          percepcionAmount: isFacturaA_Official ? Number(percepIIBB.toFixed(2)) : Math.round(percepIIBB),
-          percepcionIvaAmount: isFacturaA_Official ? Number(percepIVA.toFixed(2)) : Math.round(percepIVA),
-        },
-        include: {
-          persona: true,
-          items: { include: { product: true } },
+          total: totalSum,
         },
       });
 
-      return finalOrder;
-    });
-
-    // Auditoría
-    await logAudit({
-      userId: adminId,
-      action: 'CREATE_DIRECT_INVOICE',
-      entityType: 'Order',
-      entityId: result.id,
-      newValues: {
-        billingType,
-        invoiceNumber: result.invoiceNumber,
-        cae: result.cae,
-        total: result.totalAmount,
-      },
-    });
-
-    res.status(200).json({
-      status: 'success',
-      data: { order: result },
-    });
+      res.status(200).json({
+        status: 'success',
+        data: { order: result },
+      });
+    } catch (secondaryError: any) {
+      console.error('❌ Error en el flujo secundario de facturación directa:', secondaryError.message);
+      res.status(400).json({
+        status: 'error',
+        message: `La factura oficial fue emitida con éxito (Nro: ${finalInvoiceNumber}, CAE: ${finalCae}). Sin embargo, ocurrió un error al registrar las transacciones financieras o el stock de lotes: ${secondaryError.message}. Contacte a administración para conciliar la caja y cuenta corriente manualmente.`
+      });
+    }
   } catch (error: any) {
     console.error('Error al emitir factura directa:', error.message);
     res.status(400).json({
