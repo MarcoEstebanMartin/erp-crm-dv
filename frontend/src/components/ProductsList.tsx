@@ -111,7 +111,15 @@ export default function ProductsList({ products, searchQuery, setSearchQuery, se
 
   const filteredProducts = products
     .filter((p: any) => !selectedRubro || extractLabel(p.rubro) === selectedRubro)
-    .filter((p: any) => !selectedSubrubro || extractLabel(p.description) === selectedSubrubro);
+    .filter((p: any) => !selectedSubrubro || extractLabel(p.description) === selectedSubrubro)
+    .filter((p: any) => {
+      if (!searchQuery) return true;
+      const query = searchQuery.toLowerCase().trim();
+      const name = (p.name || '').toLowerCase();
+      const sku = (p.sku || '').toLowerCase();
+      const barcode = (p.barcode || '').toLowerCase();
+      return name.includes(query) || sku.includes(query) || barcode.includes(query);
+    });
 
   return (
     <div style={{ animation: 'fadeIn 0.3s ease-out' }}>
