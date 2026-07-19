@@ -880,7 +880,7 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
                              return `https://loremflickr.com/320/240/${keyword}?random=${product.id}`;
                           };
                           
-                          const imgSrc = p.imageUrl || getFallbackImage(p);
+                          const imgSrc = p.imageUrl ? (p.imageUrl.startsWith('http') ? p.imageUrl : `http://${window.location.hostname}:3000${p.imageUrl}`) : getFallbackImage(p);
                           const cartItem = cart.find(item => item.product.id === p.id);
 
                            return (
@@ -1464,7 +1464,7 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
                      return `https://loremflickr.com/320/240/${keyword}?random=${product.id}`;
                   };
                   
-                  const imgSrc = p.imageUrl || getFallbackImage(p);
+                   const imgSrc = p.imageUrl ? (p.imageUrl.startsWith('http') ? p.imageUrl : `http://${window.location.hostname}:3000${p.imageUrl}`) : getFallbackImage(p);
 
                   return (
                     <div key={p.id} className="product-card" style={{ 
