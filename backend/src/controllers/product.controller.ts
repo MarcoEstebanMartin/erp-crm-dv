@@ -11,9 +11,14 @@ import AdmZip from 'adm-zip';
  * Obtener todos los productos (Buscador inteligente por SKU o Nombre).
  */
 export async function getProducts(req: AuthenticatedRequest, res: Response): Promise<void> {
-  const { search } = req.query;
+  const { search, all } = req.query;
+  const userRole = req.user?.role;
+  
+  // Si no es ADMIN, o si no se solicita explicitamente 'all', solo mostramos activos
+  const includeInactive = (userRole === 'ADMIN' && all === 'true');
+  
   try {
-    const products = await productService.getProducts(search as string);
+    const products = await productService.getProducts(search as string, includeInactive);
     res.status(200).json({ status: 'success', data: { products } });
   } catch (error: any) {
     res.status(500).json({ status: 'error', message: 'Error al obtener los productos.' });

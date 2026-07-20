@@ -10,6 +10,7 @@ interface ProductsTabProps {
   setProductModal: (modal: any) => void;
   handleUpdateProductInline: (updatedProduct: any) => void;
   onOpenImportZip?: () => void;
+  onUploadImage?: (productId: number, file: File) => Promise<void>;
 }
 
 export default function ProductsTab({
@@ -17,20 +18,28 @@ export default function ProductsTab({
   fetchData,
   setProductModal,
   handleUpdateProductInline,
-  onOpenImportZip
+  onOpenImportZip,
+  onUploadImage
 }: ProductsTabProps) {
-  const [catalogTab, setCatalogTab] = useState<'products' | 'rubros' | 'stock' | 'offers'>('products');
+  const [catalogTab, setCatalogTab] = useState<'products' | 'inactive_products' | 'rubros' | 'stock' | 'offers'>('products');
   const [searchQuery, setSearchQuery] = useState('');
 
   return (
     <div className="card">
-      <div style={{ display: 'flex', gap: '24px', marginBottom: '24px', borderBottom: '1px solid var(--border-color)', paddingBottom: '12px' }}>
+      <div style={{ display: 'flex', gap: '24px', marginBottom: '24px', borderBottom: '1px solid var(--border-color)', paddingBottom: '12px', flexWrap: 'wrap' }}>
         <div 
           style={{ cursor: 'pointer', fontWeight: catalogTab === 'products' ? 600 : 400, color: catalogTab === 'products' ? 'var(--color-primary)' : 'var(--text-secondary)', position: 'relative' }}
           onClick={() => setCatalogTab('products')}
         >
           Lista de Productos
           {catalogTab === 'products' && <div style={{ position: 'absolute', bottom: '-13px', left: 0, right: 0, height: '2px', backgroundColor: 'var(--color-primary)' }} />}
+        </div>
+        <div 
+          style={{ cursor: 'pointer', fontWeight: catalogTab === 'inactive_products' ? 600 : 400, color: catalogTab === 'inactive_products' ? 'var(--color-primary)' : 'var(--text-secondary)', position: 'relative' }}
+          onClick={() => setCatalogTab('inactive_products')}
+        >
+          Productos Inactivos
+          {catalogTab === 'inactive_products' && <div style={{ position: 'absolute', bottom: '-13px', left: 0, right: 0, height: '2px', backgroundColor: 'var(--color-primary)' }} />}
         </div>
         <div 
           style={{ cursor: 'pointer', fontWeight: catalogTab === 'stock' ? 600 : 400, color: catalogTab === 'stock' ? 'var(--color-primary)' : 'var(--text-secondary)', position: 'relative' }}
@@ -55,7 +64,7 @@ export default function ProductsTab({
         </div>
       </div>
 
-      {catalogTab === 'products' && (
+      {(catalogTab === 'products' || catalogTab === 'inactive_products') && (
         <ProductsList 
           products={products} 
           searchQuery={searchQuery} 
@@ -63,6 +72,8 @@ export default function ProductsTab({
           setProductModal={setProductModal}
           onUpdateProduct={async (updatedProduct: any) => handleUpdateProductInline(updatedProduct)}
           onOpenImportZip={onOpenImportZip}
+          onUploadImage={onUploadImage}
+          catalogTab={catalogTab}
         />
       )}
 

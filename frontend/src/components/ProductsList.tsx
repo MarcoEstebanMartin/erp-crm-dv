@@ -8,11 +8,14 @@ interface ProductsListProps {
   setProductModal: (modal: any) => void;
   onUpdateProduct?: (product: any) => Promise<void>;
   onOpenImportZip?: () => void;
+  onUploadImage?: (productId: number, file: File) => Promise<void>;
+  catalogTab?: 'products' | 'inactive_products';
 }
 
-export default function ProductsList({ products, searchQuery, setSearchQuery, setProductModal, onUpdateProduct, onOpenImportZip }: ProductsListProps) {
+export default function ProductsList({ products, searchQuery, setSearchQuery, setProductModal, onUpdateProduct, onOpenImportZip, onUploadImage, catalogTab }: ProductsListProps) {
   const [selectedRubro, setSelectedRubro] = useState<string>('');
   const [selectedSubrubro, setSelectedSubrubro] = useState<string>('');
+  const [activeFilter, setActiveFilter] = useState<string>('all'); // all, active, inactive
   const [editingCell, setEditingCell] = useState<{ id: number; field: string } | null>(null);
   const [editValue, setEditValue] = useState<string>('');
 
@@ -113,6 +116,14 @@ export default function ProductsList({ products, searchQuery, setSearchQuery, se
     .filter((p: any) => !selectedRubro || extractLabel(p.rubro) === selectedRubro)
     .filter((p: any) => !selectedSubrubro || extractLabel(p.description) === selectedSubrubro)
     .filter((p: any) => {
+      if (catalogTab === 'products') return p.isActive !== false;
+      if (catalogTab === 'inactive_products') return p.isActive === false;
+
+      if (activeFilter === 'active') return p.isActive !== false;
+      if (activeFilter === 'inactive') return p.isActive === false;
+      return true;
+    })
+    .filter((p: any) => {
       if (!searchQuery) return true;
       const query = searchQuery.toLowerCase().trim();
       const name = (p.name || '').toLowerCase();
@@ -146,6 +157,19 @@ export default function ProductsList({ products, searchQuery, setSearchQuery, se
             <option key={String(r)} value={String(r)}>{String(r)}</option>
           ))}
         </select>
+
+        {!catalogTab && (
+          <select 
+            className="select" 
+            style={{ minWidth: '150px', borderRadius: '8px' }}
+            value={activeFilter} 
+            onChange={(e) => setActiveFilter(e.target.value)}
+          >
+            <option value="all">Todos (Estado)</option>
+            <option value="active">Activos</option>
+            <option value="inactive">Inactivos</option>
+          </select>
+        )}
 
         {selectedRubro && (
           <select 
@@ -197,6 +221,7 @@ export default function ProductsList({ products, searchQuery, setSearchQuery, se
               <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>RENTABILIDAD</th>
               <th style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>PRECIO SIN IVA</th>
               <th style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>PRECIO FINAL</th>
+              <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>ACTIVO</th>
               <th style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>ACCIÓN</th>
             </tr>
           </thead>
@@ -219,21 +244,40 @@ export default function ProductsList({ products, searchQuery, setSearchQuery, se
                       : (costo > 0 ? (precioFinal / costo) : 1.25));
                   
                   return (
-                    <tr key={p.id} style={{ borderBottom: '1px solid var(--border-color)', transition: 'background-color 0.2s', cursor: 'default' }} className="hover-bg-muted">
+                    <tr key={p.id} style={{ borderBottom: '1px solid var(--border-color)', transition: 'background-color 0.2s', cursor: 'default', opacity: p.isActive === false ? 0.6 : 1 }} className="hover-bg-muted">
                       <td style={{ padding: '12px 16px', fontFamily: 'monospace', fontWeight: 600, fontSize: '0.9rem' }}>{p.sku}</td>
                       <td style={{ padding: '12px 16px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                          {p.imageUrl ? (
-                            <img 
-                              src={`http://${window.location.hostname}:3000${p.imageUrl}`} 
-                              alt={p.name} 
-                              style={{ width: '40px', height: '40px', minWidth: '40px', objectFit: 'contain', borderRadius: '6px', border: '1px solid var(--border-color)', backgroundColor: '#fff', padding: '2px' }} 
-                            />
-                          ) : (
-                            <div style={{ width: '40px', height: '40px', minWidth: '40px', borderRadius: '6px', border: '1px dashed var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'var(--bg-muted)', color: 'var(--text-muted)', fontSize: '0.65rem', fontWeight: 600 }}>
-                              S/F
-                            </div>
-                          )}
+                          <div style={{ position: 'relative', cursor: onUploadImage ? 'pointer' : 'default' }} onClick={() => {
+                            if (onUploadImage) {
+                              const input = document.createElement('input');
+                              input.type = 'file';
+                              input.accept = 'image/*';
+                              input.onchange = (e: any) => {
+                                if (e.target.files && e.target.files[0]) {
+                                  onUploadImage(p.id, e.target.files[0]);
+                                }
+                              };
+                              input.click();
+                            }
+                          }}>
+                            {p.imageUrl ? (
+                              <img 
+                                src={`http://${window.location.hostname}:3000${p.imageUrl}`} 
+                                alt={p.name} 
+                                style={{ width: '40px', height: '40px', minWidth: '40px', objectFit: 'contain', borderRadius: '6px', border: '1px solid var(--border-color)', backgroundColor: '#fff', padding: '2px' }} 
+                              />
+                            ) : (
+                              <div style={{ width: '40px', height: '40px', minWidth: '40px', borderRadius: '6px', border: '1px dashed var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'var(--bg-muted)', color: 'var(--text-muted)', fontSize: '0.65rem', fontWeight: 600 }}>
+                                S/F
+                              </div>
+                            )}
+                            {onUploadImage && (
+                              <div style={{ position: 'absolute', bottom: -5, right: -5, backgroundColor: 'var(--color-primary)', color: 'white', borderRadius: '50%', padding: '2px', width: '16px', height: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <Upload size={10} />
+                              </div>
+                            )}
+                          </div>
                           <div>
                             <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{p.name}</div>
                             <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
@@ -327,6 +371,37 @@ export default function ProductsList({ products, searchQuery, setSearchQuery, se
                           </div>
                         )}
                       </td>
+                      <td style={{ padding: '12px 16px', textAlign: 'center' }}>
+                        <div 
+                          style={{
+                            width: '40px',
+                            height: '22px',
+                            borderRadius: '11px',
+                            backgroundColor: p.isActive !== false ? 'var(--color-primary)' : 'var(--border-color)',
+                            position: 'relative',
+                            cursor: 'pointer',
+                            display: 'inline-block',
+                            transition: 'all 0.2s'
+                          }}
+                          onClick={() => {
+                            if (onUpdateProduct) {
+                              onUpdateProduct({ ...p, isActive: p.isActive === false ? true : false });
+                            }
+                          }}
+                        >
+                          <div style={{
+                            width: '18px',
+                            height: '18px',
+                            backgroundColor: '#fff',
+                            borderRadius: '50%',
+                            position: 'absolute',
+                            top: '2px',
+                            left: p.isActive !== false ? '20px' : '2px',
+                            transition: 'all 0.2s',
+                            boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
+                          }} />
+                        </div>
+                      </td>
                       <td style={{ padding: '12px 16px', textAlign: 'right' }}>
                         <button 
                           className="btn btn-ghost" 
@@ -350,7 +425,8 @@ export default function ProductsList({ products, searchQuery, setSearchQuery, se
                               isPesable: p.isPesable || false, 
                               approximateWeight: p.approximateWeight || 0,
                               rubroId: p.rubroId || '',
-                              providerId: p.providerId || ''
+                              providerId: p.providerId || '',
+                              isActive: p.isActive !== false
                             } 
                           })}
                         >

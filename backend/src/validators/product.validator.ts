@@ -14,6 +14,7 @@ export const createProductSchema = z.object({
     minStock: z.number().min(0).optional().nullable(),
     rubroId: z.number().int().positive().optional().nullable(),
     providerId: z.number().int().positive().optional().nullable(),
+    isActive: z.boolean().optional(),
   }),
 });
 
@@ -33,6 +34,7 @@ export const updateProductSchema = z.object({
     minStock: z.number().min(0).optional().nullable(),
     rubroId: z.number().int().positive().optional().nullable(),
     providerId: z.number().int().positive().optional().nullable(),
+    isActive: z.boolean().optional(),
   }),
 });
 

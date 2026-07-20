@@ -173,6 +173,7 @@ model Product {
   unitsPerBox Int      @default(1)
   approximateWeight Decimal? @db.Decimal(12, 3)
   imageUrl    String?
+  isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

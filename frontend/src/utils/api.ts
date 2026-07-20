@@ -114,9 +114,11 @@ export const api = {
   },
 
   // --- PRODUCTOS e INVENTARIO ---
-  getProducts: async (search?: string) => {
-    
-    const res = await request(search ? `/products?search=${search}` : '/products');
+  getProducts: async (search?: string, all?: boolean) => {
+    let url = '/products?';
+    if (search) url += `search=${encodeURIComponent(search)}&`;
+    if (all) url += `all=true&`;
+    const res = await request(url);
     return res.products;
   },
 

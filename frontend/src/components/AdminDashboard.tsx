@@ -532,7 +532,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
         setOrders(allOrders);
         const allClients = await api.getPersonas('client');
         setClients(allClients);
-        const allProducts = await api.getProducts('');
+        const allProducts = await api.getProducts('', true);
         setProducts(allProducts);
       } else if (activeTab === 'reportes') {
         const stats = await api.getFinancialReports();
@@ -546,7 +546,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
         const allClients = await api.getPersonas('client');
         setClients(allClients);
       } else if (activeTab === 'products') {
-        const data = await api.getProducts(searchQuery);
+        const data = await api.getProducts(searchQuery, true);
         setProducts(data);
         try {
           const rList = await api.getRubros();
@@ -628,7 +628,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
             
             const allClients = await api.getPersonas('client');
             setClients(allClients.filter((c: any) => c.isActive !== false));
-            const allProducts = await api.getProducts('');
+            const allProducts = await api.getProducts('', true);
             setProducts(allProducts);
             const allRubros = await api.getRubros();
             setRubrosList(allRubros);
@@ -860,7 +860,8 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
       minStock: Number(data.minStock || 0),
       isPesable: Boolean(data.isPesable),
       unitsPerBox: Number(data.unitsPerBox || 1),
-      approximateWeight: data.approximateWeight ? Number(data.approximateWeight) : 0
+      approximateWeight: data.approximateWeight ? Number(data.approximateWeight) : 0,
+      isActive: (data as any).isActive !== undefined ? Boolean((data as any).isActive) : undefined
     };
 
     try {
@@ -884,6 +885,16 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
     }
   };
 
+  const handleUploadImage = async (productId: number, file: File) => {
+    try {
+      await api.uploadProductImage(productId, file);
+      // alert('Imagen subida con éxito');
+      fetchData(); // Refrescar catálogo
+    } catch (error: any) {
+      alert(error.message || 'Error al subir la imagen');
+    }
+  };
+
   const handleUpdateProductInline = async (updatedProduct: any) => {
     try {
       await api.updateProduct(updatedProduct.id, {
@@ -899,6 +910,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
         providerId: updatedProduct.providerId !== undefined ? (updatedProduct.providerId ? Number(updatedProduct.providerId) : null) : undefined,
         minStock: Number(updatedProduct.minStock),
         isPesable: Boolean(updatedProduct.isPesable),
+        isActive: updatedProduct.isActive,
         unitsPerBox: Number(updatedProduct.unitsPerBox || 1),
         approximateWeight: updatedProduct.approximateWeight ? Number(updatedProduct.approximateWeight) : 0
       });
@@ -1635,6 +1647,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
           setProductModal={setProductModal}
           handleUpdateProductInline={handleUpdateProductInline}
           onOpenImportZip={() => setImportZipModalOpen(true)}
+          onUploadImage={handleUploadImage}
         />
       )}
 

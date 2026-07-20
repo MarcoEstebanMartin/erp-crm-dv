@@ -5,17 +5,22 @@ export class ProductService {
   /**
    * Obtener todos los productos (Buscador inteligente por SKU o Nombre).
    */
-  async getProducts(search?: string) {
+  async getProducts(search?: string, includeInactive: boolean = false) {
+    const whereClause: any = {};
+    if (!includeInactive) {
+      whereClause.isActive = true;
+    }
+    
+    if (search) {
+      whereClause.OR = [
+        { name: { contains: search, mode: 'insensitive' } },
+        { sku: { contains: search, mode: 'insensitive' } },
+        { barcode: { equals: search } },
+      ];
+    }
+
     const products = await prisma.product.findMany({
-      where: search
-        ? {
-            OR: [
-              { name: { contains: search, mode: 'insensitive' } },
-              { sku: { contains: search, mode: 'insensitive' } },
-              { barcode: { equals: search } },
-            ],
-          }
-        : {},
+      where: whereClause,
       include: {
         lots: {
           orderBy: { expirationDate: 'asc' },
@@ -142,8 +147,9 @@ export class ProductService {
         isPesable: data.isPesable !== undefined ? Boolean(data.isPesable) : undefined,
         unitsPerBox: data.unitsPerBox !== undefined ? Number(data.unitsPerBox) : undefined,
         approximateWeight: data.approximateWeight !== undefined ? (data.approximateWeight ? Number(data.approximateWeight) : null) : undefined,
-        rubroId: data.rubroId !== undefined ? (data.rubroId ? Number(data.rubroId) : null) : undefined,
-        providerId: data.providerId !== undefined ? (data.providerId ? Number(data.providerId) : null) : undefined,
+        rubro: data.rubroId !== undefined ? (data.rubroId ? { connect: { id: Number(data.rubroId) } } : { disconnect: true }) : undefined,
+        provider: data.providerId !== undefined ? (data.providerId ? { connect: { id: Number(data.providerId) } } : { disconnect: true }) : undefined,
+        isActive: data.isActive !== undefined ? Boolean(data.isActive) : undefined,
       },
     });
 
