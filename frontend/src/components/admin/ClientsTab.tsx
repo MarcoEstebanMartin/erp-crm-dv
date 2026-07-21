@@ -58,6 +58,7 @@ export default function ClientsTab({
 }: ClientsTabProps) {
   // Local tab state
   const [personaRoleFilter, setPersonaRoleFilter] = useState<string>('client');
+  const [showInactive, setShowInactive] = useState<boolean>(false);
   const [clients, setClients] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -87,7 +88,7 @@ export default function ClientsTab({
         setAvailableCities(sortedCities);
         setSelectedCities(sortedCities);
       } else {
-        const roleParam = personaRoleFilter === 'client_inactive' ? 'client' : personaRoleFilter;
+        const roleParam = personaRoleFilter;
         const data = await api.getPersonas(roleParam, searchQuery);
         setClients(data || []);
       }
@@ -139,7 +140,6 @@ export default function ClientsTab({
       <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
         {[
           { id: 'client', label: 'Clientes' },
-          { id: 'client_inactive', label: 'Clientes Inactivos' },
           { id: 'seller', label: 'Vendedores' },
           { id: 'commission_agent', label: 'Comisionistas' },
           { id: 'debtors_by_city', label: '📊 Deudores por Ruta' },
@@ -543,7 +543,7 @@ export default function ClientsTab({
               <option value="OTRAS">Otras</option>
             </select>
 
-            {['client', 'client_inactive'].includes(personaRoleFilter) && (
+            {personaRoleFilter === 'client' && (
               <select
                 className="select"
                 value={selectedRouteFilter}
@@ -556,6 +556,20 @@ export default function ClientsTab({
                 ))}
                 <option value="SIN_RUTA">Sin Ruta</option>
               </select>
+            )}
+
+            {personaRoleFilter === 'client' && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginLeft: 'auto', marginRight: '16px' }}>
+                <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <input 
+                    type="checkbox" 
+                    checked={showInactive} 
+                    onChange={(e) => setShowInactive(e.target.checked)} 
+                    style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+                  />
+                  Ver Inactivos
+                </label>
+              </div>
             )}
 
             <button className="btn btn-primary" onClick={() => setClientModal({ 
@@ -572,18 +586,18 @@ export default function ClientsTab({
                 creditLimit: 0, 
                 priceList: 'A', 
                 discount: 0,
-                isClient: ['client', 'client_inactive'].includes(personaRoleFilter),
+                isClient: personaRoleFilter === 'client',
                 isProvider: personaRoleFilter === 'provider',
                 isSeller: personaRoleFilter === 'seller',
                 isCommissionAgent: personaRoleFilter === 'commission_agent',
                 route: '',
                 saleRouteId: null,
                 sellerId: null,
-                isActive: personaRoleFilter !== 'client_inactive'
+                isActive: !showInactive
               } 
             })}>
               <UserPlus size={16} />
-              <span>Registrar {['client', 'client_inactive'].includes(personaRoleFilter) ? 'Cliente' : personaRoleFilter === 'provider' ? 'Proveedor' : personaRoleFilter === 'seller' ? 'Vendedor' : 'Comisionista'}</span>
+              <span>Registrar {personaRoleFilter === 'client' ? 'Cliente' : personaRoleFilter === 'provider' ? 'Proveedor' : personaRoleFilter === 'seller' ? 'Vendedor' : 'Comisionista'}</span>
             </button>
           </div>
 
@@ -594,17 +608,19 @@ export default function ClientsTab({
                   <th>Nombre Comercial / Razón Social</th>
                   <th>CUIT</th>
                   <th>Contacto</th>
-                  {['client', 'client_inactive'].includes(personaRoleFilter) && <th style={{ whiteSpace: 'nowrap', minWidth: '110px' }}>Cta Cte</th>}
+                  {personaRoleFilter === 'client' && <th style={{ whiteSpace: 'nowrap', minWidth: '110px' }}>Cta Cte</th>}
                   <th>Saldo C/C</th>
-                  {['client', 'client_inactive'].includes(personaRoleFilter) && <th>Ruta</th>}
+                  {personaRoleFilter === 'client' && <th>Ruta</th>}
                   <th>Acción</th>
                 </tr>
               </thead>
               <tbody>
                 {(() => {
                   const filteredClients = clients.filter((c: any) => {
-                    if (personaRoleFilter === 'client' && c.isActive === false) return false;
-                    if (personaRoleFilter === 'client_inactive' && c.isActive !== false) return false;
+                    if (personaRoleFilter === 'client') {
+                      if (!showInactive && c.isActive === false) return false;
+                      if (showInactive && c.isActive !== false) return false;
+                    }
 
                     // Filtro de Localidad
                     if (selectedCityFilter !== 'ALL') {
@@ -619,7 +635,7 @@ export default function ClientsTab({
                     }
 
                     // Filtro de Ruta
-                    if (['client', 'client_inactive'].includes(personaRoleFilter) && selectedRouteFilter !== 'ALL') {
+                    if (personaRoleFilter === 'client' && selectedRouteFilter !== 'ALL') {
                       if (selectedRouteFilter === 'SIN_RUTA') {
                         if (c.saleRouteId) return false;
                       } else {
@@ -633,7 +649,7 @@ export default function ClientsTab({
                   if (filteredClients.length === 0) {
                     return (
                       <tr>
-                        <td colSpan={['client', 'client_inactive'].includes(personaRoleFilter) ? 6 : 5} style={{ textAlign: 'center', padding: '24px 0' }}>
+                        <td colSpan={personaRoleFilter === 'client' ? 6 : 5} style={{ textAlign: 'center', padding: '24px 0' }}>
                           No se encontraron personas registradas.
                         </td>
                       </tr>
@@ -685,7 +701,7 @@ export default function ClientsTab({
                             <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{c.email}</div>
                           )}
                         </td>
-                        {['client', 'client_inactive'].includes(personaRoleFilter) && (
+                        {personaRoleFilter === 'client' && (
                           <td style={{ whiteSpace: 'nowrap' }}>
                             <div style={{ fontWeight: 600, color: Number(c.maxUnpaidInvoices) > 0 ? '#137333' : 'var(--text-secondary)' }}>
                               {Number(c.maxUnpaidInvoices) > 0 ? `Sí (Lím. ${c.maxUnpaidInvoices})` : 'No'}
@@ -708,7 +724,7 @@ export default function ClientsTab({
                           </td>
                         )}
                         <td style={{ fontWeight: 600, color: balanceColor }}>{balanceText}</td>
-                        {['client', 'client_inactive'].includes(personaRoleFilter) && (
+                        {personaRoleFilter === 'client' && (
                           <td style={{ fontWeight: 500 }}>
                             {c.saleRoute?.name ? (
                               <span style={{ 

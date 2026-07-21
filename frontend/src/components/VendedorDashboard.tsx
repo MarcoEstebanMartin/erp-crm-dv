@@ -3,7 +3,7 @@ import React from 'react';
 import { api } from '../utils/api';
 import { getOrderStatusInfo } from '../utils/orderStatusHelper';
 
-import { Trash2, ShoppingCart, UserPlus, CheckCircle2, Eye, Edit, Printer, MapPin, Calendar, TrendingUp, X, Phone, DollarSign, Navigation, ArrowRight, Loader2 } from 'lucide-react';
+import { Trash2, ShoppingCart, UserPlus, CheckCircle2, Eye, Edit, Printer, MapPin, Calendar, TrendingUp, X, Phone, DollarSign, Navigation, ArrowRight, Loader2, RefreshCw } from 'lucide-react';
 import PriceListModal from './PriceListModal';
 import MobileCobros from './MobileCobros';
 
@@ -194,6 +194,19 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
   useEffect(() => {
     fetchData();
   }, [activeTab, searchQuery, prodSearchQuery, subTab]);
+
+  // Polling automático cada 30 segundos si la pestaña es clientes
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (activeTab === 'clients') {
+      interval = setInterval(() => {
+        fetchData();
+      }, 30000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [activeTab, selectedRouteId]);
 
   // Limpiar mensajes al cambiar de pestaña
   useEffect(() => {
@@ -1174,6 +1187,18 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
                     <option key={r.id} value={r.id}>{r.name} ({r.dayOfWeek || 'Flexible'})</option>
                   ))}
                 </select>
+                <button
+                  className="btn btn-secondary"
+                  onClick={() => {
+                    setLoading(true);
+                    fetchData().finally(() => setLoading(false));
+                  }}
+                  title="Actualizar Saldos"
+                  style={{ padding: '6px 10px', height: '36px', borderRadius: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}
+                >
+                  <RefreshCw size={16} className={loading ? "spin-animation" : ""} />
+                  <span style={{ fontSize: '0.75rem', fontWeight: 600 }}>Sync</span>
+                </button>
               </div>
             ) : (
               <div style={{ fontSize: '0.85rem', color: 'var(--color-corp-red)', fontWeight: 600 }}>

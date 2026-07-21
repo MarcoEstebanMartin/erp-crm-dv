@@ -85,7 +85,7 @@ export default function OrderFulfillmentModal({ order, onClose, onSuccess }: Ord
       await api.invoiceOrder(
         order.id,
         billingType,
-        paymentMethod,
+        paymentMethod === 'OTHER' ? undefined : paymentMethod, // Si es OTHER (Cuenta Corriente), enviamos undefined para que afecte el saldo deudor
         undefined, // payment description
         paymentMethod === 'BANK_TRANSFER' ? Number(selectedBankId) : undefined
       );
@@ -199,7 +199,7 @@ export default function OrderFulfillmentModal({ order, onClose, onSuccess }: Ord
                 <option value="CASH">Efectivo</option>
                 <option value="BANK_TRANSFER">Transferencia</option>
                 <option value="CHECK">Cheque</option>
-                <option value="OTHER">Otro (Pendiente en Cta. Cte.)</option>
+                <option value="OTHER">Cuenta Corriente (Pendiente de Pago)</option>
               </select>
             </div>
 

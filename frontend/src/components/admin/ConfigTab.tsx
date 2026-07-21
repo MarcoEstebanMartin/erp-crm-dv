@@ -330,7 +330,6 @@ export default function ConfigTab({
       <div style={{ display: 'flex', gap: '12px', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px', marginBottom: '12px', overflowX: 'auto', paddingRight: '4px' }}>
         {[
           { id: 'general', label: '🏢 General & Empresa' },
-          { id: 'impresion', label: '🖨️ Impresión' },
           { id: 'personal', label: '👥 Empleados' },
           { id: 'audit', label: '📜 Auditoría (Logs)' },
           { id: 'percepciones', label: '📊 Impuestos & Percepciones' },
@@ -398,9 +397,30 @@ export default function ConfigTab({
               <label>Punto de Venta Oficial (Factura Electrónica)</label>
               <input type="text" className="input" value={companyPos} onChange={(e) => setCompanyPos(e.target.value)} />
             </div>
-            <div className="form-group">
-              <label>Porcentaje IVA General Defecto (%)</label>
-              <input type="text" className="input" value={companyDefaultIva} onChange={(e) => setCompanyDefaultIva(e.target.value)} />
+            <div className="form-group" style={{ 
+              display: 'flex', 
+              flexDirection: 'column', 
+              backgroundColor: 'var(--bg-light, #f8f9fa)', 
+              padding: '12px', 
+              borderRadius: '8px', 
+              border: '1px solid var(--border-color, #e5e5e7)' 
+            }}>
+              <label style={{ color: 'var(--text-secondary)', fontWeight: 600, fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <span style={{ color: 'var(--color-primary, #1a73e8)' }}>⚖️</span> IVA General Defecto (%)
+              </label>
+              <input 
+                type="text" 
+                className="input" 
+                style={{ 
+                  marginTop: '4px', 
+                  backgroundColor: '#fff', 
+                  border: '1px solid var(--border-color, #e5e5e7)', 
+                  fontWeight: 600, 
+                  color: 'var(--text-primary)' 
+                }} 
+                value={companyDefaultIva} 
+                onChange={(e) => setCompanyDefaultIva(e.target.value)} 
+              />
             </div>
           </div>
 
@@ -413,19 +433,6 @@ export default function ConfigTab({
             <button type="submit" className="btn btn-primary" style={{ padding: '10px 24px', fontWeight: 600 }}>Guardar Cambios Empresa</button>
           </div>
         </form>
-      )}
-
-      {/* Sub-tab 2: Impresión */}
-      {configTab === 'impresion' && (
-        <div className="card" style={{ padding: '24px' }}>
-          <h3 className="card-title">🖨️ Configuración de Impresión</h3>
-          <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '16px' }}>Defina las leyendas de pie de página y formato de los tickets no fiscales y presupuestos de la distribuidora.</p>
-          <div className="form-group">
-            <label>Pie del Comprobante (Presupuestos)</label>
-            <textarea className="input" rows={3} defaultValue="¡Gracias por su compra! Conserve este comprobante no comercial." />
-          </div>
-          <button className="btn btn-primary" style={{ marginTop: '12px' }} onClick={() => alert('Parámetros de impresión actualizados.')}>Guardar Formato Impresión</button>
-        </div>
       )}
 
       {/* Sub-tab 3: Empleados */}

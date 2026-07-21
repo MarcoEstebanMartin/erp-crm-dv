@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { CreditCard, DollarSign, FileText, CheckCircle, ChevronLeft } from 'lucide-react';
+import { CreditCard, DollarSign, FileText, CheckCircle, ChevronLeft, RefreshCw, Loader2 } from 'lucide-react';
 import axios from 'axios';
 import { API_BASE_URL } from '../utils/api';
 
@@ -48,6 +48,26 @@ const MobileCobros: React.FC<MobileCobrosProps> = ({
       setBillingType('OFFICIAL');
     }
   }, [selectedPersona]);
+
+  // Polling automático cada 30 segundos para mantener saldos actualizados
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchPending();
+      if (selectedPersona) {
+        fetchPendingInvoices(selectedPersona.id);
+      }
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [selectedPersona]);
+
+  const handleSync = async () => {
+    setLoading(true);
+    await fetchPending();
+    if (selectedPersona) {
+      await fetchPendingInvoices(selectedPersona.id);
+    }
+    setLoading(false);
+  };
 
   const fetchPending = async () => {
     try {
@@ -303,8 +323,19 @@ const MobileCobros: React.FC<MobileCobrosProps> = ({
   // Renderizar Listado de Clientes con Saldo
   return (
     <div className="p-4 max-w-md mx-auto bg-gray-50 min-h-screen">
-      <h2 className="text-2xl font-bold text-gray-800 mb-1 mt-4">Cobranzas</h2>
-      <p className="text-gray-500 mb-4">Selecciona un cliente para registrar un cobro</p>
+      <div className="flex justify-between items-center mb-1 mt-4">
+        <h2 className="text-2xl font-bold text-gray-800">Cobranzas</h2>
+        <button
+          onClick={handleSync}
+          disabled={loading}
+          className="bg-white border border-gray-200 shadow-sm hover:bg-gray-50 text-gray-600 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-2"
+          title="Actualizar saldos"
+        >
+          <RefreshCw size={16} className={loading ? "spin-animation text-red-600" : ""} />
+          <span className="text-sm font-semibold">Sync</span>
+        </button>
+      </div>
+      <p className="text-gray-500 mb-4 text-sm">Selecciona un cliente para registrar un cobro</p>
 
       {/* Chips horizontales de localidad (sincronizados) */}
       {uniqueCities.length > 0 && setSelectedCityFilters && (
@@ -391,28 +422,15 @@ const MobileCobros: React.FC<MobileCobrosProps> = ({
               className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex justify-between items-center cursor-pointer hover:shadow-md transition-shadow active:scale-[0.98]"
             >
               <div>
-                <h3 className="font-semibold text-gray-800">{p.name}</h3>
-                <p className="text-xs text-gray-400 mt-1">{p.address || p.city}</p>
+                <h3 className="font-bold text-gray-800 text-lg">{p.name}</h3>
+                {p.city && <p className="text-xs text-gray-500 uppercase font-semibold tracking-wide">{p.city}</p>}
               </div>
               <div className="text-right">
+                <p className="text-xs text-gray-500 font-semibold mb-0.5">SALDO</p>
                 {p.outstandingBalance < 0 ? (
-                  <>
-                    <p className="text-sm font-medium text-green-600">{formatCurrency(Math.abs(p.outstandingBalance))} (A Favor)</p>
-                    <div className="mt-1 flex justify-end">
-                      <div className="bg-green-50 text-green-600 p-1.5 rounded-full">
-                        <CreditCard className="w-4 h-4" />
-                      </div>
-                    </div>
-                  </>
+                  <p className="text-sm font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100">{formatCurrency(Math.abs(p.outstandingBalance))} (A Favor)</p>
                 ) : (
-                  <>
-                    <p className="text-sm font-medium text-red-600">{formatCurrency(p.outstandingBalance)}</p>
-                    <div className="mt-1 flex justify-end">
-                      <div className="bg-red-50 text-red-600 p-1.5 rounded-full">
-                        <CreditCard className="w-4 h-4" />
-                      </div>
-                    </div>
-                  </>
+                  <p className="text-sm font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded border border-red-100">{formatCurrency(p.outstandingBalance)}</p>
                 )}
               </div>
             </div>
