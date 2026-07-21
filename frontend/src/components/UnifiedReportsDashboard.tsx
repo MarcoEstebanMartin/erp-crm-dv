@@ -56,8 +56,8 @@ export default function UnifiedReportsDashboard({
   const [activeTab, setActiveTab] = useState<'finanzas' | 'zonas' | 'caja_semanal' | 'crm' | 'arca'>('finanzas');
 
   // Estados para reporte financiero con filtros mensuales
-  const [reportYear, setReportYear] = useState<number>(2026);
-  const [reportMonth, setReportMonth] = useState<number>(5); // Mayo 2026 por defecto para ver los datos cargados
+  const [reportYear, setReportYear] = useState<number>(new Date().getFullYear());
+  const [reportMonth, setReportMonth] = useState<number>(new Date().getMonth() + 1); // Mes actual por defecto
   const [localReport, setLocalReport] = useState<any>(null);
   const [reportLoading, setReportLoading] = useState(false);
 

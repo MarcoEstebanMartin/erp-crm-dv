@@ -75,6 +75,7 @@ export default function ClientsTab({
   const [selectedBranchFilter, setSelectedBranchFilter] = useState<string>('ALL');
   const [availableSellers, setAvailableSellers] = useState<any[]>([]);
   const [availableSaleRoutes, setAvailableSaleRoutes] = useState<any[]>([]);
+  const [updatingClientId, setUpdatingClientId] = useState<number | null>(null);
 
   // Load clients or debtors report
   const loadTabContent = async () => {
@@ -132,6 +133,23 @@ export default function ClientsTab({
 
   const handlePrintDebtorsReport = () => {
     window.print();
+  };
+
+  const handleUpdateCtaCte = async (client: any, newValue: number) => {
+    try {
+      setUpdatingClientId(client.id);
+      await api.updatePersona(client.id, { 
+        ...client, 
+        maxUnpaidInvoices: newValue 
+      });
+      // Update local state to reflect change immediately
+      setClients(prev => prev.map(c => c.id === client.id ? { ...c, maxUnpaidInvoices: newValue } : c));
+    } catch (error) {
+      console.error('Error updating client Cta Cte:', error);
+      alert('Error al actualizar límite de Cta Cte.');
+    } finally {
+      setUpdatingClientId(null);
+    }
   };
 
   return (
@@ -703,8 +721,34 @@ export default function ClientsTab({
                         </td>
                         {personaRoleFilter === 'client' && (
                           <td style={{ whiteSpace: 'nowrap' }}>
-                            <div style={{ fontWeight: 600, color: Number(c.maxUnpaidInvoices) > 0 ? '#137333' : 'var(--text-secondary)' }}>
-                              {Number(c.maxUnpaidInvoices) > 0 ? `Sí (Lím. ${c.maxUnpaidInvoices})` : 'No'}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <select
+                                value={Number(c.maxUnpaidInvoices) || 0}
+                                onChange={(e) => handleUpdateCtaCte(c, Number(e.target.value))}
+                                disabled={updatingClientId === c.id}
+                                style={{
+                                  padding: '4px 8px',
+                                  borderRadius: '6px',
+                                  border: `1px solid ${Number(c.maxUnpaidInvoices) > 0 ? '#137333' : 'var(--border-color)'}`,
+                                  backgroundColor: Number(c.maxUnpaidInvoices) > 0 ? '#e6f4ea' : '#f8f9fa',
+                                  color: Number(c.maxUnpaidInvoices) > 0 ? '#137333' : 'var(--text-secondary)',
+                                  fontWeight: 600,
+                                  fontSize: '0.8rem',
+                                  cursor: 'pointer',
+                                  outline: 'none',
+                                  transition: 'all 0.2s ease',
+                                  width: '100px'
+                                }}
+                              >
+                                <option value={0}>Sin Cta Cte</option>
+                                <option value={0.5}>Med. Boleta</option>
+                                <option value={1}>1 Boleta</option>
+                                <option value={2}>2 Boletas</option>
+                                <option value={3}>3 Boletas</option>
+                                <option value={4}>4 Boletas</option>
+                                <option value={5}>5 Boletas</option>
+                              </select>
+                              {updatingClientId === c.id && <span style={{ fontSize: '0.75rem' }}>⏳</span>}
                             </div>
                             {Number(c.maxUnpaidInvoices) > 0 && c.pendingInvoicesCount > 0 && (
                               <div style={{ 

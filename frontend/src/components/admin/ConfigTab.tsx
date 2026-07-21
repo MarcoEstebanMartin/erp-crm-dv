@@ -368,65 +368,87 @@ export default function ConfigTab({
             Configure la información comercial y los parámetros fiscales del emisor para la facturación.
           </p>
           
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '20px', marginBottom: '20px' }}>
-            <div className="form-group">
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px', marginBottom: '24px' }}>
+            <div className="form-group" style={{ marginBottom: 0 }}>
               <label>Razón Social</label>
               <input type="text" className="input" value={companyRazonSocial} onChange={(e) => setCompanyRazonSocial(e.target.value)} />
             </div>
-            <div className="form-group">
+            <div className="form-group" style={{ marginBottom: 0 }}>
               <label>Nombre de Fantasía (Logo)</label>
               <input type="text" className="input" value={companyNombreFantasia} onChange={(e) => setCompanyNombreFantasia(e.target.value)} />
             </div>
-            <div className="form-group">
+            <div className="form-group" style={{ marginBottom: 0 }}>
               <label>CUIT del Emisor</label>
               <input type="text" className="input" value={companyCuit} onChange={(e) => setCompanyCuit(e.target.value)} />
             </div>
-            <div className="form-group">
+
+            <div className="form-group" style={{ marginBottom: 0 }}>
               <label>Dirección Comercial</label>
               <input type="text" className="input" value={companyDireccion} onChange={(e) => setCompanyDireccion(e.target.value)} />
             </div>
-            <div className="form-group">
+            <div className="form-group" style={{ marginBottom: 0 }}>
               <label>Teléfono de Contacto</label>
               <input type="text" className="input" value={companyTelefono} onChange={(e) => setCompanyTelefono(e.target.value)} />
             </div>
-            <div className="form-group">
+            <div className="form-group" style={{ marginBottom: 0 }}>
               <label>Email de Contacto</label>
               <input type="email" className="input" value={companyEmail} onChange={(e) => setCompanyEmail(e.target.value)} />
             </div>
-            <div className="form-group">
-              <label>Punto de Venta Oficial (Factura Electrónica)</label>
+
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label>Punto de Venta Oficial (Fact. Electrónica)</label>
               <input type="text" className="input" value={companyPos} onChange={(e) => setCompanyPos(e.target.value)} />
             </div>
-            <div className="form-group" style={{ 
-              display: 'flex', 
-              flexDirection: 'column', 
-              backgroundColor: 'var(--bg-light, #f8f9fa)', 
-              padding: '12px', 
-              borderRadius: '8px', 
-              border: '1px solid var(--border-color, #e5e5e7)' 
-            }}>
-              <label style={{ color: 'var(--text-secondary)', fontWeight: 600, fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <span style={{ color: 'var(--color-primary, #1a73e8)' }}>⚖️</span> IVA General Defecto (%)
-              </label>
-              <input 
-                type="text" 
-                className="input" 
-                style={{ 
-                  marginTop: '4px', 
-                  backgroundColor: '#fff', 
-                  border: '1px solid var(--border-color, #e5e5e7)', 
-                  fontWeight: 600, 
-                  color: 'var(--text-primary)' 
-                }} 
-                value={companyDefaultIva} 
-                onChange={(e) => setCompanyDefaultIva(e.target.value)} 
-              />
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label>IVA General Defecto (%)</label>
+              <input type="text" className="input" value={companyDefaultIva} onChange={(e) => setCompanyDefaultIva(e.target.value)} />
             </div>
           </div>
 
-          <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '8px', borderTop: '1px solid var(--border-color)', paddingTop: '16px', marginTop: '16px' }}>
-            <input type="checkbox" id="ignoreStockCheck" checked={ignoreStockCheck} onChange={(e) => setIgnoreStockCheck(e.target.checked)} style={{ width: '18px', height: '18px' }} />
-            <label htmlFor="ignoreStockCheck" style={{ cursor: 'pointer', fontWeight: 600, margin: 0 }}>⚠️ Habilitar Facturación sin Stock Físico (Venta en negativo)</label>
+          <div 
+            onClick={() => setIgnoreStockCheck(!ignoreStockCheck)}
+            style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'space-between',
+              padding: '16px 20px', 
+              backgroundColor: ignoreStockCheck ? '#f0fdf4' : '#f8f9fa',
+              border: `1px solid ${ignoreStockCheck ? '#16a34a' : 'var(--border-color)'}`,
+              borderRadius: '8px',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              marginBottom: '24px'
+            }}
+          >
+            <div>
+              <div style={{ fontWeight: 600, color: ignoreStockCheck ? '#166534' : 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                {ignoreStockCheck ? '✅' : '⚠️'} Habilitar Facturación sin Stock Físico (Venta en negativo)
+              </div>
+              <div style={{ fontSize: '0.85rem', color: ignoreStockCheck ? '#166534' : 'var(--text-secondary)', marginTop: '4px', opacity: 0.9 }}>
+                Permite realizar ventas y emitir comprobantes incluso cuando el inventario del producto sea cero o negativo.
+              </div>
+            </div>
+            <div style={{
+              width: '44px',
+              height: '24px',
+              backgroundColor: ignoreStockCheck ? '#16a34a' : '#d1d5db',
+              borderRadius: '12px',
+              position: 'relative',
+              transition: 'background-color 0.3s',
+              flexShrink: 0
+            }}>
+              <div style={{
+                width: '20px',
+                height: '20px',
+                backgroundColor: '#fff',
+                borderRadius: '50%',
+                position: 'absolute',
+                top: '2px',
+                left: ignoreStockCheck ? '22px' : '2px',
+                transition: 'left 0.3s',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
+              }} />
+            </div>
           </div>
 
           <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'flex-end' }}>

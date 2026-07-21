@@ -50,9 +50,9 @@ export default function GastosDashboard() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   
-  // Filtros (Inicializado en Mayo 2026 para ver los datos del Excel de inmediato tras importar)
-  const [selectedYear, setSelectedYear] = useState<number>(2026);
-  const [selectedMonth, setSelectedMonth] = useState<number>(5); // Mayo
+  // Filtros (Inicializado en el mes actual)
+  const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
+  const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth() + 1);
   const [filterCategoryId, setFilterCategoryId] = useState<string>('');
   const [filterPaymentMethod, setFilterPaymentMethod] = useState<string>('');
   
