@@ -8,6 +8,7 @@ import ClientsTab from './admin/ClientsTab';
 import OrdersTab from './admin/OrdersTab';
 import ProductsTab from './admin/ProductsTab';
 import ConfigTab from './admin/ConfigTab';
+import OffersDashboard from './admin/OffersDashboard';
 import ImportZipModal from './modals/ImportZipModal';
 
 const OFFICIAL_CITIES = [
@@ -49,6 +50,7 @@ const normalizeString = (str: string | null | undefined): string => {
 
 // Carga diferida de sub-dashboards pesados
 const UnifiedReportsDashboard = lazy(() => import('./UnifiedReportsDashboard'));
+const FulfillmentDashboard = lazy(() => import('./admin/FulfillmentDashboard'));
 const RendicionesDashboard = lazy(() => import('./RendicionesDashboard'));
 const LogisticaDashboard = lazy(() => import('./LogisticaDashboard'));
 const ComprasDashboard = lazy(() => import('./ComprasDashboard'));
@@ -77,6 +79,7 @@ const LoadingDashboard = () => (
 );
 import ResumenCuentaModal from './modals/ResumenCuentaModal';
 import QuickPriceSearchModal from './modals/QuickPriceSearchModal';
+import OrderFulfillmentModal from './modals/OrderFulfillmentModal';
 import { 
   UserPlus, 
   ToggleLeft, 
@@ -131,7 +134,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
   const [importZipModalOpen, setImportZipModalOpen] = useState(false);
   const [userModal, setUserModal] = useState({ open: false, username: '', password: '', role: 'VENDEDOR' });
   const [showPassword, setShowPassword] = useState(false);
-  const [clientModal, setClientModal] = useState({ open: false, mode: 'create', data: { id: 0, name: '', cuit: '', address: '', city: '', phone: '', email: '', creditLimit: 0, priceList: 'A', discount: 0, isClient: true, isProvider: false, isSeller: false, isCommissionAgent: false, route: '', saleRouteId: null as number | null, sellerId: null as number | null, isActive: true } });
+  const [clientModal, setClientModal] = useState({ open: false, mode: 'create', data: { id: 0, name: '', cuit: '', address: '', city: '', phone: '', email: '', creditLimit: 0, maxUnpaidInvoices: 0, priceList: 'A', discount: 0, isClient: true, isProvider: false, isSeller: false, isCommissionAgent: false, route: '', saleRouteId: null as number | null, sellerId: null as number | null, isActive: true } });
   const [clientsVersion, setClientsVersion] = useState(0);
   const [showResumenModal, setShowResumenModal] = useState<any>(null);
   const [orderDetailsModal, setOrderDetailsModal] = useState<any | null>(null);
@@ -140,6 +143,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
   // Estados para cuenta corriente y cobros
   const [clientProfileModal, setClientProfileModal] = useState<{ open: boolean; client: any; ledger: any[] } | null>(null);
   const [paymentModal, setPaymentModal] = useState<{ open: boolean; clientId: number; clientName: string } | null>(null);
+  const [fastInvoiceOrder, setFastInvoiceOrder] = useState<any | null>(null);
   const [paymentAmount, setPaymentAmount] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('CASH');
   const [paymentDescription, setPaymentDescription] = useState('');
@@ -973,6 +977,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
           route: data.route,
           saleRouteId: data.saleRouteId ? Number(data.saleRouteId) : null,
           creditLimit: Number(data.creditLimit || 0),
+          maxUnpaidInvoices: Number(data.maxUnpaidInvoices || 0),
           priceList: data.priceList || 'A',
           discount: Number(data.discount || 0),
           isClient: !!data.isClient,
@@ -993,6 +998,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
           route: data.route,
           saleRouteId: data.saleRouteId ? Number(data.saleRouteId) : null,
           creditLimit: Number(data.creditLimit || 0),
+          maxUnpaidInvoices: Number(data.maxUnpaidInvoices || 0),
           priceList: data.priceList || 'A',
           discount: Number(data.discount || 0),
           isClient: !!data.isClient,
@@ -1626,6 +1632,12 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
       {/* ====================================================================
           3. VISOR COMPLETO DE PEDIDOS
           ==================================================================== */}
+      {activeTab === 'fulfillment' && (
+        <Suspense fallback={<LoadingDashboard />}>
+          <FulfillmentDashboard />
+        </Suspense>
+      )}
+
       {activeTab === 'orders' && (
         <OrdersTab
           orders={orders}
@@ -1688,6 +1700,10 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
         <Suspense fallback={<LoadingDashboard />}>
           <ComprasDashboard />
         </Suspense>
+      )}
+
+      {activeTab === 'offers' && (
+        <OffersDashboard />
       )}
 
             {/* ====================================================================
@@ -2036,6 +2052,19 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
             </div>
             
             <div className="modal-footer" style={{ marginTop: '20px' }}>
+              {!orderDetailsModal.invoiceNumber && orderDetailsModal.status !== 'CANCELLED' && (
+                <button 
+                  className="btn btn-primary" 
+                  style={{ backgroundColor: '#4F46E5', borderColor: '#4F46E5', color: 'white' }} 
+                  onClick={() => {
+                    setFastInvoiceOrder(orderDetailsModal);
+                    setOrderDetailsModal(null);
+                  }}
+                >
+                  <DollarSign size={16} />
+                  <span>Facturar Directo</span>
+                </button>
+              )}
               <button className="btn btn-secondary" onClick={() => { printTicket(orderDetailsModal); setOrderDetailsModal(null); }}>
                 <Printer size={16} />
                 <span>Imprimir Ticket</span>
@@ -2808,15 +2837,22 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
 
                       <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1.2fr 1fr', gap: '10px' }}>
                         <div className="form-group" style={{ marginBottom: 0, display: 'flex', flexDirection: 'column' }}>
-                          <label style={{ fontSize: '0.8rem', fontWeight: 600, marginBottom: '6px', height: '18px', display: 'block', whiteSpace: 'nowrap' }}>Límite Crédito CC ($)</label>
-                          <input
-                            type="number"
-                            className="input"
-                            value={clientModal.data.creditLimit}
-                            onChange={(e) => setClientModal({ ...clientModal, data: { ...clientModal.data, creditLimit: Number(e.target.value) } })}
+                          <label style={{ fontSize: '0.8rem', fontWeight: 600, marginBottom: '6px', height: '18px', display: 'block', whiteSpace: 'nowrap' }}>Límite de Cta Cte</label>
+                          <select
+                            className="select"
+                            value={clientModal.data.maxUnpaidInvoices}
+                            onChange={(e) => setClientModal({ ...clientModal, data: { ...clientModal.data, maxUnpaidInvoices: Number(e.target.value) } })}
                             disabled={!clientModal.data.isClient}
-                            style={{ height: '38px', padding: '8px 12px', fontSize: '0.9rem', borderRadius: '6px', border: '1px solid var(--border-color)', boxSizing: 'border-box', width: '100%' }}
-                          />
+                            style={{ height: '38px', padding: '8px 12px', fontSize: '0.9rem', borderRadius: '6px', border: '1px solid var(--border-color)', boxSizing: 'border-box', width: '100%', backgroundColor: '#fff', color: 'var(--text-primary)' }}
+                          >
+                            <option value={0}>Sin Cta Cte</option>
+                            <option value={0.5}>Media Boleta</option>
+                            <option value={1}>1 Boleta</option>
+                            <option value={2}>2 Boletas</option>
+                            <option value={3}>3 Boletas</option>
+                            <option value={4}>4 Boletas</option>
+                            <option value={5}>5 Boletas</option>
+                          </select>
                         </div>
                         
                         <div className="form-group" style={{ marginBottom: 0, display: 'flex', flexDirection: 'column' }}>
@@ -2996,6 +3032,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
                         phone: clientProfileModal.client.phone || '',
                         email: clientProfileModal.client.email || '',
                         creditLimit: clientProfileModal.client.creditLimit ? Number(clientProfileModal.client.creditLimit) : 0,
+                        maxUnpaidInvoices: clientProfileModal.client.maxUnpaidInvoices ? Number(clientProfileModal.client.maxUnpaidInvoices) : 0,
                         priceList: clientProfileModal.client.priceList || 'A',
                         discount: clientProfileModal.client.discount ? Number(clientProfileModal.client.discount) : 0,
                         isClient: !!clientProfileModal.client.isClient,
@@ -3029,10 +3066,11 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
                   
                   {(() => {
                     const balance = Number(clientProfileModal.client.outstandingBalance || 0);
-                    const limit = Number(clientProfileModal.client.creditLimit || 0);
-                    const used = Math.max(0, balance);
-                    const pct = limit > 0 ? Math.min(100, Math.round((used / limit) * 100)) : 0;
-                    const available = limit - balance;
+                    const limit = Number(clientProfileModal.client.maxUnpaidInvoices || 0);
+                    const pendingCount = clientProfileModal.client.pendingInvoicesCount || 0;
+                    
+                    const pct = limit > 0 ? Math.min(100, Math.round((pendingCount / limit) * 100)) : 0;
+                    const available = limit - pendingCount;
                     
                     return (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -3046,7 +3084,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
                           border: '1px solid', 
                           borderColor: balance > 0 ? 'rgba(239, 68, 68, 0.15)' : balance < 0 ? 'rgba(16, 185, 129, 0.15)' : 'var(--border-color)' 
                         }}>
-                          <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Saldo Actual</span>
+                          <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Saldo Actual (en $)</span>
                           <span style={{ fontSize: '1.6rem', fontWeight: 700, color: balance > 0 ? 'var(--color-danger)' : balance < 0 ? 'var(--color-success)' : 'var(--text-primary)' }}>
                             {balance < 0 ? `$${Math.abs(balance).toLocaleString()} (A Favor)` : `$${balance.toLocaleString()}`}
                           </span>
@@ -3054,26 +3092,26 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
                         
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.85rem' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                            <span style={{ color: 'var(--text-secondary)' }}>Límite de Crédito:</span>
-                            <span style={{ fontWeight: 600 }}>${limit.toLocaleString()}</span>
+                            <span style={{ color: 'var(--text-secondary)' }}>Límite de Cta Cte:</span>
+                            <span style={{ fontWeight: 600 }}>{limit > 0 ? `${limit} Boletas` : 'No habilitada'}</span>
                           </div>
                           
                           {clientProfileModal.client.isClient && limit > 0 && (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', margin: '4px 0' }}>
                               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                                <span>Crédito Usado ({pct}%)</span>
-                                <span>${used.toLocaleString()}</span>
+                                <span>Boletas Adeudadas ({pct}%)</span>
+                                <span>{pendingCount}</span>
                               </div>
                               <div style={{ height: '6px', width: '100%', backgroundColor: '#E5E7EB', borderRadius: '3px', overflow: 'hidden' }}>
-                                <div style={{ height: '100%', width: `${pct}%`, backgroundColor: pct > 85 ? 'var(--color-danger)' : pct > 50 ? 'var(--color-warning)' : 'var(--color-success)', borderRadius: '3px' }} />
+                                <div style={{ height: '100%', width: `${pct}%`, backgroundColor: pct >= 100 ? 'var(--color-danger)' : pct > 50 ? 'var(--color-warning)' : 'var(--color-success)', borderRadius: '3px', transition: 'width 0.3s ease' }} />
                               </div>
                             </div>
                           )}
 
                           <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dashed var(--border-color)', paddingBottom: '6px' }}>
-                            <span style={{ color: 'var(--text-secondary)' }}>Crédito Disponible:</span>
-                            <span style={{ fontWeight: 600, color: available < 0 ? 'var(--color-danger)' : 'var(--text-primary)' }}>
-                              ${available.toLocaleString()}
+                            <span style={{ color: 'var(--text-secondary)' }}>Boletas Disponibles:</span>
+                            <span style={{ fontWeight: 600, color: available <= 0 ? 'var(--color-danger)' : 'var(--text-primary)' }}>
+                              {limit > 0 ? Math.max(0, available) : 0}
                             </span>
                           </div>
                           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -3394,6 +3432,24 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
             </form>
           </div>
         </div>
+      )}
+
+      {/* 8. Búsqueda Rápida de Precios (Global) */}
+      <QuickPriceSearchModal 
+        isOpen={isQuickSearchModalOpen}
+        onClose={() => setIsQuickSearchModalOpen(false)}
+      />
+
+      {/* 9. Modal Facturación Directa */}
+      {fastInvoiceOrder && (
+        <OrderFulfillmentModal
+          order={fastInvoiceOrder}
+          onClose={() => setFastInvoiceOrder(null)}
+          onSuccess={() => {
+            setFastInvoiceOrder(null);
+            fetchData();
+          }}
+        />
       )}
 
       {/* Renderizar PriceListModal */}

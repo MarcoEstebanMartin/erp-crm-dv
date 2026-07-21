@@ -3,8 +3,8 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
 }
 
@@ -60,14 +60,14 @@ enum PaymentMethod {
 }
 
 model User {
-  id             Int             @id @default(autoincrement())
-  username       String          @unique
-  passwordHash   String
-  role           Role            @default(VENDEDOR)
-  isActive       Boolean         @default(true)
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-  
+  id           Int      @id @default(autoincrement())
+  username     String   @unique
+  passwordHash String
+  role         Role     @default(VENDEDOR)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
   // Relaciones
   orders         Order[]
   transactions   Transaction[]
@@ -82,71 +82,72 @@ model User {
 }
 
 model Persona {
-  id                 Int           @id @default(autoincrement())
-  name               String
-  cuit               String?
-  address            String?
-  city               String?
-  province           String?
-  zipCode            String?
-  phone              String?
-  email              String?
-  rubro              String?
-  
+  id       Int     @id @default(autoincrement())
+  name     String
+  cuit     String?
+  address  String?
+  city     String?
+  province String?
+  zipCode  String?
+  phone    String?
+  email    String?
+  rubro    String?
+
   // Roles de Persona
-  isClient           Boolean       @default(true)
-  isProvider         Boolean       @default(false)
-  isSeller           Boolean       @default(false)
-  isCommissionAgent  Boolean       @default(false)
+  isClient          Boolean @default(true)
+  isProvider        Boolean @default(false)
+  isSeller          Boolean @default(false)
+  isCommissionAgent Boolean @default(false)
 
   // Datos de Cliente
-  creditLimit        Decimal       @default(0.00) @db.Decimal(12, 2)
-  priceList          String        @default("A")
-  discount           Decimal       @default(0.00) @db.Decimal(12, 2)
-  contacts           Json?
+  creditLimit Decimal @default(0.00) @db.Decimal(12, 2)
+  maxUnpaidInvoices Decimal @default(0.00) @db.Decimal(5, 2)
+  priceList   String  @default("A")
+  discount    Decimal @default(0.00) @db.Decimal(12, 2)
+  contacts    Json?
 
   // Cuenta Corriente (neto: positivo = nos debe, negativo = le debemos)
-  outstandingBalance Decimal       @default(0.00) @db.Decimal(12, 2)
+  outstandingBalance Decimal @default(0.00) @db.Decimal(12, 2)
 
   // Ruta de reparto (ej: "BUNGE Y BUCHARDO", "VILLEGAS NORBER", etc.)
-  route              String?
+  route String?
 
   // Relación con Ruta de Preventa estructurada
-  saleRouteId        Int?
-  saleRoute          SaleRoute?    @relation(fields: [saleRouteId], references: [id], onDelete: SetNull)
-  routeSequence      Int?          // Orden en la secuencia de visita (1, 2, 3...)
+  saleRouteId   Int?
+  saleRoute     SaleRoute? @relation(fields: [saleRouteId], references: [id], onDelete: SetNull)
+  routeSequence Int? // Orden en la secuencia de visita (1, 2, 3...)
 
   // Coordenadas geográficas para reparto y preventa
-  latitude           Float?
-  longitude          Float?
+  latitude  Float?
+  longitude Float?
 
   // Relación con vendedor (si es cliente)
-  sellerId           Int?
-  seller             User?         @relation(fields: [sellerId], references: [id])
-  
+  sellerId Int?
+  seller   User? @relation(fields: [sellerId], references: [id])
+
   // Alícuota impositiva para percepción IIBB (ej: 1.50)
-  iibbAliquot        Decimal       @default(0.00) @db.Decimal(5, 2)
-  
+  iibbAliquot Decimal @default(0.00) @db.Decimal(5, 2)
+
   // Plazo de pago acordado (en días)
-  paymentTermDays    Int           @default(30)
-  
+  paymentTermDays Int @default(30)
+
   // Estado activo/inactivo
-  isActive           Boolean       @default(true)
-  
-  createdAt          DateTime      @default(now())
-  updatedAt          DateTime      @updatedAt
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relaciones
-  orders             Order[]
-  transactions       Transaction[]
-  supplierInvoices   SupplierInvoice[]
-  taxWithholdings    TaxWithholding[]
-  purchaseOrders     PurchaseOrder[]
-  creditNotes        CreditNote[]
-  products           Product[]
+  orders              Order[]
+  transactions        Transaction[]
+  supplierInvoices    SupplierInvoice[]
+  taxWithholdings     TaxWithholding[]
+  purchaseOrders      PurchaseOrder[]
+  creditNotes         CreditNote[]
+  products            Product[]
   discountRules       DiscountRule[]
   splitBillingConfigs SplitBillingConfig[]
-  routeVisits        SaleRouteVisit[]
+  routeVisits         SaleRouteVisit[]
   vehicleMaintenances VehicleMaintenance[]
   providerMappings    ProviderProductMapping[]
 
@@ -157,65 +158,66 @@ model Persona {
 }
 
 model Product {
-  id          Int      @id @default(autoincrement())
-  sku         String   @unique
-  name        String
-  description String?
-  barcode     String?  @unique
-  costPrice   Decimal  @db.Decimal(12, 2)
-  listPrice   Decimal  @db.Decimal(12, 2)
-  listPriceB  Decimal  @default(0.00) @db.Decimal(12, 2)
-  listPriceC  Decimal  @default(0.00) @db.Decimal(12, 2)
-  profitMargin Decimal? @db.Decimal(5, 2)
-  stock       Int      @default(0)
-  minStock    Int      @default(0)
-  isPesable   Boolean  @default(false)
-  unitsPerBox Int      @default(1)
+  id                Int      @id @default(autoincrement())
+  sku               String   @unique
+  name              String
+  description       String?
+  barcode           String?  @unique
+  costPrice         Decimal  @db.Decimal(12, 2)
+  listPrice         Decimal  @db.Decimal(12, 2)
+  listPriceB        Decimal  @default(0.00) @db.Decimal(12, 2)
+  listPriceC        Decimal  @default(0.00) @db.Decimal(12, 2)
+  profitMargin      Decimal? @db.Decimal(5, 2)
+  stock             Int      @default(0)
+  minStock          Int      @default(0)
+  isPesable         Boolean  @default(false)
+  unitsPerBox       Int      @default(1)
   approximateWeight Decimal? @db.Decimal(12, 3)
-  imageUrl    String?
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  imageUrl          String?
+  isActive          Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
   // Relaciones
-  orderItems     OrderItem[]
-  stockMovements StockMovement[]
+  orderItems         OrderItem[]
+  stockMovements     StockMovement[]
   lots               ProductLot[]
   purchaseOrderItems PurchaseOrderItem[]
   creditNoteItems    CreditNoteItem[]
   rubroId            Int?
-  rubro              Rubro?              @relation(fields: [rubroId], references: [id])
+  rubro              Rubro?                   @relation(fields: [rubroId], references: [id])
   providerId         Int?
-  provider           Persona?            @relation(fields: [providerId], references: [id])
+  provider           Persona?                 @relation(fields: [providerId], references: [id])
   discountRules      DiscountRule[]
-  providerMappings    ProviderProductMapping[]
+  providerMappings   ProviderProductMapping[]
+  offerCampaignItems OfferCampaignItem[]
 
   @@index([rubroId])
   @@index([providerId])
 }
 
 model Order {
-  id            Int         @id @default(autoincrement())
-  movementId    Int         @default(dbgenerated("nextval('movement_seq')"))
-  personaId     Int
-  persona       Persona     @relation(fields: [personaId], references: [id])
-  sellerId      Int
-  seller        User        @relation(fields: [sellerId], references: [id])
-  billingType   BillingType @default(INTERNAL)
-  invoiceType   InvoiceType @default(PRESUPUESTO)
-  invoiceNumber String?
-  cae           String?
-  caeDueDate    DateTime?
-  status        OrderStatus @default(PENDING)
-  totalAmount      Decimal     @db.Decimal(12, 2)
-  netAmount        Decimal     @default(0.00) @db.Decimal(12, 2) // Neto Gravado
-  taxAmount        Decimal     @default(0.00) @db.Decimal(12, 2) // IVA Débito Fiscal
-  percepcionAmount Decimal     @default(0.00) @db.Decimal(12, 2) // Percepciones IIBB
-  percepcionIvaAmount Decimal  @default(0.00) @db.Decimal(12, 2) // Percepciones IVA (ej: RG 5329)
-  bultosCount      Int         @default(1)
-  bultosDetails    Json?
-  createdAt        DateTime    @default(now())
-  updatedAt        DateTime    @updatedAt
+  id                  Int         @id @default(autoincrement())
+  movementId          Int         @default(dbgenerated("nextval('movement_seq')"))
+  personaId           Int
+  persona             Persona     @relation(fields: [personaId], references: [id])
+  sellerId            Int
+  seller              User        @relation(fields: [sellerId], references: [id])
+  billingType         BillingType @default(INTERNAL)
+  invoiceType         InvoiceType @default(PRESUPUESTO)
+  invoiceNumber       String?
+  cae                 String?
+  caeDueDate          DateTime?
+  status              OrderStatus @default(PENDING)
+  totalAmount         Decimal     @db.Decimal(12, 2)
+  netAmount           Decimal     @default(0.00) @db.Decimal(12, 2) // Neto Gravado
+  taxAmount           Decimal     @default(0.00) @db.Decimal(12, 2) // IVA Débito Fiscal
+  percepcionAmount    Decimal     @default(0.00) @db.Decimal(12, 2) // Percepciones IIBB
+  percepcionIvaAmount Decimal     @default(0.00) @db.Decimal(12, 2) // Percepciones IVA (ej: RG 5329)
+  bultosCount         Int         @default(1)
+  bultosDetails       Json?
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
 
   // Relaciones
   items           OrderItem[]
@@ -247,15 +249,15 @@ model OrderItem {
 }
 
 model ProductLot {
-  id             Int             @id @default(autoincrement())
+  id             Int      @id @default(autoincrement())
   productId      Int
-  product        Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
+  product        Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
   lotNumber      String
   expirationDate DateTime
-  stock          Int             @default(0)
-  location       String          @default("S/U")
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
+  stock          Int      @default(0)
+  location       String   @default("S/U")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   // Relaciones
   orderItemLots  OrderItemLot[]
@@ -274,18 +276,18 @@ model OrderItemLot {
 }
 
 model StockMovement {
-  id           Int         @id @default(autoincrement())
+  id           Int          @id @default(autoincrement())
   productId    Int
-  product      Product     @relation(fields: [productId], references: [id])
-  quantity     Int         // Positivo para entrada, negativo para salida
+  product      Product      @relation(fields: [productId], references: [id])
+  quantity     Int // Positivo para entrada, negativo para salida
   type         MovementType
-  referenceId  String?     // ID del pedido u orden de compra
+  referenceId  String? // ID del pedido u orden de compra
   userId       Int
-  user         User        @relation(fields: [userId], references: [id])
+  user         User         @relation(fields: [userId], references: [id])
   reason       String?
   productLotId Int?
-  productLot   ProductLot? @relation(fields: [productLotId], references: [id])
-  createdAt    DateTime    @default(now())
+  productLot   ProductLot?  @relation(fields: [productLotId], references: [id])
+  createdAt    DateTime     @default(now())
 
   @@index([productId])
   @@index([userId])
@@ -293,33 +295,33 @@ model StockMovement {
 }
 
 model CashDrawer {
-  id             Int           @id @default(autoincrement())
+  id             Int       @id @default(autoincrement())
   userId         Int
-  user           User          @relation(fields: [userId], references: [id])
-  branch         String        // "A" | "X" (Sucursal A / X)
-  openingBalance Decimal       @db.Decimal(12, 2)
-  closingBalance Decimal?      @db.Decimal(12, 2)
-  realBalance    Decimal?      @db.Decimal(12, 2)
-  status         String        @default("OPEN") // "OPEN" | "CLOSED"
-  openedAt       DateTime      @default(now())
+  user           User      @relation(fields: [userId], references: [id])
+  branch         String // "A" | "X" (Sucursal A / X)
+  openingBalance Decimal   @db.Decimal(12, 2)
+  closingBalance Decimal?  @db.Decimal(12, 2)
+  realBalance    Decimal?  @db.Decimal(12, 2)
+  status         String    @default("OPEN") // "OPEN" | "CLOSED"
+  openedAt       DateTime  @default(now())
   closedAt       DateTime?
 
   // Relaciones
-  transactions   Transaction[]
-  expenses       Expense[]
+  transactions Transaction[]
+  expenses     Expense[]
 }
 
 model BankAccount {
-  id            Int           @id @default(autoincrement())
+  id            Int      @id @default(autoincrement())
   name          String
   accountNumber String?
-  balance       Decimal       @default(0.00) @db.Decimal(12, 2)
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  balance       Decimal  @default(0.00) @db.Decimal(12, 2)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   // Relaciones
-  transactions  Transaction[]
-  expenses      Expense[]
+  transactions Transaction[]
+  expenses     Expense[]
 }
 
 model Transaction {
@@ -337,25 +339,25 @@ model Transaction {
   amount        Decimal         @db.Decimal(12, 2)
   description   String?
   receiptNumber String?         @unique // Nro de recibo ej: "REC-00001"
-  
+
   // Relaciones Financieras
   cashDrawerId  Int?
-  cashDrawer    CashDrawer?     @relation(fields: [cashDrawerId], references: [id])
+  cashDrawer    CashDrawer?  @relation(fields: [cashDrawerId], references: [id])
   bankAccountId Int?
-  bankAccount   BankAccount?    @relation(fields: [bankAccountId], references: [id])
+  bankAccount   BankAccount? @relation(fields: [bankAccountId], references: [id])
 
   // Relación con facturas de proveedor
   supplierInvoiceId Int?
   supplierInvoice   SupplierInvoice? @relation(fields: [supplierInvoiceId], references: [id])
-  
+
   // Relación con mantenimiento de flota
   vehicleMaintenances VehicleMaintenance[]
 
   // Relación uno a uno con gastos
-  expense       Expense?
+  expense Expense?
 
-  createdAt     DateTime        @default(now())
-  verified      Boolean         @default(false)
+  createdAt DateTime @default(now())
+  verified  Boolean  @default(false)
 
   @@index([orderId])
   @@index([personaId])
@@ -365,14 +367,12 @@ model Transaction {
   @@index([createdAt])
 }
 
-
-
 model AuditLog {
   id         Int      @id @default(autoincrement())
   userId     Int
   user       User     @relation(fields: [userId], references: [id])
-  action     String   // ej. "UPDATE_PRODUCT", "CREATE_ORDER", "ADJUST_STOCK"
-  entityType String   // ej. "Product", "Order"
+  action     String // ej. "UPDATE_PRODUCT", "CREATE_ORDER", "ADJUST_STOCK"
+  entityType String // ej. "Product", "Order"
   entityId   Int
   oldValues  Json?
   newValues  Json?
@@ -384,72 +384,72 @@ model AuditLog {
 }
 
 model SupplierInvoice {
-  id               Int           @id @default(autoincrement())
-  movementId       Int           @default(dbgenerated("nextval('movement_seq')"))
-  personaId        Int
-  persona          Persona       @relation(fields: [personaId], references: [id])
-  invoiceNumber    String        // Nro comprobante ej: "0001-00004321"
-  invoiceType      String        // "FACTURA_A" | "FACTURA_B" | "FACTURA_C"
-  issueDate        DateTime
-  dueDate          DateTime?     // Fecha de vencimiento
-  status           String        @default("PENDING") // "PENDING" | "PAID" | "PARTIALLY_PAID"
-  paidAmount       Decimal       @default(0.00) @db.Decimal(12, 2)
-  netAmount        Decimal       @db.Decimal(12, 2) // Neto Gravado
-  taxAmount        Decimal       @db.Decimal(12, 2) // IVA Crédito Fiscal
-  percepcionAmount Decimal       @default(0.00) @db.Decimal(12, 2) // Percepciones IIBB sufridas
-  percepcionIvaAmount Decimal    @default(0.00) @db.Decimal(12, 2) // Percepciones IVA sufridas
-  impuestosInternos Decimal    @default(0.00) @db.Decimal(12, 2) // Impuestos Internos
-  totalAmount      Decimal       @db.Decimal(12, 2) // Total
-  billingType      BillingType   @default(INTERNAL)
-  createdAt        DateTime      @default(now())
-  updatedAt        DateTime      @updatedAt
-  transactions     Transaction[]
+  id                  Int           @id @default(autoincrement())
+  movementId          Int           @default(dbgenerated("nextval('movement_seq')"))
+  personaId           Int
+  persona             Persona       @relation(fields: [personaId], references: [id])
+  invoiceNumber       String // Nro comprobante ej: "0001-00004321"
+  invoiceType         String // "FACTURA_A" | "FACTURA_B" | "FACTURA_C"
+  issueDate           DateTime
+  dueDate             DateTime? // Fecha de vencimiento
+  status              String        @default("PENDING") // "PENDING" | "PAID" | "PARTIALLY_PAID"
+  paidAmount          Decimal       @default(0.00) @db.Decimal(12, 2)
+  netAmount           Decimal       @db.Decimal(12, 2) // Neto Gravado
+  taxAmount           Decimal       @db.Decimal(12, 2) // IVA Crédito Fiscal
+  percepcionAmount    Decimal       @default(0.00) @db.Decimal(12, 2) // Percepciones IIBB sufridas
+  percepcionIvaAmount Decimal       @default(0.00) @db.Decimal(12, 2) // Percepciones IVA sufridas
+  impuestosInternos   Decimal       @default(0.00) @db.Decimal(12, 2) // Impuestos Internos
+  totalAmount         Decimal       @db.Decimal(12, 2) // Total
+  billingType         BillingType   @default(INTERNAL)
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+  transactions        Transaction[]
 }
 
 model TaxWithholding {
-  id                Int      @id @default(autoincrement())
-  movementId        Int      @default(dbgenerated("nextval('movement_seq')"))
-  type              String   // "PERCEPCION_SUFRIDA" | "PERCEPCION_PRACTICADA" | "RETENCION_SUFRIDA" | "RETENCION_PRACTICADA"
-  taxType           String   // "IIBB" | "IVA" | "GANANCIAS"
-  personaId         Int
-  persona           Persona  @relation(fields: [personaId], references: [id])
-  number            String   // Nro certificado o comprobante
-  date              DateTime
-  amount            Decimal  @db.Decimal(12, 2)
-  jurisdiction      String?  // Jurisdicción si es IIBB (ej: "AR-B", "AR-C")
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  id           Int      @id @default(autoincrement())
+  movementId   Int      @default(dbgenerated("nextval('movement_seq')"))
+  type         String // "PERCEPCION_SUFRIDA" | "PERCEPCION_PRACTICADA" | "RETENCION_SUFRIDA" | "RETENCION_PRACTICADA"
+  taxType      String // "IIBB" | "IVA" | "GANANCIAS"
+  personaId    Int
+  persona      Persona  @relation(fields: [personaId], references: [id])
+  number       String // Nro certificado o comprobante
+  date         DateTime
+  amount       Decimal  @db.Decimal(12, 2)
+  jurisdiction String? // Jurisdicción si es IIBB (ej: "AR-B", "AR-C")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }
 
 model DeliveryRoute {
-  id                 Int             @id @default(autoincrement())
+  id                 Int      @id @default(autoincrement())
   driverName         String
   vehiclePlate       String
   vehicleDescription String?
-  status             String          @default("PENDING") // "PENDING" | "IN_TRANSIT" | "COMPLETED"
-  date               DateTime        @default(now())
-  createdAt          DateTime        @default(now())
-  updatedAt          DateTime        @updatedAt
-  
+  status             String   @default("PENDING") // "PENDING" | "IN_TRANSIT" | "COMPLETED"
+  date               DateTime @default(now())
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
   // Relación con flota de vehículos propia (opcional)
-  vehicleId          Int?
-  vehicle            Vehicle?        @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
-  
-  orders             Order[]
+  vehicleId Int?
+  vehicle   Vehicle? @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
+
+  orders Order[]
 
   @@index([vehicleId])
 }
 
 model PurchaseOrder {
-  id          Int                 @id @default(autoincrement())
+  id          Int      @id @default(autoincrement())
   personaId   Int
-  persona     Persona             @relation(fields: [personaId], references: [id])
-  status      String              @default("PENDING") // "PENDING" | "RECEIVED" | "CANCELLED"
-  totalAmount Decimal             @db.Decimal(12, 2)
-  createdAt   DateTime            @default(now())
-  updatedAt   DateTime            @updatedAt
-  
-  items       PurchaseOrderItem[]
+  persona     Persona  @relation(fields: [personaId], references: [id])
+  status      String   @default("PENDING") // "PENDING" | "RECEIVED" | "CANCELLED"
+  totalAmount Decimal  @db.Decimal(12, 2)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  items PurchaseOrderItem[]
 }
 
 model PurchaseOrderItem {
@@ -468,25 +468,25 @@ model CreditNote {
   movementId       Int              @default(dbgenerated("nextval('movement_seq')"))
   personaId        Int
   persona          Persona          @relation(fields: [personaId], references: [id])
-  orderId          Int?             // Vinculación opcional a una factura/pedido específico
+  orderId          Int? // Vinculación opcional a una factura/pedido específico
   order            Order?           @relation(fields: [orderId], references: [id])
   userId           Int
   user             User             @relation(fields: [userId], references: [id])
   status           CreditNoteStatus @default(PENDING_APPROVAL)
   billingType      BillingType      @default(INTERNAL)
-  creditNoteType   String           // "NOTA_CREDITO_A" | "NOTA_CREDITO_B" | "NOTA_CREDITO_C" | "NOTA_CREDITO_INTERNA"
-  creditNoteNumber String?          // Nro comprobante ej: "00001-00000124"
+  creditNoteType   String // "NOTA_CREDITO_A" | "NOTA_CREDITO_B" | "NOTA_CREDITO_C" | "NOTA_CREDITO_INTERNA"
+  creditNoteNumber String? // Nro comprobante ej: "00001-00000124"
   cae              String?
   caeDueDate       DateTime?
   totalAmount      Decimal          @db.Decimal(12, 2)
   netAmount        Decimal          @default(0.00) @db.Decimal(12, 2)
   taxAmount        Decimal          @default(0.00) @db.Decimal(12, 2)
-  reason           String           // "DEVOLUCION" | "DESCUENTO" | "ERROR_FACTURACION"
+  reason           String // "DEVOLUCION" | "DESCUENTO" | "ERROR_FACTURACION"
   comments         String?
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
 
-  items            CreditNoteItem[]
+  items CreditNoteItem[]
 }
 
 model CreditNoteItem {
@@ -502,64 +502,64 @@ model CreditNoteItem {
 }
 
 model Rubro {
-  id           Int       @id @default(autoincrement())
-  name         String    @unique
-  description  String?
-  profitMargin Decimal   @default(1.25) @db.Decimal(5, 2)
-  pickingZone  String    @default("CAJAS") // FRIO, TABLA, CAJAS
-  products     Product[]
-  discountRules DiscountRule[]
+  id                  Int                  @id @default(autoincrement())
+  name                String               @unique
+  description         String?
+  profitMargin        Decimal              @default(1.25) @db.Decimal(5, 2)
+  pickingZone         String               @default("CAJAS") // FRIO, TABLA, CAJAS
+  products            Product[]
+  discountRules       DiscountRule[]
   splitBillingConfigs SplitBillingConfig[]
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
 }
 
 model WeeklyReport {
-  id              Int      @id @default(autoincrement())
-  weekStart       String   @unique // Formato "YYYY-MM-DD" (Lunes de la semana)
-  purchases       Json     // Lista de compras: [{ company: string, date: string, amount: number }]
-  sales           Json     // Lista de ventas por localidad: [{ locality: string, date: string, amountA: number, amountX: number }]
-  credit          Decimal  @db.Decimal(12, 2) // Rollover de crédito / deuda
-  buffer          Decimal  @default(20000000.00) @db.Decimal(12, 2) // Colchón operativo (Resultado)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id        Int      @id @default(autoincrement())
+  weekStart String   @unique // Formato "YYYY-MM-DD" (Lunes de la semana)
+  purchases Json // Lista de compras: [{ company: string, date: string, amount: number }]
+  sales     Json // Lista de ventas por localidad: [{ locality: string, date: string, amountA: number, amountX: number }]
+  credit    Decimal  @db.Decimal(12, 2) // Rollover de crédito / deuda
+  buffer    Decimal  @default(20000000.00) @db.Decimal(12, 2) // Colchón operativo (Resultado)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model PerceptionType {
   id             Int      @id @default(autoincrement())
   code           String   @unique // Ej: "IVA_5329", "IIBB_MN", "IIBB_CR", "IIBB_BA"
-  name           String   
-  taxType        String   // "IVA" | "IIBB"
+  name           String
+  taxType        String // "IVA" | "IIBB"
   aliquot        Decimal  @db.Decimal(5, 2)
   affectsIvaBook Boolean  @default(false)
-  jurisdiction   String?  // Ej: "AR-N", "AR-W", "AR-B", o null para IVA
+  jurisdiction   String? // Ej: "AR-N", "AR-W", "AR-B", o null para IVA
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 }
 
 model DiscountRule {
-  id           Int          @id @default(autoincrement())
-  name         String?      // Nombre descriptivo (ej: "Descuento 3% Especial Quesos", "Fanberlian General 4%")
-  
+  id   Int     @id @default(autoincrement())
+  name String? // Nombre descriptivo (ej: "Descuento 3% Especial Quesos", "Fanberlian General 4%")
+
   // Condicionales de aplicación (nulos = aplica a todo)
-  personaId    Int?         // Cliente específico (ej. FANBERLIAN)
-  persona      Persona?     @relation(fields: [personaId], references: [id], onDelete: Cascade)
-  
-  priceList    String?      // Código de lista de precios (ej. "ESPECIAL_QUESOS") para agrupar clientes
-  
-  rubroId      Int?         // Rubro de producto al que aplica (ej. Remotti, Quesos Melincue)
-  rubro        Rubro?       @relation(fields: [rubroId], references: [id], onDelete: Cascade)
-  
-  productId    Int?         // Producto específico al que aplica
-  product      Product?     @relation(fields: [productId], references: [id], onDelete: Cascade)
-  
-  billingType  BillingType? // Si aplica solo a Sucursal A (OFFICIAL) o Sucursal X (INTERNAL)
-  
+  personaId Int? // Cliente específico (ej. FANBERLIAN)
+  persona   Persona? @relation(fields: [personaId], references: [id], onDelete: Cascade)
+
+  priceList String? // Código de lista de precios (ej. "ESPECIAL_QUESOS") para agrupar clientes
+
+  rubroId Int? // Rubro de producto al que aplica (ej. Remotti, Quesos Melincue)
+  rubro   Rubro? @relation(fields: [rubroId], references: [id], onDelete: Cascade)
+
+  productId Int? // Producto específico al que aplica
+  product   Product? @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  billingType BillingType? // Si aplica solo a Sucursal A (OFFICIAL) o Sucursal X (INTERNAL)
+
   // Beneficio
-  discount     Decimal      @db.Decimal(5, 2) // Porcentaje de descuento (ej. 3.00, 4.00)
-  
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
+  discount Decimal @db.Decimal(5, 2) // Porcentaje de descuento (ej. 3.00, 4.00)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([personaId])
   @@index([priceList])
@@ -568,31 +568,31 @@ model DiscountRule {
 }
 
 model SplitBillingConfig {
-  id                 Int      @id @default(autoincrement())
-  personaId          Int      // Cliente al que aplica (ej. FANBERLIAN)
-  persona            Persona  @relation(fields: [personaId], references: [id], onDelete: Cascade)
-  
-  rubroId            Int      // Rubro que se divide (ej. Remotti, Quesos Melincué)
-  rubro              Rubro    @relation(fields: [rubroId], references: [id], onDelete: Cascade)
-  
-  percentageOfficial Decimal  @default(50.00) @db.Decimal(5, 2) // % en Sucursal A (Oficial)
-  percentageInternal Decimal  @default(50.00) @db.Decimal(5, 2) // % en Sucursal X (Interno)
-  
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  id        Int     @id @default(autoincrement())
+  personaId Int // Cliente al que aplica (ej. FANBERLIAN)
+  persona   Persona @relation(fields: [personaId], references: [id], onDelete: Cascade)
+
+  rubroId Int // Rubro que se divide (ej. Remotti, Quesos Melincué)
+  rubro   Rubro @relation(fields: [rubroId], references: [id], onDelete: Cascade)
+
+  percentageOfficial Decimal @default(50.00) @db.Decimal(5, 2) // % en Sucursal A (Oficial)
+  percentageInternal Decimal @default(50.00) @db.Decimal(5, 2) // % en Sucursal X (Interno)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([personaId, rubroId])
 }
 
 model SaleRoute {
-  id          Int              @id @default(autoincrement())
-  name        String           // Ej: "General Villegas - Centro 1"
-  sellerId    Int?             // Vendedor asignado principal
-  seller      User?            @relation(fields: [sellerId], references: [id], onDelete: SetNull)
-  dayOfWeek   String?          // LUNES, MARTES, MIERCOLES, JUEVES, VIERNES, SABADO, DOMINGO
-  isActive    Boolean          @default(true)
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
+  id        Int      @id @default(autoincrement())
+  name      String // Ej: "General Villegas - Centro 1"
+  sellerId  Int? // Vendedor asignado principal
+  seller    User?    @relation(fields: [sellerId], references: [id], onDelete: SetNull)
+  dayOfWeek String? // LUNES, MARTES, MIERCOLES, JUEVES, VIERNES, SABADO, DOMINGO
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   clients     Persona[]
   routeVisits SaleRouteVisit[]
@@ -601,21 +601,21 @@ model SaleRoute {
 }
 
 model SaleRouteVisit {
-  id           Int        @id @default(autoincrement())
-  date         DateTime   @default(now())
-  sellerId     Int
-  seller       User       @relation(fields: [sellerId], references: [id], onDelete: Cascade)
-  personaId    Int
-  persona      Persona    @relation(fields: [personaId], references: [id], onDelete: Cascade)
-  saleRouteId  Int?
-  saleRoute    SaleRoute? @relation(fields: [saleRouteId], references: [id], onDelete: SetNull)
-  status       String     // "ORDERED" (Compró) | "NO_BUY" (No compró)
-  noBuyReason  String?    // Motivo si es NO_BUY (ej: "Sin dinero", "Cerrado")
-  notes        String?    // Comentarios opcionales
-  latitude     Float?     // GPS de la visita
-  longitude    Float?
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
+  id          Int        @id @default(autoincrement())
+  date        DateTime   @default(now())
+  sellerId    Int
+  seller      User       @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  personaId   Int
+  persona     Persona    @relation(fields: [personaId], references: [id], onDelete: Cascade)
+  saleRouteId Int?
+  saleRoute   SaleRoute? @relation(fields: [saleRouteId], references: [id], onDelete: SetNull)
+  status      String // "ORDERED" (Compró) | "NO_BUY" (No compró)
+  noBuyReason String? // Motivo si es NO_BUY (ej: "Sin dinero", "Cerrado")
+  notes       String? // Comentarios opcionales
+  latitude    Float? // GPS de la visita
+  longitude   Float?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
 
   @@index([sellerId])
   @@index([personaId])
@@ -628,42 +628,42 @@ model SaleRouteVisit {
 // ==========================================
 
 model Vehicle {
-  id              Int                  @id @default(autoincrement())
-  plate           String               @unique // Patente/Dominio
-  brand           String               // Marca (Mercedes Benz, Fiat, etc.)
-  model           String               // Modelo (Accelo 815, Fiorino, etc.)
+  id              Int           @id @default(autoincrement())
+  plate           String        @unique // Patente/Dominio
+  brand           String // Marca (Mercedes Benz, Fiat, etc.)
+  model           String // Modelo (Accelo 815, Fiorino, etc.)
   year            Int
-  currentOdometer Int                  // Kilometraje actual acumulado
-  status          VehicleStatus        @default(ACTIVE) // ACTIVE, MAINTENANCE, OUT_OF_SERVICE
-  notes           String?              @db.Text
-  createdAt       DateTime             @default(now())
-  updatedAt       DateTime             @updatedAt
+  currentOdometer Int // Kilometraje actual acumulado
+  status          VehicleStatus @default(ACTIVE) // ACTIVE, MAINTENANCE, OUT_OF_SERVICE
+  notes           String?       @db.Text
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
 
-  maintenances    VehicleMaintenance[]
-  expirations     VehicleExpiry[]
-  deliveryRoutes  DeliveryRoute[]      // Hojas de reparto que usaron este vehículo
-  expenses        Expense[]
+  maintenances   VehicleMaintenance[]
+  expirations    VehicleExpiry[]
+  deliveryRoutes DeliveryRoute[] // Hojas de reparto que usaron este vehículo
+  expenses       Expense[]
 }
 
 model VehicleMaintenance {
-  id            Int             @id @default(autoincrement())
-  vehicleId     Int
-  vehicle       Vehicle         @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
-  type          MaintenanceType // SERVICE, REPAIR, FUEL, CLEANING, OTHER
-  description   String          @db.Text
-  cost          Decimal         @db.Decimal(12, 2)
-  odometer      Int             // Kilometraje en el que se realizó
-  date          DateTime        @default(now())
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
+  id          Int             @id @default(autoincrement())
+  vehicleId   Int
+  vehicle     Vehicle         @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  type        MaintenanceType // SERVICE, REPAIR, FUEL, CLEANING, OTHER
+  description String          @db.Text
+  cost        Decimal         @db.Decimal(12, 2)
+  odometer    Int // Kilometraje en el que se realizó
+  date        DateTime        @default(now())
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
 
   // Proveedor/Taller opcional (vinculado a Persona)
-  supplierId    Int?
-  supplier      Persona?        @relation(fields: [supplierId], references: [id], onDelete: SetNull)
-  
+  supplierId Int?
+  supplier   Persona? @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+
   // Transacción financiera opcional para descontar de caja o banco
   transactionId Int?
-  transaction   Transaction?    @relation(fields: [transactionId], references: [id], onDelete: SetNull)
+  transaction   Transaction? @relation(fields: [transactionId], references: [id], onDelete: SetNull)
 
   @@index([vehicleId])
   @@index([supplierId])
@@ -684,8 +684,6 @@ model VehicleExpiry {
   @@index([vehicleId])
 }
 
-
-
 // ==========================================
 // Módulo de Control de Gastos Operativos
 // ==========================================
@@ -700,32 +698,32 @@ model ExpenseCategory {
 }
 
 model Expense {
-  id             Int             @id @default(autoincrement())
-  amount         Decimal         @db.Decimal(12, 2)
-  date           DateTime        @default(now())
-  description    String
-  categoryId     Int
-  category       ExpenseCategory @relation(fields: [categoryId], references: [id])
-  userId         Int
-  user           User            @relation(fields: [userId], references: [id])
-  
+  id          Int             @id @default(autoincrement())
+  amount      Decimal         @db.Decimal(12, 2)
+  date        DateTime        @default(now())
+  description String
+  categoryId  Int
+  category    ExpenseCategory @relation(fields: [categoryId], references: [id])
+  userId      Int
+  user        User            @relation(fields: [userId], references: [id])
+
   // Origen de fondos
-  paymentMethod  PaymentMethod
-  cashDrawerId   Int?
-  cashDrawer     CashDrawer?     @relation(fields: [cashDrawerId], references: [id])
-  bankAccountId  Int?
-  bankAccount    BankAccount?    @relation(fields: [bankAccountId], references: [id])
-  
+  paymentMethod PaymentMethod
+  cashDrawerId  Int?
+  cashDrawer    CashDrawer?   @relation(fields: [cashDrawerId], references: [id])
+  bankAccountId Int?
+  bankAccount   BankAccount?  @relation(fields: [bankAccountId], references: [id])
+
   // Imputación a vehículo de la flota
-  vehicleId      Int?
-  vehicle        Vehicle?        @relation(fields: [vehicleId], references: [id])
+  vehicleId Int?
+  vehicle   Vehicle? @relation(fields: [vehicleId], references: [id])
 
   // Vinculación financiera (para egresos de caja/banco)
-  transactionId  Int?            @unique
-  transaction    Transaction?    @relation(fields: [transactionId], references: [id], onDelete: SetNull)
+  transactionId Int?         @unique
+  transaction   Transaction? @relation(fields: [transactionId], references: [id], onDelete: SetNull)
 
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([categoryId])
   @@index([userId])
@@ -734,7 +732,6 @@ model Expense {
   @@index([bankAccountId])
   @@index([vehicleId])
 }
-
 
 enum VehicleStatus {
   ACTIVE
@@ -762,8 +759,8 @@ model ProviderProductMapping {
   id           Int      @id @default(autoincrement())
   providerId   Int
   provider     Persona  @relation(fields: [providerId], references: [id], onDelete: Cascade)
-  providerCode String   // Código de artículo según el proveedor (ej: "07300101000")
-  providerName String?  // Descripción según el proveedor (ej: "LECHE UAT SACHET DESC. 1 LT")
+  providerCode String // Código de artículo según el proveedor (ej: "07300101000")
+  providerName String? // Descripción según el proveedor (ej: "LECHE UAT SACHET DESC. 1 LT")
   productId    Int
   product      Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
   createdAt    DateTime @default(now())
@@ -774,4 +771,40 @@ model ProviderProductMapping {
   @@index([productId])
 }
 
+// ==========================================
+// Módulo de Campañas de Ofertas
+// ==========================================
 
+model OfferCampaign {
+  id               Int       @id @default(autoincrement())
+  title            String // Ej: "Ofertas Semanales 18 al 25"
+  startDate        DateTime  @default(now())
+  endDate          DateTime?
+  isActive         Boolean   @default(true)
+  customRubroOrder String[]  @default([])
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  items OfferCampaignItem[]
+}
+
+model OfferCampaignItem {
+  id         Int           @id @default(autoincrement())
+  campaignId Int
+  campaign   OfferCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  productId  Int
+  product    Product       @relation(fields: [productId], references: [id], onDelete: Cascade)
+  offerPrice Decimal       @db.Decimal(12, 2)
+  previousPrice Decimal?   @db.Decimal(12, 2)
+  specialTag String? // Ej: "¡OFERTÓN!", "¡ÚLTIMAS UNIDADES!"
+
+  showListPrice Boolean @default(false)
+  campaignGroup String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([campaignId, productId])
+  @@index([campaignId])
+  @@index([productId])
+}

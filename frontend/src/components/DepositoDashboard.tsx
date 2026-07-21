@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { api } from '../utils/api';
 import { OrderStatus } from '../utils/types';
-import { Play, Check, RefreshCw, Eye, Warehouse, ClipboardList, Calendar, ShoppingCart, Tag, Map, Plus, ArrowLeftRight, Printer, AlertTriangle, Info } from 'lucide-react';
+import { Play, Check, RefreshCw, Eye, Warehouse, ClipboardList, Calendar, ShoppingCart, Map, Printer } from 'lucide-react';
 
 interface DepositoDashboardProps {
   activeTab: string;
@@ -178,9 +178,51 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
     };
   }, [showConsolidatedView, labelsToPrint]);
 
+  const fetchData = useCallback(async () => {
+    setErrorMsg(null);
+    try {
+      if (subTab === 'picking' || subTab === 'replenishment') {
+        const data = await api.getOrders();
+        const filtered = data.filter((o: any) => o.status === OrderStatus.PENDING || o.status === OrderStatus.PREPARING);
+        setOrders(filtered);
+      }
+
+      if (subTab === 'picking' || subTab === 'lot-expiration') {
+        try {
+          const lotsRes = await api.getExpiringLots();
+          setExpiringLots(lotsRes.lots || []);
+        } catch (lotErr) {
+          console.error('Error al obtener lotes vencidos:', lotErr);
+        }
+      }
+
+      if (subTab === 'stock-list') {
+        const data = await api.getProducts(searchQuery);
+        setProducts(data);
+      }
+
+      if (subTab === 'wms-map' || subTab === 'lot-expiration' || subTab === 'replenishment') {
+        const allProds = await api.getProducts('');
+        setAllProducts(allProds);
+      }
+
+      if (subTab === 'replenishment') {
+        try {
+          const pendingPurchs = await api.getPurchaseOrders({ status: 'PENDING' });
+          setPendingPurchaseOrders(pendingPurchs || []);
+        } catch (poErr) {
+          console.error('Error al obtener órdenes de compra pendientes:', poErr);
+        }
+      }
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Error al obtener datos.');
+      setLoading(false);
+    }
+  }, [subTab, searchQuery]);
+
   useEffect(() => {
     fetchData();
-  }, [searchQuery, subTab]);
+  }, [fetchData]);
 
   // Limpiar mensajes y estados locales
   useEffect(() => {
@@ -217,7 +259,7 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
         setSearchQuery('');
       }
     }
-  }, [products, searchQuery, normalizedTab]);
+  }, [products, searchQuery, normalizedTab, subTab]);
 
   // --- LOGICA DE ESCANEO DE CODIGO DE BARRA / SKU (PICKING MANOS LIBRES) ---
   const processScannedCode = (code: string) => {
@@ -356,7 +398,7 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedOrder, lotAssignments]);
+  }, [selectedOrder, lotAssignments, processScannedCode]);
 
   // Sincronizar lotAssignments al seleccionar o cambiar el pedido
   useEffect(() => {
@@ -386,53 +428,6 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
       setPesableWeights({});
     }
   }, [selectedOrder]);
-
-  const fetchData = async () => {
-    setErrorMsg(null);
-    try {
-      // 1. Cargar pedidos si estamos en la cola de picking o calculando reabastecimiento
-      if (subTab === 'picking' || subTab === 'replenishment') {
-        const data = await api.getOrders();
-        const filtered = data.filter((o: any) => o.status === OrderStatus.PENDING || o.status === OrderStatus.PREPARING);
-        setOrders(filtered);
-      }
-
-      // 2. Cargar lotes vencidos si estamos en picking o en vencimientos
-      if (subTab === 'picking' || subTab === 'lot-expiration') {
-        try {
-          const lotsRes = await api.getExpiringLots();
-          setExpiringLots(lotsRes.lots || []);
-        } catch (lotErr) {
-          console.error('Error al obtener lotes vencidos:', lotErr);
-        }
-      }
-
-      // 3. Cargar productos filtrados para el listado de stock
-      if (subTab === 'stock-list') {
-        const data = await api.getProducts(searchQuery);
-        setProducts(data);
-      }
-
-      // 4. Cargar todos los productos para mapa WMS, reabastecimiento o vencimientos
-      if (subTab === 'wms-map' || subTab === 'lot-expiration' || subTab === 'replenishment') {
-        const allProds = await api.getProducts('');
-        setAllProducts(allProds);
-      }
-
-      // 5. Cargar órdenes de compra pendientes para reabastecimiento
-      if (subTab === 'replenishment') {
-        try {
-          const pendingPurchs = await api.getPurchaseOrders({ status: 'PENDING' });
-          setPendingPurchaseOrders(pendingPurchs || []);
-        } catch (poErr) {
-          console.error('Error al obtener órdenes de compra pendientes:', poErr);
-        }
-      }
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Error al obtener datos.');
-      setLoading(false);
-    }
-  };
 
   // --- LOGICA DE PICKING ---
   const handleStartPicking = async (orderId: number) => {
@@ -515,7 +510,7 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
   };
   
 
-  const handleFinishPicking = async (orderId: number) => {
+  const handleFinishPicking = async (_orderId: number) => {
     setErrorMsg(null);
     
     // Validar asignaciones
@@ -1140,7 +1135,7 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
                         const itemAssignments = lotAssignments[item.id] || {};
                         
                         const assignedSum = Object.values(itemAssignments).reduce((sum: number, qty) => sum + (qty || 0), 0);
-                        const isValidAssignment = assignedSum === item.quantity;
+                        const _isValidAssignment = assignedSum === item.quantity;
                         
                         const itemZone = item.product?.rubro?.pickingZone || 'CAJAS';
                         const unitsPerBox = item.product?.unitsPerBox || 1;
@@ -1494,7 +1489,7 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
                         const isChecked = !!consolidatedCheckedItems[item.product.id];
                         const location = getProductLocation(item.product);
                         const itemZone = item.product?.rubro?.pickingZone || 'CAJAS';
-                        const rubroName = item.product?.rubro?.name || 'General';
+                        const _rubroName = item.product?.rubro?.name || 'General';
                         
                         let badgeStyle: React.CSSProperties = {};
                         if (itemZone === 'FRIO') {
@@ -2858,7 +2853,7 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
                     return allLotsList.map((entry, idx) => {
                       const { product, lot } = entry;
                       const daysLeft = Math.ceil((new Date(lot.expirationDate).getTime() - new Date().getTime()) / (1000 * 3600 * 24));
-                      const isExpired = daysLeft <= 0;
+                      const _isExpired = daysLeft <= 0;
                       
                       let badgeColor = 'expiry-normal';
                       let statusText = 'Saludable';

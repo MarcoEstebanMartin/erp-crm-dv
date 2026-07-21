@@ -31,7 +31,7 @@ export class PersonaService {
       ];
     }
 
-    return prisma.persona.findMany({
+    const personas = await prisma.persona.findMany({
       where: whereClause,
       include: {
         seller: {
@@ -50,6 +50,24 @@ export class PersonaService {
       },
       orderBy: { name: 'asc' },
     });
+
+    if (role === 'client') {
+      try {
+        const report = await this.getDebtorsReport(userId, userRole);
+        const debtorMap = new Map();
+        report.debtors.forEach((d: any) => debtorMap.set(d.id, d.pendingInvoicesCount));
+        
+        return personas.map((p) => ({
+          ...p,
+          pendingInvoicesCount: debtorMap.get(p.id) || 0
+        }));
+      } catch (err) {
+        console.error('Error fetching debtors report inside getPersonas:', err);
+        return personas;
+      }
+    }
+
+    return personas;
   }
 
   /**
@@ -111,6 +129,7 @@ export class PersonaService {
         isCommissionAgent: data.isCommissionAgent !== undefined ? Boolean(data.isCommissionAgent) : false,
         isActive: data.isActive !== undefined ? Boolean(data.isActive) : true,
         creditLimit: data.creditLimit !== undefined ? Number(data.creditLimit) : 0.00,
+        maxUnpaidInvoices: data.maxUnpaidInvoices !== undefined ? Number(data.maxUnpaidInvoices) : 0.00,
         priceList: data.priceList || 'A',
         discount: data.discount !== undefined ? Number(data.discount) : 0.00,
         paymentTermDays: data.paymentTermDays !== undefined ? Number(data.paymentTermDays) : 30,
@@ -169,6 +188,7 @@ export class PersonaService {
         isCommissionAgent: data.isCommissionAgent !== undefined ? Boolean(data.isCommissionAgent) : undefined,
         isActive: data.isActive !== undefined ? Boolean(data.isActive) : undefined,
         creditLimit: data.creditLimit !== undefined ? Number(data.creditLimit) : undefined,
+        maxUnpaidInvoices: data.maxUnpaidInvoices !== undefined ? Number(data.maxUnpaidInvoices) : undefined,
         priceList: data.priceList !== undefined ? data.priceList : undefined,
         discount: data.discount !== undefined ? Number(data.discount) : undefined,
         paymentTermDays: data.paymentTermDays !== undefined ? Number(data.paymentTermDays) : undefined,
@@ -627,6 +647,67 @@ export class PersonaService {
     }).filter(inv => inv.pendingAmount > 0);
 
     return pendingInvoices;
+  }
+
+  /**
+   * Calcula la cantidad exacta de boletas impagas de un cliente aplicando FIFO global.
+   */
+  async getPersonaPendingInvoicesCount(id: number) {
+    const client = await prisma.persona.findUnique({
+      where: { id },
+      include: {
+        orders: {
+          where: { status: OrderStatus.DELIVERED },
+          include: {
+            transactions: { where: { type: TransactionType.INCOME } },
+            creditNotes: true
+          },
+          orderBy: { createdAt: 'asc' }
+        },
+        transactions: {
+          where: { type: TransactionType.INCOME, orderId: null }
+        },
+        creditNotes: {
+          where: { orderId: null }
+        }
+      }
+    });
+
+    if (!client) return 0;
+    if (Number(client.outstandingBalance) <= 0) return 0;
+
+    const officialOrders = client.orders.filter(o => o.billingType === BillingType.OFFICIAL);
+    const internalOrders = client.orders.filter(o => o.billingType === BillingType.INTERNAL);
+
+    const totalOfficialCredit = client.transactions.filter(t => t.billingType === BillingType.OFFICIAL).reduce((acc, t) => acc + Number(t.amount), 0) +
+                                client.creditNotes.filter(cn => cn.billingType === BillingType.OFFICIAL).reduce((acc, cn) => acc + Number(cn.totalAmount), 0);
+
+    const totalInternalCredit = client.transactions.filter(t => t.billingType === BillingType.INTERNAL).reduce((acc, t) => acc + Number(t.amount), 0) +
+                                client.creditNotes.filter(cn => cn.billingType === BillingType.INTERNAL).reduce((acc, cn) => acc + Number(cn.totalAmount), 0);
+
+    const calculateFIFO = (orders: typeof client.orders, unallocatedCredit: number) => {
+      let pool = unallocatedCredit;
+      let pendingInvoicesCount = 0;
+      orders.forEach(order => {
+        const directPayments = order.transactions.reduce((acc, t) => acc + Number(t.amount), 0);
+        const directCreditNotes = order.creditNotes.reduce((acc, cn) => acc + Number(cn.totalAmount), 0);
+        let debt = Math.max(0, Number(order.totalAmount) - directPayments - directCreditNotes);
+
+        if (pool > 0) {
+          if (debt <= pool) {
+            pool -= debt;
+            debt = 0;
+          } else {
+            debt -= pool;
+            pool = 0;
+          }
+        }
+        if (debt > 0.5) pendingInvoicesCount++;
+      });
+      return pendingInvoicesCount;
+    };
+
+    return calculateFIFO(officialOrders, totalOfficialCredit) + calculateFIFO(internalOrders, totalInternalCredit);
   }
 
   /**

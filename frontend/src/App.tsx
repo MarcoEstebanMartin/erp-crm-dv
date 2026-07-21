@@ -32,9 +32,7 @@ const LoadingSpinner = () => (
 
 function App() {
   const [user, setUser] = useState<any>(null);
-  const [activeTab, setActiveTab] = useState<string>(() => {
-    return window.location.hash.replace('#', '');
-  });
+  const [activeTab, setActiveTab] = useState<string>('');
   const [isQuickSearchModalOpen, setIsQuickSearchModalOpen] = useState(false);
 
   // Atajo de teclado global Ctrl + Q para consulta de precios
@@ -55,12 +53,7 @@ function App() {
       let currentUser = api.getCurrentUser();
       if (currentUser) {
         setUser(currentUser);
-        const hash = window.location.hash.replace('#', '');
-        if (hash) {
-          setActiveTab(hash);
-        } else {
-          setDefaultTabForRole(currentUser.role);
-        }
+        setDefaultTabForRole(currentUser.role);
         
         // Refetch to sync latest config and user data
         currentUser = await api.getMe();
@@ -74,24 +67,7 @@ function App() {
     init();
   }, []);
 
-  // Sincronizar el estado de React con la URL del navegador
-  useEffect(() => {
-    if (activeTab) {
-      window.location.hash = activeTab;
-    }
-  }, [activeTab]);
 
-  // Escuchar botones Atrás y Adelante del navegador
-  useEffect(() => {
-    const handleHashChange = () => {
-      const hash = window.location.hash.replace('#', '');
-      if (hash && hash !== activeTab) {
-        setActiveTab(hash);
-      }
-    };
-    window.addEventListener('hashchange', handleHashChange);
-    return () => window.removeEventListener('hashchange', handleHashChange);
-  }, [activeTab]);
 
   const setDefaultTabForRole = (role: string) => {
     if (role === 'ADMIN') {
@@ -116,7 +92,7 @@ function App() {
   const handleLogout = () => {
     api.logout();
     setUser(null);
-    window.location.hash = '';
+    setActiveTab('');
   };
 
   // Interceptar ruta para recibos compartidos

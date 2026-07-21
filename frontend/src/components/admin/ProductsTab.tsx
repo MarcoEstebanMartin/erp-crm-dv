@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import ProductsList from '../ProductsList';
 import StockDashboard from '../StockDashboard';
 import RubrosList from '../RubrosList';
-import OffersCatalogGenerator from './OffersCatalogGenerator';
 
 interface ProductsTabProps {
   products: any[];
@@ -21,7 +20,7 @@ export default function ProductsTab({
   onOpenImportZip,
   onUploadImage
 }: ProductsTabProps) {
-  const [catalogTab, setCatalogTab] = useState<'products' | 'inactive_products' | 'rubros' | 'stock' | 'offers'>('products');
+  const [catalogTab, setCatalogTab] = useState<'products' | 'inactive_products' | 'rubros' | 'stock'>('products');
   const [searchQuery, setSearchQuery] = useState('');
 
   return (
@@ -55,13 +54,6 @@ export default function ProductsTab({
           Gestión de Rubros
           {catalogTab === 'rubros' && <div style={{ position: 'absolute', bottom: '-13px', left: 0, right: 0, height: '2px', backgroundColor: 'var(--color-primary)' }} />}
         </div>
-        <div 
-          style={{ cursor: 'pointer', fontWeight: catalogTab === 'offers' ? 600 : 400, color: catalogTab === 'offers' ? 'var(--color-primary)' : 'var(--text-secondary)', position: 'relative' }}
-          onClick={() => setCatalogTab('offers')}
-        >
-          Diseño de Ofertas PDF
-          {catalogTab === 'offers' && <div style={{ position: 'absolute', bottom: '-13px', left: 0, right: 0, height: '2px', backgroundColor: 'var(--color-primary)' }} />}
-        </div>
       </div>
 
       {(catalogTab === 'products' || catalogTab === 'inactive_products') && (
@@ -90,11 +82,6 @@ export default function ProductsTab({
         />
       )}
 
-      {catalogTab === 'offers' && (
-        <OffersCatalogGenerator 
-          products={products}
-        />
-      )}
     </div>
   );
 }

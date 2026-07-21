@@ -594,6 +594,7 @@ export default function ClientsTab({
                   <th>Nombre Comercial / Razón Social</th>
                   <th>CUIT</th>
                   <th>Contacto</th>
+                  {['client', 'client_inactive'].includes(personaRoleFilter) && <th style={{ whiteSpace: 'nowrap', minWidth: '110px' }}>Cta Cte</th>}
                   <th>Saldo C/C</th>
                   {['client', 'client_inactive'].includes(personaRoleFilter) && <th>Ruta</th>}
                   <th>Acción</th>
@@ -684,6 +685,28 @@ export default function ClientsTab({
                             <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{c.email}</div>
                           )}
                         </td>
+                        {['client', 'client_inactive'].includes(personaRoleFilter) && (
+                          <td style={{ whiteSpace: 'nowrap' }}>
+                            <div style={{ fontWeight: 600, color: Number(c.maxUnpaidInvoices) > 0 ? '#137333' : 'var(--text-secondary)' }}>
+                              {Number(c.maxUnpaidInvoices) > 0 ? `Sí (Lím. ${c.maxUnpaidInvoices})` : 'No'}
+                            </div>
+                            {Number(c.maxUnpaidInvoices) > 0 && c.pendingInvoicesCount > 0 && (
+                              <div style={{ 
+                                fontSize: '0.75rem', 
+                                color: c.pendingInvoicesCount >= Number(c.maxUnpaidInvoices) ? '#C5221F' : '#F29900',
+                                fontWeight: 600,
+                                marginTop: '4px',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                backgroundColor: c.pendingInvoicesCount >= Number(c.maxUnpaidInvoices) ? '#FCE8E6' : '#FEF7E0',
+                                padding: '2px 6px',
+                                borderRadius: '12px'
+                              }}>
+                                {c.pendingInvoicesCount === 1 ? '⚠️ Debe 1 boleta' : `⚠️ Debe ${c.pendingInvoicesCount} boletas`}
+                              </div>
+                            )}
+                          </td>
+                        )}
                         <td style={{ fontWeight: 600, color: balanceColor }}>{balanceText}</td>
                         {['client', 'client_inactive'].includes(personaRoleFilter) && (
                           <td style={{ fontWeight: 500 }}>
@@ -725,33 +748,6 @@ export default function ClientsTab({
                             </button>
                             <button className="btn btn-secondary" style={{ padding: '6px 10px', fontSize: '0.8rem' }} onClick={() => setShowResumenModal(c)}>
                               Resumen de Cta
-                            </button>
-
-                            <button className="btn btn-ghost" style={{ padding: '6px 10px', fontSize: '0.8rem' }} onClick={() => setClientModal({ 
-                              open: true, 
-                              mode: 'edit', 
-                              data: { 
-                                id: c.id, 
-                                name: c.name, 
-                                cuit: c.cuit || '', 
-                                address: c.address || '', 
-                                city: c.city || '',
-                                phone: c.phone || '', 
-                                email: c.email || '', 
-                                creditLimit: c.creditLimit ? Number(c.creditLimit) : 0, 
-                                priceList: c.priceList || 'A', 
-                                discount: c.discount ? Number(c.discount) : 0,
-                                isClient: !!c.isClient,
-                                isProvider: !!c.isProvider,
-                                isSeller: !!c.isSeller,
-                                isCommissionAgent: !!c.isCommissionAgent,
-                                route: c.route || '',
-                                saleRouteId: c.saleRouteId || null,
-                                sellerId: c.sellerId || null,
-                                isActive: c.isActive !== false
-                              } 
-                            })}>
-                              Editar
                             </button>
                           </div>
                         </td>

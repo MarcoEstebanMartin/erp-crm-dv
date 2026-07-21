@@ -24,6 +24,7 @@ import pricingRoutes from './routes/pricing.routes';
 import saleRouteRoutes from './routes/saleRoute.routes';
 import fleetRoutes from './routes/fleet.routes';
 import expenseRoutes from './routes/expense.routes';
+import offerRoutes from './routes/offers';
 
 dotenv.config();
 
@@ -47,7 +48,7 @@ app.use('/uploads', express.static(uploadsDir, {
   cacheControl: true
 }));
 
-const archivosDir = path.join('c:', 'Users', 'Usuario', 'Desktop', 'ERP-CRM DV', 'ARCHIVOS');
+const archivosDir = process.env.ARCHIVOS_PATH || path.join(__dirname, '../../ARCHIVOS');
 app.use('/api/purchases/files', express.static(archivosDir));
 
 
@@ -71,6 +72,7 @@ app.use('/api/pricing', pricingRoutes);
 app.use('/api/sale-routes', saleRouteRoutes);
 app.use('/api/fleet', fleetRoutes);
 app.use('/api/expenses', expenseRoutes);
+app.use('/api/offers', offerRoutes);
 
 // Ruta de comprobación de estado (Healthcheck)
 app.get('/api/health', (req: Request, res: Response) => {

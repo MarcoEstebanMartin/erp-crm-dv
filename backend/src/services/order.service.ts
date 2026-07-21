@@ -1,6 +1,9 @@
 import prisma from '../utils/prisma';
 import { Role, BillingType, InvoiceType, OrderStatus, MovementType } from '@prisma/client';
 import { PricingService } from './pricing.service';
+import { PersonaService } from './persona.service';
+
+const personaService = new PersonaService();
 
 interface CreateOrderDto {
   sellerId: number;
@@ -91,13 +94,16 @@ export class OrderService {
         });
       }
 
-      const creditLimit = Number(persona.creditLimit || 0);
-      const outstandingBalance = Number(persona.outstandingBalance || 0);
-      if (creditLimit > 0 && (outstandingBalance + totalSum) > creditLimit) {
-        if (userRole !== Role.ADMIN) {
-          throw new Error(
-            `Límite de crédito excedido. Saldo actual: $${outstandingBalance.toLocaleString()}, Disponible: $${(creditLimit - outstandingBalance).toLocaleString()}, Requerido para este pedido: $${totalSum.toLocaleString()}.`
-          );
+      const maxUnpaidInvoices = Number(persona.maxUnpaidInvoices || 0);
+      if (maxUnpaidInvoices > 0) {
+        const pendingInvoicesCount = await personaService.getPersonaPendingInvoicesCount(persona.id);
+        
+        if (pendingInvoicesCount >= maxUnpaidInvoices) {
+          if (userRole !== Role.ADMIN) {
+            throw new Error(
+              `Límite de cuenta corriente excedido. El cliente debe ${pendingInvoicesCount} boletas, y su límite máximo permitido es de ${maxUnpaidInvoices}.`
+            );
+          }
         }
       }
 

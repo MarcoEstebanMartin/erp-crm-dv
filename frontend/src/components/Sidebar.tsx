@@ -15,7 +15,8 @@ import {
   History,
   MapPin,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  Tag
 } from 'lucide-react';
 import { api } from '../utils/api';
 
@@ -31,7 +32,7 @@ export default function Sidebar({ username, role, activeTab, setActiveTab, onLog
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(() => {
     // Inicializar expandido si la pestaña activa pertenece a este grupo
     const initial: Record<string, boolean> = {};
-    if (['orders', 'deposito', 'logistica'].includes(activeTab)) {
+    if (['orders', 'fulfillment', 'logistica'].includes(activeTab)) {
       initial['pedidos-logistica'] = true;
     }
     return initial;
@@ -39,7 +40,7 @@ export default function Sidebar({ username, role, activeTab, setActiveTab, onLog
 
   // Auto-expandir grupo si la pestaña activa cambia externamente
   useEffect(() => {
-    if (['orders', 'deposito', 'logistica'].includes(activeTab)) {
+    if (['orders', 'fulfillment', 'logistica'].includes(activeTab)) {
       setExpandedGroups(prev => ({
         ...prev,
         'pedidos-logistica': true
@@ -67,14 +68,15 @@ export default function Sidebar({ username, role, activeTab, setActiveTab, onLog
             icon: <ShoppingCart size={18} />,
             isGroup: true,
             children: [
-              { id: 'orders', label: 'Gestión de Pedidos', icon: <ShoppingCart size={16} /> },
-              { id: 'deposito', label: 'Preparación (Picking)', icon: <Warehouse size={16} /> },
+              { id: 'fulfillment', label: 'Armado y Facturación', icon: <Warehouse size={16} /> },
+              { id: 'orders', label: 'Historial de Pedidos', icon: <ShoppingCart size={16} /> },
               { id: 'logistica', label: 'Logística y Flota', icon: <Truck size={16} /> },
             ]
           },
           { id: 'billing', label: 'Facturación', icon: <FileText size={18} /> },
           { id: 'products', label: 'Productos', icon: <Package size={18} /> },
           { id: 'compras', label: 'Proveedores', icon: <Receipt size={18} /> },
+          { id: 'offers', label: 'Gestor de Ofertas', icon: <Tag size={18} /> },
           { id: 'rendiciones', label: 'Finanzas', icon: <DollarSign size={18} /> },
           { id: 'reportes', label: 'Reportes y Analíticas', icon: <TrendingUp size={18} /> },
           { id: 'config', label: 'Configuración', icon: <Settings size={18} /> },
@@ -89,8 +91,8 @@ export default function Sidebar({ username, role, activeTab, setActiveTab, onLog
             icon: <ShoppingCart size={18} />,
             isGroup: true,
             children: [
-              { id: 'orders', label: 'Gestión de Pedidos', icon: <ShoppingCart size={16} /> },
-              { id: 'deposito', label: 'Preparación (Picking)', icon: <Warehouse size={16} /> },
+              { id: 'fulfillment', label: 'Armado y Facturación', icon: <Warehouse size={16} /> },
+              { id: 'orders', label: 'Historial de Pedidos', icon: <ShoppingCart size={16} /> },
               { id: 'logistica', label: 'Logística y Flota', icon: <Truck size={16} /> },
             ]
           },

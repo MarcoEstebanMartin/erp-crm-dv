@@ -1159,6 +1159,19 @@ export const api = {
 
   deleteSplitConfig: async (id: number) => {
     return await api.deleteSplitBillingConfig(id);
+  },
+
+  getCampaignSuggestions: async () => {
+    const res = await request('/offers/suggestions');
+    return res;
+  },
+
+  addBulkCampaignItems: async (campaignId: number, items: { productId: number, offerPrice: number, specialTag: string | null }[]) => {
+    const res = await request(`/offers/${campaignId}/items/bulk`, {
+      method: 'POST',
+      body: JSON.stringify({ items })
+    });
+    return res;
   }
 };
 
