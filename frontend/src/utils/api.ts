@@ -1,7 +1,7 @@
 import { BillingType, OrderStatus, PaymentMethod } from './types';
 
-// Detecta dinámicamente el host para que funcione en localhost y desde el celular en la red local
-export const API_BASE_URL = `http://${window.location.hostname}:3000/api`;
+// Usa ruta relativa para que funcione tanto en localhost, IP local y túneles externos (Ngrok/Localtunnel)
+export const API_BASE_URL = '/api';
 
 // Verificar si estamos en modo simulación
 function getHeaders() {

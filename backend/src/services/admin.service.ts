@@ -930,7 +930,7 @@ export class AdminService {
         persona: {
           select: {
             id: true,
-            businessName: true,
+            name: true,
             city: true,
             sellerId: true,
             seller: { select: { username: true } },
@@ -1011,7 +1011,7 @@ export class AdminService {
       if (!clientMap.has(order.personaId)) {
         clientMap.set(order.personaId, {
           id: order.persona.id,
-          businessName: order.persona.businessName || 'Cliente sin nombre',
+          businessName: order.persona.name || 'Cliente sin nombre',
           city: personaCity,
           sellerName: order.persona.seller?.username || 'Sin Vendedor',
           totalRevenue: 0,
