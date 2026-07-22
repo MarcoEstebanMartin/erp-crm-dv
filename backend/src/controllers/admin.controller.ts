@@ -79,6 +79,35 @@ export async function toggleUserStatus(req: AuthenticatedRequest, res: Response)
 }
 
 /**
+ * Actualizar rol o contraseña de un usuario (Solo ADMIN).
+ */
+export async function updateUser(req: AuthenticatedRequest, res: Response): Promise<void> {
+  const { id } = req.params;
+  const adminId = req.user?.id;
+  try {
+    const user = await adminService.updateUser(Number(id), req.body, adminId);
+    res.status(200).json({ status: 'success', data: { user } });
+  } catch (error: any) {
+    res.status(400).json({ status: 'error', message: error.message || 'Error al actualizar usuario.' });
+  }
+}
+
+/**
+ * Eliminar un usuario (Solo ADMIN).
+ */
+export async function deleteUser(req: AuthenticatedRequest, res: Response): Promise<void> {
+  const username = String(req.params.username);
+  const adminId = req.user?.id;
+  try {
+    const result = await adminService.deleteUser(username, adminId);
+    res.status(200).json({ status: 'success', data: result });
+  } catch (error: any) {
+    res.status(400).json({ status: 'error', message: error.message || 'Error al eliminar usuario.' });
+  }
+}
+
+
+/**
  * Actualizar configuracion global del sistema (Solo ADMIN).
  */
 export async function updateConfig(req: AuthenticatedRequest, res: Response): Promise<void> {

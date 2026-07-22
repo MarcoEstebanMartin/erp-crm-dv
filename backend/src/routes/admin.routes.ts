@@ -5,6 +5,8 @@ import {
   getUsers,
   createUser,
   toggleUserStatus,
+  updateUser,
+  deleteUser,
   updateConfig,
   getZoneReports,
   getWeeklyReports,
@@ -20,7 +22,9 @@ import { Role } from '@prisma/client';
 import { validateRequest } from '../middlewares/validateRequest';
 import {
   createUserSchema,
-  toggleUserStatusSchema
+  toggleUserStatusSchema,
+  updateUserSchema,
+  deleteUserSchema
 } from '../validators/admin.validator';
 import {
   saveWeeklyReportSchema,
@@ -44,11 +48,14 @@ router.delete('/reports/weekly/:weekStart', validateRequest(deleteWeeklyReportSc
 router.get('/audit-logs', getAuditLogs);
 router.get('/users', getUsers);
 router.post('/users', validateRequest(createUserSchema), createUser);
+router.put('/users/:id', validateRequest(updateUserSchema), updateUser);
 router.post('/users/:id/toggle', validateRequest(toggleUserStatusSchema), toggleUserStatus);
+router.delete('/users/:username', validateRequest(deleteUserSchema), deleteUser);
 router.post('/config', updateConfig);
 router.get('/reconcile/check', checkBalancesReport);
 router.post('/reconcile/sync', syncBalances);
 
 export default router;
+
 
 

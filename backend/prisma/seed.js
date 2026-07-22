@@ -52,8 +52,9 @@ async function main() {
     data: { username: 'maria_jose', passwordHash: await pwhash('mariajose2026-Erp!'), role: 'VENDEDOR' }
   });
   const uOficina = await prisma.user.create({
-    data: { username: 'OFICINA', passwordHash: await pwhash('oficina2026-Erp!'), role: 'VENDEDOR' }
+    data: { username: 'OFICINA', passwordHash: await pwhash('oficina2026-Erp!'), role: 'FACTURACION' }
   });
+
 
   // Administración (Dario y Agustin)
   const uDario = await prisma.user.create({

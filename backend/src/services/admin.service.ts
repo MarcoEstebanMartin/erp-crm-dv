@@ -259,6 +259,91 @@ export class AdminService {
   }
 
   /**
+   * Actualizar nombre de usuario, rol y/o contraseña de un usuario.
+   */
+  async updateUser(id: number, data: { username?: string; role?: Role; password?: string }, adminId?: number) {
+    const user = await prisma.user.findUnique({ where: { id } });
+    if (!user) throw new Error('Usuario no encontrado.');
+
+    const updateData: any = {};
+    if (data.username && data.username.trim() !== '' && data.username.trim() !== user.username) {
+      const existing = await prisma.user.findUnique({ where: { username: data.username.trim() } });
+      if (existing) {
+        throw new Error('El nombre de usuario ya está registrado.');
+      }
+      updateData.username = data.username.trim();
+    }
+    if (data.role) {
+      updateData.role = data.role;
+    }
+    if (data.password && data.password.trim().length >= 6) {
+      const salt = await bcrypt.genSalt(10);
+      updateData.passwordHash = await bcrypt.hash(data.password, salt);
+    }
+
+    const updated = await prisma.user.update({
+      where: { id },
+      data: updateData,
+      select: {
+        id: true,
+        username: true,
+        role: true,
+        isActive: true,
+        createdAt: true,
+      },
+    });
+
+    if (adminId) {
+      await logAudit({
+        userId: adminId,
+        action: 'UPDATE_USER',
+        entityType: 'User',
+        entityId: user.id,
+        oldValues: { role: user.role },
+        newValues: { role: updated.role, passwordChanged: !!data.password },
+      });
+    }
+
+    return updated;
+  }
+
+  /**
+   * Eliminar usuario por username o ID.
+   */
+  async deleteUser(usernameOrId: string | number, adminId?: number) {
+    let user;
+    if (typeof usernameOrId === 'number' || !isNaN(Number(usernameOrId))) {
+      user = await prisma.user.findUnique({ where: { id: Number(usernameOrId) } });
+    } else {
+      user = await prisma.user.findUnique({ where: { username: String(usernameOrId) } });
+    }
+
+    if (!user) throw new Error('Usuario no encontrado.');
+
+    if (user.id === adminId) {
+      throw new Error('No podés eliminar tu propio usuario administrador en sesión.');
+    }
+
+    // Soft/Hard delete: delete user from database
+    await prisma.user.delete({
+      where: { id: user.id },
+    });
+
+    if (adminId) {
+      await logAudit({
+        userId: adminId,
+        action: 'DELETE_USER',
+        entityType: 'User',
+        entityId: user.id,
+        oldValues: { username: user.username, role: user.role },
+      });
+    }
+
+    return { success: true, username: user.username };
+  }
+
+
+  /**
    * Obtener reportes por zonas (estadísticas robustas).
    */
   async getZoneReports(filters: { sellerId?: number; city?: string; cities?: string[]; startDate?: string; endDate?: string }) {

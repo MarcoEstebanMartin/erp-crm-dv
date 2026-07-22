@@ -469,6 +469,22 @@ export const api = {
     return res.user;
   },
 
+  updateUser: async (id: number, userData: { username?: string; role?: string; password?: string }) => {
+    const res = await request(`/admin/users/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(userData)
+    });
+    return res.user;
+  },
+
+  deleteUser: async (username: string) => {
+    const res = await request(`/admin/users/${encodeURIComponent(username)}`, {
+      method: 'DELETE'
+    });
+    return res;
+  },
+
+
   // --- FINANZAS (CAJAS Y BANCOS) ---
   openDrawer: async (branch: string, openingBalance: number, targetUserId?: number) => {    
 
@@ -1142,9 +1158,10 @@ export const api = {
     });
   },
 
-  // Alias y métodos de compatibilidad para evitar errores de compilación
   deleteUser: async (username: string) => {
-    throw new Error('Los usuarios no se pueden eliminar por integridad física e histórica del sistema. Por favor, desactívelo.');
+    return await request(`/admin/users/${encodeURIComponent(username)}`, {
+      method: 'DELETE'
+    });
   },
 
   createPerception: async (perceptionData: any) => {

@@ -14,3 +14,21 @@ export const toggleUserStatusSchema = z.object({
     id: z.string().regex(/^\d+$/, 'El ID debe ser numérico'),
   }),
 });
+
+export const updateUserSchema = z.object({
+  params: z.object({
+    id: z.string().regex(/^\d+$/, 'El ID debe ser numérico'),
+  }),
+  body: z.object({
+    username: z.string().min(3, 'El nombre de usuario debe tener al menos 3 caracteres').optional(),
+    role: z.nativeEnum(Role).optional(),
+    password: z.string().min(6, 'La contraseña debe tener al menos 6 caracteres').optional().or(z.literal('')),
+  }),
+});
+
+export const deleteUserSchema = z.object({
+  params: z.object({
+    username: z.string().min(1, 'El usuario es requerido'),
+  }),
+});
+
