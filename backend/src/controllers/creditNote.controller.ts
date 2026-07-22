@@ -183,7 +183,7 @@ export async function createCreditNote(req: AuthenticatedRequest, res: Response)
         const count = await prisma.creditNote.count({
           where: { billingType: 'INTERNAL', status: CreditNoteStatus.APPROVED },
         });
-        creditNoteNumber = `NCI-${(count + 1).toString().padStart(8, '0')}`;
+        creditNoteNumber = `NCI-${(count + 1).toString().padStart(5, '0')}`;
       }
 
       creditNote = await prisma.creditNote.create({
@@ -545,7 +545,7 @@ export async function approveCreditNote(req: AuthenticatedRequest, res: Response
         const count = await prisma.creditNote.count({
           where: { billingType: 'INTERNAL', status: CreditNoteStatus.APPROVED },
         });
-        creditNoteNumber = `NCI-${(count + 1).toString().padStart(8, '0')}`;
+        creditNoteNumber = `NCI-${(count + 1).toString().padStart(5, '0')}`;
       }
 
       updatedCreditNotePre = await prisma.creditNote.update({

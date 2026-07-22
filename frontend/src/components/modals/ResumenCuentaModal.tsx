@@ -330,7 +330,7 @@ export default function ResumenCuentaModal({ client, onClose }: ResumenCuentaMod
           <div className="modal-content" style={{ maxWidth: '600px', width: '90%', padding: '24px', borderRadius: '12px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '1px solid var(--border-color)', paddingBottom: '12px' }}>
               <h3 style={{ margin: 0 }}>
-                Factura {selectedOrder.invoiceNumber || 'INT-' + selectedOrder.id.toString().padStart(8, '0')}
+                Factura {selectedOrder.invoiceNumber || 'INT-' + selectedOrder.id.toString().padStart(5, '0')}
               </h3>
               <button
                 className="btn btn-ghost"
@@ -405,7 +405,7 @@ export default function ResumenCuentaModal({ client, onClose }: ResumenCuentaMod
           <div className="modal-content" style={{ maxWidth: '600px', width: '90%', padding: '24px', borderRadius: '12px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '1px solid var(--border-color)', paddingBottom: '12px' }}>
               <h3 style={{ margin: 0 }}>
-                Nota de Crédito {selectedCreditNote.creditNoteNumber || 'INT-' + selectedCreditNote.id.toString().padStart(8, '0')}
+                Nota de Crédito {selectedCreditNote.creditNoteNumber || 'INT-' + selectedCreditNote.id.toString().padStart(5, '0')}
               </h3>
               <button
                 className="btn btn-ghost"
@@ -498,7 +498,7 @@ export default function ResumenCuentaModal({ client, onClose }: ResumenCuentaMod
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f3f4f6', paddingBottom: '6px' }}>
                 <span style={{ color: 'var(--text-secondary)' }}>Número de Recibo:</span>
-                <strong>{selectedTransaction.receiptNumber || `INT-${selectedTransaction.id.toString().padStart(8, '0')}`}</strong>
+                <strong>{selectedTransaction.receiptNumber || `INT-${selectedTransaction.id.toString().padStart(5, '0')}`}</strong>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f3f4f6', paddingBottom: '6px' }}>
                 <span style={{ color: 'var(--text-secondary)' }}>Fecha / Hora:</span>
@@ -511,13 +511,13 @@ export default function ResumenCuentaModal({ client, onClose }: ResumenCuentaMod
               <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f3f4f6', paddingBottom: '6px' }}>
                 <span style={{ color: 'var(--text-secondary)' }}>Método de Pago:</span>
                 <span className="badge badge-secondary" style={{ textTransform: 'uppercase', fontWeight: 600 }}>
-                  {selectedTransaction.paymentMethod}
+                  {selectedTransaction.paymentMethod === 'CASH' ? 'EFECTIVO' : selectedTransaction.paymentMethod === 'CHECK' ? 'CHEQUE' : selectedTransaction.paymentMethod === 'BANK_TRANSFER' ? 'TRANSFERENCIA' : selectedTransaction.paymentMethod}
                 </span>
               </div>
               {selectedTransaction.order && (
                 <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f3f4f6', paddingBottom: '6px' }}>
                   <span style={{ color: 'var(--text-secondary)' }}>Factura Imputada:</span>
-                  <strong>{selectedTransaction.order.invoiceNumber || `INT-${selectedTransaction.order.id.toString().padStart(8, '0')}`}</strong>
+                  <strong>{selectedTransaction.order.invoiceNumber || `INT-${selectedTransaction.order.id.toString().padStart(5, '0')}`}</strong>
                 </div>
               )}
               {selectedTransaction.description && (

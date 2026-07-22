@@ -47,7 +47,7 @@ export const registerCollection = async (req: AuthenticatedRequest, res: Respons
       return res.status(401).json({ error: 'No autorizado' });
     }
 
-    const { personaId, amount, paymentMethod, billingType, description, orderId, bankAccountId } = req.body;
+    const { personaId, amount, paymentMethod, billingType, description, orderId, bankAccountId, checkNumber } = req.body;
 
     if (!personaId || !amount || !paymentMethod || !billingType) {
       return res.status(400).json({ error: 'Faltan datos requeridos' });
@@ -87,11 +87,13 @@ export const registerCollection = async (req: AuthenticatedRequest, res: Respons
     if (orderId) {
       const targetOrder = await prisma.order.findUnique({ where: { id: Number(orderId) } });
       if (targetOrder) {
-        orderNumberDesc = targetOrder.invoiceNumber || `INT-${targetOrder.id.toString().padStart(8, '0')}`;
+        orderNumberDesc = targetOrder.invoiceNumber || `INT-${targetOrder.id.toString().padStart(5, '0')}`;
         // Forzar que el recibo herede la sucursal de la factura origen
         finalBillingType = targetOrder.billingType;
       }
     }
+
+    const checkInfoStr = checkNumber ? ` (Cheque N° ${checkNumber})` : '';
 
     // Ejecutar creación de transacción y actualización de saldo de forma atómica
     const transaction = await prisma.$transaction(async (tx) => {
@@ -104,9 +106,11 @@ export const registerCollection = async (req: AuthenticatedRequest, res: Respons
           type: TransactionType.INCOME,
           paymentMethod: paymentMethod as PaymentMethod,
           amount: roundedAmount,
-          description: description || (orderId 
-            ? `Cobro de Factura ${orderNumberDesc} vía móvil`
-            : `Cobro generado vía móvil a cliente ${personaId}`),
+          description: description 
+            ? `${description}${checkInfoStr}` 
+            : (orderId 
+                ? `Cobro Factura ${orderNumberDesc}${checkInfoStr}` 
+                : `Cobro a cliente ${client.name}${checkInfoStr}`),
           receiptNumber: null, // Se asigna abajo
           verified: false, // Pendiente de rendición
           orderId: orderId ? Number(orderId) : null,
@@ -114,7 +118,7 @@ export const registerCollection = async (req: AuthenticatedRequest, res: Respons
         }
       });
 
-      const formattedReceiptNumber = `REC-${newTx.movementId.toString().padStart(8, '0')}`;
+      const formattedReceiptNumber = `REC-${newTx.movementId.toString().padStart(5, '0')}`;
 
       const updatedTx = await tx.transaction.update({
         where: { id: newTx.id },
@@ -364,6 +368,13 @@ export const verifyRendicion = async (req: AuthenticatedRequest, res: Response) 
     const theoreticalClosing = expectedCash + expectedChecks;
     const realTotal = inputCash + inputChecks;
 
+    const declaredChecks = req.body.declaredChecks;
+    let extraNotes = notes ? String(notes).trim() : '';
+    if (declaredChecks && Array.isArray(declaredChecks) && declaredChecks.length > 0) {
+      const checksFormatted = declaredChecks.map((c: any) => `N° ${c.number || 'S/N'} (${c.bank || 'Banco'}) $${c.amount}`).join('; ');
+      extraNotes += (extraNotes ? ' | ' : '') + `Cheques: ${checksFormatted}`;
+    }
+
     // Crear la caja cerrada asociada a esta rendición
     const drawer = await prisma.cashDrawer.create({
       data: {
@@ -371,7 +382,7 @@ export const verifyRendicion = async (req: AuthenticatedRequest, res: Response) 
         branch: branchName,
         drawerType,
         routeNote: routeNote ? String(routeNote).trim() : null,
-        notes: notes ? String(notes).trim() : null,
+        notes: extraNotes || null,
         openingBalance: 0.00,
         closingBalance: theoreticalClosing,
         realBalance: realTotal,
@@ -385,21 +396,8 @@ export const verifyRendicion = async (req: AuthenticatedRequest, res: Response) 
     const defaultBank = await prisma.bankAccount.findFirst();
     const operations: any[] = [];
 
-    // Si se especificó una caja de destino abierta y hay efectivo real recibido, creamos la transacción de ingreso
-    let targetDrawerId = destinationDrawerId ? Number(destinationDrawerId) : null;
-    
-    // Fallback: si no se envió pero hay una sola caja abierta, buscar una activa por defecto
-    if (!targetDrawerId && inputCash > 0) {
-      const openDrawer = await prisma.cashDrawer.findFirst({
-        where: {
-          userId: adminId,
-          status: 'OPEN'
-        }
-      });
-      if (openDrawer) {
-        targetDrawerId = openDrawer.id;
-      }
-    }
+    // ÚNICAMENTE si se especificó explícitamente una caja de destino abierta y hay efectivo recibido, se genera transferencia
+    const targetDrawerId = destinationDrawerId ? Number(destinationDrawerId) : null;
 
     if (targetDrawerId && inputCash > 0) {
       operations.push(
@@ -472,7 +470,7 @@ export const verifyRendicion = async (req: AuthenticatedRequest, res: Response) 
 
     // Mapear recibos verificados para la respuesta y simular WhatsApp del ERP
     const verifiedReceipts = txs.map(t => {
-      const formattedReceiptNumber = t.receiptNumber || `REC-${t.movementId.toString().padStart(8, '0')}`;
+      const formattedReceiptNumber = t.receiptNumber || `REC-${t.movementId.toString().padStart(5, '0')}`;
       const receiptLink = `${req.protocol}://${req.get('host')}/recibo/${t.id}`;
       
       if (t.persona?.phone) {

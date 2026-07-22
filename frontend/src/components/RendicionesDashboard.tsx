@@ -12,7 +12,8 @@ import {
   ShieldCheck,
   Lock,
   Unlock,
-  Eye
+  Eye,
+  MapPin
 } from 'lucide-react';
 import ArqueoCajaModal from './ArqueoCajaModal';
 
@@ -64,6 +65,12 @@ const RendicionesDashboard: React.FC = () => {
   const [arqueoResult, setArqueoResult] = useState<any | null>(null);
   const [realCash, setRealCash] = useState<string>('');
   const [realChecks, setRealChecks] = useState<string>('');
+  const [auditRouteNote, setAuditRouteNote] = useState<string>('');
+  const [auditNotes, setAuditNotes] = useState<string>('');
+  const [declaredChecksList, setDeclaredChecksList] = useState<Array<{ number: string; bank: string; amount: number }>>([]);
+  const [newCheckNumber, setNewCheckNumber] = useState<string>('');
+  const [newCheckBank, setNewCheckBank] = useState<string>('');
+  const [newCheckAmount, setNewCheckAmount] = useState<string>('');
   const [actionLoading, setActionLoading] = useState(false);
   const [showTxs, setShowTxs] = useState(false);
   const [activeDrawers, setActiveDrawers] = useState<any[]>([]);
@@ -144,6 +151,12 @@ const RendicionesDashboard: React.FC = () => {
     setAuditTarget({ type, data });
     setRealCash('');
     setRealChecks('');
+    setAuditRouteNote(type === 'route' ? (data.driverName ? `Ruta de ${data.driverName}` : '') : '');
+    setAuditNotes('');
+    setDeclaredChecksList([]);
+    setNewCheckNumber('');
+    setNewCheckBank('');
+    setNewCheckAmount('');
     setShowTxs(false);
     setErrorMsg(null);
     setSelectedDrawerId('');
@@ -165,9 +178,38 @@ const RendicionesDashboard: React.FC = () => {
     setAuditTarget(null);
     setRealCash('');
     setRealChecks('');
+    setAuditRouteNote('');
+    setAuditNotes('');
+    setDeclaredChecksList([]);
+    setNewCheckNumber('');
+    setNewCheckBank('');
+    setNewCheckAmount('');
     setShowTxs(false);
     setActiveDrawers([]);
     setSelectedDrawerId('');
+  };
+
+  const handleAddDeclaredCheck = () => {
+    const amt = Number(newCheckAmount);
+    if (isNaN(amt) || amt <= 0) return;
+    const updated = [...declaredChecksList, {
+      number: newCheckNumber.trim() || 'S/N',
+      bank: newCheckBank.trim() || 'Banco',
+      amount: amt
+    }];
+    setDeclaredChecksList(updated);
+    const sumChecks = updated.reduce((acc, c) => acc + c.amount, 0);
+    setRealChecks(String(sumChecks));
+    setNewCheckNumber('');
+    setNewCheckBank('');
+    setNewCheckAmount('');
+  };
+
+  const handleRemoveDeclaredCheck = (index: number) => {
+    const updated = declaredChecksList.filter((_, i) => i !== index);
+    setDeclaredChecksList(updated);
+    const sumChecks = updated.reduce((acc, c) => acc + c.amount, 0);
+    setRealChecks(String(sumChecks));
   };
 
   // Inspect drawer detail handlers
@@ -190,10 +232,10 @@ const RendicionesDashboard: React.FC = () => {
     setInspectTxs([]);
   };
 
-  const handleCajaArqueoSubmit = async (realBalance: number, receipts: any[], checks: any[]) => {
+  const handleCajaArqueoSubmit = async (realBalance: number, receipts: any[], checks: any[], routeNote?: string, notes?: string) => {
     try {
       if (cajaActionModal?.mode === 'close' && cajaActionModal.drawerId) {
-        await api.closeDrawer(cajaActionModal.drawerId, realBalance, receipts, checks);
+        await api.closeDrawer(cajaActionModal.drawerId, realBalance, receipts, checks, routeNote, notes);
         setCajaActionModal(null);
         fetchDrawers();
       }
@@ -238,17 +280,15 @@ const RendicionesDashboard: React.FC = () => {
       return;
     }
 
-    if (cashVal > 0 && !selectedDrawerId) {
-      setErrorMsg('Debes seleccionar una caja operativa abierta para depositar el efectivo.');
-      return;
-    }
-
     setActionLoading(true);
     setErrorMsg(null);
     try {
       const payload: any = {
         realCash: cashVal,
-        realChecks: checksVal
+        realChecks: checksVal,
+        routeNote: auditRouteNote ? auditRouteNote.trim() : undefined,
+        notes: auditNotes ? auditNotes.trim() : undefined,
+        declaredChecks: declaredChecksList
       };
 
       if (selectedDrawerId) {
@@ -684,10 +724,15 @@ const RendicionesDashboard: React.FC = () => {
           <div className="modal-content" style={{ maxWidth: '850px', width: '95%', padding: '24px' }}>
             
             {/* Modal Header */}
-            <div className="modal-header" style={{ marginBottom: '20px' }}>
-              <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700 }}>
-                Arqueo de Caja Operativa: {auditTarget.type === 'seller' ? auditTarget.data.user.username.toUpperCase() : `${auditTarget.data.driverName} (Ruta #${auditTarget.data.routeId})`}
-              </h3>
+            <div className="modal-header" style={{ marginBottom: '16px' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700 }}>
+                  Arqueo y Rendición: {auditTarget.type === 'seller' ? `Vendedor ${auditTarget.data.user.username.toUpperCase()}` : `Repartidor ${auditTarget.data.driverName} (Ruta #${auditTarget.data.routeId})`}
+                </h3>
+                <p style={{ margin: '4px 0 0 0', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                  Estás auditando los cobros realizados en calle. Ingresá el conteo físico entregado y la Caja Central donde se guardará el dinero.
+                </p>
+              </div>
               <button 
                 type="button" 
                 className="btn btn-ghost" 
@@ -765,38 +810,23 @@ const RendicionesDashboard: React.FC = () => {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   
                   <div className="card" style={{ padding: '16px', border: '1px solid var(--border-color)' }}>
-                    <h4 style={{ margin: '0 0 12px 0', fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                      2. Conteo Físico Recibido
-                    </h4>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                      <h4 style={{ margin: 0, fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                        2. Conteo Físico Recibido
+                      </h4>
+                      <button 
+                        type="button" 
+                        className="btn btn-secondary" 
+                        onClick={() => { setRealCash(String(expectedCash)); setRealChecks(String(expectedChecks)); }} 
+                        style={{ fontSize: '0.78rem', padding: '4px 10px', display: 'inline-flex', alignItems: 'center', gap: '4px', backgroundColor: '#f0fdf4', color: '#15803d', borderColor: '#bbf7d0' }}
+                        title="Auto-completar los casilleros con los montos esperados si coinciden sin diferencia"
+                      >
+                        ⚡ Sin Diferencia (Copiar Esperado)
+                      </button>
+                    </div>
                     
-                    {activeDrawers.length === 0 ? (
-                      <div style={{ color: 'var(--color-danger, #ef4444)', fontSize: '0.82rem', fontWeight: 600, marginBottom: '16px', padding: '10px', backgroundColor: '#fef2f2', borderRadius: '6px', border: '1px solid #fca5a5' }}>
-                        ⚠️ No tenés ninguna caja operativa abierta. Abrí una caja desde Finanzas para rendir efectivo.
-                      </div>
-                    ) : (
-                      <div className="form-group" style={{ marginBottom: '16px' }}>
-                        <label style={{ fontSize: '0.8rem', fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
-                          Caja Operativa Destino
-                        </label>
-                        <select 
-                          className="select" 
-                          style={{ width: '100%', fontSize: '0.9rem' }}
-                          value={selectedDrawerId}
-                          onChange={(e) => setSelectedDrawerId(e.target.value)}
-                          required
-                        >
-                          <option value="">-- Seleccionar Caja --</option>
-                          {activeDrawers.map((d: any) => (
-                            <option key={d.id} value={d.id}>
-                              {d.branch === 'A' ? 'Caja A (Oficial)' : d.branch === 'X' ? 'Caja X (Interna)' : `Caja: ${d.branch}`} (Saldo: ${d.openingBalance})
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    )}
-                    
-                    <div className="form-group" style={{ marginBottom: '12px' }}>
-                      <label style={{ fontSize: '0.8rem', fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
+                    <div className="form-group" style={{ marginBottom: '16px' }}>
+                      <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
                         Efectivo Declarado ($)
                       </label>
                       <input 
@@ -813,20 +843,111 @@ const RendicionesDashboard: React.FC = () => {
                       />
                     </div>
 
-                    <div className="form-group" style={{ marginBottom: '0px' }}>
-                      <label style={{ fontSize: '0.8rem', fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
-                        Cheques Declarados ($)
-                      </label>
+                    <div className="form-group" style={{ marginBottom: '12px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                        <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                          Cheques Declarados ($)
+                        </label>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Carga por unidad o total</span>
+                      </div>
                       <input 
                         type="number"
                         className="input"
-                        placeholder="0.00"
-                        required
+                        placeholder="Monto total en cheques 0.00"
                         min="0"
                         step="0.01"
                         value={realChecks}
                         onChange={(e) => setRealChecks(e.target.value)}
-                        style={{ fontSize: '1.15rem', fontFamily: 'monospace', width: '100%' }}
+                        style={{ fontSize: '1.15rem', fontFamily: 'monospace', width: '100%', marginBottom: '8px' }}
+                      />
+
+                      {/* Desglose Individual de Cheques */}
+                      <div style={{ backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '10px', marginTop: '6px' }}>
+                        <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
+                          + Registrar Cheque Físico Individual (N° de Cheque):
+                        </div>
+                        <div style={{ display: 'flex', gap: '6px', marginBottom: '6px' }}>
+                          <input 
+                            type="text" 
+                            className="input" 
+                            placeholder="N° Cheque (ej: 00482910)" 
+                            value={newCheckNumber} 
+                            onChange={e => setNewCheckNumber(e.target.value)} 
+                            style={{ flex: 1, fontSize: '0.8rem' }}
+                          />
+                          <input 
+                            type="text" 
+                            className="input" 
+                            placeholder="Banco" 
+                            value={newCheckBank} 
+                            onChange={e => setNewCheckBank(e.target.value)} 
+                            style={{ flex: 1, fontSize: '0.8rem' }}
+                          />
+                        </div>
+                        <div style={{ display: 'flex', gap: '6px' }}>
+                          <input 
+                            type="number" 
+                            className="input" 
+                            placeholder="Monto $" 
+                            value={newCheckAmount} 
+                            onChange={e => setNewCheckAmount(e.target.value)} 
+                            style={{ flex: 1, fontSize: '0.8rem' }}
+                          />
+                          <button 
+                            type="button" 
+                            className="btn btn-secondary" 
+                            onClick={handleAddDeclaredCheck}
+                            style={{ fontSize: '0.78rem', padding: '4px 10px' }}
+                          >
+                            + Añadir
+                          </button>
+                        </div>
+
+                        {declaredChecksList.length > 0 && (
+                          <div style={{ marginTop: '8px', maxHeight: '100px', overflowY: 'auto' }}>
+                            <table style={{ width: '100%', fontSize: '0.75rem', borderCollapse: 'collapse' }}>
+                              <tbody>
+                                {declaredChecksList.map((c, idx) => (
+                                  <tr key={idx} style={{ borderBottom: '1px solid #e2e8f0' }}>
+                                    <td style={{ padding: '3px 0' }}><strong>N° {c.number}</strong> ({c.bank})</td>
+                                    <td style={{ textAlign: 'right', fontWeight: 600 }}>${c.amount.toLocaleString()}</td>
+                                    <td style={{ width: '24px', textAlign: 'right' }}>
+                                      <button type="button" onClick={() => handleRemoveDeclaredCheck(idx)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '0.75rem' }}>✕</button>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="form-group" style={{ marginBottom: '12px' }}>
+                      <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>
+                        Pueblo / Ruta de Cobro (Identificación)
+                      </label>
+                      <input 
+                        type="text"
+                        className="input"
+                        placeholder="Ej: General Villegas, Bunge, Ruta 33..."
+                        value={auditRouteNote}
+                        onChange={(e) => setAuditRouteNote(e.target.value)}
+                        style={{ width: '100%', fontSize: '0.9rem' }}
+                      />
+                    </div>
+
+                    <div className="form-group" style={{ marginBottom: '0px' }}>
+                      <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>
+                        Observaciones del Arqueo
+                      </label>
+                      <input 
+                        type="text"
+                        className="input"
+                        placeholder="Ej: Diferencia justificada por vueltos..."
+                        value={auditNotes}
+                        onChange={(e) => setAuditNotes(e.target.value)}
+                        style={{ width: '100%', fontSize: '0.9rem' }}
                       />
                     </div>
                   </div>
@@ -916,7 +1037,7 @@ const RendicionesDashboard: React.FC = () => {
                                 backgroundColor: tx.paymentMethod === 'CASH' ? '#ecfdf5' : tx.paymentMethod === 'CHECK' ? '#eff6ff' : '#f1f5f9',
                                 color: tx.paymentMethod === 'CASH' ? '#047857' : tx.paymentMethod === 'CHECK' ? '#1d4ed8' : '#475569'
                               }}>
-                                {tx.paymentMethod === 'CASH' ? 'EFECTIVO' : tx.paymentMethod === 'CHECK' ? 'CHEQUE' : tx.paymentMethod}
+                                {tx.paymentMethod === 'CASH' ? 'EFECTIVO' : tx.paymentMethod === 'CHECK' ? 'CHEQUE' : tx.paymentMethod === 'BANK_TRANSFER' ? 'TRANSFERENCIA' : tx.paymentMethod}
                               </span>
                             </td>
                             <td style={{ padding: '8px', textAlign: 'right', fontWeight: 600, fontFamily: 'monospace' }}>
@@ -950,7 +1071,7 @@ const RendicionesDashboard: React.FC = () => {
                 <button 
                   type="submit" 
                   className="btn" 
-                  disabled={actionLoading || (Number(realCash || 0) > 0 && !selectedDrawerId)}
+                  disabled={actionLoading}
                   style={{ 
                     padding: '10px 22px', 
                     fontSize: '0.88rem',
@@ -966,7 +1087,7 @@ const RendicionesDashboard: React.FC = () => {
                   onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#b90510'}
                   onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'var(--color-corp-red)'}
                 >
-                  {actionLoading ? 'Verificando Arqueo...' : 'Confirmar Arqueo y Transferir a Caja Grande'}
+                  {actionLoading ? 'Verificando Arqueo...' : 'Confirmar y Cerrar Rendición'}
                 </button>
               </div>
 
@@ -1048,7 +1169,32 @@ const RendicionesDashboard: React.FC = () => {
                       onMouseLeave={() => setHoveredRowId(null)}
                     >
                       <td style={{ padding: '12px', fontWeight: 600 }}>
-                        {d.branch === 'DEPOSITO' ? 'Caja Depósito' : d.branch}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
+                          <span style={{
+                            padding: '2px 8px',
+                            borderRadius: '12px',
+                            fontSize: '0.72rem',
+                            fontWeight: 600,
+                            backgroundColor: d.drawerType === 'DEPOSITO' || d.branch === 'DEPOSITO' ? '#f1f5f9' : d.drawerType === 'REPARTIDOR' || d.branch?.startsWith('REPARTIDOR') ? '#ecfdf5' : '#eff6ff',
+                            color: d.drawerType === 'DEPOSITO' || d.branch === 'DEPOSITO' ? '#475569' : d.drawerType === 'REPARTIDOR' || d.branch?.startsWith('REPARTIDOR') ? '#047857' : '#1d4ed8'
+                          }}>
+                            {d.drawerType === 'DEPOSITO' || d.branch === 'DEPOSITO' ? '🏢 Depósito' : d.drawerType === 'REPARTIDOR' || d.branch?.startsWith('REPARTIDOR') ? '🚚 Repartidor' : '💼 Vendedor'}
+                          </span>
+                        </div>
+                        <div style={{ fontSize: '0.88rem', color: 'var(--text-primary)' }}>
+                          {d.branch === 'DEPOSITO' ? 'Caja Depósito' : d.branch}
+                        </div>
+                        {d.routeNote && (
+                          <div style={{ fontSize: '0.78rem', color: '#0284c7', marginTop: '3px', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <MapPin size={12} color="#0284c7" />
+                            <span>{d.routeNote}</span>
+                          </div>
+                        )}
+                        {d.notes && (
+                          <div style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', fontStyle: 'italic', marginTop: '2px' }}>
+                            Obs: {d.notes}
+                          </div>
+                        )}
                       </td>
                       <td style={{ padding: '12px', fontSize: '0.8rem' }}>{new Date(d.openedAt).toLocaleString('es-AR', {dateStyle:'short', timeStyle:'short'})}</td>
                       <td style={{ padding: '12px', fontSize: '0.8rem' }}>{new Date(d.closedAt).toLocaleString('es-AR', {dateStyle:'short', timeStyle:'short'})}</td>
@@ -1162,6 +1308,15 @@ const RendicionesDashboard: React.FC = () => {
                     <div><strong>Cierre:</strong> <span style={{ color: 'var(--text-secondary)', fontStyle: 'italic' }}>Caja en operación</span></div>
                   )}
                   <div><strong>Procesado por:</strong> {inspectDrawer.user?.username || 'Desconocido'}</div>
+                  {inspectDrawer.routeNote && (
+                    <div style={{ color: '#0284c7', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px' }}>
+                      <MapPin size={14} color="#0284c7" />
+                      <span>Pueblo / Ruta: {inspectDrawer.routeNote}</span>
+                    </div>
+                  )}
+                  {inspectDrawer.notes && (
+                    <div style={{ marginTop: '2px' }}><strong>Observaciones:</strong> <span style={{ fontStyle: 'italic', color: 'var(--text-secondary)' }}>{inspectDrawer.notes}</span></div>
+                  )}
                 </div>
               </div>
 

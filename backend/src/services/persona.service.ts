@@ -311,7 +311,7 @@ export class PersonaService {
       if (orderId) {
         const targetOrder = await tx.order.findUnique({ where: { id: Number(orderId) } });
         if (targetOrder) {
-          orderNumberDesc = targetOrder.invoiceNumber || `INT-${targetOrder.id.toString().padStart(8, '0')}`;
+          orderNumberDesc = targetOrder.invoiceNumber || `INT-${targetOrder.id.toString().padStart(5, '0')}`;
         }
       }
 
@@ -443,7 +443,7 @@ export class PersonaService {
         date: o.createdAt,
         type: 'DEBIT',
         reference: `Pedido #${o.id}`,
-        description: `Factura ${o.invoiceNumber || 'INT-' + o.id.toString().padStart(8, '0')}`,
+        description: `Factura ${o.invoiceNumber || 'INT-' + o.id.toString().padStart(5, '0')}`,
         amount: Number(o.totalAmount),
       });
     });
@@ -457,8 +457,8 @@ export class PersonaService {
         type: ledgerType,
         reference: `Recibo #${t.id}`,
         description: t.type === TransactionType.INCOME
-          ? `Recibo N° ${t.receiptNumber || 'INT-' + t.id.toString().padStart(8, '0')}`
-          : `Pago N° ${t.receiptNumber || 'INT-' + t.id.toString().padStart(8, '0')}`,
+          ? `Recibo N° ${t.receiptNumber || 'INT-' + t.id.toString().padStart(5, '0')}`
+          : `Pago N° ${t.receiptNumber || 'INT-' + t.id.toString().padStart(5, '0')}`,
         amount: Number(t.amount),
       });
     });
@@ -482,7 +482,7 @@ export class PersonaService {
         date: cn.createdAt,
         type: 'CREDIT',
         reference: `Nota de Crédito #${cn.id}`,
-        description: `${cn.creditNoteType.replace(/_/g, ' ')} ${cn.creditNoteNumber || 'INT-' + cn.id.toString().padStart(8, '0')} (${cn.reason})`,
+        description: `${cn.creditNoteType.replace(/_/g, ' ')} ${cn.creditNoteNumber || 'INT-' + cn.id.toString().padStart(5, '0')} (${cn.reason})`,
         amount: Number(cn.totalAmount),
       });
     });
@@ -635,7 +635,7 @@ export class PersonaService {
 
       return {
         id: order.id,
-        invoiceNumber: order.invoiceNumber || `INT-${order.id.toString().padStart(8, '0')}`,
+        invoiceNumber: order.invoiceNumber || `INT-${order.id.toString().padStart(5, '0')}`,
         billingType: order.billingType,
         invoiceType: order.invoiceType,
         totalAmount: Number(order.totalAmount),
@@ -799,7 +799,7 @@ export class PersonaService {
 
           return {
             id: order.id,
-            invoiceNumber: order.invoiceNumber || `INT-${order.id.toString().padStart(8, '0')}`,
+            invoiceNumber: order.invoiceNumber || `INT-${order.id.toString().padStart(5, '0')}`,
             totalAmount: Number(order.totalAmount),
             pendingAmount: debt,
             createdAt: order.createdAt

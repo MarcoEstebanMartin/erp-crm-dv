@@ -31,6 +31,7 @@ export default function ArqueoCajaModal({ drawer, onClose, onSuccess, defaultRou
   const [receiptAmount, setReceiptAmount] = useState('');
   const [receiptBilling, setReceiptBilling] = useState('X');
   const [receiptMethod, setReceiptMethod] = useState('CASH');
+  const [checkNumberInput, setCheckNumberInput] = useState('');
 
   useEffect(() => {
     fetchDrawerTransactions();
@@ -76,9 +77,11 @@ export default function ArqueoCajaModal({ drawer, onClose, onSuccess, defaultRou
       clientName: selectedClient.name,
       amount: Number(receiptAmount),
       billingType: receiptBilling,
-      paymentMethod: receiptMethod
+      paymentMethod: receiptMethod,
+      checkNumber: receiptMethod === 'CHECK' ? checkNumberInput.trim() : undefined
     }]);
     setReceiptAmount('');
+    setCheckNumberInput('');
     setSelectedClient(null);
     setClientSearch('');
     setClients([]);
@@ -149,7 +152,7 @@ export default function ArqueoCajaModal({ drawer, onClose, onSuccess, defaultRou
                 min="0"
                 value={checksAmount}
                 onChange={(e) => setChecksAmount(e.target.value)}
-                placeholder="Monto en cheques..."
+                placeholder="Monto total en cheques..."
                 style={{ fontSize: '1.2rem', fontFamily: 'monospace', width: '100%' }}
               />
             </div>
@@ -255,6 +258,19 @@ export default function ArqueoCajaModal({ drawer, onClose, onSuccess, defaultRou
                   </select>
                 </div>
 
+                {receiptMethod === 'CHECK' && (
+                  <div style={{ marginBottom: '12px' }}>
+                    <input 
+                      type="text" 
+                      className="input" 
+                      placeholder="N° de Cheque / Banco / Vencimiento (ej: 00482910 - Banco Nación)" 
+                      value={checkNumberInput} 
+                      onChange={e => setCheckNumberInput(e.target.value)} 
+                      style={{ width: '100%', fontSize: '0.85rem' }} 
+                    />
+                  </div>
+                )}
+
                 <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
                   <input type="number" className="input" placeholder="Monto $" value={receiptAmount} onChange={e => setReceiptAmount(e.target.value)} style={{ flex: 2 }} />
                   <button type="button" className="btn btn-secondary" onClick={handleAddReceipt} style={{ flex: 1 }}><Plus size={16} /> Añadir</button>
@@ -268,7 +284,7 @@ export default function ArqueoCajaModal({ drawer, onClose, onSuccess, defaultRou
                           <tr key={i} style={{ borderBottom: '1px solid #eee' }}>
                             <td style={{ padding: '4px 0', fontSize: '0.75rem' }}>
                               <strong>{r.clientName}</strong><br/>
-                              {r.billingType === 'A' ? 'A' : 'X'} - {r.paymentMethod === 'CASH' ? 'Efe' : 'Chq'}
+                              {r.billingType === 'A' ? 'A' : 'X'} - {r.paymentMethod === 'CASH' ? 'Efe' : `Chq #${r.checkNumber || 'S/N'}`}
                             </td>
                             <td style={{ textAlign: 'right', fontWeight: 600 }}>${r.amount.toLocaleString()}</td>
                             <td style={{ width: '30px', textAlign: 'right' }}>

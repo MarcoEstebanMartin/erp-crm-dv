@@ -279,7 +279,7 @@ export async function settleDeliveryRoute(req: AuthenticatedRequest, res: Respon
         // Si está en PREPARED (no facturado aún), primero lo facturamos
         if (order.status === OrderStatus.PREPARED) {
           let finalInvoiceType: InvoiceType = InvoiceType.PRESUPUESTO;
-          let finalInvoiceNumber = `INT-${order.id.toString().padStart(8, '0')}`;
+          let finalInvoiceNumber = `INT-${order.id.toString().padStart(5, '0')}`;
           let finalCae = null;
           let finalCaeDueDate = null;
 

@@ -229,7 +229,7 @@ export async function receivePurchaseOrder(req: AuthenticatedRequest, res: Respo
       const total = Math.round(Number(order.totalAmount));
       const neto = Math.round(total / 1.21);
       const iva = total - neto;
-      const nroInvoice = invoiceNumber || `COMP-${order.id.toString().padStart(8, '0')}`;
+      const nroInvoice = invoiceNumber || `COMP-${order.id.toString().padStart(5, '0')}`;
 
       // Crear factura de proveedor
       await tx.supplierInvoice.create({

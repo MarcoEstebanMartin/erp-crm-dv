@@ -856,7 +856,7 @@ export default function CreditNotesTab({
                     <div style={{ paddingLeft: '20px' }}>
                       <div style={{ fontSize: '1.1rem', fontWeight: 900 }}>NOTA DE CRÉDITO</div>
                       <div style={{ fontSize: '0.76rem', marginTop: '6px' }}>
-                        <div><strong>Número: {viewCreditNoteModal.creditNoteNumber || `NCI-${viewCreditNoteModal.id.toString().padStart(8, '0')}`}</strong></div>
+                        <div><strong>Número: {viewCreditNoteModal.creditNoteNumber || `NCI-${viewCreditNoteModal.id.toString().padStart(5, '0')}`}</strong></div>
                         <div>Fecha: {formattedDate}</div>
                         <div>CUIT: 30-71490283-9</div>
                         <div>Ingresos Brutos: 30-71490283-9</div>

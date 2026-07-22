@@ -983,7 +983,7 @@ export async function invoiceOrder(req: AuthenticatedRequest, res: Response): Pr
         return;
       }
     } else {
-      finalInvoiceNumber = `INT-${order.id.toString().padStart(8, '0')}`;
+      finalInvoiceNumber = `INT-${order.id.toString().padStart(5, '0')}`;
     }
 
     // PERSISTENCIA AISLADA DE FACTURACIÓN: Guardamos inmediatamente los datos de facturación y CAE obtenidos de AFIP o generados de forma interna.
@@ -1690,7 +1690,7 @@ export async function createDirectInvoice(req: AuthenticatedRequest, res: Respon
 
       // Si no es oficial, generamos el invoiceNumber interno usando el ID autogenerado de la orden
       if (!finalInvoiceNumber) {
-        finalInvoiceNumber = `INT-${order.id.toString().padStart(8, '0')}`;
+        finalInvoiceNumber = `INT-${order.id.toString().padStart(5, '0')}`;
         order = await prisma.order.update({
           where: { id: order.id },
           data: { invoiceNumber: finalInvoiceNumber }
