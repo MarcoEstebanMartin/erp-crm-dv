@@ -42,9 +42,18 @@ export const ProfitabilityTab: React.FC<ProfitabilityTabProps> = ({ sellers = []
 
   const loadMetadata = async () => {
     try {
-      if (sellerOptions.length === 0 && api.getUsers) {
-        const u = await api.getUsers();
-        if (Array.isArray(u)) setSellerOptions(u);
+      if (sellerOptions.length === 0) {
+        let sellersList: any[] = [];
+        if (api.getSellersList) {
+          sellersList = await api.getSellersList();
+        }
+        if ((!sellersList || sellersList.length === 0) && api.getUsers) {
+          const u = await api.getUsers();
+          if (Array.isArray(u)) {
+            sellersList = u.filter((user: any) => user.role === 'VENDEDOR');
+          }
+        }
+        if (Array.isArray(sellersList)) setSellerOptions(sellersList);
       }
       if (rubroOptions.length === 0 && api.getRubros) {
         const r = await api.getRubros();
