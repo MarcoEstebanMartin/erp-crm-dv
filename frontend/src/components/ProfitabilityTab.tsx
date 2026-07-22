@@ -595,6 +595,7 @@ export const ProfitabilityTab: React.FC<ProfitabilityTabProps> = ({ sellers = []
           </div>
         </div>
       )}
+    </div>
   );
 };
 
