@@ -276,7 +276,7 @@ export const getPendingRendiciones = async (req: AuthenticatedRequest, res: Resp
 export const verifyRendicion = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const adminId = req.user?.id;
-    const { sellerId, routeId, realCash, realChecks, destinationDrawerId } = req.body;
+    const { sellerId, routeId, realCash, realChecks, destinationDrawerId, routeNote, notes } = req.body;
 
     if (!adminId) {
       return res.status(401).json({ error: 'No autorizado' });
@@ -295,6 +295,7 @@ export const verifyRendicion = async (req: AuthenticatedRequest, res: Response) 
 
     let txs: any[] = [];
     let branchName = '';
+    const drawerType = sellerId ? 'VENDEDOR' : 'REPARTIDOR';
 
     if (sellerId) {
       const sellerUser = await prisma.user.findUnique({
@@ -368,6 +369,9 @@ export const verifyRendicion = async (req: AuthenticatedRequest, res: Response) 
       data: {
         userId: adminId,
         branch: branchName,
+        drawerType,
+        routeNote: routeNote ? String(routeNote).trim() : null,
+        notes: notes ? String(notes).trim() : null,
         openingBalance: 0.00,
         closingBalance: theoreticalClosing,
         realBalance: realTotal,

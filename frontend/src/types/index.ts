@@ -163,6 +163,9 @@ export interface CashDrawer {
   userId: number;
   user?: User;
   branch: string;
+  drawerType?: string; // "DEPOSITO" | "VENDEDOR" | "REPARTIDOR"
+  routeNote?: string; // Pueblo o Ruta de cobro (ej: "Villegas / Bunge")
+  notes?: string; // Observaciones de arqueo
   openingBalance: number | string;
   closingBalance?: number | string;
   realBalance?: number | string;

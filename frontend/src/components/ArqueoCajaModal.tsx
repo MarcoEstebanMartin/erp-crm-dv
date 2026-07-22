@@ -5,12 +5,13 @@ import { Plus, Trash2, Search, CheckCircle } from 'lucide-react';
 interface ArqueoCajaModalProps {
   drawer: any;
   onClose: () => void;
-  onSuccess: (realBalance: number, receipts: any[], checks: any[]) => void;
+  onSuccess: (realBalance: number, receipts: any[], checks: any[], routeNote?: string, notes?: string) => void;
+  defaultRouteNote?: string;
 }
 
-export default function ArqueoCajaModal({ drawer, onClose, onSuccess }: ArqueoCajaModalProps) {
-  const isCajaVendedores = drawer.branch === 'VENDEDORES';
-  const isCajaReparto = drawer.branch === 'REPARTO';
+export default function ArqueoCajaModal({ drawer, onClose, onSuccess, defaultRouteNote = '' }: ArqueoCajaModalProps) {
+  const isCajaVendedores = drawer.branch?.includes('VENDEDOR') || drawer.drawerType === 'VENDEDOR';
+  const isCajaReparto = drawer.branch?.includes('REPARTIDOR') || drawer.drawerType === 'REPARTIDOR';
 
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -18,6 +19,8 @@ export default function ArqueoCajaModal({ drawer, onClose, onSuccess }: ArqueoCa
   // States
   const [cashAmount, setCashAmount] = useState<string>('');
   const [checksAmount, setChecksAmount] = useState<string>('');
+  const [routeNoteInput, setRouteNoteInput] = useState<string>(drawer.routeNote || defaultRouteNote || '');
+  const [notesInput, setNotesInput] = useState<string>(drawer.notes || '');
   const [receipts, setReceipts] = useState<any[]>([]);
   const [theoreticalBalance, setTheoreticalBalance] = useState<number>(0);
 
@@ -102,7 +105,7 @@ export default function ArqueoCajaModal({ drawer, onClose, onSuccess }: ArqueoCa
       return;
     }
     setLoading(true);
-    onSuccess(realBalance, receipts, []);
+    onSuccess(realBalance, receipts, [], routeNoteInput, notesInput);
   };
 
   return (
@@ -120,7 +123,7 @@ export default function ArqueoCajaModal({ drawer, onClose, onSuccess }: ArqueoCa
         )}
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' }}>
-          {/* Columna Izquierda: Efectivo y Cheques */}
+          {/* Columna Izquierda: Efectivo, Cheques y Notas de Pueblo/Ruta */}
           <div>
             <div className="card" style={{ padding: '16px', marginBottom: '16px' }}>
               <h4 style={{ margin: '0 0 12px 0', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>1. Efectivo Físico</h4>
@@ -137,7 +140,7 @@ export default function ArqueoCajaModal({ drawer, onClose, onSuccess }: ArqueoCa
               />
             </div>
 
-            <div className="card" style={{ padding: '16px' }}>
+            <div className="card" style={{ padding: '16px', marginBottom: '16px' }}>
               <h4 style={{ margin: '0 0 12px 0', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>2. Cheques Declarados</h4>
               <input 
                 type="number" 
@@ -149,6 +152,32 @@ export default function ArqueoCajaModal({ drawer, onClose, onSuccess }: ArqueoCa
                 placeholder="Monto en cheques..."
                 style={{ fontSize: '1.2rem', fontFamily: 'monospace', width: '100%' }}
               />
+            </div>
+
+            <div className="card" style={{ padding: '16px' }}>
+              <h4 style={{ margin: '0 0 12px 0', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>3. Identificación de Pueblo / Ruta</h4>
+              <div style={{ marginBottom: '10px' }}>
+                <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>Pueblo o Ruta de Cobro:</label>
+                <input 
+                  type="text" 
+                  className="input" 
+                  value={routeNoteInput}
+                  onChange={(e) => setRouteNoteInput(e.target.value)}
+                  placeholder="Ej: General Villegas, Bunge, Ruta 33..."
+                  style={{ width: '100%' }}
+                />
+              </div>
+              <div>
+                <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>Observaciones del Arqueo:</label>
+                <textarea 
+                  className="input" 
+                  rows={2}
+                  value={notesInput}
+                  onChange={(e) => setNotesInput(e.target.value)}
+                  placeholder="Ej: Diferencia por vueltos, cobro diferido..."
+                  style={{ width: '100%', resize: 'vertical' }}
+                />
+              </div>
             </div>
           </div>
 

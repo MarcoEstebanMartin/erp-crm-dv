@@ -8,7 +8,7 @@ import { BillingType, PaymentMethod, TransactionType } from '@prisma/client';
  * Abrir una nueva caja operativa.
  */
 export async function openDrawer(req: AuthenticatedRequest, res: Response): Promise<void> {
-  const { branch, openingBalance, userId: bodyUserId } = req.body;
+  const { branch, drawerType, routeNote, notes, openingBalance, userId: bodyUserId } = req.body;
   const loggedUserId = req.user?.id;
 
   if (!loggedUserId) {
@@ -51,6 +51,9 @@ export async function openDrawer(req: AuthenticatedRequest, res: Response): Prom
       data: {
         userId: targetUserId,
         branch: drawerBranch,
+        drawerType: drawerType || 'DEPOSITO',
+        routeNote: routeNote ? String(routeNote).trim() : null,
+        notes: notes ? String(notes).trim() : null,
         openingBalance: Number(openingBalance),
         status: 'OPEN',
       },
@@ -79,7 +82,7 @@ export async function openDrawer(req: AuthenticatedRequest, res: Response): Prom
  * Cerrar una caja activa y realizar arqueo.
  */
 export async function closeDrawer(req: AuthenticatedRequest, res: Response): Promise<void> {
-  const { drawerId, realBalance } = req.body;
+  const { drawerId, realBalance, routeNote, notes, receipts } = req.body;
   const userId = req.user?.id;
 
   if (!userId) {
@@ -111,7 +114,6 @@ export async function closeDrawer(req: AuthenticatedRequest, res: Response): Pro
       res.status(400).json({ status: 'error', message: 'Esta caja ya se encuentra cerrada.' });
       return;
     }
-    const { receipts } = req.body;
     
     // Procesar recibos entrantes (cobranzas) para sumarlos a la caja ANTES del arqueo
     if (receipts && Array.isArray(receipts)) {
@@ -157,6 +159,8 @@ export async function closeDrawer(req: AuthenticatedRequest, res: Response): Pro
       data: {
         closingBalance: calculatedClosingBalance,
         realBalance: Number(realBalance),
+        routeNote: routeNote !== undefined ? String(routeNote).trim() : drawer.routeNote,
+        notes: notes !== undefined ? String(notes).trim() : drawer.notes,
         status: 'CLOSED',
         closedAt: new Date(),
       },

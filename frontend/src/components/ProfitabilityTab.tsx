@@ -32,6 +32,7 @@ export const ProfitabilityTab: React.FC<ProfitabilityTabProps> = ({ sellers = []
   const [selectedCity, setSelectedCity] = useState<string>('');
   const [selectedRubro, setSelectedRubro] = useState<string>('');
   const [selectedBillingType, setSelectedBillingType] = useState<string>('ALL');
+  const [searchTerm, setSearchTerm] = useState<string>('');
 
   // Datos
   const [reportData, setReportData] = useState<any>(null);

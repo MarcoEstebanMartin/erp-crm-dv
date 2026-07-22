@@ -512,20 +512,18 @@ export const api = {
 
 
   // --- FINANZAS (CAJAS Y BANCOS) ---
-  openDrawer: async (branch: string, openingBalance: number, targetUserId?: number) => {    
-
+  openDrawer: async (branch: string, openingBalance: number, targetUserId?: number, drawerType?: string, routeNote?: string, notes?: string) => {    
     const res = await request('/finance/drawers/open', {
       method: 'POST',
-      body: JSON.stringify({ branch, openingBalance, userId: targetUserId })
+      body: JSON.stringify({ branch, openingBalance, userId: targetUserId, drawerType, routeNote, notes })
     });
     return res.drawer;
   },
 
-  closeDrawer: async (drawerId: number, realBalance: number, receipts?: any[], checks?: any[]) => {    
-
+  closeDrawer: async (drawerId: number, realBalance: number, receipts?: any[], checks?: any[], routeNote?: string, notes?: string) => {    
     const res = await request('/finance/drawers/close', {
       method: 'POST',
-      body: JSON.stringify({ drawerId, realBalance, receipts, checks })
+      body: JSON.stringify({ drawerId, realBalance, receipts, checks, routeNote, notes })
     });
     return res.drawer;
   },
@@ -999,7 +997,7 @@ export const api = {
     return await request('/collections/rendiciones');
   },
 
-  verifyRendicion: async (payload: { sellerId?: number; routeId?: number; realCash: number; realChecks: number }) => {
+  verifyRendicion: async (payload: { sellerId?: number; routeId?: number; realCash: number; realChecks: number; destinationDrawerId?: number; routeNote?: string; notes?: string }) => {
     return await request('/collections/rendiciones/verify', {
       method: 'POST',
       body: JSON.stringify(payload)
@@ -1180,12 +1178,6 @@ export const api = {
 
   deleteVehicleExpiry: async (id: number) => {
     return await request(`/fleet/expirations/${id}`, {
-      method: 'DELETE'
-    });
-  },
-
-  deleteUser: async (username: string) => {
-    return await request(`/admin/users/${encodeURIComponent(username)}`, {
       method: 'DELETE'
     });
   },

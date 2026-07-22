@@ -56,7 +56,7 @@ export default function UnifiedReportsDashboard({
   financialReport
 }: UnifiedReportsDashboardProps) {
   const confirm = useConfirm();
-  const [activeTab, setActiveTab] = useState<'finanzas' | 'zonas' | 'caja_semanal' | 'crm' | 'arca'>('finanzas');
+  const [activeTab, setActiveTab] = useState<'finanzas' | 'rentabilidad' | 'zonas' | 'caja_semanal' | 'crm' | 'arca'>('finanzas');
 
   // Estados para reporte financiero con filtros mensuales
   const [reportYear, setReportYear] = useState<number>(new Date().getFullYear());
