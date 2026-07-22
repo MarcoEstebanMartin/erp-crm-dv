@@ -1,7 +1,9 @@
 import { Router } from 'express';
 import {
   getFinancialReports,
+  getProfitabilityReport,
   getAuditLogs,
+  getDocumentAuditLogs,
   getUsers,
   createUser,
   toggleUserStatus,
@@ -33,11 +35,15 @@ import {
 
 const router = Router();
 
-// Todas las rutas en este archivo requieren autenticación y rol ADMINISTRADOR
+// Ruta de auditoría de documento (para cualquier usuario autenticado)
+router.get('/audit-logs/document/:entityType/:entityId', authenticateJWT, getDocumentAuditLogs);
+
+// Todas las rutas siguientes requieren autenticación y rol ADMINISTRADOR
 router.use(authenticateJWT);
 router.use(requireRole([Role.ADMIN]));
 
 router.get('/reports', getFinancialReports);
+router.get('/reports/profitability', getProfitabilityReport);
 router.get('/reports/zones', getZoneReports);
 router.get('/reports/weekly', getWeeklyReports);
 router.get('/reports/weekly/suggested-credit', getSuggestedCredit);

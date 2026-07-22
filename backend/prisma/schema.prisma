@@ -368,18 +368,21 @@ model Transaction {
 }
 
 model AuditLog {
-  id         Int      @id @default(autoincrement())
-  userId     Int
-  user       User     @relation(fields: [userId], references: [id])
-  action     String // ej. "UPDATE_PRODUCT", "CREATE_ORDER", "ADJUST_STOCK"
-  entityType String // ej. "Product", "Order"
-  entityId   Int
-  oldValues  Json?
-  newValues  Json?
-  ipAddress  String?
-  createdAt  DateTime @default(now())
+  id           Int      @id @default(autoincrement())
+  userId       Int
+  user         User     @relation(fields: [userId], references: [id])
+  action       String // ej. "UPDATE_PRODUCT", "CREATE_ORDER", "ADJUST_STOCK"
+  entityType   String // ej. "Product", "Order"
+  entityId     Int
+  oldValues    Json?
+  newValues    Json?
+  status       String   @default("SUCCESS") // "SUCCESS" | "ERROR" | "WARNING"
+  errorMessage String?  @db.Text
+  ipAddress    String?
+  createdAt    DateTime @default(now())
 
   @@index([userId])
+  @@index([entityType, entityId])
   @@index([createdAt])
 }
 

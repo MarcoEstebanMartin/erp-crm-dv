@@ -404,6 +404,32 @@ export const api = {
   },
 
   // --- ADMINISTRADOR ---
+  getDocumentAuditLogs: async (entityType: string, entityId: number) => {
+    const res = await request(`/admin/audit-logs/document/${entityType}/${entityId}`);
+    return res.logs;
+  },
+
+  getProfitabilityReport: async (params?: {
+    startDate?: string;
+    endDate?: string;
+    sellerId?: number;
+    city?: string;
+    rubroId?: number;
+    billingType?: string;
+  }) => {
+    const query = new URLSearchParams();
+    if (params?.startDate) query.append('startDate', params.startDate);
+    if (params?.endDate) query.append('endDate', params.endDate);
+    if (params?.sellerId) query.append('sellerId', String(params.sellerId));
+    if (params?.city) query.append('city', params.city);
+    if (params?.rubroId) query.append('rubroId', String(params.rubroId));
+    if (params?.billingType) query.append('billingType', params.billingType);
+
+    const queryString = query.toString();
+    const url = `/admin/reports/profitability${queryString ? `?${queryString}` : ''}`;
+    return await request(url);
+  },
+
   getFinancialReports: async (year?: number, month?: number) => {
     let path = '/admin/reports';
     if (year && month) {

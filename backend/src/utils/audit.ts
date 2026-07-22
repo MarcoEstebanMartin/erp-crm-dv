@@ -7,6 +7,8 @@ interface AuditLogParams {
   entityId: number;
   oldValues?: any;
   newValues?: any;
+  status?: 'SUCCESS' | 'ERROR' | 'WARNING';
+  errorMessage?: string | null;
   ipAddress?: string | null;
 }
 
@@ -20,6 +22,8 @@ export async function logAudit({
   entityId,
   oldValues = null,
   newValues = null,
+  status = 'SUCCESS',
+  errorMessage = null,
   ipAddress = null,
 }: AuditLogParams): Promise<void> {
   try {
@@ -31,13 +35,13 @@ export async function logAudit({
         entityId,
         oldValues: oldValues ? JSON.parse(JSON.stringify(oldValues)) : null,
         newValues: newValues ? JSON.parse(JSON.stringify(newValues)) : null,
+        status,
+        errorMessage,
         ipAddress,
       },
     });
-    console.log(`[AUDIT LOG] ${action} registrado por usuario ${userId} para la entidad ${entityType} ID ${entityId}`);
+    console.log(`[AUDIT LOG] [${status}] ${action} registrado por usuario ${userId} para ${entityType} ID ${entityId}`);
   } catch (error) {
     console.error('❌ Error registrando log de auditoría:', error);
-    // En sistemas ultra críticos, se podría arrojar el error. 
-    // Aquí registramos la falla en consola para evitar bloquear el flujo principal.
   }
 }

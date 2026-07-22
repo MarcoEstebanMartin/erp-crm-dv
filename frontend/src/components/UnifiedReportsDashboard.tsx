@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import CrmDashboard from './CrmDashboard';
 import AfipExportDashboard from '../pages/AfipExportDashboard';
+import ProfitabilityTab from './ProfitabilityTab';
 import { useConfirm } from '../context/ConfirmContext';
 
 const normalizeString = (str: string | null | undefined): string => {
@@ -531,6 +532,7 @@ export default function UnifiedReportsDashboard({
       <div style={{ display: 'flex', gap: '8px', marginBottom: '24px', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
         {[
           { id: 'finanzas', label: 'Resumen Financiero', icon: <DollarSign size={16} /> },
+          { id: 'rentabilidad', label: 'Rentabilidad', icon: <TrendingUp size={16} /> },
           { id: 'zonas', label: 'Análisis de Zonas', icon: <MapPin size={16} /> },
           { id: 'caja_semanal', label: 'Caja Semanal Consolidada', icon: <Calendar size={16} /> },
           { id: 'crm', label: 'Alertas + IA', icon: <Sparkles size={16} /> },
@@ -725,7 +727,10 @@ export default function UnifiedReportsDashboard({
         </div>
       )}
 
-      {/* 2. VENDEDORES (Removido e integrado en Análisis de Zonas) */}
+      {/* 2. RENTABILIDAD */}
+      {activeTab === 'rentabilidad' && (
+        <ProfitabilityTab />
+      )}
 
       {/* 3. ZONAS */}
       {activeTab === 'zonas' && (

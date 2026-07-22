@@ -278,4 +278,38 @@ export async function syncBalances(req: AuthenticatedRequest, res: Response): Pr
   }
 }
 
+/**
+ * Obtener logs de auditoría de un documento específico (Factura, Nota de Crédito, Recibo).
+ */
+export async function getDocumentAuditLogs(req: AuthenticatedRequest, res: Response): Promise<void> {
+  const { entityType, entityId } = req.params;
+  try {
+    const logs = await adminService.getDocumentAuditLogs(String(entityType), Number(entityId));
+    res.status(200).json({ status: 'success', data: { logs } });
+  } catch (error: any) {
+    res.status(500).json({ status: 'error', message: 'Error al obtener la auditoría del documento.' });
+  }
+}
+
+/**
+ * Obtener reporte de rentabilidad por clientes y productos.
+ */
+export async function getProfitabilityReport(req: AuthenticatedRequest, res: Response): Promise<void> {
+  const { startDate, endDate, sellerId, city, rubroId, billingType } = req.query;
+  try {
+    const report = await adminService.getProfitabilityReport({
+      startDate: startDate ? String(startDate) : undefined,
+      endDate: endDate ? String(endDate) : undefined,
+      sellerId: sellerId ? Number(sellerId) : undefined,
+      city: city ? String(city) : undefined,
+      rubroId: rubroId ? Number(rubroId) : undefined,
+      billingType: billingType ? String(billingType) : undefined,
+    });
+    res.status(200).json({ status: 'success', data: report });
+  } catch (error: any) {
+    console.error('Error al generar reporte de rentabilidad:', error);
+    res.status(500).json({ status: 'error', message: 'Error al generar el reporte de rentabilidad.' });
+  }
+}
+
 
