@@ -13,6 +13,7 @@ import EditOrderModal from './modals/EditOrderModal';
 import ProductModal from './modals/ProductModal';
 import ClientModal from './modals/ClientModal';
 import OffersDashboard from './admin/OffersDashboard';
+import HrDashboard from './HrDashboard';
 import ImportZipModal from './modals/ImportZipModal';
 import { useConfirm } from '../context/ConfirmContext';
 import type { Product, User, Persona, Order, Rubro, SaleRoute } from '../types';
@@ -1516,6 +1517,11 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
       )}
 
 
+
+      {/* ====================================================================
+          RECURSOS HUMANOS Y NOMINA
+          ==================================================================== */}
+      {activeTab === 'rrhh' && <HrDashboard />}
 
       {/* ====================================================================
           10. CONFIGURACIÓN UNIFICADA (General, Empresa, Impresión, Empleados, CRM, Auditoría)

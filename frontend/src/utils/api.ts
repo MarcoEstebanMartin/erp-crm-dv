@@ -1213,6 +1213,108 @@ export const api = {
       body: JSON.stringify({ items })
     });
     return res;
+  },
+
+  // --- RECURSOS HUMANOS Y NOMINA (RRHH) ---
+  getEmployees: async (filters?: { department?: string; position?: string; active?: boolean; search?: string }) => {
+    const params = new URLSearchParams();
+    if (filters?.department) params.append('department', filters.department);
+    if (filters?.position) params.append('position', filters.position);
+    if (filters?.active !== undefined) params.append('active', String(filters.active));
+    if (filters?.search) params.append('search', filters.search);
+    return await request(`/hr/employees?${params.toString()}`);
+  },
+
+  getEmployeeById: async (id: number) => {
+    return await request(`/hr/employees/${id}`);
+  },
+
+  createEmployee: async (data: any) => {
+    return await request('/hr/employees', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  },
+
+  updateEmployee: async (id: number, data: any) => {
+    return await request(`/hr/employees/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    });
+  },
+
+  deleteEmployee: async (id: number) => {
+    return await request(`/hr/employees/${id}`, {
+      method: 'DELETE'
+    });
+  },
+
+  getAdvances: async (filters?: { employeeId?: number; status?: string }) => {
+    const params = new URLSearchParams();
+    if (filters?.employeeId) params.append('employeeId', String(filters.employeeId));
+    if (filters?.status) params.append('status', filters.status);
+    return await request(`/hr/advances?${params.toString()}`);
+  },
+
+  createAdvance: async (data: { employeeId: number; amount: number; reason?: string; paymentMethod: string; cashDrawerId?: number; bankAccountId?: number }) => {
+    return await request('/hr/advances', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  },
+
+  calculatePayroll: async (employeeId: number, periodMonth: number, periodYear: number) => {
+    return await request(`/hr/payrolls/calculate?employeeId=${employeeId}&periodMonth=${periodMonth}&periodYear=${periodYear}`);
+  },
+
+  getPayrolls: async (filters?: { periodMonth?: number; periodYear?: number; employeeId?: number }) => {
+    const params = new URLSearchParams();
+    if (filters?.periodMonth) params.append('periodMonth', String(filters.periodMonth));
+    if (filters?.periodYear) params.append('periodYear', String(filters.periodYear));
+    if (filters?.employeeId) params.append('employeeId', String(filters.employeeId));
+    return await request(`/hr/payrolls?${params.toString()}`);
+  },
+
+  createPayroll: async (data: any) => {
+    return await request('/hr/payrolls', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  },
+
+  getVacations: async (filters?: { employeeId?: number; year?: number; status?: string }) => {
+    const params = new URLSearchParams();
+    if (filters?.employeeId) params.append('employeeId', String(filters.employeeId));
+    if (filters?.year) params.append('year', String(filters.year));
+    if (filters?.status) params.append('status', filters.status);
+    return await request(`/hr/vacations?${params.toString()}`);
+  },
+
+  createVacation: async (data: any) => {
+    return await request('/hr/vacations', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  },
+
+  updateVacationStatus: async (id: number, status: string) => {
+    return await request(`/hr/vacations/${id}/status`, {
+      method: 'PUT',
+      body: JSON.stringify({ status })
+    });
+  },
+
+  getDocuments: async (filters?: { employeeId?: number }) => {
+    const params = new URLSearchParams();
+    if (filters?.employeeId) params.append('employeeId', String(filters.employeeId));
+    return await request(`/hr/documents?${params.toString()}`);
+  },
+
+  createDocument: async (data: any) => {
+    return await request('/hr/documents', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
   }
 };
 

@@ -16,7 +16,8 @@ import {
   MapPin,
   ChevronDown,
   ChevronRight,
-  Tag
+  Tag,
+  Briefcase
 } from 'lucide-react';
 import { api } from '../utils/api';
 
@@ -78,6 +79,7 @@ export default function Sidebar({ username, role, activeTab, setActiveTab, onLog
           { id: 'compras', label: 'Proveedores', icon: <Receipt size={18} /> },
           { id: 'offers', label: 'Gestor de Ofertas', icon: <Tag size={18} /> },
           { id: 'rendiciones', label: 'Finanzas', icon: <DollarSign size={18} /> },
+          { id: 'rrhh', label: 'Recursos Humanos', icon: <Briefcase size={18} /> },
           { id: 'reportes', label: 'Reportes y Analíticas', icon: <TrendingUp size={18} /> },
           { id: 'config', label: 'Configuración', icon: <Settings size={18} /> },
         ];
@@ -100,6 +102,7 @@ export default function Sidebar({ username, role, activeTab, setActiveTab, onLog
           { id: 'products', label: 'Productos', icon: <Package size={18} /> },
           { id: 'compras', label: 'Proveedores', icon: <Receipt size={18} /> },
           { id: 'rendiciones', label: 'Finanzas', icon: <DollarSign size={18} /> },
+          { id: 'rrhh', label: 'Recursos Humanos', icon: <Briefcase size={18} /> },
         ];
       case 'VENDEDOR':
         return [
