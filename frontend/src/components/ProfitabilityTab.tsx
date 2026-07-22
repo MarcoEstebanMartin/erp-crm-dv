@@ -5,12 +5,8 @@ import {
   DollarSign, 
   Users, 
   Package, 
-  AlertTriangle, 
   Sparkles, 
   Filter, 
-  ArrowUpRight, 
-  ArrowDownRight, 
-  BarChart3,
   Award,
   Layers
 } from 'lucide-react';
@@ -126,17 +122,17 @@ export const ProfitabilityTab: React.FC<ProfitabilityTabProps> = ({ sellers = []
   );
 
   return (
-    <div className="space-y-6 fade-in text-gray-900">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       {/* BARRA DE FILTROS Y CONTROLES */}
-      <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
-        <div className="flex flex-wrap items-center justify-between gap-4 mb-3 pb-3 border-b border-gray-100">
-          <div className="flex items-center gap-2">
-            <Filter className="w-4 h-4 text-gray-500" />
-            <h3 className="text-sm font-semibold text-gray-900">Filtros de Análisis</h3>
+      <div className="card" style={{ padding: '16px 20px', backgroundColor: '#ffffff', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', marginBottom: '14px', paddingBottom: '12px', borderBottom: '1px solid #f1f5f9' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 600, fontSize: '0.92rem', color: 'var(--text-primary)' }}>
+            <Filter size={16} color="var(--text-secondary)" />
+            <span>Filtros de Análisis</span>
           </div>
 
           {/* Preset de Fechas */}
-          <div className="flex items-center gap-1.5 bg-gray-50 p-1 rounded-lg border border-gray-200 text-xs">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', backgroundColor: '#f8fafc', padding: '3px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
             {[
               { id: 'THIS_MONTH', label: 'Este Mes' },
               { id: 'LAST_MONTH', label: 'Mes Anterior' },
@@ -146,12 +142,19 @@ export const ProfitabilityTab: React.FC<ProfitabilityTabProps> = ({ sellers = []
             ].map((p) => (
               <button
                 key={p.id}
+                type="button"
                 onClick={() => setDatePreset(p.id)}
-                className={`px-2.5 py-1 rounded-md transition-all ${
-                  datePreset === p.id
-                    ? 'bg-gray-900 text-white font-medium shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
+                style={{
+                  padding: '4px 10px',
+                  fontSize: '0.78rem',
+                  borderRadius: '4px',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontWeight: datePreset === p.id ? 600 : 500,
+                  backgroundColor: datePreset === p.id ? '#1e293b' : 'transparent',
+                  color: datePreset === p.id ? '#ffffff' : 'var(--text-secondary)',
+                  transition: 'all 0.15s ease'
+                }}
               >
                 {p.label}
               </button>
@@ -159,40 +162,43 @@ export const ProfitabilityTab: React.FC<ProfitabilityTabProps> = ({ sellers = []
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3 text-xs">
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '12px' }}>
           {/* Fechas personalizadas */}
-          <div>
-            <label className="text-gray-500 block mb-1 font-medium">Desde</label>
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <label style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>Desde</label>
             <input
               type="date"
+              className="input"
               value={startDate}
               onChange={(e) => {
                 setDatePreset('CUSTOM');
                 setStartDate(e.target.value);
               }}
-              className="w-full bg-white border border-gray-300 rounded-lg px-2.5 py-1.5 text-gray-900 focus:outline-none focus:border-gray-500 focus:ring-1 focus:ring-gray-500"
+              style={{ padding: '6px 10px', fontSize: '0.84rem' }}
             />
           </div>
-          <div>
-            <label className="text-gray-500 block mb-1 font-medium">Hasta</label>
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <label style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>Hasta</label>
             <input
               type="date"
+              className="input"
               value={endDate}
               onChange={(e) => {
                 setDatePreset('CUSTOM');
                 setEndDate(e.target.value);
               }}
-              className="w-full bg-white border border-gray-300 rounded-lg px-2.5 py-1.5 text-gray-900 focus:outline-none focus:border-gray-500 focus:ring-1 focus:ring-gray-500"
+              style={{ padding: '6px 10px', fontSize: '0.84rem' }}
             />
           </div>
 
           {/* Vendedor */}
-          <div>
-            <label className="text-gray-500 block mb-1 font-medium">Vendedor</label>
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <label style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>Vendedor</label>
             <select
+              className="select"
               value={selectedSeller}
               onChange={(e) => setSelectedSeller(e.target.value)}
-              className="w-full bg-white border border-gray-300 rounded-lg px-2.5 py-1.5 text-gray-900 focus:outline-none focus:border-gray-500 focus:ring-1 focus:ring-gray-500"
+              style={{ padding: '6px 10px', fontSize: '0.84rem' }}
             >
               <option value="">Todos los vendedores</option>
               {sellerOptions.map((s) => (
@@ -202,12 +208,13 @@ export const ProfitabilityTab: React.FC<ProfitabilityTabProps> = ({ sellers = []
           </div>
 
           {/* Rubro */}
-          <div>
-            <label className="text-gray-500 block mb-1 font-medium">Rubro de Producto</label>
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <label style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>Rubro de Producto</label>
             <select
+              className="select"
               value={selectedRubro}
               onChange={(e) => setSelectedRubro(e.target.value)}
-              className="w-full bg-white border border-gray-300 rounded-lg px-2.5 py-1.5 text-gray-900 focus:outline-none focus:border-gray-500 focus:ring-1 focus:ring-gray-500"
+              style={{ padding: '6px 10px', fontSize: '0.84rem' }}
             >
               <option value="">Todos los rubros</option>
               {rubroOptions.map((r) => (
@@ -217,12 +224,13 @@ export const ProfitabilityTab: React.FC<ProfitabilityTabProps> = ({ sellers = []
           </div>
 
           {/* Tipo Facturación */}
-          <div>
-            <label className="text-gray-500 block mb-1 font-medium">Tipo Facturación</label>
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <label style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>Tipo Facturación</label>
             <select
+              className="select"
               value={selectedBillingType}
               onChange={(e) => setSelectedBillingType(e.target.value)}
-              className="w-full bg-white border border-gray-300 rounded-lg px-2.5 py-1.5 text-gray-900 focus:outline-none focus:border-gray-500 focus:ring-1 focus:ring-gray-500"
+              style={{ padding: '6px 10px', fontSize: '0.84rem' }}
             >
               <option value="ALL">Todas (Oficial + Interno)</option>
               <option value="OFFICIAL">Solo Oficial (Factura A/B)</option>
@@ -234,130 +242,164 @@ export const ProfitabilityTab: React.FC<ProfitabilityTabProps> = ({ sellers = []
 
       {/* TARJETAS DE KPIS PRINCIPALES */}
       {loading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
           {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="bg-white border border-gray-200 rounded-xl p-4 h-24 animate-pulse" />
+            <div key={i} className="card" style={{ height: '90px', backgroundColor: '#ffffff', borderRadius: '8px', opacity: 0.6 }} />
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
           {/* KPI 1: Ganancia Bruta Real */}
-          <div className="bg-white border border-gray-200 rounded-xl p-4 relative overflow-hidden group hover:border-gray-300 shadow-sm transition-all">
-            <div className="flex justify-between items-start mb-2">
-              <span className="text-xs font-medium text-gray-500">Margen Bruto Total</span>
-              <span className="p-1.5 bg-emerald-50 text-emerald-600 rounded-lg">
-                <TrendingUp className="w-4 h-4" />
+          <div className="card" style={{ padding: '16px', backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+              <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', fontWeight: 500 }}>Margen Bruto Total</span>
+              <span style={{ padding: '6px', backgroundColor: '#ecfdf5', borderRadius: '6px', color: '#047857', display: 'flex', alignItems: 'center' }}>
+                <TrendingUp size={16} />
               </span>
             </div>
-            <div className="text-2xl font-bold text-gray-900">
+            <div style={{ fontSize: '1.35rem', fontWeight: 700, color: 'var(--text-primary)', fontFamily: 'monospace' }}>
               {formatCurrency(kpis?.totalGrossProfit || 0)}
             </div>
-            <div className="flex items-center gap-1.5 mt-2 text-xs">
-              <span className="font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '8px', fontSize: '0.78rem' }}>
+              <span style={{ backgroundColor: '#ecfdf5', color: '#047857', fontWeight: 700, padding: '2px 6px', borderRadius: '4px', border: '1px solid #a7f3d0' }}>
                 {kpis?.overallMarginPercent || 0}%
               </span>
-              <span className="text-gray-500">margen promedio real</span>
+              <span style={{ color: 'var(--text-muted)' }}>margen promedio real</span>
             </div>
           </div>
 
           {/* KPI 2: Facturación vs Costos */}
-          <div className="bg-white border border-gray-200 rounded-xl p-4 relative overflow-hidden group hover:border-gray-300 shadow-sm transition-all">
-            <div className="flex justify-between items-start mb-2">
-              <span className="text-xs font-medium text-gray-500">Facturación vs. Costos</span>
-              <span className="p-1.5 bg-blue-50 text-blue-600 rounded-lg">
-                <DollarSign className="w-4 h-4" />
+          <div className="card" style={{ padding: '16px', backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+              <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', fontWeight: 500 }}>Facturación vs. Costos</span>
+              <span style={{ padding: '6px', backgroundColor: '#eff6ff', borderRadius: '6px', color: '#1d4ed8', display: 'flex', alignItems: 'center' }}>
+                <DollarSign size={16} />
               </span>
             </div>
-            <div className="text-2xl font-bold text-gray-900">
+            <div style={{ fontSize: '1.35rem', fontWeight: 700, color: 'var(--text-primary)', fontFamily: 'monospace' }}>
               {formatCurrency(kpis?.totalRevenue || 0)}
             </div>
-            <div className="text-xs text-gray-500 mt-2">
-              Costo mercadería: <span className="font-medium text-gray-700">{formatCurrency(kpis?.totalCost || 0)}</span>
+            <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '8px' }}>
+              Costo mercadería: <strong style={{ color: 'var(--text-primary)', fontFamily: 'monospace' }}>{formatCurrency(kpis?.totalCost || 0)}</strong>
             </div>
           </div>
 
           {/* KPI 3: Cliente Top */}
-          <div className="bg-white border border-gray-200 rounded-xl p-4 relative overflow-hidden group hover:border-gray-300 shadow-sm transition-all">
-            <div className="flex justify-between items-start mb-2">
-              <span className="text-xs font-medium text-gray-500">Cliente N° 1 en Ganancia</span>
-              <span className="p-1.5 bg-amber-50 text-amber-600 rounded-lg">
-                <Award className="w-4 h-4" />
+          <div className="card" style={{ padding: '16px', backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+              <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', fontWeight: 500 }}>Cliente N° 1 en Ganancia</span>
+              <span style={{ padding: '6px', backgroundColor: '#fffbe6', borderRadius: '6px', color: '#d97706', display: 'flex', alignItems: 'center' }}>
+                <Award size={16} />
               </span>
             </div>
-            <div className="text-base font-bold text-gray-900 truncate">
+            <div style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {kpis?.topClient?.businessName || 'Sin datos'}
             </div>
-            <div className="flex items-center justify-between text-xs text-gray-500 mt-2">
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '8px' }}>
               <span>{kpis?.topClient ? formatCurrency(kpis.topClient.grossProfit) : '$ 0'} ganancia</span>
-              <span className="text-emerald-600 font-semibold">{kpis?.topClient?.marginPercent || 0}%</span>
+              <span style={{ color: '#047857', fontWeight: 700 }}>{kpis?.topClient?.marginPercent || 0}%</span>
             </div>
           </div>
 
           {/* KPI 4: Producto Estrella */}
-          <div className="bg-white border border-gray-200 rounded-xl p-4 relative overflow-hidden group hover:border-gray-300 shadow-sm transition-all">
-            <div className="flex justify-between items-start mb-2">
-              <span className="text-xs font-medium text-gray-500">Producto N° 1 Estrella</span>
-              <span className="p-1.5 bg-purple-50 text-purple-600 rounded-lg">
-                <Sparkles className="w-4 h-4" />
+          <div className="card" style={{ padding: '16px', backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+              <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', fontWeight: 500 }}>Producto N° 1 Estrella</span>
+              <span style={{ padding: '6px', backgroundColor: '#faf5ff', borderRadius: '6px', color: '#7e22ce', display: 'flex', alignItems: 'center' }}>
+                <Sparkles size={16} />
               </span>
             </div>
-            <div className="text-base font-bold text-gray-900 truncate">
+            <div style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {kpis?.topProduct?.name || 'Sin datos'}
             </div>
-            <div className="flex items-center justify-between text-xs text-gray-500 mt-2">
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '8px' }}>
               <span>{kpis?.topProduct ? formatCurrency(kpis.topProduct.grossProfit) : '$ 0'} ganancia</span>
-              <span className="text-purple-600 font-semibold">{kpis?.topProduct?.marginPercent || 0}%</span>
+              <span style={{ color: '#7e22ce', fontWeight: 700 }}>{kpis?.topProduct?.marginPercent || 0}%</span>
             </div>
           </div>
         </div>
       )}
 
       {/* NAVEGACIÓN DE SUB-VISTAS Y BÚSQUEDA */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 bg-gray-50 p-2 rounded-xl border border-gray-200">
-        <div className="flex items-center gap-1 bg-white p-1 rounded-lg border border-gray-200 text-xs shadow-sm">
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', backgroundColor: '#f8fafc', padding: '8px 12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
           <button
+            type="button"
             onClick={() => setSubView('clients')}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-md font-medium transition-all ${
-              subView === 'clients'
-                ? 'bg-gray-900 text-white shadow-sm'
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
+            style={{
+              padding: '6px 12px',
+              fontSize: '0.82rem',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              border: '1px solid',
+              backgroundColor: subView === 'clients' ? '#1e293b' : '#ffffff',
+              color: subView === 'clients' ? '#ffffff' : 'var(--text-secondary)',
+              borderColor: subView === 'clients' ? '#1e293b' : '#cbd5e1',
+              fontWeight: subView === 'clients' ? 600 : 500,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              transition: 'all 0.15s ease'
+            }}
           >
-            <Users className="w-3.5 h-3.5" />
-            Clientes más Rentables ({reportData?.clients?.length || 0})
+            <Users size={14} />
+            <span>Clientes más Rentables ({reportData?.clients?.length || 0})</span>
           </button>
           <button
+            type="button"
             onClick={() => setSubView('products')}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-md font-medium transition-all ${
-              subView === 'products'
-                ? 'bg-gray-900 text-white shadow-sm'
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
+            style={{
+              padding: '6px 12px',
+              fontSize: '0.82rem',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              border: '1px solid',
+              backgroundColor: subView === 'products' ? '#1e293b' : '#ffffff',
+              color: subView === 'products' ? '#ffffff' : 'var(--text-secondary)',
+              borderColor: subView === 'products' ? '#1e293b' : '#cbd5e1',
+              fontWeight: subView === 'products' ? 600 : 500,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              transition: 'all 0.15s ease'
+            }}
           >
-            <Package className="w-3.5 h-3.5" />
-            Productos más Rentables ({reportData?.products?.length || 0})
+            <Package size={14} />
+            <span>Productos más Rentables ({reportData?.products?.length || 0})</span>
           </button>
           <button
+            type="button"
             onClick={() => setSubView('matrix')}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-md font-medium transition-all ${
-              subView === 'matrix'
-                ? 'bg-gray-900 text-white shadow-sm'
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
+            style={{
+              padding: '6px 12px',
+              fontSize: '0.82rem',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              border: '1px solid',
+              backgroundColor: subView === 'matrix' ? '#1e293b' : '#ffffff',
+              color: subView === 'matrix' ? '#ffffff' : 'var(--text-secondary)',
+              borderColor: subView === 'matrix' ? '#1e293b' : '#cbd5e1',
+              fontWeight: subView === 'matrix' ? 600 : 500,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              transition: 'all 0.15s ease'
+            }}
           >
-            <Layers className="w-3.5 h-3.5 text-amber-500" />
-            Matriz de Rentabilidad
+            <Layers size={14} color={subView === 'matrix' ? '#f59e0b' : '#d97706'} />
+            <span>Matriz de Rentabilidad</span>
           </button>
         </div>
 
         {subView !== 'matrix' && (
-          <div className="relative">
+          <div style={{ minWidth: '220px' }}>
             <input
               type="text"
+              className="input"
               placeholder={subView === 'clients' ? "Buscar cliente o localidad..." : "Buscar producto por SKU o nombre..."}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="bg-white border border-gray-300 rounded-lg px-3 py-1.5 text-xs text-gray-900 placeholder-gray-400 focus:outline-none focus:border-gray-500 w-full sm:w-64"
+              style={{ padding: '6px 10px', fontSize: '0.82rem', width: '100%' }}
             />
           </div>
         )}
@@ -365,230 +407,226 @@ export const ProfitabilityTab: React.FC<ProfitabilityTabProps> = ({ sellers = []
 
       {/* TABLA 1: CLIENTES MÁS RENTABLES */}
       {subView === 'clients' && (
-        <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs text-gray-700">
-              <thead className="bg-gray-50 border-b border-gray-200 text-gray-500 uppercase font-semibold">
+        <div className="table-container" style={{ margin: 0, border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.84rem' }}>
+            <thead style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+              <tr>
+                <th style={{ padding: '10px 12px', width: '40px', textAlign: 'center', fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-secondary)', fontWeight: 600 }}>#</th>
+                <th style={{ padding: '10px 12px', fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-secondary)', fontWeight: 600 }}>Cliente</th>
+                <th style={{ padding: '10px 12px', fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-secondary)', fontWeight: 600 }}>Localidad</th>
+                <th style={{ padding: '10px 12px', fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-secondary)', fontWeight: 600 }}>Vendedor</th>
+                <th style={{ padding: '10px 12px', textAlign: 'right', fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-secondary)', fontWeight: 600 }}>Facturación ($)</th>
+                <th style={{ padding: '10px 12px', textAlign: 'right', fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-secondary)', fontWeight: 600 }}>Costo ($)</th>
+                <th style={{ padding: '10px 12px', textAlign: 'right', fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-primary)', fontWeight: 700 }}>Margen Bruto ($)</th>
+                <th style={{ padding: '10px 12px', textAlign: 'center', fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-primary)', fontWeight: 700 }}>Margen (%)</th>
+                <th style={{ padding: '10px 12px', textAlign: 'right', fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-secondary)', fontWeight: 600 }}>Ticket Prom.</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredClients.length === 0 ? (
                 <tr>
-                  <th className="py-3 px-4 w-12 text-center">#</th>
-                  <th className="py-3 px-4">Cliente</th>
-                  <th className="py-3 px-4">Localidad</th>
-                  <th className="py-3 px-4">Vendedor</th>
-                  <th className="py-3 px-4 text-right">Facturación ($)</th>
-                  <th className="py-3 px-4 text-right">Costo ($)</th>
-                  <th className="py-3 px-4 text-right font-bold text-gray-900">Margen Bruto ($)</th>
-                  <th className="py-3 px-4 text-center font-bold">Margen (%)</th>
-                  <th className="py-3 px-4 text-right">Ticket Prom.</th>
+                  <td colSpan={9} style={{ padding: '32px 12px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                    No se encontraron clientes para los filtros seleccionados.
+                  </td>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {filteredClients.length === 0 ? (
-                  <tr>
-                    <td colSpan={9} className="py-8 text-center text-gray-500">
-                      No se encontraron clientes para los filtros seleccionados.
+              ) : (
+                filteredClients.map((client: any, idx: number) => (
+                  <tr key={client.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                    <td style={{ padding: '10px 12px', textAlign: 'center', fontFamily: 'monospace', color: 'var(--text-muted)' }}>
+                      {idx + 1}
+                    </td>
+                    <td style={{ padding: '10px 12px', fontWeight: 600, color: 'var(--text-primary)' }}>
+                      {client.businessName}
+                    </td>
+                    <td style={{ padding: '10px 12px', color: 'var(--text-secondary)' }}>
+                      {client.city}
+                    </td>
+                    <td style={{ padding: '10px 12px', color: 'var(--text-secondary)' }}>
+                      {client.sellerName}
+                    </td>
+                    <td style={{ padding: '10px 12px', textAlign: 'right', fontFamily: 'monospace' }}>
+                      {formatCurrency(client.totalRevenue)}
+                    </td>
+                    <td style={{ padding: '10px 12px', textAlign: 'right', fontFamily: 'monospace', color: 'var(--text-muted)' }}>
+                      {formatCurrency(client.totalCost)}
+                    </td>
+                    <td style={{ padding: '10px 12px', textAlign: 'right', fontFamily: 'monospace', fontWeight: 700, color: '#047857' }}>
+                      {formatCurrency(client.grossProfit)}
+                    </td>
+                    <td style={{ padding: '10px 12px', textAlign: 'center' }}>
+                      <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: '12px', backgroundColor: '#ecfdf5', color: '#047857', border: '1px solid #a7f3d0', fontWeight: 700, fontFamily: 'monospace', fontSize: '0.78rem' }}>
+                        {client.marginPercent}%
+                      </span>
+                    </td>
+                    <td style={{ padding: '10px 12px', textAlign: 'right', fontFamily: 'monospace' }}>
+                      {formatCurrency(client.averageTicket)}
                     </td>
                   </tr>
-                ) : (
-                  filteredClients.map((client: any, idx: number) => (
-                    <tr key={client.id} className="hover:bg-gray-50 transition-colors">
-                      <td className="py-3 px-4 text-center font-mono text-gray-400 font-medium">
-                        {idx + 1}
-                      </td>
-                      <td className="py-3 px-4 font-semibold text-gray-900">
-                        {client.businessName}
-                      </td>
-                      <td className="py-3 px-4 text-gray-500">
-                        {client.city}
-                      </td>
-                      <td className="py-3 px-4 text-gray-500">
-                        {client.sellerName}
-                      </td>
-                      <td className="py-3 px-4 text-right font-mono text-gray-900">
-                        {formatCurrency(client.totalRevenue)}
-                      </td>
-                      <td className="py-3 px-4 text-right font-mono text-gray-500">
-                        {formatCurrency(client.totalCost)}
-                      </td>
-                      <td className="py-3 px-4 text-right font-mono font-bold text-emerald-600">
-                        {formatCurrency(client.grossProfit)}
-                      </td>
-                      <td className="py-3 px-4 text-center">
-                        <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 font-semibold font-mono">
-                          {client.marginPercent}%
-                        </div>
-                      </td>
-                      <td className="py-3 px-4 text-right font-mono text-gray-700">
-                        {formatCurrency(client.averageTicket)}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
       )}
 
       {/* TABLA 2: PRODUCTOS MÁS RENTABLES */}
       {subView === 'products' && (
-        <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs text-gray-700">
-              <thead className="bg-gray-50 border-b border-gray-200 text-gray-500 uppercase font-semibold">
+        <div className="table-container" style={{ margin: 0, border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.84rem' }}>
+            <thead style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+              <tr>
+                <th style={{ padding: '10px 12px', width: '40px', textAlign: 'center', fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-secondary)', fontWeight: 600 }}>#</th>
+                <th style={{ padding: '10px 12px', fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-secondary)', fontWeight: 600 }}>SKU / Producto</th>
+                <th style={{ padding: '10px 12px', fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-secondary)', fontWeight: 600 }}>Rubro</th>
+                <th style={{ padding: '10px 12px', textAlign: 'right', fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-secondary)', fontWeight: 600 }}>Vendidos</th>
+                <th style={{ padding: '10px 12px', textAlign: 'right', fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-secondary)', fontWeight: 600 }}>Facturación ($)</th>
+                <th style={{ padding: '10px 12px', textAlign: 'right', fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-primary)', fontWeight: 700 }}>Margen Real ($)</th>
+                <th style={{ padding: '10px 12px', textAlign: 'center', fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-primary)', fontWeight: 700 }}>Margen Real (%)</th>
+                <th style={{ padding: '10px 12px', textAlign: 'center', fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-secondary)', fontWeight: 600 }}>Margen Obj. (%)</th>
+                <th style={{ padding: '10px 12px', textAlign: 'center', fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-secondary)', fontWeight: 600 }}>Estado</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredProducts.length === 0 ? (
                 <tr>
-                  <th className="py-3 px-4 w-12 text-center">#</th>
-                  <th className="py-3 px-4">SKU / Producto</th>
-                  <th className="py-3 px-4">Rubro</th>
-                  <th className="py-3 px-4 text-right">Vendidos</th>
-                  <th className="py-3 px-4 text-right">Facturación ($)</th>
-                  <th className="py-3 px-4 text-right font-bold text-gray-900">Margen Real ($)</th>
-                  <th className="py-3 px-4 text-center font-bold">Margen Real (%)</th>
-                  <th className="py-3 px-4 text-center">Margen Obj. (%)</th>
-                  <th className="py-3 px-4 text-center">Estado</th>
+                  <td colSpan={9} style={{ padding: '32px 12px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                    No se encontraron productos para los filtros seleccionados.
+                  </td>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {filteredProducts.length === 0 ? (
-                  <tr>
-                    <td colSpan={9} className="py-8 text-center text-gray-500">
-                      No se encontraron productos para los filtros seleccionados.
+              ) : (
+                filteredProducts.map((prod: any, idx: number) => (
+                  <tr key={prod.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                    <td style={{ padding: '10px 12px', textAlign: 'center', fontFamily: 'monospace', color: 'var(--text-muted)' }}>
+                      {idx + 1}
+                    </td>
+                    <td style={{ padding: '10px 12px' }}>
+                      <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{prod.name}</div>
+                      <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontFamily: 'monospace' }}>{prod.sku}</div>
+                    </td>
+                    <td style={{ padding: '10px 12px', color: 'var(--text-secondary)' }}>
+                      {prod.rubroName}
+                    </td>
+                    <td style={{ padding: '10px 12px', textAlign: 'right', fontFamily: 'monospace' }}>
+                      {prod.quantitySold}
+                    </td>
+                    <td style={{ padding: '10px 12px', textAlign: 'right', fontFamily: 'monospace' }}>
+                      {formatCurrency(prod.totalRevenue)}
+                    </td>
+                    <td style={{ padding: '10px 12px', textAlign: 'right', fontFamily: 'monospace', fontWeight: 700, color: '#7e22ce' }}>
+                      {formatCurrency(prod.grossProfit)}
+                    </td>
+                    <td style={{ padding: '10px 12px', textAlign: 'center' }}>
+                      <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: '4px', backgroundColor: '#faf5ff', color: '#7e22ce', border: '1px solid #e9d5ff', fontWeight: 700, fontFamily: 'monospace', fontSize: '0.78rem' }}>
+                        {prod.marginPercent}%
+                      </span>
+                    </td>
+                    <td style={{ padding: '10px 12px', textAlign: 'center', fontFamily: 'monospace', color: 'var(--text-muted)' }}>
+                      {prod.targetMargin}%
+                    </td>
+                    <td style={{ padding: '10px 12px', textAlign: 'center' }}>
+                      {prod.classification === 'STAR' && (
+                        <span style={{ padding: '2px 8px', borderRadius: '12px', backgroundColor: '#ecfdf5', color: '#047857', border: '1px solid #a7f3d0', fontSize: '0.72rem', fontWeight: 700 }}>
+                          ⭐ Estrella
+                        </span>
+                      )}
+                      {prod.classification === 'VOLUME' && (
+                        <span style={{ padding: '2px 8px', borderRadius: '12px', backgroundColor: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe', fontSize: '0.72rem', fontWeight: 700 }}>
+                          📦 Volumen
+                        </span>
+                      )}
+                      {prod.classification === 'OPPORTUNITY' && (
+                        <span style={{ padding: '2px 8px', borderRadius: '12px', backgroundColor: '#fffbe6', color: '#d97706', border: '1px solid #fef08a', fontSize: '0.72rem', fontWeight: 700 }}>
+                          💎 Oportunidad
+                        </span>
+                      )}
+                      {prod.classification === 'LOW_MARGIN' && (
+                        <span style={{ padding: '2px 8px', borderRadius: '12px', backgroundColor: '#fef2f2', color: '#e30613', border: '1px solid #fecaca', fontSize: '0.72rem', fontWeight: 700 }}>
+                          ⚠️ Margen Bajo
+                        </span>
+                      )}
                     </td>
                   </tr>
-                ) : (
-                  filteredProducts.map((prod: any, idx: number) => (
-                    <tr key={prod.id} className="hover:bg-gray-50 transition-colors">
-                      <td className="py-3 px-4 text-center font-mono text-gray-400 font-medium">
-                        {idx + 1}
-                      </td>
-                      <td className="py-3 px-4">
-                        <div className="font-semibold text-gray-900">{prod.name}</div>
-                        <div className="text-[10px] text-gray-400 font-mono">{prod.sku}</div>
-                      </td>
-                      <td className="py-3 px-4 text-gray-500">
-                        {prod.rubroName}
-                      </td>
-                      <td className="py-3 px-4 text-right font-mono text-gray-700">
-                        {prod.quantitySold}
-                      </td>
-                      <td className="py-3 px-4 text-right font-mono text-gray-900">
-                        {formatCurrency(prod.totalRevenue)}
-                      </td>
-                      <td className="py-3 px-4 text-right font-mono font-bold text-purple-600">
-                        {formatCurrency(prod.grossProfit)}
-                      </td>
-                      <td className="py-3 px-4 text-center">
-                        <span className="font-semibold font-mono text-purple-700 bg-purple-50 border border-purple-200 px-2 py-0.5 rounded">
-                          {prod.marginPercent}%
-                        </span>
-                      </td>
-                      <td className="py-3 px-4 text-center font-mono text-gray-500">
-                        {prod.targetMargin}%
-                      </td>
-                      <td className="py-3 px-4 text-center">
-                        {prod.classification === 'STAR' && (
-                          <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">
-                            ⭐ Estrella
-                          </span>
-                        )}
-                        {prod.classification === 'VOLUME' && (
-                          <span className="bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">
-                            📦 Volumen
-                          </span>
-                        )}
-                        {prod.classification === 'OPPORTUNITY' && (
-                          <span className="bg-amber-50 text-amber-700 border border-amber-200 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">
-                            💎 Oportunidad
-                          </span>
-                        )}
-                        {prod.classification === 'LOW_MARGIN' && (
-                          <span className="bg-red-50 text-[#E30613] border border-red-200 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">
-                            ⚠️ Margen Bajo
-                          </span>
-                        )}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
       )}
 
       {/* SUB-VISTA 3: MATRIZ DE CUADRANTES DE PRODUCTOS */}
       {subView === 'matrix' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '16px' }}>
           {/* Cuadrante 1: Estrellas */}
-          <div className="bg-emerald-50/40 border border-emerald-200 rounded-xl p-4">
-            <div className="flex items-center gap-2 mb-3 pb-2 border-b border-emerald-200/60">
-              <span className="text-base">⭐</span>
-              <h4 className="text-sm font-semibold text-emerald-800">Estrellas (Alto Margen + Alto Volumen)</h4>
+          <div style={{ backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', padding: '16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', paddingBottom: '8px', borderBottom: '1px solid #dcfce7', fontWeight: 600, color: '#166534', fontSize: '0.88rem' }}>
+              <span>⭐</span>
+              <span>Estrellas (Alto Margen + Alto Volumen)</span>
             </div>
-            <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '240px', overflowY: 'auto' }}>
               {(reportData?.products || []).filter((p: any) => p.classification === 'STAR').map((p: any) => (
-                <div key={p.id} className="flex justify-between items-center bg-white p-2.5 rounded-lg border border-emerald-100 text-xs shadow-sm">
+                <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#ffffff', padding: '8px 12px', borderRadius: '6px', border: '1px solid #dcfce7', fontSize: '0.82rem' }}>
                   <div>
-                    <span className="font-semibold text-gray-900 block">{p.name}</span>
-                    <span className="text-[10px] text-gray-500">Margen: <strong className="text-emerald-600">{p.marginPercent}%</strong></span>
+                    <strong style={{ display: 'block', color: 'var(--text-primary)' }}>{p.name}</strong>
+                    <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>Margen: <strong style={{ color: '#047857' }}>{p.marginPercent}%</strong></span>
                   </div>
-                  <span className="font-mono font-bold text-gray-900">{formatCurrency(p.grossProfit)}</span>
+                  <span style={{ fontFamily: 'monospace', fontWeight: 700, color: 'var(--text-primary)' }}>{formatCurrency(p.grossProfit)}</span>
                 </div>
               ))}
             </div>
           </div>
 
           {/* Cuadrante 2: Oportunidad */}
-          <div className="bg-amber-50/40 border border-amber-200 rounded-xl p-4">
-            <div className="flex items-center gap-2 mb-3 pb-2 border-b border-amber-200/60">
-              <span className="text-base">💎</span>
-              <h4 className="text-sm font-semibold text-amber-800">Oportunidades (Alto Margen + Bajo Volumen)</h4>
+          <div style={{ backgroundColor: '#fffbe6', border: '1px solid #fef08a', borderRadius: '8px', padding: '16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', paddingBottom: '8px', borderBottom: '1px solid #fef9c3', fontWeight: 600, color: '#854d0e', fontSize: '0.88rem' }}>
+              <span>💎</span>
+              <span>Oportunidades (Alto Margen + Bajo Volumen)</span>
             </div>
-            <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '240px', overflowY: 'auto' }}>
               {(reportData?.products || []).filter((p: any) => p.classification === 'OPPORTUNITY').map((p: any) => (
-                <div key={p.id} className="flex justify-between items-center bg-white p-2.5 rounded-lg border border-amber-100 text-xs shadow-sm">
+                <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#ffffff', padding: '8px 12px', borderRadius: '6px', border: '1px solid #fef9c3', fontSize: '0.82rem' }}>
                   <div>
-                    <span className="font-semibold text-gray-900 block">{p.name}</span>
-                    <span className="text-[10px] text-gray-500">Margen: <strong className="text-amber-600">{p.marginPercent}%</strong></span>
+                    <strong style={{ display: 'block', color: 'var(--text-primary)' }}>{p.name}</strong>
+                    <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>Margen: <strong style={{ color: '#d97706' }}>{p.marginPercent}%</strong></span>
                   </div>
-                  <span className="font-mono font-bold text-gray-900">{formatCurrency(p.grossProfit)}</span>
+                  <span style={{ fontFamily: 'monospace', fontWeight: 700, color: 'var(--text-primary)' }}>{formatCurrency(p.grossProfit)}</span>
                 </div>
               ))}
             </div>
           </div>
 
           {/* Cuadrante 3: Volumen */}
-          <div className="bg-blue-50/40 border border-blue-200 rounded-xl p-4">
-            <div className="flex items-center gap-2 mb-3 pb-2 border-b border-blue-200/60">
-              <span className="text-base">📦</span>
-              <h4 className="text-sm font-semibold text-blue-800">Volumen (Bajo Margen + Alto Volumen)</h4>
+          <div style={{ backgroundColor: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '8px', padding: '16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', paddingBottom: '8px', borderBottom: '1px solid #dbeafe', fontWeight: 600, color: '#1e40af', fontSize: '0.88rem' }}>
+              <span>📦</span>
+              <span>Volumen (Bajo Margen + Alto Volumen)</span>
             </div>
-            <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '240px', overflowY: 'auto' }}>
               {(reportData?.products || []).filter((p: any) => p.classification === 'VOLUME').map((p: any) => (
-                <div key={p.id} className="flex justify-between items-center bg-white p-2.5 rounded-lg border border-blue-100 text-xs shadow-sm">
+                <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#ffffff', padding: '8px 12px', borderRadius: '6px', border: '1px solid #dbeafe', fontSize: '0.82rem' }}>
                   <div>
-                    <span className="font-semibold text-gray-900 block">{p.name}</span>
-                    <span className="text-[10px] text-gray-500">Margen: <strong className="text-blue-600">{p.marginPercent}%</strong></span>
+                    <strong style={{ display: 'block', color: 'var(--text-primary)' }}>{p.name}</strong>
+                    <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>Margen: <strong style={{ color: '#1d4ed8' }}>{p.marginPercent}%</strong></span>
                   </div>
-                  <span className="font-mono font-bold text-gray-900">{formatCurrency(p.grossProfit)}</span>
+                  <span style={{ fontFamily: 'monospace', fontWeight: 700, color: 'var(--text-primary)' }}>{formatCurrency(p.grossProfit)}</span>
                 </div>
               ))}
             </div>
           </div>
 
           {/* Cuadrante 4: Revisar */}
-          <div className="bg-red-50/40 border border-red-200 rounded-xl p-4">
-            <div className="flex items-center gap-2 mb-3 pb-2 border-b border-red-200/60">
-              <span className="text-base">⚠️</span>
-              <h4 className="text-sm font-semibold text-[#E30613]">Revisar (Margen Bajo &lt; 15%)</h4>
+          <div style={{ backgroundColor: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', padding: '16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', paddingBottom: '8px', borderBottom: '1px solid #fee2e2', fontWeight: 600, color: '#991b1b', fontSize: '0.88rem' }}>
+              <span>⚠️</span>
+              <span>Revisar (Margen Bajo &lt; 15%)</span>
             </div>
-            <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '240px', overflowY: 'auto' }}>
               {(reportData?.products || []).filter((p: any) => p.classification === 'LOW_MARGIN').map((p: any) => (
-                <div key={p.id} className="flex justify-between items-center bg-white p-2.5 rounded-lg border border-red-100 text-xs shadow-sm">
+                <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#ffffff', padding: '8px 12px', borderRadius: '6px', border: '1px solid #fee2e2', fontSize: '0.82rem' }}>
                   <div>
-                    <span className="font-semibold text-gray-900 block">{p.name}</span>
-                    <span className="text-[10px] text-gray-500">Margen: <strong className="text-[#E30613]">{p.marginPercent}%</strong></span>
+                    <strong style={{ display: 'block', color: 'var(--text-primary)' }}>{p.name}</strong>
+                    <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>Margen: <strong style={{ color: '#e30613' }}>{p.marginPercent}%</strong></span>
                   </div>
-                  <span className="font-mono font-bold text-gray-900">{formatCurrency(p.grossProfit)}</span>
+                  <span style={{ fontFamily: 'monospace', fontWeight: 700, color: 'var(--text-primary)' }}>{formatCurrency(p.grossProfit)}</span>
                 </div>
               ))}
             </div>
