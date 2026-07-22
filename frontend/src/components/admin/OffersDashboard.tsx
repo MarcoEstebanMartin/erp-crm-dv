@@ -76,7 +76,7 @@ export default function OffersDashboard() {
     }
   };
 
-  const [confirmModal, setConfirmModal] = useState<{isOpen: boolean, title?: string, message: string, onConfirm: () => void, type?: 'danger'|'warning'|'info'}>({ isOpen: false, message: '', onConfirm: () => {} });
+  const [confirmModal, setConfirmModal] = useState<{isOpen: boolean, title?: string, message: string, onConfirm: () => void, type?: 'danger'|'warning'|'info', isAlert?: boolean}>({ isOpen: false, message: '', onConfirm: () => {} });
   const [promptModal, setPromptModal] = useState<{isOpen: boolean, title: string, message: string, defaultValue: string, onConfirm: (val: string) => void}>({ isOpen: false, title: '', message: '', defaultValue: '', onConfirm: () => {} });
 
   const executeDelete = async (id: number) => {

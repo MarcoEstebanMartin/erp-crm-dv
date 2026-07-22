@@ -80,3 +80,9 @@ Vigencia tecnológica del ERP.
 * **Separación de Lógica (Parcialmente Ejecutado - 17/07/2026):** Mover la lógica pesada del backend desde los controladores a servicios dedicados en `backend/src/services` (la lógica de órdenes, productos y rutas ya está migrada; quedan finanzas y facturación).
 * **Estilos Centralizados (Ejecutado - 17/07/2026):** Definición de variables globales en [index.css](file:///c:/Users/Usuario/Desktop/ERP-CRM%20DV/frontend/src/index.css) (`--color-corp-red`) y migración de las más de 80 referencias manuales inline a la variable.
 * **Transacciones de Prisma (Parcialmente Ejecutado - 17/07/2026):** Optimización de inserciones de stock y logs masivos (`createMany`) en `order.service.ts` para agrupar queries.
+* **Auditoría de Bugs y Refactorización de UI/UX (Ejecutado - 21/07/2026 & 22/07/2026):**
+  * **Cta. Cte. y Sincronización:** Implementación de edición y sincronización rápida de saldos en Cta. Cte. en `PersonaController`, `PersonaService` y frontend.
+  * **Modales Modulares:** Extracción y desacoplamiento de componentes modales (`ClientModal`, `ClientProfileModal`, `EditOrderModal`, `ProductModal`) para mejorar rendimiento y evitar re-renders innecesarios.
+  * **Filtros y Reportes:** Configuración del mes en curso por defecto en `UnifiedReportsDashboard` y soporte para visualización/filtrado de productos inactivos.
+  * **Generación de PDF y Ofertas:** Corrección de estilos y diseño del catálogo impreso/PDF en `OffersDashboard`.
+

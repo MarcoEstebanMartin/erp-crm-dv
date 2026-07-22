@@ -7,6 +7,7 @@ import {
   CheckCircle,
   AlertTriangle 
 } from 'lucide-react';
+import { useConfirm } from '../../context/ConfirmContext';
 
 interface CreditNotesTabProps {
   creditNotes: any[];
@@ -48,6 +49,7 @@ export default function CreditNotesTab({
   viewCreditNoteModal,
   setViewCreditNoteModal
 }: CreditNotesTabProps) {
+  const confirm = useConfirm();
   const [cnProductSearchQuery, setCnProductSearchQuery] = useState('');
   const [showCNClientDropdown, setShowCNClientDropdown] = useState(false);
   const [activeCNClientSuggestionIdx, setActiveCNClientSuggestionIdx] = useState(0);
@@ -154,7 +156,7 @@ export default function CreditNotesTab({
   };
 
   const handleApproveCreditNote = async (id: number) => {
-    if (!window.confirm('¿Está seguro de que desea APROBAR esta Nota de Crédito? Se emitirá el comprobante oficial/interno, se registrará el stock y se descontará del saldo del cliente.')) {
+    if (!await confirm('¿Está seguro de que desea APROBAR esta Nota de Crédito? Se emitirá el comprobante oficial/interno, se registrará el stock y se descontará del saldo del cliente.', { type: 'success' })) {
       return;
     }
     try {
@@ -170,7 +172,7 @@ export default function CreditNotesTab({
   };
 
   const handleRejectCreditNote = async (id: number) => {
-    if (!window.confirm('¿Está seguro de que desea RECHAZAR esta Nota de Crédito? Quedará anulada de manera permanente.')) {
+    if (!await confirm('¿Está seguro de que desea RECHAZAR esta Nota de Crédito? Quedará anulada de manera permanente.', { type: 'danger' })) {
       return;
     }
     try {

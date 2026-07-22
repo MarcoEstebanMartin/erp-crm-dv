@@ -15,6 +15,7 @@ import {
   Database
 } from 'lucide-react';
 import { api } from '../utils/api';
+import { useConfirm } from '../context/ConfirmContext';
 
 interface StockDashboardProps {
   products: any[];
@@ -22,6 +23,7 @@ interface StockDashboardProps {
 }
 
 export default function StockDashboard({ products, onRefresh }: StockDashboardProps) {
+  const confirm = useConfirm();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedRubro, setSelectedRubro] = useState('');
   const [stockFilter, setStockFilter] = useState<'all' | 'low' | 'out' | 'expiring'>('all');
@@ -289,7 +291,7 @@ export default function StockDashboard({ products, onRefresh }: StockDashboardPr
 
   // Eliminar lote físico (si tiene stock 0)
   const handleDeleteLot = async (lotId: number, lotNumber: string) => {
-    if (!window.confirm(`¿Estás seguro de que deseas eliminar permanentemente el lote "${lotNumber}"?`)) return;
+    if (!await confirm(`¿Estás seguro de que deseas eliminar permanentemente el lote "${lotNumber}"?`, { type: 'danger' })) return;
 
     setLoadingAdjust(true);
     setErrorMessage(null);

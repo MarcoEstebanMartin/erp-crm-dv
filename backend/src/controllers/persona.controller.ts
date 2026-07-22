@@ -299,3 +299,29 @@ export async function recordVisit(req: AuthenticatedRequest, res: Response): Pro
     res.status(500).json({ status: 'error', message: 'Error al registrar visita.' });
   }
 }
+
+/**
+ * Eliminar una persona.
+ */
+export async function deletePersona(req: AuthenticatedRequest, res: Response): Promise<void> {
+  const { id } = req.params;
+  const userId = req.user?.id;
+  const userRole = req.user?.role;
+
+  if (!userId || !userRole) {
+    res.status(401).json({ status: 'error', message: 'No autorizado.' });
+    return;
+  }
+
+  try {
+    const result = await personaService.deletePersona(Number(id), userId, userRole);
+    res.status(200).json({ status: 'success', data: { result } });
+  } catch (error: any) {
+    console.error('Error eliminando persona:', error);
+    if (error.message === 'Persona no encontrada.') {
+      res.status(404).json({ status: 'error', message: error.message });
+      return;
+    }
+    res.status(400).json({ status: 'error', message: error.message || 'Error al eliminar la persona.' });
+  }
+}

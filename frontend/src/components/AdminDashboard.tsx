@@ -1,4 +1,4 @@
-import React, { useState, useEffect, lazy, Suspense } from 'react';
+import React, { useState, useEffect, lazy, Suspense, useCallback } from 'react';
 import { api } from '../utils/api';
 import { OrderStatus } from '../utils/types';
 import { getOrderStatusInfo } from '../utils/orderStatusHelper';
@@ -8,9 +8,14 @@ import ClientsTab from './admin/ClientsTab';
 import OrdersTab from './admin/OrdersTab';
 import ProductsTab from './admin/ProductsTab';
 import ConfigTab from './admin/ConfigTab';
+import ClientProfileModal from './modals/ClientProfileModal';
+import EditOrderModal from './modals/EditOrderModal';
+import ProductModal from './modals/ProductModal';
+import ClientModal from './modals/ClientModal';
 import OffersDashboard from './admin/OffersDashboard';
 import ImportZipModal from './modals/ImportZipModal';
-
+import { useConfirm } from '../context/ConfirmContext';
+import type { Product, User, Persona, Order, Rubro, SaleRoute } from '../types';
 const OFFICIAL_CITIES = [
   "GENERAL VILLEGAS",
   "EMILIO V. BUNGE",
@@ -105,32 +110,32 @@ interface AdminDashboardProps {
 }
 
 export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboardProps) {
-  const [products, setProducts] = useState<any[]>([]);
-  const [users, setUsers] = useState<any[]>([]);
-  const [clients, setClients] = useState<any[]>([]);
+  const confirm = useConfirm();
+  const [products, setProducts] = useState<Product[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [clients, setClients] = useState<Persona[]>([]);
   const [debtorsReport, setDebtorsReport] = useState<any[]>([]);
   const [availableCities, setAvailableCities] = useState<string[]>([]);
   const [selectedCities, setSelectedCities] = useState<string[]>([]);
   const [selectedBranchFilter, setSelectedBranchFilter] = useState<string>('ALL');
-  const [availableSellers, setAvailableSellers] = useState<any[]>([]);
-  const [availableSaleRoutes, setAvailableSaleRoutes] = useState<any[]>([]);
+  const [availableSellers, setAvailableSellers] = useState<User[]>([]);
+  const [availableSaleRoutes, setAvailableSaleRoutes] = useState<SaleRoute[]>([]);
   const [selectedSellerFilter, setSelectedSellerFilter] = useState<string>('ALL');
   const [selectedCityFilter, setSelectedCityFilter] = useState<string>('ALL');
   const [showCityDropdown, setShowCityDropdown] = useState<boolean>(false);
   const [citySearchQuery, setCitySearchQuery] = useState<string>('');
-  const [orders, setOrders] = useState<any[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
   const [auditCategoryFilter, setAuditCategoryFilter] = useState<string>('ALL');
   const [financialReport, setFinancialReport] = useState<any | null>(null);
   
   // Listas de Rubros y Proveedores para el catálogo
-  const [rubrosList, setRubrosList] = useState<any[]>([]);
-  const [providersList, setProvidersList] = useState<any[]>([]);
+  const [rubrosList, setRubrosList] = useState<Rubro[]>([]);
+  const [providersList, setProvidersList] = useState<Persona[]>([]);
   
   // Modales
   const [productModal, setProductModal] = useState({ open: false, mode: 'create', data: { id: 0, sku: '', name: '', description: '', barcode: '', costPrice: 0, listPrice: 0, listPriceB: 0, listPriceC: 0, profitMargin: 25 as string | number, minStock: 0, isPesable: false, approximateWeight: 0, unitsPerBox: 1, rubroId: '' as string | number, providerId: '' as string | number, imageUrl: null as string | null } });
-  const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
-  const [imagePreviewUrl, setImagePreviewUrl] = useState<string>('');
+
   const [importZipModalOpen, setImportZipModalOpen] = useState(false);
   const [userModal, setUserModal] = useState({ open: false, username: '', password: '', role: 'VENDEDOR' });
   const [showPassword, setShowPassword] = useState(false);
@@ -170,16 +175,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
     }
   }, [paymentModal]);
 
-  useEffect(() => {
-    if (productModal.open) {
-      setSelectedImageFile(null);
-      if (productModal.mode === 'edit' && productModal.data.imageUrl) {
-        setImagePreviewUrl(`http://${window.location.hostname}:3000${productModal.data.imageUrl}`);
-      } else {
-        setImagePreviewUrl('');
-      }
-    }
-  }, [productModal.open, productModal.data.id]);
+
 
   const fetchPaymentPendingInvoices = async (clientId: number) => {
     try {
@@ -194,8 +190,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
     }
   };
 
-  const [newContact, setNewContact] = useState({ name: '', phone: '', email: '', role: '' });
-  const [showAddContact, setShowAddContact] = useState(false);
+
 
   // Estados para accesos directos y acciones rápidas
   const [isPriceListModalOpen, setIsPriceListModalOpen] = useState(false);
@@ -209,7 +204,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
   const [summaryCardModal, setSummaryCardModal] = useState<{ open: boolean; cardKey: string; cardLabel: string } | null>(null);
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [prodSearchQuery, setProdSearchQuery] = useState('');
+
 
   const [orderStatusFilter, setOrderStatusFilter] = useState<string>('ALL');
   const [auditPage, setAuditPage] = useState(1);
@@ -311,7 +306,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
   };
 
   const handleDeleteDiscountRule = async (id: number) => {
-    if (!window.confirm('¿Estás seguro de eliminar esta regla de descuento?')) return;
+    if (!await confirm('¿Estás seguro de eliminar esta regla de descuento?', { type: 'danger' })) return;
     setErrorMsg(null);
     setSuccessMsg(null);
     try {
@@ -348,7 +343,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
   };
 
   const handleDeleteSplitConfig = async (id: number) => {
-    if (!window.confirm('¿Estás seguro de eliminar esta configuración de división?')) return;
+    if (!await confirm('¿Estás seguro de eliminar esta configuración de división?', { type: 'danger' })) return;
     setErrorMsg(null);
     setSuccessMsg(null);
     try {
@@ -409,8 +404,9 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
       const balance = Number(clientProfileModal.client.outstandingBalance || 0);
       const parsedAmount = Number(paymentAmount);
       if (parsedAmount > balance) {
-        const confirmOverpayment = window.confirm(
-          `El monto a cobrar ($${parsedAmount.toLocaleString()}) supera el saldo pendiente del cliente ($${balance.toLocaleString()}). El cliente quedará con saldo a favor. ¿Deseas continuar?`
+        const confirmOverpayment = await confirm(
+          `El monto a cobrar ($${parsedAmount.toLocaleString()}) supera el saldo pendiente del cliente ($${balance.toLocaleString()}). El cliente quedará con saldo a favor. ¿Deseas continuar?`,
+          { type: 'warning' }
         );
         if (!confirmOverpayment) return;
       }
@@ -464,67 +460,14 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
     }
   };
 
-  const handleAddContact = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newContact.name) return;
 
-    try {
-      const currentContacts = clientProfileModal!.client.contacts || [];
-      const updatedContacts = [...currentContacts, newContact];
 
-      const updatedClient = await api.updateClient(clientProfileModal!.client.id, {
-        contacts: updatedContacts
-      });
 
-      setClientProfileModal({
-        ...clientProfileModal!,
-        client: updatedClient
-      });
-
-      setNewContact({ name: '', phone: '', email: '', role: '' });
-      setShowAddContact(false);
-      setSuccessMsg('Contacto agregado con éxito.');
-      fetchData();
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Error al agregar contacto.');
-    }
-  };
-
-  const handleRemoveContact = async (index: number) => {
-    try {
-      const currentContacts = [...(clientProfileModal!.client.contacts || [])];
-      currentContacts.splice(index, 1);
-
-      const updatedClient = await api.updateClient(clientProfileModal!.client.id, {
-        contacts: currentContacts
-      });
-
-      setClientProfileModal({
-        ...clientProfileModal!,
-        client: updatedClient
-      });
-      setSuccessMsg('Contacto eliminado.');
-      fetchData();
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Error al eliminar contacto.');
-    }
-  };
-
-  // Carga de datos según pestaña activa
-  useEffect(() => {
-    fetchData();
-  }, [activeTab, searchQuery, orderStatusFilter, auditPage, configTab, personaRoleFilter]);
-
-  // Limpiar mensajes al cambiar de pestaña principal
-  useEffect(() => {
-    setSuccessMsg(null);
-    setErrorMsg(null);
-  }, [activeTab]);
 
   
 
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setErrorMsg(null);
     try {
       if (activeTab === 'dashboard') {
@@ -644,12 +587,23 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
         }
       }
     } catch (err: any) {
-      setErrorMsg(err.message || 'Error al obtener datos.');
+      setErrorMsg(err.message || 'Error de conexión');
     }
-  };
+  }, [activeTab, searchQuery, orderStatusFilter, auditPage, configTab, personaRoleFilter]);
+
+  // Carga de datos según pestaña activa
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  // Limpiar mensajes al cambiar de pestaña principal
+  useEffect(() => {
+    setSuccessMsg(null);
+    setErrorMsg(null);
+  }, [activeTab]);
 
   const handleSyncBalance = async (personaId?: number) => {
-    if (!window.confirm(personaId ? '¿Deseas conciliar el saldo de esta cuenta?' : '¿Deseas conciliar TODOS los saldos inconsistentes del sistema?')) {
+    if (!await confirm(personaId ? '¿Deseas conciliar el saldo de esta cuenta?' : '¿Deseas conciliar TODOS los saldos inconsistentes del sistema?')) {
       return;
     }
     setLoadingReconcile(true);
@@ -745,149 +699,6 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
     e.target.value = '';
   };
 
-  const handleModalPriceChange = (field: string, valueStr: string) => {
-    const value = valueStr === '' ? '' : Number(valueStr);
-    const updatedData = { ...productModal.data, [field]: value };
-
-    const cost = Number(updatedData.costPrice) || 0;
-    const rentPercentage = updatedData.profitMargin !== '' && updatedData.profitMargin !== undefined ? Number(updatedData.profitMargin) : 25;
-    const margin = 1 + (rentPercentage / 100);
-
-    if (field === 'costPrice') {
-      // Cost changed -> update selling prices
-      const listPrice = cost * margin;
-      updatedData.listPrice = Math.max(0, Math.round(listPrice * 100) / 100);
-      
-      const ratioB = Number(productModal.data.listPrice) > 0 && Number(productModal.data.listPriceB) > 0
-        ? Number(productModal.data.listPriceB) / Number(productModal.data.listPrice) : 0.95;
-      const ratioC = Number(productModal.data.listPrice) > 0 && Number(productModal.data.listPriceC) > 0
-        ? Number(productModal.data.listPriceC) / Number(productModal.data.listPrice) : 0.90;
-      updatedData.listPriceB = Math.max(0, Math.round(updatedData.listPrice * ratioB * 100) / 100);
-      updatedData.listPriceC = Math.max(0, Math.round(updatedData.listPrice * ratioC * 100) / 100);
-
-    } else if (field === 'profitMargin') {
-      // Rentabilidad changed -> update selling prices based on cost
-      const newMargin = valueStr === '' ? 1 : 1 + (Number(valueStr) / 100);
-      const listPrice = cost * newMargin;
-      updatedData.listPrice = Math.max(0, Math.round(listPrice * 100) / 100);
-
-      const ratioB = Number(productModal.data.listPrice) > 0 && Number(productModal.data.listPriceB) > 0
-        ? Number(productModal.data.listPriceB) / Number(productModal.data.listPrice) : 0.95;
-      const ratioC = Number(productModal.data.listPrice) > 0 && Number(productModal.data.listPriceC) > 0
-        ? Number(productModal.data.listPriceC) / Number(productModal.data.listPrice) : 0.90;
-      updatedData.listPriceB = Math.max(0, Math.round(updatedData.listPrice * ratioB * 100) / 100);
-      updatedData.listPriceC = Math.max(0, Math.round(updatedData.listPrice * ratioC * 100) / 100);
-
-    } else if (field === 'priceSinIva') {
-      // Price without VAT changed -> update listPrice and cost
-      const finalPrice = (Number(value) || 0) * 1.21;
-      updatedData.listPrice = Math.max(0, Math.round(finalPrice * 100) / 100);
-      updatedData.costPrice = Math.max(0, Math.round((updatedData.listPrice / margin) * 100) / 100);
-
-      const ratioB = Number(productModal.data.listPrice) > 0 && Number(productModal.data.listPriceB) > 0
-        ? Number(productModal.data.listPriceB) / Number(productModal.data.listPrice) : 0.95;
-      const ratioC = Number(productModal.data.listPrice) > 0 && Number(productModal.data.listPriceC) > 0
-        ? Number(productModal.data.listPriceC) / Number(productModal.data.listPrice) : 0.90;
-      updatedData.listPriceB = Math.max(0, Math.round(updatedData.listPrice * ratioB * 100) / 100);
-      updatedData.listPriceC = Math.max(0, Math.round(updatedData.listPrice * ratioC * 100) / 100);
-
-    } else if (field === 'listPrice') {
-      // Final listPrice changed -> update cost
-      const listPriceVal = Number(value) || 0;
-      updatedData.costPrice = Math.max(0, Math.round((listPriceVal / margin) * 100) / 100);
-
-      const ratioB = Number(productModal.data.listPrice) > 0 && Number(productModal.data.listPriceB) > 0
-        ? Number(productModal.data.listPriceB) / Number(productModal.data.listPrice) : 0.95;
-      const ratioC = Number(productModal.data.listPrice) > 0 && Number(productModal.data.listPriceC) > 0
-        ? Number(productModal.data.listPriceC) / Number(productModal.data.listPrice) : 0.90;
-      updatedData.listPriceB = Math.max(0, Math.round(listPriceVal * ratioB * 100) / 100);
-      updatedData.listPriceC = Math.max(0, Math.round(listPriceVal * ratioC * 100) / 100);
-    }
-
-    setProductModal({
-      ...productModal,
-      data: updatedData
-    });
-  };
-
-  const handleModalRubroChange = (rubroIdVal: string) => {
-    const rubroId = rubroIdVal === '' ? '' : Number(rubroIdVal);
-    const updatedData = { ...productModal.data, rubroId };
-
-    if (rubroId) {
-      const selectedRubro = rubrosList.find(r => Number(r.id) === rubroId);
-      if (selectedRubro) {
-        const marginFactor = Number(selectedRubro.profitMargin) || 1.25;
-        const rentPercent = Math.round((marginFactor - 1) * 100);
-        updatedData.profitMargin = rentPercent;
-
-        const cost = Number(updatedData.costPrice) || 0;
-        const listPrice = cost * marginFactor;
-        updatedData.listPrice = Math.max(0, Math.round(listPrice * 100) / 100);
-
-        const ratioB = Number(productModal.data.listPrice) > 0 && Number(productModal.data.listPriceB) > 0
-          ? Number(productModal.data.listPriceB) / Number(productModal.data.listPrice) : 0.95;
-        const ratioC = Number(productModal.data.listPrice) > 0 && Number(productModal.data.listPriceC) > 0
-          ? Number(productModal.data.listPriceC) / Number(productModal.data.listPrice) : 0.90;
-        updatedData.listPriceB = Math.max(0, Math.round(updatedData.listPrice * ratioB * 100) / 100);
-        updatedData.listPriceC = Math.max(0, Math.round(updatedData.listPrice * ratioC * 100) / 100);
-      }
-    }
-
-    setProductModal({
-      ...productModal,
-      data: updatedData
-    });
-  };
-
-  // --- OPERACIONES DE PRODUCTO ---
-  const handleProductSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const { mode, data } = productModal;
-    if (!data.sku || !data.name || data.costPrice === undefined || data.listPrice === undefined) {
-      setErrorMsg('Completar SKU, Nombre, Costo y Lista.');
-      return;
-    }
-
-    const payload = {
-      sku: data.sku,
-      name: data.name,
-      description: data.description,
-      barcode: data.barcode || null,
-      costPrice: Number(data.costPrice),
-      listPrice: Number(data.listPrice),
-      listPriceB: Number(data.listPriceB || 0),
-      listPriceC: Number(data.listPriceC || 0),
-      profitMargin: data.profitMargin !== undefined && data.profitMargin !== '' ? (1 + Number(data.profitMargin) / 100) : null,
-      rubroId: data.rubroId ? Number(data.rubroId) : null,
-      providerId: data.providerId ? Number(data.providerId) : null,
-      minStock: Number(data.minStock || 0),
-      isPesable: Boolean(data.isPesable),
-      unitsPerBox: Number(data.unitsPerBox || 1),
-      approximateWeight: data.approximateWeight ? Number(data.approximateWeight) : 0,
-      isActive: (data as any).isActive !== undefined ? Boolean((data as any).isActive) : undefined
-    };
-
-    try {
-      let savedProduct;
-      if (mode === 'create') {
-        savedProduct = await api.createProduct(payload);
-      } else {
-        savedProduct = await api.updateProduct(data.id, payload);
-      }
-
-      // Subir la imagen si se seleccionó una
-      if (selectedImageFile) {
-        await api.uploadProductImage(savedProduct.id, selectedImageFile);
-      }
-
-      setProductModal({ ...productModal, open: false });
-      setSuccessMsg('Producto guardado correctamente.');
-      fetchData();
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Error al guardar producto.');
-    }
-  };
 
   const handleUploadImage = async (productId: number, file: File) => {
     try {
@@ -957,70 +768,10 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
   };
 
   // --- OPERACIONES DE PERSONAS ---
-  const handleClientSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const { mode, data } = clientModal;
-    if (!data.name) {
-      setErrorMsg('El nombre es obligatorio.');
-      return;
-    }
-
-    try {
-      if (mode === 'create') {
-        await api.createPersona({
-          name: data.name,
-          cuit: data.cuit,
-          address: data.address,
-          city: data.city,
-          phone: data.phone,
-          email: data.email,
-          route: data.route,
-          saleRouteId: data.saleRouteId ? Number(data.saleRouteId) : null,
-          creditLimit: Number(data.creditLimit || 0),
-          maxUnpaidInvoices: Number(data.maxUnpaidInvoices || 0),
-          priceList: data.priceList || 'A',
-          discount: Number(data.discount || 0),
-          isClient: !!data.isClient,
-          isProvider: !!data.isProvider,
-          isSeller: !!data.isSeller,
-          isCommissionAgent: !!data.isCommissionAgent,
-          sellerId: data.sellerId ? Number(data.sellerId) : null,
-          isActive: data.isActive !== false
-        });
-      } else {
-        await api.updatePersona(data.id, {
-          name: data.name,
-          cuit: data.cuit,
-          address: data.address,
-          city: data.city,
-          phone: data.phone,
-          email: data.email,
-          route: data.route,
-          saleRouteId: data.saleRouteId ? Number(data.saleRouteId) : null,
-          creditLimit: Number(data.creditLimit || 0),
-          maxUnpaidInvoices: Number(data.maxUnpaidInvoices || 0),
-          priceList: data.priceList || 'A',
-          discount: Number(data.discount || 0),
-          isClient: !!data.isClient,
-          isProvider: !!data.isProvider,
-          isSeller: !!data.isSeller,
-          isCommissionAgent: !!data.isCommissionAgent,
-          sellerId: data.sellerId ? Number(data.sellerId) : null,
-          isActive: data.isActive !== false
-        });
-      }
-      setClientModal({ ...clientModal, open: false });
-      setSuccessMsg('Persona guardada exitosamente.');
-      fetchData();
-      setClientsVersion(prev => prev + 1);
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Error al guardar persona.');
-    }
-  };
 
   // --- OPERACIONES DE PEDIDOS (ADMIN) ---
   const handleCancelOrder = async (id: number) => {
-    if (!window.confirm('¿Está seguro de que desea cancelar este pedido? Se restaurará el stock físico.')) return;
+    if (!await confirm('¿Está seguro de que desea cancelar este pedido? Se restaurará el stock físico.', { type: 'danger' })) return;
     try {
       await api.updateOrderStatus(id, OrderStatus.CANCELLED);
       setSuccessMsg(`Pedido #${id} cancelado correctamente.`);
@@ -1059,28 +810,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
     }
   };
 
-  const handleEditOrderSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editOrderModal) return;
-    
-    setErrorMsg(null);
-    setSuccessMsg(null);
-    
-    try {
-      const itemsPayload = editOrderModal.items.map(item => ({
-        productId: item.productId,
-        quantity: item.quantity,
-        weight: item.weight || null
-      }));
-      
-      await api.updateOrder(editOrderModal.orderId, { items: itemsPayload });
-      setEditOrderModal(null);
-      setSuccessMsg(`Pedido #${editOrderModal.orderId} actualizado con éxito.`);
-      fetchData();
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Error al actualizar el pedido.');
-    }
-  };
+
 
   // Impresión nativa del comprobante
   const printTicket = (order: any) => {
@@ -1167,12 +897,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
     printWindow.document.close();
   };
 
-  const getWhatsAppLink = (phone: string) => {
-    const cleanPhone = phone.replace(/\D/g, '');
-    if (!cleanPhone) return '';
-    const formatted = cleanPhone.startsWith('54') ? cleanPhone : `549${cleanPhone}`;
-    return `https://wa.me/${formatted}`;
-  };
+
 
   const getQuickItemPrice = (product: any, client: any) => {
     if (!client) return Math.round(Number(product.listPrice));
@@ -2076,831 +1801,40 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
       )}
 
       {/* 5. Modal Editar Pedido (Fase 2) */}
-      {editOrderModal && editOrderModal.open && (
-        <div className="modal-overlay">
-          <div className="modal-content" style={{ maxWidth: '800px', display: 'flex', flexDirection: 'column', maxHeight: '90vh' }}>
-            <div className="modal-header">
-              <h3>Editar Pedido #{editOrderModal.orderId} - {editOrderModal.clientName}</h3>
-              <button className="btn btn-ghost" style={{ padding: '4px' }} onClick={() => setEditOrderModal(null)}>✕</button>
-            </div>
-            
-            <div style={{ display: 'grid', gridTemplateColumns: '1.1fr 1fr', gap: '20px', overflowY: 'auto', flex: 1, padding: '10px 0' }}>
-              {/* Catálogo de Productos */}
-              <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <h4 style={{ marginBottom: '10px', fontSize: '0.9rem' }}>Añadir Artículos</h4>
-                <div className="search-input-wrapper" style={{ marginBottom: '10px' }}>
-                  <input
-                    type="text"
-                    className="input"
-                    placeholder="Buscar producto..."
-                    value={prodSearchQuery}
-                    onChange={(e) => setProdSearchQuery(e.target.value)}
-                  />
-                </div>
-                
-                <div style={{ flex: 1, overflowY: 'auto', maxHeight: '300px', border: '1px solid var(--border-color)', borderRadius: '4px', padding: '10px' }}>
-                  {products
-                    .filter(p => p.name.toLowerCase().includes(prodSearchQuery.toLowerCase()) || p.sku.toLowerCase().includes(prodSearchQuery.toLowerCase()))
-                    .map(p => (
-                      <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid #f0f0f0' }}>
-                        <div>
-                          <div style={{ fontSize: '0.85rem', fontWeight: 600 }}>{p.name}</div>
-                          <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Stock: {p.stock} | ${p.listPrice}</div>
-                        </div>
-                        <button
-                          type="button"
-                          className="btn btn-secondary"
-                          style={{ padding: '4px 8px', fontSize: '0.75rem' }}
-                          onClick={() => {
-                            const existing = editOrderModal.items.find(item => item.productId === p.id);
-                            if (existing) {
-                              setEditOrderModal({
-                                ...editOrderModal,
-                                items: editOrderModal.items.map(item =>
-                                  item.productId === p.id ? { ...item, quantity: item.quantity + 1 } : item
-                                )
-                              });
-                            } else {
-                              setEditOrderModal({
-                                ...editOrderModal,
-                                items: [...editOrderModal.items, {
-                                  id: Date.now(),
-                                  productId: p.id,
-                                  name: p.name,
-                                  sku: p.sku,
-                                  quantity: 1,
-                                  isPesable: p.isPesable,
-                                  approximateWeight: p.approximateWeight,
-                                  listPrice: p.listPrice
-                                }]
-                              });
-                            }
-                          }}
-                        >
-                          + Agregar
-                        </button>
-                      </div>
-                    ))}
-                </div>
-              </div>
-              
-              {/* Artículos del pedido */}
-              <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <h4 style={{ marginBottom: '10px', fontSize: '0.9rem' }}>Detalle Actual del Pedido</h4>
-                <div style={{ flex: 1, overflowY: 'auto', maxHeight: '350px', border: '1px solid var(--border-color)', borderRadius: '4px', padding: '10px' }}>
-                  {editOrderModal.items.length === 0 ? (
-                    <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textAlign: 'center', marginTop: '20px' }}>No hay artículos en el pedido.</p>
-                  ) : (
-                    editOrderModal.items.map(item => (
-                      <div key={item.productId} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid #f0f0f0' }}>
-                        <div style={{ flex: 1, marginRight: '10px' }}>
-                          <div style={{ fontSize: '0.85rem', fontWeight: 600 }}>{item.name}</div>
-                          <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>${item.listPrice} c/u {item.isPesable && '(Por Kg)'}</div>
-                          {item.isPesable && (
-                            <div style={{ marginTop: '4px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                              <span style={{ fontSize: '0.75rem', fontWeight: 600 }}>Peso Exacto (Kg):</span>
-                              <input 
-                                type="number" 
-                                step="0.01"
-                                className="input" 
-                                style={{ width: '80px', padding: '2px 6px', fontSize: '0.8rem' }}
-                                value={item.weight || ''}
-                                onChange={(e) => {
-                                  const val = parseFloat(e.target.value);
-                                  setEditOrderModal({
-                                    ...editOrderModal,
-                                    items: editOrderModal.items.map(i => 
-                                      i.productId === item.productId ? { ...i, weight: isNaN(val) ? null : val } : i
-                                    )
-                                  });
-                                }}
-                              />
-                            </div>
-                          )}
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <button
-                            type="button"
-                            className="btn btn-secondary"
-                            style={{ padding: '2px 6px' }}
-                            onClick={() => {
-                              const newQty = item.quantity - 1;
-                              if (newQty <= 0) {
-                                setEditOrderModal({
-                                  ...editOrderModal,
-                                  items: editOrderModal.items.filter(i => i.productId !== item.productId)
-                                });
-                              } else {
-                                setEditOrderModal({
-                                  ...editOrderModal,
-                                  items: editOrderModal.items.map(i =>
-                                    i.productId === item.productId ? { ...i, quantity: newQty } : i
-                                  )
-                                });
-                              }
-                            }}
-                          >
-                            -
-                          </button>
-                          <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>{item.quantity}</span>
-                          <button
-                            type="button"
-                            className="btn btn-secondary"
-                            style={{ padding: '2px 6px' }}
-                            onClick={() => {
-                              setEditOrderModal({
-                                ...editOrderModal,
-                                items: editOrderModal.items.map(i =>
-                                  i.productId === item.productId ? { ...i, quantity: i.quantity + 1 } : i
-                                )
-                              });
-                            }}
-                          >
-                            +
-                          </button>
-                          <button
-                            type="button"
-                            className="btn btn-ghost text-danger"
-                            style={{ padding: '4px' }}
-                            onClick={() => {
-                              setEditOrderModal({
-                                ...editOrderModal,
-                                items: editOrderModal.items.filter(i => i.productId !== item.productId)
-                              });
-                            }}
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-                
-                <div style={{ marginTop: '16px', borderTop: '1px solid var(--border-color)', paddingTop: '12px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', fontSize: '1.05rem', marginBottom: '12px' }}>
-                    <span>Nuevo Total:</span>
-                    <span>${editOrderModal.items.reduce((acc, i) => acc + (i.listPrice * (i.isPesable ? (i.weight || (i.quantity * (i.approximateWeight || 1))) : i.quantity)), 0).toLocaleString()}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-            
-            <div className="modal-footer" style={{ borderTop: '1px solid var(--border-color)', paddingTop: '16px', marginTop: '10px' }}>
-              <button type="button" className="btn btn-secondary" onClick={() => setEditOrderModal(null)}>Cancelar</button>
-              <button type="button" className="btn btn-primary" onClick={handleEditOrderSubmit}>Guardar Cambios</button>
-            </div>
-          </div>
-        </div>
-      )}
+      <EditOrderModal
+        editOrderModal={editOrderModal}
+        setEditOrderModal={setEditOrderModal}
+        products={products}
+        fetchData={fetchData}
+        setSuccessMsg={setSuccessMsg}
+        setErrorMsg={setErrorMsg}
+      />
 
       {/* 2. Modal Producto */}
-      {productModal.open && (
-        <div className="modal-overlay">
-          <div className="modal-content">
-            <div className="modal-header">
-              <h3>{productModal.mode === 'create' ? 'Cargar Nuevo Producto' : 'Editar Producto'}</h3>
-              <button className="btn btn-ghost" style={{ padding: '4px' }} onClick={() => setProductModal({ ...productModal, open: false })}>✕</button>
-            </div>
-            <form onSubmit={handleProductSubmit}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
-                <div className="form-group">
-                  <label>SKU (Código interno)</label>
-                  <input
-                    type="text"
-                    className="input"
-                    placeholder="ej: 0001"
-                    value={productModal.data.sku}
-                    onChange={(e) => setProductModal({ ...productModal, data: { ...productModal.data, sku: e.target.value } })}
-                    disabled={productModal.mode === 'edit'}
-                    required
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label>Código de Barras (EAN)</label>
-                  <input
-                    type="text"
-                    className="input"
-                    placeholder="ej: 7799876543210"
-                    value={productModal.data.barcode || ''}
-                    onChange={(e) => setProductModal({ ...productModal, data: { ...productModal.data, barcode: e.target.value } })}
-                  />
-                </div>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
-                <div className="form-group">
-                  <label>Rubro (Categoría)</label>
-                  <select
-                    className="select"
-                    value={productModal.data.rubroId || ''}
-                    onChange={(e) => handleModalRubroChange(e.target.value)}
-                    style={{ width: '100%', borderRadius: '8px', padding: '10px 14px' }}
-                  >
-                    <option value="">-- Sin Rubro --</option>
-                    {rubrosList.map(r => (
-                      <option key={r.id} value={r.id}>{r.name}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="form-group">
-                  <label>Proveedor</label>
-                  <select
-                    className="select"
-                    value={productModal.data.providerId || ''}
-                    onChange={(e) => setProductModal({ ...productModal, data: { ...productModal.data, providerId: e.target.value === '' ? '' : Number(e.target.value) } })}
-                    style={{ width: '100%', borderRadius: '8px', padding: '10px 14px' }}
-                  >
-                    <option value="">-- Sin Proveedor --</option>
-                    {providersList.map(p => (
-                      <option key={p.id} value={p.id}>{p.name}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div className="form-group">
-                <label>Nombre del Producto</label>
-                <input
-                  type="text"
-                  className="input"
-                  placeholder="ej: Gaseosa Coca Cola 1.5L"
-                  value={productModal.data.name}
-                  onChange={(e) => setProductModal({ ...productModal, data: { ...productModal.data, name: e.target.value } })}
-                  required
-                />
-              </div>
-
-              <div className="form-group">
-                <label>Descripción corta</label>
-                <input
-                  type="text"
-                  className="input"
-                  placeholder="ej: Pack x6 botellas sabor original"
-                  value={productModal.data.description}
-                  onChange={(e) => setProductModal({ ...productModal, data: { ...productModal.data, description: e.target.value } })}
-                />
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '14px', alignItems: 'flex-start', marginBottom: '14px' }}>
-                <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', margin: 0 }}>
-                    <input
-                      type="checkbox"
-                      checked={productModal.data.isPesable || false}
-                      onChange={(e) => setProductModal({ ...productModal, data: { ...productModal.data, isPesable: e.target.checked } })}
-                      style={{ width: '18px', height: '18px' }}
-                    />
-                    Es Producto Pesable
-                  </label>
-                </div>
-                {productModal.data.isPesable && (
-                  <div className="form-group" style={{ marginBottom: 0 }}>
-                    <label>Peso Aproximado de Horma (Kg)</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      className="input"
-                      placeholder="ej: 4.5"
-                      value={productModal.data.approximateWeight || ''}
-                      onChange={(e) => setProductModal({ ...productModal, data: { ...productModal.data, approximateWeight: Number(e.target.value) } })}
-                    />
-                  </div>
-                )}
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
-                <div className="form-group">
-                  <label>Precio Costo (C/IVA)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    className="input"
-                    value={productModal.data.costPrice !== undefined ? productModal.data.costPrice : ''}
-                    onChange={(e) => handleModalPriceChange('costPrice', e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Rentabilidad (%)</label>
-                  <input
-                    type="number"
-                    className="input"
-                    placeholder="ej: 25"
-                    value={productModal.data.profitMargin !== undefined ? productModal.data.profitMargin : ''}
-                    onChange={(e) => handleModalPriceChange('profitMargin', e.target.value)}
-                  />
-                </div>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
-                <div className="form-group">
-                  <label>Precio Venta Sin IVA</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    className="input"
-                    value={productModal.data.listPrice ? Math.round((Number(productModal.data.listPrice) / 1.21) * 100) / 100 : ''}
-                    onChange={(e) => handleModalPriceChange('priceSinIva', e.target.value)}
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Precio Venta Final (Lista A - C/IVA)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    className="input"
-                    value={productModal.data.listPrice !== undefined ? productModal.data.listPrice : ''}
-                    onChange={(e) => handleModalPriceChange('listPrice', e.target.value)}
-                    required
-                  />
-                </div>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
-                <div className="form-group">
-                  <label>Precio Lista B (Especial - Opcional)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    className="input"
-                    placeholder="Fallback a Lista A"
-                    value={productModal.data.listPriceB || ''}
-                    onChange={(e) => setProductModal({ ...productModal, data: { ...productModal.data, listPriceB: Number(e.target.value) } })}
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Precio Lista C (Distribuidor - Opcional)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    className="input"
-                    placeholder="Fallback a Lista A"
-                    value={productModal.data.listPriceC || ''}
-                    onChange={(e) => setProductModal({ ...productModal, data: { ...productModal.data, listPriceC: Number(e.target.value) } })}
-                  />
-                </div>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
-                <div className="form-group">
-                  <label>Stock Mínimo (Alerta de reposición)</label>
-                  <input
-                    type="number"
-                    className="input"
-                    value={productModal.data.minStock || ''}
-                    onChange={(e) => setProductModal({ ...productModal, data: { ...productModal.data, minStock: Number(e.target.value) } })}
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Unidades por Caja (Fraccionado)</label>
-                  <input
-                    type="number"
-                    className="input"
-                    placeholder="ej: 12"
-                    min={1}
-                    value={productModal.data.unitsPerBox || 1}
-                    onChange={(e) => setProductModal({ ...productModal, data: { ...productModal.data, unitsPerBox: Number(e.target.value) } })}
-                  />
-                </div>
-              </div>
-
-              <div className="form-group" style={{ gridColumn: '1 / -1', marginTop: '10px' }}>
-                <label>Imagen del Producto</label>
-                <div style={{ display: 'flex', gap: '16px', alignItems: 'center', backgroundColor: 'var(--bg-muted)', padding: '12px', borderRadius: '8px', border: '1px dashed var(--border-color)' }}>
-                  {imagePreviewUrl ? (
-                    <div style={{ position: 'relative', width: '80px', height: '80px', minWidth: '80px', borderRadius: '6px', overflow: 'hidden', border: '1px solid var(--border-color)', backgroundColor: '#fff' }}>
-                      <img src={imagePreviewUrl} alt="Vista previa" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      <button 
-                        type="button" 
-                        style={{ position: 'absolute', top: '2px', right: '2px', backgroundColor: 'rgba(227, 6, 19, 0.9)', color: '#fff', border: 'none', borderRadius: '50%', width: '18px', height: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '9px', padding: 0 }}
-                        onClick={() => {
-                          setSelectedImageFile(null);
-                          setImagePreviewUrl('');
-                          setProductModal({
-                            ...productModal,
-                            data: { ...productModal.data, imageUrl: null }
-                          });
-                        }}
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  ) : (
-                    <div style={{ width: '80px', height: '80px', minWidth: '80px', borderRadius: '6px', border: '2px dashed var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: '0.8rem', backgroundColor: 'var(--bg-body)' }}>
-                      Sin Foto
-                    </div>
-                  )}
-                  <div style={{ flex: 1 }}>
-                    <input 
-                      type="file" 
-                      accept="image/*"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) {
-                          setSelectedImageFile(file);
-                          const reader = new FileReader();
-                          reader.onloadend = () => {
-                            setImagePreviewUrl(reader.result as string);
-                          };
-                          reader.readAsDataURL(file);
-                        }
-                      }}
-                      style={{ display: 'none' }}
-                      id="product-image-upload"
-                    />
-                    <label htmlFor="product-image-upload" className="btn btn-secondary" style={{ display: 'inline-block', cursor: 'pointer', borderRadius: '6px', fontSize: '0.8rem', padding: '6px 12px', margin: 0 }}>
-                      Seleccionar Imagen
-                    </label>
-                    <p style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '4px', margin: 0 }}>
-                      PNG, JPG o WEBP. Estandarizado por SKU.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="modal-footer">
-                <button type="button" className="btn btn-secondary" onClick={() => setProductModal({ ...productModal, open: false })}>Cancelar</button>
-                <button type="submit" className="btn btn-primary">Guardar Cambios</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <ProductModal
+        productModal={productModal}
+        setProductModal={setProductModal}
+        rubrosList={rubrosList}
+        providersList={providersList}
+        fetchData={fetchData}
+        setSuccessMsg={setSuccessMsg}
+        setErrorMsg={setErrorMsg}
+      />
 
       {/* 3. Modal Cliente */}
       {showResumenModal && (
         <ResumenCuentaModal client={showResumenModal} onClose={() => setShowResumenModal(null)} />
       )}
-      {clientModal.open && (
-        <div className="modal-overlay" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1100 }}>
-          <div className="modal-content" style={{ maxWidth: '950px', width: '95%', maxHeight: '90vh', display: 'flex', flexDirection: 'column', padding: '24px', borderRadius: '12px' }}>
-            <div className="modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '14px', marginBottom: '20px' }}>
-              <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                👤 {clientModal.mode === 'create' ? 'Registrar Nuevo Cliente' : `Editar Cliente: ${clientModal.data.name}`}
-              </h3>
-              <button type="button" className="btn btn-ghost" style={{ padding: '6px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setClientModal({ ...clientModal, open: false })}>✕</button>
-            </div>
-            
-            <form onSubmit={handleClientSubmit} style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
-              <div style={{ flex: 1, overflowY: 'auto', paddingRight: '6px', paddingBottom: '10px' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-                  
-                  {/* Columna Izquierda: Identificación y Contacto */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                    
-                    {/* Tarjeta 1: Datos Identificatorios */}
-                    <div style={{ border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: '16px', backgroundColor: 'rgba(249, 250, 251, 0.3)', boxShadow: 'var(--shadow-sm)' }}>
-                      <h4 style={{ margin: '0 0 14px 0', fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
-                        📋 Identificación Básica
-                      </h4>
-                      
-                      <div className="form-group" style={{ marginBottom: '14px' }}>
-                        <label style={{ fontSize: '0.8rem', fontWeight: 600, marginBottom: '6px', display: 'block' }}>Nombre Comercial / Razón Social *</label>
-                        <input
-                          type="text"
-                          className="input"
-                          placeholder="ej: Almacén San Roque"
-                          value={clientModal.data.name}
-                          onChange={(e) => setClientModal({ ...clientModal, data: { ...clientModal.data, name: e.target.value } })}
-                          required
-                          style={{ width: '100%', height: '38px' }}
-                        />
-                      </div>
-
-                      <div className="form-group" style={{ marginBottom: '14px' }}>
-                        <label style={{ fontSize: '0.8rem', fontWeight: 600, marginBottom: '6px', display: 'block' }}>CUIT (Sin guiones)</label>
-                        <input
-                          type="text"
-                          className="input"
-                          placeholder="ej: 20222334449"
-                          value={clientModal.data.cuit}
-                          onChange={(e) => setClientModal({ ...clientModal, data: { ...clientModal.data, cuit: e.target.value } })}
-                          style={{ width: '100%', height: '38px' }}
-                        />
-                      </div>
-                      
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                        <div className="form-group" style={{ marginBottom: 0 }}>
-                          <label style={{ fontSize: '0.8rem', fontWeight: 600, marginBottom: '6px', display: 'block' }}>Teléfono</label>
-                          <input
-                            type="text"
-                            className="input"
-                            placeholder="ej: 11-4567-8901"
-                            value={clientModal.data.phone}
-                            onChange={(e) => setClientModal({ ...clientModal, data: { ...clientModal.data, phone: e.target.value } })}
-                            style={{ width: '100%', height: '38px' }}
-                          />
-                        </div>
-                        <div className="form-group" style={{ marginBottom: 0 }}>
-                          <label style={{ fontSize: '0.8rem', fontWeight: 600, marginBottom: '6px', display: 'block' }}>Email</label>
-                          <input
-                            type="email"
-                            className="input"
-                            placeholder="ej: contacto@cliente.com"
-                            value={clientModal.data.email}
-                            onChange={(e) => setClientModal({ ...clientModal, data: { ...clientModal.data, email: e.target.value } })}
-                            style={{ width: '100%', height: '38px' }}
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Tarjeta 2: Roles de la Persona */}
-                    <div style={{ border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: '16px', backgroundColor: 'rgba(249, 250, 251, 0.3)', boxShadow: 'var(--shadow-sm)' }}>
-                      <h4 style={{ margin: '0 0 14px 0', fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
-                        👥 Roles y Estado en Sistema
-                      </h4>
-                      
-                      <div className="form-group" style={{ marginBottom: '14px' }}>
-                        <label style={{ fontSize: '0.8rem', fontWeight: 600, marginBottom: '8px', display: 'block' }}>Roles de la Persona</label>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                          <label style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px',
-                            fontSize: '0.88rem',
-                            cursor: 'pointer',
-                            padding: '10px 12px',
-                            border: '1px solid var(--border-color)',
-                            borderRadius: 'var(--radius-sm)',
-                            backgroundColor: clientModal.data.isClient ? 'rgba(17, 24, 39, 0.03)' : 'transparent',
-                            transition: 'var(--transition-fast)'
-                          }}>
-                            <input
-                              type="checkbox"
-                              checked={!!clientModal.data.isClient}
-                              onChange={(e) => setClientModal({ ...clientModal, data: { ...clientModal.data, isClient: e.target.checked } })}
-                            />
-                            <span style={{ fontWeight: clientModal.data.isClient ? 600 : 400 }}>Cliente</span>
-                          </label>
-                          
-                          <label style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px',
-                            fontSize: '0.88rem',
-                            cursor: 'pointer',
-                            padding: '10px 12px',
-                            border: '1px solid var(--border-color)',
-                            borderRadius: 'var(--radius-sm)',
-                            backgroundColor: clientModal.data.isProvider ? 'rgba(17, 24, 39, 0.03)' : 'transparent',
-                            transition: 'var(--transition-fast)'
-                          }}>
-                            <input
-                              type="checkbox"
-                              checked={!!clientModal.data.isProvider}
-                              onChange={(e) => setClientModal({ ...clientModal, data: { ...clientModal.data, isProvider: e.target.checked } })}
-                            />
-                            <span style={{ fontWeight: clientModal.data.isProvider ? 600 : 400 }}>Proveedor</span>
-                          </label>
-
-                          <label style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px',
-                            fontSize: '0.88rem',
-                            cursor: 'pointer',
-                            padding: '10px 12px',
-                            border: '1px solid var(--border-color)',
-                            borderRadius: 'var(--radius-sm)',
-                            backgroundColor: clientModal.data.isSeller ? 'rgba(17, 24, 39, 0.03)' : 'transparent',
-                            transition: 'var(--transition-fast)'
-                          }}>
-                            <input
-                              type="checkbox"
-                              checked={!!clientModal.data.isSeller}
-                              onChange={(e) => setClientModal({ ...clientModal, data: { ...clientModal.data, isSeller: e.target.checked } })}
-                            />
-                            <span style={{ fontWeight: clientModal.data.isSeller ? 600 : 400 }}>Vendedor</span>
-                          </label>
-
-                          <label style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px',
-                            fontSize: '0.88rem',
-                            cursor: 'pointer',
-                            padding: '10px 12px',
-                            border: '1px solid var(--border-color)',
-                            borderRadius: 'var(--radius-sm)',
-                            backgroundColor: clientModal.data.isCommissionAgent ? 'rgba(17, 24, 39, 0.03)' : 'transparent',
-                            transition: 'var(--transition-fast)'
-                          }}>
-                            <input
-                              type="checkbox"
-                              checked={!!clientModal.data.isCommissionAgent}
-                              onChange={(e) => setClientModal({ ...clientModal, data: { ...clientModal.data, isCommissionAgent: e.target.checked } })}
-                            />
-                            <span style={{ fontWeight: clientModal.data.isCommissionAgent ? 600 : 400 }}>Comisionista</span>
-                          </label>
-                        </div>
-                      </div>
-
-                      <div className="form-group" style={{ marginBottom: 0 }}>
-                        <label style={{ fontSize: '0.8rem', fontWeight: 600, marginBottom: '6px', display: 'block' }}>Estado de la Persona</label>
-                        <label style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '8px',
-                          fontSize: '0.88rem',
-                          cursor: 'pointer',
-                          padding: '10px 12px',
-                          border: '1px solid var(--border-color)',
-                          borderRadius: 'var(--radius-sm)',
-                          backgroundColor: clientModal.data.isActive !== false ? 'rgba(16, 185, 129, 0.05)' : 'transparent',
-                          borderColor: clientModal.data.isActive !== false ? 'rgba(16, 185, 129, 0.2)' : 'var(--border-color)',
-                          transition: 'var(--transition-fast)'
-                        }}>
-                          <input
-                            type="checkbox"
-                            checked={clientModal.data.isActive !== false}
-                            onChange={(e) => setClientModal({ ...clientModal, data: { ...clientModal.data, isActive: e.target.checked } })}
-                          />
-                          <span style={{ fontWeight: clientModal.data.isActive !== false ? 600 : 400 }}>
-                            Persona Activa (Habilitada para facturación/reparto)
-                          </span>
-                        </label>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Columna Derecha: Ubicación y Condiciones Comerciales */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                    
-                    {/* Tarjeta 3: Ubicación y Logística */}
-                    <div style={{ border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: '16px', backgroundColor: 'rgba(249, 250, 251, 0.3)', boxShadow: 'var(--shadow-sm)' }}>
-                      <h4 style={{ margin: '0 0 14px 0', fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
-                        📍 Dirección y Despacho
-                      </h4>
-                      
-                      <div className="form-group" style={{ marginBottom: '14px' }}>
-                        <label style={{ fontSize: '0.8rem', fontWeight: 600, marginBottom: '6px', display: 'block' }}>Dirección de Entrega</label>
-                        <input
-                          type="text"
-                          className="input"
-                          placeholder="ej: Belgrano 1200, CABA"
-                          value={clientModal.data.address}
-                          onChange={(e) => setClientModal({ ...clientModal, data: { ...clientModal.data, address: e.target.value } })}
-                          style={{ width: '100%', height: '38px' }}
-                        />
-                      </div>
-
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                        <div className="form-group" style={{ marginBottom: 0 }}>
-                          <label style={{ fontSize: '0.8rem', fontWeight: 600, marginBottom: '6px', display: 'block' }}>Localidad</label>
-                          <input
-                            type="text"
-                            className="input"
-                            placeholder="ej: General Villegas"
-                            value={clientModal.data.city || ''}
-                            onChange={(e) => setClientModal({ ...clientModal, data: { ...clientModal.data, city: e.target.value } })}
-                            style={{ width: '100%', height: '38px' }}
-                          />
-                        </div>
-                        
-                        <div className="form-group" style={{ marginBottom: 0 }}>
-                          <label style={{ fontSize: '0.8rem', fontWeight: 600, marginBottom: '6px', display: 'block' }}>Zona de Reparto (Chofer)</label>
-                          <input
-                            type="text"
-                            list="route-suggestions"
-                            className="input"
-                            placeholder="ej: CENTRO 1, TROCHA..."
-                            value={clientModal.data.route || ''}
-                            onChange={(e) => setClientModal({ ...clientModal, data: { ...clientModal.data, route: e.target.value } })}
-                            style={{ width: '100%', height: '38px' }}
-                          />
-                          <datalist id="route-suggestions">
-                            {(() => {
-                              const cleanCity = (clientModal.data.city || '').toUpperCase().trim();
-                              const isVillegas = cleanCity === 'GENERAL VILLEGAS' || cleanCity === 'GRAL VILLEGAS' || cleanCity === 'VILLEGAS' || cleanCity === '';
-                              const routes = isVillegas 
-                                ? ['FEDERAL', 'PARQUE', 'CENTRO 1', 'CENTRO 2', 'CENTRO 3', 'CENTRO 4', 'FONAVI', 'PROGRESO', 'TROCHA', 'CICLON', 'CRUCE']
-                                : ['EMILIO V. BUNGE Y BUCHARDO', 'EMILIO V. BUNGE Y CORONEL CHARLONE', 'BANDERALÓ Y LARROUDÉ', 'VILLA SAUZE Y SANSINENA', 'FLORENTINO AMEGHINO Y BLAQUIER', 'RIVADAVIA Y FORTÍN OLAVARRÍA', 'PIEDRITAS', 'TRES ALGARROBOS', 'CARLOS TEJEDOR', 'INTENDENTE ALVEAR', 'RUFINO'];
-                              return routes.map(r => <option key={r} value={r} />);
-                            })()}
-                          </datalist>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Tarjeta 4: Configuración Comercial */}
-                    <div style={{ 
-                      border: '1px solid var(--border-color)', 
-                      borderRadius: 'var(--radius-md)', 
-                      padding: '16px', 
-                      backgroundColor: 'rgba(249, 250, 251, 0.3)',
-                      boxShadow: 'var(--shadow-sm)',
-                      opacity: clientModal.data.isClient ? 1 : 0.65,
-                      transition: 'var(--transition-medium)'
-                    }}>
-                      <h4 style={{ margin: '0 0 14px 0', fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span>💼 Condiciones Comerciales</span>
-                        {!clientModal.data.isClient && <small style={{ textTransform: 'none', color: 'var(--text-muted)', fontSize: '0.75rem' }}>(Solo aplica a Cliente)</small>}
-                      </h4>
-                      
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '14px' }}>
-                        <div className="form-group" style={{ marginBottom: 0 }}>
-                          <label style={{ fontSize: '0.8rem', fontWeight: 600, marginBottom: '6px', display: 'block' }}>Vendedor Asignado</label>
-                          <select
-                            className="select"
-                            value={clientModal.data.sellerId || ''}
-                            onChange={(e) => setClientModal({ ...clientModal, data: { ...clientModal.data, sellerId: e.target.value ? Number(e.target.value) : null } })}
-                            disabled={!clientModal.data.isClient}
-                            style={{ height: '38px', padding: '8px 12px', fontSize: '0.9rem', borderRadius: '6px', border: '1px solid var(--border-color)', boxSizing: 'border-box', width: '100%', backgroundColor: '#fff', color: 'var(--text-primary)' }}
-                          >
-                            <option value="">Sin Vendedor</option>
-                            {availableSellers.map(s => (
-                              <option key={s.id} value={s.id}>{s.username.replace('_', ' ').toUpperCase()}</option>
-                            ))}
-                          </select>
-                        </div>
-                        
-                        <div className="form-group" style={{ marginBottom: 0 }}>
-                          <label style={{ fontSize: '0.8rem', fontWeight: 600, marginBottom: '6px', display: 'block' }}>Ruta de Venta (Vendedor)</label>
-                          <select
-                            className="select"
-                            value={clientModal.data.saleRouteId || ''}
-                            onChange={(e) => setClientModal({ ...clientModal, data: { ...clientModal.data, saleRouteId: e.target.value ? Number(e.target.value) : null } })}
-                            disabled={!clientModal.data.isClient}
-                            style={{ height: '38px', padding: '8px 12px', fontSize: '0.9rem', borderRadius: '6px', border: '1px solid var(--border-color)', boxSizing: 'border-box', width: '100%', backgroundColor: '#fff', color: 'var(--text-primary)' }}
-                          >
-                            <option value="">Sin Ruta de Venta</option>
-                            {availableSaleRoutes.map(r => (
-                              <option key={r.id} value={r.id}>{r.name} ({r.seller?.username || 'Sin Vendedor'})</option>
-                            ))}
-                          </select>
-                        </div>
-                      </div>
-
-                      <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1.2fr 1fr', gap: '10px' }}>
-                        <div className="form-group" style={{ marginBottom: 0, display: 'flex', flexDirection: 'column' }}>
-                          <label style={{ fontSize: '0.8rem', fontWeight: 600, marginBottom: '6px', height: '18px', display: 'block', whiteSpace: 'nowrap' }}>Límite de Cta Cte</label>
-                          <select
-                            className="select"
-                            value={clientModal.data.maxUnpaidInvoices}
-                            onChange={(e) => setClientModal({ ...clientModal, data: { ...clientModal.data, maxUnpaidInvoices: Number(e.target.value) } })}
-                            disabled={!clientModal.data.isClient}
-                            style={{ height: '38px', padding: '8px 12px', fontSize: '0.9rem', borderRadius: '6px', border: '1px solid var(--border-color)', boxSizing: 'border-box', width: '100%', backgroundColor: '#fff', color: 'var(--text-primary)' }}
-                          >
-                            <option value={0}>Sin Cta Cte</option>
-                            <option value={0.5}>Media Boleta</option>
-                            <option value={1}>1 Boleta</option>
-                            <option value={2}>2 Boletas</option>
-                            <option value={3}>3 Boletas</option>
-                            <option value={4}>4 Boletas</option>
-                            <option value={5}>5 Boletas</option>
-                          </select>
-                        </div>
-                        
-                        <div className="form-group" style={{ marginBottom: 0, display: 'flex', flexDirection: 'column' }}>
-                          <label style={{ fontSize: '0.8rem', fontWeight: 600, marginBottom: '6px', height: '18px', display: 'block', whiteSpace: 'nowrap' }}>Lista de Precios</label>
-                          <select
-                            className="select"
-                            value={clientModal.data.priceList}
-                            onChange={(e) => setClientModal({ ...clientModal, data: { ...clientModal.data, priceList: e.target.value } })}
-                            disabled={!clientModal.data.isClient}
-                            style={{ height: '38px', padding: '8px 12px', fontSize: '0.9rem', borderRadius: '6px', border: '1px solid var(--border-color)', boxSizing: 'border-box', width: '100%', backgroundColor: '#fff', color: 'var(--text-primary)' }}
-                          >
-                            <option value="A">Lista Estándar A</option>
-                            <option value="B">Lista Especial B</option>
-                            <option value="C">Lista Distribuidor C</option>
-                            <option value="ESPECIAL_QUESOS">Lista Especial Quesos (3%)</option>
-                          </select>
-                        </div>
-
-                        <div className="form-group" style={{ marginBottom: 0, display: 'flex', flexDirection: 'column' }}>
-                          <label style={{ fontSize: '0.8rem', fontWeight: 600, marginBottom: '6px', height: '18px', display: 'block', whiteSpace: 'nowrap' }}>Desc. Fijo (%)</label>
-                          <input
-                            type="number"
-                            step="0.01"
-                            className="input"
-                            placeholder="ej: 5"
-                            value={clientModal.data.discount || 0}
-                            onChange={(e) => setClientModal({ ...clientModal, data: { ...clientModal.data, discount: Number(e.target.value) } })}
-                            disabled={!clientModal.data.isClient}
-                            style={{ height: '38px', padding: '8px 12px', fontSize: '0.9rem', borderRadius: '6px', border: '1px solid var(--border-color)', boxSizing: 'border-box', width: '100%' }}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  
-                </div>
-              </div>
-
-              <div className="modal-footer" style={{ borderTop: '1px solid var(--border-color)', paddingTop: '16px', marginTop: 0, display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-                <button type="button" className="btn btn-secondary" style={{ padding: '8px 16px' }} onClick={() => setClientModal({ ...clientModal, open: false })}>Cancelar</button>
-                <button type="submit" className="btn btn-primary" style={{ padding: '8px 20px', backgroundColor: 'var(--accent-color)', borderColor: 'var(--accent-color)', color: '#fff', fontWeight: 600 }}>
-                  {clientModal.mode === 'create' ? 'Crear Cliente' : 'Guardar Cambios'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <ClientModal
+        clientModal={clientModal}
+        setClientModal={setClientModal}
+        availableSellers={availableSellers}
+        availableSaleRoutes={availableSaleRoutes}
+        fetchData={fetchData}
+        setSuccessMsg={setSuccessMsg}
+        setErrorMsg={setErrorMsg}
+        setClientsVersion={setClientsVersion}
+      />
 
       {/* 4. Modal Empleado */}
       {userModal.open && (
@@ -2983,294 +1917,15 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
       />
 
       {/* 5. Ficha de Cliente y Extracto de Cuenta Corriente */}
-      {clientProfileModal && clientProfileModal.open && (
-        <div className="modal-overlay" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1100 }}>
-          <div className="modal-content" style={{ maxWidth: '950px', width: '95%', maxHeight: '90vh', display: 'flex', flexDirection: 'column', padding: '24px', borderRadius: '12px' }}>
-            <div className="modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '14px', marginBottom: '20px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-                <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                  👤 Ficha de {clientProfileModal.client.isProvider && !clientProfileModal.client.isClient ? 'Proveedor' : 'Cliente'}: {clientProfileModal.client.name}
-                </h3>
-                <span style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '5px',
-                  fontSize: '0.78rem',
-                  fontWeight: 600,
-                  padding: '3px 8px',
-                  borderRadius: '20px',
-                  backgroundColor: clientProfileModal.client.isActive !== false ? '#E6F4EA' : '#FCE8E6',
-                  color: clientProfileModal.client.isActive !== false ? '#137333' : '#C5221F',
-                  border: '1px solid currentColor'
-                }}>
-                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: 'currentColor' }} />
-                  {clientProfileModal.client.isActive !== false ? 'Activo' : 'Inactivo'}
-                </span>
-                
-                <div style={{ display: 'flex', gap: '6px' }}>
-                  {clientProfileModal.client.isClient && <span style={{ fontSize: '0.72rem', padding: '2px 6px', borderRadius: '4px', border: '1px solid var(--border-color)', backgroundColor: 'var(--accent-bg-light)', fontWeight: 500, color: 'var(--text-secondary)' }}>Cliente</span>}
-                  {clientProfileModal.client.isProvider && <span style={{ fontSize: '0.72rem', padding: '2px 6px', borderRadius: '4px', border: '1px solid var(--border-color)', backgroundColor: 'var(--accent-bg-light)', fontWeight: 500, color: 'var(--text-secondary)' }}>Proveedor</span>}
-                  {clientProfileModal.client.isSeller && <span style={{ fontSize: '0.72rem', padding: '2px 6px', borderRadius: '4px', border: '1px solid var(--border-color)', backgroundColor: 'var(--accent-bg-light)', fontWeight: 500, color: 'var(--text-secondary)' }}>Vendedor</span>}
-                  {clientProfileModal.client.isCommissionAgent && <span style={{ fontSize: '0.72rem', padding: '2px 6px', borderRadius: '4px', border: '1px solid var(--border-color)', backgroundColor: 'var(--accent-bg-light)', fontWeight: 500, color: 'var(--text-secondary)' }}>Comisionista</span>}
-                </div>
-              </div>
-              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                <button 
-                  type="button" 
-                  className="btn btn-secondary" 
-                  style={{ padding: '6px 12px', fontSize: '0.82rem', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 600 }}
-                  onClick={() => {
-                    setClientModal({
-                      open: true,
-                      mode: 'edit',
-                      data: {
-                        id: clientProfileModal.client.id,
-                        name: clientProfileModal.client.name,
-                        cuit: clientProfileModal.client.cuit || '',
-                        address: clientProfileModal.client.address || '',
-                        city: clientProfileModal.client.city || '',
-                        phone: clientProfileModal.client.phone || '',
-                        email: clientProfileModal.client.email || '',
-                        creditLimit: clientProfileModal.client.creditLimit ? Number(clientProfileModal.client.creditLimit) : 0,
-                        maxUnpaidInvoices: clientProfileModal.client.maxUnpaidInvoices ? Number(clientProfileModal.client.maxUnpaidInvoices) : 0,
-                        priceList: clientProfileModal.client.priceList || 'A',
-                        discount: clientProfileModal.client.discount ? Number(clientProfileModal.client.discount) : 0,
-                        isClient: !!clientProfileModal.client.isClient,
-                        isProvider: !!clientProfileModal.client.isProvider,
-                        isSeller: !!clientProfileModal.client.isSeller,
-                        isCommissionAgent: !!clientProfileModal.client.isCommissionAgent,
-                        route: clientProfileModal.client.route || '',
-                        saleRouteId: clientProfileModal.client.saleRouteId || null,
-                        sellerId: clientProfileModal.client.sellerId || null,
-                        isActive: clientProfileModal.client.isActive !== false
-                      }
-                    });
-                    setClientProfileModal(null);
-                  }}
-                >
-                  ✏️ Editar Datos
-                </button>
-                <button className="btn btn-ghost" style={{ padding: '6px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setClientProfileModal(null)}>✕</button>
-              </div>
-            </div>
-            
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.6fr', gap: '24px', overflowY: 'auto', flex: 1, paddingRight: '4px' }}>
-              {/* Columna Izquierda: Información Financiera y Contactos */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', borderRight: '1px solid var(--border-color)', paddingRight: '20px' }}>
-                
-                {/* Tarjeta Financiera */}
-                <div style={{ border: '1px solid var(--border-color)', padding: '16px', borderRadius: '10px', backgroundColor: 'rgba(249, 250, 251, 0.4)' }}>
-                  <h4 style={{ margin: '0 0 14px 0', fontSize: '0.82rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-secondary)', fontWeight: 600, borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
-                    📊 Resumen de Cuenta
-                  </h4>
-                  
-                  {(() => {
-                    const balance = Number(clientProfileModal.client.outstandingBalance || 0);
-                    const limit = Number(clientProfileModal.client.maxUnpaidInvoices || 0);
-                    const pendingCount = clientProfileModal.client.pendingInvoicesCount || 0;
-                    
-                    const pct = limit > 0 ? Math.min(100, Math.round((pendingCount / limit) * 100)) : 0;
-                    const available = limit - pendingCount;
-                    
-                    return (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                        <div style={{ 
-                          display: 'flex', 
-                          flexDirection: 'column', 
-                          gap: '4px', 
-                          padding: '12px 14px', 
-                          borderRadius: '8px', 
-                          backgroundColor: balance > 0 ? 'rgba(239, 68, 68, 0.04)' : balance < 0 ? 'rgba(16, 185, 129, 0.04)' : 'rgba(243, 244, 246, 0.5)', 
-                          border: '1px solid', 
-                          borderColor: balance > 0 ? 'rgba(239, 68, 68, 0.15)' : balance < 0 ? 'rgba(16, 185, 129, 0.15)' : 'var(--border-color)' 
-                        }}>
-                          <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Saldo Actual (en $)</span>
-                          <span style={{ fontSize: '1.6rem', fontWeight: 700, color: balance > 0 ? 'var(--color-danger)' : balance < 0 ? 'var(--color-success)' : 'var(--text-primary)' }}>
-                            {balance < 0 ? `$${Math.abs(balance).toLocaleString()} (A Favor)` : `$${balance.toLocaleString()}`}
-                          </span>
-                        </div>
-                        
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.85rem' }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                            <span style={{ color: 'var(--text-secondary)' }}>Límite de Cta Cte:</span>
-                            <span style={{ fontWeight: 600 }}>{limit > 0 ? `${limit} Boletas` : 'No habilitada'}</span>
-                          </div>
-                          
-                          {clientProfileModal.client.isClient && limit > 0 && (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', margin: '4px 0' }}>
-                              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                                <span>Boletas Adeudadas ({pct}%)</span>
-                                <span>{pendingCount}</span>
-                              </div>
-                              <div style={{ height: '6px', width: '100%', backgroundColor: '#E5E7EB', borderRadius: '3px', overflow: 'hidden' }}>
-                                <div style={{ height: '100%', width: `${pct}%`, backgroundColor: pct >= 100 ? 'var(--color-danger)' : pct > 50 ? 'var(--color-warning)' : 'var(--color-success)', borderRadius: '3px', transition: 'width 0.3s ease' }} />
-                              </div>
-                            </div>
-                          )}
-
-                          <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dashed var(--border-color)', paddingBottom: '6px' }}>
-                            <span style={{ color: 'var(--text-secondary)' }}>Boletas Disponibles:</span>
-                            <span style={{ fontWeight: 600, color: available <= 0 ? 'var(--color-danger)' : 'var(--text-primary)' }}>
-                              {limit > 0 ? Math.max(0, available) : 0}
-                            </span>
-                          </div>
-                          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                            <span style={{ color: 'var(--text-secondary)' }}>Lista de Precios:</span>
-                            <span style={{ fontWeight: 600 }}>
-                              {clientProfileModal.client.priceList === 'C' ? 'Lista Distribuidor C' : clientProfileModal.client.priceList === 'B' ? 'Lista Especial B' : clientProfileModal.client.priceList === 'ESPECIAL_QUESOS' ? 'Lista Especial Quesos (3%)' : 'Lista Estándar A'}
-                            </span>
-                          </div>
-                          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                            <span style={{ color: 'var(--text-secondary)' }}>Descuento Fijo:</span>
-                            <span style={{ fontWeight: 600, color: 'var(--color-success)' }}>
-                              {clientProfileModal.client.discount || 0}%
-                            </span>
-                          </div>
-                        </div>
-                        
-                        {clientProfileModal.client.isClient && (
-                          <button 
-                            type="button"
-                            className="btn btn-primary" 
-                            style={{ width: '100%', marginTop: '6px', backgroundColor: 'var(--color-success)', borderColor: 'var(--color-success)', color: '#fff', fontWeight: 600, padding: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }} 
-                            onClick={() => setPaymentModal({ open: true, clientId: clientProfileModal.client.id, clientName: clientProfileModal.client.name })}
-                          >
-                            💰 Registrar Cobro CC
-                          </button>
-                        )}
-                      </div>
-                    );
-                  })()}
-                </div>
-                
-                {/* Contactos */}
-                <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                    <h4 style={{ margin: 0, fontSize: '0.88rem', fontWeight: 600, color: 'var(--text-secondary)' }}>👥 Contactos Asociados</h4>
-                    <button className="btn btn-ghost" style={{ padding: '2px 8px', fontSize: '0.78rem', border: '1px solid var(--border-color)', borderRadius: '4px' }} onClick={() => setShowAddContact(!showAddContact)}>
-                      {showAddContact ? 'Cancelar' : '+ Agregar'}
-                    </button>
-                  </div>
-
-                  {showAddContact && (
-                    <form onSubmit={handleAddContact} style={{ padding: '12px', backgroundColor: 'rgba(243, 244, 246, 0.4)', borderRadius: '8px', marginBottom: '14px', display: 'flex', flexDirection: 'column', gap: '8px', border: '1px solid var(--border-color)' }}>
-                      <input type="text" className="input" placeholder="Nombre" style={{ padding: '6px 10px', fontSize: '0.8rem', height: '32px' }} value={newContact.name} onChange={(e) => setNewContact({ ...newContact, name: e.target.value })} required />
-                      <input type="text" className="input" placeholder="Cargo/Rol" style={{ padding: '6px 10px', fontSize: '0.8rem', height: '32px' }} value={newContact.role} onChange={(e) => setNewContact({ ...newContact, role: e.target.value })} />
-                      <input type="text" className="input" placeholder="Teléfono" style={{ padding: '6px 10px', fontSize: '0.8rem', height: '32px' }} value={newContact.phone} onChange={(e) => setNewContact({ ...newContact, phone: e.target.value })} />
-                      <input type="email" className="input" placeholder="Email" style={{ padding: '6px 10px', fontSize: '0.8rem', height: '32px' }} value={newContact.email} onChange={(e) => setNewContact({ ...newContact, email: e.target.value })} />
-                      <button type="submit" className="btn btn-primary" style={{ padding: '6px', fontSize: '0.8rem', fontWeight: 600 }}>Guardar Contacto</button>
-                    </form>
-                  )}
-
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '200px', overflowY: 'auto' }}>
-                    {(!clientProfileModal.client.contacts || clientProfileModal.client.contacts.length === 0) ? (
-                      <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontStyle: 'italic', padding: '8px', textAlign: 'center', border: '1px dashed var(--border-color)', borderRadius: '6px' }}>No hay contactos asociados.</span>
-                    ) : (
-                      clientProfileModal.client.contacts.map((contact: any, idx: number) => (
-                        <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', backgroundColor: '#fff', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                            <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-                              {contact.name} {contact.role && <small style={{ color: 'var(--text-muted)', fontWeight: 400 }}>({contact.role})</small>}
-                            </span>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '2px' }}>
-                              {contact.phone && (
-                                <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                  📞 {contact.phone}
-                                  <a href={getWhatsAppLink(contact.phone)} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center' }}>
-                                    <svg viewBox="0 0 24 24" width="13" height="13" fill="#25D366">
-                                      <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.513 2.262 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.724-1.455L0 24zm6.59-4.846c1.6.95 3.188 1.449 4.825 1.451 5.436 0 9.86-4.37 9.863-9.755.002-2.61-1.01-5.063-2.85-6.908-1.839-1.844-4.286-2.86-6.903-2.861-5.441 0-9.863 4.37-9.866 9.756-.001 1.748.469 3.456 1.36 5.01L1.932 20.17l4.715-1.016zM17.47 15.3c-.3-.15-1.775-.875-2.05-1.05-.275-.1-.475-.15-.675.15-.2.3-.775 1.05-.95 1.25-.175.2-.35.225-.65.075-.3-.15-1.263-.465-2.403-1.485-.888-.795-1.487-1.77-1.663-2.07-.176-.3-.019-.462.13-.61.135-.133.3-.35.45-.525.15-.175.2-.3.3-.5.1-.2.05-.375-.025-.525-.075-.15-.675-1.625-.925-2.225-.244-.589-.491-.51-.675-.52-.175-.01-.375-.01-.575-.01-.2 0-.525.075-.8 1.05-.275.975-1.05 2.1-1.275 2.55-.225.45-.05.875.1 1.05.887 1.02 2.222 1.944 3.9 2.52.27.093.536.14.79.165.37.037.706.024.97-.015.295-.044.875-.36 1 .71.125.35.125.65.063.8-.062.15-.325.29-1 .15z"/>
-                                    </svg>
-                                  </a>
-                                </span>
-                              )}
-                              {contact.email && <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>✉️ {contact.email}</span>}
-                            </div>
-                          </div>
-                          <button type="button" className="btn btn-ghost text-danger" style={{ padding: '4px', borderRadius: '50%' }} onClick={() => handleRemoveContact(idx)}>✕</button>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-              </div>
-              
-              {/* Columna Derecha: Datos de la Cuenta */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                <div style={{ border: '1px solid var(--border-color)', padding: '20px', borderRadius: '10px', backgroundColor: 'rgba(249, 250, 251, 0.4)' }}>
-                  <h4 style={{ margin: '0 0 16px 0', fontSize: '0.92rem', fontWeight: 600, color: 'var(--text-secondary)', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
-                    📋 Datos del Perfil y Despacho
-                  </h4>
-                  
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-                    <div>
-                      <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.03em' }}>Razón Social / Nombre</span>
-                      <div style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--text-primary)', marginTop: '4px' }}>{clientProfileModal.client.name}</div>
-                    </div>
-                    
-                    <div>
-                      <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.03em' }}>CUIT / Identificación</span>
-                      <div style={{ fontSize: '0.95rem', fontWeight: 500, color: 'var(--text-primary)', marginTop: '4px' }}>{clientProfileModal.client.cuit || 'S/D'}</div>
-                    </div>
-                    
-                    <div style={{ gridColumn: 'span 2', borderTop: '1px dashed var(--border-color)', margin: '4px 0' }} />
-                    
-                    <div>
-                      <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.03em' }}>Teléfono Principal</span>
-                      <div style={{ fontSize: '0.95rem', fontWeight: 500, color: 'var(--text-primary)', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        {clientProfileModal.client.phone || 'S/D'}
-                        {clientProfileModal.client.phone && (
-                          <a href={getWhatsAppLink(clientProfileModal.client.phone)} target="_blank" rel="noopener noreferrer">
-                            <svg viewBox="0 0 24 24" width="15" height="15" fill="#25D366">
-                              <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.513 2.262 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.724-1.455L0 24zm6.59-4.846c1.6.95 3.188 1.449 4.825 1.451 5.436 0 9.86-4.37 9.863-9.755.002-2.61-1.01-5.063-2.85-6.908-1.839-1.844-4.286-2.86-6.903-2.861-5.441 0-9.863 4.37-9.866 9.756-.001 1.748.469 3.456 1.36 5.01L1.932 20.17l4.715-1.016zM17.47 15.3c-.3-.15-1.775-.875-2.05-1.05-.275-.1-.475-.15-.675.15-.2.3-.775 1.05-.95 1.25-.175.2-.35.225-.65.075-.3-.15-1.263-.465-2.403-1.485-.888-.795-1.487-1.77-1.663-2.07-.176-.3-.019-.462.13-.61.135-.133.3-.35.45-.525.15-.175.2-.3.3-.5.1-.2.05-.375-.025-.525-.075-.15-.675-1.625-.925-2.225-.244-.589-.491-.51-.675-.52-.175-.01-.375-.01-.575-.01-.2 0-.525.075-.8 1.05-.275.975-1.05 2.1-1.275 2.55-.225.45-.05.875.1 1.05.887 1.02 2.222 1.944 3.9 2.52.27.093.536.14.79.165.37.037.706.024.97-.015.295-.044.875-.36 1 .71.125.35.125.65.063.8-.062.15-.325.29-1 .15z"/>
-                            </svg>
-                          </a>
-                        )}
-                      </div>
-                    </div>
-                    
-                    <div>
-                      <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.03em' }}>Email Principal</span>
-                      <div style={{ fontSize: '0.95rem', fontWeight: 500, color: 'var(--text-primary)', marginTop: '4px', wordBreak: 'break-all' }}>{clientProfileModal.client.email || 'S/D'}</div>
-                    </div>
-                    
-                    <div style={{ gridColumn: 'span 2', borderTop: '1px dashed var(--border-color)', margin: '4px 0' }} />
-                    
-                    <div>
-                      <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.03em' }}>Dirección de Entrega</span>
-                      <div style={{ fontSize: '0.95rem', fontWeight: 500, color: 'var(--text-primary)', marginTop: '4px' }}>{clientProfileModal.client.address || 'S/D'}</div>
-                    </div>
-                    
-                    <div>
-                      <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.03em' }}>Localidad</span>
-                      <div style={{ fontSize: '0.95rem', fontWeight: 500, color: 'var(--text-primary)', marginTop: '4px' }}>{clientProfileModal.client.city || 'S/D'}</div>
-                    </div>
-                    
-                    <div style={{ gridColumn: 'span 2', borderTop: '1px dashed var(--border-color)', margin: '4px 0' }} />
-                    
-                    <div>
-                      <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.03em' }}>Zona de Reparto (Chofer)</span>
-                      <div style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--text-primary)', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        {clientProfileModal.client.route ? `🚛 ${clientProfileModal.client.route}` : 'Sin Zona de Reparto'}
-                      </div>
-                    </div>
-                    
-                    <div>
-                      <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.03em' }}>Vendedor Asignado</span>
-                      <div style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--text-primary)', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        {clientProfileModal.client.seller?.username ? `👤 ${clientProfileModal.client.seller.username.replace('_', ' ').toUpperCase()}` : 'Sin Vendedor'}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            
-            <div className="modal-footer" style={{ borderTop: '1px solid var(--border-color)', paddingTop: '16px', marginTop: '16px' }}>
-              <button className="btn btn-secondary" style={{ padding: '8px 16px' }} onClick={() => setClientProfileModal(null)}>Cerrar Ficha</button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ClientProfileModal 
+        clientProfileModal={clientProfileModal}
+        setClientProfileModal={setClientProfileModal}
+        setClientModal={setClientModal}
+        setPaymentModal={setPaymentModal}
+        fetchData={fetchData}
+        setSuccessMsg={setSuccessMsg}
+        setErrorMsg={setErrorMsg}
+      />
 
       {/* Modal Registrar Cobro */}
       {paymentModal && paymentModal.open && (
@@ -3532,9 +2187,9 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
                       <div style={{ 
                         fontSize: '0.85rem', 
                         fontWeight: 600,
-                        color: (c.outstandingBalance || 0) > 0 
+                        color: Number(c.outstandingBalance || 0) > 0 
                           ? 'var(--color-danger)' 
-                          : (c.outstandingBalance || 0) < 0 
+                          : Number(c.outstandingBalance || 0) < 0 
                             ? 'var(--color-success)' 
                             : 'var(--text-primary)'
                       }}>

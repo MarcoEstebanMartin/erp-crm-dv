@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { api } from '../utils/api';
 import { OrderStatus } from '../utils/types';
+import type { Order, Product, ProductLot } from '../types';
 import { Play, Check, RefreshCw, Eye, Warehouse, ClipboardList, Calendar, ShoppingCart, Map, Printer } from 'lucide-react';
+import { useConfirm } from '../context/ConfirmContext';
 
 interface DepositoDashboardProps {
   activeTab: string;
@@ -34,16 +36,17 @@ const playBeep = (type: 'success' | 'error') => {
 };
 
 export default function DepositoDashboard({ activeTab }: DepositoDashboardProps) {
+  const confirm = useConfirm();
   const normalizedTab = activeTab === 'deposito' ? 'prepare-orders' : 'stock-adjust';
   
-  const [orders, setOrders] = useState<any[]>([]);
-  const [products, setProducts] = useState<any[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
   const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
   
   // Modal de ajuste de stock
   const [stockModal, setStockModal] = useState({
     open: false,
-    product: null as any,
+    product: null as Product | null,
     quantityChange: 0,
     reason: '',
     lotNumber: '',
@@ -73,7 +76,7 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [expiringLots, setExpiringLots] = useState<any[]>([]);
+  const [expiringLots, setExpiringLots] = useState<ProductLot[]>([]);
   
   // WMS Picking States
   const [selectedZone, setSelectedZone] = useState<string>('ALL');
@@ -262,7 +265,7 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
   }, [products, searchQuery, normalizedTab, subTab]);
 
   // --- LOGICA DE ESCANEO DE CODIGO DE BARRA / SKU (PICKING MANOS LIBRES) ---
-  const processScannedCode = (code: string) => {
+  const processScannedCode = useCallback((code: string) => {
     if (!selectedOrder) return;
 
     const cleanCode = code.trim().toUpperCase();
@@ -362,7 +365,7 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
 
     playBeep('success');
     setSuccessMsg(`Escaneado: +1 u. de "${item.product.name}"`);
-  };
+  }, [selectedOrder, lotAssignments, confirmedLocations]);
 
   useEffect(() => {
     if (!selectedOrder) return;
@@ -538,7 +541,7 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
     }
 
     if (hasShortages) {
-      const confirmShortage = window.confirm("Atención: Hay productos con faltantes (se asignó menos de la cantidad pedida). ¿Deseás continuar y cerrar el bulto con estos faltantes? El stock sobrante se liberará.");
+      const confirmShortage = await confirm("Atención: Hay productos con faltantes (se asignó menos de la cantidad pedida). ¿Deseás continuar y cerrar el bulto con estos faltantes? El stock sobrante se liberará.", { type: 'warning' });
       if (!confirmShortage) return;
     }
 
@@ -852,7 +855,7 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
     } = {};
 
     selectedOrdersList.forEach(order => {
-      order.items.forEach((item: any) => {
+      (order.items || []).forEach((item: any) => {
         if (!item.product) return;
         const prodId = item.product.id;
         if (!itemsMap[prodId]) {
@@ -883,7 +886,7 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
       return;
     }
 
-    if (!window.confirm(`¿Deseás pasar los ${pendingSelected.length} pedidos seleccionados a 'En Preparación'?`)) {
+    if (!await confirm(`¿Deseás pasar los ${pendingSelected.length} pedidos seleccionados a 'En Preparación'?`)) {
       return;
     }
 
@@ -1610,7 +1613,7 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
                           borderLeft: isExpired ? '4px solid #C0392B' : '4px solid #F39C12'
                         }}>
                           <div>
-                            <strong>{lot.product.name}</strong> <span style={{ color: 'var(--text-secondary)' }}>(SKU: {lot.product.sku})</span>
+                            <strong>{lot.product?.name}</strong> <span style={{ color: 'var(--text-secondary)' }}>(SKU: {lot.product?.sku})</span>
                             <div style={{ fontSize: '0.75rem', marginTop: '2px' }}>
                               Lote: <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>{lot.lotNumber}</span> | Vence: {new Date(lot.expirationDate).toLocaleDateString('es-AR')}
                             </div>
@@ -1861,20 +1864,22 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
                                   🏢 RETIRO DEPÓSITO
                                 </span>
                               ) : (
-                                <span style={{
-                                  fontSize: '0.72rem',
-                                  fontWeight: 700,
-                                  color: '#3B82F6',
-                                  backgroundColor: '#EFF6FF',
-                                  border: '1px solid rgba(59, 130, 246, 0.15)',
-                                  padding: '2px 8px',
-                                  borderRadius: '4px'
-                                }}>
-                                  🛣️ {o.persona.route}
-                                </span>
+                                o.persona?.route && (
+                                  <span style={{ 
+                                    backgroundColor: 'rgba(59, 130, 246, 0.1)', 
+                                    color: 'var(--color-primary)', 
+                                    border: '1px solid rgba(59, 130, 246, 0.15)',
+                                    padding: '2px 8px',
+                                    borderRadius: '4px',
+                                    fontSize: '0.72rem',
+                                    fontWeight: 700
+                                  }}>
+                                    🛣️ {o.persona.route}
+                                  </span>
+                                )
                               )}
                             </td>
-                            <td>{o.items.length} artículos distintos</td>
+                            <td>{(o.items || []).length} artículos distintos</td>
                             <td>
                               <span className={`badge ${o.status === 'PENDING' ? 'badge-pending' : 'badge-preparing'}`}>
                                 {o.status === 'PENDING' ? 'Esperando Picking' : 'En Preparación'}
@@ -1933,7 +1938,7 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
               // 1. Demanda pendiente
               const pendingDemand: Record<number, number> = {};
               orders.forEach(order => {
-                order.items.forEach((item: any) => {
+                (order.items || []).forEach((item: any) => {
                   const prodId = item.productId;
                   const qty = item.quantity;
                   // Si no está completamente armado
@@ -2001,7 +2006,7 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
                   return;
                 }
                 
-                if (!window.confirm(`¿Deseás generar la Orden de Compra para este proveedor con los ${items.length} productos sugeridos?`)) {
+                if (!await confirm(`¿Deseás generar la Orden de Compra para este proveedor con los ${items.length} productos sugeridos?`)) {
                   return;
                 }
 
@@ -2974,13 +2979,13 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
                     if (val === '__new__') {
                       setStockModal({ ...stockModal, isNewLot: true, lotNumber: '', expirationDate: '', location: '' });
                     } else {
-                      const lot = (stockModal.product.lots || []).find((l: any) => l.lotNumber === val);
+                      const lot = (stockModal.product?.lots || []).find((l: any) => l.lotNumber === val);
                       setStockModal({ ...stockModal, isNewLot: false, lotNumber: val, expirationDate: '', location: lot ? (lot.location || '') : '' });
                     }
                   }}
                 >
                   <option value="">Sin lote (Stock Genérico / General)</option>
-                  {(stockModal.product.lots || []).map((lot: any) => (
+                  {(stockModal.product?.lots || []).map((lot: any) => (
                     <option key={lot.id} value={lot.lotNumber}>
                       Lote: {lot.lotNumber} (Stock: {lot.stock} u. - Vence: {new Date(lot.expirationDate).toLocaleDateString('es-AR', { timeZone: 'UTC' })})
                     </option>

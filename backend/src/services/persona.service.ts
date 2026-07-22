@@ -911,6 +911,44 @@ export class PersonaService {
 
     return { status: 'success', message: 'Visita registrada con éxito.' };
   }
+
+  /**
+   * Eliminar persona (solo si no tiene movimientos).
+   */
+  async deletePersona(id: number, userId: number, userRole: string) {
+    if (userRole !== Role.ADMIN) {
+      throw new Error('Solo los administradores pueden eliminar personas.');
+    }
+    const persona = await prisma.persona.findUnique({
+      where: { id },
+      include: {
+        transactions: { select: { id: true } },
+        orders: { select: { id: true } },
+        supplierInvoices: { select: { id: true } },
+        creditNotes: { select: { id: true } }
+      }
+    });
+
+    if (!persona) throw new Error('Persona no encontrada.');
+
+    if (persona.transactions.length > 0 || persona.orders.length > 0 || persona.supplierInvoices.length > 0 || persona.creditNotes.length > 0) {
+      throw new Error('No se puede eliminar la persona porque tiene movimientos registrados (Órdenes, Transacciones, Notas de Crédito o Facturas).');
+    }
+
+    const deleted = await prisma.persona.delete({
+      where: { id }
+    });
+
+    await logAudit({
+      userId,
+      action: 'DELETE_PERSONA',
+      entityType: 'Persona',
+      entityId: deleted.id,
+      oldValues: persona,
+    });
+
+    return deleted;
+  }
 }
 
 function resolveCity(

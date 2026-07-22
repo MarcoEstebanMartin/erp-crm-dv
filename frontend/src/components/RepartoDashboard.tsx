@@ -11,6 +11,7 @@ import {
   ChevronRight,
   Printer
 } from 'lucide-react';
+import { useConfirm } from '../context/ConfirmContext';
 
 // Coordenadas fijas simuladas para clientes en General Villegas
 const VILLEGAS_DEPOT: [number, number] = [-35.030, -63.010]; // Moreno 200, Villegas (Base/Depósito)
@@ -799,6 +800,8 @@ function PrintRouteSheet({ route, locations }: { route: any; locations: any[] })
 }
 
 export default function RepartoDashboard() {
+  const confirm = useConfirm();
+  const [activeTab, setActiveTab] = useState<'planificacion' | 'ejecucion' | 'cierre'>('planificacion');
   const [routes, setRoutes] = useState<any[]>([]);
   const [pendingOrders, setPendingOrders] = useState<any[]>([]);
   const [selectedRoute, setSelectedRoute] = useState<any | null>(null);
@@ -1078,7 +1081,7 @@ export default function RepartoDashboard() {
   };
 
   const handleDeleteRoute = async (routeId: number) => {
-    if (!window.confirm('¿Estás seguro de que deseas eliminar esta hoja de ruta? Los pedidos asociados serán liberados.')) {
+    if (!await confirm('¿Estás seguro de que deseas eliminar esta hoja de ruta? Los pedidos asociados serán liberados.', { type: 'danger' })) {
       return;
     }
 

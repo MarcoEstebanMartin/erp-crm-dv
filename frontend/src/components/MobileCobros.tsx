@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { CreditCard, DollarSign, FileText, CheckCircle, ChevronLeft, RefreshCw, Loader2 } from 'lucide-react';
 import axios from 'axios';
 import { API_BASE_URL } from '../utils/api';
+import { useConfirm } from '../context/ConfirmContext';
 
 interface Persona {
   id: number;
@@ -25,6 +26,7 @@ const MobileCobros: React.FC<MobileCobrosProps> = ({
   uniqueCities = [],
   cleanCityName,
 }) => {
+  const confirm = useConfirm();
   const [personas, setPersonas] = useState<Persona[]>([]);
   const [selectedPersona, setSelectedPersona] = useState<Persona | null>(null);
   const [amount, setAmount] = useState('');
@@ -111,8 +113,9 @@ const MobileCobros: React.FC<MobileCobrosProps> = ({
 
     // Advertencia de sobrepago
     if (parsedAmount > selectedPersona.outstandingBalance) {
-      const confirmOverpayment = window.confirm(
-        `El monto a cobrar (${formatCurrency(parsedAmount)}) supera el saldo pendiente del cliente (${formatCurrency(selectedPersona.outstandingBalance)}). El cliente quedará con saldo a favor. ¿Deseas continuar?`
+      const confirmOverpayment = await confirm(
+        `El monto a cobrar (${formatCurrency(parsedAmount)}) supera el saldo pendiente del cliente (${formatCurrency(selectedPersona.outstandingBalance)}). El cliente quedará con saldo a favor. ¿Deseas continuar?`,
+        { type: 'warning' }
       );
       if (!confirmOverpayment) return;
     }

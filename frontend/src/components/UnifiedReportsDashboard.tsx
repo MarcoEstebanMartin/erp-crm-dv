@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import CrmDashboard from './CrmDashboard';
 import AfipExportDashboard from '../pages/AfipExportDashboard';
+import { useConfirm } from '../context/ConfirmContext';
 
 const normalizeString = (str: string | null | undefined): string => {
   if (!str) return '';
@@ -53,6 +54,7 @@ export default function UnifiedReportsDashboard({
   products,
   financialReport
 }: UnifiedReportsDashboardProps) {
+  const confirm = useConfirm();
   const [activeTab, setActiveTab] = useState<'finanzas' | 'zonas' | 'caja_semanal' | 'crm' | 'arca'>('finanzas');
 
   // Estados para reporte financiero con filtros mensuales
@@ -197,7 +199,7 @@ export default function UnifiedReportsDashboard({
 
   const handleSelectWeek = async (weekStart: string) => {
     if (isDirty) {
-      if (!window.confirm('Tenés cambios sin guardar en esta planilla. ¿Querés descartarlos y cambiar de semana?')) {
+      if (!await confirm('Tenés cambios sin guardar en esta planilla. ¿Querés descartarlos y cambiar de semana?', { type: 'warning' })) {
         return;
       }
     }
@@ -242,7 +244,7 @@ export default function UnifiedReportsDashboard({
   };
 
   const handleDeleteWeekly = async () => {
-    if (!window.confirm(`¿Estás seguro de que querés eliminar la planilla de la semana ${selectedWeekStart}? Esta acción no se puede deshacer.`)) {
+    if (!await confirm(`¿Estás seguro de que querés eliminar la planilla de la semana ${selectedWeekStart}? Esta acción no se puede deshacer.`, { type: 'danger' })) {
       return;
     }
     try {

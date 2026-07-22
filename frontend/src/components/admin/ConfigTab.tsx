@@ -8,6 +8,7 @@ import {
   Trash2, 
   RefreshCw 
 } from 'lucide-react';
+import { useConfirm } from '../../context/ConfirmContext';
 
 interface ConfigTabProps {
   setErrorMsg: (msg: string | null) => void;
@@ -18,6 +19,7 @@ export default function ConfigTab({
   setErrorMsg,
   setSuccessMsg
 }: ConfigTabProps) {
+  const confirm = useConfirm();
   // Tab navigation state
   const [configTab, setConfigTab] = useState<string>('general');
 
@@ -185,7 +187,7 @@ export default function ConfigTab({
   };
 
   const handleDeleteUser = async (username: string) => {
-    if (!window.confirm(`¿Está seguro de eliminar permanentemente al usuario ${username}? Esta acción no se puede deshacer.`)) return;
+    if (!await confirm(`¿Está seguro de eliminar permanentemente al usuario ${username}? Esta acción no se puede deshacer.`, { type: 'danger' })) return;
     try {
       await api.deleteUser(username);
       setSuccessMsg(`Usuario ${username} eliminado correctamente.`);
@@ -260,7 +262,8 @@ export default function ConfigTab({
   };
 
   const handleDeleteDiscountRule = async (id: number) => {
-    if (!window.confirm('¿Está seguro de eliminar esta regla de descuento?')) return;
+    if (!await confirm('¿Está seguro de eliminar esta regla de descuento?', { type: 'danger' })) return;
+    setErrorMsg(null);
     try {
       await api.deleteDiscountRule(id);
       setSuccessMsg('Regla eliminada.');
@@ -298,7 +301,8 @@ export default function ConfigTab({
   };
 
   const handleDeleteSplitConfig = async (id: number) => {
-    if (!window.confirm('¿Está seguro de eliminar esta configuración de división?')) return;
+    if (!await confirm('¿Está seguro de eliminar esta configuración de división?', { type: 'danger' })) return;
+    setErrorMsg(null);
     try {
       await api.deleteSplitConfig(id);
       setSuccessMsg('Configuración de división eliminada.');

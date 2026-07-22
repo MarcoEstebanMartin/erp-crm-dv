@@ -1,23 +1,11 @@
 import { useState, useEffect } from 'react';
 import { api } from '../utils/api';
 import { 
-  Plus, 
-  Trash2, 
-  Edit3, 
-  AlertTriangle, 
-  Calendar, 
-  DollarSign, 
-  Layers, 
-  Settings, 
-  Activity, 
-  FileText, 
-  Check, 
-  Clock, 
-  ChevronRight, 
-  ChevronDown, 
-  Wrench, 
-  AlertCircle 
+  Car, Plus, Wrench, Settings, MapPin, Map, Flag, Shield, Activity, Save, 
+  Trash2, X, Download, AlertTriangle, AlertCircle, TrendingUp, Filter, RefreshCw,
+  Layers, ChevronRight, Edit3, Calendar, DollarSign
 } from 'lucide-react';
+import { useConfirm } from '../context/ConfirmContext';
 
 interface Supplier {
   id: number;
@@ -57,8 +45,10 @@ interface Vehicle {
 }
 
 export default function FleetDashboard() {
+  const confirm = useConfirm();
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeSubTab, setActiveSubTab] = useState<'vehiculos' | 'mantenimientos' | 'alertas' | 'gastos' | 'mapa'>('vehiculos');
   const [error, setError] = useState<string | null>(null);
   
   // Selección de vehículo para ficha de detalle
@@ -191,7 +181,7 @@ export default function FleetDashboard() {
   };
 
   const handleDeleteVehicleClick = async (id: number) => {
-    if (!window.confirm('¿Está seguro de que desea eliminar este vehículo de la flota?')) return;
+    if (!await confirm('¿Está seguro de que desea eliminar este vehículo de la flota?', { type: 'danger' })) return;
     try {
       await api.deleteVehicle(id);
       if (selectedVehicleId === id) setSelectedVehicleId(null);
@@ -208,7 +198,7 @@ export default function FleetDashboard() {
 
     const currentVehicle = vehicles.find(v => v.id === selectedVehicleId);
     if (currentVehicle && Number(maintenanceForm.odometer) < currentVehicle.currentOdometer) {
-      if (!window.confirm(`El kilometraje ingresado (${maintenanceForm.odometer} km) es inferior al kilometraje actual del vehículo (${currentVehicle.currentOdometer} km). ¿Desea continuar de todas formas?`)) {
+      if (!await confirm(`El kilometraje ingresado (${maintenanceForm.odometer} km) es inferior al kilometraje actual del vehículo (${currentVehicle.currentOdometer} km). ¿Desea continuar de todas formas?`, { type: 'warning' })) {
         return;
       }
     }
@@ -244,7 +234,7 @@ export default function FleetDashboard() {
   };
 
   const handleDeleteExpiry = async (id: number) => {
-    if (!window.confirm('¿Eliminar esta alerta de vencimiento?')) return;
+    if (!await confirm('¿Eliminar esta alerta de vencimiento?')) return;
     try {
       await api.deleteVehicleExpiry(id);
       fetchVehicles();
@@ -254,7 +244,7 @@ export default function FleetDashboard() {
   };
 
   const handleDeleteMaintenance = async (id: number) => {
-    if (!window.confirm('¿Eliminar este registro de mantenimiento? Si tiene un gasto financiero asociado, este se anulará también de la caja/banco.')) return;
+    if (!await confirm('¿Eliminar este registro de mantenimiento? Si tiene un gasto financiero asociado, este se anulará también de la caja/banco.', { type: 'danger' })) return;
     try {
       await api.deleteVehicleMaintenance(id);
       fetchVehicles();

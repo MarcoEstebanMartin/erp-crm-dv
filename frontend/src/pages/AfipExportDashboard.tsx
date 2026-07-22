@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { API_BASE_URL } from '../utils/api';
-import { FileText, FileDown } from 'lucide-react';
+import { FileText, FileDown, AlertCircle, TrendingUp, TrendingDown, CheckCircle2 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
@@ -11,6 +11,10 @@ export default function AfipExportDashboard() {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [progressMsg, setProgressMsg] = useState<string | null>(null);
+
+  // Estados para el Monitor de Correlación
+  const [fetchingMetrics, setFetchingMetrics] = useState(false);
+  const [metrics, setMetrics] = useState({ ventasNeto: 0, ventasIva: 0, ventasTotal: 0, comprasNeto: 0, comprasIva: 0, comprasTotal: 0 });
 
   const months = [
     { value: 1, label: 'Enero' },
@@ -26,6 +30,51 @@ export default function AfipExportDashboard() {
     { value: 11, label: 'Noviembre' },
     { value: 12, label: 'Diciembre' }
   ];
+
+  useEffect(() => {
+    fetchMetrics();
+    // eslint-disable-next-line
+  }, [month, year]);
+
+  const fetchMetrics = async () => {
+    try {
+      setFetchingMetrics(true);
+      const res = await fetch(`${API_BASE_URL}/iva/export?month=${month}&year=${year}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+        }
+      });
+      if (!res.ok) throw new Error('Error al obtener datos fiscales');
+      const { data } = await res.json();
+      
+      let vNeto = 0, vIva = 0, vTotal = 0;
+      data.ventasData.forEach((v: any) => {
+        vNeto += (v.neto * v.sign);
+        vIva += (v.iva * v.sign);
+        vTotal += (v.total * v.sign);
+      });
+
+      let cNeto = 0, cIva = 0, cTotal = 0;
+      data.comprasData.forEach((c: any) => {
+        cNeto += (c.neto * c.sign);
+        cIva += (c.iva * c.sign);
+        cTotal += (c.total * c.sign);
+      });
+
+      setMetrics({
+        ventasNeto: vNeto,
+        ventasIva: vIva,
+        ventasTotal: vTotal,
+        comprasNeto: cNeto,
+        comprasIva: cIva,
+        comprasTotal: cTotal
+      });
+    } catch (err: any) {
+      console.error('Error fetching metrics:', err);
+    } finally {
+      setFetchingMetrics(false);
+    }
+  };
 
   const handleDownloadTxt = async () => {
     try {
@@ -93,7 +142,6 @@ export default function AfipExportDashboard() {
       if (!res.ok) throw new Error('Error al obtener datos para PDF');
       const { data } = await res.json();
 
-      // Procesar Ventas
       setProgressMsg('Procesando y tabulando Libro IVA Ventas...');
       await new Promise(r => setTimeout(r, 150));
 
@@ -115,7 +163,6 @@ export default function AfipExportDashboard() {
         ];
       });
 
-      // Generar PDF Ventas
       setProgressMsg('Generando archivo PDF de IVA Ventas...');
       await new Promise(r => setTimeout(r, 150));
 
@@ -136,7 +183,6 @@ export default function AfipExportDashboard() {
       });
       docVentas.save(`Subdiario_Ventas_${year}_${month.toString().padStart(2,'0')}.pdf`);
 
-      // Procesar Compras
       setProgressMsg('Procesando y tabulando Libro IVA Compras...');
       await new Promise(r => setTimeout(r, 150));
 
@@ -158,7 +204,6 @@ export default function AfipExportDashboard() {
         ];
       });
 
-      // Generar PDF Compras
       setProgressMsg('Generando archivo PDF de IVA Compras...');
       await new Promise(r => setTimeout(r, 150));
 
@@ -190,8 +235,46 @@ export default function AfipExportDashboard() {
     }
   };
 
+  // Cálculos para el monitor
+  const sumTotal = metrics.ventasTotal + metrics.comprasTotal || 1;
+  const ventasPerc = Math.max((metrics.ventasTotal / sumTotal) * 100, 0);
+  const comprasPerc = Math.max((metrics.comprasTotal / sumTotal) * 100, 0);
+
+  // Lógica del semáforo
+  // Un margen saludable suele ser Ventas > Compras, pero si Ventas son DEMASIADO altas respecto a compras, pagan mucho IVA/Ganancias.
+  // Si Compras son DEMASIADO altas respecto a Ventas, genera saldo a favor y levanta sospechas de evasión.
+  const isVentasTooHigh = metrics.ventasTotal > metrics.comprasTotal * 1.5; // Ventas 50% mayores que compras
+  const isComprasTooHigh = metrics.comprasTotal > metrics.ventasTotal * 1.2; // Compras 20% mayores que ventas
+
+  let statusColor = '#000000';
+  let statusIcon = <CheckCircle2 size={18} />;
+  let statusText = 'Correlación balanceada.';
+  let statusDesc = 'La proporción entre compras y ventas en blanco es razonable.';
+  let alertStyle = { bg: '#F8F9FA', border: '#E9ECEF', text: '#495057' };
+
+  if (metrics.ventasTotal === 0 && metrics.comprasTotal === 0) {
+    statusColor = '#6c757d';
+    statusText = 'Sin movimientos.';
+    statusDesc = 'No hay compras ni ventas registradas en el período.';
+  } else if (isVentasTooHigh) {
+    statusColor = '#D97706'; // Naranja / Ambar
+    statusIcon = <TrendingUp size={18} />;
+    statusText = 'Atención: Ventas elevadas.';
+    statusDesc = 'Estás facturando (Ventas en blanco) significativamente más de lo que ingresás como compras oficiales. Considerá cargar más comprobantes de proveedores.';
+    alertStyle = { bg: '#FFFBEB', border: '#FEF3C7', text: '#92400E' };
+  } else if (isComprasTooHigh) {
+    statusColor = '#DC2626'; // Rojo
+    statusIcon = <TrendingDown size={18} />;
+    statusText = 'Alerta: Compras superan Ventas.';
+    statusDesc = 'Estás ingresando comprobantes de compras por encima de tus ventas oficiales. Esto puede generar alertas fiscales. Considerá oficializar más ventas.';
+    alertStyle = { bg: '#FEF2F2', border: '#FEE2E2', text: '#991B1B' };
+  } else {
+    statusColor = '#059669'; // Verde
+    alertStyle = { bg: '#ECFDF5', border: '#D1FAE5', text: '#065F46' };
+  }
+
   return (
-    <div style={{ maxWidth: '800px', margin: '0 auto' }}>
+    <div style={{ maxWidth: '850px', margin: '0 auto' }}>
       {errorMsg && (
         <div style={{ backgroundColor: '#FDF6F6', color: '#C5221F', padding: '12px', borderRadius: '8px', marginBottom: '20px', border: '1px solid #FAD2D2' }}>
           {errorMsg}
@@ -199,10 +282,9 @@ export default function AfipExportDashboard() {
       )}
 
       <div className="card">
-        <h2 className="card-title">Cierre Fiscal (Libro IVA Digital)</h2>
+        <h2 className="card-title">Monitor de Correlación Fiscal</h2>
         <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '20px' }}>
-          Generá los archivos obligatorios para la AFIP (.txt) y los subdiarios en PDF para enviar a tu contador. 
-          Este módulo incluye únicamente los comprobantes oficiales generados bajo los Puntos de Venta registrados.
+          Evaluá en tiempo real el balance entre tus compras legales a proveedores y tu facturación de ventas (Sucursal A).
         </p>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '30px', backgroundColor: '#F8F8FA', padding: '20px', borderRadius: '8px' }}>
@@ -225,6 +307,84 @@ export default function AfipExportDashboard() {
           </div>
         </div>
 
+        {/* Dashboard de Correlación */}
+        <div style={{ border: '1px solid var(--border-color)', borderRadius: '10px', padding: '24px', marginBottom: '30px', backgroundColor: '#fff', position: 'relative', overflow: 'hidden' }}>
+          {fetchingMetrics && (
+            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '3px', backgroundColor: 'var(--bg-light)', overflow: 'hidden' }}>
+              <div style={{ width: '30%', height: '100%', backgroundColor: 'var(--color-primary)', animation: 'slide 1.5s infinite linear' }} />
+            </div>
+          )}
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px', marginBottom: '24px' }}>
+            {/* KPI Compras */}
+            <div style={{ padding: '16px', borderRadius: '8px', backgroundColor: '#FAFAFA', border: '1px solid #EEEEEE' }}>
+              <span style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Compras Oficiales</span>
+              <span style={{ display: 'block', fontSize: '1.4rem', fontWeight: 700, marginTop: '4px', color: '#111827' }}>
+                {formatCurrency(metrics.comprasTotal)}
+              </span>
+              <span style={{ fontSize: '0.75rem', color: '#6B7280' }}>Neto Gravado: {formatCurrency(metrics.comprasNeto)}</span>
+            </div>
+
+            {/* KPI Ventas */}
+            <div style={{ padding: '16px', borderRadius: '8px', backgroundColor: '#FAFAFA', border: '1px solid #EEEEEE' }}>
+              <span style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Ventas Oficiales</span>
+              <span style={{ display: 'block', fontSize: '1.4rem', fontWeight: 700, marginTop: '4px', color: '#111827' }}>
+                {formatCurrency(metrics.ventasTotal)}
+              </span>
+              <span style={{ fontSize: '0.75rem', color: '#6B7280' }}>Neto Gravado: {formatCurrency(metrics.ventasNeto)}</span>
+            </div>
+
+            {/* KPI Saldo Técnico */}
+            <div style={{ padding: '16px', borderRadius: '8px', backgroundColor: '#FAFAFA', border: '1px solid #EEEEEE' }}>
+              <span style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>IVA (Débito vs Crédito)</span>
+              <span style={{ display: 'block', fontSize: '1.4rem', fontWeight: 700, marginTop: '4px', color: metrics.ventasIva > metrics.comprasIva ? '#D97706' : '#059669' }}>
+                {formatCurrency(metrics.ventasIva - metrics.comprasIva)}
+              </span>
+              <span style={{ fontSize: '0.75rem', color: '#6B7280' }}>
+                {metrics.ventasIva > metrics.comprasIva ? 'A Pagar (Saldo favor AFIP)' : 'Saldo a Favor (Crédito)'}
+              </span>
+            </div>
+          </div>
+
+          {/* Barra de Proporción Visual */}
+          <div style={{ marginBottom: '16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
+              <span>Compras ({comprasPerc.toFixed(1)}%)</span>
+              <span>Ventas ({ventasPerc.toFixed(1)}%)</span>
+            </div>
+            <div style={{ width: '100%', height: '12px', backgroundColor: '#F3F4F6', borderRadius: '6px', display: 'flex', overflow: 'hidden' }}>
+              <div style={{ width: `${comprasPerc}%`, backgroundColor: '#3B82F6', transition: 'width 0.5s ease' }} />
+              <div style={{ width: `${ventasPerc}%`, backgroundColor: '#10B981', transition: 'width 0.5s ease' }} />
+            </div>
+          </div>
+
+          {/* Recomendación Dinámica */}
+          <div style={{ 
+            backgroundColor: alertStyle.bg, 
+            border: `1px solid ${alertStyle.border}`, 
+            color: alertStyle.text, 
+            padding: '16px', 
+            borderRadius: '8px',
+            display: 'flex',
+            gap: '12px',
+            alignItems: 'flex-start'
+          }}>
+            <div style={{ color: statusColor, marginTop: '2px' }}>{statusIcon}</div>
+            <div>
+              <span style={{ display: 'block', fontWeight: 600, fontSize: '0.9rem', marginBottom: '4px', color: statusColor }}>
+                {statusText}
+              </span>
+              <span style={{ fontSize: '0.85rem', lineHeight: '1.4' }}>
+                {statusDesc}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <hr style={{ border: '0', borderTop: '1px solid var(--border-color)', margin: '30px 0' }} />
+
+        <h3 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '20px' }}>Exportación Legal AFIP</h3>
+        
         {loading && progressMsg && (
           <div style={{
             backgroundColor: '#F3F4F6',
@@ -277,6 +437,13 @@ export default function AfipExportDashboard() {
           </button>
         </div>
       </div>
+      
+      <style dangerouslySetInnerHTML={{__html: `
+        @keyframes slide {
+          0% { transform: translateX(-100%); }
+          100% { transform: translateX(400%); }
+        }
+      `}} />
     </div>
   );
 }

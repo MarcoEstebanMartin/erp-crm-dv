@@ -11,6 +11,7 @@ import {
   getDebtorsReport,
   getSellers,
   recordVisit,
+  deletePersona,
 } from '../controllers/persona.controller';
 import { authenticateJWT, requireRole } from '../middlewares/auth';
 import { Role } from '@prisma/client';
@@ -39,5 +40,6 @@ router.post('/', authenticateJWT, requireRole([Role.ADMIN, Role.VENDEDOR]), vali
 router.put('/:id', authenticateJWT, requireRole([Role.ADMIN, Role.VENDEDOR]), validateRequest(updatePersonaSchema), updatePersona);
 router.post('/:id/payments', authenticateJWT, requireRole([Role.ADMIN, Role.VENDEDOR]), validateRequest(recordPersonaPaymentSchema), recordPersonaPayment);
 router.post('/:id/visit', authenticateJWT, requireRole([Role.ADMIN, Role.VENDEDOR]), validateRequest(recordVisitSchema), recordVisit);
+router.delete('/:id', authenticateJWT, requireRole([Role.ADMIN]), deletePersona);
 
 export default router;

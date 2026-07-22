@@ -1,11 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import React from 'react';
 import { api } from '../utils/api';
 import { getOrderStatusInfo } from '../utils/orderStatusHelper';
 
-import { Trash2, ShoppingCart, UserPlus, CheckCircle2, Eye, Edit, Printer, MapPin, Calendar, TrendingUp, X, Phone, DollarSign, Navigation, ArrowRight, Loader2, RefreshCw } from 'lucide-react';
+import { Trash2, ShoppingCart, UserPlus, CheckCircle2, Eye, Edit, Printer, MapPin, Phone, Navigation, ArrowRight, RefreshCw } from 'lucide-react';
 import PriceListModal from './PriceListModal';
 import MobileCobros from './MobileCobros';
+import type { Persona, Product, Order, Rubro, SaleRoute } from '../types';
 
 interface VendedorDashboardProps {
   activeTab: string;
@@ -13,14 +14,14 @@ interface VendedorDashboardProps {
 }
 
 export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorDashboardProps) {
-  const [clients, setClients] = useState<any[]>([]);
-  const [products, setProducts] = useState<any[]>([]);
-  const [orders, setOrders] = useState<any[]>([]);
-  const [rubros, setRubros] = useState<any[]>([]);
+  const [clients, setClients] = useState<Persona[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [rubros, setRubros] = useState<Rubro[]>([]);
   const [filterRubroId, setFilterRubroId] = useState<string>('');
   
   // Nuevo Pedido State
-  const [selectedClient, setSelectedClient] = useState<any | null>(null);
+  const [selectedClient, setSelectedClient] = useState<Persona | null>(null);
   const [clientFilter, setClientFilter] = useState('');
   const [cart, setCart] = useState<{ product: any; quantity: number }[]>([]);
   const [subTab, setSubTab] = useState<'create' | 'list'>('create');
@@ -53,7 +54,7 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
   const [noSaleModal, setNoSaleModal] = useState<{ open: boolean; clientId: number; clientName: string; reason: string; notes: string } | null>(null);
 
   // Estados para rutas de preventa del vendedor
-  const [vendedorRoutes, setVendedorRoutes] = useState<any[]>([]);
+  const [vendedorRoutes, setVendedorRoutes] = useState<SaleRoute[]>([]);
   const [selectedRouteId, setSelectedRouteId] = useState<number | null>(null);
   const [activeRouteDetail, setActiveRouteDetail] = useState<any | null>(null);
   const [todayVisits, setTodayVisits] = useState<any[]>([]);
@@ -191,30 +192,8 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
     return Math.round(price * (1 - discount / 100));
   };
 
-  useEffect(() => {
-    fetchData();
-  }, [activeTab, searchQuery, prodSearchQuery, subTab]);
 
-  // Polling automático cada 30 segundos si la pestaña es clientes
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (activeTab === 'clients') {
-      interval = setInterval(() => {
-        fetchData();
-      }, 30000);
-    }
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [activeTab, selectedRouteId]);
-
-  // Limpiar mensajes al cambiar de pestaña
-  useEffect(() => {
-    setSuccessMsg(null);
-    setErrorMsg(null);
-  }, [activeTab, subTab]);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setErrorMsg(null);
     try {
       if (activeTab === 'orders' || activeTab === 'history') {
@@ -268,7 +247,30 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
     } catch (err: any) {
       setErrorMsg(err.message || 'Error al obtener datos.');
     }
-  };
+  }, [activeTab, prodSearchQuery, selectedRouteId, searchQuery]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  // Polling automático cada 30 segundos si la pestaña es clientes
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (activeTab === 'clients') {
+      interval = setInterval(() => {
+        fetchData();
+      }, 30000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [activeTab, fetchData]);
+
+  // Limpiar mensajes al cambiar de pestaña
+  useEffect(() => {
+    setSuccessMsg(null);
+    setErrorMsg(null);
+  }, [activeTab, subTab]);
 
   // --- CARRITO DE COMPRAS ---
   const addToCart = (product: any) => {
@@ -792,9 +794,9 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
                     </div>
                     <div className="client-info-stats">
                       <span><strong>Saldo C/C:</strong> <span style={{ 
-                        color: (selectedClient.outstandingBalance || 0) > 0 
+                        color: Number(selectedClient.outstandingBalance || 0) > 0 
                           ? 'var(--color-danger)' 
-                          : (selectedClient.outstandingBalance || 0) < 0 
+                          : Number(selectedClient.outstandingBalance || 0) < 0 
                             ? 'var(--color-success)' 
                             : 'var(--text-primary)', 
                         fontWeight: 600 
@@ -1930,8 +1932,8 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
                                   sku: p.sku,
                                   quantity: 1,
                                   isPesable: p.isPesable,
-                                  approximateWeight: p.approximateWeight,
-                                  listPrice: p.listPrice
+                                  approximateWeight: p.approximateWeight != null ? Number(p.approximateWeight) : undefined,
+                                  listPrice: Number(p.listPrice)
                                 }]
                               });
                             }

@@ -10,6 +10,8 @@ import {
   Trash2 
 } from 'lucide-react';
 
+import { useConfirm } from '../../context/ConfirmContext';
+
 interface OrdersTabProps {
   orders: any[];
   fetchData: () => void;
@@ -27,12 +29,13 @@ export default function OrdersTab({
   setErrorMsg,
   setSuccessMsg
 }: OrdersTabProps) {
+  const confirm = useConfirm();
   const [searchQuery, setSearchQuery] = useState('');
   const [orderStatusFilter, setOrderStatusFilter] = useState<string>('ALL');
 
   // Cancel order handler
   const handleCancelOrder = async (id: number) => {
-    if (!window.confirm('¿Está seguro de que desea cancelar este pedido? Se restaurará el stock físico.')) return;
+    if (!await confirm('¿Está seguro de que desea cancelar este pedido? Se restaurará el stock físico.', { type: 'danger' })) return;
     try {
       await api.updateOrderStatus(id, OrderStatus.CANCELLED);
       setSuccessMsg(`Pedido #${id} cancelado correctamente.`);

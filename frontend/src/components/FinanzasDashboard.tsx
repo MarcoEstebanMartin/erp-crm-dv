@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../utils/api';
 import { DollarSign, RefreshCw, PlusCircle, AlertCircle, Landmark, Upload, Check, CheckSquare } from 'lucide-react';
+import { useConfirm } from '../context/ConfirmContext';
 
 export default function FinanzasDashboard() {
+  const confirm = useConfirm();
   const [loading, setLoading] = useState(true);
   const [drawers, setDrawers] = useState<any[]>([]);
   const [transactions, setTransactions] = useState<any[]>([]);
@@ -390,7 +392,7 @@ export default function FinanzasDashboard() {
       return;
     }
 
-    if (!window.confirm(`¿Desea conciliar las ${exactMatches.length} transferencias con coincidencia exacta de manera masiva?`)) {
+    if (!await confirm(`¿Desea conciliar las ${exactMatches.length} transferencias con coincidencia exacta de manera masiva?`)) {
       return;
     }
 
@@ -1434,7 +1436,7 @@ export default function FinanzasDashboard() {
                                 <span
                                   style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', cursor: 'pointer' }}
                                   onClick={async () => {
-                                    if (window.confirm('¿Desea revertir la verificación de esta transferencia?')) {
+                                    if (await confirm('¿Desea revertir la verificación de esta transferencia?', { type: 'warning' })) {
                                       try {
                                         await api.verifyTransaction(t.id, false);
                                         fetchFinancialData();

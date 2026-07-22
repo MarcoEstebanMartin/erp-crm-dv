@@ -11,10 +11,12 @@ import {
   Trash2
 } from 'lucide-react';
 import { PurchaseScannerModal } from './PurchaseScannerModal';
+import { useConfirm } from '../context/ConfirmContext';
 
 export default function ComprasDashboard() {
   const currentUser = api.getCurrentUser();
   const isAdmin = currentUser?.role === 'ADMIN';
+  const confirm = useConfirm();
 
   // Subpestañas del módulo unificado
   const [activeSubTab, setActiveSubTab] = useState<'ordenes' | 'recepciones' | 'facturas' | 'proveedores'>('ordenes');
@@ -72,6 +74,11 @@ export default function ComprasDashboard() {
 
   // Modal para Crear/Editar Proveedor
   const [providerModal, setProviderModal] = useState<{ open: boolean; mode: 'create' | 'edit'; data: any } | null>(null);
+
+  // Modal para Ver Resumen de Cuenta del Proveedor
+  const [accountSummaryModal, setAccountSummaryModal] = useState<any | null>(null);
+  const [ledgerData, setLedgerData] = useState<any[]>([]);
+
 
   // Feedback states
   const [_loading, setLoading] = useState(false);
@@ -347,7 +354,7 @@ export default function ComprasDashboard() {
 
     const expectedTotal = Number(netAmount) + Number(taxAmount) + pampaVal + bsasVal + ivaVal + internosVal;
     if (Math.abs(Number(totalAmount) - expectedTotal) > 1.00) {
-      if (!window.confirm(`⚠️ El total ($${totalAmount}) no coincide con Neto + IVA + Percepciones + Imp. Internos ($${expectedTotal.toFixed(2)}). ¿Desea guardar de todas formas?`)) {
+      if (!await confirm(`⚠️ El total ($${totalAmount}) no coincide con Neto + IVA + Percepciones + Imp. Internos ($${expectedTotal.toFixed(2)}). ¿Desea guardar de todas formas?`, { type: 'warning' })) {
         return;
       }
     }
@@ -398,7 +405,7 @@ export default function ComprasDashboard() {
   };
 
   const handleDeleteInvoice = async (id: number, invoiceNumber: string) => {
-    if (!window.confirm(`⚠️ ¿Está seguro que desea eliminar/anular la factura Nro ${invoiceNumber}? \n\nEsta acción es irreversible y revertirá la deuda en la cuenta corriente del proveedor, además de borrar las percepciones de AFIP vinculadas.`)) {
+    if (!await confirm(`⚠️ ¿Está seguro que desea eliminar/anular la factura Nro ${invoiceNumber}? \n\nEsta acción es irreversible y revertirá la deuda en la cuenta corriente del proveedor, además de borrar las percepciones de AFIP vinculadas.`, { type: 'danger' })) {
       return;
     }
     try {
@@ -484,6 +491,38 @@ export default function ComprasDashboard() {
       loadData();
     } catch (err: any) {
       setErrorMsg(err.message || 'Error al guardar el proveedor.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteProvider = async (id: number, name: string) => {
+    if (!await confirm(`⚠️ ¿Está seguro que desea eliminar al proveedor ${name}?\n\nEsta acción no se puede deshacer y solo será posible si el proveedor no tiene órdenes de compra, facturas ni transacciones vinculadas.`, { type: 'danger' })) {
+      return;
+    }
+    try {
+      setLoading(true);
+      setErrorMsg(null);
+      setSuccessMsg(null);
+      await api.deletePersona(id);
+      setSuccessMsg('✅ Proveedor eliminado con éxito.');
+      loadData();
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Error al eliminar el proveedor.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleOpenAccountSummary = async (p: any) => {
+    try {
+      setLoading(true);
+      setErrorMsg(null);
+      const res = await api.getPersonaLedger(p.id);
+      setAccountSummaryModal(p);
+      setLedgerData(res.ledger);
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Error al obtener el resumen de cuenta.');
     } finally {
       setLoading(false);
     }
@@ -1046,14 +1085,34 @@ export default function ComprasDashboard() {
                         </div>
                       </td>
                       <td>
-                        <button 
-                          className="btn btn-secondary" 
-                          style={{ padding: '4px 8px', fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '4px' }}
-                          onClick={() => handleOpenEditProvider(p)}
-                        >
-                          <Edit size={12} />
-                          Editar
-                        </button>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                          <button 
+                            className="btn btn-secondary" 
+                            style={{ padding: '4px 8px', fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '4px', width: '100%', justifyContent: 'center' }}
+                            onClick={() => handleOpenAccountSummary(p)}
+                          >
+                            <Eye size={12} />
+                            Resumen
+                          </button>
+                          <button 
+                            className="btn btn-secondary" 
+                            style={{ padding: '4px 8px', fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '4px', width: '100%', justifyContent: 'center' }}
+                            onClick={() => handleOpenEditProvider(p)}
+                          >
+                            <Edit size={12} />
+                            Editar
+                          </button>
+                          {isAdmin && (
+                            <button 
+                              className="btn btn-secondary" 
+                              style={{ padding: '4px 8px', fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '4px', width: '100%', justifyContent: 'center', color: 'var(--color-danger)', borderColor: 'var(--color-danger)' }}
+                              onClick={() => handleDeleteProvider(p.id, p.name)}
+                            >
+                              <Trash2 size={12} />
+                              Eliminar
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))
@@ -1854,6 +1913,83 @@ export default function ComprasDashboard() {
           loadData();
         }}
       />
+
+      {/* ====================================================================
+          MODAL: RESUMEN DE CUENTA PROVEEDOR
+          ==================================================================== */}
+      {accountSummaryModal && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ maxWidth: '800px' }}>
+            <div className="modal-header">
+              <h3>Resumen de Cuenta: {accountSummaryModal.name}</h3>
+              <button className="btn btn-ghost" style={{ padding: '4px' }} onClick={() => setAccountSummaryModal(null)}><X size={18} /></button>
+            </div>
+            
+            <div style={{ marginBottom: '16px', display: 'flex', gap: '16px' }}>
+              <div style={{ flex: 1, backgroundColor: '#F8F8FA', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>Deuda Pendiente</div>
+                <div style={{ fontSize: '1.4rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                  ${Number(accountSummaryModal.outstandingBalance || 0).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                </div>
+              </div>
+            </div>
+
+            <div className="table-container" style={{ maxHeight: '400px', overflowY: 'auto' }}>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Fecha</th>
+                    <th>Tipo</th>
+                    <th>Referencia</th>
+                    <th>Descripción</th>
+                    <th style={{ textAlign: 'right' }}>Debe</th>
+                    <th style={{ textAlign: 'right' }}>Haber</th>
+                    <th style={{ textAlign: 'right' }}>Saldo</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {ledgerData.length === 0 ? (
+                    <tr><td colSpan={7} style={{ textAlign: 'center' }}>No hay movimientos registrados.</td></tr>
+                  ) : (
+                    ledgerData.map((item, index) => (
+                      <tr key={index}>
+                        <td>{new Date(item.date).toLocaleDateString('es-AR')}</td>
+                        <td>
+                          <span style={{
+                            fontSize: '0.72rem',
+                            fontWeight: 600,
+                            padding: '2px 6px',
+                            borderRadius: '4px',
+                            backgroundColor: item.type === 'DEBIT' ? '#FFF0F0' : '#E8F5E9',
+                            color: item.type === 'DEBIT' ? 'var(--color-danger)' : '#2E7D32'
+                          }}>
+                            {item.type === 'DEBIT' ? 'Cargo' : 'Crédito'}
+                          </span>
+                        </td>
+                        <td style={{ fontSize: '0.8rem', fontWeight: 500 }}>{item.reference}</td>
+                        <td style={{ fontSize: '0.8rem' }}>{item.description}</td>
+                        <td style={{ textAlign: 'right', fontWeight: 600, color: 'var(--color-danger)' }}>
+                          {item.type === 'DEBIT' ? `$${Number(item.amount).toLocaleString('es-AR', { minimumFractionDigits: 2 })}` : ''}
+                        </td>
+                        <td style={{ textAlign: 'right', fontWeight: 600, color: '#2E7D32' }}>
+                          {item.type === 'CREDIT' ? `$${Number(item.amount).toLocaleString('es-AR', { minimumFractionDigits: 2 })}` : ''}
+                        </td>
+                        <td style={{ textAlign: 'right', fontWeight: 700 }}>
+                          ${Number(item.balance).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="modal-footer" style={{ marginTop: '20px' }}>
+              <button className="btn btn-secondary" onClick={() => setAccountSummaryModal(null)}>Cerrar</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

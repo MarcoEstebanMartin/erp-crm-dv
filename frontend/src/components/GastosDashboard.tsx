@@ -1,19 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../utils/api';
-import { 
-  Plus, 
-  Trash2, 
-  UploadCloud, 
-  AlertCircle, 
-  Calendar, 
-  DollarSign, 
-  Filter, 
-  Check, 
-  FileSpreadsheet,
-  TrendingDown,
-  Info,
-  Car
-} from 'lucide-react';
+import { DollarSign, Plus, Trash2, X, RefreshCw, Calendar, FileText, CheckCircle, Tag, Truck, UploadCloud, AlertCircle, Filter, Check, FileSpreadsheet, TrendingDown, Info, Car } from 'lucide-react';
+import { useConfirm } from '../context/ConfirmContext';
 
 interface ExpenseCategory {
   id: number;
@@ -38,7 +26,9 @@ interface Expense {
 }
 
 export default function GastosDashboard() {
+  const confirm = useConfirm();
   // Datos principales
+  const [gastos, setGastos] = useState<any[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [categories, setCategories] = useState<ExpenseCategory[]>([]);
   const [vehicles, setVehicles] = useState<any[]>([]);
@@ -186,7 +176,7 @@ export default function GastosDashboard() {
   };
 
   const handleDeleteExpense = async (id: number) => {
-    if (!window.confirm('¿Está seguro de que desea eliminar este gasto? Si afectó a una cuenta bancaria, se revertirá el saldo correspondiente.')) {
+    if (!await confirm('¿Está seguro de que desea eliminar este gasto? Si afectó a una cuenta bancaria, se revertirá el saldo correspondiente.', { type: 'danger' })) {
       return;
     }
 
