@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { api } from '../../utils/api';
 
-export const getWhatsAppLink = (phone: string) => {
+const getWhatsAppLink = (phone: string) => {
   const cleanPhone = phone.replace(/\D/g, '');
   if (!cleanPhone) return '';
   const formatted = cleanPhone.startsWith('54') ? cleanPhone : `549${cleanPhone}`;

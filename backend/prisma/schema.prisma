@@ -299,6 +299,9 @@ model CashDrawer {
   userId         Int
   user           User      @relation(fields: [userId], references: [id])
   branch         String // "A" | "X" (Sucursal A / X)
+  drawerType     String    @default("DEPOSITO") // "DEPOSITO" | "VENDEDOR" | "REPARTIDOR"
+  routeNote      String? // Pueblo o Ruta de cobro (ej: "General Villegas / Bunge")
+  notes          String? // Observaciones o notas adicionales de arqueo
   openingBalance Decimal   @db.Decimal(12, 2)
   closingBalance Decimal?  @db.Decimal(12, 2)
   realBalance    Decimal?  @db.Decimal(12, 2)
