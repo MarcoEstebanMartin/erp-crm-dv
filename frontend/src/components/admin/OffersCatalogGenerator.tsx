@@ -374,7 +374,7 @@ export default function OffersCatalogGenerator({ campaignId, onBack }: OffersCat
                       {/* Items del Rubro */}
                       {groupedItems[rubro].map(item => {
                         const regPrice = Number(item.product.listPrice) || 0;
-                        const finalPrice = Number(item.product.listPrice) || 0;
+                        const finalPrice = Number(item.offerPrice) || Number(item.product.listPrice) || 0;
                         const customTag = item.specialTag;
 
                         const tagWidth = columnsCount === 2 ? 150 : 110;

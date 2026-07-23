@@ -65,8 +65,8 @@ export default function PromptModal({
         
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px', marginBottom: '20px' }}>
           <div style={{
-            backgroundColor: 'rgba(139, 92, 246, 0.1)',
-            color: '#8b5cf6',
+            backgroundColor: 'var(--bg-secondary, #F3F4F6)',
+            color: 'var(--text-primary, #111827)',
             padding: '12px',
             borderRadius: '50%',
             display: 'flex',
@@ -74,7 +74,7 @@ export default function PromptModal({
             justifyContent: 'center',
             flexShrink: 0
           }}>
-            <Type size={24} />
+            <Type size={22} />
           </div>
           <div>
             <h3 style={{ margin: '0 0 8px 0', fontSize: '18px', fontWeight: 'bold', color: 'var(--text-primary)' }}>
@@ -131,7 +131,7 @@ export default function PromptModal({
               disabled={!inputValue.trim()}
               style={{
                 padding: '8px 16px',
-                backgroundColor: '#8b5cf6',
+                backgroundColor: 'var(--accent-color, #111827)',
                 border: 'none',
                 borderRadius: '8px',
                 color: '#ffffff',
@@ -141,7 +141,7 @@ export default function PromptModal({
                 display: 'flex',
                 alignItems: 'center',
                 gap: '6px',
-                boxShadow: '0 4px 6px -1px rgba(139, 92, 246, 0.4)'
+                boxShadow: 'var(--shadow-sm)'
               }}
             >
               <Check size={16} /> {confirmText}

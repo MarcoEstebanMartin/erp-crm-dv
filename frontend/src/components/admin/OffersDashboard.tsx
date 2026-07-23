@@ -45,10 +45,8 @@ export default function OffersDashboard() {
     }
   };
 
-  const createCampaign = async () => {
-    const title = prompt('Nombre de la nueva campaña de ofertas (Ej: Semana 18 al 25):');
-    if (!title) return;
-
+  const executeCreateCampaign = async (title: string) => {
+    setPromptModal(prev => ({ ...prev, isOpen: false }));
     try {
       const res = await fetch(`${API_BASE_URL}/offers`, {
         method: 'POST',
@@ -74,6 +72,16 @@ export default function OffersDashboard() {
         onConfirm: () => setConfirmModal(prev => ({ ...prev, isOpen: false }))
       });
     }
+  };
+
+  const createCampaign = () => {
+    setPromptModal({
+      isOpen: true,
+      title: 'Nueva Campaña de Ofertas',
+      message: 'Ingresa el nombre de la nueva campaña de ofertas (Ej: Semana 18 al 25):',
+      defaultValue: '',
+      onConfirm: (val) => executeCreateCampaign(val)
+    });
   };
 
   const [confirmModal, setConfirmModal] = useState<{isOpen: boolean, title?: string, message: string, onConfirm: () => void, type?: 'danger'|'warning'|'info', isAlert?: boolean}>({ isOpen: false, message: '', onConfirm: () => {} });

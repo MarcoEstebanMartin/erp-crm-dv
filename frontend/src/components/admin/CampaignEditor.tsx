@@ -792,8 +792,8 @@ export default function CampaignEditor({ campaignId, onBack }: CampaignEditorPro
         </div>
 
         {/* Panel derecho: Tabla de productos (Alta Densidad) */}
-        <div className="card" style={{ padding: '0px', backgroundColor: '#ffffff', overflow: 'hidden', border: '1px solid #e2e8f0' }}>
-          <div style={{ padding: '20px 20px 10px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0' }}>
+        <div className="card" style={{ padding: '0px', backgroundColor: 'var(--bg-card)', overflow: 'hidden', border: '1px solid var(--border-color)' }}>
+          <div style={{ padding: '20px 20px 10px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)' }}>
             <h3 style={{ fontSize: '18px', fontWeight: 'bold', margin: 0, color: 'var(--text-primary)' }}>
               Productos en la Campaña ({campaign.items.length})
             </h3>
@@ -807,14 +807,16 @@ export default function CampaignEditor({ campaignId, onBack }: CampaignEditorPro
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
                 <thead>
-                  <tr style={{ backgroundColor: '#f8fafc', color: '#64748b', textAlign: 'left', textTransform: 'uppercase', fontSize: '11px', letterSpacing: '0.5px' }}>
-                    <th style={{ padding: '12px 16px', fontWeight: '600' }}>SKU</th>
-                    <th style={{ padding: '12px 16px', fontWeight: '600' }}>Producto</th>
-                    <th style={{ padding: '12px 16px', fontWeight: '600' }}>Grupo</th>
-                    <th style={{ padding: '12px 16px', fontWeight: '600', textAlign: 'right' }}>Precio de Lista</th>
-                    <th style={{ padding: '12px 16px', fontWeight: '600', textAlign: 'right' }}>Precio Anterior (Tachado)</th>
-                    <th style={{ padding: '12px 16px', fontWeight: '600', textAlign: 'center' }}>Etiqueta</th>
-                    <th style={{ padding: '12px 16px', fontWeight: '600', textAlign: 'center', width: '50px' }}></th>
+                  <tr style={{ backgroundColor: 'var(--bg-secondary, #f8fafc)', color: 'var(--text-secondary, #64748b)', textAlign: 'left', textTransform: 'uppercase', fontSize: '11px', letterSpacing: '0.5px' }}>
+                    <th style={{ padding: '12px 14px', fontWeight: '600' }}>SKU</th>
+                    <th style={{ padding: '12px 14px', fontWeight: '600' }}>Producto</th>
+                    <th style={{ padding: '12px 14px', fontWeight: '600' }}>Grupo</th>
+                    <th style={{ padding: '12px 14px', fontWeight: '600', textAlign: 'right' }}>Precio Lista</th>
+                    <th style={{ padding: '12px 14px', fontWeight: '600', textAlign: 'right' }}>Precio Oferta ($)</th>
+                    <th style={{ padding: '12px 14px', fontWeight: '600', textAlign: 'center' }}>% Ahorro</th>
+                    <th style={{ padding: '12px 14px', fontWeight: '600', textAlign: 'right' }}>Anterior (Tachado)</th>
+                    <th style={{ padding: '12px 14px', fontWeight: '600', textAlign: 'center' }}>Etiqueta</th>
+                    <th style={{ padding: '12px 14px', fontWeight: '600', textAlign: 'center', width: '70px' }}>Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -843,8 +845,8 @@ export default function CampaignEditor({ campaignId, onBack }: CampaignEditorPro
                       const items = groupedItems[rubro];
                       return (
                         <React.Fragment key={rubro}>
-                          <tr style={{ backgroundColor: '#f1f5f9' }}>
-                            <td colSpan={7} style={{ padding: '8px 16px', fontWeight: 'bold', color: '#334155', fontSize: '12px' }}>
+                          <tr style={{ backgroundColor: 'var(--bg-secondary, #f1f5f9)' }}>
+                            <td colSpan={9} style={{ padding: '8px 14px', fontWeight: 'bold', color: 'var(--text-primary)', fontSize: '12px' }}>
                               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
                                   <span>{rubro.toUpperCase()} ({items.length})</span>
@@ -866,7 +868,7 @@ export default function CampaignEditor({ campaignId, onBack }: CampaignEditorPro
                                       }
                                       e.target.value = "";
                                     }}
-                                    style={{ padding: '2px 8px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '11px', fontWeight: 'normal', color: '#475569', backgroundColor: '#ffffff', cursor: 'pointer' }}
+                                    style={{ padding: '2px 8px', borderRadius: '4px', border: '1px solid var(--border-color)', fontSize: '11px', fontWeight: 'normal', color: 'var(--text-secondary)', backgroundColor: 'var(--bg-card)', cursor: 'pointer' }}
                                   >
                                     <option value="">Mover todos a...</option>
                                     <option value="Automático">Automático</option>
@@ -879,7 +881,7 @@ export default function CampaignEditor({ campaignId, onBack }: CampaignEditorPro
                                   <button 
                                     onClick={() => moveRubro(rubro, 'up')}
                                     disabled={index === 0}
-                                    style={{ background: index === 0 ? '#e2e8f0' : '#3b82f6', border: 'none', cursor: index === 0 ? 'not-allowed' : 'pointer', color: '#fff', padding: '4px', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                    style={{ background: index === 0 ? 'var(--border-color)' : 'var(--text-primary)', border: 'none', cursor: index === 0 ? 'not-allowed' : 'pointer', color: '#fff', padding: '4px', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                                     title="Subir Rubro"
                                   >
                                     <ArrowUp size={14} />
@@ -887,7 +889,7 @@ export default function CampaignEditor({ campaignId, onBack }: CampaignEditorPro
                                   <button 
                                     onClick={() => moveRubro(rubro, 'down')}
                                     disabled={index === rubroOrder.length - 1}
-                                    style={{ background: index === rubroOrder.length - 1 ? '#e2e8f0' : '#3b82f6', border: 'none', cursor: index === rubroOrder.length - 1 ? 'not-allowed' : 'pointer', color: '#fff', padding: '4px', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                    style={{ background: index === rubroOrder.length - 1 ? 'var(--border-color)' : 'var(--text-primary)', border: 'none', cursor: index === rubroOrder.length - 1 ? 'not-allowed' : 'pointer', color: '#fff', padding: '4px', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                                     title="Bajar Rubro"
                                   >
                                     <ArrowDown size={14} />
@@ -902,18 +904,18 @@ export default function CampaignEditor({ campaignId, onBack }: CampaignEditorPro
                         const savingPct = listPrice > 0 ? ((listPrice - offerPrice) / listPrice * 100) : 0;
                         
                         return (
-                          <tr key={item.id} style={{ borderBottom: '1px solid #f1f5f9', backgroundColor: index % 2 === 0 ? '#ffffff' : '#fafafa' }}>
-                            <td style={{ padding: '10px 16px', color: '#64748b', fontFamily: 'monospace' }}>
+                          <tr key={item.id} style={{ borderBottom: '1px solid var(--border-color)', backgroundColor: index % 2 === 0 ? 'var(--bg-card)' : 'var(--bg-secondary)' }}>
+                            <td style={{ padding: '10px 14px', color: 'var(--text-secondary)', fontFamily: 'monospace' }}>
                               {item.product.sku}
                             </td>
-                            <td style={{ padding: '10px 16px', fontWeight: '500', color: '#0f172a' }}>
+                            <td style={{ padding: '10px 14px', fontWeight: '500', color: 'var(--text-primary)' }}>
                               {item.product.name}
                             </td>
-                            <td style={{ padding: '10px 16px' }}>
+                            <td style={{ padding: '10px 14px' }}>
                               <select 
                                 value={item.campaignGroup || ''} 
                                 onChange={(e) => updateCampaignItem(item, { campaignGroup: e.target.value })}
-                                style={{ padding: '4px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '11px', width: '130px' }}
+                                style={{ padding: '4px 6px', borderRadius: '4px', border: '1px solid var(--border-color)', fontSize: '11px', width: '130px', backgroundColor: 'var(--bg-card)', color: 'var(--text-primary)' }}
                               >
                                 <option value="">Automático</option>
                                 {AVAILABLE_GROUPS.map(g => (
@@ -921,14 +923,59 @@ export default function CampaignEditor({ campaignId, onBack }: CampaignEditorPro
                                 ))}
                               </select>
                             </td>
-                            <td style={{ padding: '10px 16px', textAlign: 'right', fontWeight: 'bold', color: '#10b981', fontSize: '14px' }}>
+                            <td style={{ padding: '10px 14px', textAlign: 'right', color: 'var(--text-secondary)', fontSize: '13px' }}>
                               ${listPrice.toFixed(2)}
                             </td>
-                            <td style={{ padding: '10px 16px', textAlign: 'right' }}>
+                            <td style={{ padding: '10px 14px', textAlign: 'right' }}>
                               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px' }}>
-                                <span style={{ fontWeight: 'bold', color: '#fbbf24' }}>$</span>
+                                <span style={{ fontWeight: 'bold', color: 'var(--color-corp-red, #E30613)' }}>$</span>
                                 <input 
-                                  key={`prev-${item.previousPrice || ''}`}
+                                  key={`offer-${item.id}-${offerPrice}`}
+                                  type="number"
+                                  step="0.01"
+                                  defaultValue={offerPrice ? offerPrice : ''}
+                                  onBlur={(e) => {
+                                    const val = parseFloat(e.target.value);
+                                    if (!isNaN(val) && val > 0 && val !== offerPrice) {
+                                      updateCampaignItem(item, { offerPrice: val });
+                                    }
+                                  }}
+                                  style={{ 
+                                    width: '95px', 
+                                    padding: '4px 6px', 
+                                    borderRadius: '4px', 
+                                    border: '1px solid var(--color-corp-red, #E30613)', 
+                                    textAlign: 'right', 
+                                    fontWeight: 'bold', 
+                                    color: 'var(--color-corp-red, #E30613)',
+                                    fontSize: '13px',
+                                    backgroundColor: 'rgba(227, 6, 19, 0.04)'
+                                  }}
+                                  placeholder="Ej: 8500"
+                                />
+                              </div>
+                            </td>
+                            <td style={{ padding: '10px 14px', textAlign: 'center' }}>
+                              {savingPct > 0 ? (
+                                <span style={{ 
+                                  fontSize: '11px', 
+                                  fontWeight: 'bold', 
+                                  backgroundColor: 'rgba(16, 185, 129, 0.1)', 
+                                  color: '#10b981', 
+                                  padding: '2px 8px', 
+                                  borderRadius: '12px' 
+                                }}>
+                                  -{savingPct.toFixed(0)}%
+                                </span>
+                              ) : (
+                                <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>0%</span>
+                              )}
+                            </td>
+                            <td style={{ padding: '10px 14px', textAlign: 'right' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px' }}>
+                                <span style={{ fontWeight: 'bold', color: 'var(--text-muted)' }}>$</span>
+                                <input 
+                                  key={`prev-${item.id}-${item.previousPrice || ''}`}
                                   type="number"
                                   defaultValue={item.previousPrice ? Number(item.previousPrice) : ''}
                                   onBlur={(e) => {
@@ -943,20 +990,20 @@ export default function CampaignEditor({ campaignId, onBack }: CampaignEditorPro
                                     width: '85px', 
                                     padding: '4px 6px', 
                                     borderRadius: '4px', 
-                                    border: '1px solid #fbbf24', 
+                                    border: '1px solid var(--border-color)', 
                                     textAlign: 'right', 
-                                    fontWeight: 'bold', 
-                                    color: '#fbbf24',
+                                    fontWeight: '500', 
+                                    color: 'var(--text-secondary)',
                                     fontSize: '12px',
-                                    backgroundColor: '#fffbeb'
+                                    backgroundColor: 'var(--bg-card)'
                                   }}
                                   placeholder="Ej: 10500"
                                 />
                               </div>
                             </td>
-                            <td style={{ padding: '10px 16px', textAlign: 'center' }}>
+                            <td style={{ padding: '10px 14px', textAlign: 'center' }}>
                               <input 
-                                key={`tag-${item.specialTag || ''}`}
+                                key={`tag-${item.id}-${item.specialTag || ''}`}
                                 type="text"
                                 defaultValue={item.specialTag || ''}
                                 onBlur={(e) => {
@@ -969,19 +1016,19 @@ export default function CampaignEditor({ campaignId, onBack }: CampaignEditorPro
                                   width: '100px', 
                                   padding: '4px 6px', 
                                   borderRadius: '4px', 
-                                  border: '1px solid #cbd5e1', 
+                                  border: '1px solid var(--border-color)', 
                                   textAlign: 'center', 
                                   fontSize: '11px',
                                   textTransform: 'uppercase',
-                                  backgroundColor: item.specialTag ? '#fee2e2' : '#ffffff',
-                                  color: item.specialTag ? '#ef4444' : '#64748b',
+                                  backgroundColor: item.specialTag ? 'rgba(227, 6, 19, 0.08)' : 'var(--bg-card)',
+                                  color: item.specialTag ? 'var(--color-corp-red, #E30613)' : 'var(--text-secondary)',
                                   fontWeight: item.specialTag ? 'bold' : 'normal'
                                 }}
                                 placeholder="Ej: 2x1!"
                               />
                             </td>
-                            <td style={{ padding: '10px 16px', textAlign: 'center' }}>
-                              <div style={{ display: 'flex', justifyContent: 'center', gap: '8px' }}>
+                            <td style={{ padding: '10px 14px', textAlign: 'center' }}>
+                              <div style={{ display: 'flex', justifyContent: 'center', gap: '6px' }}>
                                 <button
                                   onClick={() => {
                                     setSwapTarget(item);
@@ -991,17 +1038,17 @@ export default function CampaignEditor({ campaignId, onBack }: CampaignEditorPro
                                     setNewItemTag(item.specialTag || '');
                                     window.scrollTo({ top: 0, behavior: 'smooth' });
                                   }}
-                                  style={{ background: 'none', border: 'none', color: '#f59e0b', cursor: 'pointer', padding: '4px' }}
+                                  style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: '4px' }}
                                   title="Reemplazar producto"
                                 >
-                                  <RefreshCw size={16} />
+                                  <RefreshCw size={15} />
                                 </button>
                                 <button
                                   onClick={() => removeItem(item.id)}
-                                  style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '4px' }}
+                                  style={{ background: 'none', border: 'none', color: 'var(--color-danger, #ef4444)', cursor: 'pointer', padding: '4px' }}
                                   title="Eliminar producto"
                                 >
-                                  <Trash2 size={16} />
+                                  <Trash2 size={15} />
                                 </button>
                               </div>
                             </td>
