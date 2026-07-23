@@ -12,6 +12,8 @@
   /* Paleta de Colores (Minimalista y Elegante - Stripe/Vercel/Linear style) */
   --bg-app: #F9FAFB;          /* Gris muy claro neutral (Gray 50) */
   --bg-card: #FFFFFF;         /* Blanco puro */
+  --card-bg: #FFFFFF;         /* Alias para compatibilidad */
+  --bg-secondary: #F3F4F6;    /* Gris secundario / Gray 100 */
   --text-primary: #111827;    /* Gray 900 */
   --text-secondary: #4B5563;  /* Gray 600 */
   --text-muted: #9CA3AF;      /* Gray 400 */

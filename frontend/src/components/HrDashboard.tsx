@@ -43,6 +43,7 @@ export default function HrDashboard() {
   const [showVacationModal, setShowVacationModal] = useState<boolean>(false);
   const [selectedEmployee, setSelectedEmployee] = useState<any | null>(null);
   const [selectedPayrollReceipt, setSelectedPayrollReceipt] = useState<any | null>(null);
+  const [legajoTab, setLegajoTab] = useState<'info' | 'vales' | 'liquidaciones' | 'vacaciones'>('info');
 
   // Formularios
   const [employeeForm, setEmployeeForm] = useState<any>({
@@ -927,33 +928,421 @@ export default function HrDashboard() {
       )}
 
       {/* DRAWER / DETALLE DE LEGAJO DE EMPLEADO */}
-      {selectedEmployee && (
-        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 1050, display: 'flex', justifyContent: 'flex-end' }}>
-          <div style={{ backgroundColor: 'var(--card-bg)', width: '100%', maxWidth: '550px', height: '100%', padding: '24px', overflowY: 'auto', borderLeft: '1px solid var(--border-color)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h2 style={{ margin: 0, fontSize: '1.3rem', fontWeight: 700 }}>Ficha Técnica de Legajo</h2>
-              <button onClick={() => setSelectedEmployee(null)} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}><X size={20} /></button>
-            </div>
+      {selectedEmployee && (() => {
+        const empAdvances = advances.filter(a => Number(a.employeeId) === Number(selectedEmployee.id));
+        const empPayrolls = payrolls.filter(p => Number(p.employeeId) === Number(selectedEmployee.id));
+        const empVacations = vacations.filter(v => Number(v.employeeId) === Number(selectedEmployee.id));
+        const pendingValesTotal = empAdvances.filter(a => a.status === 'PENDING').reduce((acc, c) => acc + Number(c.amount || 0), 0);
 
-            <div style={{ textAlign: 'center', padding: '20px', backgroundColor: 'var(--bg-secondary)', borderRadius: '10px', marginBottom: '20px' }}>
-              <div style={{ width: '64px', height: '64px', borderRadius: '50%', backgroundColor: 'var(--color-primary)', color: '#fff', fontSize: '1.5rem', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 10px auto' }}>
-                {selectedEmployee.firstName[0]}{selectedEmployee.lastName[0]}
+        // Antigüedad
+        const hireDateObj = new Date(selectedEmployee.hireDate);
+        const nowObj = new Date();
+        const yearsDiff = nowObj.getFullYear() - hireDateObj.getFullYear();
+        const monthsDiff = nowObj.getMonth() - hireDateObj.getMonth();
+        let totalMonths = yearsDiff * 12 + monthsDiff;
+        if (totalMonths < 0) totalMonths = 0;
+        const yearsAntig = Math.floor(totalMonths / 12);
+        const monthsAntig = totalMonths % 12;
+        const antigText = yearsAntig > 0 
+          ? `${yearsAntig} año(s) ${monthsAntig > 0 ? `y ${monthsAntig} mes(es)` : ''}`
+          : `${monthsAntig} mes(es)`;
+
+        return (
+          <div style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(15, 23, 42, 0.65)',
+            backdropFilter: 'blur(4px)',
+            zIndex: 1050,
+            display: 'flex',
+            justifyContent: 'flex-end'
+          }}>
+            <div style={{
+              backgroundColor: '#FFFFFF',
+              color: '#111827',
+              width: '100%',
+              maxWidth: '580px',
+              height: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+              boxShadow: '-8px 0 30px rgba(0,0,0,0.25)',
+              borderLeft: '1px solid var(--border-color)',
+              position: 'relative'
+            }}>
+              {/* Header Drawer */}
+              <div style={{
+                padding: '20px 24px',
+                borderBottom: '1px solid var(--border-color)',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                backgroundColor: '#FFFFFF'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{
+                    width: '44px',
+                    height: '44px',
+                    borderRadius: '10px',
+                    backgroundColor: 'var(--color-corp-red)',
+                    color: '#fff',
+                    fontWeight: 700,
+                    fontSize: '1.1rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    boxShadow: '0 2px 4px rgba(227,6,19,0.3)'
+                  }}>
+                    {selectedEmployee.firstName ? selectedEmployee.firstName[0] : 'E'}{selectedEmployee.lastName ? selectedEmployee.lastName[0] : ''}
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      Legajo N° {String(selectedEmployee.id).padStart(4, '0')}
+                    </div>
+                    <h2 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                      {selectedEmployee.lastName}, {selectedEmployee.firstName}
+                    </h2>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setSelectedEmployee(null)}
+                  style={{
+                    background: 'var(--bg-secondary)',
+                    border: 'none',
+                    borderRadius: '8px',
+                    width: '32px',
+                    height: '32px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: 'var(--text-secondary)',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s'
+                  }}
+                >
+                  <X size={18} />
+                </button>
               </div>
-              <h3 style={{ margin: 0, fontSize: '1.2rem' }}>{selectedEmployee.lastName}, {selectedEmployee.firstName}</h3>
-              <p style={{ margin: '4px 0 0 0', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>{selectedEmployee.position} • {selectedEmployee.department}</p>
-            </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', fontSize: '0.9rem' }}>
-              <div><strong>DNI:</strong> {selectedEmployee.dni}</div>
-              <div><strong>CUIL:</strong> {selectedEmployee.cuil || 'No informado'}</div>
-              <div><strong>Fecha de Ingreso:</strong> {new Date(selectedEmployee.hireDate).toLocaleDateString('es-AR')}</div>
-              <div><strong>Sueldo Básico Actual:</strong> ${Number(selectedEmployee.baseSalary).toLocaleString('es-AR')}</div>
-              <div><strong>CBU / ALIAS:</strong> {selectedEmployee.cbuAlias || 'No registrado'}</div>
-              <div><strong>Teléfono Contacto:</strong> {selectedEmployee.phone || 'Sin datos'}</div>
+              {/* Sub-Header con Info Clave y Estado */}
+              <div style={{
+                backgroundColor: 'var(--bg-app)',
+                padding: '16px 24px',
+                borderBottom: '1px solid var(--border-color)',
+                display: 'grid',
+                gridTemplateColumns: 'repeat(3, 1fr)',
+                gap: '12px'
+              }}>
+                <div>
+                  <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', display: 'block' }}>Puesto</span>
+                  <span style={{ fontSize: '0.88rem', fontWeight: 600, color: 'var(--text-primary)' }}>{selectedEmployee.position}</span>
+                </div>
+                <div>
+                  <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', display: 'block' }}>Departamento</span>
+                  <span style={{ fontSize: '0.88rem', fontWeight: 600, color: 'var(--text-primary)' }}>{selectedEmployee.department}</span>
+                </div>
+                <div>
+                  <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', display: 'block' }}>Estado</span>
+                  <span style={{
+                    fontSize: '0.75rem',
+                    fontWeight: 700,
+                    color: selectedEmployee.isActive !== false ? '#10B981' : '#EF4444',
+                    backgroundColor: selectedEmployee.isActive !== false ? '#ECFDF5' : '#FEF2F2',
+                    padding: '2px 8px',
+                    borderRadius: '12px',
+                    display: 'inline-block'
+                  }}>
+                    {selectedEmployee.isActive !== false ? '● ACTIVO' : '○ INACTIVO'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Pestañas del Legajo */}
+              <div style={{
+                display: 'flex',
+                borderBottom: '1px solid var(--border-color)',
+                backgroundColor: '#FFFFFF',
+                padding: '0 16px'
+              }}>
+                {[
+                  { id: 'info', label: '📄 Ficha Técnica' },
+                  { id: 'vales', label: `💸 Vales (${empAdvances.length})` },
+                  { id: 'liquidaciones', label: `📄 Nómina (${empPayrolls.length})` },
+                  { id: 'vacaciones', label: `🏖️ Licencias (${empVacations.length})` }
+                ].map(t => (
+                  <button
+                    key={t.id}
+                    onClick={() => setLegajoTab(t.id as any)}
+                    style={{
+                      flex: 1,
+                      padding: '12px 6px',
+                      fontSize: '0.82rem',
+                      fontWeight: 600,
+                      backgroundColor: 'transparent',
+                      border: 'none',
+                      borderBottom: legajoTab === t.id ? '2px solid var(--color-corp-red)' : '2px solid transparent',
+                      color: legajoTab === t.id ? 'var(--color-corp-red)' : 'var(--text-secondary)',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s'
+                    }}
+                  >
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Cuerpo / Contenido Navegable del Drawer */}
+              <div style={{ flex: 1, overflowY: 'auto', padding: '24px', backgroundColor: '#FFFFFF' }}>
+
+                {/* TAB 1: FICHA TÉCNICA Y DATOS PERSONALES */}
+                {legajoTab === 'info' && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+
+                    {/* Resumen Financiero Rápido */}
+                    <div style={{
+                      display: 'grid',
+                      gridTemplateColumns: '1fr 1fr',
+                      gap: '12px',
+                      backgroundColor: 'var(--bg-app)',
+                      padding: '14px',
+                      borderRadius: '10px',
+                      border: '1px solid var(--border-color)'
+                    }}>
+                      <div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Sueldo Básico Actual</div>
+                        <div style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                          ${Number(selectedEmployee.baseSalary || 0).toLocaleString('es-AR')}
+                        </div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Vales a Descontar</div>
+                        <div style={{ fontSize: '1.2rem', fontWeight: 700, color: pendingValesTotal > 0 ? '#F59E0B' : '#10B981' }}>
+                          ${pendingValesTotal.toLocaleString('es-AR')}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Sección 1: Datos de Identificación */}
+                    <div>
+                      <h4 style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '12px', borderBottom: '1px solid var(--border-color)', paddingBottom: '6px' }}>
+                        Identificación y Contacto
+                      </h4>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '0.88rem' }}>
+                        <div>
+                          <span style={{ color: 'var(--text-secondary)', display: 'block', fontSize: '0.78rem' }}>DNI</span>
+                          <strong style={{ color: 'var(--text-primary)' }}>{selectedEmployee.dni}</strong>
+                        </div>
+                        <div>
+                          <span style={{ color: 'var(--text-secondary)', display: 'block', fontSize: '0.78rem' }}>CUIL</span>
+                          <strong style={{ color: 'var(--text-primary)' }}>{selectedEmployee.cuil || 'No registrado'}</strong>
+                        </div>
+                        <div>
+                          <span style={{ color: 'var(--text-secondary)', display: 'block', fontSize: '0.78rem' }}>Teléfono</span>
+                          <strong style={{ color: 'var(--text-primary)' }}>{selectedEmployee.phone || 'Sin datos'}</strong>
+                        </div>
+                        <div>
+                          <span style={{ color: 'var(--text-secondary)', display: 'block', fontSize: '0.78rem' }}>Email</span>
+                          <strong style={{ color: 'var(--text-primary)' }}>{selectedEmployee.email || 'Sin datos'}</strong>
+                        </div>
+                        <div style={{ gridColumn: 'span 2' }}>
+                          <span style={{ color: 'var(--text-secondary)', display: 'block', fontSize: '0.78rem' }}>Dirección / Domicilio</span>
+                          <strong style={{ color: 'var(--text-primary)' }}>{selectedEmployee.address || 'No registrado'}</strong>
+                        </div>
+                        <div style={{ gridColumn: 'span 2' }}>
+                          <span style={{ color: 'var(--text-secondary)', display: 'block', fontSize: '0.78rem' }}>Contacto de Emergencia</span>
+                          <strong style={{ color: 'var(--text-primary)' }}>{selectedEmployee.emergencyContact || 'No especificado'}</strong>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Sección 2: Datos Laborales y Antigüedad */}
+                    <div>
+                      <h4 style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '12px', borderBottom: '1px solid var(--border-color)', paddingBottom: '6px' }}>
+                        Relación Laboral
+                      </h4>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '0.88rem' }}>
+                        <div>
+                          <span style={{ color: 'var(--text-secondary)', display: 'block', fontSize: '0.78rem' }}>Fecha de Ingreso</span>
+                          <strong style={{ color: 'var(--text-primary)' }}>{new Date(selectedEmployee.hireDate).toLocaleDateString('es-AR')}</strong>
+                        </div>
+                        <div>
+                          <span style={{ color: 'var(--text-secondary)', display: 'block', fontSize: '0.78rem' }}>Antigüedad</span>
+                          <strong style={{ color: 'var(--text-primary)' }}>{antigText}</strong>
+                        </div>
+                        <div>
+                          <span style={{ color: 'var(--text-secondary)', display: 'block', fontSize: '0.78rem' }}>Forma de Pago</span>
+                          <strong style={{ color: 'var(--text-primary)' }}>{selectedEmployee.paymentMethod === 'CASH' ? 'Efectivo en Caja' : 'Transferencia Bancaria'}</strong>
+                        </div>
+                        <div>
+                          <span style={{ color: 'var(--text-secondary)', display: 'block', fontSize: '0.78rem' }}>Banco / Entidad</span>
+                          <strong style={{ color: 'var(--text-primary)' }}>{selectedEmployee.bankName || 'Mercado Pago / Banco'}</strong>
+                        </div>
+                        <div style={{ gridColumn: 'span 2' }}>
+                          <span style={{ color: 'var(--text-secondary)', display: 'block', fontSize: '0.78rem' }}>CBU / Alias</span>
+                          <strong style={{ color: 'var(--text-primary)' }}>{selectedEmployee.cbuAlias || 'No configurado'}</strong>
+                        </div>
+                      </div>
+                    </div>
+
+                    {selectedEmployee.notes && (
+                      <div>
+                        <h4 style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>
+                          Observaciones Internas
+                        </h4>
+                        <div style={{ backgroundColor: 'var(--bg-app)', padding: '10px 14px', borderRadius: '8px', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                          {selectedEmployee.notes}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* TAB 2: VALES DEL EMPLEADO */}
+                {legajoTab === 'vales' && (
+                  <div>
+                    {empAdvances.length === 0 ? (
+                      <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                        Este empleado no tiene vales ni adelantos registrados.
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        {empAdvances.map(a => (
+                          <div key={a.id} style={{ border: '1px solid var(--border-color)', borderRadius: '8px', padding: '12px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div>
+                              <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{a.reason || 'Adelanto de Sueldo'}</div>
+                              <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                                {new Date(a.date).toLocaleDateString('es-AR')} • {a.paymentMethod === 'CASH' ? 'Efectivo' : 'Transferencia'}
+                              </div>
+                            </div>
+                            <div style={{ textAlign: 'right' }}>
+                              <div style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--text-primary)' }}>
+                                ${Number(a.amount).toLocaleString('es-AR')}
+                              </div>
+                              <span style={{
+                                fontSize: '0.72rem',
+                                fontWeight: 700,
+                                color: a.status === 'PENDING' ? '#F59E0B' : '#10B981',
+                                backgroundColor: a.status === 'PENDING' ? '#FFFBEB' : '#ECFDF5',
+                                padding: '2px 6px',
+                                borderRadius: '4px'
+                              }}>
+                                {a.status === 'PENDING' ? 'PENDIENTE' : 'DESCONTADO'}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* TAB 3: LIQUIDACIONES Y HABERES */}
+                {legajoTab === 'liquidaciones' && (
+                  <div>
+                    {empPayrolls.length === 0 ? (
+                      <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                        No hay recibos de haberes procesados para este empleado.
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        {empPayrolls.map(p => (
+                          <div key={p.id} style={{ border: '1px solid var(--border-color)', borderRadius: '8px', padding: '12px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div>
+                              <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>Período {p.periodMonth}/{p.periodYear}</div>
+                              <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                                Básico: ${Number(p.baseSalary).toLocaleString('es-AR')} • Desc: -${Number(p.advancesDeduction).toLocaleString('es-AR')}
+                              </div>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                              <div style={{ textAlign: 'right' }}>
+                                <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#10B981' }}>
+                                  ${Number(p.netSalary).toLocaleString('es-AR')}
+                                </div>
+                                <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>NETO COBRADO</div>
+                              </div>
+                              <button
+                                onClick={() => setSelectedPayrollReceipt(p)}
+                                className="btn btn-secondary btn-sm"
+                                style={{ padding: '6px 10px', fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '4px' }}
+                              >
+                                <Printer size={14} /> Recibo
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* TAB 4: VACACIONES Y LICENCIAS */}
+                {legajoTab === 'vacaciones' && (
+                  <div>
+                    {empVacations.length === 0 ? (
+                      <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                        No hay solicitudes ni licencias registradas para este legajo.
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        {empVacations.map(v => (
+                          <div key={v.id} style={{ border: '1px solid var(--border-color)', borderRadius: '8px', padding: '12px 14px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                              <strong style={{ fontSize: '0.88rem' }}>
+                                {v.type === 'VACATION' ? '🏖️ Vacaciones Anuales' : v.type === 'SICK_LEAVE' ? '🩺 Licencia Médica' : '📋 Licencia Especial'}
+                              </strong>
+                              <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#10B981', backgroundColor: '#ECFDF5', padding: '2px 8px', borderRadius: '4px' }}>
+                                {v.daysCount} DÍAS
+                              </span>
+                            </div>
+                            <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                              Del {new Date(v.startDate).toLocaleDateString('es-AR')} al {new Date(v.endDate).toLocaleDateString('es-AR')}
+                            </div>
+                            {v.comments && (
+                              <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '4px', fontStyle: 'italic' }}>
+                                "{v.comments}"
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Acciones Rápidas en el Pie del Drawer */}
+              <div style={{
+                padding: '16px 24px',
+                borderTop: '1px solid var(--border-color)',
+                backgroundColor: 'var(--bg-app)',
+                display: 'flex',
+                justifyContent: 'space-between',
+                gap: '12px'
+              }}>
+                <button
+                  onClick={() => {
+                    setAdvanceForm((prev: any) => ({ ...prev, employeeId: String(selectedEmployee.id) }));
+                    setShowAdvanceModal(true);
+                  }}
+                  className="btn btn-secondary"
+                  style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '0.85rem' }}
+                >
+                  <DollarSign size={16} /> Emitir Vale
+                </button>
+                <button
+                  onClick={() => {
+                    handleSelectEmployeeForPayroll(String(selectedEmployee.id));
+                    setShowPayrollModal(true);
+                  }}
+                  className="btn btn-primary"
+                  style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '0.85rem' }}
+                >
+                  <FileText size={16} /> Liquidar Sueldo
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 }
