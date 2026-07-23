@@ -3,7 +3,7 @@ import { api } from '../utils/api';
 import { useConfirm } from '../context/ConfirmContext';
 import { 
   Fuel, Plus, Trash2, TrendingUp, AlertCircle, RefreshCw, 
-  CheckCircle2, DollarSign, Gauge, Activity, Calendar, Car
+  DollarSign, Gauge, Car
 } from 'lucide-react';
 
 interface FuelControlDashboardProps {
@@ -191,188 +191,238 @@ export default function FuelControlDashboard({ vehicles: vehiclesProp, onRefresh
   const highestConsumingVehicle = vehicleStats.length > 0 && vehicleStats[0].litersPer100Km > 0 ? vehicleStats[0] : null;
 
   return (
-    <div className="space-y-6">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%' }}>
       {/* Header & Acciones Rápidas */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
-        <div>
-          <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-            <Fuel className="w-5 h-5 text-gray-700" />
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center', 
+        padding: '16px 20px', 
+        backgroundColor: 'var(--bg-card, #fff)', 
+        border: '1px solid var(--border-color)', 
+        borderRadius: '8px',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
+      }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+          <h2 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-primary)' }}>
+            <Fuel size={20} color="var(--text-primary)" />
             Control de Combustible y Eficiencia
           </h2>
-          <p className="text-xs text-gray-500 mt-1">
+          <span style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
             Monitoreo continuo de consumo promedio (L/100 km) y costos por vehículo.
-          </p>
+          </span>
         </div>
-        <div className="flex items-center gap-3">
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <button
             onClick={loadData}
             disabled={loading}
-            className="px-3 py-2 text-xs font-medium text-gray-700 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors flex items-center gap-1.5"
-            title="Actualizar datos"
+            style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '6px', 
+              padding: '8px 12px', 
+              fontSize: '0.8rem', 
+              fontWeight: 500, 
+              color: 'var(--text-primary)', 
+              backgroundColor: 'var(--bg-app, #F9FAFB)', 
+              border: '1px solid var(--border-color)', 
+              borderRadius: '6px', 
+              cursor: 'pointer' 
+            }}
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw size={14} className={loading ? 'spin' : ''} />
             Actualizar
           </button>
           <button
             onClick={() => handleOpenModal()}
-            className="px-4 py-2 text-xs font-semibold text-white bg-gray-900 rounded-lg hover:bg-gray-800 transition-colors flex items-center gap-2 shadow-sm"
+            style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '6px', 
+              padding: '8px 14px', 
+              fontSize: '0.8rem', 
+              fontWeight: 600, 
+              color: '#fff', 
+              backgroundColor: 'var(--accent-color, #111827)', 
+              border: 'none', 
+              borderRadius: '6px', 
+              cursor: 'pointer',
+              boxShadow: '0 1px 2px rgba(0,0,0,0.08)'
+            }}
           >
-            <Plus className="w-4 h-4 text-emerald-400" />
+            <Plus size={15} color="#10B981" />
             Cargar Combustible
           </button>
         </div>
       </div>
 
       {error && (
-        <div className="p-4 bg-red-50 border border-red-200 text-red-700 rounded-xl text-xs flex items-center gap-2">
-          <AlertCircle className="w-4 h-4 shrink-0" />
+        <div style={{ 
+          padding: '12px 16px', 
+          backgroundColor: 'rgba(239, 68, 68, 0.05)', 
+          border: '1px solid rgba(239, 68, 68, 0.2)', 
+          color: '#DC2626', 
+          borderRadius: '6px', 
+          fontSize: '0.84rem', 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: '8px' 
+        }}>
+          <AlertCircle size={16} />
           <span>{error}</span>
         </div>
       )}
 
       {/* KPI Cards Minimalistas */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">Gasto Total</span>
-            <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg">
-              <DollarSign className="w-4 h-4" />
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
+        <div style={{ padding: '18px 20px', backgroundColor: 'var(--bg-card, #fff)', border: '1px solid var(--border-color)', borderRadius: '8px', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Gasto Total</span>
+            <div style={{ padding: '6px', backgroundColor: '#ECFDF5', borderRadius: '6px', display: 'flex' }}>
+              <DollarSign size={16} color="#10B981" />
             </div>
           </div>
-          <p className="text-2xl font-extrabold text-gray-900 mt-2">
+          <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '8px', letterSpacing: '-0.02em' }}>
             ${summary.totalFleetSpent.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-          </p>
-          <p className="text-xs text-gray-500 mt-1">Acumulado en cargas</p>
+          </div>
+          <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '4px' }}>Acumulado en cargas</span>
         </div>
 
-        <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">Litros Consumidos</span>
-            <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
-              <Fuel className="w-4 h-4" />
+        <div style={{ padding: '18px 20px', backgroundColor: 'var(--bg-card, #fff)', border: '1px solid var(--border-color)', borderRadius: '8px', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Litros Consumidos</span>
+            <div style={{ padding: '6px', backgroundColor: '#EFF6FF', borderRadius: '6px', display: 'flex' }}>
+              <Fuel size={16} color="#3B82F6" />
             </div>
           </div>
-          <p className="text-2xl font-extrabold text-gray-900 mt-2">
-            {summary.totalFleetLiters.toLocaleString('es-AR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} <span className="text-sm font-semibold text-gray-500">L</span>
-          </p>
-          <p className="text-xs text-gray-500 mt-1">Total de litros despachados</p>
+          <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '8px', letterSpacing: '-0.02em' }}>
+            {summary.totalFleetLiters.toLocaleString('es-AR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} <span style={{ fontSize: '0.88rem', fontWeight: 600, color: 'var(--text-muted)' }}>L</span>
+          </div>
+          <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '4px' }}>Total de litros despachados</span>
         </div>
 
-        <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">Promedio Flota</span>
-            <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg">
-              <Gauge className="w-4 h-4" />
+        <div style={{ padding: '18px 20px', backgroundColor: 'var(--bg-card, #fff)', border: '1px solid var(--border-color)', borderRadius: '8px', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Promedio Flota</span>
+            <div style={{ padding: '6px', backgroundColor: '#EEF2FF', borderRadius: '6px', display: 'flex' }}>
+              <Gauge size={16} color="#6366F1" />
             </div>
           </div>
-          <p className="text-2xl font-extrabold text-gray-900 mt-2">
-            {summary.averageFleetLitersPer100Km > 0 ? summary.averageFleetLitersPer100Km.toFixed(1) : '--'} <span className="text-sm font-semibold text-gray-500">L/100 km</span>
-          </p>
-          <p className="text-xs text-gray-500 mt-1">Rendimiento medio global</p>
+          <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '8px', letterSpacing: '-0.02em' }}>
+            {summary.averageFleetLitersPer100Km > 0 ? summary.averageFleetLitersPer100Km.toFixed(1) : '--'} <span style={{ fontSize: '0.88rem', fontWeight: 600, color: 'var(--text-muted)' }}>L/100 km</span>
+          </div>
+          <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '4px' }}>Rendimiento medio global</span>
         </div>
 
-        <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">Mayor Consumo</span>
-            <div className="p-2 bg-rose-50 text-rose-600 rounded-lg">
-              <TrendingUp className="w-4 h-4" />
+        <div style={{ padding: '18px 20px', backgroundColor: 'var(--bg-card, #fff)', border: '1px solid var(--border-color)', borderRadius: '8px', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Mayor Consumo</span>
+            <div style={{ padding: '6px', backgroundColor: '#FEF2F2', borderRadius: '6px', display: 'flex' }}>
+              <TrendingUp size={16} color="#EF4444" />
             </div>
           </div>
           {highestConsumingVehicle ? (
-            <div>
-              <p className="text-base font-bold text-gray-900 mt-2 truncate">
+            <div style={{ marginTop: '6px' }}>
+              <div style={{ fontSize: '0.92rem', fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {highestConsumingVehicle.brand} {highestConsumingVehicle.model}
-              </p>
-              <div className="flex items-center gap-2 mt-1">
-                <span className="px-2 py-0.5 bg-rose-100 text-rose-700 font-bold text-xs rounded">
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px' }}>
+                <span style={{ padding: '2px 6px', backgroundColor: '#FEF2F2', color: '#DC2626', fontWeight: 700, fontSize: '0.75rem', borderRadius: '4px' }}>
                   {highestConsumingVehicle.litersPer100Km} L/100 km
                 </span>
-                <span className="text-xs text-gray-400 font-mono">({highestConsumingVehicle.plate})</span>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontFamily: 'monospace' }}>({highestConsumingVehicle.plate})</span>
               </div>
             </div>
           ) : (
-            <p className="text-xs text-gray-400 mt-3">Sin datos comparativos suficientes (requiere min. 2 cargas)</p>
+            <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '8px' }}>Requiere al menos 2 cargas</span>
           )}
         </div>
       </div>
 
       {/* Ranking de Vehículos por Consumo Promedio */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider">
-              Ranking de Eficiencia y Consumo (L / 100 km)
-            </h3>
-            <p className="text-xs text-gray-500 mt-0.5">
-              Comparativa del consumo promedio por unidad.
-            </p>
-          </div>
+      <div style={{ backgroundColor: 'var(--bg-card, #fff)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '20px' }}>
+        <div style={{ marginBottom: '16px' }}>
+          <h3 style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: '0.04em', margin: 0 }}>
+            Ranking de Eficiencia y Consumo (L / 100 km)
+          </h3>
+          <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'block', marginTop: '2px' }}>
+            Comparativa del consumo promedio por unidad ordenado de mayor a menor consumo.
+          </span>
         </div>
 
         {vehicleStats.length === 0 ? (
-          <div className="py-8 text-center text-xs text-gray-400">
+          <div style={{ padding: '30px', textAlign: 'center', fontSize: '0.82rem', color: 'var(--text-muted)' }}>
             No se registran datos de vehículos activos.
           </div>
         ) : (
-          <div className="space-y-4">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             {vehicleStats.map((stat: any) => {
               const maxLitersPer100 = Math.max(...vehicleStats.map((s: any) => s.litersPer100Km || 0), 1);
               const percentage = stat.litersPer100Km > 0 ? (stat.litersPer100Km / maxLitersPer100) * 100 : 0;
               
-              // Estado de consumo
               let badgeText = 'Normal';
-              let badgeClass = 'bg-gray-100 text-gray-700 border-gray-200';
-              let barClass = 'bg-gray-700';
+              let badgeBg = 'var(--bg-secondary, #F3F4F6)';
+              let badgeColor = 'var(--text-secondary)';
+              let barBg = '#374151';
 
               if (stat.litersPer100Km > 0) {
                 if (summary.averageFleetLitersPer100Km > 0 && stat.litersPer100Km > summary.averageFleetLitersPer100Km * 1.25) {
                   badgeText = 'Alto Consumo';
-                  badgeClass = 'bg-red-50 text-red-700 border-red-200 font-semibold';
-                  barClass = 'bg-red-600';
+                  badgeBg = '#FEF2F2';
+                  badgeColor = '#DC2626';
+                  barBg = '#EF4444';
                 } else if (summary.averageFleetLitersPer100Km > 0 && stat.litersPer100Km < summary.averageFleetLitersPer100Km * 0.85) {
                   badgeText = 'Eficiente';
-                  badgeClass = 'bg-emerald-50 text-emerald-700 border-emerald-200 font-semibold';
-                  barClass = 'bg-emerald-500';
+                  badgeBg = '#ECFDF5';
+                  badgeColor = '#059669';
+                  barBg = '#10B981';
                 }
               }
 
               return (
-                <div key={stat.vehicleId} className="p-3 bg-gray-50/70 border border-gray-100 rounded-lg hover:border-gray-300 transition-all">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
-                    <div className="flex items-center gap-2">
-                      <Car className="w-4 h-4 text-gray-400 shrink-0" />
-                      <span className="text-xs font-bold text-gray-900">
+                <div key={stat.vehicleId} style={{ padding: '12px 16px', backgroundColor: 'var(--bg-app, #F9FAFB)', border: '1px solid var(--border-color)', borderRadius: '6px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <Car size={16} color="var(--text-muted)" />
+                      <span style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--text-primary)' }}>
                         {stat.brand} {stat.model}
                       </span>
-                      <span className="text-[11px] font-mono text-gray-500 px-1.5 py-0.5 bg-white border border-gray-200 rounded">
+                      <span style={{ fontSize: '0.75rem', fontFamily: 'monospace', color: 'var(--text-secondary)', padding: '2px 6px', backgroundColor: '#fff', border: '1px solid var(--border-color)', borderRadius: '4px' }}>
                         {stat.plate}
                       </span>
-                      <span className={`text-[10px] px-2 py-0.5 rounded border ${badgeClass}`}>
+                      <span style={{ fontSize: '0.72rem', fontWeight: 600, padding: '2px 8px', borderRadius: '4px', backgroundColor: badgeBg, color: badgeColor }}>
                         {badgeText}
                       </span>
                     </div>
-                    <div className="flex items-center gap-4 text-xs">
-                      <div className="text-right">
-                        <span className="text-gray-500">Gasto: </span>
-                        <span className="font-semibold text-gray-900">${stat.vehicleSpent.toLocaleString('es-AR')}</span>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '20px', fontSize: '0.82rem' }}>
+                      <div>
+                        <span style={{ color: 'var(--text-muted)' }}>Gasto: </span>
+                        <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>${stat.vehicleSpent.toLocaleString('es-AR')}</span>
                       </div>
-                      <div className="text-right">
-                        <span className="text-gray-500">Cargas: </span>
-                        <span className="font-semibold text-gray-900">{stat.logsCount}</span>
+                      <div>
+                        <span style={{ color: 'var(--text-muted)' }}>Cargas: </span>
+                        <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{stat.logsCount}</span>
                       </div>
-                      <div className="text-right min-w-[100px]">
-                        <span className="font-extrabold text-gray-900 text-sm">
-                          {stat.litersPer100Km > 0 ? `${stat.litersPer100Km} L/100km` : 'Mediendo...'}
+                      <div style={{ minWidth: '110px', textAlign: 'right' }}>
+                        <span style={{ fontWeight: 800, fontSize: '0.9rem', color: 'var(--text-primary)' }}>
+                          {stat.litersPer100Km > 0 ? `${stat.litersPer100Km} L/100km` : 'Midiendo...'}
                         </span>
                       </div>
                     </div>
                   </div>
 
                   {/* Micro barra de nivel */}
-                  <div className="w-full bg-gray-200 h-1.5 rounded-full overflow-hidden">
+                  <div style={{ width: '100%', height: '5px', backgroundColor: 'var(--border-color)', borderRadius: '3px', overflow: 'hidden' }}>
                     <div 
-                      className={`h-full rounded-full transition-all duration-500 ${barClass}`}
-                      style={{ width: `${Math.max(percentage, 3)}%` }}
+                      style={{ 
+                        height: '100%', 
+                        width: `${Math.max(percentage, 3)}%`, 
+                        backgroundColor: barBg, 
+                        borderRadius: '3px',
+                        transition: 'width 0.4s ease'
+                      }} 
                     />
                   </div>
                 </div>
@@ -383,18 +433,19 @@ export default function FuelControlDashboard({ vehicles: vehiclesProp, onRefresh
       </div>
 
       {/* Tabla de Cargas Recientes */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-        <div className="p-5 border-b border-gray-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div style={{ backgroundColor: 'var(--bg-card, #fff)', border: '1px solid var(--border-color)', borderRadius: '8px', overflow: 'hidden' }}>
+        <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
           <div>
-            <h3 className="text-sm font-bold text-gray-900">Historial de Cargas Registradas</h3>
-            <p className="text-xs text-gray-500">Listado detallado de recargas por fecha y odómetro</p>
+            <h3 style={{ fontSize: '0.9rem', fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>Historial de Cargas Registradas</h3>
+            <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Listado detallado de recargas por fecha y odómetro</span>
           </div>
-          <div className="flex items-center gap-2">
-            <label className="text-xs text-gray-500 font-medium">Filtrar por Vehículo:</label>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 500 }}>Filtrar por Vehículo:</label>
             <select
               value={selectedVehicleFilter}
               onChange={(e) => setSelectedVehicleFilter(e.target.value === 'ALL' ? 'ALL' : Number(e.target.value))}
-              className="text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-gray-900"
+              style={{ padding: '6px 10px', fontSize: '0.8rem', border: '1px solid var(--border-color)', borderRadius: '6px', outline: 'none', backgroundColor: '#fff' }}
             >
               <option value="ALL">Todos los vehículos ({vehicles.length})</option>
               {vehicles.map(v => (
@@ -405,66 +456,66 @@ export default function FuelControlDashboard({ vehicles: vehiclesProp, onRefresh
         </div>
 
         {filteredLogs.length === 0 ? (
-          <div className="py-12 text-center text-xs text-gray-400">
+          <div style={{ padding: '40px', textAlign: 'center', fontSize: '0.82rem', color: 'var(--text-muted)' }}>
             No se han registrado cargas de combustible para el criterio seleccionado.
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-gray-50 text-gray-500 font-semibold border-b border-gray-100">
-                <tr>
-                  <th className="py-3 px-4">Fecha</th>
-                  <th className="py-3 px-4">Vehículo</th>
-                  <th className="py-3 px-4 text-right">Odómetro (km)</th>
-                  <th className="py-3 px-4 text-right">Litros (L)</th>
-                  <th className="py-3 px-4 text-right">Precio / L</th>
-                  <th className="py-3 px-4 text-right">Total ($)</th>
-                  <th className="py-3 px-4 text-center">Tanque</th>
-                  <th className="py-3 px-4 text-right">Acciones</th>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.83rem' }}>
+              <thead>
+                <tr style={{ backgroundColor: 'var(--bg-app, #F9FAFB)', borderBottom: '1px solid var(--border-color)', color: 'var(--text-secondary)', fontWeight: 600 }}>
+                  <th style={{ padding: '10px 16px' }}>Fecha</th>
+                  <th style={{ padding: '10px 16px' }}>Vehículo</th>
+                  <th style={{ padding: '10px 16px', textAlign: 'right' }}>Odómetro (km)</th>
+                  <th style={{ padding: '10px 16px', textAlign: 'right' }}>Litros (L)</th>
+                  <th style={{ padding: '10px 16px', textAlign: 'right' }}>Precio / L</th>
+                  <th style={{ padding: '10px 16px', textAlign: 'right' }}>Total ($)</th>
+                  <th style={{ padding: '10px 16px', textAlign: 'center' }}>Tanque</th>
+                  <th style={{ padding: '10px 16px', textAlign: 'right' }}>Acciones</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100 text-gray-700">
+              <tbody>
                 {filteredLogs.map(log => (
-                  <tr key={log.id} className="hover:bg-gray-50/80 transition-colors">
-                    <td className="py-3 px-4 whitespace-nowrap text-gray-500 font-mono">
+                  <tr key={log.id} style={{ borderBottom: '1px solid var(--border-color)', transition: 'background 0.15s' }}>
+                    <td style={{ padding: '10px 16px', color: 'var(--text-secondary)', fontFamily: 'monospace' }}>
                       {new Date(log.date).toLocaleDateString('es-AR')}
                     </td>
-                    <td className="py-3 px-4 font-medium text-gray-900">
+                    <td style={{ padding: '10px 16px', fontWeight: 600, color: 'var(--text-primary)' }}>
                       {log.vehicle ? `${log.vehicle.brand} ${log.vehicle.model}` : 'Vehículo general'}
-                      <span className="ml-1.5 text-[11px] text-gray-400 font-mono">
+                      <span style={{ marginLeft: '6px', fontSize: '0.75rem', color: 'var(--text-muted)', fontFamily: 'monospace' }}>
                         ({log.vehicle?.plate})
                       </span>
                     </td>
-                    <td className="py-3 px-4 text-right font-mono font-semibold">
+                    <td style={{ padding: '10px 16px', textAlign: 'right', fontFamily: 'monospace', fontWeight: 600 }}>
                       {log.odometer.toLocaleString('es-AR')} km
                     </td>
-                    <td className="py-3 px-4 text-right font-semibold text-gray-900">
+                    <td style={{ padding: '10px 16px', textAlign: 'right', fontWeight: 700, color: 'var(--text-primary)' }}>
                       {Number(log.liters).toFixed(1)} L
                     </td>
-                    <td className="py-3 px-4 text-right text-gray-500 font-mono">
+                    <td style={{ padding: '10px 16px', textAlign: 'right', color: 'var(--text-secondary)', fontFamily: 'monospace' }}>
                       ${Number(log.pricePerLiter || 0).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
                     </td>
-                    <td className="py-3 px-4 text-right font-bold text-gray-900">
+                    <td style={{ padding: '10px 16px', textAlign: 'right', fontWeight: 700, color: 'var(--text-primary)' }}>
                       ${Number(log.totalCost).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
                     </td>
-                    <td className="py-3 px-4 text-center">
+                    <td style={{ padding: '10px 16px', textAlign: 'center' }}>
                       {log.isFullTank ? (
-                        <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 text-[10px] font-semibold rounded border border-emerald-100">
+                        <span style={{ padding: '2px 6px', backgroundColor: '#ECFDF5', color: '#059669', fontSize: '0.72rem', fontWeight: 600, borderRadius: '4px', border: '1px solid #A7F3D0' }}>
                           Lleno
                         </span>
                       ) : (
-                        <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-[10px] rounded">
+                        <span style={{ padding: '2px 6px', backgroundColor: '#F3F4F6', color: '#4B5563', fontSize: '0.72rem', borderRadius: '4px' }}>
                           Parcial
                         </span>
                       )}
                     </td>
-                    <td className="py-3 px-4 text-right">
+                    <td style={{ padding: '10px 16px', textAlign: 'right' }}>
                       <button
                         onClick={() => handleDeleteLog(log.id)}
-                        className="p-1 text-gray-400 hover:text-red-600 transition-colors"
+                        style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '4px' }}
                         title="Eliminar carga"
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <Trash2 size={15} color="#EF4444" />
                       </button>
                     </td>
                   </tr>
@@ -477,32 +528,32 @@ export default function FuelControlDashboard({ vehicles: vehiclesProp, onRefresh
 
       {/* Modal "+ Registrar Carga de Combustible" */}
       {showModal && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl border border-gray-200 shadow-2xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
-              <div className="flex items-center gap-2">
-                <div className="p-2 bg-gray-900 text-emerald-400 rounded-lg">
-                  <Fuel className="w-4 h-4" />
+        <div style={{ position: 'fixed', inset: 0, zIndex: 999, backgroundColor: 'rgba(0, 0, 0, 0.4)', backdropFilter: 'blur(3px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
+          <div style={{ backgroundColor: '#fff', borderRadius: '12px', border: '1px solid var(--border-color)', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)', width: '100%', maxWidth: '500px', overflow: 'hidden' }}>
+            <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'var(--bg-app, #F9FAFB)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ padding: '6px', backgroundColor: '#111827', borderRadius: '6px', display: 'flex' }}>
+                  <Fuel size={16} color="#10B981" />
                 </div>
-                <h3 className="text-sm font-bold text-gray-900">Registrar Carga de Combustible</h3>
+                <h3 style={{ fontSize: '0.92rem', fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>Registrar Carga de Combustible</h3>
               </div>
               <button
                 onClick={() => setShowModal(false)}
-                className="text-gray-400 hover:text-gray-600 text-xs font-semibold px-2 py-1 rounded-lg hover:bg-gray-100"
+                style={{ border: 'none', background: 'none', fontSize: '1.1rem', cursor: 'pointer', color: 'var(--text-muted)' }}
               >
                 ✕
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="p-6 space-y-4 text-xs">
+            <form onSubmit={handleSubmit} style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px', fontSize: '0.83rem' }}>
               {/* Selección de Vehículo */}
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">Vehículo *</label>
+                <label style={{ display: 'block', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px' }}>Vehículo *</label>
                 <select
                   value={form.vehicleId}
                   onChange={(e) => handleVehicleChange(e.target.value)}
                   required
-                  className="w-full text-xs border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-1 focus:ring-gray-900"
+                  style={{ width: '100%', padding: '8px 12px', fontSize: '0.83rem', border: '1px solid var(--border-color)', borderRadius: '6px', outline: 'none' }}
                 >
                   <option value="">Selecciona un vehículo...</option>
                   {vehicles.map(v => (
@@ -514,19 +565,19 @@ export default function FuelControlDashboard({ vehicles: vehiclesProp, onRefresh
               </div>
 
               {/* Fecha y Odómetro */}
-              <div className="grid grid-cols-2 gap-3">
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Fecha Carga *</label>
+                  <label style={{ display: 'block', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px' }}>Fecha Carga *</label>
                   <input
                     type="date"
                     value={form.date}
                     onChange={(e) => setForm({ ...form, date: e.target.value })}
                     required
-                    className="w-full text-xs border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-1 focus:ring-gray-900"
+                    style={{ width: '100%', padding: '8px 12px', fontSize: '0.83rem', border: '1px solid var(--border-color)', borderRadius: '6px', outline: 'none' }}
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Odómetro Actual (km) *</label>
+                  <label style={{ display: 'block', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px' }}>Odómetro Actual (km) *</label>
                   <input
                     type="number"
                     value={form.odometer}
@@ -534,15 +585,15 @@ export default function FuelControlDashboard({ vehicles: vehiclesProp, onRefresh
                     placeholder="Ej: 125400"
                     required
                     min="0"
-                    className="w-full text-xs border border-gray-200 rounded-xl px-3 py-2 font-mono focus:outline-none focus:ring-1 focus:ring-gray-900"
+                    style={{ width: '100%', padding: '8px 12px', fontSize: '0.83rem', fontFamily: 'monospace', border: '1px solid var(--border-color)', borderRadius: '6px', outline: 'none' }}
                   />
                 </div>
               </div>
 
               {/* Litros y Costo Total */}
-              <div className="grid grid-cols-3 gap-3">
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Litros (L) *</label>
+                  <label style={{ display: 'block', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px' }}>Litros (L) *</label>
                   <input
                     type="number"
                     step="0.01"
@@ -551,11 +602,11 @@ export default function FuelControlDashboard({ vehicles: vehiclesProp, onRefresh
                     placeholder="0.0"
                     required
                     min="0.1"
-                    className="w-full text-xs border border-gray-200 rounded-xl px-3 py-2 font-mono focus:outline-none focus:ring-1 focus:ring-gray-900"
+                    style={{ width: '100%', padding: '8px 10px', fontSize: '0.83rem', fontFamily: 'monospace', border: '1px solid var(--border-color)', borderRadius: '6px', outline: 'none' }}
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Monto Total ($) *</label>
+                  <label style={{ display: 'block', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px' }}>Monto Total ($) *</label>
                   <input
                     type="number"
                     step="0.01"
@@ -564,59 +615,59 @@ export default function FuelControlDashboard({ vehicles: vehiclesProp, onRefresh
                     placeholder="0.00"
                     required
                     min="1"
-                    className="w-full text-xs border border-gray-200 rounded-xl px-3 py-2 font-mono focus:outline-none focus:ring-1 focus:ring-gray-900"
+                    style={{ width: '100%', padding: '8px 10px', fontSize: '0.83rem', fontFamily: 'monospace', border: '1px solid var(--border-color)', borderRadius: '6px', outline: 'none' }}
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Precio / L ($)</label>
+                  <label style={{ display: 'block', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px' }}>Precio / L ($)</label>
                   <input
                     type="number"
                     step="0.01"
                     value={form.pricePerLiter}
                     readOnly
                     placeholder="Auto"
-                    className="w-full text-xs border border-gray-200 bg-gray-50 rounded-xl px-3 py-2 font-mono text-gray-500"
+                    style={{ width: '100%', padding: '8px 10px', fontSize: '0.83rem', fontFamily: 'monospace', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-app, #F9FAFB)', color: 'var(--text-muted)', borderRadius: '6px' }}
                   />
                 </div>
               </div>
 
               {/* Checkbox Tanque Lleno */}
-              <div className="flex items-center gap-2 pt-1">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', paddingTop: '4px' }}>
                 <input
                   type="checkbox"
                   id="isFullTank"
                   checked={form.isFullTank}
                   onChange={(e) => setForm({ ...form, isFullTank: e.target.checked })}
-                  className="rounded border-gray-300 text-gray-900 focus:ring-gray-900"
+                  style={{ cursor: 'pointer' }}
                 />
-                <label htmlFor="isFullTank" className="text-xs text-gray-700 font-medium">
-                  ¿Fue carga a tanque lleno? <span className="text-gray-400 font-normal">(Recomendado para medición exacta de L/100km)</span>
+                <label htmlFor="isFullTank" style={{ fontSize: '0.82rem', color: 'var(--text-primary)', fontWeight: 500, cursor: 'pointer' }}>
+                  ¿Fue carga a tanque lleno? <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>(Recomendado para medición L/100km)</span>
                 </label>
               </div>
 
               {/* Checkbox Afectar Finanzas */}
-              <div className="p-3 bg-gray-50 rounded-xl border border-gray-200 space-y-3">
-                <div className="flex items-center gap-2">
+              <div style={{ padding: '12px', backgroundColor: 'var(--bg-app, #F9FAFB)', border: '1px solid var(--border-color)', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <input
                     type="checkbox"
                     id="affectFinance"
                     checked={form.affectFinance}
                     onChange={(e) => setForm({ ...form, affectFinance: e.target.checked })}
-                    className="rounded border-gray-300 text-gray-900 focus:ring-gray-900"
+                    style={{ cursor: 'pointer' }}
                   />
-                  <label htmlFor="affectFinance" className="text-xs text-gray-900 font-bold">
+                  <label htmlFor="affectFinance" style={{ fontSize: '0.82rem', color: 'var(--text-primary)', fontWeight: 700, cursor: 'pointer' }}>
                     Descontar dinero de Caja o Banco
                   </label>
                 </div>
 
                 {form.affectFinance && (
-                  <div className="grid grid-cols-2 gap-3 pt-1">
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', paddingTop: '4px' }}>
                     <div>
-                      <label className="block text-[11px] font-medium text-gray-600 mb-1">Método de Pago</label>
+                      <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 500, color: 'var(--text-secondary)', marginBottom: '2px' }}>Método de Pago</label>
                       <select
                         value={form.paymentMethod}
                         onChange={(e) => setForm({ ...form, paymentMethod: e.target.value })}
-                        className="w-full text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none"
+                        style={{ width: '100%', padding: '6px 10px', fontSize: '0.8rem', border: '1px solid var(--border-color)', borderRadius: '6px', outline: 'none' }}
                       >
                         <option value="CASH">Efectivo (Caja Chica)</option>
                         <option value="TRANSFER">Transferencia / Débito</option>
@@ -625,11 +676,11 @@ export default function FuelControlDashboard({ vehicles: vehiclesProp, onRefresh
 
                     {form.paymentMethod === 'TRANSFER' && (
                       <div>
-                        <label className="block text-[11px] font-medium text-gray-600 mb-1">Cuenta Bancaria</label>
+                        <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 500, color: 'var(--text-secondary)', marginBottom: '2px' }}>Cuenta Bancaria</label>
                         <select
                           value={form.bankAccountId}
                           onChange={(e) => setForm({ ...form, bankAccountId: e.target.value })}
-                          className="w-full text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none"
+                          style={{ width: '100%', padding: '6px 10px', fontSize: '0.8rem', border: '1px solid var(--border-color)', borderRadius: '6px', outline: 'none' }}
                         >
                           {bankAccounts.map(b => (
                             <option key={b.id} value={b.id}>{b.bankName} - {b.accountNumber}</option>
@@ -643,28 +694,28 @@ export default function FuelControlDashboard({ vehicles: vehiclesProp, onRefresh
 
               {/* Notas opcionales */}
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">Notas / Estación de Servicio (opcional)</label>
+                <label style={{ display: 'block', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px' }}>Notas / Estación de Servicio (opcional)</label>
                 <input
                   type="text"
                   value={form.notes}
                   onChange={(e) => setForm({ ...form, notes: e.target.value })}
                   placeholder="Ej: YPF Ruta 9, Carga antes del viaje a Rosario"
-                  className="w-full text-xs border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-1 focus:ring-gray-900"
+                  style={{ width: '100%', padding: '8px 12px', fontSize: '0.83rem', border: '1px solid var(--border-color)', borderRadius: '6px', outline: 'none' }}
                 />
               </div>
 
-              <div className="flex justify-end gap-2 pt-3 border-t border-gray-100">
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', paddingTop: '10px', borderTop: '1px solid var(--border-color)' }}>
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
-                  className="px-4 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-100 rounded-xl transition-colors"
+                  style={{ padding: '8px 14px', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', backgroundColor: 'transparent', border: 'none', cursor: 'pointer' }}
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="px-5 py-2 text-xs font-semibold text-white bg-gray-900 rounded-xl hover:bg-gray-800 transition-colors shadow-sm flex items-center gap-2"
+                  style={{ padding: '8px 16px', fontSize: '0.8rem', fontWeight: 600, color: '#fff', backgroundColor: 'var(--accent-color, #111827)', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
                 >
                   {submitting ? 'Guardando...' : 'Guardar Carga'}
                 </button>
