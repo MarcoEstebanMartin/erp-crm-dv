@@ -70,12 +70,34 @@ async function main() {
   });
 
   // Repartidores y Armado
-  await prisma.user.create({ data: { username: 'miguel', passwordHash: await pwhash('miguel!'), role: 'DEPOSITO' } });
-  await prisma.user.create({ data: { username: 'matias', passwordHash: await pwhash('matias2026-Erp!'), role: 'DEPOSITO' } });
-  await prisma.user.create({ data: { username: 'thiago', passwordHash: await pwhash('thiago2026-Erp!'), role: 'DEPOSITO' } });
-  await prisma.user.create({ data: { username: 'rocio', passwordHash: await pwhash('rocio2026-Erp!'), role: 'DEPOSITO' } });
+  const uMiguel = await prisma.user.create({ data: { username: 'miguel', passwordHash: await pwhash('miguel!'), role: 'DEPOSITO' } });
+  const uMatias = await prisma.user.create({ data: { username: 'matias', passwordHash: await pwhash('matias2026-Erp!'), role: 'DEPOSITO' } });
+  const uThiago = await prisma.user.create({ data: { username: 'thiago', passwordHash: await pwhash('thiago2026-Erp!'), role: 'DEPOSITO' } });
+  const uRocio = await prisma.user.create({ data: { username: 'rocio', passwordHash: await pwhash('rocio2026-Erp!'), role: 'DEPOSITO' } });
 
   console.log('👥 12 Usuarios del equipo creados y listos.');
+
+  // 2.b. Crear Legajos de Empleados Reales (desde Empleados.xlsx)
+  console.log('🌱 Creando legajos de personal real...');
+  const realEmployees = [
+    { firstName: 'Diego', lastName: 'Lejarza', dni: '26106000', cuil: '20-26106000-1', position: 'Vendedor Preventista', department: 'VENTAS', hireDate: new Date('2020-01-01'), baseSalary: 1000000, paymentMethod: 'BANK_TRANSFER', bankName: 'Mercado Pago', cbuAlias: '0000003100023998694574', notes: 'Sueldo Recibo: $1.000.000 | Extra al recibo: $2.000.000 | Total: $3.000.000', userId: uDiego.id },
+    { firstName: 'Fabián', lastName: 'Maya', dni: '24044029', cuil: '20-24044029-0', position: 'Vendedor Preventista', department: 'VENTAS', hireDate: new Date('1999-07-01'), baseSalary: 800000, paymentMethod: 'BANK_TRANSFER', bankName: 'Banco Provincia', cbuAlias: '0140355603665704217313', notes: 'Sueldo Recibo: $800.000 | Extra al recibo: $800.000 | Total: $1.600.000', userId: uFabian.id },
+    { firstName: 'Darío', lastName: 'Torri', dni: '39291563', cuil: '20-39291563-0', position: 'Administrativo', department: 'ADMINISTRACION', hireDate: new Date('2021-01-01'), baseSalary: 700000, paymentMethod: 'BANK_TRANSFER', bankName: 'Mercado Pago', cbuAlias: '0000003100066586071689', notes: 'Sueldo Recibo: $700.000 | Extra al recibo: $700.000 | Total: $1.400.000', userId: uDario.id },
+    { firstName: 'Agustín', lastName: 'Montiel', dni: '44839749', cuil: '20-44839749-2', position: 'Administrativo', department: 'ADMINISTRACION', hireDate: new Date('2022-01-01'), baseSalary: 600000, paymentMethod: 'BANK_TRANSFER', bankName: 'Mercado Pago', cbuAlias: '0000003100080206162823', notes: 'Sueldo Recibo: $600.000 | Extra al recibo: $400.000 | Total: $1.000.000', userId: uAgustin.id },
+    { firstName: 'Matías Ignacio', lastName: 'Rodríguez', dni: '47159975', cuil: '20-47159975-2', position: 'Chofer / Repartidor', department: 'LOGISTICA', hireDate: new Date('2023-01-01'), baseSalary: 500000, paymentMethod: 'BANK_TRANSFER', bankName: 'Banco Provincia', cbuAlias: '0140355603665753116081', notes: 'Depósito y Reparto. Sueldo Recibo: $500.000 | Extra al recibo: $500.000 | Total: $1.000.000', userId: uMatias.id },
+    { firstName: 'Tiago Iván', lastName: 'Balmaceda', dni: '46411508', cuil: '20-46411508-1', position: 'Operario Depósito / Armado', department: 'DEPOSITO', hireDate: new Date('2026-06-01'), baseSalary: 500000, paymentMethod: 'BANK_TRANSFER', bankName: 'Mercado Pago', cbuAlias: '0000003100036178817841', notes: 'Depósito y Reparto. Sueldo Recibo: $500.000 | Extra al recibo: $500.000 | Total: $1.000.000', userId: uThiago.id },
+    { firstName: 'Rocío Anahí', lastName: 'Aliendro', dni: '42417866', cuil: '27-42417866-2', position: 'Operario Depósito / Mantenimiento', department: 'DEPOSITO', hireDate: new Date('2023-06-01'), baseSalary: 300000, paymentMethod: 'BANK_TRANSFER', bankName: 'Banco Provincia', cbuAlias: '0140355603665752311838', notes: 'Limpieza y Depósito. Sueldo Recibo: $300.000 | Extra al recibo: $300.000 | Total: $600.000', userId: uRocio.id },
+    { firstName: 'Miguel', lastName: 'Alberca', dni: '28665535', cuil: '20-28665535-2', position: 'Chofer / Repartidor', department: 'LOGISTICA', hireDate: new Date('2022-06-01'), baseSalary: 700000, paymentMethod: 'BANK_TRANSFER', bankName: 'Banco Provincia', cbuAlias: '0140355603665752667344', notes: 'Depósito y Reparto. Sueldo Recibo: $700.000 | Extra al recibo: $700.000 | Total: $1.400.000', userId: uMiguel.id },
+    { firstName: 'Norberto', lastName: 'Ramos', dni: 'LEG-0009', cuil: null, position: 'Vendedor Preventista / Reparto', department: 'VENTAS', hireDate: new Date('2020-06-01'), baseSalary: 2000000, paymentMethod: 'CASH', bankName: null, cbuAlias: null, notes: 'Vendedor y Reparto. Sueldo Recibo: $2.000.000 | Extra al recibo: $3.000.000 | Total: $5.000.000', userId: uNorberto.id },
+    { firstName: 'María José', lastName: 'Videla', dni: 'LEG-0010', cuil: null, position: 'Vendedor Preventista', department: 'VENTAS', hireDate: new Date('2024-02-01'), baseSalary: 600000, paymentMethod: 'BANK_TRANSFER', bankName: 'Mercado Pago', cbuAlias: null, notes: 'Extra al recibo: $600.000', userId: uMariaJose.id },
+    { firstName: 'Marco Esteban', lastName: 'Martín', dni: '35385924', cuil: '20-35385924-3', position: 'Administrativo / Gestión', department: 'ADMINISTRACION', hireDate: new Date('2021-10-01'), baseSalary: 2000000, paymentMethod: 'BANK_TRANSFER', bankName: 'Mercado Pago', cbuAlias: 'marco.estebanmartin', notes: 'Administración y Gestión. Sueldo Recibo: $2.000.000 | Extra al recibo: $3.000.000 | Total: $5.000.000', userId: null },
+    { firstName: 'Jonathan David', lastName: 'Martín', dni: 'LEG-0012', cuil: null, position: 'Chofer / Repartidor', department: 'LOGISTICA', hireDate: new Date('2021-01-01'), baseSalary: 3500000, paymentMethod: 'BANK_TRANSFER', bankName: 'Mercado Pago', cbuAlias: null, notes: 'Logística y Gestión. Extra al recibo: $3.500.000', userId: null },
+    { firstName: 'Viviana Ruth', lastName: 'Sosa', dni: 'LEG-0013', cuil: null, position: 'Administrativo / Logística', department: 'LOGISTICA', hireDate: new Date('2022-01-01'), baseSalary: 0, paymentMethod: 'BANK_TRANSFER', bankName: 'Mercado Pago', cbuAlias: null, notes: 'Logística y Gestión. Pendiente de completar datos salariales.', userId: null }
+  ];
+  for (const emp of realEmployees) {
+    await prisma.employee.create({ data: emp });
+  }
+  console.log('🌱 13 Legajos de empleados reales cargados con éxito.');
 
   // Map of seller name in JSON -> Seller user ID in DB
   const sellerIdMap = {
