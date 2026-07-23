@@ -6,27 +6,27 @@ import jwt from 'jsonwebtoken';
 const JWT_SECRET = process.env.JWT_SECRET || 'seguridad-erp-distribuidora-2026-key-local-development';
 
 /**
- * Mapeo oficial exacto respetando los Títulos del Gestor de Ofertas
+ * Mapeo oficial exacto a la "Categoría Comercial" respetando los Títulos del Gestor de Ofertas
  */
-const RUBRO_TO_COMMERCIAL_FAMILY: Record<string, { family: string; icon: string }> = {
-  'REMOTTI': { family: 'Refrigerados', icon: '❄️' },
-  'LECHES': { family: 'Refrigerados', icon: '❄️' },
-  'SANCOR y CREMIGAL': { family: 'Refrigerados', icon: '❄️' },
-  'QUESOS RALLADOS': { family: 'Refrigerados', icon: '❄️' },
-  'SODECAR': { family: 'Fiambres', icon: '🧀' },
-  'A.G.D Y NIZA': { family: 'Aderezos y Aceites', icon: '🌻' },
-  'BEBIDAS': { family: 'Bebidas', icon: '🥤' },
-  'PASTAS SECAS': { family: 'Pastas Secas', icon: '🍝' },
-  'CONSERVAS': { family: 'Conservas', icon: '🥫' },
-  'PESCADERIA': { family: 'Pescadería', icon: '🐟' },
-  'PAPELES': { family: 'Papeles', icon: '🧻' },
-  'NO COMESTIBLES': { family: 'No comestibles', icon: '📦' },
-  'REGALERIA': { family: 'Estucheria y Regalerìa', icon: '🎁' },
-  'ARROZ': { family: 'Pastas Secas', icon: '🌾' },
-  'CAFE': { family: 'Varios', icon: '☕' },
-  'YERBAS': { family: 'Varios', icon: '🧉' },
-  'AZUCAR': { family: 'Varios', icon: '🍬' },
-  'EDULCORANTES': { family: 'Varios', icon: '☕' }
+const RUBRO_TO_COMMERCIAL_CATEGORY: Record<string, { category: string; icon: string }> = {
+  'REMOTTI': { category: 'Refrigerados', icon: '❄️' },
+  'LECHES': { category: 'Refrigerados', icon: '❄️' },
+  'SANCOR y CREMIGAL': { category: 'Refrigerados', icon: '❄️' },
+  'QUESOS RALLADOS': { category: 'Refrigerados', icon: '❄️' },
+  'SODECAR': { category: 'Fiambres', icon: '🧀' },
+  'A.G.D Y NIZA': { category: 'Aderezos y Aceites', icon: '🌻' },
+  'BEBIDAS': { category: 'Bebidas', icon: '🥤' },
+  'PASTAS SECAS': { category: 'Pastas Secas', icon: '🍝' },
+  'CONSERVAS': { category: 'Conservas', icon: '🥫' },
+  'PESCADERIA': { category: 'Pescadería', icon: '🐟' },
+  'PAPELES': { category: 'Papeles', icon: '🧻' },
+  'NO COMESTIBLES': { category: 'No comestibles', icon: '📦' },
+  'REGALERIA': { category: 'Estucheria y Regalerìa', icon: '🎁' },
+  'ARROZ': { category: 'Pastas Secas', icon: '🌾' },
+  'CAFE': { category: 'Varios', icon: '☕' },
+  'YERBAS': { category: 'Varios', icon: '🧉' },
+  'AZUCAR': { category: 'Varios', icon: '🍬' },
+  'EDULCORANTES': { category: 'Varios', icon: '☕' }
 };
 
 /**
@@ -151,7 +151,7 @@ export async function loginClient(req: Request, res: Response): Promise<void> {
 
 /**
  * Obtener el catálogo interactivo para la Tienda Online
- * Respetando los Títulos del Gestor de Ofertas con "Refrigerados" al principio.
+ * Sincronizado por "Categoría Comercial" con los Títulos del Gestor de Ofertas.
  */
 export async function getStoreCatalog(req: Request, res: Response): Promise<void> {
   try {
@@ -203,22 +203,22 @@ export async function getStoreCatalog(req: Request, res: Response): Promise<void
     ]);
 
     const productCampaignGroupMap = new Map<number, string>();
-    const configuredGroupsSet = new Set<string>();
+    const configuredCategoriesSet = new Set<string>();
     let campaignCustomOrder: string[] = [];
 
     activeCampaigns.forEach((camp) => {
       if (camp.customRubroOrder && Array.isArray(camp.customRubroOrder) && camp.customRubroOrder.length > 0) {
         campaignCustomOrder = camp.customRubroOrder;
-        camp.customRubroOrder.forEach((g) => configuredGroupsSet.add(g));
+        camp.customRubroOrder.forEach((g) => configuredCategoriesSet.add(g));
       }
       camp.items.forEach((item) => {
-        const groupName = item.campaignGroup || item.product?.rubro?.name || 'Varios';
-        productCampaignGroupMap.set(item.productId, groupName);
-        configuredGroupsSet.add(groupName);
+        const catName = item.campaignGroup || item.product?.rubro?.name || 'Varios';
+        productCampaignGroupMap.set(item.productId, catName);
+        configuredCategoriesSet.add(catName);
       });
     });
 
-    const groupIconsMap: Record<string, string> = {
+    const categoryIconsMap: Record<string, string> = {
       'Refrigerados': '❄️',
       'Fiambres': '🧀',
       'Bebidas': '🥤',
@@ -249,19 +249,19 @@ export async function getStoreCatalog(req: Request, res: Response): Promise<void
         finalPrice = Number(activeOfferItem.offerPrice);
       }
 
-      // Asignación de grupo respetando los Títulos de Ofertas
-      let assignedGroup = productCampaignGroupMap.get(p.id);
-      if (!assignedGroup && p.rubro?.name) {
-        const mapped = RUBRO_TO_COMMERCIAL_FAMILY[p.rubro.name.toUpperCase().trim()];
+      // Asignación de Categoría Comercial
+      let assignedCategory = productCampaignGroupMap.get(p.id);
+      if (!assignedCategory && p.rubro?.name) {
+        const mapped = RUBRO_TO_COMMERCIAL_CATEGORY[p.rubro.name.toUpperCase().trim()];
         if (mapped) {
-          assignedGroup = mapped.family;
+          assignedCategory = mapped.category;
         } else {
-          assignedGroup = p.rubro.name;
+          assignedCategory = p.rubro.name;
         }
       }
-      if (!assignedGroup) assignedGroup = 'Varios';
+      if (!assignedCategory) assignedCategory = 'Varios';
 
-      const groupIcon = groupIconsMap[assignedGroup] || (RUBRO_TO_COMMERCIAL_FAMILY[p.rubro?.name || '']?.icon) || '📦';
+      const catIcon = categoryIconsMap[assignedCategory] || (RUBRO_TO_COMMERCIAL_CATEGORY[p.rubro?.name || '']?.icon) || '📦';
 
       return {
         id: p.id,
@@ -279,16 +279,19 @@ export async function getStoreCatalog(req: Request, res: Response): Promise<void
         imageUrl: p.imageUrl,
         rubroId: p.rubroId,
         rubroName: p.rubro?.name || 'General',
-        commercialGroupId: assignedGroup.toLowerCase().replace(/\s+/g, '-'),
-        commercialGroupName: assignedGroup,
-        commercialGroupIcon: groupIcon,
+        commercialCategoryId: assignedCategory.toLowerCase().replace(/\s+/g, '-'),
+        commercialCategoryName: assignedCategory,
+        commercialCategoryIcon: catIcon,
+        // Compatibilidad con propiedades anteriores
+        commercialGroupId: assignedCategory.toLowerCase().replace(/\s+/g, '-'),
+        commercialGroupName: assignedCategory,
+        commercialGroupIcon: catIcon,
         isOffer,
         offerDiscount: 0,
         offerName: activeOfferItem ? activeOfferItem.campaign.title : null
       };
     });
 
-    // Orden por defecto respetando "Refrigerados" al principio
     const defaultPriorityOrder = [
       'Refrigerados',
       'Fiambres',
@@ -304,35 +307,34 @@ export async function getStoreCatalog(req: Request, res: Response): Promise<void
       'Varios'
     ];
 
-    const uniqueGroupNames: string[] = [];
+    const uniqueCategoryNames: string[] = [];
 
-    // Priorizar customRubroOrder si fue configurado en la campaña activa
     if (campaignCustomOrder.length > 0) {
       campaignCustomOrder.forEach((g) => {
-        if (!uniqueGroupNames.includes(g)) uniqueGroupNames.push(g);
+        if (!uniqueCategoryNames.includes(g)) uniqueCategoryNames.push(g);
       });
     } else {
       defaultPriorityOrder.forEach((g) => {
-        if (!uniqueGroupNames.includes(g)) uniqueGroupNames.push(g);
+        if (!uniqueCategoryNames.includes(g)) uniqueCategoryNames.push(g);
       });
     }
 
-    configuredGroupsSet.forEach((g) => {
-      if (!uniqueGroupNames.includes(g)) uniqueGroupNames.push(g);
+    configuredCategoriesSet.forEach((g) => {
+      if (!uniqueCategoryNames.includes(g)) uniqueCategoryNames.push(g);
     });
 
     formattedProducts.forEach((p) => {
-      if (p.commercialGroupName && !uniqueGroupNames.includes(p.commercialGroupName)) {
-        uniqueGroupNames.push(p.commercialGroupName);
+      if (p.commercialCategoryName && !uniqueCategoryNames.includes(p.commercialCategoryName)) {
+        uniqueCategoryNames.push(p.commercialCategoryName);
       }
     });
 
-    const commercialGroups = [
+    const commercialCategories = [
       { id: 'all', name: 'Todas las Ofertas', icon: '🔥' },
-      ...uniqueGroupNames.map((groupName) => ({
-        id: groupName.toLowerCase().replace(/\s+/g, '-'),
-        name: groupName,
-        icon: groupIconsMap[groupName] || (RUBRO_TO_COMMERCIAL_FAMILY[groupName]?.icon) || '📦'
+      ...uniqueCategoryNames.map((catName) => ({
+        id: catName.toLowerCase().replace(/\s+/g, '-'),
+        name: catName,
+        icon: categoryIconsMap[catName] || (RUBRO_TO_COMMERCIAL_CATEGORY[catName]?.icon) || '📦'
       }))
     ];
 
@@ -340,7 +342,8 @@ export async function getStoreCatalog(req: Request, res: Response): Promise<void
       status: 'success',
       data: {
         products: formattedProducts,
-        commercialGroups,
+        commercialCategories,
+        commercialGroups: commercialCategories,
         rubros
       }
     });
