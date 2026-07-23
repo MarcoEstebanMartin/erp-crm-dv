@@ -528,29 +528,28 @@ export default function OffersCatalogGenerator({ campaignId, onBack }: OffersCat
               <div style={{ 
                 backgroundColor: '#0f172a', 
                 color: '#ffffff', 
-                padding: '16px 40px', 
+                padding: '12px 40px', 
                 display: 'flex', 
                 justifyContent: 'space-between', 
                 alignItems: 'center',
-                fontSize: '14px', 
+                fontSize: '13px', 
                 fontWeight: 600,
                 boxShadow: '0 -4px 10px rgba(0,0,0,0.1)',
                 zIndex: 20
               }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1 }}>
-                  <div style={{ width: '8px', height: '8px', backgroundColor: '#e30613', borderRadius: '50%' }}></div>
-                  <span>DISTRIBUIDORA DON VENANCIO</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div style={{ width: '8px', height: '8px', backgroundColor: '#e30613', borderRadius: '50%', flexShrink: 0 }}></div>
+                  <span style={{ color: '#ffffff', fontSize: '13px', fontWeight: 700, letterSpacing: '0.3px' }}>
+                    ESTA LISTA ESTÁ SUJETA A MODIFICACIONES
+                  </span>
                 </div>
-                <div style={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
                   <img 
                     src={`http://${window.location.hostname}:3000/api/purchases/files/logo.png?v=${cacheBuster}`} 
                     crossOrigin="anonymous" 
                     alt="Logo Final" 
-                    style={{ height: '50px', objectFit: 'contain', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.5))' }}
+                    style={{ height: '32px', objectFit: 'contain', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.5))' }}
                   />
-                </div>
-                <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end' }}>
-                  <span style={{ color: '#94a3b8', fontSize: '12px' }}>ESTA LISTA ESTÁ SUJETA A MODIFICACIONES</span>
                 </div>
               </div>
             </div>

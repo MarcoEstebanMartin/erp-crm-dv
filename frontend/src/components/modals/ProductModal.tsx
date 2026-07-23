@@ -151,6 +151,7 @@ const ProductModal: React.FC<ProductModalProps> = ({
       profitMargin: data.profitMargin !== undefined && data.profitMargin !== '' ? (1 + Number(data.profitMargin) / 100) : null,
       rubroId: data.rubroId ? Number(data.rubroId) : null,
       providerId: data.providerId ? Number(data.providerId) : null,
+      commercialCategory: data.commercialCategory || null,
       minStock: Number(data.minStock || 0),
       isPesable: Boolean(data.isPesable),
       unitsPerBox: Number(data.unitsPerBox || 1),
@@ -183,9 +184,9 @@ const ProductModal: React.FC<ProductModalProps> = ({
       <div 
         className="modal-content fade-in" 
         style={{ 
-          maxWidth: '880px', 
-          width: '92%', 
-          maxHeight: '92vh', 
+          maxWidth: '1180px', 
+          width: '95%', 
+          maxHeight: '94vh', 
           overflowY: 'auto', 
           borderRadius: '16px', 
           padding: '0px', 
@@ -196,7 +197,7 @@ const ProductModal: React.FC<ProductModalProps> = ({
       >
         {/* Cabecera del Modal */}
         <div style={{ 
-          padding: '20px 28px', 
+          padding: '14px 24px', 
           borderBottom: '1px solid var(--border-color, #E5E7EB)', 
           display: 'flex', 
           justifyContent: 'space-between', 
@@ -207,8 +208,8 @@ const ProductModal: React.FC<ProductModalProps> = ({
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div style={{ 
-              width: '42px', 
-              height: '42px', 
+              width: '38px', 
+              height: '38px', 
               borderRadius: '10px', 
               backgroundColor: 'var(--accent-color, #111827)', 
               color: '#ffffff',
@@ -217,13 +218,13 @@ const ProductModal: React.FC<ProductModalProps> = ({
               justifyContent: 'center',
               boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
             }}>
-              <Package size={22} />
+              <Package size={20} />
             </div>
             <div>
-              <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+              <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700, color: 'var(--text-primary)' }}>
                 {productModal.mode === 'create' ? 'Cargar Nuevo Producto' : `Editar Producto`}
               </h3>
-              <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+              <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
                 {productModal.mode === 'create' ? 'Ingresa los datos para dar de alta el artículo en el catálogo' : `SKU: ${productModal.data.sku} | ID: ${productModal.data.id}`}
               </p>
             </div>
@@ -236,7 +237,7 @@ const ProductModal: React.FC<ProductModalProps> = ({
               border: 'none',
               color: 'var(--text-muted)',
               cursor: 'pointer',
-              padding: '8px',
+              padding: '6px',
               borderRadius: '8px',
               display: 'flex',
               alignItems: 'center',
@@ -245,26 +246,27 @@ const ProductModal: React.FC<ProductModalProps> = ({
             }}
             className="hover-bg-secondary"
           >
-            <X size={20} />
+            <X size={18} />
           </button>
         </div>
 
         {/* Formulario Estructurado */}
-        <form onSubmit={handleProductSubmit} style={{ padding: '24px 28px' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+        <form onSubmit={handleProductSubmit} style={{ padding: '16px 24px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
 
             {/* SECCIÓN 1: IDENTIFICACIÓN Y CATEGORÍA */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', borderBottom: '1px solid var(--border-color)', paddingBottom: '6px' }}>
-                <Tag size={16} color="var(--text-secondary)" />
-                <span style={{ fontSize: '0.82rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-secondary)' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', borderBottom: '1px solid var(--border-color)', paddingBottom: '4px' }}>
+                <Tag size={15} color="var(--text-secondary)" />
+                <span style={{ fontSize: '0.78rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-secondary)' }}>
                   1. Identificación y Clasificación
                 </span>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '14px' }}>
+              {/* 5 COLUMNAS EN UNA SOLA FILA HORIZONTAL PERFECTA */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr 1.3fr 1.5fr 1.3fr', gap: '12px' }}>
                 <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
+                  <label style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '3px' }}>
                     SKU (Código interno) <span style={{ color: 'var(--color-corp-red, #E30613)' }}>*</span>
                   </label>
                   <input
@@ -275,12 +277,12 @@ const ProductModal: React.FC<ProductModalProps> = ({
                     onChange={(e) => setProductModal({ ...productModal, data: { ...productModal.data, sku: e.target.value } })}
                     disabled={productModal.mode === 'edit'}
                     required
-                    style={{ fontWeight: 600, fontFamily: 'monospace' }}
+                    style={{ fontWeight: 600, fontFamily: 'monospace', padding: '6px 10px' }}
                   />
                 </div>
 
                 <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
+                  <label style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '3px' }}>
                     Código EAN (Barras)
                   </label>
                   <input
@@ -289,19 +291,19 @@ const ProductModal: React.FC<ProductModalProps> = ({
                     placeholder="ej: 7799876543210"
                     value={productModal.data.barcode || ''}
                     onChange={(e) => setProductModal({ ...productModal, data: { ...productModal.data, barcode: e.target.value } })}
-                    style={{ fontFamily: 'monospace' }}
+                    style={{ fontFamily: 'monospace', padding: '6px 10px' }}
                   />
                 </div>
 
                 <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
-                    Rubro / Categoría
+                  <label style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '3px' }}>
+                    Rubro (ERP Interno)
                   </label>
                   <select
                     className="select"
                     value={productModal.data.rubroId || ''}
                     onChange={(e) => handleModalRubroChange(e.target.value)}
-                    style={{ width: '100%', borderRadius: '6px', padding: '8px 12px' }}
+                    style={{ width: '100%', borderRadius: '6px', padding: '6px 10px' }}
                   >
                     <option value="">-- Sin Rubro --</option>
                     {rubrosList.map(r => (
@@ -311,14 +313,41 @@ const ProductModal: React.FC<ProductModalProps> = ({
                 </div>
 
                 <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
+                  <label style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '3px' }}>
+                    Categoría Comercial
+                  </label>
+                  <select
+                    className="select"
+                    value={productModal.data.commercialCategory || ''}
+                    onChange={(e) => setProductModal({ ...productModal, data: { ...productModal.data, commercialCategory: e.target.value } })}
+                    style={{ width: '100%', borderRadius: '6px', padding: '6px 10px', fontWeight: 600, color: '#0f172a' }}
+                  >
+                    <option value="">-- Automático / Por Rubro --</option>
+                    <option value="Refrigerados">❄️ Refrigerados</option>
+                    <option value="Fiambres">🧀 Fiambres</option>
+                    <option value="Bebidas">🥤 Bebidas</option>
+                    <option value="Bebidas Alcoholicas">🍺 Bebidas Alcoholicas</option>
+                    <option value="Vinos">🍷 Vinos</option>
+                    <option value="Aderezos y Aceites">🌻 Aderezos y Aceites</option>
+                    <option value="Pastas Secas">🍝 Pastas Secas</option>
+                    <option value="Conservas">🥫 Conservas</option>
+                    <option value="Pescadería">🐟 Pescadería</option>
+                    <option value="Papeles">🧻 Papeles</option>
+                    <option value="No comestibles">📦 No comestibles</option>
+                    <option value="Estucheria y Regalerìa">🎁 Estuchería y Regalería</option>
+                    <option value="Varios">🏷️ Varios</option>
+                  </select>
+                </div>
+
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '3px' }}>
                     Proveedor
                   </label>
                   <select
                     className="select"
                     value={productModal.data.providerId || ''}
                     onChange={(e) => setProductModal({ ...productModal, data: { ...productModal.data, providerId: e.target.value === '' ? '' : Number(e.target.value) } })}
-                    style={{ width: '100%', borderRadius: '6px', padding: '8px 12px' }}
+                    style={{ width: '100%', borderRadius: '6px', padding: '6px 10px' }}
                   >
                     <option value="">-- Sin Proveedor --</option>
                     {providersList.map(p => (
@@ -328,9 +357,9 @@ const ProductModal: React.FC<ProductModalProps> = ({
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: '14px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: '12px' }}>
                 <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
+                  <label style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '3px' }}>
                     Nombre del Producto <span style={{ color: 'var(--color-corp-red, #E30613)' }}>*</span>
                   </label>
                   <input
@@ -340,12 +369,12 @@ const ProductModal: React.FC<ProductModalProps> = ({
                     value={productModal.data.name}
                     onChange={(e) => setProductModal({ ...productModal, data: { ...productModal.data, name: e.target.value } })}
                     required
-                    style={{ fontSize: '0.95rem', fontWeight: 600 }}
+                    style={{ fontSize: '0.9rem', fontWeight: 600, padding: '6px 10px' }}
                   />
                 </div>
 
                 <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
+                  <label style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '3px' }}>
                     Descripción Corta / Detalle
                   </label>
                   <input
@@ -354,6 +383,7 @@ const ProductModal: React.FC<ProductModalProps> = ({
                     placeholder="ej: Queso Tybo en barra marca Melincué"
                     value={productModal.data.description || ''}
                     onChange={(e) => setProductModal({ ...productModal, data: { ...productModal.data, description: e.target.value } })}
+                    style={{ padding: '6px 10px' }}
                   />
                 </div>
               </div>
@@ -363,25 +393,25 @@ const ProductModal: React.FC<ProductModalProps> = ({
                 display: 'flex', 
                 alignItems: 'center', 
                 justifyContent: 'space-between',
-                padding: '10px 16px', 
+                padding: '8px 14px', 
                 backgroundColor: 'var(--bg-secondary, #F9FAFB)', 
                 borderRadius: '8px',
                 border: '1px solid var(--border-color)'
               }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', margin: 0, fontWeight: 600, fontSize: '0.88rem' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', margin: 0, fontWeight: 600, fontSize: '0.84rem' }}>
                   <input
                     type="checkbox"
                     checked={productModal.data.isPesable || false}
                     onChange={(e) => setProductModal({ ...productModal, data: { ...productModal.data, isPesable: e.target.checked } })}
-                    style={{ width: '18px', height: '18px', accentColor: 'var(--accent-color, #111827)', cursor: 'pointer' }}
+                    style={{ width: '16px', height: '16px', accentColor: 'var(--accent-color, #111827)', cursor: 'pointer' }}
                   />
-                  <Scale size={16} color="var(--text-secondary)" />
+                  <Scale size={15} color="var(--text-secondary)" />
                   Es Producto Pesable (Venta por Kilo)
                 </label>
 
                 {productModal.data.isPesable && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', margin: 0 }}>
+                    <label style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)', margin: 0 }}>
                       Peso Aprox. Horma (Kg):
                     </label>
                     <input
@@ -391,7 +421,7 @@ const ProductModal: React.FC<ProductModalProps> = ({
                       placeholder="ej: 4.5"
                       value={productModal.data.approximateWeight || ''}
                       onChange={(e) => setProductModal({ ...productModal, data: { ...productModal.data, approximateWeight: Number(e.target.value) } })}
-                      style={{ width: '100px', padding: '4px 8px', textAlign: 'center', fontWeight: 600 }}
+                      style={{ width: '90px', padding: '3px 8px', textAlign: 'center', fontWeight: 600 }}
                     />
                   </div>
                 )}
@@ -399,27 +429,27 @@ const ProductModal: React.FC<ProductModalProps> = ({
             </div>
 
             {/* SECCIÓN 2: PRECIOS Y MARGENES DE GANANCIA */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', borderBottom: '1px solid var(--border-color)', paddingBottom: '6px' }}>
-                <DollarSign size={16} color="var(--text-secondary)" />
-                <span style={{ fontSize: '0.82rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-secondary)' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', borderBottom: '1px solid var(--border-color)', paddingBottom: '4px' }}>
+                <DollarSign size={15} color="var(--text-secondary)" />
+                <span style={{ fontSize: '0.78rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-secondary)' }}>
                   2. Precios y Estructura de Margen
                 </span>
               </div>
 
               <div style={{ 
-                padding: '16px', 
+                padding: '12px 16px', 
                 backgroundColor: 'var(--bg-secondary, #F9FAFB)', 
                 borderRadius: '10px', 
                 border: '1px solid var(--border-color)',
                 display: 'flex',
                 flexDirection: 'column',
-                gap: '14px'
+                gap: '10px'
               }}>
                 {/* Precios base y rentabilidad */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '12px' }}>
                   <div className="form-group" style={{ marginBottom: 0 }}>
-                    <label style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                    <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
                       Costo C/IVA ($)
                     </label>
                     <input
@@ -429,12 +459,12 @@ const ProductModal: React.FC<ProductModalProps> = ({
                       value={productModal.data.costPrice !== undefined ? productModal.data.costPrice : ''}
                       onChange={(e) => handleModalPriceChange('costPrice', e.target.value)}
                       required
-                      style={{ fontWeight: 600 }}
+                      style={{ fontWeight: 600, padding: '5px 8px' }}
                     />
                   </div>
 
                   <div className="form-group" style={{ marginBottom: 0 }}>
-                    <label style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                    <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
                       Rentabilidad (%)
                     </label>
                     <input
@@ -443,12 +473,12 @@ const ProductModal: React.FC<ProductModalProps> = ({
                       placeholder="25"
                       value={productModal.data.profitMargin !== undefined ? productModal.data.profitMargin : ''}
                       onChange={(e) => handleModalPriceChange('profitMargin', e.target.value)}
-                      style={{ fontWeight: 600, color: '#10b981' }}
+                      style={{ fontWeight: 600, color: '#10b981', padding: '5px 8px' }}
                     />
                   </div>
 
                   <div className="form-group" style={{ marginBottom: 0 }}>
-                    <label style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                    <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
                       Venta Sin IVA ($)
                     </label>
                     <input
@@ -457,11 +487,12 @@ const ProductModal: React.FC<ProductModalProps> = ({
                       className="input"
                       value={productModal.data.listPrice ? Math.round((Number(productModal.data.listPrice) / 1.21) * 100) / 100 : ''}
                       onChange={(e) => handleModalPriceChange('priceSinIva', e.target.value)}
+                      style={{ padding: '5px 8px' }}
                     />
                   </div>
 
                   <div className="form-group" style={{ marginBottom: 0 }}>
-                    <label style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                    <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-primary)' }}>
                       Lista A (PVP Final - C/IVA)
                     </label>
                     <input
@@ -471,162 +502,169 @@ const ProductModal: React.FC<ProductModalProps> = ({
                       value={productModal.data.listPrice !== undefined ? productModal.data.listPrice : ''}
                       onChange={(e) => handleModalPriceChange('listPrice', e.target.value)}
                       required
-                      style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary)', border: '1px solid var(--text-primary)' }}
+                      style={{ fontWeight: 800, color: 'var(--text-primary)', border: '2px solid var(--accent-color, #111827)', padding: '5px 8px' }}
                     />
                   </div>
                 </div>
 
-                {/* Listas opcionales B y C */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', borderTop: '1px dashed var(--border-color)', paddingTop: '12px' }}>
+                {/* Listas secundarias B y C */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', paddingTop: '6px', borderTop: '1px dashed var(--border-color)' }}>
                   <div className="form-group" style={{ marginBottom: 0 }}>
-                    <label style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                    <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
                       Precio Lista B (Especial / Mayorista Opcional)
                     </label>
                     <input
                       type="number"
                       step="0.01"
                       className="input"
-                      placeholder="Automatico (95% de Lista A)"
-                      value={productModal.data.listPriceB || ''}
-                      onChange={(e) => setProductModal({ ...productModal, data: { ...productModal.data, listPriceB: Number(e.target.value) } })}
+                      placeholder="Calculado autom. (-5%)"
+                      value={productModal.data.listPriceB !== undefined ? productModal.data.listPriceB : ''}
+                      onChange={(e) => setProductModal({ ...productModal, data: { ...productModal.data, listPriceB: e.target.value === '' ? '' : Number(e.target.value) } })}
+                      style={{ padding: '5px 8px' }}
                     />
                   </div>
 
                   <div className="form-group" style={{ marginBottom: 0 }}>
-                    <label style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                    <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
                       Precio Lista C (Distribuidor Opcional)
                     </label>
                     <input
                       type="number"
                       step="0.01"
                       className="input"
-                      placeholder="Automatico (90% de Lista A)"
-                      value={productModal.data.listPriceC || ''}
-                      onChange={(e) => setProductModal({ ...productModal, data: { ...productModal.data, listPriceC: Number(e.target.value) } })}
+                      placeholder="Calculado autom. (-10%)"
+                      value={productModal.data.listPriceC !== undefined ? productModal.data.listPriceC : ''}
+                      onChange={(e) => setProductModal({ ...productModal, data: { ...productModal.data, listPriceC: e.target.value === '' ? '' : Number(e.target.value) } })}
+                      style={{ padding: '5px 8px' }}
                     />
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* SECCIÓN 3: LOGÍSTICA E INVENTARIO */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', borderBottom: '1px solid var(--border-color)', paddingBottom: '6px' }}>
-                <Box size={16} color="var(--text-secondary)" />
-                <span style={{ fontSize: '0.82rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-secondary)' }}>
+            {/* SECCIÓN 3: LOGÍSTICA Y ALMACÉN */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', borderBottom: '1px solid var(--border-color)', paddingBottom: '4px' }}>
+                <Box size={15} color="var(--text-secondary)" />
+                <span style={{ fontSize: '0.78rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-secondary)' }}>
                   3. Logística y Almacén
                 </span>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1.5fr', gap: '14px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 2fr', gap: '12px' }}>
                 <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
+                  <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '3px' }}>
                     Stock Mínimo (Alerta reposición)
                   </label>
                   <input
                     type="number"
                     className="input"
-                    placeholder="ej: 10"
-                    value={productModal.data.minStock || ''}
+                    value={productModal.data.minStock !== undefined ? productModal.data.minStock : 0}
                     onChange={(e) => setProductModal({ ...productModal, data: { ...productModal.data, minStock: Number(e.target.value) } })}
+                    style={{ padding: '5px 8px' }}
                   />
                 </div>
 
                 <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
+                  <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '3px' }}>
                     Unidades por Caja (Bulto)
                   </label>
                   <input
                     type="number"
                     className="input"
-                    placeholder="ej: 12"
-                    min={1}
-                    value={productModal.data.unitsPerBox || 1}
+                    value={productModal.data.unitsPerBox !== undefined ? productModal.data.unitsPerBox : 1}
                     onChange={(e) => setProductModal({ ...productModal, data: { ...productModal.data, unitsPerBox: Number(e.target.value) } })}
+                    style={{ padding: '5px 8px' }}
                   />
                 </div>
 
                 <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
+                  <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '3px' }}>
                     Fotografía del Producto
                   </label>
-                  <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                    {imagePreviewUrl ? (
-                      <div style={{ position: 'relative', width: '42px', height: '42px', minWidth: '42px', borderRadius: '6px', overflow: 'hidden', border: '1px solid var(--border-color)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ 
+                      width: '36px', 
+                      height: '36px', 
+                      borderRadius: '6px', 
+                      border: '1px dashed var(--border-color)', 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center',
+                      backgroundColor: 'var(--bg-secondary)',
+                      overflow: 'hidden'
+                    }}>
+                      {selectedImageFile ? (
+                        <span style={{ fontSize: '0.65rem', fontWeight: 700, color: '#10b981' }}>OK</span>
+                      ) : imagePreviewUrl ? (
                         <img src={imagePreviewUrl} alt="Vista previa" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                        <button 
-                          type="button" 
-                          style={{ position: 'absolute', top: '1px', right: '1px', backgroundColor: 'var(--color-corp-red, #E30613)', color: '#fff', border: 'none', borderRadius: '50%', width: '16px', height: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '9px', padding: 0 }}
-                          onClick={() => {
-                            setSelectedImageFile(null);
-                            setImagePreviewUrl('');
-                            setProductModal({
-                              ...productModal,
-                              data: { ...productModal.data, imageUrl: null }
-                            });
-                          }}
-                        >
-                          ✕
-                        </button>
-                      </div>
-                    ) : (
-                      <div style={{ width: '42px', height: '42px', minWidth: '42px', borderRadius: '6px', border: '1px dashed var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
-                        <ImageIcon size={18} />
-                      </div>
-                    )}
-                    <div style={{ flex: 1 }}>
+                      ) : (
+                        <ImageIcon size={16} color="var(--text-muted)" />
+                      )}
+                    </div>
+                    <label style={{ 
+                      flex: 1, 
+                      padding: '5px 12px', 
+                      backgroundColor: '#ffffff', 
+                      border: '1px solid var(--border-color)', 
+                      borderRadius: '6px', 
+                      cursor: 'pointer', 
+                      fontSize: '0.78rem',
+                      fontWeight: 600,
+                      color: 'var(--text-secondary)',
+                      textAlign: 'center'
+                    }}>
+                      {selectedImageFile ? selectedImageFile.name : 'Subir Imagen'}
                       <input 
                         type="file" 
-                        accept="image/*"
+                        accept="image/*" 
+                        style={{ display: 'none' }} 
                         onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) {
-                            setSelectedImageFile(file);
-                            const reader = new FileReader();
-                            reader.onloadend = () => {
-                              setImagePreviewUrl(reader.result as string);
-                            };
-                            reader.readAsDataURL(file);
+                          if (e.target.files && e.target.files[0]) {
+                            setSelectedImageFile(e.target.files[0]);
                           }
                         }}
-                        style={{ display: 'none' }}
-                        id="product-image-upload"
                       />
-                      <label htmlFor="product-image-upload" className="btn btn-secondary" style={{ width: '100%', display: 'flex', justifyContent: 'center', cursor: 'pointer', fontSize: '0.78rem', padding: '6px 10px', margin: 0 }}>
-                        {imagePreviewUrl ? 'Cambiar Foto' : 'Subir Imagen'}
-                      </label>
-                    </div>
+                    </label>
                   </div>
                 </div>
               </div>
             </div>
 
-          </div>
+            {/* BOTONES DE ACCIÓN */}
+            <div style={{ 
+              display: 'flex', 
+              justifyContent: 'flex-end', 
+              gap: '12px', 
+              paddingTop: '10px', 
+              borderTop: '1px solid var(--border-color)' 
+            }}>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => setProductModal({ ...productModal, open: false })}
+                style={{ borderRadius: '8px', padding: '8px 18px', fontSize: '0.84rem' }}
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                className="btn btn-primary"
+                style={{ 
+                  borderRadius: '8px', 
+                  padding: '8px 22px', 
+                  fontSize: '0.84rem', 
+                  fontWeight: 700, 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '6px',
+                  backgroundColor: 'var(--accent-color, #111827)'
+                }}
+              >
+                <Check size={16} /> Guardar Producto
+              </button>
+            </div>
 
-          {/* Pie del Modal */}
-          <div style={{ 
-            marginTop: '28px', 
-            paddingTop: '16px', 
-            borderTop: '1px solid var(--border-color)', 
-            display: 'flex', 
-            justifyContent: 'flex-end', 
-            gap: '12px' 
-          }}>
-            <button 
-              type="button" 
-              className="btn btn-secondary" 
-              onClick={() => setProductModal({ ...productModal, open: false })}
-              style={{ padding: '9px 20px', fontWeight: 500 }}
-            >
-              Cancelar
-            </button>
-            <button 
-              type="submit" 
-              className="btn btn-primary"
-              style={{ padding: '9px 24px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}
-            >
-              <Check size={18} /> Guardar Producto
-            </button>
           </div>
         </form>
       </div>
