@@ -391,6 +391,7 @@ export default function HrDashboard() {
               style={{ width: '220px' }}
             >
               <option value="TODOS">Todos los Departamentos</option>
+              <option value="DIRECCION">🏛️ Dirección / Socios</option>
               <option value="LOGISTICA">Logística / Choferes</option>
               <option value="VENTAS">Ventas / Preventa</option>
               <option value="DEPOSITO">Depósito / Operarios</option>
@@ -437,8 +438,16 @@ export default function HrDashboard() {
                         </td>
                         <td style={{ padding: '12px 16px' }}>
                           <div style={{ fontWeight: 500 }}>{emp.position}</div>
-                          <span style={{ fontSize: '0.75rem', backgroundColor: 'var(--bg-secondary)', padding: '2px 6px', borderRadius: '4px', color: 'var(--text-secondary)' }}>
-                            {emp.department}
+                          <span style={{
+                            fontSize: '0.75rem',
+                            backgroundColor: emp.department === 'DIRECCION' ? 'rgba(124, 58, 237, 0.1)' : 'var(--bg-secondary)',
+                            color: emp.department === 'DIRECCION' ? '#7C3AED' : 'var(--text-secondary)',
+                            fontWeight: emp.department === 'DIRECCION' ? 700 : 500,
+                            padding: '2px 8px',
+                            borderRadius: '4px',
+                            border: emp.department === 'DIRECCION' ? '1px solid rgba(124, 58, 237, 0.2)' : 'none'
+                          }}>
+                            {emp.department === 'DIRECCION' ? '🏛️ DIRECCIÓN / SOCIOS' : emp.department}
                           </span>
                         </td>
                         <td style={{ padding: '12px 16px' }}>
@@ -712,6 +721,7 @@ export default function HrDashboard() {
                   <option value="VENTAS">Ventas</option>
                   <option value="DEPOSITO">Depósito</option>
                   <option value="ADMINISTRACION">Administración</option>
+                  <option value="DIRECCION">Dirección / Socios / Familia</option>
                 </select>
               </div>
 

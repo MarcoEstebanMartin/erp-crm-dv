@@ -177,14 +177,14 @@ async function main() {
       lastName: 'Martín',
       dni: '35385924',
       cuil: '20-35385924-3',
-      position: 'Administrativo / Gestión',
-      department: 'ADMINISTRACION',
+      position: 'Socio / Dirección',
+      department: 'DIRECCION',
       hireDate: new Date('2021-10-01'),
       baseSalary: 2000000,
       paymentMethod: 'BANK_TRANSFER',
       bankName: 'Mercado Pago',
       cbuAlias: 'marco.estebanmartin',
-      notes: 'Administración y Gestión. Sueldo Recibo: $2.000.000 | Extra al recibo: $3.000.000 | Total: $5.000.000',
+      notes: 'Socio / Dirección. Sueldo Recibo: $2.000.000 | Extra al recibo: $3.000.000 | Total: $5.000.000',
       username: 'esteban'
     },
     {
@@ -192,14 +192,14 @@ async function main() {
       lastName: 'Martín',
       dni: 'LEG-0012',
       cuil: null,
-      position: 'Chofer / Repartidor',
-      department: 'LOGISTICA',
+      position: 'Socio / Dirección',
+      department: 'DIRECCION',
       hireDate: new Date('2021-01-01'),
       baseSalary: 3500000,
       paymentMethod: 'BANK_TRANSFER',
       bankName: 'Mercado Pago',
       cbuAlias: null,
-      notes: 'Logística y Gestión. Extra al recibo: $3.500.000',
+      notes: 'Socio / Dirección. Extra al recibo: $3.500.000',
       username: null
     },
     {
@@ -207,14 +207,14 @@ async function main() {
       lastName: 'Sosa',
       dni: 'LEG-0013',
       cuil: null,
-      position: 'Administrativo / Logística',
-      department: 'LOGISTICA',
+      position: 'Socio / Dirección',
+      department: 'DIRECCION',
       hireDate: new Date('2022-01-01'),
       baseSalary: 0,
       paymentMethod: 'BANK_TRANSFER',
       bankName: 'Mercado Pago',
       cbuAlias: null,
-      notes: 'Logística y Gestión. Pendiente de completar datos salariales.',
+      notes: 'Socio / Dirección. Pendiente de completar datos salariales.',
       username: null
     }
   ];
