@@ -4,9 +4,10 @@ import { Shield, Eye, EyeOff } from 'lucide-react';
 
 interface LoginProps {
   onLoginSuccess: () => void;
+  onOpenStore?: () => void;
 }
 
-export default function Login({ onLoginSuccess }: LoginProps) {
+export default function Login({ onLoginSuccess, onOpenStore }: LoginProps) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -152,6 +153,32 @@ export default function Login({ onLoginSuccess }: LoginProps) {
             disabled={loading || serverOnline === false}
           >
             {loading ? 'Accediendo...' : 'Iniciar sesión'}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              if (onOpenStore) onOpenStore();
+              else window.location.pathname = '/tienda';
+            }}
+            style={{
+              width: '100%',
+              marginTop: '12px',
+              padding: '12px',
+              background: 'rgba(227, 6, 19, 0.08)',
+              color: 'var(--color-corp-red)',
+              border: '1px solid rgba(227, 6, 19, 0.25)',
+              borderRadius: 'var(--radius-sm)',
+              fontWeight: 600,
+              fontSize: '0.85rem',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px'
+            }}
+          >
+            🛒 Acceso a Tienda Online & Catálogo Clientes B2B
           </button>
         </form>
 

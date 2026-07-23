@@ -9,6 +9,7 @@ import QuickPriceSearchModal from './components/modals/QuickPriceSearchModal';
 const AdminDashboard = lazy(() => import('./components/AdminDashboard'));
 const VendedorDashboard = lazy(() => import('./components/VendedorDashboard'));
 const DepositoDashboard = lazy(() => import('./components/DepositoDashboard'));
+const ClientPortal = lazy(() => import('./components/store/ClientPortal'));
 
 const LoadingSpinner = () => (
   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '50vh', gap: '12px' }}>
@@ -34,6 +35,7 @@ function App() {
   const [user, setUser] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<string>('');
   const [isQuickSearchModalOpen, setIsQuickSearchModalOpen] = useState(false);
+  const [isStoreMode, setIsStoreMode] = useState<boolean>(window.location.pathname.startsWith('/tienda'));
 
   // Atajo de teclado global Ctrl + Q para consulta de precios
   useEffect(() => {
@@ -95,6 +97,15 @@ function App() {
     setActiveTab('');
   };
 
+  // Interceptar ruta o modo para Tienda Online / Portal Clientes
+  if (isStoreMode || window.location.pathname.startsWith('/tienda')) {
+    return (
+      <Suspense fallback={<LoadingSpinner />}>
+        <ClientPortal onBackToStaffLogin={() => setIsStoreMode(false)} />
+      </Suspense>
+    );
+  }
+
   // Interceptar ruta para recibos compartidos
   if (window.location.pathname.startsWith('/recibo/')) {
     const receiptId = window.location.pathname.split('/recibo/')[1];
@@ -103,7 +114,7 @@ function App() {
 
   // Si no está autenticado, renderizar Login
   if (!user) {
-    return <Login onLoginSuccess={handleLoginSuccess} />;
+    return <Login onLoginSuccess={handleLoginSuccess} onOpenStore={() => setIsStoreMode(true)} />;
   }
 
   // Renderizado del Dashboard correspondiente

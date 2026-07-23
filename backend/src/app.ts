@@ -26,6 +26,7 @@ import fleetRoutes from './routes/fleet.routes';
 import expenseRoutes from './routes/expense.routes';
 import offerRoutes from './routes/offers';
 import hrRoutes from './routes/hr.routes';
+import storeRoutes from './routes/store.routes';
 
 dotenv.config();
 
@@ -75,6 +76,7 @@ app.use('/api/fleet', fleetRoutes);
 app.use('/api/expenses', expenseRoutes);
 app.use('/api/offers', offerRoutes);
 app.use('/api/hr', hrRoutes);
+app.use('/api/store', storeRoutes);
 
 // Ruta de comprobación de estado (Healthcheck)
 app.get('/api/health', (req: Request, res: Response) => {
