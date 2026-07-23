@@ -1182,6 +1182,35 @@ export const api = {
     });
   },
 
+  // --- CONTROL DE COMBUSTIBLE DE FLOTA ---
+  getFuelLogs: async (params?: { vehicleId?: number; startDate?: string; endDate?: string }) => {
+    const query = new URLSearchParams();
+    if (params?.vehicleId) query.append('vehicleId', String(params.vehicleId));
+    if (params?.startDate) query.append('startDate', params.startDate);
+    if (params?.endDate) query.append('endDate', params.endDate);
+    const queryString = query.toString() ? `?${query.toString()}` : '';
+    const res = await request(`/fleet/fuel${queryString}`);
+    return res.logs;
+  },
+
+  getFuelAnalytics: async () => {
+    const res = await request('/fleet/fuel/analytics');
+    return res;
+  },
+
+  createFuelLog: async (data: any) => {
+    return await request('/fleet/fuel', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  },
+
+  deleteFuelLog: async (id: number) => {
+    return await request(`/fleet/fuel/${id}`, {
+      method: 'DELETE'
+    });
+  },
+
   createPerception: async (perceptionData: any) => {
     throw new Error('La creación de impuestos/percepciones no está disponible en la versión actual. Modifique un impuesto existente en su lugar.');
   },

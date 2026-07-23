@@ -9,6 +9,12 @@ import {
   deleteMaintenance, 
   deleteExpiry 
 } from '../controllers/fleet.controller';
+import {
+  getFuelLogs,
+  createFuelLog,
+  deleteFuelLog,
+  getFuelAnalytics
+} from '../controllers/fuel.controller';
 import { authenticateJWT } from '../middlewares/auth';
 
 const router = Router();
@@ -21,6 +27,12 @@ router.get('/', getVehicles);
 router.post('/', createVehicle);
 router.put('/:id', updateVehicle);
 router.delete('/:id', deleteVehicle);
+
+// Rutas para cargas de combustible y analíticas de rendimiento
+router.get('/fuel', getFuelLogs);
+router.get('/fuel/analytics', getFuelAnalytics);
+router.post('/fuel', createFuelLog);
+router.delete('/fuel/:id', deleteFuelLog);
 
 // Rutas para mantenimientos y gastos de flota
 router.post('/:id/maintenances', createMaintenance);

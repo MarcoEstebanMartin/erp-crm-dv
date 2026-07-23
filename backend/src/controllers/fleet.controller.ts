@@ -22,6 +22,10 @@ export async function getVehicles(req: AuthenticatedRequest, res: Response): Pro
         },
         expirations: {
           orderBy: { expirationDate: 'asc' }
+        },
+        fuelLogs: {
+          orderBy: { odometer: 'desc' },
+          take: 10
         }
       },
       orderBy: { brand: 'asc' }

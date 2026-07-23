@@ -1,8 +1,9 @@
 import { useState, lazy, Suspense } from 'react';
-import { Truck, Layers } from 'lucide-react';
+import { Truck, Layers, Fuel } from 'lucide-react';
 
 const RepartoDashboard = lazy(() => import('./RepartoDashboard'));
 const FleetDashboard = lazy(() => import('./FleetDashboard'));
+const FuelControlDashboard = lazy(() => import('./FuelControlDashboard'));
 
 const MiniSpinner = () => (
   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '30vh', gap: '8px' }}>
@@ -24,11 +25,12 @@ const MiniSpinner = () => (
 );
 
 export default function LogisticaDashboard() {
-  const [subTab, setSubTab] = useState<'reparto' | 'flota'>('reparto');
+  const [subTab, setSubTab] = useState<'reparto' | 'flota' | 'combustible'>('reparto');
 
   const tabs = [
     { id: 'reparto', label: 'Hojas de Reparto', icon: <Truck size={16} /> },
-    { id: 'flota', label: 'Flota de Vehículos', icon: <Layers size={16} /> }
+    { id: 'flota', label: 'Flota de Vehículos', icon: <Layers size={16} /> },
+    { id: 'combustible', label: 'Control de Combustible', icon: <Fuel size={16} /> }
   ] as const;
 
   return (
@@ -97,6 +99,7 @@ export default function LogisticaDashboard() {
         <Suspense fallback={<MiniSpinner />}>
           {subTab === 'reparto' && <RepartoDashboard />}
           {subTab === 'flota' && <FleetDashboard />}
+          {subTab === 'combustible' && <FuelControlDashboard />}
         </Suspense>
       </div>
     </div>
