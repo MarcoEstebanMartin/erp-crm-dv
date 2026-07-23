@@ -28,7 +28,7 @@ router.post('/employees', authenticateJWT, requireRole([Role.ADMIN, Role.FACTURA
 router.put('/employees/:id', authenticateJWT, requireRole([Role.ADMIN, Role.FACTURACION]), updateEmployee);
 router.delete('/employees/:id', authenticateJWT, requireRole([Role.ADMIN]), deleteEmployee);
 
-// Vales y Adelantos
+// Adelantos
 router.get('/advances', authenticateJWT, requireRole([Role.ADMIN, Role.FACTURACION]), getAdvances);
 router.post('/advances', authenticateJWT, requireRole([Role.ADMIN, Role.FACTURACION]), createAdvance);
 

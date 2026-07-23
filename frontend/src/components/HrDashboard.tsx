@@ -68,7 +68,7 @@ export default function HrDashboard() {
   const [advanceForm, setAdvanceForm] = useState<any>({
     employeeId: '',
     amount: '',
-    reason: 'Vale de Sueldo',
+    reason: 'Adelanto de Sueldo',
     paymentMethod: 'CASH',
     cashDrawerId: '',
     bankAccountId: ''
@@ -162,14 +162,14 @@ export default function HrDashboard() {
         bankAccountId: advanceForm.bankAccountId ? parseInt(advanceForm.bankAccountId) : undefined
       });
       setShowAdvanceModal(false);
-      setAdvanceForm({ employeeId: '', amount: '', reason: 'Vale de Sueldo', paymentMethod: 'CASH', cashDrawerId: '', bankAccountId: '' });
+      setAdvanceForm({ employeeId: '', amount: '', reason: 'Adelanto de Sueldo', paymentMethod: 'CASH', cashDrawerId: '', bankAccountId: '' });
       loadAllData();
     } catch (err: any) {
-      alert(err.message || 'Error al guardar vale');
+      alert(err.message || 'Error al guardar adelanto');
     }
   };
 
-  // Al seleccionar empleado en liquidación, precalcular vales y sueldos
+  // Al seleccionar empleado en liquidación, precalcular adelantos y sueldos
   const handleSelectEmployeeForPayroll = async (empIdStr: string) => {
     if (!empIdStr) return;
     const empId = parseInt(empIdStr);
@@ -261,7 +261,7 @@ export default function HrDashboard() {
             style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px', fontWeight: 600 }}
           >
             <DollarSign size={16} />
-            Nuevo Vale / Adelanto
+            Nuevo Adelanto
           </button>
           <button
             onClick={() => setShowPayrollModal(true)}
@@ -304,14 +304,14 @@ export default function HrDashboard() {
 
         <div style={{ backgroundColor: 'var(--card-bg)', border: '1px solid var(--border-color)', borderRadius: '10px', padding: '18px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: 'var(--text-secondary)', marginBottom: '8px' }}>
-            <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>Vales Pendientes</span>
+            <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>Adelantos Pendientes</span>
             <CreditCard size={18} />
           </div>
           <div style={{ fontSize: '1.8rem', fontWeight: 700, color: pendingAdvancesTotal > 0 ? '#f59e0b' : 'inherit' }}>
             ${pendingAdvancesTotal.toLocaleString('es-AR')}
           </div>
           <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
-            {advances.filter(a => a.status === 'PENDING').length} vale(s) a descontar
+            {advances.filter(a => a.status === 'PENDING').length} adelanto(s) a descontar
           </div>
         </div>
 
@@ -329,7 +329,7 @@ export default function HrDashboard() {
       <div style={{ display: 'flex', borderBottom: '1px solid var(--border-color)', marginBottom: '20px', gap: '8px' }}>
         {[
           { id: 'plantilla', label: '👥 Plantilla de Empleados', count: employees.length },
-          { id: 'vales', label: '💸 Vales y Adelantos', count: advances.filter(a => a.status === 'PENDING').length },
+          { id: 'vales', label: '💸 Adelantos', count: advances.filter(a => a.status === 'PENDING').length },
           { id: 'liquidaciones', label: '📄 Liquidación de Sueldos', count: payrolls.length },
           { id: 'vacaciones', label: '🏖️ Vacaciones y Licencias', count: vacations.length }
         ].map(tab => (
@@ -417,7 +417,7 @@ export default function HrDashboard() {
                     <th style={{ padding: '12px 16px' }}>Ingreso</th>
                     <th style={{ padding: '12px 16px' }}>Sueldo Básico</th>
                     <th style={{ padding: '12px 16px' }}>Pago / CBU</th>
-                    <th style={{ padding: '12px 16px' }}>Vales Pend.</th>
+                    <th style={{ padding: '12px 16px' }}>Adelantos Pend.</th>
                     <th style={{ padding: '12px 16px', textAlign: 'right' }}>Acción</th>
                   </tr>
                 </thead>
@@ -488,19 +488,19 @@ export default function HrDashboard() {
         </div>
       )}
 
-      {/* CONTENIDO PESTAÑA 2: VALES Y ADELANTOS */}
+      {/* CONTENIDO PESTAÑA 2: ADELANTOS */}
       {activeTab === 'vales' && (
         <div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-            <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 600 }}>Historial de Vales y Adelantos Solicitados</h3>
+            <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 600 }}>Historial de Adelantos Solicitados</h3>
             <button onClick={() => setShowAdvanceModal(true)} className="btn btn-primary btn-sm" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <Plus size={16} /> Emitir Nuevo Vale
+              <Plus size={16} /> Emitir Nuevo Adelanto
             </button>
           </div>
 
           {advances.length === 0 ? (
             <div style={{ backgroundColor: 'var(--card-bg)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '40px', textAlign: 'center', color: 'var(--text-secondary)' }}>
-              No hay adelantos ni vales registrados actualmente.
+              No hay adelantos registrados actualmente.
             </div>
           ) : (
             <div style={{ backgroundColor: 'var(--card-bg)', border: '1px solid var(--border-color)', borderRadius: '10px', overflow: 'hidden' }}>
@@ -572,7 +572,7 @@ export default function HrDashboard() {
                     <th style={{ padding: '12px 16px' }}>Empleado</th>
                     <th style={{ padding: '12px 16px' }}>Básico</th>
                     <th style={{ padding: '12px 16px' }}>Comisiones / Extras</th>
-                    <th style={{ padding: '12px 16px' }}>Vales Descontados</th>
+                    <th style={{ padding: '12px 16px' }}>Adelantos Descontados</th>
                     <th style={{ padding: '12px 16px' }}>Neto Cobrado</th>
                     <th style={{ padding: '12px 16px' }}>Estado / Pago</th>
                     <th style={{ padding: '12px 16px', textAlign: 'right' }}>Recibo</th>
@@ -749,12 +749,12 @@ export default function HrDashboard() {
         </div>
       )}
 
-      {/* MODAL: NUEVO VALE / ADELANTO */}
+      {/* MODAL: NUEVO ADELANTO */}
       {showAdvanceModal && (
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
           <div style={{ backgroundColor: 'var(--card-bg)', borderRadius: '12px', border: '1px solid var(--border-color)', width: '100%', maxWidth: '500px', padding: '24px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h2 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 700 }}>Emisión de Vale / Adelanto</h2>
+              <h2 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 700 }}>Emisión de Adelanto</h2>
               <button onClick={() => setShowAdvanceModal(false)} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}><X size={20} /></button>
             </div>
 
@@ -789,7 +789,7 @@ export default function HrDashboard() {
 
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '16px' }}>
                 <button type="button" onClick={() => setShowAdvanceModal(false)} className="btn btn-secondary">Cancelar</button>
-                <button type="submit" className="btn btn-primary">Emitir Vale</button>
+                <button type="submit" className="btn btn-primary">Emitir Adelanto</button>
               </div>
             </form>
           </div>
@@ -841,7 +841,7 @@ export default function HrDashboard() {
               </div>
 
               <div>
-                <label style={{ fontSize: '0.82rem', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Vales a Descontar ($)</label>
+                <label style={{ fontSize: '0.82rem', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Adelantos a Descontar ($)</label>
                 <input type="number" step="0.01" value={payrollForm.advancesDeduction} onChange={e => setPayrollForm({ ...payrollForm, advancesDeduction: parseFloat(e.target.value) || 0 })} className="input" style={{ width: '100%' }} />
               </div>
 
@@ -914,7 +914,7 @@ export default function HrDashboard() {
                 )}
                 {Number(selectedPayrollReceipt.advancesDeduction) > 0 && (
                   <tr>
-                    <td style={{ padding: '6px 0' }}>Descuento de Vales Solicitados</td>
+                    <td style={{ padding: '6px 0' }}>Descuento de Adelantos Solicitados</td>
                     <td></td>
                     <td style={{ padding: '6px 0', textAlign: 'right', color: '#dc2626' }}>-${Number(selectedPayrollReceipt.advancesDeduction).toLocaleString('es-AR')}</td>
                   </tr>
@@ -1075,7 +1075,7 @@ export default function HrDashboard() {
               }}>
                 {[
                   { id: 'info', label: '📄 Ficha Técnica' },
-                  { id: 'vales', label: `💸 Vales (${empAdvances.length})` },
+                  { id: 'vales', label: `💸 Adelantos (${empAdvances.length})` },
                   { id: 'liquidaciones', label: `📄 Nómina (${empPayrolls.length})` },
                   { id: 'vacaciones', label: `🏖️ Licencias (${empVacations.length})` }
                 ].map(t => (
@@ -1124,7 +1124,7 @@ export default function HrDashboard() {
                         </div>
                       </div>
                       <div>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Vales a Descontar</div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Adelantos a Descontar</div>
                         <div style={{ fontSize: '1.2rem', fontWeight: 700, color: pendingValesTotal > 0 ? '#F59E0B' : '#10B981' }}>
                           ${pendingValesTotal.toLocaleString('es-AR')}
                         </div>
@@ -1206,12 +1206,12 @@ export default function HrDashboard() {
                   </div>
                 )}
 
-                {/* TAB 2: VALES DEL EMPLEADO */}
+                {/* TAB 2: ADELANTOS DEL EMPLEADO */}
                 {legajoTab === 'vales' && (
                   <div>
                     {empAdvances.length === 0 ? (
                       <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
-                        Este empleado no tiene vales ni adelantos registrados.
+                        Este empleado no tiene adelantos registrados.
                       </div>
                     ) : (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -1336,7 +1336,7 @@ export default function HrDashboard() {
                   className="btn btn-secondary"
                   style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '0.85rem' }}
                 >
-                  <DollarSign size={16} /> Emitir Vale
+                  <DollarSign size={16} /> Emitir Adelanto
                 </button>
                 <button
                   onClick={() => {

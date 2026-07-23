@@ -244,7 +244,7 @@ export async function deleteEmployee(req: AuthenticatedRequest, res: Response): 
 }
 
 /**
- * Listar Vales y Adelantos de Sueldo
+ * Listar Adelantos de Sueldo
  */
 export async function getAdvances(req: AuthenticatedRequest, res: Response): Promise<void> {
   try {
@@ -275,7 +275,7 @@ export async function getAdvances(req: AuthenticatedRequest, res: Response): Pro
 }
 
 /**
- * Crear un Vale / Adelanto de Sueldo
+ * Crear un Adelanto de Sueldo
  */
 export async function createAdvance(req: AuthenticatedRequest, res: Response): Promise<void> {
   try {
@@ -320,7 +320,7 @@ export async function createAdvance(req: AuthenticatedRequest, res: Response): P
             type: TransactionType.OUTCOME,
             paymentMethod: paymentMethod || PaymentMethod.CASH,
             amount: advanceAmount,
-            description: `Vale de Sueldo: ${employee.lastName}, ${employee.firstName} - ${reason || 'Adelanto'}`,
+            description: `Adelanto de Sueldo: ${employee.lastName}, ${employee.firstName} - ${reason || 'Adelanto'}`,
             cashDrawerId: cashDrawerId ? parseInt(cashDrawerId) : null,
             bankAccountId: bankAccountId ? parseInt(bankAccountId) : null,
             verified: true
@@ -339,7 +339,7 @@ export async function createAdvance(req: AuthenticatedRequest, res: Response): P
         await tx.expense.create({
           data: {
             amount: advanceAmount,
-            description: `Vale de Sueldo: ${employee.lastName}, ${employee.firstName}`,
+            description: `Adelanto de Sueldo: ${employee.lastName}, ${employee.firstName}`,
             categoryId: category.id,
             userId: req.user?.id || 1,
             paymentMethod: paymentMethod || PaymentMethod.CASH,
@@ -370,8 +370,8 @@ export async function createAdvance(req: AuthenticatedRequest, res: Response): P
 
     res.status(201).json({ status: 'success', data: result });
   } catch (error: any) {
-    console.error('Error al crear vale de sueldo:', error);
-    res.status(500).json({ status: 'error', message: error.message || 'Error al registrar el vale de sueldo' });
+    console.error('Error al crear adelanto de sueldo:', error);
+    res.status(500).json({ status: 'error', message: error.message || 'Error al registrar el adelanto de sueldo' });
   }
 }
 
