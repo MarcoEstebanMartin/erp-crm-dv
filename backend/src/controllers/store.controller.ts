@@ -9,24 +9,26 @@ const JWT_SECRET = process.env.JWT_SECRET || 'seguridad-erp-distribuidora-2026-k
  * Mapeo oficial exacto a la "Categoría Comercial" respetando los Títulos del Gestor de Ofertas
  */
 const RUBRO_TO_COMMERCIAL_CATEGORY: Record<string, { category: string; icon: string }> = {
-  'REMOTTI': { category: 'Refrigerados', icon: '❄️' },
-  'LECHES': { category: 'Refrigerados', icon: '❄️' },
-  'SANCOR y CREMIGAL': { category: 'Refrigerados', icon: '❄️' },
-  'QUESOS RALLADOS': { category: 'Refrigerados', icon: '❄️' },
-  'SODECAR': { category: 'Fiambres', icon: '🧀' },
-  'A.G.D Y NIZA': { category: 'Aderezos y Aceites', icon: '🌻' },
-  'BEBIDAS': { category: 'Bebidas', icon: '🥤' },
-  'PASTAS SECAS': { category: 'Pastas Secas', icon: '🍝' },
-  'CONSERVAS': { category: 'Conservas', icon: '🥫' },
-  'PESCADERIA': { category: 'Pescadería', icon: '🐟' },
-  'PAPELES': { category: 'Papeles', icon: '🧻' },
-  'NO COMESTIBLES': { category: 'No comestibles', icon: '📦' },
-  'REGALERIA': { category: 'Estucheria y Regalerìa', icon: '🎁' },
-  'ARROZ': { category: 'Pastas Secas', icon: '🌾' },
-  'CAFE': { category: 'Varios', icon: '☕' },
-  'YERBAS': { category: 'Varios', icon: '🧉' },
-  'AZUCAR': { category: 'Varios', icon: '🍬' },
-  'EDULCORANTES': { category: 'Varios', icon: '☕' }
+  'REMOTTI': { category: 'REFRIGERADOS', icon: '❄️' },
+  'LECHES': { category: 'REFRIGERADOS', icon: '❄️' },
+  'SANCOR y CREMIGAL': { category: 'REFRIGERADOS', icon: '❄️' },
+  'SANCOR Y CREMIGAL': { category: 'REFRIGERADOS', icon: '❄️' },
+  'QUESOS RALLADOS': { category: 'REFRIGERADOS', icon: '❄️' },
+  'SODECAR': { category: 'FIAMBRES', icon: '🧀' },
+  'A.G.D Y NIZA': { category: 'ADEREZOS Y ACEITES', icon: '🌻' },
+  'BEBIDAS': { category: 'BEBIDAS', icon: '🥤' },
+  'PASTAS SECAS': { category: 'PASTAS SECAS', icon: '🍝' },
+  'CONSERVAS': { category: 'CONSERVAS', icon: '🥫' },
+  'PESCADERIA': { category: 'PESCADERÍA', icon: '🐟' },
+  'PESCADERÍA': { category: 'PESCADERÍA', icon: '🐟' },
+  'PAPELES': { category: 'PAPELES', icon: '🧻' },
+  'NO COMESTIBLES': { category: 'NO COMESTIBLES', icon: '📦' },
+  'REGALERIA': { category: 'ESTUCHERIA Y REGALERÍA', icon: '🎁' },
+  'ARROZ': { category: 'PASTAS SECAS', icon: '🌾' },
+  'CAFE': { category: 'VARIOS', icon: '☕' },
+  'YERBAS': { category: 'VARIOS', icon: '🧉' },
+  'AZUCAR': { category: 'VARIOS', icon: '🍬' },
+  'EDULCORANTES': { category: 'VARIOS', icon: '☕' }
 };
 
 /**
@@ -307,20 +309,22 @@ export async function getStoreCatalog(req: Request, res: Response): Promise<void
     });
 
     const categoryIconsMap: Record<string, string> = {
-      'Refrigerados': '❄️',
-      'Fiambres': '🧀',
-      'Bebidas': '🥤',
-      'Bebidas Alcoholicas': '🍺',
-      'Vinos': '🍷',
-      'Aderezos y Aceites': '🌻',
-      'Pastas Secas': '🍝',
-      'Conservas': '🥫',
-      'Pescadería': '🐟',
+      'REFRIGERADOS': '❄️',
+      'FIAMBRES': '🧀',
+      'BEBIDAS': '🥤',
+      'BEBIDAS ALCOHOLICAS': '🍺',
+      'BEBIDAS ALCOHÓLICAS': '🍺',
+      'VINOS': '🍷',
+      'ADEREZOS Y ACEITES': '🌻',
+      'PASTAS SECAS': '🍝',
+      'CONSERVAS': '🥫',
+      'PESCADERÍA': '🐟',
       'PESCADERIA': '🐟',
-      'Papeles': '🧻',
-      'No comestibles': '📦',
-      'Estucheria y Regalerìa': '🎁',
-      'Varios': '🏷️'
+      'PAPELES': '🧻',
+      'NO COMESTIBLES': '📦',
+      'ESTUCHERIA Y REGALERÍA': '🎁',
+      'ESTUCHERIA Y REGALERIA': '🎁',
+      'VARIOS': '🏷️'
     };
 
     const formattedProducts = products.map((p) => {
@@ -357,17 +361,18 @@ export async function getStoreCatalog(req: Request, res: Response): Promise<void
         offerDiscount = Math.round(((previousPrice - finalPrice) / previousPrice) * 100);
       }
 
-      // Asignación de Categoría Comercial
-      let assignedCategory = productCampaignGroupMap.get(p.id);
-      if (!assignedCategory && p.rubro?.name) {
+      // Asignación de Categoría Comercial (siempre en Mayúsculas)
+      let rawCategory = productCampaignGroupMap.get(p.id);
+      if (!rawCategory && p.rubro?.name) {
         const mapped = RUBRO_TO_COMMERCIAL_CATEGORY[p.rubro.name.toUpperCase().trim()];
         if (mapped) {
-          assignedCategory = mapped.category;
+          rawCategory = mapped.category;
         } else {
-          assignedCategory = p.rubro.name;
+          rawCategory = p.rubro.name;
         }
       }
-      if (!assignedCategory) assignedCategory = 'Varios';
+      if (!rawCategory) rawCategory = 'VARIOS';
+      const assignedCategory = rawCategory.toUpperCase().trim();
 
       const catIcon = categoryIconsMap[assignedCategory] || (RUBRO_TO_COMMERCIAL_CATEGORY[p.rubro?.name || '']?.icon) || '📦';
 
@@ -403,45 +408,47 @@ export async function getStoreCatalog(req: Request, res: Response): Promise<void
     });
 
     const defaultPriorityOrder = [
-      'Refrigerados',
-      'Fiambres',
-      'Bebidas',
-      'Bebidas Alcoholicas',
-      'Aderezos y Aceites',
-      'Pastas Secas',
-      'Conservas',
-      'Pescadería',
-      'Papeles',
-      'No comestibles',
-      'Estucheria y Regalerìa',
-      'Varios'
+      'REFRIGERADOS',
+      'FIAMBRES',
+      'BEBIDAS',
+      'BEBIDAS ALCOHOLICAS',
+      'ADEREZOS Y ACEITES',
+      'PASTAS SECAS',
+      'CONSERVAS',
+      'PESCADERÍA',
+      'PAPELES',
+      'NO COMESTIBLES',
+      'ESTUCHERIA Y REGALERÍA',
+      'VARIOS'
     ];
 
-    const uniqueCategoryNames: string[] = [];
+    const uniqueCategoryMap = new Map<string, string>();
+    const addCategory = (name: string) => {
+      if (!name) return;
+      const cleanName = name.toUpperCase().trim();
+      const normKey = cleanName.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      if (!uniqueCategoryMap.has(normKey)) {
+        uniqueCategoryMap.set(normKey, cleanName);
+      }
+    };
 
     if (campaignCustomOrder.length > 0) {
-      campaignCustomOrder.forEach((g) => {
-        if (!uniqueCategoryNames.includes(g)) uniqueCategoryNames.push(g);
-      });
+      campaignCustomOrder.forEach(addCategory);
     } else {
-      defaultPriorityOrder.forEach((g) => {
-        if (!uniqueCategoryNames.includes(g)) uniqueCategoryNames.push(g);
-      });
+      defaultPriorityOrder.forEach(addCategory);
     }
 
-    configuredCategoriesSet.forEach((g) => {
-      if (!uniqueCategoryNames.includes(g)) uniqueCategoryNames.push(g);
-    });
+    configuredCategoriesSet.forEach(addCategory);
 
     formattedProducts.forEach((p) => {
-      if (p.commercialCategoryName && !uniqueCategoryNames.includes(p.commercialCategoryName)) {
-        uniqueCategoryNames.push(p.commercialCategoryName);
+      if (p.commercialCategoryName) {
+        addCategory(p.commercialCategoryName);
       }
     });
 
     const commercialCategories = [
-      { id: 'all', name: 'Todos los productos', icon: '🔥' },
-      ...uniqueCategoryNames.map((catName) => ({
+      { id: 'all', name: 'TODOS LOS PRODUCTOS', icon: '🔥' },
+      ...Array.from(uniqueCategoryMap.values()).map((catName) => ({
         id: catName.toLowerCase().replace(/\s+/g, '-'),
         name: catName,
         icon: categoryIconsMap[catName] || (RUBRO_TO_COMMERCIAL_CATEGORY[catName]?.icon) || '📦'
