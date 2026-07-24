@@ -1344,6 +1344,36 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(data)
     });
+  },
+
+  // --- WHATSAPP CRM ---
+  getCrmConversations: async () => {
+    return await request('/crm/whatsapp/conversations');
+  },
+
+  getCrmMessages: async (conversationId: number) => {
+    return await request(`/crm/whatsapp/conversations/${conversationId}/messages`);
+  },
+
+  sendCrmMessage: async (data: { to: string; text: string; mediaUrl?: string; mediaType?: string }) => {
+    return await request('/crm/whatsapp/send-message', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  },
+
+  parseCrmOrderDraft: async (conversationId: number, rawText: string) => {
+    return await request(`/crm/whatsapp/conversations/${conversationId}/parse-order`, {
+      method: 'POST',
+      body: JSON.stringify({ rawText })
+    });
+  },
+
+  approveCrmOrderDraft: async (draftId: number) => {
+    return await request(`/crm/whatsapp/drafts/${draftId}/approve`, {
+      method: 'POST'
+    });
   }
 };
+
 

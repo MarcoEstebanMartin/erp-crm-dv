@@ -154,6 +154,8 @@ model Persona {
   routeVisits         SaleRouteVisit[]
   vehicleMaintenances VehicleMaintenance[]
   providerMappings    ProviderProductMapping[]
+  crmConversations    CrmConversation[]
+  crmDrafts           CrmOrderDraft[]
 
   @@index([sellerId])
   @@index([isClient])
@@ -230,6 +232,7 @@ model Order {
   deliveryRouteId Int?
   deliveryRoute   DeliveryRoute? @relation(fields: [deliveryRouteId], references: [id])
   creditNotes     CreditNote[]
+  crmDraft        CrmOrderDraft?
 
   @@index([personaId])
   @@index([sellerId])
@@ -986,3 +989,81 @@ model EmployeeDocument {
   @@index([employeeId])
   @@index([expirationDate])
 }
+
+// ==========================================
+// MÓDULO CRM & WHATSAPP (ISLADO RIESGO CERO)
+// ==========================================
+
+enum CrmMessageDirection {
+  INBOUND
+  OUTBOUND
+}
+
+enum CrmMessageStatus {
+  SENT
+  DELIVERED
+  READ
+  FAILED
+}
+
+enum CrmDraftStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model CrmConversation {
+  id            Int      @id @default(autoincrement())
+  waId          String   @unique
+  contactName   String?
+  personaId     Int?
+  persona       Persona? @relation(fields: [personaId], references: [id], onDelete: SetNull)
+  lastMessageAt DateTime @default(now())
+  unreadCount   Int      @default(0)
+  status        String   @default("ACTIVE") // ACTIVE, ARCHIVED, CLOSED
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  messages CrmMessage[]
+  drafts   CrmOrderDraft[]
+
+  @@index([waId])
+  @@index([personaId])
+  @@index([lastMessageAt])
+}
+
+model CrmMessage {
+  id             Int                 @id @default(autoincrement())
+  conversationId Int
+  conversation   CrmConversation     @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  direction      CrmMessageDirection
+  body           String
+  mediaUrl       String?
+  mediaType      String? // image, audio, document, video
+  wamid          String?             @unique
+  status         CrmMessageStatus    @default(SENT)
+  createdAt      DateTime            @default(now())
+
+  @@index([conversationId])
+  @@index([createdAt])
+}
+
+model CrmOrderDraft {
+  id             Int             @id @default(autoincrement())
+  conversationId Int
+  conversation   CrmConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  personaId      Int?
+  persona        Persona?        @relation(fields: [personaId], references: [id], onDelete: SetNull)
+  rawText        String
+  itemsJson      String // JSON Array con productos detectados
+  totalEstimated Decimal         @db.Decimal(12, 2)
+  status         CrmDraftStatus  @default(PENDING)
+  orderId        Int?            @unique
+  order          Order?          @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  @@index([conversationId])
+  @@index([status])
+}
+

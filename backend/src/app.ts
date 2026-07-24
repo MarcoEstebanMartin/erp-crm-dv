@@ -27,6 +27,7 @@ import expenseRoutes from './routes/expense.routes';
 import offerRoutes from './routes/offers';
 import hrRoutes from './routes/hr.routes';
 import storeRoutes from './routes/store.routes';
+import crmWhatsappRoutes from './routes/crm_whatsapp.routes';
 
 dotenv.config();
 
@@ -65,6 +66,7 @@ app.use('/api/billing/credit-notes', creditNoteRoutes);
 app.use('/api/billing', billingRoutes);
 app.use('/api/logistics', logisticsRoutes);
 app.use('/api/purchases', purchaseRoutes);
+app.use('/api/crm/whatsapp', crmWhatsappRoutes);
 app.use('/api/crm', crmRoutes);
 app.use('/api/rubros', rubroRoutes);
 app.use('/api/iva', ivaRoutes);
