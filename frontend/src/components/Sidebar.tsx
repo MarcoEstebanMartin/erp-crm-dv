@@ -17,7 +17,8 @@ import {
   ChevronDown,
   ChevronRight,
   Tag,
-  Briefcase
+  Briefcase,
+  MessageSquare
 } from 'lucide-react';
 import { api } from '../utils/api';
 
@@ -75,6 +76,7 @@ export default function Sidebar({ username, role, activeTab, setActiveTab, onLog
             ]
           },
           { id: 'billing', label: 'Facturación', icon: <FileText size={18} /> },
+          { id: 'crm', label: 'CRM & WhatsApp', icon: <MessageSquare size={18} /> },
           { id: 'products', label: 'Productos', icon: <Package size={18} /> },
           { id: 'compras', label: 'Proveedores', icon: <Receipt size={18} /> },
           { id: 'offers', label: 'Gestor de Ofertas', icon: <Tag size={18} /> },
@@ -99,6 +101,7 @@ export default function Sidebar({ username, role, activeTab, setActiveTab, onLog
             ]
           },
           { id: 'billing', label: 'Facturación', icon: <FileText size={18} /> },
+          { id: 'crm', label: 'CRM & WhatsApp', icon: <MessageSquare size={18} /> },
           { id: 'products', label: 'Productos', icon: <Package size={18} /> },
           { id: 'compras', label: 'Proveedores', icon: <Receipt size={18} /> },
           { id: 'rendiciones', label: 'Finanzas', icon: <DollarSign size={18} /> },
@@ -107,6 +110,7 @@ export default function Sidebar({ username, role, activeTab, setActiveTab, onLog
       case 'VENDEDOR':
         return [
           { id: 'orders', label: 'Toma de Pedidos', icon: <ShoppingCart size={18} /> },
+          { id: 'crm', label: 'CRM & WhatsApp', icon: <MessageSquare size={18} /> },
           { id: 'clients', label: 'Mis Rutas', icon: <Users size={18} /> },
           { id: 'cobranzas', label: 'Cobranzas y Recibos', icon: <DollarSign size={18} /> },
           { id: 'products', label: 'Catálogo de Precios', icon: <Package size={18} /> },

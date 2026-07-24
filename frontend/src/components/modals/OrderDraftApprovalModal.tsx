@@ -111,7 +111,7 @@ export default function OrderDraftApprovalModal({ draft, onClose, onApproved }: 
           {/* Resumen y Total */}
           <div style={{
             display: 'flex',
-            justify: 'space-between',
+            justifyContent: 'space-between',
             alignItems: 'center',
             padding: '14px',
             backgroundColor: '#F8FAFC',

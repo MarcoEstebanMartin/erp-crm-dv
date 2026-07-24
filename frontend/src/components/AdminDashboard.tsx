@@ -64,6 +64,7 @@ const FinanzasDashboard = lazy(() => import('./FinanzasDashboard'));
 const BillingDashboard = lazy(() => import('./BillingDashboard'));
 const DepositoDashboard = lazy(() => import('./DepositoDashboard'));
 const GastosDashboard = lazy(() => import('./GastosDashboard'));
+const CrmDashboard = lazy(() => import('./CrmDashboard'));
 
 const LoadingDashboard = () => (
   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '300px', gap: '12px', padding: '40px', backgroundColor: 'var(--background-card)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
@@ -1416,6 +1417,15 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
       {activeTab === 'billing' && (
         <Suspense fallback={<LoadingDashboard />}>
           <BillingDashboard activeTab={activeTab} setActiveTab={setActiveTab} />
+        </Suspense>
+      )}
+
+      {/* ====================================================================
+          CRM & WHATSAPP
+          ==================================================================== */}
+      {activeTab === 'crm' && (
+        <Suspense fallback={<LoadingDashboard />}>
+          <CrmDashboard />
         </Suspense>
       )}
 

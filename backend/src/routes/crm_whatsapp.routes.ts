@@ -5,6 +5,9 @@ import {
   sendMessage, 
   parseOrderDraft, 
   approveOrderDraft,
+  toggleAutoReply,
+  updateStage,
+  sendDeliveryNotification,
   verifyWebhook,
   handleWebhook
 } from '../controllers/crm_whatsapp.controller';
@@ -12,7 +15,7 @@ import { authenticateJWT } from '../middlewares/auth';
 
 const router = Router();
 
-// 1. Webhook Oficial Meta WhatsApp (Públicos / Verificados por Token de Meta)
+// 1. Webhook Oficial Meta WhatsApp (Públicos / Verificados por Token)
 router.get('/webhook', verifyWebhook);
 router.post('/webhook', handleWebhook);
 
@@ -20,6 +23,9 @@ router.post('/webhook', handleWebhook);
 router.get('/conversations', authenticateJWT, getConversations);
 router.get('/conversations/:id/messages', authenticateJWT, getMessagesByConversation);
 router.post('/send-message', authenticateJWT, sendMessage);
+router.put('/conversations/:id/auto-reply', authenticateJWT, toggleAutoReply);
+router.put('/conversations/:id/stage', authenticateJWT, updateStage);
+router.post('/orders/:orderId/notify-delivery', authenticateJWT, sendDeliveryNotification);
 router.post('/conversations/:id/parse-order', authenticateJWT, parseOrderDraft);
 router.post('/drafts/:draftId/approve', authenticateJWT, approveOrderDraft);
 

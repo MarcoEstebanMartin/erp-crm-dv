@@ -68,7 +68,6 @@ export async function getMessagesByConversation(req: AuthenticatedRequest, res: 
       return;
     }
 
-    // Marcar mensajes como leídos
     await prisma.crmConversation.update({
       where: { id: conversationId },
       data: { unreadCount: 0 }
@@ -93,7 +92,7 @@ export async function getMessagesByConversation(req: AuthenticatedRequest, res: 
 }
 
 /**
- * Enviar un mensaje de WhatsApp (Oficial Cloud API o Mock)
+ * Enviar un mensaje de WhatsApp
  */
 export async function sendMessage(req: AuthenticatedRequest, res: Response): Promise<void> {
   try {
@@ -113,6 +112,76 @@ export async function sendMessage(req: AuthenticatedRequest, res: Response): Pro
   } catch (error: any) {
     console.error('Error al enviar mensaje CRM:', error);
     res.status(500).json({ status: 'error', message: 'No se pudo enviar el mensaje.' });
+  }
+}
+
+/**
+ * Activar / Desactivar Auto-Respuesta 24/7 (Bot)
+ */
+export async function toggleAutoReply(req: AuthenticatedRequest, res: Response): Promise<void> {
+  try {
+    const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const conversationId = parseInt(rawId, 10);
+    const { enabled } = req.body;
+
+    const updated = await prisma.crmConversation.update({
+      where: { id: conversationId },
+      data: { autoReplyEnabled: Boolean(enabled) }
+    });
+
+    res.status(200).json({
+      status: 'success',
+      data: updated
+    });
+  } catch (error: any) {
+    res.status(500).json({ status: 'error', message: 'Error al cambiar estado de auto-respuesta.' });
+  }
+}
+
+/**
+ * Cambiar etapa en el Pipeline Kanban CRM
+ */
+export async function updateStage(req: AuthenticatedRequest, res: Response): Promise<void> {
+  try {
+    const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const conversationId = parseInt(rawId, 10);
+    const { stage } = req.body;
+
+    if (!stage) {
+      res.status(400).json({ status: 'error', message: 'La etapa es requerida.' });
+      return;
+    }
+
+    const updated = await prisma.crmConversation.update({
+      where: { id: conversationId },
+      data: { stage }
+    });
+
+    res.status(200).json({
+      status: 'success',
+      data: updated
+    });
+  } catch (error: any) {
+    res.status(500).json({ status: 'error', message: 'Error al actualizar etapa del pipeline.' });
+  }
+}
+
+/**
+ * Disparar Notificación Automática de Despacho de Pedido
+ */
+export async function sendDeliveryNotification(req: AuthenticatedRequest, res: Response): Promise<void> {
+  try {
+    const rawOrderId = Array.isArray(req.params.orderId) ? req.params.orderId[0] : req.params.orderId;
+    const orderId = parseInt(rawOrderId, 10);
+
+    const result = await whatsAppService.sendDeliveryNotification(orderId);
+
+    res.status(200).json({
+      status: 'success',
+      data: result
+    });
+  } catch (error: any) {
+    res.status(500).json({ status: 'error', message: 'Error al enviar notificación de despacho.' });
   }
 }
 
@@ -144,7 +213,6 @@ export async function parseOrderDraft(req: AuthenticatedRequest, res: Response):
 
 /**
  * Aprobar Borrador de Pedido (Human-in-the-Loop)
- * Convierte el borrador en una preventa/orden oficial en el ERP de forma segura.
  */
 export async function approveOrderDraft(req: AuthenticatedRequest, res: Response): Promise<void> {
   try {
@@ -167,7 +235,6 @@ export async function approveOrderDraft(req: AuthenticatedRequest, res: Response
       return;
     }
 
-    // Persona o Cliente asignado
     const personaId = draft.personaId || draft.conversation.personaId;
     if (!personaId) {
       res.status(400).json({ status: 'error', message: 'Asigne un cliente a la conversación antes de aprobar la orden.' });
@@ -176,7 +243,6 @@ export async function approveOrderDraft(req: AuthenticatedRequest, res: Response
 
     const userId = req.user?.id || 1;
 
-    // Crear la Orden en el ERP (Status PENDING)
     const newOrder = await prisma.order.create({
       data: {
         personaId,
@@ -196,7 +262,6 @@ export async function approveOrderDraft(req: AuthenticatedRequest, res: Response
       }
     });
 
-    // Actualizar el borrador CRM
     await prisma.crmOrderDraft.update({
       where: { id: draftId },
       data: {
@@ -219,7 +284,7 @@ export async function approveOrderDraft(req: AuthenticatedRequest, res: Response
 }
 
 /**
- * Webhook de Meta: Verificación de endpoint (GET)
+ * Webhook de Meta: Verificación GET
  */
 export async function verifyWebhook(req: Request, res: Response): Promise<void> {
   const mode = req.query['hub.mode'];
@@ -228,7 +293,6 @@ export async function verifyWebhook(req: Request, res: Response): Promise<void> 
   const verifyToken = process.env.WHATSAPP_VERIFY_TOKEN || 'dv_crm_secure_token';
 
   if (mode === 'subscribe' && token === verifyToken) {
-    console.log('Webhook de WhatsApp Meta verificado con éxito.');
     res.status(200).send(challenge);
   } else {
     res.sendStatus(403);
@@ -236,12 +300,11 @@ export async function verifyWebhook(req: Request, res: Response): Promise<void> 
 }
 
 /**
- * Webhook de Meta: Recepción de eventos y mensajes (POST)
+ * Webhook de Meta: Recepción POST
  */
 export async function handleWebhook(req: Request, res: Response): Promise<void> {
   try {
     const body = req.body;
-
     if (body.object === 'whatsapp_business_account') {
       for (const entry of body.entry || []) {
         for (const change of entry.changes || []) {

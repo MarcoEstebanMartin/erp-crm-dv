@@ -1013,16 +1013,19 @@ enum CrmDraftStatus {
 }
 
 model CrmConversation {
-  id            Int      @id @default(autoincrement())
-  waId          String   @unique
-  contactName   String?
-  personaId     Int?
-  persona       Persona? @relation(fields: [personaId], references: [id], onDelete: SetNull)
-  lastMessageAt DateTime @default(now())
-  unreadCount   Int      @default(0)
-  status        String   @default("ACTIVE") // ACTIVE, ARCHIVED, CLOSED
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id               Int      @id @default(autoincrement())
+  waId             String   @unique
+  contactName      String?
+  personaId        Int?
+  persona          Persona? @relation(fields: [personaId], references: [id], onDelete: SetNull)
+  stage            String   @default("LEAD") // LEAD, CONTACTED, QUOTED, WON, LOST
+  autoReplyEnabled Boolean  @default(true)
+  assignedSellerId Int?
+  lastMessageAt    DateTime @default(now())
+  unreadCount      Int      @default(0)
+  status           String   @default("ACTIVE") // ACTIVE, ARCHIVED, CLOSED
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
   messages CrmMessage[]
   drafts   CrmOrderDraft[]
@@ -1030,6 +1033,7 @@ model CrmConversation {
   @@index([waId])
   @@index([personaId])
   @@index([lastMessageAt])
+  @@index([stage])
 }
 
 model CrmMessage {

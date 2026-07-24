@@ -156,12 +156,7 @@ export default function FuelControlDashboard({ vehicles: vehiclesProp, onRefresh
   };
 
   const handleDeleteLog = async (id: number) => {
-    const ok = await confirm({
-      title: 'Eliminar Carga de Combustible',
-      message: '¿Estás seguro de que deseas eliminar este registro de carga? Esta acción no se puede deshacer.',
-      confirmText: 'Sí, eliminar',
-      cancelText: 'Cancelar'
-    });
+    const ok = window.confirm('¿Estás seguro de que deseas eliminar este registro de carga? Esta acción no se puede deshacer.');
 
     if (!ok) return;
 

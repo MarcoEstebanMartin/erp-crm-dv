@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { api } from '../utils/api';
 
 import { BillingType, OrderStatus, PaymentMethod } from '../utils/types';
-import { RefreshCw, Eye, Sparkles, UserPlus, Printer, Search } from 'lucide-react';
+import { RefreshCw, Eye, Sparkles, UserPlus, Printer, Search, Send } from 'lucide-react';
 import BillingDashboard from './BillingDashboard';
 import PriceListModal from './PriceListModal';
 import QuickPriceSearchModal from './modals/QuickPriceSearchModal';
@@ -269,7 +269,19 @@ export default function FacturacionDashboard({ activeTab, setActiveTab }: Factur
             <div className="card" style={{ display: 'flex', flexDirection: 'column', height: 'fit-content' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '1px solid var(--border-color)', paddingBottom: '10px' }}>
                 <h3 style={{ fontSize: '1rem', fontWeight: 600 }}>Procesar Factura #{selectedOrder.id}</h3>
-                <button className="btn btn-ghost" style={{ padding: '4px' }} onClick={() => setSelectedOrder(null)}>✕</button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <a
+                    className="btn btn-secondary"
+                    style={{ fontSize: '0.75rem', display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '4px 8px' }}
+                    href={`https://wa.me/${selectedOrder.client?.phone ? selectedOrder.client.phone.replace(/\D/g, '') : ''}?text=${encodeURIComponent(`Hola ${selectedOrder.client?.name || ''}, te enviamos el comprobante del Pedido #${selectedOrder.id} por $${selectedOrder.totalAmount.toLocaleString('es-AR')}. ¡Muchas gracias por tu compra en DV Distribuidora!`)}`}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    <Send size={12} />
+                    <span>WhatsApp</span>
+                  </a>
+                  <button className="btn btn-ghost" style={{ padding: '4px' }} onClick={() => setSelectedOrder(null)}>✕</button>
+                </div>
               </div>
 
               <div style={{ marginBottom: '16px', fontSize: '0.85rem' }}>

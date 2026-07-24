@@ -29,7 +29,6 @@ export class WhatsAppService {
     });
 
     if (!conversation) {
-      // Buscar si corresponde a algún cliente existente en el ERP
       const persona = await prisma.persona.findFirst({
         where: {
           phone: { contains: cleanWaId.slice(-8) },
@@ -85,7 +84,6 @@ export class WhatsAppService {
         status = 'FAILED';
       }
     } else {
-      // Modo Mock / Sandbox (Enlaces wa.me asistidos)
       wamid = `mock_${Date.now()}_${Math.random().toString(36).substring(7)}`;
     }
 
@@ -102,7 +100,6 @@ export class WhatsAppService {
       }
     });
 
-    // Actualizar última fecha de conversación
     await prisma.crmConversation.update({
       where: { id: conversation.id },
       data: { lastMessageAt: new Date() }
@@ -112,7 +109,8 @@ export class WhatsAppService {
   }
 
   /**
-   * Procesa un mensaje entrante recibido por el Webhook de Meta.
+   * Procesa un mensaje entrante recibido por el Webhook de Meta
+   * y activa el motor de respuestas automáticas 24/7 si está habilitado.
    */
   async handleIncomingMessage(rawMessage: any): Promise<any> {
     const waId = rawMessage.from;
@@ -120,7 +118,6 @@ export class WhatsAppService {
     const body = rawMessage.text?.body || rawMessage.caption || '[Archivo / Media]';
     const profileName = rawMessage.profile?.name || `Cliente WhatsApp ${waId}`;
 
-    // Buscar o crear conversación
     let conversation = await prisma.crmConversation.findUnique({
       where: { waId }
     });
@@ -138,7 +135,9 @@ export class WhatsAppService {
           waId,
           contactName: persona ? persona.name : profileName,
           personaId: persona ? persona.id : null,
-          unreadCount: 1
+          unreadCount: 1,
+          autoReplyEnabled: true,
+          stage: 'LEAD'
         }
       });
     } else {
@@ -151,7 +150,6 @@ export class WhatsAppService {
       });
     }
 
-    // Evitar duplicados por wamid
     const existingMsg = await prisma.crmMessage.findUnique({ where: { wamid } });
     if (existingMsg) return existingMsg;
 
@@ -165,7 +163,82 @@ export class WhatsAppService {
       }
     });
 
+    // 🤖 MOTOR DE RESPUESTAS AUTOMÁTICAS 24/7
+    if (conversation.autoReplyEnabled) {
+      await this.autoRespondIfEnabled(conversation, body);
+    }
+
     return { message, conversation };
+  }
+
+  /**
+   * Motor Inteligente de Auto-Respuesta 24/7 (Riesgo Cero)
+   * Detecta intenciones frecuentes y responde consultando la BD del ERP.
+   */
+  private async autoRespondIfEnabled(conversation: any, inputMessage: string): Promise<void> {
+    const lower = inputMessage.toLowerCase().trim();
+
+    let autoText: string | null = null;
+
+    // 1. Consulta de Saldo / Deuda en Cuenta Corriente
+    if (lower.includes('saldo') || lower.includes('debo') || lower.includes('deuda') || lower.includes('cuenta corriente')) {
+      if (conversation.personaId) {
+        const persona = await prisma.persona.findUnique({ where: { id: conversation.personaId } });
+        if (persona) {
+          const balance = Number(persona.outstandingBalance || 0);
+          autoText = `🤖 *Asistente DV*: Hola ${persona.name}. Tu saldo actual en Cuenta Corriente es *$${balance.toLocaleString('es-AR')}*. Si necesitas el detalle de comprobantes, te lo enviamos por este medio.`;
+        }
+      } else {
+        autoText = `🤖 *Asistente DV*: Hola. No encontramos tu número vinculado a un cliente en nuestro sistema. Por favor envíanos tu CUIT o Razón Social para asociar tu cuenta.`;
+      }
+    }
+    
+    // 2. Consulta de Lista de Precios / Catálogo
+    else if (lower.includes('precio') || lower.includes('lista') || lower.includes('catalogo') || lower.includes('catálogo')) {
+      autoText = `🤖 *Asistente DV*: Te enviamos la información de catálogo de DV Distribuidora. También podés realizar tus pedidos online directamente en nuestra Tienda Web o dejar tu pedido anotado por este chat para que un vendedor lo apruebe.`;
+    }
+
+    // 3. Consulta de Reparto / Rutas de Logística
+    else if (lower.includes('reparto') || lower.includes('camion') || lower.includes('camión') || lower.includes('cuando vienen') || lower.includes('cuándo vienen')) {
+      if (conversation.personaId) {
+        const persona = await prisma.persona.findUnique({ where: { id: conversation.personaId } });
+        autoText = `🤖 *Asistente DV*: Tu zona registrada es *${persona?.route || 'General Villegas'}*. Los repartos se realizan habitualmente según la ruta asignada. Para consultar el estado en tiempo real de tu pedido, comunicate con logística.`;
+      } else {
+        autoText = `🤖 *Asistente DV*: Realizamos repartos continuos en General Villegas y zonas de influencia (Bunge, Banderaló, Piedritas, Ameghino, etc.).`;
+      }
+    }
+
+    if (autoText) {
+      // Esperar 1 segundo para simular respuesta natural
+      setTimeout(async () => {
+        await this.sendMessage({
+          to: conversation.waId,
+          text: autoText!
+        });
+      }, 1000);
+    }
+  }
+
+  /**
+   * Notificación Automática de Despacho de Pedido (Logística)
+   */
+  async sendDeliveryNotification(orderId: number): Promise<any> {
+    const order = await prisma.order.findUnique({
+      where: { id: orderId },
+      include: { persona: true }
+    });
+
+    if (!order || !order.persona || !order.persona.phone) {
+      return null;
+    }
+
+    const cleanPhone = order.persona.phone.replace(/\D/g, '');
+    const text = `🚚 *DV Distribuidora - Notificación de Logística*: Hola ${order.persona.name}, tu Pedido #${order.id} por $${Number(order.totalAmount).toLocaleString('es-AR')} ha sido despachado y se encuentra en camino. ¡Muchas gracias por tu compra!`;
+
+    return await this.sendMessage({
+      to: cleanPhone,
+      text
+    });
   }
 
   /**
@@ -182,7 +255,6 @@ export class WhatsAppService {
       throw new Error('Conversación CRM no encontrada.');
     }
 
-    // Obtener catálogo de productos activos para la IA
     const activeProducts = await prisma.product.findMany({
       where: { isActive: true },
       select: {
@@ -195,7 +267,6 @@ export class WhatsAppService {
       take: 150
     });
 
-    // Búsqueda aproximada inteligente por catálogo
     const matchedItems: any[] = [];
     let totalEstimated = 0;
     const lower = rawText.toLowerCase();
@@ -204,7 +275,6 @@ export class WhatsAppService {
       const nameParts = prod.name.toLowerCase().split(' ').filter(p => p.length > 3);
       const isMatch = nameParts.some(part => lower.includes(part));
       if (isMatch) {
-        // Intentar extraer cantidad cercana al producto o default 1
         matchedItems.push({
           productId: prod.id,
           productName: prod.name,

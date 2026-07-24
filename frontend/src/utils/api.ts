@@ -1373,6 +1373,30 @@ export const api = {
     return await request(`/crm/whatsapp/drafts/${draftId}/approve`, {
       method: 'POST'
     });
+  },
+
+  toggleCrmAutoReply: async (conversationId: number, enabled: boolean) => {
+    return await request(`/crm/whatsapp/conversations/${conversationId}/auto-reply`, {
+      method: 'PUT',
+      body: JSON.stringify({ enabled })
+    });
+  },
+
+  updateCrmStage: async (conversationId: number, stage: string) => {
+    return await request(`/crm/whatsapp/conversations/${conversationId}/stage`, {
+      method: 'PUT',
+      body: JSON.stringify({ stage })
+    });
+  },
+
+  sendCrmDeliveryNotification: async (orderId: number) => {
+    return await request(`/crm/whatsapp/orders/${orderId}/notify-delivery`, {
+      method: 'POST'
+    });
+  },
+
+  getPersonaFromAFIP: async (cuit: string) => {
+    return await request(`/personas/afip/${cuit}`);
   }
 };
 
