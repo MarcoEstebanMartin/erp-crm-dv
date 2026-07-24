@@ -150,6 +150,18 @@ const ClientModal: React.FC<ClientModalProps> = ({
                           placeholder="ej: 2035385924 ó 35385924"
                           value={clientModal.data.cuit || ''}
                           onChange={(e) => setClientModal({ ...clientModal, data: { ...clientModal.data, cuit: e.target.value } })}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              handleFetchAfipData();
+                            }
+                          }}
+                          onBlur={() => {
+                            const clean = (clientModal.data.cuit || '').replace(/\D/g, '');
+                            if ((clean.length === 7 || clean.length === 8 || clean.length === 11) && !clientModal.data.name) {
+                              handleFetchAfipData();
+                            }
+                          }}
                           style={{ flex: 1, height: '38px' }}
                         />
                         <button
