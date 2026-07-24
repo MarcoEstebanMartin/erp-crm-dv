@@ -449,7 +449,20 @@ const ClientModal: React.FC<ClientModalProps> = ({
                       <select
                         className="select"
                         value={clientModal.data.saleRouteId || ''}
-                        onChange={(e) => setClientModal({ ...clientModal, data: { ...clientModal.data, saleRouteId: e.target.value ? Number(e.target.value) : null } })}
+                        onChange={(e) => {
+                          const routeId = e.target.value ? Number(e.target.value) : null;
+                          const selectedRoute = availableSaleRoutes.find(r => Number(r.id) === routeId);
+                          let newSellerId = clientModal.data.sellerId;
+                          if (selectedRoute) {
+                            if (selectedRoute.sellerId) {
+                              newSellerId = Number(selectedRoute.sellerId);
+                            } else if (selectedRoute.name.toUpperCase().includes('OFICINA')) {
+                              const oficinaSeller = availableSellers.find((s: any) => s.username.toUpperCase() === 'OFICINA');
+                              if (oficinaSeller) newSellerId = oficinaSeller.id;
+                            }
+                          }
+                          setClientModal({ ...clientModal, data: { ...clientModal.data, saleRouteId: routeId, sellerId: newSellerId } });
+                        }}
                         disabled={!clientModal.data.isClient}
                         style={{ height: '38px', padding: '8px 12px', fontSize: '0.9rem', borderRadius: '6px', border: '1px solid var(--border-color)', boxSizing: 'border-box', width: '100%', backgroundColor: '#fff', color: 'var(--text-primary)' }}
                       >

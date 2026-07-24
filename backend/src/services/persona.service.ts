@@ -109,6 +109,18 @@ export class PersonaService {
     let finalSellerId = data.sellerId ? Number(data.sellerId) : null;
     if (userRole === Role.VENDEDOR) {
       finalSellerId = userId;
+    } else if (!finalSellerId) {
+      const cleanRoute = (data.route || '').toUpperCase().trim();
+      const saleRouteId = data.saleRouteId ? Number(data.saleRouteId) : null;
+      let isOficina = cleanRoute === 'OFICINA';
+      if (!isOficina && saleRouteId) {
+        const sr = await prisma.saleRoute.findUnique({ where: { id: saleRouteId }, select: { name: true } });
+        if (sr && sr.name.toUpperCase().includes('OFICINA')) isOficina = true;
+      }
+      if (isOficina) {
+        const oficinaUser = await prisma.user.findFirst({ where: { username: 'OFICINA' } });
+        if (oficinaUser) finalSellerId = oficinaUser.id;
+      }
     }
 
     const persona = await prisma.persona.create({
@@ -168,6 +180,21 @@ export class PersonaService {
     let finalSellerId = original.sellerId;
     if (userRole === Role.ADMIN && data.sellerId !== undefined) {
       finalSellerId = data.sellerId ? Number(data.sellerId) : null;
+    }
+
+    if (userRole !== Role.VENDEDOR && !finalSellerId) {
+      const targetRoute = data.route !== undefined ? (data.route ? standardizeRouteName(data.route) : null) : original.route;
+      const targetSaleRouteId = data.saleRouteId !== undefined ? (data.saleRouteId ? Number(data.saleRouteId) : null) : original.saleRouteId;
+      const cleanRoute = (targetRoute || '').toUpperCase().trim();
+      let isOficina = cleanRoute === 'OFICINA';
+      if (!isOficina && targetSaleRouteId) {
+        const sr = await prisma.saleRoute.findUnique({ where: { id: targetSaleRouteId }, select: { name: true } });
+        if (sr && sr.name.toUpperCase().includes('OFICINA')) isOficina = true;
+      }
+      if (isOficina) {
+        const oficinaUser = await prisma.user.findFirst({ where: { username: 'OFICINA' } });
+        if (oficinaUser) finalSellerId = oficinaUser.id;
+      }
     }
 
     const updated = await prisma.persona.update({
@@ -950,6 +977,215 @@ export class PersonaService {
     });
 
     return deleted;
+  }
+
+  /**
+   * Obtener perfil detallado y estadísticas completas de un vendedor.
+   */
+  async getSellerProfileStats(sellerIdParam: number) {
+    // 1. Buscar si la ID enviada corresponde a una Persona (isSeller = true o rol vendedor) o a un User.
+    let sellerPersona = await prisma.persona.findUnique({
+      where: { id: sellerIdParam },
+      include: {
+        seller: { select: { id: true, username: true } },
+        saleRoute: { select: { id: true, name: true, dayOfWeek: true } }
+      }
+    });
+
+    let sellerUser = await prisma.user.findUnique({
+      where: { id: sellerIdParam },
+      select: { id: true, username: true, role: true, isActive: true }
+    });
+
+    // Si la persona encontrada tiene un sellerId vinculado, cargamos el usuario correspondiente
+    if (sellerPersona && sellerPersona.sellerId && !sellerUser) {
+      sellerUser = await prisma.user.findUnique({
+        where: { id: sellerPersona.sellerId },
+        select: { id: true, username: true, role: true, isActive: true }
+      });
+    }
+
+    // Si el usuario existe pero no la persona, buscamos si hay una Persona creada para este usuario por nombre
+    if (!sellerPersona && sellerUser) {
+      sellerPersona = await prisma.persona.findFirst({
+        where: {
+          OR: [
+            { isSeller: true, name: { contains: sellerUser.username, mode: 'insensitive' } },
+            { sellerId: sellerUser.id }
+          ]
+        },
+        include: {
+          seller: { select: { id: true, username: true } },
+          saleRoute: { select: { id: true, name: true, dayOfWeek: true } }
+        }
+      });
+    }
+
+    const name = sellerPersona?.name || sellerUser?.username || `Vendedor #${sellerIdParam}`;
+    const phone = sellerPersona?.phone || '';
+    const email = sellerPersona?.email || '';
+    const city = sellerPersona?.city || 'General Villegas';
+    const cuit = sellerPersona?.cuit || '';
+    const address = sellerPersona?.address || '';
+
+    // IDs de referencia para consultas de base de datos
+    const userIds = sellerUser ? [sellerUser.id] : [];
+    const allIds = [...new Set([...userIds, sellerIdParam])];
+
+    // 2. Clientes asignados al vendedor
+    const assignedClients = await prisma.persona.findMany({
+      where: {
+        isClient: true,
+        OR: [
+          { sellerId: { in: allIds } },
+          ...(sellerUser ? [{ seller: { username: { equals: sellerUser.username, mode: 'insensitive' as const } } }] : []),
+          { seller: { id: sellerIdParam } }
+        ]
+      },
+      select: {
+        id: true,
+        name: true,
+        tradeName: true,
+        city: true,
+        address: true,
+        phone: true,
+        route: true,
+        cuit: true,
+        outstandingBalance: true,
+        saleRoute: { select: { name: true, dayOfWeek: true } }
+      },
+      orderBy: { name: 'asc' }
+    });
+
+    const clientIds = assignedClients.map(c => c.id);
+
+    // 3. Rutas de preventa asignadas
+    const assignedRoutes = await prisma.saleRoute.findMany({
+      where: {
+        OR: [
+          { sellerId: { in: allIds } },
+          ...(sellerUser ? [{ seller: { username: { equals: sellerUser.username, mode: 'insensitive' as const } } }] : [])
+        ]
+      },
+      include: {
+        clients: {
+          select: { id: true }
+        }
+      }
+    });
+
+    // 4. Órdenes / Pedidos del vendedor
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const startOf6MonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1);
+
+    const orders = await prisma.order.findMany({
+      where: {
+        status: { not: 'CANCELLED' },
+        createdAt: { gte: startOf6MonthsAgo },
+        OR: [
+          { sellerId: { in: allIds } },
+          ...(clientIds.length > 0 ? [{ personaId: { in: clientIds } }] : [])
+        ]
+      },
+      select: {
+        id: true,
+        totalAmount: true,
+        createdAt: true,
+        personaId: true,
+        persona: { select: { id: true, name: true, city: true } }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    // Filtros del mes actual
+    const currentMonthOrders = orders.filter(o => new Date(o.createdAt) >= startOfMonth);
+    const totalSalesMonth = currentMonthOrders.reduce((sum, o) => sum + Number(o.totalAmount || 0), 0);
+    const totalOrdersMonth = currentMonthOrders.length;
+    const averageTicket = totalOrdersMonth > 0 ? Math.round(totalSalesMonth / totalOrdersMonth) : 0;
+
+    // Clientes activos en los últimos 30 días
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const activeClientIds = new Set(orders.filter(o => new Date(o.createdAt) >= thirtyDaysAgo).map(o => o.personaId));
+    const activeClientsCount = activeClientIds.size;
+    const coveragePercentage = assignedClients.length > 0 ? Math.round((activeClientsCount / assignedClients.length) * 100) : 0;
+
+    // Evolución de ventas mensual (últimos 6 meses)
+    const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+    const salesEvolutionMap = new Map<string, { period: string; sales: number; orders: number }>();
+
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const key = `${monthNames[d.getMonth()]} ${d.getFullYear()}`;
+      salesEvolutionMap.set(key, { period: key, sales: 0, orders: 0 });
+    }
+
+    orders.forEach(o => {
+      const d = new Date(o.createdAt);
+      const key = `${monthNames[d.getMonth()]} ${d.getFullYear()}`;
+      if (salesEvolutionMap.has(key)) {
+        const item = salesEvolutionMap.get(key)!;
+        item.sales += Number(o.totalAmount || 0);
+        item.orders += 1;
+      }
+    });
+
+    const salesEvolution = Array.from(salesEvolutionMap.values());
+
+    // Top 5 Clientes por Volumen de Compra
+    const clientSalesMap = new Map<number, { id: number; name: string; city: string; totalSpent: number; ordersCount: number }>();
+
+    orders.forEach(o => {
+      if (!o.persona) return;
+      const existing = clientSalesMap.get(o.persona.id) || {
+        id: o.persona.id,
+        name: o.persona.name,
+        city: o.persona.city || 'S/D',
+        totalSpent: 0,
+        ordersCount: 0
+      };
+      existing.totalSpent += Number(o.totalAmount || 0);
+      existing.ordersCount += 1;
+      clientSalesMap.set(o.persona.id, existing);
+    });
+
+    const topClients = Array.from(clientSalesMap.values())
+      .sort((a, b) => b.totalSpent - a.totalSpent)
+      .slice(0, 5);
+
+    return {
+      seller: {
+        id: sellerIdParam,
+        personaId: sellerPersona?.id || null,
+        userId: sellerUser?.id || null,
+        name,
+        cuit,
+        phone,
+        email,
+        city,
+        address,
+        userAccount: sellerUser?.username || null,
+        isActive: sellerUser?.isActive ?? true
+      },
+      metrics: {
+        assignedClientsCount: assignedClients.length,
+        activeClientsCount,
+        coveragePercentage,
+        totalSalesMonth: Math.round(totalSalesMonth),
+        totalOrdersMonth,
+        averageTicket
+      },
+      salesEvolution,
+      topClients,
+      routes: assignedRoutes.map(r => ({
+        id: r.id,
+        name: r.name,
+        dayOfWeek: r.dayOfWeek,
+        clientsCount: r.clients.length
+      })),
+      clients: assignedClients
+    };
   }
 }
 
