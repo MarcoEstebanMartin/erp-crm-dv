@@ -287,11 +287,41 @@ export async function emitirNotaCreditoAFIP({
   }
 }
 
+function calculateCuil(dniStr: string, genderPrefix: '20' | '27' = '20'): string {
+  const cleanDni = dniStr.replace(/\D/g, '').padStart(8, '0');
+  let prefix: string = genderPrefix;
+  const xy = prefix + cleanDni;
+  const multipliers = [5, 4, 3, 2, 7, 6, 5, 4, 3, 2];
+  
+  let sum = 0;
+  for (let i = 0; i < 10; i++) {
+    sum += parseInt(xy[i], 10) * multipliers[i];
+  }
+  
+  const mod = sum % 11;
+  let z = 0;
+  if (mod === 0) {
+    z = 0;
+  } else if (mod === 1) {
+    prefix = '23';
+    z = genderPrefix === '20' ? 9 : 4;
+  } else {
+    z = 11 - mod;
+  }
+  
+  return `${prefix}${cleanDni}${z}`;
+}
+
 /**
- * Consulta los datos de un contribuyente en AFIP por su CUIT.
+ * Consulta los datos de un contribuyente en AFIP por su CUIT o DNI.
  */
 export async function getPersonDetailsAFIP(cuit: string): Promise<any> {
-  const numericCuit = Number(cuit.replace(/-/g, ''));
+  let cleanInput = cuit.replace(/\D/g, '');
+  if (cleanInput.length >= 7 && cleanInput.length <= 8) {
+    cleanInput = calculateCuil(cleanInput, '20');
+  }
+
+  const numericCuit = Number(cleanInput);
 
   if (useMock || !afipClient) {
     console.log(`[MOCK AFIP] Consultando datos para CUIT ${numericCuit}`);

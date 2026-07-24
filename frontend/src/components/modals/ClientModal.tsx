@@ -140,39 +140,43 @@ const ClientModal: React.FC<ClientModalProps> = ({
 
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '14px' }}>
                     <div className="form-group" style={{ marginBottom: 0 }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                        <label style={{ fontSize: '0.8rem', fontWeight: 600, margin: 0 }}>CUIT (Sin guiones)</label>
+                      <label style={{ fontSize: '0.8rem', fontWeight: 600, marginBottom: '6px', display: 'block' }}>
+                        CUIT o DNI
+                      </label>
+                      <div style={{ display: 'flex', gap: '6px' }}>
+                        <input
+                          type="text"
+                          className="input"
+                          placeholder="ej: 2035385924 ó 35385924"
+                          value={clientModal.data.cuit || ''}
+                          onChange={(e) => setClientModal({ ...clientModal, data: { ...clientModal.data, cuit: e.target.value } })}
+                          style={{ flex: 1, height: '38px' }}
+                        />
                         <button
                           type="button"
                           onClick={handleFetchAfipData}
                           disabled={isSearchingAfip || !clientModal.data.cuit}
-                          title="Obtener Razón Social y Domicilio automáticamente desde AFIP / ARCA"
+                          title="Buscar Razón Social y Domicilio automáticamente en AFIP / ARCA por CUIT o DNI"
                           style={{
                             backgroundColor: '#E30613',
                             color: '#ffffff',
                             border: 'none',
-                            borderRadius: '4px',
-                            padding: '2px 8px',
-                            fontSize: '0.72rem',
+                            borderRadius: '6px',
+                            padding: '0 10px',
+                            fontSize: '0.75rem',
                             fontWeight: 700,
                             cursor: 'pointer',
                             display: 'inline-flex',
                             alignItems: 'center',
-                            gap: '3px',
+                            gap: '4px',
+                            whiteSpace: 'nowrap',
+                            height: '38px',
                             opacity: isSearchingAfip || !clientModal.data.cuit ? 0.6 : 1
                           }}
                         >
-                          {isSearchingAfip ? '⏳ AFIP...' : '⚡ Autofill AFIP'}
+                          {isSearchingAfip ? '⏳' : '⚡ AFIP'}
                         </button>
                       </div>
-                      <input
-                        type="text"
-                        className="input"
-                        placeholder="ej: 20222334449"
-                        value={clientModal.data.cuit || ''}
-                        onChange={(e) => setClientModal({ ...clientModal, data: { ...clientModal.data, cuit: e.target.value } })}
-                        style={{ width: '100%', height: '38px' }}
-                      />
                     </div>
                     <div className="form-group" style={{ marginBottom: 0 }}>
                       <label style={{ fontSize: '0.8rem', fontWeight: 600, marginBottom: '6px', display: 'block' }}>🔑 PIN Tienda B2B</label>
