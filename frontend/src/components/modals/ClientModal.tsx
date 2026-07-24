@@ -168,25 +168,26 @@ const ClientModal: React.FC<ClientModalProps> = ({
                           type="button"
                           onClick={handleFetchAfipData}
                           disabled={isSearchingAfip || !clientModal.data.cuit}
-                          title="Buscar Razón Social y Domicilio automáticamente en AFIP / ARCA por CUIT o DNI"
+                          title="Buscar Razón Social y Domicilio automáticamente en ARCA / AFIP por CUIT o DNI"
                           style={{
-                            backgroundColor: '#E30613',
-                            color: '#ffffff',
-                            border: 'none',
+                            backgroundColor: '#f1f5f9',
+                            color: '#334155',
+                            border: '1px solid #cbd5e1',
                             borderRadius: '6px',
-                            padding: '0 10px',
+                            padding: '0 12px',
                             fontSize: '0.75rem',
-                            fontWeight: 700,
+                            fontWeight: 600,
                             cursor: 'pointer',
                             display: 'inline-flex',
                             alignItems: 'center',
                             gap: '4px',
                             whiteSpace: 'nowrap',
                             height: '38px',
-                            opacity: isSearchingAfip || !clientModal.data.cuit ? 0.6 : 1
+                            opacity: isSearchingAfip || !clientModal.data.cuit ? 0.5 : 1,
+                            transition: 'all 0.15s ease'
                           }}
                         >
-                          {isSearchingAfip ? '⏳' : '⚡ AFIP'}
+                          {isSearchingAfip ? '⏳' : '⚡ ARCA'}
                         </button>
                       </div>
                     </div>
