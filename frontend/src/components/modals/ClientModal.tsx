@@ -143,11 +143,11 @@ const ClientModal: React.FC<ClientModalProps> = ({
                       <label style={{ fontSize: '0.8rem', fontWeight: 600, marginBottom: '6px', display: 'block' }}>
                         CUIT o DNI
                       </label>
-                      <div style={{ display: 'flex', gap: '6px' }}>
+                      <div style={{ position: 'relative', width: '100%' }}>
                         <input
                           type="text"
                           className="input"
-                          placeholder="ej: 2035385924 ó 35385924"
+                          placeholder="ej: 20353859249 o DNI"
                           value={clientModal.data.cuit || ''}
                           onChange={(e) => setClientModal({ ...clientModal, data: { ...clientModal.data, cuit: e.target.value } })}
                           onKeyDown={(e) => {
@@ -162,7 +162,7 @@ const ClientModal: React.FC<ClientModalProps> = ({
                               handleFetchAfipData();
                             }
                           }}
-                          style={{ flex: 1, height: '38px' }}
+                          style={{ width: '100%', height: '38px', paddingRight: '72px' }}
                         />
                         <button
                           type="button"
@@ -170,19 +170,22 @@ const ClientModal: React.FC<ClientModalProps> = ({
                           disabled={isSearchingAfip || !clientModal.data.cuit}
                           title="Buscar Razón Social y Domicilio automáticamente en ARCA / AFIP por CUIT o DNI"
                           style={{
+                            position: 'absolute',
+                            right: '4px',
+                            top: '4px',
+                            bottom: '4px',
                             backgroundColor: '#f1f5f9',
                             color: '#334155',
                             border: '1px solid #cbd5e1',
-                            borderRadius: '6px',
-                            padding: '0 12px',
-                            fontSize: '0.75rem',
+                            borderRadius: '4px',
+                            padding: '0 8px',
+                            fontSize: '0.72rem',
                             fontWeight: 600,
                             cursor: 'pointer',
                             display: 'inline-flex',
                             alignItems: 'center',
-                            gap: '4px',
+                            gap: '3px',
                             whiteSpace: 'nowrap',
-                            height: '38px',
                             opacity: isSearchingAfip || !clientModal.data.cuit ? 0.5 : 1,
                             transition: 'all 0.15s ease'
                           }}
