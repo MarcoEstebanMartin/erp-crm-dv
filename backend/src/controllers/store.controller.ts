@@ -236,17 +236,37 @@ export async function getStoreCatalog(req: Request, res: Response): Promise<void
     };
 
     const formattedProducts = products.map((p) => {
-      let finalPrice = Number(p.listPrice);
+      let listBasePrice = Number(p.listPrice);
       if (requestedList.includes('B') && Number(p.listPriceB) > 0) {
-        finalPrice = Number(p.listPriceB);
+        listBasePrice = Number(p.listPriceB);
       } else if (requestedList.includes('C') && Number(p.listPriceC) > 0) {
-        finalPrice = Number(p.listPriceC);
+        listBasePrice = Number(p.listPriceC);
       }
+
+      let finalPrice = listBasePrice;
+      let previousPrice: number | null = null;
+      let specialTag: string | null = null;
 
       const activeOfferItem = p.offerCampaignItems.find((item) => item.campaign && item.campaign.isActive);
       const isOffer = !!activeOfferItem;
-      if (activeOfferItem && Number(activeOfferItem.offerPrice) > 0) {
-        finalPrice = Number(activeOfferItem.offerPrice);
+
+      if (activeOfferItem) {
+        if (Number(activeOfferItem.offerPrice) > 0) {
+          finalPrice = Number(activeOfferItem.offerPrice);
+        }
+        if (activeOfferItem.previousPrice && Number(activeOfferItem.previousPrice) > finalPrice) {
+          previousPrice = Number(activeOfferItem.previousPrice);
+        } else if (listBasePrice > finalPrice) {
+          previousPrice = listBasePrice;
+        }
+        if (activeOfferItem.specialTag && activeOfferItem.specialTag.trim() !== '') {
+          specialTag = activeOfferItem.specialTag.trim();
+        }
+      }
+
+      let offerDiscount = 0;
+      if (previousPrice && previousPrice > finalPrice) {
+        offerDiscount = Math.round(((previousPrice - finalPrice) / previousPrice) * 100);
       }
 
       // Asignación de Categoría Comercial
@@ -287,7 +307,9 @@ export async function getStoreCatalog(req: Request, res: Response): Promise<void
         commercialGroupName: assignedCategory,
         commercialGroupIcon: catIcon,
         isOffer,
-        offerDiscount: 0,
+        offerDiscount,
+        previousPrice,
+        specialTag,
         offerName: activeOfferItem ? activeOfferItem.campaign.title : null
       };
     });

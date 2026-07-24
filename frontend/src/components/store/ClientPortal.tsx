@@ -39,6 +39,8 @@ interface StoreProduct {
   commercialGroupIcon?: string;
   isOffer: boolean;
   offerDiscount: number;
+  previousPrice?: number | null;
+  specialTag?: string | null;
   offerName: string | null;
 }
 
@@ -573,9 +575,23 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({ onBackToStaffLogin }
                       )}
 
                       {p.isOffer && (
-                        <div style={styles.offerBadge}>
-                          🔥 {p.offerName || 'OFERTA ESPECIAL'}
-                        </div>
+                        <>
+                          {p.specialTag ? (
+                            <div style={styles.specialTagBadge}>
+                              🔥 {p.specialTag}
+                            </div>
+                          ) : (
+                            <div style={styles.offerBadge}>
+                              🔥 {p.offerName || 'OFERTA ESPECIAL'}
+                            </div>
+                          )}
+
+                          {p.offerDiscount > 0 && (
+                            <div style={styles.discountBadge}>
+                              -{p.offerDiscount}% OFF
+                            </div>
+                          )}
+                        </>
                       )}
                     </div>
 
@@ -592,7 +608,14 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({ onBackToStaffLogin }
                       <div style={styles.productPriceRow}>
                         <div>
                           <div style={styles.productPriceLabel}>Precio Final - IVA Inc.</div>
-                          <div style={styles.productPriceValue}>{formatMoney(p.price)}</div>
+                          <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+                            <div style={styles.productPriceValue}>{formatMoney(p.price)}</div>
+                            {p.previousPrice && p.previousPrice > p.price && (
+                              <div style={styles.previousPriceValue}>
+                                {formatMoney(p.previousPrice)}
+                              </div>
+                            )}
+                          </div>
                         </div>
                         {p.unitsPerBox > 1 && (
                           <div style={styles.unitsBoxTag}>
@@ -1216,6 +1239,40 @@ const styles: { [key: string]: any } = {
     borderRadius: '4px',
     textTransform: 'uppercase',
     letterSpacing: '0.5px'
+  },
+  specialTagBadge: {
+    position: 'absolute',
+    top: '10px',
+    left: '10px',
+    background: 'linear-gradient(135deg, #E30613 0%, #b91c1c 100%)',
+    color: '#fff',
+    fontSize: '11px',
+    fontWeight: 800,
+    padding: '4px 10px',
+    borderRadius: '4px',
+    textTransform: 'uppercase',
+    letterSpacing: '0.5px',
+    boxShadow: '0 2px 6px rgba(227, 6, 19, 0.4)',
+    zIndex: 2
+  },
+  discountBadge: {
+    position: 'absolute',
+    top: '10px',
+    right: '10px',
+    background: '#16a34a',
+    color: '#fff',
+    fontSize: '11px',
+    fontWeight: 800,
+    padding: '4px 8px',
+    borderRadius: '4px',
+    boxShadow: '0 2px 6px rgba(22, 163, 74, 0.3)',
+    zIndex: 2
+  },
+  previousPriceValue: {
+    textDecoration: 'line-through',
+    color: '#94a3b8',
+    fontSize: '13px',
+    fontWeight: 600
   },
   productCardBody: {
     padding: '18px',
