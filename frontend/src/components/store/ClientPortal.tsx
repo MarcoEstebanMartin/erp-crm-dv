@@ -588,11 +588,10 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({ onBackToStaffLogin }
                       </div>
 
                       <h3 style={styles.productTitle}>{p.name}</h3>
-                      {p.description && <p style={styles.productDesc}>{p.description}</p>}
 
                       <div style={styles.productPriceRow}>
                         <div>
-                          <div style={styles.productPriceLabel}>Precio Neto Lista {client.priceList}:</div>
+                          <div style={styles.productPriceLabel}>Precio Final - IVA Inc.</div>
                           <div style={styles.productPriceValue}>{formatMoney(p.price)}</div>
                         </div>
                         {p.unitsPerBox > 1 && (
