@@ -53,7 +53,7 @@ export default function Login({ onLoginSuccess, onOpenStore }: LoginProps) {
             <img 
               src="/logo.png" 
               alt="Logo DV" 
-              style={{ height: '80px', objectFit: 'contain', marginBottom: '8px' }}
+              style={{ height: '60px', objectFit: 'contain', marginBottom: '8px' }}
               onError={() => setLogoFailed(true)}
             />
           ) : (
