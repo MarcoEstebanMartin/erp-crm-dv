@@ -1224,9 +1224,11 @@ const styles: { [key: string]: any } = {
     fontWeight: 700
   },
   tabContent: {
-    maxWidth: '1320px',
+    maxWidth: '1650px',
+    width: '100%',
     margin: '0 auto',
-    padding: '28px'
+    padding: '24px 28px',
+    boxSizing: 'border-box'
   },
   filterSection: {
     display: 'flex',
@@ -1260,24 +1262,26 @@ const styles: { [key: string]: any } = {
   },
   commercialGroupTabsContainer: {
     display: 'flex',
-    gap: '10px',
-    overflowX: 'auto',
-    paddingBottom: '12px',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: '8px 10px',
+    paddingBottom: '4px',
     marginBottom: '24px'
   },
   commercialGroupTab: {
     background: '#ffffff',
     color: '#475569',
     border: '1px solid #cbd5e1',
-    borderRadius: '12px',
-    padding: '10px 18px',
+    borderRadius: '10px',
+    padding: '8px 14px',
     fontSize: '13px',
     whiteSpace: 'nowrap',
     cursor: 'pointer',
     display: 'flex',
     alignItems: 'center',
-    gap: '8px',
-    boxShadow: '0 1px 2px rgba(0,0,0,0.03)'
+    gap: '6px',
+    boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+    transition: 'all 0.15s ease'
   },
   commercialGroupTabActive: {
     background: '#0f172a',
@@ -1294,7 +1298,7 @@ const styles: { [key: string]: any } = {
   },
   productGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
     gap: '20px'
   },
   productCard: {
