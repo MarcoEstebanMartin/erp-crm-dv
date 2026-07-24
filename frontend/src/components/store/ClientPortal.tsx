@@ -389,7 +389,7 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({ onBackToStaffLogin }
                   >
                     <div style={{ fontWeight: 600, fontSize: '15px', color: '#0f172a' }}>{c.name}</div>
                     <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>
-                      CUIT: {c.cuit || 'Sin CUIT'} • Lista: <span style={{ color: '#E30613', fontWeight: 600 }}>{c.priceList || 'A'}</span>
+                      CUIT: {c.cuit || 'Sin CUIT'}
                     </div>
                     {c.city && <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '2px' }}>📍 {c.city}</div>}
                   </div>
@@ -428,7 +428,7 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({ onBackToStaffLogin }
           <div>
             <div style={styles.clientNameTitle}>{client.name}</div>
             <div style={styles.clientMetaInfo}>
-              CUIT: {client.cuit || 'S/D'} • Lista {client.priceList || 'A'} • Dto: {client.discount}%
+              CUIT: {client.cuit || 'S/D'}
             </div>
           </div>
         </div>
