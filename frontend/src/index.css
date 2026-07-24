@@ -346,8 +346,9 @@ tr:hover td {
 }
 
 .sidebar-logo {
-  height: 80px;
-  width: 80px;
+  height: 105px;
+  width: auto;
+  max-width: 180px;
   object-fit: contain;
 }
 

@@ -395,7 +395,7 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({ onBackToStaffLogin }
                 <img
                   src="/logo.png"
                   alt="Logo DV"
-                  style={{ height: '75px', objectFit: 'contain' }}
+                  style={{ height: '95px', objectFit: 'contain' }}
                   onError={() => setLogoFailed(true)}
                 />
               ) : (
@@ -524,7 +524,7 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({ onBackToStaffLogin }
             <img
               src="/logo.png"
               alt="Logo DV"
-              style={{ height: '40px', objectFit: 'contain' }}
+              style={{ height: '55px', objectFit: 'contain' }}
               onError={() => setLogoFailed(true)}
             />
           ) : (

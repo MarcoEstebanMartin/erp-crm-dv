@@ -440,7 +440,7 @@ export async function getStoreCatalog(req: Request, res: Response): Promise<void
     });
 
     const commercialCategories = [
-      { id: 'all', name: 'Todas las Ofertas', icon: '🔥' },
+      { id: 'all', name: 'Todos los productos', icon: '🔥' },
       ...uniqueCategoryNames.map((catName) => ({
         id: catName.toLowerCase().replace(/\s+/g, '-'),
         name: catName,
