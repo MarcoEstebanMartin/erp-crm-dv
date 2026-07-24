@@ -806,7 +806,7 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
                           : `$${Number(selectedClient.outstandingBalance || 0).toLocaleString()}`}
                       </span></span>
                       <span><strong>Límite Crédito:</strong> <span style={{ fontWeight: 600 }}>${(selectedClient.creditLimit || 0).toLocaleString()}</span></span>
-                      <span><strong>Lista:</strong> <span style={{ fontWeight: 600 }}>{selectedClient.priceList === 'C' ? 'Distribuidor C' : selectedClient.priceList === 'B' ? 'Especial B' : 'Estándar A'}</span></span>
+                      <span><strong>Lista:</strong> <span style={{ fontWeight: 600 }}>{selectedClient.priceList === 'C' ? 'Lista Especial 2' : selectedClient.priceList === 'B' ? 'Lista Especial' : 'Lista 4'}</span></span>
                       {Number(selectedClient.discount || 0) > 0 && (
                         <span style={{ color: 'var(--color-success)' }}><strong>Desc. Fijo:</strong> {selectedClient.discount}%</span>
                       )}

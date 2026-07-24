@@ -461,7 +461,7 @@ const ClientModal: React.FC<ClientModalProps> = ({
                     </div>
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1.2fr 1fr', gap: '10px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                     <div className="form-group" style={{ marginBottom: 0, display: 'flex', flexDirection: 'column' }}>
                       <label style={{ fontSize: '0.8rem', fontWeight: 600, marginBottom: '6px', height: '18px', display: 'block', whiteSpace: 'nowrap' }}>Límite de Cta Cte</label>
                       <select
@@ -476,8 +476,7 @@ const ClientModal: React.FC<ClientModalProps> = ({
                         <option value={1}>1 Boleta</option>
                         <option value={2}>2 Boletas</option>
                         <option value={3}>3 Boletas</option>
-                        <option value={4}>4 Boletas</option>
-                        <option value={5}>5 Boletas</option>
+                        <option value={4}>4 Boletas (Máximo)</option>
                       </select>
                     </div>
                     
@@ -490,25 +489,10 @@ const ClientModal: React.FC<ClientModalProps> = ({
                         disabled={!clientModal.data.isClient}
                         style={{ height: '38px', padding: '8px 12px', fontSize: '0.9rem', borderRadius: '6px', border: '1px solid var(--border-color)', boxSizing: 'border-box', width: '100%', backgroundColor: '#fff', color: 'var(--text-primary)' }}
                       >
-                        <option value="A">Lista Estándar A</option>
-                        <option value="B">Lista Especial B</option>
-                        <option value="C">Lista Distribuidor C</option>
-                        <option value="ESPECIAL_QUESOS">Lista Especial Quesos (3%)</option>
+                        <option value="A">Lista 4</option>
+                        <option value="B">Lista Especial</option>
+                        <option value="C">Lista Especial 2</option>
                       </select>
-                    </div>
-
-                    <div className="form-group" style={{ marginBottom: 0, display: 'flex', flexDirection: 'column' }}>
-                      <label style={{ fontSize: '0.8rem', fontWeight: 600, marginBottom: '6px', height: '18px', display: 'block', whiteSpace: 'nowrap' }}>Desc. Fijo (%)</label>
-                      <input
-                        type="number"
-                        step="0.01"
-                        className="input"
-                        placeholder="ej: 5"
-                        value={clientModal.data.discount || 0}
-                        onChange={(e) => setClientModal({ ...clientModal, data: { ...clientModal.data, discount: Number(e.target.value) } })}
-                        disabled={!clientModal.data.isClient}
-                        style={{ height: '38px', padding: '8px 12px', fontSize: '0.9rem', borderRadius: '6px', border: '1px solid var(--border-color)', boxSizing: 'border-box', width: '100%' }}
-                      />
                     </div>
                   </div>
                 </div>

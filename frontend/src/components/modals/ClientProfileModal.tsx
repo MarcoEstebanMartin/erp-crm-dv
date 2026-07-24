@@ -212,7 +212,7 @@ const ClientProfileModal: React.FC<ClientProfileModalProps> = ({
                       <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                         <span style={{ color: 'var(--text-secondary)' }}>Lista de Precios:</span>
                         <span style={{ fontWeight: 600 }}>
-                          {clientProfileModal.client.priceList === 'C' ? 'Lista Distribuidor C' : clientProfileModal.client.priceList === 'B' ? 'Lista Especial B' : clientProfileModal.client.priceList === 'ESPECIAL_QUESOS' ? 'Lista Especial Quesos (3%)' : 'Lista Estándar A'}
+                          {clientProfileModal.client.priceList === 'C' ? 'Lista Especial 2' : clientProfileModal.client.priceList === 'B' ? 'Lista Especial' : 'Lista 4'}
                         </span>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between' }}>

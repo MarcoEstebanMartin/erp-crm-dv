@@ -2294,7 +2294,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
                   <div style={{ padding: '12px', backgroundColor: 'var(--bg-light)', borderRadius: '6px', border: '1px solid var(--border-color)', fontSize: '0.8rem', display: 'flex', flexDirection: 'column', gap: '4px' }}>
                     <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>Cliente Seleccionado</div>
                     <div><strong>Nombre:</strong> {createOrderModal.client.name}</div>
-                    <div><strong>Lista:</strong> {createOrderModal.client.priceList === 'C' ? 'Distribuidor C' : createOrderModal.client.priceList === 'B' ? 'Especial B' : 'Estándar A'}</div>
+                    <div><strong>Lista:</strong> {createOrderModal.client.priceList === 'C' ? 'Lista Especial 2' : createOrderModal.client.priceList === 'B' ? 'Lista Especial' : 'Lista 4'}</div>
                     {Number(createOrderModal.client.discount || 0) > 0 && <div style={{ color: 'var(--color-success)' }}><strong>Desc. Fijo:</strong> {createOrderModal.client.discount}%</div>}
                     <div>
                       <strong>Saldo CC:</strong> <span style={{ fontWeight: 600, color: (createOrderModal.client.outstandingBalance || 0) > 0 ? 'var(--color-danger)' : 'var(--text-primary)' }}>${Number(createOrderModal.client.outstandingBalance || 0).toLocaleString()}</span>

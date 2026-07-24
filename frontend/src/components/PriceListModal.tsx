@@ -498,7 +498,7 @@ export default function PriceListModal({ isOpen, onClose }: PriceListModalProps)
                         transition: 'all 0.15s ease'
                       }}
                     >
-                      Lista {t}
+                      {t === 'A' ? 'Lista 4' : t === 'B' ? 'Lista Especial' : 'Lista Especial 2'}
                     </button>
                   ))}
                 </div>
