@@ -59,9 +59,13 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({ onBackToStaffLogin }
 
   // Modal de inicio de sesión / selección de cliente
   const [loginSearch, setLoginSearch] = useState('');
-  const [availableClients, setAvailableClients] = useState<ClientProfile[]>([]);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
+  const [availableClients, setAvailableClients] = useState<any[]>([]);
+  const [pendingClient, setPendingClient] = useState<{ id: number; name: string; cuit: string } | null>(null);
+  const [pinInput, setPinInput] = useState('');
+  const [pinMessage, setPinMessage] = useState<string | null>(null);
+  const [hasPin, setHasPin] = useState(true);
   const [logoFailed, setLogoFailed] = useState(false);
 
   // Pestañas activas: 'catalog' | 'account' | 'orders'
@@ -106,6 +110,8 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({ onBackToStaffLogin }
     setIsLoggingIn(true);
     setLoginError(null);
     setAvailableClients([]);
+    setPendingClient(null);
+    setPinInput('');
 
     try {
       const res = await fetch(`${API_BASE_URL}/store/login`, {
@@ -122,6 +128,10 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({ onBackToStaffLogin }
         } else {
           setLoginError('No se encontró ningún comercio activo con los datos ingresados.');
         }
+      } else if (json.status === 'requires_pin') {
+        setPendingClient(json.client);
+        setPinMessage(json.message);
+        setHasPin(json.hasPin);
       } else {
         setLoginError(json.message || 'No se encontró el cliente.');
       }
@@ -132,22 +142,69 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({ onBackToStaffLogin }
     }
   };
 
-  const handleSelectClient = (selected: ClientProfile, token?: string) => {
-    setClient(selected);
-    localStorage.setItem('store_client_session', JSON.stringify(selected));
+  const handleSelectClient = (selected: any, token?: string) => {
     if (token) {
+      setClient(selected);
+      localStorage.setItem('store_client_session', JSON.stringify(selected));
       localStorage.setItem('store_token', token);
+    } else {
+      // Requiere ingreso de PIN
+      setPendingClient(selected);
+      setPinMessage(selected.hasPin ? 'Ingresá tu PIN secreto para ingresar a la tienda.' : 'Es tu primer ingreso. Creá un PIN secreto de 4 dígitos para proteger tu cuenta.');
+      setHasPin(selected.hasPin);
+      setPinInput('');
+    }
+  };
+
+  const handlePinSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!pendingClient) return;
+
+    if (!pinInput.trim()) {
+      setLoginError('Por favor ingresá tu PIN numérico.');
+      return;
+    }
+
+    if (pinInput.trim().length < 4) {
+      setLoginError('El PIN debe tener al menos 4 dígitos.');
+      return;
+    }
+
+    setIsLoggingIn(true);
+    setLoginError(null);
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/store/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          clientId: pendingClient.id,
+          pin: pinInput.trim()
+        })
+      });
+      const json = await res.json();
+      if (json.status === 'success' && json.data?.client) {
+        handleSelectClient(json.data.client, json.data.token);
+      } else {
+        setLoginError(json.message || 'Error al validar el PIN.');
+      }
+    } catch (err: any) {
+      setLoginError('Error al conectar con el servidor.');
+    } finally {
+      setIsLoggingIn(false);
     }
   };
 
   const handleLogoutClient = () => {
     setClient(null);
-    localStorage.removeItem('store_client_session');
-    localStorage.removeItem('store_token');
-    setCart([]);
+    setPendingClient(null);
+    setPinInput('');
     setLoginSearch('');
     setAvailableClients([]);
     setLoginError(null);
+    localStorage.removeItem('store_client_session');
+    localStorage.removeItem('store_token');
+    setCart([]);
   };
 
   const fetchCatalog = async (priceList: string) => {
@@ -352,52 +409,98 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({ onBackToStaffLogin }
             </p>
           </div>
 
-          <div style={styles.loginSearchBox}>
-            <input
-              type="text"
-              placeholder="Ej: 30-71234567-8 o Nombre del Comercio..."
-              value={loginSearch}
-              onChange={(e) => setLoginSearch(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && fetchAvailableClients(loginSearch)}
-              style={styles.searchInput}
-              autoFocus
-            />
-            <button
-              onClick={() => fetchAvailableClients(loginSearch)}
-              disabled={isLoggingIn || !loginSearch.trim()}
-              style={{
-                ...styles.btnPrimary,
-                opacity: !loginSearch.trim() || isLoggingIn ? 0.6 : 1
-              }}
-            >
-              {isLoggingIn ? 'Buscando...' : 'Ingresar'}
-            </button>
-          </div>
-
-          {loginError && <div style={styles.errorBanner}>{loginError}</div>}
-
-          {/* LISTA DE COINCIDENCIAS (Solo se muestra cuando busca) */}
-          {availableClients.length > 0 && (
-            <div style={styles.clientListContainer}>
-              <h4 style={{ fontSize: '12px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '10px' }}>
-                Seleccioná tu Comercio ({availableClients.length}):
-              </h4>
-              <div style={styles.clientGrid}>
-                {availableClients.map((c) => (
-                  <div
-                    key={c.id}
-                    onClick={() => handleSelectClient(c)}
-                    style={styles.clientCard}
-                  >
-                    <div style={{ fontWeight: 600, fontSize: '15px', color: '#0f172a' }}>{c.name}</div>
-                    <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>
-                      CUIT: {c.cuit || 'Sin CUIT'}
-                    </div>
-                    {c.city && <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '2px' }}>📍 {c.city}</div>}
-                  </div>
-                ))}
+          {!pendingClient ? (
+            <>
+              <div style={styles.loginSearchBox}>
+                <input
+                  type="text"
+                  placeholder="Ej: 30-71234567-8 o Nombre del Comercio..."
+                  value={loginSearch}
+                  onChange={(e) => setLoginSearch(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && fetchAvailableClients(loginSearch)}
+                  style={styles.searchInput}
+                  autoFocus
+                />
+                <button
+                  onClick={() => fetchAvailableClients(loginSearch)}
+                  disabled={isLoggingIn || !loginSearch.trim()}
+                  style={{
+                    ...styles.btnPrimary,
+                    opacity: !loginSearch.trim() || isLoggingIn ? 0.6 : 1
+                  }}
+                >
+                  {isLoggingIn ? 'Buscando...' : 'Buscar'}
+                </button>
               </div>
-            </div>
+
+              {loginError && <div style={styles.errorBanner}>{loginError}</div>}
+
+              {/* LISTA DE COINCIDENCIAS (Solo se muestra cuando busca) */}
+              {availableClients.length > 0 && (
+                <div style={styles.clientListContainer}>
+                  <h4 style={{ fontSize: '12px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '10px' }}>
+                    Seleccioná tu Comercio ({availableClients.length}):
+                  </h4>
+                  <div style={styles.clientGrid}>
+                    {availableClients.map((c) => (
+                      <div
+                        key={c.id}
+                        onClick={() => handleSelectClient(c)}
+                        style={styles.clientCard}
+                      >
+                        <div style={{ fontWeight: 600, fontSize: '15px', color: '#0f172a' }}>{c.name}</div>
+                        <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>
+                          CUIT: {c.cuit || 'Sin CUIT'}
+                        </div>
+                        {c.city && <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '2px' }}>📍 {c.city}</div>}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
+          ) : (
+            <form onSubmit={handlePinSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '16px' }}>
+              <div style={{ backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '14px', textAlign: 'center' }}>
+                <div style={{ fontSize: '15px', fontWeight: 700, color: '#0f172a' }}>{pendingClient.name}</div>
+                <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>CUIT: {pendingClient.cuit || 'Sin CUIT'}</div>
+              </div>
+
+              <p style={{ fontSize: '13px', color: '#475569', textAlign: 'center', margin: 0 }}>
+                {pinMessage || 'Ingresá tu PIN secreto para acceder.'}
+              </p>
+
+              <div style={styles.loginSearchBox}>
+                <input
+                  type="password"
+                  placeholder="•••• PIN Secreto (4 dígitos)"
+                  value={pinInput}
+                  onChange={(e) => setPinInput(e.target.value)}
+                  maxLength={8}
+                  style={{ ...styles.searchInput, textAlign: 'center', letterSpacing: '4px', fontSize: '18px', fontWeight: 700 }}
+                  autoFocus
+                />
+              </div>
+
+              {loginError && <div style={styles.errorBanner}>{loginError}</div>}
+
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button
+                  type="button"
+                  onClick={() => { setPendingClient(null); setLoginError(null); }}
+                  style={{ ...styles.btnSecondarySmall, flex: 1, padding: '12px' }}
+                >
+                  ← Volver
+                </button>
+                <button
+                  type="submit"
+                  disabled={isLoggingIn || !pinInput.trim()}
+                  style={{ ...styles.btnPrimary, flex: 2, opacity: isLoggingIn || !pinInput.trim() ? 0.6 : 1 }}
+                >
+                  {isLoggingIn ? 'Verificando...' : hasPin ? 'Ingresar a la Tienda' : 'Crear PIN e Ingresar'}
+                </button>
+              </div>
+            </form>
           )}
 
           {onBackToStaffLogin && (

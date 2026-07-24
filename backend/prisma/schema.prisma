@@ -132,6 +132,9 @@ model Persona {
   // Plazo de pago acordado (en días)
   paymentTermDays Int @default(30)
 
+  // PIN Secreto de Acceso a la Tienda Online (4-6 dígitos)
+  webPin String?
+
   // Estado activo/inactivo
   isActive Boolean @default(true)
 

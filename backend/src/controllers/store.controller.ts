@@ -56,10 +56,11 @@ async function getTiendaOnlineUser() {
  */
 export async function loginClient(req: Request, res: Response): Promise<void> {
   try {
-    const { cuitOrCode, search } = req.body;
+    const { cuitOrCode, search, pin, clientId } = req.body;
     const queryTerm = (cuitOrCode || search || '').trim();
+    const providedPin = (pin || '').trim();
 
-    if (!queryTerm) {
+    if (!queryTerm && !clientId) {
       res.status(200).json({
         status: 'success',
         data: { clients: [] }
@@ -67,78 +68,165 @@ export async function loginClient(req: Request, res: Response): Promise<void> {
       return;
     }
 
-    const clients = await prisma.persona.findMany({
-      where: {
-        isClient: true,
-        isActive: true,
-        OR: [
-          { cuit: { contains: queryTerm } },
-          { name: { contains: queryTerm, mode: 'insensitive' } },
-          ...(isNaN(Number(queryTerm)) ? [] : [{ id: Number(queryTerm) }])
-        ]
-      },
-      select: {
-        id: true,
-        name: true,
-        cuit: true,
-        address: true,
-        city: true,
-        priceList: true,
-        discount: true,
-        outstandingBalance: true,
-        creditLimit: true,
-        paymentTermDays: true
-      },
-      take: 10,
-      orderBy: { name: 'asc' }
-    });
+    let client: any = null;
 
-    if (clients.length === 0) {
-      res.status(404).json({
-        status: 'error',
-        message: 'No se encontró ningún cliente activo con el CUIT o nombre ingresado.'
-      });
-      return;
-    }
-
-    if (clients.length === 1) {
-      const client = clients[0];
-      const token = jwt.sign(
-        {
-          personaId: client.id,
-          name: client.name,
-          cuit: client.cuit,
-          priceList: client.priceList || 'A',
-          role: 'CLIENTE'
-        },
-        JWT_SECRET,
-        { expiresIn: '30d' }
-      );
-
-      res.status(200).json({
-        status: 'success',
-        data: {
-          token,
-          client: {
-            id: client.id,
-            name: client.name,
-            cuit: client.cuit,
-            address: client.address,
-            city: client.city,
-            priceList: client.priceList || 'A',
-            discount: Number(client.discount || 0),
-            outstandingBalance: Number(client.outstandingBalance || 0),
-            creditLimit: Number(client.creditLimit || 0),
-            paymentTermDays: client.paymentTermDays || 30
-          }
+    if (clientId) {
+      client = await prisma.persona.findUnique({
+        where: { id: Number(clientId) },
+        select: {
+          id: true,
+          name: true,
+          cuit: true,
+          address: true,
+          city: true,
+          priceList: true,
+          discount: true,
+          outstandingBalance: true,
+          creditLimit: true,
+          paymentTermDays: true,
+          webPin: true
         }
       });
+    } else {
+      const clients = await prisma.persona.findMany({
+        where: {
+          isClient: true,
+          isActive: true,
+          OR: [
+            { cuit: { contains: queryTerm } },
+            { name: { contains: queryTerm, mode: 'insensitive' } },
+            ...(isNaN(Number(queryTerm)) ? [] : [{ id: Number(queryTerm) }])
+          ]
+        },
+        select: {
+          id: true,
+          name: true,
+          cuit: true,
+          address: true,
+          city: true,
+          priceList: true,
+          discount: true,
+          outstandingBalance: true,
+          creditLimit: true,
+          paymentTermDays: true,
+          webPin: true
+        },
+        take: 10,
+        orderBy: { name: 'asc' }
+      });
+
+      if (clients.length === 0) {
+        res.status(404).json({
+          status: 'error',
+          message: 'No se encontró ningún cliente activo con el CUIT o nombre ingresado.'
+        });
+        return;
+      }
+
+      if (clients.length > 1 && !providedPin) {
+        res.status(200).json({
+          status: 'success',
+          data: {
+            clients: clients.map((c) => ({
+              id: c.id,
+              name: c.name,
+              cuit: c.cuit,
+              city: c.city,
+              hasPin: !!c.webPin
+            }))
+          }
+        });
+        return;
+      }
+
+      client = clients[0];
+    }
+
+    if (!client) {
+      res.status(404).json({
+        status: 'error',
+        message: 'Cliente no encontrado.'
+      });
       return;
     }
+
+    // VALIDACIÓN O SETEO DE PIN SEGÚN SI TIENE CLAVE GUARDADA
+    if (client.webPin) {
+      if (!providedPin) {
+        res.status(200).json({
+          status: 'requires_pin',
+          message: 'Ingresá tu PIN secreto para ingresar a la tienda.',
+          hasPin: true,
+          client: { id: client.id, name: client.name, cuit: client.cuit }
+        });
+        return;
+      }
+
+      if (providedPin !== client.webPin) {
+        res.status(401).json({
+          status: 'error',
+          message: '🔒 PIN de acceso incorrecto. Verificá tu clave o consultá con administración.'
+        });
+        return;
+      }
+    } else {
+      // Cliente NO tiene PIN configurado todavía
+      if (!providedPin) {
+        res.status(200).json({
+          status: 'requires_pin',
+          message: 'Es tu primer ingreso. Creá un PIN secreto de 4 dígitos para proteger tu cuenta.',
+          hasPin: false,
+          client: { id: client.id, name: client.name, cuit: client.cuit }
+        });
+        return;
+      }
+
+      if (providedPin.length < 4 || providedPin.length > 8) {
+        res.status(400).json({
+          status: 'error',
+          message: 'El PIN debe tener entre 4 y 6 dígitos.'
+        });
+        return;
+      }
+
+      // Guardar el PIN en el primer ingreso
+      await prisma.persona.update({
+        where: { id: client.id },
+        data: { webPin: providedPin }
+      });
+      client.webPin = providedPin;
+    }
+
+    // TOKEN JWT Y RESPUESTA
+    const token = jwt.sign(
+      {
+        personaId: client.id,
+        name: client.name,
+        cuit: client.cuit,
+        priceList: client.priceList || 'A',
+        role: 'CLIENTE'
+      },
+      JWT_SECRET,
+      { expiresIn: '30d' }
+    );
 
     res.status(200).json({
       status: 'success',
-      data: { clients }
+      data: {
+        token,
+        client: {
+          id: client.id,
+          name: client.name,
+          cuit: client.cuit,
+          address: client.address,
+          city: client.city,
+          priceList: client.priceList || 'A',
+          discount: Number(client.discount || 0),
+          outstandingBalance: Number(client.outstandingBalance || 0),
+          creditLimit: Number(client.creditLimit || 0),
+          paymentTermDays: client.paymentTermDays || 30
+        }
+      }
     });
   } catch (error: any) {
     console.error('⚠️ Error en loginClient:', error);

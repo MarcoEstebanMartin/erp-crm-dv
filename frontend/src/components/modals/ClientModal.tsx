@@ -40,6 +40,7 @@ const ClientModal: React.FC<ClientModalProps> = ({
         city: data.city,
         phone: data.phone,
         email: data.email,
+        webPin: data.webPin !== undefined ? data.webPin : undefined,
         route: data.route,
         saleRouteId: data.saleRouteId ? Number(data.saleRouteId) : null,
         creditLimit: Number(data.creditLimit || 0),
@@ -105,16 +106,30 @@ const ClientModal: React.FC<ClientModalProps> = ({
                     />
                   </div>
 
-                  <div className="form-group" style={{ marginBottom: '14px' }}>
-                    <label style={{ fontSize: '0.8rem', fontWeight: 600, marginBottom: '6px', display: 'block' }}>CUIT (Sin guiones)</label>
-                    <input
-                      type="text"
-                      className="input"
-                      placeholder="ej: 20222334449"
-                      value={clientModal.data.cuit}
-                      onChange={(e) => setClientModal({ ...clientModal, data: { ...clientModal.data, cuit: e.target.value } })}
-                      style={{ width: '100%', height: '38px' }}
-                    />
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '14px' }}>
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label style={{ fontSize: '0.8rem', fontWeight: 600, marginBottom: '6px', display: 'block' }}>CUIT (Sin guiones)</label>
+                      <input
+                        type="text"
+                        className="input"
+                        placeholder="ej: 20222334449"
+                        value={clientModal.data.cuit || ''}
+                        onChange={(e) => setClientModal({ ...clientModal, data: { ...clientModal.data, cuit: e.target.value } })}
+                        style={{ width: '100%', height: '38px' }}
+                      />
+                    </div>
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label style={{ fontSize: '0.8rem', fontWeight: 600, marginBottom: '6px', display: 'block' }}>🔑 PIN Tienda B2B</label>
+                      <input
+                        type="text"
+                        className="input"
+                        placeholder="ej: 4819"
+                        value={clientModal.data.webPin || ''}
+                        onChange={(e) => setClientModal({ ...clientModal, data: { ...clientModal.data, webPin: e.target.value } })}
+                        maxLength={8}
+                        style={{ width: '100%', height: '38px', fontWeight: 700, letterSpacing: '1px' }}
+                      />
+                    </div>
                   </div>
                   
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>

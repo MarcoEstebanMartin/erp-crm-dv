@@ -139,6 +139,7 @@ export class PersonaService {
         routeSequence: data.routeSequence !== undefined ? (data.routeSequence !== null ? Number(data.routeSequence) : null) : null,
         latitude: data.latitude !== undefined ? (data.latitude !== null ? Number(data.latitude) : null) : null,
         longitude: data.longitude !== undefined ? (data.longitude !== null ? Number(data.longitude) : null) : null,
+        webPin: data.webPin !== undefined && data.webPin !== null ? String(data.webPin).trim() : null,
       },
     });
 
@@ -198,6 +199,7 @@ export class PersonaService {
         routeSequence: data.routeSequence !== undefined ? (data.routeSequence ? Number(data.routeSequence) : null) : undefined,
         latitude: data.latitude !== undefined ? (data.latitude !== null ? Number(data.latitude) : null) : undefined,
         longitude: data.longitude !== undefined ? (data.longitude !== null ? Number(data.longitude) : null) : undefined,
+        webPin: data.webPin !== undefined ? (data.webPin ? String(data.webPin).trim() : null) : undefined,
       },
     });
 
