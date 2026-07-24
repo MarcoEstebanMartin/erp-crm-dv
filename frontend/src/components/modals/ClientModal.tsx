@@ -24,6 +24,38 @@ const ClientModal: React.FC<ClientModalProps> = ({
 }) => {
   if (!clientModal || !clientModal.open) return null;
 
+  const [isSearchingAfip, setIsSearchingAfip] = React.useState(false);
+
+  const handleFetchAfipData = async () => {
+    const cuitClean = (clientModal.data.cuit || '').replace(/\D/g, '');
+    if (!cuitClean || cuitClean.length < 8) {
+      setErrorMsg('Ingresá un CUIT válido (mínimo 8 u 11 dígitos).');
+      return;
+    }
+
+    setIsSearchingAfip(true);
+    setErrorMsg(null);
+    try {
+      const afipData = await api.getPersonaFromAFIP(cuitClean);
+      if (afipData) {
+        setClientModal((prev: any) => ({
+          ...prev,
+          data: {
+            ...prev.data,
+            name: afipData.name || prev.data.name,
+            address: afipData.address || prev.data.address,
+            city: afipData.location || prev.data.city
+          }
+        }));
+        setSuccessMsg('✅ Datos de AFIP/ARCA cargados correctamente.');
+      }
+    } catch (err: any) {
+      setErrorMsg('No se pudieron obtener los datos de AFIP.');
+    } finally {
+      setIsSearchingAfip(false);
+    }
+  };
+
   const handleClientSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const { mode, data } = clientModal;
@@ -108,7 +140,31 @@ const ClientModal: React.FC<ClientModalProps> = ({
 
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '14px' }}>
                     <div className="form-group" style={{ marginBottom: 0 }}>
-                      <label style={{ fontSize: '0.8rem', fontWeight: 600, marginBottom: '6px', display: 'block' }}>CUIT (Sin guiones)</label>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                        <label style={{ fontSize: '0.8rem', fontWeight: 600, margin: 0 }}>CUIT (Sin guiones)</label>
+                        <button
+                          type="button"
+                          onClick={handleFetchAfipData}
+                          disabled={isSearchingAfip || !clientModal.data.cuit}
+                          title="Obtener Razón Social y Domicilio automáticamente desde AFIP / ARCA"
+                          style={{
+                            backgroundColor: '#E30613',
+                            color: '#ffffff',
+                            border: 'none',
+                            borderRadius: '4px',
+                            padding: '2px 8px',
+                            fontSize: '0.72rem',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '3px',
+                            opacity: isSearchingAfip || !clientModal.data.cuit ? 0.6 : 1
+                          }}
+                        >
+                          {isSearchingAfip ? '⏳ AFIP...' : '⚡ Autofill AFIP'}
+                        </button>
+                      </div>
                       <input
                         type="text"
                         className="input"
