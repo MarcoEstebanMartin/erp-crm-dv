@@ -475,7 +475,7 @@ export async function getStoreCatalog(req: Request, res: Response): Promise<void
     );
 
     const commercialCategories = [
-      { id: 'all', name: 'TODOS LOS PRODUCTOS', icon: '🔥' },
+      { id: 'all', name: 'TODOS LOS PRODUCTOS', icon: '📦' },
       ...sortedCategoryNames.map((catName) => ({
         id: catName.toLowerCase().replace(/\s+/g, '-'),
         name: catName,
