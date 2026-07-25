@@ -1222,7 +1222,10 @@ const styles: { [key: string]: any } = {
     gap: '8px',
     background: '#ffffff',
     borderBottom: '1px solid #e2e8f0',
-    padding: '0 28px'
+    padding: '0 28px',
+    overflowX: 'auto',
+    WebkitOverflowScrolling: 'touch',
+    whiteSpace: 'nowrap'
   },
   tabItem: {
     background: 'none',
