@@ -126,23 +126,77 @@ function classifyOfferGroup(rubroName?: string | null, subrubro?: string | null,
 async function main() {
   console.log('🚀 Iniciando actualización masiva de Categoría Comercial en la Base de Datos...');
 
-  const products = await prisma.product.findMany({
-    include: { rubro: true }
+  // 1. Renombrar / Fusionar cualquier Rubro que se llame 'Otros' u 'OTROS'
+  const otrosRubros = await prisma.rubro.findMany({
+    where: {
+      name: { in: ['Otros', 'OTROS', 'otros'] }
+    }
   });
 
+  if (otrosRubros.length > 0) {
+    let variosRubro = await prisma.rubro.findFirst({
+      where: { name: { in: ['Varios', 'VARIOS', 'varios'] } }
+    });
+
+    if (!variosRubro) {
+      variosRubro = await prisma.rubro.create({
+        data: { name: 'Varios', description: 'Productos varios sin clasificación específica' }
+      });
+    }
+
+    for (const r of otrosRubros) {
+      if (r.id !== variosRubro.id) {
+        await prisma.product.updateMany({
+          where: { rubroId: r.id },
+          data: { rubroId: variosRubro.id }
+        });
+        await prisma.rubro.delete({ where: { id: r.id } }).catch(() => {
+          console.log(`No se pudo eliminar el rubro #${r.id}, se mantiene reasignado.`);
+        });
+      }
+    }
+    console.log('✅ Rubros "Otros" reasignados a "Varios".');
+  }
+
+  // 2. Clasificar todos los productos y actualizar commercialCategory en lotes por categoría
+  const products = await prisma.product.findMany({
+    select: { id: true, name: true, rubro: { select: { name: true } }, commercialCategory: true }
+  });
+
+  const categoryMap: Record<string, number[]> = {};
   const categoryCounts: Record<string, number> = {};
-  let updatedCount = 0;
 
   for (const prod of products) {
-    const category = classifyOfferGroup(prod.rubro?.name, '', prod.name);
+    let category = classifyOfferGroup(prod.rubro?.name, '', prod.name);
+    if (!category || category === 'Otros' || category === 'OTROS') {
+      category = 'Varios';
+    }
     categoryCounts[category] = (categoryCounts[category] || 0) + 1;
 
-    await prisma.product.update({
-      where: { id: prod.id },
-      data: { commercialCategory: category }
-    });
-    updatedCount++;
+    // Solo actualizar si cambió
+    if (prod.commercialCategory !== category) {
+      if (!categoryMap[category]) categoryMap[category] = [];
+      categoryMap[category].push(prod.id);
+    }
   }
+
+  let updatedCount = 0;
+  for (const [catName, ids] of Object.entries(categoryMap)) {
+    if (ids.length > 0) {
+      const res = await prisma.product.updateMany({
+        where: { id: { in: ids } },
+        data: { commercialCategory: catName }
+      });
+      updatedCount += res.count;
+    }
+  }
+
+  // Asegurar también que cualquier producto con commercialCategory 'Otros' o 'OTROS' remanente se cambie a 'Varios'
+  const fallbackRes = await prisma.product.updateMany({
+    where: { commercialCategory: { in: ['Otros', 'OTROS', 'otros'] } },
+    data: { commercialCategory: 'Varios' }
+  });
+  updatedCount += fallbackRes.count;
 
   console.log(`\n✅ ¡${updatedCount} productos actualizados con éxito en PostgreSQL!`);
   console.log('\n📊 Resumen de productos por Categoría Comercial:');

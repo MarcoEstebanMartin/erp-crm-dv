@@ -142,7 +142,7 @@ const CATEGORY_ORDER = [
   "2.6 - REGALERIA",
   "2.7 - BEBIDAS",
   "2.8 - NO COMESTIBLES",
-  "OTROS"
+  "VARIOS"
 ];
 
 export default function PriceListModal({ isOpen, onClose }: PriceListModalProps) {
@@ -248,7 +248,7 @@ export default function PriceListModal({ isOpen, onClose }: PriceListModalProps)
       const desc = (prod.description || "").trim();
       const mapping = CATEGORY_MAP[desc];
 
-      let catKey = "OTROS";
+      let catKey = "VARIOS";
       let subKey: string | undefined;
       let brandKey: string | undefined;
 
@@ -265,13 +265,13 @@ export default function PriceListModal({ isOpen, onClose }: PriceListModalProps)
             groups[catKey] = { name: catKey, directProducts: [], subcategories: {} };
           }
         } else {
-          // Si no, lo metemos en OTROS con subcategoría igual a la descripción
-          catKey = "OTROS";
+          // Si no, lo metemos en VARIOS con subcategoría igual a la descripción
+          catKey = "VARIOS";
           subKey = desc;
         }
       }
 
-      const catGroup = groups[catKey] || groups["OTROS"];
+      const catGroup = groups[catKey] || groups["VARIOS"];
 
       if (subKey) {
         if (!catGroup.subcategories[subKey]) {

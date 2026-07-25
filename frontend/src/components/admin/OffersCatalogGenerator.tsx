@@ -72,8 +72,8 @@ export default function OffersCatalogGenerator({ campaignId, onBack }: OffersCat
       } else {
         const uniqueRubros = Array.from(new Set(campaign.items.map((item: any) => item.campaignGroup || item.product?.rubro?.name || 'Varios'))) as string[];
         uniqueRubros.sort((a, b) => {
-          if (a === 'Varios' || a === 'OTROS') return 1;
-          if (b === 'Varios' || b === 'OTROS') return -1;
+          if (a === 'Varios' || a === 'VARIOS') return 1;
+          if (b === 'Varios' || b === 'VARIOS') return -1;
           return a.localeCompare(b);
         });
         setRubroOrder(uniqueRubros);

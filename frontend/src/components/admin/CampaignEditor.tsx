@@ -306,8 +306,8 @@ export default function CampaignEditor({ campaignId, onBack }: CampaignEditorPro
     let currentOrder = campaign.customRubroOrder && campaign.customRubroOrder.length > 0
       ? campaign.customRubroOrder.filter(r => groupedItems[r])
       : Object.keys(groupedItems).sort((a, b) => {
-          if (a === 'Varios' || a === 'OTROS') return 1;
-          if (b === 'Varios' || b === 'OTROS') return -1;
+          if (a === 'Varios' || a === 'VARIOS') return 1;
+          if (b === 'Varios' || b === 'VARIOS') return -1;
           return a.localeCompare(b);
         });
     
@@ -832,8 +832,8 @@ export default function CampaignEditor({ campaignId, onBack }: CampaignEditorPro
                       let rubroOrder = campaign.customRubroOrder && campaign.customRubroOrder.length > 0
                         ? campaign.customRubroOrder.filter(r => groupedItems[r])
                         : Object.keys(groupedItems).sort((a, b) => {
-                            if (a === 'Varios' || a === 'OTROS') return 1;
-                            if (b === 'Varios' || b === 'OTROS') return -1;
+                            if (a === 'Varios' || a === 'VARIOS') return 1;
+                            if (b === 'Varios' || b === 'VARIOS') return -1;
                             return a.localeCompare(b);
                           });
                         

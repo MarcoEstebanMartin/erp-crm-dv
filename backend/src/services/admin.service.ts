@@ -487,7 +487,7 @@ export class AdminService {
         const prodId = item.productId;
         const qty = item.product.isPesable && item.weight ? Number(item.weight) : item.quantity;
         const subtotal = Number(item.subtotal) || 0;
-        const rubroName = item.product.rubro?.name || 'OTROS';
+        const rubroName = item.product.rubro?.name || 'VARIOS';
         const rubroId = item.product.rubroId || null;
 
         const prodData = productMap.get(prodId) || {
@@ -626,7 +626,7 @@ export class AdminService {
         sku: p.sku,
         name: p.name,
         stock: p.stock,
-        rubroName: p.rubro?.name || 'OTROS',
+        rubroName: p.rubro?.name || 'VARIOS',
         qty: 0,
         revenue: 0
       }))
