@@ -275,7 +275,7 @@ export async function getStoreCatalog(req: Request, res: Response): Promise<void
             include: { campaign: { select: { id: true, title: true, isActive: true } } }
           }
         },
-        orderBy: { name: 'asc' }
+        orderBy: { sku: 'asc' }
       }),
       prisma.rubro.findMany({
         orderBy: { name: 'asc' }
@@ -405,6 +405,22 @@ export async function getStoreCatalog(req: Request, res: Response): Promise<void
         specialTag,
         offerName: activeOfferItem ? activeOfferItem.campaign.title : null
       };
+    });
+
+    // Ordenar productos por SKU numéricamente (desde el más bajo hasta el más alto)
+    formattedProducts.sort((a, b) => {
+      const strA = String(a.sku || '').trim();
+      const strB = String(b.sku || '').trim();
+      const matchA = strA.match(/\d+/);
+      const matchB = strB.match(/\d+/);
+      if (matchA && matchB) {
+        const numA = parseInt(matchA[0], 10);
+        const numB = parseInt(matchB[0], 10);
+        if (numA !== numB) {
+          return numA - numB;
+        }
+      }
+      return strA.localeCompare(strB, undefined, { numeric: true, sensitivity: 'base' });
     });
 
     const defaultPriorityOrder = [

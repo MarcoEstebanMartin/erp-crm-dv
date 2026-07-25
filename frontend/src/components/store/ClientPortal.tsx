@@ -250,9 +250,9 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({ onBackToStaffLogin }
     }
   };
 
-  // Filtrado por Grupos Comerciales de Oferta
+  // Filtrado por Grupos Comerciales de Oferta y ordenamiento numérico por SKU
   const filteredProducts = useMemo(() => {
-    return products.filter((p) => {
+    const list = products.filter((p) => {
       // Filtro por Grupo Comercial
       if (selectedGroupId && selectedGroupId !== 'all') {
         if (selectedGroupId === 'bultos') {
@@ -272,6 +272,21 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({ onBackToStaffLogin }
         if (!matchName && !matchSku && !matchRubro && !matchGroup) return false;
       }
       return true;
+    });
+
+    return list.sort((a, b) => {
+      const strA = String(a.sku || '').trim();
+      const strB = String(b.sku || '').trim();
+      const matchA = strA.match(/\d+/);
+      const matchB = strB.match(/\d+/);
+      if (matchA && matchB) {
+        const numA = parseInt(matchA[0], 10);
+        const numB = parseInt(matchB[0], 10);
+        if (numA !== numB) {
+          return numA - numB;
+        }
+      }
+      return strA.localeCompare(strB, undefined, { numeric: true, sensitivity: 'base' });
     });
   }, [products, selectedGroupId, selectedRubroId, onlyOffers, searchQuery]);
 
