@@ -586,9 +586,10 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({ onBackToStaffLogin }
       )}
 
       {/* PESTAÑAS DE NAVEGACIÓN */}
-      <nav style={styles.tabNav}>
+      <nav className="store-main-tab-nav" style={styles.tabNav}>
         <button
           onClick={() => setActiveTab('catalog')}
+          className={`store-main-tab-item ${activeTab === 'catalog' ? 'active' : ''}`}
           style={{ ...styles.tabItem, ...(activeTab === 'catalog' ? styles.tabItemActive : {}) }}
         >
           🛒 Catálogo Interactivo & Ofertas
@@ -596,6 +597,7 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({ onBackToStaffLogin }
         {showAccountBalance && (
           <button
             onClick={() => setActiveTab('account')}
+            className={`store-main-tab-item ${activeTab === 'account' ? 'active' : ''}`}
             style={{ ...styles.tabItem, ...(activeTab === 'account' ? styles.tabItemActive : {}) }}
           >
             📄 Mi Cuenta Corriente
@@ -603,6 +605,7 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({ onBackToStaffLogin }
         )}
         <button
           onClick={() => setActiveTab('orders')}
+          className={`store-main-tab-item ${activeTab === 'orders' ? 'active' : ''}`}
           style={{ ...styles.tabItem, ...(activeTab === 'orders' ? styles.tabItemActive : {}) }}
         >
           📦 Mis Pedidos ({recentOrders.length})
@@ -1013,6 +1016,23 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({ onBackToStaffLogin }
               </div>
             )}
           </div>
+        </div>
+      )}
+
+      {/* BOTÓN / BARRA FLOTANTE PERMANENTE DEL CARRITO EN MÓVIL Y DESKTOP */}
+      {cartTotalItemsCount > 0 && !isCartOpen && (
+        <div style={styles.floatingCartBar} onClick={() => setIsCartOpen(true)}>
+          <div style={styles.floatingCartInfo}>
+            <div style={styles.floatingCartBadge}>
+              🛒 {cartTotalItemsCount} {cartTotalItemsCount === 1 ? 'producto seleccionado' : 'productos en tu carrito'}
+            </div>
+            <div style={styles.floatingCartTotal}>
+              Total est: {formatMoney(cartTotalFinal)}
+            </div>
+          </div>
+          <button style={styles.btnFloatingCartAction}>
+            Ver Carrito / Finalizar →
+          </button>
         </div>
       )}
     </div>
@@ -1782,6 +1802,56 @@ const styles: { [key: string]: any } = {
     marginTop: '14px',
     paddingTop: '14px',
     borderTop: '1px dashed #e2e8f0'
+  },
+
+  // BARRA FLOTANTE DEL CARRITO
+  floatingCartBar: {
+    position: 'fixed',
+    bottom: '20px',
+    left: '50%',
+    transform: 'translateX(-50%)',
+    width: 'calc(100% - 32px)',
+    maxWidth: '520px',
+    background: '#0f172a',
+    color: '#ffffff',
+    borderRadius: '16px',
+    padding: '12px 20px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    boxShadow: '0 10px 30px rgba(0, 0, 0, 0.4)',
+    zIndex: 9990,
+    cursor: 'pointer',
+    border: '1px solid rgba(255, 255, 255, 0.12)',
+    backdropFilter: 'blur(12px)',
+    transition: 'all 0.2s ease'
+  },
+  floatingCartInfo: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '2px'
+  },
+  floatingCartBadge: {
+    fontSize: '12px',
+    fontWeight: 600,
+    color: '#94a3b8'
+  },
+  floatingCartTotal: {
+    fontSize: '16px',
+    fontWeight: 800,
+    color: '#10b981'
+  },
+  btnFloatingCartAction: {
+    background: '#E30613',
+    color: '#ffffff',
+    border: 'none',
+    borderRadius: '10px',
+    padding: '10px 16px',
+    fontSize: '13px',
+    fontWeight: 700,
+    cursor: 'pointer',
+    boxShadow: '0 4px 12px rgba(227, 6, 19, 0.4)',
+    whiteSpace: 'nowrap'
   }
 };
 
