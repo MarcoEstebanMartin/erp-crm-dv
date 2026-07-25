@@ -144,7 +144,6 @@ export default function Sidebar({ username, role, activeTab, setActiveTab, onLog
       case 'VENDEDOR':
         return [
           { id: 'orders', label: 'Toma de Pedidos', icon: <ShoppingCart size={18} /> },
-          { id: 'crm', label: 'CRM & WhatsApp', icon: <MessageSquare size={18} /> },
           { id: 'clients', label: 'Mis Rutas', icon: <Users size={18} /> },
           { id: 'cobranzas', label: 'Cobranzas y Recibos', icon: <DollarSign size={18} /> },
           { id: 'products', label: 'Catálogo de Precios', icon: <Package size={18} /> },

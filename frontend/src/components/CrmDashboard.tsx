@@ -55,6 +55,33 @@ export default function CrmDashboard({ initialTab = 'whatsapp', hideHeaderTabs =
   const [allPersonas, setAllPersonas] = useState<any[]>([]);
   const [linkingPersonaId, setLinkingPersonaId] = useState<string>('');
 
+  // Obtener usuario autenticado actual
+  const currentUser = useMemo(() => {
+    try {
+      return JSON.parse(localStorage.getItem('user') || '{}');
+    } catch {
+      return {};
+    }
+  }, []);
+
+  // Verificar si el usuario actual pertenece a Administración / Autorizados para CRM WhatsApp
+  const isAuthorizedCrmUser = useMemo(() => {
+    const role = currentUser?.role?.toUpperCase();
+    const uname = currentUser?.username?.toLowerCase();
+    const allowedUsernames = ['dario', 'agustin', 'esteban', 'admin', 'pablo'];
+    return role === 'ADMIN' || role === 'FACTURACION' || allowedUsernames.includes(uname);
+  }, [currentUser]);
+
+  // Filtrar exclusivamente a los usuarios de Administración (Darío, Agustín, Esteban, Admin) para asignaciones
+  const adminUsers = useMemo(() => {
+    const allowedUsernames = ['dario', 'agustin', 'esteban', 'admin', 'pablo'];
+    return systemUsers.filter(u => {
+      const role = u.role?.toUpperCase();
+      const uname = u.username?.toLowerCase();
+      return role === 'ADMIN' || role === 'FACTURACION' || allowedUsernames.includes(uname);
+    });
+  }, [systemUsers]);
+
   // Cargar Usuarios y Clientes del sistema
   useEffect(() => {
     const loadSystemData = async () => {
@@ -387,10 +414,21 @@ export default function CrmDashboard({ initialTab = 'whatsapp', hideHeaderTabs =
         </div>
       )}
 
-      {/* ====================================================================
-          PESTAÑA 1: INBOX WHATSAPP CRM (ATENCIÓN INTELIGENTE + IA)
-          ==================================================================== */}
-      {activeTab === 'whatsapp' && (
+      {activeTab === 'whatsapp' && !isAuthorizedCrmUser && (
+        <div style={{ backgroundColor: '#FFFFFF', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '50px 20px', textAlign: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+          <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '64px', height: '64px', borderRadius: '50%', backgroundColor: '#FEF2F2', color: 'var(--color-corp-red)', marginBottom: '16px' }}>
+            <AlertTriangle size={32} />
+          </div>
+          <h3 style={{ margin: '0 0 8px 0', fontSize: '1.15rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+            Acceso Restringido - CRM WhatsApp
+          </h3>
+          <p style={{ margin: '0 auto', maxWidth: '500px', fontSize: '0.88rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+            El Inbox de WhatsApp CRM está reservado exclusivamente para el personal de <strong>Administración</strong> (Darío, Agustín, Esteban y Administradores).
+          </p>
+        </div>
+      )}
+
+      {activeTab === 'whatsapp' && isAuthorizedCrmUser && (
         <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr 280px', gap: '16px', height: '620px', backgroundColor: '#FFFFFF', border: '1px solid var(--border-color)', borderRadius: '12px', overflow: 'hidden' }}>
           
           {/* Panel Izquierdo: Lista de Conversaciones */}
@@ -664,7 +702,7 @@ export default function CrmDashboard({ initialTab = 'whatsapp', hideHeaderTabs =
                     onChange={(e) => handleAssignUser(selectedConversation.id, e.target.value ? Number(e.target.value) : null)}
                   >
                     <option value="">❓ Sin Asignar (General)</option>
-                    {systemUsers.map(u => (
+                    {adminUsers.map(u => (
                       <option key={u.id} value={u.id}>
                         👤 {u.username} ({u.role})
                       </option>
