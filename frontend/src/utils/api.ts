@@ -1401,6 +1401,13 @@ export const api = {
     });
   },
 
+  assignCrmConversation: async (conversationId: number, assignedUserId: number | null) => {
+    return await request(`/crm/whatsapp/conversations/${conversationId}/assign`, {
+      method: 'PUT',
+      body: JSON.stringify({ assignedUserId })
+    });
+  },
+
   sendCrmDeliveryNotification: async (orderId: number) => {
     return await request(`/crm/whatsapp/orders/${orderId}/notify-delivery`, {
       method: 'POST'

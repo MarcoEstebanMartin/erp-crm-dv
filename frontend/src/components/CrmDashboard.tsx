@@ -50,6 +50,25 @@ export default function CrmDashboard({ initialTab = 'whatsapp', hideHeaderTabs =
   const [replyText, setReplyText] = useState('');
   const [sendingMsg, setSendingMsg] = useState(false);
   const [searchFilter, setSearchFilter] = useState('');
+  const [assignedFilter, setAssignedFilter] = useState<'all' | 'mine' | 'unassigned' | number>('all');
+  const [systemUsers, setSystemUsers] = useState<any[]>([]);
+  const [allPersonas, setAllPersonas] = useState<any[]>([]);
+  const [linkingPersonaId, setLinkingPersonaId] = useState<string>('');
+
+  // Cargar Usuarios y Clientes del sistema
+  useEffect(() => {
+    const loadSystemData = async () => {
+      try {
+        const uList = await api.getUsers();
+        setSystemUsers(Array.isArray(uList) ? uList : []);
+        const pList = await api.getPersonas();
+        setAllPersonas(Array.isArray(pList) ? pList : []);
+      } catch (err) {
+        console.error('Error al cargar datos auxiliares CRM:', err);
+      }
+    };
+    loadSystemData();
+  }, []);
 
   // Borrador de Pedido IA modal
   const [selectedDraftModal, setSelectedDraftModal] = useState<any | null>(null);
@@ -191,16 +210,55 @@ export default function CrmDashboard({ initialTab = 'whatsapp', hideHeaderTabs =
     }
   };
 
+  // Asignar conversación a un Usuario Administrativo
+  const handleAssignUser = async (convId: number, userId: number | null) => {
+    try {
+      const updated = await api.assignCrmConversation(convId, userId);
+      const assignedUserObj = systemUsers.find(u => u.id === userId) || null;
+      setSelectedConversation((prev: any) => prev?.id === convId ? { ...prev, assignedSellerId: userId, assignedUser: assignedUserObj } : prev);
+      setConversations((prev: any[]) => prev.map((c: any) => c.id === convId ? { ...c, assignedSellerId: userId, assignedUser: assignedUserObj } : c));
+    } catch (err: any) {
+      setErrorMsg('Error al derivar la conversación.');
+    }
+  };
+
+  // Vincular conversación a Ficha de Cliente ERP
+  const handleLinkPersona = async (convId: number, personaId: number) => {
+    try {
+      const updated = await api.linkCrmPersona(convId, personaId);
+      const personaObj = allPersonas.find(p => p.id === personaId) || updated.persona;
+      setSelectedConversation((prev: any) => prev?.id === convId ? { ...prev, personaId, persona: personaObj, contactName: personaObj?.name || prev.contactName } : prev);
+      setConversations((prev: any[]) => prev.map((c: any) => c.id === convId ? { ...c, personaId, persona: personaObj, contactName: personaObj?.name || c.contactName } : c));
+      setLinkingPersonaId('');
+    } catch (err: any) {
+      setErrorMsg('Error al vincular el cliente ERP.');
+    }
+  };
+
   // Filtrar conversaciones
   const filteredConversations = useMemo(() => {
-    if (!searchFilter) return conversations;
-    const term = searchFilter.toLowerCase();
-    return conversations.filter(c => 
-      c.contactName?.toLowerCase().includes(term) || 
-      c.waId?.includes(term) ||
-      c.persona?.name?.toLowerCase().includes(term)
-    );
-  }, [conversations, searchFilter]);
+    if (!Array.isArray(conversations)) return [];
+    return conversations.filter(c => {
+      // 1. Filtro de asignación
+      if (assignedFilter === 'mine') {
+        const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+        if (c.assignedSellerId !== currentUser?.id) return false;
+      } else if (assignedFilter === 'unassigned') {
+        if (c.assignedSellerId) return false;
+      } else if (typeof assignedFilter === 'number') {
+        if (c.assignedSellerId !== assignedFilter) return false;
+      }
+
+      // 2. Filtro de texto
+      if (!searchFilter) return true;
+      const term = searchFilter.toLowerCase();
+      return (
+        c.contactName?.toLowerCase().includes(term) || 
+        c.waId?.includes(term) ||
+        c.persona?.name?.toLowerCase().includes(term)
+      );
+    });
+  }, [conversations, searchFilter, assignedFilter]);
 
   // Manejo de Orden de Compra Auto-sugerida
   const handleAutoGeneratePO = (suggestionGroup: any) => {
@@ -337,7 +395,36 @@ export default function CrmDashboard({ initialTab = 'whatsapp', hideHeaderTabs =
           
           {/* Panel Izquierdo: Lista de Conversaciones */}
           <div style={{ borderRight: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', backgroundColor: '#FAFAFA' }}>
-            <div style={{ padding: '12px', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#FFFFFF' }}>
+            
+            {/* Filtros de Asignación a Administrativos */}
+            <div style={{ padding: '8px 12px', borderBottom: '1px solid var(--border-color)', backgroundColor: '#F8FAFC', display: 'flex', gap: '4px', overflowX: 'auto' }}>
+              <button 
+                type="button" 
+                className={`btn ${assignedFilter === 'all' ? 'btn-primary' : 'btn-ghost'}`}
+                style={{ fontSize: '0.72rem', padding: '4px 8px', borderRadius: '6px' }}
+                onClick={() => setAssignedFilter('all')}
+              >
+                📥 Todos ({conversations.length})
+              </button>
+              <button 
+                type="button" 
+                className={`btn ${assignedFilter === 'mine' ? 'btn-primary' : 'btn-ghost'}`}
+                style={{ fontSize: '0.72rem', padding: '4px 8px', borderRadius: '6px' }}
+                onClick={() => setAssignedFilter('mine')}
+              >
+                👤 Mis Chats
+              </button>
+              <button 
+                type="button" 
+                className={`btn ${assignedFilter === 'unassigned' ? 'btn-primary' : 'btn-ghost'}`}
+                style={{ fontSize: '0.72rem', padding: '4px 8px', borderRadius: '6px' }}
+                onClick={() => setAssignedFilter('unassigned')}
+              >
+                ❓ Sin Asignar
+              </button>
+            </div>
+
+            <div style={{ padding: '10px 12px', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#FFFFFF' }}>
               <Search size={16} style={{ color: 'var(--text-secondary)' }} />
               <input 
                 type="text" 
@@ -362,6 +449,10 @@ export default function CrmDashboard({ initialTab = 'whatsapp', hideHeaderTabs =
                 filteredConversations.map(conv => {
                   const isSelected = selectedConversation?.id === conv.id;
                   const lastMsg = conv.messages?.[0];
+                  const latestDraft = conv.drafts?.[0];
+                  const hasPendingDraft = latestDraft?.status === 'PENDING';
+                  const isApprovedDraft = latestDraft?.status === 'APPROVED';
+                  const hasDebt = Number(conv.persona?.outstandingBalance || 0) > 0;
 
                   return (
                     <div 
@@ -383,6 +474,30 @@ export default function CrmDashboard({ initialTab = 'whatsapp', hideHeaderTabs =
                         <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>
                           {new Date(conv.lastMessageAt).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
                         </span>
+                      </div>
+
+                      {/* Insignias de Estado Comercial del Pedido */}
+                      <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginBottom: '6px' }}>
+                        {hasPendingDraft && (
+                          <span style={{ backgroundColor: '#FEF3C7', color: '#92400E', fontSize: '0.65rem', padding: '1px 6px', borderRadius: '4px', fontWeight: 700 }}>
+                            🟡 Borrador IA Pendiente
+                          </span>
+                        )}
+                        {isApprovedDraft && (
+                          <span style={{ backgroundColor: '#D1FAE5', color: '#065F46', fontSize: '0.65rem', padding: '1px 6px', borderRadius: '4px', fontWeight: 700 }}>
+                            🟢 Pedido Concretado
+                          </span>
+                        )}
+                        {hasDebt && (
+                          <span style={{ backgroundColor: '#FEE2E2', color: '#991B1B', fontSize: '0.65rem', padding: '1px 6px', borderRadius: '4px', fontWeight: 600 }}>
+                            🔴 Deuda: ${Number(conv.persona.outstandingBalance).toLocaleString('es-AR')}
+                          </span>
+                        )}
+                        {conv.assignedUser && (
+                          <span style={{ backgroundColor: '#F1F5F9', color: '#475569', fontSize: '0.65rem', padding: '1px 6px', borderRadius: '4px', fontWeight: 600 }}>
+                            👤 {conv.assignedUser.username}
+                          </span>
+                        )}
                       </div>
 
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -528,79 +643,117 @@ export default function CrmDashboard({ initialTab = 'whatsapp', hideHeaderTabs =
             )}
           </div>
 
-          {/* Panel Derecho: Ficha Comercial del Cliente (ERP Integrado) */}
+          {/* Panel Derecho: Ficha Comercial del Cliente 360° & Derivación */}
           <div style={{ borderLeft: '1px solid var(--border-color)', padding: '16px', display: 'flex', flexDirection: 'column', gap: '14px', backgroundColor: '#FAFAFA', overflowY: 'auto' }}>
             <h4 style={{ margin: 0, fontSize: '0.88rem', textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-secondary)' }}>
               Ficha del Cliente 360° ERP
             </h4>
 
-            {selectedConversation?.persona ? (
+            {selectedConversation ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                
+                {/* Selector de Asignación / Derivación a Administrativo */}
                 <div style={{ backgroundColor: '#FFFFFF', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-                  <strong style={{ display: 'block', fontSize: '0.95rem', marginBottom: '2px', color: 'var(--text-primary)' }}>
-                    {selectedConversation.persona.name}
-                  </strong>
-                  <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '4px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                    <span>CUIT: {selectedConversation.persona.cuit || 'S/D'}</span>
-                    {selectedConversation.persona.city && <span>📍 {selectedConversation.persona.city} ({selectedConversation.persona.province || 'BsAs'})</span>}
-                    {selectedConversation.persona.route && <span>🚚 Ruta: {selectedConversation.persona.route}</span>}
-                  </div>
+                  <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>
+                    👨‍💼 Responsable del Chat:
+                  </label>
+                  <select
+                    className="input"
+                    style={{ width: '100%', fontSize: '0.82rem', padding: '6px 8px' }}
+                    value={selectedConversation.assignedSellerId || ''}
+                    onChange={(e) => handleAssignUser(selectedConversation.id, e.target.value ? Number(e.target.value) : null)}
+                  >
+                    <option value="">❓ Sin Asignar (General)</option>
+                    {systemUsers.map(u => (
+                      <option key={u.id} value={u.id}>
+                        👤 {u.username} ({u.role})
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
-                {/* Saldo de Cuenta Corriente */}
-                <div style={{ backgroundColor: '#FFFFFF', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-                  <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Saldo Cta Cte:</span>
-                  <div style={{ fontSize: '1.2rem', fontWeight: 800, color: Number(selectedConversation.persona.outstandingBalance) > 0 ? 'var(--color-corp-red)' : 'var(--color-success)', marginTop: '2px' }}>
-                    ${Number(selectedConversation.persona.outstandingBalance || 0).toLocaleString('es-AR')}
-                  </div>
-                </div>
-
-                {/* Lista de Precios y Vendedor */}
-                <div style={{ backgroundColor: '#FFFFFF', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Lista de Precios:</span>
-                    <span className="badge" style={{ backgroundColor: '#E2E8F0', color: '#1E293B', fontWeight: 700 }}>
-                      Lista {selectedConversation.persona.priceList || 'A'}
-                    </span>
-                  </div>
-                  {selectedConversation.persona.seller && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.78rem', paddingTop: '4px', borderTop: '1px border-dashed var(--border-color)' }}>
-                      <span style={{ color: 'var(--text-secondary)' }}>Vendedor Asignado:</span>
-                      <span style={{ fontWeight: 600 }}>{selectedConversation.persona.seller.name || selectedConversation.persona.seller.username}</span>
+                {selectedConversation.persona ? (
+                  <>
+                    <div style={{ backgroundColor: '#FFFFFF', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                      <strong style={{ display: 'block', fontSize: '0.95rem', marginBottom: '2px', color: 'var(--text-primary)' }}>
+                        {selectedConversation.persona.name}
+                      </strong>
+                      <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '4px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                        <span>CUIT: {selectedConversation.persona.cuit || 'S/D'}</span>
+                        {selectedConversation.persona.city && <span>📍 {selectedConversation.persona.city} ({selectedConversation.persona.province || 'BsAs'})</span>}
+                        {selectedConversation.persona.route && <span>🚚 Ruta: {selectedConversation.persona.route}</span>}
+                      </div>
                     </div>
-                  )}
-                </div>
 
-                {/* Acciones Rápidas ERP Máquina de Ventas */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '6px' }}>
-                  <button 
-                    className="btn btn-secondary" 
-                    style={{ fontSize: '0.78rem', padding: '8px 12px', display: 'flex', alignItems: 'center', gap: '6px', justifyContent: 'center' }}
-                    onClick={handleSendBalanceSummary}
-                  >
-                    <FileText size={14} />
-                    <span>💳 Enviar Saldo por WhatsApp</span>
-                  </button>
+                    {/* Saldo de Cuenta Corriente */}
+                    <div style={{ backgroundColor: '#FFFFFF', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Saldo Cta Cte:</span>
+                      <div style={{ fontSize: '1.2rem', fontWeight: 800, color: Number(selectedConversation.persona.outstandingBalance) > 0 ? 'var(--color-corp-red)' : 'var(--color-success)', marginTop: '2px' }}>
+                        ${Number(selectedConversation.persona.outstandingBalance || 0).toLocaleString('es-AR')}
+                      </div>
+                    </div>
 
-                  <button 
-                    className="btn btn-secondary" 
-                    style={{ fontSize: '0.78rem', padding: '8px 12px', display: 'flex', alignItems: 'center', gap: '6px', justifyContent: 'center' }}
-                    onClick={handleParseOrderWithAI}
-                    disabled={parsingAi}
-                  >
-                    <Sparkles size={14} style={{ color: '#E30613' }} />
-                    <span>{parsingAi ? 'Interpretando...' : '⚡ Borrador Pedido con IA'}</span>
-                  </button>
-                </div>
+                    {/* Lista de Precios */}
+                    <div style={{ backgroundColor: '#FFFFFF', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Lista de Precios:</span>
+                      <span className="badge" style={{ backgroundColor: '#E2E8F0', color: '#1E293B', fontWeight: 700 }}>
+                        Lista {selectedConversation.persona.priceList || 'A'}
+                      </span>
+                    </div>
+
+                    {/* Acciones Rápidas ERP */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '6px' }}>
+                      <button 
+                        className="btn btn-secondary" 
+                        style={{ fontSize: '0.78rem', padding: '8px 12px', display: 'flex', alignItems: 'center', gap: '6px', justifyContent: 'center' }}
+                        onClick={handleSendBalanceSummary}
+                      >
+                        <FileText size={14} />
+                        <span>💳 Enviar Saldo por WhatsApp</span>
+                      </button>
+
+                      <button 
+                        className="btn btn-secondary" 
+                        style={{ fontSize: '0.78rem', padding: '8px 12px', display: 'flex', alignItems: 'center', gap: '6px', justifyContent: 'center' }}
+                        onClick={handleParseOrderWithAI}
+                        disabled={parsingAi}
+                      >
+                        <Sparkles size={14} style={{ color: '#E30613' }} />
+                        <span>{parsingAi ? 'Interpretando...' : '⚡ Borrador Pedido con IA'}</span>
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <div style={{ backgroundColor: '#FFFFFF', padding: '14px', borderRadius: '8px', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                      Vincular a Ficha de Cliente ERP
+                    </span>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                      Selecciona el cliente del catálogo para asociar esta conversación y ver su saldo:
+                    </span>
+                    <select
+                      className="input"
+                      style={{ fontSize: '0.8rem', padding: '6px' }}
+                      value={linkingPersonaId}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setLinkingPersonaId(val);
+                        if (val) handleLinkPersona(selectedConversation.id, Number(val));
+                      }}
+                    >
+                      <option value="">-- Seleccionar Cliente ERP --</option>
+                      {allPersonas.map(p => (
+                        <option key={p.id} value={p.id}>
+                          {p.name} {p.cuit ? `(CUIT: ${p.cuit})` : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
               </div>
             ) : (
-              <div style={{ backgroundColor: '#FFFFFF', padding: '16px', borderRadius: '8px', border: '1px solid var(--border-color)', textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                <span style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
-                  Este número de WhatsApp no está asociado a ninguna Ficha de Cliente ERP.
-                </span>
-                <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                  Al vincularlo, podrás ver su cuenta corriente, lista de precios y tomar pedidos en 1 clic.
-                </span>
+              <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textAlign: 'center', padding: '20px 0' }}>
+                Selecciona una conversación para ver su Ficha Comercial.
               </div>
             )}
           </div>

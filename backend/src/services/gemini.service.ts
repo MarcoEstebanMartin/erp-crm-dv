@@ -91,6 +91,40 @@ export class GeminiService {
       throw new Error('Fallo en el procesamiento de OCR con IA: ' + error.message);
     }
   }
+
+  /**
+   * Procesa un archivo de audio (nota de voz de WhatsApp) y transfiere la voz a texto comercial.
+   */
+  async transcribeAudioOrder(mimeType: string, base64Audio: string): Promise<{ rawText: string }> {
+    if (!apiKey || apiKey === 'tu-api-key-aqui') {
+      return { rawText: 'Nota de voz recibida. Transcripción IA disponible con GEMINI_API_KEY.' };
+    }
+
+    const model = genAI.getGenerativeModel({
+      model: 'gemini-1.5-flash',
+    });
+
+    const audioPart: Part = {
+      inlineData: {
+        data: base64Audio,
+        mimeType
+      }
+    };
+
+    const prompt = `
+      Eres un asistente experto en toma de pedidos comerciales de alimentos y bebidas en Argentina.
+      Escucha esta nota de voz y transcribe textualmente los productos, cantidades y marcas solicitados.
+    `;
+
+    try {
+      const result = await model.generateContent([prompt, audioPart]);
+      const rawText = result.response.text().trim();
+      return { rawText };
+    } catch (error: any) {
+      console.error('Error procesando nota de voz con Gemini:', error);
+      return { rawText: 'Nota de voz recibida por WhatsApp.' };
+    }
+  }
 }
 
 export const geminiService = new GeminiService();

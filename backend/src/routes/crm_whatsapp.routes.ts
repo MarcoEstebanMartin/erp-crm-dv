@@ -10,6 +10,7 @@ import {
   sendDeliveryNotification,
   simulateIncomingMessage,
   linkPersonaToConversation,
+  assignConversation,
   verifyWebhook,
   handleWebhook
 } from '../controllers/crm_whatsapp.controller';
@@ -30,6 +31,7 @@ router.post('/simulate-incoming', authenticateJWT, simulateIncomingMessage);
 router.put('/conversations/:id/auto-reply', authenticateJWT, toggleAutoReply);
 router.put('/conversations/:id/stage', authenticateJWT, updateStage);
 router.put('/conversations/:id/link-persona', authenticateJWT, linkPersonaToConversation);
+router.put('/conversations/:id/assign', authenticateJWT, assignConversation);
 router.post('/orders/:orderId/notify-delivery', authenticateJWT, sendDeliveryNotification);
 router.post('/conversations/:id/parse-order', authenticateJWT, parseOrderDraft);
 router.post('/drafts/:draftId/approve', authenticateJWT, approveOrderDraft);

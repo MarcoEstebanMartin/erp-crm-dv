@@ -80,6 +80,7 @@ model User {
   routeVisits    SaleRouteVisit[]
   expenses       Expense[]
   employee       Employee?
+  crmConversations CrmConversation[] @relation("CrmAssignedUser")
 }
 
 model Persona {
@@ -1021,6 +1022,7 @@ model CrmConversation {
   stage            String   @default("LEAD") // LEAD, CONTACTED, QUOTED, WON, LOST
   autoReplyEnabled Boolean  @default(true)
   assignedSellerId Int?
+  assignedUser     User?    @relation("CrmAssignedUser", fields: [assignedSellerId], references: [id], onDelete: SetNull)
   lastMessageAt    DateTime @default(now())
   unreadCount      Int      @default(0)
   status           String   @default("ACTIVE") // ACTIVE, ARCHIVED, CLOSED
@@ -1032,6 +1034,7 @@ model CrmConversation {
 
   @@index([waId])
   @@index([personaId])
+  @@index([assignedSellerId])
   @@index([lastMessageAt])
   @@index([stage])
 }

@@ -29,12 +29,15 @@ export async function getConversations(req: AuthenticatedRequest, res: Response)
             }
           }
         },
+        assignedUser: {
+          select: { id: true, username: true, role: true }
+        },
         messages: {
           orderBy: { createdAt: 'desc' },
           take: 1
         },
         drafts: {
-          where: { status: 'PENDING' },
+          orderBy: { createdAt: 'desc' },
           take: 1
         }
       }
@@ -359,6 +362,36 @@ export async function linkPersonaToConversation(req: AuthenticatedRequest, res: 
   } catch (error: any) {
     console.error('Error al vincular persona a conversación:', error);
     res.status(500).json({ status: 'error', message: 'Error al vincular cliente.' });
+  }
+}
+
+/**
+ * Asignar / Derivar conversación a un Usuario Administrativo
+ */
+export async function assignConversation(req: AuthenticatedRequest, res: Response): Promise<void> {
+  try {
+    const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const conversationId = parseInt(rawId, 10);
+    const { assignedUserId } = req.body;
+
+    const updated = await prisma.crmConversation.update({
+      where: { id: conversationId },
+      data: {
+        assignedSellerId: assignedUserId ? Number(assignedUserId) : null
+      },
+      include: {
+        persona: true,
+        assignedUser: { select: { id: true, username: true, role: true } }
+      }
+    });
+
+    res.status(200).json({
+      status: 'success',
+      data: updated
+    });
+  } catch (error: any) {
+    console.error('Error al derivar conversación:', error);
+    res.status(500).json({ status: 'error', message: 'Error al derivar conversación.' });
   }
 }
 
