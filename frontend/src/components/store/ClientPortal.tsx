@@ -1317,7 +1317,7 @@ const styles: { [key: string]: any } = {
   },
   productImageArea: {
     height: '150px',
-    background: '#f8fafc',
+    background: '#ffffff',
     borderBottom: '1px solid #f1f5f9',
     display: 'flex',
     alignItems: 'center',
@@ -1329,7 +1329,8 @@ const styles: { [key: string]: any } = {
     width: '100%',
     height: '100%',
     objectFit: 'contain',
-    padding: '12px'
+    padding: '8px',
+    mixBlendMode: 'multiply'
   },
   productPlaceholder: {
     display: 'flex',

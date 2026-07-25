@@ -446,9 +446,21 @@ export async function getStoreCatalog(req: Request, res: Response): Promise<void
       }
     });
 
+    const getCategoryRank = (catName: string) => {
+      const normCat = catName.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().trim();
+      const idx = defaultPriorityOrder.findIndex(
+        (p) => p.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().trim() === normCat
+      );
+      return idx !== -1 ? idx : 999;
+    };
+
+    const sortedCategoryNames = Array.from(uniqueCategoryMap.values()).sort(
+      (a, b) => getCategoryRank(a) - getCategoryRank(b)
+    );
+
     const commercialCategories = [
       { id: 'all', name: 'TODOS LOS PRODUCTOS', icon: '🔥' },
-      ...Array.from(uniqueCategoryMap.values()).map((catName) => ({
+      ...sortedCategoryNames.map((catName) => ({
         id: catName.toLowerCase().replace(/\s+/g, '-'),
         name: catName,
         icon: categoryIconsMap[catName] || (RUBRO_TO_COMMERCIAL_CATEGORY[catName]?.icon) || '📦'
