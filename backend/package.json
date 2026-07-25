@@ -13,7 +13,8 @@
     "prisma:seed": "prisma db seed",
     "test": "jest",
     "db:reset-movements": "node scripts/reset_movements.js",
-    "db:backup-master": "node scripts/backup_master_data.js"
+    "db:backup-master": "node scripts/backup_master_data.js",
+    "db:audit-balances": "node scripts/audit_balances.js"
   },
   "prisma": {
     "seed": "node prisma/seed.js"
