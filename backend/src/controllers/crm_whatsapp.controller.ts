@@ -25,7 +25,7 @@ export async function getConversations(req: AuthenticatedRequest, res: Response)
             outstandingBalance: true,
             priceList: true,
             seller: {
-              select: { id: true, name: true, username: true }
+              select: { id: true, username: true }
             }
           }
         },
