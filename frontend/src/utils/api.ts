@@ -1394,6 +1394,13 @@ export const api = {
     });
   },
 
+  linkCrmPersona: async (conversationId: number, personaId: number) => {
+    return await request(`/crm/whatsapp/conversations/${conversationId}/link-persona`, {
+      method: 'PUT',
+      body: JSON.stringify({ personaId })
+    });
+  },
+
   sendCrmDeliveryNotification: async (orderId: number) => {
     return await request(`/crm/whatsapp/orders/${orderId}/notify-delivery`, {
       method: 'POST'

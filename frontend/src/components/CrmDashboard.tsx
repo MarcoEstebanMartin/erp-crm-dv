@@ -73,7 +73,7 @@ export default function CrmDashboard({ initialTab = 'whatsapp', hideHeaderTabs =
   const fetchConversations = async (targetConvId?: number) => {
     try {
       const data = await api.getCrmConversations();
-      const convList = data || [];
+      const convList = Array.isArray(data) ? data : (data?.data || []);
       setConversations(convList);
 
       // Determinar qué conversación seleccionar (por ID objetivo, por conversación previa seleccionada o la primera de la lista)
@@ -86,7 +86,8 @@ export default function CrmDashboard({ initialTab = 'whatsapp', hideHeaderTabs =
       if (convToSelect) {
         setSelectedConversation(convToSelect);
         const res = await api.getCrmMessages(convToSelect.id);
-        setMessages(res.messages || []);
+        const msgList = res?.data?.messages || res?.messages || (Array.isArray(res) ? res : []);
+        setMessages(msgList);
       }
     } catch (err: any) {
       console.error('Error al cargar conversaciones CRM:', err);
@@ -100,9 +101,10 @@ export default function CrmDashboard({ initialTab = 'whatsapp', hideHeaderTabs =
     setLoadingMessages(true);
     try {
       const res = await api.getCrmMessages(conv.id);
-      setMessages(res.messages || []);
+      const msgList = res?.data?.messages || res?.messages || (Array.isArray(res) ? res : []);
+      setMessages(msgList);
       // Actualizar conteo no leído local
-      setConversations(prev => prev.map(c => c.id === conv.id ? { ...c, unreadCount: 0 } : c));
+      setConversations(prev => (Array.isArray(prev) ? prev.map(c => c.id === conv.id ? { ...c, unreadCount: 0 } : c) : []));
     } catch (err: any) {
       console.error('Error al cargar mensajes:', err);
     } finally {
@@ -137,7 +139,10 @@ export default function CrmDashboard({ initialTab = 'whatsapp', hideHeaderTabs =
         text: replyText
       });
 
-      setMessages(prev => [...prev, res.message]);
+      const sentMsg = res?.data?.message || res?.data || res?.message;
+      if (sentMsg) {
+        setMessages(prev => [...prev, sentMsg]);
+      }
       setReplyText('');
       fetchConversations(selectedConversation.id);
     } catch (err: any) {
@@ -526,51 +531,76 @@ export default function CrmDashboard({ initialTab = 'whatsapp', hideHeaderTabs =
           {/* Panel Derecho: Ficha Comercial del Cliente (ERP Integrado) */}
           <div style={{ borderLeft: '1px solid var(--border-color)', padding: '16px', display: 'flex', flexDirection: 'column', gap: '14px', backgroundColor: '#FAFAFA', overflowY: 'auto' }}>
             <h4 style={{ margin: 0, fontSize: '0.88rem', textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-secondary)' }}>
-              Ficha del Cliente ERP
+              Ficha del Cliente 360° ERP
             </h4>
 
             {selectedConversation?.persona ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 <div style={{ backgroundColor: '#FFFFFF', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-                  <strong style={{ display: 'block', fontSize: '0.92rem', marginBottom: '2px' }}>
+                  <strong style={{ display: 'block', fontSize: '0.95rem', marginBottom: '2px', color: 'var(--text-primary)' }}>
                     {selectedConversation.persona.name}
                   </strong>
-                  <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
-                    CUIT: {selectedConversation.persona.cuit || 'S/D'}
-                  </span>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '4px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                    <span>CUIT: {selectedConversation.persona.cuit || 'S/D'}</span>
+                    {selectedConversation.persona.city && <span>📍 {selectedConversation.persona.city} ({selectedConversation.persona.province || 'BsAs'})</span>}
+                    {selectedConversation.persona.route && <span>🚚 Ruta: {selectedConversation.persona.route}</span>}
+                  </div>
                 </div>
 
                 {/* Saldo de Cuenta Corriente */}
                 <div style={{ backgroundColor: '#FFFFFF', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-                  <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Saldo Cta Cte:</span>
-                  <div style={{ fontSize: '1.1rem', fontWeight: 800, color: Number(selectedConversation.persona.outstandingBalance) > 0 ? 'var(--color-corp-red)' : 'var(--color-success)' }}>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Saldo Cta Cte:</span>
+                  <div style={{ fontSize: '1.2rem', fontWeight: 800, color: Number(selectedConversation.persona.outstandingBalance) > 0 ? 'var(--color-corp-red)' : 'var(--color-success)', marginTop: '2px' }}>
                     ${Number(selectedConversation.persona.outstandingBalance || 0).toLocaleString('es-AR')}
                   </div>
                 </div>
 
-                {/* Lista de Precios */}
-                <div style={{ backgroundColor: '#FFFFFF', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Lista Asignada:</span>
-                  <span className="badge" style={{ backgroundColor: '#E2E8F0', color: '#1E293B', fontWeight: 700 }}>
-                    Lista {selectedConversation.persona.priceList || 'A'}
-                  </span>
+                {/* Lista de Precios y Vendedor */}
+                <div style={{ backgroundColor: '#FFFFFF', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Lista de Precios:</span>
+                    <span className="badge" style={{ backgroundColor: '#E2E8F0', color: '#1E293B', fontWeight: 700 }}>
+                      Lista {selectedConversation.persona.priceList || 'A'}
+                    </span>
+                  </div>
+                  {selectedConversation.persona.seller && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.78rem', paddingTop: '4px', borderTop: '1px border-dashed var(--border-color)' }}>
+                      <span style={{ color: 'var(--text-secondary)' }}>Vendedor Asignado:</span>
+                      <span style={{ fontWeight: 600 }}>{selectedConversation.persona.seller.name || selectedConversation.persona.seller.username}</span>
+                    </div>
+                  )}
                 </div>
 
-                {/* Acciones Rápidas ERP */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '10px' }}>
+                {/* Acciones Rápidas ERP Máquina de Ventas */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '6px' }}>
                   <button 
                     className="btn btn-secondary" 
-                    style={{ fontSize: '0.78rem', padding: '8px', display: 'flex', alignItems: 'center', gap: '6px', justifyContent: 'center' }}
+                    style={{ fontSize: '0.78rem', padding: '8px 12px', display: 'flex', alignItems: 'center', gap: '6px', justifyContent: 'center' }}
                     onClick={handleSendBalanceSummary}
                   >
                     <FileText size={14} />
-                    <span>Enviar Saldo Cta Cte</span>
+                    <span>💳 Enviar Saldo por WhatsApp</span>
+                  </button>
+
+                  <button 
+                    className="btn btn-secondary" 
+                    style={{ fontSize: '0.78rem', padding: '8px 12px', display: 'flex', alignItems: 'center', gap: '6px', justifyContent: 'center' }}
+                    onClick={handleParseOrderWithAI}
+                    disabled={parsingAi}
+                  >
+                    <Sparkles size={14} style={{ color: '#E30613' }} />
+                    <span>{parsingAi ? 'Interpretando...' : '⚡ Borrador Pedido con IA'}</span>
                   </button>
                 </div>
               </div>
             ) : (
-              <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textAlign: 'center', padding: '20px 0' }}>
-                Este número aún no está vinculado a una ficha de Cliente en el ERP.
+              <div style={{ backgroundColor: '#FFFFFF', padding: '16px', borderRadius: '8px', border: '1px solid var(--border-color)', textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <span style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                  Este número de WhatsApp no está asociado a ninguna Ficha de Cliente ERP.
+                </span>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                  Al vincularlo, podrás ver su cuenta corriente, lista de precios y tomar pedidos en 1 clic.
+                </span>
               </div>
             )}
           </div>

@@ -322,6 +322,47 @@ export async function approveOrderDraft(req: AuthenticatedRequest, res: Response
 }
 
 /**
+ * Vincular una conversación CRM a una Ficha de Cliente ERP existente
+ */
+export async function linkPersonaToConversation(req: AuthenticatedRequest, res: Response): Promise<void> {
+  try {
+    const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const conversationId = parseInt(rawId, 10);
+    const { personaId } = req.body;
+
+    if (!personaId) {
+      res.status(400).json({ status: 'error', message: 'ID de persona es requerido.' });
+      return;
+    }
+
+    const persona = await prisma.persona.findUnique({ where: { id: Number(personaId) } });
+    if (!persona) {
+      res.status(404).json({ status: 'error', message: 'Cliente ERP no encontrado.' });
+      return;
+    }
+
+    const updatedConv = await prisma.crmConversation.update({
+      where: { id: conversationId },
+      data: {
+        personaId: persona.id,
+        contactName: persona.name
+      },
+      include: {
+        persona: true
+      }
+    });
+
+    res.status(200).json({
+      status: 'success',
+      data: updatedConv
+    });
+  } catch (error: any) {
+    console.error('Error al vincular persona a conversación:', error);
+    res.status(500).json({ status: 'error', message: 'Error al vincular cliente.' });
+  }
+}
+
+/**
  * Webhook de Meta: Verificación GET
  */
 export async function verifyWebhook(req: Request, res: Response): Promise<void> {
