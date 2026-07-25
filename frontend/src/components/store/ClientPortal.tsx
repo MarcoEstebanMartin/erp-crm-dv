@@ -80,6 +80,7 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({ onBackToStaffLogin }
   const [onlyOffers, setOnlyOffers] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoadingCatalog, setIsLoadingCatalog] = useState(false);
+  const [imageErrors, setImageErrors] = useState<Record<number, boolean>>({});
 
   // Carrito de compras
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -661,13 +662,13 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({ onBackToStaffLogin }
                   <div key={p.id} style={styles.productCard}>
                     {/* IMAGEN DE PRODUCTO */}
                     <div style={styles.productImageArea}>
-                      {p.imageUrl ? (
+                      {p.imageUrl && !imageErrors[p.id] ? (
                         <img
-                          src={p.imageUrl.startsWith('http') || p.imageUrl.startsWith('/uploads') ? p.imageUrl : `/uploads/products/${p.imageUrl}`}
+                          src={p.imageUrl.startsWith('http') ? p.imageUrl : (p.imageUrl.startsWith('/') ? p.imageUrl : `/uploads/products/${p.imageUrl}`)}
                           alt={p.name}
                           style={styles.productImg}
-                          onError={(e: any) => {
-                            e.currentTarget.style.display = 'none';
+                          onError={() => {
+                            setImageErrors((prev) => ({ ...prev, [p.id]: true }));
                           }}
                         />
                       ) : (
