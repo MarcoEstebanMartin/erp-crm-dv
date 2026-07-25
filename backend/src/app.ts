@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
 import fs from 'fs';
+import { errorHandler } from './middlewares/errorHandler.middleware';
 
 // Importación de Rutas
 import authRoutes from './routes/auth.routes';
@@ -43,6 +44,20 @@ if (!fs.existsSync(productsUploadsDir)) {
   fs.mkdirSync(productsUploadsDir);
 }
 
+// Middleware de rendimiento (X-Response-Time)
+app.use((req: Request, res: Response, next: NextFunction) => {
+  const start = Date.now();
+  const originalWriteHead = res.writeHead;
+  res.writeHead = function (...args: any[]) {
+    if (!res.headersSent) {
+      const duration = Date.now() - start;
+      res.setHeader('X-Response-Time', `${duration}ms`);
+    }
+    return originalWriteHead.apply(this, args as any);
+  };
+  next();
+});
+
 // Middlewares globales
 app.use(cors());
 app.use(express.json());
@@ -53,7 +68,6 @@ app.use('/uploads', express.static(uploadsDir, {
 
 const archivosDir = process.env.ARCHIVOS_PATH || path.join(__dirname, '../../ARCHIVOS');
 app.use('/api/purchases/files', express.static(archivosDir));
-
 
 // Montar Rutas
 app.use('/api/auth', authRoutes);
@@ -89,14 +103,7 @@ app.get('/api/health', (req: Request, res: Response) => {
   });
 });
 
-// Manejador global de errores
-app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
-  console.error('⚠️ Unhandled Error:', err.message || err);
-  res.status(500).json({
-    status: 'error',
-    message: err.message || 'Internal Server Error',
-    error: process.env.NODE_ENV === 'development' ? err : undefined
-  });
-});
+// Manejador global de errores atómico y resiliente
+app.use(errorHandler);
 
 export default app;

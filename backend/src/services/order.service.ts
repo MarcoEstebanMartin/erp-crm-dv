@@ -2,6 +2,7 @@ import prisma from '../utils/prisma';
 import { Role, BillingType, InvoiceType, OrderStatus, MovementType } from '@prisma/client';
 import { PricingService } from './pricing.service';
 import { PersonaService } from './persona.service';
+import { roundCurrency } from '../utils/math';
 
 const personaService = new PersonaService();
 
@@ -11,6 +12,7 @@ interface CreateOrderDto {
   personaId: number;
   billingType?: BillingType;
   items: { productId: number; quantity: number; weight?: number }[];
+  idempotencyKey?: string;
 }
 
 export class OrderService {
@@ -27,6 +29,33 @@ export class OrderService {
 
     if (userRole === Role.VENDEDOR && persona.sellerId !== sellerId) {
       throw new Error('No podés cargar un pedido para un cliente asignado a otro vendedor.');
+    }
+
+    // Detección proactiva de duplicados por idempotencia en preventa móvil (últimos 2 minutos)
+    const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000);
+    const existingRecentOrder = await prisma.order.findFirst({
+      where: {
+        sellerId,
+        personaId,
+        createdAt: { gte: twoMinutesAgo },
+        status: OrderStatus.PENDING,
+      },
+      include: { items: true },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (existingRecentOrder && existingRecentOrder.items.length === items.length) {
+      const isExactDuplicate = items.every(newItem =>
+        existingRecentOrder.items.some(
+          existingItem =>
+            existingItem.productId === newItem.productId &&
+            existingItem.quantity === newItem.quantity
+        )
+      );
+      if (isExactDuplicate) {
+        console.log(`⚠️ Pedido duplicado detectado por reconexión móvil para cliente ${personaId} (Vendedor #${sellerId}). Devolviendo pedido existente #${existingRecentOrder.id}.`);
+        return existingRecentOrder;
+      }
     }
 
     return await prisma.$transaction(async (tx) => {
@@ -76,8 +105,8 @@ export class OrderService {
         const actualQuantityForPrice = product.isPesable 
           ? (item.weight ? Number(item.weight) : item.quantity * Number((product as any).approximateWeight || 1))
           : item.quantity;
-        const subtotal = Math.round(finalUnitPrice * actualQuantityForPrice);
-        totalSum += subtotal;
+        const subtotal = roundCurrency(finalUnitPrice * actualQuantityForPrice);
+        totalSum = roundCurrency(totalSum + subtotal);
 
         orderItemsToCreate.push({
           productId: product.id,
@@ -186,14 +215,14 @@ export class OrderService {
         const weightUpdate = itemWeights.find((w) => w.orderItemId === item.id);
 
         if (item.product.isPesable && weightUpdate && weightUpdate.weight > 0) {
-          subtotal = Math.round(Number(item.unitPrice) * weightUpdate.weight);
+          subtotal = roundCurrency(Number(item.unitPrice) * weightUpdate.weight);
           await tx.orderItem.update({
             where: { id: item.id },
             data: { weight: weightUpdate.weight, subtotal },
           });
         }
 
-        newTotal += subtotal;
+        newTotal = roundCurrency(newTotal + subtotal);
       }
 
       const updatedOrder = await tx.order.update({
@@ -243,9 +272,9 @@ export class OrderService {
             weightUpdate = 0;
           } else {
             if (item.product.isPesable && weightUpdate !== null && weightUpdate > 0) {
-              subtotal = Math.round(Number(item.unitPrice) * weightUpdate);
+              subtotal = roundCurrency(Number(item.unitPrice) * weightUpdate);
             } else {
-              subtotal = Math.round(Number(item.unitPrice) * currentQuantity);
+              subtotal = roundCurrency(Number(item.unitPrice) * currentQuantity);
             }
           }
 
@@ -275,13 +304,13 @@ export class OrderService {
           });
         }
 
-        newTotal += subtotal;
+        newTotal = roundCurrency(newTotal + subtotal);
       }
 
       const updatedOrder = await tx.order.update({
         where: { id: orderId },
         data: { 
-          totalAmount: newTotal,
+          totalAmount: roundCurrency(newTotal),
           status: OrderStatus.PREPARED
         },
         include: { items: { include: { product: true } }, persona: true },

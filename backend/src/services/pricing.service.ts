@@ -1,5 +1,6 @@
 import prisma from '../utils/prisma';
 import { Persona, Product, BillingType } from '@prisma/client';
+import { roundCurrency } from '../utils/math';
 
 export class PricingService {
   /**
@@ -88,7 +89,7 @@ export class PricingService {
       }
     }
 
-    const finalPrice = Number((basePrice * (1 - discount / 100)).toFixed(2));
+    const finalPrice = roundCurrency(basePrice * (1 - discount / 100));
 
     return {
       basePrice,
@@ -181,8 +182,8 @@ export class PricingService {
       }
     }
 
-    // Mantener la precisión de 2 decimales para evitar pérdidas por redondeos unitarios prematuros
-    const finalPrice = Number((basePrice * (1 - discount / 100)).toFixed(2));
+    // Mantener la precisión financiera de 2 decimales evitando pérdidas de flotantes
+    const finalPrice = roundCurrency(basePrice * (1 - discount / 100));
 
     return {
       basePrice,
@@ -192,3 +193,4 @@ export class PricingService {
     };
   }
 }
+

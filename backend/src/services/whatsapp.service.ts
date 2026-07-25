@@ -180,8 +180,19 @@ export class WhatsAppService {
 
     let autoText: string | null = null;
 
-    // 1. Consulta de Saldo / Deuda en Cuenta Corriente
-    if (lower.includes('saldo') || lower.includes('debo') || lower.includes('deuda') || lower.includes('cuenta corriente')) {
+    // 1. Detección de Intención de Pedido de Mercadería (IA Gemini)
+    const isOrderIntent = ['pedido', 'cajon', 'cajones', 'caja', 'cajas', 'lata', 'latas', 'kilo', 'kilos', 'botella', 'botellas', 'pack', 'packs', 'mandame', 'mándame', 'quiero', 'comprar'].some(k => lower.includes(k));
+    if (isOrderIntent) {
+      try {
+        await this.parseOrderWithAI(conversation.id, inputMessage);
+        autoText = `🤖 *Asistente DV*: ¡Excelente! Registramos tu borrador de pedido en nuestro sistema. Un vendedor revisará y confirmará la preventa a la brevedad. 🛒`;
+      } catch (err: any) {
+        autoText = `🤖 *Asistente DV*: Tomamos nota de tu pedido. Un vendedor se comunicará a la brevedad para confirmar los ítems.`;
+      }
+    }
+
+    // 2. Consulta de Saldo / Deuda en Cuenta Corriente
+    else if (lower.includes('saldo') || lower.includes('debo') || lower.includes('deuda') || lower.includes('cuenta corriente')) {
       if (conversation.personaId) {
         const persona = await prisma.persona.findUnique({ where: { id: conversation.personaId } });
         if (persona) {
@@ -193,12 +204,12 @@ export class WhatsAppService {
       }
     }
     
-    // 2. Consulta de Lista de Precios / Catálogo
+    // 3. Consulta de Lista de Precios / Catálogo
     else if (lower.includes('precio') || lower.includes('lista') || lower.includes('catalogo') || lower.includes('catálogo')) {
       autoText = `🤖 *Asistente DV*: Te enviamos la información de catálogo de DV Distribuidora. También podés realizar tus pedidos online directamente en nuestra Tienda Web o dejar tu pedido anotado por este chat para que un vendedor lo apruebe.`;
     }
 
-    // 3. Consulta de Reparto / Rutas de Logística
+    // 4. Consulta de Reparto / Rutas de Logística
     else if (lower.includes('reparto') || lower.includes('camion') || lower.includes('camión') || lower.includes('cuando vienen') || lower.includes('cuándo vienen')) {
       if (conversation.personaId) {
         const persona = await prisma.persona.findUnique({ where: { id: conversation.personaId } });
@@ -208,14 +219,21 @@ export class WhatsAppService {
       }
     }
 
+    // 5. Saludo o Menú Inicial
+    else if (['hola', 'buenas', 'buen dia', 'buenos dias', 'buenas tardes', 'buenas noches', 'consulta', 'menu'].some(k => lower.includes(k))) {
+      autoText = `🤖 *Asistente DV (Bot 24/7)*: ¡Hola! Gracias por comunicarte con DV Distribuidora. ¿En qué podemos ayudarte?\n\n1️⃣ *Consulta de Saldo Cta Cte* (escribe "saldo")\n2️⃣ *Realizar un Pedido* (escribe "quiero 10 cajones de Quilmes...")\n3️⃣ *Días de Reparto* (escribe "reparto")\n4️⃣ *Catálogo y Precios* (escribe "precios")`;
+    }
+
+    // 6. Respuesta por Defecto
+    else {
+      autoText = `🤖 *Asistente DV (Bot 24/7)*: Gracias por escribirnos. Hemos recibido tu mensaje y un vendedor lo atenderá en breve. Escribe "hola" o "menu" para ver opciones automáticas.`;
+    }
+
     if (autoText) {
-      // Esperar 1 segundo para simular respuesta natural
-      setTimeout(async () => {
-        await this.sendMessage({
-          to: conversation.waId,
-          text: autoText!
-        });
-      }, 1000);
+      await this.sendMessage({
+        to: conversation.waId,
+        text: autoText
+      });
     }
   }
 

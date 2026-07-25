@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 // @ts-ignore
 import Afip from '@afipsdk/afip.js';
+import { roundCurrency } from '../utils/math';
 
 const isProduction = process.env.AFIP_PRODUCTION === 'true';
 const cuit = process.env.AFIP_CUIT || '20409378472';
@@ -87,12 +88,13 @@ export async function emitirFacturaAFIP({
     const lastVoucher = await afipClient.ElectronicBilling.getLastVoucher(puntoDeVenta, cbteTipo);
     const nextVoucherNumber = lastVoucher + 1;
 
-    // 2. Cálculos impositivos para Responsable Inscripto (IVA 21% simplificado para la distribuidora)
-    const neto = reqNeto !== undefined ? reqNeto : (invoiceType === 'A' ? Number((total / 1.21).toFixed(2)) : Math.round(total / 1.21));
-    const iva = reqIva !== undefined ? reqIva : (invoiceType === 'A' ? Number((total - neto).toFixed(2)) : (total - neto));
-    const pIIBB = Number(percepcionAmount || 0);
-    const pIVA = Number(percepcionIvaAmount || 0);
-    const impTrib = Number((pIIBB + pIVA).toFixed(2));
+    // 2. Cálculos impositivos precisos para Responsable Inscripto
+    const neto = reqNeto !== undefined ? roundCurrency(reqNeto) : roundCurrency(total / 1.21);
+    const iva = reqIva !== undefined ? roundCurrency(reqIva) : roundCurrency(total - neto);
+    const pIIBB = roundCurrency(percepcionAmount || 0);
+    const pIVA = roundCurrency(percepcionIvaAmount || 0);
+    const impTrib = roundCurrency(pIIBB + pIVA);
+    const calculatedTotal = roundCurrency(neto + iva + impTrib);
 
     // Formatear fecha en AAAAMMDD
     const fechaActual = parseInt(new Date().toISOString().replace(/-/g, '').substring(0, 8));
@@ -108,7 +110,7 @@ export async function emitirFacturaAFIP({
       CbteDesde: nextVoucherNumber,
       CbteHasta: nextVoucherNumber,
       CbteFch: fechaActual,
-      ImpTotal: total,
+      ImpTotal: calculatedTotal,
       ImpTotConc: 0,
       ImpNeto: neto,
       ImpOpEx: 0,
@@ -218,9 +220,10 @@ export async function emitirNotaCreditoAFIP({
     const lastVoucher = await afipClient.ElectronicBilling.getLastVoucher(puntoDeVenta, cbteTipo);
     const nextVoucherNumber = lastVoucher + 1;
 
-    // 2. Cálculos impositivos
-    const neto = invoiceType === 'A' ? Number((total / 1.21).toFixed(2)) : Math.round(total / 1.21);
-    const iva = invoiceType === 'A' ? Number((total - neto).toFixed(2)) : (total - neto);
+    // 2. Cálculos impositivos precisos para Nota de Crédito
+    const neto = roundCurrency(total / 1.21);
+    const iva = roundCurrency(total - neto);
+    const calculatedTotal = roundCurrency(neto + iva);
 
     // Formatear fecha en AAAAMMDD
     const fechaActual = parseInt(new Date().toISOString().replace(/-/g, '').substring(0, 8));

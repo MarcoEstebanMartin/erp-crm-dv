@@ -2056,7 +2056,7 @@ export default function UnifiedReportsDashboard({
       {/* 5. Alertas + IA */}
       {activeTab === 'crm' && (
         <div className="fade-in">
-          <CrmDashboard />
+          <CrmDashboard initialTab="alerts" hideHeaderTabs={true} />
         </div>
       )}
 

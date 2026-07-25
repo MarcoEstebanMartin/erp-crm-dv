@@ -9,6 +9,7 @@ import OrdersTab from './admin/OrdersTab';
 import ProductsTab from './admin/ProductsTab';
 import ConfigTab from './admin/ConfigTab';
 import ClientProfileModal from './modals/ClientProfileModal';
+import SellerProfileModal from './modals/SellerProfileModal';
 import EditOrderModal from './modals/EditOrderModal';
 import ProductModal from './modals/ProductModal';
 import ClientModal from './modals/ClientModal';
@@ -149,6 +150,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
 
   // Estados para cuenta corriente y cobros
   const [clientProfileModal, setClientProfileModal] = useState<{ open: boolean; client: any; ledger: any[] } | null>(null);
+  const [sellerProfileModal, setSellerProfileModal] = useState<{ open: boolean; sellerId: number } | null>(null);
   const [paymentModal, setPaymentModal] = useState<{ open: boolean; clientId: number; clientName: string } | null>(null);
   const [fastInvoiceOrder, setFastInvoiceOrder] = useState<any | null>(null);
   const [paymentAmount, setPaymentAmount] = useState('');
@@ -380,6 +382,13 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
     }
   };
 
+  const handleViewSellerProfile = (seller: any) => {
+    setSellerProfileModal({
+      open: true,
+      sellerId: seller.id
+    });
+  };
+
   const handleRefreshClientProfile = async (clientId: number) => {
     try {
       const data = await api.getPersonaLedger(clientId);
@@ -483,7 +492,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
         setClients(allClients);
         const allProducts = await api.getProducts('', true);
         setProducts(allProducts);
-      } else if (activeTab === 'reportes') {
+      } else if (activeTab === 'reportes' || activeTab === 'reports') {
         const stats = await api.getFinancialReports();
         setFinancialReport(stats);
         const dataUsers = await api.getUsers();
@@ -1352,6 +1361,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
           setShowResumenModal={setShowResumenModal}
           setPaymentModal={setPaymentModal}
           handleViewClientProfile={handleViewClientProfile}
+          handleViewSellerProfile={handleViewSellerProfile}
           clientsVersion={clientsVersion}
         />
       )}
@@ -1445,7 +1455,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
             {/* ====================================================================
           9. REPORTES Y MARGENES (UNIFIED REPORTS)
           ==================================================================== */}
-      {activeTab === 'reportes' && (
+      {(activeTab === 'reportes' || activeTab === 'reports') && (
         <Suspense fallback={<LoadingDashboard />}>
           <UnifiedReportsDashboard orders={orders} users={users} clients={clients} products={products} financialReport={financialReport} />
         </Suspense>
@@ -1932,7 +1942,6 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
         onClose={() => { setImportZipModalOpen(false); fetchData(); }} 
       />
 
-      {/* 5. Ficha de Cliente y Extracto de Cuenta Corriente */}
       <ClientProfileModal 
         clientProfileModal={clientProfileModal}
         setClientProfileModal={setClientProfileModal}
@@ -1942,6 +1951,17 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
         setSuccessMsg={setSuccessMsg}
         setErrorMsg={setErrorMsg}
       />
+
+      {/* 5b. Ficha Real del Vendedor */}
+      {sellerProfileModal && sellerProfileModal.open && (
+        <SellerProfileModal
+          sellerId={sellerProfileModal.sellerId}
+          onClose={() => setSellerProfileModal(null)}
+          onOpenReport={(sellerId) => {
+            setActiveTab('reports');
+          }}
+        />
+      )}
 
       {/* Modal Registrar Cobro */}
       {paymentModal && paymentModal.open && (

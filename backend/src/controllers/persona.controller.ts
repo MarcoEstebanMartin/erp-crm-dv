@@ -270,6 +270,26 @@ export async function getSellers(req: AuthenticatedRequest, res: Response): Prom
 }
 
 /**
+ * Obtener estadísticas y perfil completo de un vendedor.
+ */
+export async function getSellerProfileStats(req: AuthenticatedRequest, res: Response): Promise<void> {
+  const { id } = req.params;
+  const userId = req.user?.id;
+  if (!userId) {
+    res.status(401).json({ status: 'error', message: 'No autorizado.' });
+    return;
+  }
+
+  try {
+    const profileData = await personaService.getSellerProfileStats(Number(id));
+    res.status(200).json({ status: 'success', data: profileData });
+  } catch (error: any) {
+    console.error('Error obteniendo perfil de vendedor:', error);
+    res.status(500).json({ status: 'error', message: error.message || 'Error al obtener perfil de vendedor.' });
+  }
+}
+
+/**
  * Registrar una visita fallida a un cliente (No Venta).
  */
 export async function recordVisit(req: AuthenticatedRequest, res: Response): Promise<void> {

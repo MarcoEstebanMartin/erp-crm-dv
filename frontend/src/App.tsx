@@ -1,14 +1,14 @@
 import { useState, useEffect, lazy, Suspense } from 'react';
+import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { api } from './utils/api';
 import Sidebar from './components/Sidebar';
 import Login from './components/Login';
 import ReceiptView from './components/ReceiptView';
 import QuickPriceSearchModal from './components/modals/QuickPriceSearchModal';
+import AdminPages from './pages/admin/AdminPages';
+import VendedorPages from './pages/vendedor/VendedorPages';
+import DepositoPages from './pages/deposito/DepositoPages';
 
-// Carga diferida de los dashboards principales
-const AdminDashboard = lazy(() => import('./components/AdminDashboard'));
-const VendedorDashboard = lazy(() => import('./components/VendedorDashboard'));
-const DepositoDashboard = lazy(() => import('./components/DepositoDashboard'));
 const ClientPortal = lazy(() => import('./components/store/ClientPortal'));
 
 const LoadingSpinner = () => (
@@ -30,12 +30,14 @@ const LoadingSpinner = () => (
   </div>
 );
 
-
 function App() {
   const [user, setUser] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<string>('');
   const [isQuickSearchModalOpen, setIsQuickSearchModalOpen] = useState(false);
   const [isStoreMode, setIsStoreMode] = useState<boolean>(window.location.pathname.startsWith('/tienda'));
+
+  const location = useLocation();
+  const navigate = useNavigate();
 
   // Atajo de teclado global Ctrl + Q para consulta de precios
   useEffect(() => {
@@ -55,9 +57,8 @@ function App() {
       let currentUser = api.getCurrentUser();
       if (currentUser) {
         setUser(currentUser);
-        setDefaultTabForRole(currentUser.role);
         
-        // Refetch to sync latest config and user data
+        // Sync usuario
         currentUser = await api.getMe();
         if (currentUser) {
           setUser(currentUser);
@@ -69,25 +70,18 @@ function App() {
     init();
   }, []);
 
-
-
-  const setDefaultTabForRole = (role: string) => {
-    if (role === 'ADMIN') {
-      setActiveTab('dashboard');
-    } else if (role === 'FACTURACION') {
-      setActiveTab('dashboard');
-    } else if (role === 'VENDEDOR') {
-      setActiveTab('orders');
-    } else if (role === 'DEPOSITO') {
-      setActiveTab('deposito');
-    }
+  const getDefaultRouteForRole = (role: string) => {
+    if (role === 'ADMIN' || role === 'FACTURACION') return '/admin/dashboard';
+    if (role === 'VENDEDOR') return '/vendedor/orders';
+    if (role === 'DEPOSITO') return '/deposito/picking';
+    return '/';
   };
 
   const handleLoginSuccess = () => {
     const currentUser = api.getCurrentUser();
     setUser(currentUser);
     if (currentUser) {
-      setDefaultTabForRole(currentUser.role);
+      navigate(getDefaultRouteForRole(currentUser.role));
     }
   };
 
@@ -95,20 +89,24 @@ function App() {
     api.logout();
     setUser(null);
     setActiveTab('');
+    navigate('/');
   };
 
   // Interceptar ruta o modo para Tienda Online / Portal Clientes
-  if (isStoreMode || window.location.pathname.startsWith('/tienda')) {
+  if (isStoreMode || location.pathname.startsWith('/tienda')) {
     return (
       <Suspense fallback={<LoadingSpinner />}>
-        <ClientPortal onBackToStaffLogin={() => setIsStoreMode(false)} />
+        <ClientPortal onBackToStaffLogin={() => {
+          setIsStoreMode(false);
+          navigate('/');
+        }} />
       </Suspense>
     );
   }
 
   // Interceptar ruta para recibos compartidos
-  if (window.location.pathname.startsWith('/recibo/')) {
-    const receiptId = window.location.pathname.split('/recibo/')[1];
+  if (location.pathname.startsWith('/recibo/')) {
+    const receiptId = location.pathname.split('/recibo/')[1];
     return <ReceiptView receiptId={receiptId} />;
   }
 
@@ -116,28 +114,6 @@ function App() {
   if (!user) {
     return <Login onLoginSuccess={handleLoginSuccess} onOpenStore={() => setIsStoreMode(true)} />;
   }
-
-  // Renderizado del Dashboard correspondiente
-  const renderDashboard = () => {
-    switch (user.role) {
-      case 'ADMIN':
-      case 'FACTURACION':
-        return <AdminDashboard activeTab={activeTab} setActiveTab={setActiveTab} />;
-      case 'VENDEDOR':
-        return <VendedorDashboard activeTab={activeTab} setActiveTab={setActiveTab} />;
-      case 'DEPOSITO':
-        return <DepositoDashboard activeTab={activeTab} setActiveTab={setActiveTab} />;
-      default:
-        return (
-          <div className="card">
-            <h2>Acceso Denegado</h2>
-            <p>El rol del usuario es inválido o no posee un panel asignado.</p>
-          </div>
-        );
-    }
-  };
-
-
 
   return (
     <div className="layout-app">
@@ -150,11 +126,21 @@ function App() {
       />
       
       <main className="main-content">
-
-
         <section style={{ animation: 'fadeIn 0.4s cubic-bezier(0.25, 1, 0.5, 1)', paddingTop: user.role === 'VENDEDOR' ? '20px' : '0' }}>
           <Suspense fallback={<LoadingSpinner />}>
-            {renderDashboard()}
+            <Routes>
+              {/* Rutas de Administración */}
+              <Route path="/admin/:tab?" element={<AdminPages setActiveTab={setActiveTab} />} />
+
+              {/* Rutas de Vendedores */}
+              <Route path="/vendedor/:tab?" element={<VendedorPages setActiveTab={setActiveTab} />} />
+
+              {/* Rutas de Depósito */}
+              <Route path="/deposito/:tab?" element={<DepositoPages setActiveTab={setActiveTab} />} />
+
+              {/* Redirección por defecto */}
+              <Route path="*" element={<Navigate to={getDefaultRouteForRole(user.role)} replace />} />
+            </Routes>
           </Suspense>
         </section>
       </main>

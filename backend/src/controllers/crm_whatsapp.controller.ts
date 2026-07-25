@@ -19,8 +19,14 @@ export async function getConversations(req: AuthenticatedRequest, res: Response)
             name: true,
             cuit: true,
             phone: true,
+            city: true,
+            province: true,
+            route: true,
             outstandingBalance: true,
-            priceList: true
+            priceList: true,
+            seller: {
+              select: { id: true, name: true, username: true }
+            }
           }
         },
         messages: {
@@ -41,6 +47,38 @@ export async function getConversations(req: AuthenticatedRequest, res: Response)
   } catch (error: any) {
     console.error('Error al obtener conversaciones CRM:', error);
     res.status(500).json({ status: 'error', message: 'Error interno del servidor.' });
+  }
+}
+
+/**
+ * Simular mensaje entrante de WhatsApp (Sandbox de Pruebas)
+ */
+export async function simulateIncomingMessage(req: AuthenticatedRequest, res: Response): Promise<void> {
+  try {
+    const { fromPhone, profileName, text } = req.body;
+
+    if (!fromPhone || !text) {
+      res.status(400).json({ status: 'error', message: 'Teléfono y texto son requeridos para la simulación.' });
+      return;
+    }
+
+    const cleanWaId = fromPhone.replace(/\D/g, '');
+    const simulatedMetaMsg = {
+      from: cleanWaId,
+      id: `sim_${Date.now()}_${Math.random().toString(36).substring(7)}`,
+      text: { body: text },
+      profile: { name: profileName || `Cliente ${cleanWaId}` }
+    };
+
+    const result = await whatsAppService.handleIncomingMessage(simulatedMetaMsg);
+
+    res.status(200).json({
+      status: 'success',
+      data: result
+    });
+  } catch (error: any) {
+    console.error('Error al simular mensaje de WhatsApp:', error);
+    res.status(500).json({ status: 'error', message: 'Error en el simulador de WhatsApp.' });
   }
 }
 

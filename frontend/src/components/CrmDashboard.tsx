@@ -16,12 +16,23 @@ import {
   Search,
   CheckCheck,
   FileText,
-  Clock
+  Clock,
+  Bot,
+  Kanban,
+  FlaskConical
 } from 'lucide-react';
 import OrderDraftApprovalModal from './modals/OrderDraftApprovalModal';
+import WhatsAppSimulatorModal from './modals/WhatsAppSimulatorModal';
+import CrmWholesaleBoard from './crm/CrmWholesaleBoard';
 
-export default function CrmDashboard() {
-  const [activeTab, setActiveTab] = useState<'whatsapp' | 'alerts'>('whatsapp');
+interface CrmDashboardProps {
+  initialTab?: 'whatsapp' | 'pipeline' | 'alerts';
+  hideHeaderTabs?: boolean;
+}
+
+export default function CrmDashboard({ initialTab = 'whatsapp', hideHeaderTabs = false }: CrmDashboardProps) {
+  const [activeTab, setActiveTab] = useState<'whatsapp' | 'pipeline' | 'alerts'>(initialTab);
+  const [showSimulatorModal, setShowSimulatorModal] = useState(false);
   
   // Estados de Alertas Inteligentes
   const [alerts, setAlerts] = useState<any | null>(null);
@@ -59,13 +70,23 @@ export default function CrmDashboard() {
   };
 
   // Cargar Conversaciones CRM
-  const fetchConversations = async () => {
-    setLoadingConversations(true);
+  const fetchConversations = async (targetConvId?: number) => {
     try {
       const data = await api.getCrmConversations();
-      setConversations(data || []);
-      if (data && data.length > 0 && !selectedConversation) {
-        handleSelectConversation(data[0]);
+      const convList = data || [];
+      setConversations(convList);
+
+      // Determinar qué conversación seleccionar (por ID objetivo, por conversación previa seleccionada o la primera de la lista)
+      const convToSelect = targetConvId 
+        ? convList.find((c: any) => c.id === targetConvId) 
+        : selectedConversation 
+          ? convList.find((c: any) => c.id === selectedConversation.id) 
+          : (convList.length > 0 ? convList[0] : null);
+
+      if (convToSelect) {
+        setSelectedConversation(convToSelect);
+        const res = await api.getCrmMessages(convToSelect.id);
+        setMessages(res.messages || []);
       }
     } catch (err: any) {
       console.error('Error al cargar conversaciones CRM:', err);
@@ -90,9 +111,19 @@ export default function CrmDashboard() {
   };
 
   useEffect(() => {
+    setLoadingConversations(true);
     fetchConversations();
     fetchCRMAlerts();
-  }, []);
+
+    // Polling en tiempo real cada 4 segundos cuando estamos en la pestaña WhatsApp
+    const interval = setInterval(() => {
+      if (activeTab === 'whatsapp') {
+        fetchConversations();
+      }
+    }, 4000);
+
+    return () => clearInterval(interval);
+  }, [activeTab]);
 
   // Enviar mensaje de respuesta
   const handleSendMessage = async (e: React.FormEvent) => {
@@ -108,7 +139,7 @@ export default function CrmDashboard() {
 
       setMessages(prev => [...prev, res.message]);
       setReplyText('');
-      fetchConversations();
+      fetchConversations(selectedConversation.id);
     } catch (err: any) {
       setErrorMsg('Error al enviar el mensaje de WhatsApp.');
     } finally {
@@ -144,14 +175,25 @@ export default function CrmDashboard() {
     setReplyText(text);
   };
 
+  // Toggle Auto-Reply 24/7 (Bot)
+  const handleToggleAutoReply = async (convId: number, enabled: boolean) => {
+    try {
+      const updated = await api.toggleCrmAutoReply(convId, enabled);
+      setSelectedConversation((prev: any) => prev ? { ...prev, autoReplyEnabled: updated.autoReplyEnabled } : null);
+      setConversations((prev: any[]) => prev.map((c: any) => c.id === convId ? { ...c, autoReplyEnabled: updated.autoReplyEnabled } : c));
+    } catch (err: any) {
+      setErrorMsg('Error al modificar auto-respuesta del bot.');
+    }
+  };
+
   // Filtrar conversaciones
   const filteredConversations = useMemo(() => {
     if (!searchFilter) return conversations;
     const term = searchFilter.toLowerCase();
     return conversations.filter(c => 
       c.contactName?.toLowerCase().includes(term) || 
-      c.waId.includes(term) ||
-      c.persona?.name.toLowerCase().includes(term)
+      c.waId?.includes(term) ||
+      c.persona?.name?.toLowerCase().includes(term)
     );
   }, [conversations, searchFilter]);
 
@@ -234,30 +276,53 @@ export default function CrmDashboard() {
       )}
 
       {/* Selector de Pestañas (Stripe Style) */}
-      <div style={{ display: 'flex', gap: '8px', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
-        <button 
-          className={`btn ${activeTab === 'whatsapp' ? 'btn-primary' : 'btn-ghost'}`}
-          onClick={() => setActiveTab('whatsapp')}
-          style={{ display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '8px' }}
-        >
-          <MessageSquare size={16} />
-          <span>Inbox WhatsApp CRM</span>
-          {conversations.some(c => c.unreadCount > 0) && (
-            <span style={{ backgroundColor: 'var(--color-corp-red)', color: 'white', fontSize: '0.7rem', padding: '2px 6px', borderRadius: '10px', fontWeight: 700 }}>
-              {conversations.reduce((acc, c) => acc + (c.unreadCount || 0), 0)}
-            </span>
-          )}
-        </button>
+      {!hideHeaderTabs && (
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button 
+              className={`btn ${activeTab === 'whatsapp' ? 'btn-primary' : 'btn-ghost'}`}
+              onClick={() => setActiveTab('whatsapp')}
+              style={{ display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '8px' }}
+            >
+              <MessageSquare size={16} />
+              <span>Inbox WhatsApp CRM</span>
+              {conversations.some(c => c.unreadCount > 0) && (
+                <span style={{ backgroundColor: 'var(--color-corp-red)', color: 'white', fontSize: '0.7rem', padding: '2px 6px', borderRadius: '10px', fontWeight: 700 }}>
+                  {conversations.reduce((acc, c) => acc + (c.unreadCount || 0), 0)}
+                </span>
+              )}
+            </button>
 
-        <button 
-          className={`btn ${activeTab === 'alerts' ? 'btn-primary' : 'btn-ghost'}`}
-          onClick={() => setActiveTab('alerts')}
-          style={{ display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '8px' }}
-        >
-          <Sparkles size={16} />
-          <span>Alertas Inteligentes (Stock / Churn / Lotes)</span>
-        </button>
-      </div>
+            <button 
+              className={`btn ${activeTab === 'pipeline' ? 'btn-primary' : 'btn-ghost'}`}
+              onClick={() => setActiveTab('pipeline')}
+              style={{ display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '8px' }}
+            >
+              <Kanban size={16} />
+              <span>Tablero Mayorista & Segmentación</span>
+            </button>
+
+            <button 
+              className={`btn ${activeTab === 'alerts' ? 'btn-primary' : 'btn-ghost'}`}
+              onClick={() => setActiveTab('alerts')}
+              style={{ display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '8px' }}
+            >
+              <Sparkles size={16} />
+              <span>Alertas Inteligentes (Stock / Churn / Lotes)</span>
+            </button>
+          </div>
+
+          <button
+            type="button"
+            className="btn btn-secondary"
+            style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', backgroundColor: '#ECFDF5', color: '#047857', borderColor: '#A7F3D0', fontWeight: 600 }}
+            onClick={() => setShowSimulatorModal(true)}
+          >
+            <FlaskConical size={15} />
+            <span>🧪 Simular Mensaje Entrante (Sandbox)</span>
+          </button>
+        </div>
+      )}
 
       {/* ====================================================================
           PESTAÑA 1: INBOX WHATSAPP CRM (ATENCIÓN INTELIGENTE + IA)
@@ -348,6 +413,24 @@ export default function CrmDashboard() {
                   </div>
 
                   <div style={{ display: 'flex', gap: '8px' }}>
+                    <button
+                      type="button"
+                      className={`btn ${selectedConversation.autoReplyEnabled !== false ? 'btn-primary' : 'btn-secondary'}`}
+                      style={{ 
+                        padding: '6px 10px', 
+                        fontSize: '0.75rem', 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: '6px',
+                        backgroundColor: selectedConversation.autoReplyEnabled !== false ? '#10B981' : undefined,
+                        borderColor: selectedConversation.autoReplyEnabled !== false ? '#10B981' : undefined
+                      }}
+                      onClick={() => handleToggleAutoReply(selectedConversation.id, !selectedConversation.autoReplyEnabled)}
+                    >
+                      <Bot size={14} />
+                      <span>{selectedConversation.autoReplyEnabled !== false ? '🤖 Bot 24/7 Activo' : '🤖 Bot Pausado'}</span>
+                    </button>
+
                     <button 
                       className="btn btn-secondary" 
                       style={{ padding: '6px 10px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '6px' }}
@@ -355,7 +438,7 @@ export default function CrmDashboard() {
                       disabled={parsingAi}
                     >
                       <Sparkles size={14} style={{ color: '#4F46E5' }} />
-                      <span>{parsingAi ? 'Analizando...' : '⚡ Parsear Pedido (IA)'}</span>
+                      <span>{parsingAi ? 'Analizando...' : '⚡ Armar Pedido (IA)'}</span>
                     </button>
 
                     <a 
@@ -496,7 +579,21 @@ export default function CrmDashboard() {
       )}
 
       {/* ====================================================================
-          PESTAÑA 2: ALERTAS INTELIGENTES (STOCK / CHURN / LOTES)
+          PESTAÑA 2: EMBUDO DE VENTAS (PIPELINE KANBAN CRM)
+          ==================================================================== */}
+      {activeTab === 'pipeline' && (
+        <CrmWholesaleBoard 
+          conversations={conversations}
+          onRefresh={fetchConversations}
+          onSelectConversation={(conv) => {
+            handleSelectConversation(conv);
+            setActiveTab('whatsapp');
+          }}
+        />
+      )}
+
+      {/* ====================================================================
+          PESTAÑA 3: ALERTAS INTELIGENTES (STOCK / CHURN / LOTES)
           ==================================================================== */}
       {activeTab === 'alerts' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -836,6 +933,17 @@ export default function CrmDashboard() {
             </form>
           </div>
         </div>
+      )}
+
+      {/* MODAL: SIMULADOR DE WHATSAPP SANDBOX */}
+      {showSimulatorModal && (
+        <WhatsAppSimulatorModal 
+          onClose={() => setShowSimulatorModal(false)}
+          onSimulated={(convId) => {
+            fetchConversations(convId);
+            setSuccessMsg('⚡ Mensaje simulado ingresado con éxito. ¡Revisa la conversación y las respuestas automáticas del Bot!');
+          }}
+        />
       )}
 
       {/* Estilos para animaciones */}

@@ -245,6 +245,11 @@ export const api = {
     return res.sellers;
   },
 
+  getSellerProfileStats: async (id: number) => {
+    const res = await request(`/personas/sellers/${id}/profile`);
+    return res;
+  },
+
   recordClientVisit: async (id: number, reason: string, notes?: string | null) => {
     const res = await request(`/personas/${id}/visit`, {
       method: 'POST',
@@ -1392,6 +1397,20 @@ export const api = {
   sendCrmDeliveryNotification: async (orderId: number) => {
     return await request(`/crm/whatsapp/orders/${orderId}/notify-delivery`, {
       method: 'POST'
+    });
+  },
+
+  simulateCrmIncomingMessage: async (data: { fromPhone: string; profileName?: string; text: string }) => {
+    return await request('/crm/whatsapp/simulate-incoming', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  },
+
+  broadcastCrmCampaign: async (data: { campaignId: number; targetSegment: string; routeName?: string }) => {
+    return await request('/crm/whatsapp/campaigns/broadcast', {
+      method: 'POST',
+      body: JSON.stringify(data)
     });
   },
 

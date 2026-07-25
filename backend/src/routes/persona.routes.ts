@@ -10,6 +10,7 @@ import {
   getPersonaPendingInvoices,
   getDebtorsReport,
   getSellers,
+  getSellerProfileStats,
   recordVisit,
   deletePersona,
 } from '../controllers/persona.controller';
@@ -29,6 +30,7 @@ const router = Router();
 router.get('/', authenticateJWT, getPersonas);
 router.get('/debtors-report', authenticateJWT, getDebtorsReport);
 router.get('/sellers', authenticateJWT, getSellers);
+router.get('/sellers/:id/profile', authenticateJWT, getSellerProfileStats);
 router.get('/afip/:cuit', authenticateJWT, getAfipData);
 router.get('/:id', authenticateJWT, getPersonaById);
 router.get('/:id/ledger', authenticateJWT, getPersonaLedger);

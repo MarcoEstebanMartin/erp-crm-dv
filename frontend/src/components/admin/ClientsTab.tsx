@@ -9,6 +9,7 @@ interface ClientsTabProps {
   setShowResumenModal: (client: any) => void;
   setPaymentModal: (modal: any) => void;
   handleViewClientProfile: (client: any) => void;
+  handleViewSellerProfile?: (seller: any) => void;
   clientsVersion?: number;
 }
 
@@ -54,6 +55,7 @@ export default function ClientsTab({
   setShowResumenModal,
   setPaymentModal,
   handleViewClientProfile,
+  handleViewSellerProfile,
   clientsVersion
 }: ClientsTabProps) {
   // Local tab state
@@ -77,28 +79,44 @@ export default function ClientsTab({
   const [availableSaleRoutes, setAvailableSaleRoutes] = useState<any[]>([]);
   const [updatingClientId, setUpdatingClientId] = useState<number | null>(null);
 
-  // Load clients or debtors report
-  const loadTabContent = async () => {
-    setLoading(true);
-    try {
-      if (personaRoleFilter === 'debtors_by_city') {
-        const report = await api.getDebtorsReport();
-        setDebtorsReport(report.debtors || []);
-        const cities = [...(report.availableCities || [])] as string[];
-        const sortedCities = cities.sort();
-        setAvailableCities(sortedCities);
-        setSelectedCities(sortedCities);
-      } else {
-        const roleParam = personaRoleFilter;
-        const data = await api.getPersonas(roleParam, searchQuery);
-        setClients(data || []);
+  // Load clients or debtors report with race condition prevention
+  useEffect(() => {
+    let isCurrent = true;
+
+    const loadTabContent = async () => {
+      setLoading(true);
+      try {
+        if (personaRoleFilter === 'debtors_by_city') {
+          const report = await api.getDebtorsReport();
+          if (!isCurrent) return;
+          setDebtorsReport(report.debtors || []);
+          const cities = [...(report.availableCities || [])] as string[];
+          const sortedCities = cities.sort();
+          setAvailableCities(sortedCities);
+          setSelectedCities(sortedCities);
+        } else {
+          const roleParam = personaRoleFilter;
+          const data = await api.getPersonas(roleParam, searchQuery);
+          if (!isCurrent) return;
+          setClients(data || []);
+        }
+      } catch (err) {
+        if (isCurrent) {
+          console.error('Error loading clients tab data:', err);
+        }
+      } finally {
+        if (isCurrent) {
+          setLoading(false);
+        }
       }
-    } catch (err) {
-      console.error('Error loading clients tab data:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
+
+    loadTabContent();
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [personaRoleFilter, searchQuery, clientsVersion]);
 
   // Fetch lists for sellers/routes
   useEffect(() => {
@@ -114,10 +132,6 @@ export default function ClientsTab({
     };
     fetchMetadata();
   }, []);
-
-  useEffect(() => {
-    loadTabContent();
-  }, [personaRoleFilter, searchQuery, clientsVersion]);
 
   useEffect(() => {
     setSelectedCityFilter('ALL');
@@ -623,11 +637,12 @@ export default function ClientsTab({
             <table>
               <thead>
                 <tr>
-                  <th>Nombre Comercial / Razón Social</th>
+                  <th>{personaRoleFilter === 'seller' ? 'Vendedor / Nombre' : 'Nombre Comercial / Razón Social'}</th>
                   <th>CUIT</th>
                   <th>Contacto</th>
                   {personaRoleFilter === 'client' && <th style={{ whiteSpace: 'nowrap', minWidth: '110px' }}>Cta Cte</th>}
-                  <th>Saldo C/C</th>
+                  {personaRoleFilter !== 'seller' && <th>Saldo C/C</th>}
+                  {personaRoleFilter === 'seller' && <th>Zonas / Rutas de Preventa</th>}
                   {personaRoleFilter === 'client' && <th>Ruta</th>}
                   <th>Acción</th>
                 </tr>
@@ -767,7 +782,25 @@ export default function ClientsTab({
                             )}
                           </td>
                         )}
-                        <td style={{ fontWeight: 600, color: balanceColor }}>{balanceText}</td>
+                        {personaRoleFilter !== 'seller' && (
+                          <td style={{ fontWeight: 600, color: balanceColor }}>{balanceText}</td>
+                        )}
+                        {personaRoleFilter === 'seller' && (
+                          <td style={{ fontWeight: 500 }}>
+                            <span style={{ 
+                              display: 'inline-block', 
+                              padding: '4px 10px', 
+                              fontSize: '0.78rem', 
+                              fontWeight: 600, 
+                              backgroundColor: 'rgba(227, 6, 19, 0.08)', 
+                              color: '#E30613', 
+                              borderRadius: '6px',
+                              textTransform: 'uppercase'
+                            }}>
+                              📍 {c.saleRoute?.name || c.route || c.city || 'General Villegas y zonas'}
+                            </span>
+                          </td>
+                        )}
                         {personaRoleFilter === 'client' && (
                           <td style={{ fontWeight: 500 }}>
                             {c.saleRoute?.name ? (
@@ -803,12 +836,24 @@ export default function ClientsTab({
                         )}
                         <td>
                           <div style={{ display: 'flex', gap: '8px' }}>
-                            <button className="btn btn-secondary" style={{ padding: '6px 10px', fontSize: '0.8rem' }} onClick={() => handleViewClientProfile(c)}>
-                              Ver Ficha
-                            </button>
-                            <button className="btn btn-secondary" style={{ padding: '6px 10px', fontSize: '0.8rem' }} onClick={() => setShowResumenModal(c)}>
-                              Resumen de Cta
-                            </button>
+                            {personaRoleFilter === 'seller' ? (
+                              <button 
+                                className="btn btn-primary" 
+                                style={{ padding: '6px 12px', fontSize: '0.8rem', backgroundColor: '#0f172a', borderColor: '#0f172a' }} 
+                                onClick={() => handleViewSellerProfile ? handleViewSellerProfile(c) : handleViewClientProfile(c)}
+                              >
+                                Ver Ficha de Vendedor
+                              </button>
+                            ) : (
+                              <>
+                                <button className="btn btn-secondary" style={{ padding: '6px 10px', fontSize: '0.8rem' }} onClick={() => handleViewClientProfile(c)}>
+                                  Ver Ficha
+                                </button>
+                                <button className="btn btn-secondary" style={{ padding: '6px 10px', fontSize: '0.8rem' }} onClick={() => setShowResumenModal(c)}>
+                                  Resumen de Cta
+                                </button>
+                              </>
+                            )}
                           </div>
                         </td>
                       </tr>

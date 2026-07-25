@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { RefreshCw, Plus, Calendar, Tag, FileText, Trash2, Edit, Copy } from 'lucide-react';
+import { RefreshCw, Plus, Calendar, Tag, FileText, Trash2, Edit, Copy, Megaphone } from 'lucide-react';
 import { API_BASE_URL } from '../../utils/api';
 import CampaignEditor from './CampaignEditor';
 import OffersCatalogGenerator from './OffersCatalogGenerator';
 import ConfirmModal from '../modals/ConfirmModal';
 import PromptModal from '../modals/PromptModal';
+import CampaignBroadcastModal from '../modals/CampaignBroadcastModal';
 
 interface OfferCampaign {
   id: number;
@@ -21,6 +22,8 @@ export default function OffersDashboard() {
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<'list' | 'editor' | 'pdf'>('list');
   const [selectedCampaignId, setSelectedCampaignId] = useState<number | null>(null);
+  const [broadcastCampaignModal, setBroadcastCampaignModal] = useState<any | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   useEffect(() => {
     if (view === 'list') {
@@ -213,6 +216,12 @@ export default function OffersDashboard() {
 
   return (
     <div className="fade-in" style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
+      {successMsg && (
+        <div style={{ backgroundColor: 'var(--color-success-bg)', borderLeft: '4px solid var(--color-success)', color: 'var(--text-primary)', padding: '12px 16px', borderRadius: '8px', fontSize: '0.88rem', marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span>{successMsg}</span>
+          <button className="btn btn-ghost" style={{ padding: '2px' }} onClick={() => setSuccessMsg(null)}>✕</button>
+        </div>
+      )}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
         <div>
           <h2 style={{ fontSize: '24px', fontWeight: 'bold', color: 'var(--text-primary)', marginBottom: '8px' }}>
@@ -314,6 +323,14 @@ export default function OffersDashboard() {
                   <Copy size={16} />
                 </button>
                 <button 
+                  onClick={() => setBroadcastCampaignModal(camp)}
+                  className="btn-secondary"
+                  style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '6px', backgroundColor: '#EEF2FF', color: '#4F46E5', borderColor: '#C7D2FE', fontWeight: 600 }}
+                  title="Difundir Ofertas por WhatsApp"
+                >
+                  <Megaphone size={16} /> WhatsApp
+                </button>
+                <button 
                   onClick={() => { setSelectedCampaignId(camp.id); setView('pdf'); }}
                   className="btn-primary"
                   style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '6px', backgroundColor: '#e30613' }}
@@ -356,6 +373,15 @@ export default function OffersDashboard() {
         onConfirm={promptModal.onConfirm}
         onCancel={() => setPromptModal(prev => ({ ...prev, isOpen: false }))}
       />
+
+      {/* Modal de Difusión de Ofertas por WhatsApp */}
+      {broadcastCampaignModal && (
+        <CampaignBroadcastModal 
+          campaign={broadcastCampaignModal}
+          onClose={() => setBroadcastCampaignModal(null)}
+          onSuccess={(msg) => setSuccessMsg(msg)}
+        />
+      )}
     </div>
   );
 }
