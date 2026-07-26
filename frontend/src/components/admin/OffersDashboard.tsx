@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { RefreshCw, Plus, Calendar, Tag, FileText, Trash2, Edit, Copy, Megaphone } from 'lucide-react';
+import { RefreshCw, Plus, Calendar, Tag, FileText, Trash2, Edit, Copy, Megaphone, Wand2 } from 'lucide-react';
 import { API_BASE_URL } from '../../utils/api';
 import CampaignEditor from './CampaignEditor';
 import OffersCatalogGenerator from './OffersCatalogGenerator';
 import ConfirmModal from '../modals/ConfirmModal';
 import PromptModal from '../modals/PromptModal';
 import CampaignBroadcastModal from '../modals/CampaignBroadcastModal';
+import WeeklyOfferWizardModal from '../modals/WeeklyOfferWizardModal';
 
 interface OfferCampaign {
   id: number;
@@ -23,6 +24,7 @@ export default function OffersDashboard() {
   const [view, setView] = useState<'list' | 'editor' | 'pdf'>('list');
   const [selectedCampaignId, setSelectedCampaignId] = useState<number | null>(null);
   const [broadcastCampaignModal, setBroadcastCampaignModal] = useState<any | null>(null);
+  const [wizardModalOpen, setWizardModalOpen] = useState(false);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   useEffect(() => {
@@ -240,11 +242,29 @@ export default function OffersDashboard() {
             <RefreshCw size={18} /> Actualizar
           </button>
           <button 
+            onClick={() => setWizardModalOpen(true)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '10px 16px',
+              backgroundColor: '#8b5cf6',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              fontWeight: 'bold',
+              cursor: 'pointer',
+              boxShadow: '0 2px 4px rgba(139, 92, 246, 0.2)'
+            }}
+          >
+            <Wand2 size={18} /> Asistente Semanal
+          </button>
+          <button 
             onClick={createCampaign}
             className="btn-primary"
             style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
           >
-            <Plus size={18} /> Nueva Campaña
+            <Plus size={18} /> Nueva Vacía
           </button>
         </div>
       </div>
@@ -382,6 +402,16 @@ export default function OffersDashboard() {
           onSuccess={(msg) => setSuccessMsg(msg)}
         />
       )}
+
+      {/* Modal Asistente Semanal de Rotación */}
+      <WeeklyOfferWizardModal
+        isOpen={wizardModalOpen}
+        onClose={() => setWizardModalOpen(false)}
+        onCampaignCreated={(id) => {
+          setSelectedCampaignId(id);
+          setView('editor');
+        }}
+      />
     </div>
   );
 }

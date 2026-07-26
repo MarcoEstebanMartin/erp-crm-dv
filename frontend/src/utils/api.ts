@@ -1241,6 +1241,11 @@ export const api = {
     return res;
   },
 
+  getWeeklyOfferRecommendations: async () => {
+    const res = await request('/offers/recommendations');
+    return res;
+  },
+
   addBulkCampaignItems: async (campaignId: number, items: { productId: number, offerPrice: number, specialTag: string | null }[]) => {
     const res = await request(`/offers/${campaignId}/items/bulk`, {
       method: 'POST',

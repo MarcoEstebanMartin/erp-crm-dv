@@ -316,3 +316,95 @@ export const addBulkCampaignItems = async (req: Request, res: Response) => {
     res.status(500).json({ error: 'Error adding items to campaign' });
   }
 };
+
+// Recomendaciones semanales inteligentes de rotación
+export const getWeeklyOfferRecommendations = async (req: Request, res: Response) => {
+  try {
+    const products = await prisma.product.findMany({
+      where: { isActive: true },
+      include: {
+        rubro: true,
+        lots: {
+          where: { stock: { gt: 0 } },
+          orderBy: { expirationDate: 'asc' }
+        },
+        offerCampaignItems: {
+          include: {
+            campaign: true
+          },
+          orderBy: { createdAt: 'desc' },
+          take: 1
+        }
+      }
+    });
+
+    const fortyFiveDaysFromNow = new Date();
+    fortyFiveDaysFromNow.setDate(fortyFiveDaysFromNow.getDate() + 45);
+
+    const groupedMap: Record<string, any[]> = {};
+
+    for (const p of products) {
+      const category = p.commercialCategory || p.rubro?.name || 'Varios';
+      if (!groupedMap[category]) groupedMap[category] = [];
+
+      let reason = 'Rotación regular de catálogo';
+      let score = 50;
+      let suggestedTag: string | null = null;
+      let suggestedPrice = Number(p.listPrice);
+
+      const earliestLot = p.lots[0];
+      if (earliestLot && earliestLot.expirationDate && new Date(earliestLot.expirationDate) <= fortyFiveDaysFromNow) {
+        reason = `Lote próximo a vencer (${new Date(earliestLot.expirationDate).toLocaleDateString('es-AR')})`;
+        score += 40;
+        suggestedTag = '🔥 OPORTUNIDAD';
+        suggestedPrice = Math.round(Number(p.listPrice) * 0.9);
+      } else if (p.stock > 40) {
+        reason = `Exceso de inventario (${p.stock} un.)`;
+        score += 30;
+        suggestedTag = '💥 MEGA OFERTA';
+      } else if (!p.offerCampaignItems || p.offerCampaignItems.length === 0) {
+        reason = 'Sin oferta en campañas previas';
+        score += 20;
+      } else {
+        const lastCampaignDate = p.offerCampaignItems[0]?.campaign?.createdAt;
+        if (lastCampaignDate) {
+          const daysDiff = Math.floor((Date.now() - new Date(lastCampaignDate).getTime()) / (1000 * 60 * 60 * 24));
+          if (daysDiff > 14) {
+            reason = `Rotación (${Math.floor(daysDiff / 7)} sem. sin oferta)`;
+            score += 25;
+          }
+        }
+      }
+
+      groupedMap[category].push({
+        id: p.id,
+        sku: p.sku,
+        name: p.name,
+        stock: p.stock,
+        listPrice: Number(p.listPrice),
+        suggestedPrice,
+        suggestedTag,
+        category,
+        reason,
+        score
+      });
+    }
+
+    const resultByGroup: Record<string, any[]> = {};
+    for (const [cat, items] of Object.entries(groupedMap)) {
+      items.sort((a, b) => b.score - a.score);
+      resultByGroup[cat] = items.slice(0, 6);
+    }
+
+    res.json({
+      status: 'success',
+      data: {
+        recommendationsByGroup: resultByGroup
+      }
+    });
+  } catch (error) {
+    console.error('Error in getWeeklyOfferRecommendations:', error);
+    res.status(500).json({ error: 'Error generating weekly offer recommendations' });
+  }
+};
+
