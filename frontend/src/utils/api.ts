@@ -1236,6 +1236,16 @@ export const api = {
     return await api.deleteSplitBillingConfig(id);
   },
 
+  createCampaign: async (data: { title: string; startDate?: string; endDate?: string; isActive?: boolean }) => {
+    const res = await fetch(`${API_BASE_URL}/offers`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(data)
+    });
+    if (!res.ok) throw new Error('Error al crear campaña');
+    return await res.json();
+  },
+
   getCampaignSuggestions: async () => {
     const res = await request('/offers/suggestions');
     return res;
