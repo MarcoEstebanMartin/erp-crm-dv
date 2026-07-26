@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import ProductsList from '../ProductsList';
 import StockDashboard from '../StockDashboard';
-import RubrosList from '../RubrosList';
+import OffersDashboard from './OffersDashboard';
 
 interface ProductsTabProps {
   products: any[];
@@ -10,6 +10,7 @@ interface ProductsTabProps {
   handleUpdateProductInline: (updatedProduct: any) => void;
   onOpenImportZip?: () => void;
   onUploadImage?: (productId: number, file: File) => Promise<void>;
+  initialCatalogTab?: 'products' | 'offers' | 'inactive_products' | 'stock';
 }
 
 export default function ProductsTab({
@@ -18,9 +19,10 @@ export default function ProductsTab({
   setProductModal,
   handleUpdateProductInline,
   onOpenImportZip,
-  onUploadImage
+  onUploadImage,
+  initialCatalogTab = 'products'
 }: ProductsTabProps) {
-  const [catalogTab, setCatalogTab] = useState<'products' | 'inactive_products' | 'rubros' | 'stock'>('products');
+  const [catalogTab, setCatalogTab] = useState<'products' | 'offers' | 'inactive_products' | 'stock'>(initialCatalogTab);
   const [searchQuery, setSearchQuery] = useState('');
 
   return (
@@ -34,11 +36,11 @@ export default function ProductsTab({
           {catalogTab === 'products' && <div style={{ position: 'absolute', bottom: '-13px', left: 0, right: 0, height: '2px', backgroundColor: 'var(--color-primary)' }} />}
         </div>
         <div 
-          style={{ cursor: 'pointer', fontWeight: catalogTab === 'inactive_products' ? 600 : 400, color: catalogTab === 'inactive_products' ? 'var(--color-primary)' : 'var(--text-secondary)', position: 'relative' }}
-          onClick={() => setCatalogTab('inactive_products')}
+          style={{ cursor: 'pointer', fontWeight: catalogTab === 'offers' ? 600 : 400, color: catalogTab === 'offers' ? 'var(--color-primary)' : 'var(--text-secondary)', position: 'relative' }}
+          onClick={() => setCatalogTab('offers')}
         >
-          Productos Inactivos
-          {catalogTab === 'inactive_products' && <div style={{ position: 'absolute', bottom: '-13px', left: 0, right: 0, height: '2px', backgroundColor: 'var(--color-primary)' }} />}
+          Ofertas y Promociones
+          {catalogTab === 'offers' && <div style={{ position: 'absolute', bottom: '-13px', left: 0, right: 0, height: '2px', backgroundColor: 'var(--color-primary)' }} />}
         </div>
         <div 
           style={{ cursor: 'pointer', fontWeight: catalogTab === 'stock' ? 600 : 400, color: catalogTab === 'stock' ? 'var(--color-primary)' : 'var(--text-secondary)', position: 'relative' }}
@@ -48,11 +50,11 @@ export default function ProductsTab({
           {catalogTab === 'stock' && <div style={{ position: 'absolute', bottom: '-13px', left: 0, right: 0, height: '2px', backgroundColor: 'var(--color-primary)' }} />}
         </div>
         <div 
-          style={{ cursor: 'pointer', fontWeight: catalogTab === 'rubros' ? 600 : 400, color: catalogTab === 'rubros' ? 'var(--color-primary)' : 'var(--text-secondary)', position: 'relative' }}
-          onClick={() => setCatalogTab('rubros')}
+          style={{ cursor: 'pointer', fontWeight: catalogTab === 'inactive_products' ? 600 : 400, color: catalogTab === 'inactive_products' ? 'var(--color-primary)' : 'var(--text-secondary)', position: 'relative' }}
+          onClick={() => setCatalogTab('inactive_products')}
         >
-          Gestión de Rubros
-          {catalogTab === 'rubros' && <div style={{ position: 'absolute', bottom: '-13px', left: 0, right: 0, height: '2px', backgroundColor: 'var(--color-primary)' }} />}
+          Productos Inactivos
+          {catalogTab === 'inactive_products' && <div style={{ position: 'absolute', bottom: '-13px', left: 0, right: 0, height: '2px', backgroundColor: 'var(--color-primary)' }} />}
         </div>
       </div>
 
@@ -69,6 +71,10 @@ export default function ProductsTab({
         />
       )}
 
+      {catalogTab === 'offers' && (
+        <OffersDashboard />
+      )}
+
       {catalogTab === 'stock' && (
         <StockDashboard 
           products={products}
@@ -76,12 +82,7 @@ export default function ProductsTab({
         />
       )}
 
-      {catalogTab === 'rubros' && (
-        <RubrosList 
-          onRubroUpdated={fetchData} 
-        />
-      )}
-
     </div>
   );
 }
+
