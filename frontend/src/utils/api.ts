@@ -645,6 +645,13 @@ export const api = {
     });
   },
 
+  createBulkExpenses: async (data: { expenses: Array<{ amount: number; categoryId: number; description: string; date?: string; paymentMethod?: string; cashDrawerId?: number; bankAccountId?: number; vehicleId?: number; billingType?: string }>; targetDate?: string }) => {
+    return await request('/expenses/bulk', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  },
+
   deleteExpenseNew: async (id: number) => {
     return await request(`/expenses/${id}`, {
       method: 'DELETE'
@@ -1078,6 +1085,48 @@ export const api = {
   },
 
   // --- RUTAS DE PREVENTA & VISITAS ---
+  getWeeklySchedule: async () => {
+    const res = await request('/weekly-schedule');
+    return res.data || res;
+  },
+
+  setCurrentWeek: async (weekType: string) => {
+    const res = await request('/weekly-schedule/toggle-week', {
+      method: 'POST',
+      body: JSON.stringify({ weekType })
+    });
+    return res.data || res;
+  },
+
+  createWeeklyScheduleItem: async (data: any) => {
+    const res = await request('/weekly-schedule', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+    return res.data || res;
+  },
+
+  updateWeeklyScheduleItem: async (id: number, data: any) => {
+    const res = await request(`/weekly-schedule/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    });
+    return res.data || res;
+  },
+
+  deleteWeeklyScheduleItem: async (id: number) => {
+    return await request(`/weekly-schedule/${id}`, {
+      method: 'DELETE'
+    });
+  },
+
+  seedWeeklyScheduleDefaults: async () => {
+    const res = await request('/weekly-schedule/seed-defaults', {
+      method: 'POST'
+    });
+    return res.data || res;
+  },
+
   getSaleRoutes: async () => {
     return await request('/sale-routes');
   },

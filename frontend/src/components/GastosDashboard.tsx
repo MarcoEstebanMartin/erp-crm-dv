@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../utils/api';
-import { DollarSign, Plus, Trash2, X, RefreshCw, Calendar, FileText, CheckCircle, Tag, Truck, UploadCloud, AlertCircle, Filter, Check, FileSpreadsheet, TrendingDown, Info, Car } from 'lucide-react';
+import { DollarSign, Plus, Trash2, X, RefreshCw, Calendar, FileText, CheckCircle, Tag, Truck, UploadCloud, AlertCircle, Filter, Check, FileSpreadsheet, TrendingDown, Info, Car, Copy } from 'lucide-react';
 import { useConfirm } from '../context/ConfirmContext';
 
 interface ExpenseCategory {
@@ -49,6 +49,15 @@ export default function GastosDashboard() {
   // Modales
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  
+  // Modal de clonación / copia de gastos
+  const [isCopyModalOpen, setIsCopyModalOpen] = useState(false);
+  const [copySourceYear, setCopySourceYear] = useState<number>(selectedYear);
+  const [copySourceMonth, setCopySourceMonth] = useState<number>(selectedMonth === 1 ? 12 : selectedMonth - 1);
+  const [copyTargetDate, setCopyTargetDate] = useState<string>(`${selectedYear}-${String(selectedMonth).padStart(2, '0')}-01`);
+  const [sourceExpenses, setSourceExpenses] = useState<any[]>([]);
+  const [loadingSource, setLoadingSource] = useState(false);
+  const [submittingCopy, setSubmittingCopy] = useState(false);
   
   // Formulario nuevo gasto
   const [newAmount, setNewAmount] = useState('');
@@ -242,6 +251,77 @@ export default function GastosDashboard() {
     setNewBillingType('INTERNAL');
   };
 
+  // Handlers para clonación de gastos del mes anterior
+  const openCopyModal = () => {
+    const srcMonth = selectedMonth === 1 ? 12 : selectedMonth - 1;
+    const srcYear = selectedMonth === 1 ? selectedYear - 1 : selectedYear;
+    setCopySourceMonth(srcMonth);
+    setCopySourceYear(srcYear);
+    setCopyTargetDate(`${selectedYear}-${String(selectedMonth).padStart(2, '0')}-01`);
+    setIsCopyModalOpen(true);
+    fetchSourceExpenses(srcYear, srcMonth);
+  };
+
+  const fetchSourceExpenses = async (year: number, month: number) => {
+    setLoadingSource(true);
+    try {
+      const data = await api.getExpensesList({ year, month });
+      const mapped = (data || []).map((exp: any) => ({
+        id: exp.id,
+        selected: true,
+        amount: String(exp.amount),
+        description: exp.description,
+        categoryId: exp.categoryId,
+        categoryName: exp.category?.name || 'General',
+        paymentMethod: exp.paymentMethod || 'CASH',
+        bankAccountId: exp.bankAccountId || undefined,
+        vehicleId: exp.vehicleId || undefined
+      }));
+      setSourceExpenses(mapped);
+    } catch (e) {
+      console.error('Error al cargar gastos del mes de origen:', e);
+    } finally {
+      setLoadingSource(false);
+    }
+  };
+
+  const handleExecuteCopy = async () => {
+    const selectedItems = sourceExpenses.filter(item => item.selected && Number(item.amount) > 0);
+    if (selectedItems.length === 0) {
+      setErrorMsg('Debe seleccionar al menos un gasto válido para clonar.');
+      return;
+    }
+
+    setSubmittingCopy(true);
+    setErrorMsg(null);
+    try {
+      const payload = selectedItems.map(item => ({
+        amount: Number(item.amount),
+        categoryId: item.categoryId,
+        description: item.description,
+        date: copyTargetDate,
+        paymentMethod: item.paymentMethod,
+        bankAccountId: item.bankAccountId,
+        vehicleId: item.vehicleId
+      }));
+
+      const res = await api.createBulkExpenses({
+        expenses: payload,
+        targetDate: copyTargetDate
+      });
+
+      setSuccessMsg(res.message || `Se clonaron ${selectedItems.length} gastos con éxito para ${getMonthName(selectedMonth)} ${selectedYear}.`);
+      setIsCopyModalOpen(false);
+      fetchExpenses();
+      setTimeout(() => setSuccessMsg(null), 4000);
+    } catch (err: any) {
+      console.error(err);
+      setErrorMsg(err.message || 'Error al clonar los gastos.');
+    } finally {
+      setSubmittingCopy(false);
+    }
+  };
+
   // Cálculos estadísticos
   const totalGasto = expenses.reduce((sum, e) => sum + Number(e.amount), 0);
   
@@ -328,6 +408,16 @@ export default function GastosDashboard() {
           </p>
         </div>
         <div style={{ display: 'flex', gap: '12px' }}>
+          <button 
+            className="btn btn-secondary" 
+            onClick={openCopyModal}
+            title="Copiar los gastos fijos del mes anterior para este período"
+            style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px' }}
+          >
+            <Copy size={16} />
+            <span>Copiar Mes Anterior</span>
+          </button>
+
           <button 
             className="btn btn-secondary" 
             onClick={() => setIsImportModalOpen(true)}
@@ -869,6 +959,317 @@ export default function GastosDashboard() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Clonar / Copiar Gastos del Mes Anterior */}
+      {isCopyModalOpen && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          padding: '16px'
+        }}>
+          <div className="card" style={{
+            width: '100%',
+            maxWidth: '900px',
+            maxHeight: '90vh',
+            display: 'flex',
+            flexDirection: 'column',
+            backgroundColor: 'var(--bg-card)',
+            borderRadius: '12px',
+            overflow: 'hidden',
+            boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04)'
+          }}>
+            {/* Cabecera Modal */}
+            <div style={{
+              padding: '16px 24px',
+              borderBottom: '1px solid var(--border-color)',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              backgroundColor: 'var(--bg-hover)'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{
+                  padding: '8px',
+                  backgroundColor: 'rgba(227, 6, 19, 0.1)',
+                  color: 'var(--color-corp-red)',
+                  borderRadius: '8px',
+                  display: 'flex'
+                }}>
+                  <Copy size={20} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                    Clonar Gastos de {getMonthName(copySourceMonth)} {copySourceYear}
+                  </h3>
+                  <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                    Generación masiva para {getMonthName(selectedMonth)} {selectedYear}. Podés editar los montos antes de confirmar.
+                  </p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setIsCopyModalOpen(false)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Configuración Origen y Destino */}
+            <div style={{
+              padding: '16px 24px',
+              backgroundColor: 'var(--bg-hover)',
+              borderBottom: '1px solid var(--border-color)',
+              display: 'flex',
+              gap: '16px',
+              flexWrap: 'wrap',
+              alignItems: 'center'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <label style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Mes Origen:</label>
+                <select
+                  value={copySourceMonth}
+                  onChange={(e) => {
+                    const m = Number(e.target.value);
+                    setCopySourceMonth(m);
+                    fetchSourceExpenses(copySourceYear, m);
+                  }}
+                  className="select"
+                  style={{ padding: '6px 10px', fontSize: '0.85rem', borderRadius: '6px' }}
+                >
+                  {[1,2,3,4,5,6,7,8,9,10,11,12].map(m => (
+                    <option key={m} value={m}>{getMonthName(m)}</option>
+                  ))}
+                </select>
+                <select
+                  value={copySourceYear}
+                  onChange={(e) => {
+                    const y = Number(e.target.value);
+                    setCopySourceYear(y);
+                    fetchSourceExpenses(y, copySourceMonth);
+                  }}
+                  className="select"
+                  style={{ padding: '6px 10px', fontSize: '0.85rem', borderRadius: '6px' }}
+                >
+                  <option value={2026}>2026</option>
+                  <option value={2025}>2025</option>
+                </select>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: 'auto' }}>
+                <label style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Fecha de registro en {getMonthName(selectedMonth)}:</label>
+                <input
+                  type="date"
+                  value={copyTargetDate}
+                  onChange={(e) => setCopyTargetDate(e.target.value)}
+                  className="input"
+                  style={{ padding: '6px 10px', fontSize: '0.85rem', borderRadius: '6px', width: '150px' }}
+                />
+              </div>
+            </div>
+
+            {/* Contenido Tabla Editable */}
+            <div style={{ padding: '16px 24px', overflowY: 'auto', flex: 1 }}>
+              {loadingSource ? (
+                <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-secondary)' }}>
+                  <RefreshCw size={24} className="spin" style={{ margin: '0 auto 10px' }} />
+                  <p style={{ fontSize: '0.9rem' }}>Cargando gastos del período de origen...</p>
+                </div>
+              ) : sourceExpenses.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-secondary)' }}>
+                  <AlertCircle size={32} style={{ margin: '0 auto 10px', color: '#f59e0b' }} />
+                  <p style={{ fontWeight: 600 }}>No se encontraron gastos en {getMonthName(copySourceMonth)} {copySourceYear}.</p>
+                  <p style={{ fontSize: '0.85rem' }}>Selecciona otro mes de origen arriba para clonar sus registros.</p>
+                </div>
+              ) : (
+                <>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <button
+                        type="button"
+                        className="btn btn-secondary"
+                        onClick={() => {
+                          const allSelected = sourceExpenses.every(s => s.selected);
+                          setSourceExpenses(sourceExpenses.map(s => ({ ...s, selected: !allSelected })));
+                        }}
+                        style={{ padding: '4px 10px', fontSize: '0.8rem' }}
+                      >
+                        {sourceExpenses.every(s => s.selected) ? 'Desmarcar Todos' : 'Marcar Todos'}
+                      </button>
+                      <span style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                        {sourceExpenses.filter(s => s.selected).length} de {sourceExpenses.length} seleccionados
+                      </span>
+                    </div>
+
+                    <div style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                      Total Lote: <span style={{ color: 'var(--color-corp-red)' }}>
+                        ${sourceExpenses
+                          .filter(s => s.selected)
+                          .reduce((sum, s) => sum + (Number(s.amount) || 0), 0)
+                          .toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                  </div>
+
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                    <thead>
+                      <tr style={{ borderBottom: '2px solid var(--border-color)', textAlign: 'left' }}>
+                        <th style={{ padding: '8px', width: '40px' }}>✓</th>
+                        <th style={{ padding: '8px' }}>Descripción</th>
+                        <th style={{ padding: '8px' }}>Categoría</th>
+                        <th style={{ padding: '8px', width: '160px' }}>Monto ($)</th>
+                        <th style={{ padding: '8px', width: '140px' }}>Medio Pago</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {sourceExpenses.map((item, index) => (
+                        <tr 
+                          key={item.id || index}
+                          style={{
+                            borderBottom: '1px solid var(--border-color)',
+                            backgroundColor: item.selected ? 'transparent' : 'var(--bg-hover)',
+                            opacity: item.selected ? 1 : 0.5
+                          }}
+                        >
+                          <td style={{ padding: '8px', textAlign: 'center' }}>
+                            <input
+                              type="checkbox"
+                              checked={item.selected}
+                              onChange={(e) => {
+                                const updated = [...sourceExpenses];
+                                updated[index].selected = e.target.checked;
+                                setSourceExpenses(updated);
+                              }}
+                              style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+                            />
+                          </td>
+                          <td style={{ padding: '8px' }}>
+                            <input
+                              type="text"
+                              value={item.description}
+                              disabled={!item.selected}
+                              onChange={(e) => {
+                                const updated = [...sourceExpenses];
+                                updated[index].description = e.target.value;
+                                setSourceExpenses(updated);
+                              }}
+                              className="input"
+                              style={{ width: '100%', padding: '4px 8px', fontSize: '0.85rem' }}
+                            />
+                          </td>
+                          <td style={{ padding: '8px', color: 'var(--text-secondary)' }}>
+                            <span style={{
+                              padding: '2px 8px',
+                              backgroundColor: 'var(--bg-hover)',
+                              borderRadius: '4px',
+                              border: '1px solid var(--border-color)',
+                              fontSize: '0.78rem'
+                            }}>
+                              {item.categoryName}
+                            </span>
+                          </td>
+                          <td style={{ padding: '8px' }}>
+                            <input
+                              type="number"
+                              step="0.01"
+                              value={item.amount}
+                              disabled={!item.selected}
+                              onChange={(e) => {
+                                const updated = [...sourceExpenses];
+                                updated[index].amount = e.target.value;
+                                setSourceExpenses(updated);
+                              }}
+                              className="input"
+                              style={{
+                                width: '100%',
+                                padding: '4px 8px',
+                                fontSize: '0.88rem',
+                                fontWeight: 600,
+                                textAlign: 'right',
+                                color: item.selected ? 'var(--text-primary)' : 'inherit'
+                              }}
+                            />
+                          </td>
+                          <td style={{ padding: '8px' }}>
+                            <select
+                              value={item.paymentMethod}
+                              disabled={!item.selected}
+                              onChange={(e) => {
+                                const updated = [...sourceExpenses];
+                                updated[index].paymentMethod = e.target.value;
+                                setSourceExpenses(updated);
+                              }}
+                              className="select"
+                              style={{ width: '100%', padding: '4px 6px', fontSize: '0.8rem' }}
+                            >
+                              <option value="CASH">Efectivo</option>
+                              <option value="BANK_TRANSFER">Transferencia</option>
+                            </select>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </>
+              )}
+            </div>
+
+            {/* Footer Modal */}
+            <div style={{
+              padding: '16px 24px',
+              borderTop: '1px solid var(--border-color)',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              backgroundColor: 'var(--bg-hover)'
+            }}>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => setIsCopyModalOpen(false)}
+                disabled={submittingCopy}
+              >
+                Cancelar
+              </button>
+
+              <button
+                type="button"
+                className="btn"
+                onClick={handleExecuteCopy}
+                disabled={submittingCopy || loadingSource || sourceExpenses.filter(s => s.selected).length === 0}
+                style={{
+                  backgroundColor: 'var(--color-corp-red)',
+                  color: '#fff',
+                  padding: '8px 20px',
+                  fontWeight: 600,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}
+              >
+                {submittingCopy ? (
+                  <>
+                    <RefreshCw size={16} className="spin" />
+                    <span>Generando Gastos...</span>
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle size={16} />
+                    <span>Generar {sourceExpenses.filter(s => s.selected).length} Gastos en {getMonthName(selectedMonth)}</span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}

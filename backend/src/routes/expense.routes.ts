@@ -4,6 +4,7 @@ import {
   createCategory,
   getExpenses,
   createExpense,
+  createBulkExpenses,
   deleteExpense,
   importExpenses
 } from '../controllers/expense.controller';
@@ -21,6 +22,7 @@ router.post('/categories', authenticateJWT, requireRole([Role.ADMIN]), createCat
 // Rutas de gastos
 router.get('/', authenticateJWT, requireRole([Role.ADMIN, Role.FACTURACION]), getExpenses);
 router.post('/', authenticateJWT, requireRole([Role.ADMIN, Role.FACTURACION]), createExpense);
+router.post('/bulk', authenticateJWT, requireRole([Role.ADMIN, Role.FACTURACION]), createBulkExpenses);
 router.delete('/:id', authenticateJWT, requireRole([Role.ADMIN]), deleteExpense);
 
 // Importación desde Excel

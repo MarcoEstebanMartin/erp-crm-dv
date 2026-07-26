@@ -536,3 +536,121 @@ export async function importExpenses(req: AuthenticatedRequest, res: Response): 
     res.status(500).json({ status: 'error', message: 'Error interno al procesar el archivo Excel.' });
   }
 }
+
+/**
+ * Registrar un lote (bulk) de gastos clonados o creados masivamente en una sola transacción.
+ */
+export async function createBulkExpenses(req: AuthenticatedRequest, res: Response): Promise<void> {
+  const { expenses, targetDate } = req.body;
+  const userId = req.user?.id;
+
+  if (!userId) {
+    res.status(401).json({ status: 'error', message: 'No autenticado.' });
+    return;
+  }
+
+  if (!Array.isArray(expenses) || expenses.length === 0) {
+    res.status(400).json({ status: 'error', message: 'Debe enviar al menos un gasto para registrar en lote.' });
+    return;
+  }
+
+  const defaultExpenseDate = targetDate ? new Date(targetDate) : new Date();
+
+  try {
+    const insertedExpenses = await prisma.$transaction(async (tx) => {
+      const results = [];
+
+      for (const item of expenses) {
+        const expAmount = Number(item.amount);
+        if (isNaN(expAmount) || expAmount <= 0) continue;
+        if (!item.categoryId || !item.description?.trim()) continue;
+
+        let transactionId: number | undefined = undefined;
+        const itemDate = item.date ? new Date(item.date) : defaultExpenseDate;
+        const paymentMethod = (item.paymentMethod as PaymentMethod) || PaymentMethod.CASH;
+
+        // Registrar transacción de caja o banco si está especificado el origen de fondos
+        if (paymentMethod === PaymentMethod.CASH && item.cashDrawerId) {
+          const activeDrawer = await tx.cashDrawer.findUnique({
+            where: { id: Number(item.cashDrawerId) }
+          });
+          if (activeDrawer && activeDrawer.status === 'OPEN') {
+            const trans = await tx.transaction.create({
+              data: {
+                userId,
+                billingType: (item.billingType as BillingType) || (activeDrawer.branch === 'A' ? BillingType.OFFICIAL : BillingType.INTERNAL),
+                type: TransactionType.OUTCOME,
+                paymentMethod: PaymentMethod.CASH,
+                amount: expAmount,
+                description: `Gasto (Clonado): ${item.description.trim()}`,
+                cashDrawerId: activeDrawer.id,
+                verified: true
+              }
+            });
+            transactionId = trans.id;
+          }
+        } else if (paymentMethod === PaymentMethod.BANK_TRANSFER && item.bankAccountId) {
+          const bankAcc = await tx.bankAccount.findUnique({
+            where: { id: Number(item.bankAccountId) }
+          });
+          if (bankAcc) {
+            await tx.bankAccount.update({
+              where: { id: bankAcc.id },
+              data: { balance: { decrement: expAmount } }
+            });
+            const trans = await tx.transaction.create({
+              data: {
+                userId,
+                billingType: (item.billingType as BillingType) || BillingType.INTERNAL,
+                type: TransactionType.OUTCOME,
+                paymentMethod: PaymentMethod.BANK_TRANSFER,
+                amount: expAmount,
+                description: `Gasto (Clonado): ${item.description.trim()}`,
+                bankAccountId: bankAcc.id,
+                verified: true
+              }
+            });
+            transactionId = trans.id;
+          }
+        }
+
+        const exp = await tx.expense.create({
+          data: {
+            amount: expAmount,
+            date: itemDate,
+            description: item.description.trim(),
+            categoryId: Number(item.categoryId),
+            userId,
+            paymentMethod,
+            cashDrawerId: item.cashDrawerId ? Number(item.cashDrawerId) : undefined,
+            bankAccountId: item.bankAccountId ? Number(item.bankAccountId) : undefined,
+            vehicleId: item.vehicleId ? Number(item.vehicleId) : undefined,
+            transactionId
+          },
+          include: { category: true }
+        });
+        results.push(exp);
+      }
+
+      return results;
+    });
+
+    await logAudit({
+      userId,
+      action: 'BULK_CREATE_EXPENSES',
+      entityType: 'Expense',
+      entityId: 0,
+      newValues: { count: insertedExpenses.length, targetDate }
+    });
+
+    res.status(201).json({
+      status: 'success',
+      message: `Se crearon ${insertedExpenses.length} gastos con éxito.`,
+      data: { count: insertedExpenses.length, expenses: insertedExpenses }
+    });
+  } catch (error: any) {
+    console.error('Error al registrar lote de gastos:', error);
+    res.status(500).json({ status: 'error', message: error.message || 'Error al guardar el lote de gastos.' });
+  }
+}
+
