@@ -387,7 +387,7 @@ export default function OffersCatalogGenerator({ campaignId, onBack }: OffersCat
                             <div style={{ flex: 1, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', padding: '10px 20px 0px 20px', position: 'relative', minHeight: columnsCount === 2 ? '200px' : '140px' }}>
                               {item.product.imageUrl ? (
                                 <img 
-                                  src={`http://${window.location.hostname}:3000${item.product.imageUrl}`} 
+                                  src={item.product.imageUrl.startsWith('http') ? item.product.imageUrl : (item.product.imageUrl.startsWith('/') ? item.product.imageUrl : `/uploads/products/${item.product.imageUrl}`)} 
                                   crossOrigin="anonymous"
                                   alt={item.product.name} 
                                   style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', mixBlendMode: 'multiply' }}

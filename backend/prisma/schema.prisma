@@ -81,6 +81,7 @@ model User {
   expenses       Expense[]
   employee       Employee?
   crmConversations CrmConversation[] @relation("CrmAssignedUser")
+  weeklySchedules  WeeklySchedule[]
 }
 
 model Persona {
@@ -239,6 +240,7 @@ model Order {
   @@index([sellerId])
   @@index([createdAt])
   @@index([status])
+  @@index([deliveryRouteId])
 }
 
 model OrderItem {
@@ -282,6 +284,9 @@ model OrderItemLot {
   productLotId Int
   productLot   ProductLot @relation(fields: [productLotId], references: [id])
   quantity     Int
+
+  @@index([orderItemId])
+  @@index([productLotId])
 }
 
 model StockMovement {
@@ -300,6 +305,7 @@ model StockMovement {
 
   @@index([productId])
   @@index([userId])
+  @@index([productLotId])
   @@index([createdAt])
 }
 
@@ -323,6 +329,9 @@ model CashDrawer {
   expenses     Expense[]
   salaryAdvances SalaryAdvance[]
   payrolls       Payroll[]
+
+  @@index([userId])
+  @@index([status])
 }
 
 model BankAccount {
@@ -383,6 +392,7 @@ model Transaction {
   @@index([userId])
   @@index([cashDrawerId])
   @@index([bankAccountId])
+  @@index([supplierInvoiceId])
   @@index([createdAt])
 }
 
@@ -426,6 +436,10 @@ model SupplierInvoice {
   createdAt           DateTime      @default(now())
   updatedAt           DateTime      @updatedAt
   transactions        Transaction[]
+
+  @@index([personaId])
+  @@index([issueDate])
+  @@index([status])
 }
 
 model TaxWithholding {
@@ -441,6 +455,10 @@ model TaxWithholding {
   jurisdiction String? // Jurisdicción si es IIBB (ej: "AR-B", "AR-C")
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+
+  @@index([personaId])
+  @@index([taxType])
+  @@index([date])
 }
 
 model DeliveryRoute {
@@ -472,6 +490,9 @@ model PurchaseOrder {
   updatedAt   DateTime @updatedAt
 
   items PurchaseOrderItem[]
+
+  @@index([personaId])
+  @@index([status])
 }
 
 model PurchaseOrderItem {
@@ -483,6 +504,9 @@ model PurchaseOrderItem {
   quantity        Int
   costPrice       Decimal       @db.Decimal(12, 2)
   subtotal        Decimal       @db.Decimal(12, 2)
+
+  @@index([purchaseOrderId])
+  @@index([productId])
 }
 
 model CreditNote {
@@ -509,6 +533,11 @@ model CreditNote {
   updatedAt        DateTime         @updatedAt
 
   items CreditNoteItem[]
+
+  @@index([personaId])
+  @@index([orderId])
+  @@index([userId])
+  @@index([status])
 }
 
 model CreditNoteItem {
@@ -521,6 +550,9 @@ model CreditNoteItem {
   weight       Decimal?   @db.Decimal(12, 3)
   unitPrice    Decimal    @db.Decimal(12, 2)
   subtotal     Decimal    @db.Decimal(12, 2)
+
+  @@index([creditNoteId])
+  @@index([productId])
 }
 
 model Rubro {
@@ -920,6 +952,9 @@ model SalaryAdvance {
   @@index([employeeId])
   @@index([status])
   @@index([date])
+  @@index([payrollId])
+  @@index([cashDrawerId])
+  @@index([bankAccountId])
 }
 
 model Payroll {
@@ -1073,4 +1108,31 @@ model CrmOrderDraft {
   @@index([conversationId])
   @@index([status])
 }
+
+model WeeklySchedule {
+  id           Int      @id @default(autoincrement())
+  weekType     String   @default("SEMANA_1") // "SEMANA_1", "SEMANA_2", "TODAS"
+  dayOfWeek    String   // "LUNES", "MARTES", "MIERCOLES", "JUEVES", "VIERNES", "SABADO", "DOMINGO"
+  activityType String   @default("PREVENTA") // "PREVENTA", "REPARTO", "COBRANZA", "AMBOS", "OTRO"
+  sellerId     Int?
+  seller       User?    @relation(fields: [sellerId], references: [id], onDelete: SetNull)
+  sellerName   String?  // Ej: "Fabián", "Marcos", "Reparto General"
+  location     String   // Ej: "América", "General Villegas", "Banderaló", "Carlos Tejedor"
+  description  String?  // Detalle o observaciones adicionales
+  sortOrder    Int      @default(0)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([weekType])
+  @@index([dayOfWeek])
+  @@index([sellerId])
+}
+
+model SystemSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+}
+
 

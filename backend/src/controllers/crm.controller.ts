@@ -32,13 +32,10 @@ export async function getCRMAlerts(req: AuthenticatedRequest, res: Response): Pr
     });
 
     // 2. Recomendaciones de reabastecimiento (IA) - Productos con stock menor o igual a minStock
-    const lowStockProducts = await prisma.product.findMany({
-      where: {
-        stock: {
-          lte: prisma.product.fields.minStock,
-        },
-      },
+    const allActiveProducts = await prisma.product.findMany({
+      where: { isActive: true }
     });
+    const lowStockProducts = allActiveProducts.filter(p => p.stock <= p.minStock);
 
     // Mapear productos con bajo stock a proveedores sugeridos (ej: Quilmes, Coca Cola)
     const replenishmentSuggestions = lowStockProducts.map(p => {

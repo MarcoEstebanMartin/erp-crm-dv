@@ -1491,7 +1491,7 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
                      return `https://loremflickr.com/320/240/${keyword}?random=${product.id}`;
                   };
                   
-                   const imgSrc = p.imageUrl ? (p.imageUrl.startsWith('http') ? p.imageUrl : `http://${window.location.hostname}:3000${p.imageUrl}`) : getFallbackImage(p);
+                   const imgSrc = p.imageUrl ? (p.imageUrl.startsWith('http') ? p.imageUrl : (p.imageUrl.startsWith('/') ? p.imageUrl : `/uploads/products/${p.imageUrl}`)) : getFallbackImage(p);
 
                   return (
                     <div key={p.id} className="product-card" style={{ 

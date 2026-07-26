@@ -9,8 +9,17 @@ import {
   BookOpen, 
   DollarSign, 
   Truck,
-  X
+  X,
+  Calendar,
+  MapPin,
+  User,
+  Settings,
+  RefreshCw,
+  ChevronRight,
+  Sparkles,
+  Clock
 } from 'lucide-react';
+import WeeklyScheduleModal from '../modals/WeeklyScheduleModal';
 
 interface HomeTabProps {
   orders: any[];
@@ -40,6 +49,59 @@ export default function HomeTab({
   const facturadosOrdersCount = useMemo(() => orders.filter(o => o.invoiceNumber && (!o.deliveryRoute || o.deliveryRoute.status === 'PENDING')).length, [orders]);
   const enViajeOrdersCount = useMemo(() => orders.filter(o => o.deliveryRoute && o.deliveryRoute.status === 'IN_TRANSIT').length, [orders]);
   const entregadosOrdersCount = useMemo(() => orders.filter(o => (o.status === 'DELIVERED' && !o.deliveryRouteId) || (o.deliveryRoute && o.deliveryRoute.status === 'COMPLETED')).length, [orders]);
+
+  // Estados para Cronograma Semanal
+  const [weeklyScheduleData, setWeeklyScheduleData] = useState<{ currentWeek: string; items: any[] }>({ currentWeek: 'SEMANA_1', items: [] });
+  const [loadingSchedule, setLoadingSchedule] = useState(false);
+  const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
+  const [selectedDayTab, setSelectedDayTab] = useState<string>(''); // Vacio = Día de hoy por defecto
+
+  const fetchWeeklySchedule = async () => {
+    setLoadingSchedule(true);
+    try {
+      const res = await api.getWeeklySchedule();
+      if (res) {
+        setWeeklyScheduleData({
+          currentWeek: res.currentWeek || 'SEMANA_1',
+          items: res.items || []
+        });
+      }
+    } catch (err) {
+      console.error('Error al cargar cronograma semanal:', err);
+    } finally {
+      setLoadingSchedule(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchWeeklySchedule();
+  }, []);
+
+  const handleToggleCurrentWeek = async () => {
+    const nextWeek = weeklyScheduleData.currentWeek === 'SEMANA_1' ? 'SEMANA_2' : 'SEMANA_1';
+    try {
+      await api.setCurrentWeek(nextWeek);
+      fetchWeeklySchedule();
+    } catch (err) {
+      console.error('Error al cambiar semana:', err);
+    }
+  };
+
+  // Día de la semana actual en español
+  const dayNamesEs = ['DOMINGO', 'LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO'];
+  const todayIndex = new Date().getDay();
+  const todayName = dayNamesEs[todayIndex];
+
+  const activeDayName = selectedDayTab || todayName;
+
+  // Filtrar ítems para la semana activa y el día seleccionado
+  const activeDayScheduleItems = useMemo(() => {
+    return weeklyScheduleData.items.filter(item => {
+      const isWeekMatch = item.weekType === weeklyScheduleData.currentWeek || item.weekType === 'TODAS';
+      const isDayMatch = item.dayOfWeek === activeDayName;
+      return isWeekMatch && isDayMatch;
+    });
+  }, [weeklyScheduleData, activeDayName]);
 
   // Estados para el nuevo modal de Gasto de Flota
   const [showGastoModal, setShowGastoModal] = useState(false);
@@ -79,19 +141,8 @@ export default function HomeTab({
         ]);
         setVehicles(vehiclesData || []);
         
-        // Filtrar proveedores de vehículos autorizados
-        const allowedProviderNames = [
-          "Gonzalo Alvarez",
-          "Jorge Guerrera",
-          "Juan Manuel Ibarra",
-          "YPF Boxes",
-          "Juan Lopez",
-          "Ricardo Beron",
-          "Raul"
-        ];
-        const filteredSuppliers = (suppliersData || []).filter((s: any) =>
-          allowedProviderNames.some(name => s.name.toLowerCase().trim() === name.toLowerCase().trim())
-        );
+        // Asignar proveedores de la base de datos (filtrados si están activos)
+        const filteredSuppliers = (suppliersData || []).filter((s: any) => s.isActive !== false);
         setSuppliers(filteredSuppliers);
         
         setBankAccounts(bankAccountsData || []);
@@ -402,6 +453,190 @@ export default function HomeTab({
           ))}
         </div>
       </div>
+
+      {/* ====================================================================
+          OPCIÓN 1: CINTA INLINE ULTRA-DELGADA (LINEAR STYLE)
+          ==================================================================== */}
+      <div style={{
+        marginTop: '16px',
+        padding: '10px 16px',
+        backgroundColor: '#ffffff',
+        borderRadius: '8px',
+        border: '1px solid var(--border-color, #e5e5e7)',
+        display: 'flex',
+        flexWrap: 'wrap',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: '12px',
+        fontSize: '0.83rem'
+      }}>
+        {/* Left side: Integrated Ribbon text */}
+        <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+          <Calendar size={15} style={{ color: 'var(--color-corp-red, #E30613)', flexShrink: 0 }} />
+
+          {/* Badge interactivo Semana 1 / Semana 2 */}
+          <button
+            onClick={handleToggleCurrentWeek}
+            title="Haz clic para alternar entre Semana 1 y Semana 2"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '4px',
+              padding: '2px 8px',
+              borderRadius: '12px',
+              fontSize: '0.74rem',
+              fontWeight: 700,
+              backgroundColor: weeklyScheduleData.currentWeek === 'SEMANA_1' ? '#FEF2F2' : '#EFF6FF',
+              color: weeklyScheduleData.currentWeek === 'SEMANA_1' ? 'var(--color-corp-red, #E30613)' : '#2563EB',
+              border: weeklyScheduleData.currentWeek === 'SEMANA_1' ? '1px solid #FCA5A5' : '1px solid #BFDBFE',
+              cursor: 'pointer'
+            }}
+          >
+            <span>{weeklyScheduleData.currentWeek === 'SEMANA_1' ? 'Semana 1' : 'Semana 2'}</span>
+            <RefreshCw size={10} style={{ opacity: 0.7 }} />
+          </button>
+
+          <span style={{ color: '#9CA3AF' }}>·</span>
+
+          <span style={{ fontWeight: 600, color: '#374151' }}>
+            Hoy ({todayName.charAt(0) + todayName.slice(1).toLowerCase()}):
+          </span>
+
+          {activeDayScheduleItems.length === 0 ? (
+            <span style={{ color: '#9CA3AF', fontStyle: 'italic' }}>Sin actividad agendada</span>
+          ) : activeDayScheduleItems.some((i: any) => i.activityType === 'FERIADO') ? (
+            <span style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              color: '#991B1B',
+              fontWeight: 700,
+              backgroundColor: '#FEF2F2',
+              padding: '2px 8px',
+              borderRadius: '6px',
+              border: '1px solid #FCA5A5'
+            }}>
+              <span>🎉 Feriado · No se trabaja</span>
+            </span>
+          ) : (
+            activeDayScheduleItems.map((item: any, idx: number) => {
+              const isPreventa = item.activityType === 'PREVENTA';
+              const isReparto = item.activityType === 'REPARTO';
+
+              return (
+                <React.Fragment key={item.id}>
+                  {idx > 0 && <span style={{ color: '#D1D5DB' }}>·</span>}
+                  <span style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    color: '#111827',
+                    fontWeight: 500
+                  }}>
+                    {isPreventa ? (
+                      <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#10B981', display: 'inline-block' }} />
+                    ) : (
+                      <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#3B82F6', display: 'inline-block' }} />
+                    )}
+                    <span style={{ color: '#4B5563', fontWeight: 600 }}>
+                      {isPreventa ? (item.sellerName ? `${item.sellerName}:` : 'Preventa:') : 'Reparto:'}
+                    </span>
+                    <strong style={{ color: '#111827' }}>{item.location}</strong>
+                  </span>
+                </React.Fragment>
+              );
+            })
+          )}
+        </div>
+
+        {/* Right side: Actions */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <button
+            onClick={() => setSelectedDayTab(prev => prev === 'FULL' ? '' : 'FULL')}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: selectedDayTab === 'FULL' ? 'var(--color-corp-red, #E30613)' : '#6B7280',
+              fontSize: '0.78rem',
+              fontWeight: 500,
+              cursor: 'pointer'
+            }}
+          >
+            {selectedDayTab === 'FULL' ? 'Ocultar semana' : 'Ver semana'}
+          </button>
+          <span style={{ color: '#E5E7EB' }}>|</span>
+          <button
+            onClick={() => setIsScheduleModalOpen(true)}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#3B82F6',
+              fontSize: '0.78rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px'
+            }}
+          >
+            <Settings size={13} />
+            Editar
+          </button>
+        </div>
+      </div>
+
+      {/* Vista Desplegable de la Semana Completa (Si presiona "Ver semana") */}
+      {selectedDayTab === 'FULL' && (
+        <div style={{
+          marginTop: '8px',
+          padding: '12px',
+          backgroundColor: '#FAF9F8',
+          borderRadius: '8px',
+          border: '1px solid #E5E7EB',
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
+          gap: '8px'
+        }}>
+          {['LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO'].map(day => {
+            const isToday = day === todayName;
+            const dayItems = weeklyScheduleData.items.filter(i => (i.weekType === weeklyScheduleData.currentWeek || i.weekType === 'TODAS') && i.dayOfWeek === day);
+            const feriado = dayItems.find(i => i.activityType === 'FERIADO');
+            const preventa = dayItems.find(i => i.activityType === 'PREVENTA' || i.activityType === 'AMBOS');
+            const reparto = dayItems.find(i => i.activityType === 'REPARTO' || i.activityType === 'AMBOS');
+
+            return (
+              <div
+                key={day}
+                style={{
+                  padding: '8px 10px',
+                  borderRadius: '6px',
+                  backgroundColor: isToday ? '#ffffff' : 'transparent',
+                  border: isToday ? '1px solid #FCA5A5' : '1px solid transparent'
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                  <span style={{ fontSize: '0.72rem', fontWeight: 700, color: isToday ? 'var(--color-corp-red, #E30613)' : '#374151' }}>
+                    {day.substring(0, 3)}
+                  </span>
+                  {isToday && <span style={{ fontSize: '0.62rem', fontWeight: 700, color: '#E30613' }}>HOY</span>}
+                </div>
+
+                <div style={{ fontSize: '0.73rem', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                  {feriado ? (
+                    <span style={{ color: '#991B1B', fontWeight: 600 }}>🎉 Feriado (No se trabaja)</span>
+                  ) : (
+                    <>
+                      {preventa && <span style={{ color: '#065F46' }}>🟢 {preventa.location}</span>}
+                      {reparto && <span style={{ color: '#1E40AF' }}>🚛 {reparto.location}</span>}
+                      {!preventa && !reparto && <span style={{ color: '#9CA3AF' }}>-</span>}
+                    </>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* Modal flotante autocontenido para registrar Gasto de Flota de forma directa */}
       {showGastoModal && (
@@ -756,6 +991,14 @@ export default function HomeTab({
           </div>
         </div>
       )}
+
+      <WeeklyScheduleModal
+        isOpen={isScheduleModalOpen}
+        onClose={() => setIsScheduleModalOpen(false)}
+        items={weeklyScheduleData.items}
+        currentWeek={weeklyScheduleData.currentWeek}
+        onRefresh={fetchWeeklySchedule}
+      />
     </div>
   );
 }

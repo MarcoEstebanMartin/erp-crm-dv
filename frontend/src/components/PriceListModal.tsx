@@ -153,7 +153,6 @@ export default function PriceListModal({ isOpen, onClose }: PriceListModalProps)
   // Configuración
   const [priceListType, setPriceListType] = useState<'A' | 'B' | 'C'>('A');
   const [targetType, setTargetType] = useState<'client' | 'staff'>('client');
-  const [hideNumbers, setHideNumbers] = useState(true);
   const [fontScale, setFontScale] = useState<'small' | 'medium' | 'large'>('medium');
   const [listDate, setListDate] = useState(() => {
     const today = new Date();
@@ -225,10 +224,42 @@ export default function PriceListModal({ isOpen, onClose }: PriceListModalProps)
     }
   }, [isOpen]);
 
-  // Limpiar el prefijo numérico de los rubros
+  // Limpiar incondicionalmente el prefijo numérico de los rubros
   const cleanCategoryName = (name: string) => {
-    if (!hideNumbers) return name;
     return name.replace(/^\d+(\.\d+)?\s*-\s*/, '');
+  };
+
+  // Funciones de detección precisa de Quesos y Quesos Remotti
+  const isQuesoRemotti = (prod: Product) => {
+    const desc = (prod.description || '').toUpperCase();
+    const name = (prod.name || '').toUpperCase();
+    const mapping = CATEGORY_MAP[(prod.description || '').trim()];
+    const category = mapping ? mapping.category : desc;
+
+    return (
+      category.includes('REMOTTI') ||
+      desc.includes('REMOTTI') ||
+      desc.includes('MELINCUE') ||
+      name.includes('MELINCUE') ||
+      name.includes('REMOTTI')
+    );
+  };
+
+  const isQueso = (prod: Product) => {
+    if (isQuesoRemotti(prod)) return true;
+
+    const desc = (prod.description || '').toUpperCase();
+    const name = (prod.name || '').toUpperCase();
+    const mapping = CATEGORY_MAP[(prod.description || '').trim()];
+    const category = mapping ? mapping.category : desc;
+    const subcategory = mapping?.subcategory || '';
+
+    return (
+      category.includes('QUESO') ||
+      subcategory.includes('QUESO') ||
+      desc.includes('QUESO') ||
+      name.includes('QUESO')
+    );
   };
 
   // Mapear y agrupar productos por Rubro -> Subrubro -> Marca
@@ -258,14 +289,12 @@ export default function PriceListModal({ isOpen, onClose }: PriceListModalProps)
         brandKey = mapping.brand;
       } else if (desc) {
         // Fallback dinámico si no está mapeado explícitamente
-        // Si tiene formato 'X.X - TEXTO' lo usamos como rubro principal
         if (/^\d+(\.\d+)?\s*-\s*/.test(desc)) {
           catKey = desc;
           if (!groups[catKey]) {
             groups[catKey] = { name: catKey, directProducts: [], subcategories: {} };
           }
         } else {
-          // Si no, lo metemos en VARIOS con subcategoría igual a la descripción
           catKey = "VARIOS";
           subKey = desc;
         }
@@ -305,10 +334,8 @@ export default function PriceListModal({ isOpen, onClose }: PriceListModalProps)
 
       if (!hasDirect && !hasSubs) return null;
 
-      // Ordenar las subcategorías alfabéticamente para mantener el orden natural de leches, quesos, bebidas, etc.
       const sortedSubcategories = subKeys.sort().map((subKey) => {
         const subGroup = catGroup.subcategories[subKey];
-        // Ordenar las marcas de vinos o similares alfabéticamente
         const sortedBrands = Object.keys(subGroup.brands).sort().map((bKey) => ({
           name: bKey,
           products: subGroup.brands[bKey].sort((a, b) => a.name.localeCompare(b.name))
@@ -329,13 +356,19 @@ export default function PriceListModal({ isOpen, onClose }: PriceListModalProps)
     }).filter(Boolean);
   }, [products]);
 
-  // Obtener el precio según la lista seleccionada
+  // Obtener el precio según la lista seleccionada y las reglas del negocio:
+  // - Lista 4 (A): 100% precio de lista
+  // - Lista Especial (B): 3% descuento en QUESOS únicamente
+  // - Lista Especial 2 (C): 5% descuento en QUESOS REMOTTI únicamente
   const getProductPrice = (prod: Product) => {
-    switch (priceListType) {
-      case 'B': return prod.listPriceB;
-      case 'C': return prod.listPriceC;
-      default: return prod.listPrice;
+    const basePrice = Number(prod.listPrice) || 0;
+    if (priceListType === 'B') {
+      return isQueso(prod) ? basePrice * 0.97 : basePrice;
     }
+    if (priceListType === 'C') {
+      return isQuesoRemotti(prod) ? basePrice * 0.95 : basePrice;
+    }
+    return basePrice;
   };
 
   // Dar formato al precio (sin centavos, redondeado al entero más cercano)
@@ -366,29 +399,31 @@ export default function PriceListModal({ isOpen, onClose }: PriceListModalProps)
         left: 0,
         right: 0,
         bottom: 0,
-        backgroundColor: 'rgba(0, 0, 0, 0.4)',
+        backgroundColor: 'rgba(0, 0, 0, 0.45)',
         backdropFilter: 'blur(4px)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         zIndex: 1000,
+        padding: '16px',
         animation: 'fadeIn 0.2s ease-out'
       }}>
         <div style={{
           backgroundColor: 'var(--bg-card)',
           borderRadius: '12px',
           border: '1px solid var(--border-color)',
-          width: '90%',
-          maxWidth: '1000px',
-          maxHeight: '90vh',
+          width: '96%',
+          maxWidth: '1240px',
+          height: '92vh',
+          maxHeight: '92vh',
           display: 'flex',
           flexDirection: 'column',
-          boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
           overflow: 'hidden'
         }}>
           {/* Cabecera */}
           <div style={{
-            padding: '16px 20px',
+            padding: '12px 20px',
             borderBottom: '1px solid var(--border-color)',
             display: 'flex',
             alignItems: 'center',
@@ -396,8 +431,8 @@ export default function PriceListModal({ isOpen, onClose }: PriceListModalProps)
             backgroundColor: 'var(--bg-light)'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <FileText size={20} style={{ color: 'var(--text-secondary)' }} />
-              <h2 style={{ fontSize: '1.1rem', fontWeight: 600, margin: 0, letterSpacing: '-0.01em' }}>Generar Lista de Precios PDF</h2>
+              <FileText size={18} style={{ color: 'var(--text-secondary)' }} />
+              <h2 style={{ fontSize: '1rem', fontWeight: 600, margin: 0, letterSpacing: '-0.01em' }}>Generar Lista de Precios PDF</h2>
             </div>
             <button 
               onClick={onClose} 
@@ -422,83 +457,87 @@ export default function PriceListModal({ isOpen, onClose }: PriceListModalProps)
           {/* Cuerpo */}
           <div style={{
             display: 'grid',
-            gridTemplateColumns: '320px 1fr',
+            gridTemplateColumns: '230px 1fr',
             flex: 1,
             overflow: 'hidden'
           }}>
-            {/* Panel de Configuración Lateral */}
+            {/* Panel de Configuración Lateral (Minimalista) */}
             <div style={{
-              padding: '20px',
+              padding: '16px',
               borderRight: '1px solid var(--border-color)',
               backgroundColor: 'var(--bg-light)',
               overflowY: 'auto',
               display: 'flex',
               flexDirection: 'column',
-              gap: '18px'
+              gap: '16px'
             }}>
               {/* Destinatario */}
               <div>
-                <label style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Destinatario de la Lista</label>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <div 
+                <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Destinatario</label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px', backgroundColor: 'var(--border-color)', padding: '2px', borderRadius: '6px' }}>
+                  <button
+                    type="button"
                     onClick={() => setTargetType('client')}
                     style={{
-                      border: targetType === 'client' ? '1.5px solid var(--text-primary)' : '1px solid var(--border-color)',
-                      borderRadius: '8px',
-                      padding: '10px 12px',
-                      cursor: 'pointer',
+                      padding: '6px 4px',
+                      fontSize: '0.78rem',
+                      fontWeight: targetType === 'client' ? 600 : 500,
+                      border: 'none',
+                      borderRadius: '4px',
                       backgroundColor: targetType === 'client' ? 'var(--bg-card)' : 'transparent',
+                      color: targetType === 'client' ? 'var(--text-primary)' : 'var(--text-secondary)',
+                      cursor: 'pointer',
                       transition: 'all 0.15s ease'
                     }}
                   >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2px' }}>
-                      <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>Para Clientes</span>
-                      {targetType === 'client' && <Check size={14} style={{ color: 'var(--text-primary)' }} />}
-                    </div>
-                    <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', margin: 0 }}>Muestra únicamente la columna con el precio final facturado.</p>
-                  </div>
-                  
-                  <div 
+                    Clientes
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => setTargetType('staff')}
                     style={{
-                      border: targetType === 'staff' ? '1.5px solid var(--text-primary)' : '1px solid var(--border-color)',
-                      borderRadius: '8px',
-                      padding: '10px 12px',
-                      cursor: 'pointer',
+                      padding: '6px 4px',
+                      fontSize: '0.78rem',
+                      fontWeight: targetType === 'staff' ? 600 : 500,
+                      border: 'none',
+                      borderRadius: '4px',
                       backgroundColor: targetType === 'staff' ? 'var(--bg-card)' : 'transparent',
+                      color: targetType === 'staff' ? 'var(--text-primary)' : 'var(--text-secondary)',
+                      cursor: 'pointer',
                       transition: 'all 0.15s ease'
                     }}
                   >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2px' }}>
-                      <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>Para Personal / Interna</span>
-                      {targetType === 'staff' && <Check size={14} style={{ color: 'var(--text-primary)' }} />}
-                    </div>
-                    <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', margin: 0 }}>Agrega una columna extra con el precio neto sin IVA (/1.21).</p>
-                  </div>
+                    Interna
+                  </button>
                 </div>
               </div>
 
               {/* Lista de Precios */}
               <div>
-                <label style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Tarifa / Lista de Origen</label>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px' }}>
+                <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Tarifa</label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                   {(['A', 'B', 'C'] as const).map((t) => (
                     <button
                       key={t}
                       type="button"
                       onClick={() => setPriceListType(t)}
                       style={{
-                        padding: '8px 0',
-                        fontSize: '0.82rem',
-                        fontWeight: 600,
+                        padding: '8px 10px',
+                        fontSize: '0.8rem',
+                        fontWeight: priceListType === t ? 600 : 500,
                         border: priceListType === t ? '1.5px solid var(--text-primary)' : '1px solid var(--border-color)',
                         borderRadius: '6px',
                         backgroundColor: priceListType === t ? 'var(--bg-card)' : 'transparent',
+                        textAlign: 'left',
                         cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
                         transition: 'all 0.15s ease'
                       }}
                     >
-                      {t === 'A' ? 'Lista 4' : t === 'B' ? 'Lista Especial' : 'Lista Especial 2'}
+                      <span>{t === 'A' ? 'Lista 4' : t === 'B' ? 'Lista Especial' : 'Lista Especial 2'}</span>
+                      {priceListType === t && <Check size={13} style={{ color: 'var(--text-primary)' }} />}
                     </button>
                   ))}
                 </div>
@@ -506,12 +545,12 @@ export default function PriceListModal({ isOpen, onClose }: PriceListModalProps)
 
               {/* Fecha Personalizada */}
               <div>
-                <label htmlFor="listDateInput" style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Fecha de la Lista</label>
+                <label htmlFor="listDateInput" style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-secondary)', display: 'block', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Fecha</label>
                 <input
                   id="listDateInput"
                   type="text"
                   className="input"
-                  style={{ fontSize: '0.85rem', padding: '8px 10px' }}
+                  style={{ fontSize: '0.82rem', padding: '6px 8px' }}
                   value={listDate}
                   onChange={(e) => setListDate(e.target.value)}
                 />
@@ -519,85 +558,42 @@ export default function PriceListModal({ isOpen, onClose }: PriceListModalProps)
 
               {/* Tamaño de Letra (Escala) */}
               <div>
-                <label htmlFor="fontScaleSelect" style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Tamaño de Letra</label>
+                <label htmlFor="fontScaleSelect" style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-secondary)', display: 'block', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Tamaño de Letra</label>
                 <select
                   id="fontScaleSelect"
                   className="input"
                   value={fontScale}
                   onChange={(e) => setFontScale(e.target.value as 'small' | 'medium' | 'large')}
-                  style={{ fontSize: '0.85rem', padding: '8px 10px', height: '38px', width: '100%', border: '1px solid var(--border-color)', borderRadius: '6px', backgroundColor: 'var(--bg-card)' }}
+                  style={{ fontSize: '0.82rem', padding: '6px 8px', height: '34px', width: '100%', border: '1px solid var(--border-color)', borderRadius: '6px', backgroundColor: 'var(--bg-card)' }}
                 >
-                  <option value="small">Chico (Ahorro de papel - 7.5pt)</option>
-                  <option value="medium">Mediano (Estándar - 9pt)</option>
-                  <option value="large">Grande (Lectura fácil - 11pt)</option>
+                  <option value="small">Chico (7.5pt)</option>
+                  <option value="medium">Mediano (9pt)</option>
+                  <option value="large">Grande (11pt)</option>
                 </select>
-              </div>
-
-              {/* Checkbox Ocultar Números */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
-                <input
-                  type="checkbox"
-                  id="hideNumbersCheck"
-                  checked={hideNumbers}
-                  onChange={(e) => setHideNumbers(e.target.checked)}
-                  style={{ cursor: 'pointer', width: '15px', height: '15px' }}
-                />
-                <label htmlFor="hideNumbersCheck" style={{ fontSize: '0.82rem', fontWeight: 500, cursor: 'pointer' }}>
-                  Ocultar números de rubro (Ej: 1.1)
-                </label>
-              </div>
-
-              {/* Información */}
-              <div style={{
-                marginTop: 'auto',
-                backgroundColor: 'rgba(0, 0, 0, 0.02)',
-                border: '1px dashed var(--border-color)',
-                borderRadius: '8px',
-                padding: '12px',
-                display: 'flex',
-                gap: '8px',
-                alignItems: 'flex-start'
-              }}>
-                <Info size={16} style={{ color: 'var(--text-secondary)', flexShrink: 0, marginTop: '2px' }} />
-                <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', margin: 0, lineHeight: '1.35' }}>
-                  Al presionar <strong>"Imprimir"</strong> se abrirá el diálogo nativo de su sistema para guardar la lista como PDF o enviarla a una impresora física.
-                </p>
               </div>
             </div>
 
-            {/* Panel de Vista Previa (Derecho) */}
+            {/* Panel de Vista Previa (Derecho, Maximizado) */}
             <div style={{
               display: 'flex',
               flexDirection: 'column',
               overflow: 'hidden',
-              backgroundColor: '#525659', // Fondo estilo visualizador de PDF
-              padding: '24px',
+              backgroundColor: '#4e5256',
+              padding: '16px 20px',
               position: 'relative'
             }}>
-              <div style={{
-                position: 'absolute',
-                top: '12px',
-                left: '24px',
-                fontSize: '0.75rem',
-                color: '#e5e5e5',
-                fontWeight: 500,
-                zIndex: 10
-              }}>
-                Vista Previa del Documento
-              </div>
-
-              {/* Hoja de papel simulada */}
+              {/* Hoja de papel simulada (Maximizada) */}
               <div style={{
                 backgroundColor: '#ffffff',
                 color: '#000000',
-                padding: '40px 30px',
-                boxShadow: '0 8px 16px rgba(0,0,0,0.2)',
+                padding: '32px 36px',
+                boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
                 borderRadius: '2px',
                 flex: 1,
                 overflowY: 'auto',
                 width: '100%',
-                maxWidth: '650px',
-                margin: '16px auto 0 auto',
+                maxWidth: '820px',
+                margin: '0 auto',
                 fontFamily: 'system-ui, sans-serif'
               }}>
                 {loading ? (

@@ -33,7 +33,7 @@ export default function WhatsAppSimulatorModal({ onClose, onSimulated }: WhatsAp
         profileName,
         text
       });
-      const convId = res?.conversation?.id || res?.data?.conversation?.id;
+      const convId = res?.data?.conversation?.id || res?.conversation?.id || res?.data?.message?.conversationId;
       onSimulated(convId);
       onClose();
     } catch (err: any) {

@@ -13,7 +13,15 @@ import {
 import { authenticateJWT, requireRole } from '../middlewares/auth';
 import { Role } from '@prisma/client';
 import { validateRequest } from '../middlewares/validateRequest';
-import { createOrderSchema, updateOrderStatusSchema, invoiceOrderSchema, updateOrderSchema } from '../validators/order.validator';
+import {
+  createOrderSchema,
+  updateOrderStatusSchema,
+  invoiceOrderSchema,
+  updateOrderSchema,
+  createDirectInvoiceSchema,
+  updateOrderWeightsSchema,
+  confirmArmadoSchema,
+} from '../validators/order.validator';
 
 const router = Router();
 
@@ -22,7 +30,7 @@ router.get('/', authenticateJWT, getOrders);
 router.get('/:id', authenticateJWT, getOrderById);
 
 // Crear, facturar y cobrar un pedido directo (ADMIN y FACTURACION)
-router.post('/direct', authenticateJWT, requireRole([Role.ADMIN, Role.FACTURACION]), createDirectInvoice);
+router.post('/direct', authenticateJWT, requireRole([Role.ADMIN, Role.FACTURACION]), validateRequest(createDirectInvoiceSchema), createDirectInvoice);
 
 // Carga de pedidos (Solo ADMIN y VENDEDOR)
 router.post('/', authenticateJWT, requireRole([Role.ADMIN, Role.VENDEDOR]), validateRequest(createOrderSchema), createOrder);
@@ -37,9 +45,9 @@ router.put('/:id/status', authenticateJWT, requireRole([Role.ADMIN, Role.DEPOSIT
 router.post('/:id/invoice', authenticateJWT, requireRole([Role.ADMIN, Role.FACTURACION]), validateRequest(invoiceOrderSchema), invoiceOrder);
 
 // Actualizar pesos de productos pesables (ADMIN, FACTURACION, DEPOSITO)
-router.put('/:id/weights', authenticateJWT, requireRole([Role.ADMIN, Role.FACTURACION, Role.DEPOSITO]), updateOrderWeights);
+router.put('/:id/weights', authenticateJWT, requireRole([Role.ADMIN, Role.FACTURACION, Role.DEPOSITO]), validateRequest(updateOrderWeightsSchema), updateOrderWeights);
 
 // Confirmación rápida de armado (Data Entry de Alta Eficiencia)
-router.post('/:id/confirm-armado', authenticateJWT, requireRole([Role.ADMIN, Role.FACTURACION, Role.DEPOSITO]), confirmArmado);
+router.post('/:id/confirm-armado', authenticateJWT, requireRole([Role.ADMIN, Role.FACTURACION, Role.DEPOSITO]), validateRequest(confirmArmadoSchema), confirmArmado);
 
 export default router;

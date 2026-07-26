@@ -19,7 +19,8 @@ import {
   ChevronRight,
   Tag,
   Briefcase,
-  MessageSquare
+  MessageSquare,
+  Building2
 } from 'lucide-react';
 import { api } from '../utils/api';
 
@@ -50,96 +51,30 @@ export default function Sidebar({ username, role, activeTab, setActiveTab, onLog
       case 'ADMIN':
         return [
           { id: 'dashboard', label: 'Panel Principal', icon: <LayoutDashboard size={18} /> },
-          {
-            id: 'comercial',
-            label: 'Comercial & CRM',
-            icon: <MessageSquare size={18} />,
-            isGroup: true,
-            children: [
-              { id: 'crm', label: 'CRM & WhatsApp', icon: <MessageSquare size={16} /> },
-              { id: 'clients', label: 'Personas', icon: <Users size={16} /> },
-              { id: 'offers', label: 'Gestor de Ofertas', icon: <Tag size={16} /> },
-            ]
-          },
-          {
-            id: 'pedidos-logistica',
-            label: 'Pedidos y Logística',
-            icon: <ShoppingCart size={18} />,
-            isGroup: true,
-            children: [
-              { id: 'fulfillment', label: 'Armado y Facturación', icon: <Warehouse size={16} /> },
-              { id: 'orders', label: 'Historial de Pedidos', icon: <ShoppingCart size={16} /> },
-              { id: 'logistica', label: 'Logística y Flota', icon: <Truck size={16} /> },
-            ]
-          },
-          {
-            id: 'inventario',
-            label: 'Inventario y Compras',
-            icon: <Package size={18} />,
-            isGroup: true,
-            children: [
-              { id: 'products', label: 'Productos y Stock', icon: <Package size={16} /> },
-              { id: 'compras', label: 'Proveedores', icon: <Receipt size={16} /> },
-            ]
-          },
-          {
-            id: 'gestion',
-            label: 'Finanzas y Gestión',
-            icon: <DollarSign size={18} />,
-            isGroup: true,
-            children: [
-              { id: 'billing', label: 'Facturación', icon: <FileText size={16} /> },
-              { id: 'rendiciones', label: 'Finanzas', icon: <DollarSign size={16} /> },
-              { id: 'rrhh', label: 'Recursos Humanos', icon: <Briefcase size={16} /> },
-              { id: 'reportes', label: 'Reportes y Analíticas', icon: <TrendingUp size={16} /> },
-              { id: 'config', label: 'Configuración', icon: <Settings size={16} /> },
-            ]
-          },
+          { id: 'crm', label: 'CRM & WhatsApp', icon: <MessageSquare size={18} /> },
+          { id: 'fulfillment', label: 'Armado y Facturación', icon: <Warehouse size={18} /> },
+          { id: 'orders', label: 'Historial de Pedidos', icon: <ShoppingCart size={18} /> },
+          { id: 'clients', label: 'Clientes (Personas)', icon: <Users size={18} /> },
+          { id: 'logistica', label: 'Logística y Flota', icon: <Truck size={18} /> },
+          { id: 'products', label: 'Productos y Stock', icon: <Package size={18} /> },
+          { id: 'compras', label: 'Proveedores', icon: <Receipt size={18} /> },
+          { id: 'billing', label: 'Facturación', icon: <FileText size={18} /> },
+          { id: 'rendiciones', label: 'Finanzas y Cajas', icon: <DollarSign size={18} /> },
+          { id: 'reportes', label: 'Reportes y Analíticas', icon: <TrendingUp size={18} /> },
+          { id: 'config', label: 'General & Empresa', icon: <Building2 size={18} /> },
         ];
       case 'FACTURACION':
         return [
           { id: 'dashboard', label: 'Panel Principal', icon: <LayoutDashboard size={18} /> },
-          {
-            id: 'comercial',
-            label: 'Comercial & CRM',
-            icon: <MessageSquare size={18} />,
-            isGroup: true,
-            children: [
-              { id: 'crm', label: 'CRM & WhatsApp', icon: <MessageSquare size={16} /> },
-              { id: 'clients', label: 'Personas', icon: <Users size={16} /> },
-            ]
-          },
-          {
-            id: 'pedidos-logistica',
-            label: 'Pedidos y Logística',
-            icon: <ShoppingCart size={18} />,
-            isGroup: true,
-            children: [
-              { id: 'fulfillment', label: 'Armado y Facturación', icon: <Warehouse size={16} /> },
-              { id: 'orders', label: 'Historial de Pedidos', icon: <ShoppingCart size={16} /> },
-              { id: 'logistica', label: 'Logística y Flota', icon: <Truck size={16} /> },
-            ]
-          },
-          {
-            id: 'inventario',
-            label: 'Inventario y Compras',
-            icon: <Package size={18} />,
-            isGroup: true,
-            children: [
-              { id: 'products', label: 'Productos y Stock', icon: <Package size={16} /> },
-              { id: 'compras', label: 'Proveedores', icon: <Receipt size={16} /> },
-            ]
-          },
-          {
-            id: 'gestion',
-            label: 'Finanzas y Gestión',
-            icon: <DollarSign size={18} />,
-            isGroup: true,
-            children: [
-              { id: 'billing', label: 'Facturación', icon: <FileText size={16} /> },
-              { id: 'rrhh', label: 'Recursos Humanos', icon: <Briefcase size={16} /> },
-            ]
-          },
+          { id: 'crm', label: 'CRM & WhatsApp', icon: <MessageSquare size={18} /> },
+          { id: 'fulfillment', label: 'Armado y Facturación', icon: <Warehouse size={18} /> },
+          { id: 'orders', label: 'Historial de Pedidos', icon: <ShoppingCart size={18} /> },
+          { id: 'clients', label: 'Clientes (Personas)', icon: <Users size={18} /> },
+          { id: 'logistica', label: 'Logística y Flota', icon: <Truck size={18} /> },
+          { id: 'products', label: 'Productos y Stock', icon: <Package size={18} /> },
+          { id: 'compras', label: 'Proveedores', icon: <Receipt size={18} /> },
+          { id: 'billing', label: 'Facturación', icon: <FileText size={18} /> },
+          { id: 'config', label: 'General & Empresa', icon: <Building2 size={18} /> },
         ];
       case 'VENDEDOR':
         return [
@@ -157,36 +92,6 @@ export default function Sidebar({ username, role, activeTab, setActiveTab, onLog
       default:
         return [];
     }
-  };
-
-  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(() => {
-    const initial: Record<string, boolean> = {};
-    const items = getMenuItems();
-    items.forEach((item: any) => {
-      if (item.isGroup && item.children?.some((c: any) => c.id === currentTab)) {
-        initial[item.id] = true;
-      }
-    });
-    return initial;
-  });
-
-  useEffect(() => {
-    const items = getMenuItems();
-    items.forEach((item: any) => {
-      if (item.isGroup && item.children?.some((c: any) => c.id === currentTab)) {
-        setExpandedGroups(prev => ({
-          ...prev,
-          [item.id]: true
-        }));
-      }
-    });
-  }, [currentTab, role]);
-
-  const toggleGroup = (groupId: string) => {
-    setExpandedGroups(prev => ({
-      ...prev,
-      [groupId]: !prev[groupId]
-    }));
   };
 
   const handleTabSelect = (tabId: string) => {
@@ -243,75 +148,28 @@ export default function Sidebar({ username, role, activeTab, setActiveTab, onLog
 
       <nav className="sidebar-menu" style={{ flex: 1, overflowY: 'auto', paddingRight: '4px' }}>
         {menuItems.map((item: any) => {
-          if (item.isGroup) {
-            const isExpanded = !!expandedGroups[item.id];
-            const isGroupActive = item.children.some((child: any) => child.id === currentTab);
-            
-            return (
-              <div key={item.id} className="sidebar-group-container">
-                <div 
-                  className={`sidebar-link sidebar-group-header`}
-                  onClick={() => toggleGroup(item.id)}
-                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', borderRadius: '6px', cursor: 'pointer', marginBottom: '4px' }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    {!isExpanded && isGroupActive && <div className="sidebar-group-active-dot" />}
-                    <span style={{ display: 'flex', alignItems: 'center', color: isGroupActive ? 'var(--text-primary)' : 'inherit' }}>
-                      {item.icon}
-                    </span>
-                    <span style={{ 
-                      fontSize: '0.88rem', 
-                      fontWeight: isGroupActive ? 600 : 500,
-                      color: isGroupActive ? 'var(--text-primary)' : 'inherit'
-                    }}>
-                      {item.label}
-                    </span>
-                  </div>
-                  {isExpanded ? (
-                    <ChevronDown size={14} className="chevron-icon" />
-                  ) : (
-                    <ChevronRight size={14} className="chevron-icon" />
-                  )}
-                </div>
-                
-                <div className={`sidebar-group-children ${isExpanded ? 'expanded' : ''}`}>
-                  {item.children.map((child: any) => (
-                    <div
-                      key={child.id}
-                      className={`sidebar-link sidebar-sub-link ${currentTab === child.id ? 'sidebar-link-active' : ''}`}
-                      onClick={() => handleTabSelect(child.id)}
-                      style={{ 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        gap: '10px', 
-                        padding: '8px 14px 8px 36px', 
-                        borderRadius: '6px', 
-                        cursor: 'pointer', 
-                        marginBottom: '2px' 
-                      }}
-                    >
-                      <span style={{ display: 'flex', alignItems: 'center' }}>
-                        {child.icon}
-                      </span>
-                      <span style={{ fontSize: '0.84rem', fontWeight: currentTab === child.id ? 600 : 400 }}>
-                        {child.label}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            );
-          }
+          const isActive = currentTab === item.id;
 
           return (
             <div
               key={item.id}
-              className={`sidebar-link ${currentTab === item.id ? 'sidebar-link-active' : ''}`}
+              className={`sidebar-link ${isActive ? 'sidebar-link-active' : ''}`}
               onClick={() => handleTabSelect(item.id)}
-              style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', borderRadius: '6px', cursor: 'pointer', marginBottom: '4px' }}
+              style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '10px', 
+                padding: '9px 14px', 
+                borderRadius: '6px', 
+                cursor: 'pointer', 
+                marginBottom: '3px',
+                fontWeight: isActive ? 600 : 400
+              }}
             >
-              {item.icon}
-              <span style={{ fontSize: '0.88rem', fontWeight: currentTab === item.id ? 600 : 400 }}>{item.label}</span>
+              <span style={{ display: 'flex', alignItems: 'center' }}>
+                {item.icon}
+              </span>
+              <span style={{ fontSize: '0.86rem' }}>{item.label}</span>
             </div>
           );
         })}

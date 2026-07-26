@@ -1388,9 +1388,9 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
       )}
 
       {/* ====================================================================
-          4. CATÁLOGO (PRODUCTOS Y RUBROS)
+          4. CATÁLOGO (PRODUCTOS, STOCK Y OFERTAS)
           ==================================================================== */}
-      {activeTab === 'products' && (
+      {(activeTab === 'products' || activeTab === 'offers') && (
         <ProductsTab
           products={products}
           fetchData={fetchData}
@@ -1398,9 +1398,9 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
           handleUpdateProductInline={handleUpdateProductInline}
           onOpenImportZip={() => setImportZipModalOpen(true)}
           onUploadImage={handleUploadImage}
+          initialCatalogTab={activeTab === 'offers' ? 'offers' : 'products'}
         />
       )}
-
 
       {/* ====================================================================
           6. LOGÍSTICA Y FLOTA (MÓDULO UNIFICADO)
@@ -1419,8 +1419,6 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
           <DepositoDashboard activeTab="deposito" setActiveTab={setActiveTab} />
         </Suspense>
       )}
-
-
 
       {/* ====================================================================
           FACTURACION & IMPUESTOS (BILLING)
@@ -1447,10 +1445,6 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
         <Suspense fallback={<LoadingDashboard />}>
           <ComprasDashboard />
         </Suspense>
-      )}
-
-      {activeTab === 'offers' && (
-        <OffersDashboard />
       )}
 
             {/* ====================================================================
@@ -1540,17 +1534,13 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
 
 
       {/* ====================================================================
-          RECURSOS HUMANOS Y NOMINA
+          10. GENERAL & EMPRESA (General, RRHH, Empleados, Auditoría, Precios, etc.)
           ==================================================================== */}
-      {activeTab === 'rrhh' && <HrDashboard />}
-
-      {/* ====================================================================
-          10. CONFIGURACIÓN UNIFICADA (General, Empresa, Impresión, Empleados, CRM, Auditoría)
-          ==================================================================== */}
-      {activeTab === 'config' && (
+      {(activeTab === 'config' || activeTab === 'rrhh') && (
         <ConfigTab
           setErrorMsg={setErrorMsg}
           setSuccessMsg={setSuccessMsg}
+          initialTab={activeTab === 'rrhh' ? 'rrhh' : 'general'}
         />
       )}
 

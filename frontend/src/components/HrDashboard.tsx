@@ -241,7 +241,7 @@ export default function HrDashboard() {
   });
 
   return (
-    <div style={{ padding: '24px', maxWidth: '1400px', margin: '0 auto', color: 'var(--text-primary)' }}>
+    <div style={{ width: '100%', boxSizing: 'border-box', color: 'var(--text-primary)' }}>
       {/* Header del Módulo */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
         <div>
@@ -490,8 +490,8 @@ export default function HrDashboard() {
 
       {/* CONTENIDO PESTAÑA 2: ADELANTOS */}
       {activeTab === 'vales' && (
-        <div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+        <div style={{ width: '100%', boxSizing: 'border-box' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', width: '100%' }}>
             <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 600 }}>Historial de Adelantos Solicitados</h3>
             <button onClick={() => setShowAdvanceModal(true)} className="btn btn-primary btn-sm" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <Plus size={16} /> Emitir Nuevo Adelanto
@@ -499,11 +499,11 @@ export default function HrDashboard() {
           </div>
 
           {advances.length === 0 ? (
-            <div style={{ backgroundColor: 'var(--card-bg)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '40px', textAlign: 'center', color: 'var(--text-secondary)' }}>
+            <div style={{ backgroundColor: 'var(--card-bg)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '40px', textAlign: 'center', color: 'var(--text-secondary)', width: '100%', boxSizing: 'border-box' }}>
               No hay adelantos registrados actualmente.
             </div>
           ) : (
-            <div style={{ backgroundColor: 'var(--card-bg)', border: '1px solid var(--border-color)', borderRadius: '10px', overflow: 'hidden' }}>
+            <div style={{ backgroundColor: 'var(--card-bg)', border: '1px solid var(--border-color)', borderRadius: '10px', overflow: 'hidden', width: '100%' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
                 <thead>
                   <tr style={{ backgroundColor: 'var(--bg-secondary)', borderBottom: '1px solid var(--border-color)', textAlign: 'left' }}>
@@ -551,8 +551,8 @@ export default function HrDashboard() {
 
       {/* CONTENIDO PESTAÑA 3: LIQUIDACIÓN DE SUELDOS (PAYROLL) */}
       {activeTab === 'liquidaciones' && (
-        <div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+        <div style={{ width: '100%', boxSizing: 'border-box' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', width: '100%' }}>
             <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 600 }}>Registro de Liquidaciones de Haberes Procesadas</h3>
             <button onClick={() => setShowPayrollModal(true)} className="btn btn-primary btn-sm" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <Plus size={16} /> Nueva Liquidación de Sueldo
@@ -560,11 +560,11 @@ export default function HrDashboard() {
           </div>
 
           {payrolls.length === 0 ? (
-            <div style={{ backgroundColor: 'var(--card-bg)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '40px', textAlign: 'center', color: 'var(--text-secondary)' }}>
+            <div style={{ backgroundColor: 'var(--card-bg)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '40px', textAlign: 'center', color: 'var(--text-secondary)', width: '100%', boxSizing: 'border-box' }}>
               No se han procesado liquidaciones de sueldo aún.
             </div>
           ) : (
-            <div style={{ backgroundColor: 'var(--card-bg)', border: '1px solid var(--border-color)', borderRadius: '10px', overflow: 'hidden' }}>
+            <div style={{ backgroundColor: 'var(--card-bg)', border: '1px solid var(--border-color)', borderRadius: '10px', overflow: 'hidden', width: '100%' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
                 <thead>
                   <tr style={{ backgroundColor: 'var(--bg-secondary)', borderBottom: '1px solid var(--border-color)', textAlign: 'left' }}>
@@ -620,8 +620,8 @@ export default function HrDashboard() {
 
       {/* CONTENIDO PESTAÑA 4: VACACIONES Y LICENCIAS */}
       {activeTab === 'vacaciones' && (
-        <div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+        <div style={{ width: '100%', boxSizing: 'border-box' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', width: '100%' }}>
             <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 600 }}>Calendario de Vacaciones y Licencias</h3>
             <button onClick={() => setShowVacationModal(true)} className="btn btn-primary btn-sm" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <Plus size={16} /> Programar Vacaciones / Licencia
@@ -629,7 +629,7 @@ export default function HrDashboard() {
           </div>
 
           {vacations.length === 0 ? (
-            <div style={{ backgroundColor: 'var(--card-bg)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '40px', textAlign: 'center', color: 'var(--text-secondary)' }}>
+            <div style={{ backgroundColor: 'var(--card-bg)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '40px', textAlign: 'center', color: 'var(--text-secondary)', width: '100%', boxSizing: 'border-box' }}>
               No hay solicitudes ni vacaciones programadas.
             </div>
           ) : (

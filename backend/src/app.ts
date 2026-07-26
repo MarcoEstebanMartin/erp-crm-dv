@@ -29,6 +29,7 @@ import offerRoutes from './routes/offers';
 import hrRoutes from './routes/hr.routes';
 import storeRoutes from './routes/store.routes';
 import crmWhatsappRoutes from './routes/crm_whatsapp.routes';
+import weeklyScheduleRoutes from './routes/weeklySchedule.routes';
 
 dotenv.config();
 
@@ -93,6 +94,7 @@ app.use('/api/expenses', expenseRoutes);
 app.use('/api/offers', offerRoutes);
 app.use('/api/hr', hrRoutes);
 app.use('/api/store', storeRoutes);
+app.use('/api/weekly-schedule', weeklyScheduleRoutes);
 
 // Ruta de comprobación de estado (Healthcheck)
 app.get('/api/health', (req: Request, res: Response) => {

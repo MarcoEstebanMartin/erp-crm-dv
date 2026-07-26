@@ -184,7 +184,7 @@ export default function WeeklyOfferWizardModal({ isOpen, onClose, onCampaignCrea
           padding: '16px 24px',
           borderBottom: '1px solid var(--border-color, #e2e8f0)',
           display: 'flex',
-          justify: 'space-between',
+          justifyContent: 'space-between',
           alignItems: 'center',
           backgroundColor: 'var(--bg-secondary, #f8fafc)'
         }}>
@@ -196,7 +196,7 @@ export default function WeeklyOfferWizardModal({ isOpen, onClose, onCampaignCrea
               borderRadius: '12px',
               display: 'flex',
               alignItems: 'center',
-              justify: 'center'
+              justifyContent: 'center'
             }}>
               <Wand2 size={22} />
             </div>
@@ -334,7 +334,7 @@ export default function WeeklyOfferWizardModal({ isOpen, onClose, onCampaignCrea
                       backgroundColor: 'var(--bg-secondary, #f8fafc)',
                       borderBottom: '1px solid var(--border-color)',
                       display: 'flex',
-                      justify: 'space-between',
+                      justifyContent: 'space-between',
                       alignItems: 'center'
                     }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -469,7 +469,7 @@ export default function WeeklyOfferWizardModal({ isOpen, onClose, onCampaignCrea
           padding: '12px 24px',
           borderTop: '1px solid var(--border-color, #e2e8f0)',
           display: 'flex',
-          justify: 'space-between',
+          justifyContent: 'space-between',
           alignItems: 'center',
           backgroundColor: 'var(--bg-secondary, #f8fafc)'
         }}>

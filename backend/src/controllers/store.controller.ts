@@ -6,7 +6,7 @@ import jwt from 'jsonwebtoken';
 const JWT_SECRET = process.env.JWT_SECRET || 'seguridad-erp-distribuidora-2026-key-local-development';
 
 /**
- * Mapeo oficial exacto a la "Categoría Comercial" respetando los Títulos del Gestor de Ofertas
+ * Mapeo oficial de Rubros del ERP a la Categoría Comercial de la Tienda Online
  */
 const RUBRO_TO_COMMERCIAL_CATEGORY: Record<string, { category: string; icon: string }> = {
   'REMOTTI': { category: 'REFRIGERADOS', icon: '❄️' },
@@ -25,10 +25,10 @@ const RUBRO_TO_COMMERCIAL_CATEGORY: Record<string, { category: string; icon: str
   'NO COMESTIBLES': { category: 'NO COMESTIBLES', icon: '📦' },
   'REGALERIA': { category: 'ESTUCHERIA Y REGALERÍA', icon: '🎁' },
   'ARROZ': { category: 'PASTAS SECAS', icon: '🌾' },
-  'CAFE': { category: 'VARIOS', icon: '☕' },
-  'YERBAS': { category: 'VARIOS', icon: '🧉' },
-  'AZUCAR': { category: 'VARIOS', icon: '🍬' },
-  'EDULCORANTES': { category: 'VARIOS', icon: '☕' }
+  'CAFE': { category: 'CONSERVAS', icon: '☕' },
+  'YERBAS': { category: 'PASTAS SECAS', icon: '🧉' },
+  'AZUCAR': { category: 'PASTAS SECAS', icon: '🍬' },
+  'EDULCORANTES': { category: 'PASTAS SECAS', icon: '☕' }
 };
 
 /**
@@ -285,7 +285,7 @@ export async function getStoreCatalog(req: Request, res: Response): Promise<void
         include: {
           items: {
             include: {
-              product: { select: { id: true, rubro: { select: { name: true } } } }
+              product: { select: { id: true, commercialCategory: true, rubro: { select: { name: true } } } }
             }
           }
         }
@@ -302,15 +302,22 @@ export async function getStoreCatalog(req: Request, res: Response): Promise<void
         camp.customRubroOrder.forEach((g) => configuredCategoriesSet.add(g));
       }
       camp.items.forEach((item) => {
-        const catName = item.campaignGroup || item.product?.rubro?.name || 'Varios';
-        productCampaignGroupMap.set(item.productId, catName);
-        configuredCategoriesSet.add(catName);
+        if (item.campaignGroup && item.campaignGroup.trim() !== '') {
+          const groupName = item.campaignGroup.trim();
+          productCampaignGroupMap.set(item.productId, groupName);
+          configuredCategoriesSet.add(groupName);
+        }
       });
     });
 
     const categoryIconsMap: Record<string, string> = {
-      'REFRIGERADOS': '❄️',
-      'FIAMBRES': '🧀',
+      'REMOTTI': '🧀',
+      'LECHES': '🥛',
+      'SANCOR y CREMIGAL': '🧈',
+      'SANCOR Y CREMIGAL': '🧈',
+      'QUESOS RALLADOS': '🧀',
+      'SODECAR': '🥓',
+      'A.G.D Y NIZA': '🌻',
       'BEBIDAS': '🥤',
       'BEBIDAS ALCOHOLICAS': '🍺',
       'BEBIDAS ALCOHÓLICAS': '🍺',
@@ -322,8 +329,16 @@ export async function getStoreCatalog(req: Request, res: Response): Promise<void
       'PESCADERIA': '🐟',
       'PAPELES': '🧻',
       'NO COMESTIBLES': '📦',
+      'REGALERIA': '🎁',
       'ESTUCHERIA Y REGALERÍA': '🎁',
       'ESTUCHERIA Y REGALERIA': '🎁',
+      'CAFE': '☕',
+      'ARROZ': '🌾',
+      'YERBAS': '🧉',
+      'AZUCAR': '🍬',
+      'EDULCORANTES': '☕',
+      'REFRIGERADOS': '❄️',
+      'FIAMBRES': '🧀',
       'VARIOS': '🏷️'
     };
 
@@ -362,7 +377,7 @@ export async function getStoreCatalog(req: Request, res: Response): Promise<void
       }
 
       // Asignación de Categoría Comercial (siempre en Mayúsculas)
-      let rawCategory = productCampaignGroupMap.get(p.id);
+      let rawCategory = productCampaignGroupMap.get(p.id) || p.commercialCategory;
       if (!rawCategory && p.rubro?.name) {
         const mapped = RUBRO_TO_COMMERCIAL_CATEGORY[p.rubro.name.toUpperCase().trim()];
         if (mapped) {
@@ -438,13 +453,24 @@ export async function getStoreCatalog(req: Request, res: Response): Promise<void
       'VARIOS'
     ];
 
+    const productCategoryCounts = new Map<string, number>();
+    formattedProducts.forEach((p) => {
+      if (p.commercialCategoryName) {
+        const cleanName = p.commercialCategoryName.toUpperCase().trim();
+        const normKey = cleanName.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        productCategoryCounts.set(normKey, (productCategoryCounts.get(normKey) || 0) + 1);
+      }
+    });
+
     const uniqueCategoryMap = new Map<string, string>();
     const addCategory = (name: string) => {
       if (!name) return;
       const cleanName = name.toUpperCase().trim();
       const normKey = cleanName.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-      if (!uniqueCategoryMap.has(normKey)) {
-        uniqueCategoryMap.set(normKey, cleanName);
+      if ((productCategoryCounts.get(normKey) || 0) > 0 || configuredCategoriesSet.has(cleanName)) {
+        if (!uniqueCategoryMap.has(normKey)) {
+          uniqueCategoryMap.set(normKey, cleanName);
+        }
       }
     };
 

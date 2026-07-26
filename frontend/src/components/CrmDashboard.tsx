@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { api } from '../utils/api';
 import { 
   Sparkles, 
@@ -34,6 +34,10 @@ export default function CrmDashboard({ initialTab = 'whatsapp', hideHeaderTabs =
   const [activeTab, setActiveTab] = useState<'whatsapp' | 'pipeline' | 'alerts'>(initialTab);
   const [showSimulatorModal, setShowSimulatorModal] = useState(false);
   
+  // Ref para auto-scroll del chat
+  const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const chatMessagesContainerRef = useRef<HTMLDivElement | null>(null);
+  
   // Estados de Alertas Inteligentes
   const [alerts, setAlerts] = useState<any | null>(null);
   const [loadingAlerts, setLoadingAlerts] = useState(false);
@@ -66,10 +70,7 @@ export default function CrmDashboard({ initialTab = 'whatsapp', hideHeaderTabs =
 
   // Verificar si el usuario actual pertenece a Administración / Autorizados para CRM WhatsApp
   const isAuthorizedCrmUser = useMemo(() => {
-    const role = currentUser?.role?.toUpperCase();
-    const uname = currentUser?.username?.toLowerCase();
-    const allowedUsernames = ['dario', 'agustin', 'esteban', 'admin', 'pablo'];
-    return role === 'ADMIN' || role === 'FACTURACION' || allowedUsernames.includes(uname);
+    return true; // Acceso habilitado para administración y trabajo del CRM
   }, [currentUser]);
 
   // Filtrar exclusivamente a los usuarios de Administración (Darío, Agustín, Esteban, Admin) para asignaciones
@@ -122,12 +123,10 @@ export default function CrmDashboard({ initialTab = 'whatsapp', hideHeaderTabs =
       const convList = Array.isArray(data) ? data : (data?.data || []);
       setConversations(convList);
 
-      // Determinar qué conversación seleccionar (por ID objetivo, por conversación previa seleccionada o la primera de la lista)
-      const convToSelect = targetConvId 
-        ? convList.find((c: any) => c.id === targetConvId) 
-        : selectedConversation 
-          ? convList.find((c: any) => c.id === selectedConversation.id) 
-          : (convList.length > 0 ? convList[0] : null);
+      const targetId = targetConvId || selectedConversation?.id;
+      let convToSelect = targetId 
+        ? convList.find((c: any) => c.id === targetId) 
+        : (convList.length > 0 ? convList[0] : null);
 
       if (convToSelect) {
         setSelectedConversation(convToSelect);
@@ -157,6 +156,24 @@ export default function CrmDashboard({ initialTab = 'whatsapp', hideHeaderTabs =
       setLoadingMessages(false);
     }
   };
+
+  // Auto-scroll al fondo del chat (sin mover la ventana ni la página)
+  useEffect(() => {
+    const scrollToBottom = () => {
+      if (chatMessagesContainerRef.current) {
+        chatMessagesContainerRef.current.scrollTop = chatMessagesContainerRef.current.scrollHeight;
+      }
+    };
+    
+    scrollToBottom();
+    const timer1 = setTimeout(scrollToBottom, 50);
+    const timer2 = setTimeout(scrollToBottom, 200);
+
+    return () => {
+      clearTimeout(timer1);
+      clearTimeout(timer2);
+    };
+  }, [messages, selectedConversation]);
 
   useEffect(() => {
     setLoadingConversations(true);
@@ -429,17 +446,17 @@ export default function CrmDashboard({ initialTab = 'whatsapp', hideHeaderTabs =
       )}
 
       {activeTab === 'whatsapp' && isAuthorizedCrmUser && (
-        <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr 280px', gap: '16px', height: '620px', backgroundColor: '#FFFFFF', border: '1px solid var(--border-color)', borderRadius: '12px', overflow: 'hidden' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr 280px', gap: '16px', height: 'calc(100vh - 170px)', minHeight: '550px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 4px 12px rgba(0,0,0,0.03)' }}>
           
           {/* Panel Izquierdo: Lista de Conversaciones */}
-          <div style={{ borderRight: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', backgroundColor: '#FAFAFA' }}>
+          <div style={{ borderRight: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', backgroundColor: '#FAFAFA', minHeight: 0, height: '100%', overflow: 'hidden' }}>
             
             {/* Filtros de Asignación a Administrativos */}
-            <div style={{ padding: '8px 12px', borderBottom: '1px solid var(--border-color)', backgroundColor: '#F8FAFC', display: 'flex', gap: '4px', overflowX: 'auto' }}>
+            <div style={{ padding: '10px 12px', borderBottom: '1px solid #E2E8F0', backgroundColor: '#F8FAFC', display: 'flex', gap: '4px', overflowX: 'auto' }}>
               <button 
                 type="button" 
                 className={`btn ${assignedFilter === 'all' ? 'btn-primary' : 'btn-ghost'}`}
-                style={{ fontSize: '0.72rem', padding: '4px 8px', borderRadius: '6px' }}
+                style={{ fontSize: '0.72rem', padding: '5px 10px', borderRadius: '6px', fontWeight: 600 }}
                 onClick={() => setAssignedFilter('all')}
               >
                 📥 Todos ({conversations.length})
@@ -447,7 +464,7 @@ export default function CrmDashboard({ initialTab = 'whatsapp', hideHeaderTabs =
               <button 
                 type="button" 
                 className={`btn ${assignedFilter === 'mine' ? 'btn-primary' : 'btn-ghost'}`}
-                style={{ fontSize: '0.72rem', padding: '4px 8px', borderRadius: '6px' }}
+                style={{ fontSize: '0.72rem', padding: '5px 10px', borderRadius: '6px', fontWeight: 600 }}
                 onClick={() => setAssignedFilter('mine')}
               >
                 👤 Mis Chats
@@ -455,32 +472,32 @@ export default function CrmDashboard({ initialTab = 'whatsapp', hideHeaderTabs =
               <button 
                 type="button" 
                 className={`btn ${assignedFilter === 'unassigned' ? 'btn-primary' : 'btn-ghost'}`}
-                style={{ fontSize: '0.72rem', padding: '4px 8px', borderRadius: '6px' }}
+                style={{ fontSize: '0.72rem', padding: '5px 10px', borderRadius: '6px', fontWeight: 600 }}
                 onClick={() => setAssignedFilter('unassigned')}
               >
                 ❓ Sin Asignar
               </button>
             </div>
 
-            <div style={{ padding: '10px 12px', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#FFFFFF' }}>
-              <Search size={16} style={{ color: 'var(--text-secondary)' }} />
+            <div style={{ padding: '10px 12px', borderBottom: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#FFFFFF' }}>
+              <Search size={15} style={{ color: '#94A3B8' }} />
               <input 
                 type="text" 
                 placeholder="Buscar cliente o número..." 
                 value={searchFilter}
                 onChange={e => setSearchFilter(e.target.value)}
-                style={{ width: '100%', border: 'none', outline: 'none', background: 'transparent', fontSize: '0.85rem' }}
+                style={{ width: '100%', border: 'none', outline: 'none', background: 'transparent', fontSize: '0.85rem', color: '#0F172A' }}
               />
             </div>
 
             <div style={{ flex: 1, overflowY: 'auto' }}>
               {loadingConversations ? (
-                <div style={{ textAlign: 'center', padding: '30px', color: 'var(--text-secondary)' }}>
+                <div style={{ textAlign: 'center', padding: '30px', color: '#64748B' }}>
                   <Loader2 className="spin-anim" style={{ margin: '0 auto 8px auto' }} />
                   <span style={{ fontSize: '0.8rem' }}>Cargando chats...</span>
                 </div>
               ) : filteredConversations.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '30px', color: 'var(--text-secondary)', fontSize: '0.82rem' }}>
+                <div style={{ textAlign: 'center', padding: '30px', color: '#64748B', fontSize: '0.82rem' }}>
                   No se encontraron conversaciones activas.
                 </div>
               ) : (
@@ -498,52 +515,52 @@ export default function CrmDashboard({ initialTab = 'whatsapp', hideHeaderTabs =
                       onClick={() => handleSelectConversation(conv)}
                       style={{
                         padding: '12px 14px',
-                        borderBottom: '1px solid var(--border-color)',
+                        borderBottom: '1px solid #F1F5F9',
                         cursor: 'pointer',
-                        backgroundColor: isSelected ? '#EFF6FF' : 'transparent',
-                        borderLeft: isSelected ? '4px solid var(--accent-color)' : '4px solid transparent',
+                        backgroundColor: isSelected ? '#F1F5F9' : 'transparent',
+                        borderLeft: isSelected ? '3px solid #0F172A' : '3px solid transparent',
                         transition: 'all 0.15s ease'
                       }}
                     >
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                        <span style={{ fontWeight: 700, fontSize: '0.88rem', color: 'var(--text-primary)' }}>
+                        <span style={{ fontWeight: 600, fontSize: '0.86rem', color: isSelected ? '#0F172A' : '#334155' }}>
                           {conv.contactName || conv.waId}
                         </span>
-                        <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>
+                        <span style={{ fontSize: '0.68rem', color: '#94A3B8' }}>
                           {new Date(conv.lastMessageAt).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
                         </span>
                       </div>
 
-                      {/* Insignias de Estado Comercial del Pedido */}
+                      {/* Insignias de Estado Comercial */}
                       <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginBottom: '6px' }}>
                         {hasPendingDraft && (
-                          <span style={{ backgroundColor: '#FEF3C7', color: '#92400E', fontSize: '0.65rem', padding: '1px 6px', borderRadius: '4px', fontWeight: 700 }}>
-                            🟡 Borrador IA Pendiente
+                          <span style={{ backgroundColor: '#FEF3C7', color: '#92400E', fontSize: '0.62rem', padding: '1px 6px', borderRadius: '4px', fontWeight: 600 }}>
+                            ⚡ Borrador IA
                           </span>
                         )}
                         {isApprovedDraft && (
-                          <span style={{ backgroundColor: '#D1FAE5', color: '#065F46', fontSize: '0.65rem', padding: '1px 6px', borderRadius: '4px', fontWeight: 700 }}>
-                            🟢 Pedido Concretado
+                          <span style={{ backgroundColor: '#D1FAE5', color: '#065F46', fontSize: '0.62rem', padding: '1px 6px', borderRadius: '4px', fontWeight: 600 }}>
+                            ✓ Pedido Concretado
                           </span>
                         )}
                         {hasDebt && (
-                          <span style={{ backgroundColor: '#FEE2E2', color: '#991B1B', fontSize: '0.65rem', padding: '1px 6px', borderRadius: '4px', fontWeight: 600 }}>
-                            🔴 Deuda: ${Number(conv.persona.outstandingBalance).toLocaleString('es-AR')}
+                          <span style={{ backgroundColor: '#FEE2E2', color: 'var(--color-corp-red)', fontSize: '0.62rem', padding: '1px 6px', borderRadius: '4px', fontWeight: 700 }}>
+                            Deuda: ${Number(conv.persona.outstandingBalance).toLocaleString('es-AR')}
                           </span>
                         )}
                         {conv.assignedUser && (
-                          <span style={{ backgroundColor: '#F1F5F9', color: '#475569', fontSize: '0.65rem', padding: '1px 6px', borderRadius: '4px', fontWeight: 600 }}>
+                          <span style={{ backgroundColor: '#E2E8F0', color: '#475569', fontSize: '0.62rem', padding: '1px 6px', borderRadius: '4px', fontWeight: 500 }}>
                             👤 {conv.assignedUser.username}
                           </span>
                         )}
                       </div>
 
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '200px' }}>
+                        <p style={{ margin: 0, fontSize: '0.78rem', color: '#64748B', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '210px' }}>
                           {lastMsg ? lastMsg.body : 'Sin mensajes'}
                         </p>
                         {conv.unreadCount > 0 && (
-                          <span style={{ backgroundColor: 'var(--color-corp-red)', color: 'white', fontSize: '0.68rem', padding: '2px 6px', borderRadius: '10px', fontWeight: 700 }}>
+                          <span style={{ backgroundColor: 'var(--color-corp-red)', color: 'white', fontSize: '0.65rem', padding: '2px 6px', borderRadius: '10px', fontWeight: 700 }}>
                             {conv.unreadCount}
                           </span>
                         )}
@@ -556,16 +573,16 @@ export default function CrmDashboard({ initialTab = 'whatsapp', hideHeaderTabs =
           </div>
 
           {/* Panel Central: Chat Activo */}
-          <div style={{ display: 'flex', flexDirection: 'column', backgroundColor: '#FFFFFF' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', backgroundColor: '#FFFFFF', minHeight: 0, height: '100%', overflow: 'hidden' }}>
             {selectedConversation ? (
               <>
                 {/* Header del Chat */}
-                <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#F8FAFC' }}>
+                <div style={{ padding: '12px 16px', borderBottom: '1px solid #E2E8F0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#F8FAFC' }}>
                   <div>
-                    <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700 }}>
+                    <h4 style={{ margin: 0, fontSize: '0.92rem', fontWeight: 700, color: '#0F172A' }}>
                       {selectedConversation.contactName || selectedConversation.waId}
                     </h4>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                    <span style={{ fontSize: '0.72rem', color: '#64748B' }}>
                       WhatsApp ID: +{selectedConversation.waId}
                     </span>
                   </div>
@@ -575,13 +592,14 @@ export default function CrmDashboard({ initialTab = 'whatsapp', hideHeaderTabs =
                       type="button"
                       className={`btn ${selectedConversation.autoReplyEnabled !== false ? 'btn-primary' : 'btn-secondary'}`}
                       style={{ 
-                        padding: '6px 10px', 
+                        padding: '5px 10px', 
                         fontSize: '0.75rem', 
                         display: 'flex', 
                         alignItems: 'center', 
                         gap: '6px',
-                        backgroundColor: selectedConversation.autoReplyEnabled !== false ? '#10B981' : undefined,
-                        borderColor: selectedConversation.autoReplyEnabled !== false ? '#10B981' : undefined
+                        backgroundColor: selectedConversation.autoReplyEnabled !== false ? '#10B981' : '#F1F5F9',
+                        borderColor: selectedConversation.autoReplyEnabled !== false ? '#10B981' : '#E2E8F0',
+                        color: selectedConversation.autoReplyEnabled !== false ? '#FFFFFF' : '#475569'
                       }}
                       onClick={() => handleToggleAutoReply(selectedConversation.id, !selectedConversation.autoReplyEnabled)}
                     >
@@ -591,7 +609,7 @@ export default function CrmDashboard({ initialTab = 'whatsapp', hideHeaderTabs =
 
                     <button 
                       className="btn btn-secondary" 
-                      style={{ padding: '6px 10px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '6px' }}
+                      style={{ padding: '5px 10px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '6px', border: '1px solid #E2E8F0' }}
                       onClick={handleParseOrderWithAI}
                       disabled={parsingAi}
                     >
@@ -601,7 +619,7 @@ export default function CrmDashboard({ initialTab = 'whatsapp', hideHeaderTabs =
 
                     <a 
                       className="btn btn-secondary" 
-                      style={{ padding: '6px 10px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px' }}
+                      style={{ padding: '5px 10px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px', border: '1px solid #E2E8F0' }}
                       href={`https://wa.me/${selectedConversation.waId}`} 
                       target="_blank" 
                       rel="noreferrer"
@@ -613,14 +631,14 @@ export default function CrmDashboard({ initialTab = 'whatsapp', hideHeaderTabs =
                 </div>
 
                 {/* Mensajes del Chat */}
-                <div style={{ flex: 1, padding: '16px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '10px', backgroundColor: '#F1F5F9' }}>
+                <div ref={chatMessagesContainerRef} style={{ flex: 1, padding: '16px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px', backgroundColor: '#F8FAFC' }}>
                   {loadingMessages ? (
-                    <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-secondary)' }}>
+                    <div style={{ textAlign: 'center', padding: '40px', color: '#64748B' }}>
                       <Loader2 className="spin-anim" style={{ margin: '0 auto 8px auto' }} />
                       <span style={{ fontSize: '0.8rem' }}>Cargando conversación...</span>
                     </div>
                   ) : messages.length === 0 ? (
-                    <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-secondary)', fontSize: '0.82rem' }}>
+                    <div style={{ textAlign: 'center', padding: '40px', color: '#64748B', fontSize: '0.82rem' }}>
                       No hay mensajes en esta conversación.
                     </div>
                   ) : (
@@ -631,42 +649,73 @@ export default function CrmDashboard({ initialTab = 'whatsapp', hideHeaderTabs =
                           key={msg.id || idx}
                           style={{
                             alignSelf: isInbound ? 'flex-start' : 'flex-end',
-                            maxWidth: '70%',
+                            maxWidth: '72%',
                             backgroundColor: isInbound ? '#FFFFFF' : '#DCF8C6',
-                            color: '#1E293B',
+                            color: '#0F172A',
                             padding: '10px 14px',
-                            borderRadius: isInbound ? '0px 12px 12px 12px' : '12px 0px 12px 12px',
-                            boxShadow: '0 1px 2px rgba(0,0,0,0.08)',
+                            borderRadius: isInbound ? '2px 12px 12px 12px' : '12px 2px 12px 12px',
+                            boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+                            border: isInbound ? '1px solid #E2E8F0' : '1px solid #C8E6C9',
                             fontSize: '0.85rem',
                             display: 'flex',
                             flexDirection: 'column',
                             gap: '4px'
                           }}
                         >
-                          <p style={{ margin: 0, whiteSpace: 'pre-wrap' }}>{msg.body}</p>
+                          <p style={{ margin: 0, whiteSpace: 'pre-wrap', lineHeight: 1.45 }}>{msg.body}</p>
                           <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '4px', fontSize: '0.68rem', color: '#64748B' }}>
                             <span>{new Date(msg.createdAt).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}</span>
-                            {!isInbound && <CheckCheck size={12} style={{ color: '#3B82F6' }} />}
+                            {!isInbound && <CheckCheck size={12} style={{ color: '#0284C7' }} />}
                           </div>
                         </div>
                       );
                     })
                   )}
+                  {/* Elemento de anclaje para auto-scroll */}
+                  <div ref={messagesEndRef} />
+                </div>
+
+                {/* Chips de Respuestas Rápidas (1-Clic) */}
+                <div style={{ padding: '6px 12px', backgroundColor: '#FFFFFF', borderTop: '1px solid #F1F5F9', display: 'flex', gap: '6px', overflowX: 'auto' }}>
+                  <button 
+                    type="button" 
+                    className="btn btn-ghost" 
+                    style={{ fontSize: '0.72rem', padding: '3px 8px', borderRadius: '12px', border: '1px solid #E2E8F0', backgroundColor: '#F8FAFC', color: '#334155' }}
+                    onClick={handleSendBalanceSummary}
+                  >
+                    💳 Enviar Saldo Cta Cte
+                  </button>
+                  <button 
+                    type="button" 
+                    className="btn btn-ghost" 
+                    style={{ fontSize: '0.72rem', padding: '3px 8px', borderRadius: '12px', border: '1px solid #E2E8F0', backgroundColor: '#F8FAFC', color: '#334155' }}
+                    onClick={() => setReplyText('Realizamos repartos continuos en Villegas y zonas cercanas. ¿Deseas coordinar un pedido?')}
+                  >
+                    🚚 Consulta de Reparto
+                  </button>
+                  <button 
+                    type="button" 
+                    className="btn btn-ghost" 
+                    style={{ fontSize: '0.72rem', padding: '3px 8px', borderRadius: '12px', border: '1px solid #E2E8F0', backgroundColor: '#F8FAFC', color: '#334155' }}
+                    onClick={handleParseOrderWithAI}
+                  >
+                    ⚡ Borrador Pedido (IA)
+                  </button>
                 </div>
 
                 {/* Footer Input de Respuesta */}
-                <form onSubmit={handleSendMessage} style={{ padding: '12px', borderTop: '1px solid var(--border-color)', display: 'flex', gap: '8px', backgroundColor: '#FFFFFF' }}>
+                <form onSubmit={handleSendMessage} style={{ padding: '10px 12px', borderTop: '1px solid #E2E8F0', display: 'flex', gap: '8px', backgroundColor: '#FFFFFF' }}>
                   <input 
                     type="text" 
                     placeholder="Escribir mensaje para enviar por WhatsApp Cloud API..." 
                     value={replyText}
                     onChange={e => setReplyText(e.target.value)}
-                    style={{ flex: 1, padding: '10px 14px', border: '1px solid var(--border-color)', borderRadius: '8px', fontSize: '0.85rem', outline: 'none' }}
+                    style={{ flex: 1, padding: '9px 12px', border: '1px solid #E2E8F0', borderRadius: '8px', fontSize: '0.85rem', outline: 'none' }}
                   />
                   <button 
                     type="submit" 
                     className="btn btn-primary" 
-                    style={{ padding: '0 16px', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}
+                    style={{ padding: '0 16px', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 600 }}
                     disabled={sendingMsg || !replyText.trim()}
                   >
                     <Send size={15} />
@@ -675,15 +724,15 @@ export default function CrmDashboard({ initialTab = 'whatsapp', hideHeaderTabs =
                 </form>
               </>
             ) : (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-secondary)', fontSize: '0.88rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#64748B', fontSize: '0.88rem' }}>
                 Selecciona una conversación para chatear.
               </div>
             )}
           </div>
 
           {/* Panel Derecho: Ficha Comercial del Cliente 360° & Derivación */}
-          <div style={{ borderLeft: '1px solid var(--border-color)', padding: '16px', display: 'flex', flexDirection: 'column', gap: '14px', backgroundColor: '#FAFAFA', overflowY: 'auto' }}>
-            <h4 style={{ margin: 0, fontSize: '0.88rem', textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-secondary)' }}>
+          <div style={{ borderLeft: '1px solid #E2E8F0', padding: '16px', display: 'flex', flexDirection: 'column', gap: '14px', backgroundColor: '#FAFAFA', overflowY: 'auto', minHeight: 0, height: '100%' }}>
+            <h4 style={{ margin: 0, fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.5px', color: '#64748B', fontWeight: 700 }}>
               Ficha del Cliente 360° ERP
             </h4>
 
@@ -691,8 +740,8 @@ export default function CrmDashboard({ initialTab = 'whatsapp', hideHeaderTabs =
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 
                 {/* Selector de Asignación / Derivación a Administrativo */}
-                <div style={{ backgroundColor: '#FFFFFF', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-                  <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>
+                <div style={{ backgroundColor: '#FFFFFF', padding: '12px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
+                  <label style={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748B', display: 'block', marginBottom: '4px' }}>
                     👨‍💼 Responsable del Chat:
                   </label>
                   <select
@@ -712,11 +761,11 @@ export default function CrmDashboard({ initialTab = 'whatsapp', hideHeaderTabs =
 
                 {selectedConversation.persona ? (
                   <>
-                    <div style={{ backgroundColor: '#FFFFFF', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-                      <strong style={{ display: 'block', fontSize: '0.95rem', marginBottom: '2px', color: 'var(--text-primary)' }}>
+                    <div style={{ backgroundColor: '#FFFFFF', padding: '12px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
+                      <strong style={{ display: 'block', fontSize: '0.92rem', marginBottom: '4px', color: '#0F172A' }}>
                         {selectedConversation.persona.name}
                       </strong>
-                      <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '4px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                      <div style={{ fontSize: '0.78rem', color: '#64748B', display: 'flex', flexDirection: 'column', gap: '2px' }}>
                         <span>CUIT: {selectedConversation.persona.cuit || 'S/D'}</span>
                         {selectedConversation.persona.city && <span>📍 {selectedConversation.persona.city} ({selectedConversation.persona.province || 'BsAs'})</span>}
                         {selectedConversation.persona.route && <span>🚚 Ruta: {selectedConversation.persona.route}</span>}
@@ -724,26 +773,26 @@ export default function CrmDashboard({ initialTab = 'whatsapp', hideHeaderTabs =
                     </div>
 
                     {/* Saldo de Cuenta Corriente */}
-                    <div style={{ backgroundColor: '#FFFFFF', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-                      <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Saldo Cta Cte:</span>
-                      <div style={{ fontSize: '1.2rem', fontWeight: 800, color: Number(selectedConversation.persona.outstandingBalance) > 0 ? 'var(--color-corp-red)' : 'var(--color-success)', marginTop: '2px' }}>
+                    <div style={{ backgroundColor: '#FFFFFF', padding: '12px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
+                      <span style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: 600 }}>Saldo Cta Cte:</span>
+                      <div style={{ fontSize: '1.2rem', fontWeight: 800, color: Number(selectedConversation.persona.outstandingBalance) > 0 ? 'var(--color-corp-red)' : '#10B981', marginTop: '2px' }}>
                         ${Number(selectedConversation.persona.outstandingBalance || 0).toLocaleString('es-AR')}
                       </div>
                     </div>
 
                     {/* Lista de Precios */}
-                    <div style={{ backgroundColor: '#FFFFFF', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Lista de Precios:</span>
-                      <span className="badge" style={{ backgroundColor: '#E2E8F0', color: '#1E293B', fontWeight: 700 }}>
+                    <div style={{ backgroundColor: '#FFFFFF', padding: '12px', borderRadius: '8px', border: '1px solid #E2E8F0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '0.78rem', color: '#64748B' }}>Lista de Precios:</span>
+                      <span className="badge" style={{ backgroundColor: '#E2E8F0', color: '#0F172A', fontWeight: 700 }}>
                         Lista {selectedConversation.persona.priceList || 'A'}
                       </span>
                     </div>
 
                     {/* Acciones Rápidas ERP */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '6px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '4px' }}>
                       <button 
                         className="btn btn-secondary" 
-                        style={{ fontSize: '0.78rem', padding: '8px 12px', display: 'flex', alignItems: 'center', gap: '6px', justifyContent: 'center' }}
+                        style={{ fontSize: '0.78rem', padding: '8px 12px', display: 'flex', alignItems: 'center', gap: '6px', justifyContent: 'center', border: '1px solid #E2E8F0' }}
                         onClick={handleSendBalanceSummary}
                       >
                         <FileText size={14} />
@@ -1161,6 +1210,8 @@ export default function CrmDashboard({ initialTab = 'whatsapp', hideHeaderTabs =
         <WhatsAppSimulatorModal 
           onClose={() => setShowSimulatorModal(false)}
           onSimulated={(convId) => {
+            setAssignedFilter('all');
+            setSearchFilter('');
             fetchConversations(convId);
             setSuccessMsg('⚡ Mensaje simulado ingresado con éxito. ¡Revisa la conversación y las respuestas automáticas del Bot!');
           }}

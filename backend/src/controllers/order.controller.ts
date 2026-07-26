@@ -25,7 +25,7 @@ function getJurisdictionCode(provinceOrAddress?: string | null): string {
 export async function getOrders(req: AuthenticatedRequest, res: Response): Promise<void> {
   const userId = req.user?.id;
   const userRole = req.user?.role;
-  const { billingType, status } = req.query;
+  const { billingType, status, page, limit } = req.query;
 
   if (!userId || !userRole) {
     res.status(401).json({ status: 'error', message: 'No autorizado.' });
@@ -47,42 +47,60 @@ export async function getOrders(req: AuthenticatedRequest, res: Response): Promi
       whereClause.status = status as OrderStatus;
     }
 
-    const orders = await prisma.order.findMany({
-      where: whereClause,
-      include: {
-        persona: {
-          select: { id: true, name: true, cuit: true, city: true, route: true, address: true },
-        },
-        seller: {
-          select: { id: true, username: true },
-        },
-        deliveryRoute: {
-          select: { id: true, status: true, driverName: true, vehiclePlate: true }
-        },
-        items: {
-          include: {
-            product: {
-              include: {
-                lots: {
-                  orderBy: { expirationDate: 'asc' },
+    const pageNum = page ? Math.max(1, parseInt(page as string, 10)) : undefined;
+    const limitNum = limit ? Math.max(1, parseInt(limit as string, 10)) : undefined;
+    const skip = pageNum && limitNum ? (pageNum - 1) * limitNum : undefined;
+    const take = limitNum || undefined;
+
+    const [orders, totalCount] = await Promise.all([
+      prisma.order.findMany({
+        where: whereClause,
+        include: {
+          persona: {
+            select: { id: true, name: true, cuit: true, city: true, route: true, address: true },
+          },
+          seller: {
+            select: { id: true, username: true },
+          },
+          deliveryRoute: {
+            select: { id: true, status: true, driverName: true, vehiclePlate: true }
+          },
+          items: {
+            include: {
+              product: {
+                include: {
+                  lots: {
+                    orderBy: { expirationDate: 'asc' },
+                  },
+                  rubro: true,
                 },
-                rubro: true,
               },
-            },
-            orderItemLots: {
-              include: {
-                productLot: true,
+              orderItemLots: {
+                include: {
+                  productLot: true,
+                },
               },
             },
           },
         },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take,
+      }),
+      prisma.order.count({ where: whereClause }),
+    ]);
 
     res.status(200).json({
       status: 'success',
-      data: { orders },
+      data: {
+        orders,
+        pagination: {
+          total: totalCount,
+          page: pageNum || 1,
+          limit: limitNum || totalCount,
+          totalPages: limitNum ? Math.ceil(totalCount / limitNum) : 1,
+        },
+      },
     });
   } catch (error: any) {
     res.status(500).json({

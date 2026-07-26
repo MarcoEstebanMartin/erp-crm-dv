@@ -1,7 +1,7 @@
 const API_BASE_URL = `http://${window.location.hostname}:3000/api`;
 
 export const apiClient = {
-  async get(endpoint: string) {
+  async get<T = any>(endpoint: string): Promise<T> {
     const token = localStorage.getItem('auth_token');
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       headers: {
@@ -12,10 +12,10 @@ export const apiClient = {
     if (!response.ok) {
       throw new Error(data.message || 'Error en la petición GET');
     }
-    return data;
+    return data as T;
   },
 
-  async post(endpoint: string, body: any) {
+  async post<T = any, B = Record<string, unknown>>(endpoint: string, body?: B): Promise<T> {
     const token = localStorage.getItem('auth_token');
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       method: 'POST',
@@ -23,16 +23,16 @@ export const apiClient = {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
       },
-      body: JSON.stringify(body)
+      body: body ? JSON.stringify(body) : undefined
     });
     const data = await response.json();
     if (!response.ok) {
       throw new Error(data.message || 'Error en la petición POST');
     }
-    return data;
+    return data as T;
   },
 
-  async put(endpoint: string, body: any) {
+  async put<T = any, B = Record<string, unknown>>(endpoint: string, body?: B): Promise<T> {
     const token = localStorage.getItem('auth_token');
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       method: 'PUT',
@@ -40,16 +40,16 @@ export const apiClient = {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
       },
-      body: JSON.stringify(body)
+      body: body ? JSON.stringify(body) : undefined
     });
     const data = await response.json();
     if (!response.ok) {
       throw new Error(data.message || 'Error en la petición PUT');
     }
-    return data;
+    return data as T;
   },
 
-  async delete(endpoint: string) {
+  async delete<T = any>(endpoint: string): Promise<T> {
     const token = localStorage.getItem('auth_token');
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       method: 'DELETE',
@@ -61,10 +61,10 @@ export const apiClient = {
     if (!response.ok) {
       throw new Error(data.message || 'Error en la petición DELETE');
     }
-    return data;
+    return data as T;
   },
 
-  async postFormData(endpoint: string, formData: FormData) {
+  async postFormData<T = any>(endpoint: string, formData: FormData): Promise<T> {
     const token = localStorage.getItem('auth_token');
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       method: 'POST',
@@ -77,6 +77,6 @@ export const apiClient = {
     if (!response.ok) {
       throw new Error(data.message || 'Error en la petición POST FormData');
     }
-    return data;
+    return data as T;
   }
 };

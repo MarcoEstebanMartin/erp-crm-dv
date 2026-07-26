@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../utils/api';
+import HrDashboard from '../HrDashboard';
 import { 
   UserPlus, 
   RotateCcw, 
@@ -19,22 +20,25 @@ import {
   Scale,
   Receipt,
   Tag,
-  Phone
+  Phone,
+  Briefcase
 } from 'lucide-react';
 import { useConfirm } from '../../context/ConfirmContext';
 
 interface ConfigTabProps {
   setErrorMsg: (msg: string | null) => void;
   setSuccessMsg: (msg: string | null) => void;
+  initialTab?: string;
 }
 
 export default function ConfigTab({
   setErrorMsg,
-  setSuccessMsg
+  setSuccessMsg,
+  initialTab = 'general'
 }: ConfigTabProps) {
   const confirm = useConfirm();
   // Tab navigation state
-  const [configTab, setConfigTab] = useState<string>('general');
+  const [configTab, setConfigTab] = useState<string>(initialTab);
 
   // General & Company settings (localStorage read-write)
   const [companyRazonSocial, setCompanyRazonSocial] = useState<string>(() => localStorage.getItem('company_razon_social') || 'Distribuidora de Bebidas SRL');
@@ -369,6 +373,7 @@ export default function ConfigTab({
       <div style={{ display: 'flex', gap: '8px', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px', marginBottom: '12px', overflowX: 'auto', paddingRight: '4px' }}>
         {[
           { id: 'general', label: 'General & Empresa', icon: <Building2 size={15} /> },
+          { id: 'rrhh', label: 'Recursos Humanos', icon: <Briefcase size={15} /> },
           { id: 'personal', label: 'Empleados & Roles', icon: <Users size={15} /> },
           { id: 'audit', label: 'Auditoría (Logs)', icon: <FileText size={15} /> },
           { id: 'percepciones', label: 'Impuestos & Percepciones', icon: <Receipt size={15} /> },
@@ -400,6 +405,11 @@ export default function ConfigTab({
           </button>
         ))}
       </div>
+
+      {/* Sub-tab Recursos Humanos */}
+      {configTab === 'rrhh' && (
+        <HrDashboard />
+      )}
 
 
       {/* Sub-tab 1: General & Empresa */}

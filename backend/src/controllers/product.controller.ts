@@ -192,9 +192,21 @@ export async function uploadProductImage(req: AuthenticatedRequest, res: Respons
 
     // Normalizar extensión del archivo original
     const ext = path.extname(req.file.originalname).toLowerCase() || '.png';
-    // Guardar imagen usando el SKU del producto
-    const filename = `${product.sku}${ext}`;
-    const uploadPath = path.join(__dirname, '../../uploads/products', filename);
+    const uploadDir = path.join(__dirname, '../../uploads/products');
+
+    // Limpiar archivos anteriores de este SKU para evitar huérfanos y problemas de caché
+    if (fs.existsSync(uploadDir)) {
+      const existingFiles = fs.readdirSync(uploadDir).filter(f => f.startsWith(`${product.sku}.`) || f.startsWith(`${product.sku}_`));
+      for (const f of existingFiles) {
+        try { fs.unlinkSync(path.join(uploadDir, f)); } catch (e) {}
+      }
+    } else {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+
+    // Nombre único con timestamp para forzar actualización en caché de navegadores
+    const filename = `${product.sku}_${Date.now()}${ext}`;
+    const uploadPath = path.join(uploadDir, filename);
 
     // Escribir el buffer a disco
     fs.writeFileSync(uploadPath, req.file.buffer);
@@ -250,47 +262,75 @@ export async function importProductsZip(req: AuthenticatedRequest, res: Response
       fs.mkdirSync(uploadDir, { recursive: true });
     }
 
-    // Procesar cada entrada del archivo ZIP
-    for (const entry of zipEntries) {
-      // Ignorar directorios, archivos del sistema (como __MACOSX) y vacíos
+    // Cargar todos los productos de la BD para hacer matcheo flexible por SKU o Nombre
+    const allProducts = await prisma.product.findMany({
+      select: { id: true, sku: true, name: true, imageUrl: true }
+    });
+
+    const normalizeStr = (str: string) => 
+      str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "");
+
+    // Filtrar entradas válidas de imagen
+    const validEntries = zipEntries.filter(entry => {
       if (entry.isDirectory || entry.entryName.startsWith('__MACOSX/') || entry.entryName.includes('.DS_Store')) {
-        continue;
+        return false;
       }
-
       const fileExt = path.extname(entry.name).toLowerCase();
-      const allowedExts = ['.png', '.jpg', '.jpeg', '.webp'];
+      return ['.png', '.jpg', '.jpeg', '.webp'].includes(fileExt);
+    });
 
-      if (!allowedExts.includes(fileExt)) {
-        continue;
-      }
+    if (validEntries.length === 0) {
+      res.status(400).json({ status: 'error', message: 'El archivo ZIP no contiene imágenes válidas.' });
+      return;
+    }
 
-      // El nombre del archivo sin extensión representa el SKU
-      const sku = path.basename(entry.name, fileExt).trim();
+    // Comprobar si las imágenes son un lote secuencial de Canva (ej: "1.jpg", "2.jpg", "Page 1.jpg", "Página 1.jpg")
+    const isSequentialCanvaZip = validEntries.every(entry => {
+      const base = path.basename(entry.name, path.extname(entry.name)).trim();
+      return /^\d{1,3}$/.test(base) || /^(page|pagina|página|diseño|diseno)[_ -]?\d+$/i.test(base);
+    });
 
-      if (!sku) {
-        continue;
-      }
+    if (isSequentialCanvaZip) {
+      // Extraer el número de página para ordenar (1, 2, 3... 50)
+      const extractNum = (name: string) => {
+        const match = name.match(/\d+/);
+        return match ? parseInt(match[0], 10) : 999999;
+      };
 
-      // Buscar si el producto existe por SKU en la base de datos
-      const product = await prisma.product.findUnique({
-        where: { sku },
+      const sortedEntries = [...validEntries].sort((a, b) => {
+        const numA = extractNum(a.name);
+        const numB = extractNum(b.name);
+        if (numA !== numB) return numA - numB;
+        return a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
       });
 
-      if (product) {
-        const filename = `${sku}${fileExt}`;
+      // Obtener los productos activos sin imagen ordenados por SKU (mismo orden que el CSV exportado para Canva)
+      const prodsWithoutImage = await prisma.product.findMany({
+        where: {
+          OR: [{ imageUrl: null }, { imageUrl: '' }],
+          isActive: true,
+        },
+        select: { id: true, sku: true, name: true, imageUrl: true },
+        orderBy: { sku: 'asc' },
+      });
+
+      const countToProcess = Math.min(sortedEntries.length, prodsWithoutImage.length);
+
+      for (let i = 0; i < countToProcess; i++) {
+        const entry = sortedEntries[i];
+        const product = prodsWithoutImage[i];
+        const fileExt = path.extname(entry.name).toLowerCase();
+        const filename = `${product.sku}${fileExt}`;
         const destPath = path.join(uploadDir, filename);
 
-        // Guardar archivo físico
         fs.writeFileSync(destPath, entry.getData());
-
-        // Actualizar URL en la BD
         const imageUrl = `/uploads/products/${filename}`;
+
         await prisma.product.update({
           where: { id: product.id },
           data: { imageUrl },
         });
 
-        // Registrar auditoría si tenemos el usuario autenticado
         if (req.user?.id) {
           await logAudit({
             userId: req.user.id,
@@ -301,11 +341,65 @@ export async function importProductsZip(req: AuthenticatedRequest, res: Response
             newValues: { imageUrl },
           });
         }
-
         processedCount++;
-      } else {
-        skippedCount++;
-        skippedEntries.push(entry.name);
+      }
+
+      if (sortedEntries.length > countToProcess) {
+        for (let i = countToProcess; i < sortedEntries.length; i++) {
+          skippedCount++;
+          skippedEntries.push(sortedEntries[i].name);
+        }
+      }
+    } else {
+      // Matcheo directo por SKU o Nombre exacto/normalizado
+      for (const entry of validEntries) {
+        const fileExt = path.extname(entry.name).toLowerCase();
+        const rawName = path.basename(entry.name, fileExt).trim();
+        const normalizedRaw = normalizeStr(rawName);
+
+        // 1. SKU exacto (ej: "0575")
+        let product = allProducts.find(p => p.sku === rawName);
+
+        // 2. Nombre exacto o normalizado
+        if (!product) {
+          product = allProducts.find(p => p.name === rawName || normalizeStr(p.name) === normalizedRaw);
+        }
+
+        // 3. Coincidencia parcial de nombre
+        if (!product) {
+          product = allProducts.find(p => {
+            const normPName = normalizeStr(p.name);
+            return (normPName.length > 5 && normalizedRaw.length > 5) && (normPName.includes(normalizedRaw) || normalizedRaw.includes(normPName));
+          });
+        }
+
+        if (product) {
+          const filename = `${product.sku}${fileExt}`;
+          const destPath = path.join(uploadDir, filename);
+
+          fs.writeFileSync(destPath, entry.getData());
+          const imageUrl = `/uploads/products/${filename}`;
+
+          await prisma.product.update({
+            where: { id: product.id },
+            data: { imageUrl },
+          });
+
+          if (req.user?.id) {
+            await logAudit({
+              userId: req.user.id,
+              action: 'IMPORT_PRODUCT_IMAGE_ZIP',
+              entityType: 'Product',
+              entityId: product.id,
+              oldValues: { imageUrl: product.imageUrl },
+              newValues: { imageUrl },
+            });
+          }
+          processedCount++;
+        } else {
+          skippedCount++;
+          skippedEntries.push(entry.name);
+        }
       }
     }
 
