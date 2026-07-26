@@ -285,7 +285,7 @@ export default function OffersDashboard() {
           </button>
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '20px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(460px, 1fr))', gap: '20px' }}>
           {campaigns.map(camp => (
             <div key={camp.id} className="card" style={{ 
               backgroundColor: 'var(--bg-card)', 
@@ -325,27 +325,27 @@ export default function OffersDashboard() {
                 </div>
               </div>
 
-              <div style={{ display: 'flex', gap: '10px' }}>
+              <div style={{ display: 'flex', gap: '10px', flexWrap: 'nowrap', alignItems: 'center' }}>
                 <button 
                   onClick={() => { setSelectedCampaignId(camp.id); setView('editor'); }}
                   className="btn-secondary"
-                  style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '6px' }}
+                  style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '6px', padding: '10px' }}
                   title="Editar"
                 >
-                  <Edit size={16} />
+                  <Edit size={16} /> Editar
                 </button>
                 <button 
                   onClick={() => duplicateCampaign(camp)}
                   className="btn-secondary"
-                  style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '6px', backgroundColor: '#f8fafc' }}
+                  style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '6px', backgroundColor: '#f8fafc', padding: '10px' }}
                   title="Duplicar como plantilla"
                 >
-                  <Copy size={16} />
+                  <Copy size={16} /> Duplicar
                 </button>
                 <button 
                   onClick={() => setBroadcastCampaignModal(camp)}
                   className="btn-secondary"
-                  style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '6px', backgroundColor: '#EEF2FF', color: '#4F46E5', borderColor: '#C7D2FE', fontWeight: 600 }}
+                  style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '6px', backgroundColor: '#EEF2FF', color: '#4F46E5', borderColor: '#C7D2FE', fontWeight: 600, padding: '10px' }}
                   title="Difundir Ofertas por WhatsApp"
                 >
                   <Megaphone size={16} /> WhatsApp
@@ -353,7 +353,7 @@ export default function OffersDashboard() {
                 <button 
                   onClick={() => { setSelectedCampaignId(camp.id); setView('pdf'); }}
                   className="btn-primary"
-                  style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '6px', backgroundColor: '#e30613' }}
+                  style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '6px', backgroundColor: '#e30613', padding: '10px' }}
                 >
                   <FileText size={16} /> PDF
                 </button>
@@ -363,9 +363,13 @@ export default function OffersDashboard() {
                     padding: '10px', 
                     backgroundColor: 'rgba(239, 68, 68, 0.1)', 
                     color: '#ef4444',
-                    border: 'none',
+                    border: '1px solid rgba(239, 68, 68, 0.2)',
                     borderRadius: '8px',
-                    cursor: 'pointer'
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0
                   }}
                   title="Eliminar campaña"
                 >
