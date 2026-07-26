@@ -19,27 +19,6 @@ export default function ProductsList({ products, searchQuery, setSearchQuery, se
   const [editingCell, setEditingCell] = useState<{ id: number; field: string } | null>(null);
   const [editValue, setEditValue] = useState<string>('');
 
-  const handleExportCanvaCsv = () => {
-    if (!products || products.length === 0) return;
-    
-    // Encabezado
-    const headers = ['sku', 'name'];
-    const rows = products.map(p => [
-      `"${String(p.sku || '').replace(/"/g, '""')}"`,
-      `"${String(p.name || '').replace(/"/g, '""')}"`
-    ]);
-    
-    const csvContent = [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
-    const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", `catalogo_canva_${new Date().toISOString().slice(0,10)}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
   const handleEditStart = (id: number, field: string, value: number) => {
     setEditingCell({ id, field });
     setEditValue(value.toString());
@@ -191,19 +170,7 @@ export default function ProductsList({ products, searchQuery, setSearchQuery, se
         )}
 
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-          <button type="button" className="btn btn-secondary" style={{ borderRadius: '8px', display: 'flex', gap: '6px', alignItems: 'center' }} onClick={handleExportCanvaCsv}>
-            <Download size={16} />
-            <span>Exportar (Canva)</span>
-          </button>
-          
-          {onOpenImportZip && (
-            <button type="button" className="btn btn-secondary" style={{ borderRadius: '8px', display: 'flex', gap: '6px', alignItems: 'center' }} onClick={onOpenImportZip}>
-              <Upload size={16} />
-              <span>Subir ZIP de Fotos</span>
-            </button>
-          )}
-
-          <button className="btn btn-primary" style={{ borderRadius: '8px' }} onClick={() => setProductModal({ open: true, mode: 'create', data: { id: 0, sku: '', name: '', description: '', barcode: '', costPrice: 0, listPrice: 0, listPriceB: 0, listPriceC: 0, minStock: 0, isPesable: false, approximateWeight: 0 } })}>
+          <button className="btn btn-primary" style={{ borderRadius: '8px' }} onClick={() => setProductModal({ open: true, mode: 'create', data: { id: 0, sku: '', name: '', description: '', barcode: '', costPrice: 0, listPrice: 0, listPriceB: 0, listPriceC: 0, profitMargin: 25, minStock: 0, isPesable: false, approximateWeight: 0, unitsPerBox: 1, rubroId: '', commercialCategory: '', providerId: '', imageUrl: null } })}>
             <Plus size={16} />
             <span>Nuevo Producto</span>
           </button>
@@ -263,7 +230,7 @@ export default function ProductsList({ products, searchQuery, setSearchQuery, se
                           }}>
                             {p.imageUrl ? (
                               <img 
-                                src={`http://${window.location.hostname}:3000${p.imageUrl}`} 
+                                src={p.imageUrl.startsWith('http') ? p.imageUrl : (p.imageUrl.startsWith('/') ? p.imageUrl : `/uploads/products/${p.imageUrl}`)} 
                                 alt={p.name} 
                                 style={{ width: '40px', height: '40px', minWidth: '40px', objectFit: 'contain', borderRadius: '6px', border: '1px solid var(--border-color)', backgroundColor: '#fff', padding: '2px' }} 
                               />
@@ -424,8 +391,11 @@ export default function ProductsList({ products, searchQuery, setSearchQuery, se
                               minStock: p.minStock, 
                               isPesable: p.isPesable || false, 
                               approximateWeight: p.approximateWeight || 0,
+                              unitsPerBox: p.unitsPerBox || 1,
                               rubroId: p.rubroId || '',
+                              commercialCategory: p.commercialCategory || '',
                               providerId: p.providerId || '',
+                              imageUrl: p.imageUrl || null,
                               isActive: p.isActive !== false
                             } 
                           })}

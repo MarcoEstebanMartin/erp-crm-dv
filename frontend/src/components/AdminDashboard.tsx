@@ -2,7 +2,6 @@ import React, { useState, useEffect, lazy, Suspense, useCallback } from 'react';
 import { api } from '../utils/api';
 import { OrderStatus } from '../utils/types';
 import { getOrderStatusInfo } from '../utils/orderStatusHelper';
-import PriceListModal from './PriceListModal';
 import HomeTab from './admin/HomeTab';
 import ClientsTab from './admin/ClientsTab';
 import OrdersTab from './admin/OrdersTab';
@@ -13,11 +12,13 @@ import SellerProfileModal from './modals/SellerProfileModal';
 import EditOrderModal from './modals/EditOrderModal';
 import ProductModal from './modals/ProductModal';
 import ClientModal from './modals/ClientModal';
-import OffersDashboard from './admin/OffersDashboard';
-import HrDashboard from './HrDashboard';
 import ImportZipModal from './modals/ImportZipModal';
 import { useConfirm } from '../context/ConfirmContext';
 import type { Product, User, Persona, Order, Rubro, SaleRoute } from '../types';
+
+const PriceListModal = lazy(() => import('./PriceListModal'));
+const OffersDashboard = lazy(() => import('./admin/OffersDashboard'));
+const HrDashboard = lazy(() => import('./HrDashboard'));
 const OFFICIAL_CITIES = [
   "GENERAL VILLEGAS",
   "EMILIO V. BUNGE",
@@ -137,7 +138,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
   const [providersList, setProvidersList] = useState<Persona[]>([]);
   
   // Modales
-  const [productModal, setProductModal] = useState({ open: false, mode: 'create', data: { id: 0, sku: '', name: '', description: '', barcode: '', costPrice: 0, listPrice: 0, listPriceB: 0, listPriceC: 0, profitMargin: 25 as string | number, minStock: 0, isPesable: false, approximateWeight: 0, unitsPerBox: 1, rubroId: '' as string | number, providerId: '' as string | number, imageUrl: null as string | null } });
+  const [productModal, setProductModal] = useState({ open: false, mode: 'create', data: { id: 0, sku: '', name: '', description: '', barcode: '', costPrice: 0, listPrice: 0, listPriceB: 0, listPriceC: 0, profitMargin: 25 as string | number, minStock: 0, isPesable: false, approximateWeight: 0, unitsPerBox: 1, rubroId: '' as string | number, commercialCategory: '', providerId: '' as string | number, imageUrl: null as string | null } });
 
   const [importZipModalOpen, setImportZipModalOpen] = useState(false);
   const [userModal, setUserModal] = useState({ open: false, username: '', password: '', role: 'VENDEDOR' });

@@ -31,6 +31,51 @@ async function main() {
     rubroMap[rName.toUpperCase()] = rubro.id;
   }
 
+  // 1.b Cargar proveedores existentes para mapear por nombre
+  const existingProviders = await prisma.persona.findMany({
+    where: { isProvider: true }
+  });
+  const providerMap: Record<string, number> = {};
+  for (const prov of existingProviders) {
+    providerMap[prov.name.toUpperCase()] = prov.id;
+  }
+
+  const getOrCreateProviderId = async (rawProviderName?: string): Promise<number | null> => {
+    if (!rawProviderName) return null;
+    const cleanName = rawProviderName.toString().trim().toUpperCase();
+    if (!cleanName) return null;
+
+    // Buscar coincidencia exacta
+    if (providerMap[cleanName]) return providerMap[cleanName];
+
+    // Buscar coincidencia parcial (ej: "REMOTTI" -> "REMOTTI S. A.")
+    const matched = existingProviders.find(p => p.name.toUpperCase().includes(cleanName) || cleanName.includes(p.name.toUpperCase()));
+    if (matched) {
+      providerMap[cleanName] = matched.id;
+      return matched.id;
+    }
+
+    // Crear proveedor si no existe
+    const newProv = await prisma.persona.create({
+      data: {
+        name: rawProviderName.toString().trim(),
+        isProvider: true,
+        isClient: false,
+        isActive: true
+      }
+    });
+    console.log(`✨ Creado nuevo Proveedor en BD: "${newProv.name}" (#${newProv.id})`);
+    providerMap[cleanName] = newProv.id;
+    existingProviders.push(newProv);
+    return newProv.id;
+  };
+
+  // Pre-resolver proveedores únicos del Excel
+  const excelProviders = [...new Set(rows.map(r => (r.PROVEEDOR || '').toString().trim()).filter(Boolean))];
+  for (const pName of excelProviders) {
+    await getOrCreateProviderId(pName);
+  }
+
   // Cargar SKUs existentes para saber si update o create rápido
   const existingProducts = await prisma.product.findMany({
     select: { id: true, sku: true }
@@ -53,10 +98,15 @@ async function main() {
     const listPrice = parseFloat(row['PRECIO FINAL']) || 0;
     const profitMargin = row.RENTABILIDAD ? parseFloat(row.RENTABILIDAD) : null;
     const isPesable = (row.PESABLE || '').toString().toUpperCase().trim() === 'SI';
-    const approximateWeight = row['PESO HORMA APROX.'] ? parseFloat(row['PESO HORMA APROX.']) : null;
+    const approximateWeight = row['PESO HORMA '] ? parseFloat(row['PESO HORMA ']) : (row['PESO HORMA'] ? parseFloat(row['PESO HORMA']) : (row['PESO HORMA APROX.'] ? parseFloat(row['PESO HORMA APROX.']) : null));
+    const rawBarcode = (row['COD.BARRAS'] || row['CODIGO BARRAS'] || row['EAN'] || row['BARCODE'] || '').toString().trim();
+    const barcode = rawBarcode && rawBarcode !== '0' ? rawBarcode : null;
     
     const rubroName = (row.RUBRO || '').toString().trim().toUpperCase();
     const rubroId = rubroName ? (rubroMap[rubroName] || null) : null;
+
+    const providerName = (row.PROVEEDOR || '').toString().trim().toUpperCase();
+    const providerId = providerName ? (providerMap[providerName] || null) : null;
 
     categoryCounts[commercialCategory] = (categoryCounts[commercialCategory] || 0) + 1;
 
@@ -74,7 +124,9 @@ async function main() {
           profitMargin,
           isPesable,
           approximateWeight,
+          barcode,
           rubroId,
+          providerId,
           isActive: true
         }
       });
@@ -90,7 +142,9 @@ async function main() {
           profitMargin,
           isPesable,
           approximateWeight,
+          barcode,
           rubroId,
+          providerId,
           isActive: true
         }
       });

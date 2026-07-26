@@ -179,6 +179,30 @@ const ProductModal: React.FC<ProductModalProps> = ({
     }
   };
 
+  const selectedRubroObj = rubrosList.find(r => Number(r.id) === Number(productModal.data?.rubroId));
+  const automaticRubroLabel = selectedRubroObj?.name ? `-- Automático (${selectedRubroObj.name}) --` : '-- Automático / Por Rubro --';
+
+  const commercialCategoriesList = [
+    { value: 'Refrigerados', label: '❄️ Refrigerados' },
+    { value: 'Fiambres', label: '🧀 Fiambres' },
+    { value: 'Bebidas', label: '🥤 Bebidas' },
+    { value: 'Bebidas Alcoholicas', label: '🍺 Bebidas Alcohólicas' },
+    { value: 'Vinos', label: '🍷 Vinos' },
+    { value: 'Aderezos y Aceites', label: '🌻 Aderezos y Aceites' },
+    { value: 'Pastas Secas', label: '🍝 Pastas Secas' },
+    { value: 'Almacén', label: '🛒 Almacén' },
+    { value: 'Yerbas', label: '🌿 Yerbas' },
+    { value: 'Conservas', label: '🥫 Conservas' },
+    { value: 'Pescadería', label: '🐟 Pescadería' },
+    { value: 'Papeles', label: '🧻 Papeles' },
+    { value: 'No comestibles', label: '📦 No comestibles' },
+    { value: 'Estucheria y Regalerìa', label: '🎁 Estuchería y Regalería' },
+    { value: 'Varios', label: '🏷️ Varios' },
+  ];
+
+  const currentCategory = productModal.data?.commercialCategory;
+  const isCustomCategory = currentCategory && !commercialCategoriesList.some(c => c.value.toLowerCase() === String(currentCategory).toLowerCase());
+
   return (
     <div className="modal-overlay" style={{ backdropFilter: 'blur(6px)', zIndex: 1100 }}>
       <div 
@@ -322,20 +346,13 @@ const ProductModal: React.FC<ProductModalProps> = ({
                     onChange={(e) => setProductModal({ ...productModal, data: { ...productModal.data, commercialCategory: e.target.value } })}
                     style={{ width: '100%', borderRadius: '6px', padding: '6px 10px', fontWeight: 600, color: '#0f172a' }}
                   >
-                    <option value="">-- Automático / Por Rubro --</option>
-                    <option value="Refrigerados">❄️ Refrigerados</option>
-                    <option value="Fiambres">🧀 Fiambres</option>
-                    <option value="Bebidas">🥤 Bebidas</option>
-                    <option value="Bebidas Alcoholicas">🍺 Bebidas Alcoholicas</option>
-                    <option value="Vinos">🍷 Vinos</option>
-                    <option value="Aderezos y Aceites">🌻 Aderezos y Aceites</option>
-                    <option value="Pastas Secas">🍝 Pastas Secas</option>
-                    <option value="Conservas">🥫 Conservas</option>
-                    <option value="Pescadería">🐟 Pescadería</option>
-                    <option value="Papeles">🧻 Papeles</option>
-                    <option value="No comestibles">📦 No comestibles</option>
-                    <option value="Estucheria y Regalerìa">🎁 Estuchería y Regalería</option>
-                    <option value="Varios">🏷️ Varios</option>
+                    <option value="">{automaticRubroLabel}</option>
+                    {commercialCategoriesList.map(cat => (
+                      <option key={cat.value} value={cat.value}>{cat.label}</option>
+                    ))}
+                    {isCustomCategory && (
+                      <option value={currentCategory}>🏷️ {currentCategory}</option>
+                    )}
                   </select>
                 </div>
 
@@ -621,7 +638,9 @@ const ProductModal: React.FC<ProductModalProps> = ({
                         style={{ display: 'none' }} 
                         onChange={(e) => {
                           if (e.target.files && e.target.files[0]) {
-                            setSelectedImageFile(e.target.files[0]);
+                            const file = e.target.files[0];
+                            setSelectedImageFile(file);
+                            setImagePreviewUrl(URL.createObjectURL(file));
                           }
                         }}
                       />
