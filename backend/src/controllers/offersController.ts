@@ -317,9 +317,29 @@ export const addBulkCampaignItems = async (req: Request, res: Response) => {
   }
 };
 
-// Recomendaciones semanales inteligentes de rotación
+function classifyQuesoSubtype(productName: string): 'duro' | 'semiduro' | 'blando' {
+  const p = productName.toUpperCase();
+  if (p.includes('GOYA') || p.includes('SARDO') || p.includes('REGGIANITO') || p.includes('PROVOLONE') || p.includes('RALLADO') || p.includes('PEPATO')) {
+    return 'duro';
+  }
+  if (p.includes('TYBO') || p.includes('GOUDA') || p.includes('CHEDDAR') || p.includes('FONTINA') || p.includes('HOLANDO') || p.includes('DANBO') || p.includes('BARRA')) {
+    return 'semiduro';
+  }
+  return 'blando'; // Cremoso, Por Salut, Mozzarella, Crema, Manteca, etc.
+}
+
+// Recomendaciones semanales inteligentes de rotación paramétrica
 export const getWeeklyOfferRecommendations = async (req: Request, res: Response) => {
   try {
+    const {
+      numDuros = 2,
+      numSemiduros = 2,
+      numBlandos = 3,
+      numFiambres = 4,
+      numBebidas = 4,
+      numAlmacen = 5
+    } = req.query;
+
     const products = await prisma.product.findMany({
       where: { isActive: true },
       include: {
@@ -341,12 +361,10 @@ export const getWeeklyOfferRecommendations = async (req: Request, res: Response)
     const fortyFiveDaysFromNow = new Date();
     fortyFiveDaysFromNow.setDate(fortyFiveDaysFromNow.getDate() + 45);
 
-    const groupedMap: Record<string, any[]> = {};
-
-    for (const p of products) {
+    const enrichedProducts = products.map(p => {
       const category = p.commercialCategory || p.rubro?.name || 'Varios';
-      if (!groupedMap[category]) groupedMap[category] = [];
-
+      const quesoSubtype = category === 'Refrigerados' ? classifyQuesoSubtype(p.name) : null;
+      
       let reason = 'Rotación regular de catálogo';
       let score = 50;
       let suggestedTag: string | null = null;
@@ -364,19 +382,17 @@ export const getWeeklyOfferRecommendations = async (req: Request, res: Response)
         suggestedTag = '💥 MEGA OFERTA';
       } else if (!p.offerCampaignItems || p.offerCampaignItems.length === 0) {
         reason = 'Sin oferta en campañas previas';
-        score += 20;
+        score += 25;
       } else {
         const lastCampaignDate = p.offerCampaignItems[0]?.campaign?.createdAt;
         if (lastCampaignDate) {
           const daysDiff = Math.floor((Date.now() - new Date(lastCampaignDate).getTime()) / (1000 * 60 * 60 * 24));
-          if (daysDiff > 14) {
-            reason = `Rotación (${Math.floor(daysDiff / 7)} sem. sin oferta)`;
-            score += 25;
-          }
+          reason = `Rotación (${Math.floor(daysDiff / 7)} sem. sin oferta)`;
+          score += Math.min(30, daysDiff);
         }
       }
 
-      groupedMap[category].push({
+      return {
         id: p.id,
         sku: p.sku,
         name: p.name,
@@ -385,21 +401,45 @@ export const getWeeklyOfferRecommendations = async (req: Request, res: Response)
         suggestedPrice,
         suggestedTag,
         category,
+        quesoSubtype,
         reason,
         score
-      });
-    }
+      };
+    });
 
+    // Separar por categorías y aplicar reglas paramétricas
     const resultByGroup: Record<string, any[]> = {};
-    for (const [cat, items] of Object.entries(groupedMap)) {
-      items.sort((a, b) => b.score - a.score);
-      resultByGroup[cat] = items.slice(0, 6);
-    }
+
+    // 1. REFRIGERADOS (7 Quesos: Duros, Semiduros, Blandos)
+    const refrigeradosAll = enrichedProducts.filter(p => p.category === 'Refrigerados');
+    const duros = refrigeradosAll.filter(p => p.quesoSubtype === 'duro').sort((a, b) => b.score - a.score).slice(0, Number(numDuros));
+    const semiduros = refrigeradosAll.filter(p => p.quesoSubtype === 'semiduro').sort((a, b) => b.score - a.score).slice(0, Number(numSemiduros));
+    const blandos = refrigeradosAll.filter(p => p.quesoSubtype === 'blando').sort((a, b) => b.score - a.score).slice(0, Number(numBlandos));
+    
+    // Etiquetar subtipos para visualización limpia
+    duros.forEach(p => p.reason = `Queso Duro | ${p.reason}`);
+    semiduros.forEach(p => p.reason = `Queso Semiduro | ${p.reason}`);
+    blandos.forEach(p => p.reason = `Queso Blando/Fresco | ${p.reason}`);
+
+    resultByGroup['Refrigerados'] = [...duros, ...semiduros, ...blandos];
+
+    // 2. FIAMBRES
+    const fiambresAll = enrichedProducts.filter(p => p.category === 'Fiambres').sort((a, b) => b.score - a.score);
+    resultByGroup['Fiambres'] = fiambresAll.slice(0, Number(numFiambres));
+
+    // 3. BEBIDAS / ALCOHOLES
+    const bebidasAll = enrichedProducts.filter(p => p.category === 'Bebidas' || p.category === 'Bebidas Alcoholicas').sort((a, b) => b.score - a.score);
+    resultByGroup['Bebidas'] = bebidasAll.slice(0, Number(numBebidas));
+
+    // 4. ALMACÉN / DESPENSA / CONSERVAS / PASTAS
+    const almacenAll = enrichedProducts.filter(p => ['Almacén', 'Pastas Secas', 'Aderezos y Aceites', 'Conservas', 'Yerbas'].includes(p.category)).sort((a, b) => b.score - a.score);
+    resultByGroup['Almacén'] = almacenAll.slice(0, Number(numAlmacen));
 
     res.json({
       status: 'success',
       data: {
-        recommendationsByGroup: resultByGroup
+        recommendationsByGroup: resultByGroup,
+        totalSelected: Object.values(resultByGroup).flat().length
       }
     });
   } catch (error) {

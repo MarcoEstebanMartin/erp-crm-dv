@@ -1241,8 +1241,9 @@ export const api = {
     return res;
   },
 
-  getWeeklyOfferRecommendations: async () => {
-    const res = await request('/offers/recommendations');
+  getWeeklyOfferRecommendations: async (params?: { numDuros?: number; numSemiduros?: number; numBlandos?: number; numFiambres?: number; numBebidas?: number; numAlmacen?: number }) => {
+    const query = params ? '?' + new URLSearchParams(params as any).toString() : '';
+    const res = await request(`/offers/recommendations${query}`);
     return res;
   },
 

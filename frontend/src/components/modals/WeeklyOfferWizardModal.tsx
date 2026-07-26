@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Wand2, Check, X, Sparkles, AlertCircle, PackageCheck, Tag } from 'lucide-react';
+import { Wand2, X, Sparkles, PackageCheck, Sliders, RefreshCw } from 'lucide-react';
 import { api } from '../../utils/api';
 
 interface RecommendedProduct {
@@ -11,6 +11,7 @@ interface RecommendedProduct {
   suggestedPrice: number;
   suggestedTag: string | null;
   category: string;
+  quesoSubtype?: 'duro' | 'semiduro' | 'blando' | null;
   reason: string;
   score: number;
 }
@@ -28,6 +29,14 @@ export default function WeeklyOfferWizardModal({ isOpen, onClose, onCampaignCrea
   
   // Custom campaign title
   const [title, setTitle] = useState('');
+
+  // Parametric controls
+  const [numDuros, setNumDuros] = useState(2);
+  const [numSemiduros, setNumSemiduros] = useState(2);
+  const [numBlandos, setNumBlandos] = useState(3);
+  const [numFiambres, setNumFiambres] = useState(4);
+  const [numBebidas, setNumBebidas] = useState(4);
+  const [numAlmacen, setNumAlmacen] = useState(5);
   
   // Map of selected productId -> boolean
   const [selectedMap, setSelectedMap] = useState<Record<number, boolean>>({});
@@ -40,7 +49,6 @@ export default function WeeklyOfferWizardModal({ isOpen, onClose, onCampaignCrea
 
   useEffect(() => {
     if (isOpen) {
-      // Set default title e.g. "Semana 26 al 02"
       const today = new Date();
       const nextWeek = new Date();
       nextWeek.setDate(today.getDate() + 7);
@@ -54,9 +62,18 @@ export default function WeeklyOfferWizardModal({ isOpen, onClose, onCampaignCrea
   const loadRecommendations = async () => {
     setLoading(true);
     try {
-      const res = await api.getWeeklyOfferRecommendations();
-      if (res && res.data && res.data.recommendationsByGroup) {
-        const groups: Record<string, RecommendedProduct[]> = res.data.recommendationsByGroup;
+      // request() returns json.data directly!
+      const res = await api.getWeeklyOfferRecommendations({
+        numDuros,
+        numSemiduros,
+        numBlandos,
+        numFiambres,
+        numBebidas,
+        numAlmacen
+      });
+
+      if (res && res.recommendationsByGroup) {
+        const groups: Record<string, RecommendedProduct[]> = res.recommendationsByGroup;
         setRecommendations(groups);
 
         // Pre-select all recommended products
@@ -105,14 +122,12 @@ export default function WeeklyOfferWizardModal({ isOpen, onClose, onCampaignCrea
     setCreating(true);
 
     try {
-      // 1. Create campaign
       const newCampaign = await api.createCampaign({
         title: title.trim(),
         isActive: true
       });
 
       if (newCampaign && newCampaign.id) {
-        // 2. Prepare selected items to add in bulk
         const allProducts = Object.values(recommendations).flat();
         const itemsToAdd = allProducts
           .filter(p => selectedMap[p.id])
@@ -154,8 +169,8 @@ export default function WeeklyOfferWizardModal({ isOpen, onClose, onCampaignCrea
         backgroundColor: 'var(--bg-card, #ffffff)',
         borderRadius: '16px',
         width: '100%',
-        maxWidth: '1050px',
-        maxHeight: '90vh',
+        maxWidth: '1080px',
+        maxHeight: '92vh',
         display: 'flex',
         flexDirection: 'column',
         boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
@@ -165,7 +180,7 @@ export default function WeeklyOfferWizardModal({ isOpen, onClose, onCampaignCrea
         
         {/* Header */}
         <div style={{
-          padding: '20px 24px',
+          padding: '16px 24px',
           borderBottom: '1px solid var(--border-color, #e2e8f0)',
           display: 'flex',
           justify: 'space-between',
@@ -176,20 +191,20 @@ export default function WeeklyOfferWizardModal({ isOpen, onClose, onCampaignCrea
             <div style={{
               backgroundColor: 'rgba(139, 92, 246, 0.12)',
               color: '#8b5cf6',
-              padding: '10px',
+              padding: '8px 12px',
               borderRadius: '12px',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center'
+              justify: 'center'
             }}>
-              <Wand2 size={24} />
+              <Wand2 size={22} />
             </div>
             <div>
-              <h3 style={{ margin: 0, fontSize: '20px', fontWeight: 'bold', color: 'var(--text-primary, #0f172a)' }}>
+              <h3 style={{ margin: 0, fontSize: '19px', fontWeight: 'bold', color: 'var(--text-primary, #0f172a)' }}>
                 Asistente de Rotación Semanal
               </h3>
-              <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-secondary, #64748b)' }}>
-                Recomendaciones automáticas de productos según vencimientos, stock y rotación previa.
+              <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary, #64748b)' }}>
+                Selección de productos según rotación histórica, stock y distribución paramétrica por rubros.
               </p>
             </div>
           </div>
@@ -202,10 +217,72 @@ export default function WeeklyOfferWizardModal({ isOpen, onClose, onCampaignCrea
           </button>
         </div>
 
-        {/* Campaign Title & Global Actions Bar */}
-        <div style={{ padding: '16px 24px', backgroundColor: 'var(--bg-card)', borderBottom: '1px solid var(--border-color)', display: 'flex', gap: '20px', alignItems: 'center' }}>
+        {/* Parametric Rotation Controls */}
+        <div style={{
+          padding: '12px 24px',
+          backgroundColor: 'rgba(139, 92, 246, 0.04)',
+          borderBottom: '1px solid var(--border-color)',
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: '12px 20px',
+          alignItems: 'center',
+          fontSize: '12px'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 'bold', color: '#8b5cf6' }}>
+            <Sliders size={16} /> Parámetros de Rotación:
+          </div>
+          
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <span style={{ color: 'var(--text-secondary)' }}>🧀 Duros:</span>
+              <input type="number" min={0} max={10} value={numDuros} onChange={e => setNumDuros(Number(e.target.value))} style={{ width: '45px', padding: '2px 4px', borderRadius: '4px', border: '1px solid var(--border-color)', textAlign: 'center', fontWeight: 'bold' }} />
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <span style={{ color: 'var(--text-secondary)' }}>Semiduros:</span>
+              <input type="number" min={0} max={10} value={numSemiduros} onChange={e => setNumSemiduros(Number(e.target.value))} style={{ width: '45px', padding: '2px 4px', borderRadius: '4px', border: '1px solid var(--border-color)', textAlign: 'center', fontWeight: 'bold' }} />
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <span style={{ color: 'var(--text-secondary)' }}>Blandos:</span>
+              <input type="number" min={0} max={10} value={numBlandos} onChange={e => setNumBlandos(Number(e.target.value))} style={{ width: '45px', padding: '2px 4px', borderRadius: '4px', border: '1px solid var(--border-color)', textAlign: 'center', fontWeight: 'bold' }} />
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <span style={{ color: 'var(--text-secondary)' }}>🥓 Fiambres:</span>
+              <input type="number" min={0} max={10} value={numFiambres} onChange={e => setNumFiambres(Number(e.target.value))} style={{ width: '45px', padding: '2px 4px', borderRadius: '4px', border: '1px solid var(--border-color)', textAlign: 'center', fontWeight: 'bold' }} />
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <span style={{ color: 'var(--text-secondary)' }}>🍾 Bebidas:</span>
+              <input type="number" min={0} max={10} value={numBebidas} onChange={e => setNumBebidas(Number(e.target.value))} style={{ width: '45px', padding: '2px 4px', borderRadius: '4px', border: '1px solid var(--border-color)', textAlign: 'center', fontWeight: 'bold' }} />
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <span style={{ color: 'var(--text-secondary)' }}>🥫 Almacén:</span>
+              <input type="number" min={0} max={10} value={numAlmacen} onChange={e => setNumAlmacen(Number(e.target.value))} style={{ width: '45px', padding: '2px 4px', borderRadius: '4px', border: '1px solid var(--border-color)', textAlign: 'center', fontWeight: 'bold' }} />
+            </div>
+
+            <button
+              onClick={loadRecommendations}
+              style={{
+                backgroundColor: '#8b5cf6',
+                color: 'white',
+                border: 'none',
+                padding: '4px 10px',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontWeight: 'bold',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                fontSize: '11px'
+              }}
+            >
+              <RefreshCw size={13} /> Recalcular Propuesta
+            </button>
+          </div>
+        </div>
+
+        {/* Campaign Title & Count Bar */}
+        <div style={{ padding: '12px 24px', backgroundColor: 'var(--bg-card)', borderBottom: '1px solid var(--border-color)', display: 'flex', gap: '20px', alignItems: 'center' }}>
           <div style={{ flex: 1 }}>
-            <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: 'var(--text-secondary)', marginBottom: '4px', textTransform: 'uppercase' }}>
+            <label style={{ display: 'block', fontSize: '11px', fontWeight: 'bold', color: 'var(--text-secondary)', marginBottom: '3px', textTransform: 'uppercase' }}>
               Nombre de la Campaña
             </label>
             <input 
@@ -215,43 +292,44 @@ export default function WeeklyOfferWizardModal({ isOpen, onClose, onCampaignCrea
               placeholder="Ej: Semana 26 al 02 de Agosto"
               style={{
                 width: '100%',
-                padding: '8px 12px',
-                borderRadius: '8px',
+                padding: '6px 12px',
+                borderRadius: '6px',
                 border: '1px solid var(--border-color)',
                 backgroundColor: 'var(--bg-secondary)',
                 color: 'var(--text-primary)',
                 fontWeight: '600',
-                fontSize: '14px'
+                fontSize: '13px'
               }}
             />
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', paddingTop: '18px' }}>
-            <span style={{ fontSize: '13px', fontWeight: 'bold', color: '#8b5cf6', backgroundColor: 'rgba(139, 92, 246, 0.1)', padding: '6px 12px', borderRadius: '20px' }}>
-              {selectedCount} seleccionados
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', paddingTop: '14px' }}>
+            <span style={{ fontSize: '13px', fontWeight: 'bold', color: '#8b5cf6', backgroundColor: 'rgba(139, 92, 246, 0.1)', padding: '5px 12px', borderRadius: '20px' }}>
+              {selectedCount} productos seleccionados
             </span>
           </div>
         </div>
 
         {/* Content Body */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
+        <div style={{ flex: 1, overflowY: 'auto', padding: '16px 24px' }}>
           {loading ? (
             <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--text-secondary)' }}>
-              <Sparkles className="animate-spin" size={32} style={{ marginBottom: '12px', color: '#8b5cf6' }} />
-              <div>Analizando inventario, vencimientos y rotación histórica...</div>
+              <Sparkles className="animate-spin" size={32} style={{ marginBottom: '12px', color: '#8b5cf6', margin: '0 auto 12px auto' }} />
+              <div>Generando propuesta de ofertas según parámetros...</div>
             </div>
           ) : Object.keys(recommendations).length === 0 ? (
             <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--text-secondary)' }}>
-              No se encontraron recomendaciones automáticas para esta semana.
+              No se encontraron productos para los parámetros seleccionados.
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               {Object.entries(recommendations).map(([category, items]) => {
+                if (!items || items.length === 0) return null;
                 const categoryAllSelected = items.every(p => selectedMap[p.id]);
                 return (
-                  <div key={category} style={{ border: '1px solid var(--border-color)', borderRadius: '12px', overflow: 'hidden' }}>
+                  <div key={category} style={{ border: '1px solid var(--border-color)', borderRadius: '10px', overflow: 'hidden' }}>
                     {/* Category Header */}
                     <div style={{
-                      padding: '12px 16px',
+                      padding: '10px 14px',
                       backgroundColor: 'var(--bg-secondary, #f8fafc)',
                       borderBottom: '1px solid var(--border-color)',
                       display: 'flex',
@@ -265,7 +343,7 @@ export default function WeeklyOfferWizardModal({ isOpen, onClose, onCampaignCrea
                           onChange={() => toggleCategory(items)}
                           style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: '#8b5cf6' }}
                         />
-                        <span style={{ fontWeight: 'bold', fontSize: '14px', color: 'var(--text-primary)' }}>
+                        <span style={{ fontWeight: 'bold', fontSize: '13px', color: 'var(--text-primary)' }}>
                           {category.toUpperCase()} ({items.length} sugeridos)
                         </span>
                       </div>
@@ -280,14 +358,14 @@ export default function WeeklyOfferWizardModal({ isOpen, onClose, onCampaignCrea
                     {/* Category Table */}
                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
                       <thead>
-                        <tr style={{ color: 'var(--text-secondary)', textAlign: 'left', fontSize: '11px', borderBottom: '1px solid var(--border-color)' }}>
-                          <th style={{ padding: '8px 12px', width: '40px' }}></th>
+                        <tr style={{ color: 'var(--text-secondary)', textAlign: 'left', fontSize: '11px', borderBottom: '1px solid var(--border-color)', backgroundColor: 'var(--bg-card)' }}>
+                          <th style={{ padding: '8px 12px', width: '36px' }}></th>
                           <th style={{ padding: '8px 12px' }}>Producto</th>
-                          <th style={{ padding: '8px 12px' }}>Motivo de Rotación</th>
+                          <th style={{ padding: '8px 12px' }}>Detalle de Rotación</th>
                           <th style={{ padding: '8px 12px', textAlign: 'right' }}>Stock</th>
                           <th style={{ padding: '8px 12px', textAlign: 'right' }}>Precio Lista</th>
                           <th style={{ padding: '8px 12px', textAlign: 'right', width: '110px' }}>Precio Oferta</th>
-                          <th style={{ padding: '8px 12px', textAlign: 'center', width: '130px' }}>Etiqueta</th>
+                          <th style={{ padding: '8px 12px', textAlign: 'center', width: '120px' }}>Etiqueta</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -297,9 +375,9 @@ export default function WeeklyOfferWizardModal({ isOpen, onClose, onCampaignCrea
                             <tr key={p.id} style={{
                               borderBottom: '1px solid var(--border-color)',
                               backgroundColor: isSelected ? 'rgba(139, 92, 246, 0.02)' : 'transparent',
-                              opacity: isSelected ? 1 : 0.6
+                              opacity: isSelected ? 1 : 0.5
                             }}>
-                              <td style={{ padding: '10px 12px', textAlign: 'center' }}>
+                              <td style={{ padding: '8px 12px', textAlign: 'center' }}>
                                 <input 
                                   type="checkbox"
                                   checked={isSelected}
@@ -307,29 +385,29 @@ export default function WeeklyOfferWizardModal({ isOpen, onClose, onCampaignCrea
                                   style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: '#8b5cf6' }}
                                 />
                               </td>
-                              <td style={{ padding: '10px 12px' }}>
+                              <td style={{ padding: '8px 12px' }}>
                                 <div style={{ fontWeight: '600', color: 'var(--text-primary)' }}>{p.name}</div>
                                 <div style={{ fontSize: '11px', color: 'var(--text-secondary)', fontFamily: 'monospace' }}>SKU: {p.sku}</div>
                               </td>
-                              <td style={{ padding: '10px 12px' }}>
+                              <td style={{ padding: '8px 12px' }}>
                                 <span style={{
                                   fontSize: '11px',
                                   fontWeight: '600',
-                                  padding: '3px 8px',
+                                  padding: '2px 7px',
                                   borderRadius: '6px',
-                                  backgroundColor: p.reason.includes('vencer') ? 'rgba(239, 68, 68, 0.1)' : p.reason.includes('Exceso') ? 'rgba(59, 130, 246, 0.1)' : 'rgba(16, 185, 129, 0.1)',
-                                  color: p.reason.includes('vencer') ? '#ef4444' : p.reason.includes('Exceso') ? '#3b82f6' : '#10b981'
+                                  backgroundColor: p.reason.includes('vencer') ? 'rgba(239, 68, 68, 0.1)' : p.reason.includes('Duro') ? 'rgba(245, 158, 11, 0.1)' : p.reason.includes('Semiduro') ? 'rgba(139, 92, 246, 0.1)' : 'rgba(16, 185, 129, 0.1)',
+                                  color: p.reason.includes('vencer') ? '#ef4444' : p.reason.includes('Duro') ? '#d97706' : p.reason.includes('Semiduro') ? '#8b5cf6' : '#10b981'
                                 }}>
                                   {p.reason}
                                 </span>
                               </td>
-                              <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: '500', color: 'var(--text-secondary)' }}>
+                              <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: '500', color: 'var(--text-secondary)' }}>
                                 {p.stock} un.
                               </td>
-                              <td style={{ padding: '10px 12px', textAlign: 'right', color: 'var(--text-muted)' }}>
+                              <td style={{ padding: '8px 12px', textAlign: 'right', color: 'var(--text-muted)' }}>
                                 ${p.listPrice.toFixed(2)}
                               </td>
-                              <td style={{ padding: '10px 12px', textAlign: 'right' }}>
+                              <td style={{ padding: '8px 12px', textAlign: 'right' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '3px' }}>
                                   <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>$</span>
                                   <input 
@@ -354,14 +432,14 @@ export default function WeeklyOfferWizardModal({ isOpen, onClose, onCampaignCrea
                                   />
                                 </div>
                               </td>
-                              <td style={{ padding: '10px 12px', textAlign: 'center' }}>
+                              <td style={{ padding: '8px 12px', textAlign: 'center' }}>
                                 <input 
                                   type="text"
                                   value={customTags[p.id] || ''}
                                   onChange={(e) => setCustomTags(prev => ({ ...prev, [p.id]: e.target.value }))}
                                   placeholder="Ej: 2X1!"
                                   style={{
-                                    width: '100px',
+                                    width: '95px',
                                     padding: '4px 6px',
                                     borderRadius: '6px',
                                     border: '1px solid var(--border-color)',
@@ -387,7 +465,7 @@ export default function WeeklyOfferWizardModal({ isOpen, onClose, onCampaignCrea
 
         {/* Footer */}
         <div style={{
-          padding: '16px 24px',
+          padding: '12px 24px',
           borderTop: '1px solid var(--border-color, #e2e8f0)',
           display: 'flex',
           justify: 'space-between',
@@ -406,7 +484,7 @@ export default function WeeklyOfferWizardModal({ isOpen, onClose, onCampaignCrea
             onClick={handleCreateCampaign}
             disabled={selectedCount === 0 || !title.trim() || creating}
             style={{
-              padding: '10px 20px',
+              padding: '8px 20px',
               backgroundColor: selectedCount > 0 && title.trim() ? '#8b5cf6' : '#cbd5e1',
               color: 'white',
               border: 'none',
