@@ -811,7 +811,6 @@ export default function CampaignEditor({ campaignId, onBack }: CampaignEditorPro
                   <tr style={{ backgroundColor: 'var(--bg-secondary, #f8fafc)', color: 'var(--text-secondary, #64748b)', textAlign: 'left', textTransform: 'uppercase', fontSize: '11px', letterSpacing: '0.5px' }}>
                     <th style={{ padding: '12px 14px', fontWeight: '600' }}>SKU</th>
                     <th style={{ padding: '12px 14px', fontWeight: '600' }}>Producto</th>
-                    <th style={{ padding: '12px 14px', fontWeight: '600' }}>Grupo</th>
                     <th style={{ padding: '12px 14px', fontWeight: '600', textAlign: 'right' }}>Precio Lista</th>
                     <th style={{ padding: '12px 14px', fontWeight: '600', textAlign: 'right' }}>Anterior (Tachado)</th>
                     <th style={{ padding: '12px 14px', fontWeight: '600', textAlign: 'center' }}>Etiqueta</th>
@@ -845,36 +844,10 @@ export default function CampaignEditor({ campaignId, onBack }: CampaignEditorPro
                       return (
                         <React.Fragment key={rubro}>
                           <tr style={{ backgroundColor: 'var(--bg-secondary, #f1f5f9)' }}>
-                            <td colSpan={7} style={{ padding: '8px 14px', fontWeight: 'bold', color: 'var(--text-primary)', fontSize: '12px' }}>
+                            <td colSpan={6} style={{ padding: '8px 14px', fontWeight: 'bold', color: 'var(--text-primary)', fontSize: '12px' }}>
                               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
                                   <span>{rubro.toUpperCase()} ({items.length})</span>
-                                  <select
-                                    title="Mover todos a..."
-                                    onChange={(e) => {
-                                      const val = e.target.value;
-                                      if (val) {
-                                        setConfirmModal({
-                                          isOpen: true,
-                                          title: 'Mover Productos',
-                                          message: `¿Mover los ${items.length} productos de ${rubro.toUpperCase()} al grupo "${val}"?`,
-                                          type: 'info',
-                                          onConfirm: () => {
-                                            setConfirmModal(prev => ({ ...prev, isOpen: false }));
-                                            items.forEach(it => updateCampaignItem(it, { campaignGroup: val }));
-                                          }
-                                        });
-                                      }
-                                      e.target.value = "";
-                                    }}
-                                    style={{ padding: '2px 8px', borderRadius: '4px', border: '1px solid var(--border-color)', fontSize: '11px', fontWeight: 'normal', color: 'var(--text-secondary)', backgroundColor: 'var(--bg-card)', cursor: 'pointer' }}
-                                  >
-                                    <option value="">Mover todos a...</option>
-                                    <option value="Automático">Automático</option>
-                                    {AVAILABLE_GROUPS.map(g => (
-                                      <option key={g} value={g}>{g}</option>
-                                    ))}
-                                  </select>
                                 </div>
                                 <div style={{ display: 'flex', gap: '8px' }}>
                                   <button 
@@ -907,18 +880,6 @@ export default function CampaignEditor({ campaignId, onBack }: CampaignEditorPro
                             </td>
                             <td style={{ padding: '10px 14px', fontWeight: '500', color: 'var(--text-primary)' }}>
                               {item.product.name}
-                            </td>
-                            <td style={{ padding: '10px 14px' }}>
-                              <select 
-                                value={item.campaignGroup || ''} 
-                                onChange={(e) => updateCampaignItem(item, { campaignGroup: e.target.value })}
-                                style={{ padding: '4px 6px', borderRadius: '4px', border: '1px solid var(--border-color)', fontSize: '11px', width: '130px', backgroundColor: 'var(--bg-card)', color: 'var(--text-primary)' }}
-                              >
-                                <option value="">Automático</option>
-                                {AVAILABLE_GROUPS.map(g => (
-                                  <option key={g} value={g}>{g}</option>
-                                ))}
-                              </select>
                             </td>
                             <td style={{ padding: '10px 14px', textAlign: 'right' }}>
                               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px' }}>
