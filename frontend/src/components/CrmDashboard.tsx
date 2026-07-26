@@ -58,7 +58,7 @@ export default function CrmDashboard({ initialTab = 'whatsapp', hideHeaderTabs =
   // Obtener usuario autenticado actual
   const currentUser = useMemo(() => {
     try {
-      return JSON.parse(localStorage.getItem('user') || '{}');
+      return api.getCurrentUser() || JSON.parse(localStorage.getItem('auth_user') || '{}');
     } catch {
       return {};
     }
@@ -268,8 +268,8 @@ export default function CrmDashboard({ initialTab = 'whatsapp', hideHeaderTabs =
     return conversations.filter(c => {
       // 1. Filtro de asignación
       if (assignedFilter === 'mine') {
-        const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
-        if (c.assignedSellerId !== currentUser?.id) return false;
+        const userObj = api.getCurrentUser() || {};
+        if (c.assignedSellerId !== userObj?.id) return false;
       } else if (assignedFilter === 'unassigned') {
         if (c.assignedSellerId) return false;
       } else if (typeof assignedFilter === 'number') {
