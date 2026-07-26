@@ -30,13 +30,14 @@ interface CampaignItem {
     name: string;
     sku: string;
     listPrice: number;
-    rubro: { name: string };
+    rubro?: { name: string } | null;
+    commercialCategory?: string | null;
   };
 }
 
 const AVAILABLE_GROUPS = [
-  'Refrigerados', 'Bebidas', 'Bebidas Alcoholicas', 'Vinos', 'Pastas Secas', 
-  'Conservas', 'Aderezos y Aceites', 'Fiambres', 'Yerbas', 'Papeles', 
+  'Refrigerados', 'Bebidas', 'Almacén', 'Bebidas Alcoholicas', 'Vinos', 'Pastas Secas', 
+  'Conservas', 'Aderezos y Aceites', 'Fiambres', 'Yerbas', 'Pescadería', 'Papeles', 
   'No comestibles', 'Estucheria y Regalerìa', 'Varios'
 ];
 
@@ -297,7 +298,7 @@ export default function CampaignEditor({ campaignId, onBack }: CampaignEditorPro
     if (!campaign) return;
     
     const groupedItems = campaign.items.reduce((acc, item) => {
-      const r = item.campaignGroup || item.product.rubro?.name || 'Varios';
+      const r = item.campaignGroup || item.product.commercialCategory || item.product.rubro?.name || 'Varios';
       if (!acc[r]) acc[r] = [];
       acc[r].push(item);
       return acc;
@@ -732,7 +733,7 @@ export default function CampaignEditor({ campaignId, onBack }: CampaignEditorPro
 
               <div>
                 <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px', color: 'var(--text-secondary)' }}>
-                  Precio de Oferta ($)
+                  Precio Lista ($)
                 </label>
                 <input
                   type="number"
@@ -812,18 +813,16 @@ export default function CampaignEditor({ campaignId, onBack }: CampaignEditorPro
                     <th style={{ padding: '12px 14px', fontWeight: '600' }}>Producto</th>
                     <th style={{ padding: '12px 14px', fontWeight: '600' }}>Grupo</th>
                     <th style={{ padding: '12px 14px', fontWeight: '600', textAlign: 'right' }}>Precio Lista</th>
-                    <th style={{ padding: '12px 14px', fontWeight: '600', textAlign: 'right' }}>Precio Oferta ($)</th>
-                    <th style={{ padding: '12px 14px', fontWeight: '600', textAlign: 'center' }}>% Ahorro</th>
                     <th style={{ padding: '12px 14px', fontWeight: '600', textAlign: 'right' }}>Anterior (Tachado)</th>
                     <th style={{ padding: '12px 14px', fontWeight: '600', textAlign: 'center' }}>Etiqueta</th>
-                    <th style={{ padding: '12px 14px', fontWeight: '600', textAlign: 'center', width: '70px' }}>Acciones</th>
+                    <th style={{ padding: '12px 14px', fontWeight: '600', textAlign: 'center', width: '80px' }}>Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
                   {/* Agrupación por Rubro */}
                   {(() => {
                     const groupedItems = campaign.items.reduce((acc, item) => {
-                      const rubro = item.campaignGroup || item.product.rubro?.name || 'Varios';
+                      const rubro = item.campaignGroup || item.product.commercialCategory || item.product.rubro?.name || 'Varios';
                       if (!acc[rubro]) acc[rubro] = [];
                       acc[rubro].push(item);
                       return acc;
@@ -846,7 +845,7 @@ export default function CampaignEditor({ campaignId, onBack }: CampaignEditorPro
                       return (
                         <React.Fragment key={rubro}>
                           <tr style={{ backgroundColor: 'var(--bg-secondary, #f1f5f9)' }}>
-                            <td colSpan={9} style={{ padding: '8px 14px', fontWeight: 'bold', color: 'var(--text-primary)', fontSize: '12px' }}>
+                            <td colSpan={7} style={{ padding: '8px 14px', fontWeight: 'bold', color: 'var(--text-primary)', fontSize: '12px' }}>
                               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
                                   <span>{rubro.toUpperCase()} ({items.length})</span>
@@ -899,9 +898,7 @@ export default function CampaignEditor({ campaignId, onBack }: CampaignEditorPro
                             </td>
                           </tr>
                       {items.map((item, index) => {
-                        const listPrice = Number(item.product.listPrice);
                         const offerPrice = Number(item.offerPrice);
-                        const savingPct = listPrice > 0 ? ((listPrice - offerPrice) / listPrice * 100) : 0;
                         
                         return (
                           <tr key={item.id} style={{ borderBottom: '1px solid var(--border-color)', backgroundColor: index % 2 === 0 ? 'var(--bg-card)' : 'var(--bg-secondary)' }}>
@@ -923,12 +920,9 @@ export default function CampaignEditor({ campaignId, onBack }: CampaignEditorPro
                                 ))}
                               </select>
                             </td>
-                            <td style={{ padding: '10px 14px', textAlign: 'right', color: 'var(--text-secondary)', fontSize: '13px' }}>
-                              ${listPrice.toFixed(2)}
-                            </td>
                             <td style={{ padding: '10px 14px', textAlign: 'right' }}>
                               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px' }}>
-                                <span style={{ fontWeight: 'bold', color: 'var(--color-corp-red, #E30613)' }}>$</span>
+                                <span style={{ fontWeight: '600', color: 'var(--text-secondary)' }}>$</span>
                                 <input 
                                   key={`offer-${item.id}-${offerPrice}`}
                                   type="number"
@@ -942,34 +936,18 @@ export default function CampaignEditor({ campaignId, onBack }: CampaignEditorPro
                                   }}
                                   style={{ 
                                     width: '95px', 
-                                    padding: '4px 6px', 
-                                    borderRadius: '4px', 
-                                    border: '1px solid var(--color-corp-red, #E30613)', 
+                                    padding: '5px 8px', 
+                                    borderRadius: '6px', 
+                                    border: '1px solid var(--border-color)', 
                                     textAlign: 'right', 
-                                    fontWeight: 'bold', 
-                                    color: 'var(--color-corp-red, #E30613)',
+                                    fontWeight: '600', 
+                                    color: 'var(--text-primary)',
                                     fontSize: '13px',
-                                    backgroundColor: 'rgba(227, 6, 19, 0.04)'
+                                    backgroundColor: 'var(--bg-card)'
                                   }}
-                                  placeholder="Ej: 8500"
+                                  placeholder="Ej: 2000"
                                 />
                               </div>
-                            </td>
-                            <td style={{ padding: '10px 14px', textAlign: 'center' }}>
-                              {savingPct > 0 ? (
-                                <span style={{ 
-                                  fontSize: '11px', 
-                                  fontWeight: 'bold', 
-                                  backgroundColor: 'rgba(16, 185, 129, 0.1)', 
-                                  color: '#10b981', 
-                                  padding: '2px 8px', 
-                                  borderRadius: '12px' 
-                                }}>
-                                  -{savingPct.toFixed(0)}%
-                                </span>
-                              ) : (
-                                <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>0%</span>
-                              )}
                             </td>
                             <td style={{ padding: '10px 14px', textAlign: 'right' }}>
                               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px' }}>
