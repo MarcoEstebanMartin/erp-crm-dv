@@ -319,13 +319,32 @@ export const addBulkCampaignItems = async (req: Request, res: Response) => {
 
 function classifyQuesoSubtype(productName: string): 'duro' | 'semiduro' | 'blando' {
   const p = productName.toUpperCase();
-  if (p.includes('GOYA') || p.includes('SARDO') || p.includes('REGGIANITO') || p.includes('PROVOLONE') || p.includes('RALLADO') || p.includes('PEPATO')) {
+  if (
+    p.includes('GOYA') || p.includes('SARDO') || p.includes('REGGIANITO') || 
+    p.includes('PROVOLONE') || p.includes('PROVOLETA') || p.includes('SBRINZ') || 
+    p.includes('RALLADO') || p.includes('PEPATO') || p.includes('PARMESANO') || 
+    p.includes('ROMANO') || p.includes('PRAMIGO') || p.includes('PARRAS')
+  ) {
     return 'duro';
   }
-  if (p.includes('TYBO') || p.includes('GOUDA') || p.includes('CHEDDAR') || p.includes('FONTINA') || p.includes('HOLANDO') || p.includes('DANBO') || p.includes('BARRA')) {
+  if (
+    p.includes('TYBO') || p.includes('GOUDA') || p.includes('CHEDDAR') || 
+    p.includes('FONTINA') || p.includes('HOLANDO') || p.includes('DANBO') || 
+    p.includes('BARRA') || p.includes('DANIELA') || p.includes('PATEGRAS') || 
+    p.includes('EDAM') || p.includes('BANQUETE')
+  ) {
     return 'semiduro';
   }
-  return 'blando'; // Cremoso, Por Salut, Mozzarella, Crema, Manteca, etc.
+  return 'blando'; // Cremoso, Por Salut, Mozzarella, Crema, Manteca, Yogur, etc.
+}
+
+function shuffleArray<T>(array: T[]): T[] {
+  const arr = [...array];
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
 }
 
 // Recomendaciones semanales inteligentes de rotación paramétrica
@@ -337,8 +356,11 @@ export const getWeeklyOfferRecommendations = async (req: Request, res: Response)
       numBlandos = 3,
       numFiambres = 4,
       numBebidas = 4,
-      numAlmacen = 5
+      numAlmacen = 5,
+      shuffle = 'false'
     } = req.query;
+
+    const isShuffle = shuffle === 'true';
 
     const products = await prisma.product.findMany({
       where: { isActive: true },
@@ -407,16 +429,26 @@ export const getWeeklyOfferRecommendations = async (req: Request, res: Response)
       };
     });
 
+    const selectTopCandidates = (items: any[], count: number) => {
+      if (count <= 0) return [];
+      const sorted = items.sort((a, b) => b.score - a.score);
+      if (isShuffle) {
+        // Tomar el doble de candidatos principales y mezclarlos
+        const pool = sorted.slice(0, Math.max(count * 2, 8));
+        return shuffleArray(pool).slice(0, count);
+      }
+      return sorted.slice(0, count);
+    };
+
     // Separar por categorías y aplicar reglas paramétricas
     const resultByGroup: Record<string, any[]> = {};
 
     // 1. REFRIGERADOS (7 Quesos: Duros, Semiduros, Blandos)
     const refrigeradosAll = enrichedProducts.filter(p => p.category === 'Refrigerados');
-    const duros = refrigeradosAll.filter(p => p.quesoSubtype === 'duro').sort((a, b) => b.score - a.score).slice(0, Number(numDuros));
-    const semiduros = refrigeradosAll.filter(p => p.quesoSubtype === 'semiduro').sort((a, b) => b.score - a.score).slice(0, Number(numSemiduros));
-    const blandos = refrigeradosAll.filter(p => p.quesoSubtype === 'blando').sort((a, b) => b.score - a.score).slice(0, Number(numBlandos));
+    const duros = selectTopCandidates(refrigeradosAll.filter(p => p.quesoSubtype === 'duro'), Number(numDuros));
+    const semiduros = selectTopCandidates(refrigeradosAll.filter(p => p.quesoSubtype === 'semiduro'), Number(numSemiduros));
+    const blandos = selectTopCandidates(refrigeradosAll.filter(p => p.quesoSubtype === 'blando'), Number(numBlandos));
     
-    // Etiquetar subtipos para visualización limpia
     duros.forEach(p => p.reason = `Queso Duro | ${p.reason}`);
     semiduros.forEach(p => p.reason = `Queso Semiduro | ${p.reason}`);
     blandos.forEach(p => p.reason = `Queso Blando/Fresco | ${p.reason}`);
@@ -424,16 +456,16 @@ export const getWeeklyOfferRecommendations = async (req: Request, res: Response)
     resultByGroup['Refrigerados'] = [...duros, ...semiduros, ...blandos];
 
     // 2. FIAMBRES
-    const fiambresAll = enrichedProducts.filter(p => p.category === 'Fiambres').sort((a, b) => b.score - a.score);
-    resultByGroup['Fiambres'] = fiambresAll.slice(0, Number(numFiambres));
+    const fiambresAll = enrichedProducts.filter(p => p.category === 'Fiambres');
+    resultByGroup['Fiambres'] = selectTopCandidates(fiambresAll, Number(numFiambres));
 
     // 3. BEBIDAS / ALCOHOLES
-    const bebidasAll = enrichedProducts.filter(p => p.category === 'Bebidas' || p.category === 'Bebidas Alcoholicas').sort((a, b) => b.score - a.score);
-    resultByGroup['Bebidas'] = bebidasAll.slice(0, Number(numBebidas));
+    const bebidasAll = enrichedProducts.filter(p => p.category === 'Bebidas' || p.category === 'Bebidas Alcoholicas');
+    resultByGroup['Bebidas'] = selectTopCandidates(bebidasAll, Number(numBebidas));
 
     // 4. ALMACÉN / DESPENSA / CONSERVAS / PASTAS
-    const almacenAll = enrichedProducts.filter(p => ['Almacén', 'Pastas Secas', 'Aderezos y Aceites', 'Conservas', 'Yerbas'].includes(p.category)).sort((a, b) => b.score - a.score);
-    resultByGroup['Almacén'] = almacenAll.slice(0, Number(numAlmacen));
+    const almacenAll = enrichedProducts.filter(p => ['Almacén', 'Pastas Secas', 'Aderezos y Aceites', 'Conservas', 'Yerbas'].includes(p.category));
+    resultByGroup['Almacén'] = selectTopCandidates(almacenAll, Number(numAlmacen));
 
     res.json({
       status: 'success',

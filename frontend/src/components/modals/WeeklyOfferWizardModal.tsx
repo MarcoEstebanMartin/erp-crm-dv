@@ -59,7 +59,7 @@ export default function WeeklyOfferWizardModal({ isOpen, onClose, onCampaignCrea
     }
   }, [isOpen]);
 
-  const loadRecommendations = async () => {
+  const loadRecommendations = async (isShuffle: boolean = false) => {
     setLoading(true);
     try {
       // request() returns json.data directly!
@@ -69,8 +69,9 @@ export default function WeeklyOfferWizardModal({ isOpen, onClose, onCampaignCrea
         numBlandos,
         numFiambres,
         numBebidas,
-        numAlmacen
-      });
+        numAlmacen,
+        shuffle: isShuffle ? 'true' : 'false'
+      } as any);
 
       if (res && res.recommendationsByGroup) {
         const groups: Record<string, RecommendedProduct[]> = res.recommendationsByGroup;
@@ -259,7 +260,7 @@ export default function WeeklyOfferWizardModal({ isOpen, onClose, onCampaignCrea
             </div>
 
             <button
-              onClick={loadRecommendations}
+              onClick={() => loadRecommendations(true)}
               style={{
                 backgroundColor: '#8b5cf6',
                 color: 'white',
@@ -274,7 +275,7 @@ export default function WeeklyOfferWizardModal({ isOpen, onClose, onCampaignCrea
                 fontSize: '11px'
               }}
             >
-              <RefreshCw size={13} /> Recalcular Propuesta
+              <RefreshCw size={13} /> Recalcular y Mezclar Propuesta
             </button>
           </div>
         </div>
