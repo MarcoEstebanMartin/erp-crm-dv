@@ -46,11 +46,16 @@ const EditOrderModal: React.FC<EditOrderModalProps> = ({
     setSuccessMsg(null);
     
     try {
-      const itemsPayload = editOrderModal.items.map(item => ({
-        productId: item.productId,
-        quantity: item.quantity,
-        weight: item.weight || null
-      }));
+      const itemsPayload = editOrderModal.items.map(item => {
+        const prod = products.find(p => p.id === item.productId);
+        const minQty = prod?.minOrderQuantity || 1;
+        return {
+          productId: item.productId,
+          quantity: item.quantity,
+          weight: item.weight || null,
+          isEmergencyOverride: Boolean((item as any).isEmergencyOverride || (item.quantity < minQty))
+        };
+      });
       
       await api.updateOrder(editOrderModal.orderId, { items: itemsPayload });
       setEditOrderModal(null);
@@ -98,6 +103,7 @@ const EditOrderModal: React.FC<EditOrderModalProps> = ({
                       style={{ padding: '4px 8px', fontSize: '0.75rem' }}
                       onClick={() => {
                         const existing = editOrderModal.items.find(item => item.productId === p.id);
+                        const minQty = p.minOrderQuantity || 1;
                         if (existing) {
                           setEditOrderModal({
                             ...editOrderModal,
@@ -113,7 +119,7 @@ const EditOrderModal: React.FC<EditOrderModalProps> = ({
                               productId: p.id,
                               name: p.name,
                               sku: p.sku,
-                              quantity: 1,
+                              quantity: minQty,
                               isPesable: p.isPesable,
                               approximateWeight: p.approximateWeight != null ? Number(p.approximateWeight) : undefined,
                               listPrice: Number(p.listPrice)

@@ -951,6 +951,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
   const handleAddProductToQuickCart = (product: any) => {
     if (!createOrderModal) return;
     const existing = createOrderModal.cart.find(item => item.product.id === product.id);
+    const minQty = product.minOrderQuantity || 1;
     if (existing) {
       if (product.stock < existing.quantity + 1) {
         alert(`Stock insuficiente para "${product.name}".`);
@@ -963,13 +964,13 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
         )
       });
     } else {
-      if (product.stock < 1) {
-        alert(`Stock insuficiente para "${product.name}".`);
+      if (product.stock < minQty) {
+        alert(`Stock insuficiente para "${product.name}" (Requiere mínimo ${minQty} unidades, disponible: ${product.stock}).`);
         return;
       }
       setCreateOrderModal({
         ...createOrderModal,
-        cart: [...createOrderModal.cart, { product, quantity: 1 }]
+        cart: [...createOrderModal.cart, { product, quantity: minQty }]
       });
     }
   };
@@ -1006,7 +1007,8 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
         clientId: createOrderModal.client.id,
         items: createOrderModal.cart.map(item => ({
           productId: item.product.id,
-          quantity: item.quantity
+          quantity: item.quantity,
+          isEmergencyOverride: Boolean(item.isEmergencyOverride || (item.quantity < (item.product.minOrderQuantity || 1)))
         })),
         notes: createOrderModal.notes
       };
@@ -2351,6 +2353,24 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
                                     <>${price.toLocaleString()} x {item.quantity} = ${(price * item.quantity).toLocaleString()}</>
                                   )}
                                 </div>
+                                {item.quantity < (item.product.minOrderQuantity || 1) && (
+                                  <div style={{ marginTop: '3px', fontSize: '0.7rem', color: '#e30613', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    <span style={{ fontWeight: 700 }}>⚠️ Mín: {item.product.minOrderQuantity} u.</span>
+                                    <label style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', cursor: 'pointer', fontWeight: 600 }}>
+                                      <input
+                                        type="checkbox"
+                                        checked={Boolean(item.isEmergencyOverride)}
+                                        onChange={(e) => {
+                                          setCreateOrderModal({
+                                            ...createOrderModal,
+                                            cart: createOrderModal.cart.map(c => c.product.id === item.product.id ? { ...c, isEmergencyOverride: e.target.checked } : c)
+                                          });
+                                        }}
+                                      />
+                                      Excepción Emergencia
+                                    </label>
+                                  </div>
+                                )}
                               </div>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                 <button
