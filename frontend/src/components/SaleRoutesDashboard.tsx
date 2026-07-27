@@ -289,8 +289,8 @@ export default function SaleRoutesDashboard() {
         </div>
       )}
 
-      {/* Grid Principal */}
-      <div style={{ display: 'grid', gridTemplateColumns: '260px 1fr 300px', gap: '16px', flex: 1, minHeight: 0 }}>
+      {/* Grid Principal (2 Columnas Limpias) */}
+      <div style={{ display: 'grid', gridTemplateColumns: '260px 1fr', gap: '16px', flex: 1, minHeight: 0 }}>
         
         {/* Columna Izquierda: Listado de Rutas */}
         <div style={{ border: '1px solid var(--border-color)', borderRadius: '8px', display: 'flex', flexDirection: 'column', overflow: 'hidden', backgroundColor: '#fff' }}>
@@ -345,7 +345,7 @@ export default function SaleRoutesDashboard() {
           </div>
         </div>
 
-        {/* Columna Central: Detalle de Ruta */}
+        {/* Columna Derecha: Detalle de Ruta y Lista de Clientes */}
         <div style={{ border: '1px solid var(--border-color)', borderRadius: '8px', display: 'flex', flexDirection: 'column', overflow: 'hidden', backgroundColor: '#fff' }}>
           {loadingRoute ? (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, gap: '12px' }}>
@@ -369,12 +369,12 @@ export default function SaleRoutesDashboard() {
                 </div>
                 <div style={{ display: 'flex', gap: '8px' }}>
                   <button 
-                    className="btn btn-primary btn-sm"
+                    className="btn btn-secondary btn-sm"
                     onClick={() => setShowOptimizeModal(true)}
-                    style={{ backgroundColor: '#e30613', borderColor: '#e30613', color: '#ffffff', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 14px' }}
+                    style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
                   >
-                    <Zap size={14} />
-                    <span>⚡ Optimizar Recorrido por Mapa</span>
+                    <Zap size={14} color="#e30613" />
+                    <span>Optimizar por Mapa</span>
                   </button>
                   <button 
                     className="btn btn-secondary btn-sm"
@@ -431,7 +431,7 @@ export default function SaleRoutesDashboard() {
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '48px 12px', color: 'var(--text-secondary)' }}>
                     <MapPin size={28} style={{ marginBottom: '8px', opacity: 0.5 }} />
                     <span style={{ fontSize: '0.85rem' }}>No hay clientes asignados a esta ruta.</span>
-                    <span style={{ fontSize: '0.75rem', marginTop: '4px' }}>Búscalos y agrégalos desde el panel de la derecha.</span>
+                    <span style={{ fontSize: '0.75rem', marginTop: '4px' }}>Los clientes se asignan automáticamente al cargar la columna RUTA en el Excel.</span>
                   </div>
                 ) : (
                   <div className="table-container" style={{ margin: 0, boxShadow: 'none', border: '1px solid var(--border-color)', borderRadius: '6px' }}>
@@ -450,8 +450,7 @@ export default function SaleRoutesDashboard() {
                         {selectedRoute.clients.map((c, index) => {
                           const isFirst = index === 0;
                           const isLast = index === selectedRoute.clients!.length - 1;
-                          const hasVisitToday = c.routeVisits && c.routeVisits.length > 0;
-                          const visit = hasVisitToday ? c.routeVisits![0] : null;
+                          const debt = Number(c.outstandingBalance || 0);
 
                           return (
                             <tr key={c.id}>
@@ -459,31 +458,27 @@ export default function SaleRoutesDashboard() {
                                 {index + 1}
                               </td>
                               <td>
-                                <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                  <span style={{ fontWeight: 600 }}>{c.name}</span>
-                                  <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>CUIT: {c.cuit || 'Sin CUIT'}</span>
-                                </div>
+                                <div style={{ fontWeight: 600 }}>{c.name}</div>
+                                <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>CUIT: {c.cuit || 'Sin CUIT'}</div>
                               </td>
                               <td>
                                 {c.route ? (
-                                  <span style={{ fontSize: '0.75rem', fontWeight: 700, backgroundColor: 'rgba(0,0,0,0.05)', color: 'var(--text-secondary)', padding: '3px 8px', borderRadius: '4px', textTransform: 'uppercase' }}>
+                                  <span style={{ fontSize: '0.72rem', backgroundColor: 'rgba(227, 6, 19, 0.08)', color: '#e30613', padding: '2px 8px', borderRadius: '4px', fontWeight: 600 }}>
                                     📍 {c.route}
                                   </span>
                                 ) : (
-                                  <span style={{ fontSize: '0.72rem', color: '#999', fontStyle: 'italic' }}>Sin Zona</span>
+                                  <span style={{ fontSize: '0.72rem', color: '#999' }}>-</span>
                                 )}
                               </td>
                               <td>
-                                <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                  <span>{c.address || 'Sin dirección'}</span>
-                                  <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>{c.city || 'Sin ciudad'}</span>
-                                </div>
+                                <div>{c.address || 'Sin dirección'}</div>
+                                <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>{c.city || ''}</div>
                               </td>
-                              <td style={{ textAlign: 'right', fontWeight: 600, color: Number(c.outstandingBalance) > 0 ? 'var(--color-corp-red)' : 'inherit' }}>
-                                ${Math.round(Number(c.outstandingBalance)).toLocaleString('es-AR')}
+                              <td style={{ textAlign: 'right', fontWeight: 600, color: debt > 0 ? 'var(--color-corp-red)' : 'inherit' }}>
+                                ${Math.round(debt).toLocaleString('es-AR')}
                               </td>
                               <td>
-                                <div style={{ display: 'flex', gap: '4px', justifyContent: 'center', alignItems: 'center' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '2px' }}>
                                   <button
                                     onClick={() => handleMoveClient(c.id, 'up')}
                                     disabled={isFirst}
@@ -544,82 +539,11 @@ export default function SaleRoutesDashboard() {
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, color: 'var(--text-secondary)', padding: '24px' }}>
               <MapPin size={32} style={{ marginBottom: '8px', opacity: 0.5 }} />
               <span style={{ fontSize: '0.9rem', fontWeight: 500 }}>No hay ninguna ruta seleccionada</span>
-              <span style={{ fontSize: '0.78rem', marginTop: '4px' }}>Selecciona una ruta de venta a la izquierda o crea una nueva.</span>
+              <span style={{ fontSize: '0.78rem', marginTop: '4px' }}>Selecciona una ruta de venta a la izquierda o carga tu Excel.</span>
             </div>
           )}
         </div>
 
-        {/* Columna Derecha: Agregar Clientes a la Ruta */}
-        <div style={{ border: '1px solid var(--border-color)', borderRadius: '8px', display: 'flex', flexDirection: 'column', overflow: 'hidden', backgroundColor: '#fff' }}>
-          <div style={{ padding: '12px', borderBottom: '1px solid var(--border-color)', backgroundColor: 'var(--bg-light)', fontWeight: 600, fontSize: '0.85rem' }}>
-            Asignar Clientes
-          </div>
-          
-          {/* Input de Búsqueda */}
-          <div style={{ padding: '8px 12px', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <Search size={14} style={{ color: 'var(--text-secondary)' }} />
-            <input
-              type="text"
-              placeholder="Buscar cliente..."
-              value={searchClientQuery}
-              onChange={(e) => setSearchClientQuery(e.target.value)}
-              style={{
-                border: 'none',
-                outline: 'none',
-                width: '100%',
-                fontSize: '0.8rem',
-                backgroundColor: 'transparent'
-              }}
-            />
-            {searchClientQuery && (
-              <X size={14} style={{ color: 'var(--text-secondary)', cursor: 'pointer' }} onClick={() => setSearchClientQuery('')} />
-            )}
-          </div>
-
-          {/* Listado de Clientes Disponibles */}
-          <div style={{ flex: 1, overflowY: 'auto', padding: '6px' }}>
-            {!selectedRoute ? (
-              <div style={{ textAlign: 'center', padding: '24px 12px', color: 'var(--text-secondary)', fontSize: '0.78rem' }}>
-                Selecciona una ruta para poder agregar clientes.
-              </div>
-            ) : availableClients.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '24px 12px', color: 'var(--text-secondary)', fontSize: '0.78rem' }}>
-                No se encontraron clientes disponibles.
-              </div>
-            ) : (
-              availableClients.map(c => (
-                <div
-                  key={c.id}
-                  style={{
-                    padding: '8px 10px',
-                    borderRadius: '6px',
-                    border: '1px solid var(--border-color)',
-                    marginBottom: '6px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    fontSize: '0.78rem',
-                    backgroundColor: '#fff'
-                  }}
-                >
-                  <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, marginRight: '8px' }}>
-                    <span style={{ fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {c.name}
-                    </span>
-                    <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      📍 {c.city || 'Sin ciudad'} {c.address ? `(${c.address})` : ''}
-                    </span>
-                  </div>
-                  <button
-                    onClick={() => handleAddClientToRoute(c.id)}
-                    style={{
-                      padding: '4px',
-                      borderRadius: '4px',
-                      backgroundColor: 'rgba(0, 122, 255, 0.05)',
-                      border: '1px solid rgba(0, 122, 255, 0.15)',
-                      color: '#007AFF',
-                      cursor: 'pointer',
-                      display: 'flex',
                       alignItems: 'center',
                       flexShrink: 0
                     }}
