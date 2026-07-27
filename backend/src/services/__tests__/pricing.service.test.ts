@@ -33,6 +33,7 @@ describe('PricingService Unit Tests (Motor de Precios y Reglas)', () => {
     iibbAliquot: 0 as any,
     paymentTermDays: 30,
     webPin: null,
+    birthDate: null,
     isActive: true,
     createdAt: new Date(),
     updatedAt: new Date(),
