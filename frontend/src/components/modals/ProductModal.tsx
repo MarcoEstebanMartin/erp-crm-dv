@@ -155,6 +155,7 @@ const ProductModal: React.FC<ProductModalProps> = ({
       minStock: Number(data.minStock || 0),
       isPesable: Boolean(data.isPesable),
       unitsPerBox: Number(data.unitsPerBox || 1),
+      minOrderQuantity: Number(data.minOrderQuantity || 1),
       approximateWeight: data.approximateWeight ? Number(data.approximateWeight) : 0,
       isActive: (data as any).isActive !== undefined ? Boolean((data as any).isActive) : undefined
     };

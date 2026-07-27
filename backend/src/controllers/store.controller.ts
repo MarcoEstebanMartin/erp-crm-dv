@@ -404,6 +404,7 @@ export async function getStoreCatalog(req: Request, res: Response): Promise<void
         stock: p.stock,
         isPesable: p.isPesable,
         unitsPerBox: p.unitsPerBox || 1,
+        minOrderQuantity: p.minOrderQuantity || 1,
         imageUrl: p.imageUrl,
         rubroId: p.rubroId,
         rubroName: p.rubro?.name || 'General',
