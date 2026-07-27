@@ -19,7 +19,9 @@ import {
   Clock,
   Bot,
   Kanban,
-  FlaskConical
+  FlaskConical,
+  Cake,
+  Gift
 } from 'lucide-react';
 import OrderDraftApprovalModal from './modals/OrderDraftApprovalModal';
 import WhatsAppSimulatorModal from './modals/WhatsAppSimulatorModal';
@@ -241,6 +243,19 @@ export default function CrmDashboard({ initialTab = 'whatsapp', hideHeaderTabs =
 
     const text = `Hola ${selectedConversation.contactName || 'Cliente'}, te enviamos tu resumen de cuenta corriente de DV Distribuidora. Saldo actual: $${balance.toLocaleString('es-AR')}. ¡Quedamos a tu disposición para tomar tu pedido!`;
     setReplyText(text);
+  };
+
+  // Actualizar Fecha de Nacimiento del Cliente desde el CRM
+  const handleUpdateBirthDate = async (personaId: number, birthDateStr: string) => {
+    try {
+      const res = await api.updatePersona(personaId, { birthDate: birthDateStr || null });
+      const updatedPersona = res.data?.persona || res.persona || res;
+      setSelectedConversation((prev: any) => prev ? { ...prev, persona: { ...prev.persona, birthDate: updatedPersona.birthDate || birthDateStr } } : null);
+      setConversations((prev: any[]) => prev.map((c: any) => c.persona?.id === personaId ? { ...c, persona: { ...c.persona, birthDate: updatedPersona.birthDate || birthDateStr } } : c));
+      setSuccessMsg('🎉 Fecha de nacimiento guardada exitosamente.');
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Error al guardar la fecha de nacimiento.');
+    }
   };
 
   // Toggle Auto-Reply 24/7 (Bot)
@@ -748,14 +763,96 @@ export default function CrmDashboard({ initialTab = 'whatsapp', hideHeaderTabs =
 
                 {selectedConversation.persona ? (
                   <>
+                    {/* Alerta & Saludo de Cumpleaños si hoy es su cumpleaños */}
+                    {(() => {
+                      const p = selectedConversation.persona;
+                      if (!p.birthDate) return null;
+                      const b = new Date(p.birthDate);
+                      const today = new Date();
+                      const isBirthdayToday = b.getUTCDate() === today.getDate() && b.getUTCMonth() === today.getMonth();
+                      if (!isBirthdayToday) return null;
+
+                      return (
+                        <div style={{ backgroundColor: '#EEF2FF', border: '1px solid #C7D2FE', padding: '10px 12px', borderRadius: '8px', fontSize: '0.78rem' }}>
+                          <div style={{ color: '#4338CA', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
+                            <Cake size={16} style={{ color: '#6366F1' }} />
+                            <span>¡Hoy es su Cumpleaños! 🥳🎂</span>
+                          </div>
+                          <div style={{ color: '#3730A3', fontSize: '0.74rem', marginBottom: '8px' }}>
+                            ¡Enviále un saludo festivo institucional a {p.name}!
+                          </div>
+                          <button
+                            type="button"
+                            className="btn btn-primary"
+                            style={{ width: '100%', fontSize: '0.74rem', padding: '6px 8px', backgroundColor: '#4F46E5', borderColor: '#4F46E5', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
+                            onClick={() => {
+                              setReplyText(`¡Hola ${p.name}! 🎂🎈 De parte de todo el equipo de DV Distribuidora te deseamos un muy feliz cumpleaños. ¡Que tengas un día excelente! 🎉🥂`);
+                            }}
+                          >
+                            <Gift size={13} />
+                            <span>Enviar Saludo de Cumpleaños</span>
+                          </button>
+                        </div>
+                      );
+                    })()}
+
+                    {/* Alerta de Datos Incompletos del Cliente */}
+                    {(() => {
+                      const p = selectedConversation.persona;
+                      const missing: string[] = [];
+                      if (!p.cuit) missing.push('CUIT/DNI');
+                      if (!p.address) missing.push('Dirección');
+                      if (!p.city) missing.push('Localidad');
+                      if (!p.email) missing.push('Email');
+                      if (!p.birthDate) missing.push('Fecha de Nacimiento');
+
+                      if (missing.length === 0) return null;
+
+                      return (
+                        <div style={{ backgroundColor: '#FEF3C7', border: '1px solid #FDE68A', padding: '10px 12px', borderRadius: '8px', fontSize: '0.78rem' }}>
+                          <div style={{ color: '#B45309', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '4px' }}>
+                            <AlertTriangle size={14} />
+                            <span>Datos Incompletos ({missing.length})</span>
+                          </div>
+                          <div style={{ color: '#78350F', fontSize: '0.74rem', marginBottom: '8px' }}>
+                            Pendientes: <strong>{missing.join(', ')}</strong>.
+                          </div>
+                          <button
+                            type="button"
+                            className="btn btn-secondary"
+                            style={{ width: '100%', fontSize: '0.74rem', padding: '5px 8px', backgroundColor: '#FFFFFF', borderColor: '#F59E0B', color: '#B45309', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
+                            onClick={() => {
+                              setReplyText(`Hola ${p.name}, para completar tu ficha de cliente en nuestro sistema, ¿nos podrías confirmar tus datos pendientes (${missing.join(', ')})? ¡Muchas gracias!`);
+                            }}
+                          >
+                            <Send size={12} />
+                            <span>Solicitar Datos por WhatsApp</span>
+                          </button>
+                        </div>
+                      );
+                    })()}
+
                     <div style={{ backgroundColor: '#FFFFFF', padding: '12px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
                       <strong style={{ display: 'block', fontSize: '0.92rem', marginBottom: '4px', color: '#0F172A' }}>
                         {selectedConversation.persona.name}
                       </strong>
-                      <div style={{ fontSize: '0.78rem', color: '#64748B', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                      <div style={{ fontSize: '0.78rem', color: '#64748B', display: 'flex', flexDirection: 'column', gap: '3px' }}>
                         <span>CUIT: {selectedConversation.persona.cuit || 'S/D'}</span>
+                        {selectedConversation.persona.address && <span>🏠 {selectedConversation.persona.address}</span>}
                         {selectedConversation.persona.city && <span>📍 {selectedConversation.persona.city} ({selectedConversation.persona.province || 'BsAs'})</span>}
                         {selectedConversation.persona.route && <span>🚚 Ruta: {selectedConversation.persona.route}</span>}
+
+                        <div style={{ marginTop: '6px', paddingTop: '6px', borderTop: '1px dashed #E2E8F0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '4px' }}>
+                          <span style={{ fontSize: '0.74rem', fontWeight: 600, color: '#475569', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <Cake size={13} style={{ color: '#E11D48' }} /> Cumpleaños:
+                          </span>
+                          <input 
+                            type="date" 
+                            value={selectedConversation.persona.birthDate ? new Date(selectedConversation.persona.birthDate).toISOString().split('T')[0] : ''}
+                            onChange={(e) => handleUpdateBirthDate(selectedConversation.persona.id, e.target.value)}
+                            style={{ fontSize: '0.72rem', padding: '2px 4px', borderRadius: '4px', border: '1px solid #CBD5E1', outline: 'none' }}
+                          />
+                        </div>
                       </div>
                     </div>
 

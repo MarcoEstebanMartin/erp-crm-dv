@@ -85,16 +85,17 @@ model User {
 }
 
 model Persona {
-  id       Int     @id @default(autoincrement())
-  name     String
-  cuit     String?
-  address  String?
-  city     String?
-  province String?
-  zipCode  String?
-  phone    String?
-  email    String?
-  rubro    String?
+  id        Int       @id @default(autoincrement())
+  name      String
+  cuit      String?
+  address   String?
+  city      String?
+  province  String?
+  zipCode   String?
+  phone     String?
+  email     String?
+  rubro     String?
+  birthDate DateTime?
 
   // Roles de Persona
   isClient          Boolean @default(true)

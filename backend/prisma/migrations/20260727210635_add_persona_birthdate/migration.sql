@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "Persona" ADD COLUMN IF NOT EXISTS "birthDate" TIMESTAMP(3);

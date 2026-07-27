@@ -152,6 +152,7 @@ export class PersonaService {
         latitude: data.latitude !== undefined ? (data.latitude !== null ? Number(data.latitude) : null) : null,
         longitude: data.longitude !== undefined ? (data.longitude !== null ? Number(data.longitude) : null) : null,
         webPin: data.webPin !== undefined && data.webPin !== null ? String(data.webPin).trim() : null,
+        birthDate: data.birthDate ? new Date(data.birthDate) : null,
       },
     });
 
@@ -227,6 +228,7 @@ export class PersonaService {
         latitude: data.latitude !== undefined ? (data.latitude !== null ? Number(data.latitude) : null) : undefined,
         longitude: data.longitude !== undefined ? (data.longitude !== null ? Number(data.longitude) : null) : undefined,
         webPin: data.webPin !== undefined ? (data.webPin ? String(data.webPin).trim() : null) : undefined,
+        birthDate: data.birthDate !== undefined ? (data.birthDate ? new Date(data.birthDate) : null) : undefined,
       },
     });
 
