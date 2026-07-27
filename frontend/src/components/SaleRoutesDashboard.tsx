@@ -13,8 +13,10 @@ import {
   X, 
   ChevronRight,
   Loader2,
-  DollarSign
+  DollarSign,
+  Zap
 } from 'lucide-react';
+import { OptimizeRouteModal } from './modals/OptimizeRouteModal';
 
 interface Client {
   id: number;
@@ -55,6 +57,7 @@ export default function SaleRoutesDashboard() {
   const [loading, setLoading] = useState(true);
   const [loadingRoute, setLoadingRoute] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showOptimizeModal, setShowOptimizeModal] = useState(false);
 
   // Estados para modal de crear/editar ruta
   const [routeModal, setRouteModal] = useState({
@@ -365,6 +368,14 @@ export default function SaleRoutesDashboard() {
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: '8px' }}>
+                  <button 
+                    className="btn btn-primary btn-sm"
+                    onClick={() => setShowOptimizeModal(true)}
+                    style={{ backgroundColor: '#e30613', borderColor: '#e30613', color: '#ffffff', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 14px' }}
+                  >
+                    <Zap size={14} />
+                    <span>⚡ Optimizar Recorrido por Mapa</span>
+                  </button>
                   <button 
                     className="btn btn-secondary btn-sm"
                     onClick={() => setRouteModal({ 
@@ -728,6 +739,16 @@ export default function SaleRoutesDashboard() {
           </div>
         </div>
       )}
+
+      {/* Modal de optimización por mapa */}
+      <OptimizeRouteModal
+        open={showOptimizeModal}
+        onClose={() => setShowOptimizeModal(false)}
+        route={selectedRoute}
+        onSuccess={() => reloadRoutesOnly()}
+        setErrorMsg={setError}
+        setSuccessMsg={() => {}}
+      />
     </div>
   );
 }

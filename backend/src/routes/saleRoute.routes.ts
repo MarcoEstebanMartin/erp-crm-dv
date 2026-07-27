@@ -10,6 +10,7 @@ import {
   addClientToRoute,
   recordRouteVisit,
   getTodayVisits,
+  optimizeRouteSequence,
 } from '../controllers/saleRoute.controller';
 import { authenticateJWT, requireRole } from '../middlewares/auth';
 import { Role } from '@prisma/client';
@@ -40,5 +41,6 @@ router.delete('/:id', authenticateJWT, requireRole([Role.ADMIN, Role.FACTURACION
 // Reordenamiento y asociación de clientes
 router.put('/:id/sequence', authenticateJWT, requireRole([Role.ADMIN, Role.FACTURACION]), validateRequest(updateSequenceSchema), updateClientSequence);
 router.post('/:id/clients', authenticateJWT, requireRole([Role.ADMIN, Role.FACTURACION]), addClientToRoute);
+router.post('/:id/optimize-sequence', authenticateJWT, requireRole([Role.ADMIN, Role.FACTURACION]), optimizeRouteSequence);
 
 export default router;

@@ -237,3 +237,25 @@ export async function getTodayVisits(req: AuthenticatedRequest, res: Response): 
     res.status(500).json({ status: 'error', message: 'Error al obtener visitas.' });
   }
 }
+
+/**
+ * Optimizar secuencia de ruta por algoritmo de mapa (TSP Haversine).
+ */
+export async function optimizeRouteSequence(req: AuthenticatedRequest, res: Response): Promise<void> {
+  const { id } = req.params;
+  const userId = req.user?.id;
+  const { startCoords } = req.body || {};
+
+  if (!userId) {
+    res.status(401).json({ status: 'error', message: 'No autorizado.' });
+    return;
+  }
+
+  try {
+    const result = await saleRouteService.optimizeRouteSequence(Number(id), startCoords);
+    res.status(200).json({ status: 'success', data: result });
+  } catch (error: any) {
+    console.error('Error al optimizar secuencia de la ruta:', error);
+    res.status(500).json({ status: 'error', message: error.message || 'Error al optimizar ruta por mapa.' });
+  }
+}

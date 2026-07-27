@@ -1180,6 +1180,13 @@ export const api = {
     });
   },
 
+  optimizeSaleRouteSequence: async (id: number, startCoords?: { lat: number; lng: number }) => {
+    return await request(`/sale-routes/${id}/optimize-sequence`, {
+      method: 'POST',
+      body: JSON.stringify({ startCoords })
+    });
+  },
+
   getTodayVisits: async () => {
     return await request('/sale-routes/visits/today');
   },
