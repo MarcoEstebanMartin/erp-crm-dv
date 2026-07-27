@@ -159,15 +159,30 @@ async function main() {
         isActive: true
       };
 
-      if (existingProd) {
-        await prisma.product.update({
-          where: { id: existingProd.id },
-          data: prodData
-        });
-      } else {
-        await prisma.product.create({
-          data: { sku, ...prodData }
-        });
+      try {
+        if (existingProd) {
+          await prisma.product.update({
+            where: { id: existingProd.id },
+            data: prodData
+          });
+        } else {
+          await prisma.product.create({
+            data: { sku, ...prodData }
+          });
+        }
+      } catch (err) {
+        // Si el código de barras ya existe en otro producto, actualizar ignorando el campo barcode
+        const { barcode, ...prodDataWithoutBarcode } = prodData;
+        if (existingProd) {
+          await prisma.product.update({
+            where: { id: existingProd.id },
+            data: prodDataWithoutBarcode
+          });
+        } else {
+          await prisma.product.create({
+            data: { sku, ...prodDataWithoutBarcode }
+          });
+        }
       }
       prodSynced++;
     }

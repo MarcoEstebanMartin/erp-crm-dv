@@ -544,19 +544,6 @@ export default function SaleRoutesDashboard() {
           )}
         </div>
 
-                      alignItems: 'center',
-                      flexShrink: 0
-                    }}
-                    title="Agregar a la ruta actual"
-                  >
-                    <Plus size={14} />
-                  </button>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-
       </div>
 
       {/* Modal para Crear / Editar Ruta */}
