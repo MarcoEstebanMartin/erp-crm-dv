@@ -39,7 +39,7 @@ export class GeminiService {
     }
 
     const model = genAI.getGenerativeModel({
-      model: 'gemini-3.5-flash',
+      model: 'gemini-1.5-flash',
       generationConfig: {
         responseMimeType: 'application/json',
       }
@@ -54,7 +54,7 @@ export class GeminiService {
 
     const prompt = `
       Eres un experto en extracción de datos de facturas y remitos comerciales de Argentina.
-      Analiza este documento y extrae la siguiente información en formato JSON estrictamente:
+      Analiza este documento y extrae la siguiente información en formato JSON strictly:
       - supplierName: Razón social del emisor (proveedor).
       - cuit: CUIT del emisor/proveedor (si existe).
       - receiverCuit: CUIT del receptor (comprador, ej: 20163165059 o similar).
@@ -124,6 +124,67 @@ export class GeminiService {
       console.error('Error procesando nota de voz con Gemini:', error);
       return { rawText: 'Nota de voz recibida por WhatsApp.' };
     }
+  }
+
+  /**
+   * Interpreta un texto de pedido de WhatsApp utilizando Gemini AI y empareja con el catálogo del ERP.
+   */
+  async parseOrderMessage(rawText: string, catalog: Array<{ id: number; sku: string; name: string; listPrice: number; costPrice: number; unitsPerBox: number; commercialCategory?: string | null }>): Promise<Array<{ productId: number; quantity: number; note?: string }>> {
+    if (!apiKey || apiKey === 'tu-api-key-aqui') {
+      throw new Error('GEMINI_API_KEY no configurada');
+    }
+
+    const modelName = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
+    const model = genAI.getGenerativeModel({
+      model: modelName,
+      generationConfig: {
+        responseMimeType: 'application/json',
+      }
+    });
+
+    const catalogFormatted = catalog.map(p => ({
+      id: p.id,
+      sku: p.sku,
+      name: p.name,
+      unitsPerBox: p.unitsPerBox || 1,
+      category: p.commercialCategory || ''
+    }));
+
+    const prompt = `
+      Eres el asistente inteligente de toma de pedidos mayoristas de DV Distribuidora (alimentos y bebidas en Argentina).
+      Tu tarea es interpretar el mensaje del cliente en WhatsApp y emparejar CADA producto solicitado con el CATÁLOGO DE PRODUCTOS de la empresa.
+
+      MENSAJE DEL CLIENTE:
+      "${rawText}"
+
+      CATÁLOGO DE PRODUCTOS DISPONIBLES:
+      ${JSON.stringify(catalogFormatted)}
+
+      REGLAS STRICTAS DE MATCHING:
+      1. Identifica CADA ítem que el cliente pide en su mensaje.
+      2. Para cada ítem solicitado, selecciona SOLAMENTE UN producto del catálogo que sea la mejor coincidencia. NO agregues productos duplicados o variantes adicionales que el cliente no haya pedido.
+      3. EXTRAER CANTIDAD:
+         - Extrae la cantidad numérica exacta especificada (ej: "10 cremosos" -> 10, "2 tybo" -> 2).
+         - Si el cliente especifica empaque como "caja", "cajon", "pack" (ej: "1 caja de fernet"), calcula la cantidad total multiplicando la cantidad de cajas por 'unitsPerBox' del producto (o si es 1, asume 12 unidades por caja si es bebida en caja). Ej: "1 caja de fernet" -> 12 unidades de Fernet.
+         - Si no se indica número, la cantidad es 1.
+      4. FALSOS POSITIVOS Y PALABRAS DE CONTENEDOR:
+         - Palabras como "caja", "cajon", "pack", "botella", "lata", "kilo" indican unidades de medida o empaque. NO deben ser usadas como coincidencia de nombre de producto (ej: "1 caja de fernet" NO pide yerba en caja, sino Fernet).
+      5. Devuelve un JSON estrictamente con la siguiente estructura:
+         {
+           "items": [
+             {
+               "productId": 123,
+               "quantity": 10,
+               "note": "10 u."
+             }
+           ]
+         }
+    `;
+
+    const result = await model.generateContent(prompt);
+    const responseText = result.response.text().trim();
+    const parsed = JSON.parse(responseText);
+    return Array.isArray(parsed.items) ? parsed.items : [];
   }
 }
 

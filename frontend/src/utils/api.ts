@@ -1446,9 +1446,10 @@ export const api = {
     });
   },
 
-  approveCrmOrderDraft: async (draftId: number) => {
+  approveCrmOrderDraft: async (draftId: number, items?: any[]) => {
     return await request(`/crm/whatsapp/drafts/${draftId}/approve`, {
-      method: 'POST'
+      method: 'POST',
+      body: items ? JSON.stringify({ items }) : undefined
     });
   },
 

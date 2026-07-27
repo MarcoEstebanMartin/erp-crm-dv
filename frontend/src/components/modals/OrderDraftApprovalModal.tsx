@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Check, Sparkles, AlertCircle, ShoppingBag } from 'lucide-react';
+import { X, Check, Sparkles, AlertCircle, ShoppingBag, Trash2, Plus, Minus } from 'lucide-react';
 import { api } from '../../utils/api';
 
 interface OrderDraftApprovalModalProps {
@@ -12,13 +12,55 @@ export default function OrderDraftApprovalModal({ draft, onClose, onApproved }: 
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const items = JSON.parse(draft.itemsJson || '[]');
+  const [items, setItems] = useState<any[]>(() => {
+    try {
+      return JSON.parse(draft.itemsJson || '[]');
+    } catch {
+      return [];
+    }
+  });
+
+  const handleQuantityChange = (idx: number, delta: number) => {
+    setItems(prev => prev.map((item, i) => {
+      if (i === idx) {
+        const newQty = Math.max(1, (Number(item.quantity) || 1) + delta);
+        return {
+          ...item,
+          quantity: newQty,
+          subtotal: newQty * Number(item.unitPrice)
+        };
+      }
+      return item;
+    }));
+  };
+
+  const handleDirectQuantityEdit = (idx: number, valStr: string) => {
+    const val = parseInt(valStr, 10);
+    const newQty = isNaN(val) || val < 1 ? 1 : val;
+    setItems(prev => prev.map((item, i) => {
+      if (i === idx) {
+        return {
+          ...item,
+          quantity: newQty,
+          subtotal: newQty * Number(item.unitPrice)
+        };
+      }
+      return item;
+    }));
+  };
+
+  const handleRemoveItem = (idx: number) => {
+    setItems(prev => prev.filter((_, i) => i !== idx));
+  };
+
+  const totalEstimated = items.reduce((acc, item) => acc + (Number(item.subtotal) || 0), 0);
 
   const handleApprove = async () => {
+    if (items.length === 0) return;
     setLoading(true);
     setErrorMsg(null);
     try {
-      await api.approveCrmOrderDraft(draft.id);
+      await api.approveCrmOrderDraft(draft.id, items);
       onApproved();
     } catch (err: any) {
       setErrorMsg(err.message || 'Error al aprobar el borrador.');
@@ -29,7 +71,7 @@ export default function OrderDraftApprovalModal({ draft, onClose, onApproved }: 
 
   return (
     <div className="modal-overlay" style={{ zIndex: 1100 }}>
-      <div className="modal-content" style={{ maxWidth: '620px', borderRadius: '12px', border: '1px solid var(--border-color)', boxShadow: '0 20px 40px rgba(0,0,0,0.15)' }}>
+      <div className="modal-content" style={{ maxWidth: '680px', borderRadius: '12px', border: '1px solid var(--border-color)', boxShadow: '0 20px 40px rgba(0,0,0,0.15)' }}>
         
         {/* Header con Badge de IA */}
         <div className="modal-header" style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '14px' }}>
@@ -40,7 +82,7 @@ export default function OrderDraftApprovalModal({ draft, onClose, onApproved }: 
             <div>
               <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700 }}>Aprobar Borrador de Pedido IA</h3>
               <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
-                Verifique los artículos detectados por la Inteligencia Artificial antes de cargarlos al ERP.
+                Verifique o edite los artículos detectados antes de cargarlos al ERP.
               </p>
             </div>
           </div>
@@ -68,7 +110,7 @@ export default function OrderDraftApprovalModal({ draft, onClose, onApproved }: 
             </p>
           </div>
 
-          {/* Tabla de ítems detectados */}
+          {/* Tabla de ítems detectados con edición */}
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
               <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>Artículos Detectados ({items.length}):</span>
@@ -80,16 +122,17 @@ export default function OrderDraftApprovalModal({ draft, onClose, onApproved }: 
                   <tr style={{ backgroundColor: '#F8F9FA' }}>
                     <th>Producto</th>
                     <th>SKU</th>
-                    <th style={{ textAlign: 'center' }}>Cantidad</th>
+                    <th style={{ textAlign: 'center', width: '130px' }}>Cantidad</th>
                     <th style={{ textAlign: 'right' }}>Precio Unit.</th>
                     <th style={{ textAlign: 'right' }}>Subtotal</th>
+                    <th style={{ width: '40px' }}></th>
                   </tr>
                 </thead>
                 <tbody>
                   {items.length === 0 ? (
                     <tr>
-                      <td colSpan={5} style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '16px' }}>
-                        No se detectaron productos del catálogo con coincidencia exacta.
+                      <td colSpan={6} style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '16px' }}>
+                        No hay productos en el borrador.
                       </td>
                     </tr>
                   ) : (
@@ -97,9 +140,43 @@ export default function OrderDraftApprovalModal({ draft, onClose, onApproved }: 
                       <tr key={idx}>
                         <td style={{ fontWeight: 600 }}>{item.productName}</td>
                         <td style={{ fontFamily: 'monospace', fontSize: '0.78rem' }}>{item.sku || 'N/A'}</td>
-                        <td style={{ textAlign: 'center', fontWeight: 700 }}>{item.quantity} u.</td>
-                        <td style={{ textAlign: 'right' }}>${Number(item.unitPrice).toLocaleString('es-AR')}</td>
-                        <td style={{ textAlign: 'right', fontWeight: 600 }}>${Number(item.subtotal).toLocaleString('es-AR')}</td>
+                        <td style={{ textAlign: 'center' }}>
+                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', backgroundColor: '#F1F5F9', padding: '2px 4px', borderRadius: '6px', border: '1px solid #CBD5E1' }}>
+                            <button
+                              type="button"
+                              onClick={() => handleQuantityChange(idx, -1)}
+                              style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: '2px', display: 'flex', color: '#475569' }}
+                            >
+                              <Minus size={13} />
+                            </button>
+                            <input
+                              type="number"
+                              value={item.quantity}
+                              onChange={(e) => handleDirectQuantityEdit(idx, e.target.value)}
+                              style={{ width: '42px', textAlign: 'center', border: 'none', background: 'transparent', fontWeight: 700, fontSize: '0.82rem' }}
+                              min="1"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => handleQuantityChange(idx, 1)}
+                              style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: '2px', display: 'flex', color: '#475569' }}
+                            >
+                              <Plus size={13} />
+                            </button>
+                          </div>
+                        </td>
+                        <td style={{ textAlign: 'right' }}>${Number(item.unitPrice).toLocaleString('es-AR', { minimumFractionDigits: 2 })}</td>
+                        <td style={{ textAlign: 'right', fontWeight: 600 }}>${Number(item.subtotal).toLocaleString('es-AR', { minimumFractionDigits: 2 })}</td>
+                        <td style={{ textAlign: 'center' }}>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveItem(idx)}
+                            title="Eliminar producto"
+                            style={{ border: 'none', background: 'transparent', color: '#EF4444', cursor: 'pointer', padding: '4px', display: 'flex' }}
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        </td>
                       </tr>
                     ))
                   )}
@@ -123,7 +200,7 @@ export default function OrderDraftApprovalModal({ draft, onClose, onApproved }: 
               <span>Total Estimado del Borrador:</span>
             </div>
             <span style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--accent-color)' }}>
-              ${Number(draft.totalEstimated).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+              ${Number(totalEstimated).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
             </span>
           </div>
 

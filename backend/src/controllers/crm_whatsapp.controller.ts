@@ -270,7 +270,11 @@ export async function approveOrderDraft(req: AuthenticatedRequest, res: Response
       return;
     }
 
-    const items = JSON.parse(draft.itemsJson || '[]');
+    const customItems = req.body?.items;
+    const items = (Array.isArray(customItems) && customItems.length > 0)
+      ? customItems
+      : JSON.parse(draft.itemsJson || '[]');
+
     if (items.length === 0) {
       res.status(400).json({ status: 'error', message: 'El borrador no contiene ítems válidos.' });
       return;
@@ -284,6 +288,12 @@ export async function approveOrderDraft(req: AuthenticatedRequest, res: Response
 
     const userId = req.user?.id || 1;
 
+    const calculatedTotal = items.reduce((acc: number, item: any) => {
+      const q = Number(item.quantity) || 1;
+      const p = Number(item.unitPrice) || 0;
+      return acc + (q * p);
+    }, 0);
+
     const newOrder = await prisma.order.create({
       data: {
         personaId,
@@ -291,13 +301,13 @@ export async function approveOrderDraft(req: AuthenticatedRequest, res: Response
         billingType: 'INTERNAL',
         invoiceType: 'PRESUPUESTO',
         status: 'PENDING',
-        totalAmount: draft.totalEstimated,
+        totalAmount: calculatedTotal > 0 ? calculatedTotal : draft.totalEstimated,
         items: {
           create: items.map((item: any) => ({
             productId: item.productId,
-            quantity: item.quantity || 1,
-            unitPrice: item.unitPrice || 0,
-            subtotal: item.subtotal || 0
+            quantity: Number(item.quantity) || 1,
+            unitPrice: Number(item.unitPrice) || 0,
+            subtotal: Number(item.subtotal) || ((Number(item.quantity) || 1) * (Number(item.unitPrice) || 0))
           }))
         }
       }
@@ -307,7 +317,9 @@ export async function approveOrderDraft(req: AuthenticatedRequest, res: Response
       where: { id: draftId },
       data: {
         status: 'APPROVED',
-        orderId: newOrder.id
+        orderId: newOrder.id,
+        itemsJson: JSON.stringify(items),
+        totalEstimated: calculatedTotal > 0 ? calculatedTotal : draft.totalEstimated
       }
     });
 

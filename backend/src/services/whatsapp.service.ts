@@ -263,6 +263,10 @@ export class WhatsAppService {
    * Interpreta un texto o pedido de cliente mediante IA (Gemini)
    * y genera un Borrador de Pedido en CRM.
    */
+  /**
+   * Interpreta un texto o pedido de cliente mediante IA (Gemini)
+   * y genera un Borrador de Pedido en CRM.
+   */
   async parseOrderWithAI(conversationId: number, rawText: string): Promise<any> {
     const conversation = await prisma.crmConversation.findUnique({
       where: { id: conversationId },
@@ -279,29 +283,122 @@ export class WhatsAppService {
         id: true,
         sku: true,
         name: true,
+        listPrice: true,
         costPrice: true,
+        unitsPerBox: true,
         commercialCategory: true
       },
-      take: 150
+      take: 500
     });
+
+    const catalog = activeProducts.map(p => ({
+      id: p.id,
+      sku: p.sku,
+      name: p.name,
+      listPrice: Number(p.listPrice) > 0 ? Number(p.listPrice) : Number(p.costPrice),
+      costPrice: Number(p.costPrice),
+      unitsPerBox: p.unitsPerBox || 1,
+      commercialCategory: p.commercialCategory
+    }));
 
     const matchedItems: any[] = [];
     let totalEstimated = 0;
-    const lower = rawText.toLowerCase();
 
-    for (const prod of activeProducts) {
-      const nameParts = prod.name.toLowerCase().split(' ').filter(p => p.length > 3);
-      const isMatch = nameParts.some(part => lower.includes(part));
-      if (isMatch) {
-        matchedItems.push({
-          productId: prod.id,
-          productName: prod.name,
-          sku: prod.sku,
-          quantity: 1,
-          unitPrice: Number(prod.costPrice),
-          subtotal: Number(prod.costPrice)
-        });
-        totalEstimated += Number(prod.costPrice);
+    // 1. Intentar interpretación con Gemini AI
+    let geminiResult: Array<{ productId: number; quantity: number; note?: string }> = [];
+    try {
+      geminiResult = await geminiService.parseOrderMessage(rawText, catalog);
+    } catch (err: any) {
+      console.warn('⚡ Fallback a Matcher Algorítmico Local (Gemini offline o no configurado):', err.message);
+    }
+
+    if (geminiResult && geminiResult.length > 0) {
+      for (const item of geminiResult) {
+        const prod = catalog.find(p => p.id === item.productId);
+        if (prod) {
+          const qty = Math.max(1, item.quantity || 1);
+          const price = prod.listPrice;
+          const subtotal = price * qty;
+          matchedItems.push({
+            productId: prod.id,
+            productName: prod.name,
+            sku: prod.sku,
+            quantity: qty,
+            unitPrice: price,
+            subtotal
+          });
+          totalEstimated += subtotal;
+        }
+      }
+    } else {
+      // 2. Fallback Matcher Algorítmico Inteligente (Determinista)
+      const clauses = rawText.split(/,|\n|\by\b/i).map(c => c.trim()).filter(c => c.length > 2);
+      const containerWords = ['caja', 'cajas', 'cajon', 'cajones', 'pack', 'packs', 'botella', 'botellas', 'kilo', 'kilos', 'kg', 'u', 'unid', 'unidades'];
+      const stopWords = ['hola', 'mandame', 'mándame', 'quiero', 'por', 'favor', 'necesito', 'de', 'un', 'una', 'el', 'la', 'los', 'las'];
+
+      const addedProductIds = new Set<number>();
+
+      for (const clause of clauses) {
+        const numberMatch = clause.match(/\b(\d+)\b/);
+        let qty = numberMatch ? parseInt(numberMatch[1], 10) : 1;
+
+        const isBox = containerWords.some(w => ['caja', 'cajas', 'cajon', 'cajones', 'pack', 'packs'].includes(w) && clause.toLowerCase().includes(w));
+
+        const clauseTokens = clause.toLowerCase()
+          .replace(/[^\w\s]/gi, '')
+          .split(/\s+/)
+          .filter(w => !containerWords.includes(w) && !stopWords.includes(w) && !/^\d+$/.test(w) && w.length > 1);
+
+        if (clauseTokens.length === 0) continue;
+
+        let bestProd: typeof catalog[0] | null = null;
+        let bestScore = 0;
+
+        for (const prod of catalog) {
+          if (addedProductIds.has(prod.id)) continue;
+
+          const prodNameLower = prod.name.toLowerCase();
+          const prodTokens = prodNameLower.split(/\s+/);
+          let score = 0;
+
+          for (const token of clauseTokens) {
+            const tokenStem = token.replace(/(s|es)$/i, '');
+            for (const prodWord of prodTokens) {
+              const prodStem = prodWord.replace(/(s|es)$/i, '');
+              if (prodWord === token || (prodStem === tokenStem && tokenStem.length >= 3)) {
+                score += 4;
+              } else if ((prodWord.includes(tokenStem) || tokenStem.includes(prodStem)) && tokenStem.length >= 3) {
+                score += 3;
+              }
+            }
+          }
+
+          if (prodNameLower.includes('caja') && !clause.toLowerCase().includes('yerba')) {
+            score -= 2;
+          }
+
+          if (score > bestScore) {
+            bestScore = score;
+            bestProd = prod;
+          }
+        }
+
+        if (bestProd && bestScore >= 2) {
+          addedProductIds.add(bestProd.id);
+          const finalQty = isBox ? (bestProd.unitsPerBox > 1 ? bestProd.unitsPerBox * qty : 12 * qty) : qty;
+          const price = bestProd.listPrice;
+          const subtotal = price * finalQty;
+
+          matchedItems.push({
+            productId: bestProd.id,
+            productName: bestProd.name,
+            sku: bestProd.sku,
+            quantity: finalQty,
+            unitPrice: price,
+            subtotal
+          });
+          totalEstimated += subtotal;
+        }
       }
     }
 
