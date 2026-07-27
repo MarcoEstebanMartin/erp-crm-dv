@@ -79,6 +79,7 @@ export interface Product {
   minStock: number;
   isPesable: boolean;
   unitsPerBox: number;
+  minOrderQuantity?: number;
   approximateWeight?: number | string;
   imageUrl?: string;
   isActive: boolean;
@@ -97,6 +98,7 @@ export interface OrderItem {
   weight?: number | string;
   unitPrice: number | string;
   subtotal: number | string;
+  isEmergencyOverride?: boolean;
   orderItemLots?: any[];
 }
 

@@ -11,7 +11,7 @@ interface CreateOrderDto {
   userRole: string;
   personaId: number;
   billingType?: BillingType;
-  items: { productId: number; quantity: number; weight?: number }[];
+  items: { productId: number; quantity: number; weight?: number; isEmergencyOverride?: boolean }[];
   idempotencyKey?: string;
 }
 
@@ -85,6 +85,13 @@ export class OrderService {
         const product = dbProducts.find(p => p.id === item.productId);
         if (!product) {
           throw new Error(`Producto ID ${item.productId} no encontrado.`);
+        }
+
+        const minQty = product.minOrderQuantity || 1;
+        if (item.quantity < minQty && !item.isEmergencyOverride) {
+          throw new Error(
+            `El producto "${product.name}" exige un mínimo de ${minQty} unidades (solicitado: ${item.quantity}). Active la excepción por emergencia si requiere facturar menor cantidad.`
+          );
         }
 
         if (product.stock < item.quantity && process.env.IGNORE_STOCK_CHECK !== 'true') {

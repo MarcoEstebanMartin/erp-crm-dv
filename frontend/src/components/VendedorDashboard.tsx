@@ -275,7 +275,8 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
   // --- CARRITO DE COMPRAS ---
   const addToCart = (product: any) => {
     const existing = cart.find(item => item.product.id === product.id);
-    let newQty = 1;
+    const minQty = product.minOrderQuantity || 1;
+    let newQty = minQty;
     if (existing) {
       if (existing.quantity >= product.stock) {
         setErrorMsg(`Stock máximo disponible para ${product.name} alcanzado.`);
@@ -294,7 +295,7 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
         showToast(`Sin stock de ${product.name}.`, 'error');
         return;
       }
-      setCart([...cart, { product, quantity: 1 }]);
+      setCart([...cart, { product, quantity: newQty }]);
     }
     setErrorMsg(null);
     showToast(`Agregado: ${product.name} (x${newQty}) al carrito.`, 'success');
@@ -351,7 +352,8 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
     try {
       const items = cart.map(item => ({
         productId: item.product.id,
-        quantity: item.quantity
+        quantity: item.quantity,
+        isEmergencyOverride: Boolean(item.isEmergencyOverride || (item.quantity < (item.product.minOrderQuantity || 1)))
       }));
 
       await api.createOrder({
@@ -1040,6 +1042,21 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
                                   <>Subtotal: ${(itemPrice * item.quantity).toLocaleString()} (${itemPrice.toLocaleString()} c/u)</>
                                 )}
                               </div>
+                              {item.quantity < (item.product.minOrderQuantity || 1) && (
+                                <div style={{ marginTop: '3px', fontSize: '0.7rem', color: '#e30613', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                  <span style={{ fontWeight: 700 }}>⚠️ Mín: {item.product.minOrderQuantity} u.</span>
+                                  <label style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', cursor: 'pointer', fontWeight: 600 }}>
+                                    <input
+                                      type="checkbox"
+                                      checked={Boolean(item.isEmergencyOverride)}
+                                      onChange={(e) => {
+                                        setCart(cart.map(c => c.product.id === item.product.id ? { ...c, isEmergencyOverride: e.target.checked } : c));
+                                      }}
+                                    />
+                                    Excepción Emergencia
+                                  </label>
+                                </div>
+                              )}
                             </div>
                             
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>

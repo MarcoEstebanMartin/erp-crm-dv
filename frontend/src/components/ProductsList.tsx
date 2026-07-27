@@ -249,6 +249,11 @@ export default function ProductsList({ products, searchQuery, setSearchQuery, se
                             <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{p.name}</div>
                             <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
                               <span style={{ backgroundColor: 'var(--bg-body)', padding: '2px 6px', borderRadius: '4px', marginRight: '6px' }}>{extractLabel(p.rubro)}</span>
+                              {p.minOrderQuantity && p.minOrderQuantity > 1 && (
+                                <span style={{ backgroundColor: 'rgba(227, 6, 19, 0.12)', color: '#e30613', padding: '2px 6px', borderRadius: '4px', marginRight: '6px', fontWeight: 700, fontSize: '0.7rem' }}>
+                                  Mín. {p.minOrderQuantity} u.
+                                </span>
+                              )}
                               {p.description}
                             </div>
                           </div>

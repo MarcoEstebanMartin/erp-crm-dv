@@ -568,10 +568,10 @@ const ProductModal: React.FC<ProductModalProps> = ({
                 </span>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 2fr', gap: '12px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1.5fr', gap: '12px' }}>
                 <div className="form-group" style={{ marginBottom: 0 }}>
                   <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '3px' }}>
-                    Stock Mínimo (Alerta reposición)
+                    Stock Mínimo
                   </label>
                   <input
                     type="number"
@@ -584,7 +584,7 @@ const ProductModal: React.FC<ProductModalProps> = ({
 
                 <div className="form-group" style={{ marginBottom: 0 }}>
                   <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '3px' }}>
-                    Unidades por Caja (Bulto)
+                    Unidades / Caja
                   </label>
                   <input
                     type="number"
@@ -592,6 +592,20 @@ const ProductModal: React.FC<ProductModalProps> = ({
                     value={productModal.data.unitsPerBox !== undefined ? productModal.data.unitsPerBox : 1}
                     onChange={(e) => setProductModal({ ...productModal, data: { ...productModal.data, unitsPerBox: Number(e.target.value) } })}
                     style={{ padding: '5px 8px' }}
+                  />
+                </div>
+
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--accent-color, #e30613)', marginBottom: '3px' }}>
+                    Mínimo Venta
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    className="input"
+                    value={productModal.data.minOrderQuantity !== undefined ? productModal.data.minOrderQuantity : 1}
+                    onChange={(e) => setProductModal({ ...productModal, data: { ...productModal.data, minOrderQuantity: Math.max(1, Number(e.target.value)) } })}
+                    style={{ padding: '5px 8px', fontWeight: 700 }}
                   />
                 </div>
 

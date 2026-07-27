@@ -291,15 +291,17 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({ onBackToStaffLogin }
   }, [products, selectedGroupId, selectedRubroId, onlyOffers, searchQuery]);
 
   // Manejo de Carrito
-  const addToCart = (product: StoreProduct, qty: number = 1) => {
+  const addToCart = (product: StoreProduct, qty?: number) => {
+    const minQty = (product as any).minOrderQuantity || 1;
+    const addedQty = qty !== undefined ? qty : minQty;
     setCart((prev) => {
       const existingIndex = prev.findIndex((item) => item.product.id === product.id);
       if (existingIndex > -1) {
         const updated = [...prev];
-        updated[existingIndex].quantity += qty;
+        updated[existingIndex].quantity += addedQty;
         return updated;
       }
-      return [...prev, { product, quantity: qty, unitPrice: product.price }];
+      return [...prev, { product, quantity: addedQty, unitPrice: product.price }];
     });
   };
 
@@ -333,7 +335,8 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({ onBackToStaffLogin }
           items: cart.map((item) => ({
             productId: item.product.id,
             quantity: item.quantity,
-            unitPrice: item.unitPrice
+            unitPrice: item.unitPrice,
+            isEmergencyOverride: Boolean((item as any).isEmergencyOverride || (item.quantity < ((item.product as any).minOrderQuantity || 1)))
           })),
           notes: orderNotes
         })

@@ -102,6 +102,9 @@ async function main() {
     const rawBarcode = (row['COD.BARRAS'] || row['CODIGO BARRAS'] || row['EAN'] || row['BARCODE'] || '').toString().trim();
     const barcode = rawBarcode && rawBarcode !== '0' ? rawBarcode : null;
     
+    const rawMinQty = row['MINIMO VENTA'] || row['MINIMO_VENTA'] || row['MINIMO'] || row['MINIMO DE VENTA'] || row['MÍNIMO DE VENTA'];
+    const minOrderQuantity = rawMinQty ? parseInt(rawMinQty) : undefined;
+    
     const rubroName = (row.RUBRO || '').toString().trim().toUpperCase();
     const rubroId = rubroName ? (rubroMap[rubroName] || null) : null;
 
@@ -124,6 +127,7 @@ async function main() {
           profitMargin,
           isPesable,
           approximateWeight,
+          ...(minOrderQuantity && minOrderQuantity > 0 ? { minOrderQuantity } : {}),
           barcode,
           rubroId,
           providerId,
@@ -142,6 +146,7 @@ async function main() {
           profitMargin,
           isPesable,
           approximateWeight,
+          minOrderQuantity: minOrderQuantity && minOrderQuantity > 0 ? minOrderQuantity : 1,
           barcode,
           rubroId,
           providerId,

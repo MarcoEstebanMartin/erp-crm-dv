@@ -271,7 +271,8 @@ export default function SalesBillingTab({
         items: directCart.map(item => ({ 
           productId: item.product.id, 
           quantity: item.quantity,
-          weight: item.weight || null
+          weight: item.weight || null,
+          isEmergencyOverride: Boolean(item.isEmergencyOverride || (item.quantity < (item.product.minOrderQuantity || 1)))
         }))
       };
 

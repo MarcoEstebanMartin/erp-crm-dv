@@ -8,6 +8,7 @@ export const createOrderSchema = z.object({
       productId: z.number().positive(),
       quantity: z.number().positive().min(1),
       weight: z.number().positive().optional(),
+      isEmergencyOverride: z.boolean().optional(),
     })).min(1, 'El pedido debe tener al menos un item'),
   }),
 });
@@ -18,6 +19,7 @@ export const updateOrderSchema = z.object({
       productId: z.number().positive(),
       quantity: z.number().positive().min(1),
       weight: z.number().positive().nullable().optional(),
+      isEmergencyOverride: z.boolean().optional(),
     })).min(1, 'El pedido debe tener al menos un item'),
   }),
 });
@@ -58,6 +60,7 @@ export const createDirectInvoiceSchema = z.object({
       productId: z.number().positive(),
       quantity: z.number().positive().min(1),
       weight: z.number().positive().optional(),
+      isEmergencyOverride: z.boolean().optional(),
     })).min(1, 'El pedido debe tener al menos un item'),
   }),
 });
