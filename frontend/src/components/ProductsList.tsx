@@ -310,6 +310,7 @@ export default function ProductsList({ products, searchQuery, setSearchQuery, se
                             ${precioFinal.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                           </div>
                         )}
+                      </td>
                       <td style={{ padding: '12px 16px', textAlign: 'right' }}>
                         <button 
                           className="btn btn-ghost" 
