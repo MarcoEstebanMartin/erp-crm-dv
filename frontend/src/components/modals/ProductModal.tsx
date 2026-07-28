@@ -185,7 +185,7 @@ const ProductModal: React.FC<ProductModalProps> = ({
 
   const commercialCategoriesList = [
     { value: 'Refrigerados', label: '❄️ Refrigerados' },
-    { value: 'Fiambres', label: '🧀 Fiambres' },
+    { value: 'Fiambres', label: '🥓 Fiambres' },
     { value: 'Bebidas', label: '🥤 Bebidas' },
     { value: 'Bebidas Alcoholicas', label: '🍺 Bebidas Alcohólicas' },
     { value: 'Vinos', label: '🍷 Vinos' },

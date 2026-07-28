@@ -68,16 +68,13 @@ export async function getOrders(req: AuthenticatedRequest, res: Response): Promi
           items: {
             include: {
               product: {
-                include: {
-                  lots: {
-                    orderBy: { expirationDate: 'asc' },
-                  },
+                select: {
+                  id: true,
+                  sku: true,
+                  name: true,
+                  isPesable: true,
+                  unitsPerBox: true,
                   rubro: true,
-                },
-              },
-              orderItemLots: {
-                include: {
-                  productLot: true,
                 },
               },
             },

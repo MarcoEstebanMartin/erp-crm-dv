@@ -14,7 +14,7 @@ const RUBRO_TO_COMMERCIAL_CATEGORY: Record<string, { category: string; icon: str
   'SANCOR y CREMIGAL': { category: 'REFRIGERADOS', icon: '❄️' },
   'SANCOR Y CREMIGAL': { category: 'REFRIGERADOS', icon: '❄️' },
   'QUESOS RALLADOS': { category: 'REFRIGERADOS', icon: '❄️' },
-  'SODECAR': { category: 'FIAMBRES', icon: '🧀' },
+  'SODECAR': { category: 'FIAMBRES', icon: '🥓' },
   'A.G.D Y NIZA': { category: 'ADEREZOS Y ACEITES', icon: '🌻' },
   'BEBIDAS': { category: 'BEBIDAS', icon: '🥤' },
   'PASTAS SECAS': { category: 'PASTAS SECAS', icon: '🍝' },
@@ -338,7 +338,7 @@ export async function getStoreCatalog(req: Request, res: Response): Promise<void
       'AZUCAR': '🍬',
       'EDULCORANTES': '☕',
       'REFRIGERADOS': '❄️',
-      'FIAMBRES': '🧀',
+      'FIAMBRES': '🥓',
       'VARIOS': '🏷️'
     };
 

@@ -12,12 +12,49 @@ interface ProductsListProps {
   catalogTab?: 'products' | 'inactive_products';
 }
 
+const CATEGORY_EMOJIS: Record<string, string> = {
+  'Fiambres': '🥓',
+  'Refrigerados': '❄️',
+  'Bebidas': '🥤',
+  'Bebidas Alcoholicas': '🍺',
+  'Bebidas Alcohólicas': '🍺',
+  'Vinos': '🍷',
+  'Aderezos y Aceites': '🌻',
+  'Pastas Secas': '🍝',
+  'Almacén': '🛒',
+  'Almacen': '🛒',
+  'Yerbas': '🌿',
+  'Conservas': '🥫',
+  'Pescadería': '🐟',
+  'Pescaderia': '🐟',
+  'Papeles': '🧻',
+  'No comestibles': '📦',
+  'Estucheria y Regalerìa': '🎁',
+  'Estuchería y Regalería': '🎁',
+  'Varios': '🏷️',
+};
+
 export default function ProductsList({ products, searchQuery, setSearchQuery, setProductModal, onUpdateProduct, onOpenImportZip, onUploadImage, catalogTab }: ProductsListProps) {
   const [selectedRubro, setSelectedRubro] = useState<string>('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [selectedSubrubro, setSelectedSubrubro] = useState<string>('');
   const [activeFilter, setActiveFilter] = useState<string>('all'); // all, active, inactive
   const [editingCell, setEditingCell] = useState<{ id: number; field: string } | null>(null);
   const [editValue, setEditValue] = useState<string>('');
+  const [previewModal, setPreviewModal] = useState<{ open: boolean; imageUrl: string; name: string; sku: string; productId: number; categoryName: string; categoryIcon: string } | null>(null);
+
+  const getCategoryInfo = (p: any) => {
+    const catName = p.commercialCategory || extractLabel(p.rubro) || 'Varios';
+    let icon = CATEGORY_EMOJIS[catName];
+    if (!icon) {
+      const upper = catName.toUpperCase();
+      if (upper.includes('QUESO') || upper.includes('REMOTTI')) icon = '🧀';
+      else if (upper.includes('FIAMBRE') || upper.includes('SODECAR')) icon = '🥓';
+      else if (upper.includes('BEBIDA')) icon = '🥤';
+      else icon = '🏷️';
+    }
+    return { name: catName, icon };
+  };
 
   const handleEditStart = (id: number, field: string, value: number) => {
     setEditingCell({ id, field });
@@ -92,6 +129,11 @@ export default function ProductsList({ products, searchQuery, setSearchQuery, se
   };
 
   const filteredProducts = products
+    .filter((p: any) => {
+      if (!selectedCategory) return true;
+      const cat = getCategoryInfo(p).name;
+      return cat.toLowerCase() === selectedCategory.toLowerCase();
+    })
     .filter((p: any) => !selectedRubro || extractLabel(p.rubro) === selectedRubro)
     .filter((p: any) => !selectedSubrubro || extractLabel(p.description) === selectedSubrubro)
     .filter((p: any) => {
@@ -111,10 +153,12 @@ export default function ProductsList({ products, searchQuery, setSearchQuery, se
       return name.includes(query) || sku.includes(query) || barcode.includes(query);
     });
 
+  const availableCategories = Array.from(new Set(products.map((p: any) => getCategoryInfo(p).name).filter(Boolean))).sort();
+
   return (
     <div style={{ animation: 'fadeIn 0.3s ease-out' }}>
       <div className="actions-bar" style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap', marginBottom: '20px', backgroundColor: 'var(--bg-card)', padding: '16px', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
-        <div className="search-input-wrapper" style={{ flex: 1, minWidth: '250px' }}>
+        <div className="search-input-wrapper" style={{ flex: 1, minWidth: '220px' }}>
           <input
             type="text"
             className="input"
@@ -127,7 +171,22 @@ export default function ProductsList({ products, searchQuery, setSearchQuery, se
         
         <select 
           className="select" 
-          style={{ minWidth: '180px', borderRadius: '8px' }}
+          style={{ minWidth: '170px', borderRadius: '8px' }}
+          value={selectedCategory} 
+          onChange={(e) => setSelectedCategory(e.target.value)}
+        >
+          <option value="">Todas las Categorías</option>
+          {availableCategories.map(catName => {
+            const icon = getCategoryInfo({ commercialCategory: catName }).icon;
+            return (
+              <option key={catName} value={catName}>{icon} {catName}</option>
+            );
+          })}
+        </select>
+
+        <select 
+          className="select" 
+          style={{ minWidth: '160px', borderRadius: '8px' }}
           value={selectedRubro} 
           onChange={(e) => { setSelectedRubro(e.target.value); setSelectedSubrubro(''); }}
         >
@@ -140,7 +199,7 @@ export default function ProductsList({ products, searchQuery, setSearchQuery, se
         {!catalogTab && (
           <select 
             className="select" 
-            style={{ minWidth: '150px', borderRadius: '8px' }}
+            style={{ minWidth: '140px', borderRadius: '8px' }}
             value={activeFilter} 
             onChange={(e) => setActiveFilter(e.target.value)}
           >
@@ -153,7 +212,7 @@ export default function ProductsList({ products, searchQuery, setSearchQuery, se
         {selectedRubro && (
           <select 
             className="select" 
-            style={{ minWidth: '180px', borderRadius: '8px' }}
+            style={{ minWidth: '160px', borderRadius: '8px' }}
             value={selectedSubrubro} 
             onChange={(e) => setSelectedSubrubro(e.target.value)}
           >
@@ -199,6 +258,7 @@ export default function ProductsList({ products, searchQuery, setSearchQuery, se
                   const costo = Number(p.costPrice) || 0;
                   const precioFinal = Number(p.listPrice) || 0;
                   const precioSinIva = precioFinal / 1.21;
+                  const catDetails = getCategoryInfo(p);
                   
                   const handleOpenEdit = () => {
                     setProductModal({ 
@@ -233,19 +293,35 @@ export default function ProductsList({ products, searchQuery, setSearchQuery, se
                       <td style={{ padding: '12px 16px', fontFamily: 'monospace', fontWeight: 600, fontSize: '0.9rem', cursor: 'pointer' }} onClick={handleOpenEdit} title="Clic para editar producto">{p.sku}</td>
                       <td style={{ padding: '12px 16px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                          <div style={{ position: 'relative', cursor: onUploadImage ? 'pointer' : 'default' }} onClick={() => {
-                            if (onUploadImage) {
-                              const input = document.createElement('input');
-                              input.type = 'file';
-                              input.accept = 'image/*';
-                              input.onchange = (e: any) => {
-                                if (e.target.files && e.target.files[0]) {
-                                  onUploadImage(p.id, e.target.files[0]);
-                                }
-                              };
-                              input.click();
-                            }
-                          }}>
+                          <div 
+                            style={{ position: 'relative', cursor: 'pointer' }} 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (p.imageUrl) {
+                                const fullUrl = p.imageUrl.startsWith('http') ? p.imageUrl : (p.imageUrl.startsWith('/') ? p.imageUrl : `/uploads/products/${p.imageUrl}`);
+                                setPreviewModal({
+                                  open: true,
+                                  imageUrl: fullUrl,
+                                  name: p.name,
+                                  sku: p.sku,
+                                  productId: p.id,
+                                  categoryName: catDetails.name,
+                                  categoryIcon: catDetails.icon
+                                });
+                              } else if (onUploadImage) {
+                                const input = document.createElement('input');
+                                input.type = 'file';
+                                input.accept = 'image/*';
+                                input.onchange = (ev: any) => {
+                                  if (ev.target.files && ev.target.files[0]) {
+                                    onUploadImage(p.id, ev.target.files[0]);
+                                  }
+                                };
+                                input.click();
+                              }
+                            }}
+                            title={p.imageUrl ? "Clic para ver la imagen ampliada" : "Subir imagen de producto"}
+                          >
                             {p.imageUrl ? (
                               <img 
                                 src={p.imageUrl.startsWith('http') ? p.imageUrl : (p.imageUrl.startsWith('/') ? p.imageUrl : `/uploads/products/${p.imageUrl}`)} 
@@ -257,22 +333,64 @@ export default function ProductsList({ products, searchQuery, setSearchQuery, se
                                 S/F
                               </div>
                             )}
+                            
+                            {/* Floating Minimalist Category Emoji Badge */}
+                            <div 
+                              title={`Categoría: ${catDetails.name}`} 
+                              style={{ 
+                                position: 'absolute', 
+                                top: -5, 
+                                left: -5, 
+                                backgroundColor: 'var(--bg-card)', 
+                                border: '1px solid var(--border-color)', 
+                                borderRadius: '50%', 
+                                width: '18px', 
+                                height: '18px', 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                justifyContent: 'center', 
+                                fontSize: '0.65rem', 
+                                boxShadow: '0 2px 4px rgba(0,0,0,0.08)',
+                                zIndex: 2,
+                                lineHeight: 1 
+                              }}
+                            >
+                              {catDetails.icon}
+                            </div>
+
                             {onUploadImage && (
-                              <div style={{ position: 'absolute', bottom: -5, right: -5, backgroundColor: 'var(--color-primary)', color: 'white', borderRadius: '50%', padding: '2px', width: '16px', height: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <div 
+                                title="Cambiar imagen"
+                                onClick={(ev) => {
+                                  ev.stopPropagation();
+                                  const input = document.createElement('input');
+                                  input.type = 'file';
+                                  input.accept = 'image/*';
+                                  input.onchange = (e: any) => {
+                                    if (e.target.files && e.target.files[0]) {
+                                      onUploadImage(p.id, e.target.files[0]);
+                                    }
+                                  };
+                                  input.click();
+                                }}
+                                style={{ position: 'absolute', bottom: -5, right: -5, backgroundColor: 'var(--color-primary)', color: 'white', borderRadius: '50%', padding: '2px', width: '16px', height: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 3, cursor: 'pointer' }}
+                              >
                                 <Upload size={10} />
                               </div>
                             )}
                           </div>
                           <div>
                             <div style={{ fontWeight: 600, color: 'var(--text-primary)', cursor: 'pointer' }} onClick={handleOpenEdit} title="Clic para editar producto">{p.name}</div>
-                            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
-                              <span style={{ backgroundColor: 'var(--bg-body)', padding: '2px 6px', borderRadius: '4px', marginRight: '6px' }}>{extractLabel(p.rubro)}</span>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                              <span style={{ backgroundColor: 'var(--bg-muted)', padding: '2px 7px', borderRadius: '5px', border: '1px solid var(--border-color)', fontSize: '0.72rem', fontWeight: 500, color: 'var(--text-primary)' }}>
+                                {extractLabel(p.rubro)}
+                              </span>
                               {p.minOrderQuantity && p.minOrderQuantity > 1 && (
-                                <span style={{ backgroundColor: 'rgba(227, 6, 19, 0.12)', color: '#e30613', padding: '2px 6px', borderRadius: '4px', marginRight: '6px', fontWeight: 700, fontSize: '0.7rem' }}>
+                                <span style={{ backgroundColor: 'rgba(227, 6, 19, 0.12)', color: '#e30613', padding: '2px 6px', borderRadius: '4px', fontWeight: 700, fontSize: '0.7rem' }}>
                                   Mín. {p.minOrderQuantity} u.
                                 </span>
                               )}
-                              {p.description}
+                              {p.description && <span>{p.description}</span>}
                             </div>
                           </div>
                         </div>
@@ -327,6 +445,71 @@ export default function ProductsList({ products, searchQuery, setSearchQuery, se
           </tbody>
         </table>
       </div>
+
+      {/* Modal Lightbox de Vista Previa de Imagen Ampliada */}
+      {previewModal?.open && (
+        <div 
+          className="modal-overlay" 
+          style={{ backdropFilter: 'blur(8px)', backgroundColor: 'rgba(0,0,0,0.65)', zIndex: 1200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          onClick={() => setPreviewModal(null)}
+        >
+          <div 
+            className="modal-content fade-in" 
+            style={{ backgroundColor: 'var(--bg-card)', padding: '24px', borderRadius: '16px', maxWidth: '500px', width: '90%', textAlign: 'center', position: 'relative', boxShadow: '0 20px 40px rgba(0,0,0,0.3)', border: '1px solid var(--border-color)' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button 
+              onClick={() => setPreviewModal(null)}
+              style={{ position: 'absolute', top: '16px', right: '16px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', fontSize: '1.2rem', fontWeight: 'bold' }}
+            >
+              ✕
+            </button>
+
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', backgroundColor: 'var(--bg-muted)', padding: '4px 12px', borderRadius: '20px', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '12px' }}>
+              <span>{previewModal.categoryIcon}</span>
+              <span>{previewModal.categoryName}</span>
+              <span style={{ opacity: 0.5 }}>|</span>
+              <span style={{ fontFamily: 'monospace' }}>SKU: {previewModal.sku}</span>
+            </div>
+
+            <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: '0 0 16px 0', color: 'var(--text-primary)' }}>
+              {previewModal.name}
+            </h3>
+
+            <div style={{ backgroundColor: '#fff', borderRadius: '12px', padding: '16px', border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '260px', maxHeight: '420px', overflow: 'hidden' }}>
+              <img 
+                src={previewModal.imageUrl} 
+                alt={previewModal.name} 
+                style={{ maxWidth: '100%', maxHeight: '380px', objectFit: 'contain', borderRadius: '8px' }} 
+              />
+            </div>
+
+            {onUploadImage && (
+              <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'center', gap: '10px' }}>
+                <button 
+                  className="btn btn-secondary" 
+                  style={{ borderRadius: '8px', fontSize: '0.85rem', padding: '8px 16px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                  onClick={() => {
+                    const input = document.createElement('input');
+                    input.type = 'file';
+                    input.accept = 'image/*';
+                    input.onchange = (e: any) => {
+                      if (e.target.files && e.target.files[0]) {
+                        onUploadImage(previewModal.productId, e.target.files[0]);
+                        setPreviewModal(null);
+                      }
+                    };
+                    input.click();
+                  }}
+                >
+                  <Upload size={14} />
+                  <span>Cambiar Imagen</span>
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

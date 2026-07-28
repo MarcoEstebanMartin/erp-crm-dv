@@ -824,9 +824,17 @@ export default function RepartoDashboard() {
     }
   }, [apiKey]);
 
-  // Efecto para geocodificar dinámicamente las direcciones de clientes que no estén en la caché
+  const selectedRouteRef = useRef(selectedRoute);
   useEffect(() => {
-    if (!googleLoaded) return;
+    selectedRouteRef.current = selectedRoute;
+  }, [selectedRoute]);
+
+  const isGeocodingRef = useRef(false);
+
+  // Efecto para geocodificar dinámicamente las direcciones de clientes que no estén en la caché
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!googleLoaded || isGeocodingRef.current) return;
 
     const personasToGeocode: any[] = [];
     const processedIds = new Set<number>();
@@ -852,18 +860,21 @@ export default function RepartoDashboard() {
     routes.forEach(r => {
       r.orders?.forEach((o: any) => addPersona(o.persona));
     });
-    if (selectedRoute?.orders) {
-      selectedRoute.orders.forEach((o: any) => addPersona(o.persona));
+    const currentSelectedRoute = selectedRouteRef.current;
+    if (currentSelectedRoute?.orders) {
+      currentSelectedRoute.orders.forEach((o: any) => addPersona(o.persona));
     }
 
     if (personasToGeocode.length === 0) return;
 
+    isGeocodingRef.current = true;
     const geocoder = new (window as any).google.maps.Geocoder();
     const newCacheEntries: typeof clientCoordsCache = {};
 
     let index = 0;
     const processNext = () => {
       if (index >= personasToGeocode.length) {
+        isGeocodingRef.current = false;
         if (Object.keys(newCacheEntries).length > 0) {
           setClientCoordsCache(prev => ({ ...prev, ...newCacheEntries }));
         }
@@ -909,8 +920,9 @@ export default function RepartoDashboard() {
             return r;
           }));
           
-          if (selectedRoute && selectedRoute.orders) {
-            const updatedOrders = selectedRoute.orders.map((o: any) => {
+          const selRoute = selectedRouteRef.current;
+          if (selRoute && selRoute.orders) {
+            const updatedOrders = selRoute.orders.map((o: any) => {
               if (o.persona?.id === p.id) {
                 return { ...o, persona: { ...o.persona, latitude: lat, longitude: lng } };
               }
@@ -978,7 +990,7 @@ export default function RepartoDashboard() {
     };
 
     processNext();
-  }, [googleLoaded, pendingOrders, routes, selectedRoute]);
+  }, [googleLoaded, pendingOrders.length, routes.length]);
 
   const handleUpdateClientCoords = async (clientId: number, lat: number, lng: number) => {
     try {
