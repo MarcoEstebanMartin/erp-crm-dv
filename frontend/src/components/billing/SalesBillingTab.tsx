@@ -634,7 +634,7 @@ export default function SalesBillingTab({
                             : 'NO (Solo Contado)'}
                         </span>
                       </div>
-                      <div style={{ gridColumn: 'span 2' }}>
+                      <div>
                         <strong>Saldo Cuenta Corriente:</strong>{' '}
                         <span style={{ 
                           color: Number(selectedDirectClient.outstandingBalance || 0) > 0 
@@ -649,8 +649,29 @@ export default function SalesBillingTab({
                             : `$${Number(selectedDirectClient.outstandingBalance || 0).toLocaleString()}`}
                         </span>
                       </div>
+
+                      <div>
+                        <strong>Boletas Pendientes:</strong>{' '}
+                        <span style={{ 
+                          fontWeight: 700,
+                          color: (selectedDirectClient.pendingInvoicesCount || 0) > 0 
+                            ? ((Number(selectedDirectClient.maxUnpaidInvoices || 0) > 0 && (selectedDirectClient.pendingInvoicesCount || 0) >= Number(selectedDirectClient.maxUnpaidInvoices)) ? 'var(--color-danger)' : '#d97706') 
+                            : '#059669'
+                        }}>
+                          {selectedDirectClient.pendingInvoicesCount || 0}
+                          {Number(selectedDirectClient.maxUnpaidInvoices || 0) > 0 
+                            ? ` de ${Number(selectedDirectClient.maxUnpaidInvoices)} máx. permitida${Number(selectedDirectClient.maxUnpaidInvoices) > 1 ? 's' : ''}` 
+                            : ' (Sin límite)'}
+                        </span>
+                      </div>
                       
-                      {Number(selectedDirectClient.outstandingBalance || 0) > 0 && (
+                      {Number(selectedDirectClient.maxUnpaidInvoices || 0) > 0 && (selectedDirectClient.pendingInvoicesCount || 0) >= Number(selectedDirectClient.maxUnpaidInvoices) && (
+                        <div style={{ gridColumn: 'span 2', backgroundColor: '#fef2f2', border: '1px solid #fca5a5', borderRadius: '4px', padding: '6px 10px', color: '#991b1b', fontWeight: 600, fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
+                          ⚠️ Límite de boletas alcanzado: El cliente debe {selectedDirectClient.pendingInvoicesCount || 0} de {Number(selectedDirectClient.maxUnpaidInvoices)} boletas permitidas.
+                        </div>
+                      )}
+
+                      {Number(selectedDirectClient.outstandingBalance || 0) > 0 && !(Number(selectedDirectClient.maxUnpaidInvoices || 0) > 0 && (selectedDirectClient.pendingInvoicesCount || 0) >= Number(selectedDirectClient.maxUnpaidInvoices)) && (
                         <div style={{ gridColumn: 'span 2', color: 'var(--color-danger)', fontWeight: 600, fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
                           ⚠️ Regla Boleta contra Boleta: El cliente tiene saldo pendiente.
                         </div>
