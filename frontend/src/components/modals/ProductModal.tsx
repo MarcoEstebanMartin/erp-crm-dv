@@ -482,7 +482,7 @@ const ProductModal: React.FC<ProductModalProps> = ({
 
                   <div className="form-group" style={{ marginBottom: 0 }}>
                     <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                      Precio Lista A (Final)
+                      Precio Lista 4 (Final C/IVA)
                     </label>
                     <input
                       type="number"
@@ -497,7 +497,7 @@ const ProductModal: React.FC<ProductModalProps> = ({
 
                   <div className="form-group" style={{ marginBottom: 0 }}>
                     <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
-                      Precio Lista B
+                      Precio Lista Especial (Opcional)
                     </label>
                     <input
                       type="number"
@@ -512,7 +512,7 @@ const ProductModal: React.FC<ProductModalProps> = ({
 
                   <div className="form-group" style={{ marginBottom: 0 }}>
                     <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
-                      Precio Lista C
+                      Precio Lista Especial 2 (Opcional)
                     </label>
                     <input
                       type="number"

@@ -614,12 +614,12 @@ export default function SalesBillingTab({
                       <div>
                         <strong>Lista de Precios:</strong>{' '}
                         <span className="badge" style={{ backgroundColor: '#e8f0fe', color: '#1a73e8', fontWeight: 600, padding: '2px 6px', borderRadius: '4px' }}>
-                          {(!selectedDirectClient.priceList || selectedDirectClient.priceList === 'A' || selectedDirectClient.priceList === 'SUCURSAL A') 
-                            ? 'Lista General' 
-                            : selectedDirectClient.priceList === 'B' 
-                              ? 'Lista B' 
-                              : selectedDirectClient.priceList === 'C' 
-                                ? 'Lista C' 
+                          {(!selectedDirectClient.priceList || selectedDirectClient.priceList === 'A' || selectedDirectClient.priceList === '4' || selectedDirectClient.priceList === 'SUCURSAL A') 
+                            ? 'Lista 4' 
+                            : (selectedDirectClient.priceList === 'B' || selectedDirectClient.priceList === 'Especial')
+                              ? 'Lista Especial' 
+                              : (selectedDirectClient.priceList === 'C' || selectedDirectClient.priceList === 'Especial 2')
+                                ? 'Lista Especial 2' 
                                 : selectedDirectClient.priceList}
                         </span>
                       </div>
