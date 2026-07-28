@@ -569,7 +569,7 @@ const ProductModal: React.FC<ProductModalProps> = ({
                 </span>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1.5fr', gap: '12px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1.3fr 1.2fr', gap: '12px' }}>
                 <div className="form-group" style={{ marginBottom: 0 }}>
                   <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '3px' }}>
                     Stock Mínimo
@@ -612,7 +612,7 @@ const ProductModal: React.FC<ProductModalProps> = ({
 
                 <div className="form-group" style={{ marginBottom: 0 }}>
                   <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '3px' }}>
-                    Fotografía del Producto
+                    Fotografía
                   </label>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <div style={{ 
@@ -636,12 +636,12 @@ const ProductModal: React.FC<ProductModalProps> = ({
                     </div>
                     <label style={{ 
                       flex: 1, 
-                      padding: '5px 12px', 
+                      padding: '5px 8px', 
                       backgroundColor: '#ffffff', 
                       border: '1px solid var(--border-color)', 
                       borderRadius: '6px', 
                       cursor: 'pointer', 
-                      fontSize: '0.78rem',
+                      fontSize: '0.75rem',
                       fontWeight: 600,
                       color: 'var(--text-secondary)',
                       textAlign: 'center'
@@ -661,6 +661,35 @@ const ProductModal: React.FC<ProductModalProps> = ({
                       />
                     </label>
                   </div>
+                </div>
+
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '3px' }}>
+                    Estado
+                  </label>
+                  <label style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: '6px', 
+                    cursor: 'pointer', 
+                    padding: '5px 10px', 
+                    backgroundColor: productModal.data.isActive !== false ? 'rgba(16, 185, 129, 0.08)' : 'var(--bg-secondary)', 
+                    border: productModal.data.isActive !== false ? '1px solid #10b981' : '1px solid var(--border-color)', 
+                    borderRadius: '6px',
+                    fontSize: '0.78rem',
+                    fontWeight: 600,
+                    height: '36px'
+                  }}>
+                    <input
+                      type="checkbox"
+                      checked={productModal.data.isActive !== false}
+                      onChange={(e) => setProductModal({ ...productModal, data: { ...productModal.data, isActive: e.target.checked } })}
+                      style={{ width: '15px', height: '15px', cursor: 'pointer' }}
+                    />
+                    <span style={{ color: productModal.data.isActive !== false ? '#059669' : 'var(--text-muted)' }}>
+                      {productModal.data.isActive !== false ? 'Activo' : 'Inactivo'}
+                    </span>
+                  </label>
                 </div>
               </div>
             </div>

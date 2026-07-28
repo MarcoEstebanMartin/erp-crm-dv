@@ -185,10 +185,8 @@ export default function ProductsList({ products, searchQuery, setSearchQuery, se
               <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>PRODUCTO</th>
               <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>PESABLE</th>
               <th style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>COSTO (C/IVA)</th>
-              <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>RENTABILIDAD</th>
               <th style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>PRECIO SIN IVA</th>
               <th style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>PRECIO FINAL</th>
-              <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>ACTIVO</th>
               <th style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>ACCIÓN</th>
             </tr>
           </thead>
@@ -203,12 +201,6 @@ export default function ProductsList({ products, searchQuery, setSearchQuery, se
                   const costo = Number(p.costPrice) || 0;
                   const precioFinal = Number(p.listPrice) || 0;
                   const precioSinIva = precioFinal / 1.21;
-                  
-                  const rentabilidad = p.profitMargin !== null && p.profitMargin !== undefined
-                    ? Number(p.profitMargin) 
-                    : (p.rubro && p.rubro.profitMargin !== null && p.rubro.profitMargin !== undefined
-                      ? Number(p.rubro.profitMargin) 
-                      : (costo > 0 ? (precioFinal / costo) : 1.25));
                   
                   return (
                     <tr key={p.id} style={{ borderBottom: '1px solid var(--border-color)', transition: 'background-color 0.2s', cursor: 'default', opacity: p.isActive === false ? 0.6 : 1 }} className="hover-bg-muted">
@@ -285,30 +277,6 @@ export default function ProductsList({ products, searchQuery, setSearchQuery, se
                           </div>
                         )}
                       </td>
-                      <td style={{ padding: '12px 16px', textAlign: 'center' }}>
-                        {editingCell?.id === p.id && editingCell?.field === 'rentabilidad' ? (
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <input
-                              type="number"
-                              autoFocus
-                              value={editValue}
-                              onChange={(e) => setEditValue(e.target.value)}
-                              onBlur={() => handleEditSave(p, 'rentabilidad')}
-                              onKeyDown={(e) => e.key === 'Enter' && handleEditSave(p, 'rentabilidad')}
-                              style={{ width: '60px', textAlign: 'right', padding: '4px', borderRadius: '4px', border: '1px solid var(--color-primary)' }}
-                            />
-                            <span style={{ marginLeft: '4px' }}>%</span>
-                          </div>
-                        ) : (
-                          <span 
-                            onClick={() => handleEditStart(p.id, 'rentabilidad', Math.round(rentabilidad > 0 ? ((rentabilidad - 1) * 100) : 0))}
-                            style={{ backgroundColor: 'var(--bg-muted)', padding: '4px 8px', borderRadius: '6px', fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-primary)', cursor: 'pointer' }}
-                            title="Clic para editar"
-                          >
-                            {(rentabilidad > 0 ? ((rentabilidad - 1) * 100) : 0).toLocaleString('es-AR', { maximumFractionDigits: 0 })}%
-                          </span>
-                        )}
-                      </td>
                       <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 500, color: 'var(--text-secondary)' }}>
                         {editingCell?.id === p.id && editingCell?.field === 'listPrice' ? (
                           <input
@@ -342,38 +310,6 @@ export default function ProductsList({ products, searchQuery, setSearchQuery, se
                             ${precioFinal.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                           </div>
                         )}
-                      </td>
-                      <td style={{ padding: '12px 16px', textAlign: 'center' }}>
-                        <div 
-                          style={{
-                            width: '40px',
-                            height: '22px',
-                            borderRadius: '11px',
-                            backgroundColor: p.isActive !== false ? 'var(--color-primary)' : 'var(--border-color)',
-                            position: 'relative',
-                            cursor: 'pointer',
-                            display: 'inline-block',
-                            transition: 'all 0.2s'
-                          }}
-                          onClick={() => {
-                            if (onUpdateProduct) {
-                              onUpdateProduct({ ...p, isActive: p.isActive === false ? true : false });
-                            }
-                          }}
-                        >
-                          <div style={{
-                            width: '18px',
-                            height: '18px',
-                            backgroundColor: '#fff',
-                            borderRadius: '50%',
-                            position: 'absolute',
-                            top: '2px',
-                            left: p.isActive !== false ? '20px' : '2px',
-                            transition: 'all 0.2s',
-                            boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
-                          }} />
-                        </div>
-                      </td>
                       <td style={{ padding: '12px 16px', textAlign: 'right' }}>
                         <button 
                           className="btn btn-ghost" 
