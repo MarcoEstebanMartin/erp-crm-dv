@@ -35,6 +35,13 @@ enum OrderStatus {
   CANCELLED
 }
 
+enum SalesChannel {
+  MOSTRADOR
+  PREVENTA_RUTA
+  TIENDA_WEB
+  TELEFONICO
+}
+
 enum CreditNoteStatus {
   PENDING_APPROVAL
   APPROVED
@@ -227,6 +234,7 @@ model Order {
   percepcionIvaAmount Decimal     @default(0.00) @db.Decimal(12, 2) // Percepciones IVA (ej: RG 5329)
   bultosCount         Int         @default(1)
   bultosDetails       Json?
+  salesChannel        SalesChannel @default(MOSTRADOR)
   createdAt           DateTime    @default(now())
   updatedAt           DateTime    @updatedAt
 
@@ -243,6 +251,7 @@ model Order {
   @@index([createdAt])
   @@index([status])
   @@index([deliveryRouteId])
+  @@index([salesChannel])
 }
 
 model OrderItem {

@@ -14,11 +14,13 @@ import {
   Calendar,
   Plus,
   Trash2,
-  Save
+  Save,
+  Store
 } from 'lucide-react';
 import CrmDashboard from './CrmDashboard';
 import AfipExportDashboard from '../pages/AfipExportDashboard';
 import ProfitabilityTab from './ProfitabilityTab';
+import SalesChannelReportsTab from './SalesChannelReportsTab';
 import { useConfirm } from '../context/ConfirmContext';
 
 const normalizeString = (str: string | null | undefined): string => {
@@ -56,7 +58,7 @@ export default function UnifiedReportsDashboard({
   financialReport
 }: UnifiedReportsDashboardProps) {
   const confirm = useConfirm();
-  const [activeTab, setActiveTab] = useState<'finanzas' | 'rentabilidad' | 'zonas' | 'caja_semanal' | 'crm' | 'arca'>('finanzas');
+  const [activeTab, setActiveTab] = useState<'finanzas' | 'canales' | 'rentabilidad' | 'zonas' | 'caja_semanal' | 'crm' | 'arca'>('finanzas');
 
   // Estados para reporte financiero con filtros mensuales
   const [reportYear, setReportYear] = useState<number>(new Date().getFullYear());
@@ -532,6 +534,7 @@ export default function UnifiedReportsDashboard({
       <div style={{ display: 'flex', gap: '8px', marginBottom: '24px', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
         {[
           { id: 'finanzas', label: 'Resumen Financiero', icon: <DollarSign size={16} /> },
+          { id: 'canales', label: 'Depósito & Canales', icon: <Store size={16} /> },
           { id: 'rentabilidad', label: 'Rentabilidad', icon: <TrendingUp size={16} /> },
           { id: 'zonas', label: 'Análisis de Zonas', icon: <MapPin size={16} /> },
           { id: 'caja_semanal', label: 'Caja Semanal Consolidada', icon: <Calendar size={16} /> },
@@ -727,7 +730,14 @@ export default function UnifiedReportsDashboard({
         </div>
       )}
 
-      {/* 2. RENTABILIDAD */}
+      {/* 2. DEPOSITO Y CANALES */}
+      {activeTab === 'canales' && (
+        <div className="fade-in">
+          <SalesChannelReportsTab />
+        </div>
+      )}
+
+      {/* 3. RENTABILIDAD */}
       {activeTab === 'rentabilidad' && (
         <ProfitabilityTab />
       )}

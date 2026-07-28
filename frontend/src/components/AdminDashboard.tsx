@@ -204,7 +204,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
   const [clientSearchModal, setClientSearchModal] = useState<{ open: boolean; action: 'ledger' | 'payment' | 'order' } | null>(null);
   const [quickClientQuery, setQuickClientQuery] = useState('');
   
-  const [createOrderModal, setCreateOrderModal] = useState<{ open: boolean; client: any; cart: { product: any; quantity: number }[]; notes: string } | null>(null);
+  const [createOrderModal, setCreateOrderModal] = useState<{ open: boolean; client: any; cart: { product: any; quantity: number; isEmergencyOverride?: boolean }[]; salesChannel?: string; notes: string } | null>(null);
   const [quickProductQuery, setQuickProductQuery] = useState('');
   const [summaryCardModal, setSummaryCardModal] = useState<{ open: boolean; cardKey: string; cardLabel: string } | null>(null);
 
@@ -1005,6 +1005,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
     try {
       const payload = {
         clientId: createOrderModal.client.id,
+        salesChannel: createOrderModal.salesChannel || 'MOSTRADOR',
         items: createOrderModal.cart.map(item => ({
           productId: item.product.id,
           quantity: item.quantity,
@@ -2321,6 +2322,39 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
                     {Number(createOrderModal.client.discount || 0) > 0 && <div style={{ color: 'var(--color-success)' }}><strong>Desc. Fijo:</strong> {createOrderModal.client.discount}%</div>}
                     <div>
                       <strong>Saldo CC:</strong> <span style={{ fontWeight: 600, color: (createOrderModal.client.outstandingBalance || 0) > 0 ? 'var(--color-danger)' : 'var(--text-primary)' }}>${Number(createOrderModal.client.outstandingBalance || 0).toLocaleString()}</span>
+                    </div>
+                  </div>
+
+                  {/* Selector de Canal de Venta */}
+                  <div style={{ padding: '12px', backgroundColor: 'var(--bg-light)', borderRadius: '6px', border: '1px solid var(--border-color)', fontSize: '0.8rem', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>Canal de Venta</div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '6px' }}>
+                      {[
+                        { id: 'MOSTRADOR', label: '🏬 Mostrador / Depósito' },
+                        { id: 'PREVENTA_RUTA', label: '🚚 Preventa Ruta' },
+                        { id: 'TIENDA_WEB', label: '🌐 Tienda Web' },
+                        { id: 'TELEFONICO', label: '📞 Telefónico' }
+                      ].map(sc => (
+                        <button
+                          key={sc.id}
+                          type="button"
+                          onClick={() => setCreateOrderModal({ ...createOrderModal, salesChannel: sc.id })}
+                          style={{
+                            padding: '6px 8px',
+                            fontSize: '0.75rem',
+                            fontWeight: (createOrderModal.salesChannel || 'MOSTRADOR') === sc.id ? 700 : 500,
+                            borderRadius: '4px',
+                            border: (createOrderModal.salesChannel || 'MOSTRADOR') === sc.id ? '1px solid #E30613' : '1px solid var(--border-color)',
+                            backgroundColor: (createOrderModal.salesChannel || 'MOSTRADOR') === sc.id ? 'rgba(227, 6, 19, 0.1)' : 'transparent',
+                            color: (createOrderModal.salesChannel || 'MOSTRADOR') === sc.id ? '#E30613' : 'var(--text-primary)',
+                            cursor: 'pointer',
+                            textAlign: 'center',
+                            transition: 'all 0.15s ease'
+                          }}
+                        >
+                          {sc.label}
+                        </button>
+                      ))}
                     </div>
                   </div>
 

@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import {
   getFinancialReports,
+  getSalesChannelStats,
   getProfitabilityReport,
   getAuditLogs,
   getDocumentAuditLogs,
@@ -43,6 +44,7 @@ router.use(authenticateJWT);
 router.use(requireRole([Role.ADMIN]));
 
 router.get('/reports', getFinancialReports);
+router.get('/reports/sales-channels', getSalesChannelStats);
 router.get('/reports/profitability', getProfitabilityReport);
 router.get('/reports/zones', getZoneReports);
 router.get('/reports/weekly', getWeeklyReports);

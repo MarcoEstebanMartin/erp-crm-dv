@@ -1,5 +1,5 @@
 import prisma from '../utils/prisma';
-import { Role, BillingType, InvoiceType, OrderStatus, MovementType } from '@prisma/client';
+import { Role, BillingType, InvoiceType, OrderStatus, MovementType, SalesChannel } from '@prisma/client';
 import { PricingService } from './pricing.service';
 import { PersonaService } from './persona.service';
 import { roundCurrency } from '../utils/math';
@@ -11,6 +11,7 @@ interface CreateOrderDto {
   userRole: string;
   personaId: number;
   billingType?: BillingType;
+  salesChannel?: SalesChannel;
   items: { productId: number; quantity: number; weight?: number; isEmergencyOverride?: boolean }[];
   idempotencyKey?: string;
 }
@@ -20,7 +21,7 @@ export class OrderService {
    * Crea un pedido, verifica el límite de crédito y descuenta stock preventivamente.
    */
   static async createOrder(data: CreateOrderDto) {
-    const { sellerId, userRole, personaId, billingType, items } = data;
+    const { sellerId, userRole, personaId, billingType, salesChannel, items } = data;
 
     const persona = await prisma.persona.findUnique({ where: { id: personaId } });
     if (!persona) {
@@ -150,6 +151,7 @@ export class OrderService {
           sellerId,
           billingType: billingType || BillingType.INTERNAL,
           invoiceType: InvoiceType.PRESUPUESTO,
+          salesChannel: salesChannel || SalesChannel.MOSTRADOR,
           totalAmount: totalSum,
           status: OrderStatus.PENDING,
         },

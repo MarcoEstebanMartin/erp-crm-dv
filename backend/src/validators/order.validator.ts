@@ -1,9 +1,10 @@
 import { z } from 'zod';
-import { BillingType, InvoiceType, OrderStatus, PaymentMethod } from '@prisma/client';
+import { BillingType, InvoiceType, OrderStatus, PaymentMethod, SalesChannel } from '@prisma/client';
 
 export const createOrderSchema = z.object({
   body: z.object({
     personaId: z.number().positive(),
+    salesChannel: z.nativeEnum(SalesChannel).optional(),
     items: z.array(z.object({
       productId: z.number().positive(),
       quantity: z.number().positive().min(1),
@@ -54,6 +55,7 @@ export const createDirectInvoiceSchema = z.object({
   body: z.object({
     personaId: z.number().positive('El cliente es requerido'),
     billingType: z.nativeEnum(BillingType).optional(),
+    salesChannel: z.nativeEnum(SalesChannel).optional(),
     paymentMethod: z.nativeEnum(PaymentMethod).optional(),
     paymentDescription: z.string().optional(),
     items: z.array(z.object({

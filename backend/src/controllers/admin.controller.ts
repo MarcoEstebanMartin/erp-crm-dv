@@ -23,6 +23,23 @@ export async function getFinancialReports(req: AuthenticatedRequest, res: Respon
 }
 
 /**
+ * Obtener reporte por Canales de Venta y estadísticas de Mostrador/Depósito (Solo ADMIN).
+ */
+export async function getSalesChannelStats(req: AuthenticatedRequest, res: Response): Promise<void> {
+  const { year, month } = req.query;
+  try {
+    const report = await adminService.getSalesChannelStats(
+      year ? Number(year) : undefined,
+      month ? Number(month) : undefined
+    );
+    res.status(200).json({ status: 'success', data: report });
+  } catch (error: any) {
+    console.error('Error al procesar estadísticas de canales de venta:', error);
+    res.status(500).json({ status: 'error', message: 'Error al procesar las estadísticas de canales de venta.' });
+  }
+}
+
+/**
  * Obtener logs de auditoría (Solo ADMIN).
  */
 export async function getAuditLogs(req: AuthenticatedRequest, res: Response): Promise<void> {

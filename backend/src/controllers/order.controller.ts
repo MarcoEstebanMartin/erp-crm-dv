@@ -1,7 +1,7 @@
 import { Response } from 'express';
 import prisma from '../utils/prisma';
 import { AuthenticatedRequest } from '../types';
-import { Role, BillingType, InvoiceType, OrderStatus, MovementType, TransactionType, PaymentMethod } from '@prisma/client';
+import { Role, BillingType, InvoiceType, OrderStatus, MovementType, TransactionType, PaymentMethod, SalesChannel } from '@prisma/client';
 import { emitirFacturaAFIP } from '../services/afip.service';
 import { logAudit } from '../utils/audit';
 import { OrderService } from '../services/order.service';
@@ -181,6 +181,7 @@ export async function getOrderById(req: AuthenticatedRequest, res: Response): Pr
 interface CreateOrderRequest {
   personaId: number;
   billingType?: string;
+  salesChannel?: any;
   items: {
     productId: number;
     quantity: number;
@@ -195,7 +196,7 @@ interface CreateOrderRequest {
 export async function createOrder(req: AuthenticatedRequest, res: Response): Promise<void> {
   const sellerId = req.user?.id;
   const userRole = req.user?.role;
-  const { personaId, billingType, items }: CreateOrderRequest = req.body;
+  const { personaId, billingType, salesChannel, items }: CreateOrderRequest = req.body;
 
   if (!sellerId || !userRole) {
     res.status(401).json({ status: 'error', message: 'No autorizado.' });
@@ -208,6 +209,7 @@ export async function createOrder(req: AuthenticatedRequest, res: Response): Pro
       userRole,
       personaId,
       billingType: billingType as any,
+      salesChannel: salesChannel as any,
       items,
     });
 
@@ -1475,6 +1477,7 @@ export async function updateOrder(req: AuthenticatedRequest, res: Response): Pro
 interface CreateDirectInvoiceRequest {
   personaId: number;
   billingType: BillingType;
+  salesChannel?: any;
   paymentMethod?: PaymentMethod;
   bankAccountId?: number;
   cashDrawerId?: number;
@@ -1494,6 +1497,7 @@ export async function createDirectInvoice(req: AuthenticatedRequest, res: Respon
   const { 
     personaId, 
     billingType, 
+    salesChannel,
     paymentMethod, 
     bankAccountId,
     cashDrawerId: explicitCashDrawerId,
@@ -1694,6 +1698,7 @@ export async function createDirectInvoice(req: AuthenticatedRequest, res: Respon
           sellerId: adminId,
           status: OrderStatus.DELIVERED,
           billingType,
+          salesChannel: salesChannel || SalesChannel.MOSTRADOR,
           totalAmount: totalSum,
           netAmount: billingType === BillingType.OFFICIAL && finalInvoiceType === InvoiceType.FACTURA_A ? Number(net.toFixed(2)) : Math.round(net),
           taxAmount: billingType === BillingType.OFFICIAL && finalInvoiceType === InvoiceType.FACTURA_A ? Number(tax.toFixed(2)) : Math.round(tax),

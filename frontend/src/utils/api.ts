@@ -444,6 +444,15 @@ export const api = {
     return res.report;
   },
 
+  getSalesChannelStats: async (year?: number, month?: number) => {
+    let path = '/admin/reports/sales-channels';
+    if (year && month) {
+      path += `?year=${year}&month=${month}`;
+    }
+    const res = await request(path);
+    return res;
+  },
+
   getZoneReports: async (filters: { city?: string; cities?: string[]; sellerId?: number; startDate?: string; endDate?: string } = {}) => {
     const params = [];
     if (filters.city) params.push(`city=${encodeURIComponent(filters.city)}`);
