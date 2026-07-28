@@ -614,16 +614,27 @@ export default function SalesBillingTab({
                       <div>
                         <strong>Lista de Precios:</strong>{' '}
                         <span className="badge" style={{ backgroundColor: '#e8f0fe', color: '#1a73e8', fontWeight: 600, padding: '2px 6px', borderRadius: '4px' }}>
-                          Lista {selectedDirectClient.priceList || 'A'}
+                          {(!selectedDirectClient.priceList || selectedDirectClient.priceList === 'A' || selectedDirectClient.priceList === 'SUCURSAL A') 
+                            ? 'Lista General' 
+                            : selectedDirectClient.priceList === 'B' 
+                              ? 'Lista B' 
+                              : selectedDirectClient.priceList === 'C' 
+                                ? 'Lista C' 
+                                : selectedDirectClient.priceList}
                         </span>
                       </div>
                       <div>
-                        <strong>Descuento Fijo:</strong>{' '}
-                        <span style={{ color: Number(selectedDirectClient.discount || 0) > 0 ? 'var(--color-success)' : 'inherit', fontWeight: 600 }}>
-                          {selectedDirectClient.discount || 0}%
+                        <strong>Tiene Cta. Corriente:</strong>{' '}
+                        <span style={{ 
+                          fontWeight: 700, 
+                          color: (Number(selectedDirectClient.creditLimit || 0) > 0 || Number(selectedDirectClient.paymentTermDays || 0) > 0) ? '#059669' : '#64748b' 
+                        }}>
+                          {(Number(selectedDirectClient.creditLimit || 0) > 0 || Number(selectedDirectClient.paymentTermDays || 0) > 0) 
+                            ? `SÍ ${Number(selectedDirectClient.creditLimit || 0) > 0 ? `(Límite: $${Number(selectedDirectClient.creditLimit).toLocaleString()})` : ''}` 
+                            : 'NO (Solo Contado)'}
                         </span>
                       </div>
-                      <div>
+                      <div style={{ gridColumn: 'span 2' }}>
                         <strong>Saldo Cuenta Corriente:</strong>{' '}
                         <span style={{ 
                           color: Number(selectedDirectClient.outstandingBalance || 0) > 0 
@@ -631,14 +642,13 @@ export default function SalesBillingTab({
                             : Number(selectedDirectClient.outstandingBalance || 0) < 0 
                               ? 'var(--color-success)' 
                               : 'inherit', 
-                          fontWeight: 600 
+                          fontWeight: 700 
                         }}>
                           {Number(selectedDirectClient.outstandingBalance || 0) < 0 
                             ? `$${Math.abs(Number(selectedDirectClient.outstandingBalance)).toLocaleString()} (A Favor)` 
                             : `$${Number(selectedDirectClient.outstandingBalance || 0).toLocaleString()}`}
                         </span>
                       </div>
-                      <div><strong>Límite de Crédito:</strong> ${Number(selectedDirectClient.creditLimit || 0).toLocaleString()}</div>
                       
                       {Number(selectedDirectClient.outstandingBalance || 0) > 0 && (
                         <div style={{ gridColumn: 'span 2', color: 'var(--color-danger)', fontWeight: 600, fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
