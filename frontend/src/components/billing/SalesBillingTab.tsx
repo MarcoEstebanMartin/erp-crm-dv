@@ -134,6 +134,8 @@ export default function SalesBillingTab({
     setSelectedDirectProduct(String(p.id));
     setProductSearchQuery(p.name);
     setShowProductDropdown(false);
+    const minQty = p.minOrderQuantity || 1;
+    setDirectProductQty(String(minQty));
   };
 
   // Direct Invoicing totals calculation
@@ -183,10 +185,17 @@ export default function SalesBillingTab({
     const prod = products.find(p => p.id === Number(selectedDirectProduct));
     if (!prod) return;
 
-    const qty = Number(directProductQty);
+    let qty = Number(directProductQty);
     if (isNaN(qty) || qty <= 0) {
       alert('La cantidad debe ser mayor a 0');
       return;
+    }
+
+    const minQty = prod.minOrderQuantity || 1;
+    if (qty < minQty) {
+      qty = minQty;
+      setDirectProductQty(String(minQty));
+      setModalError(`⚠️ El producto "${prod.name}" exige un mínimo de ${minQty} unidades. Se ajustó automáticamente la cantidad.`);
     }
 
     const existingIdx = directCart.findIndex(item => item.product.id === prod.id);
@@ -724,9 +733,16 @@ export default function SalesBillingTab({
                                       borderBottom: '1px solid #f0f0f0'
                                     }}
                                   >
-                                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                       <strong>{p.name}</strong>
-                                      <span style={{ fontSize: '0.75rem', fontWeight: 600, color: p.stock > 0 ? 'var(--color-success)' : 'var(--color-danger)' }}>Stock: {p.stock}</span>
+                                      <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                                        {p.minOrderQuantity && p.minOrderQuantity > 1 && (
+                                          <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#d97706', backgroundColor: '#fef3c7', padding: '1px 5px', borderRadius: '4px' }}>
+                                            Mín: {p.minOrderQuantity} u.
+                                          </span>
+                                        )}
+                                        <span style={{ fontSize: '0.75rem', fontWeight: 600, color: p.stock > 0 ? 'var(--color-success)' : 'var(--color-danger)' }}>Stock: {p.stock}</span>
+                                      </div>
                                     </div>
                                     <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
                                       SKU: {p.sku || 'S/D'} | Precio Lista: ${p.listPrice} {p.isPesable ? '(Pesable)' : ''}
@@ -796,7 +812,21 @@ export default function SalesBillingTab({
                             <tr key={item.product.id}>
                               <td>
                                 <div style={{ fontWeight: 600 }}>{item.product.name}</div>
-                                <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>SKU: {item.product.sku}</div>
+                                <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                                  <span>SKU: {item.product.sku}</span>
+                                  {item.product.minOrderQuantity && item.product.minOrderQuantity > 1 && (
+                                    <span style={{ 
+                                      color: item.quantity < item.product.minOrderQuantity ? '#d97706' : '#059669', 
+                                      fontWeight: 600,
+                                      fontSize: '0.68rem',
+                                      backgroundColor: item.quantity < item.product.minOrderQuantity ? '#fef3c7' : '#ecfdf5',
+                                      padding: '1px 5px',
+                                      borderRadius: '4px'
+                                    }}>
+                                      {item.quantity < item.product.minOrderQuantity ? `⚠️ Mínimo exigido: ${item.product.minOrderQuantity} u.` : `Mín. ${item.product.minOrderQuantity} u. OK`}
+                                    </span>
+                                  )}
+                                </div>
                               </td>
                               <td>${Number(item.unitPrice).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                               <td>
