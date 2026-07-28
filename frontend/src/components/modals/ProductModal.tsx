@@ -451,7 +451,7 @@ const ProductModal: React.FC<ProductModalProps> = ({
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', borderBottom: '1px solid var(--border-color)', paddingBottom: '4px' }}>
                 <DollarSign size={15} color="var(--text-secondary)" />
                 <span style={{ fontSize: '0.78rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-secondary)' }}>
-                  2. Precios y Estructura de Margen
+                  2. Precios de Venta
                 </span>
               </div>
 
@@ -464,40 +464,11 @@ const ProductModal: React.FC<ProductModalProps> = ({
                 flexDirection: 'column',
                 gap: '10px'
               }}>
-                {/* Precios base y rentabilidad */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '12px' }}>
+                {/* Precios de venta */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr 1fr 1fr', gap: '12px' }}>
                   <div className="form-group" style={{ marginBottom: 0 }}>
                     <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
-                      Costo C/IVA ($)
-                    </label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      className="input"
-                      value={productModal.data.costPrice !== undefined ? productModal.data.costPrice : ''}
-                      onChange={(e) => handleModalPriceChange('costPrice', e.target.value)}
-                      required
-                      style={{ fontWeight: 600, padding: '5px 8px' }}
-                    />
-                  </div>
-
-                  <div className="form-group" style={{ marginBottom: 0 }}>
-                    <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
-                      Rentabilidad (%)
-                    </label>
-                    <input
-                      type="number"
-                      className="input"
-                      placeholder="25"
-                      value={productModal.data.profitMargin !== undefined ? productModal.data.profitMargin : ''}
-                      onChange={(e) => handleModalPriceChange('profitMargin', e.target.value)}
-                      style={{ fontWeight: 600, color: '#10b981', padding: '5px 8px' }}
-                    />
-                  </div>
-
-                  <div className="form-group" style={{ marginBottom: 0 }}>
-                    <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
-                      Venta Sin IVA ($)
+                      Precio Venta Sin IVA ($)
                     </label>
                     <input
                       type="number"
@@ -511,7 +482,7 @@ const ProductModal: React.FC<ProductModalProps> = ({
 
                   <div className="form-group" style={{ marginBottom: 0 }}>
                     <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                      Lista A (PVP Final - C/IVA)
+                      Precio Final General (C/IVA)
                     </label>
                     <input
                       type="number"
@@ -523,19 +494,16 @@ const ProductModal: React.FC<ProductModalProps> = ({
                       style={{ fontWeight: 800, color: 'var(--text-primary)', border: '2px solid var(--accent-color, #111827)', padding: '5px 8px' }}
                     />
                   </div>
-                </div>
 
-                {/* Listas secundarias B y C */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', paddingTop: '6px', borderTop: '1px dashed var(--border-color)' }}>
                   <div className="form-group" style={{ marginBottom: 0 }}>
                     <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
-                      Precio Lista B (Especial / Mayorista Opcional)
+                      Precio Lista B (Mayorista)
                     </label>
                     <input
                       type="number"
                       step="0.01"
                       className="input"
-                      placeholder="Calculado autom. (-5%)"
+                      placeholder="Opcional"
                       value={productModal.data.listPriceB !== undefined ? productModal.data.listPriceB : ''}
                       onChange={(e) => setProductModal({ ...productModal, data: { ...productModal.data, listPriceB: e.target.value === '' ? '' : Number(e.target.value) } })}
                       style={{ padding: '5px 8px' }}
@@ -544,13 +512,13 @@ const ProductModal: React.FC<ProductModalProps> = ({
 
                   <div className="form-group" style={{ marginBottom: 0 }}>
                     <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
-                      Precio Lista C (Distribuidor Opcional)
+                      Precio Lista C (Distribuidor)
                     </label>
                     <input
                       type="number"
                       step="0.01"
                       className="input"
-                      placeholder="Calculado autom. (-10%)"
+                      placeholder="Opcional"
                       value={productModal.data.listPriceC !== undefined ? productModal.data.listPriceC : ''}
                       onChange={(e) => setProductModal({ ...productModal, data: { ...productModal.data, listPriceC: e.target.value === '' ? '' : Number(e.target.value) } })}
                       style={{ padding: '5px 8px' }}
