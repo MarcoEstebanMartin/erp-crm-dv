@@ -840,6 +840,7 @@ export default function CrmDashboard({ initialTab = 'whatsapp', hideHeaderTabs =
                         <span>CUIT: {selectedConversation.persona.cuit || 'S/D'}</span>
                         {selectedConversation.persona.address && <span>🏠 {selectedConversation.persona.address}</span>}
                         {selectedConversation.persona.city && <span>📍 {selectedConversation.persona.city} ({selectedConversation.persona.province || 'BsAs'})</span>}
+                        {selectedConversation.persona.email && <span>✉️ {selectedConversation.persona.email}</span>}
                         {selectedConversation.persona.route && <span>🚚 Ruta: {selectedConversation.persona.route}</span>}
 
                         <div style={{ marginTop: '6px', paddingTop: '6px', borderTop: '1px dashed #E2E8F0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '4px' }}>

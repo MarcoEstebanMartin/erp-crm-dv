@@ -14,16 +14,7 @@ export async function getConversations(req: AuthenticatedRequest, res: Response)
       orderBy: { lastMessageAt: 'desc' },
       include: {
         persona: {
-          select: {
-            id: true,
-            name: true,
-            cuit: true,
-            phone: true,
-            city: true,
-            province: true,
-            route: true,
-            outstandingBalance: true,
-            priceList: true,
+          include: {
             seller: {
               select: { id: true, username: true }
             }
