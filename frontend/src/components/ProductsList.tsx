@@ -186,13 +186,12 @@ export default function ProductsList({ products, searchQuery, setSearchQuery, se
               <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>PESABLE</th>
               <th style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>PRECIO SIN IVA</th>
               <th style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>PRECIO FINAL</th>
-              <th style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>ACCIÓN</th>
             </tr>
           </thead>
           <tbody>
             {filteredProducts.length === 0 ? (
               <tr>
-                <td colSpan={6} style={{ textAlign: 'center', padding: '32px 0', color: 'var(--text-secondary)' }}>No se encontraron productos.</td>
+                <td colSpan={5} style={{ textAlign: 'center', padding: '32px 0', color: 'var(--text-secondary)' }}>No se encontraron productos.</td>
               </tr>
             ) : (
               filteredProducts
@@ -201,9 +200,37 @@ export default function ProductsList({ products, searchQuery, setSearchQuery, se
                   const precioFinal = Number(p.listPrice) || 0;
                   const precioSinIva = precioFinal / 1.21;
                   
+                  const handleOpenEdit = () => {
+                    setProductModal({ 
+                      open: true, 
+                      mode: 'edit', 
+                      data: { 
+                        id: p.id, 
+                        sku: p.sku, 
+                        name: p.name, 
+                        description: p.description || '', 
+                        barcode: p.barcode || '', 
+                        costPrice: p.costPrice, 
+                        listPrice: p.listPrice, 
+                        listPriceB: p.listPriceB || 0, 
+                        listPriceC: p.listPriceC || 0, 
+                        profitMargin: p.profitMargin !== null && p.profitMargin !== undefined ? Math.round((Number(p.profitMargin) - 1) * 100) : (p.rubro && p.rubro.profitMargin !== null && p.rubro.profitMargin !== undefined ? Math.round((Number(p.rubro.profitMargin) - 1) * 100) : 25),
+                        minStock: p.minStock, 
+                        isPesable: p.isPesable || false, 
+                        approximateWeight: p.approximateWeight || 0,
+                        unitsPerBox: p.unitsPerBox || 1,
+                        rubroId: p.rubroId || '',
+                        commercialCategory: p.commercialCategory || '',
+                        providerId: p.providerId || '',
+                        imageUrl: p.imageUrl || null,
+                        isActive: p.isActive !== false
+                      } 
+                    });
+                  };
+                  
                   return (
                     <tr key={p.id} style={{ borderBottom: '1px solid var(--border-color)', transition: 'background-color 0.2s', cursor: 'default', opacity: p.isActive === false ? 0.6 : 1 }} className="hover-bg-muted">
-                      <td style={{ padding: '12px 16px', fontFamily: 'monospace', fontWeight: 600, fontSize: '0.9rem' }}>{p.sku}</td>
+                      <td style={{ padding: '12px 16px', fontFamily: 'monospace', fontWeight: 600, fontSize: '0.9rem', cursor: 'pointer' }} onClick={handleOpenEdit} title="Clic para editar producto">{p.sku}</td>
                       <td style={{ padding: '12px 16px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                           <div style={{ position: 'relative', cursor: onUploadImage ? 'pointer' : 'default' }} onClick={() => {
@@ -237,7 +264,7 @@ export default function ProductsList({ products, searchQuery, setSearchQuery, se
                             )}
                           </div>
                           <div>
-                            <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{p.name}</div>
+                            <div style={{ fontWeight: 600, color: 'var(--text-primary)', cursor: 'pointer' }} onClick={handleOpenEdit} title="Clic para editar producto">{p.name}</div>
                             <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
                               <span style={{ backgroundColor: 'var(--bg-body)', padding: '2px 6px', borderRadius: '4px', marginRight: '6px' }}>{extractLabel(p.rubro)}</span>
                               {p.minOrderQuantity && p.minOrderQuantity > 1 && (
@@ -260,23 +287,6 @@ export default function ProductsList({ products, searchQuery, setSearchQuery, se
                         )}
                       </td>
                       <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 500, color: 'var(--text-secondary)' }}>
-                        {editingCell?.id === p.id && editingCell?.field === 'costPrice' ? (
-                          <input
-                            type="number"
-                            autoFocus
-                            value={editValue}
-                            onChange={(e) => setEditValue(e.target.value)}
-                            onBlur={() => handleEditSave(p, 'costPrice')}
-                            onKeyDown={(e) => e.key === 'Enter' && handleEditSave(p, 'costPrice')}
-                            style={{ width: '80px', textAlign: 'right', padding: '4px', borderRadius: '4px', border: '1px solid var(--color-primary)' }}
-                          />
-                        ) : (
-                          <div onClick={() => handleEditStart(p.id, 'costPrice', Math.round(costo))} style={{ cursor: 'pointer', padding: '4px', border: '1px solid transparent' }} title="Clic para editar">
-                            ${costo.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-                          </div>
-                        )}
-                      </td>
-                      <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 500, color: 'var(--text-secondary)' }}>
                         {editingCell?.id === p.id && editingCell?.field === 'listPrice' ? (
                           <input
                             type="number"
@@ -288,7 +298,7 @@ export default function ProductsList({ products, searchQuery, setSearchQuery, se
                             style={{ width: '80px', textAlign: 'right', padding: '4px', borderRadius: '4px', border: '1px solid var(--color-primary)' }}
                           />
                         ) : (
-                          <div onClick={() => handleEditStart(p.id, 'listPrice', Math.round(precioSinIva))} style={{ cursor: 'pointer', padding: '4px', border: '1px solid transparent' }} title="Clic para editar">
+                          <div onClick={() => handleEditStart(p.id, 'listPrice', Math.round(precioSinIva))} style={{ cursor: 'pointer', padding: '4px', border: '1px solid transparent' }} title="Clic para editar rápido">
                             ${precioSinIva.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                           </div>
                         )}
@@ -305,44 +315,10 @@ export default function ProductsList({ products, searchQuery, setSearchQuery, se
                             style={{ width: '80px', textAlign: 'right', padding: '4px', borderRadius: '4px', border: '1px solid var(--color-primary)' }}
                           />
                         ) : (
-                          <div onClick={() => handleEditStart(p.id, 'listPriceFinal', Math.round(precioFinal))} style={{ cursor: 'pointer', padding: '4px', border: '1px solid transparent' }} title="Clic para editar (Precio Final)">
+                          <div onClick={() => handleEditStart(p.id, 'listPriceFinal', Math.round(precioFinal))} style={{ cursor: 'pointer', padding: '4px', border: '1px solid transparent' }} title="Clic para editar rápido (Precio Final)">
                             ${precioFinal.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                           </div>
                         )}
-                      </td>
-                      <td style={{ padding: '12px 16px', textAlign: 'right' }}>
-                        <button 
-                          className="btn btn-ghost" 
-                          style={{ padding: '6px', borderRadius: '6px', color: 'var(--text-secondary)' }} 
-                          title="Editar producto completo"
-                          onClick={() => setProductModal({ 
-                            open: true, 
-                            mode: 'edit', 
-                            data: { 
-                              id: p.id, 
-                              sku: p.sku, 
-                              name: p.name, 
-                              description: p.description || '', 
-                              barcode: p.barcode || '', 
-                              costPrice: p.costPrice, 
-                              listPrice: p.listPrice, 
-                              listPriceB: p.listPriceB || 0, 
-                              listPriceC: p.listPriceC || 0, 
-                              profitMargin: p.profitMargin !== null && p.profitMargin !== undefined ? Math.round((Number(p.profitMargin) - 1) * 100) : (p.rubro && p.rubro.profitMargin !== null && p.rubro.profitMargin !== undefined ? Math.round((Number(p.rubro.profitMargin) - 1) * 100) : 25),
-                              minStock: p.minStock, 
-                              isPesable: p.isPesable || false, 
-                              approximateWeight: p.approximateWeight || 0,
-                              unitsPerBox: p.unitsPerBox || 1,
-                              rubroId: p.rubroId || '',
-                              commercialCategory: p.commercialCategory || '',
-                              providerId: p.providerId || '',
-                              imageUrl: p.imageUrl || null,
-                              isActive: p.isActive !== false
-                            } 
-                          })}
-                        >
-                          <Edit size={16} />
-                        </button>
                       </td>
                     </tr>
                   );
