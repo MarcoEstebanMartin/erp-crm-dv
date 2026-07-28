@@ -42,7 +42,7 @@ export default function SalesBillingTab({
   const [directInvoiceForm, setDirectInvoiceForm] = useState({
     personaId: '',
     billingType: 'INTERNAL',
-    immediatePayment: false,
+    immediatePayment: true,
     paymentMethod: 'CASH',
     cashDrawerId: '',
     bankAccountId: '',
@@ -324,7 +324,7 @@ export default function SalesBillingTab({
       setDirectInvoiceForm({
         personaId: '',
         billingType: 'INTERNAL',
-        immediatePayment: false,
+        immediatePayment: true,
         paymentMethod: 'CASH',
         cashDrawerId: '',
         bankAccountId: '',
@@ -506,7 +506,7 @@ export default function SalesBillingTab({
                 setDirectInvoiceForm({
                   personaId: '',
                   billingType: 'INTERNAL',
-                  immediatePayment: false,
+                  immediatePayment: true,
                   paymentMethod: 'CASH',
                   cashDrawerId: '',
                   bankAccountId: '',
@@ -925,17 +925,66 @@ export default function SalesBillingTab({
                     )}
                   </div>
 
-                  <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '8px' }}>
-                    <input
-                      type="checkbox"
-                      id="immediatePayment"
-                      checked={directInvoiceForm.immediatePayment}
-                      onChange={(e) => setDirectInvoiceForm(prev => ({ ...prev, immediatePayment: e.target.checked }))}
-                      style={{ width: '18px', height: '18px' }}
-                    />
-                    <label htmlFor="immediatePayment" style={{ fontWeight: 600, cursor: 'pointer', margin: 0 }}>
-                      💰 ¿Registrar Cobro Inmediato? (Pago en el Acto)
-                    </label>
+                  <div className="form-group" style={{ marginTop: '8px' }}>
+                    <label style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--text-primary)' }}>💳 Condición de Cobro</label>
+                    
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '6px' }}>
+                      <label style={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: '10px', 
+                        padding: '10px 12px', 
+                        border: directInvoiceForm.immediatePayment ? '2px solid var(--color-success, #10b981)' : '1px solid var(--border-color)', 
+                        borderRadius: '6px', 
+                        backgroundColor: directInvoiceForm.immediatePayment ? 'rgba(16, 185, 129, 0.06)' : 'var(--bg-app)', 
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease'
+                      }}>
+                        <input
+                          type="radio"
+                          name="directPaymentCondition"
+                          checked={directInvoiceForm.immediatePayment}
+                          onChange={() => setDirectInvoiceForm(prev => ({ ...prev, immediatePayment: true }))}
+                          style={{ width: '16px', height: '16px' }}
+                        />
+                        <div>
+                          <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                            💵 Cobro en el Acto (Paga en Mostrador / Banco)
+                          </div>
+                          <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>
+                            Registra el ingreso de dinero inmediato en la caja chica o cuenta bancaria.
+                          </div>
+                        </div>
+                      </label>
+
+                      <label style={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: '10px', 
+                        padding: '10px 12px', 
+                        border: !directInvoiceForm.immediatePayment ? '2px solid #f59e0b' : '1px solid var(--border-color)', 
+                        borderRadius: '6px', 
+                        backgroundColor: !directInvoiceForm.immediatePayment ? 'rgba(245, 158, 11, 0.06)' : 'var(--bg-app)', 
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease'
+                      }}>
+                        <input
+                          type="radio"
+                          name="directPaymentCondition"
+                          checked={!directInvoiceForm.immediatePayment}
+                          onChange={() => setDirectInvoiceForm(prev => ({ ...prev, immediatePayment: false }))}
+                          style={{ width: '16px', height: '16px' }}
+                        />
+                        <div>
+                          <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                            📝 Queda en Cuenta Corriente (Venta a Crédito / Fiado)
+                          </div>
+                          <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>
+                            Carga el saldo a la cuenta corriente del cliente para cobrarlo posteriormente.
+                          </div>
+                        </div>
+                      </label>
+                    </div>
                   </div>
 
                   {directInvoiceForm.immediatePayment && (
