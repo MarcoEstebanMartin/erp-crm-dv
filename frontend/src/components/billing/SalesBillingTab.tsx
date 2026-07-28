@@ -949,7 +949,7 @@ export default function SalesBillingTab({
                         />
                         <div>
                           <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                            💵 Cobro en el Acto (Paga en Mostrador / Banco)
+                            💵 Cobro en el Acto
                           </div>
                           <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>
                             Registra el ingreso de dinero inmediato en la caja chica o cuenta bancaria.
@@ -977,7 +977,7 @@ export default function SalesBillingTab({
                         />
                         <div>
                           <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                            📝 Queda en Cuenta Corriente (Venta a Crédito / Fiado)
+                            📝 Queda en Cuenta Corriente
                           </div>
                           <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>
                             Carga el saldo a la cuenta corriente del cliente para cobrarlo posteriormente.
