@@ -27,6 +27,57 @@ import OrderDraftApprovalModal from './modals/OrderDraftApprovalModal';
 import WhatsAppSimulatorModal from './modals/WhatsAppSimulatorModal';
 import CrmWholesaleBoard from './crm/CrmWholesaleBoard';
 
+function BirthDateInput({ 
+  personaId, 
+  initialBirthDate, 
+  onSave 
+}: { 
+  personaId: number; 
+  initialBirthDate?: string | null; 
+  onSave: (personaId: number, val: string) => void;
+}) {
+  const formattedInitial = useMemo(() => {
+    if (!initialBirthDate) return '';
+    try {
+      return new Date(initialBirthDate).toISOString().split('T')[0];
+    } catch {
+      return '';
+    }
+  }, [initialBirthDate]);
+
+  const [value, setValue] = useState(formattedInitial);
+
+  useEffect(() => {
+    setValue(formattedInitial);
+  }, [personaId, formattedInitial]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setValue(val);
+    if (val && /^\d{4}-\d{2}-\d{2}$/.test(val) && val !== formattedInitial) {
+      onSave(personaId, val);
+    }
+  };
+
+  const handleBlur = () => {
+    if (value !== formattedInitial) {
+      if (!value || /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+        onSave(personaId, value);
+      }
+    }
+  };
+
+  return (
+    <input 
+      type="date" 
+      value={value}
+      onChange={handleChange}
+      onBlur={handleBlur}
+      style={{ fontSize: '0.72rem', padding: '2px 4px', borderRadius: '4px', border: '1px solid #CBD5E1', outline: 'none' }}
+    />
+  );
+}
+
 interface CrmDashboardProps {
   initialTab?: 'whatsapp' | 'pipeline' | 'alerts';
   hideHeaderTabs?: boolean;
@@ -847,11 +898,10 @@ export default function CrmDashboard({ initialTab = 'whatsapp', hideHeaderTabs =
                           <span style={{ fontSize: '0.74rem', fontWeight: 600, color: '#475569', display: 'flex', alignItems: 'center', gap: '4px' }}>
                             <Cake size={13} style={{ color: '#E11D48' }} /> Cumpleaños:
                           </span>
-                          <input 
-                            type="date" 
-                            value={selectedConversation.persona.birthDate ? new Date(selectedConversation.persona.birthDate).toISOString().split('T')[0] : ''}
-                            onChange={(e) => handleUpdateBirthDate(selectedConversation.persona.id, e.target.value)}
-                            style={{ fontSize: '0.72rem', padding: '2px 4px', borderRadius: '4px', border: '1px solid #CBD5E1', outline: 'none' }}
+                          <BirthDateInput 
+                            personaId={selectedConversation.persona.id}
+                            initialBirthDate={selectedConversation.persona.birthDate}
+                            onSave={handleUpdateBirthDate}
                           />
                         </div>
                       </div>
