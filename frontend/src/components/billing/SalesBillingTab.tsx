@@ -928,12 +928,12 @@ export default function SalesBillingTab({
                   <div className="form-group" style={{ marginTop: '8px' }}>
                     <label style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--text-primary)' }}>💳 Condición de Cobro</label>
                     
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '6px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '6px' }}>
                       <label style={{ 
                         display: 'flex', 
                         alignItems: 'center', 
-                        gap: '10px', 
-                        padding: '10px 12px', 
+                        gap: '8px', 
+                        padding: '8px 12px', 
                         border: directInvoiceForm.immediatePayment ? '2px solid var(--color-success, #10b981)' : '1px solid var(--border-color)', 
                         borderRadius: '6px', 
                         backgroundColor: directInvoiceForm.immediatePayment ? 'rgba(16, 185, 129, 0.06)' : 'var(--bg-app)', 
@@ -945,23 +945,18 @@ export default function SalesBillingTab({
                           name="directPaymentCondition"
                           checked={directInvoiceForm.immediatePayment}
                           onChange={() => setDirectInvoiceForm(prev => ({ ...prev, immediatePayment: true }))}
-                          style={{ width: '16px', height: '16px' }}
+                          style={{ width: '15px', height: '15px' }}
                         />
-                        <div>
-                          <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                            💵 Cobro en el Acto
-                          </div>
-                          <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>
-                            Registra el ingreso de dinero inmediato en la caja chica o cuenta bancaria.
-                          </div>
-                        </div>
+                        <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                          💵 Cobro en el Acto
+                        </span>
                       </label>
 
                       <label style={{ 
                         display: 'flex', 
                         alignItems: 'center', 
-                        gap: '10px', 
-                        padding: '10px 12px', 
+                        gap: '8px', 
+                        padding: '8px 12px', 
                         border: !directInvoiceForm.immediatePayment ? '2px solid #f59e0b' : '1px solid var(--border-color)', 
                         borderRadius: '6px', 
                         backgroundColor: !directInvoiceForm.immediatePayment ? 'rgba(245, 158, 11, 0.06)' : 'var(--bg-app)', 
@@ -973,16 +968,11 @@ export default function SalesBillingTab({
                           name="directPaymentCondition"
                           checked={!directInvoiceForm.immediatePayment}
                           onChange={() => setDirectInvoiceForm(prev => ({ ...prev, immediatePayment: false }))}
-                          style={{ width: '16px', height: '16px' }}
+                          style={{ width: '15px', height: '15px' }}
                         />
-                        <div>
-                          <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                            📝 Queda en Cuenta Corriente
-                          </div>
-                          <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>
-                            Carga el saldo a la cuenta corriente del cliente para cobrarlo posteriormente.
-                          </div>
-                        </div>
+                        <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                          📝 Queda en Cuenta Corriente
+                        </span>
                       </label>
                     </div>
                   </div>
