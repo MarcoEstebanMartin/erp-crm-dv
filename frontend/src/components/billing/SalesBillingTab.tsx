@@ -54,6 +54,8 @@ export default function SalesBillingTab({
   const [selectedDirectProduct, setSelectedDirectProduct] = useState('');
   const [directProductQty, setDirectProductQty] = useState('1');
   const [ivaPerceptionAliquot] = useState(3.00);
+  const [modalError, setModalError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
   // Search queries
   const [clientSearchQuery, setClientSearchQuery] = useState('');
@@ -242,32 +244,51 @@ export default function SalesBillingTab({
     e.preventDefault();
     setErrorMsg(null);
     setSuccessMsg(null);
+    setModalError(null);
 
     const { personaId, billingType, immediatePayment, paymentMethod, cashDrawerId, bankAccountId } = directInvoiceForm;
 
     if (!personaId || !billingType || directCart.length === 0) {
-      setErrorMsg('Por favor completa todos los campos y añade al menos un producto.');
+      const msg = 'Por favor selecciona un cliente y añade al menos un producto.';
+      setErrorMsg(msg);
+      setModalError(msg);
       return;
     }
 
-    const isDrawerInvalid = immediatePayment && paymentMethod === 'CASH' && (!cashDrawerId || activeDrawers.length === 0);
+    // Auto-fallback para caja operativa y banco si no estaban asignados en el state
+    let effectiveCashDrawerId = cashDrawerId;
+    if (immediatePayment && paymentMethod === 'CASH' && !effectiveCashDrawerId && activeDrawers.length > 0) {
+      effectiveCashDrawerId = activeDrawers[0].id.toString();
+    }
+
+    let effectiveBankAccountId = bankAccountId;
+    if (immediatePayment && paymentMethod === 'BANK_TRANSFER' && !effectiveBankAccountId && bankAccounts.length > 0) {
+      effectiveBankAccountId = bankAccounts[0].id.toString();
+    }
+
+    const isDrawerInvalid = immediatePayment && paymentMethod === 'CASH' && (!effectiveCashDrawerId || activeDrawers.length === 0);
 
     if (isDrawerInvalid) {
+      let msg = '';
       if (activeDrawers.length === 0) {
-        setErrorMsg('No se puede cobrar en efectivo. Verifique que posee una caja operativa abierta.');
+        msg = 'No se puede cobrar en efectivo. Verifique que posee una caja operativa abierta.';
       } else {
-        setErrorMsg('No se puede cobrar en efectivo. Por favor, seleccione una caja operativa.');
+        msg = 'No se puede cobrar en efectivo. Por favor, seleccione una caja operativa.';
       }
+      setErrorMsg(msg);
+      setModalError(msg);
       return;
     }
+
+    setIsSubmitting(true);
 
     try {
       const reqData: any = {
         personaId: Number(personaId),
         billingType,
         paymentMethod: immediatePayment ? paymentMethod : undefined,
-        cashDrawerId: immediatePayment && paymentMethod === 'CASH' ? Number(cashDrawerId) : undefined,
-        bankAccountId: immediatePayment && paymentMethod === 'BANK_TRANSFER' ? Number(bankAccountId) : undefined,
+        cashDrawerId: immediatePayment && paymentMethod === 'CASH' ? Number(effectiveCashDrawerId) : undefined,
+        bankAccountId: immediatePayment && paymentMethod === 'BANK_TRANSFER' ? Number(effectiveBankAccountId) : undefined,
         items: directCart.map(item => ({ 
           productId: item.product.id, 
           quantity: item.quantity,
@@ -285,8 +306,9 @@ export default function SalesBillingTab({
 
       const res = await api.createDirectInvoice(reqData);
 
-      setSuccessMsg(`✅ Factura directa emitida con éxito. Comprobante: ${res.invoiceNumber}`);
+      setSuccessMsg(`✅ Factura directa emitida con éxito. Comprobante: ${res?.invoiceNumber || 'Emitido'}`);
       setShowDirectInvoiceModal(false);
+      setModalError(null);
       
       // Clear form
       setDirectCart([]);
@@ -305,7 +327,12 @@ export default function SalesBillingTab({
       setProductSearchQuery('');
       loadData();
     } catch (err: any) {
-      setErrorMsg(err.message || 'Error al emitir factura directa.');
+      console.error('Error al emitir factura directa:', err);
+      const msg = err.message || 'Error al emitir factura directa.';
+      setErrorMsg(msg);
+      setModalError(msg);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -1031,24 +1058,31 @@ export default function SalesBillingTab({
                     </div>
                   </div>
 
-                  <div className="modal-footer" style={{ border: 0, padding: 0 }}>
-                    <button type="button" className="btn btn-secondary" style={{ flex: 1 }} onClick={() => {
-                      setShowDirectInvoiceModal(false);
-                      setDirectCart([]);
-                      setClientSearchQuery('');
-                      setProductSearchQuery('');
-                    }}>
-                      Cancelar
-                    </button>
-                    <button 
-                      type="submit" 
-                      className="btn btn-primary" 
-                      style={{ flex: 1.5, backgroundColor: 'var(--color-success)', borderColor: 'var(--color-success)', fontWeight: 700 }}
-                      disabled={loading || directCart.length === 0}
-                    >
-                      {loading ? 'Procesando...' : 'Facturar y Confirmar'}
-                    </button>
-                  </div>
+                    {modalError && (
+                      <div style={{ padding: '10px 14px', backgroundColor: '#fef2f2', border: '1px solid #fca5a5', borderRadius: '6px', color: '#991b1b', fontSize: '0.83rem', fontWeight: 600, marginTop: '12px' }}>
+                        ⚠️ {modalError}
+                      </div>
+                    )}
+
+                    <div className="modal-footer" style={{ border: 0, padding: 0, marginTop: '16px' }}>
+                      <button type="button" className="btn btn-secondary" style={{ flex: 1 }} disabled={isSubmitting} onClick={() => {
+                        setShowDirectInvoiceModal(false);
+                        setDirectCart([]);
+                        setClientSearchQuery('');
+                        setProductSearchQuery('');
+                        setModalError(null);
+                      }}>
+                        Cancelar
+                      </button>
+                      <button 
+                        type="submit" 
+                        className="btn btn-primary" 
+                        style={{ flex: 1.5, backgroundColor: 'var(--color-success)', borderColor: 'var(--color-success)', fontWeight: 700 }}
+                        disabled={isSubmitting || directCart.length === 0}
+                      >
+                        {isSubmitting ? 'Procesando Factura...' : 'Facturar y Confirmar'}
+                      </button>
+                    </div>
 
                 </div>
 
