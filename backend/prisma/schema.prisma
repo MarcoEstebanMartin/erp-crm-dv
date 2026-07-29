@@ -192,6 +192,8 @@ model Product {
   approximateWeight Decimal? @db.Decimal(12, 3)
   imageUrl          String?
   commercialCategory String?
+  pickingZone        String?
+  defaultLocation    String?
   isActive          Boolean  @default(true)
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt

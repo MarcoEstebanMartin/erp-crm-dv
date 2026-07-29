@@ -552,7 +552,7 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
     let suggestedCajas = 0;
 
     selectedOrder.items.forEach((item: any) => {
-      const itemZone = item.product?.rubro?.pickingZone || 'CAJAS';
+      const itemZone = item.product?.pickingZone || item.product?.rubro?.pickingZone || 'CAJAS';
       const unitsPerBox = item.product?.unitsPerBox || 1;
       
       const itemAssignments = lotAssignments[item.id] || {};
@@ -1002,11 +1002,11 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
         <div>
           {selectedOrder ? (() => {
             const filteredItems = sortItemsByOptimalRoute(
-              selectedOrder.items.filter((item: any) => selectedZone === 'ALL' || (item.product?.rubro?.pickingZone || 'CAJAS') === selectedZone)
+              selectedOrder.items.filter((item: any) => selectedZone === 'ALL' || (item.product?.pickingZone || item.product?.rubro?.pickingZone || 'CAJAS') === selectedZone)
             );
             const countZone = (zId: string) => {
               if (zId === 'ALL') return selectedOrder.items.length;
-              return selectedOrder.items.filter((i: any) => (i.product?.rubro?.pickingZone || 'CAJAS') === zId).length;
+              return selectedOrder.items.filter((i: any) => (i.product?.pickingZone || i.product?.rubro?.pickingZone || 'CAJAS') === zId).length;
             };
 
             const totalItemsCount = selectedOrder.items.length;
@@ -1140,7 +1140,7 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
                         const assignedSum = Object.values(itemAssignments).reduce((sum: number, qty) => sum + (qty || 0), 0);
                         const _isValidAssignment = assignedSum === item.quantity;
                         
-                        const itemZone = item.product?.rubro?.pickingZone || 'CAJAS';
+                        const itemZone = item.product?.pickingZone || item.product?.rubro?.pickingZone || 'CAJAS';
                         const unitsPerBox = item.product?.unitsPerBox || 1;
                         
                         // Determinar tipo de empaque para visualización
@@ -1177,6 +1177,19 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
                             }}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '8px' }}>
                                 <span style={{ fontWeight: 600, fontSize: '0.95rem' }}>{item.product?.name}</span>
+                                {item.product?.defaultLocation && (
+                                  <span style={{
+                                    padding: '2px 8px',
+                                    borderRadius: '4px',
+                                    fontSize: '0.75rem',
+                                    fontWeight: 700,
+                                    backgroundColor: 'var(--bg-secondary)',
+                                    color: 'var(--text-primary)',
+                                    border: '1px solid var(--border-color)'
+                                  }}>
+                                    📍 {item.product.defaultLocation}
+                                  </span>
+                                )}
                                 <span style={{
                                   padding: '2px 8px',
                                   borderRadius: '4px',
@@ -1436,7 +1449,7 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
                 ].map(zone => {
                   const count = zone.id === 'ALL' 
                     ? consolidatedItems.length 
-                    : consolidatedItems.filter(i => (i.product?.rubro?.pickingZone || 'CAJAS') === zone.id).length;
+                    : consolidatedItems.filter(i => (i.product?.pickingZone || i.product?.rubro?.pickingZone || 'CAJAS') === zone.id).length;
                   return (
                     <button
                       key={zone.id}
@@ -1477,7 +1490,7 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
                   <tbody>
                     {(() => {
                       const filteredConsolidated = consolidatedItems.filter(
-                        item => consolidatedZone === 'ALL' || (item.product?.rubro?.pickingZone || 'CAJAS') === consolidatedZone
+                        item => consolidatedZone === 'ALL' || (item.product?.pickingZone || item.product?.rubro?.pickingZone || 'CAJAS') === consolidatedZone
                       );
                       if (filteredConsolidated.length === 0) {
                         return (
@@ -3350,7 +3363,7 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
           </div>
           
           {['FRIO', 'TABLA', 'CAJAS'].map(zone => {
-            const zoneItems = consolidatedItems.filter(i => (i.product?.rubro?.pickingZone || 'CAJAS') === zone);
+            const zoneItems = consolidatedItems.filter(i => (i.product?.pickingZone || i.product?.rubro?.pickingZone || 'CAJAS') === zone);
             if (zoneItems.length === 0) return null;
             
             const zoneName = zone === 'FRIO' ? '❄️ SECTOR FRÍO' : zone === 'TABLA' ? '🍾 SECTOR TABLA/BEBIDAS' : '📦 SECTOR SECOS/CAJAS';

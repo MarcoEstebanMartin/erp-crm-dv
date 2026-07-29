@@ -111,6 +111,12 @@ async function main() {
     const providerName = (row.PROVEEDOR || '').toString().trim().toUpperCase();
     const providerId = providerName ? (providerMap[providerName] || null) : null;
 
+    const rawPickingZone = (row['ZONA ARMADO'] || row['ZONA_ARMADO'] || row['ZONA DE ARMADO'] || row['ZONA'] || '').toString().trim().toUpperCase();
+    const pickingZone = ['FRIO', 'CAJAS', 'TABLA'].includes(rawPickingZone) ? rawPickingZone : null;
+
+    const rawLocation = (row['SECTOR DEPOSITO'] || row['AREA DEPOSITO'] || row['SECTOR_DEPOSITO'] || row['AREA_DEPOSITO'] || row['UBICACION'] || '').toString().trim();
+    const defaultLocation = rawLocation && rawLocation !== '-' ? rawLocation : null;
+
     categoryCounts[commercialCategory] = (categoryCounts[commercialCategory] || 0) + 1;
 
     const existingId = existingSkuMap.get(sku);
@@ -131,6 +137,8 @@ async function main() {
           barcode,
           rubroId,
           providerId,
+          ...(pickingZone ? { pickingZone } : {}),
+          ...(defaultLocation ? { defaultLocation } : {}),
           isActive: true
         }
       });
@@ -150,6 +158,8 @@ async function main() {
           barcode,
           rubroId,
           providerId,
+          ...(pickingZone ? { pickingZone } : {}),
+          ...(defaultLocation ? { defaultLocation } : {}),
           isActive: true
         }
       });
