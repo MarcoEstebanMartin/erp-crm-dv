@@ -43,12 +43,10 @@ export default function HomeTab({
   setIsQuickSearchModalOpen
 }: HomeTabProps) {
   
-  // Computed metrics from orders list
-  const recibidosOrdersCount = useMemo(() => orders.filter(o => o.status === 'PENDING' || o.status === 'PREPARING').length, [orders]);
-  const armadosOrdersCount = useMemo(() => orders.filter(o => o.status === 'PREPARED' && !o.invoiceNumber).length, [orders]);
-  const facturadosOrdersCount = useMemo(() => orders.filter(o => o.invoiceNumber && (!o.deliveryRoute || o.deliveryRoute.status === 'PENDING')).length, [orders]);
-  const enViajeOrdersCount = useMemo(() => orders.filter(o => o.deliveryRoute && o.deliveryRoute.status === 'IN_TRANSIT').length, [orders]);
-  const entregadosOrdersCount = useMemo(() => orders.filter(o => (o.status === 'DELIVERED' && !o.deliveryRouteId) || (o.deliveryRoute && o.deliveryRoute.status === 'COMPLETED')).length, [orders]);
+  // Computed metrics from orders list (3 Master Operational Pillars)
+  const recibidosOrdersCount = useMemo(() => orders.filter(o => o.status === 'PENDING' || o.status === 'RECIBIDO').length, [orders]);
+  const armadosOrdersCount = useMemo(() => orders.filter(o => o.status === 'PREPARING' || (o.status === 'PREPARED' && !o.invoiceNumber)).length, [orders]);
+  const facturadosDespachadosOrdersCount = useMemo(() => orders.filter(o => o.invoiceNumber || o.status === 'DELIVERED' || o.status === 'BILLED' || (o.deliveryRoute && (o.deliveryRoute.status === 'IN_TRANSIT' || o.deliveryRoute.status === 'COMPLETED'))).length, [orders]);
 
   // Estados para Cronograma Semanal
   const [weeklyScheduleData, setWeeklyScheduleData] = useState<{ currentWeek: string; items: any[] }>({ currentWeek: 'SEMANA_1', items: [] });
@@ -252,46 +250,81 @@ export default function HomeTab({
         </div>
       </div>
 
-      {/* Grilla de Métricas de Pedidos */}
-      <div className="dashboard-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px' }}>
-        <div className="card stat-card" style={{ borderLeft: '4px solid var(--accent-color)' }} onClick={() => setSummaryCardModal({ open: true, cardKey: 'RECIBIDO', cardLabel: 'Pedidos Recibidos' })}>
-          <div className="stat-label">Pedidos Recibidos</div>
-          <div className="stat-value" style={{ color: 'var(--accent-color)', fontSize: '1.8rem' }}>
+      {/* Grilla de Métricas de Pedidos Master (3 Tarjetas Principales) */}
+      <div className="dashboard-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
+        <div 
+          className="card stat-card" 
+          style={{ 
+            borderLeft: '4px solid #007AFF', 
+            padding: '16px 20px',
+            background: 'var(--background-card)',
+            borderRadius: '12px',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.03)' 
+          }} 
+          onClick={() => setSummaryCardModal({ open: true, cardKey: 'RECIBIDO', cardLabel: 'Pedidos Recibidos' })}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div className="stat-label" style={{ fontWeight: 700, fontSize: '0.92rem', color: 'var(--text-secondary)' }}>
+              📥 Pedidos Recibidos
+            </div>
+            <span style={{ fontSize: '1.2rem' }}>📋</span>
+          </div>
+          <div className="stat-value" style={{ color: '#007AFF', fontSize: '2.2rem', fontWeight: 800, margin: '6px 0 2px 0' }}>
             {recibidosOrdersCount}
           </div>
-          <div className="stat-desc">Toma de pedidos (vendedores)</div>
+          <div className="stat-desc" style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+            Pendientes de recolección en depósito
+          </div>
         </div>
 
-        <div className="card stat-card" style={{ borderLeft: '4px solid #F59E0B' }} onClick={() => setSummaryCardModal({ open: true, cardKey: 'ARMADO', cardLabel: 'Pedidos Armados' })}>
-          <div className="stat-label">Pedidos Armados</div>
-          <div className="stat-value" style={{ color: '#F59E0B', fontSize: '1.8rem' }}>
+        <div 
+          className="card stat-card" 
+          style={{ 
+            borderLeft: '4px solid #F59E0B', 
+            padding: '16px 20px',
+            background: 'var(--background-card)',
+            borderRadius: '12px',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.03)' 
+          }} 
+          onClick={() => setSummaryCardModal({ open: true, cardKey: 'ARMADO', cardLabel: 'Pedidos En Armado / Picking' })}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div className="stat-label" style={{ fontWeight: 700, fontSize: '0.92rem', color: 'var(--text-secondary)' }}>
+              📦 En Armado / Picking
+            </div>
+            <span style={{ fontSize: '1.2rem' }}>⚖️</span>
+          </div>
+          <div className="stat-value" style={{ color: '#F59E0B', fontSize: '2.2rem', fontWeight: 800, margin: '6px 0 2px 0' }}>
             {armadosOrdersCount}
           </div>
-          <div className="stat-desc">Pendientes de facturación</div>
+          <div className="stat-desc" style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+            Mercadería en embalaje y control
+          </div>
         </div>
 
-        <div className="card stat-card" style={{ borderLeft: '4px solid #10B981' }} onClick={() => setSummaryCardModal({ open: true, cardKey: 'FACTURADO', cardLabel: 'Pedidos Facturados' })}>
-          <div className="stat-label">Pedidos Facturados</div>
-          <div className="stat-value" style={{ color: '#10B981', fontSize: '1.8rem' }}>
-            {facturadosOrdersCount}
+        <div 
+          className="card stat-card" 
+          style={{ 
+            borderLeft: '4px solid #10B981', 
+            padding: '16px 20px',
+            background: 'var(--background-card)',
+            borderRadius: '12px',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.03)' 
+          }} 
+          onClick={() => setSummaryCardModal({ open: true, cardKey: 'FACTURADO', cardLabel: 'Pedidos Facturados & Despachos' })}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div className="stat-label" style={{ fontWeight: 700, fontSize: '0.92rem', color: 'var(--text-secondary)' }}>
+              🚚 Facturados & Despachos
+            </div>
+            <span style={{ fontSize: '1.2rem' }}>🧾</span>
           </div>
-          <div className="stat-desc">Listos para cargar al viaje</div>
-        </div>
-
-        <div className="card stat-card" style={{ borderLeft: '4px solid #8B5CF6' }} onClick={() => setSummaryCardModal({ open: true, cardKey: 'EN_VIAJE', cardLabel: 'Pedidos en Viaje' })}>
-          <div className="stat-label">Pedidos en Viaje</div>
-          <div className="stat-value" style={{ color: '#8B5CF6', fontSize: '1.8rem' }}>
-            {enViajeOrdersCount}
+          <div className="stat-value" style={{ color: '#10B981', fontSize: '2.2rem', fontWeight: 800, margin: '6px 0 2px 0' }}>
+            {facturadosDespachadosOrdersCount}
           </div>
-          <div className="stat-desc">Repartos activos en calle</div>
-        </div>
-
-        <div className="card stat-card" style={{ borderLeft: '4px solid var(--color-success)' }} onClick={() => setSummaryCardModal({ open: true, cardKey: 'ENTREGADO', cardLabel: 'Pedidos Entregados' })}>
-          <div className="stat-label">Pedidos Entregados</div>
-          <div className="stat-value" style={{ color: 'var(--color-success)', fontSize: '1.8rem' }}>
-            {entregadosOrdersCount}
+          <div className="stat-desc" style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+            Comprobantes emitidos / Reparto activo
           </div>
-          <div className="stat-desc">Operación completada con éxito</div>
         </div>
       </div>
 

@@ -1550,93 +1550,136 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
       {/* ====================================================================
           MODALES
           ==================================================================== */}
-      {/* 0. Resumen de tarjeta del panel */}
+      {/* 0. Resumen de tarjeta del panel (Modal Ampliado y Detallado) */}
       {summaryCardModal && summaryCardModal.open && (
         <div className="modal-overlay" style={{ zIndex: 1200 }}>
-          <div className="modal-content" style={{ maxWidth: '800px', width: '90vw' }}>
-            <div className="modal-header">
-              <h3>{summaryCardModal.cardLabel}</h3>
+          <div className="modal-content" style={{ maxWidth: '1100px', width: '95vw', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
+            <div className="modal-header" style={{ paddingBottom: '12px', borderBottom: '1px solid var(--border-color)' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700 }}>{summaryCardModal.cardLabel}</h3>
+                <span style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>Listado detallado con estado de facturación y asignación de viaje</span>
+              </div>
               <button className="btn btn-ghost" style={{ padding: '4px' }} onClick={() => setSummaryCardModal(null)}>✕</button>
             </div>
             
-            <div style={{ padding: '16px 0' }}>
+            <div style={{ padding: '12px 0', flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
               {(() => {
                 const cardOrders = orders.filter(o => {
                   const statusInfo = getOrderStatusInfo(o);
                   const logicalKey = statusInfo.label.toUpperCase().replace(' ', '_');
                   if (summaryCardModal.cardKey === 'RECIBIDO') {
-                    return logicalKey === 'RECIBIDO' || logicalKey === 'EN_PICKING';
+                    return o.status === 'PENDING' || o.status === 'RECIBIDO';
+                  }
+                  if (summaryCardModal.cardKey === 'ARMADO') {
+                    return o.status === 'PREPARING' || (o.status === 'PREPARED' && !o.invoiceNumber);
+                  }
+                  if (summaryCardModal.cardKey === 'FACTURADO') {
+                    return o.invoiceNumber || o.status === 'DELIVERED' || o.status === 'BILLED' || (o.deliveryRoute && (o.deliveryRoute.status === 'IN_TRANSIT' || o.deliveryRoute.status === 'COMPLETED'));
                   }
                   return logicalKey === summaryCardModal.cardKey;
                 });
 
                 if (cardOrders.length === 0) {
                   return (
-                    <div style={{ textAlign: 'center', padding: '24px 0', color: 'var(--text-secondary)' }}>
+                    <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-secondary)' }}>
                       No hay pedidos en esta categoría actualmente.
                     </div>
                   );
                 }
 
                 return (
-                  <div className="table-container" style={{ maxHeight: '400px', overflowY: 'auto' }}>
-                    <table style={{ width: '100%', fontSize: '0.82rem' }}>
+                  <div className="table-container" style={{ maxHeight: '500px', overflowY: 'auto', flex: 1 }}>
+                    <table style={{ width: '100%', fontSize: '0.84rem' }}>
                       <thead>
                         <tr>
                           <th>Nro Pedido</th>
-                          <th>Cliente</th>
+                          <th>Cliente / Localidad</th>
                           <th>Fecha</th>
                           <th>Vendedor</th>
                           <th className="text-right">Monto</th>
-                          <th>Estado Real</th>
+                          <th>Estado Interno</th>
+                          <th>🚚 Viaje / Reparto</th>
                           <th>Acciones</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {cardOrders.map(o => (
-                          <tr key={o.id}>
-                            <td style={{ fontWeight: 700 }}>#{o.id}</td>
-                            <td>
-                              <div style={{ fontWeight: 600 }}>{o.client?.name || o.persona?.name}</div>
-                              <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>Items: {o.items?.length || 0}</div>
-                            </td>
-                            <td>{new Date(o.createdAt).toLocaleDateString('es-AR')} {new Date(o.createdAt).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}</td>
-                            <td>{o.seller?.username || 'Sistema'}</td>
-                            <td className="text-right" style={{ fontWeight: 600 }}>${Math.round(Number(o.totalAmount)).toLocaleString('es-AR')}</td>
-                            <td>
-                              {(() => {
-                                const statusInfo = getOrderStatusInfo(o);
-                                return (
-                                  <span 
-                                    className={`badge badge-${statusInfo.badgeClass}`}
-                                    style={{
-                                      backgroundColor: statusInfo.color + '15',
-                                      color: statusInfo.color,
-                                      border: `1px solid ${statusInfo.color}30`,
-                                      fontSize: '0.7rem',
-                                      padding: '2px 6px',
-                                      fontWeight: 600
-                                    }}
-                                  >
-                                    {statusInfo.label}
+                        {cardOrders.map(o => {
+                          const statusInfo = getOrderStatusInfo(o);
+                          const clientName = o.client?.name || o.persona?.name || 'Cliente S/D';
+                          const city = o.client?.city || o.persona?.city;
+
+                          return (
+                            <tr key={o.id}>
+                              <td>
+                                <div style={{ fontWeight: 800, fontSize: '0.9rem' }}>#{o.id}</div>
+                                {o.invoiceNumber && (
+                                  <div style={{ fontSize: '0.72rem', color: '#059669', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '3px' }}>
+                                    📄 Fact. {o.invoiceNumber}
+                                  </div>
+                                )}
+                              </td>
+                              <td>
+                                <div style={{ fontWeight: 700, fontSize: '0.88rem' }}>{clientName}</div>
+                                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'flex', gap: '8px' }}>
+                                  <span>📦 {o.items?.length || 0} items</span>
+                                  {city && <span>📍 {city}</span>}
+                                </div>
+                              </td>
+                              <td style={{ fontSize: '0.78rem' }}>
+                                <div>{new Date(o.createdAt).toLocaleDateString('es-AR')}</div>
+                                <div style={{ color: 'var(--text-secondary)' }}>{new Date(o.createdAt).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}</div>
+                              </td>
+                              <td>{o.seller?.username || 'Sistema'}</td>
+                              <td className="text-right" style={{ fontWeight: 800, fontSize: '0.9rem' }}>
+                                ${Math.round(Number(o.totalAmount)).toLocaleString('es-AR')}
+                              </td>
+                              <td>
+                                <span 
+                                  className={`badge badge-${statusInfo.badgeClass}`}
+                                  style={{
+                                    backgroundColor: statusInfo.color + '15',
+                                    color: statusInfo.color,
+                                    border: `1px solid ${statusInfo.color}30`,
+                                    fontSize: '0.72rem',
+                                    padding: '3px 8px',
+                                    fontWeight: 700,
+                                    borderRadius: '12px'
+                                  }}
+                                >
+                                  {statusInfo.label}
+                                </span>
+                              </td>
+                              <td>
+                                {o.deliveryRoute ? (
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                    <span style={{ fontWeight: 700, color: '#4F46E5', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                      🚚 {o.deliveryRoute.routeName || `Viaje #${o.deliveryRoute.id}`}
+                                    </span>
+                                    <span style={{ fontSize: '0.72rem', fontWeight: 600, color: o.deliveryRoute.status === 'IN_TRANSIT' ? '#059669' : o.deliveryRoute.status === 'COMPLETED' ? '#2563EB' : '#D97706' }}>
+                                      {o.deliveryRoute.status === 'IN_TRANSIT' ? '🟢 En Calle (Tránsito)' : o.deliveryRoute.status === 'COMPLETED' ? '✅ Entregado' : '🟡 Asignado (En Espera)'}
+                                    </span>
+                                  </div>
+                                ) : (
+                                  <span className="badge" style={{ backgroundColor: '#F3F4F6', color: '#6B7280', fontSize: '0.72rem', fontWeight: 600, padding: '3px 8px', borderRadius: '12px' }}>
+                                    🏬 Sin Viaje (En Depósito)
                                   </span>
-                                );
-                              })()}
-                            </td>
-                            <td>
-                              <button 
-                                className="btn btn-secondary" 
-                                style={{ padding: '4px 8px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px' }}
-                                onClick={() => {
-                                  setOrderDetailsModal(o);
-                                  setSummaryCardModal(null);
-                                }}
-                              >
-                                <Eye size={12} /> Ver Detalle
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
+                                )}
+                              </td>
+                              <td>
+                                <button 
+                                  className="btn btn-secondary" 
+                                  style={{ padding: '4px 10px', fontSize: '0.76rem', display: 'flex', alignItems: 'center', gap: '5px', fontWeight: 600 }}
+                                  onClick={() => {
+                                    setOrderDetailsModal(o);
+                                    setSummaryCardModal(null);
+                                  }}
+                                >
+                                  <Eye size={13} /> Detalle
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>

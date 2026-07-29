@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../utils/api';
 import { Printer, CheckSquare, Search, RefreshCw, Eye, CheckCircle } from 'lucide-react';
-import { printPickingList, printOrderReceipt, printBatchPickingA4 } from '../../utils/printHelpers';
+import { printPickingList, printOrderReceipt, printBatchPickingA4, printConsolidatedPickingA4 } from '../../utils/printHelpers';
 import OrderFulfillmentModal from '../modals/OrderFulfillmentModal';
 import { getOrderStatusInfo } from '../../utils/orderStatusHelper';
 
@@ -19,10 +19,16 @@ export default function FulfillmentDashboard() {
   useEffect(() => {
     fetchOrders();
 
-    // Listen for print success to move to PREPARING
-    const handleMessage = (event: MessageEvent) => {
+    // Listen for print success to move orders from PENDING to PREPARING (En Picking)
+    const handleMessage = async (event: MessageEvent) => {
       if (event.data?.type === 'PRINT_SUCCESS' && event.data?.orderId) {
-        api.updateOrderStatus(event.data.orderId, 'PREPARING' as any).then(() => fetchOrders());
+        await api.updateOrderStatus(event.data.orderId, 'PREPARING' as any);
+        fetchOrders();
+      } else if (event.data?.type === 'PRINT_BATCH_SUCCESS' && Array.isArray(event.data?.orderIds)) {
+        await Promise.all(
+          event.data.orderIds.map((id: number) => api.updateOrderStatus(id, 'PREPARING' as any))
+        );
+        fetchOrders();
       }
     };
     window.addEventListener('message', handleMessage);
@@ -73,23 +79,37 @@ export default function FulfillmentDashboard() {
     return matchesSearch && matchesSeller && matchesRoute && matchesZone;
   });
 
+  const getFilterLabel = () => {
+    const filterLabelParts: string[] = [];
+    if (selectedRoute !== 'ALL') filterLabelParts.push(`Ruta: ${selectedRoute}`);
+    if (selectedSeller !== 'ALL') filterLabelParts.push(`Vendedor: ${selectedSeller}`);
+    if (selectedZone !== 'ALL') filterLabelParts.push(`Zona: ${selectedZone}`);
+    return filterLabelParts.length > 0 ? filterLabelParts.join(' | ') : 'Todos los Pedidos';
+  };
+
   const handlePrintBatchA4 = () => {
     if (pending.length === 0) {
       alert('No hay pedidos pendientes que coincidan con los filtros seleccionados.');
       return;
     }
 
-    const filterLabelParts: string[] = [];
-    if (selectedRoute !== 'ALL') filterLabelParts.push(`Ruta: ${selectedRoute}`);
-    if (selectedSeller !== 'ALL') filterLabelParts.push(`Vendedor: ${selectedSeller}`);
-    if (selectedZone !== 'ALL') filterLabelParts.push(`Zona: ${selectedZone}`);
-    
-    const filterLabel = filterLabelParts.length > 0 ? filterLabelParts.join(' | ') : 'Todos los Pedidos';
-
     printBatchPickingA4({
       orders: pending,
       zone: selectedZone,
-      filterLabel
+      filterLabel: getFilterLabel()
+    });
+  };
+
+  const handlePrintConsolidated = () => {
+    if (pending.length === 0) {
+      alert('No hay pedidos pendientes para consolidar.');
+      return;
+    }
+
+    printConsolidatedPickingA4({
+      orders: pending,
+      zone: selectedZone,
+      filterLabel: getFilterLabel()
     });
   };
 
@@ -104,6 +124,7 @@ export default function FulfillmentDashboard() {
 
   const renderCard = (o: any, column: 'PENDING' | 'PREPARING' | 'BILLED') => {
     const statusInfo = getOrderStatusInfo(o);
+    const clientName = o.client?.name || o.persona?.name || 'Cliente sin Nombre';
     
     return (
       <div 
@@ -111,51 +132,158 @@ export default function FulfillmentDashboard() {
         style={{
           background: 'var(--background-card)',
           borderRadius: '8px',
-          padding: '16px',
+          padding: '8px 10px',
           border: '1px solid var(--border-color)',
-          boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
           display: 'flex',
           flexDirection: 'column',
-          gap: '12px',
-          transition: 'all 0.2s',
+          gap: '5px',
+          transition: 'all 0.15s ease',
           cursor: 'default'
         }}
         className="fulfillment-card"
       >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-          <div>
-            <div style={{ fontWeight: 700, fontSize: '1.1rem' }}>{o.client?.name}</div>
-            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Pedido #{o.id}</div>
+        {/* Linea 1: #Pedido + Nombre Cliente + Badge Estado */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '6px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden', minWidth: 0 }}>
+            <span style={{ 
+              fontWeight: 800, 
+              fontSize: '0.78rem', 
+              background: 'var(--background-alt)', 
+              padding: '1px 6px', 
+              borderRadius: '4px', 
+              color: 'var(--text-main)',
+              border: '1px solid var(--border-color)',
+              flexShrink: 0 
+            }}>
+              #{o.id}
+            </span>
+            <span 
+              style={{ 
+                fontWeight: 700, 
+                fontSize: '0.86rem', 
+                whiteSpace: 'nowrap', 
+                overflow: 'hidden', 
+                textOverflow: 'ellipsis',
+                color: 'var(--text-main)' 
+              }} 
+              title={clientName}
+            >
+              {clientName}
+            </span>
           </div>
-          <span className="badge" style={{ backgroundColor: statusInfo.color + '15', color: statusInfo.color, fontWeight: 600 }}>
+          <span 
+            className="badge" 
+            style={{ 
+              backgroundColor: statusInfo.color + '18', 
+              color: statusInfo.color, 
+              fontWeight: 700, 
+              fontSize: '0.7rem',
+              padding: '2px 7px',
+              borderRadius: '10px',
+              flexShrink: 0
+            }}
+          >
             {statusInfo.label}
           </span>
         </div>
 
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
-          <div>Items: {o.items?.length || 0}</div>
-          <div>${Math.round(Number(o.totalAmount)).toLocaleString('es-AR')}</div>
+        {/* Linea 2: Items + Ciudad/Ruta + Monto Total */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <span>📦 {o.items?.length || 0} items</span>
+            {(o.client?.city || o.persona?.city) && (
+              <span style={{ fontSize: '0.75rem', opacity: 0.85 }}>📍 {o.client?.city || o.persona?.city}</span>
+            )}
+          </div>
+          <div style={{ fontWeight: 800, fontSize: '0.88rem', color: 'var(--text-main)' }}>
+            ${Math.round(Number(o.totalAmount)).toLocaleString('es-AR')}
+          </div>
         </div>
 
-        <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '12px', display: 'flex', gap: '8px' }}>
+        {/* Linea 3: Botones de Acción Compactos */}
+        <div style={{ display: 'flex', gap: '6px', marginTop: '2px' }}>
           {column === 'PENDING' && (
             <>
-              <button className="btn btn-secondary" style={{ flex: 1, display: 'flex', justifyContent: 'center', gap: '6px' }} onClick={() => handlePrintPickingList(o)} title="Imprimir Hoja de Armado">
-                <Printer size={16} /> Hoja
+              <button 
+                className="btn btn-secondary" 
+                style={{ 
+                  flex: 1, 
+                  display: 'flex', 
+                  justify: 'center', 
+                  alignItems: 'center', 
+                  gap: '4px',
+                  height: '26px',
+                  padding: '0 6px',
+                  fontSize: '0.75rem',
+                  fontWeight: 600
+                }} 
+                onClick={() => handlePrintPickingList(o)} 
+                title="Imprimir Hoja de Armado"
+              >
+                <Printer size={13} /> Hoja
               </button>
-              <button className="btn btn-primary" style={{ flex: 1, display: 'flex', justifyContent: 'center', gap: '6px', backgroundColor: '#4F46E5', borderColor: '#4F46E5' }} onClick={() => setFulfillmentModalOrder(o)} title="Facturar Directamente">
-                Facturar Rápid.
+              <button 
+                className="btn btn-primary" 
+                style={{ 
+                  flex: 1.2, 
+                  display: 'flex', 
+                  justify: 'center', 
+                  alignItems: 'center', 
+                  gap: '4px', 
+                  height: '26px',
+                  padding: '0 6px',
+                  fontSize: '0.75rem',
+                  fontWeight: 700,
+                  backgroundColor: '#4F46E5', 
+                  borderColor: '#4F46E5' 
+                }} 
+                onClick={() => setFulfillmentModalOrder(o)} 
+                title="Facturar Directamente"
+              >
+                ⚡ Facturar
               </button>
             </>
           )}
           {column === 'PREPARING' && (
-            <button className="btn btn-secondary" style={{ flex: 1, display: 'flex', justifyContent: 'center', gap: '6px', backgroundColor: '#4F46E5', color: 'white', borderColor: '#4F46E5' }} onClick={() => setFulfillmentModalOrder(o)}>
-              <CheckSquare size={16} /> Confirmar Armado
+            <button 
+              className="btn btn-primary" 
+              style={{ 
+                flex: 1, 
+                display: 'flex', 
+                justify: 'center', 
+                alignItems: 'center', 
+                gap: '5px', 
+                height: '26px',
+                padding: '0 8px',
+                fontSize: '0.78rem',
+                fontWeight: 700,
+                backgroundColor: '#4F46E5', 
+                color: 'white', 
+                borderColor: '#4F46E5' 
+              }} 
+              onClick={() => setFulfillmentModalOrder(o)}
+            >
+              <CheckSquare size={13} /> Confirmar Armado
             </button>
           )}
           {column === 'BILLED' && (
-            <button className="btn btn-secondary" style={{ flex: 1, display: 'flex', justifyContent: 'center', gap: '6px' }} onClick={() => handlePrintReceipt(o)}>
-              <Printer size={16} /> Comprobante
+            <button 
+              className="btn btn-secondary" 
+              style={{ 
+                flex: 1, 
+                display: 'flex', 
+                justify: 'center', 
+                alignItems: 'center', 
+                gap: '5px',
+                height: '26px',
+                padding: '0 8px',
+                fontSize: '0.78rem',
+                fontWeight: 600 
+              }} 
+              onClick={() => handlePrintReceipt(o)}
+            >
+              <Printer size={13} /> Ticket
             </button>
           )}
         </div>
@@ -164,47 +292,53 @@ export default function FulfillmentDashboard() {
   };
 
   return (
-    <div style={{ padding: '0 16px', height: '100%', display: 'flex', flexDirection: 'column' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <div>
-          <h2 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 600 }}>Centro de Armado y Facturación</h2>
-          <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Gestión unificada de pedidos para el depósito.</p>
+    <div style={{ padding: '0 12px', height: '100%', display: 'flex', flexDirection: 'column' }}>
+      {/* Barra de Control y Filtros Unificada de Alta Densidad */}
+      <div style={{
+        display: 'flex',
+        flexWrap: 'wrap',
+        gap: '10px',
+        alignItems: 'center',
+        justify: 'space-between',
+        backgroundColor: 'var(--background-card)',
+        padding: '8px 14px',
+        borderRadius: '10px',
+        border: '1px solid var(--border-color)',
+        marginBottom: '12px'
+      }}>
+        {/* Titulo + Boton Recargar */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <h2 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 700, letterSpacing: '-0.3px' }}>Armado & Facturación</h2>
+          <button 
+            className="btn btn-secondary" 
+            style={{ padding: '4px 8px', height: '28px', borderRadius: '6px' }} 
+            onClick={fetchOrders} 
+            disabled={loading}
+            title="Recargar pedidos"
+          >
+            <RefreshCw size={13} className={loading ? 'spin' : ''} />
+          </button>
         </div>
-        <div style={{ display: 'flex', gap: '12px' }}>
-          <div className="search-input-wrapper">
-            <Search size={16} style={{ position: 'absolute', left: '10px', top: '10px', color: 'var(--text-secondary)' }} />
+
+        {/* Buscador + Filtros In-Line */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+          <div className="search-input-wrapper" style={{ position: 'relative' }}>
+            <Search size={14} style={{ position: 'absolute', left: '8px', top: '7px', color: 'var(--text-secondary)' }} />
             <input 
               type="text" 
               className="input" 
-              placeholder="Buscar pedido..." 
-              style={{ paddingLeft: '34px', width: '250px' }}
+              placeholder="Buscar..." 
+              style={{ paddingLeft: '28px', paddingRight: '8px', height: '28px', fontSize: '0.82rem', width: '150px' }}
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
             />
           </div>
-          <button className="btn btn-secondary" onClick={fetchOrders} disabled={loading}>
-            <RefreshCw size={16} className={loading ? 'spin' : ''} />
-          </button>
-      {/* Barra de Filtros Operativos de Administración */}
-      <div style={{
-        display: 'flex',
-        flexWrap: 'wrap',
-        gap: '12px',
-        alignItems: 'center',
-        justify: 'space-between',
-        backgroundColor: 'var(--background-card)',
-        padding: '12px 16px',
-        borderRadius: '10px',
-        border: '1px solid var(--border-color)',
-        marginBottom: '16px'
-      }}>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center' }}>
-          {/* Filtro Ruta / Localidad */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)' }}>📍 Ruta:</span>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)' }}>📍</span>
             <select
               className="input"
-              style={{ padding: '6px 10px', fontSize: '0.85rem' }}
+              style={{ padding: '3px 6px', height: '28px', fontSize: '0.82rem' }}
               value={selectedRoute}
               onChange={e => setSelectedRoute(e.target.value)}
             >
@@ -215,71 +349,93 @@ export default function FulfillmentDashboard() {
             </select>
           </div>
 
-          {/* Filtro Vendedor */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)' }}>👤 Vendedor:</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)' }}>👤</span>
             <select
               className="input"
-              style={{ padding: '6px 10px', fontSize: '0.85rem' }}
+              style={{ padding: '3px 6px', height: '28px', fontSize: '0.82rem' }}
               value={selectedSeller}
               onChange={e => setSelectedSeller(e.target.value)}
             >
-              <option value="ALL">Todos los Vendedores</option>
+              <option value="ALL">Vendedores</option>
               {uniqueSellers.map((s: any) => (
                 <option key={s} value={s}>{s}</option>
               ))}
             </select>
           </div>
 
-          {/* Filtro Zona de Armado */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)' }}>📦 Zona:</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)' }}>📦</span>
             <select
               className="input"
-              style={{ padding: '6px 10px', fontSize: '0.85rem', fontWeight: 600 }}
+              style={{ padding: '3px 6px', height: '28px', fontSize: '0.82rem', fontWeight: 600 }}
               value={selectedZone}
               onChange={e => setSelectedZone(e.target.value)}
             >
-              <option value="ALL">🌟 Todas las Zonas</option>
-              <option value="FRIO">❄️ Sector Frío</option>
-              <option value="CAJAS">📦 Sector Cajas / Secos</option>
-              <option value="TABLA">🍾 Sector Tabla / Bebidas</option>
+              <option value="ALL">Zonas</option>
+              <option value="FRIO">❄️ Frío</option>
+              <option value="CAJAS">📦 Cajas</option>
+              <option value="TABLA">🍾 Tabla</option>
             </select>
           </div>
         </div>
 
-        {/* Botón Imprimir Hoja A4 2 Columnas */}
-        <button
-          className="btn btn-primary"
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            backgroundColor: '#007AFF',
-            borderColor: '#007AFF',
-            fontWeight: 700,
-            fontSize: '0.88rem',
-            padding: '8px 16px'
-          }}
-          onClick={handlePrintBatchA4}
-          title="Imprime los pedidos filtrados agrupados en 2 columnas en hoja A4"
-        >
-          <Printer size={16} /> 🖨️ Imprimir Lote A4 (2 Col)
-        </button>
+        {/* Botones de Impresión de Picking Premium */}
+        <div style={{ display: 'flex', gap: '6px' }}>
+          <button
+            className="btn btn-primary"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '5px',
+              backgroundColor: '#007AFF',
+              borderColor: '#007AFF',
+              fontWeight: 700,
+              fontSize: '0.82rem',
+              height: '28px',
+              padding: '0 10px'
+            }}
+            onClick={handlePrintBatchA4}
+            title="Imprimir lote de pedidos (máximo 8 por hoja A4)"
+          >
+            <Printer size={13} /> 🖨️ Lote A4
+          </button>
+
+          <button
+            className="btn btn-secondary"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '5px',
+              backgroundColor: '#059669',
+              borderColor: '#059669',
+              color: 'white',
+              fontWeight: 700,
+              fontSize: '0.82rem',
+              height: '28px',
+              padding: '0 10px'
+            }}
+            onClick={handlePrintConsolidated}
+            title="Imprimir planilla de consolidado total por depósito"
+          >
+            <Printer size={13} /> 📌 Consolidado
+          </button>
+        </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px', flexGrow: 1, minHeight: 0 }}>
+      {/* Columnas Kanban de Alta Densidad */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '14px', flexGrow: 1, minHeight: 0 }}>
         {/* Columna Pendientes */}
-        <div style={{ display: 'flex', flexDirection: 'column', background: 'var(--background-alt)', borderRadius: '12px', padding: '16px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-            <h3 style={{ margin: 0, fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ display: 'inline-block', width: '10px', height: '10px', borderRadius: '50%', backgroundColor: 'var(--accent-color)' }} />
+        <div style={{ display: 'flex', flexDirection: 'column', background: 'var(--background-alt)', borderRadius: '10px', padding: '12px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+            <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'var(--accent-color)' }} />
               Pendientes ({pending.length})
             </h3>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', overflowY: 'auto', flexGrow: 1, paddingRight: '4px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', overflowY: 'auto', flexGrow: 1, paddingRight: '2px' }}>
             {pending.length === 0 ? (
-              <div style={{ textAlign: 'center', color: 'var(--text-secondary)', marginTop: '40px' }}>No hay pedidos pendientes.</div>
+              <div style={{ textAlign: 'center', color: 'var(--text-secondary)', marginTop: '30px', fontSize: '0.85rem' }}>No hay pedidos pendientes.</div>
             ) : (
               pending.map(o => renderCard(o, 'PENDING'))
             )}
@@ -287,16 +443,16 @@ export default function FulfillmentDashboard() {
         </div>
 
         {/* Columna En Picking */}
-        <div style={{ display: 'flex', flexDirection: 'column', background: 'var(--background-alt)', borderRadius: '12px', padding: '16px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-            <h3 style={{ margin: 0, fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ display: 'inline-block', width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#F59E0B' }} />
+        <div style={{ display: 'flex', flexDirection: 'column', background: 'var(--background-alt)', borderRadius: '10px', padding: '12px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+            <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#F59E0B' }} />
               En Picking ({preparing.length})
             </h3>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', overflowY: 'auto', flexGrow: 1, paddingRight: '4px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', overflowY: 'auto', flexGrow: 1, paddingRight: '2px' }}>
             {preparing.length === 0 ? (
-              <div style={{ textAlign: 'center', color: 'var(--text-secondary)', marginTop: '40px' }}>No hay pedidos en preparación.</div>
+              <div style={{ textAlign: 'center', color: 'var(--text-secondary)', marginTop: '30px', fontSize: '0.85rem' }}>No hay pedidos en preparación.</div>
             ) : (
               preparing.map(o => renderCard(o, 'PREPARING'))
             )}
@@ -304,16 +460,16 @@ export default function FulfillmentDashboard() {
         </div>
 
         {/* Columna Facturados Hoy */}
-        <div style={{ display: 'flex', flexDirection: 'column', background: 'var(--background-alt)', borderRadius: '12px', padding: '16px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-            <h3 style={{ margin: 0, fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ display: 'inline-block', width: '10px', height: '10px', borderRadius: '50%', backgroundColor: 'var(--color-success)' }} />
+        <div style={{ display: 'flex', flexDirection: 'column', background: 'var(--background-alt)', borderRadius: '10px', padding: '12px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+            <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'var(--color-success)' }} />
               Facturados Hoy ({billedToday.length})
             </h3>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', overflowY: 'auto', flexGrow: 1, paddingRight: '4px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', overflowY: 'auto', flexGrow: 1, paddingRight: '2px' }}>
             {billedToday.length === 0 ? (
-              <div style={{ textAlign: 'center', color: 'var(--text-secondary)', marginTop: '40px' }}>Aún no hay facturaciones hoy.</div>
+              <div style={{ textAlign: 'center', color: 'var(--text-secondary)', marginTop: '30px', fontSize: '0.85rem' }}>Aún no hay facturaciones hoy.</div>
             ) : (
               billedToday.map(o => renderCard(o, 'BILLED'))
             )}
