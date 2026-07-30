@@ -65,6 +65,71 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
     return `visits_${today.getFullYear()}-${today.getMonth() + 1}-${today.getDate()}`;
   };
 
+  const syncOfflineData = useCallback(async () => {
+    if (!navigator.onLine) return;
+
+    // 1. Sincronizar pedidos cargados sin señal
+    const offlineOrders = JSON.parse(localStorage.getItem('offline_orders') || '[]');
+    if (offlineOrders.length > 0) {
+      let syncedCount = 0;
+      const remainingOrders = [];
+
+      for (const order of offlineOrders) {
+        try {
+          await api.createOrder({
+            clientId: order.clientId,
+            items: order.items,
+            notes: order.notes
+          });
+          if (order.routeId) {
+            try {
+              await api.recordRouteVisit(order.routeId, {
+                personaId: order.clientId,
+                status: 'ORDERED'
+              });
+            } catch (e) {}
+          }
+          syncedCount++;
+        } catch (e) {
+          console.error("Error al sincronizar pedido offline:", e);
+          remainingOrders.push(order);
+        }
+      }
+
+      localStorage.setItem('offline_orders', JSON.stringify(remainingOrders));
+      if (syncedCount > 0) {
+        showToast(`✅ Se enviaron automáticamente ${syncedCount} pedido(s) guardados sin señal.`, 'success');
+        fetchData();
+      }
+    }
+
+    // 2. Sincronizar visitas sin venta registradas sin señal
+    const offlineVisits = JSON.parse(localStorage.getItem('offline_route_visits') || '[]');
+    if (offlineVisits.length > 0) {
+      let syncedVisits = 0;
+      const remainingVisits = [];
+
+      for (const visit of offlineVisits) {
+        try {
+          await api.recordRouteVisit(visit.routeId, {
+            personaId: visit.personaId,
+            status: visit.status,
+            noBuyReason: visit.noBuyReason,
+            notes: visit.notes
+          });
+          syncedVisits++;
+        } catch (e) {
+          remainingVisits.push(visit);
+        }
+      }
+
+      localStorage.setItem('offline_route_visits', JSON.stringify(remainingVisits));
+      if (syncedVisits > 0) {
+        showToast(`✅ Se sincronizaron ${syncedVisits} visita(s) registradas sin señal.`, 'success');
+      }
+    }
+  }, []);
+
   useEffect(() => {
     const key = getTodayKey();
     const stored = localStorage.getItem(key);
@@ -75,7 +140,13 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
         console.error(e);
       }
     }
-  }, []);
+
+    syncOfflineData();
+    window.addEventListener('online', syncOfflineData);
+    return () => {
+      window.removeEventListener('online', syncOfflineData);
+    };
+  }, [syncOfflineData]);
 
   const cleanCityName = (city: string | null | undefined): string => {
     if (!city) return 'OTRAS';
@@ -334,7 +405,7 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
     }, 0);
   };
 
-  // --- CONFIRMAR PEDIDO (3-CLICS) ---
+  // --- CONFIRMAR PEDIDO (3-CLICS) CON SOPORTE OFFLINE ---
   const handleConfirmOrder = async () => {
     if (!selectedClient) {
       setErrorMsg('Debe seleccionar un cliente antes de confirmar.');
@@ -345,22 +416,49 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
       return;
     }
 
+    const items = cart.map(item => ({
+      productId: item.product.id,
+      quantity: item.quantity,
+      isEmergencyOverride: Boolean((item as any).isEmergencyOverride || (item.quantity < (item.product.minOrderQuantity || 1)))
+    }));
+
+    const orderPayload = {
+      clientId: selectedClient.id,
+      items,
+      notes: orderNotes
+    };
+
+    if (!navigator.onLine) {
+      const offlineOrders = JSON.parse(localStorage.getItem('offline_orders') || '[]');
+      offlineOrders.push({
+        ...orderPayload,
+        clientName: selectedClient.name,
+        routeId: selectedRouteId,
+        timestamp: new Date().toISOString()
+      });
+      localStorage.setItem('offline_orders', JSON.stringify(offlineOrders));
+
+      const updatedVisits = {
+        ...sessionVisits,
+        [selectedClient.id]: { status: 'VENTA' }
+      };
+      setSessionVisits(updatedVisits);
+      localStorage.setItem(getTodayKey(), JSON.stringify(updatedVisits));
+
+      setSuccessMsg(`⚠️ Sin señal. El pedido de "${selectedClient.name}" se guardó localmente en tu celular. Se enviará a depósito automáticamente al recuperar conexión.`);
+      setCart([]);
+      setOrderNotes('');
+      setSelectedClient(null);
+      setClientFilter('');
+      return;
+    }
+
     setLoading(true);
     setErrorMsg(null);
     setSuccessMsg(null);
 
     try {
-      const items = cart.map(item => ({
-        productId: item.product.id,
-        quantity: item.quantity,
-        isEmergencyOverride: Boolean((item as any).isEmergencyOverride || (item.quantity < (item.product.minOrderQuantity || 1)))
-      }));
-
-      await api.createOrder({
-        clientId: selectedClient.id,
-        items,
-        notes: orderNotes
-      });
+      await api.createOrder(orderPayload);
 
       // Registrar visita en base de datos si hay ruta activa
       if (selectedRouteId) {
