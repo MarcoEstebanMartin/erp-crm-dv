@@ -1000,15 +1000,6 @@ export default function SalesBillingTab({
                                     <span style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>-</span>
                                   )}
                                 </td>
-                                        <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '2px', fontWeight: 600 }}>
-                                          Caja x{unitsPerBox}u
-                                        </div>
-                                      </div>
-                                    )
-                                  ) : (
-                                    <span style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>-</span>
-                                  )}
-                                </td>
                                 <td>
                                   {item.product.isPesable ? (
                                     <input
