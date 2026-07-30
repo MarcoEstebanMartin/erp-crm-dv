@@ -1803,14 +1803,14 @@ export default function RepartoDashboard() {
           ==================================================================== */}
       {showCreateModal && (
         <div className="modal-overlay" style={{ zIndex: 1000 }}>
-          <div className="modal-content" style={{ maxWidth: '800px' }}>
+          <div className="modal-content" style={{ maxWidth: '1200px', width: '94vw', maxHeight: '92vh', overflowY: 'auto' }}>
             <div className="modal-header">
               <h3>Crear Hoja de Ruta & Optimizar Recorrido</h3>
               <button className="btn btn-ghost" style={{ padding: '4px' }} onClick={() => setShowCreateModal(false)}><X size={18} /></button>
             </div>
             
             <form onSubmit={handleCreateRouteSubmit}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '20px', alignItems: 'start' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '420px 1fr', gap: '24px', alignItems: 'start' }}>
                 
                 {/* Formulario Izquierda */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -1934,7 +1934,7 @@ export default function RepartoDashboard() {
                     </div>
                     
                     <div style={{ 
-                      maxHeight: '180px', 
+                      maxHeight: '280px', 
                       overflowY: 'auto', 
                       border: '1px solid var(--border-color)', 
                       borderRadius: '6px',
