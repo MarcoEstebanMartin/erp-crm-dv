@@ -31,7 +31,8 @@ const ProductModal: React.FC<ProductModalProps> = ({
   useEffect(() => {
     if (productModal.open) {
       if (productModal.mode === 'edit' && productModal.data.imageUrl) {
-        setImagePreviewUrl(`http://${window.location.hostname}:3000${productModal.data.imageUrl}`);
+        const img = productModal.data.imageUrl;
+        setImagePreviewUrl(img.startsWith('http') ? img : (img.startsWith('/') ? img : `/uploads/products/${img}`));
       } else {
         setImagePreviewUrl('');
       }
