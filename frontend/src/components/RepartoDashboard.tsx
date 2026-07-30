@@ -12,6 +12,7 @@ import {
   Printer
 } from 'lucide-react';
 import { useConfirm } from '../context/ConfirmContext';
+import { printDeliveryRouteCustodyGuide } from '../utils/printHelpers';
 
 // Coordenadas fijas simuladas para clientes en General Villegas
 const VILLEGAS_DEPOT: [number, number] = [-35.030, -63.010]; // Moreno 200, Villegas (Base/Depósito)
@@ -1637,10 +1638,11 @@ export default function RepartoDashboard() {
                   <button 
                     className="btn btn-secondary no-print" 
                     style={{ fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '4px' }}
-                    onClick={() => window.print()}
+                    onClick={() => printDeliveryRouteCustodyGuide(selectedRoute)}
+                    title="Imprimir Guía Oficial de Carga y Acta de Transferencia de Custodia para Chofer"
                   >
                     <Printer size={12} />
-                    Imprimir Hoja
+                    Guía de Carga y Custodia
                   </button>
                 </div>
               </div>

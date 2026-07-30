@@ -1052,5 +1052,145 @@ export const printShippingLabelsBultos = ({
   printWindow.document.close();
 };
 
+export const printDeliveryRouteCustodyGuide = (route: any) => {
+  const printWindow = window.open('', '_blank', 'width=900,height=1100');
+  if (!printWindow) return;
+
+  const companyLogo = localStorage.getItem('company_nombre_fantasia') || 'DISTRIBUIDORA DON VENANCIO';
+  const orders = route.orders || [];
+
+  const totalBultosFraccionados = orders.reduce((sum: number, o: any) => sum + Math.max(1, Number(o.bultosCount || 1)), 0);
+  const totalCajasTablaEstimadas = orders.reduce((sum: number, o: any) => {
+    // Estimación de cajas cerradas de tabla
+    const tablaItems = (o.items || []).filter((i: any) => (i.product?.pickingZone === 'TABLA' || i.product?.rubro?.pickingZone === 'TABLA') && !i.product?.isPesable);
+    return sum + tablaItems.reduce((acc: number, item: any) => acc + Math.floor(item.quantity / (item.product?.unitsPerBox || 1)), 0);
+  }, 0);
+
+  const totalBultosRuta = totalBultosFraccionados + totalCajasTablaEstimadas;
+
+  printWindow.document.write(`
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <title>Guía de Carga y Transferencia de Custodia - Ruta #${route.id}</title>
+        <style>
+          @page { size: A4 portrait; margin: 10mm; }
+          * { box-sizing: border-box; }
+          body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 12px; color: #111; margin: 0; padding: 0; }
+          .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #000; padding-bottom: 8px; margin-bottom: 12px; }
+          .title { font-size: 18px; font-weight: 900; text-transform: uppercase; }
+          .subtitle { font-size: 12px; font-weight: 700; color: #000; }
+          .summary-card { border: 2.5px solid #000; border-radius: 8px; padding: 12px; margin-bottom: 16px; background: #fafafa; }
+          .summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 8px; }
+          .category-box { border: 1.5px solid #000; border-radius: 6px; padding: 10px; background: #fff; }
+          .category-title { font-size: 11px; font-weight: 900; text-transform: uppercase; margin-bottom: 4px; color: #333; }
+          .category-val { font-size: 20px; font-weight: 900; color: #000; }
+          table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+          th { border: 1.5px solid #000; background: #e2e8f0; padding: 6px 8px; font-size: 11px; text-transform: uppercase; font-weight: 900; text-align: left; }
+          td { border: 1px solid #cbd5e1; padding: 6px 8px; font-size: 11.5px; vertical-align: middle; }
+          .signature-box { border: 2px solid #000; border-radius: 8px; padding: 16px; margin-top: 24px; background: #fff; }
+          @media print { body { -webkit-print-color-adjust: exact; } }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div>
+            <div class="title">${companyLogo}</div>
+            <div class="subtitle">GUÍA DE CARGA Y ACTA OFICIAL DE TRANSFERENCIA DE CUSTODIA</div>
+          </div>
+          <div style="text-align: right;">
+            <div style="font-size: 18px; font-weight: 900;">HOJA DE RUTA #${route.id}</div>
+            <div>Fecha: ${new Date(route.date || Date.now()).toLocaleDateString('es-AR')}</div>
+          </div>
+        </div>
+
+        <div class="summary-card">
+          <div style="display: flex; justify-content: space-between; font-size: 14px; font-weight: 900; border-bottom: 1.5px solid #000; padding-bottom: 6px;">
+            <span>🚚 CHOFER / REPARTIDOR: ${route.driverName.toUpperCase()}</span>
+            <span>🚙 VEHÍCULO: ${route.vehiclePlate || 'S/D'} ${route.vehicleDescription ? '(' + route.vehicleDescription + ')' : ''}</span>
+          </div>
+
+          <div class="summary-grid">
+            <div class="category-box">
+              <div class="category-title">1. CAJAS CERRADAS FÁBRICA (TABLA)</div>
+              <div class="category-val">~ ${totalCajasTablaEstimadas} Cajas</div>
+              <div style="font-size: 10.5px; color: #555; margin-top: 2px;">Palletizado sellado de origen (Conteo masivo)</div>
+            </div>
+            <div class="category-box">
+              <div class="category-title">2. BULTOS FRACCIONADOS Y FRÍO (FAJADOS)</div>
+              <div class="category-val">${totalBultosFraccionados} Bultos</div>
+              <div style="font-size: 10.5px; color: #555; margin-top: 2px;">Cajas abiertas con Faja de Seguridad y Rótulo Térmico</div>
+            </div>
+          </div>
+
+          <div style="margin-top: 10px; background: #000; color: #fff; padding: 8px 12px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; font-size: 15px; font-weight: 900;">
+            <span>TOTAL ESTIMADO DE BULTOS A CARGAR:</span>
+            <span>${totalBultosRuta} BULTOS TOTALES</span>
+          </div>
+        </div>
+
+        <h4 style="font-size: 13px; font-weight: 900; margin: 16px 0 6px 0; text-transform: uppercase;">Detalle de Pedidos de la Ruta (${orders.length} pedidos)</h4>
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 30px; text-align: center;">✓</th>
+              <th style="width: 70px;">Pedido</th>
+              <th>Cliente y Dirección</th>
+              <th style="width: 90px; text-align: center;">Bultos Fajados</th>
+              <th>Notas / Observaciones Vendedor</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${orders.map((o: any) => `
+              <tr>
+                <td style="text-align: center;"><div style="width: 16px; height: 16px; border: 1.5px solid #000; margin: 0 auto;"></div></td>
+                <td><strong>#${o.id}</strong></td>
+                <td>
+                  <strong>${o.persona?.name || o.client?.name || 'Cliente'}</strong>
+                  <div style="font-size: 10.5px; color: #444;">📍 ${o.persona?.address || o.client?.address || 'Localidad'} ${o.persona?.city || o.client?.city ? '(' + (o.persona?.city || o.client?.city) + ')' : ''}</div>
+                </td>
+                <td style="text-align: center; font-weight: 900; font-size: 13px;">${o.bultosCount || 1} u</td>
+                <td style="font-size: 11px;">${o.notes || o.bultosDetails?.notes || '-'}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+
+        <div class="signature-box">
+          <div style="font-size: 12px; font-weight: 900; text-transform: uppercase; margin-bottom: 6px;">
+            🔒 DECLARACIÓN Y TRANSFERENCIA DE CUSTODIA LEGAL DE CARGA
+          </div>
+          <div style="font-size: 11px; line-height: 1.4; color: #222;">
+            Por medio de la presente, el chofer abajo firmante declara haber contado y recibido en perfecta conformidad el total de bultos cerrados y fajados detallados en esta guía. A partir de este momento, asume la responsabilidad total de la custodia y transporte de la mercadería hasta su entrega efectiva al cliente final.
+          </div>
+
+          <div style="display: flex; justify-content: space-between; margin-top: 35px; border-top: 1px dashed #000; padding-top: 10px;">
+            <div style="width: 45%;">
+              <div>________________________________________</div>
+              <div style="font-size: 11px; font-weight: 800; margin-top: 3px;">Firma Chofer: ${route.driverName.toUpperCase()}</div>
+              <div style="font-size: 10px; color: #555;">DNI / Aclaración:</div>
+            </div>
+            <div style="width: 45%;">
+              <div>________________________________________</div>
+              <div style="font-size: 11px; font-weight: 800; margin-top: 3px;">Firma Responsable Despacho / Depósito</div>
+              <div style="font-size: 10px; color: #555;">Fecha / Hora Carga: ____/____/2026 ____:____ hs</div>
+            </div>
+          </div>
+        </div>
+
+        <script>
+          window.onload = function() {
+            setTimeout(() => {
+              window.print();
+            }, 400);
+          };
+        </script>
+      </body>
+    </html>
+  `);
+  printWindow.document.close();
+};
+
+
 
 
