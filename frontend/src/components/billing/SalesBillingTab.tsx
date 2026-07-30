@@ -775,8 +775,15 @@ export default function SalesBillingTab({
                                         <span style={{ fontSize: '0.75rem', fontWeight: 600, color: p.stock > 0 ? 'var(--color-success)' : 'var(--color-danger)' }}>Stock: {p.stock}</span>
                                       </div>
                                     </div>
-                                    <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
-                                      SKU: {p.sku || 'S/D'} | Precio Lista: ${p.listPrice} {p.isPesable ? '(Pesable)' : ''}
+                                    <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '2px', display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                      <span>SKU: {p.sku || 'S/D'}</span>
+                                      <span>| Precio Lista: ${p.listPrice}</span>
+                                      {p.isPesable && <span style={{ color: '#0369a1', fontWeight: 600 }}>(Pesable)</span>}
+                                      {p.unitsPerBox && p.unitsPerBox > 1 && (
+                                        <span style={{ color: '#475569', fontWeight: 600, backgroundColor: '#f1f5f9', padding: '1px 6px', borderRadius: '4px', border: '1px solid #cbd5e1' }}>
+                                          📦 Caja x{p.unitsPerBox}u
+                                        </span>
+                                      )}
                                     </div>
                                   </div>
                                 );
@@ -825,8 +832,9 @@ export default function SalesBillingTab({
                         <tr>
                           <th>Producto</th>
                           <th>Precio Unit.</th>
-                          <th style={{ width: '100px' }}>Cant.</th>
-                          <th style={{ width: '110px' }}>Kilos</th>
+                          <th style={{ width: '85px' }}>Cant.</th>
+                          <th style={{ textAlign: 'center' }}>Empaque / Bultos</th>
+                          <th style={{ width: '100px' }}>Kilos</th>
                           <th>Subtotal</th>
                           <th style={{ width: '40px' }}></th>
                         </tr>
@@ -834,83 +842,124 @@ export default function SalesBillingTab({
                       <tbody>
                         {directCart.length === 0 ? (
                           <tr>
-                            <td colSpan={6} style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-secondary)' }}>
+                            <td colSpan={7} style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-secondary)' }}>
                               El carrito de compras está vacío.
                             </td>
                           </tr>
                         ) : (
-                          directCart.map((item, index) => (
-                            <tr key={item.product.id}>
-                              <td>
-                                <div style={{ fontWeight: 600 }}>{item.product.name}</div>
-                                <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                                  <span>SKU: {item.product.sku}</span>
-                                  {item.product.minOrderQuantity && item.product.minOrderQuantity > 1 && (
-                                    <span style={{ 
-                                      color: item.quantity < item.product.minOrderQuantity ? '#d97706' : '#059669', 
-                                      fontWeight: 600,
-                                      fontSize: '0.68rem',
-                                      backgroundColor: item.quantity < item.product.minOrderQuantity ? '#fef3c7' : '#ecfdf5',
-                                      padding: '1px 5px',
-                                      borderRadius: '4px'
-                                    }}>
-                                      {item.quantity < item.product.minOrderQuantity ? `⚠️ Mínimo exigido: ${item.product.minOrderQuantity} u.` : `Mín. ${item.product.minOrderQuantity} u. OK`}
-                                    </span>
-                                  )}
-                                </div>
-                              </td>
-                              <td>${Number(item.unitPrice).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                              <td>
-                                <input
-                                  type="number"
-                                  className="input"
-                                  style={{ padding: '4px 8px', fontSize: '0.85rem' }}
-                                  min="1"
-                                  value={item.quantity}
-                                  onChange={(e) => {
-                                    const val = Number(e.target.value);
-                                    if (val > 0) {
-                                      const newCart = [...directCart];
-                                      newCart[index].quantity = val;
-                                      newCart[index].weight = item.product.isPesable ? (val * (item.product.approximateWeight || 1)) : null;
-                                      newCart[index].subtotal = Number((item.unitPrice * (item.product.isPesable ? newCart[index].weight : val)).toFixed(2));
-                                      setDirectCart(newCart);
-                                    }
-                                  }}
-                                />
-                              </td>
-                              <td>
-                                {item.product.isPesable ? (
+                          directCart.map((item, index) => {
+                            const unitsPerBox = item.product.unitsPerBox && Number(item.product.unitsPerBox) > 1 ? Number(item.product.unitsPerBox) : 1;
+                            const fullBoxes = unitsPerBox > 1 ? Math.floor(item.quantity / unitsPerBox) : 0;
+                            const remainderUnits = unitsPerBox > 1 ? item.quantity % unitsPerBox : item.quantity;
+
+                            return (
+                              <tr key={item.product.id}>
+                                <td>
+                                  <div style={{ fontWeight: 600 }}>{item.product.name}</div>
+                                  <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginTop: '2px' }}>
+                                    <span>SKU: {item.product.sku}</span>
+                                    {unitsPerBox > 1 && (
+                                      <span className="badge" style={{ backgroundColor: '#f1f5f9', color: '#475569', fontSize: '0.68rem', padding: '1px 5px', borderRadius: '4px', border: '1px solid #cbd5e1' }}>
+                                        📦 Caja x{unitsPerBox}u
+                                      </span>
+                                    )}
+                                    {item.product.isPesable && (
+                                      <span className="badge" style={{ backgroundColor: '#e0f2fe', color: '#0369a1', fontSize: '0.68rem', padding: '1px 5px', borderRadius: '4px' }}>
+                                        Pesable
+                                      </span>
+                                    )}
+                                    {item.product.minOrderQuantity && item.product.minOrderQuantity > 1 && (
+                                      <span style={{ 
+                                        color: item.quantity < item.product.minOrderQuantity ? '#d97706' : '#059669', 
+                                        fontWeight: 600,
+                                        fontSize: '0.68rem',
+                                        backgroundColor: item.quantity < item.product.minOrderQuantity ? '#fef3c7' : '#ecfdf5',
+                                        padding: '1px 5px',
+                                        borderRadius: '4px'
+                                      }}>
+                                        {item.quantity < item.product.minOrderQuantity ? `⚠️ Mínimo exigido: ${item.product.minOrderQuantity} u.` : `Mín. ${item.product.minOrderQuantity} u. OK`}
+                                      </span>
+                                    )}
+                                  </div>
+                                </td>
+                                <td>${Number(item.unitPrice).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                                <td>
                                   <input
                                     type="number"
-                                    step="0.001"
                                     className="input"
                                     style={{ padding: '4px 8px', fontSize: '0.85rem' }}
-                                    value={item.weight || ''}
+                                    min="1"
+                                    value={item.quantity}
                                     onChange={(e) => {
                                       const val = Number(e.target.value);
-                                      if (val >= 0) {
+                                      if (val > 0) {
                                         const newCart = [...directCart];
-                                        newCart[index].weight = val;
-                                        newCart[index].subtotal = Number((item.unitPrice * val).toFixed(2));
+                                        newCart[index].quantity = val;
+                                        newCart[index].weight = item.product.isPesable ? (val * (item.product.approximateWeight || 1)) : null;
+                                        newCart[index].subtotal = Number((item.unitPrice * (item.product.isPesable ? newCart[index].weight : val)).toFixed(2));
                                         setDirectCart(newCart);
                                       }
                                     }}
                                   />
-                                ) : (
-                                  <span style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>No Aplica</span>
-                                )}
-                              </td>
-                              <td style={{ fontWeight: 600 }}>
-                                ${Number(item.subtotal).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                              </td>
-                              <td>
-                                <button type="button" className="btn btn-ghost" style={{ color: 'var(--color-danger)', padding: '4px' }} onClick={() => handleRemoveDirectProduct(item.product.id)}>
-                                  <TrashIcon size={16} />
-                                </button>
-                              </td>
-                            </tr>
-                          ))
+                                </td>
+                                <td style={{ textAlign: 'center', padding: '8px 12px' }}>
+                                  {unitsPerBox > 1 ? (
+                                    fullBoxes > 0 ? (
+                                      <div>
+                                        <span className="badge" style={{ backgroundColor: remainderUnits > 0 ? '#eff6ff' : '#f0fdf4', color: remainderUnits > 0 ? '#1d4ed8' : '#15803d', border: `1px solid ${remainderUnits > 0 ? '#bfdbfe' : '#bbf7d0'}`, fontSize: '0.78rem', fontWeight: 700, padding: '2px 7px', borderRadius: '6px', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                                          📦 {fullBoxes} {fullBoxes === 1 ? 'Caja' : 'Cajas'}{remainderUnits > 0 ? ` + ${remainderUnits}u` : ''}
+                                        </span>
+                                        <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '2px', fontWeight: 600 }}>
+                                          {remainderUnits > 0 ? `${fullBoxes * unitsPerBox}u + ${remainderUnits}u sueltas` : 'Caja cerrada'}
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      <div>
+                                        <span className="badge" style={{ backgroundColor: '#faf5ff', color: '#7e22ce', border: '1px solid #e9d5ff', fontSize: '0.78rem', fontWeight: 700, padding: '2px 7px', borderRadius: '6px', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                                          {remainderUnits} u sueltas
+                                        </span>
+                                        <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '2px', fontWeight: 600 }}>
+                                          Caja x{unitsPerBox}u
+                                        </div>
+                                      </div>
+                                    )
+                                  ) : (
+                                    <span style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>-</span>
+                                  )}
+                                </td>
+                                <td>
+                                  {item.product.isPesable ? (
+                                    <input
+                                      type="number"
+                                      step="0.001"
+                                      className="input"
+                                      style={{ padding: '4px 8px', fontSize: '0.85rem' }}
+                                      value={item.weight || ''}
+                                      onChange={(e) => {
+                                        const val = Number(e.target.value);
+                                        if (val >= 0) {
+                                          const newCart = [...directCart];
+                                          newCart[index].weight = val;
+                                          newCart[index].subtotal = Number((item.unitPrice * val).toFixed(2));
+                                          setDirectCart(newCart);
+                                        }
+                                      }}
+                                    />
+                                  ) : (
+                                    <span style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>No Aplica</span>
+                                  )}
+                                </td>
+                                <td style={{ fontWeight: 600 }}>
+                                  ${Number(item.subtotal).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                </td>
+                                <td>
+                                  <button type="button" className="btn btn-ghost" style={{ color: 'var(--color-danger)', padding: '4px' }} onClick={() => handleRemoveDirectProduct(item.product.id)}>
+                                    <TrashIcon size={16} />
+                                  </button>
+                                </td>
+                              </tr>
+                            );
+                          })
                         )}
                       </tbody>
                     </table>
