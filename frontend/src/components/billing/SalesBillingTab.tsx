@@ -811,6 +811,33 @@ export default function SalesBillingTab({
                           />
                         </div>
 
+                        {selectedDirectProduct && (() => {
+                          const p = products.find(prod => prod.id === Number(selectedDirectProduct));
+                          if (p && p.unitsPerBox && p.unitsPerBox > 1) {
+                            return (
+                              <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                                <button
+                                  type="button"
+                                  className="btn btn-secondary"
+                                  style={{ fontSize: '0.75rem', fontWeight: 700, padding: '6px 10px', whiteSpace: 'nowrap', backgroundColor: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe' }}
+                                  onClick={() => setDirectProductQty(p.unitsPerBox.toString())}
+                                >
+                                  📦 1 Caja ({p.unitsPerBox}u)
+                                </button>
+                                <button
+                                  type="button"
+                                  className="btn btn-secondary"
+                                  style={{ fontSize: '0.75rem', fontWeight: 700, padding: '6px 10px', whiteSpace: 'nowrap', backgroundColor: '#f0fdf4', color: '#15803d', border: '1px solid #bbf7d0' }}
+                                  onClick={() => setDirectProductQty((p.unitsPerBox * 2).toString())}
+                                >
+                                  📦 2 Cajas ({p.unitsPerBox * 2}u)
+                                </button>
+                              </div>
+                            );
+                          }
+                          return null;
+                        })()}
+
                         <button
                           type="button"
                           className="btn btn-primary"
@@ -849,8 +876,8 @@ export default function SalesBillingTab({
                         ) : (
                           directCart.map((item, index) => {
                             const unitsPerBox = item.product.unitsPerBox && Number(item.product.unitsPerBox) > 1 ? Number(item.product.unitsPerBox) : 1;
-                            const fullBoxes = unitsPerBox > 1 ? Math.floor(item.quantity / unitsPerBox) : 0;
-                            const remainderUnits = unitsPerBox > 1 ? item.quantity % unitsPerBox : item.quantity;
+                            const fullBoxes = unitsPerBox > 1 ? Math.floor(Number(item.quantity || 0) / unitsPerBox) : 0;
+                            const remainderUnits = unitsPerBox > 1 ? Number(item.quantity || 0) % unitsPerBox : Number(item.quantity || 0);
 
                             return (
                               <tr key={item.product.id}>
@@ -870,14 +897,14 @@ export default function SalesBillingTab({
                                     )}
                                     {item.product.minOrderQuantity && item.product.minOrderQuantity > 1 && (
                                       <span style={{ 
-                                        color: item.quantity < item.product.minOrderQuantity ? '#d97706' : '#059669', 
+                                        color: Number(item.quantity) < item.product.minOrderQuantity ? '#d97706' : '#059669', 
                                         fontWeight: 600,
                                         fontSize: '0.68rem',
-                                        backgroundColor: item.quantity < item.product.minOrderQuantity ? '#fef3c7' : '#ecfdf5',
+                                        backgroundColor: Number(item.quantity) < item.product.minOrderQuantity ? '#fef3c7' : '#ecfdf5',
                                         padding: '1px 5px',
                                         borderRadius: '4px'
                                       }}>
-                                        {item.quantity < item.product.minOrderQuantity ? `⚠️ Mínimo exigido: ${item.product.minOrderQuantity} u.` : `Mín. ${item.product.minOrderQuantity} u. OK`}
+                                        {Number(item.quantity) < item.product.minOrderQuantity ? `⚠️ Mínimo exigido: ${item.product.minOrderQuantity} u.` : `Mín. ${item.product.minOrderQuantity} u. OK`}
                                       </span>
                                     )}
                                   </div>
@@ -889,14 +916,27 @@ export default function SalesBillingTab({
                                     className="input"
                                     style={{ padding: '4px 8px', fontSize: '0.85rem' }}
                                     min="1"
-                                    value={item.quantity}
+                                    value={item.quantity === '' || item.quantity === 0 ? '' : item.quantity}
                                     onChange={(e) => {
-                                      const val = Number(e.target.value);
-                                      if (val > 0) {
-                                        const newCart = [...directCart];
+                                      const rawVal = e.target.value;
+                                      const newCart = [...directCart];
+                                      if (rawVal === '') {
+                                        (newCart[index] as any).quantity = '';
+                                        newCart[index].subtotal = 0;
+                                      } else {
+                                        const val = Math.max(0, Number(rawVal));
                                         newCart[index].quantity = val;
                                         newCart[index].weight = item.product.isPesable ? (val * (item.product.approximateWeight || 1)) : null;
-                                        newCart[index].subtotal = Number((item.unitPrice * (item.product.isPesable ? newCart[index].weight : val)).toFixed(2));
+                                        newCart[index].subtotal = Number((item.unitPrice * (item.product.isPesable ? (newCart[index].weight || 0) : val)).toFixed(2));
+                                      }
+                                      setDirectCart(newCart);
+                                    }}
+                                    onBlur={() => {
+                                      if (!item.quantity || Number(item.quantity) <= 0) {
+                                        const newCart = [...directCart];
+                                        newCart[index].quantity = 1;
+                                        newCart[index].weight = item.product.isPesable ? (1 * (item.product.approximateWeight || 1)) : null;
+                                        newCart[index].subtotal = Number((item.unitPrice * (item.product.isPesable ? newCart[index].weight : 1)).toFixed(2));
                                         setDirectCart(newCart);
                                       }
                                     }}
@@ -904,20 +944,62 @@ export default function SalesBillingTab({
                                 </td>
                                 <td style={{ textAlign: 'center', padding: '8px 12px' }}>
                                   {unitsPerBox > 1 ? (
-                                    fullBoxes > 0 ? (
-                                      <div>
+                                    <div>
+                                      {fullBoxes > 0 ? (
                                         <span className="badge" style={{ backgroundColor: remainderUnits > 0 ? '#eff6ff' : '#f0fdf4', color: remainderUnits > 0 ? '#1d4ed8' : '#15803d', border: `1px solid ${remainderUnits > 0 ? '#bfdbfe' : '#bbf7d0'}`, fontSize: '0.78rem', fontWeight: 700, padding: '2px 7px', borderRadius: '6px', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
                                           📦 {fullBoxes} {fullBoxes === 1 ? 'Caja' : 'Cajas'}{remainderUnits > 0 ? ` + ${remainderUnits}u` : ''}
                                         </span>
-                                        <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '2px', fontWeight: 600 }}>
-                                          {remainderUnits > 0 ? `${fullBoxes * unitsPerBox}u + ${remainderUnits}u sueltas` : 'Caja cerrada'}
-                                        </div>
-                                      </div>
-                                    ) : (
-                                      <div>
+                                      ) : (
                                         <span className="badge" style={{ backgroundColor: '#faf5ff', color: '#7e22ce', border: '1px solid #e9d5ff', fontSize: '0.78rem', fontWeight: 700, padding: '2px 7px', borderRadius: '6px', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
                                           {remainderUnits} u sueltas
                                         </span>
+                                      )}
+                                      <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '2px', fontWeight: 600 }}>
+                                        {remainderUnits > 0 ? `${fullBoxes * unitsPerBox}u + ${remainderUnits}u sueltas` : 'Caja cerrada'}
+                                      </div>
+                                      <div style={{ display: 'flex', gap: '4px', justifyContent: 'center', marginTop: '4px' }}>
+                                        <button
+                                          type="button"
+                                          className="btn btn-secondary"
+                                          style={{ padding: '2px 7px', fontSize: '0.72rem', fontWeight: 700, borderRadius: '4px', backgroundColor: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe' }}
+                                          title={`Sumar 1 caja (+${unitsPerBox}u)`}
+                                          onClick={() => {
+                                            const newCart = [...directCart];
+                                            const currentQty = Number(newCart[index].quantity || 0);
+                                            const newQty = currentQty + unitsPerBox;
+                                            newCart[index].quantity = newQty;
+                                            newCart[index].weight = item.product.isPesable ? (newQty * (item.product.approximateWeight || 1)) : null;
+                                            newCart[index].subtotal = Number((item.unitPrice * (item.product.isPesable ? newCart[index].weight : newQty)).toFixed(2));
+                                            setDirectCart(newCart);
+                                          }}
+                                        >
+                                          +1 Caja (+{unitsPerBox}u)
+                                        </button>
+                                        {fullBoxes > 0 && (
+                                          <button
+                                            type="button"
+                                            className="btn btn-secondary"
+                                            style={{ padding: '2px 7px', fontSize: '0.72rem', fontWeight: 700, borderRadius: '4px', backgroundColor: '#fef2f2', color: '#dc2626', border: '1px solid #fca5a5' }}
+                                            title={`Restar 1 caja (-${unitsPerBox}u)`}
+                                            onClick={() => {
+                                              const newCart = [...directCart];
+                                              const currentQty = Number(newCart[index].quantity || 0);
+                                              const newQty = Math.max(1, currentQty - unitsPerBox);
+                                              newCart[index].quantity = newQty;
+                                              newCart[index].weight = item.product.isPesable ? (newQty * (item.product.approximateWeight || 1)) : null;
+                                              newCart[index].subtotal = Number((item.unitPrice * (item.product.isPesable ? newCart[index].weight : newQty)).toFixed(2));
+                                              setDirectCart(newCart);
+                                            }}
+                                          >
+                                            -1 Caja
+                                          </button>
+                                        )}
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <span style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>-</span>
+                                  )}
+                                </td>
                                         <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '2px', fontWeight: 600 }}>
                                           Caja x{unitsPerBox}u
                                         </div>
