@@ -833,10 +833,23 @@ function PrintRouteSheet({ route, locations }: { route: any; locations: any[] })
 
 export default function RepartoDashboard() {
   const confirm = useConfirm();
+  const currentUser = api.getCurrentUser();
+  const isAdminOrOffice = currentUser?.role === 'ADMIN' || currentUser?.role === 'FACTURACION';
+
   const [activeTab, setActiveTab] = useState<'planificacion' | 'ejecucion' | 'cierre'>('planificacion');
   const [routes, setRoutes] = useState<any[]>([]);
   const [pendingOrders, setPendingOrders] = useState<any[]>([]);
   const [selectedRoute, setSelectedRoute] = useState<any | null>(null);
+
+  // Filtrar rutas para que los choferes solo vean los viajes asignados a su nombre
+  const visibleRoutes = useMemo(() => {
+    if (isAdminOrOffice) return routes;
+    const uname = (currentUser?.username || '').toLowerCase().trim();
+    return routes.filter(r => {
+      const dName = (r.driverName || '').toLowerCase().trim();
+      return dName.includes(uname) || uname.includes(dName);
+    });
+  }, [routes, isAdminOrOffice, currentUser?.username]);
 
   // Estados para trazas de calles reales por OSRM
   const [createRouteStreetPoints, setCreateRouteStreetPoints] = useState<[number, number][]>([]);
@@ -1149,6 +1162,21 @@ export default function RepartoDashboard() {
     try {
       const allRoutes = await api.getDeliveryRoutes();
       setRoutes(allRoutes);
+
+      // Si el usuario es un chofer/vendedor (ej: Fabián), auto-seleccionar su viaje activo
+      if (!isAdminOrOffice) {
+        const uname = (currentUser?.username || '').toLowerCase().trim();
+        const myRoutes = allRoutes.filter((r: any) => {
+          const dName = (r.driverName || '').toLowerCase().trim();
+          return dName.includes(uname) || uname.includes(dName);
+        });
+        if (myRoutes.length > 0) {
+          const activeOrFirst = myRoutes.find((r: any) => r.status === 'IN_TRANSIT' || r.custodyStatus === 'LOADED_IN_TRANSIT') || myRoutes[0];
+          setSelectedRoute(activeOrFirst);
+        } else {
+          setSelectedRoute(null);
+        }
+      }
 
       const allOrders = await api.getOrders();
       const available = allOrders.filter((o: any) => (o.status === 'PREPARED' || o.status === 'DELIVERED' || !!o.invoiceNumber) && !o.deliveryRouteId && o.status !== 'CANCELLED');
@@ -1519,53 +1547,74 @@ export default function RepartoDashboard() {
         </div>
       )}
 
-      {/* PANEL DE CONTROL DE REPARTO */}
-      <div className="no-print" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px', marginBottom: '8px' }}>
-        <div className="card" style={{ padding: '16px', borderRadius: '12px', border: '1px solid var(--border-color)', backgroundColor: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-          <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px', letterSpacing: '0.5px' }}>
-            VIAJES ACTIVOS (EN CALLE)
-          </span>
-          <span style={{ fontSize: '1.4rem', fontWeight: 700, color: '#681da8' }}>
-            {logisticsStats.inTransitCount} {logisticsStats.inTransitCount === 1 ? 'viaje activo' : 'viajes activos'}
-          </span>
-          <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', display: 'block', marginTop: '6px' }}>
-            Vehículos en distribución activa
-          </span>
-        </div>
+      {/* PANEL DE CONTROL DE REPARTO (Solo visible para administración) */}
+      {isAdminOrOffice && (
+        <div className="no-print" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px', marginBottom: '8px' }}>
+          <div className="card" style={{ padding: '16px', borderRadius: '12px', border: '1px solid var(--border-color)', backgroundColor: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+            <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px', letterSpacing: '0.5px' }}>
+              VIAJES ACTIVOS (EN CALLE)
+            </span>
+            <span style={{ fontSize: '1.4rem', fontWeight: 700, color: '#681da8' }}>
+              {logisticsStats.inTransitCount} {logisticsStats.inTransitCount === 1 ? 'viaje activo' : 'viajes activos'}
+            </span>
+            <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', display: 'block', marginTop: '6px' }}>
+              Vehículos en distribución activa
+            </span>
+          </div>
 
-        <div className="card" style={{ padding: '16px', borderRadius: '12px', border: '1px solid var(--border-color)', backgroundColor: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-          <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px', letterSpacing: '0.5px' }}>
-            PEDIDOS EN ESPERA DE VIAJE
-          </span>
-          <span style={{ fontSize: '1.4rem', fontWeight: 700, color: '#3c4043' }}>
-            {logisticsStats.pendingOrdersCount} {logisticsStats.pendingOrdersCount === 1 ? 'pedido en espera' : 'pedidos en espera'}
-          </span>
-          <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', display: 'block', marginTop: '6px' }}>
-            Disponibles para armar hojas de ruta
-          </span>
+          <div className="card" style={{ padding: '16px', borderRadius: '12px', border: '1px solid var(--border-color)', backgroundColor: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+            <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px', letterSpacing: '0.5px' }}>
+              PEDIDOS EN ESPERA DE VIAJE
+            </span>
+            <span style={{ fontSize: '1.4rem', fontWeight: 700, color: '#3c4043' }}>
+              {logisticsStats.pendingOrdersCount} {logisticsStats.pendingOrdersCount === 1 ? 'pedido en espera' : 'pedidos en espera'}
+            </span>
+            <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', display: 'block', marginTop: '6px' }}>
+              Disponibles para armar hojas de ruta
+            </span>
+          </div>
         </div>
-      </div>
+      )}
 
-      <div className="no-print" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', alignItems: 'start' }}>
+      {/* Si el chofer no tiene ninguna ruta asignada */}
+      {!isAdminOrOffice && visibleRoutes.length === 0 && (
+        <div className="card no-print" style={{ padding: '32px 20px', textAlign: 'center', backgroundColor: '#fff', borderRadius: '12px', border: '1px solid var(--border-color)', margin: '10px 0' }}>
+          <div style={{ fontSize: '2.5rem', marginBottom: '12px' }}>🚚</div>
+          <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '8px' }}>
+            Sin Viajes Asignados
+          </h3>
+          <p style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', maxWidth: '450px', margin: '0 auto' }}>
+            Hola <strong>{currentUser?.username}</strong>, no tenés ninguna hoja de reparto asignada a tu nombre para el día de hoy. Cuando la administración te asigne un viaje, aparecerá aquí automáticamente.
+          </p>
+        </div>
+      )}
+
+      <div className="no-print" style={{ display: 'grid', gridTemplateColumns: isAdminOrOffice ? '1fr 1fr' : '1fr', gap: '20px', alignItems: 'start' }}>
         
         {/* COLUMNA IZQUIERDA: HISTORIAL DE HOJAS DE RUTA */}
         <div className="card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
             <div>
-              <h3 className="card-title" style={{ margin: '0' }}>🚚 Hojas de Ruta de Reparto</h3>
-              <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Historial logístico de despachos.</p>
+              <h3 className="card-title" style={{ margin: '0' }}>
+                {isAdminOrOffice ? '🚚 Hojas de Ruta de Reparto' : '🚚 Mi Hoja de Ruta Asignada'}
+              </h3>
+              <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                {isAdminOrOffice ? 'Historial logístico de despachos.' : 'Viajes de entrega asignados a tu nombre.'}
+              </p>
             </div>
-            <button className="btn btn-primary" onClick={() => {
-              setDriverName('');
-              setVehiclePlate('');
-              setVehicleDescription('');
-              setSelectedVehicleKey('');
-              setSelectedOrderIds([]);
-              setShowCreateModal(true);
-            }}>
-              <Plus size={16} />
-              Crear Hoja de Ruta
-            </button>
+            {isAdminOrOffice && (
+              <button className="btn btn-primary" onClick={() => {
+                setDriverName('');
+                setVehiclePlate('');
+                setVehicleDescription('');
+                setSelectedVehicleKey('');
+                setSelectedOrderIds([]);
+                setShowCreateModal(true);
+              }}>
+                <Plus size={16} />
+                Crear Hoja de Ruta
+              </button>
+            )}
           </div>
 
           <div className="table-container">
@@ -1580,10 +1629,10 @@ export default function RepartoDashboard() {
                 </tr>
               </thead>
               <tbody>
-                {routes.length === 0 ? (
-                  <tr><td colSpan={5} style={{ textAlign: 'center' }}>No hay hojas de ruta registradas.</td></tr>
+                {visibleRoutes.length === 0 ? (
+                  <tr><td colSpan={5} style={{ textAlign: 'center' }}>No hay hojas de ruta asignadas.</td></tr>
                 ) : (
-                  routes.map(r => (
+                  visibleRoutes.map(r => (
                     <tr 
                       key={r.id} 
                       onClick={() => setSelectedRoute(r)}
