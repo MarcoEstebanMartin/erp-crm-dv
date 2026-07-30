@@ -226,7 +226,8 @@ export default function OrderFulfillmentModal({ order, onClose, onSuccess }: Ord
                 <thead>
                   <tr style={{ backgroundColor: 'var(--background-alt)', textAlign: 'left', position: 'sticky', top: 0, zIndex: 1 }}>
                     <th style={{ padding: '12px 16px' }}>Producto</th>
-                    <th style={{ padding: '12px 16px', textAlign: 'right' }}>Cant</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'center' }}>Empaque / Bultos</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'right' }}>Cant Total</th>
                     <th style={{ padding: '12px 16px', textAlign: 'center' }}>Peso Real (Kg)</th>
                     <th style={{ padding: '12px 16px', textAlign: 'right' }}>Subtotal</th>
                   </tr>
@@ -241,6 +242,11 @@ export default function OrderFulfillmentModal({ order, onClose, onSuccess }: Ord
                     const suggestedAvgWeight = Number((item.quantity * approxWeightUnit).toFixed(3));
                     const currentWeight = pesableWeights[item.id];
                     const hasWeight = currentWeight !== undefined && currentWeight > 0;
+
+                    // Desglose de empaque (cajas + sueltas)
+                    const unitsPerBox = item.product?.unitsPerBox && Number(item.product.unitsPerBox) > 1 ? Number(item.product.unitsPerBox) : 1;
+                    const fullBoxes = unitsPerBox > 1 ? Math.floor(item.quantity / unitsPerBox) : 0;
+                    const remainderUnits = unitsPerBox > 1 ? item.quantity % unitsPerBox : item.quantity;
 
                     // Anomaly checks
                     const anomalyInfo = isPesableProduct ? anomalies.find(a => a.item.id === item.id) : undefined;
@@ -259,13 +265,45 @@ export default function OrderFulfillmentModal({ order, onClose, onSuccess }: Ord
                       <tr key={item.id} style={{ borderBottom: '1px solid var(--border-color)', backgroundColor: isAnomaly ? '#fff5f5' : undefined }}>
                         <td style={{ padding: '12px 16px', fontWeight: 500 }}>
                           <div>{item.product?.name}</div>
-                          {isPesableProduct && (
-                            <span className="badge" style={{ backgroundColor: '#e0f2fe', color: '#0369a1', fontSize: '0.75rem', marginTop: '4px', display: 'inline-block' }}>
-                              Pesable (${price.toLocaleString('es-AR')}/kg)
-                            </span>
+                          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '4px' }}>
+                            {isPesableProduct && (
+                              <span className="badge" style={{ backgroundColor: '#e0f2fe', color: '#0369a1', fontSize: '0.73rem', display: 'inline-block' }}>
+                                Pesable (${price.toLocaleString('es-AR')}/kg)
+                              </span>
+                            )}
+                            {unitsPerBox > 1 && (
+                              <span className="badge" style={{ backgroundColor: '#f1f5f9', color: '#475569', fontSize: '0.73rem', display: 'inline-block', border: '1px solid #cbd5e1' }}>
+                                📦 Caja x{unitsPerBox}u
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td style={{ padding: '12px 16px', textAlign: 'center' }}>
+                          {unitsPerBox > 1 ? (
+                            fullBoxes > 0 ? (
+                              <div>
+                                <span className="badge" style={{ backgroundColor: remainderUnits > 0 ? '#eff6ff' : '#f0fdf4', color: remainderUnits > 0 ? '#1d4ed8' : '#15803d', border: `1px solid ${remainderUnits > 0 ? '#bfdbfe' : '#bbf7d0'}`, fontSize: '0.8rem', fontWeight: 700, padding: '3px 8px', borderRadius: '6px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                  📦 {fullBoxes} {fullBoxes === 1 ? 'Caja' : 'Cajas'}{remainderUnits > 0 ? ` + ${remainderUnits} u` : ''}
+                                </span>
+                                <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '2px', fontWeight: 600 }}>
+                                  {remainderUnits > 0 ? `(${fullBoxes * unitsPerBox}u + ${remainderUnits}u sueltas)` : '(Caja cerrada)'}
+                                </div>
+                              </div>
+                            ) : (
+                              <div>
+                                <span className="badge" style={{ backgroundColor: '#faf5ff', color: '#7e22ce', border: '1px solid #e9d5ff', fontSize: '0.8rem', fontWeight: 700, padding: '3px 8px', borderRadius: '6px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                  {remainderUnits} u sueltas
+                                </span>
+                                <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '2px', fontWeight: 600 }}>
+                                  (Caja x{unitsPerBox}u)
+                                </div>
+                              </div>
+                            )
+                          ) : (
+                            <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>-</span>
                           )}
                         </td>
-                        <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 600 }}>
+                        <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 700, fontSize: '0.95rem' }}>
                           {item.quantity} u
                         </td>
                         <td style={{ padding: '12px 16px', textAlign: 'center' }}>
