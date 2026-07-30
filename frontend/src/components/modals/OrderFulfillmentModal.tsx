@@ -152,8 +152,9 @@ export default function OrderFulfillmentModal({ order, onClose, onSuccess }: Ord
 
   return (
     <div className="modal-overlay" style={{ zIndex: 1100 }}>
-      <div className="modal-content" style={{ width: '94vw', maxWidth: '1200px', padding: '28px', maxHeight: '90vh', overflowY: 'auto' }}>
-        <div className="modal-header" style={{ marginBottom: '20px', paddingBottom: '14px', borderBottom: '1px solid var(--border-color)' }}>
+      <div className="modal-content" style={{ width: '95vw', maxWidth: '1280px', height: '85vh', minHeight: '680px', padding: '28px', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        {/* Header - Tamaño Fijo */}
+        <div className="modal-header" style={{ flexShrink: 0, marginBottom: '16px', paddingBottom: '14px', borderBottom: '1px solid var(--border-color)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <h2 style={{ fontSize: '1.35rem', margin: 0, fontWeight: 700 }}>
               Confirmar Armado y Facturar — Pedido #{order.id}
@@ -170,11 +171,11 @@ export default function OrderFulfillmentModal({ order, onClose, onSuccess }: Ord
           </button>
         </div>
 
-        {/* Banner de Advertencia por Desviación Anómala de Peso */}
+        {/* Banner de Advertencia por Desviación Anómala de Peso - Flex Shrink 0 */}
         {anomalies.length > 0 && (
-          <div style={{ backgroundColor: '#fffbe3', color: '#92400e', border: '1px solid #fcd34d', padding: '14px 18px', borderRadius: '10px', marginBottom: '20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', boxShadow: '0 2px 6px rgba(0,0,0,0.05)' }}>
+          <div style={{ flexShrink: 0, backgroundColor: '#fffbe3', color: '#92400e', border: '1px solid #fcd34d', padding: '12px 18px', borderRadius: '10px', marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', boxShadow: '0 2px 6px rgba(0,0,0,0.05)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <AlertTriangle size={26} style={{ color: '#d97706', flexShrink: 0 }} />
+              <AlertTriangle size={24} style={{ color: '#d97706', flexShrink: 0 }} />
               <div>
                 <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#78350f' }}>
                   ⚠️ Advertencia: Peso muy superior al promedio esperado
@@ -203,26 +204,27 @@ export default function OrderFulfillmentModal({ order, onClose, onSuccess }: Ord
         )}
         
         {errorMsg && (
-          <div style={{ backgroundColor: '#fef2f2', color: '#dc2626', border: '1px solid #fca5a5', padding: '12px 16px', borderRadius: '8px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{ flexShrink: 0, backgroundColor: '#fef2f2', color: '#dc2626', border: '1px solid #fca5a5', padding: '12px 16px', borderRadius: '8px', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
             <AlertCircle size={18} />
             <span>{errorMsg}</span>
           </div>
         )}
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr', gap: '28px' }}>
+        {/* Sección Principal con Grid - Ocupa todo el espacio vertical restante */}
+        <div style={{ flex: 1, minHeight: 0, display: 'grid', gridTemplateColumns: '1.6fr 1fr', gap: '28px' }}>
           {/* Columna Izquierda: Tabla de Artículos */}
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
+            <div style={{ flexShrink: 0, display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
               <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 600 }}>Artículos Preparados</h3>
               <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
                 {order.items?.length || 0} ítems en total
               </span>
             </div>
 
-            <div className="table-container" style={{ maxHeight: '450px', overflowY: 'auto', border: '1px solid var(--border-color)', borderRadius: '8px' }}>
+            <div className="table-container" style={{ flex: 1, minHeight: 0, overflowY: 'auto', border: '1px solid var(--border-color)', borderRadius: '8px' }}>
               <table style={{ width: '100%', fontSize: '0.95rem' }}>
                 <thead>
-                  <tr style={{ backgroundColor: 'var(--background-alt)', textAlign: 'left' }}>
+                  <tr style={{ backgroundColor: 'var(--background-alt)', textAlign: 'left', position: 'sticky', top: 0, zIndex: 1 }}>
                     <th style={{ padding: '12px 16px' }}>Producto</th>
                     <th style={{ padding: '12px 16px', textAlign: 'right' }}>Cant</th>
                     <th style={{ padding: '12px 16px', textAlign: 'center' }}>Peso Real (Kg)</th>
@@ -330,7 +332,7 @@ export default function OrderFulfillmentModal({ order, onClose, onSuccess }: Ord
               </table>
             </div>
             
-            <div style={{ marginTop: '20px', padding: '16px 20px', backgroundColor: 'var(--background-alt)', borderRadius: '8px', border: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ flexShrink: 0, marginTop: '16px', padding: '16px 20px', backgroundColor: 'var(--background-alt)', borderRadius: '8px', border: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Monto Total del Pedido</span>
               <span style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--text-primary)' }}>
                 ${Math.round(currentTotal).toLocaleString('es-AR')}
@@ -339,7 +341,7 @@ export default function OrderFulfillmentModal({ order, onClose, onSuccess }: Ord
           </div>
           
           {/* Columna Derecha: Panel de Facturación */}
-          <div style={{ backgroundColor: 'var(--background-alt)', padding: '22px', borderRadius: '12px', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <div style={{ backgroundColor: 'var(--background-alt)', padding: '22px', borderRadius: '12px', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '18px', overflowY: 'auto' }}>
             <div style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '12px' }}>
               <h3 style={{ fontSize: '1.2rem', margin: 0, display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700 }}>
                 <DollarSign size={20} style={{ color: '#E30613' }} /> Facturación y Cobro
