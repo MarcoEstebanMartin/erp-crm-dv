@@ -111,7 +111,6 @@ export default function Sidebar({ username, role, activeTab, setActiveTab, onLog
 
     return items;
   };
-  };
 
   const handleTabSelect = (tabId: string) => {
     setActiveTab(tabId);

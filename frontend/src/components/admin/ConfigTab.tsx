@@ -56,7 +56,14 @@ export default function ConfigTab({
 
   // Employee Management
   const [users, setUsers] = useState<any[]>([]);
-  const [userModal, setUserModal] = useState<{ open: boolean; isEdit?: boolean; id?: number; username: string; password?: string; role: string }>({ open: false, isEdit: false, username: '', password: '', role: 'VENDEDOR' });
+  const [userModal, setUserModal] = useState<{ open: boolean; isEdit?: boolean; id?: number; username: string; password?: string; role: string; permissions?: any }>({
+    open: false,
+    isEdit: false,
+    username: '',
+    password: '',
+    role: 'VENDEDOR',
+    permissions: { canSell: true, canPick: false, canDeliver: true, canCollect: true, canManageStock: false }
+  });
   const [showPassword, setShowPassword] = useState(false);
 
 
@@ -183,14 +190,16 @@ export default function ConfigTab({
         await api.updateUser(userModal.id, {
           username: userModal.username,
           role: userModal.role,
-          password: userModal.password
+          password: userModal.password,
+          permissions: userModal.permissions
         });
         setSuccessMsg(`Empleado ${userModal.username} actualizado correctamente.`);
       } else {
         await api.createUser({
           username: userModal.username,
           password: userModal.password,
-          role: userModal.role
+          role: userModal.role,
+          permissions: userModal.permissions
         });
         setSuccessMsg('Usuario creado exitosamente.');
       }
@@ -201,6 +210,15 @@ export default function ConfigTab({
       setErrorMsg(err.message || 'Error al procesar usuario.');
     }
   };
+  const getDefaultPermissionsForRole = (role: string) => {
+    if (role === 'ADMIN' || role === 'FACTURACION') {
+      return { canSell: true, canPick: true, canDeliver: true, canCollect: true, canManageStock: true };
+    }
+    if (role === 'DEPOSITO') {
+      return { canSell: false, canPick: true, canDeliver: true, canCollect: false, canManageStock: true };
+    }
+    return { canSell: true, canPick: false, canDeliver: true, canCollect: true, canManageStock: false };
+  };
 
   const handleOpenEditUser = (u: any) => {
     setUserModal({
@@ -209,7 +227,8 @@ export default function ConfigTab({
       id: u.id,
       username: u.username,
       password: '',
-      role: u.role
+      role: u.role,
+      permissions: u.permissions || getDefaultPermissionsForRole(u.role)
     });
   };
 
@@ -1225,6 +1244,34 @@ export default function ConfigTab({
                   <option value="VENDEDOR">Vendedor de Calle (Toma de pedidos en ruta)</option>
                   <option value="DEPOSITO">Depósito y Logística (Armado de pedidos, Balanza, Stock)</option>
                 </select>
+              </div>
+
+              <div style={{ padding: '12px', backgroundColor: 'var(--bg-light, #fafafa)', borderRadius: '8px', border: '1px solid var(--border-color)', marginBottom: '16px' }}>
+                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, marginBottom: '8px', color: 'var(--text-primary)' }}>
+                  ⚡ Matriz de Permisos Granulares por Módulo
+                </label>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '8px' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', cursor: 'pointer', fontWeight: 500 }}>
+                    <input type="checkbox" checked={userModal.permissions?.canSell ?? true} onChange={(e) => setUserModal({ ...userModal, permissions: { ...userModal.permissions, canSell: e.target.checked } })} />
+                    🛒 Toma de Pedidos / Venta
+                  </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', cursor: 'pointer', fontWeight: 500 }}>
+                    <input type="checkbox" checked={userModal.permissions?.canPick ?? false} onChange={(e) => setUserModal({ ...userModal, permissions: { ...userModal.permissions, canPick: e.target.checked } })} />
+                    📦 Armado Depósito (Picking)
+                  </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', cursor: 'pointer', fontWeight: 500 }}>
+                    <input type="checkbox" checked={userModal.permissions?.canDeliver ?? true} onChange={(e) => setUserModal({ ...userModal, permissions: { ...userModal.permissions, canDeliver: e.target.checked } })} />
+                    🚚 Hojas de Reparto & GPS
+                  </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', cursor: 'pointer', fontWeight: 500 }}>
+                    <input type="checkbox" checked={userModal.permissions?.canCollect ?? true} onChange={(e) => setUserModal({ ...userModal, permissions: { ...userModal.permissions, canCollect: e.target.checked } })} />
+                    💰 Cobranzas & Recibos
+                  </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', cursor: 'pointer', fontWeight: 500 }}>
+                    <input type="checkbox" checked={userModal.permissions?.canManageStock ?? false} onChange={(e) => setUserModal({ ...userModal, permissions: { ...userModal.permissions, canManageStock: e.target.checked } })} />
+                    📊 Inventario & Stock
+                  </label>
+                </div>
               </div>
 
               <div className="modal-footer" style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', paddingTop: '12px', borderTop: '1px solid var(--border-color)' }}>
