@@ -660,6 +660,7 @@ export async function createStoreOrder(req: Request, res: Response): Promise<voi
         netAmount: totalNeto,
         taxAmount: taxAmount,
         totalAmount: totalAmount,
+        notes: notes ? String(notes).trim() : null,
         bultosCount: totalBultos,
         bultosDetails: {
           notes: notes ? String(notes).trim() : '',

@@ -12,6 +12,7 @@ interface CreateOrderDto {
   personaId: number;
   billingType?: BillingType;
   salesChannel?: SalesChannel;
+  notes?: string;
   items: { productId: number; quantity: number; weight?: number; isEmergencyOverride?: boolean }[];
   idempotencyKey?: string;
 }
@@ -21,7 +22,7 @@ export class OrderService {
    * Crea un pedido, verifica el límite de crédito y descuenta stock preventivamente.
    */
   static async createOrder(data: CreateOrderDto) {
-    const { sellerId, userRole, personaId, billingType, salesChannel, items } = data;
+    const { sellerId, userRole, personaId, billingType, salesChannel, notes, items } = data;
 
     const persona = await prisma.persona.findUnique({ where: { id: personaId } });
     if (!persona) {
@@ -152,6 +153,7 @@ export class OrderService {
           billingType: billingType || BillingType.INTERNAL,
           invoiceType: InvoiceType.PRESUPUESTO,
           salesChannel: salesChannel || SalesChannel.MOSTRADOR,
+          notes: notes ? notes.trim() : undefined,
           totalAmount: totalSum,
           status: OrderStatus.PENDING,
         },

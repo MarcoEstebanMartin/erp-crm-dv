@@ -86,7 +86,7 @@ export const printPickingList = (order: any, callback?: () => void) => {
         <div class="header">
           <div>
             <div class="logo">${companyLogo}</div>
-            <div style="font-size: 1.2rem;">HOJA DE ARMADO (PICKING)</div>
+            <div style="font-size: 1.25rem; font-weight: bold; margin-top: 5px;">Responsable: _________________________</div>
           </div>
           <div class="order-info">
             <div>Fecha: ${new Date().toLocaleDateString('es-AR')}</div>
@@ -95,9 +95,12 @@ export const printPickingList = (order: any, callback?: () => void) => {
         </div>
 
         <div class="client-box">
-          <div class="client-name">${order.client?.name || 'Cliente'}</div>
-          <div><strong>Dirección:</strong> ${order.client?.address || 'Retira en local'} ${order.client?.city ? '(' + order.client.city + ')' : ''}</div>
-          <div><strong>Notas:</strong> ${order.notes || '-'}</div>
+          <div class="client-name">${order.client?.name || order.persona?.name || 'Cliente'}</div>
+          <div><strong>Dirección:</strong> ${order.client?.address || order.persona?.address || 'Retira en local'} ${(order.client?.city || order.persona?.city) ? '(' + (order.client?.city || order.persona?.city) + ')' : ''}</div>
+          <div style="margin-top: 8px; padding: 8px 12px; background: ${order.notes ? '#fffbeb' : '#fafafa'}; border: ${order.notes ? '2px solid #f59e0b' : '1px solid #eee'}; border-radius: 6px;">
+            <strong style="color: ${order.notes ? '#b45309' : '#111'}; font-size: 1.15rem;">Notas del Vendedor:</strong> 
+            <span style="font-size: 1.15rem; font-weight: ${order.notes ? 'bold' : 'normal'}; color: ${order.notes ? '#78350f' : '#555'};">${order.notes || '-'}</span>
+          </div>
         </div>
 
         ${(() => {
@@ -465,7 +468,7 @@ export const printBatchPickingA4 = ({
           <div class="page-block">
             <div class="header-bar">
               <div>
-                <div class="title">${companyLogo} — HOJA DE ARMADO A4</div>
+                <div class="title">${companyLogo} — Responsable: ________________________</div>
                 <div class="subtitle">${zoneTitle} | Filtros: ${filterLabel}</div>
               </div>
               <div class="meta-info">
@@ -479,6 +482,7 @@ export const printBatchPickingA4 = ({
                 const clientName = order.client?.name || order.persona?.name || 'Cliente Desconocido';
                 const address = order.client?.address || order.persona?.address || 'Retira en Local';
                 const city = order.client?.city || order.persona?.city || '';
+                const orderNotes = order.notes || (order.bultosDetails?.notes ? order.bultosDetails.notes : '');
 
                 return `
                   <div class="order-card">
@@ -488,6 +492,7 @@ export const printBatchPickingA4 = ({
                         <span class="client-name" title="${clientName}">${clientName}</span>
                       </div>
                       <div class="order-sub">📍 ${address} ${city ? '(' + city + ')' : ''}</div>
+                      ${orderNotes ? `<div class="order-sub" style="color: #b45309; font-weight: 700; background: #fffbeb; padding: 1px 4px; border-radius: 3px; margin-bottom: 3px;">📝 ${orderNotes}</div>` : ''}
                       <table class="item-table">
                         <thead>
                           <tr>
@@ -762,8 +767,8 @@ export const printConsolidatedPickingA4 = ({
       <body>
         <div class="header-bar">
           <div>
-            <div class="title">${companyLogo} — CONSOLIDADO DE ARMADO (PICKING TOTAL)</div>
-            <div class="subtitle">📌 ORDENADO POR DEPOSITO Y UBICACIÓN | ${zoneTitle}</div>
+            <div class="title">${companyLogo} — CONSOLIDADO DE ARMADO</div>
+            <div class="subtitle">Responsable: ________________________ | 📌 ORDENADO POR DEPOSITO Y UBICACIÓN | ${zoneTitle}</div>
           </div>
           <div class="meta-info">
             <div><strong>Filtros:</strong> ${filterLabel}</div>

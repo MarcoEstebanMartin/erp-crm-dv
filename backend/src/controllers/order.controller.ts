@@ -179,9 +179,11 @@ export async function getOrderById(req: AuthenticatedRequest, res: Response): Pr
 }
 
 interface CreateOrderRequest {
-  personaId: number;
+  personaId?: number;
+  clientId?: number;
   billingType?: string;
   salesChannel?: any;
+  notes?: string;
   items: {
     productId: number;
     quantity: number;
@@ -196,10 +198,16 @@ interface CreateOrderRequest {
 export async function createOrder(req: AuthenticatedRequest, res: Response): Promise<void> {
   const sellerId = req.user?.id;
   const userRole = req.user?.role;
-  const { personaId, billingType, salesChannel, items }: CreateOrderRequest = req.body;
+  const { personaId, clientId, billingType, salesChannel, notes, items }: CreateOrderRequest = req.body;
+  const targetPersonaId = personaId || clientId;
 
   if (!sellerId || !userRole) {
     res.status(401).json({ status: 'error', message: 'No autorizado.' });
+    return;
+  }
+
+  if (!targetPersonaId) {
+    res.status(400).json({ status: 'error', message: 'Debe especificar el cliente (personaId o clientId).' });
     return;
   }
 
@@ -207,9 +215,10 @@ export async function createOrder(req: AuthenticatedRequest, res: Response): Pro
     const result = await OrderService.createOrder({
       sellerId,
       userRole,
-      personaId,
+      personaId: targetPersonaId,
       billingType: billingType as any,
       salesChannel: salesChannel as any,
+      notes,
       items,
     });
 

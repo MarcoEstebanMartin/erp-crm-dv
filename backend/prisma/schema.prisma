@@ -236,6 +236,7 @@ model Order {
   percepcionIvaAmount Decimal     @default(0.00) @db.Decimal(12, 2) // Percepciones IVA (ej: RG 5329)
   bultosCount         Int         @default(1)
   bultosDetails       Json?
+  notes               String?     @db.Text
   salesChannel        SalesChannel @default(MOSTRADOR)
   createdAt           DateTime    @default(now())
   updatedAt           DateTime    @updatedAt
