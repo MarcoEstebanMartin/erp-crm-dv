@@ -234,16 +234,16 @@ export default function OrderFulfillmentModal({ order, onClose, onSuccess }: Ord
                 <tbody>
                   {order.items?.map((item: any) => {
                     const price = Number(item.unitPrice ?? item.price ?? 0);
-                    const isPesableProduct = item.product?.isPesable || item.isPesable;
                     const nameLower = (item.product?.name || '').toLowerCase();
                     const isCheeseOrBar = nameLower.includes('cremoso') || nameLower.includes('tybo') || nameLower.includes('barr') || nameLower.includes('queso') || nameLower.includes('horma') || nameLower.includes('sardo') || nameLower.includes('gouda') || nameLower.includes('mozzarella');
+                    const isPesableProduct = Boolean(item.product?.isPesable || item.isPesable || isCheeseOrBar || nameLower.includes('x kg') || nameLower.includes('por kg'));
                     const approxWeightUnit = item.product?.approximateWeight ? Number(item.product.approximateWeight) : (isCheeseOrBar ? 4 : 1);
                     const suggestedAvgWeight = Number((item.quantity * approxWeightUnit).toFixed(3));
                     const currentWeight = pesableWeights[item.id];
                     const hasWeight = currentWeight !== undefined && currentWeight > 0;
 
                     // Anomaly checks
-                    const anomalyInfo = anomalies.find(a => a.item.id === item.id);
+                    const anomalyInfo = isPesableProduct ? anomalies.find(a => a.item.id === item.id) : undefined;
                     const isAnomaly = Boolean(anomalyInfo);
 
                     let subtotal = 0;
@@ -269,58 +269,64 @@ export default function OrderFulfillmentModal({ order, onClose, onSuccess }: Ord
                           {item.quantity} u
                         </td>
                         <td style={{ padding: '12px 16px', textAlign: 'center' }}>
-                          <input
-                            type="number"
-                            className="input"
-                            style={{
-                              width: '110px',
-                              textAlign: 'center',
-                              padding: '6px 8px',
-                              fontWeight: 700,
-                              fontSize: '0.95rem',
-                              borderColor: isAnomaly ? '#dc2626' : (isPesableProduct ? '#f97316' : undefined),
-                              backgroundColor: isAnomaly ? '#fef2f2' : (isPesableProduct && (!pesableWeights[item.id] || pesableWeights[item.id] === suggestedAvgWeight) ? '#fff7ed' : undefined),
-                              color: isAnomaly ? '#b91c1c' : undefined
-                            }}
-                            placeholder={isPesableProduct ? `${suggestedAvgWeight}` : 'Peso Kg'}
-                            value={pesableWeights[item.id] !== undefined && pesableWeights[item.id] !== 0 ? pesableWeights[item.id] : (isPesableProduct ? suggestedAvgWeight : '')}
-                            onChange={(e) => handleWeightChange(item.id, e.target.value)}
-                            step="0.001"
-                            min="0"
-                          />
-                          {isAnomaly ? (
-                            <div style={{ marginTop: '4px' }}>
-                              <span style={{ fontSize: '0.72rem', color: '#dc2626', fontWeight: 700, display: 'block' }}>
-                                ⚠️ ¡Peso fuera de promedio! (~{suggestedAvgWeight} kg)
-                              </span>
-                              {anomalyInfo?.possibleDecimalFix && (
-                                <button
-                                  type="button"
-                                  onClick={() => handleWeightChange(item.id, anomalyInfo.possibleDecimalFix!.toString())}
-                                  style={{
-                                    marginTop: '4px',
-                                    padding: '3px 8px',
-                                    fontSize: '0.72rem',
-                                    backgroundColor: '#fee2e2',
-                                    color: '#991b1b',
-                                    border: '1px solid #fca5a5',
-                                    borderRadius: '4px',
-                                    cursor: 'pointer',
-                                    fontWeight: 700,
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    gap: '3px'
-                                  }}
-                                >
-                                  💡 Corregir a {anomalyInfo.possibleDecimalFix} kg
-                                </button>
+                          {isPesableProduct ? (
+                            <>
+                              <input
+                                type="number"
+                                className="input"
+                                style={{
+                                  width: '110px',
+                                  textAlign: 'center',
+                                  padding: '6px 8px',
+                                  fontWeight: 700,
+                                  fontSize: '0.95rem',
+                                  borderColor: isAnomaly ? '#dc2626' : '#f97316',
+                                  backgroundColor: isAnomaly ? '#fef2f2' : (!pesableWeights[item.id] || pesableWeights[item.id] === suggestedAvgWeight ? '#fff7ed' : undefined),
+                                  color: isAnomaly ? '#b91c1c' : undefined
+                                }}
+                                placeholder={`${suggestedAvgWeight}`}
+                                value={pesableWeights[item.id] !== undefined && pesableWeights[item.id] !== 0 ? pesableWeights[item.id] : suggestedAvgWeight}
+                                onChange={(e) => handleWeightChange(item.id, e.target.value)}
+                                step="0.001"
+                                min="0"
+                              />
+                              {isAnomaly ? (
+                                <div style={{ marginTop: '4px' }}>
+                                  <span style={{ fontSize: '0.72rem', color: '#dc2626', fontWeight: 700, display: 'block' }}>
+                                    ⚠️ ¡Peso fuera de promedio! (~{suggestedAvgWeight} kg)
+                                  </span>
+                                  {anomalyInfo?.possibleDecimalFix && (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleWeightChange(item.id, anomalyInfo.possibleDecimalFix!.toString())}
+                                      style={{
+                                        marginTop: '4px',
+                                        padding: '3px 8px',
+                                        fontSize: '0.72rem',
+                                        backgroundColor: '#fee2e2',
+                                        color: '#991b1b',
+                                        border: '1px solid #fca5a5',
+                                        borderRadius: '4px',
+                                        cursor: 'pointer',
+                                        fontWeight: 700,
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '3px'
+                                      }}
+                                    >
+                                      💡 Corregir a {anomalyInfo.possibleDecimalFix} kg
+                                    </button>
+                                  )}
+                                </div>
+                              ) : (
+                                <span style={{ fontSize: '0.72rem', color: pesableWeights[item.id] && pesableWeights[item.id] !== suggestedAvgWeight ? '#16a34a' : '#c2410c', display: 'block', marginTop: '3px', fontWeight: 600 }}>
+                                  {pesableWeights[item.id] && pesableWeights[item.id] !== suggestedAvgWeight ? '✓ Peso balanza' : `Promedio (${suggestedAvgWeight} kg)`}
+                                </span>
                               )}
-                            </div>
-                          ) : isPesableProduct ? (
-                            <span style={{ fontSize: '0.72rem', color: pesableWeights[item.id] && pesableWeights[item.id] !== suggestedAvgWeight ? '#16a34a' : '#c2410c', display: 'block', marginTop: '3px', fontWeight: 600 }}>
-                              {pesableWeights[item.id] && pesableWeights[item.id] !== suggestedAvgWeight ? '✓ Peso balanza' : `Promedio (${suggestedAvgWeight} kg)`}
-                            </span>
-                          ) : null}
+                            </>
+                          ) : (
+                            <span style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>-</span>
+                          )}
                         </td>
                         <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 700, fontSize: '1rem', color: isAnomaly ? '#dc2626' : undefined }}>
                           ${Math.round(subtotal).toLocaleString('es-AR')}
