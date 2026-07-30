@@ -22,13 +22,18 @@ export default function OrderFulfillmentModal({ order, onClose, onSuccess }: Ord
   const [bankAccounts, setBankAccounts] = useState<any[]>([]);
 
   useEffect(() => {
-    // Inicializar pesos si ya existen o si hay peso aproximado sugerido
-    const initialWeights: any = {};
+    // Inicializar pesos para productos pesables o con peso previo
+    const initialWeights: { [id: number]: number } = {};
     order.items?.forEach((item: any) => {
+      const isPesable = item.product?.isPesable || item.isPesable;
+      const approxWeightUnit = item.product?.approximateWeight ? Number(item.product.approximateWeight) : 1;
+      const defaultAvgWeight = Number((item.quantity * approxWeightUnit).toFixed(3));
+
       if (item.weight && Number(item.weight) > 0) {
         initialWeights[item.id] = Number(item.weight);
-      } else if (item.product?.isPesable && item.product?.approximateWeight) {
-        initialWeights[item.id] = Number((item.quantity * item.product.approximateWeight).toFixed(3));
+      } else if (isPesable) {
+        // Peso promedio sugerido por defecto si es pesable
+        initialWeights[item.id] = defaultAvgWeight;
       }
     });
     setPesableWeights(initialWeights);
@@ -54,9 +59,15 @@ export default function OrderFulfillmentModal({ order, onClose, onSuccess }: Ord
     let total = 0;
     order.items?.forEach((item: any) => {
       const price = Number(item.unitPrice ?? item.price ?? 0);
+      const isPesableProduct = item.product?.isPesable || item.isPesable;
+      const approxWeightUnit = item.product?.approximateWeight ? Number(item.product.approximateWeight) : 1;
+      const suggestedAvgWeight = Number((item.quantity * approxWeightUnit).toFixed(3));
       const currentWeight = pesableWeights[item.id];
-      if (currentWeight && currentWeight > 0) {
+
+      if (currentWeight !== undefined && currentWeight > 0) {
         total += currentWeight * price;
+      } else if (isPesableProduct) {
+        total += suggestedAvgWeight * price;
       } else {
         total += item.quantity * price;
       }
@@ -146,13 +157,17 @@ export default function OrderFulfillmentModal({ order, onClose, onSuccess }: Ord
                 <tbody>
                   {order.items?.map((item: any) => {
                     const price = Number(item.unitPrice ?? item.price ?? 0);
+                    const isPesableProduct = item.product?.isPesable || item.isPesable;
+                    const approxWeightUnit = item.product?.approximateWeight ? Number(item.product.approximateWeight) : 1;
+                    const suggestedAvgWeight = Number((item.quantity * approxWeightUnit).toFixed(3));
                     const currentWeight = pesableWeights[item.id];
                     const hasWeight = currentWeight !== undefined && currentWeight > 0;
-                    const isPesableProduct = item.product?.isPesable || item.isPesable;
 
                     let subtotal = 0;
                     if (hasWeight) {
                       subtotal = currentWeight * price;
+                    } else if (isPesableProduct) {
+                      subtotal = suggestedAvgWeight * price;
                     } else {
                       subtotal = item.quantity * price;
                     }
@@ -174,13 +189,26 @@ export default function OrderFulfillmentModal({ order, onClose, onSuccess }: Ord
                           <input
                             type="number"
                             className="input"
-                            style={{ width: '100px', textAlign: 'center', padding: '6px 8px', fontWeight: 600, fontSize: '0.95rem' }}
-                            placeholder="Peso Kg"
-                            value={pesableWeights[item.id] !== undefined && pesableWeights[item.id] !== 0 ? pesableWeights[item.id] : ''}
+                            style={{
+                              width: '110px',
+                              textAlign: 'center',
+                              padding: '6px 8px',
+                              fontWeight: 600,
+                              fontSize: '0.95rem',
+                              borderColor: isPesableProduct ? '#f97316' : undefined,
+                              backgroundColor: isPesableProduct && (!pesableWeights[item.id] || pesableWeights[item.id] === suggestedAvgWeight) ? '#fff7ed' : undefined
+                            }}
+                            placeholder={isPesableProduct ? `${suggestedAvgWeight}` : 'Peso Kg'}
+                            value={pesableWeights[item.id] !== undefined && pesableWeights[item.id] !== 0 ? pesableWeights[item.id] : (isPesableProduct ? suggestedAvgWeight : '')}
                             onChange={(e) => handleWeightChange(item.id, e.target.value)}
                             step="0.001"
                             min="0"
                           />
+                          {isPesableProduct && (
+                            <span style={{ fontSize: '0.72rem', color: pesableWeights[item.id] && pesableWeights[item.id] !== suggestedAvgWeight ? '#16a34a' : '#c2410c', display: 'block', marginTop: '3px', fontWeight: 600 }}>
+                              {pesableWeights[item.id] && pesableWeights[item.id] !== suggestedAvgWeight ? '✓ Peso balanza' : `Promedio (${suggestedAvgWeight} kg)`}
+                            </span>
+                          )}
                         </td>
                         <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 700, fontSize: '1rem' }}>
                           ${Math.round(subtotal).toLocaleString('es-AR')}
