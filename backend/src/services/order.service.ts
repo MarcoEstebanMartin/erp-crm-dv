@@ -173,17 +173,27 @@ export class OrderService {
 
       // 5. Actualizar stock general de manera atómica para evitar race conditions
       for (const stockUp of stockUpdates) {
-        const updated = await tx.product.update({
-          where: { id: stockUp.productId },
-          data: {
-            stock: {
-              decrement: Math.abs(stockUp.quantityDecreased)
-            }
-          }
-        });
+        const qtyToDecrement = Math.abs(stockUp.quantityDecreased);
+        if (process.env.IGNORE_STOCK_CHECK === 'true') {
+          await tx.product.update({
+            where: { id: stockUp.productId },
+            data: { stock: { decrement: qtyToDecrement } }
+          });
+        } else {
+          const res = await tx.product.updateMany({
+            where: {
+              id: stockUp.productId,
+              stock: { gte: qtyToDecrement },
+            },
+            data: {
+              stock: { decrement: qtyToDecrement },
+            },
+          });
 
-        if (updated.stock < 0 && process.env.IGNORE_STOCK_CHECK !== 'true') {
-          throw new Error(`Stock insuficiente para "${updated.name}" debido a una operación concurrente. Por favor reintente la carga del pedido.`);
+          if (res.count === 0) {
+            const prod = dbProducts.find(p => p.id === stockUp.productId);
+            throw new Error(`Stock insuficiente para "${prod?.name || 'Producto'}" debido a una operación concurrente. Por favor reintente la carga del pedido.`);
+          }
         }
       }
 

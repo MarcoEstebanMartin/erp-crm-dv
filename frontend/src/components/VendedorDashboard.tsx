@@ -415,6 +415,22 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
     e.preventDefault();
     if (!noSaleModal || !selectedRouteId) return;
 
+    if (!navigator.onLine) {
+      const pendingQueue = JSON.parse(localStorage.getItem('offline_route_visits') || '[]');
+      pendingQueue.push({
+        routeId: selectedRouteId,
+        personaId: noSaleModal.clientId,
+        status: 'NO_BUY',
+        noBuyReason: noSaleModal.reason,
+        notes: noSaleModal.notes,
+        timestamp: new Date().toISOString()
+      });
+      localStorage.setItem('offline_route_visits', JSON.stringify(pendingQueue));
+      setSuccessMsg('⚠️ Sin conexión. La visita se guardó localmente y se sincronizará al recuperar señal.');
+      setNoSaleModal(null);
+      return;
+    }
+
     setLoading(true);
     try {
       let lat = null;

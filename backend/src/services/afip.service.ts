@@ -187,6 +187,22 @@ export async function emitirFacturaAFIP({
 }
 
 /**
+ * Solicita el CAE a AFIP con reintentos automáticos y backoff exponencial ante caídas o timeouts temporales.
+ */
+export async function emitirFacturaAFIPConReintento(requestData: InvoiceRequest, retries = 3): Promise<InvoiceResult> {
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      return await emitirFacturaAFIP(requestData);
+    } catch (error: any) {
+      console.warn(`⚠️ Intento ${attempt}/${retries} fallido al conectar con AFIP WSFE: ${error.message}`);
+      if (attempt === retries) throw error;
+      await new Promise((res) => setTimeout(res, 1500 * attempt));
+    }
+  }
+  throw new Error('Servidor de AFIP inalcanzable tras múltiples intentos.');
+}
+
+/**
  * Solicita el CAE a AFIP para una Nota de Crédito.
  */
 export async function emitirNotaCreditoAFIP({

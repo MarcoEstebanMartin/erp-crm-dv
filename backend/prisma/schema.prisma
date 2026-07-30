@@ -245,7 +245,7 @@ model Order {
   items           OrderItem[]
   transactions    Transaction[]
   deliveryRouteId Int?
-  deliveryRoute   DeliveryRoute? @relation(fields: [deliveryRouteId], references: [id])
+  deliveryRoute   DeliveryRoute? @relation(fields: [deliveryRouteId], references: [id], onDelete: SetNull)
   creditNotes     CreditNote[]
   crmDraft        CrmOrderDraft?
 
@@ -255,6 +255,7 @@ model Order {
   @@index([status])
   @@index([deliveryRouteId])
   @@index([salesChannel])
+  @@index([movementId])
 }
 
 model OrderItem {
@@ -289,6 +290,8 @@ model ProductLot {
   stockMovements StockMovement[]
 
   @@unique([productId, lotNumber])
+  @@index([expirationDate])
+  @@index([productId, expirationDate])
 }
 
 model OrderItemLot {
@@ -381,9 +384,9 @@ model Transaction {
 
   // Relaciones Financieras
   cashDrawerId  Int?
-  cashDrawer    CashDrawer?  @relation(fields: [cashDrawerId], references: [id])
+  cashDrawer    CashDrawer?  @relation(fields: [cashDrawerId], references: [id], onDelete: SetNull)
   bankAccountId Int?
-  bankAccount   BankAccount? @relation(fields: [bankAccountId], references: [id])
+  bankAccount   BankAccount? @relation(fields: [bankAccountId], references: [id], onDelete: SetNull)
 
   // Relación con facturas de proveedor
   supplierInvoiceId Int?
@@ -408,6 +411,7 @@ model Transaction {
   @@index([bankAccountId])
   @@index([supplierInvoiceId])
   @@index([createdAt])
+  @@index([movementId])
 }
 
 model AuditLog {
@@ -454,6 +458,8 @@ model SupplierInvoice {
   @@index([personaId])
   @@index([issueDate])
   @@index([status])
+  @@index([dueDate])
+  @@index([movementId])
 }
 
 model TaxWithholding {

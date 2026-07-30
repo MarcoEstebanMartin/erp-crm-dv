@@ -2,6 +2,7 @@ import { Response } from 'express';
 import prisma from '../utils/prisma';
 import { AuthenticatedRequest } from '../types';
 import { logAudit } from '../utils/audit';
+import { roundCurrency } from '../utils/math';
 
 /**
  * Obtener comprobantes de venta (Pedidos facturados y entregados)
@@ -134,13 +135,13 @@ export async function createSupplierInvoice(req: AuthenticatedRequest, res: Resp
 
     const resolvedDueDate = dueDate ? new Date(dueDate) : new Date(new Date(issueDate).getTime() + 30 * 24 * 3600 * 1000);
 
-    const pampa = Number(percepcionPampa || 0);
-    const bsas = Number(percepcionBsAs || 0);
-    const ivaVal = Number(percepcionIva || 0);
-    const internos = Number(impuestosInternos || 0);
+    const pampa = roundCurrency(Number(percepcionPampa || 0));
+    const bsas = roundCurrency(Number(percepcionBsAs || 0));
+    const ivaVal = roundCurrency(Number(percepcionIva || 0));
+    const internos = roundCurrency(Number(impuestosInternos || 0));
 
     // Suma de IIBB es La Pampa + Bs As (o cae a percepcionAmount genérica)
-    const finalIIBB = (pampa > 0 || bsas > 0) ? (pampa + bsas) : Number(percepcionAmount || 0);
+    const finalIIBB = (pampa > 0 || bsas > 0) ? roundCurrency(pampa + bsas) : roundCurrency(Number(percepcionAmount || 0));
 
     const invoice = await prisma.$transaction(async (tx) => {
       // 2. Crear la factura de compra
@@ -153,12 +154,12 @@ export async function createSupplierInvoice(req: AuthenticatedRequest, res: Resp
           dueDate: resolvedDueDate,
           status: 'PENDING',
           paidAmount: 0.00,
-          netAmount: Number(netAmount),
-          taxAmount: Number(taxAmount),
+          netAmount: roundCurrency(Number(netAmount)),
+          taxAmount: roundCurrency(Number(taxAmount)),
           percepcionAmount: finalIIBB,
           percepcionIvaAmount: ivaVal,
           impuestosInternos: internos,
-          totalAmount: Number(totalAmount),
+          totalAmount: roundCurrency(Number(totalAmount)),
           billingType: billingType || 'OFFICIAL',
         },
       });
