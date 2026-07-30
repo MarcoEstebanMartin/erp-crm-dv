@@ -2321,6 +2321,12 @@ export default function RepartoDashboard() {
 
                 </div>
 
+                {errorMsg && (
+                  <div style={{ backgroundColor: '#FFF2F2', borderLeft: '4px solid var(--color-danger)', color: 'var(--color-danger)', padding: '10px 14px', borderRadius: '6px', fontSize: '0.82rem', marginBottom: '14px', fontWeight: 600 }}>
+                    ⚠️ {errorMsg}
+                  </div>
+                )}
+
                 <div className="modal-footer" style={{ marginTop: '20px', borderTop: '1px solid var(--border-color)', paddingTop: '16px' }}>
                   <button type="button" className="btn btn-secondary" onClick={() => setShowSettleModal(false)}>Cancelar</button>
                   <button

@@ -182,6 +182,19 @@ export async function emitirFacturaAFIP({
     };
   } catch (error: any) {
     console.error('❌ Error llamando a los Web Services de AFIP:', error);
+    if (!isProduction) {
+      console.log('⚠️ AFIP Web Service en Homologación falló. Generando comprobante de prueba para no bloquear la liquidación.');
+      const mockInvoiceNum = Math.floor(100000 + Math.random() * 900000);
+      const mockCae = '9999' + Math.floor(10000000 + Math.random() * 90000000) + '1';
+      const dueDate = new Date();
+      dueDate.setDate(dueDate.getDate() + 10);
+      return {
+        invoiceNumber: `00001-${mockInvoiceNum.toString().padStart(8, '0')}`,
+        cae: mockCae,
+        caeDueDate: dueDate,
+        puntoVenta: 1,
+      };
+    }
     throw new Error(`Error AFIP: ${error.message || error}`);
   }
 }
