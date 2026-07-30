@@ -932,6 +932,19 @@ export const api = {
     return res.route;
   },
 
+  recordRouteGpsPing: async (id: number, gpsData: { latitude: number; longitude: number; speed?: number | null; heading?: number | null }) => {
+    const res = await request(`/logistics/${id}/gps`, {
+      method: 'POST',
+      body: JSON.stringify(gpsData)
+    });
+    return res;
+  },
+
+  getRouteGpsHistory: async (id: number) => {
+    const res = await request(`/logistics/${id}/gps-history`);
+    return res;
+  },
+
   settleDeliveryRoute: async (id: number, settleData: { settlements: any[], cashDeclared: number, checksDeclared: number, transfersDeclared: number }) => {    
 
     const res = await request(`/logistics/${id}/settle`, {

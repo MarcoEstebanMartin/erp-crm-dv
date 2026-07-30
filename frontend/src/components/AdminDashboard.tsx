@@ -1568,13 +1568,13 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
                   const statusInfo = getOrderStatusInfo(o);
                   const logicalKey = statusInfo.label.toUpperCase().replace(' ', '_');
                   if (summaryCardModal.cardKey === 'RECIBIDO') {
-                    return o.status === 'PENDING' || o.status === 'RECIBIDO';
+                    return o.status === 'PENDING' || (o.status as string) === 'RECIBIDO';
                   }
                   if (summaryCardModal.cardKey === 'ARMADO') {
                     return o.status === 'PREPARING' || (o.status === 'PREPARED' && !o.invoiceNumber);
                   }
                   if (summaryCardModal.cardKey === 'FACTURADO') {
-                    return o.invoiceNumber || o.status === 'DELIVERED' || o.status === 'BILLED' || (o.deliveryRoute && (o.deliveryRoute.status === 'IN_TRANSIT' || o.deliveryRoute.status === 'COMPLETED'));
+                    return o.invoiceNumber || o.status === 'DELIVERED' || (o.status as string) === 'BILLED' || (o.deliveryRoute && (o.deliveryRoute.status === 'IN_TRANSIT' || o.deliveryRoute.status === 'COMPLETED'));
                   }
                   return logicalKey === summaryCardModal.cardKey;
                 });
@@ -1653,7 +1653,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
                                 {o.deliveryRoute ? (
                                   <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                                     <span style={{ fontWeight: 700, color: '#4F46E5', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                      🚚 {o.deliveryRoute.routeName || `Viaje #${o.deliveryRoute.id}`}
+                                      🚚 {(o.deliveryRoute as any).routeName || `Viaje #${o.deliveryRoute.id}`}
                                     </span>
                                     <span style={{ fontSize: '0.72rem', fontWeight: 600, color: o.deliveryRoute.status === 'IN_TRANSIT' ? '#059669' : o.deliveryRoute.status === 'COMPLETED' ? '#2563EB' : '#D97706' }}>
                                       {o.deliveryRoute.status === 'IN_TRANSIT' ? '🟢 En Calle (Tránsito)' : o.deliveryRoute.status === 'COMPLETED' ? '✅ Entregado' : '🟡 Asignado (En Espera)'}

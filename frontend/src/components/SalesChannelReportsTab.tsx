@@ -402,7 +402,7 @@ export default function SalesChannelReportsTab() {
                 boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', justifyBetween: 'space-between', marginBottom: '16px', gap: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', gap: '8px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <ShoppingBag size={18} color="#E30613" />
                   <h3 style={{ fontSize: '0.95rem', fontWeight: 700, margin: 0, color: 'var(--text-primary, #0f172a)' }}>

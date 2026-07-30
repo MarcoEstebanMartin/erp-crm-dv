@@ -862,12 +862,12 @@ export default function RepartoDashboard() {
     }
 
     const fetchGpsData = () => {
-      api.get(`/logistics/${selectedRoute.id}/gps-history`)
-        .then((res: any) => {
-          if (res.data?.data) {
-            setLiveGpsInfo(res.data.data.route);
-            if (Array.isArray(res.data.data.pings)) {
-              setGpsHistory(res.data.data.pings.map((p: any) => [p.latitude, p.longitude]));
+      api.getRouteGpsHistory(selectedRoute.id)
+        .then((data: any) => {
+          if (data?.route) {
+            setLiveGpsInfo(data.route);
+            if (Array.isArray(data.pings)) {
+              setGpsHistory(data.pings.map((p: any) => [p.latitude, p.longitude]));
             }
           }
         })

@@ -353,7 +353,7 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
       const items = cart.map(item => ({
         productId: item.product.id,
         quantity: item.quantity,
-        isEmergencyOverride: Boolean(item.isEmergencyOverride || (item.quantity < (item.product.minOrderQuantity || 1)))
+        isEmergencyOverride: Boolean((item as any).isEmergencyOverride || (item.quantity < (item.product.minOrderQuantity || 1)))
       }));
 
       await api.createOrder({
@@ -1048,7 +1048,7 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
                                   <label style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', cursor: 'pointer', fontWeight: 600 }}>
                                     <input
                                       type="checkbox"
-                                      checked={Boolean(item.isEmergencyOverride)}
+                                      checked={Boolean((item as any).isEmergencyOverride)}
                                       onChange={(e) => {
                                         setCart(cart.map(c => c.product.id === item.product.id ? { ...c, isEmergencyOverride: e.target.checked } : c));
                                       }}

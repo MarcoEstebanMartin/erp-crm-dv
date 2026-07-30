@@ -56,7 +56,7 @@ export function useGpsTracker({
 
       const speedKmH = speed !== null && speed !== undefined ? Math.round(speed * 3.6) : null;
 
-      api.post(`/logistics/${activeRouteId}/gps`, {
+      api.recordRouteGpsPing(activeRouteId, {
         latitude,
         longitude,
         speed: speedKmH,
@@ -69,7 +69,7 @@ export function useGpsTracker({
         lastCoordsRef.current = { latitude, longitude };
         setGpsError(null);
       })
-      .catch((err) => {
+      .catch((err: any) => {
         // Registro silencioso en consola para no interrumpir al chofer
         console.warn('[GPS Tracker] Error al sincronizar ubicación:', err?.message || err);
       });
