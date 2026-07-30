@@ -71,6 +71,7 @@ model User {
   username     String   @unique
   passwordHash String
   role         Role     @default(VENDEDOR)
+  permissions  Json?    // Matriz de permisos granulares por módulo ({ canSell, canPick, canDeliver, canCollect, canManageStock })
   isActive     Boolean  @default(true)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt

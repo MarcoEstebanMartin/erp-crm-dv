@@ -6,6 +6,7 @@ export const createUserSchema = z.object({
     username: z.string().min(4, 'El nombre de usuario debe tener al menos 4 caracteres'),
     password: z.string().min(6, 'La contraseña debe tener al menos 6 caracteres'),
     role: z.nativeEnum(Role),
+    permissions: z.any().optional(),
   }),
 });
 
@@ -23,6 +24,7 @@ export const updateUserSchema = z.object({
     username: z.string().min(3, 'El nombre de usuario debe tener al menos 3 caracteres').optional(),
     role: z.nativeEnum(Role).optional(),
     password: z.string().min(6, 'La contraseña debe tener al menos 6 caracteres').optional().or(z.literal('')),
+    permissions: z.any().optional(),
   }),
 });
 

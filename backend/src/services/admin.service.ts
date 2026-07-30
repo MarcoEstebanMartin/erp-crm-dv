@@ -178,6 +178,7 @@ export class AdminService {
         id: true,
         username: true,
         role: true,
+        permissions: true,
         isActive: true,
         createdAt: true,
       },
@@ -189,7 +190,7 @@ export class AdminService {
    * Crear un nuevo usuario.
    */
   async createUser(data: any, adminId?: number) {
-    const { username, password, role } = data;
+    const { username, password, role, permissions } = data;
 
     const existing = await prisma.user.findUnique({ where: { username } });
     if (existing) {
@@ -204,11 +205,13 @@ export class AdminService {
         username,
         passwordHash,
         role: role as Role,
+        permissions: permissions || null,
       },
       select: {
         id: true,
         username: true,
         role: true,
+        permissions: true,
         isActive: true,
         createdAt: true,
       },
@@ -220,7 +223,7 @@ export class AdminService {
         action: 'CREATE_USER',
         entityType: 'User',
         entityId: newUser.id,
-        newValues: { username: newUser.username, role: newUser.role },
+        newValues: { username: newUser.username, role: newUser.role, permissions: newUser.permissions },
       });
     }
 
@@ -261,7 +264,7 @@ export class AdminService {
   /**
    * Actualizar nombre de usuario, rol y/o contraseña de un usuario.
    */
-  async updateUser(id: number, data: { username?: string; role?: Role; password?: string }, adminId?: number) {
+  async updateUser(id: number, data: { username?: string; role?: Role; password?: string; permissions?: any }, adminId?: number) {
     const user = await prisma.user.findUnique({ where: { id } });
     if (!user) throw new Error('Usuario no encontrado.');
 
@@ -276,6 +279,9 @@ export class AdminService {
     if (data.role) {
       updateData.role = data.role;
     }
+    if (data.permissions !== undefined) {
+      updateData.permissions = data.permissions;
+    }
     if (data.password && data.password.trim().length >= 6) {
       const salt = await bcrypt.genSalt(10);
       updateData.passwordHash = await bcrypt.hash(data.password, salt);
@@ -288,6 +294,7 @@ export class AdminService {
         id: true,
         username: true,
         role: true,
+        permissions: true,
         isActive: true,
         createdAt: true,
       },

@@ -6,6 +6,19 @@ import { AuthenticatedRequest } from '../types';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'seguridad-erp-distribuidora-2026-key-local-development';
 
+export function getDefaultPermissions(role: string) {
+  if (role === 'ADMIN' || role === 'FACTURACION') {
+    return { canSell: true, canPick: true, canDeliver: true, canCollect: true, canManageStock: true };
+  }
+  if (role === 'VENDEDOR') {
+    return { canSell: true, canPick: false, canDeliver: true, canCollect: true, canManageStock: false };
+  }
+  if (role === 'DEPOSITO') {
+    return { canSell: false, canPick: true, canDeliver: true, canCollect: false, canManageStock: true };
+  }
+  return { canSell: true, canPick: false, canDeliver: true, canCollect: true, canManageStock: false };
+}
+
 export async function login(req: Request, res: Response): Promise<void> {
   const { username, password } = req.body;
 
@@ -41,12 +54,15 @@ export async function login(req: Request, res: Response): Promise<void> {
       return;
     }
 
+    const effectivePermissions = (user.permissions as any) || getDefaultPermissions(user.role);
+
     // Generar JWT (válido por 12 horas)
     const token = jwt.sign(
       {
         id: user.id,
         username: user.username,
         role: user.role,
+        permissions: effectivePermissions
       },
       JWT_SECRET,
       { expiresIn: '12h' }
@@ -60,6 +76,7 @@ export async function login(req: Request, res: Response): Promise<void> {
           id: user.id,
           username: user.username,
           role: user.role,
+          permissions: effectivePermissions
         },
         config: {
           ignoreStock: process.env.IGNORE_STOCK_CHECK === 'true',
@@ -92,6 +109,7 @@ export async function getMe(req: AuthenticatedRequest, res: Response): Promise<v
         id: true,
         username: true,
         role: true,
+        permissions: true,
         isActive: true,
         createdAt: true,
       },
@@ -105,10 +123,15 @@ export async function getMe(req: AuthenticatedRequest, res: Response): Promise<v
       return;
     }
 
+    const effectivePermissions = (user.permissions as any) || getDefaultPermissions(user.role);
+
     res.status(200).json({
       status: 'success',
       data: { 
-        user,
+        user: {
+          ...user,
+          permissions: effectivePermissions
+        },
         config: {
           ignoreStock: process.env.IGNORE_STOCK_CHECK === 'true',
           afipProduction: process.env.AFIP_PRODUCTION === 'true'
