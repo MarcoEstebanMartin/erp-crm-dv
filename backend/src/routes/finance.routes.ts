@@ -27,9 +27,9 @@ router.get('/drawers/active-all', authenticateJWT, getActiveDrawers);
 router.get('/drawers/history', authenticateJWT, getDrawersHistory);
 router.post('/drawers/close-joint', authenticateJWT, closeJointDrawers);
 
-// Rutas administrativas
+// Rutas administrativas y de cuentas bancarias
 router.get('/transactions', authenticateJWT, requireRole([Role.ADMIN, Role.FACTURACION]), getTransactions);
-router.get('/bank-accounts', authenticateJWT, requireRole([Role.ADMIN, Role.FACTURACION]), getBankAccounts);
+router.get('/bank-accounts', authenticateJWT, getBankAccounts);
 router.post('/bank-accounts', authenticateJWT, requireRole([Role.ADMIN]), createBankAccount);
 router.post('/bank-accounts/transfer', authenticateJWT, requireRole([Role.ADMIN, Role.FACTURACION]), transferFunds);
 router.put('/transactions/:id/verify', authenticateJWT, requireRole([Role.ADMIN, Role.FACTURACION]), verifyTransaction);

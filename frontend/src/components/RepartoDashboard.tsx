@@ -1182,9 +1182,14 @@ export default function RepartoDashboard() {
       const available = allOrders.filter((o: any) => (o.status === 'PREPARED' || o.status === 'DELIVERED' || !!o.invoiceNumber) && !o.deliveryRouteId && o.status !== 'CANCELLED');
       setPendingOrders(available);
 
-      const banks = await api.getBankAccounts();
-      setBankAccounts(banks);
+      try {
+        const banks = await api.getBankAccounts();
+        setBankAccounts(banks || []);
+      } catch (bErr) {
+        console.warn('Cuentas bancarias no disponibles para este perfil.');
+      }
     } catch (err: any) {
+      console.error('Error al cargar datos logísticos:', err);
       setErrorMsg('Error al cargar datos logísticos.');
     } finally {
       setLoading(false);
