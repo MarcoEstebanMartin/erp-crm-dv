@@ -1,6 +1,7 @@
 import prisma from '../src/utils/prisma';
 import XLSX from 'xlsx';
 import path from 'path';
+import fs from 'fs';
 
 async function main() {
   const excelPath = path.join(__dirname, '../../ARCHIVOS/IDUO/Productos.xlsx');
@@ -177,6 +178,51 @@ async function main() {
   const resetItems = await prisma.offerCampaignItem.updateMany({
     data: { campaignGroup: null }
   });
+
+  // 4. Re-vincular automáticamente las imágenes existentes en disco por SKU
+  const uploadsPath = path.join(__dirname, '../uploads/products');
+  let relinkedImagesCount = 0;
+  if (fs.existsSync(uploadsPath)) {
+    const files = fs.readdirSync(uploadsPath);
+    const fileMap = new Map<string, string>();
+    files.forEach(f => {
+      const ext = path.extname(f).toLowerCase();
+      if (['.jpg', '.jpeg', '.png', '.webp'].includes(ext)) {
+        const base = path.basename(f, ext);
+        fileMap.set(base, f);
+        if (/^\d+$/.test(base)) {
+          const numStr = parseInt(base, 10).toString();
+          fileMap.set(numStr, f);
+          fileMap.set(numStr.padStart(4, '0'), f);
+        }
+      }
+    });
+
+    const allProducts = await prisma.product.findMany();
+    const relinkPromises: Array<Promise<any>> = [];
+    for (const p of allProducts) {
+      const rawSku = p.sku.trim();
+      let matchedFile = fileMap.get(rawSku);
+      if (!matchedFile && /^\d+$/.test(rawSku)) {
+        matchedFile = fileMap.get(rawSku.padStart(4, '0')) || fileMap.get(parseInt(rawSku, 10).toString());
+      }
+      if (matchedFile) {
+        const expectedUrl = `/uploads/products/${matchedFile}`;
+        if (p.imageUrl !== expectedUrl) {
+          relinkedImagesCount++;
+          relinkPromises.push(
+            prisma.product.update({
+              where: { id: p.id },
+              data: { imageUrl: expectedUrl }
+            })
+          );
+        }
+      }
+    }
+    for (let i = 0; i < relinkPromises.length; i += 40) {
+      await Promise.all(relinkPromises.slice(i, i + 40));
+    }
+  }
 
   console.log(`\n✅ ¡Sincronización completada con éxito!`);
   console.log(`   - Productos actualizados: ${updatedCount}`);
