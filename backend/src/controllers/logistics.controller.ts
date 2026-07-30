@@ -58,7 +58,7 @@ export async function getDeliveryRoutes(req: AuthenticatedRequest, res: Response
  * Crear una nueva hoja de ruta de reparto
  */
 export async function createDeliveryRoute(req: AuthenticatedRequest, res: Response): Promise<void> {
-  const { driverName, vehiclePlate, vehicleDescription, vehicleId, date, orderIds } = req.body;
+  const { driverName, companionName, vehiclePlate, vehicleDescription, vehicleId, date, orderIds } = req.body;
   const userId = req.user?.id;
 
   if (!driverName || (!vehiclePlate && !vehicleId) || !orderIds || !Array.isArray(orderIds)) {
@@ -88,7 +88,8 @@ export async function createDeliveryRoute(req: AuthenticatedRequest, res: Respon
       // 1. Crear la hoja de ruta
       const newRoute = await tx.deliveryRoute.create({
         data: {
-          driverName,
+          driverName: driverName.trim(),
+          companionName: companionName ? companionName.trim() : null,
           vehiclePlate: finalPlate || '',
           vehicleDescription: finalDesc || null,
           vehicleId: vId,
@@ -524,22 +525,8 @@ export async function getLogisticsResources(req: AuthenticatedRequest, res: Resp
       }
     });
 
-    // Consolidar choferes únicos
-    const driverSet = new Set<string>();
-    activeUsers.forEach(u => {
-      driverSet.add(capitalizeUsername(u.username));
-    });
-    pastRoutes.forEach(r => {
-      if (r.driverName) {
-        driverSet.add(r.driverName.trim());
-      }
-    });
-    
-    // Valores por defecto de fallback (si por alguna razón no hay usuarios)
-    if (driverSet.size === 0) {
-      ['Miguel', 'Norberto', 'Fabian', 'Matias', 'Thiago', 'Agustin'].forEach(d => driverSet.add(d));
-    }
-    const drivers = Array.from(driverSet).sort();
+    // Choferes habilitados en la empresa (únicos autorizados para reparto)
+    const drivers = ['Agustin', 'Fabian', 'Matias', 'Miguel', 'Norberto'];
 
     // Consolidar vehículos únicos (por patente)
     const vehicleMap = new Map<string, string>();

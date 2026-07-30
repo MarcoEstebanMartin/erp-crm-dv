@@ -105,6 +105,7 @@ export interface OrderItem {
 export interface DeliveryRoute {
   id: number;
   driverName: string;
+  companionName?: string;
   vehiclePlate: string;
   status: string;
   date: string;

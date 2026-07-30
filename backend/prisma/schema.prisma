@@ -478,6 +478,7 @@ model TaxWithholding {
 model DeliveryRoute {
   id                 Int      @id @default(autoincrement())
   driverName         String
+  companionName      String?
   vehiclePlate       String
   vehicleDescription String?
   status             String   @default("PENDING") // "PENDING" | "IN_TRANSIT" | "COMPLETED"

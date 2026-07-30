@@ -1106,7 +1106,7 @@ export const printDeliveryRouteCustodyGuide = (route: any) => {
 
         <div class="summary-card">
           <div style="display: flex; justify-content: space-between; font-size: 14px; font-weight: 900; border-bottom: 1.5px solid #000; padding-bottom: 6px;">
-            <span>🚚 CHOFER / REPARTIDOR: ${route.driverName.toUpperCase()}</span>
+            <span>🚚 CHOFER / REPARTIDOR: ${route.driverName.toUpperCase()}${route.companionName ? ` (Acompañante: ${route.companionName.toUpperCase()})` : ''}</span>
             <span>🚙 VEHÍCULO: ${route.vehiclePlate || 'S/D'} ${route.vehicleDescription ? '(' + route.vehicleDescription + ')' : ''}</span>
           </div>
 

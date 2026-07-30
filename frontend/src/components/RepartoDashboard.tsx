@@ -1047,6 +1047,7 @@ export default function RepartoDashboard() {
   // Formulario de nueva ruta
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [driverName, setDriverName] = useState('');
+  const [companionName, setCompanionName] = useState('');
   const [vehiclePlate, setVehiclePlate] = useState('');
   const [vehicleDescription, setVehicleDescription] = useState('');
   const [selectedOrderIds, setSelectedOrderIds] = useState<number[]>([]);
@@ -1349,6 +1350,7 @@ export default function RepartoDashboard() {
 
       await api.createDeliveryRoute({
         driverName,
+        companionName: companionName.trim() || undefined,
         vehiclePlate,
         vehicleDescription,
         orderIds: optimalOrderIds
@@ -1357,6 +1359,7 @@ export default function RepartoDashboard() {
       setSuccessMsg('✨ Hoja de ruta de reparto creada y optimizada con éxito.');
       setShowCreateModal(false);
       setDriverName('');
+      setCompanionName('');
       setVehiclePlate('');
       setVehicleDescription('');
       setSelectedVehicleKey('');
@@ -1522,7 +1525,14 @@ export default function RepartoDashboard() {
                     >
                       <td style={{ fontWeight: 600 }}>#{r.id}</td>
                       <td>
-                        <div style={{ fontWeight: 500 }}>{r.driverName}</div>
+                        <div style={{ fontWeight: 500 }}>
+                          {r.driverName}
+                          {r.companionName && (
+                            <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 400, marginLeft: '6px' }}>
+                              (Acomp: {r.companionName})
+                            </span>
+                          )}
+                        </div>
                         <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{r.vehiclePlate} ({r.vehicleDescription})</div>
                       </td>
                       <td>
@@ -1590,7 +1600,11 @@ export default function RepartoDashboard() {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '16px', borderBottom: '1px solid var(--border-color)', paddingBottom: '12px' }}>
                 <div>
                   <h3 style={{ fontSize: '1.1rem', fontWeight: 700 }}>Hoja de Ruta #{selectedRoute.id}</h3>
-                  <p style={{ fontSize: '0.8rem' }}>Chofer: <strong>{selectedRoute.driverName}</strong> | Patente: <strong>{selectedRoute.vehiclePlate}</strong></p>
+                  <p style={{ fontSize: '0.8rem' }}>
+                    Chofer: <strong>{selectedRoute.driverName}</strong>
+                    {selectedRoute.companionName && <> | Acompañante: <strong>{selectedRoute.companionName}</strong></>}
+                    | Patente: <strong>{selectedRoute.vehiclePlate}</strong>
+                  </p>
                   {selectedRoute.custodyStatus === 'LOADED_IN_TRANSIT' ? (
                     <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#15803d', backgroundColor: '#dcfce7', padding: '3px 8px', borderRadius: '4px', marginTop: '4px', display: 'inline-block', border: '1px solid #86efac' }}>
                       🔒 Custodia Transferida a {selectedRoute.driverName} ({selectedRoute.orders?.reduce((sum: number, o: any) => sum + Math.max(1, Number(o.bultosCount || 1)), 0) || 0} Bultos) {selectedRoute.signedByDriverAt ? '• ' + new Date(selectedRoute.signedByDriverAt).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }) : ''}
@@ -1815,6 +1829,19 @@ export default function RepartoDashboard() {
                     </select>
                   </div>
                   <div className="form-group">
+                    <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span>Acompañante</span>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 400 }}>(Opcional)</span>
+                    </label>
+                    <input 
+                      type="text" 
+                      className="input" 
+                      placeholder="ej: Juan Pérez"
+                      value={companionName}
+                      onChange={(e) => setCompanionName(e.target.value)}
+                    />
+                  </div>
+                  <div className="form-group">
                     <label>Vehículo de Reparto</label>
                     <select 
                       className="input" 
@@ -2036,7 +2063,9 @@ export default function RepartoDashboard() {
               </div>
 
               <div style={{ marginBottom: '16px', padding: '10px 14px', backgroundColor: '#f3e8fd', borderRadius: '6px', fontSize: '0.82rem', color: '#681da8' }}>
-                🚚 Chofer: <strong>{settleRoute.driverName}</strong> | Patente: <strong>{settleRoute.vehiclePlate}</strong> | Pedidos a rendir: <strong>{settleRoute.orders?.length || 0}</strong>
+                🚚 Chofer: <strong>{settleRoute.driverName}</strong>
+                {settleRoute.companionName && <> | Acompañante: <strong>{settleRoute.companionName}</strong></>}
+                | Patente: <strong>{settleRoute.vehiclePlate}</strong> | Pedidos a rendir: <strong>{settleRoute.orders?.length || 0}</strong>
               </div>
 
               <form onSubmit={handleSettleSubmit}>
