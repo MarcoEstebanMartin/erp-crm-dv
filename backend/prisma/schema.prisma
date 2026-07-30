@@ -494,9 +494,30 @@ model DeliveryRoute {
   vehicleId Int?
   vehicle   Vehicle? @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
 
+  // Telemetría GPS en tiempo real
+  currentLat       Float?
+  currentLng       Float?
+  currentSpeed     Float?
+  lastGpsUpdate    DateTime?
+  gpsPings         RouteGpsPing[]
+
   orders Order[]
 
   @@index([vehicleId])
+}
+
+model RouteGpsPing {
+  id              Int           @id @default(autoincrement())
+  deliveryRouteId Int
+  deliveryRoute   DeliveryRoute @relation(fields: [deliveryRouteId], references: [id], onDelete: Cascade)
+  latitude        Float
+  longitude       Float
+  speed           Float?
+  heading         Float?
+  createdAt       DateTime      @default(now())
+
+  @@index([deliveryRouteId])
+  @@index([createdAt])
 }
 
 model PurchaseOrder {

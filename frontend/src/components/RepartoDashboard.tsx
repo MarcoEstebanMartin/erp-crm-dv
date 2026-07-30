@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { useConfirm } from '../context/ConfirmContext';
 import { printDeliveryRouteCustodyGuide } from '../utils/printHelpers';
+import { useGpsTracker } from '../hooks/useGpsTracker';
 
 // Coordenadas fijas simuladas para clientes en General Villegas
 const VILLEGAS_DEPOT: [number, number] = [-35.030, -63.010]; // Moreno 200, Villegas (Base/Depósito)
@@ -497,14 +498,19 @@ function GoogleRouteMap({
 }
 
 // Sub-componente para inyectar Leaflet y renderizar el mapa
+// Sub-componente para inyectar Leaflet y renderizar el mapa
 function LeafletRouteMap({ 
   locations, 
   routePoints, 
-  onUpdateClientCoords 
+  onUpdateClientCoords,
+  gpsLocation,
+  gpsTrail
 }: { 
   locations: any[], 
   routePoints: [number, number][], 
-  onUpdateClientCoords?: (clientId: number, lat: number, lng: number) => void 
+  onUpdateClientCoords?: (clientId: number, lat: number, lng: number) => void,
+  gpsLocation?: { lat: number; lng: number; speed?: number | null; lastUpdate?: string | null; vehiclePlate?: string | null } | null,
+  gpsTrail?: [number, number][]
 }) {
   const mapRef = useRef<any>(null);
   
@@ -591,11 +597,32 @@ function LeafletRouteMap({
         }
       });
       
-      // Trazar línea de ruta
+      // Trazar línea de ruta planificada
       if (routePoints.length > 1) {
         L.polyline(routePoints, { color: 'var(--color-corp-red)', weight: 4, opacity: 0.85 }).addTo(map);
-        // Ajustar límites del mapa
         map.fitBounds(L.polyline(routePoints).getBounds(), { padding: [40, 40] });
+      }
+
+      // Trazar línea de recorrido real GPS (si existe)
+      if (gpsTrail && gpsTrail.length > 1) {
+        L.polyline(gpsTrail, { color: '#059669', weight: 3, opacity: 0.8, dashArray: '6, 6' }).addTo(map);
+      }
+
+      // Renderizar ubicación en vivo del vehículo/chofer
+      if (gpsLocation && typeof gpsLocation.lat === 'number' && typeof gpsLocation.lng === 'number') {
+        const truckIcon = L.divIcon({
+          className: 'custom-truck-icon',
+          html: `<div style="background-color:#E30613; color:white; border-radius:50%; width:32px; height:32px; display:flex; align-items:center; justify-content:center; font-size:16px; border: 2px solid white; box-shadow: 0 2px 8px rgba(227,6,19,0.5);">🚚</div>`,
+          iconSize: [32, 32],
+          iconAnchor: [16, 16]
+        });
+
+        const speedText = gpsLocation.speed !== null && gpsLocation.speed !== undefined ? `${gpsLocation.speed} km/h` : 'En parada';
+        const timeText = gpsLocation.lastUpdate ? new Date(gpsLocation.lastUpdate).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }) : 'En vivo';
+
+        L.marker([gpsLocation.lat, gpsLocation.lng], { icon: truckIcon })
+          .addTo(map)
+          .bindPopup(`<b>🚚 Vehículo en Vivo: ${gpsLocation.vehiclePlate || 'Unidad de Reparto'}</b><br/>Velocidad: <strong>${speedText}</strong><br/>Última transmisión: <strong>${timeText}</strong>`);
       }
     }
     
@@ -605,7 +632,7 @@ function LeafletRouteMap({
         mapRef.current = null;
       }
     };
-  }, [locations, routePoints]);
+  }, [locations, routePoints, gpsLocation, gpsTrail]);
   
   return (
     <div id="leaflet-map-div" style={{ 
@@ -623,18 +650,22 @@ function LeafletRouteMap({
 function RouteMap({ 
   locations, 
   routePoints, 
-  onUpdateClientCoords 
+  onUpdateClientCoords,
+  gpsLocation,
+  gpsTrail
 }: { 
   locations: any[], 
   routePoints: [number, number][], 
-  onUpdateClientCoords?: (clientId: number, lat: number, lng: number) => void 
+  onUpdateClientCoords?: (clientId: number, lat: number, lng: number) => void,
+  gpsLocation?: { lat: number; lng: number; speed?: number | null; lastUpdate?: string | null; vehiclePlate?: string | null } | null,
+  gpsTrail?: [number, number][]
 }) {
   const apiKey = (import.meta.env as any)?.VITE_GOOGLE_MAPS_API_KEY || '';
   
   if (apiKey) {
     return <GoogleRouteMap locations={locations} routePoints={routePoints} onUpdateClientCoords={onUpdateClientCoords} />;
   }
-  return <LeafletRouteMap locations={locations} routePoints={routePoints} onUpdateClientCoords={onUpdateClientCoords} />;
+  return <LeafletRouteMap locations={locations} routePoints={routePoints} onUpdateClientCoords={onUpdateClientCoords} gpsLocation={gpsLocation} gpsTrail={gpsTrail} />;
 }
 
 // Componente de impresión de Hoja de Ruta (oculto en pantalla, visible al imprimir)
@@ -810,6 +841,45 @@ export default function RepartoDashboard() {
   // Estados para trazas de calles reales por OSRM
   const [createRouteStreetPoints, setCreateRouteStreetPoints] = useState<[number, number][]>([]);
   const [selectedRouteStreetPoints, setSelectedRouteStreetPoints] = useState<[number, number][]>([]);
+
+  // Estados para telemetría GPS en tiempo real
+  const [gpsHistory, setGpsHistory] = useState<[number, number][]>([]);
+  const [liveGpsInfo, setLiveGpsInfo] = useState<any>(null);
+
+  // Hook de GPS en segundo plano para el chofer
+  useGpsTracker({
+    activeRouteId: selectedRoute?.id,
+    isActive: selectedRoute?.status === 'IN_TRANSIT' || selectedRoute?.custodyStatus === 'LOADED_IN_TRANSIT',
+    intervalMs: 60000
+  });
+
+  // Polling de telemetría GPS para el panel de control de administración
+  useEffect(() => {
+    if (!selectedRoute?.id) {
+      setGpsHistory([]);
+      setLiveGpsInfo(null);
+      return;
+    }
+
+    const fetchGpsData = () => {
+      api.get(`/logistics/${selectedRoute.id}/gps-history`)
+        .then((res: any) => {
+          if (res.data?.data) {
+            setLiveGpsInfo(res.data.data.route);
+            if (Array.isArray(res.data.data.pings)) {
+              setGpsHistory(res.data.data.pings.map((p: any) => [p.latitude, p.longitude]));
+            }
+          }
+        })
+        .catch(() => {
+          // Silencioso
+        });
+    };
+
+    fetchGpsData();
+    const interval = setInterval(fetchGpsData, 15000);
+    return () => clearInterval(interval);
+  }, [selectedRoute?.id]);
 
   // Carga e integración del geocodificador de Google Maps
   const [googleLoaded, setGoogleLoaded] = useState(false);
@@ -1662,14 +1732,46 @@ export default function RepartoDashboard() {
 
               {/* Mapa Interactivo Leaflet */}
               <div style={{ marginBottom: '16px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', color: 'var(--text-secondary)', marginBottom: '8px' }}>
-                  <Map size={14} />
-                  <span>Mapa de Recorrido Óptimo (General Villegas)</span>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap', gap: '8px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                    <Map size={14} />
+                    <span>Mapa de Recorrido Óptimo y Posición GPS en Vivo</span>
+                  </div>
+                  {liveGpsInfo?.lastGpsUpdate && (
+                    <div style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      padding: '4px 10px',
+                      borderRadius: '12px',
+                      backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                      color: '#059669',
+                      fontSize: '0.75rem',
+                      fontWeight: 600
+                    }}>
+                      <span style={{
+                        width: '8px',
+                        height: '8px',
+                        borderRadius: '50%',
+                        backgroundColor: '#10B981',
+                        boxShadow: '0 0 0 2px rgba(16, 185, 129, 0.3)'
+                      }} />
+                      GPS Chofer: {liveGpsInfo.currentSpeed !== null && liveGpsInfo.currentSpeed !== undefined ? `${liveGpsInfo.currentSpeed} km/h` : 'En parada'} • Última señal {new Date(liveGpsInfo.lastGpsUpdate).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
+                    </div>
+                  )}
                 </div>
                 <RouteMap 
                   locations={activeRouteTspDetails.locations} 
                   routePoints={selectedRouteStreetPoints.length > 0 ? selectedRouteStreetPoints : activeRouteTspDetails.points} 
                   onUpdateClientCoords={handleUpdateClientCoords}
+                  gpsLocation={liveGpsInfo?.currentLat && liveGpsInfo?.currentLng ? {
+                    lat: liveGpsInfo.currentLat,
+                    lng: liveGpsInfo.currentLng,
+                    speed: liveGpsInfo.currentSpeed,
+                    lastUpdate: liveGpsInfo.lastGpsUpdate,
+                    vehiclePlate: liveGpsInfo.vehiclePlate || selectedRoute?.vehiclePlate
+                  } : null}
+                  gpsTrail={gpsHistory}
                 />
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '8px', padding: '8px', backgroundColor: 'var(--bg-light, #fafafa)', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
                   <div><strong>📍 Consejo:</strong> Si un punto en el mapa está mal ubicado, podés arrastrar su marcador para corregirlo permanentemente en el sistema.</div>

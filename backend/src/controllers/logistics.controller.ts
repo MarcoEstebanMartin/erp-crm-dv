@@ -623,3 +623,137 @@ export async function transferRouteCustody(req: AuthenticatedRequest, res: Respo
   }
 }
 
+/**
+ * Registrar punto de GPS en tiempo real para una hoja de ruta activa
+ */
+export async function recordRouteGpsPing(req: AuthenticatedRequest, res: Response): Promise<void> {
+  const { id } = req.params;
+  const { latitude, longitude, speed, heading } = req.body;
+
+  try {
+    const routeId = Number(id);
+    if (isNaN(routeId)) {
+      res.status(400).json({ status: 'error', message: 'ID de ruta inválido.' });
+      return;
+    }
+
+    const lat = Number(latitude);
+    const lng = Number(longitude);
+
+    if (isNaN(lat) || isNaN(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+      res.status(400).json({ status: 'error', message: 'Coordenadas GPS inválidas.' });
+      return;
+    }
+
+    const spd = speed !== undefined && speed !== null ? Number(speed) : null;
+    const hdg = heading !== undefined && heading !== null ? Number(heading) : null;
+
+    const route = await prisma.deliveryRoute.findUnique({
+      where: { id: routeId }
+    });
+
+    if (!route) {
+      res.status(404).json({ status: 'error', message: 'Hoja de ruta no encontrada.' });
+      return;
+    }
+
+    const now = new Date();
+
+    // Actualizar última posición en DeliveryRoute
+    const updatedRoute = await prisma.deliveryRoute.update({
+      where: { id: routeId },
+      data: {
+        currentLat: lat,
+        currentLng: lng,
+        currentSpeed: spd,
+        lastGpsUpdate: now
+      }
+    });
+
+    // Guardar ping en el historial de traza
+    const ping = await prisma.routeGpsPing.create({
+      data: {
+        deliveryRouteId: routeId,
+        latitude: lat,
+        longitude: lng,
+        speed: spd,
+        heading: hdg,
+        createdAt: now
+      }
+    });
+
+    res.status(200).json({
+      status: 'success',
+      data: {
+        routeId: updatedRoute.id,
+        currentLat: updatedRoute.currentLat,
+        currentLng: updatedRoute.currentLng,
+        lastGpsUpdate: updatedRoute.lastGpsUpdate,
+        pingId: ping.id
+      }
+    });
+  } catch (error: any) {
+    console.error('Error al registrar ping GPS de ruta:', error);
+    res.status(500).json({
+      status: 'error',
+      message: error.message || 'Error interno al registrar telemetría GPS.'
+    });
+  }
+}
+
+/**
+ * Obtener historial de traza GPS y última ubicación de una hoja de ruta
+ */
+export async function getRouteGpsHistory(req: AuthenticatedRequest, res: Response): Promise<void> {
+  const { id } = req.params;
+
+  try {
+    const routeId = Number(id);
+    if (isNaN(routeId)) {
+      res.status(400).json({ status: 'error', message: 'ID de ruta inválido.' });
+      return;
+    }
+
+    const route = await prisma.deliveryRoute.findUnique({
+      where: { id: routeId },
+      select: {
+        id: true,
+        driverName: true,
+        vehiclePlate: true,
+        status: true,
+        custodyStatus: true,
+        currentLat: true,
+        currentLng: true,
+        currentSpeed: true,
+        lastGpsUpdate: true
+      }
+    });
+
+    if (!route) {
+      res.status(404).json({ status: 'error', message: 'Hoja de ruta no encontrada.' });
+      return;
+    }
+
+    const pings = await prisma.routeGpsPing.findMany({
+      where: { deliveryRouteId: routeId },
+      orderBy: { createdAt: 'asc' },
+      take: 1000
+    });
+
+    res.status(200).json({
+      status: 'success',
+      data: {
+        route,
+        pings
+      }
+    });
+  } catch (error: any) {
+    console.error('Error al obtener historial GPS de ruta:', error);
+    res.status(500).json({
+      status: 'error',
+      message: error.message || 'Error al obtener historial GPS.'
+    });
+  }
+}
+
+
