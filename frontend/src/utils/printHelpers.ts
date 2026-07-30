@@ -289,7 +289,7 @@ export const printBatchPickingA4 = ({
         <style>
           @page {
             size: A4 portrait;
-            margin: 10mm 10mm 10mm 10mm;
+            margin: 6mm 6mm 6mm 6mm;
           }
           * {
             box-sizing: border-box;
@@ -299,15 +299,19 @@ export const printBatchPickingA4 = ({
             margin: 0;
             padding: 0;
             color: #111; 
-            font-size: 12px; 
-            line-height: 1.3; 
+            font-size: 11px; 
+            line-height: 1.2; 
             background: #fff;
           }
           .page-block {
             page-break-after: always;
-            min-height: 270mm;
+            page-break-inside: avoid;
+            height: 280mm;
+            max-height: 280mm;
+            overflow: hidden;
             display: flex;
             flex-direction: column;
+            box-sizing: border-box;
           }
           .page-block:last-child {
             page-break-after: avoid;
@@ -318,42 +322,49 @@ export const printBatchPickingA4 = ({
             justify-content: space-between;
             align-items: center;
             border-bottom: 2px solid #111;
-            padding-bottom: 6px;
-            margin-bottom: 10px;
+            padding-bottom: 4px;
+            margin-bottom: 6px;
+            height: 28mm;
+            flex-shrink: 0;
           }
           .title {
-            font-size: 15px;
+            font-size: 14px;
             font-weight: 800;
             text-transform: uppercase;
           }
           .subtitle {
-            font-size: 12px;
+            font-size: 11px;
             font-weight: 600;
             color: #333;
           }
           .meta-info {
-            font-size: 11px;
+            font-size: 10.5px;
             text-align: right;
             color: #444;
           }
           
-          /* Grilla A4 fija 2x4 por hoja para asegurar máxima legibilidad */
+          /* Grilla A4 fija 2x4 por hoja */
           .orders-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            grid-template-rows: repeat(4, minmax(0, 1fr));
-            gap: 10px;
+            grid-template-rows: repeat(4, 1fr);
+            gap: 6px;
             flex-grow: 1;
+            height: calc(280mm - 30mm);
+            overflow: hidden;
           }
           
           .order-card {
-            border: 2px solid #222;
-            border-radius: 6px;
-            padding: 8px 10px;
+            border: 1.5px solid #222;
+            border-radius: 5px;
+            padding: 5px 7px;
             background: #fff;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
+            overflow: hidden;
+            page-break-inside: avoid;
+            height: 100%;
           }
 
           .order-header {
@@ -361,33 +372,36 @@ export const printBatchPickingA4 = ({
             justify-content: space-between;
             align-items: center;
             border-bottom: 1.5px solid #000;
-            padding-bottom: 4px;
-            margin-bottom: 4px;
+            padding-bottom: 3px;
+            margin-bottom: 3px;
           }
 
           .order-num {
-            font-size: 13px;
+            font-size: 12px;
             font-weight: 800;
             background: #000;
             color: #fff;
-            padding: 2px 7px;
-            border-radius: 4px;
+            padding: 1px 6px;
+            border-radius: 3px;
           }
 
           .client-name {
-            font-size: 13px;
+            font-size: 12px;
             font-weight: 800;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            max-width: 200px;
+            max-width: 180px;
           }
 
           .order-sub {
-            font-size: 10.5px;
+            font-size: 10px;
             color: #444;
-            margin-bottom: 6px;
+            margin-bottom: 4px;
             font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
           }
 
           table.item-table {
@@ -397,46 +411,45 @@ export const printBatchPickingA4 = ({
           }
 
           table.item-table th {
-            font-size: 10px;
+            font-size: 9.5px;
             text-transform: uppercase;
             border-bottom: 1.5px solid #222;
             text-align: left;
-            padding: 3px 2px;
+            padding: 2px 2px;
             color: #111;
             font-weight: 800;
           }
 
           table.item-table td {
-            font-size: 11.5px;
-            padding: 4px 2px;
-            border-bottom: 1px solid #ddd;
+            font-size: 10.5px;
+            padding: 2px 2px;
+            border-bottom: 1px solid #eee;
             vertical-align: middle;
           }
 
           .loc-tag {
-            font-size: 9.5px;
+            font-size: 9px;
             font-weight: 800;
             background: #e2e8f0;
             border: 1px solid #94a3b8;
-            padding: 1px 4px;
+            padding: 1px 3px;
             border-radius: 3px;
             display: inline-block;
-            margin-right: 4px;
+            margin-right: 3px;
           }
 
           .chk-box {
-            width: 16px;
-            height: 16px;
-            border: 2px solid #000;
-            border-radius: 3px;
+            width: 14px;
+            height: 14px;
+            border: 1.5px solid #000;
+            border-radius: 2px;
             display: inline-block;
           }
 
-          /* Agrandado el recuadro para escribir el peso a mano */
           .weight-box {
-            width: 58px;
-            height: 26px;
-            border: 2px dashed #000;
+            width: 50px;
+            height: 22px;
+            border: 1.5px dashed #000;
             border-radius: 3px;
             display: inline-block;
             background: #fff;
@@ -478,10 +491,10 @@ export const printBatchPickingA4 = ({
                       <table class="item-table">
                         <thead>
                           <tr>
-                            <th style="width: 22px; text-align: center;">Visto</th>
+                            <th style="width: 18px; text-align: center;">✓</th>
                             <th>Artículo / Ubicación</th>
-                            <th style="text-align: right; width: 45px;">Cant</th>
-                            ${showPesoColumn ? '<th style="text-align: center; width: 65px;">Peso</th>' : ''}
+                            <th style="text-align: right; width: 38px;">Cant</th>
+                            ${showPesoColumn ? '<th style="text-align: center; width: 50px;">Peso</th>' : ''}
                           </tr>
                         </thead>
                         <tbody>
@@ -494,9 +507,9 @@ export const printBatchPickingA4 = ({
                                 <td style="text-align: center;"><div class="chk-box"></div></td>
                                 <td>
                                   ${loc !== 'S/U' ? `<span class="loc-tag">${loc}</span>` : ''}
-                                  <strong style="font-size: 11.5px;">${item.product?.name || 'Artículo'}</strong>
+                                  <strong style="font-size: 10px;">${item.product?.name || 'Artículo'}</strong>
                                 </td>
-                                <td style="text-align: right; font-weight: 800; font-size: 12.5px;">
+                                <td style="text-align: right; font-weight: 800; font-size: 10.5px;">
                                   ${item.quantity}u
                                 </td>
                                 ${showPesoColumn ? `
@@ -521,9 +534,6 @@ export const printBatchPickingA4 = ({
           window.onload = function() {
             setTimeout(() => {
               window.print();
-              if (window.opener) {
-                window.opener.postMessage({ type: 'PRINT_BATCH_SUCCESS', orderIds: ${JSON.stringify(processedOrders.map(o => o.id))} }, '*');
-              }
             }, 500);
           }
         </script>

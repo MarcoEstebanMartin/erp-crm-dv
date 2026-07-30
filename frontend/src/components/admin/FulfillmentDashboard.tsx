@@ -3,6 +3,7 @@ import { api } from '../../utils/api';
 import { Printer, CheckSquare, Search, RefreshCw, Eye, CheckCircle } from 'lucide-react';
 import { printPickingList, printOrderReceipt, printBatchPickingA4, printConsolidatedPickingA4 } from '../../utils/printHelpers';
 import OrderFulfillmentModal from '../modals/OrderFulfillmentModal';
+import ConfirmModal from '../modals/ConfirmModal';
 import { getOrderStatusInfo } from '../../utils/orderStatusHelper';
 
 export default function FulfillmentDashboard() {
@@ -16,23 +17,61 @@ export default function FulfillmentDashboard() {
   const [selectedRoute, setSelectedRoute] = useState<string>('ALL');
   const [selectedZone, setSelectedZone] = useState<string>('ALL');
 
+  // Estado para diálogos ConfirmModal estilizados
+  const [confirmState, setConfirmState] = useState<{
+    isOpen: boolean;
+    title?: string;
+    message: string;
+    confirmText?: string;
+    cancelText?: string;
+    type?: 'danger' | 'warning' | 'info' | 'success';
+    isAlert?: boolean;
+    onConfirm: () => void;
+    onCancel: () => void;
+  }>({
+    isOpen: false,
+    message: '',
+    onConfirm: () => {},
+    onCancel: () => {}
+  });
+
+  const showConfirm = ({
+    title = 'Confirmar Acción',
+    message,
+    confirmText = 'Aceptar',
+    cancelText = 'Cancelar',
+    type = 'info',
+    isAlert = false,
+    onConfirm
+  }: {
+    title?: string;
+    message: string;
+    confirmText?: string;
+    cancelText?: string;
+    type?: 'danger' | 'warning' | 'info' | 'success';
+    isAlert?: boolean;
+    onConfirm: () => void;
+  }) => {
+    setConfirmState({
+      isOpen: true,
+      title,
+      message,
+      confirmText,
+      cancelText,
+      type,
+      isAlert,
+      onConfirm: () => {
+        setConfirmState(prev => ({ ...prev, isOpen: false }));
+        onConfirm();
+      },
+      onCancel: () => {
+        setConfirmState(prev => ({ ...prev, isOpen: false }));
+      }
+    });
+  };
+
   useEffect(() => {
     fetchOrders();
-
-    // Listen for print success to move orders from PENDING to PREPARING (En Picking)
-    const handleMessage = async (event: MessageEvent) => {
-      if (event.data?.type === 'PRINT_SUCCESS' && event.data?.orderId) {
-        await api.updateOrderStatus(event.data.orderId, 'PREPARING' as any);
-        fetchOrders();
-      } else if (event.data?.type === 'PRINT_BATCH_SUCCESS' && Array.isArray(event.data?.orderIds)) {
-        await Promise.all(
-          event.data.orderIds.map((id: number) => api.updateOrderStatus(id, 'PREPARING' as any))
-        );
-        fetchOrders();
-      }
-    };
-    window.addEventListener('message', handleMessage);
-    return () => window.removeEventListener('message', handleMessage);
   }, []);
 
   const fetchOrders = async () => {
@@ -87,27 +126,115 @@ export default function FulfillmentDashboard() {
     return filterLabelParts.length > 0 ? filterLabelParts.join(' | ') : 'Todos los Pedidos';
   };
 
+  // Selección múltiple para armado A4
+  const [selectedOrderIds, setSelectedOrderIds] = useState<number[]>([]);
+
+  const toggleSelectOrder = (id: number) => {
+    setSelectedOrderIds(prev =>
+      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+    );
+  };
+
+  const toggleSelectAllPending = () => {
+    const pendingIds = pending.map(o => o.id);
+    const allSelected = pendingIds.length > 0 && pendingIds.every(id => selectedOrderIds.includes(id));
+    if (allSelected) {
+      setSelectedOrderIds(prev => prev.filter(id => !pendingIds.includes(id)));
+    } else {
+      setSelectedOrderIds(prev => Array.from(new Set([...prev, ...pendingIds])));
+    }
+  };
+
+  const handleRevertToPending = async (orderId: number) => {
+    try {
+      await api.updateOrderStatus(orderId, 'PENDING' as any);
+      fetchOrders();
+    } catch (err) {
+      console.error('Error al devolver pedido a pendientes:', err);
+    }
+  };
+
+  const handleRevertAllPreparingToPending = () => {
+    if (preparing.length === 0) return;
+    showConfirm({
+      title: 'Devolver a Pendientes',
+      message: `¿Deseas devolver los ${preparing.length} pedidos de "En Picking" a la columna "Pendientes"?`,
+      confirmText: 'Devolver Todos',
+      cancelText: 'Cancelar',
+      type: 'warning',
+      onConfirm: async () => {
+        try {
+          await Promise.all(
+            preparing.map(o => api.updateOrderStatus(o.id, 'PENDING' as any))
+          );
+          fetchOrders();
+        } catch (err) {
+          console.error('Error al devolver todos a pendientes:', err);
+        }
+      }
+    });
+  };
+
   const handlePrintBatchA4 = () => {
-    if (pending.length === 0) {
-      alert('No hay pedidos pendientes que coincidan con los filtros seleccionados.');
+    const ordersToPrint = selectedOrderIds.length > 0
+      ? pending.filter(o => selectedOrderIds.includes(o.id))
+      : pending;
+
+    if (ordersToPrint.length === 0) {
+      showConfirm({
+        title: 'Sin Pedidos Pendientes',
+        message: 'No hay pedidos seleccionados o pendientes que coincidan con los filtros.',
+        isAlert: true,
+        confirmText: 'Entendido',
+        type: 'info',
+        onConfirm: () => {}
+      });
       return;
     }
 
     printBatchPickingA4({
-      orders: pending,
+      orders: ordersToPrint,
       zone: selectedZone,
       filterLabel: getFilterLabel()
     });
+
+    setTimeout(() => {
+      showConfirm({
+        title: 'Pasar a En Picking',
+        message: `¿Deseas mover los ${ordersToPrint.length} pedidos impresos a la columna "En Picking"?`,
+        confirmText: 'Pasar a Picking',
+        cancelText: 'Mantener en Pendientes',
+        type: 'info',
+        onConfirm: async () => {
+          await Promise.all(
+            ordersToPrint.map(o => api.updateOrderStatus(o.id, 'PREPARING' as any))
+          );
+          setSelectedOrderIds([]);
+          fetchOrders();
+        }
+      });
+    }, 600);
   };
 
   const handlePrintConsolidated = () => {
-    if (pending.length === 0) {
-      alert('No hay pedidos pendientes para consolidar.');
+    const ordersToPrint = selectedOrderIds.length > 0
+      ? pending.filter(o => selectedOrderIds.includes(o.id))
+      : pending;
+
+    if (ordersToPrint.length === 0) {
+      showConfirm({
+        title: 'Sin Pedidos Pendientes',
+        message: 'No hay pedidos pendientes para consolidar.',
+        isAlert: true,
+        confirmText: 'Entendido',
+        type: 'info',
+        onConfirm: () => {}
+      });
       return;
     }
 
     printConsolidatedPickingA4({
-      orders: pending,
+      orders: ordersToPrint,
       zone: selectedZone,
       filterLabel: getFilterLabel()
     });
@@ -125,16 +252,17 @@ export default function FulfillmentDashboard() {
   const renderCard = (o: any, column: 'PENDING' | 'PREPARING' | 'BILLED') => {
     const statusInfo = getOrderStatusInfo(o);
     const clientName = o.client?.name || o.persona?.name || 'Cliente sin Nombre';
+    const isSelected = selectedOrderIds.includes(o.id);
     
     return (
       <div 
         key={o.id} 
         style={{
-          background: 'var(--background-card)',
+          background: isSelected ? '#F8FAFC' : 'var(--background-card)',
           borderRadius: '8px',
           padding: '8px 10px',
-          border: '1px solid var(--border-color)',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+          border: isSelected ? '2px solid #6366F1' : '1px solid var(--border-color)',
+          boxShadow: isSelected ? '0 2px 8px rgba(99, 102, 241, 0.12)' : '0 1px 3px rgba(0,0,0,0.03)',
           display: 'flex',
           flexDirection: 'column',
           gap: '5px',
@@ -143,17 +271,32 @@ export default function FulfillmentDashboard() {
         }}
         className="fulfillment-card"
       >
-        {/* Linea 1: #Pedido + Nombre Cliente + Badge Estado */}
+        {/* Linea 1: Checkbox (si es PENDING) + #Pedido + Nombre Cliente + Badge Estado */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '6px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden', minWidth: 0 }}>
+            {column === 'PENDING' && (
+              <input 
+                type="checkbox"
+                checked={isSelected}
+                onChange={() => toggleSelectOrder(o.id)}
+                style={{ 
+                  cursor: 'pointer', 
+                  width: '15px', 
+                  height: '15px', 
+                  accentColor: '#6366F1',
+                  flexShrink: 0
+                }}
+                title="Seleccionar para imprimir en lote A4"
+              />
+            )}
             <span style={{ 
               fontWeight: 800, 
               fontSize: '0.78rem', 
-              background: 'var(--background-alt)', 
+              background: '#F1F5F9', 
               padding: '1px 6px', 
               borderRadius: '4px', 
-              color: 'var(--text-main)',
-              border: '1px solid var(--border-color)',
+              color: '#334155',
+              border: '1px solid #E2E8F0',
               flexShrink: 0 
             }}>
               #{o.id}
@@ -196,12 +339,12 @@ export default function FulfillmentDashboard() {
               <span style={{ fontSize: '0.75rem', opacity: 0.85 }}>📍 {o.client?.city || o.persona?.city}</span>
             )}
           </div>
-          <div style={{ fontWeight: 800, fontSize: '0.88rem', color: 'var(--text-main)' }}>
+          <div style={{ fontWeight: 800, fontSize: '0.88rem', color: '#0F172A' }}>
             ${Math.round(Number(o.totalAmount)).toLocaleString('es-AR')}
           </div>
         </div>
 
-        {/* Linea 3: Botones de Acción Compactos */}
+        {/* Linea 3: Botones de Acción Elegantes */}
         <div style={{ display: 'flex', gap: '6px', marginTop: '2px' }}>
           {column === 'PENDING' && (
             <>
@@ -210,13 +353,16 @@ export default function FulfillmentDashboard() {
                 style={{ 
                   flex: 1, 
                   display: 'flex', 
-                  justify: 'center', 
+                  justifyContent: 'center', 
                   alignItems: 'center', 
                   gap: '4px',
                   height: '26px',
                   padding: '0 6px',
                   fontSize: '0.75rem',
-                  fontWeight: 600
+                  fontWeight: 600,
+                  backgroundColor: '#F8FAFC',
+                  borderColor: '#E2E8F0',
+                  color: '#475569'
                 }} 
                 onClick={() => handlePrintPickingList(o)} 
                 title="Imprimir Hoja de Armado"
@@ -228,15 +374,16 @@ export default function FulfillmentDashboard() {
                 style={{ 
                   flex: 1.2, 
                   display: 'flex', 
-                  justify: 'center', 
+                  justifyContent: 'center', 
                   alignItems: 'center', 
                   gap: '4px', 
                   height: '26px',
                   padding: '0 6px',
                   fontSize: '0.75rem',
                   fontWeight: 700,
-                  backgroundColor: '#4F46E5', 
-                  borderColor: '#4F46E5' 
+                  backgroundColor: '#6366F1', 
+                  borderColor: '#6366F1',
+                  color: '#FFFFFF'
                 }} 
                 onClick={() => setFulfillmentModalOrder(o)} 
                 title="Facturar Directamente"
@@ -246,26 +393,47 @@ export default function FulfillmentDashboard() {
             </>
           )}
           {column === 'PREPARING' && (
-            <button 
-              className="btn btn-primary" 
-              style={{ 
-                flex: 1, 
-                display: 'flex', 
-                justify: 'center', 
-                alignItems: 'center', 
-                gap: '5px', 
-                height: '26px',
-                padding: '0 8px',
-                fontSize: '0.78rem',
-                fontWeight: 700,
-                backgroundColor: '#4F46E5', 
-                color: 'white', 
-                borderColor: '#4F46E5' 
-              }} 
-              onClick={() => setFulfillmentModalOrder(o)}
-            >
-              <CheckSquare size={13} /> Confirmar Armado
-            </button>
+            <div style={{ display: 'flex', gap: '6px', width: '100%' }}>
+              <button 
+                className="btn btn-secondary" 
+                style={{ 
+                  height: '26px',
+                  padding: '0 8px',
+                  fontSize: '0.74rem',
+                  fontWeight: 600,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  backgroundColor: '#F8FAFC',
+                  borderColor: '#E2E8F0',
+                  color: '#475569'
+                }} 
+                onClick={() => handleRevertToPending(o.id)}
+                title="Devolver este pedido a la columna Pendientes"
+              >
+                ↩️ Volver
+              </button>
+              <button 
+                className="btn btn-primary" 
+                style={{ 
+                  flex: 1, 
+                  display: 'flex', 
+                  justifyContent: 'center', 
+                  alignItems: 'center', 
+                  gap: '5px', 
+                  height: '26px',
+                  padding: '0 8px',
+                  fontSize: '0.78rem',
+                  fontWeight: 700,
+                  backgroundColor: '#4F46E5', 
+                  color: 'white', 
+                  borderColor: '#4F46E5'
+                }} 
+                onClick={() => setFulfillmentModalOrder(o)}
+              >
+                <CheckSquare size={13} /> Confirmar Armado
+              </button>
+            </div>
           )}
           {column === 'BILLED' && (
             <button 
@@ -273,13 +441,16 @@ export default function FulfillmentDashboard() {
               style={{ 
                 flex: 1, 
                 display: 'flex', 
-                justify: 'center', 
+                justifyContent: 'center', 
                 alignItems: 'center', 
                 gap: '5px',
                 height: '26px',
                 padding: '0 8px',
                 fontSize: '0.78rem',
-                fontWeight: 600 
+                fontWeight: 600,
+                backgroundColor: '#F8FAFC',
+                borderColor: '#E2E8F0',
+                color: '#475569'
               }} 
               onClick={() => handlePrintReceipt(o)}
             >
@@ -299,7 +470,7 @@ export default function FulfillmentDashboard() {
         flexWrap: 'wrap',
         gap: '10px',
         alignItems: 'center',
-        justify: 'space-between',
+        justifyContent: 'space-between',
         backgroundColor: 'var(--background-card)',
         padding: '8px 14px',
         borderRadius: '10px',
@@ -380,7 +551,7 @@ export default function FulfillmentDashboard() {
           </div>
         </div>
 
-        {/* Botones de Impresión de Picking Premium */}
+        {/* Botones de Impresión de Picking (Tonos Neutros con Violeta Tenue) */}
         <div style={{ display: 'flex', gap: '6px' }}>
           <button
             className="btn btn-primary"
@@ -388,17 +559,20 @@ export default function FulfillmentDashboard() {
               display: 'flex',
               alignItems: 'center',
               gap: '5px',
-              backgroundColor: '#007AFF',
-              borderColor: '#007AFF',
+              backgroundColor: '#6366F1',
+              borderColor: '#6366F1',
+              color: '#FFFFFF',
               fontWeight: 700,
               fontSize: '0.82rem',
               height: '28px',
-              padding: '0 10px'
+              padding: '0 12px',
+              borderRadius: '6px',
+              boxShadow: '0 2px 6px rgba(99, 102, 241, 0.2)'
             }}
             onClick={handlePrintBatchA4}
-            title="Imprimir lote de pedidos (máximo 8 por hoja A4)"
+            title="Imprimir lote de pedidos seleccionados (máximo 8 por hoja A4)"
           >
-            <Printer size={13} /> 🖨️ Lote A4
+            <Printer size={13} /> Lote A4 {selectedOrderIds.length > 0 ? `(${selectedOrderIds.length})` : ''}
           </button>
 
           <button
@@ -407,18 +581,19 @@ export default function FulfillmentDashboard() {
               display: 'flex',
               alignItems: 'center',
               gap: '5px',
-              backgroundColor: '#059669',
-              borderColor: '#059669',
-              color: 'white',
+              backgroundColor: '#F8FAFC',
+              borderColor: '#E2E8F0',
+              color: '#334155',
               fontWeight: 700,
               fontSize: '0.82rem',
               height: '28px',
-              padding: '0 10px'
+              padding: '0 12px',
+              borderRadius: '6px'
             }}
             onClick={handlePrintConsolidated}
             title="Imprimir planilla de consolidado total por depósito"
           >
-            <Printer size={13} /> 📌 Consolidado
+            <Printer size={13} /> Consolidado {selectedOrderIds.length > 0 ? `(${selectedOrderIds.length})` : ''}
           </button>
         </div>
       </div>
@@ -429,9 +604,37 @@ export default function FulfillmentDashboard() {
         <div style={{ display: 'flex', flexDirection: 'column', background: 'var(--background-alt)', borderRadius: '10px', padding: '12px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
             <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'var(--accent-color)' }} />
+              <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#6366F1' }} />
               Pendientes ({pending.length})
+              {selectedOrderIds.length > 0 && (
+                <span style={{
+                  fontSize: '0.72rem',
+                  fontWeight: 800,
+                  backgroundColor: '#EEF2FF',
+                  color: '#4338CA',
+                  border: '1px solid #C7D2FE',
+                  padding: '1px 7px',
+                  borderRadius: '10px',
+                  marginLeft: '4px'
+                }}>
+                  {selectedOrderIds.length} sel.
+                </span>
+              )}
             </h3>
+
+            {pending.length > 0 && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                  <input 
+                    type="checkbox"
+                    checked={pending.length > 0 && pending.every(o => selectedOrderIds.includes(o.id))}
+                    onChange={toggleSelectAllPending}
+                    style={{ accentColor: 'var(--accent-color, #111827)', cursor: 'pointer' }}
+                  />
+                  Todos
+                </label>
+              </div>
+            )}
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', overflowY: 'auto', flexGrow: 1, paddingRight: '2px' }}>
             {pending.length === 0 ? (
@@ -449,6 +652,22 @@ export default function FulfillmentDashboard() {
               <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#F59E0B' }} />
               En Picking ({preparing.length})
             </h3>
+            {preparing.length > 0 && (
+              <button
+                className="btn btn-secondary"
+                style={{
+                  padding: '2px 8px',
+                  fontSize: '0.72rem',
+                  height: '24px',
+                  borderRadius: '5px',
+                  fontWeight: 600
+                }}
+                onClick={handleRevertAllPreparingToPending}
+                title="Devolver todos los pedidos en picking a la columna Pendientes"
+              >
+                ↩️ Devolver Todos
+              </button>
+            )}
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', overflowY: 'auto', flexGrow: 1, paddingRight: '2px' }}>
             {preparing.length === 0 ? (
@@ -487,6 +706,8 @@ export default function FulfillmentDashboard() {
           }}
         />
       )}
+
+      <ConfirmModal {...confirmState} />
       
       <style>{`
         .fulfillment-card:hover {
