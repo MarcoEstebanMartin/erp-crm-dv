@@ -873,57 +873,60 @@ export async function invoiceOrder(req: AuthenticatedRequest, res: Response): Pr
 
     if (paymentMethod) {
       if (paymentMethod === PaymentMethod.CASH) {
-        // Validar caja para la porción oficial
+        // Validar caja para la porción oficial: Buscar primero caja abierta del usuario
         let activeDrawerOfficial = await prisma.cashDrawer.findFirst({
           where: {
             userId: adminId,
             status: 'OPEN',
-            branch: {
-              in: [billingType === BillingType.OFFICIAL ? 'A' : 'X', 'CONSOLIDADA']
-            }
           },
+          orderBy: { openedAt: 'desc' }
         });
 
+        // Si no hay del usuario, buscar cualquier caja abierta en el sistema
         if (!activeDrawerOfficial) {
           activeDrawerOfficial = await prisma.cashDrawer.findFirst({
             where: {
               status: 'OPEN',
-              branch: {
-                in: [billingType === BillingType.OFFICIAL ? 'A' : 'X', 'CONSOLIDADA']
-              }
             },
+            orderBy: { openedAt: 'desc' }
           });
         }
 
+        // EXIGIR OBLIGATORIAMENTE que haya una caja abierta para ingresar cobros en efectivo
         if (!activeDrawerOfficial) {
-          if (userRole === Role.ADMIN || userRole === Role.FACTURACION) {
-            activeDrawerOfficialId = null;
-          } else {
-            res.status(400).json({ status: 'error', message: `Debe abrir la Caja Grande antes de registrar cobros en efectivo.` });
-            return;
-          }
-        } else {
-          activeDrawerOfficialId = activeDrawerOfficial.id;
+          res.status(400).json({
+            status: 'error',
+            message: 'No hay ninguna Caja de Efectivo abierta. Debe abrir la caja diaria/depósito en el módulo de Cajas antes de facturar un cobro en efectivo.'
+          });
+          return;
         }
+        activeDrawerOfficialId = activeDrawerOfficial.id;
 
         // Validar caja para la porción interna si hay split
         if (splitApplied && internoItemsData.length > 0) {
-          const activeDrawerInternal = await prisma.cashDrawer.findFirst({
+          let activeDrawerInternal = await prisma.cashDrawer.findFirst({
             where: {
+              userId: adminId,
               status: 'OPEN',
-              branch: { in: ['X', 'CONSOLIDADA'] }
-            }
+            },
+            orderBy: { openedAt: 'desc' }
           });
+
           if (!activeDrawerInternal) {
-            if (userRole === Role.ADMIN || userRole === Role.FACTURACION) {
-              activeDrawerInternalId = null;
-            } else {
-              res.status(400).json({ status: 'error', message: `Debe abrir la Caja de Sucursal X antes de registrar cobros en efectivo para la parte interna.` });
-              return;
-            }
-          } else {
-            activeDrawerInternalId = activeDrawerInternal.id;
+            activeDrawerInternal = await prisma.cashDrawer.findFirst({
+              where: { status: 'OPEN' },
+              orderBy: { openedAt: 'desc' }
+            });
           }
+
+          if (!activeDrawerInternal) {
+            res.status(400).json({
+              status: 'error',
+              message: 'No hay ninguna Caja de Efectivo abierta. Debe abrir una caja de efectivo antes de facturar cobros en efectivo para la parte interna.'
+            });
+            return;
+          }
+          activeDrawerInternalId = activeDrawerInternal.id;
         }
       } else if (paymentMethod === PaymentMethod.BANK_TRANSFER) {
         const selectedBankId = reqBankAccountId ? Number(reqBankAccountId) : (await prisma.bankAccount.findFirst())?.id;
