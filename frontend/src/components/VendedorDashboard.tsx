@@ -8,6 +8,9 @@ import PriceListModal from './PriceListModal';
 import MobileCobros from './MobileCobros';
 import type { Persona, Product, Order, Rubro, SaleRoute } from '../types';
 
+const RepartoDashboard = React.lazy(() => import('./RepartoDashboard'));
+const DepositoDashboard = React.lazy(() => import('./DepositoDashboard'));
+
 interface VendedorDashboardProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
@@ -2236,6 +2239,18 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
             </form>
           </div>
         </div>
+      )}
+
+      {activeTab === 'logistica' && (
+        <React.Suspense fallback={<div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-secondary)' }}>Cargando Logística y Reparto...</div>}>
+          <RepartoDashboard />
+        </React.Suspense>
+      )}
+
+      {activeTab === 'deposito' && (
+        <React.Suspense fallback={<div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-secondary)' }}>Cargando Preparación y Depósito...</div>}>
+          <DepositoDashboard activeTab="deposito" setActiveTab={setActiveTab} />
+        </React.Suspense>
       )}
 
       {/* Alerta flotante Toast */}

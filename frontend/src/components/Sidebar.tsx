@@ -79,15 +79,21 @@ export default function Sidebar({ username, role, activeTab, setActiveTab, onLog
       case 'VENDEDOR':
         return [
           { id: 'orders', label: 'Toma de Pedidos', icon: <ShoppingCart size={18} /> },
+          { id: 'logistica', label: 'Logística y Reparto', icon: <Truck size={18} /> },
           { id: 'clients', label: 'Mis Rutas', icon: <Users size={18} /> },
           { id: 'cobranzas', label: 'Cobranzas y Recibos', icon: <DollarSign size={18} /> },
+          { id: 'deposito', label: 'Preparación (Picking)', icon: <Warehouse size={18} /> },
           { id: 'products', label: 'Catálogo de Precios', icon: <Package size={18} /> },
           { id: 'history', label: 'Historial de Pedidos', icon: <History size={18} /> },
         ];
       case 'DEPOSITO':
         return [
           { id: 'deposito', label: 'Preparación (Picking)', icon: <Warehouse size={18} /> },
+          { id: 'logistica', label: 'Logística y Reparto', icon: <Truck size={18} /> },
+          { id: 'cobranzas', label: 'Cobranzas y Recibos', icon: <DollarSign size={18} /> },
+          { id: 'orders', label: 'Toma de Pedidos', icon: <ShoppingCart size={18} /> },
           { id: 'products', label: 'Inventario y Stock', icon: <Package size={18} /> },
+          { id: 'history', label: 'Historial de Pedidos', icon: <History size={18} /> },
         ];
       default:
         return [];
@@ -100,7 +106,13 @@ export default function Sidebar({ username, role, activeTab, setActiveTab, onLog
     if (role === 'VENDEDOR') {
       targetPath = `/vendedor/${tabId}`;
     } else if (role === 'DEPOSITO') {
-      targetPath = tabId === 'deposito' ? '/deposito/picking' : '/deposito/stock';
+      if (tabId === 'deposito') {
+        targetPath = '/deposito/picking';
+      } else if (tabId === 'products') {
+        targetPath = '/deposito/stock';
+      } else {
+        targetPath = `/vendedor/${tabId}`;
+      }
     }
     navigate(targetPath);
   };
