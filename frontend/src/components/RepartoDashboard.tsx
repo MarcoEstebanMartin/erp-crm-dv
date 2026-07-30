@@ -1080,8 +1080,7 @@ export default function RepartoDashboard() {
       setRoutes(allRoutes);
 
       const allOrders = await api.getOrders();
-      // Órdenes preparadas o facturadas (DELIVERED) que no tengan ruta asignada aún
-      const available = allOrders.filter((o: any) => (o.status === 'PREPARED' || o.status === 'DELIVERED') && !o.deliveryRouteId);
+      const available = allOrders.filter((o: any) => (o.status === 'PREPARED' || o.status === 'DELIVERED' || !!o.invoiceNumber) && !o.deliveryRouteId && o.status !== 'CANCELLED');
       setPendingOrders(available);
 
       const banks = await api.getBankAccounts();
