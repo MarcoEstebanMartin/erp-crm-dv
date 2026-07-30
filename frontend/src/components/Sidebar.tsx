@@ -45,59 +45,72 @@ export default function Sidebar({ username, role, activeTab, setActiveTab, onLog
     return activeTab || (role === 'VENDEDOR' ? 'orders' : role === 'DEPOSITO' ? 'deposito' : 'dashboard');
   })();
 
-  // Definir elementos del menú basados en el rol
+  const userObj = api.getCurrentUser();
+  const permissions = userObj?.permissions || {
+    canSell: role === 'VENDEDOR' || role === 'ADMIN',
+    canPick: role === 'DEPOSITO' || role === 'ADMIN',
+    canDeliver: true,
+    canCollect: true,
+    canManageStock: role === 'DEPOSITO' || role === 'ADMIN'
+  };
+
+  // Definir elementos del menú basados en el rol y matriz de permisos
   const getMenuItems = () => {
-    switch (role) {
-      case 'ADMIN':
-        return [
-          { id: 'dashboard', label: 'Panel Principal', icon: <LayoutDashboard size={18} /> },
-          { id: 'crm', label: 'CRM & WhatsApp', icon: <MessageSquare size={18} /> },
-          { id: 'fulfillment', label: 'Armado y Facturación', icon: <Warehouse size={18} /> },
-          { id: 'orders', label: 'Historial de Pedidos', icon: <ShoppingCart size={18} /> },
-          { id: 'clients', label: 'Personas', icon: <Users size={18} /> },
-          { id: 'logistica', label: 'Logística y Flota', icon: <Truck size={18} /> },
-          { id: 'products', label: 'Productos y Stock', icon: <Package size={18} /> },
-          { id: 'compras', label: 'Proveedores', icon: <Receipt size={18} /> },
-          { id: 'billing', label: 'Facturación', icon: <FileText size={18} /> },
-          { id: 'rendiciones', label: 'Finanzas y Cajas', icon: <DollarSign size={18} /> },
-          { id: 'reportes', label: 'Reportes y Analíticas', icon: <TrendingUp size={18} /> },
-          { id: 'config', label: 'General & Empresa', icon: <Building2 size={18} /> },
-        ];
-      case 'FACTURACION':
-        return [
-          { id: 'dashboard', label: 'Panel Principal', icon: <LayoutDashboard size={18} /> },
-          { id: 'crm', label: 'CRM & WhatsApp', icon: <MessageSquare size={18} /> },
-          { id: 'fulfillment', label: 'Armado y Facturación', icon: <Warehouse size={18} /> },
-          { id: 'orders', label: 'Historial de Pedidos', icon: <ShoppingCart size={18} /> },
-          { id: 'clients', label: 'Personas', icon: <Users size={18} /> },
-          { id: 'logistica', label: 'Logística y Flota', icon: <Truck size={18} /> },
-          { id: 'products', label: 'Productos y Stock', icon: <Package size={18} /> },
-          { id: 'compras', label: 'Proveedores', icon: <Receipt size={18} /> },
-          { id: 'billing', label: 'Facturación', icon: <FileText size={18} /> },
-          { id: 'config', label: 'General & Empresa', icon: <Building2 size={18} /> },
-        ];
-      case 'VENDEDOR':
-        return [
-          { id: 'orders', label: 'Toma de Pedidos', icon: <ShoppingCart size={18} /> },
-          { id: 'logistica', label: 'Logística y Reparto', icon: <Truck size={18} /> },
-          { id: 'clients', label: 'Mis Rutas', icon: <Users size={18} /> },
-          { id: 'cobranzas', label: 'Cobranzas y Recibos', icon: <DollarSign size={18} /> },
-          { id: 'deposito', label: 'Preparación (Picking)', icon: <Warehouse size={18} /> },
-          { id: 'products', label: 'Catálogo de Precios', icon: <Package size={18} /> },
-          { id: 'history', label: 'Historial de Pedidos', icon: <History size={18} /> },
-        ];
-      case 'DEPOSITO':
-        return [
-          { id: 'deposito', label: 'Preparación (Picking)', icon: <Warehouse size={18} /> },
-          { id: 'logistica', label: 'Logística y Reparto', icon: <Truck size={18} /> },
-          { id: 'cobranzas', label: 'Cobranzas y Recibos', icon: <DollarSign size={18} /> },
-          { id: 'orders', label: 'Toma de Pedidos', icon: <ShoppingCart size={18} /> },
-          { id: 'products', label: 'Inventario y Stock', icon: <Package size={18} /> },
-          { id: 'history', label: 'Historial de Pedidos', icon: <History size={18} /> },
-        ];
-      default:
-        return [];
+    if (role === 'ADMIN') {
+      return [
+        { id: 'dashboard', label: 'Panel Principal', icon: <LayoutDashboard size={18} /> },
+        { id: 'crm', label: 'CRM & WhatsApp', icon: <MessageSquare size={18} /> },
+        { id: 'fulfillment', label: 'Armado y Facturación', icon: <Warehouse size={18} /> },
+        { id: 'orders', label: 'Historial de Pedidos', icon: <ShoppingCart size={18} /> },
+        { id: 'clients', label: 'Personas', icon: <Users size={18} /> },
+        { id: 'logistica', label: 'Logística y Flota', icon: <Truck size={18} /> },
+        { id: 'products', label: 'Productos y Stock', icon: <Package size={18} /> },
+        { id: 'compras', label: 'Proveedores', icon: <Receipt size={18} /> },
+        { id: 'billing', label: 'Facturación', icon: <FileText size={18} /> },
+        { id: 'rendiciones', label: 'Finanzas y Cajas', icon: <DollarSign size={18} /> },
+        { id: 'reportes', label: 'Reportes y Analíticas', icon: <TrendingUp size={18} /> },
+        { id: 'config', label: 'General & Empresa', icon: <Building2 size={18} /> },
+      ];
     }
+
+    if (role === 'FACTURACION') {
+      return [
+        { id: 'dashboard', label: 'Panel Principal', icon: <LayoutDashboard size={18} /> },
+        { id: 'crm', label: 'CRM & WhatsApp', icon: <MessageSquare size={18} /> },
+        { id: 'fulfillment', label: 'Armado y Facturación', icon: <Warehouse size={18} /> },
+        { id: 'orders', label: 'Historial de Pedidos', icon: <ShoppingCart size={18} /> },
+        { id: 'clients', label: 'Personas', icon: <Users size={18} /> },
+        { id: 'logistica', label: 'Logística y Flota', icon: <Truck size={18} /> },
+        { id: 'products', label: 'Productos y Stock', icon: <Package size={18} /> },
+        { id: 'compras', label: 'Proveedores', icon: <Receipt size={18} /> },
+        { id: 'billing', label: 'Facturación', icon: <FileText size={18} /> },
+        { id: 'config', label: 'General & Empresa', icon: <Building2 size={18} /> },
+      ];
+    }
+
+    // Para personal operativo (VENDEDOR, DEPOSITO, etc.) construimos según permisos granulares
+    const items: any[] = [];
+    
+    if (permissions.canSell) {
+      items.push({ id: 'orders', label: 'Toma de Pedidos', icon: <ShoppingCart size={18} /> });
+      items.push({ id: 'clients', label: 'Mis Rutas Preventa', icon: <Users size={18} /> });
+    }
+    if (permissions.canPick) {
+      items.push({ id: 'deposito', label: 'Preparación (Picking)', icon: <Warehouse size={18} /> });
+    }
+    if (permissions.canDeliver) {
+      items.push({ id: 'logistica', label: 'Logística y Reparto', icon: <Truck size={18} /> });
+    }
+    if (permissions.canCollect) {
+      items.push({ id: 'cobranzas', label: 'Cobranzas y Recibos', icon: <DollarSign size={18} /> });
+    }
+    if (permissions.canManageStock || permissions.canSell) {
+      items.push({ id: 'products', label: 'Catálogo de Precios', icon: <Package size={18} /> });
+    }
+    items.push({ id: 'history', label: 'Historial de Pedidos', icon: <History size={18} /> });
+
+    return items;
+  };
   };
 
   const handleTabSelect = (tabId: string) => {
