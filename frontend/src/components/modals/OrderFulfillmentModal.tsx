@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { X, CheckCircle, DollarSign, Truck, AlertCircle } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { X, CheckCircle, DollarSign, Truck, AlertCircle, AlertTriangle } from 'lucide-react';
 import { BillingType, PaymentMethod } from '../../utils/types';
 import { api } from '../../utils/api';
 
@@ -55,12 +55,46 @@ export default function OrderFulfillmentModal({ order, onClose, onSuccess }: Ord
     }));
   };
 
+  // Detección automática de anomalías y sugerencia de comas faltantes
+  const anomalies = useMemo(() => {
+    if (!order.items) return [];
+    const list: { item: any; currentWeight: number; suggestedAvgWeight: number; possibleDecimalFix: number | null }[] = [];
+
+    order.items.forEach((item: any) => {
+      const isPesableProduct = item.product?.isPesable || item.isPesable;
+      const nameLower = (item.product?.name || '').toLowerCase();
+      const isCheeseOrBar = nameLower.includes('cremoso') || nameLower.includes('tybo') || nameLower.includes('barr') || nameLower.includes('queso') || nameLower.includes('horma') || nameLower.includes('sardo') || nameLower.includes('gouda') || nameLower.includes('mozzarella');
+      const approxWeightUnit = item.product?.approximateWeight ? Number(item.product.approximateWeight) : (isCheeseOrBar ? 4 : (isPesableProduct ? 1 : 1));
+      const suggestedAvgWeight = Number((item.quantity * approxWeightUnit).toFixed(3));
+      const currentWeight = pesableWeights[item.id];
+
+      if (currentWeight !== undefined && currentWeight > 0 && suggestedAvgWeight > 0) {
+        // Alerta si el peso ingresado supera el doble o es menor al 30% del promedio esperado
+        if (currentWeight > suggestedAvgWeight * 2 || (suggestedAvgWeight >= 2 && currentWeight < suggestedAvgWeight * 0.3)) {
+          let possibleFix: number | null = null;
+          const div10 = Number((currentWeight / 10).toFixed(1));
+          const div100 = Number((currentWeight / 100).toFixed(2));
+          if (div10 >= suggestedAvgWeight * 0.5 && div10 <= suggestedAvgWeight * 1.6) {
+            possibleFix = div10;
+          } else if (div100 >= suggestedAvgWeight * 0.5 && div100 <= suggestedAvgWeight * 1.6) {
+            possibleFix = div100;
+          }
+          list.push({ item, currentWeight, suggestedAvgWeight, possibleDecimalFix: possibleFix });
+        }
+      }
+    });
+
+    return list;
+  }, [order.items, pesableWeights]);
+
   const calculateTotal = () => {
     let total = 0;
     order.items?.forEach((item: any) => {
       const price = Number(item.unitPrice ?? item.price ?? 0);
       const isPesableProduct = item.product?.isPesable || item.isPesable;
-      const approxWeightUnit = item.product?.approximateWeight ? Number(item.product.approximateWeight) : 1;
+      const nameLower = (item.product?.name || '').toLowerCase();
+      const isCheeseOrBar = nameLower.includes('cremoso') || nameLower.includes('tybo') || nameLower.includes('barr') || nameLower.includes('queso') || nameLower.includes('horma') || nameLower.includes('sardo') || nameLower.includes('gouda') || nameLower.includes('mozzarella');
+      const approxWeightUnit = item.product?.approximateWeight ? Number(item.product.approximateWeight) : (isCheeseOrBar ? 4 : 1);
       const suggestedAvgWeight = Number((item.quantity * approxWeightUnit).toFixed(3));
       const currentWeight = pesableWeights[item.id];
 
@@ -76,6 +110,15 @@ export default function OrderFulfillmentModal({ order, onClose, onSuccess }: Ord
   };
 
   const handleConfirmAndInvoice = async () => {
+    // Si hay anomalías graves no corregidas, pedir confirmación al usuario
+    if (anomalies.length > 0) {
+      const alertDetails = anomalies.map(a => `• ${a.item.product?.name}: ${a.currentWeight} kg (Promedio esperado: ~${a.suggestedAvgWeight} kg)`).join('\n');
+      const confirmMsg = `⚠️ ALERTA DE SEGURIDAD EN PESOS:\n\nSe detectaron pesos inusualmente altos o desproporcionados:\n${alertDetails}\n\n¿Faltó ingresar una coma decimal?\n\n¿Desea confirmar y facturar igualmente con estos pesos?`;
+      if (!window.confirm(confirmMsg)) {
+        return;
+      }
+    }
+
     setLoading(true);
     setErrorMsg(null);
     try {
@@ -126,6 +169,38 @@ export default function OrderFulfillmentModal({ order, onClose, onSuccess }: Ord
             <X size={24} />
           </button>
         </div>
+
+        {/* Banner de Advertencia por Desviación Anómala de Peso */}
+        {anomalies.length > 0 && (
+          <div style={{ backgroundColor: '#fffbe3', color: '#92400e', border: '1px solid #fcd34d', padding: '14px 18px', borderRadius: '10px', marginBottom: '20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', boxShadow: '0 2px 6px rgba(0,0,0,0.05)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <AlertTriangle size={26} style={{ color: '#d97706', flexShrink: 0 }} />
+              <div>
+                <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#78350f' }}>
+                  ⚠️ Advertencia: Peso muy superior al promedio esperado
+                </div>
+                <div style={{ fontSize: '0.85rem', marginTop: '2px', color: '#92400e' }}>
+                  {anomalies.map(a => `${a.item.product?.name}: ${a.currentWeight} kg (esperado ~${a.suggestedAvgWeight} kg)`).join(' | ')}
+                </div>
+              </div>
+            </div>
+            {anomalies.some(a => a.possibleDecimalFix !== null) && (
+              <button
+                type="button"
+                style={{ backgroundColor: '#d97706', color: '#fff', fontWeight: 700, border: 'none', padding: '8px 14px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem', whiteSpace: 'nowrap', transition: 'all 0.2s' }}
+                onClick={() => {
+                  anomalies.forEach(a => {
+                    if (a.possibleDecimalFix !== null) {
+                      handleWeightChange(a.item.id, a.possibleDecimalFix.toString());
+                    }
+                  });
+                }}
+              >
+                🪄 Corregir coma faltante
+              </button>
+            )}
+          </div>
+        )}
         
         {errorMsg && (
           <div style={{ backgroundColor: '#fef2f2', color: '#dc2626', border: '1px solid #fca5a5', padding: '12px 16px', borderRadius: '8px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -158,10 +233,16 @@ export default function OrderFulfillmentModal({ order, onClose, onSuccess }: Ord
                   {order.items?.map((item: any) => {
                     const price = Number(item.unitPrice ?? item.price ?? 0);
                     const isPesableProduct = item.product?.isPesable || item.isPesable;
-                    const approxWeightUnit = item.product?.approximateWeight ? Number(item.product.approximateWeight) : 1;
+                    const nameLower = (item.product?.name || '').toLowerCase();
+                    const isCheeseOrBar = nameLower.includes('cremoso') || nameLower.includes('tybo') || nameLower.includes('barr') || nameLower.includes('queso') || nameLower.includes('horma') || nameLower.includes('sardo') || nameLower.includes('gouda') || nameLower.includes('mozzarella');
+                    const approxWeightUnit = item.product?.approximateWeight ? Number(item.product.approximateWeight) : (isCheeseOrBar ? 4 : 1);
                     const suggestedAvgWeight = Number((item.quantity * approxWeightUnit).toFixed(3));
                     const currentWeight = pesableWeights[item.id];
                     const hasWeight = currentWeight !== undefined && currentWeight > 0;
+
+                    // Anomaly checks
+                    const anomalyInfo = anomalies.find(a => a.item.id === item.id);
+                    const isAnomaly = Boolean(anomalyInfo);
 
                     let subtotal = 0;
                     if (hasWeight) {
@@ -173,7 +254,7 @@ export default function OrderFulfillmentModal({ order, onClose, onSuccess }: Ord
                     }
 
                     return (
-                      <tr key={item.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
+                      <tr key={item.id} style={{ borderBottom: '1px solid var(--border-color)', backgroundColor: isAnomaly ? '#fff5f5' : undefined }}>
                         <td style={{ padding: '12px 16px', fontWeight: 500 }}>
                           <div>{item.product?.name}</div>
                           {isPesableProduct && (
@@ -193,10 +274,11 @@ export default function OrderFulfillmentModal({ order, onClose, onSuccess }: Ord
                               width: '110px',
                               textAlign: 'center',
                               padding: '6px 8px',
-                              fontWeight: 600,
+                              fontWeight: 700,
                               fontSize: '0.95rem',
-                              borderColor: isPesableProduct ? '#f97316' : undefined,
-                              backgroundColor: isPesableProduct && (!pesableWeights[item.id] || pesableWeights[item.id] === suggestedAvgWeight) ? '#fff7ed' : undefined
+                              borderColor: isAnomaly ? '#dc2626' : (isPesableProduct ? '#f97316' : undefined),
+                              backgroundColor: isAnomaly ? '#fef2f2' : (isPesableProduct && (!pesableWeights[item.id] || pesableWeights[item.id] === suggestedAvgWeight) ? '#fff7ed' : undefined),
+                              color: isAnomaly ? '#b91c1c' : undefined
                             }}
                             placeholder={isPesableProduct ? `${suggestedAvgWeight}` : 'Peso Kg'}
                             value={pesableWeights[item.id] !== undefined && pesableWeights[item.id] !== 0 ? pesableWeights[item.id] : (isPesableProduct ? suggestedAvgWeight : '')}
@@ -204,13 +286,41 @@ export default function OrderFulfillmentModal({ order, onClose, onSuccess }: Ord
                             step="0.001"
                             min="0"
                           />
-                          {isPesableProduct && (
+                          {isAnomaly ? (
+                            <div style={{ marginTop: '4px' }}>
+                              <span style={{ fontSize: '0.72rem', color: '#dc2626', fontWeight: 700, display: 'block' }}>
+                                ⚠️ ¡Peso fuera de promedio! (~{suggestedAvgWeight} kg)
+                              </span>
+                              {anomalyInfo?.possibleDecimalFix && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleWeightChange(item.id, anomalyInfo.possibleDecimalFix!.toString())}
+                                  style={{
+                                    marginTop: '4px',
+                                    padding: '3px 8px',
+                                    fontSize: '0.72rem',
+                                    backgroundColor: '#fee2e2',
+                                    color: '#991b1b',
+                                    border: '1px solid #fca5a5',
+                                    borderRadius: '4px',
+                                    cursor: 'pointer',
+                                    fontWeight: 700,
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '3px'
+                                  }}
+                                >
+                                  💡 Corregir a {anomalyInfo.possibleDecimalFix} kg
+                                </button>
+                              )}
+                            </div>
+                          ) : isPesableProduct ? (
                             <span style={{ fontSize: '0.72rem', color: pesableWeights[item.id] && pesableWeights[item.id] !== suggestedAvgWeight ? '#16a34a' : '#c2410c', display: 'block', marginTop: '3px', fontWeight: 600 }}>
                               {pesableWeights[item.id] && pesableWeights[item.id] !== suggestedAvgWeight ? '✓ Peso balanza' : `Promedio (${suggestedAvgWeight} kg)`}
                             </span>
-                          )}
+                          ) : null}
                         </td>
-                        <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 700, fontSize: '1rem' }}>
+                        <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 700, fontSize: '1rem', color: isAnomaly ? '#dc2626' : undefined }}>
                           ${Math.round(subtotal).toLocaleString('es-AR')}
                         </td>
                       </tr>
