@@ -412,6 +412,10 @@ export class AdminService {
             id: true,
             name: true,
             city: true,
+            route: true,
+            saleRoute: {
+              select: { id: true, name: true }
+            },
             seller: {
               select: { id: true, username: true }
             }

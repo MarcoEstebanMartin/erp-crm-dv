@@ -1598,7 +1598,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
                           <th>Vendedor</th>
                           <th className="text-right">Monto</th>
                           <th>Estado Interno</th>
-                          <th>🚚 Viaje / Reparto</th>
+                          <th>📍 Ruta</th>
                           <th>Acciones</th>
                         </tr>
                       </thead>
@@ -1607,6 +1607,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
                           const statusInfo = getOrderStatusInfo(o);
                           const clientName = o.client?.name || o.persona?.name || 'Cliente S/D';
                           const city = o.client?.city || o.persona?.city;
+                          const clientRoute = o.persona?.saleRoute?.name || o.client?.saleRoute?.name || o.persona?.route || o.client?.route || o.deliveryZone || 'Sin Ruta';
 
                           return (
                             <tr key={o.id}>
@@ -1650,20 +1651,16 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
                                 </span>
                               </td>
                               <td>
-                                {o.deliveryRoute ? (
-                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                                    <span style={{ fontWeight: 700, color: '#4F46E5', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                      🚚 {(o.deliveryRoute as any).routeName || `Viaje #${o.deliveryRoute.id}`}
-                                    </span>
-                                    <span style={{ fontSize: '0.72rem', fontWeight: 600, color: o.deliveryRoute.status === 'IN_TRANSIT' ? '#059669' : o.deliveryRoute.status === 'COMPLETED' ? '#2563EB' : '#D97706' }}>
-                                      {o.deliveryRoute.status === 'IN_TRANSIT' ? '🟢 En Calle (Tránsito)' : o.deliveryRoute.status === 'COMPLETED' ? '✅ Entregado' : '🟡 Asignado (En Espera)'}
-                                    </span>
-                                  </div>
-                                ) : (
-                                  <span className="badge" style={{ backgroundColor: '#F3F4F6', color: '#6B7280', fontSize: '0.72rem', fontWeight: 600, padding: '3px 8px', borderRadius: '12px' }}>
-                                    🏬 Sin Viaje (En Depósito)
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                                  <span className="badge" style={{ backgroundColor: '#F3F4F6', color: '#1F2937', border: '1px solid #E5E7EB', fontSize: '0.75rem', fontWeight: 700, padding: '3px 8px', borderRadius: '10px', display: 'inline-flex', alignItems: 'center', gap: '4px', maxWidth: 'fit-content' }}>
+                                    📍 {clientRoute}
                                   </span>
-                                )}
+                                  {o.deliveryRoute && (
+                                    <span style={{ fontSize: '0.7rem', fontWeight: 600, color: o.deliveryRoute.status === 'IN_TRANSIT' ? '#059669' : o.deliveryRoute.status === 'COMPLETED' ? '#2563EB' : '#D97706' }}>
+                                      🚚 Viaje #{o.deliveryRoute.id} ({o.deliveryRoute.status === 'IN_TRANSIT' ? 'En Calle' : o.deliveryRoute.status === 'COMPLETED' ? 'Entregado' : 'Asignado'})
+                                    </span>
+                                  )}
+                                </div>
                               </td>
                               <td>
                                 <button 

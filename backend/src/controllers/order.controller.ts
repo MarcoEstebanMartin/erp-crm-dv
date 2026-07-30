@@ -57,7 +57,7 @@ export async function getOrders(req: AuthenticatedRequest, res: Response): Promi
         where: whereClause,
         include: {
           persona: {
-            select: { id: true, name: true, cuit: true, city: true, route: true, address: true },
+            select: { id: true, name: true, cuit: true, city: true, route: true, address: true, saleRoute: { select: { id: true, name: true } } },
           },
           seller: {
             select: { id: true, username: true },
