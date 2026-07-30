@@ -282,7 +282,7 @@ export class AdminService {
     if (data.permissions !== undefined) {
       updateData.permissions = data.permissions;
     }
-    if (data.password && data.password.trim().length >= 6) {
+    if (data.password && data.password.trim().length >= 4) {
       const salt = await bcrypt.genSalt(10);
       updateData.passwordHash = await bcrypt.hash(data.password, salt);
     }
