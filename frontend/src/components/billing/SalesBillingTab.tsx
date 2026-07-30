@@ -885,11 +885,6 @@ export default function SalesBillingTab({
                                   <div style={{ fontWeight: 600 }}>{item.product.name}</div>
                                   <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginTop: '2px' }}>
                                     <span>SKU: {item.product.sku}</span>
-                                    {unitsPerBox > 1 && (
-                                      <span className="badge" style={{ backgroundColor: '#f1f5f9', color: '#475569', fontSize: '0.68rem', padding: '1px 5px', borderRadius: '4px', border: '1px solid #cbd5e1' }}>
-                                        📦 Caja x{unitsPerBox}u
-                                      </span>
-                                    )}
                                     {item.product.isPesable && (
                                       <span className="badge" style={{ backgroundColor: '#e0f2fe', color: '#0369a1', fontSize: '0.68rem', padding: '1px 5px', borderRadius: '4px' }}>
                                         Pesable
@@ -944,57 +939,40 @@ export default function SalesBillingTab({
                                 </td>
                                 <td style={{ textAlign: 'center', padding: '8px 12px' }}>
                                   {unitsPerBox > 1 ? (
-                                    <div>
-                                      {fullBoxes > 0 ? (
-                                        <span className="badge" style={{ backgroundColor: remainderUnits > 0 ? '#eff6ff' : '#f0fdf4', color: remainderUnits > 0 ? '#1d4ed8' : '#15803d', border: `1px solid ${remainderUnits > 0 ? '#bfdbfe' : '#bbf7d0'}`, fontSize: '0.78rem', fontWeight: 700, padding: '2px 7px', borderRadius: '6px', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
-                                          📦 {fullBoxes} {fullBoxes === 1 ? 'Caja' : 'Cajas'}{remainderUnits > 0 ? ` + ${remainderUnits}u` : ''}
-                                        </span>
-                                      ) : (
-                                        <span className="badge" style={{ backgroundColor: '#faf5ff', color: '#7e22ce', border: '1px solid #e9d5ff', fontSize: '0.78rem', fontWeight: 700, padding: '2px 7px', borderRadius: '6px', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
-                                          {remainderUnits} u sueltas
-                                        </span>
-                                      )}
-                                      <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '2px', fontWeight: 600 }}>
-                                        {remainderUnits > 0 ? `${fullBoxes * unitsPerBox}u + ${remainderUnits}u sueltas` : 'Caja cerrada'}
-                                      </div>
-                                      <div style={{ display: 'flex', gap: '4px', justifyContent: 'center', marginTop: '4px' }}>
-                                        <button
-                                          type="button"
-                                          className="btn btn-secondary"
-                                          style={{ padding: '2px 7px', fontSize: '0.72rem', fontWeight: 700, borderRadius: '4px', backgroundColor: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe' }}
-                                          title={`Sumar 1 caja (+${unitsPerBox}u)`}
-                                          onClick={() => {
-                                            const newCart = [...directCart];
-                                            const currentQty = Number(newCart[index].quantity || 0);
-                                            const newQty = currentQty + unitsPerBox;
-                                            newCart[index].quantity = newQty;
-                                            newCart[index].weight = item.product.isPesable ? (newQty * (item.product.approximateWeight || 1)) : null;
-                                            newCart[index].subtotal = Number((item.unitPrice * (item.product.isPesable ? newCart[index].weight : newQty)).toFixed(2));
-                                            setDirectCart(newCart);
-                                          }}
-                                        >
-                                          +1 Caja (+{unitsPerBox}u)
-                                        </button>
-                                        {fullBoxes > 0 && (
-                                          <button
-                                            type="button"
-                                            className="btn btn-secondary"
-                                            style={{ padding: '2px 7px', fontSize: '0.72rem', fontWeight: 700, borderRadius: '4px', backgroundColor: '#fef2f2', color: '#dc2626', border: '1px solid #fca5a5' }}
-                                            title={`Restar 1 caja (-${unitsPerBox}u)`}
-                                            onClick={() => {
-                                              const newCart = [...directCart];
-                                              const currentQty = Number(newCart[index].quantity || 0);
-                                              const newQty = Math.max(1, currentQty - unitsPerBox);
-                                              newCart[index].quantity = newQty;
-                                              newCart[index].weight = item.product.isPesable ? (newQty * (item.product.approximateWeight || 1)) : null;
-                                              newCart[index].subtotal = Number((item.unitPrice * (item.product.isPesable ? newCart[index].weight : newQty)).toFixed(2));
-                                              setDirectCart(newCart);
-                                            }}
-                                          >
-                                            -1 Caja
-                                          </button>
-                                        )}
-                                      </div>
+                                    <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
+                                      <span
+                                        className="badge"
+                                        title={`Clic para sumar 1 caja (+${unitsPerBox}u)`}
+                                        onClick={() => {
+                                          const newCart = [...directCart];
+                                          const currentQty = Number(newCart[index].quantity || 0);
+                                          const newQty = currentQty + unitsPerBox;
+                                          newCart[index].quantity = newQty;
+                                          newCart[index].weight = item.product.isPesable ? (newQty * (item.product.approximateWeight || 1)) : null;
+                                          newCart[index].subtotal = Number((item.unitPrice * (item.product.isPesable ? newCart[index].weight : newQty)).toFixed(2));
+                                          setDirectCart(newCart);
+                                        }}
+                                        style={{
+                                          backgroundColor: fullBoxes > 0 ? (remainderUnits > 0 ? '#eff6ff' : '#f0fdf4') : '#faf5ff',
+                                          color: fullBoxes > 0 ? (remainderUnits > 0 ? '#1d4ed8' : '#15803d') : '#7e22ce',
+                                          border: `1px solid ${fullBoxes > 0 ? (remainderUnits > 0 ? '#bfdbfe' : '#bbf7d0') : '#e9d5ff'}`,
+                                          fontSize: '0.78rem',
+                                          fontWeight: 700,
+                                          padding: '3px 8px',
+                                          borderRadius: '6px',
+                                          cursor: 'pointer',
+                                          userSelect: 'none',
+                                          display: 'inline-flex',
+                                          alignItems: 'center',
+                                          gap: '3px',
+                                          transition: 'all 0.15s'
+                                        }}
+                                      >
+                                        📦 {fullBoxes > 0 ? `${fullBoxes} ${fullBoxes === 1 ? 'Caja' : 'Cajas'}${remainderUnits > 0 ? ` + ${remainderUnits}u` : ''}` : `${remainderUnits} u sueltas`}
+                                      </span>
+                                      <span style={{ fontSize: '0.68rem', color: '#64748b', fontWeight: 500 }}>
+                                        Caja x{unitsPerBox}u
+                                      </span>
                                     </div>
                                   ) : (
                                     <span style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>-</span>

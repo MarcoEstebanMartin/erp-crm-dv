@@ -265,40 +265,36 @@ export default function OrderFulfillmentModal({ order, onClose, onSuccess }: Ord
                       <tr key={item.id} style={{ borderBottom: '1px solid var(--border-color)', backgroundColor: isAnomaly ? '#fff5f5' : undefined }}>
                         <td style={{ padding: '12px 16px', fontWeight: 500 }}>
                           <div>{item.product?.name}</div>
-                          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '4px' }}>
-                            {isPesableProduct && (
-                              <span className="badge" style={{ backgroundColor: '#e0f2fe', color: '#0369a1', fontSize: '0.73rem', display: 'inline-block' }}>
-                                Pesable (${price.toLocaleString('es-AR')}/kg)
-                              </span>
-                            )}
-                            {unitsPerBox > 1 && (
-                              <span className="badge" style={{ backgroundColor: '#f1f5f9', color: '#475569', fontSize: '0.73rem', display: 'inline-block', border: '1px solid #cbd5e1' }}>
-                                📦 Caja x{unitsPerBox}u
-                              </span>
-                            )}
-                          </div>
+                          {isPesableProduct && (
+                            <span className="badge" style={{ backgroundColor: '#e0f2fe', color: '#0369a1', fontSize: '0.73rem', display: 'inline-block', marginTop: '4px' }}>
+                              Pesable (${price.toLocaleString('es-AR')}/kg)
+                            </span>
+                          )}
                         </td>
                         <td style={{ padding: '12px 16px', textAlign: 'center' }}>
                           {unitsPerBox > 1 ? (
-                            fullBoxes > 0 ? (
-                              <div>
-                                <span className="badge" style={{ backgroundColor: remainderUnits > 0 ? '#eff6ff' : '#f0fdf4', color: remainderUnits > 0 ? '#1d4ed8' : '#15803d', border: `1px solid ${remainderUnits > 0 ? '#bfdbfe' : '#bbf7d0'}`, fontSize: '0.8rem', fontWeight: 700, padding: '3px 8px', borderRadius: '6px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                                  📦 {fullBoxes} {fullBoxes === 1 ? 'Caja' : 'Cajas'}{remainderUnits > 0 ? ` + ${remainderUnits} u` : ''}
-                                </span>
-                                <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '2px', fontWeight: 600 }}>
-                                  {remainderUnits > 0 ? `(${fullBoxes * unitsPerBox}u + ${remainderUnits}u sueltas)` : '(Caja cerrada)'}
-                                </div>
-                              </div>
-                            ) : (
-                              <div>
-                                <span className="badge" style={{ backgroundColor: '#faf5ff', color: '#7e22ce', border: '1px solid #e9d5ff', fontSize: '0.8rem', fontWeight: 700, padding: '3px 8px', borderRadius: '6px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                                  {remainderUnits} u sueltas
-                                </span>
-                                <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '2px', fontWeight: 600 }}>
-                                  (Caja x{unitsPerBox}u)
-                                </div>
-                              </div>
-                            )
+                            <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
+                              <span
+                                className="badge"
+                                style={{
+                                  backgroundColor: fullBoxes > 0 ? (remainderUnits > 0 ? '#eff6ff' : '#f0fdf4') : '#faf5ff',
+                                  color: fullBoxes > 0 ? (remainderUnits > 0 ? '#1d4ed8' : '#15803d') : '#7e22ce',
+                                  border: `1px solid ${fullBoxes > 0 ? (remainderUnits > 0 ? '#bfdbfe' : '#bbf7d0') : '#e9d5ff'}`,
+                                  fontSize: '0.78rem',
+                                  fontWeight: 700,
+                                  padding: '3px 8px',
+                                  borderRadius: '6px',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '3px'
+                                }}
+                              >
+                                📦 {fullBoxes > 0 ? `${fullBoxes} ${fullBoxes === 1 ? 'Caja' : 'Cajas'}${remainderUnits > 0 ? ` + ${remainderUnits}u` : ''}` : `${remainderUnits} u sueltas`}
+                              </span>
+                              <span style={{ fontSize: '0.68rem', color: '#64748b', fontWeight: 500 }}>
+                                Caja x{unitsPerBox}u
+                              </span>
+                            </div>
                           ) : (
                             <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>-</span>
                           )}
