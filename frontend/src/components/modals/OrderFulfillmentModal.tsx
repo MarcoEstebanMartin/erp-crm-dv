@@ -14,21 +14,21 @@ export default function OrderFulfillmentModal({ order, onClose, onSuccess }: Ord
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // Billing configuration - Default to OTHER (Cuenta Corriente) for delivery trips
+  // Billing configuration - Default to OTHER (Cuenta Corriente)
   const [billingType, setBillingType] = useState<BillingType>(order.billingType || BillingType.INTERNAL);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(PaymentMethod.OTHER);
+  const [checkNumber, setCheckNumber] = useState<string>('');
   const [selectedBankId, setSelectedBankId] = useState<string>('');
   const [bankAccounts, setBankAccounts] = useState<any[]>([]);
 
   useEffect(() => {
-    // Inicializar pesos de los pesables
+    // Inicializar pesos si ya existen o si hay peso aproximado sugerido
     const initialWeights: any = {};
     order.items?.forEach((item: any) => {
-      if (item.weight) {
+      if (item.weight && Number(item.weight) > 0) {
         initialWeights[item.id] = Number(item.weight);
-      } else if (item.product?.isPesable) {
-        // Suggested weight based on approximate
-        initialWeights[item.id] = item.quantity * (item.product.approximateWeight || 1);
+      } else if (item.product?.isPesable && item.product?.approximateWeight) {
+        initialWeights[item.id] = Number((item.quantity * item.product.approximateWeight).toFixed(3));
       }
     });
     setPesableWeights(initialWeights);
@@ -54,9 +54,8 @@ export default function OrderFulfillmentModal({ order, onClose, onSuccess }: Ord
     let total = 0;
     order.items?.forEach((item: any) => {
       const price = Number(item.unitPrice ?? item.price ?? 0);
-      const isPesable = item.product?.isPesable || (item.weight && Number(item.weight) > 0);
-      if (isPesable) {
-        const currentWeight = pesableWeights[item.id] || 0;
+      const currentWeight = pesableWeights[item.id];
+      if (currentWeight && currentWeight > 0) {
         total += currentWeight * price;
       } else {
         total += item.quantity * price;
@@ -69,24 +68,21 @@ export default function OrderFulfillmentModal({ order, onClose, onSuccess }: Ord
     setLoading(true);
     setErrorMsg(null);
     try {
-      // 1. Guardar pesos si hay pesables
+      // 1. Guardar pesos de los ítems con peso ingresado (> 0)
       const weightItems = Object.entries(pesableWeights).map(([orderItemId, weight]) => ({
         orderItemId: Number(orderItemId),
         weight: Number(weight)
       })).filter(i => i.weight > 0);
       
-      if (weightItems.length > 0) {
-        await api.confirmOrderArmado(order.id, weightItems);
-      } else {
-        await api.confirmOrderArmado(order.id, []);
-      }
+      await api.confirmOrderArmado(order.id, weightItems);
 
       // 2. Facturar
+      const paymentDesc = paymentMethod === 'CHECK' && checkNumber.trim() ? `Cheque N° ${checkNumber.trim()}` : undefined;
       await api.invoiceOrder(
         order.id,
         billingType,
-        paymentMethod === 'OTHER' ? undefined : paymentMethod, // Si es OTHER (Cuenta Corriente), enviamos undefined para que afecte el saldo deudor
-        undefined, // payment description
+        paymentMethod === 'OTHER' ? undefined : paymentMethod, // Si es Cuenta Corriente, enviamos undefined para que afecte el saldo deudor
+        paymentDesc,
         paymentMethod === 'BANK_TRANSFER' ? Number(selectedBankId) : undefined
       );
 
@@ -150,11 +146,13 @@ export default function OrderFulfillmentModal({ order, onClose, onSuccess }: Ord
                 <tbody>
                   {order.items?.map((item: any) => {
                     const price = Number(item.unitPrice ?? item.price ?? 0);
-                    const isPesable = item.product?.isPesable || (item.weight && Number(item.weight) > 0);
-                    
+                    const currentWeight = pesableWeights[item.id];
+                    const hasWeight = currentWeight !== undefined && currentWeight > 0;
+                    const isPesableProduct = item.product?.isPesable || item.isPesable;
+
                     let subtotal = 0;
-                    if (isPesable) {
-                      subtotal = (pesableWeights[item.id] || 0) * price;
+                    if (hasWeight) {
+                      subtotal = currentWeight * price;
                     } else {
                       subtotal = item.quantity * price;
                     }
@@ -163,7 +161,7 @@ export default function OrderFulfillmentModal({ order, onClose, onSuccess }: Ord
                       <tr key={item.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
                         <td style={{ padding: '12px 16px', fontWeight: 500 }}>
                           <div>{item.product?.name}</div>
-                          {isPesable && (
+                          {isPesableProduct && (
                             <span className="badge" style={{ backgroundColor: '#e0f2fe', color: '#0369a1', fontSize: '0.75rem', marginTop: '4px', display: 'inline-block' }}>
                               Pesable (${price.toLocaleString('es-AR')}/kg)
                             </span>
@@ -173,18 +171,16 @@ export default function OrderFulfillmentModal({ order, onClose, onSuccess }: Ord
                           {item.quantity} u
                         </td>
                         <td style={{ padding: '12px 16px', textAlign: 'center' }}>
-                          {isPesable ? (
-                            <input
-                              type="number"
-                              className="input"
-                              style={{ width: '95px', textAlign: 'center', padding: '6px 8px', fontWeight: 600, fontSize: '0.95rem' }}
-                              value={pesableWeights[item.id] || ''}
-                              onChange={(e) => handleWeightChange(item.id, e.target.value)}
-                              step="0.001"
-                            />
-                          ) : (
-                            <span style={{ color: 'var(--text-secondary)' }}>-</span>
-                          )}
+                          <input
+                            type="number"
+                            className="input"
+                            style={{ width: '100px', textAlign: 'center', padding: '6px 8px', fontWeight: 600, fontSize: '0.95rem' }}
+                            placeholder="Peso Kg"
+                            value={pesableWeights[item.id] !== undefined && pesableWeights[item.id] !== 0 ? pesableWeights[item.id] : ''}
+                            onChange={(e) => handleWeightChange(item.id, e.target.value)}
+                            step="0.001"
+                            min="0"
+                          />
                         </td>
                         <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 700, fontSize: '1rem' }}>
                           ${Math.round(subtotal).toLocaleString('es-AR')}
@@ -235,19 +231,24 @@ export default function OrderFulfillmentModal({ order, onClose, onSuccess }: Ord
             <div className="form-group" style={{ marginBottom: 0 }}>
               <label style={{ fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-secondary)', fontWeight: 600 }}>Medio de Pago / Condición</label>
               <select className="select" style={{ width: '100%', padding: '10px 12px', fontSize: '0.95rem', fontWeight: 600, marginTop: '6px' }} value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)}>
-                <option value="OTHER">Cuenta Corriente (Cobro en Reparto / Contrareembolso)</option>
-                <option value="CASH">Efectivo (Pagado al Armar)</option>
-                <option value="BANK_TRANSFER">Transferencia Bancaria</option>
+                <option value="OTHER">Cuenta Corriente</option>
+                <option value="CASH">Efectivo</option>
+                <option value="BANK_TRANSFER">Transferencia</option>
                 <option value="CHECK">Cheque</option>
               </select>
             </div>
 
-            {paymentMethod === 'OTHER' && (
-              <div style={{ backgroundColor: '#eff6ff', border: '1px solid #bfdbfe', color: '#1e40af', padding: '12px 14px', borderRadius: '8px', fontSize: '0.85rem', lineHeight: '1.4' }}>
-                <div style={{ fontWeight: 700, marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <Truck size={15} /> Cobro contra entrega en viaje
-                </div>
-                El saldo de <strong>${Math.round(currentTotal).toLocaleString('es-AR')}</strong> quedará cargado a la Cuenta Corriente del cliente para ser cobrado por el repartidor durante la entrega.
+            {paymentMethod === 'CHECK' && (
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label style={{ fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-secondary)', fontWeight: 600 }}>Número de Cheque</label>
+                <input
+                  type="text"
+                  className="input"
+                  style={{ width: '100%', padding: '10px 12px', fontSize: '0.95rem', marginTop: '6px' }}
+                  placeholder="Ej: CH-0012948"
+                  value={checkNumber}
+                  onChange={(e) => setCheckNumber(e.target.value)}
+                />
               </div>
             )}
 
