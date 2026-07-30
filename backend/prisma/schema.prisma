@@ -481,6 +481,10 @@ model DeliveryRoute {
   vehiclePlate       String
   vehicleDescription String?
   status             String   @default("PENDING") // "PENDING" | "IN_TRANSIT" | "COMPLETED"
+  totalBultos        Int      @default(0)
+  custodyStatus      String   @default("PENDING_LOADING") // "PENDING_LOADING" | "LOADED_IN_TRANSIT" | "COMPLETED"
+  signedByDriverAt   DateTime?
+  driverNotes        String?  @db.Text
   date               DateTime @default(now())
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt

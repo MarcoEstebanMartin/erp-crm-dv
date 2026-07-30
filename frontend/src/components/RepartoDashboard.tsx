@@ -1227,6 +1227,25 @@ export default function RepartoDashboard() {
     );
   };
 
+  const handleTransferCustody = async (route: any) => {
+    const totalBultos = route.orders?.reduce((sum: number, o: any) => sum + Math.max(1, Number(o.bultosCount || 1)), 0) || 0;
+    if (!window.confirm(`¿Confirmar la carga de ${totalBultos} bultos en el vehículo de ${route.driverName} y transferir la custodia legal/operativa al chofer?`)) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const updated = await api.transferRouteCustody(route.id);
+      setSuccessMsg(`🔒 Carga de ${totalBultos} bultos confirmada. Custodia transferida exitosamente a ${route.driverName}.`);
+      setSelectedRoute(updated);
+      fetchRoutesAndOrders();
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Error al transferir la custodia de la ruta.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // --- CÁLCULO DE RUTA ÓPTIMA TSP (Simulada para visualización y ordenamiento) ---
   const currentTspRoute = useMemo(() => {
     if (selectedOrderIds.length === 0) return [];
@@ -1572,10 +1591,29 @@ export default function RepartoDashboard() {
                 <div>
                   <h3 style={{ fontSize: '1.1rem', fontWeight: 700 }}>Hoja de Ruta #{selectedRoute.id}</h3>
                   <p style={{ fontSize: '0.8rem' }}>Chofer: <strong>{selectedRoute.driverName}</strong> | Patente: <strong>{selectedRoute.vehiclePlate}</strong></p>
+                  {selectedRoute.custodyStatus === 'LOADED_IN_TRANSIT' ? (
+                    <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#15803d', backgroundColor: '#dcfce7', padding: '3px 8px', borderRadius: '4px', marginTop: '4px', display: 'inline-block', border: '1px solid #86efac' }}>
+                      🔒 Custodia Transferida a {selectedRoute.driverName} ({selectedRoute.orders?.reduce((sum: number, o: any) => sum + Math.max(1, Number(o.bultosCount || 1)), 0) || 0} Bultos) {selectedRoute.signedByDriverAt ? '• ' + new Date(selectedRoute.signedByDriverAt).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }) : ''}
+                    </div>
+                  ) : (
+                    <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#b45309', backgroundColor: '#fef3c7', padding: '3px 8px', borderRadius: '4px', marginTop: '4px', display: 'inline-block', border: '1px solid #fde68a' }}>
+                      ⏳ Carga en Preparación / Pendiente Transferencia a Chofer
+                    </div>
+                  )}
                 </div>
                 
                 {/* Controles de Estado de la Hoja de Ruta */}
-                <div style={{ display: 'flex', gap: '6px' }}>
+                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                  {selectedRoute.custodyStatus !== 'LOADED_IN_TRANSIT' && (
+                    <button 
+                      className="btn btn-warning" 
+                      style={{ fontSize: '0.78rem', backgroundColor: '#FEF3C7', borderColor: '#F59E0B', color: '#B45309', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '4px' }}
+                      onClick={() => handleTransferCustody(selectedRoute)}
+                      title="Transferir la responsabilidad del stock cargado al chofer"
+                    >
+                      🔒 Transferir Custodia Chofer
+                    </button>
+                  )}
                   {selectedRoute.status === 'PENDING' && (
                     <button 
                       className="btn btn-secondary" 

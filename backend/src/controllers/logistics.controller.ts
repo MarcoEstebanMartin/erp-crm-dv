@@ -577,9 +577,62 @@ export async function getLogisticsResources(req: AuthenticatedRequest, res: Resp
     });
   } catch (error: any) {
     console.error('Error al obtener recursos de logística:', error);
+  }
+}
+
+/**
+ * Transferir Custodia de Carga al Chofer (Conformidad y Cierre de Carga)
+ */
+export async function transferRouteCustody(req: AuthenticatedRequest, res: Response): Promise<void> {
+  const { id } = req.params;
+  const { driverNotes } = req.body;
+  const userId = req.user?.id;
+
+  try {
+    const routeId = Number(id);
+    const route = await prisma.deliveryRoute.findUnique({
+      where: { id: routeId },
+      include: { orders: true }
+    });
+
+    if (!route) {
+      res.status(404).json({ status: 'error', message: 'Hoja de ruta no encontrada.' });
+      return;
+    }
+
+    const totalBultos = route.orders.reduce((sum, o) => sum + Math.max(1, Number(o.bultosCount || 1)), 0);
+
+    const updatedRoute = await prisma.deliveryRoute.update({
+      where: { id: routeId },
+      data: {
+        custodyStatus: 'LOADED_IN_TRANSIT',
+        status: 'IN_TRANSIT',
+        totalBultos,
+        signedByDriverAt: new Date(),
+        driverNotes: driverNotes ? String(driverNotes).trim() : null
+      }
+    });
+
+    if (userId) {
+      await logAudit({
+        userId,
+        action: 'TRANSFER_ROUTE_CUSTODY',
+        entityType: 'DeliveryRoute',
+        entityId: routeId,
+        newValues: updatedRoute
+      });
+    }
+
+    res.status(200).json({
+      status: 'success',
+      data: { route: updatedRoute }
+    });
+  } catch (error: any) {
+    console.error('Error al transferir custodia de ruta:', error);
     res.status(500).json({
       status: 'error',
-      message: 'Error al obtener recursos de logística.'
+      message: error.message || 'Error al transferir la custodia de la ruta.'
     });
   }
 }
+

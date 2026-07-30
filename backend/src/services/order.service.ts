@@ -258,8 +258,8 @@ export class OrderService {
       });
 
       if (!order) throw new Error('Pedido no encontrado.');
-      if (!([OrderStatus.PENDING, OrderStatus.PREPARING] as OrderStatus[]).includes(order.status as OrderStatus)) {
-        throw new Error('El pedido debe estar pendiente o en preparación para confirmar el armado.');
+      if (!([OrderStatus.PENDING, OrderStatus.PREPARING, OrderStatus.PREPARED] as OrderStatus[]).includes(order.status as OrderStatus)) {
+        throw new Error('El pedido debe estar pendiente, en preparación o preparado para confirmar el armado.');
       }
 
       let newTotal = 0;

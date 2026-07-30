@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../utils/api';
 import { Printer, CheckSquare, Search, RefreshCw, Eye, CheckCircle } from 'lucide-react';
-import { printPickingList, printOrderReceipt, printBatchPickingA4, printConsolidatedPickingA4 } from '../../utils/printHelpers';
+import { printPickingList, printOrderReceipt, printBatchPickingA4, printConsolidatedPickingA4, printShippingLabelsBultos } from '../../utils/printHelpers';
 import OrderFulfillmentModal from '../modals/OrderFulfillmentModal';
 import ConfirmModal from '../modals/ConfirmModal';
 import { getOrderStatusInfo } from '../../utils/orderStatusHelper';
@@ -240,6 +240,28 @@ export default function FulfillmentDashboard() {
     });
   };
 
+  const handlePrintLabels = (singleOrder?: any) => {
+    const ordersToPrint = singleOrder
+      ? [singleOrder]
+      : selectedOrderIds.length > 0
+        ? pending.filter(o => selectedOrderIds.includes(o.id))
+        : pending;
+
+    if (ordersToPrint.length === 0) {
+      showConfirm({
+        title: 'Sin Pedidos',
+        message: 'No hay pedidos seleccionados para imprimir rótulos de despacho.',
+        isAlert: true,
+        confirmText: 'Entendido',
+        type: 'info',
+        onConfirm: () => {}
+      });
+      return;
+    }
+
+    printShippingLabelsBultos({ orders: ordersToPrint });
+  };
+
   const pending = filteredOrders.filter(o => o.status === 'PENDING' || o.status === 'RECIBIDO');
   const preparing = filteredOrders.filter(o => o.status === 'PREPARING' || (o.status === 'PREPARED' && !o.invoiceNumber));
   
@@ -368,6 +390,27 @@ export default function FulfillmentDashboard() {
                 title="Imprimir Hoja de Armado"
               >
                 <Printer size={13} /> Hoja
+              </button>
+              <button 
+                className="btn btn-secondary" 
+                style={{ 
+                  flex: 1, 
+                  display: 'flex', 
+                  justifyContent: 'center', 
+                  alignItems: 'center', 
+                  gap: '4px',
+                  height: '26px',
+                  padding: '0 6px',
+                  fontSize: '0.75rem',
+                  fontWeight: 700,
+                  backgroundColor: '#FEF3C7',
+                  borderColor: '#F59E0B',
+                  color: '#B45309'
+                }} 
+                onClick={() => handlePrintLabels(o)} 
+                title="Imprimir Rótulos Térmicos de Bultos"
+              >
+                🏷️ Rótulo
               </button>
               <button 
                 className="btn btn-primary" 
@@ -594,6 +637,27 @@ export default function FulfillmentDashboard() {
             title="Imprimir planilla de consolidado total por depósito"
           >
             <Printer size={13} /> Consolidado {selectedOrderIds.length > 0 ? `(${selectedOrderIds.length})` : ''}
+          </button>
+
+          <button
+            className="btn btn-secondary"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '5px',
+              backgroundColor: '#FEF3C7',
+              borderColor: '#F59E0B',
+              color: '#B45309',
+              fontWeight: 800,
+              fontSize: '0.82rem',
+              height: '28px',
+              padding: '0 12px',
+              borderRadius: '6px'
+            }}
+            onClick={() => handlePrintLabels()}
+            title="Imprimir rótulos térmicos adhesivos para los bultos"
+          >
+            🏷️ Rótulos Bultos {selectedOrderIds.length > 0 ? `(${selectedOrderIds.length})` : ''}
           </button>
         </div>
       </div>

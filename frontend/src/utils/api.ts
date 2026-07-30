@@ -915,11 +915,19 @@ export const api = {
     return res.route;
   },
 
-  updateRouteStatus: async (id: number, status: string) => {    
+  updateRouteStatus: async (id: number, status: string) => {    
 
     const res = await request(`/logistics/${id}/status`, {
       method: 'PATCH',
       body: JSON.stringify({ status })
+    });
+    return res.route;
+  },
+
+  transferRouteCustody: async (id: number, driverNotes?: string) => {
+    const res = await request(`/logistics/${id}/custody`, {
+      method: 'POST',
+      body: JSON.stringify({ driverNotes })
     });
     return res.route;
   },
