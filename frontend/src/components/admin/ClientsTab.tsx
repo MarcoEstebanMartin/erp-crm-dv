@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { api } from '../../utils/api';
-import { UserPlus, Printer, Search } from 'lucide-react';
+import { UserPlus, Printer, Search, Trash2 } from 'lucide-react';
 import SaleRoutesDashboard from '../SaleRoutesDashboard';
 
 interface ClientsTabProps {
@@ -78,6 +78,18 @@ export default function ClientsTab({
   const [availableSellers, setAvailableSellers] = useState<any[]>([]);
   const [availableSaleRoutes, setAvailableSaleRoutes] = useState<any[]>([]);
   const [updatingClientId, setUpdatingClientId] = useState<number | null>(null);
+
+  const handleDeletePersona = async (personaId: number, name: string) => {
+    if (!window.confirm(`¿Estás seguro de que deseas eliminar a "${name}"?`)) {
+      return;
+    }
+    try {
+      await api.deletePersona(personaId);
+      setClients(prev => prev.filter(c => c.id !== personaId));
+    } catch (err: any) {
+      alert(err.message || 'Error al eliminar el registro.');
+    }
+  };
 
   // Load clients or debtors report with race condition prevention
   useEffect(() => {
@@ -835,7 +847,7 @@ export default function ClientsTab({
                           </td>
                         )}
                         <td>
-                          <div style={{ display: 'flex', gap: '8px' }}>
+                          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                             {personaRoleFilter === 'seller' ? (
                               <button 
                                 className="btn btn-primary" 
@@ -854,6 +866,15 @@ export default function ClientsTab({
                                 </button>
                               </>
                             )}
+                            <button
+                              type="button"
+                              className="btn btn-ghost text-danger"
+                              style={{ padding: '6px 8px', color: '#e30613' }}
+                              title="Eliminar este registro"
+                              onClick={() => handleDeletePersona(c.id, c.name)}
+                            >
+                              <Trash2 size={16} />
+                            </button>
                           </div>
                         </td>
                       </tr>
