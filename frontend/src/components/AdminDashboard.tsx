@@ -105,7 +105,10 @@ import {
   Receipt,
   Search,
   DollarSign,
-  Truck
+  Truck,
+  Warehouse,
+  FileText,
+  TrendingUp
 } from 'lucide-react';
 
 interface AdminDashboardProps {
@@ -214,8 +217,14 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
   const [orderStatusFilter, setOrderStatusFilter] = useState<string>('ALL');
   const [auditPage, setAuditPage] = useState(1);
   const [auditTotalPages, setAuditTotalPages] = useState(1);
-    const [configTab, setConfigTab] = useState<string>('general');
-  const [cajasSubTab, setCajasSubTab] = useState<'general' | 'rendiciones' | 'gastos'>('general');
+  const [configTab, setConfigTab] = useState<string>('general');
+  const [cajasSubTab, setCajasSubTab] = useState<'general' | 'rendiciones' | 'gastos' | 'reportes'>('general');
+
+  useEffect(() => {
+    if (activeTab === 'reportes' || activeTab === 'reports') {
+      setCajasSubTab('reportes');
+    }
+  }, [activeTab]);
   
   // Estados para Reglas de Precios y Descuentos
   const [pricingRules, setPricingRules] = useState<{ discountRules: any[]; splitConfigs: any[] }>({ discountRules: [], splitConfigs: [] });
@@ -1356,6 +1365,20 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
       )}
 
       {/* ====================================================================
+          PRODUCTOS Y STOCK (CATÁLOGO)
+          ==================================================================== */}
+      {(activeTab === 'products' || activeTab === 'catalog' || activeTab === 'stock') && (
+        <ProductsTab
+          products={products}
+          fetchData={fetchData}
+          setProductModal={setProductModal}
+          handleUpdateProductInline={handleUpdateProductInline}
+          onUploadImage={handleUploadImage}
+          initialCatalogTab={activeTab === 'stock' ? 'stock' : 'products'}
+        />
+      )}
+
+      {/* ====================================================================
           2. FICHERO DE PERSONAS
           ==================================================================== */}
       {(activeTab === 'clients') && (
@@ -1371,65 +1394,66 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
       )}
 
       {/* ====================================================================
-          3. VISOR COMPLETO DE PEDIDOS
+          3. MÓDULO UNIFICADO: ARMADO Y FACTURACIÓN (ARMADO, HISTORIAL, FACTURACIÓN)
           ==================================================================== */}
-      {activeTab === 'fulfillment' && (
-        <Suspense fallback={<LoadingDashboard />}>
-          <FulfillmentDashboard />
-        </Suspense>
-      )}
+      {(activeTab === 'fulfillment' || activeTab === 'orders' || activeTab === 'billing') && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          {/* Sub-tab Navigation */}
+          <div style={{ display: 'flex', gap: '8px', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px', overflowX: 'auto' }}>
+            {[
+              { id: 'fulfillment', label: 'Armado y Facturación', icon: <Warehouse size={15} /> },
+              { id: 'orders', label: 'Historial', icon: <ShoppingCart size={15} /> },
+              { id: 'billing', label: 'Facturación', icon: <FileText size={15} /> }
+            ].map(tab => (
+              <button
+                key={tab.id}
+                type="button"
+                className="btn"
+                style={{
+                  backgroundColor: activeTab === tab.id ? 'var(--color-primary)' : '#fff',
+                  color: activeTab === tab.id ? '#fff' : 'var(--text-primary)',
+                  border: activeTab === tab.id ? '1px solid var(--color-primary)' : '1px solid var(--border-color)',
+                  fontWeight: 600,
+                  fontSize: '0.85rem',
+                  padding: '8px 16px',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+                onClick={() => setActiveTab(tab.id as any)}
+              >
+                {tab.icon}
+                {tab.label}
+              </button>
+            ))}
+          </div>
 
-      {activeTab === 'orders' && (
-        <OrdersTab
-          orders={orders}
-          fetchData={fetchData}
-          setOrderDetailsModal={setOrderDetailsModal}
-          handleOpenEditOrder={handleOpenEditOrder}
-          setErrorMsg={setErrorMsg}
-          setSuccessMsg={setSuccessMsg}
-        />
-      )}
+          {activeTab === 'fulfillment' && (
+            <Suspense fallback={<LoadingDashboard />}>
+              <FulfillmentDashboard />
+            </Suspense>
+          )}
 
-      {/* ====================================================================
-          4. CATÁLOGO (PRODUCTOS, STOCK Y OFERTAS)
-          ==================================================================== */}
-      {(activeTab === 'products' || activeTab === 'offers') && (
-        <ProductsTab
-          products={products}
-          fetchData={fetchData}
-          setProductModal={setProductModal}
-          handleUpdateProductInline={handleUpdateProductInline}
-          onOpenImportZip={() => setImportZipModalOpen(true)}
-          onUploadImage={handleUploadImage}
-          initialCatalogTab={activeTab === 'offers' ? 'offers' : 'products'}
-        />
-      )}
+          {activeTab === 'orders' && (
+            <OrdersTab
+              orders={orders}
+              fetchData={fetchData}
+              setOrderDetailsModal={setOrderDetailsModal}
+              handleOpenEditOrder={handleOpenEditOrder}
+              setErrorMsg={setErrorMsg}
+              setSuccessMsg={setSuccessMsg}
+            />
+          )}
 
-      {/* ====================================================================
-          6. LOGÍSTICA Y FLOTA (MÓDULO UNIFICADO)
-          ==================================================================== */}
-      {activeTab === 'logistica' && (
-        <Suspense fallback={<LoadingDashboard />}>
-          <LogisticaDashboard />
-        </Suspense>
-      )}
-
-      {/* ====================================================================
-          OPERACIONES & DEPOSITO (PICKING LIST)
-          ==================================================================== */}
-      {activeTab === 'deposito' && (
-        <Suspense fallback={<LoadingDashboard />}>
-          <DepositoDashboard activeTab="deposito" setActiveTab={setActiveTab} />
-        </Suspense>
-      )}
-
-      {/* ====================================================================
-          FACTURACION & IMPUESTOS (BILLING)
-          ==================================================================== */}
-      {activeTab === 'billing' && (
-        <Suspense fallback={<LoadingDashboard />}>
-          <BillingDashboard activeTab={activeTab} setActiveTab={setActiveTab} />
-        </Suspense>
+          {activeTab === 'billing' && (
+            <Suspense fallback={<LoadingDashboard />}>
+              <BillingDashboard activeTab={activeTab} setActiveTab={setActiveTab} />
+            </Suspense>
+          )}
+        </div>
       )}
 
       {/* ====================================================================
@@ -1450,76 +1474,43 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
         </Suspense>
       )}
 
-            {/* ====================================================================
-          9. REPORTES Y MARGENES (UNIFIED REPORTS)
-          ==================================================================== */}
-      {(activeTab === 'reportes' || activeTab === 'reports') && (
-        <Suspense fallback={<LoadingDashboard />}>
-          <UnifiedReportsDashboard orders={orders} users={users} clients={clients} products={products} financialReport={financialReport} />
-        </Suspense>
-      )}
-
       {/* ====================================================================
-          9b. CAJAS Y RENDICIONES (UNIFICADO)
+          9. FINANZAS, CAJAS Y REPORTES (UNIFICADO)
           ==================================================================== */}
-      {activeTab === 'rendiciones' && (
+      {(activeTab === 'rendiciones' || activeTab === 'reportes' || activeTab === 'reports') && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           {/* Sub-tab Navigation */}
-          <div style={{ display: 'flex', gap: '12px', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px', marginBottom: '12px', overflowX: 'auto' }}>
-            <button 
-              type="button"
-              className="btn" 
-              style={{ 
-                backgroundColor: cajasSubTab === 'general' ? 'var(--color-primary)' : 'transparent',
-                color: cajasSubTab === 'general' ? '#fff' : 'var(--text-primary)',
-                border: cajasSubTab === 'general' ? '1px solid var(--color-primary)' : '1px solid var(--border-color)',
-                fontWeight: 600,
-                fontSize: '0.85rem',
-                padding: '8px 16px',
-                borderRadius: '6px',
-                cursor: 'pointer',
-                whiteSpace: 'nowrap'
-              }}
-              onClick={() => setCajasSubTab('general')}
-            >
-              💼 General
-            </button>
-            <button 
-              type="button"
-              className="btn" 
-              style={{ 
-                backgroundColor: cajasSubTab === 'rendiciones' ? 'var(--color-primary)' : 'transparent',
-                color: cajasSubTab === 'rendiciones' ? '#fff' : 'var(--text-primary)',
-                border: cajasSubTab === 'rendiciones' ? '1px solid var(--color-primary)' : '1px solid var(--border-color)',
-                fontWeight: 600,
-                fontSize: '0.85rem',
-                padding: '8px 16px',
-                borderRadius: '6px',
-                cursor: 'pointer',
-                whiteSpace: 'nowrap'
-              }}
-              onClick={() => setCajasSubTab('rendiciones')}
-            >
-              📊 Rendiciones y Arqueos
-            </button>
-            <button 
-              type="button"
-              className="btn" 
-              style={{ 
-                backgroundColor: cajasSubTab === 'gastos' ? 'var(--color-primary)' : 'transparent',
-                color: cajasSubTab === 'gastos' ? '#fff' : 'var(--text-primary)',
-                border: cajasSubTab === 'gastos' ? '1px solid var(--color-primary)' : '1px solid var(--border-color)',
-                fontWeight: 600,
-                fontSize: '0.85rem',
-                padding: '8px 16px',
-                borderRadius: '6px',
-                cursor: 'pointer',
-                whiteSpace: 'nowrap'
-              }}
-              onClick={() => setCajasSubTab('gastos')}
-            >
-              💸 Control de Gastos
-            </button>
+          <div style={{ display: 'flex', gap: '8px', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px', marginBottom: '12px', overflowX: 'auto' }}>
+            {[
+              { id: 'general', label: 'Finanzas General', icon: <DollarSign size={15} /> },
+              { id: 'rendiciones', label: 'Rendiciones y Arqueos', icon: <Receipt size={15} /> },
+              { id: 'gastos', label: 'Control de Gastos', icon: <DollarSign size={15} /> },
+              { id: 'reportes', label: 'Reportes y Analíticas', icon: <TrendingUp size={15} /> }
+            ].map(tab => (
+              <button 
+                key={tab.id}
+                type="button"
+                className="btn" 
+                style={{ 
+                  backgroundColor: cajasSubTab === tab.id ? 'var(--color-primary)' : '#fff',
+                  color: cajasSubTab === tab.id ? '#fff' : 'var(--text-primary)',
+                  border: cajasSubTab === tab.id ? '1px solid var(--color-primary)' : '1px solid var(--border-color)',
+                  fontWeight: 600,
+                  fontSize: '0.85rem',
+                  padding: '8px 16px',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+                onClick={() => setCajasSubTab(tab.id as any)}
+              >
+                {tab.icon}
+                {tab.label}
+              </button>
+            ))}
           </div>
 
           <Suspense fallback={<LoadingDashboard />}>
@@ -1527,8 +1518,10 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
               <FinanzasDashboard />
             ) : cajasSubTab === 'rendiciones' ? (
               <RendicionesDashboard />
-            ) : (
+            ) : cajasSubTab === 'gastos' ? (
               <GastosDashboard />
+            ) : (
+              <UnifiedReportsDashboard orders={orders} users={users} clients={clients} products={products} financialReport={financialReport} />
             )}
           </Suspense>
         </div>
@@ -1607,7 +1600,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
                           const statusInfo = getOrderStatusInfo(o);
                           const clientName = o.client?.name || o.persona?.name || 'Cliente S/D';
                           const city = o.client?.city || o.persona?.city;
-                          const clientRoute = o.persona?.saleRoute?.name || o.client?.saleRoute?.name || o.persona?.route || o.client?.route || o.deliveryZone || 'Sin Ruta';
+                          const clientRoute = (o.persona as any)?.saleRoute?.name || (o.client as any)?.saleRoute?.name || (o.persona as any)?.route || (o.client as any)?.route || (o as any).deliveryZone || 'Sin Ruta';
 
                           return (
                             <tr key={o.id}>
@@ -1701,160 +1694,247 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
         </div>
       )}
 
-
-
       {/* 1. Detalles de pedido */}
       {orderDetailsModal && (
-        <div className="modal-overlay">
-          <div className="modal-content" style={{ maxWidth: '600px' }}>
-            <div className="modal-header">
-              <h3>Pedido #{orderDetailsModal.id}</h3>
-              <button className="btn btn-ghost" style={{ padding: '4px' }} onClick={() => setOrderDetailsModal(null)}>✕</button>
+        <div className="modal-overlay" style={{ zIndex: 10000 }}>
+          <div 
+            className="modal-content" 
+            style={{ 
+              maxWidth: '820px', 
+              width: '95%', 
+              maxHeight: '90vh', 
+              display: 'flex', 
+              flexDirection: 'column', 
+              borderRadius: '16px', 
+              padding: '24px 28px',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+              overflow: 'hidden'
+            }}
+          >
+            <div className="modal-header" style={{ paddingBottom: '16px', marginBottom: '20px', borderBottom: '1px solid #E2E8F0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <h3 style={{ fontSize: '1.35rem', fontWeight: 800, margin: 0, color: '#0F172A' }}>
+                  Pedido #{orderDetailsModal.id}
+                </h3>
+                {(() => {
+                  const statusInfo = getOrderStatusInfo(orderDetailsModal);
+                  return (
+                    <span 
+                      className={`badge badge-${statusInfo.badgeClass}`}
+                      style={{
+                        backgroundColor: statusInfo.color + '18',
+                        color: statusInfo.color,
+                        border: `1px solid ${statusInfo.color}35`,
+                        fontWeight: 700,
+                        fontSize: '0.8rem',
+                        padding: '4px 10px'
+                      }}
+                    >
+                      {statusInfo.label}
+                    </span>
+                  );
+                })()}
+              </div>
+              <button 
+                className="btn btn-ghost" 
+                style={{ padding: '6px 12px', fontSize: '1.2rem', fontWeight: 700, borderRadius: '8px' }} 
+                onClick={() => setOrderDetailsModal(null)}
+              >
+                ✕
+              </button>
             </div>
             
-            {/* Barra de progreso de preparación de pedidos */}
-            {orderDetailsModal.status !== 'CANCELLED' ? (
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', padding: '12px 0', borderBottom: '1px solid var(--border-color)' }}>
-                {[
-                  { status: 'RECIBIDO', label: 'Recibido' },
-                  { status: 'EN_PICKING', label: 'En Picking' },
-                  { status: 'ARMADO', label: 'Armado' },
-                  { status: 'FACTURADO', label: 'Facturado' },
-                  { status: 'EN_VIAJE', label: 'En Viaje' },
-                  { status: 'ENTREGADO', label: 'Entregado' }
-                ].map((step, idx, arr) => {
-                  const logicalStatus = getOrderStatusInfo(orderDetailsModal).label.toUpperCase().replace(' ', '_');
-                  const statusOrder = ['RECIBIDO', 'EN_PICKING', 'ARMADO', 'FACTURADO', 'EN_VIAJE', 'ENTREGADO'];
-                  const currentIdx = statusOrder.indexOf(logicalStatus);
-                  const stepIdx = statusOrder.indexOf(step.status);
-                  const isCompleted = stepIdx <= currentIdx;
-                  const isActive = step.status === logicalStatus;
-                  
-                  return (
-                    <React.Fragment key={step.status}>
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 }}>
-                        <div style={{
-                          width: '24px',
-                          height: '24px',
-                          borderRadius: '50%',
-                          backgroundColor: isCompleted ? 'var(--color-success)' : 'var(--border-color)',
-                          color: isCompleted ? '#fff' : 'var(--text-secondary)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontSize: '0.75rem',
-                          fontWeight: 600,
-                          border: isActive ? '2px solid var(--text-primary)' : 'none',
-                          transition: 'all 0.3s'
-                        }}>
-                          {isCompleted ? '✓' : idx + 1}
-                        </div>
-                        <span style={{ fontSize: '0.7rem', marginTop: '6px', fontWeight: isActive ? 600 : 400, color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)' }}>
-                          {step.label}
-                        </span>
-                      </div>
-                      {idx < arr.length - 1 && (
-                        <div style={{
-                          height: '2px',
-                          flex: 1,
-                          backgroundColor: stepIdx < currentIdx ? 'var(--color-success)' : 'var(--border-color)',
-                          margin: '0 -10px',
-                          transform: 'translateY(-10px)'
-                        }} />
-                      )}
-                    </React.Fragment>
-                  );
-                })}
-              </div>
-            ) : (
-              <div style={{ padding: '8px 12px', backgroundColor: '#FFF2F2', color: 'var(--color-danger)', borderRadius: '4px', fontSize: '0.85rem', fontWeight: 500, marginBottom: '16px', display: 'inline-block' }}>
-                🚫 Este pedido ha sido CANCELADO.
-              </div>
-            )}
+            <div style={{ overflowY: 'auto', flex: 1, paddingRight: '4px' }}>
+              {/* Barra de progreso de 3 fases */}
+              {orderDetailsModal.status !== 'CANCELLED' ? (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  marginBottom: '24px',
+                  padding: '16px 20px',
+                  backgroundColor: '#F8FAFC',
+                  borderRadius: '12px',
+                  border: '1px solid #E2E8F0'
+                }}>
+                  {[
+                    { key: 'RECIBIDO', label: '1. Recibido' },
+                    { key: 'EN_PICKING', label: '2. En Picking' },
+                    { key: 'FACTURADO', label: '3. Facturado' }
+                  ].map((step, idx, arr) => {
+                    const statusInfo = getOrderStatusInfo(orderDetailsModal);
+                    const labelUpper = statusInfo.label.toUpperCase();
+                    let currentIdx = 0;
+                    if (orderDetailsModal.status === 'PREPARING' || orderDetailsModal.status === 'PREPARED' || labelUpper.includes('PICKING') || labelUpper.includes('ARMADO')) {
+                      currentIdx = 1;
+                    } else if (orderDetailsModal.invoiceNumber || orderDetailsModal.status === 'DELIVERED' || orderDetailsModal.status === 'INVOICED' || labelUpper.includes('FACTURADO') || labelUpper.includes('ENTREGADO') || labelUpper.includes('VIAJE')) {
+                      currentIdx = 2;
+                    }
 
-            <div style={{ marginBottom: '16px' }}>
-              <p><strong>Cliente:</strong> {orderDetailsModal.client?.name}</p>
-              <p><strong>CUIT:</strong> {orderDetailsModal.client?.cuit || 'S/D'}</p>
-              <p><strong>Estado:</strong> {(() => {
-                const statusInfo = getOrderStatusInfo(orderDetailsModal);
-                return (
-                  <span 
-                    className={`badge badge-${statusInfo.badgeClass}`}
-                    style={{
-                      backgroundColor: statusInfo.color + '15',
-                      color: statusInfo.color,
-                      border: `1px solid ${statusInfo.color}30`,
-                      fontWeight: 600
-                    }}
-                  >
-                    {statusInfo.label}
-                  </span>
-                );
-              })()}</p>
-              <p><strong>Fecha de Carga:</strong> {new Date(orderDetailsModal.createdAt).toLocaleString('es-AR')}</p>
-            </div>
+                    const isCompleted = idx <= currentIdx;
+                    const isActive = idx === currentIdx;
 
-            <div className="table-container" style={{ maxHeight: '200px', overflowY: 'auto' }}>
-              <table>
-                <thead>
-                  <tr>
-                    <th>Artículo</th>
-                    <th className="text-right">Cantidad</th>
-                    <th className="text-right">Precio Unit.</th>
-                    <th className="text-right">Subtotal</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {orderDetailsModal.items.map((item: any, idx: number) => {
-                    const price = Number(item.unitPrice ?? item.price ?? 0);
-                    const isPesable = item.product?.isPesable || (item.weight && Number(item.weight) > 0);
-                    const subtotal = item.subtotal ? Number(item.subtotal) : (isPesable ? item.quantity * (item.product?.approximateWeight || 1) * price : item.quantity * price);
                     return (
-                      <tr key={idx}>
-                        <td>{item.product?.name}</td>
-                        <td className="text-right">
-                          {item.quantity} u.
-                          {isPesable && (
-                            <span style={{ fontSize: '0.75rem', color: 'var(--color-danger)', marginLeft: '4px' }}>
-                              ({item.weight ? `${Number(item.weight).toFixed(2)} Kg` : `${(item.quantity * (item.product?.approximateWeight || 1)).toLocaleString()} Kg aprox`})
-                            </span>
-                          )}
-                        </td>
-                        <td className="text-right">
-                          ${Math.round(price).toLocaleString('es-AR')}
-                          {isPesable && ' / Kg'}
-                        </td>
-                        <td className="text-right">${Math.round(subtotal).toLocaleString('es-AR')}</td>
-                      </tr>
+                      <React.Fragment key={step.key}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, justifyContent: idx === 0 ? 'flex-start' : idx === arr.length - 1 ? 'flex-end' : 'center' }}>
+                          <div style={{
+                            width: '32px',
+                            height: '32px',
+                            borderRadius: '50%',
+                            backgroundColor: isCompleted ? '#10B981' : '#E2E8F0',
+                            color: isCompleted ? '#ffffff' : '#64748B',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '0.85rem',
+                            fontWeight: 800,
+                            boxShadow: isActive ? '0 0 0 4px rgba(16, 185, 129, 0.2)' : 'none',
+                            transition: 'all 0.2s ease'
+                          }}>
+                            {isCompleted ? '✓' : idx + 1}
+                          </div>
+                          <span style={{
+                            fontSize: '0.85rem',
+                            fontWeight: isActive ? 700 : 500,
+                            color: isActive ? '#0F172A' : isCompleted ? '#10B981' : '#64748B'
+                          }}>
+                            {step.label}
+                          </span>
+                        </div>
+                        {idx < arr.length - 1 && (
+                          <div style={{
+                            height: '3px',
+                            flex: 1,
+                            backgroundColor: idx < currentIdx ? '#10B981' : '#E2E8F0',
+                            margin: '0 12px',
+                            borderRadius: '2px',
+                            transition: 'all 0.2s ease'
+                          }} />
+                        )}
+                      </React.Fragment>
                     );
                   })}
-                </tbody>
-              </table>
-            </div>
+                </div>
+              ) : (
+                <div style={{ padding: '10px 16px', backgroundColor: '#FEF2F2', color: '#EF4444', border: '1px solid #FCA5A5', borderRadius: '10px', fontSize: '0.875rem', fontWeight: 600, marginBottom: '20px' }}>
+                  🚫 Este pedido ha sido CANCELADO.
+                </div>
+              )}
 
-            <div style={{ textAlign: 'right', marginTop: '20px', fontWeight: 'bold', fontSize: '1.1rem' }}>
-              Monto Total: ${Math.round(Number(orderDetailsModal.totalAmount)).toLocaleString('es-AR')}
+              {/* Ficha de datos del cliente y pedido */}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+                gap: '14px',
+                marginBottom: '20px',
+                padding: '16px 20px',
+                backgroundColor: '#F8FAFC',
+                borderRadius: '12px',
+                border: '1px solid #E2E8F0',
+                fontSize: '0.875rem'
+              }}>
+                <div>
+                  <span style={{ color: '#64748B', fontSize: '0.72rem', display: 'block', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.3px' }}>Cliente</span>
+                  <strong style={{ color: '#0F172A', fontSize: '0.95rem' }}>{orderDetailsModal.client?.name || orderDetailsModal.persona?.name || 'S/D'}</strong>
+                </div>
+                <div>
+                  <span style={{ color: '#64748B', fontSize: '0.72rem', display: 'block', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.3px' }}>CUIT / C.U.I.L.</span>
+                  <strong style={{ color: '#0F172A' }}>{orderDetailsModal.client?.cuit || 'S/D'}</strong>
+                </div>
+                <div>
+                  <span style={{ color: '#64748B', fontSize: '0.72rem', display: 'block', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.3px' }}>Dirección de Entrega</span>
+                  <strong style={{ color: '#0F172A' }}>{orderDetailsModal.client?.address || orderDetailsModal.persona?.address || 'S/D'}</strong>
+                </div>
+                <div>
+                  <span style={{ color: '#64748B', fontSize: '0.72rem', display: 'block', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.3px' }}>Fecha de Carga</span>
+                  <strong style={{ color: '#0F172A' }}>{new Date(orderDetailsModal.createdAt).toLocaleString('es-AR')}</strong>
+                </div>
+                {orderDetailsModal.notes && (
+                  <div style={{ gridColumn: '1 / -1', marginTop: '4px', padding: '10px 14px', backgroundColor: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: '8px', color: '#92400E' }}>
+                    <strong>📝 Notas / Indicaciones:</strong> {orderDetailsModal.notes}
+                  </div>
+                )}
+              </div>
+
+              {/* Tabla de artículos */}
+              <div style={{ border: '1px solid #E2E8F0', borderRadius: '12px', overflow: 'hidden', marginBottom: '20px' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
+                  <thead>
+                    <tr style={{ backgroundColor: '#F8FAFC', borderBottom: '1px solid #E2E8F0' }}>
+                      <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 700, color: '#475569', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Artículo</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 700, color: '#475569', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Cantidad</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 700, color: '#475569', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Precio Unit.</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 700, color: '#475569', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Subtotal</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {orderDetailsModal.items.map((item: any, idx: number) => {
+                      const price = Number(item.unitPrice ?? item.price ?? 0);
+                      const isPesable = item.product?.isPesable || (item.weight && Number(item.weight) > 0);
+                      const subtotal = item.subtotal ? Number(item.subtotal) : (isPesable ? item.quantity * (item.product?.approximateWeight || 1) * price : item.quantity * price);
+                      return (
+                        <tr key={idx} style={{ borderBottom: idx < orderDetailsModal.items.length - 1 ? '1px solid #F1F5F9' : 'none' }}>
+                          <td style={{ padding: '12px 16px', fontWeight: 600, color: '#0F172A' }}>{item.product?.name}</td>
+                          <td style={{ padding: '12px 16px', textAlign: 'right', color: '#334155' }}>
+                            {item.quantity} u.
+                            {isPesable && (
+                              <span style={{ fontSize: '0.75rem', color: '#DC2626', backgroundColor: '#FEE2E2', padding: '2px 6px', borderRadius: '4px', marginLeft: '6px', fontWeight: 600 }}>
+                                ({item.weight ? `${Number(item.weight).toFixed(2)} Kg` : `${(item.quantity * (item.product?.approximateWeight || 1)).toLocaleString()} Kg aprox`})
+                              </span>
+                            )}
+                          </td>
+                          <td style={{ padding: '12px 16px', textAlign: 'right', color: '#334155' }}>
+                            ${Math.round(price).toLocaleString('es-AR')}
+                            {isPesable && ' / Kg'}
+                          </td>
+                          <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 700, color: '#0F172A' }}>
+                            ${Math.round(subtotal).toLocaleString('es-AR')}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Total acumulado */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', backgroundColor: '#F8FAFC', borderRadius: '12px', border: '1px solid #E2E8F0', marginBottom: '20px' }}>
+                <span style={{ fontSize: '1rem', fontWeight: 600, color: '#475569' }}>Monto Total:</span>
+                <span style={{ fontSize: '1.6rem', fontWeight: 800, color: '#0F172A' }}>
+                  ${Math.round(Number(orderDetailsModal.totalAmount)).toLocaleString('es-AR')}
+                </span>
+              </div>
             </div>
             
-            <div className="modal-footer" style={{ marginTop: '20px' }}>
+            <div className="modal-footer" style={{ borderTop: '1px solid #E2E8F0', paddingTop: '16px', marginTop: '10px', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
               {!orderDetailsModal.invoiceNumber && orderDetailsModal.status !== 'CANCELLED' && (
                 <button 
                   className="btn btn-primary" 
-                  style={{ backgroundColor: '#4F46E5', borderColor: '#4F46E5', color: 'white' }} 
+                  style={{ backgroundColor: '#6366F1', borderColor: '#6366F1', color: 'white', padding: '10px 18px', borderRadius: '8px', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '6px' }} 
                   onClick={() => {
                     setFastInvoiceOrder(orderDetailsModal);
                     setOrderDetailsModal(null);
                   }}
                 >
-                  <DollarSign size={16} />
+                  <DollarSign size={18} />
                   <span>Facturar Directo</span>
                 </button>
               )}
-              <button className="btn btn-secondary" onClick={() => { printTicket(orderDetailsModal); setOrderDetailsModal(null); }}>
-                <Printer size={16} />
+              <button 
+                className="btn btn-secondary" 
+                style={{ padding: '10px 18px', borderRadius: '8px', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '6px' }} 
+                onClick={() => { printTicket(orderDetailsModal); setOrderDetailsModal(null); }}
+              >
+                <Printer size={18} />
                 <span>Imprimir Ticket</span>
               </button>
-              <button className="btn btn-primary" onClick={() => setOrderDetailsModal(null)}>Cerrar</button>
+              <button 
+                className="btn" 
+                style={{ padding: '10px 20px', borderRadius: '8px', backgroundColor: '#1E293B', color: '#fff', fontWeight: 700 }} 
+                onClick={() => setOrderDetailsModal(null)}
+              >
+                Cerrar
+              </button>
             </div>
           </div>
         </div>
