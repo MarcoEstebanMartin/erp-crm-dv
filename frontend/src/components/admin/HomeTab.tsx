@@ -641,9 +641,7 @@ export default function HomeTab({
             },
             {
               title: 'Cuentas por Cobrar',
-              desc: financesSummary?.totalOutstandingBalance 
-                ? `$${Math.round(financesSummary.totalOutstandingBalance).toLocaleString('es-AR')} por cobrar` 
-                : 'Estado de Cuenta Corriente',
+              desc: 'Estado de Cuenta Corriente',
               icon: <BookOpen size={20} style={{ color: '#8B5CF6' }} />,
               onClick: () => {
                 setClientSearchModal({ open: true, action: 'ledger' });
