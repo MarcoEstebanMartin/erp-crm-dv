@@ -265,6 +265,10 @@ const RendicionesDashboard: React.FC = () => {
       setAmountInput('');
       fetchDrawers();
     } catch (err: any) {
+      alert(err.message || 'Ocurrió un error al procesar la caja.');
+    }
+  };
+
   const handleDeleteReceipt = async (tx: any) => {
     const receiptName = tx.receiptNumber || `N° ${tx.id}`;
     const clientName = tx.persona?.name || 'Cliente';
@@ -759,7 +763,10 @@ const RendicionesDashboard: React.FC = () => {
               </div>
             </div>
           );
-             {/* MODAL DE ARQUEO Y CONCILIACIÓN */}
+        })()}
+      </div>
+
+      {/* MODAL DE ARQUEO Y CONCILIACIÓN */}
       {auditTarget && (
         <div className="modal-overlay">
           <div className="modal-content" style={{ maxWidth: '1150px', width: '95vw', maxHeight: '90vh', display: 'flex', flexDirection: 'column', padding: '24px', borderRadius: '12px', overflow: 'hidden' }}>
