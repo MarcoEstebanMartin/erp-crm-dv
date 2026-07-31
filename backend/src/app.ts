@@ -63,8 +63,9 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 app.use(cors());
 app.use(express.json());
 app.use('/uploads', express.static(uploadsDir, {
-  maxAge: 7 * 24 * 60 * 60 * 1000, // 7 días en milisegundos
-  cacheControl: true
+  maxAge: 0,
+  etag: true,
+  lastModified: true
 }));
 
 const archivosDir = process.env.ARCHIVOS_PATH || path.join(__dirname, '../../ARCHIVOS');

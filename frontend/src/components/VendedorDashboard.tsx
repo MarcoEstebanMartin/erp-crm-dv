@@ -1002,7 +1002,7 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
                              Number(selectedClient.discount || 0) > 0
                            );
                           
-                          const imgSrc = p.imageUrl ? (p.imageUrl.startsWith('http') ? p.imageUrl : (p.imageUrl.startsWith('/') ? p.imageUrl : `/uploads/products/${p.imageUrl}`)) : null;
+                          const imgSrc = p.imageUrl ? (p.imageUrl.startsWith('http') ? p.imageUrl : (p.imageUrl.startsWith('/') ? `${p.imageUrl}?v=1.1` : `/uploads/products/${p.imageUrl}?v=1.1`)) : null;
                           const cartItem = cart.find(item => item.product.id === p.id);
 
                            return (
@@ -1630,7 +1630,7 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
                 <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-secondary)', gridColumn: '1 / -1' }}>No se encontraron productos.</div>
               ) : (
                 filtered.map((p) => {
-                  const imgSrc = p.imageUrl ? (p.imageUrl.startsWith('http') ? p.imageUrl : (p.imageUrl.startsWith('/') ? p.imageUrl : `/uploads/products/${p.imageUrl}`)) : null;
+                  const imgSrc = p.imageUrl ? (p.imageUrl.startsWith('http') ? p.imageUrl : (p.imageUrl.startsWith('/') ? `${p.imageUrl}?v=1.1` : `/uploads/products/${p.imageUrl}?v=1.1`)) : null;
 
                   return (
                     <div key={p.id} className="product-card" style={{ 
