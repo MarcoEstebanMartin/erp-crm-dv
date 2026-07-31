@@ -120,6 +120,14 @@ export const registerCollection = async (req: AuthenticatedRequest, res: Respons
 
       const formattedReceiptNumber = `REC-${newTx.movementId.toString().padStart(5, '0')}`;
 
+      // Decrementar el saldo pendiente del cliente de forma inmediata al registrar el cobro
+      await tx.persona.update({
+        where: { id: Number(personaId) },
+        data: {
+          outstandingBalance: { decrement: roundedAmount }
+        }
+      });
+
       const updatedTx = await tx.transaction.update({
         where: { id: newTx.id },
         data: { receiptNumber: formattedReceiptNumber },
@@ -448,18 +456,6 @@ export const verifyRendicion = async (req: AuthenticatedRequest, res: Response) 
             data: {
               verified: true,
               cashDrawerId: drawer.id
-            }
-          })
-        );
-      }
-
-      // Decrementar de forma atómica el outstandingBalance del cliente correspondiente al verificar
-      if (t.personaId) {
-        operations.push(
-          prisma.persona.update({
-            where: { id: t.personaId },
-            data: {
-              outstandingBalance: { decrement: t.amount }
             }
           })
         );
