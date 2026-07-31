@@ -685,7 +685,7 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({ onBackToStaffLogin }
                     <div style={styles.productImageArea}>
                       {p.imageUrl && !imageErrors[p.id] ? (
                         <img
-                          src={p.imageUrl.startsWith('http') ? p.imageUrl : (p.imageUrl.startsWith('/') ? `${p.imageUrl}?v=1.1` : `/uploads/products/${p.imageUrl}?v=1.1`)}
+                          src={p.imageUrl.startsWith('http') ? p.imageUrl : (p.imageUrl.startsWith('/') ? `${p.imageUrl}?v=1.2` : `/uploads/products/${p.imageUrl}?v=1.2`)}
                           alt={p.name}
                           style={styles.productImg}
                           onError={() => {

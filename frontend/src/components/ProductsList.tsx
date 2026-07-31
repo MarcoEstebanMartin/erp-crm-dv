@@ -298,7 +298,7 @@ export default function ProductsList({ products, searchQuery, setSearchQuery, se
                             onClick={(e) => {
                               e.stopPropagation();
                               if (p.imageUrl) {
-                                const fullUrl = p.imageUrl.startsWith('http') ? p.imageUrl : (p.imageUrl.startsWith('/') ? `${p.imageUrl}?v=1.1` : `/uploads/products/${p.imageUrl}?v=1.1`);
+                                const fullUrl = p.imageUrl.startsWith('http') ? p.imageUrl : (p.imageUrl.startsWith('/') ? `${p.imageUrl}?v=1.2` : `/uploads/products/${p.imageUrl}?v=1.2`);
                                 setPreviewModal({
                                   open: true,
                                   imageUrl: fullUrl,
@@ -324,7 +324,7 @@ export default function ProductsList({ products, searchQuery, setSearchQuery, se
                           >
                             {p.imageUrl ? (
                               <img 
-                                src={p.imageUrl.startsWith('http') ? p.imageUrl : (p.imageUrl.startsWith('/') ? `${p.imageUrl}?v=1.1` : `/uploads/products/${p.imageUrl}?v=1.1`)} 
+                                src={p.imageUrl.startsWith('http') ? p.imageUrl : (p.imageUrl.startsWith('/') ? `${p.imageUrl}?v=1.2` : `/uploads/products/${p.imageUrl}?v=1.2`)} 
                                 alt={p.name} 
                                 style={{ width: '40px', height: '40px', minWidth: '40px', objectFit: 'contain', borderRadius: '6px', border: '1px solid var(--border-color)', backgroundColor: '#fff', padding: '2px' }} 
                               />
