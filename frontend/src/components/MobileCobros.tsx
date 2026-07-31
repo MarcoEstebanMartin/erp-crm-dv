@@ -31,6 +31,7 @@ const MobileCobros: React.FC<MobileCobrosProps> = ({
   const [selectedPersona, setSelectedPersona] = useState<Persona | null>(null);
   const [amount, setAmount] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('CASH');
+  const [checkNumber, setCheckNumber] = useState('');
   const [billingType, setBillingType] = useState('OFFICIAL'); // OFFICIAL = A, INTERNAL = X
   const [loading, setLoading] = useState(false);
   const [successReceipt, setSuccessReceipt] = useState<any>(null);
@@ -48,6 +49,7 @@ const MobileCobros: React.FC<MobileCobrosProps> = ({
       setPendingInvoices([]);
       setSelectedInvoiceId(null);
       setBillingType('OFFICIAL');
+      setCheckNumber('');
     }
   }, [selectedPersona]);
 
@@ -111,6 +113,11 @@ const MobileCobros: React.FC<MobileCobrosProps> = ({
       return;
     }
 
+    if (paymentMethod === 'CHECK' && !checkNumber.trim()) {
+      alert('Por favor, ingresa el número de cheque.');
+      return;
+    }
+
     // Advertencia de sobrepago
     if (parsedAmount > selectedPersona.outstandingBalance) {
       const confirmOverpayment = await confirm(
@@ -127,7 +134,8 @@ const MobileCobros: React.FC<MobileCobrosProps> = ({
         amount: parsedAmount,
         paymentMethod,
         billingType,
-        orderId: selectedInvoiceId
+        orderId: selectedInvoiceId,
+        checkNumber: paymentMethod === 'CHECK' ? checkNumber.trim() : undefined
       }, {
         headers: { Authorization: `Bearer ${localStorage.getItem('auth_token')}` }
       });
@@ -202,9 +210,16 @@ const MobileCobros: React.FC<MobileCobrosProps> = ({
             <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #F3F4F6' }}>
               <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Medio de Pago</span>
               <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-                {successReceipt.paymentMethod === 'CASH' ? 'Efectivo' : successReceipt.paymentMethod === 'BANK_TRANSFER' ? 'Transferencia' : 'Cheque'}
+                {successReceipt.paymentMethod === 'CASH' ? 'Efectivo' : successReceipt.paymentMethod === 'BANK_TRANSFER' ? 'Transferencia (Mercado Pago / Banco)' : 'Cheque'}
               </span>
             </div>
+
+            {checkNumber && paymentMethod === 'CHECK' && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #F3F4F6' }}>
+                <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>N° de Cheque</span>
+                <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-primary)' }}>{checkNumber}</span>
+              </div>
+            )}
 
             <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '10px' }}>
               <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Sucursal</span>
@@ -233,7 +248,7 @@ const MobileCobros: React.FC<MobileCobrosProps> = ({
           </div>
           
           <button 
-            onClick={() => { setSuccessReceipt(null); setSelectedPersona(null); setAmount(''); }}
+            onClick={() => { setSuccessReceipt(null); setSelectedPersona(null); setAmount(''); setCheckNumber(''); }}
             style={{
               width: '100%',
               backgroundColor: 'var(--accent-color)',
@@ -522,6 +537,104 @@ const MobileCobros: React.FC<MobileCobrosProps> = ({
               })}
             </div>
           </div>
+
+          {/* Banner de Promoción Mercado Pago si selecciona Transferencia */}
+          {paymentMethod === 'BANK_TRANSFER' && (
+            <div style={{
+              backgroundColor: '#EFF6FF',
+              border: '1px solid #BFDBFE',
+              borderRadius: '10px',
+              padding: '14px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '8px'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#1D4ED8', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span>💙 Priorizar Mercado Pago</span>
+                </span>
+                <span style={{ fontSize: '0.7rem', backgroundColor: '#DBEAFE', color: '#1E40AF', padding: '2px 8px', borderRadius: '12px', fontWeight: 600 }}>
+                  Acreditación Inmediata
+                </span>
+              </div>
+              
+              <p style={{ fontSize: '0.78rem', color: '#1E40AF', margin: 0, lineHeight: '1.4' }}>
+                💡 <strong>Recomendación:</strong> Solicitar al cliente que realice la transferencia preferentemente a la cuenta oficial de Mercado Pago para verificación instantánea.
+              </p>
+
+              <div style={{
+                backgroundColor: '#FFFFFF',
+                borderRadius: '8px',
+                padding: '10px 12px',
+                border: '1px solid #93C5FD',
+                display: 'flex',
+                justify: 'space-between',
+                alignItems: 'center'
+              }}>
+                <div>
+                  <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', display: 'block', fontWeight: 600, textTransform: 'uppercase' }}>
+                    ALIAS OFICIAL MERCADO PAGO
+                  </span>
+                  <span style={{ fontSize: '0.98rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                    donvenancio2024
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText('donvenancio2024');
+                    alert('¡Alias MercadoPago (donvenancio2024) copiado al portapapeles!');
+                  }}
+                  style={{
+                    fontSize: '0.75rem',
+                    backgroundColor: '#2563EB',
+                    color: '#FFFFFF',
+                    border: 'none',
+                    padding: '6px 12px',
+                    borderRadius: '6px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    boxShadow: 'var(--shadow-sm)'
+                  }}
+                >
+                  Copiar Alias
+                </button>
+              </div>
+
+              <div style={{ fontSize: '0.73rem', color: '#1E40AF', marginTop: '2px' }}>
+                <strong>CVU MP:</strong> <code>0000003100085432453321</code>
+              </div>
+            </div>
+          )}
+
+          {/* Campo de Número de Cheque si selecciona Cheque */}
+          {paymentMethod === 'CHECK' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <label style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                Número de Cheque *
+              </label>
+              <input
+                type="text"
+                required
+                value={checkNumber}
+                onChange={(e) => setCheckNumber(e.target.value)}
+                placeholder="Ej: CH-90824102"
+                style={{
+                  width: '100%',
+                  padding: '12px 14px',
+                  borderRadius: '8px',
+                  border: '1px solid var(--border-color)',
+                  backgroundColor: '#FFFFFF',
+                  color: 'var(--text-primary)',
+                  fontSize: '0.95rem',
+                  fontWeight: 600,
+                  outline: 'none',
+                  boxShadow: 'var(--shadow-sm)'
+                }}
+              />
+            </div>
+          )}
+
 
           {/* Selector de Sucursal (Pill Segmented Toggle) */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
