@@ -48,28 +48,24 @@ export default function HomeTab({
   const armadosOrdersCount = useMemo(() => orders.filter(o => o.status === 'PREPARING' || (o.status === 'PREPARED' && !o.invoiceNumber)).length, [orders]);
   const facturadosDespachadosOrdersCount = useMemo(() => orders.filter(o => o.invoiceNumber || o.status === 'DELIVERED' || o.status === 'BILLED' || (o.deliveryRoute && (o.deliveryRoute.status === 'IN_TRANSIT' || o.deliveryRoute.status === 'COMPLETED'))).length, [orders]);
 
-  // Estados para resumen de finanzas, cuentas por cobrar y cajas pendientes
-  const [financesSummary, setFinancesSummary] = useState<{
-    totalOutstandingBalance: number;
-    pendingClientsCount: number;
-    pendingRendicionesAmount: number;
-    pendingRendicionesCount: number;
-    pendingSellersCount: number;
-    pendingDriversCount: number;
-  } | null>(null);
-  const [loadingFinances, setLoadingFinances] = useState(false);
+  // Estado para desglose ultra minimalista de rendiciones pendientes por vendedor y repartidor
+  const [pendingRendicionesDetails, setPendingRendicionesDetails] = useState<{ sellers: any[]; routes: any[] }>({ sellers: [], routes: [] });
+  const [loadingRendicionesDetails, setLoadingRendicionesDetails] = useState(false);
 
-  const fetchFinancesSummary = async () => {
-    setLoadingFinances(true);
+  const fetchRendicionesDetails = async () => {
+    setLoadingRendicionesDetails(true);
     try {
-      const res = await api.getCollectionsSummary();
+      const res = await api.getPendingRendiciones();
       if (res) {
-        setFinancesSummary(res);
+        setPendingRendicionesDetails({
+          sellers: res.sellers || [],
+          routes: res.routes || []
+        });
       }
     } catch (err) {
-      console.error('Error al obtener resumen de finanzas/rendiciones:', err);
+      console.error('Error al obtener detalle de rendiciones pendientes:', err);
     } finally {
-      setLoadingFinances(false);
+      setLoadingRendicionesDetails(false);
     }
   };
 
@@ -98,7 +94,7 @@ export default function HomeTab({
 
   useEffect(() => {
     fetchWeeklySchedule();
-    fetchFinancesSummary();
+    fetchRendicionesDetails();
   }, []);
 
   const handleToggleCurrentWeek = async () => {
@@ -354,71 +350,187 @@ export default function HomeTab({
         </div>
       </div>
 
-      {/* Grilla de Resumen Financiero & Rendiciones (2 Tarjetas Principales para Administradores) */}
-      <div className="dashboard-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px', marginTop: '16px' }}>
-        {/* Dinero por Cobrar */}
-        <div 
-          className="card stat-card" 
-          style={{ 
-            borderLeft: '4px solid #8B5CF6', 
-            padding: '16px 20px',
-            background: 'var(--background-card)',
-            borderRadius: '12px',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.03)' 
-          }} 
-          onClick={() => {
-            setClientSearchModal({ open: true, action: 'ledger' });
-            setQuickClientQuery('');
-          }}
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div className="stat-label" style={{ fontWeight: 700, fontSize: '0.92rem', color: 'var(--text-secondary)' }}>
-              💳 Dinero por Cobrar (Cuentas Corrientes)
-            </div>
-            <span style={{ fontSize: '1.2rem' }}>📊</span>
-          </div>
-          <div className="stat-value" style={{ color: '#8B5CF6', fontSize: '1.8rem', fontWeight: 800, margin: '6px 0 2px 0' }}>
-            {loadingFinances ? 'Cargando...' : `$ ${financesSummary?.totalOutstandingBalance?.toLocaleString('es-AR') ?? '0'}`}
-          </div>
-          <div className="stat-desc" style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
-            {financesSummary?.pendingClientsCount ? `${financesSummary.pendingClientsCount} clientes con saldo pendiente` : 'Sin saldos deudores acumulados'}
-          </div>
-        </div>
-
-        {/* Recordatorio de Cajas Pendientes */}
-        <div 
-          className="card stat-card" 
-          style={{ 
-            borderLeft: (financesSummary?.pendingRendicionesCount || 0) > 0 ? '4px solid #E30613' : '4px solid #10B981', 
-            padding: '16px 20px',
-            background: 'var(--background-card)',
-            borderRadius: '12px',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.03)' 
-          }} 
-          onClick={() => setActiveTab('rendiciones')}
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div className="stat-label" style={{ fontWeight: 700, fontSize: '0.92rem', color: 'var(--text-secondary)' }}>
-              📬 Cajas & Rendiciones Pendientes (Dinero a Rendir)
-            </div>
-            <span style={{ fontSize: '1.2rem' }}>💰</span>
-          </div>
-          <div className="stat-value" style={{ color: (financesSummary?.pendingRendicionesCount || 0) > 0 ? '#E30613' : '#10B981', fontSize: '1.8rem', fontWeight: 800, margin: '6px 0 2px 0' }}>
-            {loadingFinances ? 'Cargando...' : `$ ${financesSummary?.pendingRendicionesAmount?.toLocaleString('es-AR') ?? '0'}`}
-          </div>
-          <div className="stat-desc" style={{ fontSize: '0.82rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-            {(financesSummary?.pendingRendicionesCount || 0) > 0 ? (
-              <>
-                <span style={{ backgroundColor: '#FEE2E2', color: '#DC2626', padding: '2px 8px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 700 }}>
-                  ⚠️ {financesSummary?.pendingRendicionesCount} caja(s) por rendir
-                </span>
-                <span>({financesSummary?.pendingSellersCount || 0} vend. / {financesSummary?.pendingDriversCount || 0} choc.)</span>
-              </>
-            ) : (
-              <span style={{ color: '#10B981', fontWeight: 600 }}>✓ Todas las cajas rendidas y al día</span>
+      {/* Resumen Ultra-Minimalista: Cajas Pendientes por Rendir (Vendedores & Choferes) */}
+      <div style={{
+        marginTop: '20px',
+        backgroundColor: '#ffffff',
+        borderRadius: '10px',
+        border: '1px solid var(--border-color, #e5e5e7)',
+        padding: '16px 20px',
+        boxShadow: '0 1px 4px rgba(0,0,0,0.02)'
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '1.1rem' }}>💼</span>
+            <h3 style={{ fontSize: '0.98rem', fontWeight: 600, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.01em' }}>
+              Cajas Pendientes por Rendir
+            </h3>
+            {(pendingRendicionesDetails.sellers.length > 0 || pendingRendicionesDetails.routes.length > 0) && (
+              <span style={{
+                backgroundColor: '#FEE2E2',
+                color: '#DC2626',
+                fontSize: '0.72rem',
+                fontWeight: 700,
+                padding: '2px 8px',
+                borderRadius: '10px'
+              }}>
+                {pendingRendicionesDetails.sellers.length + pendingRendicionesDetails.routes.length} pendiente(s)
+              </span>
             )}
           </div>
+          <button 
+            onClick={() => setActiveTab('rendiciones')}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: 'var(--color-corp-red, #E30613)',
+              fontSize: '0.82rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px'
+            }}
+          >
+            Auditar Rendiciones <ChevronRight size={14} />
+          </button>
         </div>
+
+        {loadingRendicionesDetails ? (
+          <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', padding: '8px 0' }}>Cargando resumen de cajas...</div>
+        ) : (pendingRendicionesDetails.sellers.length === 0 && pendingRendicionesDetails.routes.length === 0) ? (
+          <div style={{ fontSize: '0.84rem', color: '#10B981', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '6px', padding: '4px 0' }}>
+            <span>✓</span> No hay cajas ni rendiciones pendientes. Todo se encuentra al día.
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {/* Vendedores */}
+            {pendingRendicionesDetails.sellers.map((s: any) => {
+              const name = s.user?.username || `Vendedor #${s.user?.id}`;
+              const count = s.transactions?.length || 0;
+              const cash = Number(s.totalCash || 0);
+              const checks = Number(s.totalChecks || 0);
+              const transfers = Number(s.totalTransfers || 0);
+              const total = Number(s.totalToCollect || 0);
+
+              return (
+                <div 
+                  key={`seller-${s.user?.id}`}
+                  onClick={() => setActiveTab('rendiciones')}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    flexWrap: 'wrap',
+                    padding: '10px 14px',
+                    backgroundColor: 'var(--bg-light, #f9f9fb)',
+                    border: '1px solid var(--border-color, #efeff1)',
+                    borderRadius: '8px',
+                    fontSize: '0.84rem',
+                    cursor: 'pointer',
+                    gap: '8px',
+                    transition: 'all 0.15s ease'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.borderColor = '#d1d1d6'}
+                  onMouseLeave={(e) => e.currentTarget.style.borderColor = '#efeff1'}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
+                      👤 {name}
+                    </span>
+                    <span style={{ color: '#4f46e5', fontSize: '0.78rem', backgroundColor: '#eef2ff', padding: '2px 7px', borderRadius: '6px', fontWeight: 600 }}>
+                      ({count}) recibo{count !== 1 ? 's' : ''}
+                    </span>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
+                    {cash > 0 && (
+                      <span style={{ color: '#16a34a', fontWeight: 600 }}>
+                        ${cash.toLocaleString('es-AR')} <span style={{ fontWeight: 400, color: 'var(--text-muted)', fontSize: '0.78rem' }}>efectivo</span>
+                      </span>
+                    )}
+                    {checks > 0 && (
+                      <span style={{ color: '#0284c7', fontWeight: 600 }}>
+                        ${checks.toLocaleString('es-AR')} <span style={{ fontWeight: 400, color: 'var(--text-muted)', fontSize: '0.78rem' }}>cheques</span>
+                      </span>
+                    )}
+                    {transfers > 0 && (
+                      <span style={{ color: '#9333ea', fontWeight: 600 }}>
+                        ${transfers.toLocaleString('es-AR')} <span style={{ fontWeight: 400, color: 'var(--text-muted)', fontSize: '0.78rem' }}>transf.</span>
+                      </span>
+                    )}
+                    <span style={{ fontWeight: 700, color: 'var(--text-primary)', borderLeft: '1px solid #e5e5e7', paddingLeft: '12px' }}>
+                      Total: ${total.toLocaleString('es-AR')}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+
+            {/* Repartidores / Rutas */}
+            {pendingRendicionesDetails.routes.map((r: any) => {
+              const name = r.driverName || `Chofer Ruta #${r.routeId}`;
+              const count = r.transactions?.length || 0;
+              const cash = Number(r.totalCash || 0);
+              const checks = Number(r.totalChecks || 0);
+              const transfers = Number(r.totalTransfers || 0);
+              const total = Number(r.totalToCollect || 0);
+
+              return (
+                <div 
+                  key={`route-${r.routeId}`}
+                  onClick={() => setActiveTab('rendiciones')}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    flexWrap: 'wrap',
+                    padding: '10px 14px',
+                    backgroundColor: 'var(--bg-light, #f9f9fb)',
+                    border: '1px solid var(--border-color, #efeff1)',
+                    borderRadius: '8px',
+                    fontSize: '0.84rem',
+                    cursor: 'pointer',
+                    gap: '8px',
+                    transition: 'all 0.15s ease'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.borderColor = '#d1d1d6'}
+                  onMouseLeave={(e) => e.currentTarget.style.borderColor = '#efeff1'}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
+                      🚚 {name} {r.vehiclePlate ? `(${r.vehiclePlate})` : ''}
+                    </span>
+                    <span style={{ color: '#d97706', fontSize: '0.78rem', backgroundColor: '#fef3c7', padding: '2px 7px', borderRadius: '6px', fontWeight: 600 }}>
+                      ({count}) recibo{count !== 1 ? 's' : ''}
+                    </span>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
+                    {cash > 0 && (
+                      <span style={{ color: '#16a34a', fontWeight: 600 }}>
+                        ${cash.toLocaleString('es-AR')} <span style={{ fontWeight: 400, color: 'var(--text-muted)', fontSize: '0.78rem' }}>efectivo</span>
+                      </span>
+                    )}
+                    {checks > 0 && (
+                      <span style={{ color: '#0284c7', fontWeight: 600 }}>
+                        ${checks.toLocaleString('es-AR')} <span style={{ fontWeight: 400, color: 'var(--text-muted)', fontSize: '0.78rem' }}>cheques</span>
+                      </span>
+                    )}
+                    {transfers > 0 && (
+                      <span style={{ color: '#9333ea', fontWeight: 600 }}>
+                        ${transfers.toLocaleString('es-AR')} <span style={{ fontWeight: 400, color: 'var(--text-muted)', fontSize: '0.78rem' }}>transf.</span>
+                      </span>
+                    )}
+                    <span style={{ fontWeight: 700, color: 'var(--text-primary)', borderLeft: '1px solid #e5e5e7', paddingLeft: '12px' }}>
+                      Total: ${total.toLocaleString('es-AR')}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Accesos Directos (Acciones Rápidas) */}
@@ -453,12 +565,14 @@ export default function HomeTab({
           {[
             {
               title: 'Rendición de Cajas',
-              desc: (financesSummary?.pendingRendicionesCount || 0) > 0 
-                ? `${financesSummary?.pendingRendicionesCount} pendientes ($${Math.round(financesSummary?.pendingRendicionesAmount || 0).toLocaleString('es-AR')})` 
+              desc: (pendingRendicionesDetails.sellers.length + pendingRendicionesDetails.routes.length) > 0 
+                ? `${pendingRendicionesDetails.sellers.length + pendingRendicionesDetails.routes.length} rendiciones pendientes` 
                 : 'Auditar rendiciones al día',
-              badge: (financesSummary?.pendingRendicionesCount || 0) > 0 ? `${financesSummary?.pendingRendicionesCount}` : null,
+              badge: (pendingRendicionesDetails.sellers.length + pendingRendicionesDetails.routes.length) > 0 
+                ? `${pendingRendicionesDetails.sellers.length + pendingRendicionesDetails.routes.length}` 
+                : null,
               badgeColor: '#E30613',
-              icon: <DollarSign size={20} style={{ color: (financesSummary?.pendingRendicionesCount || 0) > 0 ? '#E30613' : 'var(--text-secondary)' }} />,
+              icon: <DollarSign size={20} style={{ color: (pendingRendicionesDetails.sellers.length + pendingRendicionesDetails.routes.length) > 0 ? '#E30613' : 'var(--text-secondary)' }} />,
               onClick: () => {
                 setActiveTab('rendiciones');
               }
