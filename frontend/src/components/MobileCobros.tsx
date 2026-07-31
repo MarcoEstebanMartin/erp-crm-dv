@@ -556,18 +556,9 @@ const MobileCobros: React.FC<MobileCobrosProps> = ({
               padding: '14px',
               display: 'flex',
               flexDirection: 'column',
-              gap: '8px'
+              gap: '10px'
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#1D4ED8', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <span>💙 Priorizar Mercado Pago</span>
-                </span>
-                <span style={{ fontSize: '0.7rem', backgroundColor: '#DBEAFE', color: '#1E40AF', padding: '2px 8px', borderRadius: '12px', fontWeight: 600 }}>
-                  Acreditación Inmediata
-                </span>
-              </div>
-              
-              <p style={{ fontSize: '0.78rem', color: '#1E40AF', margin: 0, lineHeight: '1.4' }}>
+              <p style={{ fontSize: '0.82rem', color: '#1E40AF', margin: 0, lineHeight: '1.4' }}>
                 💡 <strong>Recomendación:</strong> Solicitar al cliente que realice la transferencia preferentemente a la cuenta oficial de Mercado Pago para verificación instantánea.
               </p>
 
