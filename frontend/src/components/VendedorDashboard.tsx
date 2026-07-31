@@ -980,14 +980,43 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
                       const filtered = products
                         .filter(p => {
                           if (filterRubroId && Number(p.rubroId) !== Number(filterRubroId)) return false;
+                          if (prodSearchQuery) {
+                            const q = prodSearchQuery.toLowerCase().trim();
+                            const matchName = (p.name || '').toLowerCase().includes(q);
+                            const matchSku = (p.sku || '').toLowerCase().includes(q);
+                            const matchBar = (p.barcode || '').toLowerCase().includes(q);
+                            const matchDesc = (p.description || '').toLowerCase().includes(q);
+                            if (!matchName && !matchSku && !matchBar && !matchDesc) return false;
+                          }
                           return true;
                         })
                         .sort((a, b) => {
+                          if (!filterRubroId) {
+                            const strA = String(a.sku || '').trim();
+                            const strB = String(b.sku || '').trim();
+                            const matchA = strA.match(/\d+/);
+                            const matchB = strB.match(/\d+/);
+                            if (matchA && matchB) {
+                              const numA = parseInt(matchA[0], 10);
+                              const numB = parseInt(matchB[0], 10);
+                              if (numA !== numB) return numA - numB;
+                            }
+                            return strA.localeCompare(strB, undefined, { numeric: true, sensitivity: 'base' });
+                          }
                           const rubroA = rubros.find(r => Number(r.id) === Number(a.rubroId))?.name || 'Z';
                           const rubroB = rubros.find(r => Number(r.id) === Number(b.rubroId))?.name || 'Z';
                           if (rubroA < rubroB) return -1;
                           if (rubroA > rubroB) return 1;
-                          return a.name.localeCompare(b.name);
+                          const strA = String(a.sku || '').trim();
+                          const strB = String(b.sku || '').trim();
+                          const matchA = strA.match(/\d+/);
+                          const matchB = strB.match(/\d+/);
+                          if (matchA && matchB) {
+                            const numA = parseInt(matchA[0], 10);
+                            const numB = parseInt(matchB[0], 10);
+                            if (numA !== numB) return numA - numB;
+                          }
+                          return strA.localeCompare(strB, undefined, { numeric: true, sensitivity: 'base' });
                         });
 
                       return filtered.length === 0 ? (
@@ -1008,32 +1037,55 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
                            return (
                              <div key={p.id} className="product-card" style={{ 
                                backgroundColor: '#fff', 
-                               borderRadius: '4px', 
-                               border: cartItem ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid transparent', 
+                               borderRadius: '8px', 
+                               border: cartItem ? '1.5px solid #10B981' : '1px solid var(--border-color)', 
                                overflow: 'hidden', 
                                display: 'flex', 
                                flexDirection: 'column',
                                alignItems: 'center',
-                               padding: '12px',
+                               padding: '10px',
                                transition: 'all 0.2s ease',
                                cursor: 'pointer',
-                               boxShadow: cartItem ? '0 4px 12px rgba(16, 185, 129, 0.08)' : 'none'
+                               position: 'relative',
+                               boxShadow: cartItem ? '0 4px 12px rgba(16, 185, 129, 0.12)' : '0 1px 3px rgba(0,0,0,0.04)'
                              }}
-                             onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = cartItem ? '0 6px 16px rgba(16, 185, 129, 0.15)' : '0 6px 16px rgba(0,0,0,0.06)'; }}
-                             onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = cartItem ? '0 4px 12px rgba(16, 185, 129, 0.08)' : 'none'; }}
+                             onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = cartItem ? '0 6px 16px rgba(16, 185, 129, 0.2)' : '0 6px 16px rgba(0,0,0,0.08)'; }}
+                             onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = cartItem ? '0 4px 12px rgba(16, 185, 129, 0.12)' : '0 1px 3px rgba(0,0,0,0.04)'; }}
                              onClick={() => { if(p.stock > 0) addToCart(p); }}
                              >
-                               <div style={{ position: 'relative', height: '130px', width: '100%', backgroundColor: '#f8fafc', borderRadius: '4px', overflow: 'hidden', marginBottom: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                               <div style={{ position: 'relative', height: '140px', width: '100%', backgroundColor: '#f8fafc', borderRadius: '6px', overflow: 'hidden', marginBottom: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                 <span style={{
+                                   position: 'absolute',
+                                   top: '4px',
+                                   left: '4px',
+                                   backgroundColor: 'rgba(15, 23, 42, 0.75)',
+                                   color: '#ffffff',
+                                   fontFamily: 'monospace',
+                                   fontSize: '0.68rem',
+                                   fontWeight: 700,
+                                   padding: '2px 6px',
+                                   borderRadius: '4px',
+                                   zIndex: 3,
+                                   letterSpacing: '0.5px'
+                                 }}>
+                                   #{p.sku || p.id}
+                                 </span>
+
                                  {imgSrc ? (
                                    <img 
                                      src={imgSrc} 
                                      alt={p.name} 
-                                     style={{ width: '100%', height: '100%', objectFit: 'contain' }} 
+                                     style={{ width: '100%', height: '100%', objectFit: 'contain', padding: '4px' }} 
                                      loading="lazy" 
                                      onError={(e) => {
-                                       e.currentTarget.style.display = 'none';
-                                       if (e.currentTarget.nextElementSibling) {
-                                         (e.currentTarget.nextElementSibling as HTMLElement).style.display = 'flex';
+                                       const target = e.currentTarget;
+                                       if (target.src.includes('?v=1.2')) {
+                                         target.src = target.src.replace('?v=1.2', '');
+                                         return;
+                                       }
+                                       target.style.display = 'none';
+                                       if (target.nextElementSibling) {
+                                         (target.nextElementSibling as HTMLElement).style.display = 'flex';
                                        }
                                      }}
                                    />
@@ -1057,8 +1109,8 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
                                  {cartItem && (
                                    <div style={{
                                      position: 'absolute',
-                                     top: '0',
-                                     left: '0',
+                                     bottom: '4px',
+                                     left: '4px',
                                      backgroundColor: '#10B981',
                                      color: '#fff',
                                      fontSize: '0.65rem',
@@ -1066,7 +1118,7 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
                                      padding: '2px 8px',
                                      borderRadius: '4px',
                                      boxShadow: '0 2px 4px rgba(0,0,0,0.15)',
-                                     zIndex: 2,
+                                     zIndex: 3,
                                      display: 'flex',
                                      alignItems: 'center',
                                      gap: '4px'
@@ -1076,27 +1128,27 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
                                    </div>
                                  )}
                                  {p.stock <= p.minStock && p.stock > 0 && (
-                                    <span style={{ position: 'absolute', top: '0', right: '0', background: 'var(--color-warning)', color: '#fff', fontSize: '0.65rem', padding: '2px 6px', borderRadius: '4px', fontWeight: 700 }}>Poco Stock</span>
+                                    <span style={{ position: 'absolute', top: '4px', right: '4px', background: 'var(--color-warning)', color: '#fff', fontSize: '0.65rem', padding: '2px 6px', borderRadius: '4px', fontWeight: 700, zIndex: 3 }}>Poco Stock</span>
                                  )}
                                  {p.stock <= 0 && (
-                                    <span style={{ position: 'absolute', top: '0', right: '0', background: 'var(--color-danger)', color: '#fff', fontSize: '0.65rem', padding: '2px 6px', borderRadius: '4px', fontWeight: 700 }}>Agotado</span>
+                                    <span style={{ position: 'absolute', top: '4px', right: '4px', background: 'var(--color-danger)', color: '#fff', fontSize: '0.65rem', padding: '2px 6px', borderRadius: '4px', fontWeight: 700, zIndex: 3 }}>Agotado</span>
                                  )}
                                </div>
                                
                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', textAlign: 'center', flex: 1 }}>
-                                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1 }}>
-                                   <span style={{ fontWeight: 800, fontSize: '1.3rem', color: hasCustomPrice ? 'var(--color-success)' : 'var(--text-primary)', lineHeight: '1' }}>
+                                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', flex: 1, width: '100%' }}>
+                                   <span style={{ fontWeight: 800, fontSize: '1.25rem', color: hasCustomPrice ? 'var(--color-success)' : 'var(--text-primary)', lineHeight: '1.1' }}>
                                      ${price.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-                                     {p.isPesable && <span style={{ fontSize: '0.8rem', fontWeight: 500, color: 'var(--text-secondary)' }}> / Kg</span>}
+                                     {p.isPesable && <span style={{ fontSize: '0.78rem', fontWeight: 500, color: 'var(--text-secondary)' }}> / Kg</span>}
                                    </span>
                                    
                                    {hasCustomPrice && (
-                                     <span style={{ fontSize: '0.75rem', color: 'var(--color-danger)', textDecoration: 'line-through', marginTop: '2px', fontWeight: 600 }}>
+                                     <span style={{ fontSize: '0.72rem', color: 'var(--color-danger)', textDecoration: 'line-through', marginTop: '2px', fontWeight: 600 }}>
                                        Antes: ${Number(p.listPrice).toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}{p.isPesable ? ' / Kg' : ''}
                                      </span>
                                    )}
                                    
-                                   <div style={{ fontWeight: 600, fontSize: '0.8rem', marginTop: '8px', lineHeight: '1.2', color: 'var(--text-primary)' }}>
+                                   <div style={{ fontWeight: 600, fontSize: '0.8rem', marginTop: '6px', lineHeight: '1.25', color: 'var(--text-primary)', minHeight: '2.5em', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }} title={p.name}>
                                      {p.name}
                                    </div>
                                  </div>
@@ -1104,9 +1156,9 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
                                  <button
                                    type="button"
                                    style={{
-                                     marginTop: '12px',
+                                     marginTop: '10px',
                                      width: '100%',
-                                     padding: '8px',
+                                     padding: '8px 4px',
                                      borderRadius: '20px',
                                      backgroundColor: p.stock <= 0 
                                        ? 'var(--border-color)' 
@@ -1616,14 +1668,43 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
               const filtered = products
                 .filter(p => {
                   if (filterRubroId && Number(p.rubroId) !== Number(filterRubroId)) return false;
+                  if (searchQuery) {
+                    const q = searchQuery.toLowerCase().trim();
+                    const matchName = (p.name || '').toLowerCase().includes(q);
+                    const matchSku = (p.sku || '').toLowerCase().includes(q);
+                    const matchBar = (p.barcode || '').toLowerCase().includes(q);
+                    const matchDesc = (p.description || '').toLowerCase().includes(q);
+                    if (!matchName && !matchSku && !matchBar && !matchDesc) return false;
+                  }
                   return true;
                 })
                 .sort((a, b) => {
+                  if (!filterRubroId) {
+                    const strA = String(a.sku || '').trim();
+                    const strB = String(b.sku || '').trim();
+                    const matchA = strA.match(/\d+/);
+                    const matchB = strB.match(/\d+/);
+                    if (matchA && matchB) {
+                      const numA = parseInt(matchA[0], 10);
+                      const numB = parseInt(matchB[0], 10);
+                      if (numA !== numB) return numA - numB;
+                    }
+                    return strA.localeCompare(strB, undefined, { numeric: true, sensitivity: 'base' });
+                  }
                   const rubroA = rubros.find(r => Number(r.id) === Number(a.rubroId))?.name || 'Z';
                   const rubroB = rubros.find(r => Number(r.id) === Number(b.rubroId))?.name || 'Z';
                   if (rubroA < rubroB) return -1;
                   if (rubroA > rubroB) return 1;
-                  return a.name.localeCompare(b.name);
+                  const strA = String(a.sku || '').trim();
+                  const strB = String(b.sku || '').trim();
+                  const matchA = strA.match(/\d+/);
+                  const matchB = strB.match(/\d+/);
+                  if (matchA && matchB) {
+                    const numA = parseInt(matchA[0], 10);
+                    const numB = parseInt(matchB[0], 10);
+                    if (numA !== numB) return numA - numB;
+                  }
+                  return strA.localeCompare(strB, undefined, { numeric: true, sensitivity: 'base' });
                 });
 
               return filtered.length === 0 ? (
@@ -1635,29 +1716,53 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
                   return (
                     <div key={p.id} className="product-card" style={{ 
                       backgroundColor: '#fff', 
-                      borderRadius: '4px', 
-                      border: '1px solid transparent', 
+                      borderRadius: '8px', 
+                      border: '1px solid var(--border-color)', 
                       overflow: 'hidden', 
                       display: 'flex', 
                       flexDirection: 'column',
                       alignItems: 'center',
-                      padding: '12px',
-                      transition: 'box-shadow 0.2s ease, transform 0.2s ease'
+                      padding: '10px',
+                      transition: 'box-shadow 0.2s ease, transform 0.2s ease',
+                      position: 'relative',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.04)'
                     }}
-                    onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 16px rgba(0,0,0,0.06)'; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}
+                    onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 16px rgba(0,0,0,0.08)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.04)'; }}
                     >
-                      <div style={{ position: 'relative', height: '130px', width: '100%', backgroundColor: '#f8fafc', borderRadius: '4px', overflow: 'hidden', marginBottom: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <div style={{ position: 'relative', height: '140px', width: '100%', backgroundColor: '#f8fafc', borderRadius: '6px', overflow: 'hidden', marginBottom: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <span style={{
+                          position: 'absolute',
+                          top: '4px',
+                          left: '4px',
+                          backgroundColor: 'rgba(15, 23, 42, 0.75)',
+                          color: '#ffffff',
+                          fontFamily: 'monospace',
+                          fontSize: '0.68rem',
+                          fontWeight: 700,
+                          padding: '2px 6px',
+                          borderRadius: '4px',
+                          zIndex: 3,
+                          letterSpacing: '0.5px'
+                        }}>
+                          #{p.sku || p.id}
+                        </span>
+
                         {imgSrc ? (
                           <img 
                             src={imgSrc} 
                             alt={p.name} 
-                            style={{ width: '100%', height: '100%', objectFit: 'contain' }} 
+                            style={{ width: '100%', height: '100%', objectFit: 'contain', padding: '4px' }} 
                             loading="lazy" 
                             onError={(e) => {
-                              e.currentTarget.style.display = 'none';
-                              if (e.currentTarget.nextElementSibling) {
-                                (e.currentTarget.nextElementSibling as HTMLElement).style.display = 'flex';
+                              const target = e.currentTarget;
+                              if (target.src.includes('?v=1.2')) {
+                                target.src = target.src.replace('?v=1.2', '');
+                                return;
+                              }
+                              target.style.display = 'none';
+                              if (target.nextElementSibling) {
+                                (target.nextElementSibling as HTMLElement).style.display = 'flex';
                               }
                             }}
                           />
@@ -1679,20 +1784,20 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
                         </div>
 
                         {p.stock <= p.minStock && p.stock > 0 && (
-                           <span style={{ position: 'absolute', top: '0', right: '0', background: 'var(--color-warning)', color: '#fff', fontSize: '0.65rem', padding: '2px 6px', borderRadius: '4px', fontWeight: 700 }}>Poco Stock</span>
+                           <span style={{ position: 'absolute', top: '4px', right: '4px', background: 'var(--color-warning)', color: '#fff', fontSize: '0.65rem', padding: '2px 6px', borderRadius: '4px', fontWeight: 700, zIndex: 3 }}>Poco Stock</span>
                         )}
                         {p.stock <= 0 && (
-                           <span style={{ position: 'absolute', top: '0', right: '0', background: 'var(--color-danger)', color: '#fff', fontSize: '0.65rem', padding: '2px 6px', borderRadius: '4px', fontWeight: 700 }}>Agotado</span>
+                           <span style={{ position: 'absolute', top: '4px', right: '4px', background: 'var(--color-danger)', color: '#fff', fontSize: '0.65rem', padding: '2px 6px', borderRadius: '4px', fontWeight: 700, zIndex: 3 }}>Agotado</span>
                         )}
                       </div>
                       
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', textAlign: 'center', flex: 1 }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1 }}>
-                          <span style={{ fontWeight: 800, fontSize: '1.3rem', color: 'var(--text-primary)', lineHeight: '1' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', flex: 1, width: '100%' }}>
+                          <span style={{ fontWeight: 800, fontSize: '1.25rem', color: 'var(--text-primary)', lineHeight: '1.1' }}>
                             ${Number(p.listPrice).toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                           </span>
                           
-                          <div style={{ fontWeight: 600, fontSize: '0.8rem', marginTop: '8px', lineHeight: '1.2', color: 'var(--text-primary)' }}>
+                          <div style={{ fontWeight: 600, fontSize: '0.8rem', marginTop: '6px', lineHeight: '1.25', color: 'var(--text-primary)', minHeight: '2.5em', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }} title={p.name}>
                             {p.name}
                           </div>
                         </div>
@@ -1898,148 +2003,232 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
 
       {/* 1. Detalles de pedido */}
       {orderDetailsModal && (
-        <div className="modal-overlay">
-          <div className="modal-content" style={{ maxWidth: '600px' }}>
-            <div className="modal-header">
-              <h3>Pedido #{orderDetailsModal.id}</h3>
-              <button className="btn btn-ghost" style={{ padding: '4px' }} onClick={() => setOrderDetailsModal(null)}>✕</button>
+        <div className="modal-overlay" style={{ zIndex: 10000 }}>
+          <div 
+            className="modal-content" 
+            style={{ 
+              maxWidth: '820px', 
+              width: '95%', 
+              maxHeight: '90vh', 
+              display: 'flex', 
+              flexDirection: 'column', 
+              borderRadius: '16px', 
+              padding: '24px 28px',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+              overflow: 'hidden'
+            }}
+          >
+            <div className="modal-header" style={{ paddingBottom: '16px', marginBottom: '20px', borderBottom: '1px solid #E2E8F0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <h3 style={{ fontSize: '1.35rem', fontWeight: 800, margin: 0, color: '#0F172A' }}>
+                  Pedido #{orderDetailsModal.id}
+                </h3>
+                {(() => {
+                  const statusInfo = getOrderStatusInfo(orderDetailsModal);
+                  return (
+                    <span 
+                      className={`badge badge-${statusInfo.badgeClass}`}
+                      style={{
+                        backgroundColor: statusInfo.color + '18',
+                        color: statusInfo.color,
+                        border: `1px solid ${statusInfo.color}35`,
+                        fontWeight: 700,
+                        fontSize: '0.8rem',
+                        padding: '4px 10px'
+                      }}
+                    >
+                      {statusInfo.label}
+                    </span>
+                  );
+                })()}
+              </div>
+              <button 
+                className="btn btn-ghost" 
+                style={{ padding: '6px 12px', fontSize: '1.2rem', fontWeight: 700, borderRadius: '8px' }} 
+                onClick={() => setOrderDetailsModal(null)}
+              >
+                ✕
+              </button>
             </div>
             
-            {/* Barra de progreso de preparación */}
-            {orderDetailsModal.status !== 'CANCELLED' ? (
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', padding: '12px 0', borderBottom: '1px solid var(--border-color)' }}>
-                {[
-                  { status: 'RECIBIDO', label: 'Recibido' },
-                  { status: 'EN_PICKING', label: 'En Picking' },
-                  { status: 'ARMADO', label: 'Armado' },
-                  { status: 'FACTURADO', label: 'Facturado' },
-                  { status: 'EN_VIAJE', label: 'En Viaje' },
-                  { status: 'ENTREGADO', label: 'Entregado' }
-                ].map((step, idx, arr) => {
-                  const logicalStatus = getOrderStatusInfo(orderDetailsModal).label.toUpperCase().replace(' ', '_');
-                  const statusOrder = ['RECIBIDO', 'EN_PICKING', 'ARMADO', 'FACTURADO', 'EN_VIAJE', 'ENTREGADO'];
-                  const currentIdx = statusOrder.indexOf(logicalStatus);
-                  const stepIdx = statusOrder.indexOf(step.status);
-                  const isCompleted = stepIdx <= currentIdx;
-                  const isActive = step.status === logicalStatus;
-                  
-                  return (
-                    <React.Fragment key={step.status}>
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 }}>
-                        <div style={{
-                          width: '24px',
-                          height: '24px',
-                          borderRadius: '50%',
-                          backgroundColor: isCompleted ? 'var(--color-success)' : 'var(--border-color)',
-                          color: isCompleted ? '#fff' : 'var(--text-secondary)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontSize: '0.75rem',
-                          fontWeight: 600,
-                          border: isActive ? '2px solid var(--text-primary)' : 'none',
-                          transition: 'all 0.3s'
-                        }}>
-                          {isCompleted ? '✓' : idx + 1}
-                        </div>
-                        <span style={{ fontSize: '0.7rem', marginTop: '6px', fontWeight: isActive ? 600 : 400, color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)' }}>
-                          {step.label}
-                        </span>
-                      </div>
-                      {idx < arr.length - 1 && (
-                        <div style={{
-                          height: '2px',
-                          flex: 1,
-                          backgroundColor: stepIdx < currentIdx ? 'var(--color-success)' : 'var(--border-color)',
-                          margin: '0 -10px',
-                          transform: 'translateY(-10px)'
-                        }} />
-                      )}
-                    </React.Fragment>
-                  );
-                })}
-              </div>
-            ) : (
-              <div style={{ padding: '8px 12px', backgroundColor: '#FFF2F2', color: 'var(--color-danger)', borderRadius: '4px', fontSize: '0.85rem', fontWeight: 500, marginBottom: '16px', display: 'inline-block' }}>
-                ❌ Este pedido ha sido CANCELADO.
-              </div>
-            )}
+            <div style={{ overflowY: 'auto', flex: 1, paddingRight: '4px' }}>
+              {/* Barra de progreso de 3 fases */}
+              {orderDetailsModal.status !== 'CANCELLED' ? (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  marginBottom: '24px',
+                  padding: '16px 20px',
+                  backgroundColor: '#F8FAFC',
+                  borderRadius: '12px',
+                  border: '1px solid #E2E8F0'
+                }}>
+                  {[
+                    { key: 'RECIBIDO', label: '1. Recibido' },
+                    { key: 'EN_PICKING', label: '2. En Picking' },
+                    { key: 'FACTURADO', label: '3. Facturado' }
+                  ].map((step, idx, arr) => {
+                    const statusInfo = getOrderStatusInfo(orderDetailsModal);
+                    const labelUpper = statusInfo.label.toUpperCase();
+                    let currentIdx = 0;
+                    if (orderDetailsModal.status === 'PREPARING' || orderDetailsModal.status === 'PREPARED' || labelUpper.includes('PICKING') || labelUpper.includes('ARMADO')) {
+                      currentIdx = 1;
+                    } else if (orderDetailsModal.invoiceNumber || orderDetailsModal.status === 'DELIVERED' || orderDetailsModal.status === 'INVOICED' || labelUpper.includes('FACTURADO') || labelUpper.includes('ENTREGADO') || labelUpper.includes('VIAJE')) {
+                      currentIdx = 2;
+                    }
 
-            <div style={{ marginBottom: '16px', fontSize: '0.85rem' }}>
-              <p><strong>Cliente:</strong> {orderDetailsModal.client?.name || orderDetailsModal.persona?.name || 'S/D'}</p>
-              <p><strong>Dirección:</strong> {orderDetailsModal.client?.address || orderDetailsModal.persona?.address || 'S/D'}</p>
-              <p><strong>Estado:</strong> {(() => {
-                const statusInfo = getOrderStatusInfo(orderDetailsModal);
-                return (
-                  <span 
-                    className={`badge badge-${statusInfo.badgeClass}`}
-                    style={{
-                      backgroundColor: statusInfo.color + '15',
-                      color: statusInfo.color,
-                      border: `1px solid ${statusInfo.color}30`,
-                      fontWeight: 600
-                    }}
-                  >
-                    {statusInfo.label}
-                  </span>
-                );
-              })()}</p>
-              <p><strong>Fecha de Carga:</strong> {new Date(orderDetailsModal.createdAt).toLocaleString('es-AR')}</p>
-              {orderDetailsModal.notes && (
-                <div style={{ marginTop: '10px', padding: '8px 12px', backgroundColor: '#FEF7E0', borderLeft: '3px solid #FBBC04', borderRadius: '4px' }}>
-                  <strong>📝 Notas de Entrega:</strong> {orderDetailsModal.notes}
-                </div>
-              )}
-            </div>
+                    const isCompleted = idx <= currentIdx;
+                    const isActive = idx === currentIdx;
 
-            <div className="table-container" style={{ maxHeight: '200px', overflowY: 'auto' }}>
-              <table>
-                <thead>
-                  <tr>
-                    <th>Artículo</th>
-                    <th className="text-right">Cantidad</th>
-                    <th className="text-right">Precio Unit.</th>
-                    <th className="text-right">Subtotal</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {orderDetailsModal.items.map((item: any, idx: number) => {
-                    const price = Number(item.unitPrice ?? item.price ?? 0);
-                    const isPesable = item.product?.isPesable || (item.weight && Number(item.weight) > 0);
-                    const subtotal = item.subtotal ? Number(item.subtotal) : (isPesable ? item.quantity * (item.product?.approximateWeight || 1) * price : item.quantity * price);
                     return (
-                      <tr key={idx}>
-                        <td>{item.product?.name}</td>
-                        <td className="text-right">
-                          {item.quantity} u.
-                          {isPesable && (
-                            <span style={{ fontSize: '0.75rem', color: 'var(--color-danger)', marginLeft: '4px' }}>
-                              ({item.weight ? `${Number(item.weight).toFixed(2)} Kg` : `${(item.quantity * (item.product?.approximateWeight || 1)).toLocaleString()} Kg aprox`})
-                            </span>
-                          )}
-                        </td>
-                        <td className="text-right">
-                          ${price.toLocaleString()}
-                          {isPesable && ' / Kg'}
-                        </td>
-                        <td className="text-right">${Math.round(subtotal).toLocaleString('es-AR')}</td>
-                      </tr>
+                      <React.Fragment key={step.key}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, justifyContent: idx === 0 ? 'flex-start' : idx === arr.length - 1 ? 'flex-end' : 'center' }}>
+                          <div style={{
+                            width: '32px',
+                            height: '32px',
+                            borderRadius: '50%',
+                            backgroundColor: isCompleted ? '#10B981' : '#E2E8F0',
+                            color: isCompleted ? '#ffffff' : '#64748B',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '0.85rem',
+                            fontWeight: 800,
+                            boxShadow: isActive ? '0 0 0 4px rgba(16, 185, 129, 0.2)' : 'none',
+                            transition: 'all 0.2s ease'
+                          }}>
+                            {isCompleted ? '✓' : idx + 1}
+                          </div>
+                          <span style={{
+                            fontSize: '0.85rem',
+                            fontWeight: isActive ? 700 : 500,
+                            color: isActive ? '#0F172A' : isCompleted ? '#10B981' : '#64748B'
+                          }}>
+                            {step.label}
+                          </span>
+                        </div>
+                        {idx < arr.length - 1 && (
+                          <div style={{
+                            height: '3px',
+                            flex: 1,
+                            backgroundColor: idx < currentIdx ? '#10B981' : '#E2E8F0',
+                            margin: '0 12px',
+                            borderRadius: '2px',
+                            transition: 'all 0.2s ease'
+                          }} />
+                        )}
+                      </React.Fragment>
                     );
                   })}
-                </tbody>
-              </table>
-            </div>
+                </div>
+              ) : (
+                <div style={{ padding: '10px 16px', backgroundColor: '#FEF2F2', color: '#EF4444', border: '1px solid #FCA5A5', borderRadius: '10px', fontSize: '0.875rem', fontWeight: 600, marginBottom: '20px' }}>
+                  🚫 Este pedido ha sido CANCELADO.
+                </div>
+              )}
 
-            <div style={{ textAlign: 'right', marginTop: '20px', fontWeight: 'bold', fontSize: '1.1rem' }}>
-              Monto Total: ${Math.round(Number(orderDetailsModal.totalAmount)).toLocaleString('es-AR')}
+              {/* Ficha de datos del cliente y pedido */}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+                gap: '14px',
+                marginBottom: '20px',
+                padding: '16px 20px',
+                backgroundColor: '#F8FAFC',
+                borderRadius: '12px',
+                border: '1px solid #E2E8F0',
+                fontSize: '0.875rem'
+              }}>
+                <div>
+                  <span style={{ color: '#64748B', fontSize: '0.72rem', display: 'block', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.3px' }}>Cliente</span>
+                  <strong style={{ color: '#0F172A', fontSize: '0.95rem' }}>{orderDetailsModal.client?.name || orderDetailsModal.persona?.name || 'S/D'}</strong>
+                </div>
+                <div>
+                  <span style={{ color: '#64748B', fontSize: '0.72rem', display: 'block', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.3px' }}>CUIT / C.U.I.L.</span>
+                  <strong style={{ color: '#0F172A' }}>{orderDetailsModal.client?.cuit || 'S/D'}</strong>
+                </div>
+                <div>
+                  <span style={{ color: '#64748B', fontSize: '0.72rem', display: 'block', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.3px' }}>Dirección de Entrega</span>
+                  <strong style={{ color: '#0F172A' }}>{orderDetailsModal.client?.address || orderDetailsModal.persona?.address || 'S/D'}</strong>
+                </div>
+                <div>
+                  <span style={{ color: '#64748B', fontSize: '0.72rem', display: 'block', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.3px' }}>Fecha de Carga</span>
+                  <strong style={{ color: '#0F172A' }}>{new Date(orderDetailsModal.createdAt).toLocaleString('es-AR')}</strong>
+                </div>
+                {orderDetailsModal.notes && (
+                  <div style={{ gridColumn: '1 / -1', marginTop: '4px', padding: '10px 14px', backgroundColor: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: '8px', color: '#92400E' }}>
+                    <strong>📝 Notas / Indicaciones:</strong> {orderDetailsModal.notes}
+                  </div>
+                )}
+              </div>
+
+              {/* Tabla de artículos */}
+              <div style={{ border: '1px solid #E2E8F0', borderRadius: '12px', overflow: 'hidden', marginBottom: '20px' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
+                  <thead>
+                    <tr style={{ backgroundColor: '#F8FAFC', borderBottom: '1px solid #E2E8F0' }}>
+                      <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 700, color: '#475569', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Artículo</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 700, color: '#475569', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Cantidad</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 700, color: '#475569', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Precio Unit.</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 700, color: '#475569', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Subtotal</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {orderDetailsModal.items.map((item: any, idx: number) => {
+                      const price = Number(item.unitPrice ?? item.price ?? 0);
+                      const isPesable = item.product?.isPesable || (item.weight && Number(item.weight) > 0);
+                      const subtotal = item.subtotal ? Number(item.subtotal) : (isPesable ? item.quantity * (item.product?.approximateWeight || 1) * price : item.quantity * price);
+                      return (
+                        <tr key={idx} style={{ borderBottom: idx < orderDetailsModal.items.length - 1 ? '1px solid #F1F5F9' : 'none' }}>
+                          <td style={{ padding: '12px 16px', fontWeight: 600, color: '#0F172A' }}>{item.product?.name}</td>
+                          <td style={{ padding: '12px 16px', textAlign: 'right', color: '#334155' }}>
+                            {item.quantity} u.
+                            {isPesable && (
+                              <span style={{ fontSize: '0.75rem', color: '#DC2626', backgroundColor: '#FEE2E2', padding: '2px 6px', borderRadius: '4px', marginLeft: '6px', fontWeight: 600 }}>
+                                ({item.weight ? `${Number(item.weight).toFixed(2)} Kg` : `${(item.quantity * (item.product?.approximateWeight || 1)).toLocaleString()} Kg aprox`})
+                              </span>
+                            )}
+                          </td>
+                          <td style={{ padding: '12px 16px', textAlign: 'right', color: '#334155' }}>
+                            ${Math.round(price).toLocaleString('es-AR')}
+                            {isPesable && ' / Kg'}
+                          </td>
+                          <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 700, color: '#0F172A' }}>
+                            ${Math.round(subtotal).toLocaleString('es-AR')}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Total acumulado */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', backgroundColor: '#F8FAFC', borderRadius: '12px', border: '1px solid #E2E8F0', marginBottom: '20px' }}>
+                <span style={{ fontSize: '1rem', fontWeight: 600, color: '#475569' }}>Monto Total:</span>
+                <span style={{ fontSize: '1.6rem', fontWeight: 800, color: '#0F172A' }}>
+                  ${Math.round(Number(orderDetailsModal.totalAmount)).toLocaleString('es-AR')}
+                </span>
+              </div>
             </div>
             
-            <div className="modal-footer" style={{ marginTop: '20px' }}>
-              <button className="btn btn-secondary" onClick={() => { printTicket(orderDetailsModal); setOrderDetailsModal(null); }}>
-                <Printer size={16} />
+            <div className="modal-footer" style={{ borderTop: '1px solid #E2E8F0', paddingTop: '16px', marginTop: '10px', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+              <button 
+                className="btn btn-secondary" 
+                style={{ padding: '10px 18px', borderRadius: '8px', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '6px' }} 
+                onClick={() => { printTicket(orderDetailsModal); setOrderDetailsModal(null); }}
+              >
+                <Printer size={18} />
                 <span>Imprimir Ticket</span>
               </button>
-              <button className="btn btn-primary" onClick={() => setOrderDetailsModal(null)}>Cerrar</button>
+              <button 
+                className="btn" 
+                style={{ padding: '10px 20px', borderRadius: '8px', backgroundColor: '#1E293B', color: '#fff', fontWeight: 700 }} 
+                onClick={() => setOrderDetailsModal(null)}
+              >
+                Cerrar
+              </button>
             </div>
           </div>
         </div>

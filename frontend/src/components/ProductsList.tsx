@@ -151,6 +151,33 @@ export default function ProductsList({ products, searchQuery, setSearchQuery, se
       const sku = (p.sku || '').toLowerCase();
       const barcode = (p.barcode || '').toLowerCase();
       return name.includes(query) || sku.includes(query) || barcode.includes(query);
+    })
+    .sort((a: any, b: any) => {
+      if (!selectedRubro && !selectedCategory && !selectedSubrubro) {
+        const strA = String(a.sku || '').trim();
+        const strB = String(b.sku || '').trim();
+        const matchA = strA.match(/\d+/);
+        const matchB = strB.match(/\d+/);
+        if (matchA && matchB) {
+          const numA = parseInt(matchA[0], 10);
+          const numB = parseInt(matchB[0], 10);
+          if (numA !== numB) return numA - numB;
+        }
+        return strA.localeCompare(strB, undefined, { numeric: true, sensitivity: 'base' });
+      }
+      const rubroA = extractLabel(a.rubro) || 'Z';
+      const rubroB = extractLabel(b.rubro) || 'Z';
+      if (rubroA !== rubroB) return rubroA.localeCompare(rubroB);
+      const strA = String(a.sku || '').trim();
+      const strB = String(b.sku || '').trim();
+      const matchA = strA.match(/\d+/);
+      const matchB = strB.match(/\d+/);
+      if (matchA && matchB) {
+        const numA = parseInt(matchA[0], 10);
+        const numB = parseInt(matchB[0], 10);
+        if (numA !== numB) return numA - numB;
+      }
+      return strA.localeCompare(strB, undefined, { numeric: true, sensitivity: 'base' });
     });
 
   const availableCategories = Array.from(new Set(products.map((p: any) => getCategoryInfo(p).name).filter(Boolean))).sort();
