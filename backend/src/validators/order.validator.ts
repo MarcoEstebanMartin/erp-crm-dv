@@ -48,6 +48,7 @@ export const invoiceOrderSchema = z.object({
     billingType: z.nativeEnum(BillingType),
     paymentMethod: z.nativeEnum(PaymentMethod).optional(),
     paymentDescription: z.string().optional(),
+    deferCae: z.boolean().optional(),
   }),
 });
 

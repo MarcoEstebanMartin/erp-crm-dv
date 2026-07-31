@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../utils/api';
-import { Printer, CheckSquare, Search, RefreshCw, Eye, CheckCircle } from 'lucide-react';
-import { printPickingList, printOrderReceipt, printBatchPickingA4, printConsolidatedPickingA4, printShippingLabelsBultos } from '../../utils/printHelpers';
+import { Printer, CheckSquare, Search, RefreshCw, Eye, CheckCircle, Zap } from 'lucide-react';
+import { printPickingList, printOrderReceipt, printRemitoX, printFacturaOficialA4, printBatchPickingA4, printConsolidatedPickingA4, printShippingLabelsBultos } from '../../utils/printHelpers';
 import OrderFulfillmentModal from '../modals/OrderFulfillmentModal';
 import ConfirmModal from '../modals/ConfirmModal';
 import { getOrderStatusInfo } from '../../utils/orderStatusHelper';
@@ -88,6 +88,30 @@ export default function FulfillmentDashboard() {
 
   const handlePrintPickingList = (order: any) => {
     printPickingList(order);
+  };
+
+  const handleRequestCae = async (orderId: number) => {
+    try {
+      setLoading(true);
+      const res = await api.requestCaeForOrder(orderId);
+      showConfirmDialog({
+        title: 'CAE Asignado con Éxito',
+        message: res.message || 'El comprobante fue autorizado por AFIP.',
+        type: 'success',
+        isAlert: true,
+        onConfirm: () => fetchOrders(),
+      });
+    } catch (err: any) {
+      showConfirmDialog({
+        title: 'Error al solicitar CAE',
+        message: err.message || 'Error al conectar con AFIP.',
+        type: 'danger',
+        isAlert: true,
+        onConfirm: () => {},
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handlePrintReceipt = (order: any) => {
@@ -479,26 +503,102 @@ export default function FulfillmentDashboard() {
             </div>
           )}
           {column === 'BILLED' && (
-            <button 
-              className="btn btn-secondary" 
-              style={{ 
-                flex: 1, 
-                display: 'flex', 
-                justifyContent: 'center', 
-                alignItems: 'center', 
-                gap: '5px',
-                height: '26px',
-                padding: '0 8px',
-                fontSize: '0.78rem',
-                fontWeight: 600,
-                backgroundColor: '#F8FAFC',
-                borderColor: '#E2E8F0',
-                color: '#475569'
-              }} 
-              onClick={() => handlePrintReceipt(o)}
-            >
-              <Printer size={13} /> Ticket
-            </button>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', width: '100%' }}>
+              {o.billingType === 'OFFICIAL' && !o.cae && (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#FEF3C7', border: '1px solid #F59E0B', borderRadius: '6px', padding: '4px 8px' }}>
+                  <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#B45309', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <Zap size={12} /> PENDIENTE CAE (PRE-FACTURA)
+                  </span>
+                  <button
+                    className="btn btn-primary"
+                    style={{
+                      height: '22px',
+                      padding: '0 8px',
+                      fontSize: '0.7rem',
+                      fontWeight: 700,
+                      backgroundColor: '#D97706',
+                      borderColor: '#D97706',
+                      color: 'white',
+                      borderRadius: '4px'
+                    }}
+                    onClick={() => handleRequestCae(o.id)}
+                    title="Solicitar CAE a AFIP ahora"
+                  >
+                    ⚡ Solicitar CAE
+                  </button>
+                </div>
+              )}
+
+              <div style={{ display: 'flex', gap: '6px', width: '100%' }}>
+                {o.billingType === 'OFFICIAL' ? (
+                  <button 
+                    className="btn btn-secondary" 
+                    style={{ 
+                      flex: 1, 
+                      display: 'flex', 
+                      justifyContent: 'center', 
+                      alignItems: 'center', 
+                      gap: '4px',
+                      height: '26px',
+                      padding: '0 6px',
+                      fontSize: '0.76rem',
+                      fontWeight: 700,
+                      backgroundColor: '#F8FAFC',
+                      borderColor: '#CBD5E1',
+                      color: '#0F172A'
+                    }} 
+                    onClick={() => printFacturaOficialA4(o)}
+                    title="Imprimir Factura Oficial A4"
+                  >
+                    📄 Factura A4
+                  </button>
+                ) : (
+                  <button 
+                    className="btn btn-secondary" 
+                    style={{ 
+                      flex: 1, 
+                      display: 'flex', 
+                      justifyContent: 'center', 
+                      alignItems: 'center', 
+                      gap: '4px',
+                      height: '26px',
+                      padding: '0 6px',
+                      fontSize: '0.76rem',
+                      fontWeight: 700,
+                      backgroundColor: '#F8FAFC',
+                      borderColor: '#CBD5E1',
+                      color: '#0F172A'
+                    }} 
+                    onClick={() => printRemitoX(o)}
+                    title="Imprimir Boleta Remito X en hoja A4"
+                  >
+                    📄 Boleta A4
+                  </button>
+                )}
+
+                <button 
+                  className="btn btn-secondary" 
+                  style={{ 
+                    flex: 1, 
+                    display: 'flex', 
+                    justifyContent: 'center', 
+                    alignItems: 'center', 
+                    gap: '4px',
+                    height: '26px',
+                    padding: '0 6px',
+                    fontSize: '0.76rem',
+                    fontWeight: 600,
+                    backgroundColor: '#F8FAFC',
+                    borderColor: '#CBD5E1',
+                    color: '#475569'
+                  }} 
+                  onClick={() => handlePrintReceipt(o)}
+                  title="Imprimir Ticket Térmico de 80mm"
+                >
+                  <Printer size={13} /> Ticket
+                </button>
+              </div>
+            </div>
           )}
         </div>
       </div>

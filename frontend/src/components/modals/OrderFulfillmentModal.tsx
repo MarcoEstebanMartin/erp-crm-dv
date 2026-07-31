@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { X, CheckCircle, DollarSign, Truck, AlertCircle, AlertTriangle } from 'lucide-react';
+import { X, CheckCircle, DollarSign, Truck, AlertCircle, AlertTriangle, Printer, FileText, Zap } from 'lucide-react';
 import { BillingType, PaymentMethod } from '../../utils/types';
 import { api } from '../../utils/api';
+import { printRemitoX, printOrderReceipt, printFacturaOficialA4 } from '../../utils/printHelpers';
 
 interface OrderFulfillmentModalProps {
   order: any;
@@ -13,6 +14,8 @@ export default function OrderFulfillmentModal({ order, onClose, onSuccess }: Ord
   const [pesableWeights, setPesableWeights] = useState<{ [orderItemId: number]: number }>({});
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [billingCompleted, setBillingCompleted] = useState(false);
+  const [deferCae, setDeferCae] = useState(false);
 
   // Billing configuration - Default to OTHER (Cuenta Corriente)
   const [billingType, setBillingType] = useState<BillingType>(order.billingType || BillingType.INTERNAL);
@@ -137,10 +140,11 @@ export default function OrderFulfillmentModal({ order, onClose, onSuccess }: Ord
         billingType,
         paymentMethod === 'OTHER' ? undefined : paymentMethod, // Si es Cuenta Corriente, enviamos undefined para que afecte el saldo deudor
         paymentDesc,
-        paymentMethod === 'BANK_TRANSFER' ? Number(selectedBankId) : undefined
+        paymentMethod === 'BANK_TRANSFER' ? Number(selectedBankId) : undefined,
+        deferCae
       );
 
-      onSuccess();
+      setBillingCompleted(true);
     } catch (err: any) {
       setErrorMsg(err.message || 'Error al completar el pedido.');
     } finally {
@@ -149,6 +153,101 @@ export default function OrderFulfillmentModal({ order, onClose, onSuccess }: Ord
   };
 
   const currentTotal = calculateTotal();
+
+  if (billingCompleted) {
+    return (
+      <div className="modal-overlay" style={{ zIndex: 1100 }}>
+        <div className="modal-content" style={{ width: '90vw', maxWidth: '640px', padding: '32px', textAlign: 'center', borderRadius: '16px', border: '1px solid var(--border-color)' }}>
+          <div style={{ width: '64px', height: '64px', backgroundColor: '#DCFCE7', color: '#16A34A', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px auto' }}>
+            <CheckCircle size={36} />
+          </div>
+          <h2 style={{ fontSize: '1.4rem', fontWeight: 800, margin: '0 0 8px 0', color: 'var(--text-primary)' }}>
+            ¡Pedido #{order.id} Facturado con Éxito!
+          </h2>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', marginBottom: '24px' }}>
+            {billingType === 'OFFICIAL' 
+              ? (deferCae ? 'Pre-Factura Sucursal A generada con éxito (Pendiente de CAE).' : 'Factura Sucursal A emitida y autorizada en AFIP.')
+              : 'Comprobante Sucursal X generado con éxito.'}
+          </p>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '24px' }}>
+            {billingType === 'OFFICIAL' ? (
+              <button
+                className="btn btn-primary"
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  fontSize: '1rem',
+                  fontWeight: 700,
+                  backgroundColor: '#0F172A',
+                  color: '#FFFFFF',
+                  borderRadius: '8px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '10px'
+                }}
+                onClick={() => printFacturaOficialA4({ ...order, totalAmount: currentTotal, billingType })}
+              >
+                <FileText size={20} /> 📄 Imprimir Factura Oficial A4 ({deferCae ? 'Borrador' : 'AFIP'})
+              </button>
+            ) : (
+              <button
+                className="btn btn-primary"
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  fontSize: '1rem',
+                  fontWeight: 700,
+                  backgroundColor: '#0F172A',
+                  color: '#FFFFFF',
+                  borderRadius: '8px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '10px'
+                }}
+                onClick={() => printRemitoX({ ...order, totalAmount: currentTotal, billingType })}
+              >
+                <FileText size={20} /> 📄 Imprimir Boleta Remito A4 (Sucursal X)
+              </button>
+            )}
+
+            <button
+              className="btn btn-secondary"
+              style={{
+                width: '100%',
+                padding: '12px',
+                fontSize: '1rem',
+                fontWeight: 600,
+                backgroundColor: '#F8FAFC',
+                borderColor: '#CBD5E1',
+                color: '#334155',
+                borderRadius: '8px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '10px'
+              }}
+              onClick={() => printOrderReceipt({ ...order, totalAmount: currentTotal, billingType })}
+            >
+              <Printer size={20} /> 🖨️ Imprimir Ticket Térmico 80mm (Resumido)
+            </button>
+          </div>
+
+          <button
+            className="btn btn-secondary"
+            style={{ width: '100%', padding: '10px', fontSize: '0.95rem', fontWeight: 600 }}
+            onClick={() => {
+              onSuccess();
+            }}
+          >
+            Finalizar y Cerrar
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="modal-overlay" style={{ zIndex: 1100 }}>
@@ -407,6 +506,22 @@ export default function OrderFulfillmentModal({ order, onClose, onSuccess }: Ord
                 <option value="INTERNAL">Sucursal X (Interno)</option>
               </select>
             </div>
+
+            {billingType === 'OFFICIAL' && (
+              <div className="form-group" style={{ marginBottom: 0, backgroundColor: '#f8fafc', padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                <label style={{ fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.5px', color: '#475569', fontWeight: 800 }}>Modo de Emisión AFIP / ARCA</label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '6px' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.88rem', cursor: 'pointer', fontWeight: !deferCae ? 700 : 500, color: !deferCae ? '#16a34a' : '#475569' }}>
+                    <input type="radio" name="deferCae" checked={!deferCae} onChange={() => setDeferCae(false)} />
+                    🟢 Solicitar CAE Inmediato (AFIP Directo)
+                  </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.88rem', cursor: 'pointer', fontWeight: deferCae ? 700 : 500, color: deferCae ? '#d97706' : '#475569' }}>
+                    <input type="radio" name="deferCae" checked={deferCae} onChange={() => setDeferCae(true)} />
+                    🟡 Pre-Facturar A (Diferir CAE / Borrador)
+                  </label>
+                </div>
+              </div>
+            )}
 
             <div className="form-group" style={{ marginBottom: 0 }}>
               <label style={{ fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-secondary)', fontWeight: 600 }}>Medio de Pago / Condición</label>

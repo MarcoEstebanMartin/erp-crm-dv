@@ -660,7 +660,7 @@ interface InvoiceOrderRequest {
  */
 export async function invoiceOrder(req: AuthenticatedRequest, res: Response): Promise<void> {
   const { id } = req.params;
-  const { billingType, paymentMethod, paymentDescription, bankAccountId: reqBankAccountId }: InvoiceOrderRequest = req.body;
+  const { billingType, paymentMethod, paymentDescription, bankAccountId: reqBankAccountId, deferCae }: InvoiceOrderRequest & { deferCae?: boolean } = req.body;
   const adminId = req.user?.id;
   const userRole = req.user?.role;
 
@@ -995,24 +995,31 @@ export async function invoiceOrder(req: AuthenticatedRequest, res: Response): Pr
     }
 
     if (billingType === BillingType.OFFICIAL) {
-      try {
-        const afipRes = await emitirFacturaAFIP({
-          clientCuit: cuitLimpio,
-          clientDocType: docType,
-          invoiceType: finalInvoiceType === InvoiceType.FACTURA_A ? 'A' : 'B',
-          total: officialOrderTotal,
-          neto: isFacturaA_Official ? Number(net.toFixed(2)) : undefined,
-          iva: isFacturaA_Official ? Number(tax.toFixed(2)) : undefined,
-          percepcionAmount: isFacturaA_Official ? Number(percepIIBB.toFixed(2)) : undefined,
-          percepcionIvaAmount: isFacturaA_Official ? Number(percepIVA.toFixed(2)) : undefined,
-        });
+      if (deferCae) {
+        // Pre-Factura A/B: Solicitud diferida de CAE (flujo tipo IDUO)
+        finalInvoiceNumber = `PRE-${finalInvoiceType === InvoiceType.FACTURA_A ? 'A' : 'B'}-${order.id.toString().padStart(6, '0')}`;
+        finalCae = null;
+        finalCaeDueDate = null;
+      } else {
+        try {
+          const afipRes = await emitirFacturaAFIP({
+            clientCuit: cuitLimpio,
+            clientDocType: docType,
+            invoiceType: finalInvoiceType === InvoiceType.FACTURA_A ? 'A' : 'B',
+            total: officialOrderTotal,
+            neto: isFacturaA_Official ? Number(net.toFixed(2)) : undefined,
+            iva: isFacturaA_Official ? Number(tax.toFixed(2)) : undefined,
+            percepcionAmount: isFacturaA_Official ? Number(percepIIBB.toFixed(2)) : undefined,
+            percepcionIvaAmount: isFacturaA_Official ? Number(percepIVA.toFixed(2)) : undefined,
+          });
 
-        finalInvoiceNumber = afipRes.invoiceNumber;
-        finalCae = afipRes.cae;
-        finalCaeDueDate = afipRes.caeDueDate;
-      } catch (err: any) {
-        res.status(400).json({ status: 'error', message: `Error AFIP al facturar pedido: ${err.message}` });
-        return;
+          finalInvoiceNumber = afipRes.invoiceNumber;
+          finalCae = afipRes.cae;
+          finalCaeDueDate = afipRes.caeDueDate;
+        } catch (err: any) {
+          res.status(400).json({ status: 'error', message: `Error AFIP al facturar pedido: ${err.message}` });
+          return;
+        }
       }
     } else {
       finalInvoiceNumber = `INT-${order.id.toString().padStart(5, '0')}`;
@@ -2022,6 +2029,75 @@ export async function createDirectInvoice(req: AuthenticatedRequest, res: Respon
       status: 'error',
       message: error.message || 'Error al emitir factura directa.',
     });
+  }
+}
+
+/**
+ * Solicitar CAE a AFIP para un pedido pre-facturado (flujo diferido IDUO)
+ */
+export async function requestCaeForOrder(req: AuthenticatedRequest, res: Response): Promise<void> {
+  const { id } = req.params;
+  const adminId = req.user?.id;
+  const userRole = req.user?.role;
+
+  if (!adminId || (userRole !== Role.ADMIN && userRole !== Role.FACTURACION)) {
+    res.status(403).json({ status: 'error', message: 'Acceso denegado.' });
+    return;
+  }
+
+  try {
+    const order = await prisma.order.findUnique({
+      where: { id: Number(id) },
+      include: { persona: true }
+    });
+
+    if (!order) {
+      res.status(404).json({ status: 'error', message: 'Pedido no encontrado.' });
+      return;
+    }
+
+    if (order.cae) {
+      res.status(400).json({ status: 'error', message: `Este pedido ya posee CAE asignado (CAE: ${order.cae}).` });
+      return;
+    }
+
+    if (order.billingType !== BillingType.OFFICIAL) {
+      res.status(400).json({ status: 'error', message: 'Solo se puede solicitar CAE para comprobantes de Sucursal A (Oficial).' });
+      return;
+    }
+
+    const cuitLimpio = (order.persona.cuit || '').replace(/\D/g, '');
+    const isFacturaA = order.invoiceType === InvoiceType.FACTURA_A;
+    const docType = (cuitLimpio.length === 11) ? 80 : 96;
+
+    const afipRes = await emitirFacturaAFIP({
+      clientCuit: cuitLimpio || '20000000001',
+      clientDocType: docType,
+      invoiceType: isFacturaA ? 'A' : 'B',
+      total: Number(order.totalAmount),
+      neto: Number(order.netAmount || 0),
+      iva: Number(order.taxAmount || 0),
+      percepcionAmount: Number(order.percepcionAmount || 0),
+      percepcionIvaAmount: Number(order.percepcionIvaAmount || 0),
+    });
+
+    const updated = await prisma.order.update({
+      where: { id: order.id },
+      data: {
+        invoiceNumber: afipRes.invoiceNumber,
+        cae: afipRes.cae,
+        caeDueDate: afipRes.caeDueDate ? new Date(afipRes.caeDueDate) : null,
+      },
+      include: { items: { include: { product: true } }, persona: true }
+    });
+
+    res.json({
+      status: 'success',
+      message: `CAE asignado correctamente por AFIP/ARCA (N° ${afipRes.invoiceNumber}, CAE: ${afipRes.cae}).`,
+      data: updated
+    });
+  } catch (err: any) {
+    res.status(400).json({ status: 'error', message: `Error AFIP al solicitar CAE: ${err.message}` });
   }
 }
 

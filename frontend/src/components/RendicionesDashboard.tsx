@@ -1157,6 +1157,8 @@ const RendicionesDashboard: React.FC = () => {
             </form>
           </div>
         </div>
+      )}
+
       {/* HISTORIAL DE ARQUEOS (CAJAS CERRADAS) */}
       <div className="card" style={{ padding: '24px', marginTop: '20px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>

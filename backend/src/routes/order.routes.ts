@@ -9,6 +9,7 @@ import {
   createDirectInvoice,
   updateOrderWeights,
   confirmArmado,
+  requestCaeForOrder,
 } from '../controllers/order.controller';
 import { authenticateJWT, requireRole } from '../middlewares/auth';
 import { Role } from '@prisma/client';
@@ -43,6 +44,9 @@ router.put('/:id/status', authenticateJWT, requireRole([Role.ADMIN, Role.DEPOSIT
 
 // Facturar y cobrar pedido preparado (ADMIN y FACTURACION)
 router.post('/:id/invoice', authenticateJWT, requireRole([Role.ADMIN, Role.FACTURACION]), validateRequest(invoiceOrderSchema), invoiceOrder);
+
+// Solicitar CAE a AFIP para pre-factura oficial
+router.post('/:id/request-cae', authenticateJWT, requireRole([Role.ADMIN, Role.FACTURACION]), requestCaeForOrder);
 
 // Actualizar pesos de productos pesables (ADMIN, FACTURACION, DEPOSITO)
 router.put('/:id/weights', authenticateJWT, requireRole([Role.ADMIN, Role.FACTURACION, Role.DEPOSITO]), validateRequest(updateOrderWeightsSchema), updateOrderWeights);
