@@ -560,27 +560,13 @@ export default function HomeTab({
         <div style={{ 
           display: 'grid', 
           gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', 
-          gap: '16px' 
+          gap: '12px' 
         }}>
           {[
             {
-              title: 'Rendición de Cajas',
-              desc: (pendingRendicionesDetails.sellers.length + pendingRendicionesDetails.routes.length) > 0 
-                ? `${pendingRendicionesDetails.sellers.length + pendingRendicionesDetails.routes.length} rendiciones pendientes` 
-                : 'Auditar rendiciones al día',
-              badge: (pendingRendicionesDetails.sellers.length + pendingRendicionesDetails.routes.length) > 0 
-                ? `${pendingRendicionesDetails.sellers.length + pendingRendicionesDetails.routes.length}` 
-                : null,
-              badgeColor: '#E30613',
-              icon: <DollarSign size={20} style={{ color: (pendingRendicionesDetails.sellers.length + pendingRendicionesDetails.routes.length) > 0 ? '#E30613' : 'var(--text-secondary)' }} />,
-              onClick: () => {
-                setActiveTab('rendiciones');
-              }
-            },
-            {
               title: 'Facturar Directo',
-              desc: 'Emitir comprobante de venta',
-              icon: <Receipt size={20} style={{ color: 'var(--text-secondary)' }} />,
+              desc: 'Comprobante de venta',
+              icon: <Receipt size={18} style={{ color: 'var(--text-secondary)' }} />,
               onClick: () => {
                 localStorage.setItem('preselected_billing_client', 'direct');
                 setActiveTab('billing');
@@ -589,7 +575,7 @@ export default function HomeTab({
             {
               title: 'Agregar Cliente',
               desc: 'Registrar nueva persona',
-              icon: <UserPlus size={20} style={{ color: 'var(--text-secondary)' }} />,
+              icon: <UserPlus size={18} style={{ color: 'var(--text-secondary)' }} />,
               onClick: () => {
                 setActiveTab('clients');
                 setClientModal({ 
@@ -621,7 +607,7 @@ export default function HomeTab({
             {
               title: 'Tomar Pedido',
               desc: 'Registrar nuevo pedido',
-              icon: <ShoppingCart size={20} style={{ color: 'var(--text-secondary)' }} />,
+              icon: <ShoppingCart size={18} style={{ color: 'var(--text-secondary)' }} />,
               onClick: () => {
                 setClientSearchModal({ open: true, action: 'order' });
                 setQuickClientQuery('');
@@ -630,19 +616,19 @@ export default function HomeTab({
             {
               title: 'Lista de Precios',
               desc: 'Generar PDF general',
-              icon: <Printer size={20} style={{ color: 'var(--text-secondary)' }} />,
+              icon: <Printer size={18} style={{ color: 'var(--text-secondary)' }} />,
               onClick: () => setIsPriceListModalOpen(true)
             },
             {
               title: 'Buscar Precio',
               desc: 'Consulta rápida (Lupa)',
-              icon: <Search size={20} style={{ color: 'var(--text-secondary)' }} />,
+              icon: <Search size={18} style={{ color: 'var(--text-secondary)' }} />,
               onClick: () => setIsQuickSearchModalOpen(true)
             },
             {
               title: 'Cuentas por Cobrar',
               desc: 'Estado de Cuenta Corriente',
-              icon: <BookOpen size={20} style={{ color: '#8B5CF6' }} />,
+              icon: <BookOpen size={18} style={{ color: '#8B5CF6' }} />,
               onClick: () => {
                 setClientSearchModal({ open: true, action: 'ledger' });
                 setQuickClientQuery('');
@@ -651,7 +637,7 @@ export default function HomeTab({
             {
               title: 'Cargar Recibo',
               desc: 'Registrar cobro de cliente',
-              icon: <DollarSign size={20} style={{ color: 'var(--text-secondary)' }} />,
+              icon: <DollarSign size={18} style={{ color: 'var(--text-secondary)' }} />,
               onClick: () => {
                 setClientSearchModal({ open: true, action: 'payment' });
                 setQuickClientQuery('');
@@ -659,8 +645,8 @@ export default function HomeTab({
             },
             {
               title: 'Gasto de Flota',
-              desc: 'Combustible, service o taller',
-              icon: <Truck size={20} style={{ color: 'var(--text-secondary)' }} />,
+              desc: 'Combustible / Taller',
+              icon: <Truck size={18} style={{ color: 'var(--text-secondary)' }} />,
               onClick: () => {
                 setShowGastoModal(true);
               }
@@ -672,48 +658,34 @@ export default function HomeTab({
               className="quick-action-card"
               style={{
                 display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'flex-start',
-                padding: '16px',
+                alignItems: 'center',
+                padding: '10px 14px',
                 backgroundColor: '#ffffff',
                 border: '1px solid var(--border-color, #e5e5e7)',
                 borderRadius: '8px',
                 cursor: 'pointer',
                 textAlign: 'left',
                 width: '100%',
-                gap: '8px',
-                transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+                gap: '10px',
+                transition: 'all 0.15s ease',
               }}
             >
-              <div style={{ display: 'flex', width: '100%', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: '36px',
-                  height: '36px',
-                  borderRadius: '6px',
-                  backgroundColor: 'var(--bg-light, #f5f5f7)',
-                  border: '1px solid var(--border-color, #e5e5e7)'
-                }}>
-                  {act.icon}
-                </div>
-                {act.badge && (
-                  <span style={{
-                    backgroundColor: act.badgeColor || '#E30613',
-                    color: '#ffffff',
-                    fontSize: '0.72rem',
-                    fontWeight: 700,
-                    padding: '2px 8px',
-                    borderRadius: '10px'
-                  }}>
-                    {act.badge}
-                  </span>
-                )}
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: '32px',
+                height: '32px',
+                borderRadius: '6px',
+                backgroundColor: 'var(--bg-light, #f5f5f7)',
+                border: '1px solid var(--border-color, #e5e5e7)',
+                flexShrink: 0
+              }}>
+                {act.icon}
               </div>
-              <div>
-                <div style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-primary)' }}>{act.title}</div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '2px' }}>{act.desc}</div>
+              <div style={{ overflow: 'hidden' }}>
+                <div style={{ fontSize: '0.84rem', fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{act.title}</div>
+                <div style={{ fontSize: '0.73rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginTop: '1px' }}>{act.desc}</div>
               </div>
             </button>
           ))}
