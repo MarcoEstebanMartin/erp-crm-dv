@@ -3,7 +3,7 @@ import React from 'react';
 import { api } from '../utils/api';
 import { getOrderStatusInfo } from '../utils/orderStatusHelper';
 
-import { Trash2, ShoppingCart, UserPlus, CheckCircle2, Eye, Edit, Printer, MapPin, Phone, Navigation, ArrowRight, RefreshCw } from 'lucide-react';
+import { Trash2, ShoppingCart, UserPlus, CheckCircle2, Eye, Edit, Printer, MapPin, Phone, Navigation, ArrowRight, RefreshCw, Package } from 'lucide-react';
 import PriceListModal from './PriceListModal';
 import MobileCobros from './MobileCobros';
 import type { Persona, Product, Order, Rubro, SaleRoute } from '../types';
@@ -1002,19 +1002,7 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
                              Number(selectedClient.discount || 0) > 0
                            );
                           
-                          // Helper para imágenes realistas de demostración
-                          const getFallbackImage = (product: any) => {
-                             let keyword = 'groceries,food';
-                             const name = product.name.toLowerCase();
-                             if (name.includes('queso') || name.includes('melincue') || name.includes('sardo') || name.includes('mozzarella')) keyword = 'cheese';
-                             else if (name.includes('leche') || name.includes('crema') || name.includes('yogurt') || name.includes('manteca')) keyword = 'milk,dairy';
-                             else if (name.includes('fiambre') || name.includes('jamon') || name.includes('bondiola')) keyword = 'ham,meat';
-                             else if (name.includes('cerveza') || name.includes('vino') || name.includes('bebida')) keyword = 'beer,beverage';
-                             else if (name.includes('miel') || name.includes('dulce')) keyword = 'honey,sweet';
-                             return `https://loremflickr.com/320/240/${keyword}?random=${product.id}`;
-                          };
-                          
-                          const imgSrc = p.imageUrl ? (p.imageUrl.startsWith('http') ? p.imageUrl : (p.imageUrl.startsWith('/') ? p.imageUrl : `/uploads/products/${p.imageUrl}`)) : getFallbackImage(p);
+                          const imgSrc = p.imageUrl ? (p.imageUrl.startsWith('http') ? p.imageUrl : (p.imageUrl.startsWith('/') ? p.imageUrl : `/uploads/products/${p.imageUrl}`)) : null;
                           const cartItem = cart.find(item => item.product.id === p.id);
 
                            return (
@@ -1035,8 +1023,37 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
                              onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = cartItem ? '0 4px 12px rgba(16, 185, 129, 0.08)' : 'none'; }}
                              onClick={() => { if(p.stock > 0) addToCart(p); }}
                              >
-                               <div style={{ position: 'relative', height: '130px', width: '100%', backgroundColor: '#fff', marginBottom: '8px' }}>
-                                 <img src={imgSrc} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'contain' }} loading="lazy" />
+                               <div style={{ position: 'relative', height: '130px', width: '100%', backgroundColor: '#f8fafc', borderRadius: '4px', overflow: 'hidden', marginBottom: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                 {imgSrc ? (
+                                   <img 
+                                     src={imgSrc} 
+                                     alt={p.name} 
+                                     style={{ width: '100%', height: '100%', objectFit: 'contain' }} 
+                                     loading="lazy" 
+                                     onError={(e) => {
+                                       e.currentTarget.style.display = 'none';
+                                       if (e.currentTarget.nextElementSibling) {
+                                         (e.currentTarget.nextElementSibling as HTMLElement).style.display = 'flex';
+                                       }
+                                     }}
+                                   />
+                                 ) : null}
+                                 <div 
+                                   style={{ 
+                                     display: imgSrc ? 'none' : 'flex', 
+                                     width: '100%', 
+                                     height: '100%', 
+                                     alignItems: 'center', 
+                                     justifyContent: 'center', 
+                                     flexDirection: 'column', 
+                                     backgroundColor: '#f8fafc',
+                                     color: '#94a3b8'
+                                   }}
+                                 >
+                                   <Package size={34} color="#cbd5e1" />
+                                   <span style={{ fontSize: '0.68rem', marginTop: '4px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Sin foto</span>
+                                 </div>
+
                                  {cartItem && (
                                    <div style={{
                                      position: 'absolute',
@@ -1613,19 +1630,7 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
                 <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-secondary)', gridColumn: '1 / -1' }}>No se encontraron productos.</div>
               ) : (
                 filtered.map((p) => {
-                  // Helper para imágenes realistas de demostración
-                  const getFallbackImage = (product: any) => {
-                     let keyword = 'groceries,food';
-                     const name = product.name.toLowerCase();
-                     if (name.includes('queso') || name.includes('melincue') || name.includes('sardo') || name.includes('mozzarella')) keyword = 'cheese';
-                     else if (name.includes('leche') || name.includes('crema') || name.includes('yogurt') || name.includes('manteca')) keyword = 'milk,dairy';
-                     else if (name.includes('fiambre') || name.includes('jamon') || name.includes('bondiola')) keyword = 'ham,meat';
-                     else if (name.includes('cerveza') || name.includes('vino') || name.includes('bebida')) keyword = 'beer,beverage';
-                     else if (name.includes('miel') || name.includes('dulce')) keyword = 'honey,sweet';
-                     return `https://loremflickr.com/320/240/${keyword}?random=${product.id}`;
-                  };
-                  
-                   const imgSrc = p.imageUrl ? (p.imageUrl.startsWith('http') ? p.imageUrl : (p.imageUrl.startsWith('/') ? p.imageUrl : `/uploads/products/${p.imageUrl}`)) : getFallbackImage(p);
+                  const imgSrc = p.imageUrl ? (p.imageUrl.startsWith('http') ? p.imageUrl : (p.imageUrl.startsWith('/') ? p.imageUrl : `/uploads/products/${p.imageUrl}`)) : null;
 
                   return (
                     <div key={p.id} className="product-card" style={{ 
@@ -1642,8 +1647,37 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
                     onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 16px rgba(0,0,0,0.06)'; }}
                     onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}
                     >
-                      <div style={{ position: 'relative', height: '130px', width: '100%', backgroundColor: '#fff', marginBottom: '8px' }}>
-                        <img src={imgSrc} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'contain' }} loading="lazy" />
+                      <div style={{ position: 'relative', height: '130px', width: '100%', backgroundColor: '#f8fafc', borderRadius: '4px', overflow: 'hidden', marginBottom: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        {imgSrc ? (
+                          <img 
+                            src={imgSrc} 
+                            alt={p.name} 
+                            style={{ width: '100%', height: '100%', objectFit: 'contain' }} 
+                            loading="lazy" 
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none';
+                              if (e.currentTarget.nextElementSibling) {
+                                (e.currentTarget.nextElementSibling as HTMLElement).style.display = 'flex';
+                              }
+                            }}
+                          />
+                        ) : null}
+                        <div 
+                          style={{ 
+                            display: imgSrc ? 'none' : 'flex', 
+                            width: '100%', 
+                            height: '100%', 
+                            alignItems: 'center', 
+                            justifyContent: 'center', 
+                            flexDirection: 'column', 
+                            backgroundColor: '#f8fafc',
+                            color: '#94a3b8'
+                          }}
+                        >
+                          <Package size={34} color="#cbd5e1" />
+                          <span style={{ fontSize: '0.68rem', marginTop: '4px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Sin foto</span>
+                        </div>
+
                         {p.stock <= p.minStock && p.stock > 0 && (
                            <span style={{ position: 'absolute', top: '0', right: '0', background: 'var(--color-warning)', color: '#fff', fontSize: '0.65rem', padding: '2px 6px', borderRadius: '4px', fontWeight: 700 }}>Poco Stock</span>
                         )}
