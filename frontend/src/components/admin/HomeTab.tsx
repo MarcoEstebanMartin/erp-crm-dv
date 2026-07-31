@@ -544,6 +544,21 @@ export default function HomeTab({
             transform: translateY(-2px);
             box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
           }
+          .quick-actions-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+          }
+          @media (max-width: 1024px) {
+            .quick-actions-grid {
+              grid-template-columns: repeat(2, 1fr);
+            }
+          }
+          @media (max-width: 550px) {
+            .quick-actions-grid {
+              grid-template-columns: repeat(1, 1fr);
+            }
+          }
           .quick-action-card:hover {
             transform: translateY(-2px);
             border-color: #a1a1a6 !important;
@@ -557,11 +572,7 @@ export default function HomeTab({
         <h3 style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '16px', letterSpacing: '-0.01em', color: 'var(--text-primary)' }}>
           Accesos Directos
         </h3>
-        <div style={{ 
-          display: 'grid', 
-          gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', 
-          gap: '12px' 
-        }}>
+        <div className="quick-actions-grid">
           {[
             {
               title: 'Facturar Directo',
@@ -626,8 +637,8 @@ export default function HomeTab({
               onClick: () => setIsQuickSearchModalOpen(true)
             },
             {
-              title: 'Cuentas por Cobrar',
-              desc: 'Estado de Cuenta Corriente',
+              title: 'Cuentas Corrientes',
+              desc: 'Estado y saldos de CC',
               icon: <BookOpen size={18} style={{ color: '#8B5CF6' }} />,
               onClick: () => {
                 setClientSearchModal({ open: true, action: 'ledger' });
