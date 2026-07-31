@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { CreditCard, DollarSign, FileText, CheckCircle, ChevronLeft, RefreshCw, Loader2 } from 'lucide-react';
+import { CreditCard, DollarSign, FileText, CheckCircle, ChevronLeft, RefreshCw, Loader2, Landmark, Banknote, ScrollText } from 'lucide-react';
 import axios from 'axios';
 import { API_BASE_URL } from '../utils/api';
 import { useConfirm } from '../context/ConfirmContext';
@@ -133,7 +133,6 @@ const MobileCobros: React.FC<MobileCobrosProps> = ({
       });
       
       setSuccessReceipt(res.data.transaction);
-      // Actualizar listado localmente o refetch
       fetchPending();
     } catch (error: any) {
       console.error('Error registering collection', error);
@@ -144,38 +143,110 @@ const MobileCobros: React.FC<MobileCobrosProps> = ({
     }
   };
 
-
   const formatCurrency = (val: number | string) => {
     return Number(val).toLocaleString('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0, maximumFractionDigits: 0 });
   };
 
-  // Renderizar la vista de éxito
+  // 1. Vista de Éxito / Recibo Generado
   if (successReceipt) {
     return (
-      <div className="p-4 max-w-md mx-auto bg-gray-50 min-h-screen">
-        <div className="bg-white rounded-xl shadow-lg p-6 text-center mt-10">
-          <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-gray-800">Cobro Registrado</h2>
-          <p className="text-gray-500 mt-2">Recibo {successReceipt.receiptNumber}</p>
+      <div style={{ maxWidth: '500px', margin: '0 auto', padding: '16px' }}>
+        <div style={{
+          backgroundColor: '#FFFFFF',
+          borderRadius: '16px',
+          border: '1px solid var(--border-color)',
+          boxShadow: 'var(--shadow-lg)',
+          padding: '28px 20px',
+          textAlign: 'center',
+          marginTop: '20px'
+        }}>
+          <div style={{
+            width: '64px',
+            height: '64px',
+            borderRadius: '50%',
+            backgroundColor: '#ECFDF5',
+            color: '#10B981',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            margin: '0 auto 16px'
+          }}>
+            <CheckCircle size={36} />
+          </div>
           
-          <div className="my-6 bg-gray-100 p-4 rounded-lg text-left">
-            <p className="text-sm text-gray-600">Cliente: <span className="font-semibold text-gray-800">{selectedPersona?.name}</span></p>
-            <p className="text-sm text-gray-600">Monto: <span className="font-bold text-gray-900 text-lg">{formatCurrency(successReceipt.amount)}</span></p>
-            <p className="text-sm text-gray-600">Medio: <span className="font-semibold text-gray-800">{successReceipt.paymentMethod}</span></p>
-            <p className="text-sm text-gray-600">Sucursal: <span className="font-semibold text-gray-800">{successReceipt.billingType === 'OFFICIAL' ? 'A' : 'X'}</span></p>
-            <div className="mt-4 pt-4 border-t border-gray-200">
-              <p className="text-xs text-blue-700 font-medium bg-blue-50 p-3 rounded-lg border border-blue-100 leading-relaxed text-center">
+          <h2 style={{ fontSize: '1.4rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '4px' }}>
+            Cobro Registrado
+          </h2>
+          <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '20px', fontWeight: 500 }}>
+            Recibo N° {successReceipt.receiptNumber}
+          </p>
+          
+          <div style={{
+            backgroundColor: '#F9FAFB',
+            borderRadius: '12px',
+            border: '1px solid var(--border-color)',
+            padding: '16px',
+            textAlign: 'left',
+            marginBottom: '24px'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '10px', borderBottom: '1px solid #F3F4F6' }}>
+              <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Cliente</span>
+              <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-primary)' }}>{selectedPersona?.name}</span>
+            </div>
+            
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #F3F4F6', alignItems: 'center' }}>
+              <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Monto Cobrado</span>
+              <span style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--text-primary)' }}>{formatCurrency(successReceipt.amount)}</span>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #F3F4F6' }}>
+              <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Medio de Pago</span>
+              <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                {successReceipt.paymentMethod === 'CASH' ? 'Efectivo' : successReceipt.paymentMethod === 'BANK_TRANSFER' ? 'Transferencia' : 'Cheque'}
+              </span>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '10px' }}>
+              <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Sucursal</span>
+              <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                {successReceipt.billingType === 'OFFICIAL' ? 'Sucursal A (Oficial)' : 'Sucursal X (Interno)'}
+              </span>
+            </div>
+
+            <div style={{ marginTop: '16px', paddingTop: '14px', borderTop: '1px solid var(--border-color)' }}>
+              <div style={{
+                backgroundColor: '#EFF6FF',
+                border: '1px solid #BFDBFE',
+                borderRadius: '8px',
+                padding: '12px',
+                fontSize: '0.8rem',
+                color: '#1E40AF',
+                textAlign: 'center',
+                lineHeight: '1.4'
+              }}>
                 💬 <strong>Notificación Enviada:</strong> El ERP ha enviado el recibo digital provisorio por WhatsApp al cliente.
-              </p>
-              <p className="text-[10px] text-gray-400 mt-2 text-center">
-                🔒 El cobro está registrado para auditoría. No se puede descargar ni modificar desde este dispositivo móvil. Impactará en la cuenta corriente una vez verificado físicamente.
+              </div>
+              <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '8px', textAlign: 'center', lineHeight: '1.3' }}>
+                🔒 El cobro está registrado para auditoría. Se consolidará en la cuenta corriente una vez verificado físicamente en caja.
               </p>
             </div>
           </div>
           
           <button 
             onClick={() => { setSuccessReceipt(null); setSelectedPersona(null); setAmount(''); }}
-            className="w-full bg-gray-900 hover:bg-gray-800 text-white font-bold py-3 px-4 rounded-lg transition-colors"
+            style={{
+              width: '100%',
+              backgroundColor: 'var(--accent-color)',
+              color: '#FFFFFF',
+              fontWeight: 600,
+              padding: '14px',
+              borderRadius: '10px',
+              fontSize: '0.95rem',
+              border: 'none',
+              cursor: 'pointer',
+              boxShadow: 'var(--shadow-sm)',
+              transition: 'var(--transition-fast)'
+            }}
           >
             Volver a Cobros
           </button>
@@ -184,37 +255,125 @@ const MobileCobros: React.FC<MobileCobrosProps> = ({
     );
   }
 
-  // Renderizar Formulario de Cobro
+  // 2. Vista de Formulario de Cobro (Cliente Seleccionado)
   if (selectedPersona) {
+    const isOverpayment = parseFloat(amount) > selectedPersona.outstandingBalance && selectedPersona.outstandingBalance > 0;
+    
     return (
-      <div className="p-4 max-w-md mx-auto bg-gray-50 min-h-screen">
+      <div style={{ maxWidth: '500px', margin: '0 auto', padding: '16px' }}>
+        {/* Botón Volver */}
         <button 
           onClick={() => setSelectedPersona(null)} 
-          className="flex items-center text-gray-600 mb-6 font-medium"
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '4px',
+            backgroundColor: 'transparent',
+            border: 'none',
+            color: 'var(--text-secondary)',
+            fontSize: '0.9rem',
+            fontWeight: 500,
+            cursor: 'pointer',
+            padding: '4px 0',
+            marginBottom: '16px'
+          }}
         >
-          <ChevronLeft className="w-5 h-5 mr-1" />
-          Volver
+          <ChevronLeft size={20} />
+          Volver a Clientes
         </button>
 
-        <h2 className="text-2xl font-bold text-gray-800 mb-1">Registrar Cobro</h2>
-        <p className="text-gray-500 mb-6">{selectedPersona.name}</p>
-
-        {selectedPersona.outstandingBalance < 0 ? (
-          <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-lg mb-6 flex justify-between items-center">
-            <span className="text-emerald-700 font-medium">Saldo a Favor</span>
-            <span className="text-emerald-700 font-bold text-lg">{formatCurrency(Math.abs(selectedPersona.outstandingBalance))}</span>
-          </div>
-        ) : (
-          <div className="bg-red-50 border border-red-100 p-4 rounded-lg mb-6 flex justify-between items-center">
-            <span className="text-red-700 font-medium">Saldo Pendiente</span>
-            <span className="text-red-700 font-bold text-lg">{formatCurrency(selectedPersona.outstandingBalance)}</span>
-          </div>
-        )}
-
-        <form onSubmit={handleRegister} className="space-y-5">
-          {pendingInvoices.length > 0 && (
+        {/* Hero Card del Cliente y Saldo */}
+        <div style={{
+          backgroundColor: '#FFFFFF',
+          borderRadius: '14px',
+          border: '1px solid var(--border-color)',
+          padding: '18px 20px',
+          boxShadow: 'var(--shadow-sm)',
+          marginBottom: '20px'
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Imputar a Factura</label>
+              <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                CLIENTE SELECCIONADO
+              </span>
+              <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)', margin: '2px 0 0 0' }}>
+                {selectedPersona.name}
+              </h2>
+              {selectedPersona.city && (
+                <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                  📍 {selectedPersona.city}
+                </span>
+              )}
+            </div>
+          </div>
+
+          {selectedPersona.outstandingBalance < 0 ? (
+            <div style={{
+              backgroundColor: '#ECFDF5',
+              border: '1px solid #A7F3D0',
+              borderRadius: '10px',
+              padding: '12px 16px',
+              display: 'flex',
+              justify: 'space-between',
+              alignItems: 'center'
+            }}>
+              <div>
+                <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#047857', display: 'block' }}>SALDO A FAVOR</span>
+                <span style={{ fontSize: '1.3rem', fontWeight: 700, color: '#065F46' }}>
+                  {formatCurrency(Math.abs(selectedPersona.outstandingBalance))}
+                </span>
+              </div>
+              <span style={{ fontSize: '0.75rem', backgroundColor: '#D1FAE5', color: '#065F46', padding: '4px 10px', borderRadius: '20px', fontWeight: 600 }}>
+                Crédito
+              </span>
+            </div>
+          ) : (
+            <div style={{
+              backgroundColor: '#FEF2F2',
+              border: '1px solid #FCA5A5',
+              borderRadius: '10px',
+              padding: '12px 16px',
+              display: 'flex',
+              justify: 'space-between',
+              alignItems: 'center'
+            }}>
+              <div>
+                <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#B91C1C', display: 'block' }}>SALDO PENDIENTE TOTAL</span>
+                <span style={{ fontSize: '1.4rem', fontWeight: 700, color: '#991B1B' }}>
+                  {formatCurrency(selectedPersona.outstandingBalance)}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setAmount(selectedPersona.outstandingBalance.toString())}
+                style={{
+                  fontSize: '0.75rem',
+                  backgroundColor: '#FFFFFF',
+                  color: '#991B1B',
+                  border: '1px solid #FCA5A5',
+                  padding: '6px 12px',
+                  borderRadius: '6px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  boxShadow: 'var(--shadow-sm)',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                Cobrar Total
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Formulario */}
+        <form onSubmit={handleRegister} style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+          
+          {/* Imputación a Factura */}
+          {pendingInvoices.length > 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <label style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                Imputar a Comprobante Específico (Opcional)
+              </label>
               <select
                 value={selectedInvoiceId || ''}
                 onChange={(e) => {
@@ -234,120 +393,285 @@ const MobileCobros: React.FC<MobileCobrosProps> = ({
                     }
                   }
                 }}
-                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 py-3 border bg-white text-base"
+                style={{
+                  width: '100%',
+                  padding: '12px 14px',
+                  borderRadius: '8px',
+                  border: '1px solid var(--border-color)',
+                  backgroundColor: '#FFFFFF',
+                  color: 'var(--text-primary)',
+                  fontSize: '0.9rem',
+                  outline: 'none',
+                  boxShadow: 'var(--shadow-sm)'
+                }}
               >
-                <option value="">Entrega a cuenta general (sin factura específica)</option>
+                <option value="">Entrega a cuenta general (Sin factura específica)</option>
                 {pendingInvoices.map((inv) => (
                   <option key={inv.id} value={inv.id}>
-                    {inv.invoiceNumber} (Pendiente: {formatCurrency(inv.pendingAmount)})
+                    {inv.invoiceNumber} — Pendiente: {formatCurrency(inv.pendingAmount)}
                   </option>
                 ))}
               </select>
             </div>
           )}
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Monto a Cobrar</label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <DollarSign className="h-5 w-5 text-gray-400" />
-              </div>
+          {/* Campo de Monto a Cobrar */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <label style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                Monto a Cobrar (ARS)
+              </label>
+              {selectedPersona.outstandingBalance > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setAmount((selectedPersona.outstandingBalance / 2).toFixed(0))}
+                  style={{
+                    backgroundColor: 'transparent',
+                    border: 'none',
+                    color: 'var(--text-secondary)',
+                    fontSize: '0.75rem',
+                    cursor: 'pointer',
+                    textDecoration: 'underline'
+                  }}
+                >
+                  Usar 50%
+                </button>
+              )}
+            </div>
+
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              backgroundColor: '#FFFFFF',
+              border: `1.5px solid ${isOverpayment ? '#F59E0B' : 'var(--border-color)'}`,
+              borderRadius: '10px',
+              padding: '4px 14px',
+              boxShadow: 'var(--shadow-sm)',
+              transition: 'border-color 0.2s ease'
+            }}>
+              <span style={{ fontSize: '1.4rem', fontWeight: 700, color: 'var(--text-secondary)', marginRight: '10px', userSelect: 'none' }}>
+                $
+              </span>
               <input
                 type="number"
                 step="0.01"
                 required
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
-                className="pl-10 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 text-lg py-3 border bg-white"
                 placeholder="0.00"
+                style={{
+                  width: '100%',
+                  border: 'none',
+                  outline: 'none',
+                  backgroundColor: 'transparent',
+                  fontSize: '1.4rem',
+                  fontWeight: 700,
+                  color: 'var(--text-primary)',
+                  padding: '10px 0'
+                }}
               />
+            </div>
+            {isOverpayment && (
+              <span style={{ fontSize: '0.75rem', color: '#D97706', marginTop: '2px' }}>
+                ⚠️ El monto supera el saldo pendiente. El cliente quedará con saldo a favor.
+              </span>
+            )}
+          </div>
+
+          {/* Selector de Medio de Pago (Chips interactivos) */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <label style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
+              Medio de Pago
+            </label>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+              {[
+                { id: 'CASH', label: 'Efectivo', icon: Banknote },
+                { id: 'BANK_TRANSFER', label: 'Transferencia', icon: Landmark },
+                { id: 'CHECK', label: 'Cheque', icon: ScrollText },
+              ].map((method) => {
+                const Icon = method.icon;
+                const isActive = paymentMethod === method.id;
+                return (
+                  <button
+                    key={method.id}
+                    type="button"
+                    onClick={() => setPaymentMethod(method.id)}
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justify: 'center',
+                      gap: '6px',
+                      padding: '12px 8px',
+                      borderRadius: '10px',
+                      fontSize: '0.8rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      border: '1px solid',
+                      borderColor: isActive ? 'var(--accent-color)' : 'var(--border-color)',
+                      backgroundColor: isActive ? 'var(--accent-color)' : '#FFFFFF',
+                      color: isActive ? '#FFFFFF' : 'var(--text-secondary)',
+                      boxShadow: isActive ? 'var(--shadow-sm)' : 'none',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    <Icon size={18} />
+                    <span>{method.label}</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Medio de Pago</label>
-            <select
-              value={paymentMethod}
-              onChange={(e) => setPaymentMethod(e.target.value)}
-              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 py-3 border bg-white text-base"
-            >
-              <option value="CASH">Efectivo</option>
-              <option value="BANK_TRANSFER">Transferencia</option>
-              <option value="CHECK">Cheque</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Corresponde a Sucursal</label>
-            <div className="flex bg-gray-100 p-1 rounded-lg">
+          {/* Selector de Sucursal (Pill Segmented Toggle) */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <label style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
+              Corresponde a Sucursal
+            </label>
+            <div style={{
+              display: 'flex',
+              backgroundColor: '#F3F4F6',
+              padding: '4px',
+              borderRadius: '10px',
+              border: '1px solid var(--border-color)'
+            }}>
               <button
                 type="button"
                 disabled={selectedInvoiceId !== null}
-                className={`flex-1 py-2 rounded-md font-medium text-sm transition-all ${billingType === 'OFFICIAL' ? 'bg-white shadow text-gray-900' : 'text-gray-500'} ${selectedInvoiceId !== null ? 'opacity-60 cursor-not-allowed' : ''}`}
                 onClick={() => setBillingType('OFFICIAL')}
+                style={{
+                  flex: 1,
+                  padding: '10px',
+                  borderRadius: '7px',
+                  fontSize: '0.83rem',
+                  fontWeight: 600,
+                  border: 'none',
+                  cursor: selectedInvoiceId !== null ? 'not-allowed' : 'pointer',
+                  backgroundColor: billingType === 'OFFICIAL' ? '#FFFFFF' : 'transparent',
+                  color: billingType === 'OFFICIAL' ? 'var(--text-primary)' : 'var(--text-secondary)',
+                  boxShadow: billingType === 'OFFICIAL' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                  opacity: selectedInvoiceId !== null && billingType !== 'OFFICIAL' ? 0.4 : 1,
+                  transition: 'all 0.15s ease'
+                }}
               >
                 Sucursal A (Oficial)
               </button>
               <button
                 type="button"
                 disabled={selectedInvoiceId !== null}
-                className={`flex-1 py-2 rounded-md font-medium text-sm transition-all ${billingType === 'INTERNAL' ? 'bg-white shadow text-gray-900' : 'text-gray-500'} ${selectedInvoiceId !== null ? 'opacity-60 cursor-not-allowed' : ''}`}
                 onClick={() => setBillingType('INTERNAL')}
+                style={{
+                  flex: 1,
+                  padding: '10px',
+                  borderRadius: '7px',
+                  fontSize: '0.83rem',
+                  fontWeight: 600,
+                  border: 'none',
+                  cursor: selectedInvoiceId !== null ? 'not-allowed' : 'pointer',
+                  backgroundColor: billingType === 'INTERNAL' ? '#FFFFFF' : 'transparent',
+                  color: billingType === 'INTERNAL' ? 'var(--text-primary)' : 'var(--text-secondary)',
+                  boxShadow: billingType === 'INTERNAL' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                  opacity: selectedInvoiceId !== null && billingType !== 'INTERNAL' ? 0.4 : 1,
+                  transition: 'all 0.15s ease'
+                }}
               >
                 Sucursal X (Interno)
               </button>
             </div>
             {selectedInvoiceId !== null && (
-              <p className="text-xs text-gray-500 mt-1">
-                La sucursal está determinada automáticamente por la factura seleccionada.
-              </p>
+              <span style={{ fontSize: '0.73rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                ℹ️ La sucursal fue asignada automáticamente según la factura seleccionada.
+              </span>
             )}
           </div>
 
+          {/* Botón de Confirmación Principal */}
           <button
             type="submit"
             disabled={loading || !amount || parseFloat(amount) <= 0}
-            className="w-full bg-[var(--color-corp-red)] hover:bg-red-700 text-white font-bold py-4 px-4 rounded-lg flex justify-center items-center gap-2 mt-8 disabled:opacity-50 transition-colors shadow-md"
+            style={{
+              width: '100%',
+              backgroundColor: 'var(--color-corp-red)',
+              color: '#FFFFFF',
+              fontWeight: 700,
+              fontSize: '1rem',
+              padding: '14px',
+              borderRadius: '10px',
+              border: 'none',
+              cursor: (loading || !amount || parseFloat(amount) <= 0) ? 'not-allowed' : 'pointer',
+              opacity: (loading || !amount || parseFloat(amount) <= 0) ? 0.5 : 1,
+              boxShadow: '0 4px 12px rgba(227, 6, 19, 0.25)',
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              gap: '8px',
+              marginTop: '10px',
+              transition: 'all 0.15s ease'
+            }}
           >
-            {loading ? 'Procesando...' : 'Confirmar Cobro'}
+            {loading ? (
+              <>
+                <Loader2 size={18} className="spin-animation" />
+                <span>Procesando Cobro...</span>
+              </>
+            ) : (
+              'Confirmar Cobro'
+            )}
           </button>
         </form>
       </div>
     );
   }
 
-  // Filtrar localmente por ruta/ciudad seleccionada
+  // 3. Vista Principal: Listado de Clientes con Saldo Pendiente
   const filteredPersonas = personas.filter(p => {
     if (selectedCityFilters.length === 0) return true;
     const cleanCity = cleanCityName ? cleanCityName(p.city) : (p.city || '').toUpperCase().trim();
     return selectedCityFilters.includes(cleanCity);
   });
 
-  // Renderizar Listado de Clientes con Saldo
   return (
-    <div className="p-4 max-w-md mx-auto bg-gray-50 min-h-screen">
-      <div className="flex justify-between items-center mb-1 mt-4">
-        <h2 className="text-2xl font-bold text-gray-800">Cobranzas</h2>
+    <div style={{ maxWidth: '600px', margin: '0 auto', padding: '16px' }}>
+      {/* Header con Título y Botón Sync */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px', marginTop: '8px' }}>
+        <h2 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
+          Cobranzas
+        </h2>
         <button
           onClick={handleSync}
           disabled={loading}
-          className="bg-white border border-gray-200 shadow-sm hover:bg-gray-50 text-gray-600 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-2"
+          style={{
+            backgroundColor: '#FFFFFF',
+            border: '1px solid var(--border-color)',
+            boxShadow: 'var(--shadow-sm)',
+            color: 'var(--text-secondary)',
+            padding: '6px 12px',
+            borderRadius: '8px',
+            fontSize: '0.82rem',
+            fontWeight: 600,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            cursor: loading ? 'not-allowed' : 'pointer'
+          }}
           title="Actualizar saldos"
         >
-          <RefreshCw size={16} className={loading ? "spin-animation text-red-600" : ""} />
-          <span className="text-sm font-semibold">Sync</span>
+          <RefreshCw size={14} className={loading ? "spin-animation" : ""} />
+          <span>Sincronizar</span>
         </button>
       </div>
-      <p className="text-gray-500 mb-4 text-sm">Selecciona un cliente para registrar un cobro</p>
+      
+      <p style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', marginBottom: '16px' }}>
+        Selecciona un cliente para registrar un cobro o abono a su cuenta
+      </p>
 
-      {/* Chips horizontales de localidad (sincronizados) */}
+      {/* Chips de filtro por localidad */}
       {uniqueCities.length > 0 && setSelectedCityFilters && (
         <div style={{ 
           display: 'flex', 
           gap: '8px', 
           overflowX: 'auto', 
-          padding: '8px 4px', 
-          marginBottom: '16px', 
+          padding: '4px 2px 14px 2px', 
           WebkitOverflowScrolling: 'touch',
           scrollbarWidth: 'none',
         }}>
@@ -361,11 +685,11 @@ const MobileCobros: React.FC<MobileCobrosProps> = ({
               fontWeight: 600,
               border: '1px solid',
               borderColor: selectedCityFilters.length === 0 ? 'var(--text-primary)' : 'var(--border-color)',
-              backgroundColor: selectedCityFilters.length === 0 ? 'var(--text-primary)' : '#fff',
-              color: selectedCityFilters.length === 0 ? '#fff' : 'var(--text-secondary)',
+              backgroundColor: selectedCityFilters.length === 0 ? 'var(--text-primary)' : '#FFFFFF',
+              color: selectedCityFilters.length === 0 ? '#FFFFFF' : 'var(--text-secondary)',
               whiteSpace: 'nowrap',
               cursor: 'pointer',
-              transition: 'all 0.2s ease'
+              transition: 'all 0.15s ease'
             }}
           >
             Todas
@@ -389,12 +713,12 @@ const MobileCobros: React.FC<MobileCobrosProps> = ({
                   fontSize: '0.8rem',
                   fontWeight: 600,
                   border: '1px solid',
-                  borderColor: isActive ? 'var(--accent-color)' : 'var(--border-color)',
-                  backgroundColor: isActive ? 'rgba(var(--color-corp-red-rgb), 0.08)' : '#fff',
-                  color: isActive ? 'var(--accent-color)' : 'var(--text-secondary)',
+                  borderColor: isActive ? 'var(--color-corp-red)' : 'var(--border-color)',
+                  backgroundColor: isActive ? 'rgba(227, 6, 19, 0.08)' : '#FFFFFF',
+                  color: isActive ? 'var(--color-corp-red)' : 'var(--text-secondary)',
                   whiteSpace: 'nowrap',
                   cursor: 'pointer',
-                  transition: 'all 0.2s ease'
+                  transition: 'all 0.15s ease'
                 }}
               >
                 {city}
@@ -404,36 +728,86 @@ const MobileCobros: React.FC<MobileCobrosProps> = ({
         </div>
       )}
 
+      {/* Lista de Clientes */}
       {filteredPersonas.length === 0 ? (
-        <div className="text-center py-10 bg-white rounded-lg border border-gray-100 shadow-sm">
-          <FileText className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-          <p className="text-gray-500">
+        <div style={{
+          textAlign: 'center',
+          padding: '40px 20px',
+          backgroundColor: '#FFFFFF',
+          borderRadius: '12px',
+          border: '1px solid var(--border-color)',
+          boxShadow: 'var(--shadow-sm)'
+        }}>
+          <FileText size={40} style={{ color: 'var(--text-muted)', marginBottom: '12px' }} />
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', margin: 0 }}>
             {personas.length === 0 
-              ? 'No hay saldos pendientes.' 
-              : 'No hay saldos pendientes en las rutas seleccionadas.'}
+              ? 'No hay clientes con saldos pendientes actualmente.' 
+              : 'No hay saldos pendientes en las rutas/localidades seleccionadas.'}
           </p>
         </div>
       ) : (
-        <div className="space-y-3">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
           {filteredPersonas.map((p) => (
             <div 
               key={p.id} 
               onClick={() => {
                 setSelectedPersona(p);
-                setAmount(p.outstandingBalance.toString()); // Pre-fill con el total
+                setAmount(p.outstandingBalance > 0 ? p.outstandingBalance.toString() : '');
               }}
-              className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex justify-between items-center cursor-pointer hover:shadow-md transition-shadow active:scale-[0.98]"
+              style={{
+                backgroundColor: '#FFFFFF',
+                padding: '14px 16px',
+                borderRadius: '12px',
+                border: '1px solid var(--border-color)',
+                boxShadow: 'var(--shadow-sm)',
+                display: 'flex',
+                justify: 'space-between',
+                alignItems: 'center',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease'
+              }}
             >
               <div>
-                <h3 className="font-bold text-gray-800 text-lg">{p.name}</h3>
-                {p.city && <p className="text-xs text-gray-500 uppercase font-semibold tracking-wide">{p.city}</p>}
+                <h3 style={{ fontSize: '0.98rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
+                  {p.name}
+                </h3>
+                {p.city && (
+                  <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    {p.city}
+                  </span>
+                )}
               </div>
-              <div className="text-right">
-                <p className="text-xs text-gray-500 font-semibold mb-0.5">SALDO</p>
+              
+              <div style={{ textAlign: 'right' }}>
+                <span style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-muted)', display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  SALDO
+                </span>
                 {p.outstandingBalance < 0 ? (
-                  <p className="text-sm font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100">{formatCurrency(Math.abs(p.outstandingBalance))} (A Favor)</p>
+                  <span style={{
+                    fontSize: '0.85rem',
+                    fontWeight: 700,
+                    color: '#059669',
+                    backgroundColor: '#ECFDF5',
+                    padding: '3px 8px',
+                    borderRadius: '6px',
+                    border: '1px solid #A7F3D0',
+                    display: 'inline-block'
+                  }}>
+                    {formatCurrency(Math.abs(p.outstandingBalance))} (A Favor)
+                  </span>
                 ) : (
-                  <p className="text-sm font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded border border-red-100">{formatCurrency(p.outstandingBalance)}</p>
+                  <span style={{
+                    fontSize: '0.9rem',
+                    fontWeight: 700,
+                    color: '#DC2626',
+                    backgroundColor: '#FEF2F2',
+                    padding: '3px 8px',
+                    borderRadius: '6px',
+                    border: '1px solid #FCA5A5',
+                    display: 'inline-block'
+                  }}>
+                    {formatCurrency(p.outstandingBalance)}
+                  </span>
                 )}
               </div>
             </div>
