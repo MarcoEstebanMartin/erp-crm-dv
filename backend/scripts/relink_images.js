@@ -5,10 +5,26 @@ const path = require('path');
 const prisma = new PrismaClient();
 
 async function main() {
+  const masterPath = path.join(__dirname, '../../ARCHIVOS/fotos/Productos');
   const uploadsPath = path.join(__dirname, '../uploads/products');
   if (!fs.existsSync(uploadsPath)) {
-    console.error('❌ No existe la carpeta /uploads/products');
-    return;
+    fs.mkdirSync(uploadsPath, { recursive: true });
+  }
+
+  if (fs.existsSync(masterPath)) {
+    const masterFiles = fs.readdirSync(masterPath);
+    let restoredMaster = 0;
+    masterFiles.forEach(f => {
+      const srcFile = path.join(masterPath, f);
+      const dstFile = path.join(uploadsPath, f);
+      if (!fs.existsSync(dstFile) || fs.statSync(srcFile).size !== fs.statSync(dstFile).size) {
+        fs.copyFileSync(srcFile, dstFile);
+        restoredMaster++;
+      }
+    });
+    if (restoredMaster > 0) {
+      console.log(`🛡️ Sincronizadas ${restoredMaster} fotos maestras originales desde ARCHIVOS/fotos/Productos`);
+    }
   }
 
   const files = fs.readdirSync(uploadsPath);

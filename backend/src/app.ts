@@ -69,6 +69,30 @@ app.use('/uploads', express.static(uploadsDir, {
 }));
 
 const archivosDir = process.env.ARCHIVOS_PATH || path.join(__dirname, '../../ARCHIVOS');
+const masterProductosFotosDir = path.join(archivosDir, 'fotos/Productos');
+
+// Auto-restaurar imágenes maestras de productos al arrancar el servidor
+if (fs.existsSync(masterProductosFotosDir)) {
+  try {
+    const masterFiles = fs.readdirSync(masterProductosFotosDir);
+    masterFiles.forEach(f => {
+      const srcFile = path.join(masterProductosFotosDir, f);
+      const dstFile = path.join(productsUploadsDir, f);
+      if (!fs.existsSync(dstFile) || fs.statSync(srcFile).size !== fs.statSync(dstFile).size) {
+        fs.copyFileSync(srcFile, dstFile);
+      }
+    });
+  } catch (err) {
+    console.error('⚠️ Error al auto-sincronizar imágenes maestras:', err);
+  }
+
+  app.use('/uploads/products', express.static(masterProductosFotosDir, {
+    maxAge: 0,
+    etag: true,
+    lastModified: true
+  }));
+}
+
 app.use('/api/purchases/files', express.static(archivosDir));
 
 // Montar Rutas

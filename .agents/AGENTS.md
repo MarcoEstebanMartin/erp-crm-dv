@@ -31,3 +31,8 @@ Este archivo define las reglas de comportamiento, estética y calidad profesiona
   1. Ejecutar `ipconfig` en la terminal para obtener la dirección IPv4 local activa.
   2. Iniciar el entorno de desarrollo local ejecutando `npm run dev` en la raíz del proyecto como tarea en segundo plano.
   3. Mostrar un resumen claro con el estado de los servidores, la IP local / enlace de acceso directo para el celular (ej. `http://<IP>:5173`) y el recordatorio de las credenciales de prueba disponibles para vendedores y administración.
+
+## 6. Protección de Imágenes de Productos y Archivos Maestros
+- **Carpeta Maestra Inmutable (`ARCHIVOS/fotos/Productos`)**: La carpeta `ARCHIVOS/fotos/Productos/` es el repositorio maestro sagrado e inmutable de imágenes de catálogo. Jamás se deben eliminar ni sobrescribir archivos en ese directorio con scripts automatizados o reemplazos masivos.
+- **Auto-Restauración Transparente**: El servidor backend (`app.ts`) y los scripts de vinculación sincronizarán y auto-restaurarán automáticamente las imágenes desde `ARCHIVOS/fotos/Productos/` hacia `backend/uploads/products/` en cada inicio del sistema, garantizando inmunidad ante borrados accidentales o desajustes de almacenamiento.
+
