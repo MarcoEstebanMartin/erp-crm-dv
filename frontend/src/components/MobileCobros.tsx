@@ -32,6 +32,7 @@ const MobileCobros: React.FC<MobileCobrosProps> = ({
   const [amount, setAmount] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('CASH');
   const [checkNumber, setCheckNumber] = useState('');
+  const [isEcheq, setIsEcheq] = useState(false);
   const [billingType, setBillingType] = useState('OFFICIAL'); // OFFICIAL = A, INTERNAL = X
   const [loading, setLoading] = useState(false);
   const [successReceipt, setSuccessReceipt] = useState<any>(null);
@@ -50,6 +51,7 @@ const MobileCobros: React.FC<MobileCobrosProps> = ({
       setSelectedInvoiceId(null);
       setBillingType('OFFICIAL');
       setCheckNumber('');
+      setIsEcheq(false);
     }
   }, [selectedPersona]);
 
@@ -129,13 +131,17 @@ const MobileCobros: React.FC<MobileCobrosProps> = ({
     
     setLoading(true);
     try {
+      const finalCheckStr = paymentMethod === 'CHECK' 
+        ? (isEcheq ? `E-CHEQ #${checkNumber.trim()}` : checkNumber.trim()) 
+        : undefined;
+
       const res = await axios.post(`${API_BASE_URL}/collections/register`, {
         personaId: selectedPersona.id,
         amount: parsedAmount,
         paymentMethod,
         billingType,
         orderId: selectedInvoiceId,
-        checkNumber: paymentMethod === 'CHECK' ? checkNumber.trim() : undefined
+        checkNumber: finalCheckStr
       }, {
         headers: { Authorization: `Bearer ${localStorage.getItem('auth_token')}` }
       });
@@ -210,14 +216,16 @@ const MobileCobros: React.FC<MobileCobrosProps> = ({
             <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #F3F4F6' }}>
               <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Medio de Pago</span>
               <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-                {successReceipt.paymentMethod === 'CASH' ? 'Efectivo' : successReceipt.paymentMethod === 'BANK_TRANSFER' ? 'Transferencia (Mercado Pago / Banco)' : 'Cheque'}
+                {successReceipt.paymentMethod === 'CASH' ? 'Efectivo' : successReceipt.paymentMethod === 'BANK_TRANSFER' ? 'Transferencia (Mercado Pago / Banco)' : (isEcheq ? 'Cheque (E-Cheq)' : 'Cheque Físico')}
               </span>
             </div>
 
             {checkNumber && paymentMethod === 'CHECK' && (
               <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #F3F4F6' }}>
                 <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>N° de Cheque</span>
-                <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-primary)' }}>{checkNumber}</span>
+                <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                  {isEcheq ? `📱 E-CHEQ #${checkNumber}` : `📄 ${checkNumber}`}
+                </span>
               </div>
             )}
 
@@ -248,7 +256,7 @@ const MobileCobros: React.FC<MobileCobrosProps> = ({
           </div>
           
           <button 
-            onClick={() => { setSuccessReceipt(null); setSelectedPersona(null); setAmount(''); setCheckNumber(''); }}
+            onClick={() => { setSuccessReceipt(null); setSelectedPersona(null); setAmount(''); setCheckNumber(''); setIsEcheq(false); }}
             style={{
               width: '100%',
               backgroundColor: 'var(--accent-color)',
@@ -269,6 +277,7 @@ const MobileCobros: React.FC<MobileCobrosProps> = ({
       </div>
     );
   }
+
 
   // 2. Vista de Formulario de Cobro (Cliente Seleccionado)
   if (selectedPersona) {
@@ -609,7 +618,7 @@ const MobileCobros: React.FC<MobileCobrosProps> = ({
 
           {/* Campo de Número de Cheque si selecciona Cheque */}
           {paymentMethod === 'CHECK' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <label style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
                 Número de Cheque *
               </label>
@@ -632,6 +641,40 @@ const MobileCobros: React.FC<MobileCobrosProps> = ({
                   boxShadow: 'var(--shadow-sm)'
                 }}
               />
+
+              {/* Checkbox / Toggle para E-Cheq */}
+              <label style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                backgroundColor: isEcheq ? '#F0F9FF' : '#F9FAFB',
+                border: `1px solid ${isEcheq ? '#0EA5E9' : 'var(--border-color)'}`,
+                padding: '10px 14px',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+                userSelect: 'none'
+              }}>
+                <input
+                  type="checkbox"
+                  checked={isEcheq}
+                  onChange={(e) => setIsEcheq(e.target.checked)}
+                  style={{
+                    width: '18px',
+                    height: '18px',
+                    accentColor: '#0284C7',
+                    cursor: 'pointer'
+                  }}
+                />
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  <span style={{ fontSize: '0.85rem', fontWeight: 700, color: isEcheq ? '#0369A1' : 'var(--text-primary)' }}>
+                    📱 Es E-Cheq (Cheque Electrónico / Digital)
+                  </span>
+                  <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>
+                    Marcar si el cheque ingresó por plataforma bancaria digital sin papel físico.
+                  </span>
+                </div>
+              </label>
             </div>
           )}
 
