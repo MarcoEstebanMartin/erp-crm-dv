@@ -39,6 +39,75 @@ export const getPendingCollections = async (req: AuthenticatedRequest, res: Resp
   }
 };
 
+export const getCollectionsSummary = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    // 1. Cuentas por cobrar a clientes (outstandingBalance > 0)
+    const outstandingAggregate = await prisma.persona.aggregate({
+      where: {
+        isClient: true,
+        isActive: true,
+        outstandingBalance: { gt: 0 }
+      },
+      _sum: {
+        outstandingBalance: true
+      },
+      _count: {
+        id: true
+      }
+    });
+
+    const totalOutstandingBalance = Number(outstandingAggregate._sum.outstandingBalance || 0);
+    const pendingClientsCount = outstandingAggregate._count.id || 0;
+
+    // 2. Cajas y rendiciones pendientes (Ingresos sin verificar)
+    const pendingTransactions = await prisma.transaction.findMany({
+      where: {
+        type: TransactionType.INCOME,
+        verified: false
+      },
+      select: {
+        amount: true,
+        userId: true,
+        order: {
+          select: {
+            deliveryRouteId: true
+          }
+        }
+      }
+    });
+
+    let pendingRendicionesAmount = 0;
+    const sellersSet = new Set<number>();
+    const driversSet = new Set<number>();
+
+    for (const tx of pendingTransactions) {
+      pendingRendicionesAmount += Number(tx.amount || 0);
+      if (tx.order?.deliveryRouteId) {
+        driversSet.add(tx.order.deliveryRouteId);
+      } else if (tx.userId) {
+        sellersSet.add(tx.userId);
+      }
+    }
+
+    const pendingSellersCount = sellersSet.size;
+    const pendingDriversCount = driversSet.size;
+    const pendingRendicionesCount = pendingSellersCount + pendingDriversCount;
+
+    res.json({
+      totalOutstandingBalance,
+      pendingClientsCount,
+      pendingRendicionesAmount,
+      pendingRendicionesCount,
+      pendingSellersCount,
+      pendingDriversCount
+    });
+  } catch (error) {
+    console.error('Error al obtener resumen de cobranzas:', error);
+    res.status(500).json({ error: 'Error al obtener resumen de cobranzas' });
+  }
+};
+
+
 export const registerCollection = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user?.id;

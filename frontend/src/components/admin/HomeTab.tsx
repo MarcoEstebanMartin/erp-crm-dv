@@ -48,6 +48,31 @@ export default function HomeTab({
   const armadosOrdersCount = useMemo(() => orders.filter(o => o.status === 'PREPARING' || (o.status === 'PREPARED' && !o.invoiceNumber)).length, [orders]);
   const facturadosDespachadosOrdersCount = useMemo(() => orders.filter(o => o.invoiceNumber || o.status === 'DELIVERED' || o.status === 'BILLED' || (o.deliveryRoute && (o.deliveryRoute.status === 'IN_TRANSIT' || o.deliveryRoute.status === 'COMPLETED'))).length, [orders]);
 
+  // Estados para resumen de finanzas, cuentas por cobrar y cajas pendientes
+  const [financesSummary, setFinancesSummary] = useState<{
+    totalOutstandingBalance: number;
+    pendingClientsCount: number;
+    pendingRendicionesAmount: number;
+    pendingRendicionesCount: number;
+    pendingSellersCount: number;
+    pendingDriversCount: number;
+  } | null>(null);
+  const [loadingFinances, setLoadingFinances] = useState(false);
+
+  const fetchFinancesSummary = async () => {
+    setLoadingFinances(true);
+    try {
+      const res = await api.getCollectionsSummary();
+      if (res) {
+        setFinancesSummary(res);
+      }
+    } catch (err) {
+      console.error('Error al obtener resumen de finanzas/rendiciones:', err);
+    } finally {
+      setLoadingFinances(false);
+    }
+  };
+
   // Estados para Cronograma Semanal
   const [weeklyScheduleData, setWeeklyScheduleData] = useState<{ currentWeek: string; items: any[] }>({ currentWeek: 'SEMANA_1', items: [] });
   const [loadingSchedule, setLoadingSchedule] = useState(false);
@@ -73,6 +98,7 @@ export default function HomeTab({
 
   useEffect(() => {
     fetchWeeklySchedule();
+    fetchFinancesSummary();
   }, []);
 
   const handleToggleCurrentWeek = async () => {
@@ -328,6 +354,73 @@ export default function HomeTab({
         </div>
       </div>
 
+      {/* Grilla de Resumen Financiero & Rendiciones (2 Tarjetas Principales para Administradores) */}
+      <div className="dashboard-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px', marginTop: '16px' }}>
+        {/* Dinero por Cobrar */}
+        <div 
+          className="card stat-card" 
+          style={{ 
+            borderLeft: '4px solid #8B5CF6', 
+            padding: '16px 20px',
+            background: 'var(--background-card)',
+            borderRadius: '12px',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.03)' 
+          }} 
+          onClick={() => {
+            setClientSearchModal({ open: true, action: 'ledger' });
+            setQuickClientQuery('');
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div className="stat-label" style={{ fontWeight: 700, fontSize: '0.92rem', color: 'var(--text-secondary)' }}>
+              💳 Dinero por Cobrar (Cuentas Corrientes)
+            </div>
+            <span style={{ fontSize: '1.2rem' }}>📊</span>
+          </div>
+          <div className="stat-value" style={{ color: '#8B5CF6', fontSize: '1.8rem', fontWeight: 800, margin: '6px 0 2px 0' }}>
+            {loadingFinances ? 'Cargando...' : `$ ${financesSummary?.totalOutstandingBalance?.toLocaleString('es-AR') ?? '0'}`}
+          </div>
+          <div className="stat-desc" style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+            {financesSummary?.pendingClientsCount ? `${financesSummary.pendingClientsCount} clientes con saldo pendiente` : 'Sin saldos deudores acumulados'}
+          </div>
+        </div>
+
+        {/* Recordatorio de Cajas Pendientes */}
+        <div 
+          className="card stat-card" 
+          style={{ 
+            borderLeft: (financesSummary?.pendingRendicionesCount || 0) > 0 ? '4px solid #E30613' : '4px solid #10B981', 
+            padding: '16px 20px',
+            background: 'var(--background-card)',
+            borderRadius: '12px',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.03)' 
+          }} 
+          onClick={() => setActiveTab('rendiciones')}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div className="stat-label" style={{ fontWeight: 700, fontSize: '0.92rem', color: 'var(--text-secondary)' }}>
+              📬 Cajas & Rendiciones Pendientes (Dinero a Rendir)
+            </div>
+            <span style={{ fontSize: '1.2rem' }}>💰</span>
+          </div>
+          <div className="stat-value" style={{ color: (financesSummary?.pendingRendicionesCount || 0) > 0 ? '#E30613' : '#10B981', fontSize: '1.8rem', fontWeight: 800, margin: '6px 0 2px 0' }}>
+            {loadingFinances ? 'Cargando...' : `$ ${financesSummary?.pendingRendicionesAmount?.toLocaleString('es-AR') ?? '0'}`}
+          </div>
+          <div className="stat-desc" style={{ fontSize: '0.82rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            {(financesSummary?.pendingRendicionesCount || 0) > 0 ? (
+              <>
+                <span style={{ backgroundColor: '#FEE2E2', color: '#DC2626', padding: '2px 8px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 700 }}>
+                  ⚠️ {financesSummary?.pendingRendicionesCount} caja(s) por rendir
+                </span>
+                <span>({financesSummary?.pendingSellersCount || 0} vend. / {financesSummary?.pendingDriversCount || 0} choc.)</span>
+              </>
+            ) : (
+              <span style={{ color: '#10B981', fontWeight: 600 }}>✓ Todas las cajas rendidas y al día</span>
+            )}
+          </div>
+        </div>
+      </div>
+
       {/* Accesos Directos (Acciones Rápidas) */}
       <div style={{ marginTop: '24px' }}>
         <style>{`
@@ -358,6 +451,18 @@ export default function HomeTab({
           gap: '16px' 
         }}>
           {[
+            {
+              title: 'Rendición de Cajas',
+              desc: (financesSummary?.pendingRendicionesCount || 0) > 0 
+                ? `${financesSummary?.pendingRendicionesCount} pendientes ($${Math.round(financesSummary?.pendingRendicionesAmount || 0).toLocaleString('es-AR')})` 
+                : 'Auditar rendiciones al día',
+              badge: (financesSummary?.pendingRendicionesCount || 0) > 0 ? `${financesSummary?.pendingRendicionesCount}` : null,
+              badgeColor: '#E30613',
+              icon: <DollarSign size={20} style={{ color: (financesSummary?.pendingRendicionesCount || 0) > 0 ? '#E30613' : 'var(--text-secondary)' }} />,
+              onClick: () => {
+                setActiveTab('rendiciones');
+              }
+            },
             {
               title: 'Facturar Directo',
               desc: 'Emitir comprobante de venta',
@@ -421,9 +526,11 @@ export default function HomeTab({
               onClick: () => setIsQuickSearchModalOpen(true)
             },
             {
-              title: 'Cuenta Corriente',
-              desc: 'Estado y movimientos de CC',
-              icon: <BookOpen size={20} style={{ color: 'var(--text-secondary)' }} />,
+              title: 'Cuentas por Cobrar',
+              desc: financesSummary?.totalOutstandingBalance 
+                ? `$${Math.round(financesSummary.totalOutstandingBalance).toLocaleString('es-AR')} por cobrar` 
+                : 'Estado de Cuenta Corriente',
+              icon: <BookOpen size={20} style={{ color: '#8B5CF6' }} />,
               onClick: () => {
                 setClientSearchModal({ open: true, action: 'ledger' });
                 setQuickClientQuery('');
@@ -446,7 +553,7 @@ export default function HomeTab({
                 setShowGastoModal(true);
               }
             }
-          ].map((act) => (
+          ].map((act: any) => (
             <button
               key={act.title}
               onClick={act.onClick}
@@ -466,17 +573,31 @@ export default function HomeTab({
                 transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
               }}
             >
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: '36px',
-                height: '36px',
-                borderRadius: '6px',
-                backgroundColor: 'var(--bg-light, #f5f5f7)',
-                border: '1px solid var(--border-color, #e5e5e7)'
-              }}>
-                {act.icon}
+              <div style={{ display: 'flex', width: '100%', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '6px',
+                  backgroundColor: 'var(--bg-light, #f5f5f7)',
+                  border: '1px solid var(--border-color, #e5e5e7)'
+                }}>
+                  {act.icon}
+                </div>
+                {act.badge && (
+                  <span style={{
+                    backgroundColor: act.badgeColor || '#E30613',
+                    color: '#ffffff',
+                    fontSize: '0.72rem',
+                    fontWeight: 700,
+                    padding: '2px 8px',
+                    borderRadius: '10px'
+                  }}>
+                    {act.badge}
+                  </span>
+                )}
               </div>
               <div>
                 <div style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-primary)' }}>{act.title}</div>

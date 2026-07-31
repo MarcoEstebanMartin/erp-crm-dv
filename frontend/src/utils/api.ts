@@ -1041,6 +1041,10 @@ export const api = {
     return res.data;
   },
 
+  getCollectionsSummary: async () => {
+    return await request('/collections/summary');
+  },
+
   getPendingRendiciones: async () => {
     return await request('/collections/rendiciones');
   },
