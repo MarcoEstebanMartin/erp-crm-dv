@@ -53,6 +53,34 @@ const getWhatsAppSendLink = (phone: string, clientName: string, receiptNumber: s
   return `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(text)}`;
 };
 
+const getDetectedRoutesAndCities = (transactions: any[]) => {
+  if (!transactions || transactions.length === 0) return { primary: '', list: [] };
+
+  const counts: Record<string, number> = {};
+
+  transactions.forEach((tx: any) => {
+    const loc = tx.persona?.city || tx.persona?.route || tx.persona?.saleRoute?.name;
+    if (loc && loc.trim()) {
+      const cleanLoc = loc.trim();
+      counts[cleanLoc] = (counts[cleanLoc] || 0) + 1;
+    }
+  });
+
+  const list = Object.keys(counts).map(key => ({
+    name: key,
+    count: counts[key]
+  })).sort((a, b) => b.count - a.count);
+
+  if (list.length === 0) return { primary: '', list: [] };
+
+  const namesStr = list.map(item => item.name).join(', ');
+
+  return {
+    primary: namesStr,
+    list
+  };
+};
+
 const RendicionesDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'sellers' | 'routes' | 'diaria'>('sellers');
   const [sellers, setSellers] = useState<SellerGroup[]>([]);
@@ -152,7 +180,12 @@ const RendicionesDashboard: React.FC = () => {
     setAuditTarget({ type, data });
     setRealCash('');
     setRealChecks('');
-    setAuditRouteNote(type === 'route' ? (data.driverName ? `Ruta de ${data.driverName}` : '') : '');
+    if (type === 'route') {
+      setAuditRouteNote(data.driverName ? `Ruta de ${data.driverName}` : '');
+    } else {
+      const detected = getDetectedRoutesAndCities(data.transactions);
+      setAuditRouteNote(detected.primary);
+    }
     setAuditNotes('');
     setDeclaredChecksList([]);
     setNewCheckNumber('');
@@ -575,9 +608,29 @@ const RendicionesDashboard: React.FC = () => {
                     </div>
                     <div>
                       <h4 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 600 }}>{item.user.username.toUpperCase()}</h4>
-                      <p style={{ margin: '4px 0 0 0', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                        {item.transactions.length} recibo(s) pendiente(s) de rendir
-                      </p>
+                      <div style={{ margin: '4px 0 0 0', fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                        <span>{item.transactions.length} recibo(s) pendiente(s) de rendir</span>
+                        {(() => {
+                          const detected = getDetectedRoutesAndCities(item.transactions);
+                          if (!detected.primary) return null;
+                          return (
+                            <span style={{ 
+                              backgroundColor: '#f1f5f9', 
+                              border: '1px solid #cbd5e1', 
+                              padding: '1px 8px', 
+                              borderRadius: '10px', 
+                              fontSize: '0.74rem', 
+                              color: '#334155', 
+                              fontWeight: 500,
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '3px'
+                            }}>
+                              📍 {detected.primary}
+                            </span>
+                          );
+                        })()}
+                      </div>
                     </div>
                   </div>
 
@@ -987,6 +1040,56 @@ const RendicionesDashboard: React.FC = () => {
                           onChange={(e) => setAuditRouteNote(e.target.value)}
                           style={{ width: '100%', fontSize: '0.9rem' }}
                         />
+                        {auditTarget?.data?.transactions && (() => {
+                          const detected = getDetectedRoutesAndCities(auditTarget.data.transactions);
+                          if (detected.list.length === 0) return null;
+                          return (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '6px', flexWrap: 'wrap' }}>
+                              <span style={{ fontSize: '0.73rem', color: 'var(--text-secondary)', fontWeight: 500 }}>📍 Detectado en recibos:</span>
+                              {detected.list.map((item, idx) => (
+                                <button
+                                  key={idx}
+                                  type="button"
+                                  onClick={() => setAuditRouteNote(item.name)}
+                                  style={{
+                                    fontSize: '0.72rem',
+                                    padding: '2px 8px',
+                                    borderRadius: '12px',
+                                    backgroundColor: auditRouteNote === item.name ? '#e0f2fe' : '#f1f5f9',
+                                    border: auditRouteNote === item.name ? '1px solid #0284c7' : '1px solid #cbd5e1',
+                                    color: auditRouteNote === item.name ? '#0369a1' : '#334155',
+                                    cursor: 'pointer',
+                                    fontWeight: 500,
+                                    transition: 'all 0.15s ease'
+                                  }}
+                                  title={`Hacer clic para definir esta ruta (${item.count} recibo${item.count > 1 ? 's' : ''})`}
+                                >
+                                  {item.name} ({item.count})
+                                </button>
+                              ))}
+                              {detected.list.length > 1 && (
+                                <button
+                                  type="button"
+                                  onClick={() => setAuditRouteNote(detected.primary)}
+                                  style={{
+                                    fontSize: '0.72rem',
+                                    padding: '2px 8px',
+                                    borderRadius: '12px',
+                                    backgroundColor: auditRouteNote === detected.primary ? '#dbeafe' : '#eff6ff',
+                                    border: '1px solid #93c5fd',
+                                    color: '#1d4ed8',
+                                    cursor: 'pointer',
+                                    fontWeight: 600,
+                                    transition: 'all 0.15s ease'
+                                  }}
+                                  title="Combinar todos los pueblos/rutas detectados"
+                                >
+                                  Todos ({detected.primary})
+                                </button>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </div>
 
                       <div className="form-group" style={{ marginBottom: '0px' }}>
@@ -1079,7 +1182,14 @@ const RendicionesDashboard: React.FC = () => {
                               <td style={{ padding: '8px', fontWeight: 500 }}>
                                 {tx.receiptNumber || `Pedido #${tx.orderId || 'S/N'}`}
                               </td>
-                              <td style={{ padding: '8px' }}>{tx.persona?.name || 'Desconocido'}</td>
+                              <td style={{ padding: '8px' }}>
+                                <div style={{ fontWeight: 500 }}>{tx.persona?.name || 'Desconocido'}</div>
+                                {(tx.persona?.city || tx.persona?.route || tx.persona?.saleRoute?.name) && (
+                                  <div style={{ fontSize: '0.72rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '3px', marginTop: '2px' }}>
+                                    <span>📍 {tx.persona?.city || tx.persona?.route || tx.persona?.saleRoute?.name}</span>
+                                  </div>
+                                )}
+                              </td>
                               <td style={{ padding: '8px' }}>{tx.billingType === 'OFFICIAL' ? 'A' : 'X'}</td>
                               <td style={{ padding: '8px' }}>
                                 <span style={{ 

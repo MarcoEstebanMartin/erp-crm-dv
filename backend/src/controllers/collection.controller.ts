@@ -201,7 +201,15 @@ export const getPendingRendiciones = async (req: AuthenticatedRequest, res: Resp
       },
       include: {
         user: { select: { id: true, username: true, role: true } },
-        persona: { select: { id: true, name: true } },
+        persona: { 
+          select: { 
+            id: true, 
+            name: true,
+            city: true,
+            route: true,
+            saleRoute: { select: { id: true, name: true } }
+          } 
+        },
         order: {
           include: {
             deliveryRoute: true
