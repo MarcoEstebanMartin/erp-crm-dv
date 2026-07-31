@@ -4,7 +4,8 @@ import {
   getReceipt,
   getPendingCollections,
   getPendingRendiciones,
-  verifyRendicion
+  verifyRendicion,
+  deleteReceipt
 } from '../controllers/collection.controller';
 import { authenticateJWT, requireRole } from '../middlewares/auth';
 import { Role } from '@prisma/client';
@@ -18,6 +19,8 @@ router.get('/pending', authenticateJWT, getPendingCollections);
 router.post('/register', authenticateJWT, registerCollection);
 // Obtener detalle de un recibo (para compartir)
 router.get('/receipt/:id', getReceipt); // Puede ser público o requerir auth dependiendo del diseño
+// Eliminar/anular un recibo erróneo (solo unverified)
+router.delete('/receipt/:id', authenticateJWT, requireRole([Role.ADMIN, Role.FACTURACION]), deleteReceipt);
 
 // --- RUTAS ADMINISTRATIVAS (Cajeros) ---
 // Obtener rendiciones pendientes agrupadas por vendedor
@@ -26,3 +29,4 @@ router.get('/rendiciones', authenticateJWT, requireRole([Role.ADMIN, Role.FACTUR
 router.post('/rendiciones/verify', authenticateJWT, requireRole([Role.ADMIN, Role.FACTURACION]), verifyRendicion);
 
 export default router;
+

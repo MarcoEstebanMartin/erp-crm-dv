@@ -360,13 +360,19 @@ export const api = {
     return res.order;
   },
 
-  invoiceOrder: async (id: number, billingType: BillingType, paymentMethod?: PaymentMethod, paymentDescription?: string, bankAccountId?: number) => {    
-
+  invoiceOrder: async (id: number, billingType: BillingType, paymentMethod?: PaymentMethod, paymentDescription?: string, bankAccountId?: number, deferCae?: boolean) => {    
     const res = await request(`/orders/${id}/invoice`, {
       method: 'POST',
-      body: JSON.stringify({ billingType, paymentMethod, paymentDescription, bankAccountId })
+      body: JSON.stringify({ billingType, paymentMethod, paymentDescription, bankAccountId, deferCae })
     });
     return res.order;
+  },
+
+  requestCaeForOrder: async (id: number) => {
+    const res = await request(`/orders/${id}/request-cae`, {
+      method: 'POST',
+    });
+    return res;
   },
 
   updateOrderWeights: async (id: number, items: { orderItemId: number; weight: number }[]) => {
@@ -1045,6 +1051,13 @@ export const api = {
       body: JSON.stringify(payload)
     });
   },
+
+  deleteReceipt: async (id: number) => {
+    return await request(`/collections/receipt/${id}`, {
+      method: 'DELETE'
+    });
+  },
+
 
   getWeeklyReports: async () => {
     return await request('/admin/reports/weekly');

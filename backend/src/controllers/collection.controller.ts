@@ -520,3 +520,86 @@ export const verifyRendicion = async (req: AuthenticatedRequest, res: Response) 
     res.status(500).json({ error: 'Error interno del servidor al procesar la rendición.' });
   }
 };
+
+export const deleteReceipt = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const adminId = req.user?.id;
+    const userRole = req.user?.role;
+    const { id } = req.params;
+
+    if (!adminId) {
+      return res.status(401).json({ error: 'No autorizado' });
+    }
+
+    if (userRole !== Role.ADMIN && userRole !== Role.FACTURACION) {
+      return res.status(403).json({ error: 'No tienes permisos para eliminar o anular recibos' });
+    }
+
+    const txId = Number(id);
+    if (isNaN(txId)) {
+      return res.status(400).json({ error: 'ID de recibo inválido' });
+    }
+
+    const tx = await prisma.transaction.findUnique({
+      where: { id: txId },
+      include: { persona: true }
+    });
+
+    if (!tx || tx.type !== TransactionType.INCOME) {
+      return res.status(404).json({ error: 'Recibo no encontrado' });
+    }
+
+    if (tx.verified) {
+      return res.status(400).json({ 
+        error: 'No se puede eliminar un recibo que ya ha sido verificado y cerrado en una rendición.' 
+      });
+    }
+
+    const amountToRestore = Number(tx.amount);
+
+    await prisma.$transaction(async (prismaTx) => {
+      // 1. Restablecer e incrementar el saldo pendiente del cliente (devuelve la deuda)
+      if (tx.personaId) {
+        await prismaTx.persona.update({
+          where: { id: tx.personaId },
+          data: {
+            outstandingBalance: { increment: amountToRestore }
+          }
+        });
+      }
+
+      // 2. Eliminar la transacción de la base de datos
+      await prismaTx.transaction.delete({
+        where: { id: tx.id }
+      });
+
+      // 3. Crear registro de auditoría
+      await prismaTx.auditLog.create({
+        data: {
+          userId: adminId,
+          action: 'DELETE_COLLECTION_RECEIPT',
+          entityType: 'Transaction',
+          entityId: tx.id,
+          oldValues: {
+            receiptNumber: tx.receiptNumber,
+            amount: amountToRestore,
+            personaId: tx.personaId,
+            personaName: tx.persona?.name,
+            paymentMethod: tx.paymentMethod,
+            billingType: tx.billingType
+          }
+        }
+      });
+    });
+
+    res.json({ 
+      status: 'success', 
+      message: `Recibo ${tx.receiptNumber || 'N° ' + tx.id} eliminado correctamente. Se restableció $${amountToRestore.toLocaleString()} al saldo pendiente del cliente.` 
+    });
+
+  } catch (error) {
+    console.error('Error al eliminar recibo:', error);
+    res.status(500).json({ error: 'Error interno del servidor al eliminar el recibo' });
+  }
+};
+

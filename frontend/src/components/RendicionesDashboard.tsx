@@ -13,7 +13,8 @@ import {
   Lock,
   Unlock,
   Eye,
-  MapPin
+  MapPin,
+  Trash2
 } from 'lucide-react';
 import ArqueoCajaModal from './ArqueoCajaModal';
 
@@ -264,7 +265,50 @@ const RendicionesDashboard: React.FC = () => {
       setAmountInput('');
       fetchDrawers();
     } catch (err: any) {
-      alert(err.message || 'Ocurrió un error al procesar la caja.');
+  const handleDeleteReceipt = async (tx: any) => {
+    const receiptName = tx.receiptNumber || `N° ${tx.id}`;
+    const clientName = tx.persona?.name || 'Cliente';
+    const amountStr = formatCurrency(Number(tx.amount));
+
+    if (!window.confirm(`¿Estás seguro de eliminar el recibo ${receiptName} (${clientName} por ${amountStr})?\n\nEsta acción restablecerá ${amountStr} al saldo pendiente del cliente.`)) {
+      return;
+    }
+
+    setActionLoading(true);
+    setErrorMsg(null);
+    try {
+      const res = await api.deleteReceipt(tx.id);
+      
+      if (auditTarget) {
+        const remainingTxs = auditTarget.data.transactions.filter((t: any) => t.id !== tx.id);
+        const amt = Number(tx.amount);
+        const isOfficial = tx.billingType === 'OFFICIAL';
+        const method = tx.paymentMethod;
+
+        const updatedData = {
+          ...auditTarget.data,
+          totalToCollect: auditTarget.data.totalToCollect - amt,
+          totalBranchA: isOfficial ? auditTarget.data.totalBranchA - amt : auditTarget.data.totalBranchA,
+          totalBranchX: !isOfficial ? auditTarget.data.totalBranchX - amt : auditTarget.data.totalBranchX,
+          totalCash: method === 'CASH' ? auditTarget.data.totalCash - amt : auditTarget.data.totalCash,
+          totalChecks: method === 'CHECK' ? auditTarget.data.totalChecks - amt : auditTarget.data.totalChecks,
+          totalTransfers: method === 'BANK_TRANSFER' ? auditTarget.data.totalTransfers - amt : auditTarget.data.totalTransfers,
+          transactions: remainingTxs
+        };
+
+        setAuditTarget({
+          ...auditTarget,
+          data: updatedData
+        });
+      }
+
+      fetchRendiciones();
+      alert(res.message || 'Recibo eliminado correctamente.');
+    } catch (err: any) {
+      console.error('Error al eliminar recibo:', err);
+      setErrorMsg(err.message || 'Error al eliminar recibo');
+    } finally {
+      setActionLoading(false);
     }
   };
 
@@ -715,16 +759,13 @@ const RendicionesDashboard: React.FC = () => {
               </div>
             </div>
           );
-        })()}
-      </div>
-
-      {/* MODAL DE ARQUEO Y CONCILIACIÓN */}
+             {/* MODAL DE ARQUEO Y CONCILIACIÓN */}
       {auditTarget && (
         <div className="modal-overlay">
-          <div className="modal-content" style={{ maxWidth: '850px', width: '95%', padding: '24px' }}>
+          <div className="modal-content" style={{ maxWidth: '1150px', width: '95vw', maxHeight: '90vh', display: 'flex', flexDirection: 'column', padding: '24px', borderRadius: '12px', overflow: 'hidden' }}>
             
             {/* Modal Header */}
-            <div className="modal-header" style={{ marginBottom: '16px' }}>
+            <div className="modal-header" style={{ marginBottom: '16px', flexShrink: 0 }}>
               <div>
                 <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700 }}>
                   Arqueo y Rendición: {auditTarget.type === 'seller' ? `Vendedor ${auditTarget.data.user.username.toUpperCase()}` : `Repartidor ${auditTarget.data.driverName} (Ruta #${auditTarget.data.routeId})`}
@@ -755,309 +796,331 @@ const RendicionesDashboard: React.FC = () => {
                 fontSize: '0.88rem',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '8px'
+                gap: '8px',
+                flexShrink: 0
               }}>
                 <AlertCircle size={16} color="#ef4444" />
                 <span>{errorMsg}</span>
               </div>
             )}
 
-            <form onSubmit={handleVerifySubmit}>
+            <form onSubmit={handleVerifySubmit} style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
               
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '24px', marginBottom: '20px' }}>
-                
-                {/* Columna Izquierda: Esperado en Sistema */}
-                <div className="card" style={{ padding: '16px', backgroundColor: '#f8fafc', border: '1px solid var(--border-color)' }}>
-                  <h4 style={{ margin: '0 0 12px 0', fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                    1. Sistema (Teórico Esperado)
-                  </h4>
+              {/* Cuerpo del formulario deslizable */}
+              <div style={{ flex: 1, overflowY: 'auto', paddingRight: '6px' }}>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '24px', marginBottom: '20px' }}>
                   
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {/* Columna Izquierda: Esperado en Sistema */}
+                  <div className="card" style={{ padding: '16px', backgroundColor: '#f8fafc', border: '1px solid var(--border-color)' }}>
+                    <h4 style={{ margin: '0 0 12px 0', fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                      1. Sistema (Teórico Esperado)
+                    </h4>
                     
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
-                      <span style={{ color: 'var(--text-secondary)' }}>Efectivo en Sistema:</span>
-                      <strong style={{ fontFamily: 'monospace' }}>{formatCurrency(expectedCash)}</strong>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+                        <span style={{ color: 'var(--text-secondary)' }}>Efectivo en Sistema:</span>
+                        <strong style={{ fontFamily: 'monospace' }}>{formatCurrency(expectedCash)}</strong>
+                      </div>
+
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+                        <span style={{ color: 'var(--text-secondary)' }}>Cheques en Sistema:</span>
+                        <strong style={{ fontFamily: 'monospace' }}>{formatCurrency(expectedChecks)}</strong>
+                      </div>
+                      
+                      <div style={{ height: '1px', backgroundColor: '#e2e8f0', margin: '4px 0' }} />
+
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+                        <span style={{ color: 'var(--text-secondary)' }}>Sucursal A (Oficial):</span>
+                        <span style={{ fontWeight: 500 }}>{formatCurrency(auditTarget.data.totalBranchA)}</span>
+                      </div>
+
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+                        <span style={{ color: 'var(--text-secondary)' }}>Sucursal X (Interna):</span>
+                        <span style={{ fontWeight: 500 }}>{formatCurrency(auditTarget.data.totalBranchX)}</span>
+                      </div>
+
+                      <div style={{ height: '1px', backgroundColor: '#e2e8f0', margin: '4px 0' }} />
+
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1rem', fontWeight: 700 }}>
+                        <span style={{ color: 'var(--text-primary)' }}>Total Esperado:</span>
+                        <span style={{ color: 'var(--color-primary)', fontFamily: 'monospace' }}>{formatCurrency(totalExpected)}</span>
+                      </div>
+
                     </div>
-
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
-                      <span style={{ color: 'var(--text-secondary)' }}>Cheques en Sistema:</span>
-                      <strong style={{ fontFamily: 'monospace' }}>{formatCurrency(expectedChecks)}</strong>
-                    </div>
-                    
-                    <div style={{ height: '1px', backgroundColor: '#e2e8f0', margin: '4px 0' }} />
-
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
-                      <span style={{ color: 'var(--text-secondary)' }}>Sucursal A (Oficial):</span>
-                      <span style={{ fontWeight: 500 }}>{formatCurrency(auditTarget.data.totalBranchA)}</span>
-                    </div>
-
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
-                      <span style={{ color: 'var(--text-secondary)' }}>Sucursal X (Interna):</span>
-                      <span style={{ fontWeight: 500 }}>{formatCurrency(auditTarget.data.totalBranchX)}</span>
-                    </div>
-
-                    <div style={{ height: '1px', backgroundColor: '#e2e8f0', margin: '4px 0' }} />
-
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1rem', fontWeight: 700 }}>
-                      <span style={{ color: 'var(--text-primary)' }}>Total Esperado:</span>
-                      <span style={{ color: 'var(--color-primary)', fontFamily: 'monospace' }}>{formatCurrency(totalExpected)}</span>
-                    </div>
-
                   </div>
-                </div>
 
-                {/* Columna Derecha: Arqueo Físico Recibido */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                  
-                  <div className="card" style={{ padding: '16px', border: '1px solid var(--border-color)' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                      <h4 style={{ margin: 0, fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                        2. Conteo Físico Recibido
-                      </h4>
-                      <button 
-                        type="button" 
-                        className="btn btn-secondary" 
-                        onClick={() => { setRealCash(String(expectedCash)); setRealChecks(String(expectedChecks)); }} 
-                        style={{ fontSize: '0.78rem', padding: '4px 10px', display: 'inline-flex', alignItems: 'center', gap: '4px', backgroundColor: '#f0fdf4', color: '#15803d', borderColor: '#bbf7d0' }}
-                        title="Auto-completar los casilleros con los montos esperados si coinciden sin diferencia"
-                      >
-                        ⚡ Sin Diferencia (Copiar Esperado)
-                      </button>
-                    </div>
+                  {/* Columna Derecha: Arqueo Físico Recibido */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                     
-                    <div className="form-group" style={{ marginBottom: '16px' }}>
-                      <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
-                        Efectivo Declarado ($)
-                      </label>
-                      <input 
-                        type="number"
-                        className="input"
-                        placeholder="0.00"
-                        required
-                        min="0"
-                        step="0.01"
-                        autoFocus
-                        value={realCash}
-                        onChange={(e) => setRealCash(e.target.value)}
-                        style={{ fontSize: '1.15rem', fontFamily: 'monospace', width: '100%' }}
-                      />
-                    </div>
-
-                    <div className="form-group" style={{ marginBottom: '12px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                        <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
-                          Cheques Declarados ($)
+                    <div className="card" style={{ padding: '16px', border: '1px solid var(--border-color)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                        <h4 style={{ margin: 0, fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                          2. Conteo Físico Recibido
+                        </h4>
+                        <button 
+                          type="button" 
+                          className="btn btn-secondary" 
+                          onClick={() => { setRealCash(String(expectedCash)); setRealChecks(String(expectedChecks)); }} 
+                          style={{ fontSize: '0.78rem', padding: '4px 10px', display: 'inline-flex', alignItems: 'center', gap: '4px', backgroundColor: '#f0fdf4', color: '#15803d', borderColor: '#bbf7d0' }}
+                          title="Auto-completar los casilleros con los montos esperados si coinciden sin diferencia"
+                        >
+                          ⚡ Sin Diferencia (Copiar Esperado)
+                        </button>
+                      </div>
+                      
+                      <div className="form-group" style={{ marginBottom: '16px' }}>
+                        <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
+                          Efectivo Declarado ($)
                         </label>
-                        <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Carga por unidad o total</span>
+                        <input 
+                          type="number"
+                          className="input"
+                          placeholder="0.00"
+                          required
+                          min="0"
+                          step="0.01"
+                          autoFocus
+                          value={realCash}
+                          onChange={(e) => setRealCash(e.target.value)}
+                          style={{ fontSize: '1.15rem', fontFamily: 'monospace', width: '100%' }}
+                        />
                       </div>
-                      <input 
-                        type="number"
-                        className="input"
-                        placeholder="Monto total en cheques 0.00"
-                        min="0"
-                        step="0.01"
-                        value={realChecks}
-                        onChange={(e) => setRealChecks(e.target.value)}
-                        style={{ fontSize: '1.15rem', fontFamily: 'monospace', width: '100%', marginBottom: '8px' }}
-                      />
 
-                      {/* Desglose Individual de Cheques */}
-                      <div style={{ backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '10px', marginTop: '6px' }}>
-                        <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
-                          + Registrar Cheque Físico Individual (N° de Cheque):
+                      <div className="form-group" style={{ marginBottom: '12px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                          <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                            Cheques Declarados ($)
+                          </label>
+                          <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Carga por unidad o total</span>
                         </div>
-                        <div style={{ display: 'flex', gap: '6px', marginBottom: '6px' }}>
-                          <input 
-                            type="text" 
-                            className="input" 
-                            placeholder="N° Cheque (ej: 00482910)" 
-                            value={newCheckNumber} 
-                            onChange={e => setNewCheckNumber(e.target.value)} 
-                            style={{ flex: 1, fontSize: '0.8rem' }}
-                          />
-                          <input 
-                            type="text" 
-                            className="input" 
-                            placeholder="Banco" 
-                            value={newCheckBank} 
-                            onChange={e => setNewCheckBank(e.target.value)} 
-                            style={{ flex: 1, fontSize: '0.8rem' }}
-                          />
-                        </div>
-                        <div style={{ display: 'flex', gap: '6px' }}>
-                          <input 
-                            type="number" 
-                            className="input" 
-                            placeholder="Monto $" 
-                            value={newCheckAmount} 
-                            onChange={e => setNewCheckAmount(e.target.value)} 
-                            style={{ flex: 1, fontSize: '0.8rem' }}
-                          />
-                          <button 
-                            type="button" 
-                            className="btn btn-secondary" 
-                            onClick={handleAddDeclaredCheck}
-                            style={{ fontSize: '0.78rem', padding: '4px 10px' }}
-                          >
-                            + Añadir
-                          </button>
-                        </div>
+                        <input 
+                          type="number"
+                          className="input"
+                          placeholder="Monto total en cheques 0.00"
+                          min="0"
+                          step="0.01"
+                          value={realChecks}
+                          onChange={(e) => setRealChecks(e.target.value)}
+                          style={{ fontSize: '1.15rem', fontFamily: 'monospace', width: '100%', marginBottom: '8px' }}
+                        />
 
-                        {declaredChecksList.length > 0 && (
-                          <div style={{ marginTop: '8px', maxHeight: '100px', overflowY: 'auto' }}>
-                            <table style={{ width: '100%', fontSize: '0.75rem', borderCollapse: 'collapse' }}>
-                              <tbody>
-                                {declaredChecksList.map((c, idx) => (
-                                  <tr key={idx} style={{ borderBottom: '1px solid #e2e8f0' }}>
-                                    <td style={{ padding: '3px 0' }}><strong>N° {c.number}</strong> ({c.bank})</td>
-                                    <td style={{ textAlign: 'right', fontWeight: 600 }}>${c.amount.toLocaleString()}</td>
-                                    <td style={{ width: '24px', textAlign: 'right' }}>
-                                      <button type="button" onClick={() => handleRemoveDeclaredCheck(idx)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '0.75rem' }}>✕</button>
-                                    </td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
+                        {/* Desglose Individual de Cheques */}
+                        <div style={{ backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '10px', marginTop: '6px' }}>
+                          <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
+                            + Registrar Cheque Físico Individual (N° de Cheque):
                           </div>
-                        )}
+                          <div style={{ display: 'flex', gap: '6px', marginBottom: '6px' }}>
+                            <input 
+                              type="text" 
+                              className="input" 
+                              placeholder="N° Cheque (ej: 00482910)" 
+                              value={newCheckNumber} 
+                              onChange={e => setNewCheckNumber(e.target.value)} 
+                              style={{ flex: 1, fontSize: '0.8rem' }}
+                            />
+                            <input 
+                              type="text" 
+                              className="input" 
+                              placeholder="Banco" 
+                              value={newCheckBank} 
+                              onChange={e => setNewCheckBank(e.target.value)} 
+                              style={{ flex: 1, fontSize: '0.8rem' }}
+                            />
+                          </div>
+                          <div style={{ display: 'flex', gap: '6px' }}>
+                            <input 
+                              type="number" 
+                              className="input" 
+                              placeholder="Monto $" 
+                              value={newCheckAmount} 
+                              onChange={e => setNewCheckAmount(e.target.value)} 
+                              style={{ flex: 1, fontSize: '0.8rem' }}
+                            />
+                            <button 
+                              type="button" 
+                              className="btn btn-secondary" 
+                              onClick={handleAddDeclaredCheck}
+                              style={{ fontSize: '0.78rem', padding: '4px 10px' }}
+                            >
+                              + Añadir
+                            </button>
+                          </div>
+
+                          {declaredChecksList.length > 0 && (
+                            <div style={{ marginTop: '8px', maxHeight: '100px', overflowY: 'auto' }}>
+                              <table style={{ width: '100%', fontSize: '0.75rem', borderCollapse: 'collapse' }}>
+                                <tbody>
+                                  {declaredChecksList.map((c, idx) => (
+                                    <tr key={idx} style={{ borderBottom: '1px solid #e2e8f0' }}>
+                                      <td style={{ padding: '3px 0' }}><strong>N° {c.number}</strong> ({c.bank})</td>
+                                      <td style={{ textAlign: 'right', fontWeight: 600 }}>${c.amount.toLocaleString()}</td>
+                                      <td style={{ width: '24px', textAlign: 'right' }}>
+                                        <button type="button" onClick={() => handleRemoveDeclaredCheck(idx)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '0.75rem' }}>✕</button>
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="form-group" style={{ marginBottom: '12px' }}>
+                        <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>
+                          Pueblo / Ruta de Cobro (Identificación)
+                        </label>
+                        <input 
+                          type="text"
+                          className="input"
+                          placeholder="Ej: General Villegas, Bunge, Ruta 33..."
+                          value={auditRouteNote}
+                          onChange={(e) => setAuditRouteNote(e.target.value)}
+                          style={{ width: '100%', fontSize: '0.9rem' }}
+                        />
+                      </div>
+
+                      <div className="form-group" style={{ marginBottom: '0px' }}>
+                        <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>
+                          Observaciones del Arqueo
+                        </label>
+                        <input 
+                          type="text"
+                          className="input"
+                          placeholder="Ej: Diferencia justificada por vueltos..."
+                          value={auditNotes}
+                          onChange={(e) => setAuditNotes(e.target.value)}
+                          style={{ width: '100%', fontSize: '0.9rem' }}
+                        />
                       </div>
                     </div>
 
-                    <div className="form-group" style={{ marginBottom: '12px' }}>
-                      <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>
-                        Pueblo / Ruta de Cobro (Identificación)
-                      </label>
-                      <input 
-                        type="text"
-                        className="input"
-                        placeholder="Ej: General Villegas, Bunge, Ruta 33..."
-                        value={auditRouteNote}
-                        onChange={(e) => setAuditRouteNote(e.target.value)}
-                        style={{ width: '100%', fontSize: '0.9rem' }}
-                      />
-                    </div>
-
-                    <div className="form-group" style={{ marginBottom: '0px' }}>
-                      <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>
-                        Observaciones del Arqueo
-                      </label>
-                      <input 
-                        type="text"
-                        className="input"
-                        placeholder="Ej: Diferencia justificada por vueltos..."
-                        value={auditNotes}
-                        onChange={(e) => setAuditNotes(e.target.value)}
-                        style={{ width: '100%', fontSize: '0.9rem' }}
-                      />
-                    </div>
                   </div>
 
                 </div>
 
-              </div>
-
-              {/* Widget de Conciliación y Diferencias en tiempo real */}
-              <div 
-                style={{ 
-                  padding: '16px 20px', 
-                  borderRadius: '8px', 
-                  backgroundColor: totalDiff === 0 ? '#f0fdf4' : totalDiff > 0 ? '#f0fdfa' : '#fef2f2',
-                  border: totalDiff === 0 ? '1px solid #bbf7d0' : totalDiff > 0 ? '1px solid #99f6e4' : '1px solid #fecaca',
-                  color: totalDiff === 0 ? '#166534' : totalDiff > 0 ? '#0f766e' : '#991b1b',
-                  marginBottom: '20px',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center'
-                }}
-              >
-                <div>
-                  <h4 style={{ margin: '0 0 4px 0', fontSize: '0.95rem', fontWeight: 700 }}>
-                    {totalDiff === 0 ? 'Caja Conciliada (Cuadrado)' : totalDiff > 0 ? 'Sobrante Detectado' : 'Faltante de Caja'}
-                  </h4>
-                  <p style={{ margin: 0, fontSize: '0.82rem', opacity: 0.9 }}>
-                    Efectivo: {diffCash >= 0 ? '+' : ''}{formatCurrency(diffCash)} | 
-                    Cheques: {diffChecks >= 0 ? '+' : ''}{formatCurrency(diffChecks)}
-                  </p>
-                </div>
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: '0.75rem', opacity: 0.8, textTransform: 'uppercase' }}>Diferencia Total</div>
-                  <div style={{ fontSize: '1.4rem', fontWeight: 800, fontFamily: 'monospace' }}>
-                    {totalDiff > 0 ? '+' : ''}{formatCurrency(totalDiff)}
-                  </div>
-                </div>
-              </div>
-
-              {/* Detalle de transacciones asociadas (Colapsable) */}
-              <div style={{ border: '1px solid var(--border-color)', borderRadius: '8px', overflow: 'hidden', marginBottom: '20px' }}>
+                {/* Widget de Conciliación y Diferencias en tiempo real */}
                 <div 
-                  onClick={() => setShowTxs(!showTxs)}
                   style={{ 
-                    padding: '12px 16px', 
-                    backgroundColor: 'var(--bg-light)', 
-                    display: 'flex', 
-                    justifyContent: 'space-between', 
-                    alignItems: 'center', 
-                    cursor: 'pointer',
-                    userSelect: 'none'
+                    padding: '16px 20px', 
+                    borderRadius: '8px', 
+                    backgroundColor: totalDiff === 0 ? '#f0fdf4' : totalDiff > 0 ? '#f0fdfa' : '#fef2f2',
+                    border: totalDiff === 0 ? '1px solid #bbf7d0' : totalDiff > 0 ? '1px solid #99f6e4' : '1px solid #fecaca',
+                    color: totalDiff === 0 ? '#166534' : totalDiff > 0 ? '#0f766e' : '#991b1b',
+                    marginBottom: '20px',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center'
                   }}
                 >
-                  <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <FileText size={16} />
-                    Ver recibos y cobros asociados ({auditTarget.data.transactions.length})
-                  </span>
-                  {showTxs ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                  <div>
+                    <h4 style={{ margin: '0 0 4px 0', fontSize: '0.95rem', fontWeight: 700 }}>
+                      {totalDiff === 0 ? 'Caja Conciliada (Cuadrado)' : totalDiff > 0 ? 'Sobrante Detectado' : 'Faltante de Caja'}
+                    </h4>
+                    <p style={{ margin: 0, fontSize: '0.82rem', opacity: 0.9 }}>
+                      Efectivo: {diffCash >= 0 ? '+' : ''}{formatCurrency(diffCash)} | 
+                      Cheques: {diffChecks >= 0 ? '+' : ''}{formatCurrency(diffChecks)}
+                    </p>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: '0.75rem', opacity: 0.8, textTransform: 'uppercase' }}>Diferencia Total</div>
+                    <div style={{ fontSize: '1.4rem', fontWeight: 800, fontFamily: 'monospace' }}>
+                      {totalDiff > 0 ? '+' : ''}{formatCurrency(totalDiff)}
+                    </div>
+                  </div>
                 </div>
 
-                {showTxs && (
-                  <div style={{ maxHeight: '200px', overflowY: 'auto', backgroundColor: '#fff', padding: '8px' }}>
-                    <table style={{ width: '100%', fontSize: '0.8rem', borderCollapse: 'collapse', textAlign: 'left' }}>
-                      <thead>
-                        <tr style={{ borderBottom: '1px solid var(--border-color)', color: 'var(--text-secondary)' }}>
-                          <th style={{ padding: '8px' }}>Recibo/Pedido</th>
-                          <th style={{ padding: '8px' }}>Cliente</th>
-                          <th style={{ padding: '8px' }}>Sucursal</th>
-                          <th style={{ padding: '8px' }}>Medio</th>
-                          <th style={{ padding: '8px', textAlign: 'right' }}>Monto</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {auditTarget.data.transactions.map((tx: any) => (
-                          <tr key={tx.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                            <td style={{ padding: '8px', fontWeight: 500 }}>
-                              {tx.receiptNumber || `Pedido #${tx.orderId || 'S/N'}`}
-                            </td>
-                            <td style={{ padding: '8px' }}>{tx.persona?.name || 'Desconocido'}</td>
-                            <td style={{ padding: '8px' }}>{tx.billingType === 'OFFICIAL' ? 'A' : 'X'}</td>
-                            <td style={{ padding: '8px' }}>
-                              <span style={{ 
-                                padding: '2px 6px', 
-                                borderRadius: '4px', 
-                                fontSize: '0.72rem', 
-                                fontWeight: 600,
-                                backgroundColor: tx.paymentMethod === 'CASH' ? '#ecfdf5' : tx.paymentMethod === 'CHECK' ? '#eff6ff' : '#f1f5f9',
-                                color: tx.paymentMethod === 'CASH' ? '#047857' : tx.paymentMethod === 'CHECK' ? '#1d4ed8' : '#475569'
-                              }}>
-                                {tx.paymentMethod === 'CASH' ? 'EFECTIVO' : tx.paymentMethod === 'CHECK' ? 'CHEQUE' : tx.paymentMethod === 'BANK_TRANSFER' ? 'TRANSFERENCIA' : tx.paymentMethod}
-                              </span>
-                            </td>
-                            <td style={{ padding: '8px', textAlign: 'right', fontWeight: 600, fontFamily: 'monospace' }}>
-                              {formatCurrency(Number(tx.amount))}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                {/* Detalle de transacciones asociadas (Colapsable) */}
+                <div style={{ border: '1px solid var(--border-color)', borderRadius: '8px', overflow: 'hidden', marginBottom: '12px' }}>
+                  <div 
+                    onClick={() => setShowTxs(!showTxs)}
+                    style={{ 
+                      padding: '12px 16px', 
+                      backgroundColor: 'var(--bg-light)', 
+                      display: 'flex', 
+                      justifyContent: 'space-between', 
+                      alignItems: 'center', 
+                      cursor: 'pointer',
+                      userSelect: 'none'
+                    }}
+                  >
+                    <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <FileText size={16} />
+                      Ver recibos y cobros asociados ({auditTarget.data.transactions.length})
+                    </span>
+                    {showTxs ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                   </div>
-                )}
+
+                  {showTxs && (
+                    <div style={{ maxHeight: '250px', overflowY: 'auto', backgroundColor: '#fff', padding: '8px' }}>
+                      <table style={{ width: '100%', fontSize: '0.8rem', borderCollapse: 'collapse', textAlign: 'left' }}>
+                        <thead>
+                          <tr style={{ borderBottom: '1px solid var(--border-color)', color: 'var(--text-secondary)' }}>
+                            <th style={{ padding: '8px' }}>Recibo/Pedido</th>
+                            <th style={{ padding: '8px' }}>Cliente</th>
+                            <th style={{ padding: '8px' }}>Sucursal</th>
+                            <th style={{ padding: '8px' }}>Medio</th>
+                            <th style={{ padding: '8px', textAlign: 'right' }}>Monto</th>
+                            <th style={{ padding: '8px', textAlign: 'center', width: '90px' }}>Acciones</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {auditTarget.data.transactions.map((tx: any) => (
+                            <tr key={tx.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                              <td style={{ padding: '8px', fontWeight: 500 }}>
+                                {tx.receiptNumber || `Pedido #${tx.orderId || 'S/N'}`}
+                              </td>
+                              <td style={{ padding: '8px' }}>{tx.persona?.name || 'Desconocido'}</td>
+                              <td style={{ padding: '8px' }}>{tx.billingType === 'OFFICIAL' ? 'A' : 'X'}</td>
+                              <td style={{ padding: '8px' }}>
+                                <span style={{ 
+                                  padding: '2px 6px', 
+                                  borderRadius: '4px', 
+                                  fontSize: '0.72rem', 
+                                  fontWeight: 600,
+                                  backgroundColor: tx.paymentMethod === 'CASH' ? '#ecfdf5' : tx.paymentMethod === 'CHECK' ? '#eff6ff' : '#f1f5f9',
+                                  color: tx.paymentMethod === 'CASH' ? '#047857' : tx.paymentMethod === 'CHECK' ? '#1d4ed8' : '#475569'
+                                }}>
+                                  {tx.paymentMethod === 'CASH' ? 'EFECTIVO' : tx.paymentMethod === 'CHECK' ? 'CHEQUE' : tx.paymentMethod === 'BANK_TRANSFER' ? 'TRANSFERENCIA' : tx.paymentMethod}
+                                </span>
+                              </td>
+                              <td style={{ padding: '8px', textAlign: 'right', fontWeight: 600, fontFamily: 'monospace' }}>
+                                {formatCurrency(Number(tx.amount))}
+                              </td>
+                              <td style={{ padding: '8px', textAlign: 'center' }}>
+                                <button
+                                  type="button"
+                                  className="btn btn-ghost"
+                                  onClick={() => handleDeleteReceipt(tx)}
+                                  disabled={actionLoading}
+                                  style={{ padding: '4px 8px', color: '#ef4444', fontSize: '0.75rem', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                                  title="Eliminar recibo y restaurar saldo del cliente"
+                                >
+                                  <Trash2 size={14} color="#ef4444" />
+                                  <span>Eliminar</span>
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+
               </div>
 
-              {/* Botones de acción */}
+              {/* Botones de acción (Fijos al pie del modal) */}
               <div style={{ 
                 display: 'flex', 
                 justifyContent: 'flex-end', 
                 gap: '12px', 
                 borderTop: '1px solid var(--border-color)', 
-                paddingTop: '20px' 
+                paddingTop: '16px',
+                marginTop: '12px',
+                flexShrink: 0
               }}>
                 <button 
                   type="button" 
@@ -1094,8 +1157,6 @@ const RendicionesDashboard: React.FC = () => {
             </form>
           </div>
         </div>
-      )}
-
       {/* HISTORIAL DE ARQUEOS (CAJAS CERRADAS) */}
       <div className="card" style={{ padding: '24px', marginTop: '20px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
