@@ -38,6 +38,7 @@ const MobileCobros: React.FC<MobileCobrosProps> = ({
   const [successReceipt, setSuccessReceipt] = useState<any>(null);
   const [pendingInvoices, setPendingInvoices] = useState<any[]>([]);
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<number | null>(null);
+  const [isCreditOnAccount, setIsCreditOnAccount] = useState(false);
 
   useEffect(() => {
     fetchPending();
@@ -49,6 +50,7 @@ const MobileCobros: React.FC<MobileCobrosProps> = ({
     } else {
       setPendingInvoices([]);
       setSelectedInvoiceId(null);
+      setIsCreditOnAccount(false);
       setBillingType('OFFICIAL');
       setCheckNumber('');
       setIsEcheq(false);
@@ -120,6 +122,12 @@ const MobileCobros: React.FC<MobileCobrosProps> = ({
       return;
     }
 
+    // Regla de imputación obligatoria: si hay facturas pendientes, exigir seleccionar factura o tildar dinero a favor
+    if (pendingInvoices.length > 0 && !selectedInvoiceId && !isCreditOnAccount) {
+      alert('Este cliente posee facturas pendientes de pago. Debes seleccionar la factura a abonar o tildar la casilla "Dejar dinero a favor".');
+      return;
+    }
+
     // Advertencia de sobrepago
     if (parsedAmount > selectedPersona.outstandingBalance) {
       const confirmOverpayment = await confirm(
@@ -141,6 +149,7 @@ const MobileCobros: React.FC<MobileCobrosProps> = ({
         paymentMethod,
         billingType,
         orderId: selectedInvoiceId,
+        isCreditOnAccount,
         checkNumber: finalCheckStr
       }, {
         headers: { Authorization: `Bearer ${localStorage.getItem('auth_token')}` }
@@ -338,7 +347,7 @@ const MobileCobros: React.FC<MobileCobrosProps> = ({
               borderRadius: '10px',
               padding: '12px 16px',
               display: 'flex',
-              justify: 'space-between',
+              justifyContent: 'space-between',
               alignItems: 'center'
             }}>
               <div>
@@ -358,7 +367,7 @@ const MobileCobros: React.FC<MobileCobrosProps> = ({
               borderRadius: '10px',
               padding: '12px 16px',
               display: 'flex',
-              justify: 'space-between',
+              justifyContent: 'space-between',
               alignItems: 'center'
             }}>
               <div>
@@ -394,12 +403,14 @@ const MobileCobros: React.FC<MobileCobrosProps> = ({
           
           {/* Imputación a Factura */}
           {pendingInvoices.length > 0 && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', backgroundColor: '#F9FAFB', padding: '12px 14px', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
               <label style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
-                Imputar a Comprobante Específico (Opcional)
+                Imputación del Cobro
               </label>
+              
               <select
                 value={selectedInvoiceId || ''}
+                disabled={isCreditOnAccount}
                 onChange={(e) => {
                   const val = e.target.value;
                   if (val === '') {
@@ -408,6 +419,7 @@ const MobileCobros: React.FC<MobileCobrosProps> = ({
                   } else {
                     const invId = Number(val);
                     setSelectedInvoiceId(invId);
+                    setIsCreditOnAccount(false);
                     const inv = pendingInvoices.find(i => i.id === invId);
                     if (inv) {
                       setAmount(inv.pendingAmount.toString());
@@ -422,20 +434,38 @@ const MobileCobros: React.FC<MobileCobrosProps> = ({
                   padding: '12px 14px',
                   borderRadius: '8px',
                   border: '1px solid var(--border-color)',
-                  backgroundColor: '#FFFFFF',
-                  color: 'var(--text-primary)',
+                  backgroundColor: isCreditOnAccount ? '#F3F4F6' : '#FFFFFF',
+                  color: isCreditOnAccount ? '#9CA3AF' : 'var(--text-primary)',
                   fontSize: '0.9rem',
                   outline: 'none',
                   boxShadow: 'var(--shadow-sm)'
                 }}
               >
-                <option value="">Entrega a cuenta general (Sin factura específica)</option>
+                <option value="">-- Seleccionar Factura a Abonar --</option>
                 {pendingInvoices.map((inv) => (
                   <option key={inv.id} value={inv.id}>
                     {inv.invoiceNumber} — Pendiente: {formatCurrency(inv.pendingAmount)}
                   </option>
                 ))}
               </select>
+
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.85rem', color: 'var(--text-primary)', marginTop: '2px' }}>
+                <input 
+                  type="checkbox" 
+                  checked={isCreditOnAccount} 
+                  onChange={(e) => {
+                    const checked = e.target.checked;
+                    setIsCreditOnAccount(checked);
+                    if (checked) {
+                      setSelectedInvoiceId(null);
+                    }
+                  }}
+                  style={{ width: '18px', height: '18px', accentColor: 'var(--accent-color)', cursor: 'pointer' }} 
+                />
+                <span style={{ fontWeight: isCreditOnAccount ? 600 : 400 }}>
+                  Dejar dinero a favor / Entrega a cuenta general (Sin factura)
+                </span>
+              </label>
             </div>
           )}
 
@@ -524,7 +554,7 @@ const MobileCobros: React.FC<MobileCobrosProps> = ({
                       display: 'flex',
                       flexDirection: 'column',
                       alignItems: 'center',
-                      justify: 'center',
+                      justifyContent: 'center',
                       gap: '6px',
                       padding: '12px 8px',
                       borderRadius: '10px',
@@ -568,7 +598,7 @@ const MobileCobros: React.FC<MobileCobrosProps> = ({
                 padding: '10px 12px',
                 border: '1px solid #93C5FD',
                 display: 'flex',
-                justify: 'space-between',
+                justifyContent: 'space-between',
                 alignItems: 'center'
               }}>
                 <div>
@@ -908,7 +938,7 @@ const MobileCobros: React.FC<MobileCobrosProps> = ({
                 border: '1px solid var(--border-color)',
                 boxShadow: 'var(--shadow-sm)',
                 display: 'flex',
-                justify: 'space-between',
+                justifyContent: 'space-between',
                 alignItems: 'center',
                 cursor: 'pointer',
                 transition: 'all 0.15s ease'

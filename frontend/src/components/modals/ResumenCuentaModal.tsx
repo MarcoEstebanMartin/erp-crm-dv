@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Printer, Calendar } from 'lucide-react';
+import { X, Printer, Calendar, Trash2 } from 'lucide-react';
 import { api } from '../../utils/api';
 
 interface ResumenCuentaModalProps {
@@ -13,6 +13,9 @@ export default function ResumenCuentaModal({ client, onClose }: ResumenCuentaMod
   const [dateRange, setDateRange] = useState('30days'); // 30days, all, custom
   const [customStart, setCustomStart] = useState('');
   const [customEnd, setCustomEnd] = useState('');
+
+  const userRole = localStorage.getItem('user_role') || '';
+  const isAdminOrFacturacion = userRole === 'ADMIN' || userRole === 'FACTURACION';
 
   // Estados para ver el detalle de un comprobante
   const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
@@ -128,6 +131,21 @@ export default function ResumenCuentaModal({ client, onClose }: ResumenCuentaMod
       alert('No se pudo cargar el detalle del comprobante.');
     } finally {
       setViewLoading(false);
+    }
+  };
+
+  const handleDeleteReceipt = async (txId: number, receiptDesc: string, creditAmount: number) => {
+    if (!window.confirm(`¿Estás seguro de que deseas anular y eliminar el recibo "${receiptDesc}"? Esto devolverá $${creditAmount.toLocaleString('es-AR')} al saldo pendiente del cliente.`)) {
+      return;
+    }
+    try {
+      const res = await api.deleteReceipt(txId);
+      alert(res.message || 'Recibo anulado y eliminado correctamente.');
+      setSelectedTransaction(null);
+      fetchTransactions();
+    } catch (err: any) {
+      console.error('Error al eliminar recibo:', err);
+      alert(err?.response?.data?.error || err?.message || 'Error al anular recibo.');
     }
   };
 
@@ -536,8 +554,31 @@ export default function ResumenCuentaModal({ client, onClose }: ResumenCuentaMod
               </div>
             </div>
 
-            {/* Botón de cierre */}
-            <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'flex-end' }}>
+            {/* Botones de acción */}
+            <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--border-color)', paddingTop: '16px' }}>
+              {isAdminOrFacturacion && selectedTransaction.type === 'INCOME' ? (
+                <button 
+                  type="button"
+                  style={{ 
+                    display: 'inline-flex', 
+                    alignItems: 'center', 
+                    gap: '6px', 
+                    color: '#DC2626', 
+                    backgroundColor: '#FEF2F2', 
+                    border: '1px solid #FCA5A5', 
+                    padding: '8px 14px', 
+                    borderRadius: '6px', 
+                    fontWeight: 600, 
+                    cursor: 'pointer',
+                    fontSize: '0.85rem'
+                  }}
+                  onClick={() => handleDeleteReceipt(selectedTransaction.id, selectedTransaction.receiptNumber || `REC-${selectedTransaction.id}`, Number(selectedTransaction.amount))}
+                >
+                  <Trash2 size={16} /> Anular / Eliminar Recibo
+                </button>
+              ) : (
+                <div />
+              )}
               <button className="btn btn-primary" onClick={() => setSelectedTransaction(null)}>Cerrar</button>
             </div>
           </div>

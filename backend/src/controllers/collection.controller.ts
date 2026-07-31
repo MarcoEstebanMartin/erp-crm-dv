@@ -2,6 +2,7 @@ import { Response } from 'express';
 import { AuthenticatedRequest } from '../types';
 import { TransactionType, PaymentMethod, BillingType, Role } from '@prisma/client';
 import prisma from '../utils/prisma';
+import { personaService } from '../services/persona.service';
 
 export const getPendingCollections = async (req: AuthenticatedRequest, res: Response) => {
   try {
@@ -116,10 +117,20 @@ export const registerCollection = async (req: AuthenticatedRequest, res: Respons
       return res.status(401).json({ error: 'No autorizado' });
     }
 
-    const { personaId, amount, paymentMethod, billingType, description, orderId, bankAccountId, checkNumber } = req.body;
+    const { personaId, amount, paymentMethod, billingType, description, orderId, isCreditOnAccount, bankAccountId, checkNumber } = req.body;
 
     if (!personaId || !amount || !paymentMethod || !billingType) {
       return res.status(400).json({ error: 'Faltan datos requeridos' });
+    }
+
+    // Regla de imputación a factura: si no se especifica orderId ni isCreditOnAccount, verificar si el cliente posee facturas impagas
+    if (!orderId && !isCreditOnAccount) {
+      const pendingInvoices = await personaService.getPersonaPendingInvoices(Number(personaId), userId, userRole || '');
+      if (pendingInvoices && pendingInvoices.length > 0) {
+        return res.status(400).json({ 
+          error: 'El cliente posee facturas pendientes. Selecciona una factura a la cual imputar el pago o marca la casilla "Dejar dinero a favor".' 
+        });
+      }
     }
 
     // Verificar que el cliente exista y pertenezca al vendedor (si el rol es VENDEDOR)
@@ -626,9 +637,9 @@ export const deleteReceipt = async (req: AuthenticatedRequest, res: Response) =>
       return res.status(404).json({ error: 'Recibo no encontrado' });
     }
 
-    if (tx.verified) {
+    if (tx.verified && userRole !== Role.ADMIN) {
       return res.status(400).json({ 
-        error: 'No se puede eliminar un recibo que ya ha sido verificado y cerrado en una rendición.' 
+        error: 'Este recibo ya fue verificado en una rendición. Solo un Administrador puede anularlo para corregir saldos de caja.' 
       });
     }
 
@@ -645,12 +656,22 @@ export const deleteReceipt = async (req: AuthenticatedRequest, res: Response) =>
         });
       }
 
-      // 2. Eliminar la transacción de la base de datos
+      // 2. Si estaba verificado y afectó banco, ajustar saldo bancario
+      if (tx.verified && tx.bankAccountId) {
+        await prismaTx.bankAccount.update({
+          where: { id: tx.bankAccountId },
+          data: {
+            balance: { decrement: amountToRestore }
+          }
+        });
+      }
+
+      // 3. Eliminar la transacción de la base de datos
       await prismaTx.transaction.delete({
         where: { id: tx.id }
       });
 
-      // 3. Crear registro de auditoría
+      // 4. Crear registro de auditoría
       await prismaTx.auditLog.create({
         data: {
           userId: adminId,
@@ -663,7 +684,8 @@ export const deleteReceipt = async (req: AuthenticatedRequest, res: Response) =>
             personaId: tx.personaId,
             personaName: tx.persona?.name,
             paymentMethod: tx.paymentMethod,
-            billingType: tx.billingType
+            billingType: tx.billingType,
+            verified: tx.verified
           }
         }
       });
