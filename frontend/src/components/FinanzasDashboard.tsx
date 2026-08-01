@@ -505,7 +505,7 @@ export default function FinanzasDashboard() {
     const detailedCheckItems: any[] = [];
 
     closedInPeriod.forEach((d: any) => {
-      const drawerBranch = d.branch || `Caja ${d.user?.username || ''}`;
+      const branchLabel = d.branch ? (d.branch.toLowerCase().startsWith('caja:') ? d.branch : `Caja: ${d.branch}`) : `Caja: ${d.user?.username || 'Central'}`;
       if (d.transactions && d.transactions.length > 0) {
         d.transactions.forEach((t: any) => {
           const isInc = t.type === 'INCOME';
@@ -513,7 +513,7 @@ export default function FinanzasDashboard() {
             id: `tx-drawer-${t.id || Math.random()}`,
             date: t.createdAt || d.closedAt,
             type: isInc ? 'INGRESO' : 'EGRESO',
-            origin: drawerBranch,
+            origin: branchLabel,
             description: t.description || (isInc ? 'Cobro en cierre de caja' : 'Salida en cierre de caja'),
             paymentMethod: t.paymentMethod === 'CASH' ? 'EFECTIVO' : t.paymentMethod === 'CHECK' ? 'CHEQUE' : t.paymentMethod,
             reference: t.receiptNumber || undefined,
@@ -532,8 +532,8 @@ export default function FinanzasDashboard() {
             id: `drawer-summary-${d.id}`,
             date: d.closedAt,
             type: 'INGRESO',
-            origin: drawerBranch,
-            description: `Depósito por cierre de caja`,
+            origin: branchLabel,
+            description: branchLabel,
             paymentMethod: 'EFECTIVO',
             amount: netAmount
           });
@@ -578,11 +578,13 @@ export default function FinanzasDashboard() {
     // Closure deposits as entry items
     closedInPeriod.forEach((d: any) => {
       const netAmount = Number(d.realBalance || 0) - Number(d.openingBalance || 0);
+      const rawBranch = d.branch || d.user?.username || 'Central';
+      const conceptText = rawBranch.toLowerCase().startsWith('caja:') ? rawBranch : `Caja: ${rawBranch}`;
       ledgerItems.push({
         id: `drawer-${d.id}`,
         date: d.closedAt,
         type: 'INGRESO',
-        description: `Depósito por cierre de caja: ${d.branch}`,
+        description: conceptText,
         paymentMethod: 'Varios',
         amount: netAmount,
       });
