@@ -71,12 +71,6 @@ export default function FinanceMovementModal({
     }, 0);
   }, [filteredMovements]);
 
-  const avgAmount = useMemo(() => {
-    if (filteredMovements.length === 0) return 0;
-    const sum = filteredMovements.reduce((acc, curr) => acc + Math.abs(Number(curr?.amount || 0)), 0);
-    return sum / filteredMovements.length;
-  }, [filteredMovements]);
-
   if (!isOpen) return null;
 
   // Icon badge based on category
@@ -231,7 +225,7 @@ export default function FinanceMovementModal({
           backgroundColor: '#ffffff',
           borderBottom: '1px solid #f1f5f9',
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
           gap: '16px'
         }}>
           <div style={{ padding: '12px 16px', borderRadius: '10px', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0' }}>
@@ -247,13 +241,6 @@ export default function FinanceMovementModal({
             </div>
             <div style={{ fontSize: '1.4rem', fontWeight: 700, color: categoryKey === 'EXPENSE' ? '#991b1b' : '#166534', marginTop: '4px', fontFamily: 'monospace' }}>
               ${totalAmount.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-            </div>
-          </div>
-
-          <div style={{ padding: '12px 16px', borderRadius: '10px', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0' }}>
-            <div style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>Monto Promedio</div>
-            <div style={{ fontSize: '1.4rem', fontWeight: 700, color: '#334155', marginTop: '4px', fontFamily: 'monospace' }}>
-              ${avgAmount.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
             </div>
           </div>
         </div>
