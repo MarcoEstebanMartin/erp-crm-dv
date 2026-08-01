@@ -322,7 +322,7 @@ export default function SellerMeetingPdfReport({ sellers, initialSellerId, onClo
 
       {error && (
         <div style={{ padding: '16px', backgroundColor: '#fef2f2', color: '#991b1b', borderRadius: '8px', border: '1px solid #fca5a5', marginBottom: '20px' }}>
-          <AlertCircle size={18} inline style={{ marginRight: '8px' }} />
+          <AlertCircle size={18} style={{ marginRight: '8px', display: 'inline-block', verticalAlign: 'middle' }} />
           {error}
         </div>
       )}

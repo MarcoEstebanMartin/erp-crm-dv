@@ -690,6 +690,7 @@ export default function FinanzasDashboard() {
     totalTransfers,
     netIncome,
     ledger,
+    transfers,
     detailedCashItems,
     detailedCheckItems,
     detailedTransferItems,
