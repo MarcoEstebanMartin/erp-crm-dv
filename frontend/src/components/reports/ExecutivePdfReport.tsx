@@ -378,184 +378,34 @@ export default function ExecutivePdfReport({ onClose }: ExecutivePdfReportProps)
             </div>
 
             {/* CUADROS DE RESUMEN EJECUTIVO (4 CARDS KPIS) */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: '24px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: '22px' }}>
               
               <div style={{ padding: '12px', borderRadius: '6px', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0' }}>
                 <div style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>Ventas Totales ($)</div>
-                <div style={{ fontSize: '1.2rem', fontWeight: 800, fontFamily: 'monospace', color: '#0f172a', marginTop: '4px' }}>
+                <div style={{ fontSize: '1.25rem', fontWeight: 800, fontFamily: 'monospace', color: '#0f172a', marginTop: '4px' }}>
                   {formatCurrency(data.summary.totalSales)}
                 </div>
-                <div style={{ fontSize: '0.72rem', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px', color: data.summary.salesGrowthPct >= 0 ? '#166534' : '#991b1b' }}>
-                  {data.summary.salesGrowthPct >= 0 ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
-                  <span>{data.summary.salesGrowthPct >= 0 ? '+' : ''}{data.summary.salesGrowthPct}% vs período ant.</span>
+                <div style={{ fontSize: '0.72rem', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px', color: data.summary.salesGrowthPct >= 0 ? '#166534' : '#991b1b', fontWeight: 600 }}>
+                  {data.summary.salesGrowthPct >= 0 ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
+                  <span>{data.summary.salesGrowthPct >= 0 ? `+${data.summary.salesGrowthPct}%` : `${data.summary.salesGrowthPct}%`} vs ant.</span>
                 </div>
               </div>
 
               <div style={{ padding: '12px', borderRadius: '6px', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0' }}>
-                <div style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>Ganancia Bruta</div>
-                <div style={{ fontSize: '1.2rem', fontWeight: 800, fontFamily: 'monospace', color: '#166534', marginTop: '4px' }}>
+                <div style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>Ganancia Bruta ($)</div>
+                <div style={{ fontSize: '1.25rem', fontWeight: 800, fontFamily: 'monospace', color: '#166534', marginTop: '4px' }}>
                   {formatCurrency(data.summary.grossProfit)}
                 </div>
-                <div style={{ fontSize: '0.72rem', color: '#475569', marginTop: '4px' }}>
-                  Margen Bruto: <strong>{data.summary.grossMarginPct}%</strong>
+                <div style={{ fontSize: '0.72rem', color: '#475569', marginTop: '4px', fontWeight: 600 }}>
+                  Margen Bruto: <strong style={{ color: '#166534' }}>{data.summary.grossMarginPct}%</strong>
                 </div>
               </div>
 
               <div style={{ padding: '12px', borderRadius: '6px', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0' }}>
                 <div style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>Cobranza Recaudada</div>
-                <div style={{ fontSize: '1.2rem', fontWeight: 800, fontFamily: 'monospace', color: '#0369a1', marginTop: '4px' }}>
+                <div style={{ fontSize: '1.25rem', fontWeight: 800, fontFamily: 'monospace', color: '#0369a1', marginTop: '4px' }}>
                   {formatCurrency(data.collections.totalCollected)}
                 </div>
-                <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '4px' }}>
-                  Deuda en calle: <strong>{formatCurrency(data.collections.totalPendingDebt)}</strong>
-                </div>
-              </div>
-
-              <div style={{ padding: '12px', borderRadius: '6px', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0' }}>
-                <div style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>Volumen / Bultos</div>
-                <div style={{ fontSize: '1.2rem', fontWeight: 800, fontFamily: 'monospace', color: '#0f172a', marginTop: '4px' }}>
-                  {data.summary.totalBultos.toLocaleString('es-AR')} <span style={{ fontSize: '0.75rem', fontWeight: 400 }}>unid/bultos</span>
-                </div>
-                <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '4px' }}>
-                  Total Pedidos: <strong>{data.summary.totalOrders}</strong>
-                </div>
-              </div>
-
-            </div>
-
-            {/* SECCIÓN 1: FACTURACIÓN CANAL OFICIAL (A) VS INTERNA (X) */}
-            <div style={{ marginBottom: '24px' }}>
-              <h3 style={{ fontSize: '0.85rem', fontWeight: 700, color: '#0f172a', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '10px', borderBottom: '1px solid #cbd5e1', paddingBottom: '4px' }}>
-                1. Desglose de Ventas por Canal de Facturación (Oficial A vs Interna X)
-              </h3>
-              
-              <table style={{ width: '100%', fontSize: '0.78rem', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr style={{ backgroundColor: '#f1f5f9', color: '#475569', textAlign: 'left' }}>
-                    <th style={{ padding: '6px 10px' }}>Sucursal / Tipo</th>
-                    <th style={{ padding: '6px 10px', textAlign: 'center' }}>Pedidos</th>
-                    <th style={{ padding: '6px 10px', textAlign: 'right' }}>Venta Bruta ($)</th>
-                    <th style={{ padding: '6px 10px', textAlign: 'right' }}>Costo Estimado ($)</th>
-                    <th style={{ padding: '6px 10px', textAlign: 'right' }}>Ganancia ($)</th>
-                    <th style={{ padding: '6px 10px', textAlign: 'right' }}>Margen %</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
-                    <td style={{ padding: '8px 10px', fontWeight: 600, color: '#1e40af' }}>
-                      Sucursal A (Facturación Oficial)
-                    </td>
-                    <td style={{ padding: '8px 10px', textAlign: 'center' }}>{data.billingBreakdown.official.count}</td>
-                    <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 600, fontFamily: 'monospace' }}>
-                      {formatCurrency(data.billingBreakdown.official.sales)}
-                    </td>
-                    <td style={{ padding: '8px 10px', textAlign: 'right', fontFamily: 'monospace', color: '#64748b' }}>
-                      {formatCurrency(data.billingBreakdown.official.cost)}
-                    </td>
-                    <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 600, fontFamily: 'monospace', color: '#166534' }}>
-                      {formatCurrency(data.billingBreakdown.official.grossProfit)}
-                    </td>
-                    <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 600 }}>
-                      {data.billingBreakdown.official.sales > 0 ? Math.round((data.billingBreakdown.official.grossProfit / data.billingBreakdown.official.sales) * 100) : 0}%
-                    </td>
-                  </tr>
-
-                  <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
-                    <td style={{ padding: '8px 10px', fontWeight: 600, color: '#b45309' }}>
-                      Sucursal X (Gestión Interna)
-                    </td>
-                    <td style={{ padding: '8px 10px', textAlign: 'center' }}>{data.billingBreakdown.internal.count}</td>
-                    <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 600, fontFamily: 'monospace' }}>
-                      {formatCurrency(data.billingBreakdown.internal.sales)}
-                    </td>
-                    <td style={{ padding: '8px 10px', textAlign: 'right', fontFamily: 'monospace', color: '#64748b' }}>
-                      {formatCurrency(data.billingBreakdown.internal.cost)}
-                    </td>
-                    <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 600, fontFamily: 'monospace', color: '#166534' }}>
-                      {formatCurrency(data.billingBreakdown.internal.grossProfit)}
-                    </td>
-                    <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 600 }}>
-                      {data.billingBreakdown.internal.sales > 0 ? Math.round((data.billingBreakdown.internal.grossProfit / data.billingBreakdown.internal.sales) * 100) : 0}%
-                    </td>
-                  </tr>
-
-                  <tr style={{ backgroundColor: '#f8fafc', fontWeight: 700 }}>
-                    <td style={{ padding: '8px 10px' }}>TOTAL CONSOLIDADO</td>
-                    <td style={{ padding: '8px 10px', textAlign: 'center' }}>{data.summary.totalOrders}</td>
-                    <td style={{ padding: '8px 10px', textAlign: 'right', fontFamily: 'monospace', color: '#0f172a' }}>
-                      {formatCurrency(data.summary.totalSales)}
-                    </td>
-                    <td style={{ padding: '8px 10px', textAlign: 'right', fontFamily: 'monospace', color: '#64748b' }}>
-                      {formatCurrency(data.summary.totalCost)}
-                    </td>
-                    <td style={{ padding: '8px 10px', textAlign: 'right', fontFamily: 'monospace', color: '#166534' }}>
-                      {formatCurrency(data.summary.grossProfit)}
-                    </td>
-                    <td style={{ padding: '8px 10px', textAlign: 'right' }}>
-                      {data.summary.grossMarginPct}%
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-
-            {/* SECCIÓN 2: FLUJO DE COBRANZAS Y GASTOS */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '24px' }}>
-              
-              {/* Cobranzas */}
-              <div>
-                <h3 style={{ fontSize: '0.85rem', fontWeight: 700, color: '#0f172a', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '10px', borderBottom: '1px solid #cbd5e1', paddingBottom: '4px' }}>
-                  2. Cobranzas por Medio de Pago
-                </h3>
-                <table style={{ width: '100%', fontSize: '0.78rem', borderCollapse: 'collapse' }}>
-                  <tbody>
-                    <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
-                      <td style={{ padding: '6px 0', color: '#475569' }}>💵 Efectivo Rendido:</td>
-                      <td style={{ padding: '6px 0', textAlign: 'right', fontWeight: 600, fontFamily: 'monospace' }}>
-                        {formatCurrency(data.collections.byMethod.cash)}
-                      </td>
-                    </tr>
-                    <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
-                      <td style={{ padding: '6px 0', color: '#475569' }}>📑 Cheques Ingresados:</td>
-                      <td style={{ padding: '6px 0', textAlign: 'right', fontWeight: 600, fontFamily: 'monospace' }}>
-                        {formatCurrency(data.collections.byMethod.check)}
-                      </td>
-                    </tr>
-                    <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
-                      <td style={{ padding: '6px 0', color: '#475569' }}>🏦 Transferencias Bancarias:</td>
-                      <td style={{ padding: '6px 0', textAlign: 'right', fontWeight: 600, fontFamily: 'monospace' }}>
-                        {formatCurrency(data.collections.byMethod.transfer)}
-                      </td>
-                    </tr>
-                    <tr style={{ fontWeight: 700, borderTop: '1px solid #cbd5e1' }}>
-                      <td style={{ padding: '6px 0' }}>TOTAL COBRADO:</td>
-                      <td style={{ padding: '6px 0', textAlign: 'right', fontFamily: 'monospace', color: '#0369a1' }}>
-                        {formatCurrency(data.collections.totalCollected)}
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Gastos y Resultado Neto */}
-              <div>
-                <h3 style={{ fontSize: '0.85rem', fontWeight: 700, color: '#0f172a', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '10px', borderBottom: '1px solid #cbd5e1', paddingBottom: '4px' }}>
-                  3. Gastos Operativos y Resultado Neto
-                </h3>
-                <table style={{ width: '100%', fontSize: '0.78rem', borderCollapse: 'collapse' }}>
-                  <tbody>
-                    <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
-                      <td style={{ padding: '6px 0', color: '#475569' }}>Ganancia Bruta:</td>
-                      <td style={{ padding: '6px 0', textAlign: 'right', fontWeight: 600, fontFamily: 'monospace', color: '#166534' }}>
-                        {formatCurrency(data.summary.grossProfit)}
-                      </td>
-                    </tr>
-                    <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
-                      <td style={{ padding: '6px 0', color: '#991b1b' }}>(-) Gastos Operativos Totales:</td>
-                      <td style={{ padding: '6px 0', textAlign: 'right', fontWeight: 600, fontFamily: 'monospace', color: '#991b1b' }}>
-                        -{formatCurrency(data.summary.totalExpenses)}
-                      </td>
-                    </tr>
                 <div style={{ fontSize: '0.72rem', color: '#991b1b', marginTop: '4px' }}>
                   Deuda Pendiente: <strong>{formatCurrency(data.collections.totalPendingDebt)}</strong>
                 </div>
@@ -563,8 +413,8 @@ export default function ExecutivePdfReport({ onClose }: ExecutivePdfReportProps)
 
               <div style={{ padding: '12px', borderRadius: '6px', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0' }}>
                 <div style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>Volumen Comercial</div>
-                <div style={{ fontSize: '1.3rem', fontWeight: 800, fontFamily: 'monospace', color: '#0f172a', marginTop: '4px' }}>
-                  {data.summary.totalBultos.toLocaleString('es-AR')} <span style={{ fontSize: '0.8rem', fontWeight: 500 }}>bultos</span>
+                <div style={{ fontSize: '1.25rem', fontWeight: 800, fontFamily: 'monospace', color: '#0f172a', marginTop: '4px' }}>
+                  {data.summary.totalBultos.toLocaleString('es-AR')} <span style={{ fontSize: '0.75rem', fontWeight: 500 }}>bultos</span>
                 </div>
                 <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '4px' }}>
                   En <strong>{data.summary.totalOrders}</strong> pedidos entregados
@@ -573,13 +423,13 @@ export default function ExecutivePdfReport({ onClose }: ExecutivePdfReportProps)
 
             </div>
 
-            {/* SECCIÓN 2: DESGLOSE DE FACTURACIÓN Y COBRANZAS */}
+            {/* SECCIÓN 1: FACTURACIÓN CANAL OFICIAL (A) VS INTERNA (X) Y COBRANZAS */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '22px' }}>
               
               {/* Facturación Sucursal A vs Sucursal X */}
               <div style={{ padding: '14px', borderRadius: '6px', border: '1px solid #e2e8f0', backgroundColor: '#fff' }}>
                 <h3 style={{ margin: '0 0 10px 0', fontSize: '0.8rem', fontWeight: 700, color: '#0f172a', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                  Canal de Facturación (Oficial vs Interno)
+                  1. Canal de Facturación (Oficial A vs Interna X)
                 </h3>
                 <table style={{ width: '100%', fontSize: '0.75rem', borderCollapse: 'collapse' }}>
                   <thead>
@@ -592,7 +442,7 @@ export default function ExecutivePdfReport({ onClose }: ExecutivePdfReportProps)
                   </thead>
                   <tbody>
                     <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
-                      <td style={{ padding: '6px 0', fontWeight: 600 }}>Sucursal A (Oficial)</td>
+                      <td style={{ padding: '6px 0', fontWeight: 600, color: '#1e40af' }}>Sucursal A (Oficial)</td>
                       <td style={{ padding: '6px 0', textAlign: 'right', fontFamily: 'monospace' }}>{formatCurrency(data.billingBreakdown.official.sales)}</td>
                       <td style={{ padding: '6px 0', textAlign: 'right', fontFamily: 'monospace', color: '#166534' }}>{formatCurrency(data.billingBreakdown.official.grossProfit)}</td>
                       <td style={{ padding: '6px 0', textAlign: 'right', fontWeight: 600 }}>
@@ -600,7 +450,7 @@ export default function ExecutivePdfReport({ onClose }: ExecutivePdfReportProps)
                       </td>
                     </tr>
                     <tr>
-                      <td style={{ padding: '6px 0', fontWeight: 600 }}>Sucursal X (Interna)</td>
+                      <td style={{ padding: '6px 0', fontWeight: 600, color: '#b45309' }}>Sucursal X (Interna)</td>
                       <td style={{ padding: '6px 0', textAlign: 'right', fontFamily: 'monospace' }}>{formatCurrency(data.billingBreakdown.internal.sales)}</td>
                       <td style={{ padding: '6px 0', textAlign: 'right', fontFamily: 'monospace', color: '#166534' }}>{formatCurrency(data.billingBreakdown.internal.grossProfit)}</td>
                       <td style={{ padding: '6px 0', textAlign: 'right', fontWeight: 600 }}>
@@ -614,11 +464,11 @@ export default function ExecutivePdfReport({ onClose }: ExecutivePdfReportProps)
               {/* Cobranzas por Método de Pago */}
               <div style={{ padding: '14px', borderRadius: '6px', border: '1px solid #e2e8f0', backgroundColor: '#fff' }}>
                 <h3 style={{ margin: '0 0 10px 0', fontSize: '0.8rem', fontWeight: 700, color: '#0f172a', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                  Recaudación de Cobranzas por Medio
+                  2. Recaudación de Cobranzas por Medio
                 </h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.75rem' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '4px', borderBottom: '1px solid #f1f5f9' }}>
-                    <span style={{ color: '#475569' }}>💵 Efectivo (Caja)</span>
+                    <span style={{ color: '#475569' }}>💵 Efectivo Rendido (Caja)</span>
                     <strong style={{ fontFamily: 'monospace' }}>{formatCurrency(data.collections.byMethod.cash)}</strong>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '4px', borderBottom: '1px solid #f1f5f9' }}>
