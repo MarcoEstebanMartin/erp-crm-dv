@@ -779,7 +779,19 @@ export async function getDrawersHistory(req: AuthenticatedRequest, res: Response
       take: 50,
       include: {
         user: { select: { id: true, username: true } },
-        transactions: { select: { type: true, paymentMethod: true, amount: true } }
+        transactions: {
+          select: {
+            id: true,
+            type: true,
+            paymentMethod: true,
+            amount: true,
+            description: true,
+            createdAt: true,
+            receiptNumber: true,
+            orderId: true,
+            persona: { select: { id: true, name: true } }
+          }
+        }
       }
     });
     res.json({ status: 'success', data: { drawers: closedDrawers } });

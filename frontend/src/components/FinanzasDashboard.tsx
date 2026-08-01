@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../utils/api';
-import { DollarSign, RefreshCw, PlusCircle, AlertCircle, Landmark, Upload, Check, CheckSquare } from 'lucide-react';
+import { DollarSign, RefreshCw, PlusCircle, AlertCircle, Landmark, Upload, Check, CheckSquare, Eye, ChevronRight } from 'lucide-react';
 import { useConfirm } from '../context/ConfirmContext';
+import FinanceMovementModal from './FinanceMovementModal';
 
 export default function FinanzasDashboard() {
   const confirm = useConfirm();
@@ -47,6 +48,13 @@ export default function FinanzasDashboard() {
   const [expenseBillingType, setExpenseBillingType] = useState('INTERNAL');
   const [modalError, setModalError] = useState<string | null>(null);
   const [submittingExpense, setSubmittingExpense] = useState(false);
+
+  // Estado para Modal de Desglose de Movimientos KPI
+  const [detailModalOpen, setDetailModalOpen] = useState(false);
+  const [modalCategory, setModalCategory] = useState<'CASH' | 'CHECK' | 'TRANSFER' | 'EXPENSE' | 'NET'>('CASH');
+  const [modalTitle, setModalTitle] = useState('');
+  const [modalSubtitle, setModalSubtitle] = useState('');
+  const [modalMovements, setModalMovements] = useState<any[]>([]);
 
   useEffect(() => {
     fetchFinancialData();
@@ -492,6 +500,78 @@ export default function FinanzasDashboard() {
 
     const totalTransfers = transfersInPeriod.reduce((acc, t) => acc + Number(t.amount || 0), 0);
 
+    // Items detallados para modales de desglose
+    const detailedCashItems: any[] = [];
+    const detailedCheckItems: any[] = [];
+
+    closedInPeriod.forEach((d: any) => {
+      const drawerBranch = d.branch || `Caja ${d.user?.username || ''}`;
+      if (d.transactions && d.transactions.length > 0) {
+        d.transactions.forEach((t: any) => {
+          const isInc = t.type === 'INCOME';
+          const item = {
+            id: `tx-drawer-${t.id || Math.random()}`,
+            date: t.createdAt || d.closedAt,
+            type: isInc ? 'INGRESO' : 'EGRESO',
+            origin: drawerBranch,
+            description: t.description || (isInc ? 'Cobro en cierre de caja' : 'Salida en cierre de caja'),
+            paymentMethod: t.paymentMethod === 'CASH' ? 'EFECTIVO' : t.paymentMethod === 'CHECK' ? 'CHEQUE' : t.paymentMethod,
+            reference: t.receiptNumber || undefined,
+            amount: Number(t.amount || 0),
+            orderId: t.orderId || undefined,
+            personaName: t.persona?.name || undefined
+          };
+
+          if (t.paymentMethod === 'CASH') detailedCashItems.push(item);
+          else if (t.paymentMethod === 'CHECK') detailedCheckItems.push(item);
+        });
+      } else {
+        const netAmount = Number(d.realBalance || 0) - Number(d.openingBalance || 0);
+        if (netAmount > 0) {
+          detailedCashItems.push({
+            id: `drawer-summary-${d.id}`,
+            date: d.closedAt,
+            type: 'INGRESO',
+            origin: drawerBranch,
+            description: `Depósito por cierre de caja`,
+            paymentMethod: 'EFECTIVO',
+            amount: netAmount
+          });
+        }
+      }
+    });
+
+    const detailedTransferItems = transfersInPeriod.map((t: any) => ({
+      id: `transfer-${t.id}`,
+      date: t.createdAt,
+      type: 'INGRESO',
+      origin: t.bankAccount ? `Banco: ${t.bankAccount.bankName || 'Cta Bancaria'}` : 'Transferencia Bancaria',
+      description: t.description || 'Ingreso por transferencia bancaria',
+      paymentMethod: 'TRANSFERENCIA',
+      reference: t.receiptNumber || undefined,
+      amount: Number(t.amount || 0),
+      orderId: t.orderId || undefined,
+      personaName: t.persona?.name || undefined
+    }));
+
+    const detailedExpenseItems = expensesInPeriod.map((t: any) => ({
+      id: `expense-${t.id}`,
+      date: t.createdAt,
+      type: 'EGRESO',
+      origin: 'Gastos Generales (Tesorería)',
+      description: t.description || 'Gasto registrado',
+      paymentMethod: t.paymentMethod === 'CASH' ? 'EFECTIVO' : t.paymentMethod === 'CHECK' ? 'CHEQUE' : 'OTRO',
+      reference: t.receiptNumber || undefined,
+      amount: Number(t.amount || 0)
+    }));
+
+    const detailedNetItems = [
+      ...detailedCashItems,
+      ...detailedCheckItems,
+      ...detailedTransferItems,
+      ...detailedExpenseItems
+    ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
     // Ledger: combine Drawer Closures deposits and direct expenses
     const ledgerItems: any[] = [];
 
@@ -530,7 +610,12 @@ export default function FinanzasDashboard() {
       totalTransfers,
       netIncome: cashIncome + checkIncome + totalTransfers - totalExpenses,
       ledger: ledgerItems,
-      transfers: transfersInPeriod
+      transfers: transfersInPeriod,
+      detailedCashItems,
+      detailedCheckItems,
+      detailedTransferItems,
+      detailedExpenseItems,
+      detailedNetItems
     };
   };
 
@@ -598,7 +683,42 @@ export default function FinanzasDashboard() {
     );
   };
 
-  const { cashIncome, checkIncome, totalExpenses, totalTransfers, netIncome, ledger, transfers } = getFilteredMetricsAndLedger();
+  const {
+    cashIncome,
+    checkIncome,
+    totalExpenses,
+    totalTransfers,
+    netIncome,
+    ledger,
+    detailedCashItems,
+    detailedCheckItems,
+    detailedTransferItems,
+    detailedExpenseItems,
+    detailedNetItems
+  } = getFilteredMetricsAndLedger();
+
+  const openDetailModal = (
+    category: 'CASH' | 'CHECK' | 'TRANSFER' | 'EXPENSE' | 'NET',
+    title: string,
+    subtitle: string,
+    movements: any[]
+  ) => {
+    setModalCategory(category);
+    setModalTitle(title);
+    setModalSubtitle(subtitle);
+    setModalMovements(movements);
+    setDetailModalOpen(true);
+  };
+
+  const formatDateRangeText = () => {
+    try {
+      const [sY, sM, sD] = filterStartDate.split('-');
+      const [eY, eM, eD] = filterEndDate.split('-');
+      return `${sD}/${sM}/${sY} - ${eD}/${eM}/${eY}`;
+    } catch {
+      return `${filterStartDate} - ${filterEndDate}`;
+    }
+  };
 
   if (loading) return <div style={{ padding: '20px', textAlign: 'center' }}>Cargando información financiera...</div>;
 
@@ -689,40 +809,215 @@ export default function FinanzasDashboard() {
         </div>
       </div>
 
-      {/* KPI Cards */}
+      {/* KPI Cards Interactivas */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '40px' }}>
-        <div className="card" style={{ padding: '20px', backgroundColor: '#ecfdf5', border: '1px solid #a7f3d0' }}>
-          <div style={{ fontSize: '0.85rem', color: '#047857', fontWeight: 600, textTransform: 'uppercase', marginBottom: '8px' }}>Ingreso Efectivo</div>
+        {/* Card 1: Efectivo */}
+        <div
+          onClick={() => openDetailModal(
+            'CASH',
+            'Desglose de Ingresos en Efectivo',
+            'Transacciones y cobros en efectivo registrados en cierres de caja durante el período.',
+            detailedCashItems
+          )}
+          style={{
+            padding: '20px',
+            backgroundColor: '#ecfdf5',
+            border: '1px solid #a7f3d0',
+            borderRadius: '12px',
+            cursor: 'pointer',
+            transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+            userSelect: 'none'
+          }}
+          onMouseOver={(e) => {
+            e.currentTarget.style.transform = 'translateY(-3px)';
+            e.currentTarget.style.boxShadow = '0 10px 15px -3px rgba(16, 185, 129, 0.15)';
+            e.currentTarget.style.borderColor = '#10b981';
+          }}
+          onMouseOut={(e) => {
+            e.currentTarget.style.transform = 'translateY(0)';
+            e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.05)';
+            e.currentTarget.style.borderColor = '#a7f3d0';
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+            <div style={{ fontSize: '0.85rem', color: '#047857', fontWeight: 600, textTransform: 'uppercase' }}>Ingreso Efectivo</div>
+            <Eye size={16} color="#047857" style={{ opacity: 0.7 }} />
+          </div>
           <div style={{ fontSize: '1.8rem', fontWeight: 700, color: '#065f46', fontFamily: 'monospace' }}>
             ${cashIncome.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
           </div>
+          <div style={{ fontSize: '0.75rem', color: '#059669', marginTop: '10px', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 600 }}>
+            <span>Ver {detailedCashItems.length} movimientos</span>
+            <ChevronRight size={12} />
+          </div>
         </div>
 
-        <div className="card" style={{ padding: '20px', backgroundColor: '#eff6ff', border: '1px solid #bfdbfe' }}>
-          <div style={{ fontSize: '0.85rem', color: '#1d4ed8', fontWeight: 600, textTransform: 'uppercase', marginBottom: '8px' }}>Ingreso Cheques</div>
+        {/* Card 2: Cheques */}
+        <div
+          onClick={() => openDetailModal(
+            'CHECK',
+            'Desglose de Ingresos en Cheques',
+            'Valores en cheques físicos y eCheqs recibidos en cierres de caja durante el período.',
+            detailedCheckItems
+          )}
+          style={{
+            padding: '20px',
+            backgroundColor: '#eff6ff',
+            border: '1px solid #bfdbfe',
+            borderRadius: '12px',
+            cursor: 'pointer',
+            transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+            userSelect: 'none'
+          }}
+          onMouseOver={(e) => {
+            e.currentTarget.style.transform = 'translateY(-3px)';
+            e.currentTarget.style.boxShadow = '0 10px 15px -3px rgba(37, 99, 235, 0.15)';
+            e.currentTarget.style.borderColor = '#3b82f6';
+          }}
+          onMouseOut={(e) => {
+            e.currentTarget.style.transform = 'translateY(0)';
+            e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.05)';
+            e.currentTarget.style.borderColor = '#bfdbfe';
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+            <div style={{ fontSize: '0.85rem', color: '#1d4ed8', fontWeight: 600, textTransform: 'uppercase' }}>Ingreso Cheques</div>
+            <Eye size={16} color="#1d4ed8" style={{ opacity: 0.7 }} />
+          </div>
           <div style={{ fontSize: '1.8rem', fontWeight: 700, color: '#1e3a8a', fontFamily: 'monospace' }}>
             ${checkIncome.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
           </div>
+          <div style={{ fontSize: '0.75rem', color: '#2563eb', marginTop: '10px', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 600 }}>
+            <span>Ver {detailedCheckItems.length} movimientos</span>
+            <ChevronRight size={12} />
+          </div>
         </div>
 
-        <div className="card" style={{ padding: '20px', backgroundColor: '#f0fdfa', border: '1px solid #99f6e4' }}>
-          <div style={{ fontSize: '0.85rem', color: '#0f766e', fontWeight: 600, textTransform: 'uppercase', marginBottom: '8px' }}>Ingreso Transferencias</div>
+        {/* Card 3: Transferencias */}
+        <div
+          onClick={() => openDetailModal(
+            'TRANSFER',
+            'Desglose de Ingresos por Transferencia',
+            'Transferencias acreditadas en cuentas bancarias registradas durante el período.',
+            detailedTransferItems
+          )}
+          style={{
+            padding: '20px',
+            backgroundColor: '#f0fdfa',
+            border: '1px solid #99f6e4',
+            borderRadius: '12px',
+            cursor: 'pointer',
+            transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+            userSelect: 'none'
+          }}
+          onMouseOver={(e) => {
+            e.currentTarget.style.transform = 'translateY(-3px)';
+            e.currentTarget.style.boxShadow = '0 10px 15px -3px rgba(13, 148, 136, 0.15)';
+            e.currentTarget.style.borderColor = '#14b8a6';
+          }}
+          onMouseOut={(e) => {
+            e.currentTarget.style.transform = 'translateY(0)';
+            e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.05)';
+            e.currentTarget.style.borderColor = '#99f6e4';
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+            <div style={{ fontSize: '0.85rem', color: '#0f766e', fontWeight: 600, textTransform: 'uppercase' }}>Ingreso Transferencias</div>
+            <Eye size={16} color="#0f766e" style={{ opacity: 0.7 }} />
+          </div>
           <div style={{ fontSize: '1.8rem', fontWeight: 700, color: '#115e59', fontFamily: 'monospace' }}>
             ${totalTransfers.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
           </div>
-        </div>
-
-        <div className="card" style={{ padding: '20px', backgroundColor: '#fff5f5', border: '1px solid #feb2b2' }}>
-          <div style={{ fontSize: '0.85rem', color: '#c53030', fontWeight: 600, textTransform: 'uppercase', marginBottom: '8px' }}>Gastos (Egresos)</div>
-          <div style={{ fontSize: '1.8rem', fontWeight: 700, color: '#9b2c2c', fontFamily: 'monospace' }}>
-            ${totalExpenses.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+          <div style={{ fontSize: '0.75rem', color: '#0d9488', marginTop: '10px', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 600 }}>
+            <span>Ver {detailedTransferItems.length} movimientos</span>
+            <ChevronRight size={12} />
           </div>
         </div>
 
-        <div className="card" style={{ padding: '20px', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0' }}>
-          <div style={{ fontSize: '0.85rem', color: '#475569', fontWeight: 600, textTransform: 'uppercase', marginBottom: '8px' }}>Recaudación Neta del Periodo</div>
+        {/* Card 4: Gastos (Egresos) */}
+        <div
+          onClick={() => openDetailModal(
+            'EXPENSE',
+            'Desglose de Gastos y Egresos',
+            'Salidas directas y gastos operativos de tesorería imputados en el período.',
+            detailedExpenseItems
+          )}
+          style={{
+            padding: '20px',
+            backgroundColor: '#fff5f5',
+            border: '1px solid #feb2b2',
+            borderRadius: '12px',
+            cursor: 'pointer',
+            transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+            userSelect: 'none'
+          }}
+          onMouseOver={(e) => {
+            e.currentTarget.style.transform = 'translateY(-3px)';
+            e.currentTarget.style.boxShadow = '0 10px 15px -3px rgba(225, 29, 72, 0.15)';
+            e.currentTarget.style.borderColor = '#f43f5e';
+          }}
+          onMouseOut={(e) => {
+            e.currentTarget.style.transform = 'translateY(0)';
+            e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.05)';
+            e.currentTarget.style.borderColor = '#feb2b2';
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+            <div style={{ fontSize: '0.85rem', color: '#c53030', fontWeight: 600, textTransform: 'uppercase' }}>Gastos (Egresos)</div>
+            <Eye size={16} color="#c53030" style={{ opacity: 0.7 }} />
+          </div>
+          <div style={{ fontSize: '1.8rem', fontWeight: 700, color: '#9b2c2c', fontFamily: 'monospace' }}>
+            ${totalExpenses.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+          </div>
+          <div style={{ fontSize: '0.75rem', color: '#e11d48', marginTop: '10px', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 600 }}>
+            <span>Ver {detailedExpenseItems.length} movimientos</span>
+            <ChevronRight size={12} />
+          </div>
+        </div>
+
+        {/* Card 5: Recaudación Neta */}
+        <div
+          onClick={() => openDetailModal(
+            'NET',
+            'Resumen Consolidado de Recaudación Neta',
+            'Integración de todos los ingresos (Efectivo, Cheques, Transferencias) menos Egresos del período.',
+            detailedNetItems
+          )}
+          style={{
+            padding: '20px',
+            backgroundColor: '#f8fafc',
+            border: '1px solid #cbd5e1',
+            borderRadius: '12px',
+            cursor: 'pointer',
+            transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+            userSelect: 'none'
+          }}
+          onMouseOver={(e) => {
+            e.currentTarget.style.transform = 'translateY(-3px)';
+            e.currentTarget.style.boxShadow = '0 10px 15px -3px rgba(71, 85, 105, 0.15)';
+            e.currentTarget.style.borderColor = '#64748b';
+          }}
+          onMouseOut={(e) => {
+            e.currentTarget.style.transform = 'translateY(0)';
+            e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.05)';
+            e.currentTarget.style.borderColor = '#cbd5e1';
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+            <div style={{ fontSize: '0.85rem', color: '#475569', fontWeight: 600, textTransform: 'uppercase' }}>Recaudación Neta del Periodo</div>
+            <Eye size={16} color="#475569" style={{ opacity: 0.7 }} />
+          </div>
           <div style={{ fontSize: '1.8rem', fontWeight: 700, color: '#0f172a', fontFamily: 'monospace' }}>
             ${netIncome.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+          </div>
+          <div style={{ fontSize: '0.75rem', color: '#475569', marginTop: '10px', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 600 }}>
+            <span>Ver {detailedNetItems.length} movimientos</span>
+            <ChevronRight size={12} />
           </div>
         </div>
       </div>
@@ -1516,6 +1811,17 @@ export default function FinanzasDashboard() {
           </div>
         </div>
       )}
+
+      {/* Modal Reutilizable de Desglose de Movimientos */}
+      <FinanceMovementModal
+        isOpen={detailModalOpen}
+        onClose={() => setDetailModalOpen(false)}
+        title={modalTitle}
+        subtitle={modalSubtitle}
+        categoryKey={modalCategory}
+        dateRangeText={formatDateRangeText()}
+        movements={modalMovements}
+      />
 
     </div>
   );
