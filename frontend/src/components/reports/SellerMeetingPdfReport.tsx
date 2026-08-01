@@ -352,14 +352,22 @@ export default function SellerMeetingPdfReport({ sellers, initialSellerId, onClo
         ) : (
           <div>
             
-            {/* ENCABEZADO FICHA DE VENDEDOR */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '2px solid #0f172a', paddingBottom: '14px', marginBottom: '20px' }}>
-              <div>
-                <div style={{ fontSize: '1.3rem', fontWeight: 900, color: 'var(--color-corp-red)', letterSpacing: '0.5px' }}>
-                  DISTRIBUIDORA DV
-                </div>
-                <div style={{ fontSize: '0.72rem', fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', marginTop: '2px' }}>
-                  Reunión Individual de Ventas y Desempeño
+            {/* ENCABEZADO FICHA DE VENDEDOR CON LOGO */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #0f172a', paddingBottom: '14px', marginBottom: '20px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <img 
+                  src="/logo.png" 
+                  alt="Logo DV" 
+                  style={{ height: '48px', width: 'auto', objectFit: 'contain' }}
+                  onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                />
+                <div>
+                  <div style={{ fontSize: '1.3rem', fontWeight: 900, color: 'var(--color-corp-red)', letterSpacing: '0.5px' }}>
+                    DISTRIBUIDORA DV
+                  </div>
+                  <div style={{ fontSize: '0.72rem', fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', marginTop: '2px' }}>
+                    Reunión Individual de Ventas y Desempeño
+                  </div>
                 </div>
               </div>
               <div style={{ textAlign: 'right' }}>

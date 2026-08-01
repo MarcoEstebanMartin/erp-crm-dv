@@ -351,14 +351,22 @@ export default function ExecutivePdfReport({ onClose }: ExecutivePdfReportProps)
         ) : (
           <div>
             
-            {/* ENCABEZADO EJECUTIVO */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '2px solid #0f172a', paddingBottom: '16px', marginBottom: '24px' }}>
-              <div>
-                <div style={{ fontSize: '1.4rem', fontWeight: 900, color: 'var(--color-corp-red)', letterSpacing: '1px' }}>
-                  DISTRIBUIDORA DV
-                </div>
-                <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', marginTop: '2px' }}>
-                  Alimentos y Bebidas | Control de Gestión
+            {/* ENCABEZADO EJECUTIVO CON LOGO */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #0f172a', paddingBottom: '16px', marginBottom: '24px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                <img 
+                  src="/logo.png" 
+                  alt="Logo DV" 
+                  style={{ height: '52px', width: 'auto', objectFit: 'contain' }}
+                  onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                />
+                <div>
+                  <div style={{ fontSize: '1.35rem', fontWeight: 900, color: 'var(--color-corp-red)', letterSpacing: '0.5px' }}>
+                    DISTRIBUIDORA DV
+                  </div>
+                  <div style={{ fontSize: '0.73rem', fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', marginTop: '2px' }}>
+                    Alimentos y Bebidas | Control de Gestión
+                  </div>
                 </div>
               </div>
               <div style={{ textAlign: 'right' }}>
