@@ -46,17 +46,19 @@ export default function FinanceMovementModal({
 
   // Filter movements by search term
   const filteredMovements = useMemo(() => {
-    if (!searchTerm.trim()) return movements;
+    if (!searchTerm.trim()) return movements || [];
     const term = searchTerm.toLowerCase();
-    return movements.filter(m => {
+    return (movements || []).filter(m => {
+      if (!m) return false;
+      const amtStr = (m.amount ?? 0).toString();
       return (
-        m.description?.toLowerCase().includes(term) ||
-        m.origin?.toLowerCase().includes(term) ||
-        m.paymentMethod?.toLowerCase().includes(term) ||
-        m.reference?.toLowerCase().includes(term) ||
-        m.personaName?.toLowerCase().includes(term) ||
-        m.amount.toString().includes(term) ||
-        (m.orderId && `#${m.orderId}`.includes(term))
+        (m.description || '').toLowerCase().includes(term) ||
+        (m.origin || '').toLowerCase().includes(term) ||
+        (m.paymentMethod || '').toLowerCase().includes(term) ||
+        (m.reference || '').toLowerCase().includes(term) ||
+        (m.personaName || '').toLowerCase().includes(term) ||
+        amtStr.includes(term) ||
+        (m.orderId ? `#${m.orderId}`.includes(term) : false)
       );
     });
   }, [movements, searchTerm]);
@@ -64,13 +66,14 @@ export default function FinanceMovementModal({
   // Calculate metrics
   const totalAmount = useMemo(() => {
     return filteredMovements.reduce((acc, curr) => {
-      return curr.type === 'INGRESO' ? acc + curr.amount : acc - curr.amount;
+      const amt = Number(curr?.amount || 0);
+      return curr?.type === 'INGRESO' ? acc + amt : acc - amt;
     }, 0);
   }, [filteredMovements]);
 
   const avgAmount = useMemo(() => {
     if (filteredMovements.length === 0) return 0;
-    const sum = filteredMovements.reduce((acc, curr) => acc + Math.abs(curr.amount), 0);
+    const sum = filteredMovements.reduce((acc, curr) => acc + Math.abs(Number(curr?.amount || 0)), 0);
     return sum / filteredMovements.length;
   }, [filteredMovements]);
 
@@ -358,13 +361,16 @@ export default function FinanceMovementModal({
               <tbody>
                 {filteredMovements.map((m, idx) => {
                   const isIncome = m.type === 'INGRESO';
-                  const formattedDate = new Date(m.date).toLocaleString('es-AR', {
-                    day: '2-digit',
-                    month: '2-digit',
-                    year: '2-digit',
-                    hour: '2-digit',
-                    minute: '2-digit'
-                  });
+                  const rawDate = m.date ? new Date(m.date) : null;
+                  const formattedDate = rawDate && !isNaN(rawDate.getTime())
+                    ? rawDate.toLocaleString('es-AR', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })
+                    : 'S/F';
 
                   return (
                     <tr
