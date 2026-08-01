@@ -329,4 +329,45 @@ export async function getProfitabilityReport(req: AuthenticatedRequest, res: Res
   }
 }
 
+/**
+ * Obtener datos para el Reporte Ejecutivo en PDF (Solo ADMIN).
+ */
+export async function getExecutivePdfReport(req: AuthenticatedRequest, res: Response): Promise<void> {
+  const { startDate, endDate } = req.query;
+  try {
+    const reportData = await adminService.getExecutivePdfReportData(
+      startDate ? String(startDate) : undefined,
+      endDate ? String(endDate) : undefined
+    );
+    res.status(200).json({ status: 'success', data: reportData });
+  } catch (error: any) {
+    console.error('Error al generar reporte ejecutivo PDF:', error);
+    res.status(500).json({ status: 'error', message: 'Error al generar el reporte ejecutivo PDF.' });
+  }
+}
+
+/**
+ * Obtener datos para el Reporte de Desempeño por Vendedor (Solo ADMIN).
+ */
+export async function getSellerMeetingPdfReport(req: AuthenticatedRequest, res: Response): Promise<void> {
+  const { sellerId } = req.params;
+  const { startDate, endDate } = req.query;
+  try {
+    if (!sellerId) {
+      res.status(400).json({ status: 'error', message: 'El ID del vendedor es requerido.' });
+      return;
+    }
+    const reportData = await adminService.getSellerMeetingPdfReportData(
+      Number(sellerId),
+      startDate ? String(startDate) : undefined,
+      endDate ? String(endDate) : undefined
+    );
+    res.status(200).json({ status: 'success', data: reportData });
+  } catch (error: any) {
+    console.error('Error al generar reporte de reunión con vendedor:', error);
+    res.status(500).json({ status: 'error', message: 'Error al generar el reporte para la reunión.' });
+  }
+}
+
+
 

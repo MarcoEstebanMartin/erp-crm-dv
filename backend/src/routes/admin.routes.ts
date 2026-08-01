@@ -3,6 +3,8 @@ import {
   getFinancialReports,
   getSalesChannelStats,
   getProfitabilityReport,
+  getExecutivePdfReport,
+  getSellerMeetingPdfReport,
   getAuditLogs,
   getDocumentAuditLogs,
   getUsers,
@@ -46,6 +48,8 @@ router.use(requireRole([Role.ADMIN]));
 router.get('/reports', getFinancialReports);
 router.get('/reports/sales-channels', getSalesChannelStats);
 router.get('/reports/profitability', getProfitabilityReport);
+router.get('/reports/pdf/executive', getExecutivePdfReport);
+router.get('/reports/pdf/seller/:sellerId', getSellerMeetingPdfReport);
 router.get('/reports/zones', getZoneReports);
 router.get('/reports/weekly', getWeeklyReports);
 router.get('/reports/weekly/suggested-credit', getSuggestedCredit);

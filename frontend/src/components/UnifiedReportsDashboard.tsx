@@ -18,9 +18,10 @@ import {
   Store
 } from 'lucide-react';
 import CrmDashboard from './CrmDashboard';
-import AfipExportDashboard from '../pages/AfipExportDashboard';
 import ProfitabilityTab from './ProfitabilityTab';
 import SalesChannelReportsTab from './SalesChannelReportsTab';
+import ExecutivePdfReport from './reports/ExecutivePdfReport';
+import SellerMeetingPdfReport from './reports/SellerMeetingPdfReport';
 import { useConfirm } from '../context/ConfirmContext';
 
 const normalizeString = (str: string | null | undefined): string => {
@@ -40,8 +41,6 @@ const getMonthName = (m: number): string => {
   return months[m - 1];
 };
 
-
-
 interface UnifiedReportsDashboardProps {
   orders: any[];
   users: any[];
@@ -58,7 +57,7 @@ export default function UnifiedReportsDashboard({
   financialReport
 }: UnifiedReportsDashboardProps) {
   const confirm = useConfirm();
-  const [activeTab, setActiveTab] = useState<'finanzas' | 'canales' | 'rentabilidad' | 'zonas' | 'caja_semanal' | 'crm' | 'arca'>('finanzas');
+  const [activeTab, setActiveTab] = useState<'finanzas' | 'canales' | 'rentabilidad' | 'zonas' | 'caja_semanal' | 'crm' | 'pdf_ejecutivo' | 'pdf_vendedores'>('finanzas');
 
   // Estados para reporte financiero con filtros mensuales
   const [reportYear, setReportYear] = useState<number>(new Date().getFullYear());
@@ -531,15 +530,16 @@ export default function UnifiedReportsDashboard({
       </div>
 
       {/* TABS INTERNOS */}
-      <div style={{ display: 'flex', gap: '8px', marginBottom: '24px', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
+      <div style={{ display: 'flex', gap: '8px', marginBottom: '24px', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px', flexWrap: 'wrap' }}>
         {[
           { id: 'finanzas', label: 'Resumen Financiero', icon: <DollarSign size={16} /> },
+          { id: 'pdf_ejecutivo', label: '📄 Reporte Dirección PDF', icon: <FileText size={16} color="var(--color-corp-red)" /> },
+          { id: 'pdf_vendedores', label: '👥 Ficha Vendedores PDF', icon: <Users size={16} color="#0369a1" /> },
           { id: 'canales', label: 'Depósito & Canales', icon: <Store size={16} /> },
           { id: 'rentabilidad', label: 'Rentabilidad', icon: <TrendingUp size={16} /> },
           { id: 'zonas', label: 'Análisis de Zonas', icon: <MapPin size={16} /> },
           { id: 'caja_semanal', label: 'Caja Semanal Consolidada', icon: <Calendar size={16} /> },
-          { id: 'crm', label: 'Alertas + IA', icon: <Sparkles size={16} /> },
-          { id: 'arca', label: 'Cierre Fiscal (ARCA)', icon: <FileText size={16} /> }
+          { id: 'crm', label: 'Alertas + IA', icon: <Sparkles size={16} /> }
         ].map(tab => (
 
           <button
@@ -567,6 +567,16 @@ export default function UnifiedReportsDashboard({
 
       {/* CONTENIDO DE TABS */}
       
+      {/* 7. REPORTE EJECUTIVO PDF */}
+      {activeTab === 'pdf_ejecutivo' && (
+        <ExecutivePdfReport onClose={() => setActiveTab('finanzas')} />
+      )}
+
+      {/* 8. FICHA DE VENDEDORES PDF */}
+      {activeTab === 'pdf_vendedores' && (
+        <SellerMeetingPdfReport sellers={_users.filter(u => u.role === 'VENDEDOR' || u.role === 'ADMIN')} onClose={() => setActiveTab('finanzas')} />
+      )}
+
       {/* 1. FINANZAS */}
       {activeTab === 'finanzas' && (
         <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -2067,13 +2077,6 @@ export default function UnifiedReportsDashboard({
       {activeTab === 'crm' && (
         <div className="fade-in">
           <CrmDashboard initialTab="alerts" hideHeaderTabs={true} />
-        </div>
-      )}
-
-      {/* 6. ARCA */}
-      {activeTab === 'arca' && (
-        <div className="fade-in">
-          <AfipExportDashboard />
         </div>
       )}
     </div>

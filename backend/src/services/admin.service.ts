@@ -1325,6 +1325,448 @@ export class AdminService {
       }
     };
   }
+
+  /**
+   * Obtener datos consolidados para el Reporte Ejecutivo (PDF para la Dirección).
+   */
+  async getExecutivePdfReportData(startDateStr?: string, endDateStr?: string) {
+    let start: Date;
+    let end: Date;
+
+    if (startDateStr && endDateStr) {
+      start = new Date(startDateStr);
+      end = new Date(endDateStr);
+      if (isNaN(start.getTime())) start = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+      if (isNaN(end.getTime())) end = new Date();
+    } else {
+      const now = new Date();
+      start = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
+      end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+    }
+
+    const durationMs = end.getTime() - start.getTime();
+    const prevStart = new Date(start.getTime() - durationMs);
+    const prevEnd = new Date(start.getTime() - 1);
+
+    // 1. Pedidos entregados en el período actual
+    const currentOrders = await prisma.order.findMany({
+      where: {
+        status: OrderStatus.DELIVERED,
+        createdAt: { gte: start, lte: end }
+      },
+      include: {
+        persona: true,
+        items: { include: { product: { include: { rubro: true } } } }
+      }
+    });
+
+    // 2. Pedidos en período anterior (para comparar)
+    const prevOrders = await prisma.order.findMany({
+      where: {
+        status: OrderStatus.DELIVERED,
+        createdAt: { gte: prevStart, lte: prevEnd }
+      }
+    });
+
+    let totalSales = 0;
+    let totalCost = 0;
+    let totalBultos = 0;
+    let officialSales = 0;
+    let officialCost = 0;
+    let officialCount = 0;
+    let internalSales = 0;
+    let internalCost = 0;
+    let internalCount = 0;
+
+    const productSalesMap: { [key: number]: { name: string; category: string; quantity: number; amount: number; cost: number } } = {};
+    const categorySalesMap: { [key: string]: { amount: number; cost: number; itemsCount: number } } = {};
+    const citySalesMap: { [key: string]: { sales: number; count: number; clients: Set<number> } } = {};
+
+    for (const order of currentOrders) {
+      const orderTotal = Number(order.totalAmount) || 0;
+      totalSales += orderTotal;
+      let orderCost = 0;
+
+      const cityName = normalizeCity(order.persona?.city || order.persona?.route);
+      if (!citySalesMap[cityName]) {
+        citySalesMap[cityName] = { sales: 0, count: 0, clients: new Set() };
+      }
+      citySalesMap[cityName].sales += orderTotal;
+      citySalesMap[cityName].count += 1;
+      if (order.personaId) citySalesMap[cityName].clients.add(order.personaId);
+
+      for (const item of order.items) {
+        const qty = item.product.isPesable && item.weight ? Number(item.weight) : item.quantity;
+        const itemAmount = Number(item.subtotal || Number(item.unitPrice) * qty) || 0;
+        const itemCost = Math.round(Number(item.product.costPrice || 0) * qty);
+        orderCost += itemCost;
+        totalBultos += item.quantity;
+
+        // Mapeo Producto
+        if (!productSalesMap[item.productId]) {
+          productSalesMap[item.productId] = {
+            name: item.product.name,
+            category: item.product.rubro?.name || 'Sin Categoría',
+            quantity: 0,
+            amount: 0,
+            cost: 0
+          };
+        }
+        productSalesMap[item.productId].quantity += item.quantity;
+        productSalesMap[item.productId].amount += itemAmount;
+        productSalesMap[item.productId].cost += itemCost;
+
+        // Mapeo Categoría
+        const catName = item.product.rubro?.name || 'Sin Categoría';
+        if (!categorySalesMap[catName]) {
+          categorySalesMap[catName] = { amount: 0, cost: 0, itemsCount: 0 };
+        }
+        categorySalesMap[catName].amount += itemAmount;
+        categorySalesMap[catName].cost += itemCost;
+        categorySalesMap[catName].itemsCount += item.quantity;
+      }
+
+      totalCost += orderCost;
+
+      if (order.billingType === BillingType.OFFICIAL) {
+        officialSales += orderTotal;
+        officialCost += orderCost;
+        officialCount++;
+      } else {
+        internalSales += orderTotal;
+        internalCost += orderCost;
+        internalCount++;
+      }
+    }
+
+    // Totales período anterior
+    const prevTotalSales = prevOrders.reduce((sum, o) => sum + (Number(o.totalAmount) || 0), 0);
+    const salesGrowthPct = prevTotalSales > 0 ? Math.round(((totalSales - prevTotalSales) / prevTotalSales) * 100) : 0;
+
+    // Cobranzas en el período
+    const collections = await prisma.transaction.groupBy({
+      by: ['paymentMethod'],
+      where: {
+        type: TransactionType.INCOME,
+        createdAt: { gte: start, lte: end }
+      },
+      _sum: { amount: true }
+    });
+
+    let totalCollected = 0;
+    const collectionsByMethod: { [key: string]: number } = { CASH: 0, CHECK: 0, BANK_TRANSFER: 0, OTHER: 0 };
+
+    collections.forEach(c => {
+      const amt = Math.round(Number(c._sum.amount || 0));
+      totalCollected += amt;
+      const method = c.paymentMethod || 'OTHER';
+      collectionsByMethod[method] = (collectionsByMethod[method] || 0) + amt;
+    });
+
+    // Deuda pendiente en calle (Saldo total de clientes)
+    const debtors = await prisma.persona.aggregate({
+      where: { outstandingBalance: { gt: 0 } },
+      _sum: { outstandingBalance: true }
+    });
+    const totalPendingDebt = Math.round(Number(debtors._sum?.outstandingBalance || 0));
+
+    const expenses = await prisma.expense.findMany({
+      where: { date: { gte: start, lte: end } },
+      include: { category: true }
+    });
+    let totalExpenses = 0;
+    const expensesByCategoryMap: { [key: string]: number } = {};
+    expenses.forEach(e => {
+      const amt = Number(e.amount) || 0;
+      totalExpenses += amt;
+      const cat = e.category?.name || 'General';
+      expensesByCategoryMap[cat] = (expensesByCategoryMap[cat] || 0) + amt;
+    });
+
+    const topProducts = Object.values(productSalesMap)
+      .sort((a, b) => b.amount - a.amount)
+      .slice(0, 10)
+      .map(p => ({
+        ...p,
+        amount: Math.round(p.amount),
+        cost: Math.round(p.cost),
+        profit: Math.round(p.amount - p.cost),
+        marginPct: p.amount > 0 ? Math.round(((p.amount - p.cost) / p.amount) * 100) : 0
+      }));
+
+    const topCategories = Object.entries(categorySalesMap)
+      .map(([name, data]) => ({
+        name,
+        amount: Math.round(data.amount),
+        cost: Math.round(data.cost),
+        profit: Math.round(data.amount - data.cost),
+        marginPct: data.amount > 0 ? Math.round(((data.amount - data.cost) / data.amount) * 100) : 0,
+        itemsCount: data.itemsCount
+      }))
+      .sort((a, b) => b.amount - a.amount);
+
+    const citiesSummary = Object.entries(citySalesMap)
+      .map(([cityName, data]) => ({
+        cityName,
+        sales: Math.round(data.sales),
+        ordersCount: data.count,
+        activeClientsCount: data.clients.size
+      }))
+      .sort((a, b) => b.sales - a.sales);
+
+    const grossProfit = totalSales - totalCost;
+    const netProfit = grossProfit - totalExpenses;
+    const grossMarginPct = totalSales > 0 ? Math.round((grossProfit / totalSales) * 100) : 0;
+
+    return {
+      period: {
+        startDate: start.toISOString(),
+        endDate: end.toISOString(),
+        durationDays: Math.ceil(durationMs / (1000 * 60 * 60 * 24))
+      },
+      summary: {
+        totalSales: Math.round(totalSales),
+        totalCost: Math.round(totalCost),
+        grossProfit: Math.round(grossProfit),
+        grossMarginPct,
+        totalExpenses: Math.round(totalExpenses),
+        netProfit: Math.round(netProfit),
+        totalOrders: currentOrders.length,
+        totalBultos,
+        salesGrowthPct,
+        prevTotalSales: Math.round(prevTotalSales)
+      },
+      billingBreakdown: {
+        official: {
+          sales: Math.round(officialSales),
+          cost: Math.round(officialCost),
+          grossProfit: Math.round(officialSales - officialCost),
+          count: officialCount
+        },
+        internal: {
+          sales: Math.round(internalSales),
+          cost: Math.round(internalCost),
+          grossProfit: Math.round(internalSales - internalCost),
+          count: internalCount
+        }
+      },
+      collections: {
+        totalCollected,
+        byMethod: {
+          cash: collectionsByMethod['CASH'] || 0,
+          check: collectionsByMethod['CHECK'] || 0,
+          transfer: collectionsByMethod['BANK_TRANSFER'] || 0,
+          other: collectionsByMethod['OTHER'] || 0
+        },
+        totalPendingDebt
+      },
+      topProducts,
+      topCategories,
+      citiesSummary,
+      expensesSummary: {
+        total: Math.round(totalExpenses),
+        byCategory: Object.entries(expensesByCategoryMap).map(([name, amount]) => ({ name, amount: Math.round(amount) }))
+      }
+    };
+  }
+
+  /**
+   * Obtener datos detallados de desempeño e insights para la reunión 1 a 1 con un Vendedor.
+   */
+  async getSellerMeetingPdfReportData(sellerId: number, startDateStr?: string, endDateStr?: string) {
+    let start: Date;
+    let end: Date;
+
+    if (startDateStr && endDateStr) {
+      start = new Date(startDateStr);
+      end = new Date(endDateStr);
+    } else {
+      const now = new Date();
+      start = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
+      end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+    }
+
+    const sellerUser = await prisma.user.findUnique({ where: { id: sellerId } });
+    const sellerPersona = await prisma.persona.findFirst({
+      where: { OR: [{ id: sellerId }, { name: { contains: sellerUser?.username || '', mode: 'insensitive' } }] }
+    });
+
+    const sellerName = sellerUser?.username ? sellerUser.username.toUpperCase() : sellerPersona?.name || `Vendedor #${sellerId}`;
+
+    const assignedClients = await prisma.persona.findMany({
+      where: { sellerId: sellerId },
+      include: { saleRoute: true }
+    });
+
+    const totalClientsCount = assignedClients.length;
+
+    const sellerOrders = await prisma.order.findMany({
+      where: {
+        sellerId: sellerId,
+        status: OrderStatus.DELIVERED,
+        createdAt: { gte: start, lte: end }
+      },
+      include: {
+        persona: true,
+        items: { include: { product: { include: { rubro: true } } } }
+      }
+    });
+
+    let totalSales = 0;
+    let totalCost = 0;
+    let totalBultos = 0;
+    let officialSales = 0;
+    let internalSales = 0;
+    const buyingClientsSet = new Set<number>();
+    const productSalesMap: { [key: number]: { name: string; category: string; quantity: number; amount: number } } = {};
+
+    sellerOrders.forEach(order => {
+      const orderAmt = Number(order.totalAmount) || 0;
+      totalSales += orderAmt;
+      if (order.personaId) buyingClientsSet.add(order.personaId);
+
+      if (order.billingType === BillingType.OFFICIAL) {
+        officialSales += orderAmt;
+      } else {
+        internalSales += orderAmt;
+      }
+
+      order.items.forEach(item => {
+        const qty = item.product.isPesable && item.weight ? Number(item.weight) : item.quantity;
+        const itemAmt = Number(item.subtotal || Number(item.unitPrice) * qty) || 0;
+        const cost = Math.round(Number(item.product.costPrice || 0) * qty);
+        totalCost += cost;
+        totalBultos += item.quantity;
+
+        if (!productSalesMap[item.productId]) {
+          productSalesMap[item.productId] = {
+            name: item.product.name,
+            category: item.product.rubro?.name || 'Sin Categoría',
+            quantity: 0,
+            amount: 0
+          };
+        }
+        productSalesMap[item.productId].quantity += item.quantity;
+        productSalesMap[item.productId].amount += itemAmt;
+      });
+    });
+
+    const activeBuyingClientsCount = buyingClientsSet.size;
+    const portfolioCoveragePct = totalClientsCount > 0 ? Math.round((activeBuyingClientsCount / totalClientsCount) * 100) : 0;
+    const averageTicketPerClient = activeBuyingClientsCount > 0 ? Math.round(totalSales / activeBuyingClientsCount) : 0;
+
+    const sellerCollections = await prisma.transaction.aggregate({
+      where: {
+        userId: sellerId,
+        type: TransactionType.INCOME,
+        createdAt: { gte: start, lte: end }
+      },
+      _sum: { amount: true }
+    });
+    const totalCollected = Math.round(Number(sellerCollections._sum.amount || 0));
+
+    const clientIds = assignedClients.map(c => c.id);
+    const carteraDebtAggregate = await prisma.persona.aggregate({
+      where: { id: { in: clientIds }, outstandingBalance: { gt: 0 } },
+      _sum: { outstandingBalance: true }
+    });
+    const totalCarteraDebt = Math.round(Number(carteraDebtAggregate._sum?.outstandingBalance || 0));
+
+    const inactiveClients = assignedClients
+      .filter(c => !buyingClientsSet.has(c.id))
+      .map(c => ({
+        id: c.id,
+        name: c.name,
+        city: normalizeCity(c.city || c.route),
+        balance: Math.round(Number(c.outstandingBalance || 0))
+      }))
+      .sort((a, b) => b.balance - a.balance)
+      .slice(0, 10);
+
+    const debtorClients = assignedClients
+      .filter(c => Number(c.outstandingBalance || 0) > 0)
+      .map(c => ({
+        id: c.id,
+        name: c.name,
+        city: normalizeCity(c.city || c.route),
+        balance: Math.round(Number(c.outstandingBalance || 0))
+      }))
+      .sort((a, b) => b.balance - a.balance)
+      .slice(0, 8);
+
+    const topProducts = Object.values(productSalesMap)
+      .sort((a, b) => b.amount - a.amount)
+      .slice(0, 6)
+      .map(p => ({ ...p, amount: Math.round(p.amount) }));
+
+    const actionInsights: Array<{ type: 'warning' | 'opportunity' | 'success'; title: string; description: string }> = [];
+
+    if (portfolioCoveragePct < 60) {
+      actionInsights.push({
+        type: 'warning',
+        title: 'Baja Cobertura de Cartera',
+        description: `Solo el ${portfolioCoveragePct}% de los clientes asignados (${activeBuyingClientsCount} de ${totalClientsCount}) realizaron compras en el período. Hay ${inactiveClients.length} clientes inactivos para revisar.`
+      });
+    } else {
+      actionInsights.push({
+        type: 'success',
+        title: 'Buena Cobertura de Cartera',
+        description: `El vendedor registró ventas en el ${portfolioCoveragePct}% de su cartera (${activeBuyingClientsCount} clientes).`
+      });
+    }
+
+    if (totalCarteraDebt > 2000000) {
+      actionInsights.push({
+        type: 'warning',
+        title: 'Deuda Acumulada en Cartera',
+        description: `Los clientes asignados acumulan $${totalCarteraDebt.toLocaleString('es-AR')} en cuenta corriente. Revisar prioridad de cobranza antes de autorizar nuevos créditos.`
+      });
+    }
+
+    if (inactiveClients.length > 0) {
+      actionInsights.push({
+        type: 'opportunity',
+        title: 'Recuperación de Clientes Inactivos',
+        description: `Identificados ${inactiveClients.length} clientes principales que no compraron este período. Planificar visitas en ruta para reactivar pedidos.`
+      });
+    }
+
+    const grossProfit = totalSales - totalCost;
+    const grossMarginPct = totalSales > 0 ? Math.round((grossProfit / totalSales) * 100) : 0;
+
+    return {
+      seller: {
+        id: sellerId,
+        name: sellerName,
+        totalAssignedClients: totalClientsCount,
+      },
+      period: {
+        startDate: start.toISOString(),
+        endDate: end.toISOString()
+      },
+      performance: {
+        totalSales: Math.round(totalSales),
+        totalCost: Math.round(totalCost),
+        grossProfit: Math.round(grossProfit),
+        grossMarginPct,
+        totalOrders: sellerOrders.length,
+        totalBultos,
+        activeBuyingClientsCount,
+        portfolioCoveragePct,
+        averageTicketPerClient,
+        officialSales: Math.round(officialSales),
+        internalSales: Math.round(internalSales)
+      },
+      collections: {
+        totalCollected,
+        totalCarteraDebt
+      },
+      topProducts,
+      inactiveClients,
+      debtorClients,
+      actionInsights
+    };
+  }
 }
 
 const MAIN_CITIES = [
