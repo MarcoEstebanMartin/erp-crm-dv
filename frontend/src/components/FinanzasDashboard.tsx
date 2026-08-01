@@ -580,12 +580,26 @@ export default function FinanzasDashboard() {
       const netAmount = Number(d.realBalance || 0) - Number(d.openingBalance || 0);
       const rawBranch = d.branch || d.user?.username || 'Central';
       const conceptText = rawBranch.toLowerCase().startsWith('caja:') ? rawBranch : `Caja: ${rawBranch}`;
+
+      // Determinar medio de pago de la caja
+      const methodsSet = new Set<string>();
+      if (d.transactions && d.transactions.length > 0) {
+        d.transactions.forEach((t: any) => {
+          if (t.paymentMethod === 'CASH') methodsSet.add('Efectivo');
+          else if (t.paymentMethod === 'CHECK') methodsSet.add('Cheque');
+          else if (t.paymentMethod === 'BANK_TRANSFER') methodsSet.add('Transferencia');
+        });
+      }
+
+      const methods = Array.from(methodsSet);
+      const paymentMethodLabel = methods.length === 1 ? methods[0] : methods.length > 1 ? 'Varios' : 'Efectivo';
+
       ledgerItems.push({
         id: `drawer-${d.id}`,
         date: d.closedAt,
         type: 'INGRESO',
         description: conceptText,
-        paymentMethod: 'Varios',
+        paymentMethod: paymentMethodLabel,
         amount: netAmount,
       });
     });
