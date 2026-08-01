@@ -66,9 +66,9 @@ export default function ExecutivePdfReport({ onClose }: ExecutivePdfReportProps)
     setLoading(true);
     setError(null);
     try {
-      const res = await api.getExecutivePdfReport(startDate, endDate);
-      if (res.status === 'success') {
-        setData(res.data);
+      const reportData = await api.getExecutivePdfReport(startDate, endDate);
+      if (reportData) {
+        setData(reportData);
       } else {
         setError('No se pudieron obtener los datos del reporte.');
       }
@@ -320,9 +320,9 @@ export default function ExecutivePdfReport({ onClose }: ExecutivePdfReportProps)
       </div>
 
       {error && (
-        <div style={{ padding: '16px', backgroundColor: '#fef2f2', color: '#991b1b', borderRadius: '8px', border: '1px solid #fca5a5', marginBottom: '20px' }}>
-          <AlertCircle size={18} inline style={{ marginRight: '8px' }} />
-          {error}
+        <div style={{ padding: '16px', backgroundColor: '#fef2f2', color: '#991b1b', borderRadius: '8px', border: '1px solid #fca5a5', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <AlertCircle size={18} />
+          <span>{error}</span>
         </div>
       )}
 

@@ -73,9 +73,9 @@ export default function SellerMeetingPdfReport({ sellers, initialSellerId, onClo
     setLoading(true);
     setError(null);
     try {
-      const res = await api.getSellerMeetingPdfReport(selectedSellerId, startDate, endDate);
-      if (res.status === 'success') {
-        setData(res.data);
+      const reportData = await api.getSellerMeetingPdfReport(selectedSellerId, startDate, endDate);
+      if (reportData) {
+        setData(reportData);
       } else {
         setError('No se pudieron obtener los datos de la reunión para este vendedor.');
       }
