@@ -1359,7 +1359,6 @@ export class AdminService {
         items: { include: { product: { include: { rubro: true } } } }
       }
     });
-
     // 2. Pedidos en período anterior (para comparar)
     const prevOrders = await prisma.order.findMany({
       where: {
@@ -1380,7 +1379,8 @@ export class AdminService {
 
     const productSalesMap: { [key: number]: { name: string; category: string; quantity: number; amount: number; cost: number } } = {};
     const categorySalesMap: { [key: string]: { amount: number; cost: number; itemsCount: number } } = {};
-    const citySalesMap: { [key: string]: { sales: number; count: number; clients: Set<number> } } = {};
+    const citySalesMap: { [key: string]: { officialSales: number; internalSales: number; totalSales: number; count: number; clients: Set<number> } } = {};
+    const clientSalesMap: { [key: number]: { name: string; city: string; officialSales: number; internalSales: number; totalSales: number; cost: number; ordersCount: number } } = {};
 
     for (const order of currentOrders) {
       const orderTotal = Number(order.totalAmount) || 0;
@@ -1389,11 +1389,16 @@ export class AdminService {
 
       const cityName = normalizeCity(order.persona?.city || order.persona?.route);
       if (!citySalesMap[cityName]) {
-        citySalesMap[cityName] = { sales: 0, count: 0, clients: new Set() };
+        citySalesMap[cityName] = { officialSales: 0, internalSales: 0, totalSales: 0, count: 0, clients: new Set() };
       }
-      citySalesMap[cityName].sales += orderTotal;
+      citySalesMap[cityName].totalSales += orderTotal;
       citySalesMap[cityName].count += 1;
       if (order.personaId) citySalesMap[cityName].clients.add(order.personaId);
+      if (order.billingType === BillingType.OFFICIAL) {
+        citySalesMap[cityName].officialSales += orderTotal;
+      } else {
+        citySalesMap[cityName].internalSales += orderTotal;
+      }
 
       for (const item of order.items) {
         const qty = item.product.isPesable && item.weight ? Number(item.weight) : item.quantity;
@@ -1436,6 +1441,30 @@ export class AdminService {
         internalSales += orderTotal;
         internalCost += orderCost;
         internalCount++;
+      }
+
+      // Mapeo por Cliente (Rentabilidad)
+      if (order.personaId) {
+        const clientName = order.persona?.name || `Cliente #${order.personaId}`;
+        if (!clientSalesMap[order.personaId]) {
+          clientSalesMap[order.personaId] = {
+            name: clientName,
+            city: cityName,
+            officialSales: 0,
+            internalSales: 0,
+            totalSales: 0,
+            cost: 0,
+            ordersCount: 0
+          };
+        }
+        clientSalesMap[order.personaId].totalSales += orderTotal;
+        clientSalesMap[order.personaId].cost += orderCost;
+        clientSalesMap[order.personaId].ordersCount += 1;
+        if (order.billingType === BillingType.OFFICIAL) {
+          clientSalesMap[order.personaId].officialSales += orderTotal;
+        } else {
+          clientSalesMap[order.personaId].internalSales += orderTotal;
+        }
       }
     }
 
@@ -1483,6 +1512,7 @@ export class AdminService {
       expensesByCategoryMap[cat] = (expensesByCategoryMap[cat] || 0) + amt;
     });
 
+    // Top 10 Productos
     const topProducts = Object.values(productSalesMap)
       .sort((a, b) => b.amount - a.amount)
       .slice(0, 10)
@@ -1494,6 +1524,21 @@ export class AdminService {
         marginPct: p.amount > 0 ? Math.round(((p.amount - p.cost) / p.amount) * 100) : 0
       }));
 
+    // Top 10 Clientes Más Rentables
+    const topClients = Object.values(clientSalesMap)
+      .map(c => ({
+        ...c,
+        officialSales: Math.round(c.officialSales),
+        internalSales: Math.round(c.internalSales),
+        totalSales: Math.round(c.totalSales),
+        cost: Math.round(c.cost),
+        profit: Math.round(c.totalSales - c.cost),
+        marginPct: c.totalSales > 0 ? Math.round(((c.totalSales - c.cost) / c.totalSales) * 100) : 0
+      }))
+      .sort((a, b) => b.profit - a.profit)
+      .slice(0, 10);
+
+    // Top Categorías
     const topCategories = Object.entries(categorySalesMap)
       .map(([name, data]) => ({
         name,
@@ -1505,14 +1550,17 @@ export class AdminService {
       }))
       .sort((a, b) => b.amount - a.amount);
 
+    // Zonas / Ciudades con desglose Sucursal A (Oficial), Sucursal X (Interna) y Total
     const citiesSummary = Object.entries(citySalesMap)
       .map(([cityName, data]) => ({
         cityName,
-        sales: Math.round(data.sales),
+        officialSales: Math.round(data.officialSales),
+        internalSales: Math.round(data.internalSales),
+        totalSales: Math.round(data.totalSales),
         ordersCount: data.count,
         activeClientsCount: data.clients.size
       }))
-      .sort((a, b) => b.sales - a.sales);
+      .sort((a, b) => b.totalSales - a.totalSales);
 
     const grossProfit = totalSales - totalCost;
     const netProfit = grossProfit - totalExpenses;
@@ -1561,6 +1609,7 @@ export class AdminService {
         totalPendingDebt
       },
       topProducts,
+      topClients,
       topCategories,
       citiesSummary,
       expensesSummary: {
@@ -1570,9 +1619,6 @@ export class AdminService {
     };
   }
 
-  /**
-   * Obtener datos detallados de desempeño e insights para la reunión 1 a 1 con un Vendedor.
-   */
   async getSellerMeetingPdfReportData(sellerId: number, startDateStr?: string, endDateStr?: string) {
     let start: Date;
     let end: Date;

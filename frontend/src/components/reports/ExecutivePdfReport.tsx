@@ -351,22 +351,17 @@ export default function ExecutivePdfReport({ onClose }: ExecutivePdfReportProps)
         ) : (
           <div>
             
-            {/* ENCABEZADO EJECUTIVO CON LOGO */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #0f172a', paddingBottom: '16px', marginBottom: '24px' }}>
+            {/* ENCABEZADO EJECUTIVO CON LOGO ALINEADO Y SUBTÍTULO */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #0f172a', paddingBottom: '14px', marginBottom: '22px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
                 <img 
                   src="/logo.png" 
                   alt="Logo DV" 
-                  style={{ height: '52px', width: 'auto', objectFit: 'contain' }}
+                  style={{ height: '56px', width: 'auto', objectFit: 'contain' }}
                   onError={(e) => { e.currentTarget.style.display = 'none'; }}
                 />
-                <div>
-                  <div style={{ fontSize: '1.35rem', fontWeight: 900, color: 'var(--color-corp-red)', letterSpacing: '0.5px' }}>
-                    DISTRIBUIDORA DV
-                  </div>
-                  <div style={{ fontSize: '0.73rem', fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', marginTop: '2px' }}>
-                    Alimentos y Bebidas | Control de Gestión
-                  </div>
+                <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px', borderLeft: '2px solid #e2e8f0', paddingLeft: '12px' }}>
+                  Alimentos y Bebidas | Control de Gestión
                 </div>
               </div>
               <div style={{ textAlign: 'right' }}>
@@ -561,46 +556,158 @@ export default function ExecutivePdfReport({ onClose }: ExecutivePdfReportProps)
                         -{formatCurrency(data.summary.totalExpenses)}
                       </td>
                     </tr>
-                    <tr style={{ fontWeight: 800, fontSize: '0.85rem', borderTop: '2px solid #0f172a' }}>
-                      <td style={{ padding: '6px 0' }}>RESULTADO NETO ESTIMADO:</td>
-                      <td style={{ padding: '6px 0', textAlign: 'right', fontFamily: 'monospace', color: data.summary.netProfit >= 0 ? '#166534' : '#991b1b' }}>
-                        {formatCurrency(data.summary.netProfit)}
+                <div style={{ fontSize: '0.72rem', color: '#991b1b', marginTop: '4px' }}>
+                  Deuda Pendiente: <strong>{formatCurrency(data.collections.totalPendingDebt)}</strong>
+                </div>
+              </div>
+
+              <div style={{ padding: '12px', borderRadius: '6px', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0' }}>
+                <div style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>Volumen Comercial</div>
+                <div style={{ fontSize: '1.3rem', fontWeight: 800, fontFamily: 'monospace', color: '#0f172a', marginTop: '4px' }}>
+                  {data.summary.totalBultos.toLocaleString('es-AR')} <span style={{ fontSize: '0.8rem', fontWeight: 500 }}>bultos</span>
+                </div>
+                <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '4px' }}>
+                  En <strong>{data.summary.totalOrders}</strong> pedidos entregados
+                </div>
+              </div>
+
+            </div>
+
+            {/* SECCIÓN 2: DESGLOSE DE FACTURACIÓN Y COBRANZAS */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '22px' }}>
+              
+              {/* Facturación Sucursal A vs Sucursal X */}
+              <div style={{ padding: '14px', borderRadius: '6px', border: '1px solid #e2e8f0', backgroundColor: '#fff' }}>
+                <h3 style={{ margin: '0 0 10px 0', fontSize: '0.8rem', fontWeight: 700, color: '#0f172a', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  Canal de Facturación (Oficial vs Interno)
+                </h3>
+                <table style={{ width: '100%', fontSize: '0.75rem', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr style={{ borderBottom: '1px solid #cbd5e1', textAlign: 'left', color: '#64748b' }}>
+                      <th style={{ padding: '4px 0' }}>Sucursal</th>
+                      <th style={{ padding: '4px 0', textAlign: 'right' }}>Venta ($)</th>
+                      <th style={{ padding: '4px 0', textAlign: 'right' }}>Ganancia ($)</th>
+                      <th style={{ padding: '4px 0', textAlign: 'right' }}>Margen %</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
+                      <td style={{ padding: '6px 0', fontWeight: 600 }}>Sucursal A (Oficial)</td>
+                      <td style={{ padding: '6px 0', textAlign: 'right', fontFamily: 'monospace' }}>{formatCurrency(data.billingBreakdown.official.sales)}</td>
+                      <td style={{ padding: '6px 0', textAlign: 'right', fontFamily: 'monospace', color: '#166534' }}>{formatCurrency(data.billingBreakdown.official.grossProfit)}</td>
+                      <td style={{ padding: '6px 0', textAlign: 'right', fontWeight: 600 }}>
+                        {data.billingBreakdown.official.sales > 0 ? Math.round((data.billingBreakdown.official.grossProfit / data.billingBreakdown.official.sales) * 100) : 0}%
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style={{ padding: '6px 0', fontWeight: 600 }}>Sucursal X (Interna)</td>
+                      <td style={{ padding: '6px 0', textAlign: 'right', fontFamily: 'monospace' }}>{formatCurrency(data.billingBreakdown.internal.sales)}</td>
+                      <td style={{ padding: '6px 0', textAlign: 'right', fontFamily: 'monospace', color: '#166534' }}>{formatCurrency(data.billingBreakdown.internal.grossProfit)}</td>
+                      <td style={{ padding: '6px 0', textAlign: 'right', fontWeight: 600 }}>
+                        {data.billingBreakdown.internal.sales > 0 ? Math.round((data.billingBreakdown.internal.grossProfit / data.billingBreakdown.internal.sales) * 100) : 0}%
                       </td>
                     </tr>
                   </tbody>
                 </table>
               </div>
 
+              {/* Cobranzas por Método de Pago */}
+              <div style={{ padding: '14px', borderRadius: '6px', border: '1px solid #e2e8f0', backgroundColor: '#fff' }}>
+                <h3 style={{ margin: '0 0 10px 0', fontSize: '0.8rem', fontWeight: 700, color: '#0f172a', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  Recaudación de Cobranzas por Medio
+                </h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.75rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '4px', borderBottom: '1px solid #f1f5f9' }}>
+                    <span style={{ color: '#475569' }}>💵 Efectivo (Caja)</span>
+                    <strong style={{ fontFamily: 'monospace' }}>{formatCurrency(data.collections.byMethod.cash)}</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '4px', borderBottom: '1px solid #f1f5f9' }}>
+                    <span style={{ color: '#475569' }}>🏦 Transferencias Bancarias</span>
+                    <strong style={{ fontFamily: 'monospace' }}>{formatCurrency(data.collections.byMethod.transfer)}</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '4px', borderBottom: '1px solid #f1f5f9' }}>
+                    <span style={{ color: '#475569' }}>📄 Cheques de Terceros</span>
+                    <strong style={{ fontFamily: 'monospace' }}>{formatCurrency(data.collections.byMethod.check)}</strong>
+                  </div>
+                </div>
+              </div>
+
             </div>
 
-            {/* SECCIÓN 3: TOP 10 PRODUCTOS MÁS VENDIDOS */}
-            <div style={{ marginBottom: '24px' }}>
+            {/* SECCIÓN 3: TOP 10 CLIENTES MÁS RENTABLES DEL PERÍODO */}
+            <div style={{ marginBottom: '22px' }}>
               <h3 style={{ fontSize: '0.85rem', fontWeight: 700, color: '#0f172a', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '10px', borderBottom: '1px solid #cbd5e1', paddingBottom: '4px' }}>
-                4. Ranking de Productos Principales (Top 10 en Recaudación)
+                3. Top 10 Clientes Más Rentables del Período
               </h3>
               
-              <table style={{ width: '100%', fontSize: '0.75rem', borderCollapse: 'collapse' }}>
+              <table style={{ width: '100%', fontSize: '0.73rem', borderCollapse: 'collapse' }}>
                 <thead>
                   <tr style={{ backgroundColor: '#f1f5f9', color: '#475569', textAlign: 'left' }}>
-                    <th style={{ padding: '6px 8px' }}>#</th>
-                    <th style={{ padding: '6px 8px' }}>Producto</th>
-                    <th style={{ padding: '6px 8px' }}>Categoría</th>
-                    <th style={{ padding: '6px 8px', textAlign: 'center' }}>Bultos / Cantidad</th>
-                    <th style={{ padding: '6px 8px', textAlign: 'right' }}>Total Venta ($)</th>
-                    <th style={{ padding: '6px 8px', textAlign: 'right' }}>Margen %</th>
+                    <th style={{ padding: '5px 8px' }}>#</th>
+                    <th style={{ padding: '5px 8px' }}>Cliente</th>
+                    <th style={{ padding: '5px 8px' }}>Localidad</th>
+                    <th style={{ padding: '5px 8px', textAlign: 'right' }}>Suc. A (Oficial)</th>
+                    <th style={{ padding: '5px 8px', textAlign: 'right' }}>Suc. X (Interna)</th>
+                    <th style={{ padding: '5px 8px', textAlign: 'right' }}>Total Venta ($)</th>
+                    <th style={{ padding: '5px 8px', textAlign: 'right' }}>Ganancia ($)</th>
+                    <th style={{ padding: '5px 8px', textAlign: 'right' }}>Margen %</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.topClients && data.topClients.map((client: any, idx: number) => (
+                    <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                      <td style={{ padding: '4px 8px', fontWeight: 700, color: '#64748b' }}>{idx + 1}</td>
+                      <td style={{ padding: '4px 8px', fontWeight: 600, color: '#0f172a' }}>{client.name}</td>
+                      <td style={{ padding: '4px 8px', color: '#64748b' }}>📍 {client.city}</td>
+                      <td style={{ padding: '4px 8px', textAlign: 'right', fontFamily: 'monospace', color: '#475569' }}>
+                        {formatCurrency(client.officialSales)}
+                      </td>
+                      <td style={{ padding: '4px 8px', textAlign: 'right', fontFamily: 'monospace', color: '#475569' }}>
+                        {formatCurrency(client.internalSales)}
+                      </td>
+                      <td style={{ padding: '4px 8px', textAlign: 'right', fontWeight: 700, fontFamily: 'monospace', color: '#0f172a' }}>
+                        {formatCurrency(client.totalSales)}
+                      </td>
+                      <td style={{ padding: '4px 8px', textAlign: 'right', fontWeight: 700, fontFamily: 'monospace', color: '#166534' }}>
+                        {formatCurrency(client.profit)}
+                      </td>
+                      <td style={{ padding: '4px 8px', textAlign: 'right', fontWeight: 600, color: client.marginPct >= 20 ? '#166534' : '#b45309' }}>
+                        {client.marginPct}%
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* SECCIÓN 4: TOP 10 PRODUCTOS MÁS VENDIDOS */}
+            <div style={{ marginBottom: '22px' }}>
+              <h3 style={{ fontSize: '0.85rem', fontWeight: 700, color: '#0f172a', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '10px', borderBottom: '1px solid #cbd5e1', paddingBottom: '4px' }}>
+                4. Productos Más Vendidos del Período
+              </h3>
+              
+              <table style={{ width: '100%', fontSize: '0.73rem', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ backgroundColor: '#f1f5f9', color: '#475569', textAlign: 'left' }}>
+                    <th style={{ padding: '5px 8px' }}>#</th>
+                    <th style={{ padding: '5px 8px' }}>Producto</th>
+                    <th style={{ padding: '5px 8px' }}>Categoría</th>
+                    <th style={{ padding: '5px 8px', textAlign: 'center' }}>Bultos / Cantidad</th>
+                    <th style={{ padding: '5px 8px', textAlign: 'right' }}>Total Venta ($)</th>
+                    <th style={{ padding: '5px 8px', textAlign: 'right' }}>Margen %</th>
                   </tr>
                 </thead>
                 <tbody>
                   {data.topProducts.map((prod: any, idx: number) => (
                     <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                      <td style={{ padding: '5px 8px', fontWeight: 700, color: '#64748b' }}>{idx + 1}</td>
-                      <td style={{ padding: '5px 8px', fontWeight: 600, color: '#0f172a' }}>{prod.name}</td>
-                      <td style={{ padding: '5px 8px', color: '#64748b' }}>{prod.category}</td>
-                      <td style={{ padding: '5px 8px', textAlign: 'center', fontWeight: 600 }}>{prod.quantity.toLocaleString('es-AR')}</td>
-                      <td style={{ padding: '5px 8px', textAlign: 'right', fontWeight: 600, fontFamily: 'monospace' }}>
+                      <td style={{ padding: '4px 8px', fontWeight: 700, color: '#64748b' }}>{idx + 1}</td>
+                      <td style={{ padding: '4px 8px', fontWeight: 600, color: '#0f172a' }}>{prod.name}</td>
+                      <td style={{ padding: '4px 8px', color: '#64748b' }}>{prod.category}</td>
+                      <td style={{ padding: '4px 8px', textAlign: 'center', fontWeight: 600 }}>{prod.quantity.toLocaleString('es-AR')}</td>
+                      <td style={{ padding: '4px 8px', textAlign: 'right', fontWeight: 600, fontFamily: 'monospace' }}>
                         {formatCurrency(prod.amount)}
                       </td>
-                      <td style={{ padding: '5px 8px', textAlign: 'right', fontWeight: 600, color: prod.marginPct >= 20 ? '#166534' : '#b45309' }}>
+                      <td style={{ padding: '4px 8px', textAlign: 'right', fontWeight: 600, color: prod.marginPct >= 20 ? '#166534' : '#b45309' }}>
                         {prod.marginPct}%
                       </td>
                     </tr>
@@ -609,25 +716,40 @@ export default function ExecutivePdfReport({ onClose }: ExecutivePdfReportProps)
               </table>
             </div>
 
-            {/* SECCIÓN 4: RENDIMIENTO POR ZONAS Y PUEBLOS */}
+            {/* SECCIÓN 5: VENTAS POR LOCALIDAD / ZONA (MINIMALISTA) */}
             <div>
               <h3 style={{ fontSize: '0.85rem', fontWeight: 700, color: '#0f172a', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '10px', borderBottom: '1px solid #cbd5e1', paddingBottom: '4px' }}>
-                5. Ventas por Localidad / Zona de Cobertura
+                5. Ventas por Zona y Localidad (Sucursal A vs Sucursal X)
               </h3>
               
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
-                {data.citiesSummary.slice(0, 9).map((c: any, idx: number) => (
-                  <div key={idx} style={{ padding: '8px 10px', backgroundColor: '#f8fafc', borderRadius: '4px', border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div>
-                      <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#0f172a' }}>📍 {c.cityName}</div>
-                      <div style={{ fontSize: '0.68rem', color: '#64748b' }}>{c.ordersCount} pedidos | {c.activeClientsCount} clientes</div>
-                    </div>
-                    <div style={{ fontSize: '0.82rem', fontWeight: 700, fontFamily: 'monospace', color: '#0f172a' }}>
-                      {formatCurrency(c.sales)}
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <table style={{ width: '100%', fontSize: '0.73rem', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ backgroundColor: '#f8fafc', color: '#475569', textAlign: 'left', borderBottom: '1px solid #e2e8f0' }}>
+                    <th style={{ padding: '5px 8px' }}>Localidad / Ruta</th>
+                    <th style={{ padding: '5px 8px', textAlign: 'center' }}>Pedidos</th>
+                    <th style={{ padding: '5px 8px', textAlign: 'right' }}>Sucursal A (Oficial)</th>
+                    <th style={{ padding: '5px 8px', textAlign: 'right' }}>Sucursal X (Interna)</th>
+                    <th style={{ padding: '5px 8px', textAlign: 'right' }}>Total Facturado ($)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.citiesSummary.map((c: any, idx: number) => (
+                    <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                      <td style={{ padding: '4px 8px', fontWeight: 600, color: '#0f172a' }}>📍 {c.cityName}</td>
+                      <td style={{ padding: '4px 8px', textAlign: 'center', color: '#64748b' }}>{c.ordersCount}</td>
+                      <td style={{ padding: '4px 8px', textAlign: 'right', fontFamily: 'monospace', color: '#475569' }}>
+                        {formatCurrency(c.officialSales || 0)}
+                      </td>
+                      <td style={{ padding: '4px 8px', textAlign: 'right', fontFamily: 'monospace', color: '#475569' }}>
+                        {formatCurrency(c.internalSales || 0)}
+                      </td>
+                      <td style={{ padding: '4px 8px', textAlign: 'right', fontWeight: 700, fontFamily: 'monospace', color: '#0f172a' }}>
+                        {formatCurrency(c.totalSales || c.sales || 0)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
 
             {/* FIRMA Y PIE DE PÁGINA */}
