@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../utils/api';
 import HrDashboard from '../HrDashboard';
+import AfipExportDashboard from '../../pages/AfipExportDashboard';
 import { 
   UserPlus, 
   RotateCcw, 
@@ -392,6 +393,7 @@ export default function ConfigTab({
       <div style={{ display: 'flex', gap: '8px', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px', marginBottom: '12px', overflowX: 'auto', paddingRight: '4px' }}>
         {[
           { id: 'general', label: 'General & Empresa', icon: <Building2 size={15} /> },
+          { id: 'arca', label: 'Cierre Fiscal (ARCA)', icon: <FileText size={15} /> },
           { id: 'rrhh', label: 'Recursos Humanos', icon: <Briefcase size={15} /> },
           { id: 'personal', label: 'Empleados & Roles', icon: <Users size={15} /> },
           { id: 'audit', label: 'Auditoría (Logs)', icon: <FileText size={15} /> },
@@ -424,6 +426,11 @@ export default function ConfigTab({
           </button>
         ))}
       </div>
+
+      {/* Sub-tab Cierre Fiscal (ARCA) */}
+      {configTab === 'arca' && (
+        <AfipExportDashboard />
+      )}
 
       {/* Sub-tab Recursos Humanos */}
       {configTab === 'rrhh' && (
@@ -484,42 +491,56 @@ export default function ConfigTab({
               display: 'flex', 
               alignItems: 'center', 
               justifyContent: 'space-between',
-              padding: '16px 20px', 
-              backgroundColor: ignoreStockCheck ? '#f0fdf4' : '#f8f9fa',
-              border: `1px solid ${ignoreStockCheck ? '#16a34a' : 'var(--border-color)'}`,
+              padding: '14px 18px', 
+              backgroundColor: '#ffffff',
+              border: '1px solid var(--border-color)',
               borderRadius: '8px',
               cursor: 'pointer',
-              transition: 'all 0.2s ease',
-              marginBottom: '24px'
+              transition: 'all 0.15s ease',
+              marginBottom: '24px',
+              userSelect: 'none'
             }}
+            onMouseEnter={(e) => (e.currentTarget.style.borderColor = 'var(--text-secondary)')}
+            onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'var(--border-color)')}
           >
-            <div>
-              <div style={{ fontWeight: 600, color: ignoreStockCheck ? '#166534' : 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                {ignoreStockCheck ? '✅' : '⚠️'} Habilitar Facturación sin Stock Físico (Venta en negativo)
-              </div>
-              <div style={{ fontSize: '0.85rem', color: ignoreStockCheck ? '#166534' : 'var(--text-secondary)', marginTop: '4px', opacity: 0.9 }}>
-                Permite realizar ventas y emitir comprobantes incluso cuando el inventario del producto sea cero o negativo.
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{
+                width: '8px',
+                height: '8px',
+                borderRadius: '50%',
+                backgroundColor: ignoreStockCheck ? '#10b981' : '#9ca3af',
+                transition: 'background-color 0.2s ease',
+                flexShrink: 0
+              }} />
+              <div>
+                <div style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.88rem' }}>
+                  Habilitar Facturación sin Stock Físico <span style={{ color: 'var(--text-secondary)', fontWeight: 400, fontSize: '0.825rem' }}>(Venta en negativo)</span>
+                </div>
+                <div style={{ fontSize: '0.825rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                  Permite realizar ventas y emitir comprobantes incluso cuando el inventario del producto sea cero o negativo.
+                </div>
               </div>
             </div>
             <div style={{
-              width: '44px',
-              height: '24px',
-              backgroundColor: ignoreStockCheck ? '#16a34a' : '#d1d5db',
-              borderRadius: '12px',
+              width: '38px',
+              height: '22px',
+              backgroundColor: ignoreStockCheck ? '#10b981' : '#e5e7eb',
+              borderRadius: '11px',
               position: 'relative',
-              transition: 'background-color 0.3s',
-              flexShrink: 0
+              transition: 'background-color 0.2s ease',
+              flexShrink: 0,
+              marginLeft: '16px'
             }}>
               <div style={{
-                width: '20px',
-                height: '20px',
-                backgroundColor: '#fff',
+                width: '18px',
+                height: '18px',
+                backgroundColor: '#ffffff',
                 borderRadius: '50%',
                 position: 'absolute',
                 top: '2px',
-                left: ignoreStockCheck ? '22px' : '2px',
-                transition: 'left 0.3s',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
+                left: ignoreStockCheck ? '18px' : '2px',
+                transition: 'left 0.2s ease',
+                boxShadow: '0 1px 2px rgba(0,0,0,0.15)'
               }} />
             </div>
           </div>

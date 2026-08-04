@@ -1,9 +1,13 @@
+import dotenv from 'dotenv';
+dotenv.config();
+
 import express, { Application, Request, Response, NextFunction } from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
 import path from 'path';
 import fs from 'fs';
 import { errorHandler } from './middlewares/errorHandler.middleware';
+
+import { authenticateJWT } from './middlewares/auth';
 
 // Importación de Rutas
 import authRoutes from './routes/auth.routes';
@@ -30,8 +34,6 @@ import hrRoutes from './routes/hr.routes';
 import storeRoutes from './routes/store.routes';
 import crmWhatsappRoutes from './routes/crm_whatsapp.routes';
 import weeklyScheduleRoutes from './routes/weeklySchedule.routes';
-
-dotenv.config();
 
 const app: Application = express();
 
@@ -93,7 +95,7 @@ if (fs.existsSync(masterProductosFotosDir)) {
   }));
 }
 
-app.use('/api/purchases/files', express.static(archivosDir));
+app.use('/api/purchases/files', authenticateJWT, express.static(archivosDir));
 
 // Montar Rutas
 app.use('/api/auth', authRoutes);

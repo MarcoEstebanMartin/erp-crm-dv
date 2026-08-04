@@ -94,7 +94,7 @@ export default function FulfillmentDashboard() {
     try {
       setLoading(true);
       const res = await api.requestCaeForOrder(orderId);
-      showConfirmDialog({
+      showConfirm({
         title: 'CAE Asignado con Éxito',
         message: res.message || 'El comprobante fue autorizado por AFIP.',
         type: 'success',
@@ -102,7 +102,7 @@ export default function FulfillmentDashboard() {
         onConfirm: () => fetchOrders(),
       });
     } catch (err: any) {
-      showConfirmDialog({
+      showConfirm({
         title: 'Error al solicitar CAE',
         message: err.message || 'Error al conectar con AFIP.',
         type: 'danger',

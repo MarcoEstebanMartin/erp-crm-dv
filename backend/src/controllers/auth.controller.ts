@@ -2,9 +2,15 @@ import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import prisma from '../utils/prisma';
-import { AuthenticatedRequest } from '../types';
+import { AuthenticatedRequest, UserPermissions } from '../types';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'seguridad-erp-distribuidora-2026-key-local-development';
+function getJwtSecret(): string {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error('FATAL: La variable de entorno JWT_SECRET no está definida en la configuración del servidor.');
+  }
+  return secret;
+}
 
 export function getDefaultPermissions(role: string) {
   if (role === 'ADMIN' || role === 'FACTURACION') {
@@ -54,7 +60,7 @@ export async function login(req: Request, res: Response): Promise<void> {
       return;
     }
 
-    const effectivePermissions = (user.permissions as any) || getDefaultPermissions(user.role);
+    const effectivePermissions: UserPermissions = (user.permissions as unknown as UserPermissions) || getDefaultPermissions(user.role);
 
     // Generar JWT (válido por 12 horas)
     const token = jwt.sign(
@@ -64,7 +70,7 @@ export async function login(req: Request, res: Response): Promise<void> {
         role: user.role,
         permissions: effectivePermissions
       },
-      JWT_SECRET,
+      getJwtSecret(),
       { expiresIn: '12h' }
     );
 
@@ -123,7 +129,7 @@ export async function getMe(req: AuthenticatedRequest, res: Response): Promise<v
       return;
     }
 
-    const effectivePermissions = (user.permissions as any) || getDefaultPermissions(user.role);
+    const effectivePermissions: UserPermissions = (user.permissions as unknown as UserPermissions) || getDefaultPermissions(user.role);
 
     res.status(200).json({
       status: 'success',

@@ -3,7 +3,13 @@ import jwt from 'jsonwebtoken';
 import { Role } from '@prisma/client';
 import { AuthenticatedRequest, UserPayload } from '../types';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'seguridad-erp-distribuidora-2026-key-local-development';
+function getJwtSecret(): string {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error('FATAL: La variable de entorno JWT_SECRET no está definida en la configuración del servidor.');
+  }
+  return secret;
+}
 
 /**
  * Middleware para autenticar requests mediante JWT en el header Authorization.
@@ -26,7 +32,7 @@ export function authenticateJWT(
   const token = authHeader.split(' ')[1];
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as UserPayload;
+    const decoded = jwt.verify(token, getJwtSecret()) as UserPayload;
     req.user = decoded;
     next();
   } catch (error) {

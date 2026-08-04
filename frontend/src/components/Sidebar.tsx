@@ -61,14 +61,11 @@ export default function Sidebar({ username, role, activeTab, setActiveTab, onLog
         { id: 'dashboard', label: 'Panel Principal', icon: <LayoutDashboard size={18} /> },
         { id: 'crm', label: 'CRM & WhatsApp', icon: <MessageSquare size={18} /> },
         { id: 'fulfillment', label: 'Armado y Facturación', icon: <Warehouse size={18} /> },
-        { id: 'orders', label: 'Historial de Pedidos', icon: <ShoppingCart size={18} /> },
         { id: 'clients', label: 'Personas', icon: <Users size={18} /> },
         { id: 'logistica', label: 'Logística y Flota', icon: <Truck size={18} /> },
         { id: 'products', label: 'Productos y Stock', icon: <Package size={18} /> },
         { id: 'compras', label: 'Proveedores', icon: <Receipt size={18} /> },
-        { id: 'billing', label: 'Facturación', icon: <FileText size={18} /> },
-        { id: 'rendiciones', label: 'Finanzas y Cajas', icon: <DollarSign size={18} /> },
-        { id: 'reportes', label: 'Reportes y Analíticas', icon: <TrendingUp size={18} /> },
+        { id: 'rendiciones', label: 'Finanzas y Reportes', icon: <DollarSign size={18} /> },
         { id: 'config', label: 'General & Empresa', icon: <Building2 size={18} /> },
       ];
     }
@@ -78,12 +75,10 @@ export default function Sidebar({ username, role, activeTab, setActiveTab, onLog
         { id: 'dashboard', label: 'Panel Principal', icon: <LayoutDashboard size={18} /> },
         { id: 'crm', label: 'CRM & WhatsApp', icon: <MessageSquare size={18} /> },
         { id: 'fulfillment', label: 'Armado y Facturación', icon: <Warehouse size={18} /> },
-        { id: 'orders', label: 'Historial de Pedidos', icon: <ShoppingCart size={18} /> },
         { id: 'clients', label: 'Personas', icon: <Users size={18} /> },
         { id: 'logistica', label: 'Logística y Flota', icon: <Truck size={18} /> },
         { id: 'products', label: 'Productos y Stock', icon: <Package size={18} /> },
         { id: 'compras', label: 'Proveedores', icon: <Receipt size={18} /> },
-        { id: 'billing', label: 'Facturación', icon: <FileText size={18} /> },
         { id: 'config', label: 'General & Empresa', icon: <Building2 size={18} /> },
       ];
     }

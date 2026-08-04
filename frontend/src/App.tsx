@@ -10,6 +10,7 @@ import VendedorPages from './pages/vendedor/VendedorPages';
 import DepositoPages from './pages/deposito/DepositoPages';
 
 const ClientPortal = lazy(() => import('./components/store/ClientPortal'));
+const InstitutionalLanding = lazy(() => import('./components/landing/InstitutionalLanding'));
 
 const LoadingSpinner = () => (
   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '50vh', gap: '12px' }}>
@@ -92,27 +93,47 @@ function App() {
     navigate('/');
   };
 
-  // Interceptar ruta o modo para Tienda Online / Portal Clientes
-  if (isStoreMode || location.pathname.startsWith('/tienda')) {
-    return (
-      <Suspense fallback={<LoadingSpinner />}>
-        <ClientPortal onBackToStaffLogin={() => {
-          setIsStoreMode(false);
-          navigate('/');
-        }} />
-      </Suspense>
-    );
-  }
-
   // Interceptar ruta para recibos compartidos
   if (location.pathname.startsWith('/recibo/')) {
     const receiptId = location.pathname.split('/recibo/')[1];
     return <ReceiptView receiptId={receiptId} />;
   }
 
-  // Si no está autenticado, renderizar Login
+  // Interceptar ruta o modo para Tienda Online B2B / Portal Clientes
+  if (isStoreMode || location.pathname.startsWith('/tienda') || location.search.includes('token=')) {
+    return (
+      <Suspense fallback={<LoadingSpinner />}>
+        <ClientPortal onBackToStaffLogin={() => {
+          setIsStoreMode(false);
+          navigate('/login');
+        }} />
+      </Suspense>
+    );
+  }
+
+  // Interceptar ruta para Login de Empleados ERP (/login)
+  if (location.pathname === '/login' && !user) {
+    return <Login onLoginSuccess={handleLoginSuccess} onOpenStore={() => { setIsStoreMode(true); navigate('/tienda'); }} />;
+  }
+
+  // Si no hay sesión de empleado activa y está en la raíz (/), mostrar la Web Institucional donvenancio.com.ar
+  if (!user && (location.pathname === '/' || location.pathname === '')) {
+    return (
+      <Suspense fallback={<LoadingSpinner />}>
+        <InstitutionalLanding
+          onOpenStore={() => {
+            setIsStoreMode(true);
+            navigate('/tienda');
+          }}
+          onOpenStaffLogin={() => navigate('/login')}
+        />
+      </Suspense>
+    );
+  }
+
+  // Si no está autenticado y busca otra ruta interna, renderizar Login ERP
   if (!user) {
-    return <Login onLoginSuccess={handleLoginSuccess} onOpenStore={() => setIsStoreMode(true)} />;
+    return <Login onLoginSuccess={handleLoginSuccess} onOpenStore={() => { setIsStoreMode(true); navigate('/tienda'); }} />;
   }
 
   return (
