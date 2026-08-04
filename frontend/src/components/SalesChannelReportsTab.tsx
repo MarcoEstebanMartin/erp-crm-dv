@@ -432,7 +432,7 @@ export default function SalesChannelReportsTab() {
                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                               <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#94a3b8', width: '16px', textAlign: 'center' }}>{index + 1}</span>
                               {item.product.imageUrl ? (
-                                <img src={item.product.imageUrl} alt="" style={{ width: '28px', height: '28px', borderRadius: '4px', objectFit: 'cover', border: '1px solid #e2e8f0' }} />
+                                <img src={item.product.imageUrl.startsWith('http') ? item.product.imageUrl : (item.product.imageUrl.startsWith('/') ? `${item.product.imageUrl}?v=1.3` : `/uploads/products/${item.product.imageUrl}?v=1.3`)} alt="" style={{ width: '28px', height: '28px', borderRadius: '4px', objectFit: 'cover', border: '1px solid #e2e8f0' }} />
                               ) : (
                                 <div style={{ width: '28px', height: '28px', borderRadius: '4px', backgroundColor: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.65rem', fontWeight: 700, color: '#64748b' }}>
                                   {item.product.sku.slice(0, 3)}

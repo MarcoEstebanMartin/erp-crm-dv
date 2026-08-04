@@ -193,6 +193,9 @@ export async function uploadProductImage(req: AuthenticatedRequest, res: Respons
     // Normalizar extensión del archivo original
     const ext = path.extname(req.file.originalname).toLowerCase() || '.png';
     const uploadDir = path.join(__dirname, '../../uploads/products');
+    const masterDir = process.env.ARCHIVOS_PATH 
+      ? path.join(process.env.ARCHIVOS_PATH, 'fotos/Productos')
+      : path.join(__dirname, '../../../ARCHIVOS/fotos/Productos');
 
     // Limpiar archivos anteriores de este SKU para evitar huérfanos y problemas de caché
     if (fs.existsSync(uploadDir)) {
@@ -204,12 +207,22 @@ export async function uploadProductImage(req: AuthenticatedRequest, res: Respons
       fs.mkdirSync(uploadDir, { recursive: true });
     }
 
+    if (!fs.existsSync(masterDir)) {
+      try { fs.mkdirSync(masterDir, { recursive: true }); } catch (e) {}
+    }
+
     // Nombre único con timestamp para forzar actualización en caché de navegadores
     const filename = `${product.sku}_${Date.now()}${ext}`;
     const uploadPath = path.join(uploadDir, filename);
 
-    // Escribir el buffer a disco
+    // Escribir el buffer a disco (Uploads y Maestro)
     fs.writeFileSync(uploadPath, req.file.buffer);
+    if (fs.existsSync(masterDir)) {
+      try {
+        const masterPath = path.join(masterDir, `${product.sku}${ext}`);
+        fs.writeFileSync(masterPath, req.file.buffer);
+      } catch (e) {}
+    }
 
     // Ruta URL relativa que sirve Express estático
     const imageUrl = `/uploads/products/${filename}`;
@@ -241,12 +254,18 @@ export async function uploadProductImage(req: AuthenticatedRequest, res: Respons
 
 /**
  * Importar imágenes en lote a partir de un archivo comprimido ZIP.
- * Asocia las imágenes basándose en que el nombre del archivo coincida con el SKU.
+ * Asocia las imágenes basándose en que el nombre del archivo coincida con el SKU o Nombre exacto.
  */
 export async function importProductsZip(req: AuthenticatedRequest, res: Response): Promise<void> {
   try {
     if (!req.file) {
       res.status(400).json({ status: 'error', message: 'No se ha subido ningún archivo ZIP.' });
+      return;
+    }
+
+    const MAX_ZIP_SIZE = 50 * 1024 * 1024; // 50MB
+    if (req.file.size > MAX_ZIP_SIZE) {
+      res.status(400).json({ status: 'error', message: 'El archivo ZIP supera el límite máximo permitido de 50MB.' });
       return;
     }
 
@@ -258,12 +277,17 @@ export async function importProductsZip(req: AuthenticatedRequest, res: Response
     const skippedEntries: string[] = [];
 
     const uploadDir = path.join(__dirname, '../../uploads/products');
+    const masterDir = process.env.ARCHIVOS_PATH 
+      ? path.join(process.env.ARCHIVOS_PATH, 'fotos/Productos')
+      : path.join(__dirname, '../../../ARCHIVOS/fotos/Productos');
+
     if (!fs.existsSync(uploadDir)) {
       fs.mkdirSync(uploadDir, { recursive: true });
     }
 
-    // Cargar todos los productos de la BD para hacer matcheo flexible por SKU o Nombre
+    // Cargar únicamente productos activos o relevantes con SKU / Nombre
     const allProducts = await prisma.product.findMany({
+      where: { isActive: true },
       select: { id: true, sku: true, name: true, imageUrl: true }
     });
 
@@ -284,46 +308,31 @@ export async function importProductsZip(req: AuthenticatedRequest, res: Response
       return;
     }
 
-    // Comprobar si las imágenes son un lote secuencial de Canva (ej: "1.jpg", "2.jpg", "Page 1.jpg", "Página 1.jpg")
-    const isSequentialCanvaZip = validEntries.every(entry => {
-      const base = path.basename(entry.name, path.extname(entry.name)).trim();
-      return /^\d{1,3}$/.test(base) || /^(page|pagina|página|diseño|diseno)[_ -]?\d+$/i.test(base);
-    });
+    // Matcheo directo y seguro por SKU o Nombre exacto/normalizado
+    for (const entry of validEntries) {
+      const fileExt = path.extname(entry.name).toLowerCase();
+      const rawName = path.basename(entry.name, fileExt).trim();
+      const paddedRawSku = /^\d+$/.test(rawName) ? rawName.padStart(4, '0') : rawName;
+      const normalizedRaw = normalizeStr(rawName);
 
-    if (isSequentialCanvaZip) {
-      // Extraer el número de página para ordenar (1, 2, 3... 50)
-      const extractNum = (name: string) => {
-        const match = name.match(/\d+/);
-        return match ? parseInt(match[0], 10) : 999999;
-      };
+      // 1. SKU exacto o paddeado (ej: "0575" o "575")
+      let product = allProducts.find(p => p.sku === rawName || p.sku === paddedRawSku);
 
-      const sortedEntries = [...validEntries].sort((a, b) => {
-        const numA = extractNum(a.name);
-        const numB = extractNum(b.name);
-        if (numA !== numB) return numA - numB;
-        return a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
-      });
+      // 2. Nombre exacto o normalizado (Evitar coincidencia parcial difusa para impedir descalces)
+      if (!product) {
+        product = allProducts.find(p => p.name.trim().toLowerCase() === rawName.toLowerCase() || normalizeStr(p.name) === normalizedRaw);
+      }
 
-      // Obtener los productos activos sin imagen ordenados por SKU (mismo orden que el CSV exportado para Canva)
-      const prodsWithoutImage = await prisma.product.findMany({
-        where: {
-          OR: [{ imageUrl: null }, { imageUrl: '' }],
-          isActive: true,
-        },
-        select: { id: true, sku: true, name: true, imageUrl: true },
-        orderBy: { sku: 'asc' },
-      });
-
-      const countToProcess = Math.min(sortedEntries.length, prodsWithoutImage.length);
-
-      for (let i = 0; i < countToProcess; i++) {
-        const entry = sortedEntries[i];
-        const product = prodsWithoutImage[i];
-        const fileExt = path.extname(entry.name).toLowerCase();
+      if (product) {
         const filename = `${product.sku}${fileExt}`;
         const destPath = path.join(uploadDir, filename);
 
-        fs.writeFileSync(destPath, entry.getData());
+        const imgData = entry.getData();
+        fs.writeFileSync(destPath, imgData);
+        if (fs.existsSync(masterDir)) {
+          try { fs.writeFileSync(path.join(masterDir, filename), imgData); } catch (e) {}
+        }
+
         const imageUrl = `/uploads/products/${filename}`;
 
         await prisma.product.update({
@@ -342,64 +351,9 @@ export async function importProductsZip(req: AuthenticatedRequest, res: Response
           });
         }
         processedCount++;
-      }
-
-      if (sortedEntries.length > countToProcess) {
-        for (let i = countToProcess; i < sortedEntries.length; i++) {
-          skippedCount++;
-          skippedEntries.push(sortedEntries[i].name);
-        }
-      }
-    } else {
-      // Matcheo directo por SKU o Nombre exacto/normalizado
-      for (const entry of validEntries) {
-        const fileExt = path.extname(entry.name).toLowerCase();
-        const rawName = path.basename(entry.name, fileExt).trim();
-        const normalizedRaw = normalizeStr(rawName);
-
-        // 1. SKU exacto (ej: "0575")
-        let product = allProducts.find(p => p.sku === rawName);
-
-        // 2. Nombre exacto o normalizado
-        if (!product) {
-          product = allProducts.find(p => p.name === rawName || normalizeStr(p.name) === normalizedRaw);
-        }
-
-        // 3. Coincidencia parcial de nombre
-        if (!product) {
-          product = allProducts.find(p => {
-            const normPName = normalizeStr(p.name);
-            return (normPName.length > 5 && normalizedRaw.length > 5) && (normPName.includes(normalizedRaw) || normalizedRaw.includes(normPName));
-          });
-        }
-
-        if (product) {
-          const filename = `${product.sku}${fileExt}`;
-          const destPath = path.join(uploadDir, filename);
-
-          fs.writeFileSync(destPath, entry.getData());
-          const imageUrl = `/uploads/products/${filename}`;
-
-          await prisma.product.update({
-            where: { id: product.id },
-            data: { imageUrl },
-          });
-
-          if (req.user?.id) {
-            await logAudit({
-              userId: req.user.id,
-              action: 'IMPORT_PRODUCT_IMAGE_ZIP',
-              entityType: 'Product',
-              entityId: product.id,
-              oldValues: { imageUrl: product.imageUrl },
-              newValues: { imageUrl },
-            });
-          }
-          processedCount++;
-        } else {
-          skippedCount++;
-          skippedEntries.push(entry.name);
-        }
+      } else {
+        skippedCount++;
+        skippedEntries.push(entry.name);
       }
     }
 

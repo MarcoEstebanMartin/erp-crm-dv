@@ -14,6 +14,24 @@ async function main() {
 
   console.log(`📦 Se encontraron ${rows.length} productos en el Excel.`);
 
+  // 0. Validar que NO existan SKUs duplicados en el Excel maestro
+  const skuMapCheck: Record<string, number[]> = {};
+  rows.forEach((r, idx) => {
+    const rawSku = (r.SKU || '').toString().trim();
+    if (!rawSku) return;
+    const sku = /^\d+$/.test(rawSku) ? rawSku.padStart(4, '0') : rawSku;
+    if (!skuMapCheck[sku]) skuMapCheck[sku] = [];
+    skuMapCheck[sku].push(idx + 2);
+  });
+  const duplicateSkusInExcel = Object.entries(skuMapCheck).filter(([_, lines]) => lines.length > 1);
+  if (duplicateSkusInExcel.length > 0) {
+    console.error('❌ ERROR CRÍTICO: El archivo Excel contiene SKUs DUPLICADOS:');
+    duplicateSkusInExcel.forEach(([sku, lines]) => {
+      console.error(`   - SKU '${sku}' repetido en filas de Excel: ${lines.join(', ')}`);
+    });
+    throw new Error('Cancelando sincronización por colisión de SKUs en el Excel maestro.');
+  }
+
   // 1. Asegurar la existencia de todos los Rubros
   const excelRubros = [...new Set(rows.map(r => (r.RUBRO || '').toString().trim()).filter(Boolean))];
   const rubroMap: Record<string, number> = {};
