@@ -469,20 +469,10 @@ export default function CrmDashboard({ initialTab = 'whatsapp', hideHeaderTabs =
               </p>
             </div>
           </div>
-
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-            <button
-              type="button"
-              className="btn btn-secondary"
-              style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', backgroundColor: '#ECFDF5', color: '#047857', borderColor: '#A7F3D0', fontWeight: 600 }}
-              onClick={() => setShowSimulatorModal(true)}
-            >
-              <FlaskConical size={15} />
-              <span>Simular Mensaje (Sandbox)</span>
-            </button>
-          </div>
         </div>
       )}
+
+
 
       {!isAuthorizedCrmUser && (
         <div style={{ backgroundColor: '#FFFFFF', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '50px 20px', textAlign: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>

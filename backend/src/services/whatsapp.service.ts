@@ -13,8 +13,9 @@ export interface SendWhatsAppMessagePayload {
 
 export class WhatsAppService {
   private apiVersion = 'v19.0';
-  private token = process.env.WHATSAPP_TOKEN || '';
-  private phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID || '';
+  private get token() { return process.env.WHATSAPP_TOKEN || ''; }
+  private get phoneNumberId() { return process.env.WHATSAPP_PHONE_NUMBER_ID || ''; }
+
 
   /**
    * Envia un mensaje utilizando la API oficial de Meta WhatsApp Cloud.
