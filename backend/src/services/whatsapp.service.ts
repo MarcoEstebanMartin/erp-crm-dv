@@ -1,6 +1,8 @@
 import { PrismaClient } from '@prisma/client';
 import axios from 'axios';
 import { geminiService } from './gemini.service';
+import { generateMagicToken } from '../controllers/store.controller';
+import dotenv from 'dotenv';
 
 const prisma = new PrismaClient();
 
@@ -13,9 +15,19 @@ export interface SendWhatsAppMessagePayload {
 
 export class WhatsAppService {
   private apiVersion = 'v19.0';
-  private get token() { return process.env.WHATSAPP_TOKEN || ''; }
-  private get phoneNumberId() { return process.env.WHATSAPP_PHONE_NUMBER_ID || ''; }
+  private get token() {
+    dotenv.config({ override: true });
+    return process.env.WHATSAPP_TOKEN || '';
+  }
+  private get phoneNumberId() {
+    dotenv.config({ override: true });
+    return process.env.WHATSAPP_PHONE_NUMBER_ID || '';
+  }
 
+  private get frontendUrl() {
+    dotenv.config({ override: true });
+    return process.env.FRONTEND_URL || 'http://localhost:5173';
+  }
 
   /**
    * Envia un mensaje utilizando la API oficial de Meta WhatsApp Cloud.
@@ -174,60 +186,77 @@ export class WhatsAppService {
 
   /**
    * Motor Inteligente de Auto-Respuesta 24/7 (Riesgo Cero)
-   * Detecta intenciones frecuentes y responde consultando la BD del ERP.
+   * Detecta intenciones frecuentes y responde consultando la BD del ERP con Magic Links.
    */
   private async autoRespondIfEnabled(conversation: any, inputMessage: string): Promise<void> {
     const lower = inputMessage.toLowerCase().trim();
-
     let autoText: string | null = null;
 
-    // 1. Detección de Intención de Pedido de Mercadería (IA Gemini)
+    const personaId = conversation.personaId;
+    let magicLinkCatalog = this.frontendUrl;
+    let magicToken: string | null = null;
+
+    if (personaId) {
+      magicToken = generateMagicToken(personaId);
+      magicLinkCatalog = `${this.frontendUrl}/?token=${magicToken}`;
+    }
+
+    // 1. Detección de Intención de Pedido de Mercadería (IA Gemini + Magic Link Carrito)
     const isOrderIntent = ['pedido', 'cajon', 'cajones', 'caja', 'cajas', 'lata', 'latas', 'kilo', 'kilos', 'botella', 'botellas', 'pack', 'packs', 'mandame', 'mándame', 'quiero', 'comprar'].some(k => lower.includes(k));
     if (isOrderIntent) {
       try {
-        await this.parseOrderWithAI(conversation.id, inputMessage);
-        autoText = `🤖 *Asistente DV*: ¡Excelente! Registramos tu borrador de pedido en nuestro sistema. Un vendedor revisará y confirmará la preventa a la brevedad. 🛒`;
+        const draft = await this.parseOrderWithAI(conversation.id, inputMessage);
+        
+        let draftLink = magicLinkCatalog;
+        if (personaId && draft?.id) {
+          const draftMagicToken = generateMagicToken(personaId, draft.id);
+          draftLink = `${this.frontendUrl}/?token=${draftMagicToken}&draftId=${draft.id}`;
+        }
+
+        const totalStr = Number(draft.totalEstimated || 0).toLocaleString('es-AR');
+        autoText = `🤖 *Asistente DV*: ¡Excelente! Registramos tu borrador de pedido por un total aproximado de *$${totalStr}*. 🛒\n\n👉 *Revisá, modificá o confirmá tu pedido en 1-clic sin contraseña*:\n${draftLink}`;
       } catch (err: any) {
-        autoText = `🤖 *Asistente DV*: Tomamos nota de tu pedido. Un vendedor se comunicará a la brevedad para confirmar los ítems.`;
+        autoText = `🤖 *Asistente DV*: Tomamos nota de tu pedido. Podés revisarlo y completarlo directamente en nuestra Tienda B2B:\n${magicLinkCatalog}`;
       }
     }
 
     // 2. Consulta de Saldo / Deuda en Cuenta Corriente
     else if (lower.includes('saldo') || lower.includes('debo') || lower.includes('deuda') || lower.includes('cuenta corriente')) {
-      if (conversation.personaId) {
-        const persona = await prisma.persona.findUnique({ where: { id: conversation.personaId } });
+      if (personaId) {
+        const persona = await prisma.persona.findUnique({ where: { id: personaId } });
         if (persona) {
           const balance = Number(persona.outstandingBalance || 0);
-          autoText = `🤖 *Asistente DV*: Hola ${persona.name}. Tu saldo actual en Cuenta Corriente es *$${balance.toLocaleString('es-AR')}*. Si necesitas el detalle de comprobantes, te lo enviamos por este medio.`;
+          const accountLink = `${this.frontendUrl}/?token=${magicToken}&tab=account`;
+          autoText = `🤖 *Asistente DV*: Hola ${persona.name}. Tu saldo en Cuenta Corriente es *$${balance.toLocaleString('es-AR')}*.\n\n📊 *Ver comprobantes y detalle online*:\n${accountLink}`;
         }
       } else {
-        autoText = `🤖 *Asistente DV*: Hola. No encontramos tu número vinculado a un cliente en nuestro sistema. Por favor envíanos tu CUIT o Razón Social para asociar tu cuenta.`;
+        autoText = `🤖 *Asistente DV*: Hola. No encontramos tu número registrado. Por favor envíanos tu CUIT o Razón Social para vincular tu cuenta.`;
       }
     }
     
-    // 3. Consulta de Lista de Precios / Catálogo
+    // 3. Consulta de Lista de Precios / Catálogo (Magic Link directo)
     else if (lower.includes('precio') || lower.includes('lista') || lower.includes('catalogo') || lower.includes('catálogo')) {
-      autoText = `🤖 *Asistente DV*: Te enviamos la información de catálogo de DV Distribuidora. También podés realizar tus pedidos online directamente en nuestra Tienda Web o dejar tu pedido anotado por este chat para que un vendedor lo apruebe.`;
+      autoText = `🤖 *Asistente DV*: Te enviamos el acceso directo al catálogo completo de DV Distribuidora.\n\n🛒 *Ingresá a tu Tienda Personalizada sin clave*:\n${magicLinkCatalog}`;
     }
 
     // 4. Consulta de Reparto / Rutas de Logística
     else if (lower.includes('reparto') || lower.includes('camion') || lower.includes('camión') || lower.includes('cuando vienen') || lower.includes('cuándo vienen')) {
-      if (conversation.personaId) {
-        const persona = await prisma.persona.findUnique({ where: { id: conversation.personaId } });
-        autoText = `🤖 *Asistente DV*: Tu zona registrada es *${persona?.route || 'General Villegas'}*. Los repartos se realizan habitualmente según la ruta asignada. Para consultar el estado en tiempo real de tu pedido, comunicate con logística.`;
+      if (personaId) {
+        const persona = await prisma.persona.findUnique({ where: { id: personaId } });
+        autoText = `🤖 *Asistente DV*: Tu zona registrada es *${persona?.route || 'General Villegas'}*. Los repartos se realizan habitualmente según tu ruta habitual.\n\n🛒 Podés cargar tu pedido para el próximo reparto aquí:\n${magicLinkCatalog}`;
       } else {
-        autoText = `🤖 *Asistente DV*: Realizamos repartos continuos en General Villegas y zonas de influencia (Bunge, Banderaló, Piedritas, Ameghino, etc.).`;
+        autoText = `🤖 *Asistente DV*: Realizamos repartos continuos en General Villegas y zona. Ingresá a nuestra tienda para hacer tu pedido:\n${this.frontendUrl}`;
       }
     }
 
     // 5. Saludo o Menú Inicial
     else if (['hola', 'buenas', 'buen dia', 'buenos dias', 'buenas tardes', 'buenas noches', 'consulta', 'menu'].some(k => lower.includes(k))) {
-      autoText = `🤖 *Asistente DV (Bot 24/7)*: ¡Hola! Gracias por comunicarte con DV Distribuidora. ¿En qué podemos ayudarte?\n\n1️⃣ *Consulta de Saldo Cta Cte* (escribe "saldo")\n2️⃣ *Realizar un Pedido* (escribe "quiero 10 cajones de Quilmes...")\n3️⃣ *Días de Reparto* (escribe "reparto")\n4️⃣ *Catálogo y Precios* (escribe "precios")`;
+      autoText = `🤖 *Asistente DV (Bot 24/7)*: ¡Hola! Gracias por comunicarte con DV Distribuidora. ¿En qué podemos ayudarte?\n\n1️⃣ *Consulta de Saldo Cta Cte* (escribí "saldo")\n2️⃣ *Realizar un Pedido por chat* (ej: "quiero 10 cajones de Quilmes...")\n3️⃣ *Catálogo y Precios* (escribí "catálogo")\n\n🛒 *Acceso Directo a tu Tienda Web*:\n${magicLinkCatalog}`;
     }
 
     // 6. Respuesta por Defecto
     else {
-      autoText = `🤖 *Asistente DV (Bot 24/7)*: Gracias por escribirnos. Hemos recibido tu mensaje y un vendedor lo atenderá en breve. Escribe "hola" o "menu" para ver opciones automáticas.`;
+      autoText = `🤖 *Asistente DV (Bot 24/7)*: Gracias por escribirnos. Hemos recibido tu mensaje y un vendedor lo atenderá en breve.\n\n🛒 Podés explorar productos y armar tu pedido acá:\n${magicLinkCatalog}`;
     }
 
     if (autoText) {

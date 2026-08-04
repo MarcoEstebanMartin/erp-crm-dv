@@ -89,6 +89,79 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({ onBackToStaffLogin }
   const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
   const [orderSuccessMessage, setOrderSuccessMessage] = useState<string | null>(null);
 
+  // Magic Link Autologin desde WhatsApp
+  const [magicBanner, setMagicBanner] = useState<string | null>(null);
+
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const magicToken = urlParams.get('token') || urlParams.get('magicToken');
+    const draftId = urlParams.get('draftId');
+    const targetTab = urlParams.get('tab');
+
+    if (magicToken) {
+      handleMagicLogin(magicToken, draftId, targetTab);
+    }
+  }, []);
+
+  const handleMagicLogin = async (token: string, draftId?: string | null, targetTab?: string | null) => {
+    setIsLoggingIn(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/store/magic-login?token=${encodeURIComponent(token)}${draftId ? `&draftId=${draftId}` : ''}`);
+      const json = await res.json();
+
+      if (json.status === 'success' && json.data.client) {
+        const loggedClient = json.data.client;
+        setClient(loggedClient);
+        localStorage.setItem('store_client_session', JSON.stringify(loggedClient));
+        if (json.data.token) {
+          localStorage.setItem('store_token', json.data.token);
+        }
+
+        if (targetTab === 'account') {
+          setActiveTab('account');
+        }
+
+        if (json.data.draft && json.data.draft.items && json.data.draft.items.length > 0) {
+          const draftItems = json.data.draft.items;
+          const catalogRes = await fetch(`${API_BASE_URL}/store/catalog?priceList=${loggedClient.priceList || 'A'}`);
+          const catalogJson = await catalogRes.json();
+          const storeProducts: StoreProduct[] = catalogJson.data?.products || [];
+          setProducts(storeProducts);
+
+          const newCartItems: CartItem[] = [];
+          for (const dItem of draftItems) {
+            const matchedProd = storeProducts.find(p => p.id === dItem.productId || p.sku === dItem.sku);
+            if (matchedProd) {
+              newCartItems.push({
+                product: matchedProd,
+                quantity: dItem.quantity,
+                unitPrice: dItem.unitPrice || matchedProd.price
+              });
+            }
+          }
+
+          if (newCartItems.length > 0) {
+            setCart(newCartItems);
+            setIsCartOpen(true);
+            setMagicBanner(`🛒 ¡Hola ${loggedClient.name}! Precargamos en tu carrito tu pedido de WhatsApp ($${json.data.draft.totalEstimated?.toLocaleString('es-AR')}). Revisalo y confirmalo en 1 clic.`);
+          } else {
+            setMagicBanner(`✨ ¡Bienvenido/a ${loggedClient.name}! Accediste a tu Tienda B2B por WhatsApp.`);
+          }
+        } else {
+          setMagicBanner(`✨ ¡Bienvenido/a ${loggedClient.name}! Accediste sin clave a tu Tienda B2B.`);
+        }
+
+        window.history.replaceState({}, document.title, window.location.pathname);
+      } else {
+        setLoginError(json.message || 'El enlace de acceso por WhatsApp no es válido o ha expirado.');
+      }
+    } catch (e) {
+      console.error('Error al procesar inicio de sesión por enlace mágico:', e);
+    } finally {
+      setIsLoggingIn(false);
+    }
+  };
+
   // Historial de pedidos y cuenta corriente
   const [recentOrders, setRecentOrders] = useState<any[]>([]);
   const [accountData, setAccountData] = useState<any>(null);
@@ -583,6 +656,16 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({ onBackToStaffLogin }
         <div style={styles.successBanner}>
           <span>{orderSuccessMessage}</span>
           <button onClick={() => setOrderSuccessMessage(null)} style={{ background: 'none', border: 'none', color: '#10b981', cursor: 'pointer', fontWeight: 'bold' }}>
+            ✕
+          </button>
+        </div>
+      )}
+
+      {/* MENSAJE DE INGRESO DESDE WHATSAPP / MAGIC LINK */}
+      {magicBanner && (
+        <div style={{ ...styles.successBanner, backgroundColor: '#f0fdf4', borderColor: '#bbf7d0', color: '#166534' }}>
+          <span>{magicBanner}</span>
+          <button onClick={() => setMagicBanner(null)} style={{ background: 'none', border: 'none', color: '#166534', cursor: 'pointer', fontWeight: 'bold' }}>
             ✕
           </button>
         </div>

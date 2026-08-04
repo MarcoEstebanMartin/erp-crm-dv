@@ -729,3 +729,119 @@ export async function getClientOrders(req: Request, res: Response): Promise<void
     });
   }
 }
+
+/**
+ * Genera un token JWT de inicio de sesión mágico para WhatsApp
+ */
+export function generateMagicToken(personaId: number, draftId?: number): string {
+  return jwt.sign(
+    { personaId, draftId: draftId || null, type: 'magic_login' },
+    JWT_SECRET,
+    { expiresIn: '30d' }
+  );
+}
+
+/**
+ * Autenticación Mágica sin contraseña vía Link de WhatsApp
+ */
+export async function magicLoginClient(req: Request, res: Response): Promise<void> {
+  try {
+    const rawToken = (req.query.token || req.body.token || req.query.magicToken || req.body.magicToken) as string;
+    const draftIdQuery = req.query.draftId || req.body.draftId;
+
+    if (!rawToken || typeof rawToken !== 'string') {
+      res.status(400).json({ status: 'error', message: 'Token mágico de acceso no proporcionado.' });
+      return;
+    }
+
+    let decoded: any;
+    try {
+      decoded = jwt.verify(rawToken, JWT_SECRET);
+    } catch (err: any) {
+      res.status(401).json({ status: 'error', message: 'El enlace de acceso ha expirado o no es válido.' });
+      return;
+    }
+
+    if (!decoded || decoded.type !== 'magic_login' || !decoded.personaId) {
+      res.status(401).json({ status: 'error', message: 'Token de acceso inválido.' });
+      return;
+    }
+
+    const client = await prisma.persona.findUnique({
+      where: { id: Number(decoded.personaId) },
+      select: {
+        id: true,
+        name: true,
+        cuit: true,
+        address: true,
+        city: true,
+        priceList: true,
+        discount: true,
+        outstandingBalance: true,
+        creditLimit: true,
+        paymentTermDays: true
+      }
+    });
+
+    if (!client) {
+      res.status(404).json({ status: 'error', message: 'El cliente asociado al enlace no fue encontrado.' });
+      return;
+    }
+
+    const effectiveDraftId = draftIdQuery ? Number(draftIdQuery) : decoded.draftId;
+    let draftData: any = null;
+
+    if (effectiveDraftId) {
+      const draft = await prisma.crmOrderDraft.findUnique({
+        where: { id: Number(effectiveDraftId) }
+      });
+
+      if (draft) {
+        let items: any[] = [];
+        try {
+          items = JSON.parse(draft.itemsJson);
+        } catch (e) {
+          items = [];
+        }
+
+        draftData = {
+          id: draft.id,
+          rawText: draft.rawText,
+          status: draft.status,
+          totalEstimated: Number(draft.totalEstimated),
+          items
+        };
+      }
+    }
+
+    const storeToken = jwt.sign(
+      { personaId: client.id, role: 'CLIENT' },
+      JWT_SECRET,
+      { expiresIn: '30d' }
+    );
+
+    res.status(200).json({
+      status: 'success',
+      data: {
+        token: storeToken,
+        client: {
+          id: client.id,
+          name: client.name,
+          cuit: client.cuit,
+          address: client.address,
+          city: client.city,
+          priceList: client.priceList,
+          discount: Number(client.discount),
+          outstandingBalance: Number(client.outstandingBalance),
+          creditLimit: Number(client.creditLimit),
+          paymentTermDays: client.paymentTermDays
+        },
+        draft: draftData
+      }
+    });
+  } catch (error: any) {
+    console.error('Error al procesar inicio de sesión mágico:', error);
+    res.status(500).json({ status: 'error', message: 'Error interno al autenticar por enlace directo.' });
+  }
+}
+

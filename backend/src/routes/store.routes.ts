@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import {
   loginClient,
+  magicLoginClient,
   getStoreCatalog,
   getClientAccount,
   createStoreOrder,
@@ -11,6 +12,10 @@ const router = Router();
 
 // Autenticación / Búsqueda de Cliente
 router.post('/login', loginClient);
+
+// Autenticación Mágica sin Contraseña desde WhatsApp
+router.get('/magic-login', magicLoginClient);
+router.post('/magic-login', magicLoginClient);
 
 // Catálogo interactivo de productos y ofertas
 router.get('/catalog', getStoreCatalog);
