@@ -3,6 +3,23 @@ import axios from 'axios';
 import { geminiService } from './gemini.service';
 import { generateMagicToken } from '../controllers/store.controller';
 import dotenv from 'dotenv';
+import os from 'os';
+
+function getLocalIpAddress(): string {
+  try {
+    const interfaces = os.networkInterfaces();
+    for (const name of Object.keys(interfaces)) {
+      for (const net of interfaces[name] || []) {
+        if (net.family === 'IPv4' && !net.internal) {
+          return net.address;
+        }
+      }
+    }
+  } catch (e) {
+    // Fallback
+  }
+  return 'localhost';
+}
 
 const prisma = new PrismaClient();
 
@@ -26,7 +43,11 @@ export class WhatsAppService {
 
   private get frontendUrl() {
     dotenv.config({ override: true });
-    return process.env.FRONTEND_URL || 'http://localhost:5173';
+    if (process.env.FRONTEND_URL && !process.env.FRONTEND_URL.includes('localhost')) {
+      return process.env.FRONTEND_URL;
+    }
+    const localIp = getLocalIpAddress();
+    return `http://${localIp}:5173`;
   }
 
   /**
