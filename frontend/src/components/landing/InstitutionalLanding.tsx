@@ -30,11 +30,11 @@ const BrandCardLogo = ({ brand, onClick }: { brand: typeof BRANDS_LIST[0]; onCli
           src={`/brands/${brand.filename}`}
           alt={brand.name}
           onError={() => setImgError(true)}
-          style={{ maxHeight: '68px', maxWidth: '78%', objectFit: 'contain' }}
+          style={{ maxHeight: '95px', maxWidth: '86%', objectFit: 'contain' }}
         />
       ) : (
         <div style={{ textAlign: 'center' }}>
-          <span style={{ fontSize: '1.15rem', fontWeight: 800, color: brand.accent, letterSpacing: '-0.01em' }}>
+          <span style={{ fontSize: '1.35rem', fontWeight: 800, color: brand.accent, letterSpacing: '-0.01em' }}>
             {brand.name}
           </span>
         </div>
@@ -266,12 +266,12 @@ export const InstitutionalLanding: React.FC<InstitutionalLandingProps> = ({
         justifyContent: 'center',
         boxSizing: 'border-box'
       }}>
-        <div style={{ maxWidth: '1140px', margin: '0 auto' }}>
-          <div style={{ marginBottom: '36px', textAlign: 'left' }}>
-            <h2 style={{ fontSize: '32px', fontWeight: 800, color: '#0F172A', margin: '0 0 12px 0', letterSpacing: '-0.025em' }}>
+        <div style={{ maxWidth: '1280px', width: '100%', margin: '0 auto' }}>
+          <div style={{ marginBottom: '40px', textAlign: 'left' }}>
+            <h2 style={{ fontSize: '38px', fontWeight: 800, color: '#0F172A', margin: '0 0 14px 0', letterSpacing: '-0.03em' }}>
               Trabajamos con marcas líderes.
             </h2>
-            <p style={{ color: '#64748B', fontSize: '15px', lineHeight: 1.6, maxWidth: '860px', margin: 0 }}>
+            <p style={{ color: '#475569', fontSize: '17px', lineHeight: 1.65, maxWidth: '960px', margin: 0 }}>
               Quesos Melincué de Remotti, Sancor, Fratelli Branca, Aceites y Aderezos Natura (AGD), Productos Baggio, La Huerta (RPB), Marolio y muchas más.
             </p>
           </div>
