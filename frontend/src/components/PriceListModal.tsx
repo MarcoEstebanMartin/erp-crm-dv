@@ -611,7 +611,7 @@ export default function PriceListModal({ isOpen, onClose }: PriceListModalProps)
                       .price-list-view-table {
                         width: 100%;
                         border-collapse: collapse;
-                        font-family: system-ui, sans-serif;
+                        font-family: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
                       }
                       .price-list-view-table td {
                         padding: ${fontScaleConfig.viewPadding};
@@ -650,7 +650,7 @@ export default function PriceListModal({ isOpen, onClose }: PriceListModalProps)
                         .price-list-print-table {
                           width: 100% !important;
                           border-collapse: collapse !important;
-                          font-family: system-ui, sans-serif !important;
+                          font-family: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif !important;
                         }
                         .price-list-print-table tr {
                           page-break-inside: avoid !important;

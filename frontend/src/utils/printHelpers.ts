@@ -10,7 +10,7 @@ export const printPickingList = (order: any, callback?: () => void) => {
         <title>Hoja de Armado - Pedido #${order.id}</title>
         <style>
           body { 
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, sans-serif; 
             padding: 20px; 
             color: #111; 
             font-size: 16px; 
@@ -227,7 +227,7 @@ export const printRemitoX = (order: any) => {
           
           * { box-sizing: border-box; margin: 0; padding: 0; }
           body { 
-            font-family: 'Inter', system-ui, -apple-system, sans-serif; 
+            font-family: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, sans-serif; 
             color: #0f172a; 
             background: #ffffff; 
             padding: 24px;
@@ -593,7 +593,7 @@ export const printFacturaOficialA4 = (order: any) => {
           
           * { box-sizing: border-box; margin: 0; padding: 0; }
           body { 
-            font-family: 'Inter', system-ui, -apple-system, sans-serif; 
+            font-family: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, sans-serif; 
             color: #0f172a; 
             background: #ffffff; 
             padding: 24px;
@@ -1126,7 +1126,7 @@ export const printBatchPickingA4 = ({
             box-sizing: border-box;
           }
           body { 
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
+            font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; 
             margin: 0;
             padding: 0;
             color: #111; 
@@ -1472,7 +1472,7 @@ export const printConsolidatedPickingA4 = ({
             box-sizing: border-box;
           }
           body { 
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
+            font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; 
             margin: 0;
             padding: 0;
             color: #111; 
@@ -1726,7 +1726,7 @@ export const printShippingLabelsBultos = ({
           }
           * { box-sizing: border-box; }
           body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
             margin: 0;
             padding: 0;
             background: #fff;
@@ -1904,7 +1904,7 @@ export const printDeliveryRouteCustodyGuide = (route: any) => {
         <style>
           @page { size: A4 portrait; margin: 10mm; }
           * { box-sizing: border-box; }
-          body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 12px; color: #111; margin: 0; padding: 0; }
+          body { font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 12px; color: #111; margin: 0; padding: 0; }
           .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #000; padding-bottom: 8px; margin-bottom: 12px; }
           .title { font-size: 18px; font-weight: 900; text-transform: uppercase; }
           .subtitle { font-size: 12px; font-weight: 700; color: #000; }

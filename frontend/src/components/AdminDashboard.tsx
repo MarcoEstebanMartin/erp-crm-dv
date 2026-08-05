@@ -1093,7 +1093,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
           <title>${reportTitle}</title>
           <style>
             body {
-              font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+              font-family: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, sans-serif;
               color: #1f2937;
               padding: 20px;
               font-size: 12px;
