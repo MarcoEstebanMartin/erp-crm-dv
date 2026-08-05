@@ -1466,6 +1466,15 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
       )}
 
       {/* ====================================================================
+          LOGÍSTICA Y FLOTA
+          ==================================================================== */}
+      {(activeTab === 'logistica' || activeTab === 'fleet' || activeTab === 'reparto') && (
+        <Suspense fallback={<LoadingDashboard />}>
+          <LogisticaDashboard />
+        </Suspense>
+      )}
+
+      {/* ====================================================================
           8. COMPRAS (COMPRAS DASHBOARD)
           ==================================================================== */}
       {activeTab === 'compras' && (
