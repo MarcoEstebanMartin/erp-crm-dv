@@ -219,31 +219,34 @@ export const InstitutionalLanding: React.FC<InstitutionalLandingProps> = ({
       <section id="empresa" style={styles.sectionClean}>
         <div style={styles.sectionHeader}>
           <span style={styles.sectionTag}>EMPRESA</span>
-          <h2 style={styles.sectionTitle}>Más de 20 años acompañando a comercios</h2>
+          <h2 style={styles.sectionTitle}>Experiencia, cercanía y servicio.</h2>
+          <p style={{ color: '#475569', fontSize: '17px', lineHeight: 1.65, maxWidth: '820px', margin: '14px 0 0 0' }}>
+            Somos una empresa familiar fundada en 1996, con base en General Villegas. Repartimos en todos los pueblos de la zona, cubriendo un radio aproximado de 70 km, con el compromiso de sostener un servicio prolijo, rápido y cercano.
+          </p>
         </div>
 
         <div style={styles.grid3Cols}>
           <div style={styles.minimalCard}>
             <div style={styles.minimalCardNumber}>01</div>
-            <h3 style={styles.minimalCardTitle}>Logística y Frío</h3>
+            <h3 style={styles.minimalCardTitle}>Servicio directo</h3>
             <p style={styles.minimalCardText}>
-              Flota propia de vehículos refrigerados con rutas organizadas por zona para asegurar entregas en 24/48hs.
+              Atención clara, contacto permanente.
             </p>
           </div>
 
           <div style={styles.minimalCard}>
             <div style={styles.minimalCardNumber}>02</div>
-            <h3 style={styles.minimalCardTitle}>Autogestión B2B</h3>
+            <h3 style={styles.minimalCardTitle}>Distribución regional</h3>
             <p style={styles.minimalCardText}>
-              Acceso exclusivo para clientes con listas de precios personalizadas, pedidos en 1-clic y cuenta corriente en vivo.
+              Visitas semanales a todos los comercios de la zona.
             </p>
           </div>
 
           <div style={styles.minimalCard}>
             <div style={styles.minimalCardNumber}>03</div>
-            <h3 style={styles.minimalCardTitle}>Compromiso Comercial</h3>
+            <h3 style={styles.minimalCardTitle}>Relación a largo plazo</h3>
             <p style={styles.minimalCardText}>
-              Atención personalizada con preventistas de zona y asesoramiento continuo para potenciar la rentabilidad de tu negocio.
+              Cumplimiento, continuidad y criterio comercial.
             </p>
           </div>
         </div>
