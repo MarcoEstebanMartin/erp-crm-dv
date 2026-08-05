@@ -1346,23 +1346,53 @@ tr:hover td {
   align-items: center;
 }
 
-/* Tarjetas de Marcas Líderes */
+/* Tarjetas de Marcas Líderes - MÁS GRANDES Y PREMIUM */
 .brand-card-hover {
   background-color: #FFFFFF;
-  border-radius: 16px;
-  height: 115px;
+  border-radius: 18px;
+  height: 155px;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 16px 24px;
-  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.04), 0 2px 6px -1px rgba(0, 0, 0, 0.02);
-  border: 1px solid #E2E8F0;
+  padding: 24px 28px;
+  box-shadow: 0 4px 24px -2px rgba(0, 0, 0, 0.05), 0 2px 6px -1px rgba(0, 0, 0, 0.02);
+  border: 1.5px solid #E2E8F0;
   cursor: pointer;
   transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.25s ease;
 }
 
 .brand-card-hover:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 14px 28px -4px rgba(0, 0, 0, 0.08), 0 4px 12px -2px rgba(0, 0, 0, 0.03);
+  transform: translateY(-5px);
+  box-shadow: 0 16px 32px -4px rgba(0, 0, 0, 0.09), 0 4px 12px -2px rgba(0, 0, 0, 0.03);
   border-color: #CBD5E1;
+}
+
+/* RESPONSIVE LANDING EN DISPOSITIVOS MÓVILES */
+@media (max-width: 860px) {
+  .landing-nav-container {
+    flex-direction: column !important;
+    gap: 10px !important;
+    padding: 10px 14px !important;
+  }
+  
+  .landing-pill-nav {
+    max-width: 100% !important;
+    overflow-x: auto !important;
+    white-space: nowrap !important;
+    padding: 4px 6px !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .brand-card-hover {
+    height: 125px !important;
+    padding: 16px 18px !important;
+    border-radius: 14px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .brand-card-hover {
+    height: 110px !important;
+    padding: 12px 14px !important;
+  }
 }

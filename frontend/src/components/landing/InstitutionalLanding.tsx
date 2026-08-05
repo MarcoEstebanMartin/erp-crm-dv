@@ -30,11 +30,11 @@ const BrandCardLogo = ({ brand, onClick }: { brand: typeof BRANDS_LIST[0]; onCli
           src={`/brands/${brand.filename}`}
           alt={brand.name}
           onError={() => setImgError(true)}
-          style={{ maxHeight: '60px', maxWidth: '82%', objectFit: 'contain' }}
+          style={{ maxHeight: '90px', maxWidth: '88%', objectFit: 'contain' }}
         />
       ) : (
         <div style={{ textAlign: 'center' }}>
-          <span style={{ fontSize: '1.15rem', fontWeight: 800, color: brand.accent, letterSpacing: '-0.01em' }}>
+          <span style={{ fontSize: '1.25rem', fontWeight: 800, color: brand.accent, letterSpacing: '-0.01em' }}>
             {brand.name}
           </span>
         </div>
@@ -78,14 +78,14 @@ export const InstitutionalLanding: React.FC<InstitutionalLandingProps> = ({
     <div style={styles.pageWrapper}>
       {/* 1. HEADER CON MENÚ PILL & REDES SOCIALES INTERACTIVAS */}
       <header style={styles.navbar}>
-        <div style={styles.navContainer}>
-          {/* BRAND / LOGO */}
+        <div style={styles.navContainer} className="landing-nav-container">
+          {/* BRAND / LOGO - MÁS GRANDE COMO EN LA OTRA PÁGINA */}
           <div style={styles.brandGroup} onClick={() => handleNavClick('inicio', 'inicio')}>
             {!logoFailed ? (
               <img
-                src="/logo.png"
+                src="/logo-don-venancio.png"
                 alt="Don Venancio Distribuidora"
-                style={{ height: '44px', objectFit: 'contain', cursor: 'pointer' }}
+                style={{ height: '60px', objectFit: 'contain', cursor: 'pointer' }}
                 onError={() => setLogoFailed(true)}
               />
             ) : (
@@ -93,8 +93,8 @@ export const InstitutionalLanding: React.FC<InstitutionalLandingProps> = ({
             )}
           </div>
 
-          {/* MENÚ PILL CAPSULE (EXACTO A LA FOTO + TIENDA) */}
-          <nav style={styles.pillNavContainer}>
+          {/* MENÚ PILL CAPSULE CON BORDE COMPLETO AL SELECCIONAR */}
+          <nav style={styles.pillNavContainer} className="landing-pill-nav">
             <button
               onClick={() => handleNavClick('inicio', 'inicio')}
               style={{
@@ -147,7 +147,7 @@ export const InstitutionalLanding: React.FC<InstitutionalLandingProps> = ({
             </button>
           </nav>
 
-          {/* REDES SOCIALES INTERACTIVAS (FOTO 2) + ACCESO ERP */}
+          {/* REDES SOCIALES INTERACTIVAS CON LOGO WHATSAPP NÍTIDO */}
           <div style={styles.socialAndActionsGroup}>
             <div style={styles.socialButtonsGroup}>
               {/* INSTAGRAM */}
@@ -166,17 +166,17 @@ export const InstitutionalLanding: React.FC<InstitutionalLandingProps> = ({
                 </svg>
               </a>
 
-              {/* WHATSAPP */}
+              {/* WHATSAPP LLENO NÍTIDO */}
               <a
-                href="https://wa.me/5491112345678"
+                href="https://wa.me/5493388526852"
                 target="_blank"
                 rel="noopener noreferrer"
                 title="Contactar por WhatsApp"
                 className="social-circle-btn"
                 style={styles.socialCircleBtn}
               >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#25D366" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="#25D366">
+                  <path d="M12.012 2c-5.506 0-9.989 4.478-9.99 9.984 0 1.764.459 3.487 1.333 5.006l-1.417 5.176 5.297-1.389c1.467.8 3.123 1.222 4.773 1.223h.004c5.505 0 9.989-4.477 9.99-9.984 0-2.668-1.039-5.176-2.927-7.062a9.923 9.923 0 0 0-7.063-2.954zm5.7 12.656c-.234.658-1.155 1.205-1.597 1.277-.442.072-1.02.13-2.953-.637-2.474-.982-4.066-3.484-4.19-3.648-.124-.165-1.002-1.333-1.002-2.542 0-1.21.636-1.803.861-2.048.225-.245.492-.307.656-.307.164 0 .328.001.472.008.152.007.356-.058.557.426.205.495.7 1.706.762 1.83.062.124.103.268.02.433-.082.164-.124.267-.246.411-.123.144-.258.322-.369.433-.123.123-.252.257-.109.503.144.246.637 1.052 1.368 1.703.94.838 1.734 1.098 1.98 1.221.246.124.39.103.533-.061.144-.164.615-.719.78-.966.164-.246.328-.205.553-.123.226.082 1.435.677 1.681.8.246.123.41.185.472.288.062.103.062.6-.172 1.258z"/>
                 </svg>
               </a>
 
@@ -437,7 +437,7 @@ const styles: Record<string, React.CSSProperties> = {
     gap: '2px'
   },
   pillNavItem: {
-    border: 'none',
+    border: '1.5px solid transparent',
     background: 'transparent',
     padding: '7px 18px',
     borderRadius: '999px',
@@ -450,7 +450,9 @@ const styles: Record<string, React.CSSProperties> = {
   pillNavItemActive: {
     backgroundColor: '#FEF2F2',
     color: '#E30613',
-    fontWeight: 600
+    fontWeight: 700,
+    border: '1.5px solid #E30613',
+    boxShadow: '0 2px 8px rgba(227, 6, 19, 0.15)'
   },
   pillNavItemTienda: {
     fontWeight: 600,
