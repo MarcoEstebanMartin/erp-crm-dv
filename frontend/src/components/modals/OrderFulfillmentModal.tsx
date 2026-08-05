@@ -240,7 +240,7 @@ export default function OrderFulfillmentModal({ order, onClose, onSuccess }: Ord
               onSuccess();
             }}
           >
-            Finalizar y Cerrar
+            Finalizar
           </button>
         </div>
       </div>
