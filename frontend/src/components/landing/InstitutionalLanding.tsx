@@ -293,9 +293,9 @@ export const InstitutionalLanding: React.FC<InstitutionalLandingProps> = ({
             </p>
 
             <div style={styles.contactList}>
-              <div>📍 <strong>Base Operativa:</strong> General Villegas, Buenos Aires, Argentina</div>
+              <div>📍 <strong>Depósito Central:</strong> Pringles 116, General Villegas, Pcia. Bs.As</div>
               <div>📞 <strong>Ventas / WhatsApp:</strong> +54 9 3388 52-6852</div>
-              <div>✉️ <strong>Email:</strong> ventas@donvenancio.com.ar</div>
+              <div>✉️ <strong>Email:</strong> contacto@donvenancio.com.ar</div>
             </div>
 
             {/* REDES SOCIALES EN SECCIÓN CONTACTO */}
