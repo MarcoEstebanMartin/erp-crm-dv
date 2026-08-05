@@ -1346,29 +1346,41 @@ tr:hover td {
   align-items: center;
 }
 
-/* Tarjetas de Marcas Líderes - MÁS GRANDES Y PREMIUM */
+/* GRILLA DE MARCAS LÍDERES (2 FILAS X 4 COLUMNAS FOTO REFERENCIA) */
+.brands-grid-container {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 24px;
+  width: 100%;
+}
+
 .brand-card-hover {
   background-color: #FFFFFF;
-  border-radius: 18px;
-  height: 155px;
+  border-radius: 16px;
+  height: 135px;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 24px 28px;
-  box-shadow: 0 4px 24px -2px rgba(0, 0, 0, 0.05), 0 2px 6px -1px rgba(0, 0, 0, 0.02);
-  border: 1.5px solid #E2E8F0;
+  box-shadow: 0 10px 30px -4px rgba(0, 0, 0, 0.04), 0 2px 8px -1px rgba(0, 0, 0, 0.02);
+  border: 1px solid rgba(226, 232, 240, 0.8);
   cursor: pointer;
   transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.25s ease;
 }
 
 .brand-card-hover:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 16px 32px -4px rgba(0, 0, 0, 0.09), 0 4px 12px -2px rgba(0, 0, 0, 0.03);
+  transform: translateY(-4px);
+  box-shadow: 0 18px 36px -4px rgba(0, 0, 0, 0.08), 0 4px 12px -2px rgba(0, 0, 0, 0.03);
   border-color: #CBD5E1;
 }
 
 /* RESPONSIVE LANDING EN DISPOSITIVOS MÓVILES */
-@media (max-width: 860px) {
+@media (max-width: 900px) {
+  .brands-grid-container {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+  }
+
   .landing-nav-container {
     flex-direction: column !important;
     gap: 10px !important;
@@ -1384,7 +1396,7 @@ tr:hover td {
   }
 
   .brand-card-hover {
-    height: 125px !important;
+    height: 115px !important;
     padding: 16px 18px !important;
     border-radius: 14px !important;
   }
@@ -1392,7 +1404,7 @@ tr:hover td {
 
 @media (max-width: 480px) {
   .brand-card-hover {
-    height: 110px !important;
+    height: 100px !important;
     padding: 12px 14px !important;
   }
 }

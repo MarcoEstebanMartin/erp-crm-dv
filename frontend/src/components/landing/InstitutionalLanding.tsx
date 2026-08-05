@@ -30,11 +30,11 @@ const BrandCardLogo = ({ brand, onClick }: { brand: typeof BRANDS_LIST[0]; onCli
           src={`/brands/${brand.filename}`}
           alt={brand.name}
           onError={() => setImgError(true)}
-          style={{ maxHeight: '90px', maxWidth: '88%', objectFit: 'contain' }}
+          style={{ maxHeight: '68px', maxWidth: '78%', objectFit: 'contain' }}
         />
       ) : (
         <div style={{ textAlign: 'center' }}>
-          <span style={{ fontSize: '1.25rem', fontWeight: 800, color: brand.accent, letterSpacing: '-0.01em' }}>
+          <span style={{ fontSize: '1.15rem', fontWeight: 800, color: brand.accent, letterSpacing: '-0.01em' }}>
             {brand.name}
           </span>
         </div>
@@ -276,11 +276,7 @@ export const InstitutionalLanding: React.FC<InstitutionalLandingProps> = ({
             </p>
           </div>
 
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-            gap: '20px'
-          }}>
+          <div className="brands-grid-container">
             {BRANDS_LIST.map((brand) => (
               <BrandCardLogo key={brand.id} brand={brand} onClick={onOpenStore} />
             ))}
