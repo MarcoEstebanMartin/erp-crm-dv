@@ -458,3 +458,55 @@ export async function deleteExpiry(req: AuthenticatedRequest, res: Response): Pr
     });
   }
 }
+
+/**
+ * Actualizar/Modificar un vencimiento existente
+ */
+export async function updateExpiry(req: AuthenticatedRequest, res: Response): Promise<void> {
+  const expiryId = Number(req.params.id);
+  const { type, description, expirationDate } = req.body;
+  const userId = req.user?.id;
+
+  if (!userId) {
+    res.status(401).json({ status: 'error', message: 'No autorizado.' });
+    return;
+  }
+
+  try {
+    const existing = await prisma.vehicleExpiry.findUnique({ where: { id: expiryId } });
+    if (!existing) {
+      res.status(404).json({ status: 'error', message: 'Registro de vencimiento no encontrado.' });
+      return;
+    }
+
+    const updated = await prisma.vehicleExpiry.update({
+      where: { id: expiryId },
+      data: {
+        type: type ? (type as ExpiryType) : existing.type,
+        description: description !== undefined ? String(description).trim() : existing.description,
+        expirationDate: expirationDate ? new Date(expirationDate) : existing.expirationDate
+      }
+    });
+
+    await logAudit({
+      userId,
+      action: 'UPDATE_VEHICLE_EXPIRY',
+      entityType: 'VehicleExpiry',
+      entityId: expiryId,
+      oldValues: { expirationDate: existing.expirationDate },
+      newValues: { expirationDate: updated.expirationDate }
+    });
+
+    res.status(200).json({
+      status: 'success',
+      data: { expiry: updated }
+    });
+  } catch (error: any) {
+    console.error('Error al actualizar vencimiento:', error);
+    res.status(500).json({
+      status: 'error',
+      message: 'Error al actualizar el registro de vencimiento.'
+    });
+  }
+}
+

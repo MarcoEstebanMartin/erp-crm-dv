@@ -64,6 +64,7 @@ export default function FleetDashboard() {
   
   const [showMaintenanceModal, setShowMaintenanceModal] = useState(false);
   const [showExpiryModal, setShowExpiryModal] = useState(false);
+  const [editingExpiryId, setEditingExpiryId] = useState<number | null>(null);
 
   // Estados de Formularios
   const [vehicleForm, setVehicleForm] = useState({
@@ -219,18 +220,32 @@ export default function FleetDashboard() {
     }
   };
 
-  // Registrar Vencimiento
+  // Registrar / Modificar Vencimiento
   const handleSaveExpiry = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedVehicleId) return;
     try {
-      await api.createVehicleExpiry(selectedVehicleId, expiryForm);
+      if (editingExpiryId) {
+        await api.updateVehicleExpiry(editingExpiryId, expiryForm);
+      } else {
+        await api.createVehicleExpiry(selectedVehicleId, expiryForm);
+      }
       setShowExpiryModal(false);
       resetExpiryForm();
       fetchVehicles();
     } catch (e: any) {
-      alert(e.message || 'Error al registrar vencimiento.');
+      alert(e.message || 'Error al guardar vencimiento.');
     }
+  };
+
+  const handleEditExpiryClick = (exp: Expiry) => {
+    setEditingExpiryId(exp.id);
+    setExpiryForm({
+      type: exp.type,
+      description: exp.description,
+      expirationDate: new Date(exp.expirationDate).toISOString().substring(0, 10)
+    });
+    setShowExpiryModal(true);
   };
 
   const handleDeleteExpiry = async (id: number) => {
@@ -281,6 +296,7 @@ export default function FleetDashboard() {
   };
 
   const resetExpiryForm = () => {
+    setEditingExpiryId(null);
     setExpiryForm({
       type: 'INSURANCE',
       description: '',
@@ -542,7 +558,10 @@ export default function FleetDashboard() {
                     <Calendar size={16} /> Vencimientos y Seguros
                   </h3>
                   <button 
-                    onClick={() => setShowExpiryModal(true)}
+                    onClick={() => {
+                      resetExpiryForm();
+                      setShowExpiryModal(true);
+                    }}
                     style={{ fontSize: '0.78rem', color: 'var(--color-corp-red)', border: 'none', backgroundColor: 'transparent', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}
                   >
                     <Plus size={14} /> Agregar Alerta
@@ -598,14 +617,26 @@ export default function FleetDashboard() {
                               </span>
                               <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>Fecha</span>
                             </div>
-                            <button 
-                              onClick={() => handleDeleteExpiry(exp.id)}
-                              style={{ border: 'none', backgroundColor: 'transparent', color: 'var(--text-secondary)', cursor: 'pointer', padding: '4px' }}
-                              onMouseEnter={(e) => e.currentTarget.style.color = 'var(--color-corp-red)'}
-                              onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-secondary)'}
-                            >
-                              <Trash2 size={13} />
-                            </button>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              <button 
+                                onClick={() => handleEditExpiryClick(exp)}
+                                style={{ border: 'none', backgroundColor: 'transparent', color: 'var(--text-secondary)', cursor: 'pointer', padding: '4px' }}
+                                onMouseEnter={(e) => e.currentTarget.style.color = 'var(--text-primary)'}
+                                onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-secondary)'}
+                                title="Editar vencimiento"
+                              >
+                                <Edit3 size={13} />
+                              </button>
+                              <button 
+                                onClick={() => handleDeleteExpiry(exp.id)}
+                                style={{ border: 'none', backgroundColor: 'transparent', color: 'var(--text-secondary)', cursor: 'pointer', padding: '4px' }}
+                                onMouseEnter={(e) => e.currentTarget.style.color = 'var(--color-corp-red)'}
+                                onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-secondary)'}
+                                title="Eliminar vencimiento"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            </div>
                           </div>
                         </div>
                       );
@@ -1021,7 +1052,7 @@ export default function FleetDashboard() {
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
           <div style={{ backgroundColor: 'var(--bg-card, #fff)', borderRadius: '8px', width: '420px', padding: '24px', border: '1px solid var(--border-color)', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
             <h2 style={{ fontSize: '1.1rem', fontWeight: 700, margin: '0 0 20px 0' }}>
-              Agregar Vencimiento para {selectedVehicle?.plate}
+              {editingExpiryId ? 'Modificar Vencimiento' : `Agregar Vencimiento para ${selectedVehicle?.plate}`}
             </h2>
             <form onSubmit={handleSaveExpiry} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               
@@ -1066,7 +1097,10 @@ export default function FleetDashboard() {
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
                 <button 
                   type="button" 
-                  onClick={() => setShowExpiryModal(false)}
+                  onClick={() => {
+                    setShowExpiryModal(false);
+                    resetExpiryForm();
+                  }}
                   style={{ padding: '8px 16px', fontSize: '0.84rem', border: '1px solid var(--border-color)', borderRadius: '4px', backgroundColor: 'transparent', cursor: 'pointer' }}
                 >
                   Cancelar
@@ -1075,7 +1109,7 @@ export default function FleetDashboard() {
                   type="submit" 
                   style={{ padding: '8px 16px', fontSize: '0.84rem', border: 'none', borderRadius: '4px', backgroundColor: 'var(--color-corp-red)', color: '#fff', cursor: 'pointer', fontWeight: 600 }}
                 >
-                  Guardar Alerta
+                  {editingExpiryId ? 'Guardar Cambios' : 'Guardar Alerta'}
                 </button>
               </div>
 

@@ -1300,6 +1300,13 @@ export const api = {
     });
   },
 
+  updateVehicleExpiry: async (id: number, data: any) => {
+    return await request(`/fleet/expirations/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    });
+  },
+
   deleteVehicleExpiry: async (id: number) => {
     return await request(`/fleet/expirations/${id}`, {
       method: 'DELETE'

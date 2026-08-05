@@ -6,6 +6,7 @@ import {
   deleteVehicle, 
   createMaintenance, 
   createExpiry, 
+  updateExpiry,
   deleteMaintenance, 
   deleteExpiry 
 } from '../controllers/fleet.controller';
@@ -40,6 +41,7 @@ router.delete('/maintenances/:id', deleteMaintenance);
 
 // Rutas para vencimientos de documentación
 router.post('/:id/expirations', createExpiry);
+router.put('/expirations/:id', updateExpiry);
 router.delete('/expirations/:id', deleteExpiry);
 
 export default router;
