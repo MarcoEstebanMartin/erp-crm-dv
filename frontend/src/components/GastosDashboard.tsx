@@ -797,8 +797,8 @@ export default function GastosDashboard() {
                     onChange={e => setNewBillingType(e.target.value)}
                     style={{ width: '100%', padding: '10px 12px', backgroundColor: '#fff', borderRadius: '6px' }}
                   >
-                    <option value="INTERNAL">Interno (Sucursal X)</option>
-                    <option value="OFFICIAL">Oficial (Sucursal A)</option>
+                    <option value="INTERNAL">Sucursal X</option>
+                    <option value="OFFICIAL">Sucursal A</option>
                   </select>
                 </div>
               </div>

@@ -1302,8 +1302,8 @@ export default function FinanzasDashboard() {
                     onChange={e => setExpenseBillingType(e.target.value)}
                     style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid var(--border-color)', backgroundColor: '#fff', fontSize: '0.9rem', color: 'var(--text-primary)', height: 'auto', lineHeight: 'normal' }}
                   >
-                    <option value="INTERNAL">Interno (Sucursal X)</option>
-                    <option value="OFFICIAL">Oficial (Sucursal A)</option>
+                    <option value="INTERNAL">Sucursal X</option>
+                    <option value="OFFICIAL">Sucursal A</option>
                   </select>
                 </div>
               </div>

@@ -500,8 +500,8 @@ export default function OrderFulfillmentModal({ order, onClose, onSuccess }: Ord
             <div className="form-group" style={{ marginBottom: 0 }}>
               <label style={{ fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-secondary)', fontWeight: 600 }}>Canal de Facturación</label>
               <select className="select" style={{ width: '100%', padding: '10px 12px', fontSize: '0.95rem', marginTop: '6px' }} value={billingType} onChange={(e) => setBillingType(e.target.value as BillingType)}>
-                <option value="OFFICIAL">Sucursal A (Oficial con CAE)</option>
-                <option value="INTERNAL">Sucursal X (Interno)</option>
+                <option value="OFFICIAL">Sucursal A</option>
+                <option value="INTERNAL">Sucursal X</option>
               </select>
             </div>
 

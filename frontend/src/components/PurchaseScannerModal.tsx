@@ -505,8 +505,8 @@ export const PurchaseScannerModal: React.FC<PurchaseScannerModalProps> = ({
                             backgroundSize: '16px'
                           }}
                         >
-                          <option value="OFFICIAL">Sucursal A (Oficial - Afecta IVA Ventas/Compras legal)</option>
-                          <option value="INTERNAL">Sucursal X (Interna - Solo Control Físico / Cuenta Corriente)</option>
+                          <option value="OFFICIAL">Sucursal A</option>
+                          <option value="INTERNAL">Sucursal X</option>
                         </select>
                       </div>
                     </div>

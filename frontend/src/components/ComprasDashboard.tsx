@@ -869,8 +869,8 @@ export default function ComprasDashboard() {
                     onChange={(e) => setBranchFilter(e.target.value as any)}
                   >
                     <option value="ALL">🏢 Sucursal (Todas)</option>
-                    <option value="OFFICIAL">Sucursal A (Oficial)</option>
-                    <option value="INTERNAL">Sucursal X (Interno)</option>
+                    <option value="OFFICIAL">Sucursal A</option>
+                    <option value="INTERNAL">Sucursal X</option>
                   </select>
                 </div>
                 <button className="btn btn-primary" onClick={() => setShowSupplierModal(true)}>
@@ -1549,8 +1549,8 @@ export default function ComprasDashboard() {
                   value={supplierForm.billingType}
                   onChange={(e) => setSupplierForm(prev => ({ ...prev, billingType: e.target.value }))}
                 >
-                  <option value="OFFICIAL">Sucursal A (Oficial - Afecta AFIP)</option>
-                  <option value="INTERNAL">Sucursal X (Interna - No AFIP)</option>
+                  <option value="OFFICIAL">Sucursal A</option>
+                  <option value="INTERNAL">Sucursal X</option>
                 </select>
               </div>
 
