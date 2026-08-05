@@ -29,6 +29,38 @@ export interface ExtractedInvoiceData {
   totalAmount: number;
 }
 
+async function generateWithFallback(
+  promptParts: Array<string | Part>,
+  responseMimeType?: string
+) {
+  const primaryModel = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
+  const candidateModels = [
+    primaryModel,
+    'gemini-2.0-flash',
+    'gemini-1.5-flash-latest',
+    'gemini-1.5-flash'
+  ];
+
+  const uniqueModels = Array.from(new Set(candidateModels));
+  let lastError: any = null;
+
+  for (const modelName of uniqueModels) {
+    try {
+      const modelConfig: any = { model: modelName };
+      if (responseMimeType) {
+        modelConfig.generationConfig = { responseMimeType };
+      }
+      const model = genAI.getGenerativeModel(modelConfig);
+      const result = await model.generateContent(promptParts);
+      return result;
+    } catch (err: any) {
+      lastError = err;
+      console.warn(`[GeminiService] Modelo ${modelName} no disponible: ${err.message || err}. Probando siguiente modelo...`);
+    }
+  }
+  throw lastError;
+}
+
 export class GeminiService {
   /**
    * Procesa un archivo (imagen o pdf) y extrae los datos de la factura/remito.
@@ -37,13 +69,6 @@ export class GeminiService {
     if (!apiKey || apiKey === 'tu-api-key-aqui') {
       throw new Error('GEMINI_API_KEY no está configurada o es inválida.');
     }
-
-    const model = genAI.getGenerativeModel({
-      model: 'gemini-1.5-flash',
-      generationConfig: {
-        responseMimeType: 'application/json',
-      }
-    });
 
     const filePart: Part = {
       inlineData: {
@@ -55,7 +80,7 @@ export class GeminiService {
     const prompt = `
       Eres un experto en extracción de datos de facturas y remitos comerciales de Argentina.
       Analiza este documento y extrae la siguiente información en formato JSON strictly:
-      - supplierName: Razón social del emisor (proveedor).
+      - supplierName: Razón social del emisor (proveedor, ej: SODECAR S.A.).
       - cuit: CUIT del emisor/proveedor (si existe).
       - receiverCuit: CUIT del receptor (comprador, ej: 20163165059 o similar).
       - receiverName: Razón social o Nombre del receptor (comprador, ej: MARTIN PABLO DAVID).
@@ -63,9 +88,9 @@ export class GeminiService {
       - documentNumber: Número del comprobante (formato XXXX-XXXXXXXX).
       - issueDate: Fecha de emisión en formato YYYY-MM-DD.
       - items: Arreglo de objetos con:
-        - code: Código o número de artículo del emisor/proveedor (si existe, ej: "0109000000" o "07300101000").
-        - description: Descripción del producto.
-        - quantity: Cantidad (número).
+        - code: Código o número de artículo del emisor/proveedor (si existe, ej: "0109000000" o "7667/1").
+        - description: Descripción del producto (ej: PERNIL DE CERDO 1/2K, F.DTO.PALETA CBR, BONDIOLA ENTERA, etc.).
+        - quantity: Cantidad de unidades o kilogramos (número). Si hay columnas de Kilogramos y Unidades, priorizar el peso/kilos si el precio unitario corresponde a kilos, o la cantidad vendida.
         - unitPrice: Precio unitario neto o bruto (número).
         - subtotal: Subtotal del ítem (número).
       - netAmount: Importe neto gravado (número).
@@ -82,7 +107,7 @@ export class GeminiService {
     `;
 
     try {
-      const result = await model.generateContent([prompt, filePart]);
+      const result = await generateWithFallback([prompt, filePart], 'application/json');
       const responseText = result.response.text();
       const jsonData = JSON.parse(responseText);
       return jsonData as ExtractedInvoiceData;
@@ -100,10 +125,6 @@ export class GeminiService {
       return { rawText: 'Nota de voz recibida. Transcripción IA disponible con GEMINI_API_KEY.' };
     }
 
-    const model = genAI.getGenerativeModel({
-      model: 'gemini-1.5-flash',
-    });
-
     const audioPart: Part = {
       inlineData: {
         data: base64Audio,
@@ -117,7 +138,7 @@ export class GeminiService {
     `;
 
     try {
-      const result = await model.generateContent([prompt, audioPart]);
+      const result = await generateWithFallback([prompt, audioPart]);
       const rawText = result.response.text().trim();
       return { rawText };
     } catch (error: any) {
@@ -133,14 +154,6 @@ export class GeminiService {
     if (!apiKey || apiKey === 'tu-api-key-aqui') {
       throw new Error('GEMINI_API_KEY no configurada');
     }
-
-    const modelName = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
-    const model = genAI.getGenerativeModel({
-      model: modelName,
-      generationConfig: {
-        responseMimeType: 'application/json',
-      }
-    });
 
     const catalogFormatted = catalog.map(p => ({
       id: p.id,
@@ -181,10 +194,15 @@ export class GeminiService {
          }
     `;
 
-    const result = await model.generateContent(prompt);
-    const responseText = result.response.text().trim();
-    const parsed = JSON.parse(responseText);
-    return Array.isArray(parsed.items) ? parsed.items : [];
+    try {
+      const result = await generateWithFallback([prompt], 'application/json');
+      const responseText = result.response.text().trim();
+      const parsed = JSON.parse(responseText);
+      return Array.isArray(parsed.items) ? parsed.items : [];
+    } catch (error: any) {
+      console.error('Error al procesar pedido con Gemini:', error);
+      return [];
+    }
   }
 }
 
