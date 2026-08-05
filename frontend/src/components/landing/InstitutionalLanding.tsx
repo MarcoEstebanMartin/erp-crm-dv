@@ -199,24 +199,6 @@ export const InstitutionalLanding: React.FC<InstitutionalLandingProps> = ({
         </div>
       </header>
 
-              {/* FACEBOOK */}
-              <a
-                href="https://facebook.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                title="Síguenos en Facebook"
-                className="social-circle-btn"
-                style={styles.socialCircleBtn}
-              >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="#1877F2">
-                  <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"></path>
-                </svg>
-              </a>
-            </div>
-          </div>
-        </div>
-      </header>
-
       {/* 2. HERO MINIMALISTA & LIMPIO */}
       <section id="inicio" style={styles.heroSection}>
         <div style={styles.heroContent}>
