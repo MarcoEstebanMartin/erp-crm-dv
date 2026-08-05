@@ -788,7 +788,7 @@ export const PurchaseScannerModal: React.FC<PurchaseScannerModalProps> = ({
 
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '13px', margin: '8px 0' }}>
                     <div>
-                      <label style={{ display: 'block', fontSize: '10px', color: 'var(--text-secondary)', marginBottom: '4px', textTransform: 'uppercase', fontWeight: 600 }}>Percep. de IVA RG 5329</label>
+                      <label style={{ display: 'block', fontSize: '10px', color: 'var(--text-secondary)', marginBottom: '4px', textTransform: 'uppercase', fontWeight: 600 }}>Percepción IVA (RG 3337 / 5329)</label>
                       <input 
                         type="number" 
                         value={extractedData.percepcionIva ?? 0} 

@@ -1616,7 +1616,7 @@ export default function ComprasDashboard() {
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <div className="form-group">
-                  <label>Percep. de IVA RG 5329 ($)</label>
+                  <label>Percepción IVA (RG 3337 / 5329) ($)</label>
                   <input
                     type="number"
                     step="0.01"

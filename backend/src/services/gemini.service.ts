@@ -98,7 +98,7 @@ export class GeminiService {
       - taxAmount: Importe de IVA (número).
       - percepcionAmount: Importe total acumulado de todas las percepciones (número).
       - percepcionIIBBAmount: Importe específico de la percepción de Ingresos Brutos (IIBB) sufrida (número).
-      - percepcionIvaAmount: Importe específico de la percepción de IVA sufrida (número).
+      - percepcionIvaAmount: Importe específico de la percepción de IVA sufrida (ej: Percepción IVA, RG 3337, RG 5329) (número).
       - percepcionJurisdiction: Jurisdicción o provincia asociada a la percepción de IIBB (ej: "Buenos Aires", "CABA", "Santa Fe", "Misiones", etc.), si se indica expresamente; si no, null.
       - totalAmount: Importe total (número).
 
