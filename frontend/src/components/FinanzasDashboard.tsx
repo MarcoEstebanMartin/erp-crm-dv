@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../utils/api';
-import { DollarSign, RefreshCw, PlusCircle, AlertCircle, Landmark, Upload, Check, CheckSquare, Eye, ChevronRight } from 'lucide-react';
+import { DollarSign, RefreshCw, PlusCircle, AlertCircle, Landmark, Upload, Check, CheckSquare, Eye, ChevronRight, FileText } from 'lucide-react';
 import { useConfirm } from '../context/ConfirmContext';
 import FinanceMovementModal from './FinanceMovementModal';
+import { formatResponsibleName } from '../utils/formatters';
 
 export default function FinanzasDashboard() {
   const confirm = useConfirm();
@@ -11,6 +12,7 @@ export default function FinanzasDashboard() {
   const [transactions, setTransactions] = useState<any[]>([]);
   const [cajaGrandeBalance, setCajaGrandeBalance] = useState(0);
   const [bankAccounts, setBankAccounts] = useState<any[]>([]);
+  const [inspectingDrawer, setInspectingDrawer] = useState<any | null>(null);
 
   // Conciliación Bancaria Modal y estados
   const [reconModalOpen, setReconModalOpen] = useState(false);
@@ -578,8 +580,7 @@ export default function FinanzasDashboard() {
     // Closure deposits as entry items
     closedInPeriod.forEach((d: any) => {
       const netAmount = Number(d.realBalance || 0) - Number(d.openingBalance || 0);
-      const rawBranch = d.branch || d.user?.username || 'Central';
-      const conceptText = rawBranch.toLowerCase().startsWith('caja:') ? rawBranch : `Caja: ${rawBranch}`;
+      const responsibleName = formatResponsibleName(d);
 
       // Determinar medio de pago de la caja
       const methodsSet = new Set<string>();
@@ -598,9 +599,10 @@ export default function FinanzasDashboard() {
         id: `drawer-${d.id}`,
         date: d.closedAt,
         type: 'INGRESO',
-        description: conceptText,
+        description: responsibleName,
         paymentMethod: paymentMethodLabel,
         amount: netAmount,
+        drawer: d,
       });
     });
 
@@ -1048,7 +1050,7 @@ export default function FinanzasDashboard() {
               <tr style={{ backgroundColor: 'var(--bg-light)', borderBottom: '1px solid var(--border-color)' }}>
                 <th style={{ padding: '12px' }}>Fecha/Hora</th>
                 <th style={{ padding: '12px' }}>Tipo</th>
-                <th style={{ padding: '12px' }}>Concepto</th>
+                <th style={{ padding: '12px' }}>Responsable</th>
                 <th style={{ padding: '12px' }}>Medio de Pago</th>
                 <th style={{ padding: '12px', textAlign: 'right' }}>Monto</th>
               </tr>
@@ -1062,7 +1064,20 @@ export default function FinanzasDashboard() {
                 </tr>
               ) : (
                 ledger.map((item) => (
-                  <tr key={item.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
+                  <tr 
+                    key={item.id} 
+                    style={{ 
+                      borderBottom: '1px solid var(--border-color)',
+                      cursor: item.drawer ? 'pointer' : 'default',
+                      transition: 'background-color 0.15s'
+                    }}
+                    onClick={() => {
+                      if (item.drawer) {
+                        setInspectingDrawer(item.drawer);
+                      }
+                    }}
+                    title={item.drawer ? 'Haz clic para ver los recibos traídos en este cierre' : undefined}
+                  >
                     <td style={{ padding: '12px', fontSize: '0.82rem' }}>
                       {new Date(item.date).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' })}
                     </td>
@@ -1078,7 +1093,26 @@ export default function FinanzasDashboard() {
                         {item.type}
                       </span>
                     </td>
-                    <td style={{ padding: '12px', fontWeight: 500 }}>{item.description}</td>
+                    <td style={{ padding: '12px', fontWeight: 600 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span>{item.description}</span>
+                        {item.drawer && (
+                          <span style={{ 
+                            fontSize: '0.72rem', 
+                            backgroundColor: '#e0f2fe', 
+                            color: '#0369a1', 
+                            padding: '2px 8px', 
+                            borderRadius: '12px', 
+                            fontWeight: 500,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px'
+                          }}>
+                            <Eye size={11} /> Ver recibos ({item.drawer.transactions?.length || 0})
+                          </span>
+                        )}
+                      </div>
+                    </td>
                     <td style={{ padding: '12px', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
                       {item.paymentMethod}
                     </td>
@@ -1839,6 +1873,122 @@ export default function FinanzasDashboard() {
         dateRangeText={formatDateRangeText()}
         movements={modalMovements}
       />
+
+      {/* MODAL DE DETALLE Y RECIBOS DEL CIERRE DE CAJA */}
+      {inspectingDrawer && (
+        <div className="modal-overlay" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setInspectingDrawer(null)}>
+          <div className="modal-content" style={{ maxWidth: '850px', width: '95%', padding: '24px', borderRadius: '12px', maxHeight: '90vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
+            <div className="modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '1px solid var(--border-color)', paddingBottom: '12px' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <FileText size={22} color="var(--color-corp-red)" /> Cierre de Caja — {formatResponsibleName(inspectingDrawer)}
+                </h3>
+                <p style={{ margin: '4px 0 0 0', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                  Cierre del {new Date(inspectingDrawer.closedAt || inspectingDrawer.openedAt).toLocaleString('es-AR', { dateStyle: 'full', timeStyle: 'short' })}
+                </p>
+              </div>
+              <button type="button" className="btn btn-ghost" onClick={() => setInspectingDrawer(null)} style={{ fontSize: '1.2rem', cursor: 'pointer' }}>
+                ✕
+              </button>
+            </div>
+
+            {/* Tarjetas resumen del cierre */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', marginBottom: '20px' }}>
+              <div style={{ backgroundColor: '#f8fafc', padding: '12px 16px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 600 }}>Total Rendido</span>
+                <div style={{ fontSize: '1.25rem', fontWeight: 700, color: '#047857', fontFamily: 'monospace', marginTop: '2px' }}>
+                  +${Number(inspectingDrawer.realBalance || inspectingDrawer.closingBalance || 0).toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                </div>
+              </div>
+              <div style={{ backgroundColor: '#f8fafc', padding: '12px 16px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 600 }}>Fondo Inicial</span>
+                <div style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)', fontFamily: 'monospace', marginTop: '2px' }}>
+                  ${Number(inspectingDrawer.openingBalance || 0).toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                </div>
+              </div>
+              <div style={{ backgroundColor: '#f8fafc', padding: '12px 16px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 600 }}>Comprobantes</span>
+                <div style={{ fontSize: '1.25rem', fontWeight: 700, color: '#1e40af', fontFamily: 'monospace', marginTop: '2px' }}>
+                  {inspectingDrawer.transactions?.length || 0} Recibos
+                </div>
+              </div>
+            </div>
+
+            {/* Listado de Recibos / Comprobantes */}
+            <h4 style={{ margin: '0 0 12px 0', fontSize: '0.95rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+              Recibos Traídos en este Cierre
+            </h4>
+
+            {!inspectingDrawer.transactions || inspectingDrawer.transactions.length === 0 ? (
+              <div style={{ padding: '30px', textAlign: 'center', color: 'var(--text-secondary)', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px solid var(--border-color)', fontSize: '0.88rem' }}>
+                No se registran recibos o comprobantes individuales adjuntos a este cierre.
+              </div>
+            ) : (
+              <div className="table-responsive card" style={{ overflowX: 'auto' }}>
+                <table className="table" style={{ width: '100%', fontSize: '0.85rem', borderCollapse: 'collapse', textAlign: 'left' }}>
+                  <thead>
+                    <tr style={{ backgroundColor: 'var(--bg-light)', borderBottom: '1px solid var(--border-color)' }}>
+                      <th style={{ padding: '10px' }}>Fecha/Hora</th>
+                      <th style={{ padding: '10px' }}>N° Recibo / Pedido</th>
+                      <th style={{ padding: '10px' }}>Cliente</th>
+                      <th style={{ padding: '10px' }}>Medio de Pago</th>
+                      <th style={{ padding: '10px', textAlign: 'right' }}>Monto</th>
+                      <th style={{ padding: '10px', textAlign: 'center' }}>Estado</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {inspectingDrawer.transactions.map((t: any) => (
+                      <tr key={t.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
+                        <td style={{ padding: '10px', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                          {new Date(t.createdAt).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' })}
+                        </td>
+                        <td style={{ padding: '10px', fontWeight: 600 }}>
+                          {t.receiptNumber || `Pedido #${t.orderId || 'S/N'}`}
+                        </td>
+                        <td style={{ padding: '10px', fontWeight: 500 }}>
+                          {t.persona?.name || 'Cliente Varios'}
+                        </td>
+                        <td style={{ padding: '10px' }}>
+                          <span style={{
+                            padding: '2px 8px',
+                            borderRadius: '12px',
+                            fontSize: '0.72rem',
+                            fontWeight: 600,
+                            backgroundColor: t.paymentMethod === 'CASH' ? '#ecfdf5' : t.paymentMethod === 'CHECK' ? '#eff6ff' : '#f1f5f9',
+                            color: t.paymentMethod === 'CASH' ? '#047857' : t.paymentMethod === 'CHECK' ? '#1d4ed8' : '#475569'
+                          }}>
+                            {t.paymentMethod === 'CASH' ? 'Efectivo' : t.paymentMethod === 'CHECK' ? 'Cheque' : t.paymentMethod === 'BANK_TRANSFER' ? 'Transferencia' : t.paymentMethod}
+                          </span>
+                        </td>
+                        <td style={{ padding: '10px', textAlign: 'right', fontWeight: 700, fontFamily: 'monospace', color: '#047857' }}>
+                          +${Number(t.amount).toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                        </td>
+                        <td style={{ padding: '10px', textAlign: 'center' }}>
+                          {t.verified ? (
+                            <span style={{ padding: '2px 8px', borderRadius: '12px', fontSize: '0.72rem', fontWeight: 600, backgroundColor: '#ecfdf5', color: '#047857' }}>
+                              Verificado
+                            </span>
+                          ) : (
+                            <span style={{ padding: '2px 8px', borderRadius: '12px', fontSize: '0.72rem', fontWeight: 600, backgroundColor: '#fefce8', color: '#a16207' }}>
+                              Pendiente
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '20px' }}>
+              <button type="button" className="btn btn-secondary" onClick={() => setInspectingDrawer(null)} style={{ padding: '8px 20px', borderRadius: '6px' }}>
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

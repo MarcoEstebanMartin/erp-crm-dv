@@ -17,6 +17,7 @@ import {
   Trash2
 } from 'lucide-react';
 import ArqueoCajaModal from './ArqueoCajaModal';
+import { formatResponsibleName } from '../utils/formatters';
 
 interface SellerGroup {
   user: {
@@ -1268,7 +1269,7 @@ const RendicionesDashboard: React.FC = () => {
           <table className="table" style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse', fontSize: '0.88rem' }}>
             <thead>
               <tr style={{ backgroundColor: 'var(--bg-light)', borderBottom: '1px solid var(--border-color)' }}>
-                <th style={{ padding: '12px' }}>Caja / Rama</th>
+                <th style={{ padding: '12px' }}>Responsable / Caja</th>
                 <th style={{ padding: '12px' }}>Apertura</th>
                 <th style={{ padding: '12px' }}>Cierre</th>
                 <th style={{ padding: '12px' }}>Fondo Inicial</th>
@@ -1334,7 +1335,7 @@ const RendicionesDashboard: React.FC = () => {
                           </span>
                         </div>
                         <div style={{ fontSize: '0.88rem', color: 'var(--text-primary)' }}>
-                          {d.branch === 'DEPOSITO' ? 'Caja Depósito' : d.branch}
+                          {d.branch === 'DEPOSITO' ? 'Caja Depósito' : formatResponsibleName(d)}
                         </div>
                         {d.routeNote && (
                           <div style={{ fontSize: '0.78rem', color: '#0284c7', marginTop: '3px', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '4px' }}>

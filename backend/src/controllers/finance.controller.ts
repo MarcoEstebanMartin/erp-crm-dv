@@ -778,17 +778,25 @@ export async function getDrawersHistory(req: AuthenticatedRequest, res: Response
       },
       take: 50,
       include: {
-        user: { select: { id: true, username: true } },
+        user: { 
+          select: { 
+            id: true, 
+            username: true,
+            employee: { select: { firstName: true, lastName: true } }
+          } 
+        },
         transactions: {
           select: {
             id: true,
             type: true,
+            billingType: true,
             paymentMethod: true,
             amount: true,
             description: true,
             createdAt: true,
             receiptNumber: true,
             orderId: true,
+            verified: true,
             persona: { select: { id: true, name: true } }
           }
         }

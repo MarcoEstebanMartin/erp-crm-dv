@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../utils/api';
 import { Lock, Unlock, RefreshCw, AlertCircle, CheckCircle, } from 'lucide-react';
+import { formatResponsibleName } from '../utils/formatters';
 
 export default function CierreCajaDashboard() {
   const [activeDrawers, setActiveDrawers] = useState<any[]>([]);
@@ -184,7 +185,7 @@ export default function CierreCajaDashboard() {
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead style={{ backgroundColor: 'var(--bg-muted)' }}>
                 <tr>
-                  <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '0.85rem' }}>SUC.</th>
+                  <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '0.85rem' }}>RESPONSABLE</th>
                   <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '0.85rem' }}>APERTURA</th>
                   <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '0.85rem' }}>CIERRE</th>
                   <th style={{ padding: '12px 16px', textAlign: 'right', fontSize: '0.85rem' }}>ESPERADO (SISTEMA)</th>
@@ -202,7 +203,7 @@ export default function CierreCajaDashboard() {
                     const diff = Number(d.realBalance) - Number(d.closingBalance);
                     return (
                       <tr key={d.id} className="hover-bg-muted" style={{ borderBottom: '1px solid var(--border-color)' }}>
-                        <td style={{ padding: '12px 16px', fontWeight: 600 }}>{d.branch}</td>
+                        <td style={{ padding: '12px 16px', fontWeight: 600 }}>{formatResponsibleName(d)}</td>
                         <td style={{ padding: '12px 16px', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
                           {new Date(d.openedAt).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' })}
                         </td>
