@@ -167,7 +167,7 @@ export const InstitutionalLanding: React.FC<InstitutionalLandingProps> = ({
                 </svg>
               </a>
 
-              {/* WHATSAPP */}
+              {/* WHATSAPP CON TELÉFONO EN EL CENTRO */}
               <a
                 href="https://wa.me/5493388526852"
                 target="_blank"
@@ -176,8 +176,9 @@ export const InstitutionalLanding: React.FC<InstitutionalLandingProps> = ({
                 className={`social-circle-btn btn-wsp ${activeSocial === 'wsp' ? 'active' : ''}`}
                 onClick={() => setActiveSocial('wsp')}
               >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
+                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 2a9.97 9.97 0 0 0-8.47 15.22L2 22l4.92-1.38A9.97 9.97 0 1 0 12 2z" />
+                  <path d="M16.5 14c-.2-.1-1.2-.6-1.4-.7-.2-.1-.3-.1-.5.1-.1.2-.5.7-.6.8-.1.1-.3.2-.5.1-.3-.1-.9-.3-1.7-1-.6-.6-1.1-1.2-1.2-1.4-.1-.2 0-.3.1-.4.1-.1.2-.2.3-.4.1-.1.1-.2.2-.3 0-.1 0-.3 0-.4s-.5-1.2-.7-1.6c-.2-.4-.4-.4-.5-.4h-.4c-.1 0-.4 0-.6.3s-.8.8-.8 1.9c0 1.1.8 2.2.9 2.4.1.1 1.6 2.4 3.8 3.4.5.2.9.4 1.2.5.5.2 1 .1 1.4.1.4-.1 1.3-.5 1.5-1.1.2-.5.2-1 .1-1.1-.1-.1-.3-.1-.5-.2z" fill="currentColor" stroke="none" />
                 </svg>
               </a>
 

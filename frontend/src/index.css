@@ -1422,6 +1422,7 @@ tr:hover td {
 }
 .social-circle-btn.btn-wsp svg {
   stroke: #1E293B;
+  color: #1E293B;
 }
 .social-circle-btn.btn-fb svg {
   fill: #1E293B;
@@ -1443,6 +1444,7 @@ tr:hover td {
 .social-circle-btn.btn-wsp:hover svg,
 .social-circle-btn.btn-wsp.active svg {
   stroke: #25D366 !important;
+  color: #25D366 !important;
 }
 
 .social-circle-btn.btn-fb:hover svg,
