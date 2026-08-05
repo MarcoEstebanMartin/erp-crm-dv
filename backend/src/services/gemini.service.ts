@@ -33,11 +33,12 @@ async function generateWithFallback(
   promptParts: Array<string | Part>,
   responseMimeType?: string
 ) {
-  const primaryModel = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
+  const primaryModel = process.env.GEMINI_MODEL || 'gemini-3.6-flash';
   const candidateModels = [
     primaryModel,
+    'gemini-3.6-flash',
     'gemini-2.0-flash',
-    'gemini-1.5-flash-latest',
+    'gemini-2.5-flash',
     'gemini-1.5-flash'
   ];
 
