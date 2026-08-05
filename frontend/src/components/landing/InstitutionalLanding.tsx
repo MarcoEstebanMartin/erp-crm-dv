@@ -80,13 +80,13 @@ export const InstitutionalLanding: React.FC<InstitutionalLandingProps> = ({
       {/* 1. HEADER CON MENÚ PILL & REDES SOCIALES INTERACTIVAS */}
       <header style={styles.navbar}>
         <div style={styles.navContainer} className="landing-nav-container">
-          {/* BRAND / LOGO - MÁS GRANDE COMO EN LA OTRA PÁGINA */}
+          {/* BRAND / LOGO ACTUAL DEL ERP 2026 */}
           <div style={styles.brandGroup} onClick={() => handleNavClick('inicio', 'inicio')}>
             {!logoFailed ? (
               <img
-                src="/logo-don-venancio.png"
+                src="/logo.png"
                 alt="Don Venancio Distribuidora"
-                style={{ height: '62px', objectFit: 'contain', cursor: 'pointer' }}
+                style={{ height: '56px', objectFit: 'contain', cursor: 'pointer' }}
                 onError={() => setLogoFailed(true)}
               />
             ) : (
@@ -443,21 +443,21 @@ const styles: Record<string, React.CSSProperties> = {
     padding: '7px 18px',
     borderRadius: '999px',
     fontSize: '14px',
-    fontWeight: 500,
-    color: '#475569',
+    fontWeight: 600,
+    color: '#0F172A',
     cursor: 'pointer',
     transition: 'all 0.2s ease'
   },
   pillNavItemActive: {
     backgroundColor: '#FEF2F2',
-    color: '#E30613',
-    fontWeight: 700,
+    color: '#0F172A',
+    fontWeight: 800,
     border: '1.5px solid #E30613',
     boxShadow: '0 2px 8px rgba(227, 6, 19, 0.15)'
   },
   pillNavItemTienda: {
-    fontWeight: 600,
-    color: '#E30613'
+    fontWeight: 700,
+    color: '#0F172A'
   },
 
   /* GRUPO DE ICONOS SOCIALES Y ERP */
