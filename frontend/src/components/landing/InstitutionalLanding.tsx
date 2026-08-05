@@ -5,6 +5,44 @@ interface InstitutionalLandingProps {
   onOpenStaffLogin: () => void;
 }
 
+const BRANDS_LIST = [
+  { id: 'melincue', name: 'Quesos Melincué', filename: 'melincue.png', accent: '#991B1B' },
+  { id: 'branca', name: 'Fratelli Branca', filename: 'branca.png', accent: '#1E293B' },
+  { id: 'natura', name: 'Natura', filename: 'natura.png', accent: '#15803D' },
+  { id: 'agd', name: 'AGD', filename: 'agd.png', accent: '#1E3A8A' },
+  { id: 'baggio', name: 'Baggio', filename: 'baggio.png', accent: '#DC2626' },
+  { id: 'marolio', name: 'Marolio', filename: 'marolio.png', accent: '#B45309' },
+  { id: 'sancor', name: 'SanCor', filename: 'sancor.png', accent: '#0369A1' },
+  { id: '308', name: 'Fideos 308', filename: '308.png', accent: '#BE123C' }
+];
+
+const BrandCardLogo = ({ brand, onClick }: { brand: typeof BRANDS_LIST[0]; onClick: () => void }) => {
+  const [imgError, setImgError] = useState(false);
+
+  return (
+    <div
+      onClick={onClick}
+      className="brand-card-hover"
+      title={`Ver catálogo de ${brand.name}`}
+    >
+      {!imgError ? (
+        <img
+          src={`/brands/${brand.filename}`}
+          alt={brand.name}
+          onError={() => setImgError(true)}
+          style={{ maxHeight: '60px', maxWidth: '82%', objectFit: 'contain' }}
+        />
+      ) : (
+        <div style={{ textAlign: 'center' }}>
+          <span style={{ fontSize: '1.15rem', fontWeight: 800, color: brand.accent, letterSpacing: '-0.01em' }}>
+            {brand.name}
+          </span>
+        </div>
+      )}
+    </div>
+  );
+};
+
 export const InstitutionalLanding: React.FC<InstitutionalLandingProps> = ({
   onOpenStore,
   onOpenStaffLogin
@@ -223,36 +261,26 @@ export const InstitutionalLanding: React.FC<InstitutionalLandingProps> = ({
         </div>
       </section>
 
-      {/* 4. MARCAS Y CATEGORÍAS */}
-      <section id="marcas" style={{ ...styles.sectionClean, backgroundColor: '#FAFAFA' }}>
-        <div style={styles.sectionHeader}>
-          <span style={styles.sectionTag}>MARCAS & CATEGORÍAS</span>
-          <h2 style={styles.sectionTitle}>Productos de Alta Rotación</h2>
-        </div>
-
-        <div style={styles.grid4Cols}>
-          <div style={styles.brandCard} onClick={onOpenStore}>
-            <span style={styles.brandEmoji}>🧀</span>
-            <h4 style={styles.brandTitle}>Lácteos & Quesos</h4>
-            <p style={styles.brandDesc}>Cremoso, Tybo, Mozzarella, Sardo y Manteca por horma.</p>
+      {/* 4. MARCAS LÍDERES */}
+      <section id="marcas" style={{ backgroundColor: '#FAFAFA', padding: '75px 20px', borderTop: '1px solid #F1F5F9', borderBottom: '1px solid #F1F5F9' }}>
+        <div style={{ maxWidth: '1140px', margin: '0 auto' }}>
+          <div style={{ marginBottom: '36px', textAlign: 'left' }}>
+            <h2 style={{ fontSize: '32px', fontWeight: 800, color: '#0F172A', margin: '0 0 12px 0', letterSpacing: '-0.025em' }}>
+              Trabajamos con marcas líderes.
+            </h2>
+            <p style={{ color: '#64748B', fontSize: '15px', lineHeight: 1.6, maxWidth: '860px', margin: 0 }}>
+              Quesos Melincué de Remotti, Sancor, Fratelli Branca, Aceites y Aderezos Natura (AGD), Productos Baggio, La Huerta (RPB), Marolio y muchas más.
+            </p>
           </div>
 
-          <div style={styles.brandCard} onClick={onOpenStore}>
-            <span style={styles.brandEmoji}>🥓</span>
-            <h4 style={styles.brandTitle}>Fiambres & Embutidos</h4>
-            <p style={styles.brandDesc}>Jamón Cocido, Paleta, Salames y piezas enteras.</p>
-          </div>
-
-          <div style={styles.brandCard} onClick={onOpenStore}>
-            <span style={styles.brandEmoji}>🥤</span>
-            <h4 style={styles.brandTitle}>Bebidas & Aguas</h4>
-            <p style={styles.brandDesc}>Gaseosas, Aguas minerales, Cervezas y Vinos en packs.</p>
-          </div>
-
-          <div style={styles.brandCard} onClick={onOpenStore}>
-            <span style={styles.brandEmoji}>🥫</span>
-            <h4 style={styles.brandTitle}>Almacén & Conservas</h4>
-            <p style={styles.brandDesc}>Aceites, enlatados, harinas, aderezos e insumos masivos.</p>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+            gap: '20px'
+          }}>
+            {BRANDS_LIST.map((brand) => (
+              <BrandCardLogo key={brand.id} brand={brand} onClick={onOpenStore} />
+            ))}
           </div>
         </div>
       </section>
