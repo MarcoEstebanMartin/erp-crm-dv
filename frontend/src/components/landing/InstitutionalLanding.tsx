@@ -197,25 +197,20 @@ export const InstitutionalLanding: React.FC<InstitutionalLandingProps> = ({
           <span style={styles.minimalBadge}>DON VENANCIO DISTRIBUIDORA</span>
 
           <h1 style={styles.heroTitle}>
-            Distribución Mayorista de Alimentos y Bebidas
+            Desde 1996 abasteciendo comercios de la región
           </h1>
 
           <p style={styles.heroSubtitle}>
-            Abastecimiento directo para supermercados, almacenes, fiambrerías y gastronomía. Calidad, logística propia y atención personalizada.
+            <strong style={{ color: '#0F172A', fontWeight: 700 }}>Distribuidora mayorista de alimentos y bebidas.</strong> 30 años acompañando a comercios de General Villegas y toda la zona, con stock permanente, atención personalizada, logística propia y entregas semanales garantizadas.
           </p>
 
           <div style={styles.heroCtaRow}>
-            <button onClick={onOpenStore} style={styles.btnPrimaryRed}>
-              🛒 Ingresar a la Tienda B2B
-            </button>
-            <a
-              href="https://wa.me/5491112345678?text=Hola,%20quisiera%20consultar%20por%20ventas%20mayoristas"
-              target="_blank"
-              rel="noopener noreferrer"
-              style={styles.btnSecondaryClean}
+            <button
+              onClick={() => handleNavClick('contacto', 'contacto')}
+              style={styles.btnPrimaryRed}
             >
-              💬 WhatsApp Directo
-            </a>
+              CONTACTO
+            </button>
           </div>
         </div>
       </section>
@@ -488,59 +483,62 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     flexDirection: 'column',
     justifyContent: 'center',
-    alignItems: 'center',
     padding: '60px 20px',
-    textAlign: 'center',
-    background: 'linear-gradient(180deg, #FFFFFF 0%, #FAFAFA 100%)',
+    backgroundColor: '#FFFFFF',
     borderBottom: '1px solid #F1F5F9',
     boxSizing: 'border-box'
   },
   heroContent: {
-    maxWidth: '780px',
+    maxWidth: '1280px',
+    width: '100%',
     margin: '0 auto',
     display: 'flex',
     flexDirection: 'column',
-    alignItems: 'center'
+    alignItems: 'flex-start',
+    textAlign: 'left'
   },
   minimalBadge: {
-    fontSize: '11px',
-    fontWeight: 700,
-    letterSpacing: '0.12em',
+    fontSize: '12px',
+    fontWeight: 800,
+    letterSpacing: '0.14em',
     color: '#E30613',
     textTransform: 'uppercase',
-    marginBottom: '16px'
+    marginBottom: '20px'
   },
   heroTitle: {
-    fontSize: '42px',
+    fontSize: '56px',
     fontWeight: 800,
-    lineHeight: 1.18,
+    lineHeight: 1.1,
     color: '#0F172A',
-    margin: '0 0 16px 0',
-    letterSpacing: '-0.02em'
+    margin: '0 0 24px 0',
+    letterSpacing: '-0.035em',
+    maxWidth: '980px'
   },
   heroSubtitle: {
-    fontSize: '17px',
-    lineHeight: 1.6,
-    color: '#64748B',
-    margin: '0 0 32px 0'
+    fontSize: '18px',
+    lineHeight: 1.65,
+    color: '#475569',
+    margin: '0 0 36px 0',
+    maxWidth: '880px'
   },
   heroCtaRow: {
     display: 'flex',
     gap: '12px',
-    flexWrap: 'wrap',
-    justifyContent: 'center'
+    justifyContent: 'flex-start'
   },
   btnPrimaryRed: {
     backgroundColor: '#E30613',
     color: '#FFFFFF',
     border: 'none',
-    borderRadius: '8px',
-    padding: '13px 26px',
-    fontSize: '15px',
-    fontWeight: 600,
+    borderRadius: '999px',
+    padding: '16px 42px',
+    fontSize: '14px',
+    fontWeight: 700,
+    letterSpacing: '0.08em',
     cursor: 'pointer',
-    boxShadow: '0 4px 12px rgba(227, 6, 19, 0.25)',
-    transition: 'transform 0.2s ease'
+    boxShadow: '0 8px 24px rgba(227, 6, 19, 0.28)',
+    transition: 'all 0.2s ease',
+    textTransform: 'uppercase'
   },
   btnSecondaryClean: {
     backgroundColor: '#FFFFFF',
@@ -558,7 +556,8 @@ const styles: Record<string, React.CSSProperties> = {
 
   /* SECCIONES PROLIJAS PANTALLA COMPLETA */
   sectionClean: {
-    maxWidth: '1140px',
+    maxWidth: '1280px',
+    width: '100%',
     margin: '0 auto',
     padding: '60px 20px',
     minHeight: 'calc(100vh - 65px)',
@@ -568,21 +567,22 @@ const styles: Record<string, React.CSSProperties> = {
     boxSizing: 'border-box'
   },
   sectionHeader: {
-    textAlign: 'center',
-    marginBottom: '44px'
+    textAlign: 'left',
+    marginBottom: '40px'
   },
   sectionTag: {
-    fontSize: '11px',
+    fontSize: '12px',
     fontWeight: 800,
-    letterSpacing: '0.1em',
-    color: '#94A3B8',
+    letterSpacing: '0.12em',
+    color: '#E30613',
     textTransform: 'uppercase'
   },
   sectionTitle: {
-    fontSize: '26px',
+    fontSize: '38px',
     fontWeight: 800,
     color: '#0F172A',
-    marginTop: '6px'
+    marginTop: '8px',
+    letterSpacing: '-0.03em'
   },
   grid3Cols: {
     display: 'grid',
