@@ -153,7 +153,7 @@ export const InstitutionalLanding: React.FC<InstitutionalLandingProps> = ({
             <div style={styles.socialButtonsGroup}>
               {/* INSTAGRAM */}
               <a
-                href="https://instagram.com"
+                href="https://www.instagram.com/donvenanciodistribuidora/?hl=es"
                 target="_blank"
                 rel="noopener noreferrer"
                 title="Síguenos en Instagram"
@@ -165,7 +165,7 @@ export const InstitutionalLanding: React.FC<InstitutionalLandingProps> = ({
 
               {/* WHATSAPP */}
               <a
-                href="https://wa.me/5493388526852"
+                href="https://api.whatsapp.com/send/?phone=5493388526852&text&type=phone_number&app_absent=0"
                 target="_blank"
                 rel="noopener noreferrer"
                 title="Contactar por WhatsApp"
@@ -177,7 +177,7 @@ export const InstitutionalLanding: React.FC<InstitutionalLandingProps> = ({
 
               {/* FACEBOOK */}
               <a
-                href="https://facebook.com"
+                href="https://www.facebook.com/DonVenanciodistribuidora/"
                 target="_blank"
                 rel="noopener noreferrer"
                 title="Síguenos en Facebook"
@@ -293,21 +293,39 @@ export const InstitutionalLanding: React.FC<InstitutionalLandingProps> = ({
             </p>
 
             <div style={styles.contactList}>
-              <div>📍 <strong>Depósito Central:</strong> Buenos Aires, Argentina</div>
-              <div>📞 <strong>Ventas:</strong> +54 9 11 1234-5678</div>
+              <div>📍 <strong>Base Operativa:</strong> General Villegas, Buenos Aires, Argentina</div>
+              <div>📞 <strong>Ventas / WhatsApp:</strong> +54 9 3388 52-6852</div>
               <div>✉️ <strong>Email:</strong> ventas@donvenancio.com.ar</div>
             </div>
 
-            {/* REDES SOCIALES DEBAJO DE CONTACTO TAMBIÉN */}
+            {/* REDES SOCIALES EN SECCIÓN CONTACTO */}
             <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
-              <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" style={styles.socialCircleBtn}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#E1306C" strokeWidth="2"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path></svg>
+              <a
+                href="https://www.instagram.com/donvenanciodistribuidora/?hl=es"
+                target="_blank"
+                rel="noopener noreferrer"
+                title="Instagram Don Venancio"
+                className="social-circle-btn btn-ig"
+              >
+                <i className="fa-brands fa-instagram"></i>
               </a>
-              <a href="https://wa.me/5491112345678" target="_blank" rel="noopener noreferrer" style={styles.socialCircleBtn}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#25D366" strokeWidth="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+              <a
+                href="https://api.whatsapp.com/send/?phone=5493388526852&text&type=phone_number&app_absent=0"
+                target="_blank"
+                rel="noopener noreferrer"
+                title="WhatsApp Directo"
+                className="social-circle-btn btn-wsp"
+              >
+                <i className="fa-brands fa-whatsapp"></i>
               </a>
-              <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" style={styles.socialCircleBtn}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="#1877F2"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"></path></svg>
+              <a
+                href="https://www.facebook.com/DonVenanciodistribuidora/"
+                target="_blank"
+                rel="noopener noreferrer"
+                title="Facebook Don Venancio"
+                className="social-circle-btn btn-fb"
+              >
+                <i className="fa-brands fa-facebook-f"></i>
               </a>
             </div>
           </div>
