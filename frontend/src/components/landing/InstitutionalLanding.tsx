@@ -287,7 +287,7 @@ export const InstitutionalLanding: React.FC<InstitutionalLandingProps> = ({
         <div style={styles.contactWrapper}>
           <div style={styles.contactInfo}>
             <span style={styles.sectionTag}>CONTACTO</span>
-            <h2 style={styles.sectionTitle}>Contactate con Don Venancio</h2>
+            <h2 style={styles.sectionTitle}>Contáctanos</h2>
             <p style={{ fontSize: '15px', color: '#64748B', lineHeight: 1.6, marginBottom: '24px' }}>
               Dejanos tu mensaje o consulta comercial y un preventista te contactará a la brevedad.
             </p>
