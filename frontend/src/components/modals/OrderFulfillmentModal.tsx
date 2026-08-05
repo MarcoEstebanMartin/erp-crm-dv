@@ -165,9 +165,7 @@ export default function OrderFulfillmentModal({ order, onClose, onSuccess }: Ord
             ¡Pedido #{order.id} Facturado con Éxito!
           </h2>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', marginBottom: '24px' }}>
-            {billingType === 'OFFICIAL' 
-              ? (deferCae ? 'Pre-Factura Sucursal A generada con éxito (Pendiente de CAE).' : 'Factura Sucursal A emitida y autorizada en AFIP.')
-              : 'Comprobante Sucursal X generado con éxito.'}
+            Comprobante generado con éxito.
           </p>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '24px' }}>
@@ -189,7 +187,7 @@ export default function OrderFulfillmentModal({ order, onClose, onSuccess }: Ord
                 }}
                 onClick={() => printFacturaOficialA4({ ...order, totalAmount: currentTotal, billingType })}
               >
-                <FileText size={20} /> 📄 Imprimir Factura Oficial A4 ({deferCae ? 'Borrador' : 'AFIP'})
+                <FileText size={20} /> 📄 Imprimir Factura (Sucursal A)
               </button>
             ) : (
               <button
@@ -209,7 +207,7 @@ export default function OrderFulfillmentModal({ order, onClose, onSuccess }: Ord
                 }}
                 onClick={() => printRemitoX({ ...order, totalAmount: currentTotal, billingType })}
               >
-                <FileText size={20} /> 📄 Imprimir Boleta Remito A4 (Sucursal X)
+                <FileText size={20} /> 📄 Imprimir Factura (Sucursal X)
               </button>
             )}
 
@@ -231,7 +229,7 @@ export default function OrderFulfillmentModal({ order, onClose, onSuccess }: Ord
               }}
               onClick={() => printOrderReceipt({ ...order, totalAmount: currentTotal, billingType })}
             >
-              <Printer size={20} /> 🖨️ Imprimir Ticket Térmico 80mm (Resumido)
+              <Printer size={20} /> 🖨️ Imprimir Ticket
             </button>
           </div>
 
