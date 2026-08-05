@@ -262,7 +262,17 @@ export const InstitutionalLanding: React.FC<InstitutionalLandingProps> = ({
       </section>
 
       {/* 4. MARCAS LÍDERES */}
-      <section id="marcas" style={{ backgroundColor: '#FAFAFA', padding: '75px 20px', borderTop: '1px solid #F1F5F9', borderBottom: '1px solid #F1F5F9' }}>
+      <section id="marcas" style={{
+        backgroundColor: '#FAFAFA',
+        padding: '60px 20px',
+        borderTop: '1px solid #F1F5F9',
+        borderBottom: '1px solid #F1F5F9',
+        minHeight: 'calc(100vh - 65px)',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'center',
+        boxSizing: 'border-box'
+      }}>
         <div style={{ maxWidth: '1140px', margin: '0 auto' }}>
           <div style={{ marginBottom: '36px', textAlign: 'left' }}>
             <h2 style={{ fontSize: '32px', fontWeight: 800, color: '#0F172A', margin: '0 0 12px 0', letterSpacing: '-0.025em' }}>
@@ -483,10 +493,16 @@ const styles: Record<string, React.CSSProperties> = {
 
   /* HERO */
   heroSection: {
-    padding: '90px 20px 70px 20px',
+    minHeight: 'calc(100vh - 65px)',
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: '60px 20px',
     textAlign: 'center',
     background: 'linear-gradient(180deg, #FFFFFF 0%, #FAFAFA 100%)',
-    borderBottom: '1px solid #F1F5F9'
+    borderBottom: '1px solid #F1F5F9',
+    boxSizing: 'border-box'
   },
   heroContent: {
     maxWidth: '780px',
@@ -549,11 +565,16 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: 'center'
   },
 
-  /* SECCIONES PROLIJAS */
+  /* SECCIONES PROLIJAS PANTALLA COMPLETA */
   sectionClean: {
     maxWidth: '1140px',
     margin: '0 auto',
-    padding: '70px 20px'
+    padding: '60px 20px',
+    minHeight: 'calc(100vh - 65px)',
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'center',
+    boxSizing: 'border-box'
   },
   sectionHeader: {
     textAlign: 'center',
