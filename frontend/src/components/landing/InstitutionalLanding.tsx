@@ -73,6 +73,16 @@ export const InstitutionalLanding: React.FC<InstitutionalLandingProps> = ({
   const handleSubmitContact = (e: React.FormEvent) => {
     e.preventDefault();
     setFormSent(true);
+
+    const messageText = `Hola Don Venancio, quisiera realizar una consulta comercial:\n\n` +
+      `🏢 *Razón Social / Nombre:* ${contactForm.businessName}\n` +
+      `📞 *Teléfono:* ${contactForm.phone}\n` +
+      (contactForm.message ? `💬 *Consulta:* ${contactForm.message}` : '');
+
+    const encodedText = encodeURIComponent(messageText);
+    const whatsappUrl = `https://api.whatsapp.com/send/?phone=5493388526852&text=${encodedText}&type=phone_number&app_absent=0`;
+
+    window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
   };
 
   return (
