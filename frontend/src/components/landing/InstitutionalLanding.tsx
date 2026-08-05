@@ -49,6 +49,7 @@ export const InstitutionalLanding: React.FC<InstitutionalLandingProps> = ({
 }) => {
   const [logoFailed, setLogoFailed] = useState(false);
   const [activeNav, setActiveNav] = useState<'inicio' | 'empresa' | 'marcas' | 'contacto' | 'tienda'>('inicio');
+  const [activeSocial, setActiveSocial] = useState<'ig' | 'wsp' | 'fb' | null>(null);
   
   const [contactForm, setContactForm] = useState({
     businessName: '',
@@ -85,7 +86,7 @@ export const InstitutionalLanding: React.FC<InstitutionalLandingProps> = ({
               <img
                 src="/logo-don-venancio.png"
                 alt="Don Venancio Distribuidora"
-                style={{ height: '60px', objectFit: 'contain', cursor: 'pointer' }}
+                style={{ height: '62px', objectFit: 'contain', cursor: 'pointer' }}
                 onError={() => setLogoFailed(true)}
               />
             ) : (
@@ -147,7 +148,7 @@ export const InstitutionalLanding: React.FC<InstitutionalLandingProps> = ({
             </button>
           </nav>
 
-          {/* REDES SOCIALES INTERACTIVAS CON LOGO WHATSAPP NÍTIDO */}
+          {/* REDES SOCIALES INTERACTIVAS CON ANILLO ROSADO AL SELECCIONAR/HOVER */}
           <div style={styles.socialAndActionsGroup}>
             <div style={styles.socialButtonsGroup}>
               {/* INSTAGRAM */}
@@ -156,29 +157,47 @@ export const InstitutionalLanding: React.FC<InstitutionalLandingProps> = ({
                 target="_blank"
                 rel="noopener noreferrer"
                 title="Síguenos en Instagram"
-                className="social-circle-btn"
-                style={styles.socialCircleBtn}
+                className={`social-circle-btn btn-ig ${activeSocial === 'ig' ? 'active' : ''}`}
+                onClick={() => setActiveSocial('ig')}
               >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#E1306C" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
                   <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
                   <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
                 </svg>
               </a>
 
-              {/* WHATSAPP LLENO NÍTIDO */}
+              {/* WHATSAPP */}
               <a
                 href="https://wa.me/5493388526852"
                 target="_blank"
                 rel="noopener noreferrer"
                 title="Contactar por WhatsApp"
-                className="social-circle-btn"
-                style={styles.socialCircleBtn}
+                className={`social-circle-btn btn-wsp ${activeSocial === 'wsp' ? 'active' : ''}`}
+                onClick={() => setActiveSocial('wsp')}
               >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="#25D366">
-                  <path d="M12.012 2c-5.506 0-9.989 4.478-9.99 9.984 0 1.764.459 3.487 1.333 5.006l-1.417 5.176 5.297-1.389c1.467.8 3.123 1.222 4.773 1.223h.004c5.505 0 9.989-4.477 9.99-9.984 0-2.668-1.039-5.176-2.927-7.062a9.923 9.923 0 0 0-7.063-2.954zm5.7 12.656c-.234.658-1.155 1.205-1.597 1.277-.442.072-1.02.13-2.953-.637-2.474-.982-4.066-3.484-4.19-3.648-.124-.165-1.002-1.333-1.002-2.542 0-1.21.636-1.803.861-2.048.225-.245.492-.307.656-.307.164 0 .328.001.472.008.152.007.356-.058.557.426.205.495.7 1.706.762 1.83.062.124.103.268.02.433-.082.164-.124.267-.246.411-.123.144-.258.322-.369.433-.123.123-.252.257-.109.503.144.246.637 1.052 1.368 1.703.94.838 1.734 1.098 1.98 1.221.246.124.39.103.533-.061.144-.164.615-.719.78-.966.164-.246.328-.205.553-.123.226.082 1.435.677 1.681.8.246.123.41.185.472.288.062.103.062.6-.172 1.258z"/>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
                 </svg>
               </a>
+
+              {/* FACEBOOK */}
+              <a
+                href="https://facebook.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                title="Síguenos en Facebook"
+                className={`social-circle-btn btn-fb ${activeSocial === 'fb' ? 'active' : ''}`}
+                onClick={() => setActiveSocial('fb')}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24">
+                  <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"></path>
+                </svg>
+              </a>
+            </div>
+          </div>
+        </div>
+      </header>
 
               {/* FACEBOOK */}
               <a
