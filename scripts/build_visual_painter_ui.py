@@ -284,7 +284,9 @@ wms_painter_jsx = '''      {subTab === 'wms-map' && !selectedOrder && !showConso
                         <tr key={rIdx}>
                           {row.map((cell: any, cIdx: number) => {
                             const isSlot = cell.is_storage;
-                            const cellPosKey = `${cell.dep_id}-R${cell.r:02d}-C${cell.c:02d}`;
+                            const rStr = cell.r < 10 ? '0' + cell.r : cell.r;
+                            const cStr = cell.c < 10 ? '0' + cell.c : cell.c;
+                            const cellPosKey = `${cell.dep_id}-R${rStr}-C${cStr}`;
                             
                             let cellText = cell.val;
                             if (slotTypeMap[cellPosKey]) {

@@ -2278,7 +2278,7 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
       {/* ====================================================================
           2.2 MAPA VISUAL (WMS)
           ==================================================================== */}
-                                                                                    {subTab === 'wms-map' && !selectedOrder && !showConsolidatedView && (
+                                                                                          {subTab === 'wms-map' && !selectedOrder && !showConsolidatedView && (
         <div className="wms-container" style={{ display: 'flex', flexDirection: 'column', gap: '14px', width: '100%' }}>
           {/* Header Principal Responsivo */}
           <div style={{ backgroundColor: '#ffffff', border: '1px solid var(--border-color)', borderRadius: '10px', padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
@@ -2515,7 +2515,9 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
                         <tr key={rIdx}>
                           {row.map((cell: any, cIdx: number) => {
                             const isSlot = cell.is_storage;
-                            const cellPosKey = `${cell.dep_id}-R${cell.r:02d}-C${cell.c:02d}`;
+                            const rStr = cell.r < 10 ? '0' + cell.r : cell.r;
+                            const cStr = cell.c < 10 ? '0' + cell.c : cell.c;
+                            const cellPosKey = `${cell.dep_id}-R${rStr}-C${cStr}`;
                             
                             let cellText = cell.val;
                             if (slotTypeMap[cellPosKey]) {
