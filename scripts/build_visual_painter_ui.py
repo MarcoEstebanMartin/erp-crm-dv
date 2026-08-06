@@ -21,7 +21,6 @@ if 'import SimpleStockLoadModal' not in content:
 
 # 2. Agregar estados del Editor Visual de Mapa si no existen
 states_to_add = '''  const [isMapModalOpen, setIsMapModalOpen] = useState(false);
-  const [isSimpleStockModalOpen, setIsSimpleStockModalOpen] = useState(false);
   
   // Estado del Editor Visual de Mapa y Sectores
   const [isEditMode, setIsEditMode] = useState(false);

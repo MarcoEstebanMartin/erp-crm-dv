@@ -134,7 +134,6 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
       return {};
     }
   });
-  const [isSimpleStockModalOpen, setIsSimpleStockModalOpen] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState<any | null>(null);
   const [selectedSector, setSelectedSector] = useState<string>('ALL');
   const [selectedMapLocation, setSelectedMapLocation] = useState<string>('');
