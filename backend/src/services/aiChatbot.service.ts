@@ -54,6 +54,13 @@ async function callGeminiFallback(promptParts: Array<string | Part>, responseMim
   throw lastError;
 }
 
+export function getFirstName(fullName?: string | null): string {
+  if (!fullName) return 'Cliente';
+  const firstWord = fullName.trim().split(/\s+/)[0];
+  if (!firstWord) return 'Cliente';
+  return firstWord.charAt(0).toUpperCase() + firstWord.slice(1).toLowerCase();
+}
+
 export class AiChatbotService {
   /**
    * Obtener catálogo formateado y optimizado para la IA en tiempo real desde la BD
@@ -112,10 +119,13 @@ export class AiChatbotService {
       priceListType = 'LISTA_A'
     } = params;
 
+    const firstName = getFirstName(customerName);
+    const requiredWelcomeHeader = `Hola ${firstName} 👋! Soy Ben, tu asistente de inteligencia artificial. Contame con el mayor detalle posible que necesitas, asi puedo darte una mejor respuesta. Estoy aca para ayudarte.`;
+
     // Si no hay API KEY, fallback cordial
     if (!apiKey || apiKey === 'tu-api-key-aqui') {
       return {
-        text: `Hola ${customerName}! Soy Ben, tu asistente de inteligencia artificial. Contame con el mayor detalle posible que necesitas, asi puedo darte una mejor respuesta. Estoy aca para ayudarte.`,
+        text: requiredWelcomeHeader,
         intent: 'GENERAL_TALK'
       };
     }
@@ -131,18 +141,18 @@ PERSONALIDAD Y TONO:
 - NUNCA respondas con frases robóticas ni con exclamaciones sobreactuadas. Conversa de manera natural, fluida y atenta.
 
 REGLAS STRICTAS DE SALUDO, USO DEL NOMBRE Y DESPEDIDA:
-- El cliente actual se llama: "${customerName}".
+- El cliente actual se llama: "${firstName}" (Nombre completo: "${customerName}"). Usa ÚNICAMENTE su primer nombre: "${firstName}".
 
 1. SALUDO INICIAL (ÚNICAMENTE EN EL PRIMER MENSAJE DE LA CONVERSACIÓN / PRIMER CONTACTO):
    - Si no hay historial de conversación previo o si el cliente está iniciando la interacción (ej: "Hola", "Buenas", etc.), DEBES incluir la siguiente estructura exacta de bienvenida:
-     "Hola ${customerName}! Soy Ben, tu asistente de inteligencia artificial. Contame con el mayor detalle posible que necesitas, asi puedo darte una mejor respuesta. Estoy aca para ayudarte."
+     "${requiredWelcomeHeader}"
    - Si en su primer mensaje el cliente ya te pide un producto o hace una pregunta (ej: "Hola, mandame 2 cajas de fernet"), usa esa frase inicial y a continuación responde su pedido/consulta.
 
 2. RESPUESTAS INTERMEDIAS (DURANTE LA CONVERSACIÓN):
-   - En las respuestas intermedias (confirmaciones de ítem, precios, forma de pago, stock o aclaraciones), **NO repitas el nombre del cliente ("${customerName}") ni vuelvas a dar el saludo inicial**. Responde directamente, de forma clara y amable sin usar su nombre en cada mensaje.
+   - En las respuestas intermedias (confirmaciones de ítem, precios, forma de pago, stock o aclaraciones), **NO repitas el nombre del cliente ("${firstName}") ni vuelvas a dar el saludo inicial**. Responde directamente, de forma clara y amable sin usar su nombre en cada mensaje.
 
 3. DESPEDIDA Y AGRADECIMIENTO (AL FINALIZAR UN PEDIDO O ATENCIÓN):
-   - En el mensaje de cierre/despedida al dejar registrado un pedido o al concluir una consulta, **SÍ incluye un agradecimiento cordial mencionando su nombre** (ej: "¡Muchas gracias por tu compra, ${customerName}! Que tengas un excelente día.", "¡Muchas gracias, ${customerName}! Quedo a tu disposición para lo que necesites.").
+   - En el mensaje de cierre/despedida al dejar registrado un pedido o al concluir una consulta, **SÍ incluye un agradecimiento cordial mencionando únicamente su primer nombre** (ej: "¡Muchas gracias por tu compra, ${firstName}! Que tengas un excelente día.", "¡Muchas gracias, ${firstName}! Quedo a tu disposición para lo que necesites.").
 
 DATOS DE LA EMPRESA Y CATÁLOGO REAL:
 - Lista de precios aplicable: ${priceListType} (Usa los valores correspondientes de precioA, precioB o precioC del catálogo).
@@ -197,7 +207,7 @@ Debes responder NÚNICAMENTE con un objeto JSON válido con la siguiente estruct
     }
 
     // Agregar el mensaje actual
-    promptParts.push(`MENSAJE ACTUAL DE CLIENTE (${customerName}): "${messageText || (mediaBase64 ? 'Adjunto de imagen/documento' : '')}"`);
+    promptParts.push(`MENSAJE ACTUAL DE CLIENTE (${firstName}): "${messageText || (mediaBase64 ? 'Adjunto de imagen/documento' : '')}"`);
 
     // Agregar media si existe
     if (mediaBase64 && mediaMimeType) {
@@ -216,7 +226,6 @@ Debes responder NÚNICAMENTE con un objeto JSON válido con la siguiente estruct
 
       const hasPreviousBotReply = history.some(h => h.role === 'model');
       let finalText = parsed.text || '¡Con mucho gusto te ayudo! ¿Qué productos necesitas?';
-      const requiredWelcomeHeader = `Hola ${customerName} 👋! Soy Ben, tu asistente de inteligencia artificial. Contame con el mayor detalle posible que necesitas, asi puedo darte una mejor respuesta. Estoy aca para ayudarte.`;
 
       if (!hasPreviousBotReply) {
         // Primera respuesta del bot en la conversación: DEBE ser o comenzar con el saludo oficial exacto
@@ -237,13 +246,12 @@ Debes responder NÚNICAMENTE con un objeto JSON válido con la siguiente estruct
       };
     } catch (error: any) {
       console.error('[AiChatbotService] Error procesando mensaje con Gemini:', error);
-      const requiredWelcomeHeader = `Hola ${customerName} 👋! Soy Ben, tu asistente de inteligencia artificial. Contame con el mayor detalle posible que necesitas, asi puedo darte una mejor respuesta. Estoy aca para ayudarte.`;
       const hasPreviousBotReply = history.some(h => h.role === 'model');
 
       return {
         text: !hasPreviousBotReply
           ? requiredWelcomeHeader
-          : `¡Muchas gracias por tu mensaje, ${customerName}! 👋 Un asesor de nuestro equipo comercial te responderá a la brevedad.`,
+          : `¡Muchas gracias por tu mensaje, ${firstName}! 👋 Un asesor de nuestro equipo comercial te responderá a la brevedad.`,
         intent: 'GENERAL_TALK',
         transferToHuman: true
       };
