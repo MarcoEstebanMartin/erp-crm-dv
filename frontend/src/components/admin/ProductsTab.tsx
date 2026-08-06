@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import ProductsList from '../ProductsList';
 import StockDashboard from '../StockDashboard';
 import OffersDashboard from './OffersDashboard';
+import DepositoDashboard from '../DepositoDashboard';
 
 interface ProductsTabProps {
   products: any[];
@@ -22,7 +23,7 @@ export default function ProductsTab({
   onUploadImage,
   initialCatalogTab = 'products'
 }: ProductsTabProps) {
-  const [catalogTab, setCatalogTab] = useState<'products' | 'offers' | 'inactive_products' | 'stock'>(initialCatalogTab);
+  const [catalogTab, setCatalogTab] = useState<'products' | 'offers' | 'inactive_products' | 'stock' | 'deposito'>(initialCatalogTab);
   const [searchQuery, setSearchQuery] = useState('');
 
   return (
@@ -48,6 +49,13 @@ export default function ProductsTab({
         >
           Control y Valorización de Stock
           {catalogTab === 'stock' && <div style={{ position: 'absolute', bottom: '-13px', left: 0, right: 0, height: '2px', backgroundColor: 'var(--color-primary)' }} />}
+        </div>
+        <div 
+          style={{ cursor: 'pointer', fontWeight: catalogTab === 'deposito' ? 600 : 400, color: catalogTab === 'deposito' ? 'var(--color-primary)' : 'var(--text-secondary)', position: 'relative' }}
+          onClick={() => setCatalogTab('deposito')}
+        >
+          📍 Mapa Depósito & Slots (WMS)
+          {catalogTab === 'deposito' && <div style={{ position: 'absolute', bottom: '-13px', left: 0, right: 0, height: '2px', backgroundColor: 'var(--color-primary)' }} />}
         </div>
         <div 
           style={{ cursor: 'pointer', fontWeight: catalogTab === 'inactive_products' ? 600 : 400, color: catalogTab === 'inactive_products' ? 'var(--color-primary)' : 'var(--text-secondary)', position: 'relative' }}
@@ -80,6 +88,10 @@ export default function ProductsTab({
           products={products}
           onRefresh={async () => fetchData()}
         />
+      )}
+
+      {catalogTab === 'deposito' && (
+        <DepositoDashboard activeTab="stock-adjust" setActiveTab={() => {}} />
       )}
 
     </div>

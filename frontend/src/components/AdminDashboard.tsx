@@ -1379,6 +1379,13 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
       )}
 
       {/* ====================================================================
+          GESTIÓN DE DEPÓSITO & SLOTS (WMS)
+          ==================================================================== */}
+      {activeTab === 'deposito' && (
+        <DepositoDashboard activeTab="deposito" setActiveTab={setActiveTab} />
+      )}
+
+      {/* ====================================================================
           2. FICHERO DE PERSONAS
           ==================================================================== */}
       {(activeTab === 'clients') && (

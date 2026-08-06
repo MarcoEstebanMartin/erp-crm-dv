@@ -393,6 +393,7 @@ export default function ComprasDashboard() {
         percepcionPampa: '',
         percepcionBsAs: '',
         percepcionIva: '',
+        percepcionIva5329: '',
         impuestosInternos: '',
         totalAmount: '',
         billingType: 'OFFICIAL'

@@ -43,7 +43,7 @@ export function formatResponsibleName(d: any): string {
   if (cleanNameOnly.length > 0) {
     return cleanNameOnly
       .split(' ')
-      .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+      .map((w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
       .join(' ');
   }
 

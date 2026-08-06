@@ -214,7 +214,7 @@ export const WebChatWidget: React.FC<WebChatWidgetProps> = ({
                         style={styles.attachedImg}
                       />
                     )}
-                    <div style={{ whitespace: 'pre-line', lineHeight: '1.45', fontSize: '13px' }}>
+                    <div style={{ whiteSpace: 'pre-line', lineHeight: '1.45', fontSize: '13px' }}>
                       {msg.text}
                     </div>
                   </div>
