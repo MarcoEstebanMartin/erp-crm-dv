@@ -3531,34 +3531,9 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
           }
         }}
       />
-      <SimpleStockLoadModal
-        isOpen={isSimpleStockModalOpen}
-        onClose={() => setIsSimpleStockModalOpen(false)}
-        slot={selectedSlot}
-        allProducts={allProducts}
-        onSaveStock={async (slotCode, productId, lotNumber, expDate, qty) => {
-          try {
-            await api.adjustStock(
-              productId,
-              qty,
-              'Carga desde Plano WMS',
-              lotNumber,
-              expDate,
-              slotCode
-            );
-            playBeep('success');
-            await fetchData();
-          } catch (err: any) {
-            console.error('Error al guardar stock:', err);
-            playBeep('error');
-            throw err;
-          }
-        }}
-      />
-      {/* Modal 3D Isométrico de Rack y Vigas en Altura */}
-      <Rack3DViewerModal
-        isOpen={is3DModalOpen}
-        onClose={() => setIs3DModalOpen(false)}
+      <RackLevelViewerModal
+        isOpen={isLevelModalOpen}
+        onClose={() => setIsLevelModalOpen(false)}
         slot={selectedSlot}
         allProducts={allProducts}
         onRefresh={fetchData}
