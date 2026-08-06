@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import ExcelSpatialMapModal from './ExcelSpatialMapModal';
 import SimpleStockLoadModal from './SimpleStockLoadModal';
+import Rack3DViewerModal from './Rack3DViewerModal';
 import { api } from '../utils/api';
 import { OrderStatus } from '../utils/types';
 import type { Order, Product, ProductLot } from '../types';
@@ -114,6 +115,7 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
   const [selectedWarehouse, setSelectedWarehouse] = useState<string>('D1');
     const [isMapModalOpen, setIsMapModalOpen] = useState(false);
   const [isSimpleStockModalOpen, setIsSimpleStockModalOpen] = useState(false);
+  const [is3DModalOpen, setIs3DModalOpen] = useState(false);
   
   // Estado del Editor Visual de Mapa y Sectores
   const [isEditMode, setIsEditMode] = useState(false);
@@ -2609,7 +2611,7 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
                                 onDoubleClick={() => {
                                   if (!isEditMode && isSlot && foundSlotObj) {
                                     setSelectedSlot(foundSlotObj);
-                                    setIsSimpleStockModalOpen(true);
+                                    setIs3DModalOpen(true);
                                   }
                                 }}
                                 style={{
@@ -2740,20 +2742,38 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
                           <div style={{ fontSize: '0.78rem', marginTop: '4px' }}>
                             Posición sin productos asignados.
                           </div>
-                          <button
-                            type="button"
-                            className="btn btn-primary"
-                            style={{ width: '100%', marginTop: '14px', fontSize: '0.84rem', padding: '9px 14px', fontWeight: 700, borderRadius: '8px' }}
-                            onClick={() => setIsSimpleStockModalOpen(true)}
-                          >
-                            ➕ Cargar Mercadería en este Slot
-                          </button>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '14px' }}>
+                            <button
+                              type="button"
+                              className="btn btn-primary"
+                              style={{ width: '100%', fontSize: '0.84rem', padding: '9px 14px', fontWeight: 700, borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                              onClick={() => setIs3DModalOpen(true)}
+                            >
+                              🧊 Ver Rack Tridimensional 3D (Niveles {selectedSlot.nivel})
+                            </button>
+                            <button
+                              type="button"
+                              className="btn btn-secondary"
+                              style={{ width: '100%', fontSize: '0.82rem', padding: '8px 12px', fontWeight: 600, borderRadius: '8px' }}
+                              onClick={() => setIsSimpleStockModalOpen(true)}
+                            >
+                              ➕ Cargar Mercadería Rápida
+                            </button>
+                          </div>
                         </div>
                       );
                     }
 
                     return (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        <button
+                          type="button"
+                          className="btn btn-primary"
+                          style={{ width: '100%', fontSize: '0.84rem', padding: '9px 14px', fontWeight: 700, borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                          onClick={() => setIs3DModalOpen(true)}
+                        >
+                          🧊 Ver Rack Tridimensional 3D (Niveles {selectedSlot.nivel})
+                        </button>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                           <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)' }}>MERCADERÍA ASIGNADA</span>
                           <span className="badge badge-success" style={{ fontSize: '0.7rem' }}>🟢 OCUPADO</span>
@@ -3569,6 +3589,14 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
             throw err;
           }
         }}
+      />
+      {/* Modal 3D Isométrico de Rack y Vigas en Altura */}
+      <Rack3DViewerModal
+        isOpen={is3DModalOpen}
+        onClose={() => setIs3DModalOpen(false)}
+        slot={selectedSlot}
+        allProducts={allProducts}
+        onRefresh={fetchData}
       />
     </div>
   );
