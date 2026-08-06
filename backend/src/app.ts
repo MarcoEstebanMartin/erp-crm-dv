@@ -34,6 +34,7 @@ import hrRoutes from './routes/hr.routes';
 import storeRoutes from './routes/store.routes';
 import crmWhatsappRoutes from './routes/crm_whatsapp.routes';
 import weeklyScheduleRoutes from './routes/weeklySchedule.routes';
+import webChatRoutes from './routes/webChat.routes';
 
 const app: Application = express();
 
@@ -122,6 +123,7 @@ app.use('/api/offers', offerRoutes);
 app.use('/api/hr', hrRoutes);
 app.use('/api/store', storeRoutes);
 app.use('/api/weekly-schedule', weeklyScheduleRoutes);
+app.use('/api/web-chat', webChatRoutes);
 
 // Ruta de comprobación de estado (Healthcheck)
 app.get('/api/health', (req: Request, res: Response) => {

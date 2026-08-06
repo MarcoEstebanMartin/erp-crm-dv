@@ -11,6 +11,7 @@ import {
   simulateIncomingMessage,
   linkPersonaToConversation,
   assignConversation,
+  deleteConversation,
   verifyWebhook,
   handleWebhook
 } from '../controllers/crm_whatsapp.controller';
@@ -35,6 +36,7 @@ router.put('/conversations/:id/auto-reply', adminOnly, toggleAutoReply);
 router.put('/conversations/:id/stage', adminOnly, updateStage);
 router.put('/conversations/:id/link-persona', adminOnly, linkPersonaToConversation);
 router.put('/conversations/:id/assign', adminOnly, assignConversation);
+router.delete('/conversations/:id', adminOnly, deleteConversation);
 router.post('/orders/:orderId/notify-delivery', adminOnly, sendDeliveryNotification);
 router.post('/conversations/:id/parse-order', adminOnly, parseOrderDraft);
 router.post('/drafts/:draftId/approve', adminOnly, approveOrderDraft);

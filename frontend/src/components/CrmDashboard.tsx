@@ -21,7 +21,8 @@ import {
   Kanban,
   FlaskConical,
   Cake,
-  Gift
+  Gift,
+  Trash2
 } from 'lucide-react';
 import OrderDraftApprovalModal from './modals/OrderDraftApprovalModal';
 import WhatsAppSimulatorModal from './modals/WhatsAppSimulatorModal';
@@ -207,6 +208,22 @@ export default function CrmDashboard({ initialTab = 'whatsapp', hideHeaderTabs =
       console.error('Error al cargar mensajes:', err);
     } finally {
       setLoadingMessages(false);
+    }
+  };
+
+  const handleDeleteConversation = async (conversationId: number, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    if (!window.confirm('¿Estás seguro de que deseas eliminar este chat? Se borrará el historial de esta conversación.')) return;
+    try {
+      await api.deleteCrmConversation(conversationId);
+      if (selectedConversation?.id === conversationId) {
+        setSelectedConversation(null);
+        setMessages([]);
+      }
+      fetchConversations();
+    } catch (err: any) {
+      console.error('Error al eliminar conversación:', err);
+      alert('Error al eliminar la conversación.');
     }
   };
 
@@ -569,9 +586,21 @@ export default function CrmDashboard({ initialTab = 'whatsapp', hideHeaderTabs =
                         <span style={{ fontWeight: 600, fontSize: '0.86rem', color: isSelected ? '#0F172A' : '#334155' }}>
                           {conv.contactName || conv.waId}
                         </span>
-                        <span style={{ fontSize: '0.68rem', color: '#94A3B8' }}>
-                          {new Date(conv.lastMessageAt).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
-                        </span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span style={{ fontSize: '0.68rem', color: '#94A3B8' }}>
+                            {new Date(conv.lastMessageAt).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={(e) => handleDeleteConversation(conv.id, e)}
+                            title="Eliminar conversación"
+                            style={{ border: 'none', background: 'transparent', color: '#94A3B8', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center' }}
+                            onMouseEnter={(e) => (e.currentTarget.style.color = '#EF4444')}
+                            onMouseLeave={(e) => (e.currentTarget.style.color = '#94A3B8')}
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
                       </div>
 
                       {/* Insignias de Estado Comercial */}
@@ -670,6 +699,17 @@ export default function CrmDashboard({ initialTab = 'whatsapp', hideHeaderTabs =
                       <Phone size={14} />
                       <span>Abrir WA Web</span>
                     </a>
+
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      style={{ padding: '5px 10px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px', border: '1px solid #FECDD3', color: '#E11D48', backgroundColor: '#FFF1F2' }}
+                      onClick={(e) => handleDeleteConversation(selectedConversation.id, e)}
+                      title="Eliminar conversación"
+                    >
+                      <Trash2 size={14} />
+                      <span>Borrar Chat</span>
+                    </button>
                   </div>
                 </div>
 

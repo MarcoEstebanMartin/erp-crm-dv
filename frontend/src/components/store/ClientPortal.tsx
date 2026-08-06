@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { API_BASE_URL } from '../../utils/api';
+import { WebChatWidget } from './WebChatWidget';
 
 interface ClientPortalProps {
   onBackToStaffLogin?: () => void;
@@ -1106,6 +1107,7 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({ onBackToStaffLogin }
       )}
 
       {/* BOTÓN / BARRA FLOTANTE PERMANENTE DEL CARRITO EN MÓVIL Y DESKTOP */}
+      {/* BOTÓN / BARRA FLOTANTE PERMANENTE DEL CARRITO EN MÓVIL Y DESKTOP */}
       {cartTotalItemsCount > 0 && !isCartOpen && (
         <div style={styles.floatingCartBar} onClick={() => setIsCartOpen(true)}>
           <div style={styles.floatingCartInfo}>
@@ -1121,6 +1123,12 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({ onBackToStaffLogin }
           </button>
         </div>
       )}
+
+      {/* WIDGET CHATBOT DE IA CONVERSACIONAL (HUMANO Y AMABLE) */}
+      <WebChatWidget
+        customerName={clientProfile?.name}
+        priceListType={(clientProfile?.priceList as any) || 'LISTA_A'}
+      />
     </div>
   );
 };

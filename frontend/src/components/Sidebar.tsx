@@ -195,10 +195,6 @@ export default function Sidebar({ username, role, activeTab, setActiveTab, onLog
       </nav>
 
       <div className="sidebar-user" style={{ borderTop: '1px solid var(--border-color)', paddingTop: '16px', marginTop: 'auto' }}>
-        <div className="user-info" style={{ marginBottom: '12px' }}>
-          <div className="user-name" style={{ fontSize: '0.85rem', fontWeight: 600 }}>{username}</div>
-          <div className="user-role" style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{role}</div>
-        </div>
         <button
           className="btn btn-ghost"
           style={{ width: '100%', justifyContent: 'flex-start', padding: '8px 12px', fontSize: '0.85rem' }}

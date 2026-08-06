@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
-import { whatsAppService } from '../services/whatsapp.service';
+import { whatsAppService, normalizeWaId } from '../services/whatsapp.service';
 import { AuthenticatedRequest } from '../types';
 
 const prisma = new PrismaClient();
@@ -56,7 +56,7 @@ export async function simulateIncomingMessage(req: AuthenticatedRequest, res: Re
       return;
     }
 
-    const cleanWaId = fromPhone.replace(/\D/g, '');
+    const cleanWaId = normalizeWaId(fromPhone);
     const simulatedMetaMsg = {
       from: cleanWaId,
       id: `sim_${Date.now()}_${Math.random().toString(36).substring(7)}`,
@@ -438,5 +438,31 @@ export async function handleWebhook(req: Request, res: Response): Promise<void> 
   } catch (error: any) {
     console.error('Error en Webhook Meta:', error);
     res.status(500).send('SERVER_ERROR');
+  }
+}
+
+/**
+ * Eliminar una conversación CRM y sus mensajes
+ */
+export async function deleteConversation(req: AuthenticatedRequest, res: Response): Promise<void> {
+  try {
+    const rawId = Array.isArray(req.params.id) ? req.params.id[0] : (req.params.id as string);
+    const conversationId = parseInt(rawId, 10);
+    if (isNaN(conversationId)) {
+      res.status(400).json({ status: 'error', message: 'ID de conversación inválido.' });
+      return;
+    }
+
+    await prisma.crmMessage.deleteMany({ where: { conversationId } });
+    await prisma.crmOrderDraft.deleteMany({ where: { conversationId } });
+    await prisma.crmConversation.delete({ where: { id: conversationId } });
+
+    res.status(200).json({
+      status: 'success',
+      message: 'Conversación eliminada correctamente.'
+    });
+  } catch (error: any) {
+    console.error('Error al eliminar conversación:', error);
+    res.status(500).json({ status: 'error', message: 'Error al eliminar la conversación.' });
   }
 }
