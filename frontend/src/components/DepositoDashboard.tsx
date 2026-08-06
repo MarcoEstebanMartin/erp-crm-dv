@@ -2546,26 +2546,38 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
                             }
 
                             let hasStock = false;
-                            let foundSlotObj: any = defaultSlots.find((s: any) => s.row === cell.r && s.col === cell.c);
-                            if (foundSlotObj) {
+                            let foundSlotObj: any = defaultSlots.find((s: any) => s.row === cell.r && s.col === cell.c && s.dep_id === cell.dep_id);
+                            
+                            const depName = cell.dep_id === 'D1' ? 'Depósito 1' : cell.dep_id === 'D2' ? 'Depósito 2' : 'Depósito 3';
+                            if (!foundSlotObj) {
+                              foundSlotObj = {
+                                code: cellPosKey,
+                                dep_id: cell.dep_id,
+                                deposito: depName,
+                                row: cell.r,
+                                col: cell.c,
+                                nivel: cellText || 'A',
+                                chamber: chamberMap[cellPosKey] || cell.chamber || 'GENERAL'
+                              };
+                            } else {
                               const effChamber = chamberMap[cellPosKey] || foundSlotObj.chamber;
-                              foundSlotObj = { ...foundSlotObj, chamber: effChamber, nivel: cellText };
-
-                              allProducts.forEach(p => {
-                                if (p.lots && p.lots.length > 0) {
-                                  p.lots.forEach((l: any) => {
-                                    const loc = l.location || '';
-                                    if ((loc === foundSlotObj.code || loc.startsWith(foundSlotObj.code) || loc.includes(foundSlotObj.code)) && l.stock > 0) hasStock = true;
-                                  });
-                                } else if (p.defaultLocation === foundSlotObj.code && p.stock > 0) {
-                                  hasStock = true;
-                                }
-                              });
+                              foundSlotObj = { ...foundSlotObj, chamber: effChamber, nivel: cellText || foundSlotObj.nivel || 'A' };
                             }
 
-                            const currentChamber = chamberMap[cellPosKey] || (foundSlotObj ? foundSlotObj.chamber : 'GENERAL');
+                            allProducts.forEach(p => {
+                              if (p.lots && p.lots.length > 0) {
+                                p.lots.forEach((l: any) => {
+                                  const loc = l.location || '';
+                                  if ((loc === foundSlotObj.code || loc.startsWith(foundSlotObj.code) || loc.includes(foundSlotObj.code)) && l.stock > 0) hasStock = true;
+                                });
+                              } else if (p.defaultLocation === foundSlotObj.code && p.stock > 0) {
+                                hasStock = true;
+                              }
+                            });
+
+                            const currentChamber = chamberMap[cellPosKey] || foundSlotObj.chamber || 'GENERAL';
                             const isChamberSelected = selectedSector !== 'ALL' && currentChamber === selectedSector;
-                            const isSelected = selectedSlot && foundSlotObj && selectedSlot.code === foundSlotObj.code;
+                            const isSelected = selectedSlot && selectedSlot.code === foundSlotObj.code;
 
                             // Colores de sector en modo edición o filtrado
                             if (currentChamber === 'ESTANTERIA') {
@@ -2601,15 +2613,13 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
                                       localStorage.setItem('wms_custom_chamber_map_v2', JSON.stringify(newChamberMap));
                                     }
                                   } else {
-                                    // MODO INSPECCIÓN NORMAL
-                                    if (isSlot && foundSlotObj) {
-                                      setSelectedSlot(foundSlotObj);
-                                      setSelectedMapLocation(foundSlotObj.code);
-                                    }
+                                    // MODO INSPECCIÓN NORMAL: HABILITADO EN EL 100% DE LAS CELDAS
+                                    setSelectedSlot(foundSlotObj);
+                                    setSelectedMapLocation(foundSlotObj.code);
                                   }
                                 }}
                                 onDoubleClick={() => {
-                                  if (!isEditMode && isSlot && foundSlotObj) {
+                                  if (!isEditMode) {
                                     setSelectedSlot(foundSlotObj);
                                     setIsLevelModalOpen(true);
                                   }
@@ -2747,7 +2757,11 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
                             <button
                               type="button"
                               className="btn btn-primary"
-                              style={{ width: '100%', fontSize: '0.86rem', padding: '10px 14px', fontWeight: 800, borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                              style={{
+                                width: '100%', fontSize: '0.86rem', padding: '10px 14px', fontWeight: 700, borderRadius: '8px',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                                boxShadow: '0 2px 6px rgba(0, 0, 0, 0.08)'
+                              }}
                               onClick={() => setIsLevelModalOpen(true)}
                             >
                               📦 Abrir Estantería & Cargar Mercadería
@@ -2762,26 +2776,36 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
                         <button
                           type="button"
                           className="btn btn-primary"
-                          style={{ width: '100%', fontSize: '0.86rem', padding: '10px 14px', fontWeight: 800, borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                          style={{
+                            width: '100%', fontSize: '0.86rem', padding: '10px 14px', fontWeight: 700, borderRadius: '8px',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                            boxShadow: '0 2px 6px rgba(0, 0, 0, 0.08)'
+                          }}
                           onClick={() => setIsLevelModalOpen(true)}
                         >
                           📦 Inspeccionar / Cargar Estantería ({selectedSlot.nivel})
                         </button>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)' }}>MERCADERÍA ASIGNADA</span>
-                          <span className="badge badge-success" style={{ fontSize: '0.7rem' }}>🟢 OCUPADO</span>
+
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '4px 0 2px 0' }}>
+                          <span style={{ fontSize: '0.74rem', fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: '0.4px' }}>MERCADERÍA ASIGNADA</span>
+                          <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#047857', backgroundColor: '#dcfce7', padding: '2px 8px', borderRadius: '12px', border: '1px solid #a7f3d0' }}>
+                            🟢 OCUPADO ({matchingProducts.reduce((acc, curr) => acc + (curr.lot.stock || 0), 0)} u.)
+                          </span>
                         </div>
 
                         {matchingProducts.map(({ product, lot }, idx) => (
-                          <div key={idx} style={{ border: '1px solid var(--border-color)', borderRadius: '8px', padding: '10px', backgroundColor: '#fafafa' }}>
-                            <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--text-primary)', marginBottom: '4px' }}>
+                          <div key={idx} style={{
+                            border: '1px solid var(--border-color)', borderRadius: '8px', padding: '12px',
+                            backgroundColor: '#ffffff', boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)'
+                          }}>
+                            <div style={{ fontWeight: 700, fontSize: '0.86rem', color: 'var(--text-primary)', marginBottom: '6px' }}>
                               [{product.sku}] {product.name}
                             </div>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
-                              <div>Lote: <strong style={{ color: 'var(--text-primary)' }}>{lot.lotNumber}</strong></div>
+                              <div>Lote: <strong style={{ color: '#2563eb' }}>{lot.lotNumber}</strong></div>
                               <div>Vencimiento: <strong>{lot.expirationDate ? new Date(lot.expirationDate).toLocaleDateString() : 'S/V'}</strong></div>
-                              <div>Ubicación: <strong>{lot.location || selectedSlot.code}</strong></div>
-                              <div>Stock Lote: <strong style={{ color: '#059669' }}>{lot.stock} u.</strong></div>
+                              <div>Ubicación: <strong style={{ color: '#d97706' }}>{lot.location || selectedSlot.code}</strong></div>
+                              <div>Stock: <strong style={{ color: '#059669', fontSize: '0.84rem' }}>{lot.stock} u.</strong></div>
                             </div>
                           </div>
                         ))}
