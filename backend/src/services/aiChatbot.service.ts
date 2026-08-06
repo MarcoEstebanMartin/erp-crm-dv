@@ -214,16 +214,36 @@ Debes responder NÚNICAMENTE con un objeto JSON válido con la siguiente estruct
       const responseText = result.response.text().trim();
       const parsed: ChatbotResponse = JSON.parse(responseText);
 
+      const hasPreviousBotReply = history.some(h => h.role === 'model');
+      let finalText = parsed.text || '¡Con mucho gusto te ayudo! ¿Qué productos necesitas?';
+      const requiredWelcomeHeader = `Hola ${customerName} 👋! Soy Ben, tu asistente de inteligencia artificial. Contame con el mayor detalle posible que necesitas, asi puedo darte una mejor respuesta. Estoy aca para ayudarte.`;
+
+      if (!hasPreviousBotReply) {
+        // Primera respuesta del bot en la conversación: DEBE ser o comenzar con el saludo oficial exacto
+        if (!finalText.includes('Soy Ben, tu asistente de inteligencia artificial')) {
+          const cleanContent = finalText.replace(/^¡?Hola[^!\n]*![ \t]*/i, '').trim();
+          finalText = cleanContent ? `${requiredWelcomeHeader}\n\n${cleanContent}` : requiredWelcomeHeader;
+        }
+      } else {
+        // Respuestas intermedias: Limpiar saludos redundantes que repitan Hola o el nombre en cada mensaje
+        finalText = finalText.replace(/^¡?Hola(\s+[\w\s]+)?![ \t]*/i, '').trim();
+      }
+
       return {
-        text: parsed.text || '¡Con mucho gusto te ayudo! ¿Qué productos necesitas?',
+        text: finalText,
         intent: parsed.intent || 'GENERAL_TALK',
         draftOrderItems: parsed.draftOrderItems || [],
         transferToHuman: Boolean(parsed.transferToHuman)
       };
     } catch (error: any) {
       console.error('[AiChatbotService] Error procesando mensaje con Gemini:', error);
+      const requiredWelcomeHeader = `Hola ${customerName} 👋! Soy Ben, tu asistente de inteligencia artificial. Contame con el mayor detalle posible que necesitas, asi puedo darte una mejor respuesta. Estoy aca para ayudarte.`;
+      const hasPreviousBotReply = history.some(h => h.role === 'model');
+
       return {
-        text: `¡Muchas gracias por tu mensaje, ${customerName}! 👋 Un asesor de nuestro equipo comercial te responderá a la brevedad.`,
+        text: !hasPreviousBotReply
+          ? requiredWelcomeHeader
+          : `¡Muchas gracias por tu mensaje, ${customerName}! 👋 Un asesor de nuestro equipo comercial te responderá a la brevedad.`,
         intent: 'GENERAL_TALK',
         transferToHuman: true
       };

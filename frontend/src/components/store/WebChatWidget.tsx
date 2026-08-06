@@ -36,7 +36,7 @@ export const WebChatWidget: React.FC<WebChatWidgetProps> = ({
     {
       id: 'welcome',
       sender: 'bot',
-      text: `Hola ${customerName}! Soy Ben, tu asistente de inteligencia artificial. Contame con el mayor detalle posible que necesitas, asi puedo darte una mejor respuesta. Estoy aca para ayudarte.`,
+      text: `Hola ${customerName} 👋! Soy Ben, tu asistente de inteligencia artificial. Contame con el mayor detalle posible que necesitas, asi puedo darte una mejor respuesta. Estoy aca para ayudarte.`,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     }
   ]);
