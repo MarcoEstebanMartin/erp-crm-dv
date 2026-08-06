@@ -137,7 +137,9 @@ export async function createSupplierInvoice(req: AuthenticatedRequest, res: Resp
 
     const pampa = roundCurrency(Number(percepcionPampa || 0));
     const bsas = roundCurrency(Number(percepcionBsAs || 0));
-    const ivaVal = roundCurrency(Number(percepcionIva || 0));
+    const iva3337 = roundCurrency(Number(percepcionIva || 0));
+    const iva5329 = roundCurrency(Number(req.body.percepcionIva5329 || 0));
+    const totalIvaPerc = roundCurrency(iva3337 + iva5329);
     const internos = roundCurrency(Number(impuestosInternos || 0));
 
     // Suma de IIBB es La Pampa + Bs As (o cae a percepcionAmount genérica)
@@ -157,7 +159,7 @@ export async function createSupplierInvoice(req: AuthenticatedRequest, res: Resp
           netAmount: roundCurrency(Number(netAmount)),
           taxAmount: roundCurrency(Number(taxAmount)),
           percepcionAmount: finalIIBB,
-          percepcionIvaAmount: ivaVal,
+          percepcionIvaAmount: totalIvaPerc,
           impuestosInternos: internos,
           totalAmount: roundCurrency(Number(totalAmount)),
           billingType: billingType || 'OFFICIAL',
@@ -220,8 +222,8 @@ export async function createSupplierInvoice(req: AuthenticatedRequest, res: Resp
         });
       }
 
-      // IVA Percepcion RG 5329
-      if (ivaVal > 0) {
+      // IVA Percepcion RG 3337
+      if (iva3337 > 0) {
         await tx.taxWithholding.create({
           data: {
             type: 'PERCEPCION_SUFRIDA',
@@ -229,8 +231,23 @@ export async function createSupplierInvoice(req: AuthenticatedRequest, res: Resp
             personaId: Number(personaId),
             number: invoiceNumber,
             date: new Date(issueDate),
-            amount: ivaVal,
-            jurisdiction: null,
+            amount: iva3337,
+            jurisdiction: 'RG3337',
+          },
+        });
+      }
+
+      // IVA Percepcion RG 5329
+      if (iva5329 > 0) {
+        await tx.taxWithholding.create({
+          data: {
+            type: 'PERCEPCION_SUFRIDA',
+            taxType: 'IVA',
+            personaId: Number(personaId),
+            number: invoiceNumber,
+            date: new Date(issueDate),
+            amount: iva5329,
+            jurisdiction: 'RG5329',
           },
         });
       }

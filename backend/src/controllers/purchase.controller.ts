@@ -609,7 +609,9 @@ export async function confirmDocument(req: AuthenticatedRequest, res: Response):
         // Si se envían por separado La Pampa y Bs As:
         const pampa = Number(req.body.percepcionPampa || 0);
         const bsas = Number(req.body.percepcionBsAs || 0);
-        const ivarg = Number(req.body.percepcionIva || req.body.percepcionIvaAmount || 0);
+        const ivarg3337 = Number(req.body.percepcionIva || req.body.percepcionIvaAmount || 0);
+        const ivarg5329 = Number(req.body.percepcionIva5329 || 0);
+        const totalPercIva = ivarg3337 + ivarg5329;
         const impInternos = Number(req.body.impuestosInternos || 0);
 
         // La percepción total de IIBB es la suma de La Pampa y Bs As (o cae en el valor directo anterior)
@@ -625,7 +627,7 @@ export async function confirmDocument(req: AuthenticatedRequest, res: Response):
             netAmount: Number(netAmount || 0),
             taxAmount: Number(taxAmount || 0),
             percepcionAmount: finalIIBB,
-            percepcionIvaAmount: ivarg,
+            percepcionIvaAmount: totalPercIva,
             impuestosInternos: impInternos,
             totalAmount: Number(totalAmount || 0),
             status: 'PENDING',
@@ -681,8 +683,8 @@ export async function confirmDocument(req: AuthenticatedRequest, res: Response):
           });
         }
 
-        // Crear TaxWithholding para percepciones de IVA si existen
-        if (ivarg > 0) {
+        // Crear TaxWithholding para percepciones de IVA RG 3337 si existen
+        if (ivarg3337 > 0) {
           await tx.taxWithholding.create({
             data: {
               type: 'PERCEPCION_SUFRIDA',
@@ -690,8 +692,23 @@ export async function confirmDocument(req: AuthenticatedRequest, res: Response):
               personaId: providerId,
               number: documentNumber || `INV-${invoice.id}`,
               date: invoiceDate,
-              amount: ivarg,
-              jurisdiction: null,
+              amount: ivarg3337,
+              jurisdiction: 'RG3337',
+            }
+          });
+        }
+
+        // Crear TaxWithholding para percepciones de IVA RG 5329 si existen
+        if (ivarg5329 > 0) {
+          await tx.taxWithholding.create({
+            data: {
+              type: 'PERCEPCION_SUFRIDA',
+              taxType: 'IVA',
+              personaId: providerId,
+              number: documentNumber || `INV-${invoice.id}`,
+              date: invoiceDate,
+              amount: ivarg5329,
+              jurisdiction: 'RG5329',
             }
           });
         }

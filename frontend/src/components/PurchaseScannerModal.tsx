@@ -127,6 +127,7 @@ export const PurchaseScannerModal: React.FC<PurchaseScannerModalProps> = ({
         percepcionPampa: Number(extractedData.percepcionPampa || 0),
         percepcionBsAs: Number(extractedData.percepcionBsAs || 0),
         percepcionIva: Number(extractedData.percepcionIva || 0),
+        percepcionIva5329: Number(extractedData.percepcionIva5329 || 0),
         impuestosInternos: Number(extractedData.impuestosInternos || 0),
         totalAmount: Number(extractedData.totalAmount)
       });
@@ -788,7 +789,7 @@ export const PurchaseScannerModal: React.FC<PurchaseScannerModalProps> = ({
 
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '13px', margin: '8px 0' }}>
                     <div>
-                      <label style={{ display: 'block', fontSize: '10px', color: 'var(--text-secondary)', marginBottom: '4px', textTransform: 'uppercase', fontWeight: 600 }}>Percepción IVA (RG 3337 / 5329)</label>
+                      <label style={{ display: 'block', fontSize: '10px', color: 'var(--text-secondary)', marginBottom: '4px', textTransform: 'uppercase', fontWeight: 600 }}>Percepción IVA RG 3337</label>
                       <input 
                         type="number" 
                         value={extractedData.percepcionIva ?? 0} 
@@ -799,6 +800,21 @@ export const PurchaseScannerModal: React.FC<PurchaseScannerModalProps> = ({
                         style={{ width: '100%', padding: '6px 8px', fontSize: '12px', border: '1px solid var(--border-color)', borderRadius: '6px', backgroundColor: '#fff', color: 'var(--text-primary)' }}
                       />
                     </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '10px', color: 'var(--text-secondary)', marginBottom: '4px', textTransform: 'uppercase', fontWeight: 600 }}>Percepción IVA RG 5329</label>
+                      <input 
+                        type="number" 
+                        value={extractedData.percepcionIva5329 ?? 0} 
+                        onChange={(e) => setExtractedData({
+                          ...extractedData, 
+                          percepcionIva5329: Number(e.target.value)
+                        })}
+                        style={{ width: '100%', padding: '6px 8px', fontSize: '12px', border: '1px solid var(--border-color)', borderRadius: '6px', backgroundColor: '#fff', color: 'var(--text-primary)' }}
+                      />
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '13px', margin: '8px 0' }}>
                     <div>
                       <label style={{ display: 'block', fontSize: '10px', color: 'var(--text-secondary)', marginBottom: '4px', textTransform: 'uppercase', fontWeight: 600 }}>Impuestos Internos</label>
                       <input 

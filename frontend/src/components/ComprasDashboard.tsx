@@ -67,6 +67,7 @@ export default function ComprasDashboard() {
     percepcionPampa: '',
     percepcionBsAs: '',
     percepcionIva: '',
+    percepcionIva5329: '',
     impuestosInternos: '',
     totalAmount: '',
     billingType: 'OFFICIAL'
@@ -1616,7 +1617,7 @@ export default function ComprasDashboard() {
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <div className="form-group">
-                  <label>Percepción IVA (RG 3337 / 5329) ($)</label>
+                  <label>Percepción IVA RG 3337 ($)</label>
                   <input
                     type="number"
                     step="0.01"
@@ -1626,10 +1627,28 @@ export default function ComprasDashboard() {
                     onChange={(e) => setSupplierForm(prev => ({ 
                       ...prev, 
                       percepcionIva: e.target.value,
-                      totalAmount: (Number(supplierForm.netAmount || 0) + Number(supplierForm.taxAmount || 0) + Number(prev.percepcionPampa || 0) + Number(prev.percepcionBsAs || 0) + Number(e.target.value) + Number(prev.impuestosInternos || 0)).toFixed(2)
+                      totalAmount: (Number(supplierForm.netAmount || 0) + Number(supplierForm.taxAmount || 0) + Number(prev.percepcionPampa || 0) + Number(prev.percepcionBsAs || 0) + Number(e.target.value) + Number(prev.percepcionIva5329 || 0) + Number(prev.impuestosInternos || 0)).toFixed(2)
                     }))}
                   />
                 </div>
+                <div className="form-group">
+                  <label>Percepción IVA RG 5329 ($)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    className="input"
+                    placeholder="0.00"
+                    value={supplierForm.percepcionIva5329}
+                    onChange={(e) => setSupplierForm(prev => ({ 
+                      ...prev, 
+                      percepcionIva5329: e.target.value,
+                      totalAmount: (Number(supplierForm.netAmount || 0) + Number(supplierForm.taxAmount || 0) + Number(prev.percepcionPampa || 0) + Number(prev.percepcionBsAs || 0) + Number(prev.percepcionIva || 0) + Number(e.target.value) + Number(prev.impuestosInternos || 0)).toFixed(2)
+                    }))}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <div className="form-group">
                   <label>Impuestos Internos ($)</label>
                   <input
@@ -1641,7 +1660,7 @@ export default function ComprasDashboard() {
                     onChange={(e) => setSupplierForm(prev => ({ 
                       ...prev, 
                       impuestosInternos: e.target.value,
-                      totalAmount: (Number(supplierForm.netAmount || 0) + Number(supplierForm.taxAmount || 0) + Number(prev.percepcionPampa || 0) + Number(prev.percepcionBsAs || 0) + Number(prev.percepcionIva || 0) + Number(e.target.value)).toFixed(2)
+                      totalAmount: (Number(supplierForm.netAmount || 0) + Number(supplierForm.taxAmount || 0) + Number(prev.percepcionPampa || 0) + Number(prev.percepcionBsAs || 0) + Number(prev.percepcionIva || 0) + Number(prev.percepcionIva5329 || 0) + Number(e.target.value)).toFixed(2)
                     }))}
                   />
                 </div>

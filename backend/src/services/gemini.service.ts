@@ -24,7 +24,8 @@ export interface ExtractedInvoiceData {
   taxAmount: number;
   percepcionAmount: number; // Suma total de percepciones (compatible con lógica previa si fuera necesario)
   percepcionIIBBAmount: number; // Específico de Ingresos Brutos
-  percepcionIvaAmount: number; // Específico de IVA
+  percepcionIvaAmount: number; // Específico de IVA RG 3337
+  percepcionIva5329Amount: number; // Específico de IVA RG 5329
   percepcionJurisdiction: string | null; // Provincia de la percepción IIBB (ej: "Buenos Aires", "CABA", etc.)
   totalAmount: number;
 }
@@ -98,7 +99,8 @@ export class GeminiService {
       - taxAmount: Importe de IVA (número).
       - percepcionAmount: Importe total acumulado de todas las percepciones (número).
       - percepcionIIBBAmount: Importe específico de la percepción de Ingresos Brutos (IIBB) sufrida (número).
-      - percepcionIvaAmount: Importe específico de la percepción de IVA sufrida (ej: Percepción IVA, RG 3337, RG 5329) (número).
+      - percepcionIvaAmount: Importe específico de la percepción de IVA Régimen General RG 3337 (número).
+      - percepcionIva5329Amount: Importe específico de la percepción de IVA Alimentos Canasta Básica RG 5329 (número).
       - percepcionJurisdiction: Jurisdicción o provincia asociada a la percepción de IIBB (ej: "Buenos Aires", "CABA", "Santa Fe", "Misiones", etc.), si se indica expresamente; si no, null.
       - totalAmount: Importe total (número).
 
