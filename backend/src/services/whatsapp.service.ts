@@ -316,11 +316,52 @@ export class WhatsAppService {
   async parseOrderWithAI(conversationId: number, rawText: string): Promise<any> {
     const conversation = await prisma.crmConversation.findUnique({
       where: { id: conversationId },
-      include: { persona: true }
+      include: {
+        persona: true,
+        drafts: {
+          where: { status: 'PENDING' },
+          orderBy: { createdAt: 'desc' },
+          take: 1
+        }
+      }
     });
 
     if (!conversation) {
       throw new Error('Conversación CRM no encontrada.');
+    }
+
+    // 0. Reutilizar borrador pendiente si ya contiene ítems válidos
+    const existingDraft = conversation.drafts?.[0];
+    if (existingDraft && existingDraft.itemsJson) {
+      try {
+        const parsedItems = JSON.parse(existingDraft.itemsJson);
+        if (Array.isArray(parsedItems) && parsedItems.length > 0) {
+          return existingDraft;
+        }
+      } catch (e) {
+        // Continuar si el JSON no era válido
+      }
+    }
+
+    // Obtener los últimos mensajes del usuario para rescatar el contexto completo del pedido
+    const recentInboundMsgs = await prisma.crmMessage.findMany({
+      where: {
+        conversationId,
+        direction: 'INBOUND'
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 5
+    });
+
+    const inboundTexts = recentInboundMsgs.map(m => m.body).reverse();
+    let fullContextText = rawText;
+    if (inboundTexts.length > 0) {
+      const concatenated = inboundTexts.join('\n');
+      if (!fullContextText || concatenated.toLowerCase().includes(fullContextText.toLowerCase())) {
+        fullContextText = concatenated;
+      } else {
+        fullContextText = `${concatenated}\n${fullContextText}`;
+      }
     }
 
     const activeProducts = await prisma.product.findMany({
@@ -350,10 +391,10 @@ export class WhatsAppService {
     const matchedItems: any[] = [];
     let totalEstimated = 0;
 
-    // 1. Intentar interpretación con Gemini AI
+    // 1. Intentar interpretación con Gemini AI pasando el texto con contexto completo
     let geminiResult: Array<{ productId: number; quantity: number; note?: string }> = [];
     try {
-      geminiResult = await geminiService.parseOrderMessage(rawText, catalog);
+      geminiResult = await geminiService.parseOrderMessage(fullContextText, catalog);
     } catch (err: any) {
       console.warn('⚡ Fallback a Matcher Algorítmico Local (Gemini offline o no configurado):', err.message);
     }
@@ -378,9 +419,13 @@ export class WhatsAppService {
       }
     } else {
       // 2. Fallback Matcher Algorítmico Inteligente (Determinista)
-      const clauses = rawText.split(/,|\n|\by\b/i).map(c => c.trim()).filter(c => c.length > 2);
+      const clauses = fullContextText.split(/,|\n|\by\b/i).map(c => c.trim()).filter(c => c.length > 2);
       const containerWords = ['caja', 'cajas', 'cajon', 'cajones', 'pack', 'packs', 'botella', 'botellas', 'kilo', 'kilos', 'kg', 'u', 'unid', 'unidades'];
-      const stopWords = ['hola', 'mandame', 'mándame', 'quiero', 'por', 'favor', 'necesito', 'de', 'un', 'una', 'el', 'la', 'los', 'las'];
+      const stopWords = [
+        'hola', 'mandame', 'mándame', 'quiero', 'por', 'favor', 'necesito', 'de', 'un', 'una', 'el', 'la', 'los', 'las',
+        'pago', 'contrareembolso', 'contra', 'reembolso', 'efectivo', 'transferencia', 'gracias', 'buenisimo', 'buenísimo',
+        'ok', 'dale', 'envio', 'envío', 'entrega', 'cbu', 'alias', 'mercado', 'mercadopago'
+      ];
 
       const addedProductIds = new Set<number>();
 
@@ -429,7 +474,7 @@ export class WhatsAppService {
           }
         }
 
-        if (bestProd && bestScore >= 2) {
+        if (bestProd && bestScore >= 4) {
           addedProductIds.add(bestProd.id);
           const finalQty = isBox ? (bestProd.unitsPerBox > 1 ? bestProd.unitsPerBox * qty : 12 * qty) : qty;
           const price = bestProd.listPrice;
@@ -452,7 +497,7 @@ export class WhatsAppService {
       data: {
         conversationId,
         personaId: conversation.personaId,
-        rawText,
+        rawText: fullContextText || rawText,
         itemsJson: JSON.stringify(matchedItems),
         totalEstimated,
         status: 'PENDING'

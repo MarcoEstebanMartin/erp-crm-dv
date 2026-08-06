@@ -168,24 +168,26 @@ export class GeminiService {
 
     const prompt = `
       Eres el asistente inteligente de toma de pedidos mayoristas de DV Distribuidora (alimentos y bebidas en Argentina).
-      Tu tarea es interpretar el mensaje del cliente en WhatsApp y emparejar CADA producto solicitado con el CATÁLOGO DE PRODUCTOS de la empresa.
+      Tu tarea es interpretar el texto/conversación del cliente en WhatsApp y emparejar CADA producto solicitado con el CATÁLOGO DE PRODUCTOS de la empresa.
 
-      MENSAJE DEL CLIENTE:
+      TEXTO DE LA CONVERSACIÓN DEL CLIENTE:
       "${rawText}"
 
       CATÁLOGO DE PRODUCTOS DISPONIBLES:
       ${JSON.stringify(catalogFormatted)}
 
       REGLAS STRICTAS DE MATCHING:
-      1. Identifica CADA ítem que el cliente pide en su mensaje.
-      2. Para cada ítem solicitado, selecciona SOLAMENTE UN producto del catálogo que sea la mejor coincidencia. NO agregues productos duplicados o variantes adicionales que el cliente no haya pedido.
-      3. EXTRAER CANTIDAD:
+      1. Identifica únicamente los productos que el cliente solicita explícitamente comprar en la conversación.
+      2. ATENCIÓN AL CONTEXTO CONVERSACIONAL: Si el texto contiene mensajes de pago o logística (ej: "Pago contrareembolso", "Efectivo", "Enviamelo mañana", "Paso por el depósito"), busca si previamente en el texto se solicitaron productos. 
+      3. SI NO SE SOLICITAN PRODUCTOS EN EL TEXTO: Si el cliente solo está saludando, indicando la forma de pago o haciendo consultas sin pedir ningún producto específico del catálogo, devuelve estrictamente un arreglo de ítems VACÍO: {"items": []}. ¡JAMÁS inventes ni asignes productos aleatorios si el cliente no pidió nada!
+      4. Para cada ítem solicitado, selecciona SOLAMENTE UN producto del catálogo que sea la mejor coincidencia. NO agregues productos duplicados o variantes adicionales.
+      5. EXTRAER CANTIDAD:
          - Extrae la cantidad numérica exacta especificada (ej: "10 cremosos" -> 10, "2 tybo" -> 2).
-         - Si el cliente especifica empaque como "caja", "cajon", "pack" (ej: "1 caja de fernet"), calcula la cantidad total multiplicando la cantidad de cajas por 'unitsPerBox' del producto (o si es 1, asume 12 unidades por caja si es bebida en caja). Ej: "1 caja de fernet" -> 12 unidades de Fernet.
+         - Si el cliente especifica empaque como "caja", "cajon", "pack" (ej: "1 caja de fernet"), calcula la cantidad total multiplicando la cantidad de cajas por 'unitsPerBox' del producto (o si es 1, asume 12 unidades por caja si es bebida).
          - Si no se indica número, la cantidad es 1.
-      4. FALSOS POSITIVOS Y PALABRAS DE CONTENEDOR:
-         - Palabras como "caja", "cajon", "pack", "botella", "lata", "kilo" indican unidades de medida o empaque. NO deben ser usadas como coincidencia de nombre de producto (ej: "1 caja de fernet" NO pide yerba en caja, sino Fernet).
-      5. Devuelve un JSON estrictamente con la siguiente estructura:
+      6. FALSOS POSITIVOS Y PALABRAS DE CONTENEDOR O PAGO:
+         - Palabras como "caja", "cajon", "pack", "botella", "lata", "kilo", "pago", "contrareembolso", "efectivo", "transferencia", "gracias" NO son nombres de productos.
+      7. Devuelve un JSON strictly con la siguiente estructura:
          {
            "items": [
              {

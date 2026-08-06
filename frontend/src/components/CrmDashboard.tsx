@@ -288,8 +288,23 @@ export default function CrmDashboard({ initialTab = 'whatsapp', hideHeaderTabs =
   // Solicitar interpretación de pedido con IA
   const handleParseOrderWithAI = async () => {
     if (!selectedConversation) return;
+
+    // Si la conversación ya tiene un borrador PENDING con artículos, reutilizarlo directamente
+    const pendingDraft = selectedConversation.drafts?.find((d: any) => d.status === 'PENDING');
+    if (pendingDraft && pendingDraft.itemsJson) {
+      try {
+        const items = JSON.parse(pendingDraft.itemsJson);
+        if (Array.isArray(items) && items.length > 0) {
+          setSelectedDraftModal(pendingDraft);
+          return;
+        }
+      } catch (e) {
+        // Continuar si falla el parseo
+      }
+    }
+
     const lastInboundMsg = [...messages].reverse().find(m => m.direction === 'INBOUND');
-    const textToParse = lastInboundMsg ? lastInboundMsg.body : '10 cajones de Quilmes 1L';
+    const textToParse = lastInboundMsg ? lastInboundMsg.body : '';
 
     setParsingAi(true);
     setErrorMsg(null);
@@ -606,7 +621,14 @@ export default function CrmDashboard({ initialTab = 'whatsapp', hideHeaderTabs =
                       {/* Insignias de Estado Comercial */}
                       <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginBottom: '6px' }}>
                         {hasPendingDraft && (
-                          <span style={{ backgroundColor: '#FEF3C7', color: '#92400E', fontSize: '0.62rem', padding: '1px 6px', borderRadius: '4px', fontWeight: 600 }}>
+                          <span 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedDraftModal(latestDraft);
+                            }}
+                            title="Ver y aprobar borrador sugerido"
+                            style={{ backgroundColor: '#FEF3C7', color: '#92400E', fontSize: '0.62rem', padding: '1px 6px', borderRadius: '4px', fontWeight: 600, cursor: 'pointer' }}
+                          >
                             ⚡ Borrador IA
                           </span>
                         )}
