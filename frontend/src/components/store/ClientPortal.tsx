@@ -1126,8 +1126,8 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({ onBackToStaffLogin }
 
       {/* WIDGET CHATBOT DE IA CONVERSACIONAL (HUMANO Y AMABLE) */}
       <WebChatWidget
-        customerName={clientProfile?.name}
-        priceListType={(clientProfile?.priceList as any) || 'LISTA_A'}
+        customerName={client?.name}
+        priceListType={(client?.priceList as any) || 'LISTA_A'}
       />
     </div>
   );
