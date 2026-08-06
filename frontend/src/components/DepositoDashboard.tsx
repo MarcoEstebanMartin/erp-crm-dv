@@ -2754,16 +2754,37 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
                             </button>
                           </div>
                         </div>
-                        ))}
+                      );
+                    }
 
+                    return (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                         <button
                           type="button"
                           className="btn btn-primary"
-                          style={{ width: '100%', marginTop: '8px', fontSize: '0.84rem', padding: '9px 14px', fontWeight: 700, borderRadius: '8px' }}
-                          onClick={() => setIsSimpleStockModalOpen(true)}
+                          style={{ width: '100%', fontSize: '0.86rem', padding: '10px 14px', fontWeight: 800, borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                          onClick={() => setIsLevelModalOpen(true)}
                         >
-                          ➕ Cargar / Añadir Más Stock
+                          📦 Inspeccionar / Cargar Estantería ({selectedSlot.nivel})
                         </button>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)' }}>MERCADERÍA ASIGNADA</span>
+                          <span className="badge badge-success" style={{ fontSize: '0.7rem' }}>🟢 OCUPADO</span>
+                        </div>
+
+                        {matchingProducts.map(({ product, lot }, idx) => (
+                          <div key={idx} style={{ border: '1px solid var(--border-color)', borderRadius: '8px', padding: '10px', backgroundColor: '#fafafa' }}>
+                            <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--text-primary)', marginBottom: '4px' }}>
+                              [{product.sku}] {product.name}
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                              <div>Lote: <strong style={{ color: 'var(--text-primary)' }}>{lot.lotNumber}</strong></div>
+                              <div>Vencimiento: <strong>{lot.expirationDate ? new Date(lot.expirationDate).toLocaleDateString() : 'S/V'}</strong></div>
+                              <div>Ubicación: <strong>{lot.location || selectedSlot.code}</strong></div>
+                              <div>Stock Lote: <strong style={{ color: '#059669' }}>{lot.stock} u.</strong></div>
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     );
                   })()}
