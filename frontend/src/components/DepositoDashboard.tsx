@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import ExcelSpatialMapModal from './ExcelSpatialMapModal';
-import SimpleStockLoadModal from './SimpleStockLoadModal';
-import Rack3DViewerModal from './Rack3DViewerModal';
+import RackLevelViewerModal from './RackLevelViewerModal';
 import { api } from '../utils/api';
 import { OrderStatus } from '../utils/types';
 import type { Order, Product, ProductLot } from '../types';
@@ -114,8 +113,9 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
   const [subTab, setSubTab] = useState<string>('picking');
   const [selectedWarehouse, setSelectedWarehouse] = useState<string>('D1');
     const [isMapModalOpen, setIsMapModalOpen] = useState(false);
-  const [isSimpleStockModalOpen, setIsSimpleStockModalOpen] = useState(false);
-  const [is3DModalOpen, setIs3DModalOpen] = useState(false);
+  const [isLevelModalOpen, setIsLevelModalOpen] = useState(false);
+  
+  
   
   // Estado del Editor Visual de Mapa y Sectores
   const [isEditMode, setIsEditMode] = useState(false);
@@ -2611,7 +2611,7 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
                                 onDoubleClick={() => {
                                   if (!isEditMode && isSlot && foundSlotObj) {
                                     setSelectedSlot(foundSlotObj);
-                                    setIs3DModalOpen(true);
+                                    setIsLevelModalOpen(true);
                                   }
                                 }}
                                 style={{
@@ -2743,53 +2743,17 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
                           <div style={{ fontSize: '0.78rem', marginTop: '4px' }}>
                             Posición sin productos asignados.
                           </div>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '14px' }}>
+                          <div style={{ marginTop: '14px' }}>
                             <button
                               type="button"
                               className="btn btn-primary"
-                              style={{ width: '100%', fontSize: '0.84rem', padding: '9px 14px', fontWeight: 700, borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
-                              onClick={() => setIs3DModalOpen(true)}
+                              style={{ width: '100%', fontSize: '0.86rem', padding: '10px 14px', fontWeight: 800, borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                              onClick={() => setIsLevelModalOpen(true)}
                             >
-                              🧊 Ver Rack Tridimensional 3D (Niveles {selectedSlot.nivel})
-                            </button>
-                            <button
-                              type="button"
-                              className="btn btn-secondary"
-                              style={{ width: '100%', fontSize: '0.82rem', padding: '8px 12px', fontWeight: 600, borderRadius: '8px' }}
-                              onClick={() => setIsSimpleStockModalOpen(true)}
-                            >
-                              ➕ Cargar Mercadería Rápida
+                              📦 Abrir Estantería & Cargar Mercadería
                             </button>
                           </div>
                         </div>
-                      );
-                    }
-
-                    return (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                        <button
-                          type="button"
-                          className="btn btn-primary"
-                          style={{ width: '100%', fontSize: '0.84rem', padding: '9px 14px', fontWeight: 700, borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
-                          onClick={() => setIs3DModalOpen(true)}
-                        >
-                          🧊 Ver Rack Tridimensional 3D (Niveles {selectedSlot.nivel})
-                        </button>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)' }}>MERCADERÍA ASIGNADA</span>
-                          <span className="badge badge-success" style={{ fontSize: '0.7rem' }}>🟢 OCUPADO</span>
-                        </div>
-
-                        {matchingProducts.map(({ product, lot }, idx) => (
-                          <div key={idx} style={{ border: '1px solid var(--border-color)', borderRadius: '8px', padding: '10px', backgroundColor: '#fafafa' }}>
-                            <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--text-primary)', marginBottom: '4px' }}>
-                              [{product.sku}] {product.name}
-                            </div>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
-                              <div>Lote: <strong style={{ color: 'var(--text-primary)' }}>{lot.lotNumber}</strong></div>
-                              <div>Stock: <strong style={{ color: 'var(--color-primary)' }}>{lot.stock} un.</strong></div>
-                            </div>
-                          </div>
                         ))}
 
                         <button
