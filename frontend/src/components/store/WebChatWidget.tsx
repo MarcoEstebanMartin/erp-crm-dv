@@ -36,7 +36,7 @@ export const WebChatWidget: React.FC<WebChatWidgetProps> = ({
     {
       id: 'welcome',
       sender: 'bot',
-      text: `¡Hola ${customerName}! 👋 Soy Santi, el asistente virtual de DV Distribuidora.\n\nPuedo ayudarte a consultar precios, verificar stock, procesar fotos de pedidos anotados a mano o comprobantes de transferencia. ¿En qué te puedo colaborar hoy?`,
+      text: `Hola ${customerName}! Soy Ben, tu asistente de inteligencia artificial. Contame con el mayor detalle posible que necesitas, asi puedo darte una mejor respuesta. Estoy aca para ayudarte.`,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     }
   ]);
@@ -131,7 +131,7 @@ export const WebChatWidget: React.FC<WebChatWidgetProps> = ({
         {
           id: `err_${Date.now()}`,
           sender: 'bot',
-          text: '¡Uy! Ocurrió un inconveniente momentáneo al procesar tu consulta. En un segundo me reconecto o podés volver a intentar. 😊',
+          text: 'Disculpame, tuve un inconveniente para procesar tu consulta en este momento. Por favor reintenta en unos instantes o aguarda que te atenderá un operador humano.',
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         }
       ]);
@@ -166,7 +166,7 @@ export const WebChatWidget: React.FC<WebChatWidgetProps> = ({
               </div>
               <div>
                 <h3 style={styles.headerTitle}>
-                  Santi <Sparkles style={{ width: 14, height: 14, color: '#fbbf24', display: 'inline' }} />
+                  Ben <Sparkles style={{ width: 14, height: 14, color: '#fbbf24', display: 'inline' }} />
                 </h3>
                 <p style={styles.headerSubtitle}>
                   Asistente DV • <span style={{ color: '#10b981', fontWeight: 600 }}>En línea</span>
@@ -244,7 +244,7 @@ export const WebChatWidget: React.FC<WebChatWidgetProps> = ({
             {loading && (
               <div style={styles.loadingRow}>
                 <Loader2 style={{ width: 16, height: 16, color: '#E30613', animation: 'spin 1s linear infinite' }} />
-                <span>Santi está consultando la base de datos...</span>
+                <span>Ben está consultando la base de datos...</span>
               </div>
             )}
 

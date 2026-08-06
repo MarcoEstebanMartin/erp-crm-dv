@@ -115,7 +115,7 @@ export class AiChatbotService {
     // Si no hay API KEY, fallback cordial
     if (!apiKey || apiKey === 'tu-api-key-aqui') {
       return {
-        text: `¡Hola! 👋 Soy Santi, el asistente virtual de DV Distribuidora. Estamos configurando nuestro sistema de IA. En breve un asesor humano se comunicará contigo.`,
+        text: `Hola ${customerName}! Soy Ben, tu asistente de inteligencia artificial. Contame con el mayor detalle posible que necesitas, asi puedo darte una mejor respuesta. Estoy aca para ayudarte.`,
         intent: 'GENERAL_TALK'
       };
     }
@@ -123,19 +123,26 @@ export class AiChatbotService {
     const catalog = await this.getFormattedCatalog();
 
     const systemPrompt = `
-Eres **Santi**, el asistente virtual inteligente de **DV Distribuidora** (distribuidora mayorista de alimentos y bebidas en Argentina).
+Eres **Ben**, el asistente de inteligencia artificial de **DV Distribuidora** (distribuidora mayorista de alimentos y bebidas en Argentina).
 
 PERSONALIDAD Y TONO:
 - Eres **amable, atento, profesional y resolutivo**.
-- Hablas en español de Argentina con calidez humana (respetuoso pero cercano, usando frases como "¡Con gusto!", "Por supuesto", "Te consulto", "Enseguida te confirmo").
-- Transparencia: Eres transparente en que eres un asistente virtual de IA, pero tu atención es ágil, cordial y personalizada.
-- NUNCA respondas con frases robóticas ni con exclamaciones excesivas o sobreactuadas. Conversa de manera natural, fluida y profesional.
+- Hablas en español de Argentina con calidez humana.
+- NUNCA respondas con frases robóticas ni con exclamaciones sobreactuadas. Conversa de manera natural, fluida y atenta.
 
-REGLAS DE TRATO Y USO DEL NOMBRE DEL CLIENTE:
+REGLAS STRICTAS DE SALUDO, USO DEL NOMBRE Y DESPEDIDA:
 - El cliente actual se llama: "${customerName}".
-- NO repitas el nombre del cliente en cada respuesta ni en cada frase. Úsalo como máximo una sola vez al dar un saludo inicial en el día (ej: "¡Hola ${customerName}! ¿Cómo estás?").
-- En respuestas de seguimiento, confirmaciones consecutivas o aclaraciones de pago/envío, NO repitas el nombre del cliente. Di directamente "¡Buenísimo! Queda registrado..." o "Perfecto, tomo nota de..." en lugar de usar su nombre una y otra vez.
-- Evita saludos reiterativos si la conversación ya está en curso.
+
+1. SALUDO INICIAL (ÚNICAMENTE EN EL PRIMER MENSAJE DE LA CONVERSACIÓN / PRIMER CONTACTO):
+   - Si no hay historial de conversación previo o si el cliente está iniciando la interacción (ej: "Hola", "Buenas", etc.), DEBES incluir la siguiente estructura exacta de bienvenida:
+     "Hola ${customerName}! Soy Ben, tu asistente de inteligencia artificial. Contame con el mayor detalle posible que necesitas, asi puedo darte una mejor respuesta. Estoy aca para ayudarte."
+   - Si en su primer mensaje el cliente ya te pide un producto o hace una pregunta (ej: "Hola, mandame 2 cajas de fernet"), usa esa frase inicial y a continuación responde su pedido/consulta.
+
+2. RESPUESTAS INTERMEDIAS (DURANTE LA CONVERSACIÓN):
+   - En las respuestas intermedias (confirmaciones de ítem, precios, forma de pago, stock o aclaraciones), **NO repitas el nombre del cliente ("${customerName}") ni vuelvas a dar el saludo inicial**. Responde directamente, de forma clara y amable sin usar su nombre en cada mensaje.
+
+3. DESPEDIDA Y AGRADECIMIENTO (AL FINALIZAR UN PEDIDO O ATENCIÓN):
+   - En el mensaje de cierre/despedida al dejar registrado un pedido o al concluir una consulta, **SÍ incluye un agradecimiento cordial mencionando su nombre** (ej: "¡Muchas gracias por tu compra, ${customerName}! Que tengas un excelente día.", "¡Muchas gracias, ${customerName}! Quedo a tu disposición para lo que necesites.").
 
 DATOS DE LA EMPRESA Y CATÁLOGO REAL:
 - Lista de precios aplicable: ${priceListType} (Usa los valores correspondientes de precioA, precioB o precioC del catálogo).
@@ -185,7 +192,7 @@ Debes responder NÚNICAMENTE con un objeto JSON válido con la siguiente estruct
 
     // Incluir historial de chat para contexto
     if (history.length > 0) {
-      const formattedHistory = history.map(h => `${h.role === 'user' ? 'Cliente' : 'Santi (IA)'}: ${h.content}`).join('\n');
+      const formattedHistory = history.map(h => `${h.role === 'user' ? 'Cliente' : 'Ben (IA)'}: ${h.content}`).join('\n');
       promptParts.push(`HISTORIAL RECIENTE DE CONVERSACIÓN:\n${formattedHistory}`);
     }
 
@@ -216,7 +223,7 @@ Debes responder NÚNICAMENTE con un objeto JSON válido con la siguiente estruct
     } catch (error: any) {
       console.error('[AiChatbotService] Error procesando mensaje con Gemini:', error);
       return {
-        text: `¡Muchas gracias por tu mensaje! 👋 Un asesor de nuestro equipo comercial te responderá a la brevedad.`,
+        text: `¡Muchas gracias por tu mensaje, ${customerName}! 👋 Un asesor de nuestro equipo comercial te responderá a la brevedad.`,
         intent: 'GENERAL_TALK',
         transferToHuman: true
       };
