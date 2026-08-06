@@ -3546,7 +3546,6 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
           }
         }}
       />
-      {/* Modal Popup Simple y Efectivo para Cargar Stock */}
       <SimpleStockLoadModal
         isOpen={isSimpleStockModalOpen}
         onClose={() => setIsSimpleStockModalOpen(false)}
@@ -3554,24 +3553,20 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
         allProducts={allProducts}
         onSaveStock={async (slotCode, productId, lotNumber, expDate, qty) => {
           try {
-            const token = localStorage.getItem('token');
-            await fetch('http://localhost:3001/api/products/' + productId + '/stock', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': 'Bearer ' + token
-              },
-              body: JSON.stringify({
-                quantityChange: qty,
-                reason: 'Carga desde Plano WMS',
-                lotNumber: lotNumber,
-                expirationDate: expDate,
-                location: slotCode
-              })
-            });
-            fetchData();
-          } catch (err) {
+            await api.adjustStock(
+              productId,
+              qty,
+              'Carga desde Plano WMS',
+              lotNumber,
+              expDate,
+              slotCode
+            );
+            playBeep('success');
+            await fetchData();
+          } catch (err: any) {
             console.error('Error al guardar stock:', err);
+            playBeep('error');
+            throw err;
           }
         }}
       />
