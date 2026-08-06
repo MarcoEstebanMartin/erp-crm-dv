@@ -1,0 +1,2104 @@
+{
+  "all_slots": [
+    {
+      "code": "D1-R04-C04",
+      "dep_id": "D1",
+      "deposito": "Depósito 1",
+      "row": 4,
+      "col": 4,
+      "nivel": "A-B-C",
+      "fill": "#B6D7A8",
+      "chamber": "ESTANTERIA"
+    },
+    {
+      "code": "D1-R04-C07",
+      "dep_id": "D1",
+      "deposito": "Depósito 1",
+      "row": 4,
+      "col": 7,
+      "nivel": "A-B-C",
+      "fill": "#B6D7A8",
+      "chamber": "CAMARA_2"
+    },
+    {
+      "code": "D1-R04-C08",
+      "dep_id": "D1",
+      "deposito": "Depósito 1",
+      "row": 4,
+      "col": 8,
+      "nivel": "A",
+      "fill": "#B6D7A8",
+      "chamber": "CAMARA_2"
+    },
+    {
+      "code": "D1-R04-C09",
+      "dep_id": "D1",
+      "deposito": "Depósito 1",
+      "row": 4,
+      "col": 9,
+      "nivel": "A",
+      "fill": "#B6D7A8",
+      "chamber": "CAMARA_2"
+    },
+    {
+      "code": "D1-R04-C10",
+      "dep_id": "D1",
+      "deposito": "Depósito 1",
+      "row": 4,
+      "col": 10,
+      "nivel": "A",
+      "fill": "#B6D7A8",
+      "chamber": "CAMARA_2"
+    },
+    {
+      "code": "D1-R04-C11",
+      "dep_id": "D1",
+      "deposito": "Depósito 1",
+      "row": 4,
+      "col": 11,
+      "nivel": "A",
+      "fill": "#B6D7A8",
+      "chamber": "CAMARA_2"
+    },
+    {
+      "code": "D1-R05-C04",
+      "dep_id": "D1",
+      "deposito": "Depósito 1",
+      "row": 5,
+      "col": 4,
+      "nivel": "A-B-C",
+      "fill": "#B6D7A8",
+      "chamber": "ESTANTERIA"
+    },
+    {
+      "code": "D1-R05-C07",
+      "dep_id": "D1",
+      "deposito": "Depósito 1",
+      "row": 5,
+      "col": 7,
+      "nivel": "A",
+      "fill": "#B6D7A8",
+      "chamber": "CAMARA_2"
+    },
+    {
+      "code": "D1-R05-C08",
+      "dep_id": "D1",
+      "deposito": "Depósito 1",
+      "row": 5,
+      "col": 8,
+      "nivel": "A",
+      "fill": "#B6D7A8",
+      "chamber": "CAMARA_2"
+    },
+    {
+      "code": "D1-R05-C09",
+      "dep_id": "D1",
+      "deposito": "Depósito 1",
+      "row": 5,
+      "col": 9,
+      "nivel": "A",
+      "fill": "#B6D7A8",
+      "chamber": "CAMARA_2"
+    },
+    {
+      "code": "D1-R05-C10",
+      "dep_id": "D1",
+      "deposito": "Depósito 1",
+      "row": 5,
+      "col": 10,
+      "nivel": "A",
+      "fill": "#B6D7A8",
+      "chamber": "CAMARA_2"
+    },
+    {
+      "code": "D1-R05-C11",
+      "dep_id": "D1",
+      "deposito": "Depósito 1",
+      "row": 5,
+      "col": 11,
+      "nivel": "A",
+      "fill": "#B6D7A8",
+      "chamber": "CAMARA_2"
+    },
+    {
+      "code": "D1-R06-C04",
+      "dep_id": "D1",
+      "deposito": "Depósito 1",
+      "row": 6,
+      "col": 4,
+      "nivel": "A-B-C",
+      "fill": "#B6D7A8",
+      "chamber": "ESTANTERIA"
+    },
+    {
+      "code": "D1-R06-C07",
+      "dep_id": "D1",
+      "deposito": "Depósito 1",
+      "row": 6,
+      "col": 7,
+      "nivel": "A-B-C",
+      "fill": "#B6D7A8",
+      "chamber": "CAMARA_2"
+    },
+    {
+      "code": "D1-R06-C10",
+      "dep_id": "D1",
+      "deposito": "Depósito 1",
+      "row": 6,
+      "col": 10,
+      "nivel": "A",
+      "fill": "#B6D7A8",
+      "chamber": "CAMARA_2"
+    },
+    {
+      "code": "D1-R06-C11",
+      "dep_id": "D1",
+      "deposito": "Depósito 1",
+      "row": 6,
+      "col": 11,
+      "nivel": "A",
+      "fill": "#B6D7A8",
+      "chamber": "CAMARA_2"
+    },
+    {
+      "code": "D1-R08-C06",
+      "dep_id": "D1",
+      "deposito": "Depósito 1",
+      "row": 8,
+      "col": 6,
+      "nivel": "A",
+      "fill": "#B6D7A8",
+      "chamber": "CAMARA_1"
+    },
+    {
+      "code": "D1-R08-C09",
+      "dep_id": "D1",
+      "deposito": "Depósito 1",
+      "row": 8,
+      "col": 9,
+      "nivel": "A",
+      "fill": "#B6D7A8",
+      "chamber": "CAMARA_1"
+    },
+    {
+      "code": "D1-R08-C11",
+      "dep_id": "D1",
+      "deposito": "Depósito 1",
+      "row": 8,
+      "col": 11,
+      "nivel": "A-B-C",
+      "fill": "#B6D7A8",
+      "chamber": "CAMARA_3"
+    },
+    {
+      "code": "D1-R08-C12",
+      "dep_id": "D1",
+      "deposito": "Depósito 1",
+      "row": 8,
+      "col": 12,
+      "nivel": "A",
+      "fill": "#B6D7A8",
+      "chamber": "CAMARA_3"
+    },
+    {
+      "code": "D1-R08-C13",
+      "dep_id": "D1",
+      "deposito": "Depósito 1",
+      "row": 8,
+      "col": 13,
+      "nivel": "A",
+      "fill": "#B6D7A8",
+      "chamber": "CAMARA_3"
+    },
+    {
+      "code": "D1-R08-C15",
+      "dep_id": "D1",
+      "deposito": "Depósito 1",
+      "row": 8,
+      "col": 15,
+      "nivel": "A",
+      "fill": "#B6D7A8",
+      "chamber": "CAMARA_3"
+    },
+    {
+      "code": "D1-R08-C17",
+      "dep_id": "D1",
+      "deposito": "Depósito 1",
+      "row": 8,
+      "col": 17,
+      "nivel": "A",
+      "fill": "#B6D7A8",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D1-R09-C01",
+      "dep_id": "D1",
+      "deposito": "Depósito 1",
+      "row": 9,
+      "col": 1,
+      "nivel": "A",
+      "fill": "#B6D7A8",
+      "chamber": "RACK_ENTRADA"
+    },
+    {
+      "code": "D1-R09-C02",
+      "dep_id": "D1",
+      "deposito": "Depósito 1",
+      "row": 9,
+      "col": 2,
+      "nivel": "A",
+      "fill": "#B6D7A8",
+      "chamber": "RACK_ENTRADA"
+    },
+    {
+      "code": "D1-R09-C03",
+      "dep_id": "D1",
+      "deposito": "Depósito 1",
+      "row": 9,
+      "col": 3,
+      "nivel": "A",
+      "fill": "#B6D7A8",
+      "chamber": "RACK_ENTRADA"
+    },
+    {
+      "code": "D1-R09-C04",
+      "dep_id": "D1",
+      "deposito": "Depósito 1",
+      "row": 9,
+      "col": 4,
+      "nivel": "A",
+      "fill": "#B6D7A8",
+      "chamber": "RACK_ENTRADA"
+    },
+    {
+      "code": "D1-R09-C06",
+      "dep_id": "D1",
+      "deposito": "Depósito 1",
+      "row": 9,
+      "col": 6,
+      "nivel": "A",
+      "fill": "#B6D7A8",
+      "chamber": "CAMARA_1"
+    },
+    {
+      "code": "D1-R09-C07",
+      "dep_id": "D1",
+      "deposito": "Depósito 1",
+      "row": 9,
+      "col": 7,
+      "nivel": "A",
+      "fill": "#B6D7A8",
+      "chamber": "CAMARA_1"
+    },
+    {
+      "code": "D1-R09-C09",
+      "dep_id": "D1",
+      "deposito": "Depósito 1",
+      "row": 9,
+      "col": 9,
+      "nivel": "A",
+      "fill": "#B6D7A8",
+      "chamber": "CAMARA_1"
+    },
+    {
+      "code": "D1-R09-C11",
+      "dep_id": "D1",
+      "deposito": "Depósito 1",
+      "row": 9,
+      "col": 11,
+      "nivel": "A-B-C",
+      "fill": "#B6D7A8",
+      "chamber": "CAMARA_3"
+    },
+    {
+      "code": "D1-R09-C15",
+      "dep_id": "D1",
+      "deposito": "Depósito 1",
+      "row": 9,
+      "col": 15,
+      "nivel": "A",
+      "fill": "#B6D7A8",
+      "chamber": "CAMARA_3"
+    },
+    {
+      "code": "D1-R10-C01",
+      "dep_id": "D1",
+      "deposito": "Depósito 1",
+      "row": 10,
+      "col": 1,
+      "nivel": "A-B-C",
+      "fill": "#B6D7A8",
+      "chamber": "RACK_ENTRADA"
+    },
+    {
+      "code": "D1-R10-C02",
+      "dep_id": "D1",
+      "deposito": "Depósito 1",
+      "row": 10,
+      "col": 2,
+      "nivel": "A-B-C",
+      "fill": "#B6D7A8",
+      "chamber": "RACK_ENTRADA"
+    },
+    {
+      "code": "D1-R10-C03",
+      "dep_id": "D1",
+      "deposito": "Depósito 1",
+      "row": 10,
+      "col": 3,
+      "nivel": "A-B-C",
+      "fill": "#B6D7A8",
+      "chamber": "RACK_ENTRADA"
+    },
+    {
+      "code": "D1-R10-C04",
+      "dep_id": "D1",
+      "deposito": "Depósito 1",
+      "row": 10,
+      "col": 4,
+      "nivel": "A-B-C",
+      "fill": "#B6D7A8",
+      "chamber": "RACK_ENTRADA"
+    },
+    {
+      "code": "D1-R10-C06",
+      "dep_id": "D1",
+      "deposito": "Depósito 1",
+      "row": 10,
+      "col": 6,
+      "nivel": "A-B-C-D-E-F",
+      "fill": "#B6D7A8",
+      "chamber": "CAMARA_1"
+    },
+    {
+      "code": "D1-R10-C07",
+      "dep_id": "D1",
+      "deposito": "Depósito 1",
+      "row": 10,
+      "col": 7,
+      "nivel": "A",
+      "fill": "#B6D7A8",
+      "chamber": "CAMARA_1"
+    },
+    {
+      "code": "D1-R10-C08",
+      "dep_id": "D1",
+      "deposito": "Depósito 1",
+      "row": 10,
+      "col": 8,
+      "nivel": "A",
+      "fill": "#B6D7A8",
+      "chamber": "CAMARA_1"
+    },
+    {
+      "code": "D1-R10-C09",
+      "dep_id": "D1",
+      "deposito": "Depósito 1",
+      "row": 10,
+      "col": 9,
+      "nivel": "A",
+      "fill": "#B6D7A8",
+      "chamber": "CAMARA_1"
+    },
+    {
+      "code": "D1-R10-C11",
+      "dep_id": "D1",
+      "deposito": "Depósito 1",
+      "row": 10,
+      "col": 11,
+      "nivel": "A",
+      "fill": "#B6D7A8",
+      "chamber": "CAMARA_3"
+    },
+    {
+      "code": "D1-R10-C12",
+      "dep_id": "D1",
+      "deposito": "Depósito 1",
+      "row": 10,
+      "col": 12,
+      "nivel": "A",
+      "fill": "#B6D7A8",
+      "chamber": "CAMARA_3"
+    },
+    {
+      "code": "D1-R10-C13",
+      "dep_id": "D1",
+      "deposito": "Depósito 1",
+      "row": 10,
+      "col": 13,
+      "nivel": "A",
+      "fill": "#B6D7A8",
+      "chamber": "CAMARA_3"
+    },
+    {
+      "code": "D1-R10-C14",
+      "dep_id": "D1",
+      "deposito": "Depósito 1",
+      "row": 10,
+      "col": 14,
+      "nivel": "A",
+      "fill": "#B6D7A8",
+      "chamber": "CAMARA_3"
+    },
+    {
+      "code": "D1-R10-C15",
+      "dep_id": "D1",
+      "deposito": "Depósito 1",
+      "row": 10,
+      "col": 15,
+      "nivel": "A",
+      "fill": "#B6D7A8",
+      "chamber": "CAMARA_3"
+    },
+    {
+      "code": "D2-R14-C01",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 14,
+      "col": 1,
+      "nivel": "A-B-C",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R14-C02",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 14,
+      "col": 2,
+      "nivel": "A-B-C",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R14-C03",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 14,
+      "col": 3,
+      "nivel": "A-B-C",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R14-C04",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 14,
+      "col": 4,
+      "nivel": "A-B-C",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R14-C05",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 14,
+      "col": 5,
+      "nivel": "A-B-C",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R14-C06",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 14,
+      "col": 6,
+      "nivel": "A-B-C",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R14-C07",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 14,
+      "col": 7,
+      "nivel": "A-B-C",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R14-C08",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 14,
+      "col": 8,
+      "nivel": "A-B-C",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R14-C09",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 14,
+      "col": 9,
+      "nivel": "A-B-C",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R14-C10",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 14,
+      "col": 10,
+      "nivel": "A-B-C",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R14-C11",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 14,
+      "col": 11,
+      "nivel": "A-B-C",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R14-C12",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 14,
+      "col": 12,
+      "nivel": "A-B-C",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R14-C13",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 14,
+      "col": 13,
+      "nivel": "A-B-C",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R14-C14",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 14,
+      "col": 14,
+      "nivel": "A-B-C",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R14-C15",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 14,
+      "col": 15,
+      "nivel": "A-B-C",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R14-C16",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 14,
+      "col": 16,
+      "nivel": "A-B-C",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R14-C17",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 14,
+      "col": 17,
+      "nivel": "A-B-C",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R14-C18",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 14,
+      "col": 18,
+      "nivel": "A-B-C",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R14-C19",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 14,
+      "col": 19,
+      "nivel": "A-B-C",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R14-C20",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 14,
+      "col": 20,
+      "nivel": "A-B-C",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R14-C21",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 14,
+      "col": 21,
+      "nivel": "A-B-C",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R14-C22",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 14,
+      "col": 22,
+      "nivel": "A",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R15-C23",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 15,
+      "col": 23,
+      "nivel": "A-B-C",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R16-C03",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 16,
+      "col": 3,
+      "nivel": "A",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R16-C04",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 16,
+      "col": 4,
+      "nivel": "A",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R16-C06",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 16,
+      "col": 6,
+      "nivel": "A",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R16-C07",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 16,
+      "col": 7,
+      "nivel": "A",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R16-C09",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 16,
+      "col": 9,
+      "nivel": "A-B",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R16-C10",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 16,
+      "col": 10,
+      "nivel": "A-B",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R16-C12",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 16,
+      "col": 12,
+      "nivel": "A",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R16-C13",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 16,
+      "col": 13,
+      "nivel": "A",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R16-C15",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 16,
+      "col": 15,
+      "nivel": "A",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R16-C16",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 16,
+      "col": 16,
+      "nivel": "A",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R16-C19",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 16,
+      "col": 19,
+      "nivel": "A-B",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R16-C20",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 16,
+      "col": 20,
+      "nivel": "A-B",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R16-C21",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 16,
+      "col": 21,
+      "nivel": "A-B",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R16-C23",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 16,
+      "col": 23,
+      "nivel": "A-B-C",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R17-C01",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 17,
+      "col": 1,
+      "nivel": "A",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R17-C03",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 17,
+      "col": 3,
+      "nivel": "A",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R17-C04",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 17,
+      "col": 4,
+      "nivel": "A",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R17-C06",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 17,
+      "col": 6,
+      "nivel": "A",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R17-C07",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 17,
+      "col": 7,
+      "nivel": "A",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R17-C09",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 17,
+      "col": 9,
+      "nivel": "A",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R17-C10",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 17,
+      "col": 10,
+      "nivel": "A",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R17-C12",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 17,
+      "col": 12,
+      "nivel": "A",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R17-C13",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 17,
+      "col": 13,
+      "nivel": "A",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R17-C15",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 17,
+      "col": 15,
+      "nivel": "A",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R17-C16",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 17,
+      "col": 16,
+      "nivel": "A",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R17-C19",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 17,
+      "col": 19,
+      "nivel": "A",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R17-C20",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 17,
+      "col": 20,
+      "nivel": "A",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R17-C21",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 17,
+      "col": 21,
+      "nivel": "A",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R17-C23",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 17,
+      "col": 23,
+      "nivel": "A-B-C",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R18-C01",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 18,
+      "col": 1,
+      "nivel": "A",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R18-C03",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 18,
+      "col": 3,
+      "nivel": "A",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R18-C04",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 18,
+      "col": 4,
+      "nivel": "A",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R18-C06",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 18,
+      "col": 6,
+      "nivel": "A",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R18-C07",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 18,
+      "col": 7,
+      "nivel": "A",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R18-C09",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 18,
+      "col": 9,
+      "nivel": "A",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R18-C10",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 18,
+      "col": 10,
+      "nivel": "A",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R18-C12",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 18,
+      "col": 12,
+      "nivel": "A",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R18-C13",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 18,
+      "col": 13,
+      "nivel": "A",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R18-C15",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 18,
+      "col": 15,
+      "nivel": "A",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R18-C16",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 18,
+      "col": 16,
+      "nivel": "A",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R18-C19",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 18,
+      "col": 19,
+      "nivel": "A",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R18-C20",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 18,
+      "col": 20,
+      "nivel": "A",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R18-C21",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 18,
+      "col": 21,
+      "nivel": "A",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R18-C23",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 18,
+      "col": 23,
+      "nivel": "A-B-C",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R19-C03",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 19,
+      "col": 3,
+      "nivel": "A",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R19-C04",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 19,
+      "col": 4,
+      "nivel": "A",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R19-C06",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 19,
+      "col": 6,
+      "nivel": "A",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R19-C07",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 19,
+      "col": 7,
+      "nivel": "A",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R19-C09",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 19,
+      "col": 9,
+      "nivel": "A",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R19-C10",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 19,
+      "col": 10,
+      "nivel": "A",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R19-C12",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 19,
+      "col": 12,
+      "nivel": "A",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R19-C13",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 19,
+      "col": 13,
+      "nivel": "A",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R19-C15",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 19,
+      "col": 15,
+      "nivel": "A",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R19-C16",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 19,
+      "col": 16,
+      "nivel": "A",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R19-C19",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 19,
+      "col": 19,
+      "nivel": "A",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R19-C20",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 19,
+      "col": 20,
+      "nivel": "A",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R19-C21",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 19,
+      "col": 21,
+      "nivel": "A",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R19-C23",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 19,
+      "col": 23,
+      "nivel": "A-B-C",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R21-C21",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 21,
+      "col": 21,
+      "nivel": "A",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R21-C23",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 21,
+      "col": 23,
+      "nivel": "A-B-C",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R22-C09",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 22,
+      "col": 9,
+      "nivel": "A",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R22-C10",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 22,
+      "col": 10,
+      "nivel": "A-B-C",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R22-C11",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 22,
+      "col": 11,
+      "nivel": "A-B-C",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R22-C12",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 22,
+      "col": 12,
+      "nivel": "A-B-C",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R22-C13",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 22,
+      "col": 13,
+      "nivel": "A-B-C",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R22-C14",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 22,
+      "col": 14,
+      "nivel": "A-B-C",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R22-C17",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 22,
+      "col": 17,
+      "nivel": "A",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R22-C18",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 22,
+      "col": 18,
+      "nivel": "A",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R22-C19",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 22,
+      "col": 19,
+      "nivel": "A",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R22-C21",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 22,
+      "col": 21,
+      "nivel": "A",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R22-C23",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 22,
+      "col": 23,
+      "nivel": "A-B",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R23-C09",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 23,
+      "col": 9,
+      "nivel": "A",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R23-C17",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 23,
+      "col": 17,
+      "nivel": "A",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R23-C18",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 23,
+      "col": 18,
+      "nivel": "A",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R23-C19",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 23,
+      "col": 19,
+      "nivel": "A",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R23-C21",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 23,
+      "col": 21,
+      "nivel": "A",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R23-C23",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 23,
+      "col": 23,
+      "nivel": "A-B-C",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R24-C09",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 24,
+      "col": 9,
+      "nivel": "A",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R24-C10",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 24,
+      "col": 10,
+      "nivel": "A",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R24-C11",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 24,
+      "col": 11,
+      "nivel": "A",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R24-C12",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 24,
+      "col": 12,
+      "nivel": "A",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R24-C13",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 24,
+      "col": 13,
+      "nivel": "A",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R24-C14",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 24,
+      "col": 14,
+      "nivel": "A",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R24-C15",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 24,
+      "col": 15,
+      "nivel": "A",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R24-C17",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 24,
+      "col": 17,
+      "nivel": "A",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R24-C18",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 24,
+      "col": 18,
+      "nivel": "A",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R24-C19",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 24,
+      "col": 19,
+      "nivel": "A",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R24-C21",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 24,
+      "col": 21,
+      "nivel": "A",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R24-C23",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 24,
+      "col": 23,
+      "nivel": "A-B-C",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R25-C23",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 25,
+      "col": 23,
+      "nivel": "A-B-C",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R26-C09",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 26,
+      "col": 9,
+      "nivel": "A-B-C",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R26-C11",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 26,
+      "col": 11,
+      "nivel": "A",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R26-C12",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 26,
+      "col": 12,
+      "nivel": "A",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R26-C13",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 26,
+      "col": 13,
+      "nivel": "A",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R26-C14",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 26,
+      "col": 14,
+      "nivel": "A",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R26-C15",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 26,
+      "col": 15,
+      "nivel": "A",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R26-C17",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 26,
+      "col": 17,
+      "nivel": "A-B-C",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R26-C18",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 26,
+      "col": 18,
+      "nivel": "A-B-C",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R26-C19",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 26,
+      "col": 19,
+      "nivel": "A-B-C",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D2-R26-C21",
+      "dep_id": "D2",
+      "deposito": "Depósito 2",
+      "row": 26,
+      "col": 21,
+      "nivel": "A-B-C",
+      "fill": "#FCE5CD",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D3-R30-C01",
+      "dep_id": "D3",
+      "deposito": "Depósito 3",
+      "row": 30,
+      "col": 1,
+      "nivel": "A",
+      "fill": "#D9D2E9",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D3-R30-C02",
+      "dep_id": "D3",
+      "deposito": "Depósito 3",
+      "row": 30,
+      "col": 2,
+      "nivel": "A",
+      "fill": "#D9D2E9",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D3-R30-C03",
+      "dep_id": "D3",
+      "deposito": "Depósito 3",
+      "row": 30,
+      "col": 3,
+      "nivel": "A",
+      "fill": "#D9D2E9",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D3-R32-C01",
+      "dep_id": "D3",
+      "deposito": "Depósito 3",
+      "row": 32,
+      "col": 1,
+      "nivel": "A",
+      "fill": "#D9D2E9",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D3-R32-C02",
+      "dep_id": "D3",
+      "deposito": "Depósito 3",
+      "row": 32,
+      "col": 2,
+      "nivel": "A",
+      "fill": "#D9D2E9",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D3-R32-C03",
+      "dep_id": "D3",
+      "deposito": "Depósito 3",
+      "row": 32,
+      "col": 3,
+      "nivel": "A",
+      "fill": "#D9D2E9",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D3-R32-C04",
+      "dep_id": "D3",
+      "deposito": "Depósito 3",
+      "row": 32,
+      "col": 4,
+      "nivel": "A",
+      "fill": "#D9D2E9",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D3-R32-C05",
+      "dep_id": "D3",
+      "deposito": "Depósito 3",
+      "row": 32,
+      "col": 5,
+      "nivel": "A",
+      "fill": "#D9D2E9",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D3-R33-C01",
+      "dep_id": "D3",
+      "deposito": "Depósito 3",
+      "row": 33,
+      "col": 1,
+      "nivel": "A-B-C",
+      "fill": "#D9D2E9",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D3-R33-C02",
+      "dep_id": "D3",
+      "deposito": "Depósito 3",
+      "row": 33,
+      "col": 2,
+      "nivel": "A",
+      "fill": "#D9D2E9",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D3-R33-C03",
+      "dep_id": "D3",
+      "deposito": "Depósito 3",
+      "row": 33,
+      "col": 3,
+      "nivel": "A",
+      "fill": "#D9D2E9",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D3-R33-C04",
+      "dep_id": "D3",
+      "deposito": "Depósito 3",
+      "row": 33,
+      "col": 4,
+      "nivel": "A",
+      "fill": "#D9D2E9",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D3-R33-C05",
+      "dep_id": "D3",
+      "deposito": "Depósito 3",
+      "row": 33,
+      "col": 5,
+      "nivel": "A",
+      "fill": "#D9D2E9",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D3-R33-C08",
+      "dep_id": "D3",
+      "deposito": "Depósito 3",
+      "row": 33,
+      "col": 8,
+      "nivel": "A-B-C",
+      "fill": "#D9D2E9",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D3-R34-C08",
+      "dep_id": "D3",
+      "deposito": "Depósito 3",
+      "row": 34,
+      "col": 8,
+      "nivel": "A-B-C",
+      "fill": "#D9D2E9",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D3-R35-C01",
+      "dep_id": "D3",
+      "deposito": "Depósito 3",
+      "row": 35,
+      "col": 1,
+      "nivel": "A-B-C",
+      "fill": "#D9D2E9",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D3-R35-C02",
+      "dep_id": "D3",
+      "deposito": "Depósito 3",
+      "row": 35,
+      "col": 2,
+      "nivel": "A",
+      "fill": "#D9D2E9",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D3-R35-C03",
+      "dep_id": "D3",
+      "deposito": "Depósito 3",
+      "row": 35,
+      "col": 3,
+      "nivel": "A",
+      "fill": "#D9D2E9",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D3-R35-C04",
+      "dep_id": "D3",
+      "deposito": "Depósito 3",
+      "row": 35,
+      "col": 4,
+      "nivel": "A",
+      "fill": "#D9D2E9",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D3-R35-C05",
+      "dep_id": "D3",
+      "deposito": "Depósito 3",
+      "row": 35,
+      "col": 5,
+      "nivel": "A",
+      "fill": "#D9D2E9",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D3-R35-C08",
+      "dep_id": "D3",
+      "deposito": "Depósito 3",
+      "row": 35,
+      "col": 8,
+      "nivel": "A-B-C",
+      "fill": "#D9D2E9",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D3-R36-C01",
+      "dep_id": "D3",
+      "deposito": "Depósito 3",
+      "row": 36,
+      "col": 1,
+      "nivel": "A-B-C",
+      "fill": "#D9D2E9",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D3-R36-C02",
+      "dep_id": "D3",
+      "deposito": "Depósito 3",
+      "row": 36,
+      "col": 2,
+      "nivel": "A",
+      "fill": "#D9D2E9",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D3-R36-C03",
+      "dep_id": "D3",
+      "deposito": "Depósito 3",
+      "row": 36,
+      "col": 3,
+      "nivel": "A",
+      "fill": "#D9D2E9",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D3-R36-C04",
+      "dep_id": "D3",
+      "deposito": "Depósito 3",
+      "row": 36,
+      "col": 4,
+      "nivel": "A",
+      "fill": "#D9D2E9",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D3-R36-C05",
+      "dep_id": "D3",
+      "deposito": "Depósito 3",
+      "row": 36,
+      "col": 5,
+      "nivel": "A",
+      "fill": "#D9D2E9",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D3-R36-C08",
+      "dep_id": "D3",
+      "deposito": "Depósito 3",
+      "row": 36,
+      "col": 8,
+      "nivel": "A-B-C",
+      "fill": "#D9D2E9",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D3-R37-C01",
+      "dep_id": "D3",
+      "deposito": "Depósito 3",
+      "row": 37,
+      "col": 1,
+      "nivel": "A-B-C",
+      "fill": "#D9D2E9",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D3-R37-C02",
+      "dep_id": "D3",
+      "deposito": "Depósito 3",
+      "row": 37,
+      "col": 2,
+      "nivel": "A",
+      "fill": "#D9D2E9",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D3-R37-C03",
+      "dep_id": "D3",
+      "deposito": "Depósito 3",
+      "row": 37,
+      "col": 3,
+      "nivel": "A",
+      "fill": "#D9D2E9",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D3-R37-C04",
+      "dep_id": "D3",
+      "deposito": "Depósito 3",
+      "row": 37,
+      "col": 4,
+      "nivel": "A",
+      "fill": "#D9D2E9",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D3-R37-C05",
+      "dep_id": "D3",
+      "deposito": "Depósito 3",
+      "row": 37,
+      "col": 5,
+      "nivel": "A",
+      "fill": "#D9D2E9",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D3-R37-C08",
+      "dep_id": "D3",
+      "deposito": "Depósito 3",
+      "row": 37,
+      "col": 8,
+      "nivel": "A-B-C",
+      "fill": "#D9D2E9",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D3-R38-C01",
+      "dep_id": "D3",
+      "deposito": "Depósito 3",
+      "row": 38,
+      "col": 1,
+      "nivel": "A-B-C",
+      "fill": "#D9D2E9",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D3-R38-C08",
+      "dep_id": "D3",
+      "deposito": "Depósito 3",
+      "row": 38,
+      "col": 8,
+      "nivel": "A-B-C",
+      "fill": "#D9D2E9",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D3-R39-C01",
+      "dep_id": "D3",
+      "deposito": "Depósito 3",
+      "row": 39,
+      "col": 1,
+      "nivel": "A-B-C",
+      "fill": "#D9D2E9",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D3-R39-C02",
+      "dep_id": "D3",
+      "deposito": "Depósito 3",
+      "row": 39,
+      "col": 2,
+      "nivel": "A",
+      "fill": "#D9D2E9",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D3-R39-C03",
+      "dep_id": "D3",
+      "deposito": "Depósito 3",
+      "row": 39,
+      "col": 3,
+      "nivel": "A",
+      "fill": "#D9D2E9",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D3-R39-C04",
+      "dep_id": "D3",
+      "deposito": "Depósito 3",
+      "row": 39,
+      "col": 4,
+      "nivel": "A",
+      "fill": "#D9D2E9",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D3-R39-C05",
+      "dep_id": "D3",
+      "deposito": "Depósito 3",
+      "row": 39,
+      "col": 5,
+      "nivel": "A",
+      "fill": "#D9D2E9",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D3-R39-C06",
+      "dep_id": "D3",
+      "deposito": "Depósito 3",
+      "row": 39,
+      "col": 6,
+      "nivel": "A-B-C",
+      "fill": "#D9D2E9",
+      "chamber": "GENERAL"
+    },
+    {
+      "code": "D3-R39-C07",
+      "dep_id": "D3",
+      "deposito": "Depósito 3",
+      "row": 39,
+      "col": 7,
+      "nivel": "A-B-C",
+      "fill": "#D9D2E9",
+      "chamber": "GENERAL"
+    }
+  ]
+}
