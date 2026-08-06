@@ -1498,6 +1498,12 @@ export const api = {
     return await request('/crm/whatsapp/conversations');
   },
 
+  deleteCrmConversation: async (conversationId: number) => {
+    return await request(`/crm/whatsapp/conversations/${conversationId}`, {
+      method: 'DELETE'
+    });
+  },
+
   getCrmMessages: async (conversationId: number) => {
     return await request(`/crm/whatsapp/conversations/${conversationId}/messages`);
   },
