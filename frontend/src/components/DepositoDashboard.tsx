@@ -271,10 +271,9 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
         setProducts(data);
       }
 
-      if (subTab === 'wms-map' || subTab === 'lot-expiration' || subTab === 'replenishment') {
-        const allProds = await api.getProducts('');
-        setAllProducts(allProds);
-      }
+      // Carga incondicional de todos los productos y lotes para el mapa WMS y trazabilidad
+      const allProds = await api.getProducts('');
+      setAllProducts(allProds);
 
       if (subTab === 'replenishment') {
         try {
@@ -2555,7 +2554,8 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
                               allProducts.forEach(p => {
                                 if (p.lots && p.lots.length > 0) {
                                   p.lots.forEach((l: any) => {
-                                    if ((l.location === foundSlotObj.code || l.location.startsWith(foundSlotObj.code)) && l.stock > 0) hasStock = true;
+                                    const loc = l.location || '';
+                                    if ((loc === foundSlotObj.code || loc.startsWith(foundSlotObj.code) || loc.includes(foundSlotObj.code)) && l.stock > 0) hasStock = true;
                                   });
                                 } else if (p.defaultLocation === foundSlotObj.code && p.stock > 0) {
                                   hasStock = true;
@@ -2725,11 +2725,12 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
                     allProducts.forEach(p => {
                       if (p.lots && p.lots.length > 0) {
                         p.lots.forEach((l: any) => {
-                          if ((l.location === selectedSlot.code || l.location.startsWith(selectedSlot.code)) && l.stock > 0) {
+                          const loc = l.location || '';
+                          if ((loc === selectedSlot.code || loc.startsWith(selectedSlot.code) || loc.includes(selectedSlot.code)) && l.stock > 0) {
                             matchingProducts.push({ product: p, lot: l });
                           }
                         });
-                      } else if (p.defaultLocation === selectedSlot.code && p.stock > 0) {
+                      } else if (p.stock > 0 && (p.defaultLocation === selectedSlot.code || (p.defaultLocation && (p.defaultLocation.startsWith(selectedSlot.code) || p.defaultLocation.includes(selectedSlot.code))))) {
                         matchingProducts.push({ product: p, lot: { lotNumber: 'S/L', stock: p.stock } });
                       }
                     });
