@@ -77,16 +77,20 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
       try {
         const activeList = await api.getActiveDrawers();
         setActiveDrawers(activeList || []);
-      } catch (drawerErr) {
+      } catch (drawerErr: any) {
         setActiveDrawers([]);
+        console.error('Error al obtener cajas chicas activas:', drawerErr);
+        setErrorMsg((prev) => (prev ? prev + ' | ' : '') + 'Atención: No se pudieron cargar las cajas operativas.');
       }
 
       // Cargar cuentas bancarias
       try {
         const banks = await api.getBankAccounts();
         setBankAccounts(banks || []);
-      } catch (bankErr) {
+      } catch (bankErr: any) {
         setBankAccounts([]);
+        console.error('Error al obtener cuentas bancarias:', bankErr);
+        setErrorMsg((prev) => (prev ? prev + ' | ' : '') + 'Atención: No se pudieron cargar las cuentas bancarias.');
       }
 
       // 2. Cargar datos según la sub-tab activa y los filtros aplicados

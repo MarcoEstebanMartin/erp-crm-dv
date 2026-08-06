@@ -217,7 +217,7 @@ export default function SalesChannelReportsTab() {
 
       {loading ? (
         <div style={{ padding: '60px 0', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', backgroundColor: '#ffffff', borderRadius: '12px', border: '1px solid var(--border-color, #e2e8f0)' }}>
-          <RefreshCw size={32} style={{ animation: 'spin 1s linear infinite', color: '#E30613', marginBottom: '12px' }} />
+          <RefreshCw size={32} style={{ animation: 'spin 1s linear infinite', color: 'var(--text-secondary, #64748b)', marginBottom: '12px' }} />
           <span style={{ fontSize: '0.88rem', fontWeight: 600, color: 'var(--text-secondary, #64748b)' }}>
             Cargando analíticas del depósito y canales...
           </span>

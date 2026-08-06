@@ -524,6 +524,7 @@ function LeafletRouteMap({
       document.head.appendChild(link);
     }
     
+    let checkL: any = null;
     // 2. Inyectar JS de Leaflet
     if (!document.getElementById('leaflet-js')) {
       const script = document.createElement('script');
@@ -534,10 +535,15 @@ function LeafletRouteMap({
       };
       document.head.appendChild(script);
     } else {
-      const checkL = setInterval(() => {
+      let attempts = 0;
+      checkL = setInterval(() => {
+        attempts++;
         if ((window as any).L) {
-          clearInterval(checkL);
+          if (checkL) clearInterval(checkL);
           initMap();
+        } else if (attempts > 50) {
+          if (checkL) clearInterval(checkL);
+          console.error('Timeout cargando Leaflet JS');
         }
       }, 100);
     }
@@ -627,6 +633,9 @@ function LeafletRouteMap({
     }
     
     return () => {
+      if (checkL) {
+        clearInterval(checkL);
+      }
       if (mapRef.current) {
         mapRef.current.remove();
         mapRef.current = null;

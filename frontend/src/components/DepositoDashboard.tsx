@@ -1,4 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
+import ExcelSpatialMapModal from './ExcelSpatialMapModal';
+import SimpleStockLoadModal from './SimpleStockLoadModal';
 import { api } from '../utils/api';
 import { OrderStatus } from '../utils/types';
 import type { Order, Product, ProductLot } from '../types';
@@ -73,6 +75,14 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
   const [pesableWeights, setPesableWeights] = useState<{ [orderItemId: number]: number }>({});
   
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [searchQuery]);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -102,60 +112,95 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
   // --- SUB-PESTAÑAS DE DEPÓSITO Y ESTADOS WMS / REABASTECIMIENTO ---
   const [subTab, setSubTab] = useState<string>('picking');
   const [selectedWarehouse, setSelectedWarehouse] = useState<string>('D1');
+  const [isMapModalOpen, setIsMapModalOpen] = useState(false);
+  const [isSimpleStockModalOpen, setIsSimpleStockModalOpen] = useState(false);
+  const [selectedSlot, setSelectedSlot] = useState<any | null>(null);
+  const [selectedSector, setSelectedSector] = useState<string>('ALL');
   const [selectedMapLocation, setSelectedMapLocation] = useState<string>('');
   const [allProducts, setAllProducts] = useState<any[]>([]); // Todos los productos para WMS y Reabastecimiento
   const [pendingPurchaseOrders, setPendingPurchaseOrders] = useState<any[]>([]);
   const [generatingPOForProvider, setGeneratingPOForProvider] = useState<number | null>(null);
 
   // Estandarización de ubicaciones físicas
-  const LOCATION_MAP: Record<string, { label: string; icon: string; color: string; bg: string; description: string }> = {
-    // Depósito 1 - Racks de Entrada
-    'D1-RKA-N1': { label: 'D1 - Rack A Nivel 1', icon: '📦', color: '#8E8E93', bg: 'rgba(142, 142, 147, 0.08)', description: 'Rack A, Nivel del suelo (Pallets pesados)' },
-    'D1-RKA-N2': { label: 'D1 - Rack A Nivel 2', icon: '📦', color: '#8E8E93', bg: 'rgba(142, 142, 147, 0.08)', description: 'Rack A, Nivel medio (Cajas/Pallets)' },
-    'D1-RKA-N3': { label: 'D1 - Rack A Nivel 3', icon: '📦', color: '#8E8E93', bg: 'rgba(142, 142, 147, 0.08)', description: 'Rack A, Nivel superior (Reserva / Altura)' },
-    'D1-RKB-N1': { label: 'D1 - Rack B Nivel 1', icon: '📦', color: '#8E8E93', bg: 'rgba(142, 142, 147, 0.08)', description: 'Rack B, Nivel del suelo (Pallets pesados)' },
-    'D1-RKB-N2': { label: 'D1 - Rack B Nivel 2', icon: '📦', color: '#8E8E93', bg: 'rgba(142, 142, 147, 0.08)', description: 'Rack B, Nivel medio (Cajas/Pallets)' },
-    'D1-RKB-N3': { label: 'D1 - Rack B Nivel 3', icon: '📦', color: '#8E8E93', bg: 'rgba(142, 142, 147, 0.08)', description: 'Rack B, Nivel superior (Reserva / Altura)' },
-    'D1-RACK': { label: 'D1 - Racks Entrada (Gral)', icon: '📦', color: '#8E8E93', bg: 'rgba(142, 142, 147, 0.08)', description: 'Racks de entrada general' },
-    
-    // Depósito 1 - Cámara Grande (Frio 1)
-    'D1-CAM1-RKA-N1': { label: 'D1 - C.Grande Rack A Nivel 1', icon: '❄️', color: '#007AFF', bg: 'rgba(0, 122, 255, 0.08)', description: 'Cámara Grande, Rack A (Izquierdo) Nivel Inferior' },
-    'D1-CAM1-RKA-N2': { label: 'D1 - C.Grande Rack A Nivel 2', icon: '❄️', color: '#007AFF', bg: 'rgba(0, 122, 255, 0.08)', description: 'Cámara Grande, Rack A (Izquierdo) Nivel Superior' },
-    'D1-CAM1-RKB-N1': { label: 'D1 - C.Grande Rack B Nivel 1', icon: '❄️', color: '#007AFF', bg: 'rgba(0, 122, 255, 0.08)', description: 'Cámara Grande, Rack B (Derecho) Nivel Inferior' },
-    'D1-CAM1-RKB-N2': { label: 'D1 - C.Grande Rack B Nivel 2', icon: '❄️', color: '#007AFF', bg: 'rgba(0, 122, 255, 0.08)', description: 'Cámara Grande, Rack B (Derecho) Nivel Superior' },
-    'D1-CAM1': { label: 'D1 - Cámara Grande (Gral)', icon: '❄️', color: '#007AFF', bg: 'rgba(0, 122, 255, 0.08)', description: 'Cámara Grande de frío general' },
-    
-    // Depósito 1 - Cámara Mediana (Frio 2)
-    'D1-CAM2-N1': { label: 'D1 - C.Mediana Nivel 1', icon: '❄️', color: '#34C759', bg: 'rgba(52, 199, 89, 0.08)', description: 'Cámara Mediana, Nivel del Suelo' },
-    'D1-CAM2-N2': { label: 'D1 - C.Mediana Nivel 2', icon: '❄️', color: '#34C759', bg: 'rgba(52, 199, 89, 0.08)', description: 'Cámara Mediana, Estante Alto' },
-    'D1-CAM2': { label: 'D1 - Cámara Mediana (Gral)', icon: '❄️', color: '#34C759', bg: 'rgba(52, 199, 89, 0.08)', description: 'Cámara Mediana general' },
-    
-    // Depósito 1 - Cámara Chica Nº 3 (Secos / Cajas sin frio)
-    'D1-CAM3-N1': { label: 'D1 - C.Chica 3 Nivel 1', icon: '📦', color: '#FF2D55', bg: 'rgba(255, 45, 85, 0.08)', description: 'Cámara Chica 3, Estante Inferior (Cajas pesadas)' },
-    'D1-CAM3-N2': { label: 'D1 - C.Chica 3 Nivel 2', icon: '📦', color: '#FF2D55', bg: 'rgba(255, 45, 85, 0.08)', description: 'Cámara Chica 3, Estante Superior (Cajas livianas)' },
-    'D1-CAM3': { label: 'D1 - Cámara Chica 3 (Secos)', icon: '📦', color: '#FF2D55', bg: 'rgba(255, 45, 85, 0.08)', description: 'Cámara Chica Nº 3 al lado de la mediana para cajas secas' },
-
-    // Depósito 1 - Estanterías / Góndolas
-    'D1-EST-M1': { label: 'D1 - Góndola Módulo 1', icon: '🍾', color: '#FF9500', bg: 'rgba(255, 149, 0, 0.08)', description: 'Bebidas Blancas (Gin, Vodka Sernova)' },
-    'D1-EST-M2': { label: 'D1 - Góndola Módulo 2', icon: '🍾', color: '#FF9500', bg: 'rgba(255, 149, 0, 0.08)', description: 'Licores y Aperitivos' },
-    'D1-EST-M3': { label: 'D1 - Góndola Módulo 3', icon: '🍾', color: '#FF9500', bg: 'rgba(255, 149, 0, 0.08)', description: 'Vinos y espumantes sueltos' },
-    'D1-EST-M4': { label: 'D1 - Góndola Módulo 4', icon: '🍾', color: '#FF9500', bg: 'rgba(255, 149, 0, 0.08)', description: 'Conservas y condimentos' },
-    'D1-EST': { label: 'D1 - Estanterías (Gral)', icon: '🍾', color: '#FF9500', bg: 'rgba(255, 149, 0, 0.08)', description: 'Góndolas de pasillo general' },
-    
-    // Depósito 2 - Secos General
-    'D2-RKC-N1': { label: 'D2 - Rack C Nivel 1', icon: '🏢', color: '#5856D6', bg: 'rgba(88, 86, 214, 0.08)', description: 'Depósito 2, Rack C, Nivel del suelo' },
-    'D2-RKC-N2': { label: 'D2 - Rack C Nivel 2', icon: '🏢', color: '#5856D6', bg: 'rgba(88, 86, 214, 0.08)', description: 'Depósito 2, Rack C, Nivel medio' },
-    'D2-RKC-N3': { label: 'D2 - Rack C Nivel 3', icon: '🏢', color: '#5856D6', bg: 'rgba(88, 86, 214, 0.08)', description: 'Depósito 2, Rack C, Nivel superior' },
-    'D2-RKD-N1': { label: 'D2 - Rack D Nivel 1', icon: '🏢', color: '#5856D6', bg: 'rgba(88, 86, 214, 0.08)', description: 'Depósito 2, Rack D, Nivel del suelo' },
-    'D2-RKD-N2': { label: 'D2 - Rack D Nivel 2', icon: '🏢', color: '#5856D6', bg: 'rgba(88, 86, 214, 0.08)', description: 'Depósito 2, Rack D, Nivel medio' },
-    'D2-RKD-N3': { label: 'D2 - Rack D Nivel 3', icon: '🏢', color: '#5856D6', bg: 'rgba(88, 86, 214, 0.08)', description: 'Depósito 2, Rack D, Nivel superior' },
-    'D2-GEN': { label: 'D2 - Secos General', icon: '🏢', color: '#5856D6', bg: 'rgba(88, 86, 214, 0.08)', description: 'Acopio general de mercadería seca' },
-    
-    // Depósito 3 - Envases y Logística Inversa
-    'D3-PALLETS': { label: 'D3 - Área Pallets', icon: '🔄', color: '#FF2D55', bg: 'rgba(255, 45, 85, 0.08)', description: 'Pilas de pallets de madera vacíos' },
-    'D3-CAJONES': { label: 'D3 - Área Cajones', icon: '🔄', color: '#FF2D55', bg: 'rgba(255, 45, 85, 0.08)', description: 'Cajones vacíos de cerveza/gaseosa y retornos' },
-    'D3-ENV': { label: 'D3 - Envases y Retornos (Gral)', icon: '🔄', color: '#FF2D55', bg: 'rgba(255, 45, 85, 0.08)', description: 'Depósito 3 general' },
-    
+    const LOCATION_MAP: Record<string, { label: string; icon: string; color: string; bg: string; description: string }> = {
+    'D1-CAM2-R01-A': { label: 'D1-CAM2-R01-A - Quesos Tybo / Barra', icon: '❄️', color: '#007AFF', bg: 'rgba(0, 122, 255, 0.08)', description: 'Cámaras Frío 2 - Rack 2 Niveles (A (Piso)): Rack Negro Pared Izquierda (Picking)' },
+    'D1-CAM2-R01-B': { label: 'D1-CAM2-R01-B - Quesos Reserva / Pulmón', icon: '❄️', color: '#007AFF', bg: 'rgba(0, 122, 255, 0.08)', description: 'Cámaras Frío 2 - Rack 2 Niveles (B (Viga 1)): Rack Negro Pared Izquierda (Pulmón)' },
+    'D1-CAM2-R02-A': { label: 'D1-CAM2-R02-A - Mozzarella / Gouda', icon: '❄️', color: '#007AFF', bg: 'rgba(0, 122, 255, 0.08)', description: 'Cámaras Frío 2 - Rack 2 Niveles (A (Piso)): Rack Negro Pared Izquierda (Picking)' },
+    'D1-CAM2-R02-B': { label: 'D1-CAM2-R02-B - Mozzarella Reserva', icon: '❄️', color: '#007AFF', bg: 'rgba(0, 122, 255, 0.08)', description: 'Cámaras Frío 2 - Rack 2 Niveles (B (Viga 1)): Rack Negro Pared Izquierda (Pulmón)' },
+    'D1-CAM2-P01': { label: 'D1-CAM2-P01 - Pallet Queso Melincué Barra', icon: '❄️', color: '#007AFF', bg: 'rgba(0, 122, 255, 0.08)', description: 'Cámaras Frío 2 - Slot Piso Pallet (Piso): Pasillo Central Slot 1' },
+    'D1-CAM2-P02': { label: 'D1-CAM2-P02 - Pallet Queso Melincué Tybo', icon: '❄️', color: '#007AFF', bg: 'rgba(0, 122, 255, 0.08)', description: 'Cámaras Frío 2 - Slot Piso Pallet (Piso): Pasillo Central Slot 2' },
+    'D1-CAM2-P03': { label: 'D1-CAM2-P03 - Pallet Queso Cremoso Remotti', icon: '❄️', color: '#007AFF', bg: 'rgba(0, 122, 255, 0.08)', description: 'Cámaras Frío 2 - Slot Piso Pallet (Piso): Pasillo Central Slot 3' },
+    'D1-CAM2-P04': { label: 'D1-CAM2-P04 - Pallet Fiambres / Embutidos', icon: '❄️', color: '#007AFF', bg: 'rgba(0, 122, 255, 0.08)', description: 'Cámaras Frío 2 - Slot Piso Pallet (Piso): Pasillo Central Slot 4' },
+    'D1-CAM2-P05': { label: 'D1-CAM2-P05 - Pallet Queso Sardo / Bloque', icon: '❄️', color: '#007AFF', bg: 'rgba(0, 122, 255, 0.08)', description: 'Cámaras Frío 2 - Slot Piso Pallet (Piso): Fondo Cámara Slot 5' },
+    'D1-CAM2-P06': { label: 'D1-CAM2-P06 - Pallet Por Salut / Fresco', icon: '❄️', color: '#007AFF', bg: 'rgba(0, 122, 255, 0.08)', description: 'Cámaras Frío 2 - Slot Piso Pallet (Piso): Fondo Cámara Slot 6' },
+    'D1-CAM2-R03-A': { label: 'D1-CAM2-R03-A - Salames / Jamones / Fiambres', icon: '❄️', color: '#007AFF', bg: 'rgba(0, 122, 255, 0.08)', description: 'Cámaras Frío 2 - Rack 2 Niveles (A (Piso)): Rack Negro Pared Derecha (Picking)' },
+    'D1-CAM2-R03-B': { label: 'D1-CAM2-R03-B - Fiambres Reserva / Cajas', icon: '❄️', color: '#007AFF', bg: 'rgba(0, 122, 255, 0.08)', description: 'Cámaras Frío 2 - Rack 2 Niveles (B (Viga 1)): Rack Negro Pared Derecha (Pulmón)' },
+    'D1-CAM2-R04-A': { label: 'D1-CAM2-R04-A - Cremas / Mantecas / Lácteos', icon: '❄️', color: '#007AFF', bg: 'rgba(0, 122, 255, 0.08)', description: 'Cámaras Frío 2 - Rack 2 Niveles (A (Piso)): Rack Negro Pared Derecha (Picking)' },
+    'D1-CAM2-R04-B': { label: 'D1-CAM2-R04-B - Mantecas / Cremas Reserva', icon: '❄️', color: '#007AFF', bg: 'rgba(0, 122, 255, 0.08)', description: 'Cámaras Frío 2 - Rack 2 Niveles (B (Viga 1)): Rack Negro Pared Derecha (Pulmón)' },
+    'D1-CAM1-EST-N1': { label: 'D1-CAM1-EST-N1 - Queso Por Salut / Azul Potes', icon: '❄️', color: '#007AFF', bg: 'rgba(0, 122, 255, 0.08)', description: 'Cámara 1 Frío - Estantería 5 Niveles (N1 (Piso)): Estantería Roja Nivel 1 (Inferior)' },
+    'D1-CAM1-EST-N2': { label: 'D1-CAM1-EST-N2 - Quesos Fraccionados / Potes', icon: '❄️', color: '#007AFF', bg: 'rgba(0, 122, 255, 0.08)', description: 'Cámara 1 Frío - Estantería 5 Niveles (N2): Estantería Roja Nivel 2' },
+    'D1-CAM1-EST-N3': { label: 'D1-CAM1-EST-N3 - Yogures Potes / Cremas', icon: '❄️', color: '#007AFF', bg: 'rgba(0, 122, 255, 0.08)', description: 'Cámara 1 Frío - Estantería 5 Niveles (N3): Estantería Roja Nivel 3' },
+    'D1-CAM1-EST-N4': { label: 'D1-CAM1-EST-N4 - Postres / Sodecar Fraccionados', icon: '❄️', color: '#007AFF', bg: 'rgba(0, 122, 255, 0.08)', description: 'Cámara 1 Frío - Estantería 5 Niveles (N4): Estantería Roja Nivel 4' },
+    'D1-CAM1-EST-N5': { label: 'D1-CAM1-EST-N5 - Reposición Potes / Cajas', icon: '❄️', color: '#007AFF', bg: 'rgba(0, 122, 255, 0.08)', description: 'Cámara 1 Frío - Estantería 5 Niveles (N5 (Superior)): Estantería Roja Nivel 5 (Superior)' },
+    'D1-CAM1-P01': { label: 'D1-CAM1-P01 - Pallet Mozzarella Cremigal', icon: '❄️', color: '#007AFF', bg: 'rgba(0, 122, 255, 0.08)', description: 'Cámara 1 Frío - Slot Piso Pallet (Piso): Piso Frente Estantería 1' },
+    'D1-CAM1-P02': { label: 'D1-CAM1-P02 - Pallet Queso Por Salut Melincu', icon: '❄️', color: '#007AFF', bg: 'rgba(0, 122, 255, 0.08)', description: 'Cámara 1 Frío - Slot Piso Pallet (Piso): Piso Frente Estantería 2' },
+    'D1-CAM1-P03': { label: 'D1-CAM1-P03 - Pallet Sodecar / Embutidos', icon: '❄️', color: '#007AFF', bg: 'rgba(0, 122, 255, 0.08)', description: 'Cámara 1 Frío - Slot Piso Pallet (Piso): Piso Lateral 3' },
+    'D1-CAM1-P04': { label: 'D1-CAM1-P04 - Pallet Stock Reserva Frío', icon: '❄️', color: '#007AFF', bg: 'rgba(0, 122, 255, 0.08)', description: 'Cámara 1 Frío - Slot Piso Pallet (Piso): Piso Lateral 4' },
+    'D1-CAM3-R01-A': { label: 'D1-CAM3-R01-A - Conservas Cumaná / Puré Tomate', icon: '📦', color: '#8E8E93', bg: 'rgba(142, 142, 147, 0.08)', description: 'Cámara 3 Seco - Rack Seco 2 Niveles (A (Piso)): Rack Seco Nivel A (Picking)' },
+    'D1-CAM3-R01-B': { label: 'D1-CAM3-R01-B - Cumaná Reserva / Cajas', icon: '📦', color: '#8E8E93', bg: 'rgba(142, 142, 147, 0.08)', description: 'Cámara 3 Seco - Rack Seco 2 Niveles (B (Viga 1)): Rack Seco Nivel B (Pulmón)' },
+    'D1-CAM3-EST-N1': { label: 'D1-CAM3-EST-N1 - Aceites Fraccionados', icon: '📦', color: '#8E8E93', bg: 'rgba(142, 142, 147, 0.08)', description: 'Cámara 3 Seco - Estantería Metálica (N1 (Piso)): Estantería Secos Nivel 1' },
+    'D1-CAM3-EST-N2': { label: 'D1-CAM3-EST-N2 - Fraccionado Seco Pequeño', icon: '📦', color: '#8E8E93', bg: 'rgba(142, 142, 147, 0.08)', description: 'Cámara 3 Seco - Estantería Metálica (N2): Estantería Secos Nivel 2' },
+    'D1-CAM3-EST-N3': { label: 'D1-CAM3-EST-N3 - Galletitas / Especies', icon: '📦', color: '#8E8E93', bg: 'rgba(142, 142, 147, 0.08)', description: 'Cámara 3 Seco - Estantería Metálica (N3): Estantería Secos Nivel 3' },
+    'D1-CAM3-P01': { label: 'D1-CAM3-P01 - Pallet Conservas Cumaná', icon: '📦', color: '#8E8E93', bg: 'rgba(142, 142, 147, 0.08)', description: 'Cámara 3 Seco - Slot Piso Pallet (Piso): Slot Piso Central 1' },
+    'D1-CAM3-P02': { label: 'D1-CAM3-P02 - Pallet Aceites Secos', icon: '📦', color: '#8E8E93', bg: 'rgba(142, 142, 147, 0.08)', description: 'Cámara 3 Seco - Slot Piso Pallet (Piso): Slot Piso Central 2' },
+    'D1-RACK1-M01-A': { label: 'D1-RACK1-M01-A - Bebidas / Aperitivos Rotación', icon: '📦', color: '#8E8E93', bg: 'rgba(142, 142, 147, 0.08)', description: 'Rack 1 Entrada - Rack Heavy Duty 3 Niv (A (Piso)): Módulo 1 Piso (Picking)' },
+    'D1-RACK1-M01-B': { label: 'D1-RACK1-M01-B - Bebidas Pulmón Nivel 1', icon: '📦', color: '#8E8E93', bg: 'rgba(142, 142, 147, 0.08)', description: 'Rack 1 Entrada - Rack Heavy Duty 3 Niv (B (Medio)): Módulo 1 Medio (Pulmón)' },
+    'D1-RACK1-M01-C': { label: 'D1-RACK1-M01-C - Bebidas Pulmón Nivel 2', icon: '📦', color: '#8E8E93', bg: 'rgba(142, 142, 147, 0.08)', description: 'Rack 1 Entrada - Rack Heavy Duty 3 Niv (C (Alto)): Módulo 1 Alto (Pulmón)' },
+    'D1-RACK1-M02-A': { label: 'D1-RACK1-M02-A - Aperitivos Sernova / Gordon\'s', icon: '📦', color: '#8E8E93', bg: 'rgba(142, 142, 147, 0.08)', description: 'Rack 1 Entrada - Rack Heavy Duty 3 Niv (A (Piso)): Módulo 2 Piso (Picking)' },
+    'D1-RACK1-M02-B': { label: 'D1-RACK1-M02-B - Aperitivos Pulmón Nivel 1', icon: '📦', color: '#8E8E93', bg: 'rgba(142, 142, 147, 0.08)', description: 'Rack 1 Entrada - Rack Heavy Duty 3 Niv (B (Medio)): Módulo 2 Medio (Pulmón)' },
+    'D1-RACK1-M02-C': { label: 'D1-RACK1-M02-C - Aperitivos Pulmón Nivel 2', icon: '📦', color: '#8E8E93', bg: 'rgba(142, 142, 147, 0.08)', description: 'Rack 1 Entrada - Rack Heavy Duty 3 Niv (C (Alto)): Módulo 2 Alto (Pulmón)' },
+    'D1-RACK1-M03-A': { label: 'D1-RACK1-M03-A - Vinos / Espumantes', icon: '📦', color: '#8E8E93', bg: 'rgba(142, 142, 147, 0.08)', description: 'Rack 1 Entrada - Rack Heavy Duty 3 Niv (A (Piso)): Módulo 3 Piso (Picking)' },
+    'D1-RACK1-M03-B': { label: 'D1-RACK1-M03-B - Vinos Pulmón Nivel 1', icon: '📦', color: '#8E8E93', bg: 'rgba(142, 142, 147, 0.08)', description: 'Rack 1 Entrada - Rack Heavy Duty 3 Niv (B (Medio)): Módulo 3 Medio (Pulmón)' },
+    'D1-RACK1-M03-C': { label: 'D1-RACK1-M03-C - Vinos Pulmón Nivel 2', icon: '📦', color: '#8E8E93', bg: 'rgba(142, 142, 147, 0.08)', description: 'Rack 1 Entrada - Rack Heavy Duty 3 Niv (C (Alto)): Módulo 3 Alto (Pulmón)' },
+    'D1-RACK1-M04-A': { label: 'D1-RACK1-M04-A - Sidras / Jugos', icon: '📦', color: '#8E8E93', bg: 'rgba(142, 142, 147, 0.08)', description: 'Rack 1 Entrada - Rack Heavy Duty 3 Niv (A (Piso)): Módulo 4 Piso (Picking)' },
+    'D1-RACK1-M04-B': { label: 'D1-RACK1-M04-B - Jugos / Sidras Pulmón Nivel 1', icon: '📦', color: '#8E8E93', bg: 'rgba(142, 142, 147, 0.08)', description: 'Rack 1 Entrada - Rack Heavy Duty 3 Niv (B (Medio)): Módulo 4 Medio (Pulmón)' },
+    'D1-RACK1-M04-C': { label: 'D1-RACK1-M04-C - Jugos / Sidras Pulmón Nivel 2', icon: '📦', color: '#8E8E93', bg: 'rgba(142, 142, 147, 0.08)', description: 'Rack 1 Entrada - Rack Heavy Duty 3 Niv (C (Alto)): Módulo 4 Alto (Pulmón)' },
+    'D1-EST-LIC-N1': { label: 'D1-EST-LIC-N1 - Botellas Aperitivos Alta Rotac', icon: '🍾', color: '#FF9500', bg: 'rgba(255, 149, 0, 0.08)', description: 'Estantería Licores - Estantería 3 Niveles (N1 (Piso)): Nivel 1 Piso' },
+    'D1-EST-LIC-N2': { label: 'D1-EST-LIC-N2 - Licores / Fernet / Aperitivos', icon: '🍾', color: '#FF9500', bg: 'rgba(255, 149, 0, 0.08)', description: 'Estantería Licores - Estantería 3 Niveles (N2 (Medio)): Nivel 2 Medio' },
+    'D1-EST-LIC-N3': { label: 'D1-EST-LIC-N3 - Botellas Sueltas / Packs Espec', icon: '🍾', color: '#FF9500', bg: 'rgba(255, 149, 0, 0.08)', description: 'Estantería Licores - Estantería 3 Niveles (N3 (Alto)): Nivel 3 Alto' },
+    'D2-RACK-AZUL-M01-A': { label: 'D2-RACK-AZUL-M01-A - Cajas Cumaná / Puré / Tomate', icon: '🏢', color: '#5856D6', bg: 'rgba(88, 86, 214, 0.08)', description: 'Racks Azules - Rack Estructural 3 Niv (A (Piso)): Módulo 1 Piso (Picking)' },
+    'D2-RACK-AZUL-M01-B': { label: 'D2-RACK-AZUL-M01-B - Cumaná Reserva', icon: '🏢', color: '#5856D6', bg: 'rgba(88, 86, 214, 0.08)', description: 'Racks Azules - Rack Estructural 3 Niv (B (Medio)): Módulo 1 Medio (Pulmón)' },
+    'D2-RACK-AZUL-M01-C': { label: 'D2-RACK-AZUL-M01-C - Cumaná Reserva Masiva', icon: '🏢', color: '#5856D6', bg: 'rgba(88, 86, 214, 0.08)', description: 'Racks Azules - Rack Estructural 3 Niv (C (Alto)): Módulo 1 Alto (Pulmón)' },
+    'D2-RACK-AZUL-M02-A': { label: 'D2-RACK-AZUL-M02-A - Latas Durazno / Ensaladas', icon: '🏢', color: '#5856D6', bg: 'rgba(88, 86, 214, 0.08)', description: 'Racks Azules - Rack Estructural 3 Niv (A (Piso)): Módulo 2 Piso (Picking)' },
+    'D2-RACK-AZUL-M02-B': { label: 'D2-RACK-AZUL-M02-B - Latas Reserva', icon: '🏢', color: '#5856D6', bg: 'rgba(88, 86, 214, 0.08)', description: 'Racks Azules - Rack Estructural 3 Niv (B (Medio)): Módulo 2 Medio (Pulmón)' },
+    'D2-RACK-AZUL-M02-C': { label: 'D2-RACK-AZUL-M02-C - Latas Reserva Masiva', icon: '🏢', color: '#5856D6', bg: 'rgba(88, 86, 214, 0.08)', description: 'Racks Azules - Rack Estructural 3 Niv (C (Alto)): Módulo 2 Alto (Pulmón)' },
+    'D2-RACK-AZUL-M03-A': { label: 'D2-RACK-AZUL-M03-A - Legumbres / Arroz / Harinas', icon: '🏢', color: '#5856D6', bg: 'rgba(88, 86, 214, 0.08)', description: 'Racks Azules - Rack Estructural 3 Niv (A (Piso)): Módulo 3 Piso (Picking)' },
+    'D2-RACK-AZUL-M03-B': { label: 'D2-RACK-AZUL-M03-B - Harinas / Arroz Reserva', icon: '🏢', color: '#5856D6', bg: 'rgba(88, 86, 214, 0.08)', description: 'Racks Azules - Rack Estructural 3 Niv (B (Medio)): Módulo 3 Medio (Pulmón)' },
+    'D2-RACK-AZUL-M03-C': { label: 'D2-RACK-AZUL-M03-C - Harinas Reserva Masiva', icon: '🏢', color: '#5856D6', bg: 'rgba(88, 86, 214, 0.08)', description: 'Racks Azules - Rack Estructural 3 Niv (C (Alto)): Módulo 3 Alto (Pulmón)' },
+    'D2-PISO-FID-01': { label: 'D2-PISO-FID-01 - Pallet Fideos 308 Tallarín', icon: '🏢', color: '#5856D6', bg: 'rgba(88, 86, 214, 0.08)', description: 'Patio Fideos 308 - Slot Piso Pallet (Piso): Slot Fideos 1' },
+    'D2-PISO-FID-02': { label: 'D2-PISO-FID-02 - Pallet Fideos 308 Guisero', icon: '🏢', color: '#5856D6', bg: 'rgba(88, 86, 214, 0.08)', description: 'Patio Fideos 308 - Slot Piso Pallet (Piso): Slot Fideos 2' },
+    'D2-PISO-FID-03': { label: 'D2-PISO-FID-03 - Pallet Fideos 308 Moñito', icon: '🏢', color: '#5856D6', bg: 'rgba(88, 86, 214, 0.08)', description: 'Patio Fideos 308 - Slot Piso Pallet (Piso): Slot Fideos 3' },
+    'D2-PISO-FID-04': { label: 'D2-PISO-FID-04 - Pallet Fideos 308 Nido / Espec', icon: '🏢', color: '#5856D6', bg: 'rgba(88, 86, 214, 0.08)', description: 'Patio Fideos 308 - Slot Piso Pallet (Piso): Slot Fideos 4' },
+    'D2-PISO-FID-05': { label: 'D2-PISO-FID-05 - Pallet Fideos 308 Reserva 1', icon: '🏢', color: '#5856D6', bg: 'rgba(88, 86, 214, 0.08)', description: 'Patio Fideos 308 - Slot Piso Pallet (Piso): Slot Fideos Reserva 5' },
+    'D2-PISO-FID-06': { label: 'D2-PISO-FID-06 - Pallet Fideos 308 Reserva 2', icon: '🏢', color: '#5856D6', bg: 'rgba(88, 86, 214, 0.08)', description: 'Patio Fideos 308 - Slot Piso Pallet (Piso): Slot Fideos Reserva 6' },
+    'D2-PISO-ACE-01': { label: 'D2-PISO-ACE-01 - Pallet Aceite Natura 900ml', icon: '🏢', color: '#5856D6', bg: 'rgba(88, 86, 214, 0.08)', description: 'Patio Aceites - Slot Piso Pallet (Piso): Slot Aceites 1' },
+    'D2-PISO-ACE-02': { label: 'D2-PISO-ACE-02 - Pallet Aceite Natura 1.5L', icon: '🏢', color: '#5856D6', bg: 'rgba(88, 86, 214, 0.08)', description: 'Patio Aceites - Slot Piso Pallet (Piso): Slot Aceites 2' },
+    'D2-PISO-ACE-03': { label: 'D2-PISO-ACE-03 - Pallet Aceite Cañuelas / Cada ', icon: '🏢', color: '#5856D6', bg: 'rgba(88, 86, 214, 0.08)', description: 'Patio Aceites - Slot Piso Pallet (Piso): Slot Aceites 3' },
+    'D2-PISO-ACE-04': { label: 'D2-PISO-ACE-04 - Pallet Aceite Mezcla / Girasol', icon: '🏢', color: '#5856D6', bg: 'rgba(88, 86, 214, 0.08)', description: 'Patio Aceites - Slot Piso Pallet (Piso): Slot Aceites 4' },
+    'D2-PISO-ACE-05': { label: 'D2-PISO-ACE-05 - Pallet Aceite Natura Reserva 1', icon: '🏢', color: '#5856D6', bg: 'rgba(88, 86, 214, 0.08)', description: 'Patio Aceites - Slot Piso Pallet (Piso): Slot Aceites Reserva 5' },
+    'D2-PISO-ACE-06': { label: 'D2-PISO-ACE-06 - Pallet Aceite Natura Reserva 2', icon: '🏢', color: '#5856D6', bg: 'rgba(88, 86, 214, 0.08)', description: 'Patio Aceites - Slot Piso Pallet (Piso): Slot Aceites Reserva 6' },
+    'D3-PISO-UAT-01': { label: 'D3-PISO-UAT-01 - Pallet Leche UAT Cremigal Ente', icon: '🥛', color: '#FF2D55', bg: 'rgba(255, 45, 85, 0.08)', description: 'Patio Leches UAT - Slot Piso Pallet (Piso): Slot Leches UAT 1' },
+    'D3-PISO-UAT-02': { label: 'D3-PISO-UAT-02 - Pallet Leche UAT Cremigal Desc', icon: '🥛', color: '#FF2D55', bg: 'rgba(255, 45, 85, 0.08)', description: 'Patio Leches UAT - Slot Piso Pallet (Piso): Slot Leches UAT 2' },
+    'D3-PISO-UAT-03': { label: 'D3-PISO-UAT-03 - Pallet Leche Chocolatada / Sac', icon: '🥛', color: '#FF2D55', bg: 'rgba(255, 45, 85, 0.08)', description: 'Patio Leches UAT - Slot Piso Pallet (Piso): Slot Leches UAT 3' },
+    'D3-PISO-UAT-04': { label: 'D3-PISO-UAT-04 - Pallet Leche UAT Reserva Masiv', icon: '🥛', color: '#FF2D55', bg: 'rgba(255, 45, 85, 0.08)', description: 'Patio Leches UAT - Slot Piso Pallet (Piso): Slot Leches UAT Reserva 4' },
+    'D3-PISO-PAPEL-01': { label: 'D3-PISO-PAPEL-01 - Pallet Papel Higiénico Felpita', icon: '📦', color: '#FF2D55', bg: 'rgba(255, 45, 85, 0.08)', description: 'Patio Papelería - Slot Piso Pallet (Piso): Slot Papelería 1' },
+    'D3-PISO-PAPEL-02': { label: 'D3-PISO-PAPEL-02 - Pallet Rollos Cocina RolMayor', icon: '📦', color: '#FF2D55', bg: 'rgba(255, 45, 85, 0.08)', description: 'Patio Papelería - Slot Piso Pallet (Piso): Slot Papelería 2' },
+    'D3-PISO-PAPEL-03': { label: 'D3-PISO-PAPEL-03 - Pallet Servilletas / Bobinas', icon: '📦', color: '#FF2D55', bg: 'rgba(255, 45, 85, 0.08)', description: 'Patio Papelería - Slot Piso Pallet (Piso): Slot Papelería 3' },
+    'D3-PISO-PAPEL-04': { label: 'D3-PISO-PAPEL-04 - Pallet Papelería Reserva', icon: '📦', color: '#FF2D55', bg: 'rgba(255, 45, 85, 0.08)', description: 'Patio Papelería - Slot Piso Pallet (Piso): Slot Papelería Reserva 4' },
+    'D3-RACK-FONDO-M01-A': { label: 'D3-RACK-FONDO-M01-A - Reserva Papelería / Fideos', icon: '📦', color: '#FF2D55', bg: 'rgba(255, 45, 85, 0.08)', description: 'Racks Fondo - Rack 2 Niveles (A (Piso)): Módulo 1 Piso' },
+    'D3-RACK-FONDO-M01-B': { label: 'D3-RACK-FONDO-M01-B - Reserva Masiva Nivel 1', icon: '📦', color: '#FF2D55', bg: 'rgba(255, 45, 85, 0.08)', description: 'Racks Fondo - Rack 2 Niveles (B (Viga 1)): Módulo 1 Alto' },
+    'D3-RACK-FONDO-M02-A': { label: 'D3-RACK-FONDO-M02-A - Reserva Envases / Rollos', icon: '📦', color: '#FF2D55', bg: 'rgba(255, 45, 85, 0.08)', description: 'Racks Fondo - Rack 2 Niveles (A (Piso)): Módulo 2 Piso' },
+    'D3-RACK-FONDO-M02-B': { label: 'D3-RACK-FONDO-M02-B - Reserva Masiva Nivel 2', icon: '📦', color: '#FF2D55', bg: 'rgba(255, 45, 85, 0.08)', description: 'Racks Fondo - Rack 2 Niveles (B (Viga 1)): Módulo 2 Alto' },
     'S/U': { label: 'Sin Ubicación', icon: '📍', color: '#8E8E93', bg: 'rgba(142, 142, 147, 0.08)', description: 'Artículos sin ubicación física asignada' }
   };
 
@@ -200,7 +245,7 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
       }
 
       if (subTab === 'stock-list') {
-        const data = await api.getProducts(searchQuery);
+        const data = await api.getProducts(debouncedSearchQuery);
         setProducts(data);
       }
 
@@ -221,7 +266,7 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
       setErrorMsg(err.message || 'Error al obtener datos.');
       setLoading(false);
     }
-  }, [subTab, searchQuery]);
+  }, [subTab, debouncedSearchQuery]);
 
   useEffect(() => {
     fetchData();
@@ -962,35 +1007,21 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
             onClick={() => setSubTab('picking')}
           >
             <ClipboardList size={16} />
-            <span>Cola de Preparación</span>
+            <span>📦 Armado de Pedidos (Picking)</span>
           </button>
           <button
             className={`subtab-btn ${subTab === 'wms-map' ? 'active' : ''}`}
             onClick={() => setSubTab('wms-map')}
           >
             <Map size={16} />
-            <span>Mapa Visual (WMS)</span>
-          </button>
-          <button
-            className={`subtab-btn ${subTab === 'lot-expiration' ? 'active' : ''}`}
-            onClick={() => setSubTab('lot-expiration')}
-          >
-            <Calendar size={16} />
-            <span>Lotes y Vencimientos</span>
-          </button>
-          <button
-            className={`subtab-btn ${subTab === 'replenishment' ? 'active' : ''}`}
-            onClick={() => setSubTab('replenishment')}
-          >
-            <ShoppingCart size={16} />
-            <span>Sugerencias de Compra</span>
+            <span>🗺️ Plano Interactivo WMS</span>
           </button>
           <button
             className={`subtab-btn ${subTab === 'stock-list' ? 'active' : ''}`}
             onClick={() => setSubTab('stock-list')}
           >
             <Warehouse size={16} />
-            <span>Inventario y Ajustes</span>
+            <span>📋 Control de Stock y Lotes</span>
           </button>
         </div>
       )}
@@ -2226,500 +2257,350 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
       {/* ====================================================================
           2.2 MAPA VISUAL (WMS)
           ==================================================================== */}
-      {subTab === 'wms-map' && !selectedOrder && !showConsolidatedView && (
-        <div className="wms-container">
-          {/* Card del Mapa */}
-          <div className="wms-map-card">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
-              <div>
-                <h4 style={{ margin: '0 0 4px 0' }}>Layout de Distribución Física</h4>
-                <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', margin: 0 }}>
-                  Seleccioná un depósito y hacé clic en un rack, nivel o cámara de frío para consultar el stock físico.
-                </p>
+                                                            {subTab === 'wms-map' && !selectedOrder && !showConsolidatedView && (
+        <div className="wms-container" style={{ display: 'flex', flexDirection: 'column', gap: '14px', width: '100%' }}>
+          {/* Header Principal Responsivo */}
+          <div style={{ backgroundColor: '#ffffff', border: '1px solid var(--border-color)', borderRadius: '10px', padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px' }}>
+                <h4 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-primary)' }}>🗺️ Plano Gráfico 2D de Depósito (WMS Fiel a Excel)</h4>
+                <span className="badge badge-success" style={{ fontSize: '0.72rem', padding: '3px 9px' }}>210 Slots Limpios</span>
               </div>
-              <div style={{ display: 'flex', gap: '6px' }}>
-                <button 
-                  className={`btn ${selectedWarehouse === 'D1' ? 'btn-primary' : 'btn-secondary'}`}
-                  style={{ fontSize: '0.8rem', padding: '6px 12px' }}
-                  onClick={() => { setSelectedWarehouse('D1'); setSelectedMapLocation(''); }}
-                >
-                  🏢 Depósito 1
-                </button>
-                <button 
-                  className={`btn ${selectedWarehouse === 'D2' ? 'btn-primary' : 'btn-secondary'}`}
-                  style={{ fontSize: '0.8rem', padding: '6px 12px' }}
-                  onClick={() => { setSelectedWarehouse('D2'); setSelectedMapLocation(''); }}
-                >
-                  🏢 Depósito 2
-                </button>
-                <button 
-                  className={`btn ${selectedWarehouse === 'D3' ? 'btn-primary' : 'btn-secondary'}`}
-                  style={{ fontSize: '0.8rem', padding: '6px 12px' }}
-                  onClick={() => { setSelectedWarehouse('D3'); setSelectedMapLocation(''); }}
-                >
-                  🔄 Depósito 3
-                </button>
-              </div>
+              <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: 0 }}>
+                Hacé clic en los botones de Cámaras para resaltar exclusivamente sus slots y gestionar su contenido.
+              </p>
             </div>
-            
-            <div className="wms-svg-wrapper">
-              {selectedWarehouse === 'D1' && (
-                <svg viewBox="0 0 800 450" width="100%" height="100%" style={{ maxHeight: '420px' }}>
-                  {/* Fondo general */}
-                  <rect x="0" y="0" width="800" height="450" fill="#f8fafc" rx="8" />
-                  
-                  {/* RACKS ENTRADA (RACK A - Arriba Izquierda) */}
-                  <g>
-                    <rect x="25" y="40" width="230" height="135" fill="#ffffff" stroke="#cbd5e1" strokeWidth="1" strokeDasharray="3 3" rx="6" />
-                    <text x="35" y="32" fill="var(--text-primary)" fontSize="11px" fontWeight="bold">📦 RACK A - ENTRADA</text>
-                    {/* Nivel 3 */}
-                    {(() => {
-                      const active = selectedMapLocation === 'D1-RKA-N3';
-                      return (
-                        <rect x="35" y="50" width="210" height="32" fill={active ? 'rgba(142, 142, 147, 0.25)' : '#ffffff'} stroke="#94a3b8" strokeWidth={active ? 2.5 : 1} style={{ cursor: 'pointer' }} onClick={() => setSelectedMapLocation(active ? '' : 'D1-RKA-N3')} rx="4" />
-                      );
-                    })()}
-                    <text x="45" y="70" fill="#475569" fontSize="10px" fontWeight="bold" style={{ pointerEvents: 'none' }}>Nivel 3 (Alto - Reserva)</text>
-                    {/* Nivel 2 */}
-                    {(() => {
-                      const active = selectedMapLocation === 'D1-RKA-N2';
-                      return (
-                        <rect x="35" y="90" width="210" height="32" fill={active ? 'rgba(142, 142, 147, 0.25)' : '#ffffff'} stroke="#94a3b8" strokeWidth={active ? 2.5 : 1} style={{ cursor: 'pointer' }} onClick={() => setSelectedMapLocation(active ? '' : 'D1-RKA-N2')} rx="4" />
-                      );
-                    })()}
-                    <text x="45" y="110" fill="#475569" fontSize="10px" fontWeight="bold" style={{ pointerEvents: 'none' }}>Nivel 2 (Medio - Cajas)</text>
-                    {/* Nivel 1 */}
-                    {(() => {
-                      const active = selectedMapLocation === 'D1-RKA-N1';
-                      return (
-                        <rect x="35" y="130" width="210" height="32" fill={active ? 'rgba(142, 142, 147, 0.25)' : '#ffffff'} stroke="#94a3b8" strokeWidth={active ? 2.5 : 1} style={{ cursor: 'pointer' }} onClick={() => setSelectedMapLocation(active ? '' : 'D1-RKA-N1')} rx="4" />
-                      );
-                    })()}
-                    <text x="45" y="150" fill="#475569" fontSize="10px" fontWeight="bold" style={{ pointerEvents: 'none' }}>Nivel 1 (Suelo - Pallets)</text>
-                  </g>
 
-                  {/* RACKS ENTRADA (RACK B - Abajo Izquierda) */}
-                  <g>
-                    <rect x="25" y="215" width="230" height="135" fill="#ffffff" stroke="#cbd5e1" strokeWidth="1" strokeDasharray="3 3" rx="6" />
-                    <text x="35" y="207" fill="var(--text-primary)" fontSize="11px" fontWeight="bold">📦 RACK B - ENTRADA</text>
-                    {/* Nivel 3 */}
-                    {(() => {
-                      const active = selectedMapLocation === 'D1-RKB-N3';
-                      return (
-                        <rect x="35" y="225" width="210" height="32" fill={active ? 'rgba(142, 142, 147, 0.25)' : '#ffffff'} stroke="#94a3b8" strokeWidth={active ? 2.5 : 1} style={{ cursor: 'pointer' }} onClick={() => setSelectedMapLocation(active ? '' : 'D1-RKB-N3')} rx="4" />
-                      );
-                    })()}
-                    <text x="45" y="245" fill="#475569" fontSize="10px" fontWeight="bold" style={{ pointerEvents: 'none' }}>Nivel 3 (Alto - Reserva)</text>
-                    {/* Nivel 2 */}
-                    {(() => {
-                      const active = selectedMapLocation === 'D1-RKB-N2';
-                      return (
-                        <rect x="35" y="265" width="210" height="32" fill={active ? 'rgba(142, 142, 147, 0.25)' : '#ffffff'} stroke="#94a3b8" strokeWidth={active ? 2.5 : 1} style={{ cursor: 'pointer' }} onClick={() => setSelectedMapLocation(active ? '' : 'D1-RKB-N2')} rx="4" />
-                      );
-                    })()}
-                    <text x="45" y="285" fill="#475569" fontSize="10px" fontWeight="bold" style={{ pointerEvents: 'none' }}>Nivel 2 (Medio - Cajas)</text>
-                    {/* Nivel 1 */}
-                    {(() => {
-                      const active = selectedMapLocation === 'D1-RKB-N1';
-                      return (
-                        <rect x="35" y="305" width="210" height="32" fill={active ? 'rgba(142, 142, 147, 0.25)' : '#ffffff'} stroke="#94a3b8" strokeWidth={active ? 2.5 : 1} style={{ cursor: 'pointer' }} onClick={() => setSelectedMapLocation(active ? '' : 'D1-RKB-N1')} rx="4" />
-                      );
-                    })()}
-                    <text x="45" y="325" fill="#475569" fontSize="10px" fontWeight="bold" style={{ pointerEvents: 'none' }}>Nivel 1 (Suelo - Pallets)</text>
-                  </g>
-
-                  {/* ESTANTERÍAS DE PASILLO (MIDDLE - BEBIDAS/LICORES) */}
-                  <g>
-                    <rect x="290" y="40" width="160" height="370" fill="#ffffff" stroke="#cbd5e1" strokeWidth="1" strokeDasharray="3 3" rx="6" />
-                    <text x="295" y="32" fill="var(--text-primary)" fontSize="11px" fontWeight="bold">🍾 GÓNDOLAS BEBIDAS</text>
-                    
-                    {/* Modulo 1 */}
-                    {(() => {
-                      const active = selectedMapLocation === 'D1-EST-M1';
-                      return (
-                        <rect x="300" y="55" width="140" height="75" fill={active ? 'rgba(255, 149, 0, 0.18)' : 'rgba(255, 149, 0, 0.03)'} stroke="#FF9500" strokeWidth={active ? 2.5 : 1} style={{ cursor: 'pointer' }} onClick={() => setSelectedMapLocation(active ? '' : 'D1-EST-M1')} rx="4" />
-                      );
-                    })()}
-                    <text x="310" y="90" fill="#d97706" fontSize="11px" fontWeight="bold" style={{ pointerEvents: 'none' }}>Módulo 1: Gin / Vodka</text>
-                    <text x="310" y="105" fill="#b45309" fontSize="8.5px" style={{ pointerEvents: 'none' }}>Sernova, Gordon's</text>
-
-                    {/* Modulo 2 */}
-                    {(() => {
-                      const active = selectedMapLocation === 'D1-EST-M2';
-                      return (
-                        <rect x="300" y="145" width="140" height="75" fill={active ? 'rgba(255, 149, 0, 0.18)' : 'rgba(255, 149, 0, 0.03)'} stroke="#FF9500" strokeWidth={active ? 2.5 : 1} style={{ cursor: 'pointer' }} onClick={() => setSelectedMapLocation(active ? '' : 'D1-EST-M2')} rx="4" />
-                      );
-                    })()}
-                    <text x="310" y="180" fill="#d97706" fontSize="11px" fontWeight="bold" style={{ pointerEvents: 'none' }}>Módulo 2: Licores</text>
-                    <text x="310" y="195" fill="#b45309" fontSize="8.5px" style={{ pointerEvents: 'none' }}>Fernet, Campari</text>
-
-                    {/* Modulo 3 */}
-                    {(() => {
-                      const active = selectedMapLocation === 'D1-EST-M3';
-                      return (
-                        <rect x="300" y="235" width="140" height="75" fill={active ? 'rgba(255, 149, 0, 0.18)' : 'rgba(255, 149, 0, 0.03)'} stroke="#FF9500" strokeWidth={active ? 2.5 : 1} style={{ cursor: 'pointer' }} onClick={() => setSelectedMapLocation(active ? '' : 'D1-EST-M3')} rx="4" />
-                      );
-                    })()}
-                    <text x="310" y="270" fill="#d97706" fontSize="11px" fontWeight="bold" style={{ pointerEvents: 'none' }}>Módulo 3: Vinos</text>
-                    <text x="310" y="285" fill="#b45309" fontSize="8.5px" style={{ pointerEvents: 'none' }}>Espumantes sueltos</text>
-
-                    {/* Modulo 4 */}
-                    {(() => {
-                      const active = selectedMapLocation === 'D1-EST-M4';
-                      return (
-                        <rect x="300" y="325" width="140" height="75" fill={active ? 'rgba(255, 149, 0, 0.18)' : 'rgba(255, 149, 0, 0.03)'} stroke="#FF9500" strokeWidth={active ? 2.5 : 1} style={{ cursor: 'pointer' }} onClick={() => setSelectedMapLocation(active ? '' : 'D1-EST-M4')} rx="4" />
-                      );
-                    })()}
-                    <text x="310" y="360" fill="#d97706" fontSize="11px" fontWeight="bold" style={{ pointerEvents: 'none' }}>Módulo 4: Conservas</text>
-                    <text x="310" y="375" fill="#b45309" fontSize="8.5px" style={{ pointerEvents: 'none' }}>Salsas y condimentos</text>
-                  </g>
-
-                  {/* CÁMARAS Y ESPACIOS DE FRÍO / SECOS (RIGHT SIDE) */}
-                  <g>
-                    {/* Cámara Grande */}
-                    <rect x="480" y="40" width="295" height="230" fill="none" stroke="#007AFF" strokeWidth="1.5" rx="8" style={{ strokeDasharray: '4 2' }} />
-                    <text x="485" y="32" fill="#007AFF" fontSize="11px" fontWeight="bold">❄️ CÁMARA GRANDE DE FRÍO (CAM1)</text>
-
-                    {/* Rack A (Izquierdo en Cámara Grande) */}
-                    <g>
-                      <rect x="492" y="52" width="130" height="205" fill="#ffffff" stroke="#cbd5e1" strokeWidth="1" rx="4" />
-                      <text x="498" y="47" fill="#0056b3" fontSize="8.5px" fontWeight="bold">RACK INTERNO A</text>
-                      {/* Nivel 2 */}
-                      {(() => {
-                        const active = selectedMapLocation === 'D1-CAM1-RKA-N2';
-                        return (
-                          <rect x="498" y="60" width="118" height="90" fill={active ? 'rgba(0, 122, 255, 0.18)' : 'rgba(0, 122, 255, 0.02)'} stroke="#007AFF" strokeWidth={active ? 2.5 : 1} style={{ cursor: 'pointer' }} onClick={() => setSelectedMapLocation(active ? '' : 'D1-CAM1-RKA-N2')} rx="3" />
-                        );
-                      })()}
-                      <text x="504" y="90" fill="#007AFF" fontSize="10px" fontWeight="bold" style={{ pointerEvents: 'none' }}>Nivel 2 (Alto)</text>
-                      <text x="504" y="105" fill="#0056b3" fontSize="8px" style={{ pointerEvents: 'none' }}>Lácteos / Yogur</text>
-                      
-                      {/* Nivel 1 */}
-                      {(() => {
-                        const active = selectedMapLocation === 'D1-CAM1-RKA-N1';
-                        return (
-                          <rect x="498" y="158" width="118" height="90" fill={active ? 'rgba(0, 122, 255, 0.18)' : 'rgba(0, 122, 255, 0.02)'} stroke="#007AFF" strokeWidth={active ? 2.5 : 1} style={{ cursor: 'pointer' }} onClick={() => setSelectedMapLocation(active ? '' : 'D1-CAM1-RKA-N1')} rx="3" />
-                        );
-                      })()}
-                      <text x="504" y="188" fill="#007AFF" fontSize="10px" fontWeight="bold" style={{ pointerEvents: 'none' }}>Nivel 1 (Suelo)</text>
-                      <text x="504" y="203" fill="#0056b3" fontSize="8px" style={{ pointerEvents: 'none' }}>Queso Crema / Potes</text>
-                    </g>
-
-                    {/* Rack B (Derecho en Cámara Grande) */}
-                    <g>
-                      <rect x="635" y="52" width="130" height="205" fill="#ffffff" stroke="#cbd5e1" strokeWidth="1" rx="4" />
-                      <text x="641" y="47" fill="#0056b3" fontSize="8.5px" fontWeight="bold">RACK INTERNO B</text>
-                      {/* Nivel 2 */}
-                      {(() => {
-                        const active = selectedMapLocation === 'D1-CAM1-RKB-N2';
-                        return (
-                          <rect x="641" y="60" width="118" height="90" fill={active ? 'rgba(0, 122, 255, 0.18)' : 'rgba(0, 122, 255, 0.02)'} stroke="#007AFF" strokeWidth={active ? 2.5 : 1} style={{ cursor: 'pointer' }} onClick={() => setSelectedMapLocation(active ? '' : 'D1-CAM1-RKB-N2')} rx="3" />
-                        );
-                      })()}
-                      <text x="647" y="90" fill="#007AFF" fontSize="10px" fontWeight="bold" style={{ pointerEvents: 'none' }}>Nivel 2 (Alto)</text>
-                      <text x="647" y="105" fill="#0056b3" fontSize="8px" style={{ pointerEvents: 'none' }}>Fiambres / Embutidos</text>
-                      
-                      {/* Nivel 1 */}
-                      {(() => {
-                        const active = selectedMapLocation === 'D1-CAM1-RKB-N1';
-                        return (
-                          <rect x="641" y="158" width="118" height="90" fill={active ? 'rgba(0, 122, 255, 0.18)' : 'rgba(0, 122, 255, 0.02)'} stroke="#007AFF" strokeWidth={active ? 2.5 : 1} style={{ cursor: 'pointer' }} onClick={() => setSelectedMapLocation(active ? '' : 'D1-CAM1-RKB-N1')} rx="3" />
-                        );
-                      })()}
-                      <text x="647" y="188" fill="#007AFF" fontSize="10px" fontWeight="bold" style={{ pointerEvents: 'none' }}>Nivel 1 (Suelo)</text>
-                      <text x="647" y="203" fill="#0056b3" fontSize="8px" style={{ pointerEvents: 'none' }}>Hormas de Queso Tybo</text>
-                    </g>
-                  </g>
-
-                  {/* CÁMARA MEDIANA (FRÍO 2 - Abajo Izquierda) */}
-                  <g>
-                    <rect x="480" y="290" width="140" height="120" fill="none" stroke="#34C759" strokeWidth="1.5" rx="6" style={{ strokeDasharray: '4 2' }} />
-                    <text x="485" y="282" fill="#1e7e34" fontSize="10px" fontWeight="bold">❄️ C. MEDIANA (CAM2)</text>
-                    {/* Nivel 2 */}
-                    {(() => {
-                      const active = selectedMapLocation === 'D1-CAM2-N2';
-                      return (
-                        <rect x="488" y="300" width="124" height="48" fill={active ? 'rgba(52, 199, 89, 0.18)' : '#ffffff'} stroke="#34C759" strokeWidth={active ? 2.5 : 1} style={{ cursor: 'pointer' }} onClick={() => setSelectedMapLocation(active ? '' : 'D1-CAM2-N2')} rx="4" />
-                      );
-                    })()}
-                    <text x="496" y="322" fill="#1e7e34" fontSize="9px" fontWeight="bold" style={{ pointerEvents: 'none' }}>Nivel 2 (Alto)</text>
-                    <text x="496" y="335" fill="#28a745" fontSize="7.5px" style={{ pointerEvents: 'none' }}>Fiambres en Reserva</text>
-                    {/* Nivel 1 */}
-                    {(() => {
-                      const active = selectedMapLocation === 'D1-CAM2-N1';
-                      return (
-                        <rect x="488" y="355" width="124" height="48" fill={active ? 'rgba(52, 199, 89, 0.18)' : '#ffffff'} stroke="#34C759" strokeWidth={active ? 2.5 : 1} style={{ cursor: 'pointer' }} onClick={() => setSelectedMapLocation(active ? '' : 'D1-CAM2-N1')} rx="4" />
-                      );
-                    })()}
-                    <text x="496" y="377" fill="#1e7e34" fontSize="9px" fontWeight="bold" style={{ pointerEvents: 'none' }}>Nivel 1 (Suelo)</text>
-                    <text x="496" y="390" fill="#28a745" fontSize="7.5px" style={{ pointerEvents: 'none' }}>Insumos de Armado</text>
-                  </g>
-
-                  {/* CÁMARA CHICA Nº 3 (SECOS - Abajo Derecha) */}
-                  <g>
-                    <rect x="635" y="290" width="140" height="120" fill="none" stroke="#FF2D55" strokeWidth="1.5" rx="6" style={{ strokeDasharray: '4 2' }} />
-                    <text x="640" y="282" fill="#FF2D55" fontSize="10px" fontWeight="bold">📦 C. CHICA 3 (SECOS)</text>
-                    {/* Nivel 2 */}
-                    {(() => {
-                      const active = selectedMapLocation === 'D1-CAM3-N2';
-                      return (
-                        <rect x="643" y="300" width="124" height="48" fill={active ? 'rgba(255, 45, 85, 0.18)' : '#ffffff'} stroke="#FF2D55" strokeWidth={active ? 2.5 : 1} style={{ cursor: 'pointer' }} onClick={() => setSelectedMapLocation(active ? '' : 'D1-CAM3-N2')} rx="4" />
-                      );
-                    })()}
-                    <text x="651" y="322" fill="#e11d48" fontSize="9px" fontWeight="bold" style={{ pointerEvents: 'none' }}>Nivel 2 (Alto)</text>
-                    <text x="651" y="335" fill="#f43f5e" fontSize="7.5px" style={{ pointerEvents: 'none' }}>Cajas Secas Livianas</text>
-                    {/* Nivel 1 */}
-                    {(() => {
-                      const active = selectedMapLocation === 'D1-CAM3-N1';
-                      return (
-                        <rect x="643" y="355" width="124" height="48" fill={active ? 'rgba(255, 45, 85, 0.18)' : '#ffffff'} stroke="#FF2D55" strokeWidth={active ? 2.5 : 1} style={{ cursor: 'pointer' }} onClick={() => setSelectedMapLocation(active ? '' : 'D1-CAM3-N1')} rx="4" />
-                      );
-                    })()}
-                    <text x="651" y="377" fill="#e11d48" fontSize="9px" fontWeight="bold" style={{ pointerEvents: 'none' }}>Nivel 1 (Suelo)</text>
-                    <text x="651" y="390" fill="#f43f5e" fontSize="7.5px" style={{ pointerEvents: 'none' }}>Cajas Secas Pesadas</text>
-                  </g>
-
-                  {/* Pasillos de Maniobra */}
-                  <g style={{ pointerEvents: 'none' }}>
-                    <text x="35" y="370" fill="#94a3b8" fontSize="10px" fontStyle="italic" fontWeight="600">Corredor de Entrada (Zorras)</text>
-                    <text x="110" y="395" fill="#94a3b8" fontSize="18px" fontWeight="bold">⬇️ ENTRADA</text>
-                  </g>
-                </svg>
-              )}
-
-              {selectedWarehouse === 'D2' && (
-                <svg viewBox="0 0 800 450" width="100%" height="100%" style={{ maxHeight: '420px' }}>
-                  <rect x="0" y="0" width="800" height="450" fill="#f8fafc" rx="8" />
-                  <text x="30" y="35" fill="var(--text-primary)" fontSize="14px" fontWeight="bold">🏢 DEPÓSITO 2 - ACOPIO DE SECOS GENERAL</text>
-                  
-                  {/* Rack C (Izquierda) */}
-                  <g>
-                    <rect x="45" y="60" width="320" height="320" fill="#ffffff" stroke="#5856D6" strokeWidth="1" strokeDasharray="3 3" rx="6" />
-                    <text x="55" y="52" fill="#5856D6" fontSize="12px" fontWeight="bold">🏢 RACK C - SECOS</text>
-                    {/* Nivel 3 */}
-                    {(() => {
-                      const active = selectedMapLocation === 'D2-RKC-N3';
-                      return (
-                        <rect x="60" y="80" width="290" height="80" fill={active ? 'rgba(88, 86, 214, 0.25)' : '#ffffff'} stroke="#5856D6" strokeWidth={active ? 2.5 : 1} style={{ cursor: 'pointer' }} onClick={() => setSelectedMapLocation(active ? '' : 'D2-RKC-N3')} rx="4" />
-                      );
-                    })()}
-                    <text x="80" y="125" fill="#4f46e5" fontSize="12px" fontWeight="bold" style={{ pointerEvents: 'none' }}>Nivel 3 (Reserva / Altura)</text>
-                    {/* Nivel 2 */}
-                    {(() => {
-                      const active = selectedMapLocation === 'D2-RKC-N2';
-                      return (
-                        <rect x="60" y="180" width="290" height="80" fill={active ? 'rgba(88, 86, 214, 0.25)' : '#ffffff'} stroke="#5856D6" strokeWidth={active ? 2.5 : 1} style={{ cursor: 'pointer' }} onClick={() => setSelectedMapLocation(active ? '' : 'D2-RKC-N2')} rx="4" />
-                      );
-                    })()}
-                    <text x="80" y="225" fill="#4f46e5" fontSize="12px" fontWeight="bold" style={{ pointerEvents: 'none' }}>Nivel 2 (Medio - Cajas de Acopio)</text>
-                    {/* Nivel 1 */}
-                    {(() => {
-                      const active = selectedMapLocation === 'D2-RKC-N1';
-                      return (
-                        <rect x="60" y="280" width="290" height="80" fill={active ? 'rgba(88, 86, 214, 0.25)' : '#ffffff'} stroke="#5856D6" strokeWidth={active ? 2.5 : 1} style={{ cursor: 'pointer' }} onClick={() => setSelectedMapLocation(active ? '' : 'D2-RKC-N1')} rx="4" />
-                      );
-                    })()}
-                    <text x="80" y="325" fill="#4f46e5" fontSize="12px" fontWeight="bold" style={{ pointerEvents: 'none' }}>Nivel 1 (Suelo - Pallets Pesados)</text>
-                  </g>
-
-                  {/* Rack D (Derecha) */}
-                  <g>
-                    <rect x="435" y="60" width="320" height="320" fill="#ffffff" stroke="#5856D6" strokeWidth="1" strokeDasharray="3 3" rx="6" />
-                    <text x="445" y="52" fill="#5856D6" fontSize="12px" fontWeight="bold">🏢 RACK D - SECOS</text>
-                    {/* Nivel 3 */}
-                    {(() => {
-                      const active = selectedMapLocation === 'D2-RKD-N3';
-                      return (
-                        <rect x="450" y="80" width="290" height="80" fill={active ? 'rgba(88, 86, 214, 0.25)' : '#ffffff'} stroke="#5856D6" strokeWidth={active ? 2.5 : 1} style={{ cursor: 'pointer' }} onClick={() => setSelectedMapLocation(active ? '' : 'D2-RKD-N3')} rx="4" />
-                      );
-                    })()}
-                    <text x="470" y="125" fill="#4f46e5" fontSize="12px" fontWeight="bold" style={{ pointerEvents: 'none' }}>Nivel 3 (Reserva / Altura)</text>
-                    {/* Nivel 2 */}
-                    {(() => {
-                      const active = selectedMapLocation === 'D2-RKD-N2';
-                      return (
-                        <rect x="450" y="180" width="290" height="80" fill={active ? 'rgba(88, 86, 214, 0.25)' : '#ffffff'} stroke="#5856D6" strokeWidth={active ? 2.5 : 1} style={{ cursor: 'pointer' }} onClick={() => setSelectedMapLocation(active ? '' : 'D2-RKD-N2')} rx="4" />
-                      );
-                    })()}
-                    <text x="470" y="225" fill="#4f46e5" fontSize="12px" fontWeight="bold" style={{ pointerEvents: 'none' }}>Nivel 2 (Medio - Cajas de Acopio)</text>
-                    {/* Nivel 1 */}
-                    {(() => {
-                      const active = selectedMapLocation === 'D2-RKD-N1';
-                      return (
-                        <rect x="450" y="280" width="290" height="80" fill={active ? 'rgba(88, 86, 214, 0.25)' : '#ffffff'} stroke="#5856D6" strokeWidth={active ? 2.5 : 1} style={{ cursor: 'pointer' }} onClick={() => setSelectedMapLocation(active ? '' : 'D2-RKD-N1')} rx="4" />
-                      );
-                    })()}
-                    <text x="470" y="325" fill="#4f46e5" fontSize="12px" fontWeight="bold" style={{ pointerEvents: 'none' }}>Nivel 1 (Suelo - Pallets Pesados)</text>
-                  </g>
-
-                  {/* Área de Suelo General */}
-                  {(() => {
-                    const active = selectedMapLocation === 'D2-GEN';
-                    return (
-                      <rect x="45" y="395" width="710" height="35" fill={active ? 'rgba(88, 86, 214, 0.15)' : 'rgba(88, 86, 214, 0.02)'} stroke="#5856D6" strokeWidth={active ? 2 : 1} style={{ cursor: 'pointer' }} onClick={() => setSelectedMapLocation(active ? '' : 'D2-GEN')} rx="4" />
-                    );
-                  })()}
-                  <text x="310" y="417" fill="#5856D6" fontSize="11px" fontWeight="bold" style={{ pointerEvents: 'none' }}>📍 Pasillo / Acopio Libre en Suelo General</text>
-                </svg>
-              )}
-
-              {selectedWarehouse === 'D3' && (
-                <svg viewBox="0 0 800 450" width="100%" height="100%" style={{ maxHeight: '420px' }}>
-                  <rect x="0" y="0" width="800" height="450" fill="#f8fafc" rx="8" />
-                  <text x="30" y="35" fill="var(--text-primary)" fontSize="14px" fontWeight="bold">🔄 DEPÓSITO 3 - RETORNABLES Y LOGÍSTICA INVERSA</text>
-
-                  {/* Pilas de Pallets Vacíos */}
-                  {(() => {
-                    const active = selectedMapLocation === 'D3-PALLETS';
-                    return (
-                      <g onClick={() => setSelectedMapLocation(active ? '' : 'D3-PALLETS')} style={{ cursor: 'pointer' }}>
-                        <rect x="50" y="70" width="330" height="260" fill={active ? 'rgba(255, 45, 85, 0.18)' : '#ffffff'} stroke="#FF2D55" strokeWidth={active ? 2.5 : 1.5} rx="8" />
-                        <text x="70" y="110" fill="#e11d48" fontSize="14px" fontWeight="bold">🪵 Pilas de Pallets Madera Vacíos</text>
-                        <text x="70" y="135" fill="#f43f5e" fontSize="11px">Stock de pallets limpios para carga de camiones</text>
-                        {/* Ilustrar pallets apilados */}
-                        <line x1="70" y1="180" x2="350" y2="180" stroke="#cbd5e1" strokeWidth="6" />
-                        <line x1="70" y1="210" x2="350" y2="210" stroke="#cbd5e1" strokeWidth="6" />
-                        <line x1="70" y1="240" x2="350" y2="240" stroke="#cbd5e1" strokeWidth="6" />
-                        <line x1="70" y1="270" x2="350" y2="270" stroke="#cbd5e1" strokeWidth="6" />
-                      </g>
-                    );
-                  })()}
-
-                  {/* Pilas de Cajones Vacíos */}
-                  {(() => {
-                    const active = selectedMapLocation === 'D3-CAJONES';
-                    return (
-                      <g onClick={() => setSelectedMapLocation(active ? '' : 'D3-CAJONES')} style={{ cursor: 'pointer' }}>
-                        <rect x="420" y="70" width="330" height="260" fill={active ? 'rgba(255, 45, 85, 0.18)' : '#ffffff'} stroke="#FF2D55" strokeWidth={active ? 2.5 : 1.5} rx="8" />
-                        <text x="440" y="110" fill="#e11d48" fontSize="14px" fontWeight="bold">🍺 Cajones y Envases de Vidrio Retornables</text>
-                        <text x="440" y="135" fill="#f43f5e" fontSize="11px">Cajones vacíos listos para devolución a fábrica</text>
-                        {/* Ilustrar cajones */}
-                        <rect x="450" y="180" width="60" height="40" fill="#cbd5e1" rx="4" />
-                        <rect x="520" y="180" width="60" height="40" fill="#cbd5e1" rx="4" />
-                        <rect x="590" y="180" width="60" height="40" fill="#cbd5e1" rx="4" />
-                        <rect x="660" y="180" width="60" height="40" fill="#cbd5e1" rx="4" />
-                        <rect x="450" y="240" width="60" height="40" fill="#cbd5e1" rx="4" />
-                        <rect x="520" y="240" width="60" height="40" fill="#cbd5e1" rx="4" />
-                        <rect x="590" y="240" width="60" height="40" fill="#cbd5e1" rx="4" />
-                        <rect x="660" y="240" width="60" height="40" fill="#cbd5e1" rx="4" />
-                      </g>
-                    );
-                  })()}
-
-                  {/* Zona General */}
-                  {(() => {
-                    const active = selectedMapLocation === 'D3-ENV';
-                    return (
-                      <rect x="50" y="360" width="700" height="50" fill={active ? 'rgba(255, 45, 85, 0.15)' : 'rgba(255, 45, 85, 0.02)'} stroke="#FF2D55" strokeWidth={active ? 2 : 1} style={{ cursor: 'pointer' }} onClick={() => setSelectedMapLocation(active ? '' : 'D3-ENV')} rx="4" />
-                    );
-                  })()}
-                  <text x="290" y="390" fill="#FF2D55" fontSize="12px" fontWeight="bold" style={{ pointerEvents: 'none' }}>🔄 Andén de Carga y Descarga de Envases</text>
-                </svg>
-              )}
+            {/* Selector de Depósitos y Pantalla Completa */}
+            <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
+              <button 
+                type="button"
+                className={`btn ${selectedWarehouse === 'ALL' ? 'btn-primary' : 'btn-secondary'}`}
+                style={{ fontSize: '0.8rem', padding: '6px 12px', borderRadius: '6px', fontWeight: 600 }}
+                onClick={() => { setSelectedWarehouse('ALL'); setSelectedSector('ALL'); }}
+              >
+                🌐 Planta Completa
+              </button>
+              <button 
+                type="button"
+                className={`btn ${selectedWarehouse === 'D1' ? 'btn-primary' : 'btn-secondary'}`}
+                style={{ fontSize: '0.8rem', padding: '6px 12px', borderRadius: '6px', fontWeight: 600 }}
+                onClick={() => { setSelectedWarehouse('D1'); setSelectedSector('ALL'); }}
+              >
+                🏢 Depósito 1
+              </button>
+              <button 
+                type="button"
+                className={`btn ${selectedWarehouse === 'D2' ? 'btn-primary' : 'btn-secondary'}`}
+                style={{ fontSize: '0.8rem', padding: '6px 12px', borderRadius: '6px', fontWeight: 600 }}
+                onClick={() => { setSelectedWarehouse('D2'); setSelectedSector('ALL'); }}
+              >
+                🏢 Depósito 2
+              </button>
+              <button 
+                type="button"
+                className={`btn ${selectedWarehouse === 'D3' ? 'btn-primary' : 'btn-secondary'}`}
+                style={{ fontSize: '0.8rem', padding: '6px 12px', borderRadius: '6px', fontWeight: 600 }}
+                onClick={() => { setSelectedWarehouse('D3'); setSelectedSector('ALL'); }}
+              >
+                🔄 Depósito 3
+              </button>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                style={{ fontSize: '0.8rem', padding: '6px 12px', borderRadius: '6px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}
+                onClick={() => setIsMapModalOpen(true)}
+              >
+                🖥️ Ampliar Pantalla Completa
+              </button>
             </div>
           </div>
-          
-          {/* Card de Información de la Zona */}
-          <div className="wms-info-card">
-            {(() => {
-              const loc = selectedMapLocation || 'ALL';
-              let zoneName = 'Todas las Ubicaciones';
-              let zoneDesc = 'Mostrando un resumen consolidado de todo el stock distribuido en los depósitos.';
-              let icon = '🌐';
-              let color = 'var(--text-primary)';
-              
-              if (loc !== 'ALL' && LOCATION_MAP[loc]) {
-                const info = LOCATION_MAP[loc];
-                zoneName = info.label;
-                zoneDesc = info.description;
-                icon = info.icon;
-                color = info.color;
-              }
 
-              // Calcular estadísticas de esta zona
-              let lotCount = 0;
-              let totalStock = 0;
-              const zoneProducts: any[] = [];
+          {/* Botones Interactivos para Seleccionar Cámaras Exactas */}
+          <div style={{ padding: '10px 16px', backgroundColor: '#ffffff', border: '1px solid var(--border-color)', borderRadius: '8px', display: 'flex', gap: '8px', fontSize: '0.78rem', flexWrap: 'wrap', alignItems: 'center' }}>
+            <span style={{ fontWeight: 700, color: 'var(--text-primary)', marginRight: '4px' }}>Seleccionar Cámara / Sector:</span>
+            
+            <button
+              type="button"
+              className={`btn btn-sm ${selectedSector === 'CAMARA_2' ? 'btn-primary' : 'btn-secondary'}`}
+              style={{ backgroundColor: selectedSector === 'CAMARA_2' ? '#0284c7' : '#e0f2fe', color: selectedSector === 'CAMARA_2' ? '#fff' : '#0369a1', border: '1.5px solid #0284c7', fontWeight: 600, fontSize: '0.78rem' }}
+              onClick={() => { setSelectedSector(selectedSector === 'CAMARA_2' ? 'ALL' : 'CAMARA_2'); setSelectedWarehouse('D1'); }}
+            >
+              ❄️ Cámara 2 Frío (Quesos - 8 Slots)
+            </button>
 
-              allProducts.forEach(prod => {
-                const activeLots = (prod.lots || []).filter((l: any) => {
-                  const isMatch = loc === 'ALL' || (loc === 'S/U' && (!l.location || l.location === 'S/U')) || l.location === loc;
-                  return isMatch && l.stock > 0;
-                });
-                
-                if (activeLots.length > 0) {
-                  lotCount += activeLots.length;
-                  const prodStock = activeLots.reduce((sum: number, l: any) => sum + l.stock, 0);
-                  totalStock += prodStock;
-                  zoneProducts.push({
-                    product: prod,
-                    lots: activeLots,
-                    stock: prodStock
-                  });
-                }
-              });
+            <button
+              type="button"
+              className={`btn btn-sm ${selectedSector === 'CAMARA_1' ? 'btn-primary' : 'btn-secondary'}`}
+              style={{ backgroundColor: selectedSector === 'CAMARA_1' ? '#0891b2' : '#ecfeff', color: selectedSector === 'CAMARA_1' ? '#fff' : '#0e7490', border: '1.5px solid #0891b2', fontWeight: 600, fontSize: '0.78rem' }}
+              onClick={() => { setSelectedSector(selectedSector === 'CAMARA_1' ? 'ALL' : 'CAMARA_1'); setSelectedWarehouse('D1'); }}
+            >
+              ❄️ Cámara 1 Frío (Lácteos - 4 Slots)
+            </button>
 
-              return (
-                <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-                  <div style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '12px', marginBottom: '16px' }}>
-                    <h4 style={{ margin: 0, color: color, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      {icon} {zoneName}
-                    </h4>
-                    <p style={{ margin: '4px 0 0 0', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{zoneDesc}</p>
-                  </div>
-                  
-                  {/* Resumen numérico */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '20px' }}>
-                    <div style={{ backgroundColor: 'var(--bg-secondary)', padding: '10px 14px', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
-                      <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', display: 'block', fontWeight: 600 }}>ARTÍCULOS ÚNICOS</span>
-                      <strong style={{ fontSize: '1.2rem' }}>{zoneProducts.length}</strong>
-                    </div>
-                    <div style={{ backgroundColor: 'var(--bg-secondary)', padding: '10px 14px', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
-                      <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', display: 'block', fontWeight: 600 }}>STOCK TOTAL</span>
-                      <strong style={{ fontSize: '1.2rem' }}>{totalStock} u.</strong>
-                    </div>
-                  </div>
+            <button
+              type="button"
+              className={`btn btn-sm ${selectedSector === 'CAMARA_3' ? 'btn-primary' : 'btn-secondary'}`}
+              style={{ backgroundColor: selectedSector === 'CAMARA_3' ? '#7e22ce' : '#f3e8ff', color: selectedSector === 'CAMARA_3' ? '#fff' : '#6b21a8', border: '1.5px solid #7e22ce', fontWeight: 600, fontSize: '0.78rem' }}
+              onClick={() => { setSelectedSector(selectedSector === 'CAMARA_3' ? 'ALL' : 'CAMARA_3'); setSelectedWarehouse('D1'); }}
+            >
+              📦 Cámara 3 Seco (Conservas - 7 Slots)
+            </button>
 
-                  {/* Listado de artículos en la zona */}
-                  <h5 style={{ fontSize: '0.85rem', marginBottom: '8px' }}>Artículos en esta zona</h5>
-                  <div style={{ flex: 1, overflowY: 'auto', maxHeight: '240px', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-sm)' }}>
-                    {zoneProducts.length === 0 ? (
-                      <p style={{ padding: '20px', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.82rem', margin: 0 }}>
-                        Sin stock en esta ubicación.
-                      </p>
-                    ) : (
-                      <table style={{ width: '100%', fontSize: '0.78rem', borderCollapse: 'collapse' }}>
-                        <tbody>
-                          {zoneProducts.map((zp, idx) => (
-                            <tr key={idx} style={{ borderBottom: '1px solid var(--bg-secondary)' }}>
-                              <td style={{ padding: '8px 10px' }}>
-                                <strong>{zp.product.name}</strong>
-                                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-                                  Lotes: {zp.lots.map((l: any) => `${l.lotNumber} (${l.stock} u.)`).join(', ')}
-                                </div>
+            <button
+              type="button"
+              className={`btn btn-sm ${selectedSector === 'ALL' ? 'btn-secondary' : 'btn-outline'}`}
+              style={{ fontSize: '0.75rem', marginLeft: 'auto' }}
+              onClick={() => setSelectedSector('ALL')}
+            >
+              🔄 Limpiar Selección
+            </button>
+          </div>
+
+          {/* Vista Principal Ajustada 100% Responsiva Sin Cortar */}
+          <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start', width: '100%' }}>
+            
+            {/* Contenedor del Mapa con Ajuste Responsivo Fluido */}
+            <div style={{ flex: 1, backgroundColor: '#ffffff', border: '1px solid var(--border-color)', borderRadius: '10px', padding: '14px', overflowX: 'auto', maxWidth: '100%' }}>
+              <div style={{
+                display: 'block',
+                width: '100%',
+                backgroundColor: '#ffffff',
+                border: '1px solid #cbd5e1',
+                borderRadius: '8px',
+                padding: '10px',
+                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.02)'
+              }}>
+                <table style={{ borderCollapse: 'separate', borderSpacing: '1.5px', width: '100%', tableLayout: 'fixed', fontSize: '0.65rem', fontFamily: 'sans-serif' }}>
+                  <tbody>
+                    {(() => {
+                      const allRows = [[{"r": 1, "c": 1, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 1, "c": 2, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 1, "c": 3, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 1, "c": 4, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 1, "c": 5, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 1, "c": 6, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 1, "c": 7, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 1, "c": 8, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 1, "c": 9, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 1, "c": 10, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 1, "c": 11, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 1, "c": 12, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 1, "c": 13, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 1, "c": 14, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 1, "c": 15, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 1, "c": 16, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 1, "c": 17, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 1, "c": 18, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 1, "c": 19, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 1, "c": 20, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 1, "c": 21, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 1, "c": 22, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 1, "c": 23, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 1, "c": 24, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 1, "c": 25, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 1, "c": 26, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 1, "c": 27, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 1, "c": 28, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 1, "c": 29, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}], [{"r": 2, "c": 1, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 2, "c": 2, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 2, "c": 3, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 2, "c": 4, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 2, "c": 5, "val": "A-B-C", "fill": "#EAD1DC", "is_storage": true, "dep_id": "D1"}, {"r": 2, "c": 6, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 2, "c": 7, "val": "A-B-C", "fill": "#CFE2F3", "is_storage": true, "dep_id": "D1"}, {"r": 2, "c": 8, "val": "A", "fill": "#CFE2F3", "is_storage": true, "dep_id": "D1"}, {"r": 2, "c": 9, "val": "A", "fill": "#CFE2F3", "is_storage": true, "dep_id": "D1"}, {"r": 2, "c": 10, "val": "A", "fill": "#CFE2F3", "is_storage": true, "dep_id": "D1"}, {"r": 2, "c": 11, "val": "A", "fill": "#CFE2F3", "is_storage": true, "dep_id": "D1"}, {"r": 2, "c": 12, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 2, "c": 13, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 2, "c": 14, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 2, "c": 15, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 2, "c": 16, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 2, "c": 17, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 2, "c": 18, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 2, "c": 19, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 2, "c": 20, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 2, "c": 21, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 2, "c": 22, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 2, "c": 23, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 2, "c": 24, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 2, "c": 25, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 2, "c": 26, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 2, "c": 27, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 2, "c": 28, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 2, "c": 29, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}], [{"r": 3, "c": 1, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 3, "c": 2, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 3, "c": 3, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 3, "c": 4, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 3, "c": 5, "val": "A-B-C", "fill": "#EAD1DC", "is_storage": true, "dep_id": "D1"}, {"r": 3, "c": 6, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 3, "c": 7, "val": "A", "fill": "#CFE2F3", "is_storage": true, "dep_id": "D1"}, {"r": 3, "c": 8, "val": "A", "fill": "#CFE2F3", "is_storage": true, "dep_id": "D1"}, {"r": 3, "c": 9, "val": "A", "fill": "#CFE2F3", "is_storage": true, "dep_id": "D1"}, {"r": 3, "c": 10, "val": "A", "fill": "#CFE2F3", "is_storage": true, "dep_id": "D1"}, {"r": 3, "c": 11, "val": "A", "fill": "#CFE2F3", "is_storage": true, "dep_id": "D1"}, {"r": 3, "c": 12, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 3, "c": 13, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 3, "c": 14, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 3, "c": 15, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 3, "c": 16, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 3, "c": 17, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 3, "c": 18, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 3, "c": 19, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 3, "c": 20, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 3, "c": 21, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 3, "c": 22, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 3, "c": 23, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 3, "c": 24, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 3, "c": 25, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 3, "c": 26, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 3, "c": 27, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 3, "c": 28, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 3, "c": 29, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}], [{"r": 4, "c": 1, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 4, "c": 2, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 4, "c": 3, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 4, "c": 4, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 4, "c": 5, "val": "A-B-C", "fill": "#EAD1DC", "is_storage": true, "dep_id": "D1"}, {"r": 4, "c": 6, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 4, "c": 7, "val": "A-B-C", "fill": "#CFE2F3", "is_storage": true, "dep_id": "D1"}, {"r": 4, "c": 8, "val": "CAMARA 2 FRIO", "fill": "#CFE2F3", "is_storage": false, "dep_id": "D1"}, {"r": 4, "c": 9, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 4, "c": 10, "val": "A", "fill": "#CFE2F3", "is_storage": true, "dep_id": "D1"}, {"r": 4, "c": 11, "val": "A", "fill": "#CFE2F3", "is_storage": true, "dep_id": "D1"}, {"r": 4, "c": 12, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 4, "c": 13, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 4, "c": 14, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 4, "c": 15, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 4, "c": 16, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 4, "c": 17, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 4, "c": 18, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 4, "c": 19, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 4, "c": 20, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 4, "c": 21, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 4, "c": 22, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 4, "c": 23, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 4, "c": 24, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 4, "c": 25, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 4, "c": 26, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 4, "c": 27, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 4, "c": 28, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 4, "c": 29, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}], [{"r": 5, "c": 1, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 5, "c": 2, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 5, "c": 3, "val": "1.0", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 5, "c": 4, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 5, "c": 5, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 5, "c": 6, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 5, "c": 7, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 5, "c": 8, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 5, "c": 9, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 5, "c": 10, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 5, "c": 11, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 5, "c": 12, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 5, "c": 13, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 5, "c": 14, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 5, "c": 15, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 5, "c": 16, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 5, "c": 17, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 5, "c": 18, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 5, "c": 19, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 5, "c": 20, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 5, "c": 21, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 5, "c": 22, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 5, "c": 23, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 5, "c": 24, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 5, "c": 25, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 5, "c": 26, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 5, "c": 27, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 5, "c": 28, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 5, "c": 29, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}], [{"r": 6, "c": 1, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 6, "c": 2, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 6, "c": 3, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 6, "c": 4, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 6, "c": 5, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 6, "c": 6, "val": "A", "fill": "#CFE2F3", "is_storage": true, "dep_id": "D1"}, {"r": 6, "c": 7, "val": "CAMARA 1 FRIO", "fill": "#CFE2F3", "is_storage": false, "dep_id": "D1"}, {"r": 6, "c": 8, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 6, "c": 9, "val": "A", "fill": "#CFE2F3", "is_storage": true, "dep_id": "D1"}, {"r": 6, "c": 10, "val": "A-B-C", "fill": "#D9D2E9", "is_storage": true, "dep_id": "D1"}, {"r": 6, "c": 11, "val": "A", "fill": "#D9D2E9", "is_storage": true, "dep_id": "D1"}, {"r": 6, "c": 12, "val": "A", "fill": "#D9D2E9", "is_storage": true, "dep_id": "D1"}, {"r": 6, "c": 13, "val": "", "fill": "#D9D2E9", "is_storage": false, "dep_id": "D1"}, {"r": 6, "c": 14, "val": "A", "fill": "#D9D2E9", "is_storage": true, "dep_id": "D1"}, {"r": 6, "c": 15, "val": "A", "fill": "#E6B8AF", "is_storage": true, "dep_id": "D1"}, {"r": 6, "c": 16, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 6, "c": 17, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 6, "c": 18, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 6, "c": 19, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 6, "c": 20, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 6, "c": 21, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 6, "c": 22, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 6, "c": 23, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 6, "c": 24, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 6, "c": 25, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 6, "c": 26, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 6, "c": 27, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 6, "c": 28, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 6, "c": 29, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}], [{"r": 7, "c": 1, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 7, "c": 2, "val": "A", "fill": "#ffffff", "is_storage": true, "dep_id": "D1"}, {"r": 7, "c": 3, "val": "A", "fill": "#ffffff", "is_storage": true, "dep_id": "D1"}, {"r": 7, "c": 4, "val": "A", "fill": "#ffffff", "is_storage": true, "dep_id": "D1"}, {"r": 7, "c": 5, "val": "A", "fill": "#ffffff", "is_storage": true, "dep_id": "D1"}, {"r": 7, "c": 6, "val": "A", "fill": "#CFE2F3", "is_storage": true, "dep_id": "D1"}, {"r": 7, "c": 7, "val": "A", "fill": "#CFE2F3", "is_storage": true, "dep_id": "D1"}, {"r": 7, "c": 8, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 7, "c": 9, "val": "A", "fill": "#CFE2F3", "is_storage": true, "dep_id": "D1"}, {"r": 7, "c": 10, "val": "A-B-C", "fill": "#D9D2E9", "is_storage": true, "dep_id": "D1"}, {"r": 7, "c": 11, "val": "CAMARA 3 SECO", "fill": "#D9D2E9", "is_storage": false, "dep_id": "D1"}, {"r": 7, "c": 12, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 7, "c": 13, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 7, "c": 14, "val": "A", "fill": "#D9D2E9", "is_storage": true, "dep_id": "D1"}, {"r": 7, "c": 15, "val": "BAÑO", "fill": "#E6B8AF", "is_storage": false, "dep_id": "D1"}, {"r": 7, "c": 16, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 7, "c": 17, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 7, "c": 18, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 7, "c": 19, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 7, "c": 20, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 7, "c": 21, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 7, "c": 22, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 7, "c": 23, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 7, "c": 24, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 7, "c": 25, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 7, "c": 26, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 7, "c": 27, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 7, "c": 28, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 7, "c": 29, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}], [{"r": 8, "c": 1, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 8, "c": 2, "val": "A-B-C", "fill": "#EAD1DC", "is_storage": true, "dep_id": "D1"}, {"r": 8, "c": 3, "val": "A-B-C", "fill": "#EAD1DC", "is_storage": true, "dep_id": "D1"}, {"r": 8, "c": 4, "val": "A-B-C", "fill": "#EAD1DC", "is_storage": true, "dep_id": "D1"}, {"r": 8, "c": 5, "val": "A-B-C", "fill": "#EAD1DC", "is_storage": true, "dep_id": "D1"}, {"r": 8, "c": 6, "val": "A-B-C-D-E-F", "fill": "#CFE2F3", "is_storage": true, "dep_id": "D1"}, {"r": 8, "c": 7, "val": "A", "fill": "#CFE2F3", "is_storage": true, "dep_id": "D1"}, {"r": 8, "c": 8, "val": "A", "fill": "#CFE2F3", "is_storage": true, "dep_id": "D1"}, {"r": 8, "c": 9, "val": "A", "fill": "#CFE2F3", "is_storage": true, "dep_id": "D1"}, {"r": 8, "c": 10, "val": "A", "fill": "#D9D2E9", "is_storage": true, "dep_id": "D1"}, {"r": 8, "c": 11, "val": "A", "fill": "#D9D2E9", "is_storage": true, "dep_id": "D1"}, {"r": 8, "c": 12, "val": "A", "fill": "#D9D2E9", "is_storage": true, "dep_id": "D1"}, {"r": 8, "c": 13, "val": "A", "fill": "#D9D2E9", "is_storage": true, "dep_id": "D1"}, {"r": 8, "c": 14, "val": "A", "fill": "#D9D2E9", "is_storage": true, "dep_id": "D1"}, {"r": 8, "c": 15, "val": "", "fill": "#E6B8AF", "is_storage": false, "dep_id": "D1"}, {"r": 8, "c": 16, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 8, "c": 17, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 8, "c": 18, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 8, "c": 19, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 8, "c": 20, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 8, "c": 21, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 8, "c": 22, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 8, "c": 23, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 8, "c": 24, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 8, "c": 25, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 8, "c": 26, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 8, "c": 27, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 8, "c": 28, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 8, "c": 29, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}], [{"r": 9, "c": 1, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 9, "c": 2, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 9, "c": 3, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 9, "c": 4, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 9, "c": 5, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 9, "c": 6, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 9, "c": 7, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 9, "c": 8, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 9, "c": 9, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 9, "c": 10, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 9, "c": 11, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 9, "c": 12, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 9, "c": 13, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 9, "c": 14, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 9, "c": 15, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 9, "c": 16, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 9, "c": 17, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 9, "c": 18, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 9, "c": 19, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 9, "c": 20, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 9, "c": 21, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 9, "c": 22, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 9, "c": 23, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 9, "c": 24, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 9, "c": 25, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 9, "c": 26, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 9, "c": 27, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 9, "c": 28, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 9, "c": 29, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}], [{"r": 10, "c": 1, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 10, "c": 2, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 10, "c": 3, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 10, "c": 4, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 10, "c": 5, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 10, "c": 6, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 10, "c": 7, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 10, "c": 8, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 10, "c": 9, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 10, "c": 10, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 10, "c": 11, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 10, "c": 12, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 10, "c": 13, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 10, "c": 14, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 10, "c": 15, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 10, "c": 16, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 10, "c": 17, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 10, "c": 18, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 10, "c": 19, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 10, "c": 20, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 10, "c": 21, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 10, "c": 22, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 10, "c": 23, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 10, "c": 24, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 10, "c": 25, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 10, "c": 26, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 10, "c": 27, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 10, "c": 28, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}, {"r": 10, "c": 29, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D1"}], [{"r": 11, "c": 1, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 11, "c": 2, "val": "A-B-C", "fill": "#EAD1DC", "is_storage": true, "dep_id": "D2"}, {"r": 11, "c": 3, "val": "A-B-C", "fill": "#EAD1DC", "is_storage": true, "dep_id": "D2"}, {"r": 11, "c": 4, "val": "A-B-C", "fill": "#EAD1DC", "is_storage": true, "dep_id": "D2"}, {"r": 11, "c": 5, "val": "A-B-C", "fill": "#EAD1DC", "is_storage": true, "dep_id": "D2"}, {"r": 11, "c": 6, "val": "A-B-C", "fill": "#EAD1DC", "is_storage": true, "dep_id": "D2"}, {"r": 11, "c": 7, "val": "A-B-C", "fill": "#EAD1DC", "is_storage": true, "dep_id": "D2"}, {"r": 11, "c": 8, "val": "A-B-C", "fill": "#EAD1DC", "is_storage": true, "dep_id": "D2"}, {"r": 11, "c": 9, "val": "A-B-C", "fill": "#EAD1DC", "is_storage": true, "dep_id": "D2"}, {"r": 11, "c": 10, "val": "A-B-C", "fill": "#EAD1DC", "is_storage": true, "dep_id": "D2"}, {"r": 11, "c": 11, "val": "A-B-C", "fill": "#EAD1DC", "is_storage": true, "dep_id": "D2"}, {"r": 11, "c": 12, "val": "A-B-C", "fill": "#EAD1DC", "is_storage": true, "dep_id": "D2"}, {"r": 11, "c": 13, "val": "A-B-C", "fill": "#EAD1DC", "is_storage": true, "dep_id": "D2"}, {"r": 11, "c": 14, "val": "A-B-C", "fill": "#EAD1DC", "is_storage": true, "dep_id": "D2"}, {"r": 11, "c": 15, "val": "A-B-C", "fill": "#EAD1DC", "is_storage": true, "dep_id": "D2"}, {"r": 11, "c": 16, "val": "A-B-C", "fill": "#EAD1DC", "is_storage": true, "dep_id": "D2"}, {"r": 11, "c": 17, "val": "A-B-C", "fill": "#EAD1DC", "is_storage": true, "dep_id": "D2"}, {"r": 11, "c": 18, "val": "A-B-C", "fill": "#EAD1DC", "is_storage": true, "dep_id": "D2"}, {"r": 11, "c": 19, "val": "A-B-C", "fill": "#EAD1DC", "is_storage": true, "dep_id": "D2"}, {"r": 11, "c": 20, "val": "A-B-C", "fill": "#EAD1DC", "is_storage": true, "dep_id": "D2"}, {"r": 11, "c": 21, "val": "A-B-C", "fill": "#EAD1DC", "is_storage": true, "dep_id": "D2"}, {"r": 11, "c": 22, "val": "A-B-C", "fill": "#EAD1DC", "is_storage": true, "dep_id": "D2"}, {"r": 11, "c": 23, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D2"}, {"r": 11, "c": 24, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 11, "c": 25, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 11, "c": 26, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 11, "c": 27, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 11, "c": 28, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 11, "c": 29, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}], [{"r": 12, "c": 1, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 12, "c": 2, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 12, "c": 3, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 12, "c": 4, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 12, "c": 5, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 12, "c": 6, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 12, "c": 7, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 12, "c": 8, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 12, "c": 9, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 12, "c": 10, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 12, "c": 11, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 12, "c": 12, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 12, "c": 13, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 12, "c": 14, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 12, "c": 15, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 12, "c": 16, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 12, "c": 17, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 12, "c": 18, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 12, "c": 19, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 12, "c": 20, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 12, "c": 21, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 12, "c": 22, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 12, "c": 23, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 12, "c": 24, "val": "A-B-C", "fill": "#EAD1DC", "is_storage": true, "dep_id": "D2"}, {"r": 12, "c": 25, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 12, "c": 26, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 12, "c": 27, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 12, "c": 28, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 12, "c": 29, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}], [{"r": 13, "c": 1, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 13, "c": 2, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 13, "c": 3, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 13, "c": 4, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D2"}, {"r": 13, "c": 5, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D2"}, {"r": 13, "c": 6, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 13, "c": 7, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D2"}, {"r": 13, "c": 8, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D2"}, {"r": 13, "c": 9, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 13, "c": 10, "val": "A-B", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D2"}, {"r": 13, "c": 11, "val": "A-B", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D2"}, {"r": 13, "c": 12, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 13, "c": 13, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D2"}, {"r": 13, "c": 14, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D2"}, {"r": 13, "c": 15, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 13, "c": 16, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D2"}, {"r": 13, "c": 17, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D2"}, {"r": 13, "c": 18, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 13, "c": 19, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 13, "c": 20, "val": "A-B", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D2"}, {"r": 13, "c": 21, "val": "A-B", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D2"}, {"r": 13, "c": 22, "val": "A-B", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D2"}, {"r": 13, "c": 23, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 13, "c": 24, "val": "A-B-C", "fill": "#EAD1DC", "is_storage": true, "dep_id": "D2"}, {"r": 13, "c": 25, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 13, "c": 26, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 13, "c": 27, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 13, "c": 28, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 13, "c": 29, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}], [{"r": 14, "c": 1, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 14, "c": 2, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D2"}, {"r": 14, "c": 3, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 14, "c": 4, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D2"}, {"r": 14, "c": 5, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D2"}, {"r": 14, "c": 6, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 14, "c": 7, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D2"}, {"r": 14, "c": 8, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D2"}, {"r": 14, "c": 9, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 14, "c": 10, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D2"}, {"r": 14, "c": 11, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D2"}, {"r": 14, "c": 12, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 14, "c": 13, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D2"}, {"r": 14, "c": 14, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D2"}, {"r": 14, "c": 15, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 14, "c": 16, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D2"}, {"r": 14, "c": 17, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D2"}, {"r": 14, "c": 18, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 14, "c": 19, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 14, "c": 20, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D2"}, {"r": 14, "c": 21, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D2"}, {"r": 14, "c": 22, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D2"}, {"r": 14, "c": 23, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 14, "c": 24, "val": "A-B-C", "fill": "#EAD1DC", "is_storage": true, "dep_id": "D2"}, {"r": 14, "c": 25, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 14, "c": 26, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 14, "c": 27, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 14, "c": 28, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 14, "c": 29, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}], [{"r": 15, "c": 1, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 15, "c": 2, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D2"}, {"r": 15, "c": 3, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 15, "c": 4, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D2"}, {"r": 15, "c": 5, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D2"}, {"r": 15, "c": 6, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 15, "c": 7, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D2"}, {"r": 15, "c": 8, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D2"}, {"r": 15, "c": 9, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 15, "c": 10, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D2"}, {"r": 15, "c": 11, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D2"}, {"r": 15, "c": 12, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 15, "c": 13, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D2"}, {"r": 15, "c": 14, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D2"}, {"r": 15, "c": 15, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 15, "c": 16, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D2"}, {"r": 15, "c": 17, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D2"}, {"r": 15, "c": 18, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 15, "c": 19, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 15, "c": 20, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D2"}, {"r": 15, "c": 21, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D2"}, {"r": 15, "c": 22, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D2"}, {"r": 15, "c": 23, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 15, "c": 24, "val": "A-B-C", "fill": "#EAD1DC", "is_storage": true, "dep_id": "D2"}, {"r": 15, "c": 25, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 15, "c": 26, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 15, "c": 27, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 15, "c": 28, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 15, "c": 29, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}], [{"r": 16, "c": 1, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 16, "c": 2, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 16, "c": 3, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 16, "c": 4, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D2"}, {"r": 16, "c": 5, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D2"}, {"r": 16, "c": 6, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 16, "c": 7, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D2"}, {"r": 16, "c": 8, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D2"}, {"r": 16, "c": 9, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 16, "c": 10, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D2"}, {"r": 16, "c": 11, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D2"}, {"r": 16, "c": 12, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 16, "c": 13, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D2"}, {"r": 16, "c": 14, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D2"}, {"r": 16, "c": 15, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 16, "c": 16, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D2"}, {"r": 16, "c": 17, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D2"}, {"r": 16, "c": 18, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 16, "c": 19, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 16, "c": 20, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D2"}, {"r": 16, "c": 21, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D2"}, {"r": 16, "c": 22, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D2"}, {"r": 16, "c": 23, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 16, "c": 24, "val": "A-B-C", "fill": "#EAD1DC", "is_storage": true, "dep_id": "D2"}, {"r": 16, "c": 25, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 16, "c": 26, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 16, "c": 27, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 16, "c": 28, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 16, "c": 29, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}], [{"r": 17, "c": 1, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 17, "c": 2, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 17, "c": 3, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 17, "c": 4, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 17, "c": 5, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 17, "c": 6, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 17, "c": 7, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 17, "c": 8, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 17, "c": 9, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 17, "c": 10, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 17, "c": 11, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 17, "c": 12, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 17, "c": 13, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 17, "c": 14, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 17, "c": 15, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 17, "c": 16, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 17, "c": 17, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 17, "c": 18, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 17, "c": 19, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 17, "c": 20, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 17, "c": 21, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 17, "c": 22, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 17, "c": 23, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 17, "c": 24, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 17, "c": 25, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 17, "c": 26, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 17, "c": 27, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 17, "c": 28, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 17, "c": 29, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}], [{"r": 18, "c": 1, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 18, "c": 2, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 18, "c": 3, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 18, "c": 4, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 18, "c": 5, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 18, "c": 6, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 18, "c": 7, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 18, "c": 8, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 18, "c": 9, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 18, "c": 10, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 18, "c": 11, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 18, "c": 12, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 18, "c": 13, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 18, "c": 14, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 18, "c": 15, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 18, "c": 16, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 18, "c": 17, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 18, "c": 18, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 18, "c": 19, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 18, "c": 20, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 18, "c": 21, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 18, "c": 22, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D2"}, {"r": 18, "c": 23, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 18, "c": 24, "val": "A-B-C", "fill": "#EAD1DC", "is_storage": true, "dep_id": "D2"}, {"r": 18, "c": 25, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 18, "c": 26, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 18, "c": 27, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 18, "c": 28, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 18, "c": 29, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}], [{"r": 19, "c": 1, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 19, "c": 2, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 19, "c": 3, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 19, "c": 4, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 19, "c": 5, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 19, "c": 6, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 19, "c": 7, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 19, "c": 8, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 19, "c": 9, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 19, "c": 10, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D2"}, {"r": 19, "c": 11, "val": "A-B-C", "fill": "#F4CCCC", "is_storage": true, "dep_id": "D2"}, {"r": 19, "c": 12, "val": "A-B-C", "fill": "#F4CCCC", "is_storage": true, "dep_id": "D2"}, {"r": 19, "c": 13, "val": "A-B-C", "fill": "#F4CCCC", "is_storage": true, "dep_id": "D2"}, {"r": 19, "c": 14, "val": "A-B-C", "fill": "#F4CCCC", "is_storage": true, "dep_id": "D2"}, {"r": 19, "c": 15, "val": "A-B-C", "fill": "#F4CCCC", "is_storage": true, "dep_id": "D2"}, {"r": 19, "c": 16, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 19, "c": 17, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 19, "c": 18, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D2"}, {"r": 19, "c": 19, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D2"}, {"r": 19, "c": 20, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D2"}, {"r": 19, "c": 21, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 19, "c": 22, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D2"}, {"r": 19, "c": 23, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 19, "c": 24, "val": "A-B", "fill": "#EAD1DC", "is_storage": true, "dep_id": "D2"}, {"r": 19, "c": 25, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 19, "c": 26, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 19, "c": 27, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 19, "c": 28, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 19, "c": 29, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}], [{"r": 20, "c": 1, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 20, "c": 2, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 20, "c": 3, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 20, "c": 4, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 20, "c": 5, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 20, "c": 6, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 20, "c": 7, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 20, "c": 8, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 20, "c": 9, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 20, "c": 10, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D2"}, {"r": 20, "c": 11, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 20, "c": 12, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 20, "c": 13, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 20, "c": 14, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 20, "c": 15, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 20, "c": 16, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 20, "c": 17, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 20, "c": 18, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D2"}, {"r": 20, "c": 19, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D2"}, {"r": 20, "c": 20, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D2"}, {"r": 20, "c": 21, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 20, "c": 22, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D2"}, {"r": 20, "c": 23, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 20, "c": 24, "val": "A-B-C", "fill": "#EAD1DC", "is_storage": true, "dep_id": "D2"}, {"r": 20, "c": 25, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 20, "c": 26, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 20, "c": 27, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 20, "c": 28, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 20, "c": 29, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}], [{"r": 21, "c": 1, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 21, "c": 2, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 21, "c": 3, "val": "2.0", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 21, "c": 4, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 21, "c": 5, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 21, "c": 6, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 21, "c": 7, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 21, "c": 8, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 21, "c": 9, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 21, "c": 10, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D2"}, {"r": 21, "c": 11, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D2"}, {"r": 21, "c": 12, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D2"}, {"r": 21, "c": 13, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D2"}, {"r": 21, "c": 14, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D2"}, {"r": 21, "c": 15, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D2"}, {"r": 21, "c": 16, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D2"}, {"r": 21, "c": 17, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 21, "c": 18, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D2"}, {"r": 21, "c": 19, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D2"}, {"r": 21, "c": 20, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D2"}, {"r": 21, "c": 21, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 21, "c": 22, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D2"}, {"r": 21, "c": 23, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 21, "c": 24, "val": "A-B-C", "fill": "#EAD1DC", "is_storage": true, "dep_id": "D2"}, {"r": 21, "c": 25, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 21, "c": 26, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 21, "c": 27, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 21, "c": 28, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 21, "c": 29, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}], [{"r": 22, "c": 1, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 22, "c": 2, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 22, "c": 3, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 22, "c": 4, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 22, "c": 5, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 22, "c": 6, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 22, "c": 7, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 22, "c": 8, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 22, "c": 9, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 22, "c": 10, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 22, "c": 11, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 22, "c": 12, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 22, "c": 13, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 22, "c": 14, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 22, "c": 15, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 22, "c": 16, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 22, "c": 17, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 22, "c": 18, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 22, "c": 19, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 22, "c": 20, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 22, "c": 21, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 22, "c": 22, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 22, "c": 23, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 22, "c": 24, "val": "A-B-C", "fill": "#EAD1DC", "is_storage": true, "dep_id": "D2"}, {"r": 22, "c": 25, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 22, "c": 26, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 22, "c": 27, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 22, "c": 28, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 22, "c": 29, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}], [{"r": 23, "c": 1, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 23, "c": 2, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 23, "c": 3, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 23, "c": 4, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 23, "c": 5, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 23, "c": 6, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 23, "c": 7, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 23, "c": 8, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 23, "c": 9, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 23, "c": 10, "val": "A-B-C", "fill": "#EAD1DC", "is_storage": true, "dep_id": "D2"}, {"r": 23, "c": 11, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 23, "c": 12, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D2"}, {"r": 23, "c": 13, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D2"}, {"r": 23, "c": 14, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D2"}, {"r": 23, "c": 15, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D2"}, {"r": 23, "c": 16, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D2"}, {"r": 23, "c": 17, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 23, "c": 18, "val": "A-B-C", "fill": "#EAD1DC", "is_storage": true, "dep_id": "D2"}, {"r": 23, "c": 19, "val": "A-B-C", "fill": "#EAD1DC", "is_storage": true, "dep_id": "D2"}, {"r": 23, "c": 20, "val": "A-B-C", "fill": "#EAD1DC", "is_storage": true, "dep_id": "D2"}, {"r": 23, "c": 21, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 23, "c": 22, "val": "A-B-C", "fill": "#EAD1DC", "is_storage": true, "dep_id": "D2"}, {"r": 23, "c": 23, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 23, "c": 24, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 23, "c": 25, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 23, "c": 26, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 23, "c": 27, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 23, "c": 28, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 23, "c": 29, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}], [{"r": 24, "c": 1, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 24, "c": 2, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 24, "c": 3, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 24, "c": 4, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 24, "c": 5, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 24, "c": 6, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 24, "c": 7, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 24, "c": 8, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 24, "c": 9, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 24, "c": 10, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 24, "c": 11, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 24, "c": 12, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 24, "c": 13, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 24, "c": 14, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 24, "c": 15, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 24, "c": 16, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 24, "c": 17, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 24, "c": 18, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 24, "c": 19, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 24, "c": 20, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 24, "c": 21, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 24, "c": 22, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 24, "c": 23, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 24, "c": 24, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 24, "c": 25, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 24, "c": 26, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 24, "c": 27, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 24, "c": 28, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}, {"r": 24, "c": 29, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D2"}], [{"r": 25, "c": 1, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 25, "c": 2, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D3"}, {"r": 25, "c": 3, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D3"}, {"r": 25, "c": 4, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D3"}, {"r": 25, "c": 5, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 25, "c": 6, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 25, "c": 7, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 25, "c": 8, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 25, "c": 9, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 25, "c": 10, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 25, "c": 11, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 25, "c": 12, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 25, "c": 13, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 25, "c": 14, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 25, "c": 15, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 25, "c": 16, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 25, "c": 17, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 25, "c": 18, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 25, "c": 19, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 25, "c": 20, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 25, "c": 21, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 25, "c": 22, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 25, "c": 23, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 25, "c": 24, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 25, "c": 25, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 25, "c": 26, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 25, "c": 27, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 25, "c": 28, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 25, "c": 29, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}], [{"r": 26, "c": 1, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 26, "c": 2, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 26, "c": 3, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 26, "c": 4, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 26, "c": 5, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 26, "c": 6, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 26, "c": 7, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 26, "c": 8, "val": "3.0", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 26, "c": 9, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 26, "c": 10, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 26, "c": 11, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 26, "c": 12, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 26, "c": 13, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 26, "c": 14, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 26, "c": 15, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 26, "c": 16, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 26, "c": 17, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 26, "c": 18, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 26, "c": 19, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 26, "c": 20, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 26, "c": 21, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 26, "c": 22, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 26, "c": 23, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 26, "c": 24, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 26, "c": 25, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 26, "c": 26, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 26, "c": 27, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 26, "c": 28, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 26, "c": 29, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}], [{"r": 27, "c": 1, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 27, "c": 2, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D3"}, {"r": 27, "c": 3, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D3"}, {"r": 27, "c": 4, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D3"}, {"r": 27, "c": 5, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D3"}, {"r": 27, "c": 6, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D3"}, {"r": 27, "c": 7, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 27, "c": 8, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 27, "c": 9, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 27, "c": 10, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 27, "c": 11, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 27, "c": 12, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 27, "c": 13, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 27, "c": 14, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 27, "c": 15, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 27, "c": 16, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 27, "c": 17, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 27, "c": 18, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 27, "c": 19, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 27, "c": 20, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 27, "c": 21, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 27, "c": 22, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 27, "c": 23, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 27, "c": 24, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 27, "c": 25, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 27, "c": 26, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 27, "c": 27, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 27, "c": 28, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 27, "c": 29, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}], [{"r": 28, "c": 1, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 28, "c": 2, "val": "A-B-C", "fill": "#EAD1DC", "is_storage": true, "dep_id": "D3"}, {"r": 28, "c": 3, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D3"}, {"r": 28, "c": 4, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D3"}, {"r": 28, "c": 5, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D3"}, {"r": 28, "c": 6, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D3"}, {"r": 28, "c": 7, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 28, "c": 8, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 28, "c": 9, "val": "A-B-C", "fill": "#EAD1DC", "is_storage": true, "dep_id": "D3"}, {"r": 28, "c": 10, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 28, "c": 11, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 28, "c": 12, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 28, "c": 13, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 28, "c": 14, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 28, "c": 15, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 28, "c": 16, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 28, "c": 17, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 28, "c": 18, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 28, "c": 19, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 28, "c": 20, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 28, "c": 21, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 28, "c": 22, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 28, "c": 23, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 28, "c": 24, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 28, "c": 25, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 28, "c": 26, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 28, "c": 27, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 28, "c": 28, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 28, "c": 29, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}], [{"r": 29, "c": 1, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 29, "c": 2, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 29, "c": 3, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 29, "c": 4, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 29, "c": 5, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 29, "c": 6, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 29, "c": 7, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 29, "c": 8, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 29, "c": 9, "val": "A-B-C", "fill": "#EAD1DC", "is_storage": true, "dep_id": "D3"}, {"r": 29, "c": 10, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 29, "c": 11, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 29, "c": 12, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 29, "c": 13, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 29, "c": 14, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 29, "c": 15, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 29, "c": 16, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 29, "c": 17, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 29, "c": 18, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 29, "c": 19, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 29, "c": 20, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 29, "c": 21, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 29, "c": 22, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 29, "c": 23, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 29, "c": 24, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 29, "c": 25, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 29, "c": 26, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 29, "c": 27, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 29, "c": 28, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 29, "c": 29, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}], [{"r": 30, "c": 1, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 30, "c": 2, "val": "A-B-C", "fill": "#EAD1DC", "is_storage": true, "dep_id": "D3"}, {"r": 30, "c": 3, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D3"}, {"r": 30, "c": 4, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D3"}, {"r": 30, "c": 5, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D3"}, {"r": 30, "c": 6, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D3"}, {"r": 30, "c": 7, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 30, "c": 8, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 30, "c": 9, "val": "A-B-C", "fill": "#EAD1DC", "is_storage": true, "dep_id": "D3"}, {"r": 30, "c": 10, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 30, "c": 11, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 30, "c": 12, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 30, "c": 13, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 30, "c": 14, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 30, "c": 15, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 30, "c": 16, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 30, "c": 17, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 30, "c": 18, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 30, "c": 19, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 30, "c": 20, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 30, "c": 21, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 30, "c": 22, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 30, "c": 23, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 30, "c": 24, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 30, "c": 25, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 30, "c": 26, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 30, "c": 27, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 30, "c": 28, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 30, "c": 29, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}], [{"r": 31, "c": 1, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 31, "c": 2, "val": "A-B-C", "fill": "#EAD1DC", "is_storage": true, "dep_id": "D3"}, {"r": 31, "c": 3, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D3"}, {"r": 31, "c": 4, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D3"}, {"r": 31, "c": 5, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D3"}, {"r": 31, "c": 6, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D3"}, {"r": 31, "c": 7, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 31, "c": 8, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 31, "c": 9, "val": "A-B-C", "fill": "#EAD1DC", "is_storage": true, "dep_id": "D3"}, {"r": 31, "c": 10, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 31, "c": 11, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 31, "c": 12, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 31, "c": 13, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 31, "c": 14, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 31, "c": 15, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 31, "c": 16, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 31, "c": 17, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 31, "c": 18, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 31, "c": 19, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 31, "c": 20, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 31, "c": 21, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 31, "c": 22, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 31, "c": 23, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 31, "c": 24, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 31, "c": 25, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 31, "c": 26, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 31, "c": 27, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 31, "c": 28, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 31, "c": 29, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}], [{"r": 32, "c": 1, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 32, "c": 2, "val": "A-B-C", "fill": "#EAD1DC", "is_storage": true, "dep_id": "D3"}, {"r": 32, "c": 3, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D3"}, {"r": 32, "c": 4, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D3"}, {"r": 32, "c": 5, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D3"}, {"r": 32, "c": 6, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D3"}, {"r": 32, "c": 7, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 32, "c": 8, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 32, "c": 9, "val": "A-B-C", "fill": "#EAD1DC", "is_storage": true, "dep_id": "D3"}, {"r": 32, "c": 10, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 32, "c": 11, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 32, "c": 12, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 32, "c": 13, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 32, "c": 14, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 32, "c": 15, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 32, "c": 16, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 32, "c": 17, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 32, "c": 18, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 32, "c": 19, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 32, "c": 20, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 32, "c": 21, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 32, "c": 22, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 32, "c": 23, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 32, "c": 24, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 32, "c": 25, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 32, "c": 26, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 32, "c": 27, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 32, "c": 28, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 32, "c": 29, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}], [{"r": 33, "c": 1, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 33, "c": 2, "val": "A-B-C", "fill": "#EAD1DC", "is_storage": true, "dep_id": "D3"}, {"r": 33, "c": 3, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 33, "c": 4, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 33, "c": 5, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 33, "c": 6, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 33, "c": 7, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 33, "c": 8, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 33, "c": 9, "val": "A-B-C", "fill": "#EAD1DC", "is_storage": true, "dep_id": "D3"}, {"r": 33, "c": 10, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 33, "c": 11, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 33, "c": 12, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 33, "c": 13, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 33, "c": 14, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 33, "c": 15, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 33, "c": 16, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 33, "c": 17, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 33, "c": 18, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 33, "c": 19, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 33, "c": 20, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 33, "c": 21, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 33, "c": 22, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 33, "c": 23, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 33, "c": 24, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 33, "c": 25, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 33, "c": 26, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 33, "c": 27, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 33, "c": 28, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 33, "c": 29, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}], [{"r": 34, "c": 1, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 34, "c": 2, "val": "A-B-C", "fill": "#EAD1DC", "is_storage": true, "dep_id": "D3"}, {"r": 34, "c": 3, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D3"}, {"r": 34, "c": 4, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D3"}, {"r": 34, "c": 5, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D3"}, {"r": 34, "c": 6, "val": "A", "fill": "#FCE5CD", "is_storage": true, "dep_id": "D3"}, {"r": 34, "c": 7, "val": "A-B-C", "fill": "#EAD1DC", "is_storage": true, "dep_id": "D3"}, {"r": 34, "c": 8, "val": "A-B-C", "fill": "#EAD1DC", "is_storage": true, "dep_id": "D3"}, {"r": 34, "c": 9, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 34, "c": 10, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 34, "c": 11, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 34, "c": 12, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 34, "c": 13, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 34, "c": 14, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 34, "c": 15, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 34, "c": 16, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 34, "c": 17, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 34, "c": 18, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 34, "c": 19, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 34, "c": 20, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 34, "c": 21, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 34, "c": 22, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 34, "c": 23, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 34, "c": 24, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 34, "c": 25, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 34, "c": 26, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 34, "c": 27, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 34, "c": 28, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}, {"r": 34, "c": 29, "val": "", "fill": "#ffffff", "is_storage": false, "dep_id": "D3"}]];
+                      let filteredRows = allRows;
+
+                      if (selectedWarehouse === 'D1') {
+                        filteredRows = allRows.slice(0, 10);
+                      } else if (selectedWarehouse === 'D2') {
+                        filteredRows = allRows.slice(10, 24);
+                      } else if (selectedWarehouse === 'D3') {
+                        filteredRows = allRows.slice(24, 34);
+                      }
+
+                      return filteredRows.map((row: any[], rIdx: number) => (
+                        <tr key={rIdx}>
+                          {row.map((cell: any, cIdx: number) => {
+                            const isSlot = cell.is_storage;
+                            const cellText = cell.val;
+                            
+                            let bg = '#ffffff';
+                            let color = '#334155';
+                            let border = '1px solid #e2e8f0';
+
+                            if (cellText.includes('BAÑO')) {
+                              bg = '#fce7f3'; color = '#881337'; border = '1.5px solid #f43f5e';
+                            } else if (cellText.includes('CAMARA 2')) {
+                              bg = '#e0f2fe'; color = '#0369a1'; border = '2px solid #0284c7';
+                            } else if (cellText.includes('CAMARA 1')) {
+                              bg = '#ecfeff'; color = '#0e7490'; border = '2px solid #0891b2';
+                            } else if (cellText.includes('CAMARA 3')) {
+                              bg = '#f3e8ff'; color = '#6b21a8'; border = '2px solid #7e22ce';
+                            }
+
+                            if (isSlot) {
+                              if (cellText === 'A') { bg = '#ffffff'; color = '#334155'; border = '1px solid #94a3b8'; }
+                              else if (cellText === 'A-B') { bg = '#fef3c7'; color = '#92400e'; border = '1.5px solid #f59e0b'; }
+                              else if (cellText === 'A-B-C') { bg = '#dbeafe'; color = '#1e40af'; border = '1.5px solid #3b82f6'; }
+                              else if (cellText === 'A-B-C-D-E-F') { bg = '#dcfce7'; color = '#166534'; border = '2px solid #22c55e'; }
+                            }
+
+                            let hasStock = false;
+                            let foundSlotObj: any = null;
+                            if (isSlot) {
+                              foundSlotObj = [{"code": "D1-R02-C05", "dep_id": "D1", "row": 2, "col": 5, "nivel": "A-B-C", "fill": "#EAD1DC", "chamber": "GENERAL"}, {"code": "D1-R02-C07", "dep_id": "D1", "row": 2, "col": 7, "nivel": "A-B-C", "fill": "#CFE2F3", "chamber": "GENERAL"}, {"code": "D1-R02-C08", "dep_id": "D1", "row": 2, "col": 8, "nivel": "A", "fill": "#CFE2F3", "chamber": "CAMARA_2"}, {"code": "D1-R02-C09", "dep_id": "D1", "row": 2, "col": 9, "nivel": "A", "fill": "#CFE2F3", "chamber": "CAMARA_2"}, {"code": "D1-R02-C10", "dep_id": "D1", "row": 2, "col": 10, "nivel": "A", "fill": "#CFE2F3", "chamber": "CAMARA_2"}, {"code": "D1-R02-C11", "dep_id": "D1", "row": 2, "col": 11, "nivel": "A", "fill": "#CFE2F3", "chamber": "CAMARA_2"}, {"code": "D1-R03-C05", "dep_id": "D1", "row": 3, "col": 5, "nivel": "A-B-C", "fill": "#EAD1DC", "chamber": "GENERAL"}, {"code": "D1-R03-C07", "dep_id": "D1", "row": 3, "col": 7, "nivel": "A", "fill": "#CFE2F3", "chamber": "GENERAL"}, {"code": "D1-R03-C08", "dep_id": "D1", "row": 3, "col": 8, "nivel": "A", "fill": "#CFE2F3", "chamber": "CAMARA_2"}, {"code": "D1-R03-C09", "dep_id": "D1", "row": 3, "col": 9, "nivel": "A", "fill": "#CFE2F3", "chamber": "CAMARA_2"}, {"code": "D1-R03-C10", "dep_id": "D1", "row": 3, "col": 10, "nivel": "A", "fill": "#CFE2F3", "chamber": "CAMARA_2"}, {"code": "D1-R03-C11", "dep_id": "D1", "row": 3, "col": 11, "nivel": "A", "fill": "#CFE2F3", "chamber": "CAMARA_2"}, {"code": "D1-R04-C05", "dep_id": "D1", "row": 4, "col": 5, "nivel": "A-B-C", "fill": "#EAD1DC", "chamber": "CAMARA_1"}, {"code": "D1-R04-C07", "dep_id": "D1", "row": 4, "col": 7, "nivel": "A-B-C", "fill": "#CFE2F3", "chamber": "CAMARA_1"}, {"code": "D1-R04-C10", "dep_id": "D1", "row": 4, "col": 10, "nivel": "A", "fill": "#CFE2F3", "chamber": "CAMARA_3"}, {"code": "D1-R04-C11", "dep_id": "D1", "row": 4, "col": 11, "nivel": "A", "fill": "#CFE2F3", "chamber": "CAMARA_3"}, {"code": "D1-R06-C06", "dep_id": "D1", "row": 6, "col": 6, "nivel": "A", "fill": "#CFE2F3", "chamber": "CAMARA_1"}, {"code": "D1-R06-C09", "dep_id": "D1", "row": 6, "col": 9, "nivel": "A", "fill": "#CFE2F3", "chamber": "CAMARA_1"}, {"code": "D1-R06-C10", "dep_id": "D1", "row": 6, "col": 10, "nivel": "A-B-C", "fill": "#D9D2E9", "chamber": "CAMARA_3"}, {"code": "D1-R06-C11", "dep_id": "D1", "row": 6, "col": 11, "nivel": "A", "fill": "#D9D2E9", "chamber": "CAMARA_3"}, {"code": "D1-R06-C12", "dep_id": "D1", "row": 6, "col": 12, "nivel": "A", "fill": "#D9D2E9", "chamber": "CAMARA_3"}, {"code": "D1-R06-C14", "dep_id": "D1", "row": 6, "col": 14, "nivel": "A", "fill": "#D9D2E9", "chamber": "CAMARA_3"}, {"code": "D1-R06-C15", "dep_id": "D1", "row": 6, "col": 15, "nivel": "A", "fill": "#E6B8AF", "chamber": "CAMARA_3"}, {"code": "D1-R07-C02", "dep_id": "D1", "row": 7, "col": 2, "nivel": "A", "fill": "#000000", "chamber": "RACK_1"}, {"code": "D1-R07-C03", "dep_id": "D1", "row": 7, "col": 3, "nivel": "A", "fill": "#000000", "chamber": "RACK_1"}, {"code": "D1-R07-C04", "dep_id": "D1", "row": 7, "col": 4, "nivel": "A", "fill": "#000000", "chamber": "RACK_1"}, {"code": "D1-R07-C05", "dep_id": "D1", "row": 7, "col": 5, "nivel": "A", "fill": "#000000", "chamber": "GENERAL"}, {"code": "D1-R07-C06", "dep_id": "D1", "row": 7, "col": 6, "nivel": "A", "fill": "#CFE2F3", "chamber": "GENERAL"}, {"code": "D1-R07-C07", "dep_id": "D1", "row": 7, "col": 7, "nivel": "A", "fill": "#CFE2F3", "chamber": "GENERAL"}, {"code": "D1-R07-C09", "dep_id": "D1", "row": 7, "col": 9, "nivel": "A", "fill": "#CFE2F3", "chamber": "GENERAL"}, {"code": "D1-R07-C10", "dep_id": "D1", "row": 7, "col": 10, "nivel": "A-B-C", "fill": "#D9D2E9", "chamber": "GENERAL"}, {"code": "D1-R07-C14", "dep_id": "D1", "row": 7, "col": 14, "nivel": "A", "fill": "#D9D2E9", "chamber": "GENERAL"}, {"code": "D1-R08-C02", "dep_id": "D1", "row": 8, "col": 2, "nivel": "A-B-C", "fill": "#EAD1DC", "chamber": "RACK_1"}, {"code": "D1-R08-C03", "dep_id": "D1", "row": 8, "col": 3, "nivel": "A-B-C", "fill": "#EAD1DC", "chamber": "RACK_1"}, {"code": "D1-R08-C04", "dep_id": "D1", "row": 8, "col": 4, "nivel": "A-B-C", "fill": "#EAD1DC", "chamber": "RACK_1"}, {"code": "D1-R08-C05", "dep_id": "D1", "row": 8, "col": 5, "nivel": "A-B-C", "fill": "#EAD1DC", "chamber": "GENERAL"}, {"code": "D1-R08-C06", "dep_id": "D1", "row": 8, "col": 6, "nivel": "A-B-C-D-E-F", "fill": "#CFE2F3", "chamber": "GENERAL"}, {"code": "D1-R08-C07", "dep_id": "D1", "row": 8, "col": 7, "nivel": "A", "fill": "#CFE2F3", "chamber": "GENERAL"}, {"code": "D1-R08-C08", "dep_id": "D1", "row": 8, "col": 8, "nivel": "A", "fill": "#CFE2F3", "chamber": "GENERAL"}, {"code": "D1-R08-C09", "dep_id": "D1", "row": 8, "col": 9, "nivel": "A", "fill": "#CFE2F3", "chamber": "GENERAL"}, {"code": "D1-R08-C10", "dep_id": "D1", "row": 8, "col": 10, "nivel": "A", "fill": "#D9D2E9", "chamber": "GENERAL"}, {"code": "D1-R08-C11", "dep_id": "D1", "row": 8, "col": 11, "nivel": "A", "fill": "#D9D2E9", "chamber": "GENERAL"}, {"code": "D1-R08-C12", "dep_id": "D1", "row": 8, "col": 12, "nivel": "A", "fill": "#D9D2E9", "chamber": "GENERAL"}, {"code": "D1-R08-C13", "dep_id": "D1", "row": 8, "col": 13, "nivel": "A", "fill": "#D9D2E9", "chamber": "GENERAL"}, {"code": "D1-R08-C14", "dep_id": "D1", "row": 8, "col": 14, "nivel": "A", "fill": "#D9D2E9", "chamber": "GENERAL"}, {"code": "D2-R11-C02", "dep_id": "D2", "row": 11, "col": 2, "nivel": "A-B-C", "fill": "#EAD1DC", "chamber": "GENERAL"}, {"code": "D2-R11-C03", "dep_id": "D2", "row": 11, "col": 3, "nivel": "A-B-C", "fill": "#EAD1DC", "chamber": "GENERAL"}, {"code": "D2-R11-C04", "dep_id": "D2", "row": 11, "col": 4, "nivel": "A-B-C", "fill": "#EAD1DC", "chamber": "GENERAL"}, {"code": "D2-R11-C05", "dep_id": "D2", "row": 11, "col": 5, "nivel": "A-B-C", "fill": "#EAD1DC", "chamber": "GENERAL"}, {"code": "D2-R11-C06", "dep_id": "D2", "row": 11, "col": 6, "nivel": "A-B-C", "fill": "#EAD1DC", "chamber": "GENERAL"}, {"code": "D2-R11-C07", "dep_id": "D2", "row": 11, "col": 7, "nivel": "A-B-C", "fill": "#EAD1DC", "chamber": "GENERAL"}, {"code": "D2-R11-C08", "dep_id": "D2", "row": 11, "col": 8, "nivel": "A-B-C", "fill": "#EAD1DC", "chamber": "GENERAL"}, {"code": "D2-R11-C09", "dep_id": "D2", "row": 11, "col": 9, "nivel": "A-B-C", "fill": "#EAD1DC", "chamber": "GENERAL"}, {"code": "D2-R11-C10", "dep_id": "D2", "row": 11, "col": 10, "nivel": "A-B-C", "fill": "#EAD1DC", "chamber": "GENERAL"}, {"code": "D2-R11-C11", "dep_id": "D2", "row": 11, "col": 11, "nivel": "A-B-C", "fill": "#EAD1DC", "chamber": "GENERAL"}, {"code": "D2-R11-C12", "dep_id": "D2", "row": 11, "col": 12, "nivel": "A-B-C", "fill": "#EAD1DC", "chamber": "GENERAL"}, {"code": "D2-R11-C13", "dep_id": "D2", "row": 11, "col": 13, "nivel": "A-B-C", "fill": "#EAD1DC", "chamber": "GENERAL"}, {"code": "D2-R11-C14", "dep_id": "D2", "row": 11, "col": 14, "nivel": "A-B-C", "fill": "#EAD1DC", "chamber": "GENERAL"}, {"code": "D2-R11-C15", "dep_id": "D2", "row": 11, "col": 15, "nivel": "A-B-C", "fill": "#EAD1DC", "chamber": "GENERAL"}, {"code": "D2-R11-C16", "dep_id": "D2", "row": 11, "col": 16, "nivel": "A-B-C", "fill": "#EAD1DC", "chamber": "GENERAL"}, {"code": "D2-R11-C17", "dep_id": "D2", "row": 11, "col": 17, "nivel": "A-B-C", "fill": "#EAD1DC", "chamber": "GENERAL"}, {"code": "D2-R11-C18", "dep_id": "D2", "row": 11, "col": 18, "nivel": "A-B-C", "fill": "#EAD1DC", "chamber": "GENERAL"}, {"code": "D2-R11-C19", "dep_id": "D2", "row": 11, "col": 19, "nivel": "A-B-C", "fill": "#EAD1DC", "chamber": "GENERAL"}, {"code": "D2-R11-C20", "dep_id": "D2", "row": 11, "col": 20, "nivel": "A-B-C", "fill": "#EAD1DC", "chamber": "GENERAL"}, {"code": "D2-R11-C21", "dep_id": "D2", "row": 11, "col": 21, "nivel": "A-B-C", "fill": "#EAD1DC", "chamber": "GENERAL"}, {"code": "D2-R11-C22", "dep_id": "D2", "row": 11, "col": 22, "nivel": "A-B-C", "fill": "#EAD1DC", "chamber": "GENERAL"}, {"code": "D2-R11-C23", "dep_id": "D2", "row": 11, "col": 23, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D2-R12-C24", "dep_id": "D2", "row": 12, "col": 24, "nivel": "A-B-C", "fill": "#EAD1DC", "chamber": "GENERAL"}, {"code": "D2-R13-C04", "dep_id": "D2", "row": 13, "col": 4, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D2-R13-C05", "dep_id": "D2", "row": 13, "col": 5, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D2-R13-C07", "dep_id": "D2", "row": 13, "col": 7, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D2-R13-C08", "dep_id": "D2", "row": 13, "col": 8, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D2-R13-C10", "dep_id": "D2", "row": 13, "col": 10, "nivel": "A-B", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D2-R13-C11", "dep_id": "D2", "row": 13, "col": 11, "nivel": "A-B", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D2-R13-C13", "dep_id": "D2", "row": 13, "col": 13, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D2-R13-C14", "dep_id": "D2", "row": 13, "col": 14, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D2-R13-C16", "dep_id": "D2", "row": 13, "col": 16, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D2-R13-C17", "dep_id": "D2", "row": 13, "col": 17, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D2-R13-C20", "dep_id": "D2", "row": 13, "col": 20, "nivel": "A-B", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D2-R13-C21", "dep_id": "D2", "row": 13, "col": 21, "nivel": "A-B", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D2-R13-C22", "dep_id": "D2", "row": 13, "col": 22, "nivel": "A-B", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D2-R13-C24", "dep_id": "D2", "row": 13, "col": 24, "nivel": "A-B-C", "fill": "#EAD1DC", "chamber": "GENERAL"}, {"code": "D2-R14-C02", "dep_id": "D2", "row": 14, "col": 2, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D2-R14-C04", "dep_id": "D2", "row": 14, "col": 4, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D2-R14-C05", "dep_id": "D2", "row": 14, "col": 5, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D2-R14-C07", "dep_id": "D2", "row": 14, "col": 7, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D2-R14-C08", "dep_id": "D2", "row": 14, "col": 8, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D2-R14-C10", "dep_id": "D2", "row": 14, "col": 10, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D2-R14-C11", "dep_id": "D2", "row": 14, "col": 11, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D2-R14-C13", "dep_id": "D2", "row": 14, "col": 13, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D2-R14-C14", "dep_id": "D2", "row": 14, "col": 14, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D2-R14-C16", "dep_id": "D2", "row": 14, "col": 16, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D2-R14-C17", "dep_id": "D2", "row": 14, "col": 17, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D2-R14-C20", "dep_id": "D2", "row": 14, "col": 20, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D2-R14-C21", "dep_id": "D2", "row": 14, "col": 21, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D2-R14-C22", "dep_id": "D2", "row": 14, "col": 22, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D2-R14-C24", "dep_id": "D2", "row": 14, "col": 24, "nivel": "A-B-C", "fill": "#EAD1DC", "chamber": "GENERAL"}, {"code": "D2-R15-C02", "dep_id": "D2", "row": 15, "col": 2, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D2-R15-C04", "dep_id": "D2", "row": 15, "col": 4, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D2-R15-C05", "dep_id": "D2", "row": 15, "col": 5, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D2-R15-C07", "dep_id": "D2", "row": 15, "col": 7, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D2-R15-C08", "dep_id": "D2", "row": 15, "col": 8, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D2-R15-C10", "dep_id": "D2", "row": 15, "col": 10, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D2-R15-C11", "dep_id": "D2", "row": 15, "col": 11, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D2-R15-C13", "dep_id": "D2", "row": 15, "col": 13, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D2-R15-C14", "dep_id": "D2", "row": 15, "col": 14, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D2-R15-C16", "dep_id": "D2", "row": 15, "col": 16, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D2-R15-C17", "dep_id": "D2", "row": 15, "col": 17, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D2-R15-C20", "dep_id": "D2", "row": 15, "col": 20, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D2-R15-C21", "dep_id": "D2", "row": 15, "col": 21, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D2-R15-C22", "dep_id": "D2", "row": 15, "col": 22, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D2-R15-C24", "dep_id": "D2", "row": 15, "col": 24, "nivel": "A-B-C", "fill": "#EAD1DC", "chamber": "GENERAL"}, {"code": "D2-R16-C04", "dep_id": "D2", "row": 16, "col": 4, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D2-R16-C05", "dep_id": "D2", "row": 16, "col": 5, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D2-R16-C07", "dep_id": "D2", "row": 16, "col": 7, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D2-R16-C08", "dep_id": "D2", "row": 16, "col": 8, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D2-R16-C10", "dep_id": "D2", "row": 16, "col": 10, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D2-R16-C11", "dep_id": "D2", "row": 16, "col": 11, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D2-R16-C13", "dep_id": "D2", "row": 16, "col": 13, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D2-R16-C14", "dep_id": "D2", "row": 16, "col": 14, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D2-R16-C16", "dep_id": "D2", "row": 16, "col": 16, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D2-R16-C17", "dep_id": "D2", "row": 16, "col": 17, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D2-R16-C20", "dep_id": "D2", "row": 16, "col": 20, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D2-R16-C21", "dep_id": "D2", "row": 16, "col": 21, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D2-R16-C22", "dep_id": "D2", "row": 16, "col": 22, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D2-R16-C24", "dep_id": "D2", "row": 16, "col": 24, "nivel": "A-B-C", "fill": "#EAD1DC", "chamber": "GENERAL"}, {"code": "D2-R18-C22", "dep_id": "D2", "row": 18, "col": 22, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D2-R18-C24", "dep_id": "D2", "row": 18, "col": 24, "nivel": "A-B-C", "fill": "#EAD1DC", "chamber": "GENERAL"}, {"code": "D2-R19-C10", "dep_id": "D2", "row": 19, "col": 10, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D2-R19-C11", "dep_id": "D2", "row": 19, "col": 11, "nivel": "A-B-C", "fill": "#F4CCCC", "chamber": "GENERAL"}, {"code": "D2-R19-C12", "dep_id": "D2", "row": 19, "col": 12, "nivel": "A-B-C", "fill": "#F4CCCC", "chamber": "GENERAL"}, {"code": "D2-R19-C13", "dep_id": "D2", "row": 19, "col": 13, "nivel": "A-B-C", "fill": "#F4CCCC", "chamber": "GENERAL"}, {"code": "D2-R19-C14", "dep_id": "D2", "row": 19, "col": 14, "nivel": "A-B-C", "fill": "#F4CCCC", "chamber": "GENERAL"}, {"code": "D2-R19-C15", "dep_id": "D2", "row": 19, "col": 15, "nivel": "A-B-C", "fill": "#F4CCCC", "chamber": "GENERAL"}, {"code": "D2-R19-C18", "dep_id": "D2", "row": 19, "col": 18, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D2-R19-C19", "dep_id": "D2", "row": 19, "col": 19, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D2-R19-C20", "dep_id": "D2", "row": 19, "col": 20, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D2-R19-C22", "dep_id": "D2", "row": 19, "col": 22, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D2-R19-C24", "dep_id": "D2", "row": 19, "col": 24, "nivel": "A-B", "fill": "#EAD1DC", "chamber": "GENERAL"}, {"code": "D2-R20-C10", "dep_id": "D2", "row": 20, "col": 10, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D2-R20-C18", "dep_id": "D2", "row": 20, "col": 18, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D2-R20-C19", "dep_id": "D2", "row": 20, "col": 19, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D2-R20-C20", "dep_id": "D2", "row": 20, "col": 20, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D2-R20-C22", "dep_id": "D2", "row": 20, "col": 22, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D2-R20-C24", "dep_id": "D2", "row": 20, "col": 24, "nivel": "A-B-C", "fill": "#EAD1DC", "chamber": "GENERAL"}, {"code": "D2-R21-C10", "dep_id": "D2", "row": 21, "col": 10, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D2-R21-C11", "dep_id": "D2", "row": 21, "col": 11, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D2-R21-C12", "dep_id": "D2", "row": 21, "col": 12, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D2-R21-C13", "dep_id": "D2", "row": 21, "col": 13, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D2-R21-C14", "dep_id": "D2", "row": 21, "col": 14, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D2-R21-C15", "dep_id": "D2", "row": 21, "col": 15, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D2-R21-C16", "dep_id": "D2", "row": 21, "col": 16, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D2-R21-C18", "dep_id": "D2", "row": 21, "col": 18, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D2-R21-C19", "dep_id": "D2", "row": 21, "col": 19, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D2-R21-C20", "dep_id": "D2", "row": 21, "col": 20, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D2-R21-C22", "dep_id": "D2", "row": 21, "col": 22, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D2-R21-C24", "dep_id": "D2", "row": 21, "col": 24, "nivel": "A-B-C", "fill": "#EAD1DC", "chamber": "GENERAL"}, {"code": "D2-R22-C24", "dep_id": "D2", "row": 22, "col": 24, "nivel": "A-B-C", "fill": "#EAD1DC", "chamber": "GENERAL"}, {"code": "D2-R23-C10", "dep_id": "D2", "row": 23, "col": 10, "nivel": "A-B-C", "fill": "#EAD1DC", "chamber": "GENERAL"}, {"code": "D2-R23-C12", "dep_id": "D2", "row": 23, "col": 12, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D2-R23-C13", "dep_id": "D2", "row": 23, "col": 13, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D2-R23-C14", "dep_id": "D2", "row": 23, "col": 14, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D2-R23-C15", "dep_id": "D2", "row": 23, "col": 15, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D2-R23-C16", "dep_id": "D2", "row": 23, "col": 16, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D2-R23-C18", "dep_id": "D2", "row": 23, "col": 18, "nivel": "A-B-C", "fill": "#EAD1DC", "chamber": "GENERAL"}, {"code": "D2-R23-C19", "dep_id": "D2", "row": 23, "col": 19, "nivel": "A-B-C", "fill": "#EAD1DC", "chamber": "GENERAL"}, {"code": "D2-R23-C20", "dep_id": "D2", "row": 23, "col": 20, "nivel": "A-B-C", "fill": "#EAD1DC", "chamber": "GENERAL"}, {"code": "D2-R23-C22", "dep_id": "D2", "row": 23, "col": 22, "nivel": "A-B-C", "fill": "#EAD1DC", "chamber": "GENERAL"}, {"code": "D3-R25-C02", "dep_id": "D3", "row": 25, "col": 2, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D3-R25-C03", "dep_id": "D3", "row": 25, "col": 3, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D3-R25-C04", "dep_id": "D3", "row": 25, "col": 4, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D3-R27-C02", "dep_id": "D3", "row": 27, "col": 2, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D3-R27-C03", "dep_id": "D3", "row": 27, "col": 3, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D3-R27-C04", "dep_id": "D3", "row": 27, "col": 4, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D3-R27-C05", "dep_id": "D3", "row": 27, "col": 5, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D3-R27-C06", "dep_id": "D3", "row": 27, "col": 6, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D3-R28-C02", "dep_id": "D3", "row": 28, "col": 2, "nivel": "A-B-C", "fill": "#EAD1DC", "chamber": "GENERAL"}, {"code": "D3-R28-C03", "dep_id": "D3", "row": 28, "col": 3, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D3-R28-C04", "dep_id": "D3", "row": 28, "col": 4, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D3-R28-C05", "dep_id": "D3", "row": 28, "col": 5, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D3-R28-C06", "dep_id": "D3", "row": 28, "col": 6, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D3-R28-C09", "dep_id": "D3", "row": 28, "col": 9, "nivel": "A-B-C", "fill": "#EAD1DC", "chamber": "GENERAL"}, {"code": "D3-R29-C09", "dep_id": "D3", "row": 29, "col": 9, "nivel": "A-B-C", "fill": "#EAD1DC", "chamber": "GENERAL"}, {"code": "D3-R30-C02", "dep_id": "D3", "row": 30, "col": 2, "nivel": "A-B-C", "fill": "#EAD1DC", "chamber": "GENERAL"}, {"code": "D3-R30-C03", "dep_id": "D3", "row": 30, "col": 3, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D3-R30-C04", "dep_id": "D3", "row": 30, "col": 4, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D3-R30-C05", "dep_id": "D3", "row": 30, "col": 5, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D3-R30-C06", "dep_id": "D3", "row": 30, "col": 6, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D3-R30-C09", "dep_id": "D3", "row": 30, "col": 9, "nivel": "A-B-C", "fill": "#EAD1DC", "chamber": "GENERAL"}, {"code": "D3-R31-C02", "dep_id": "D3", "row": 31, "col": 2, "nivel": "A-B-C", "fill": "#EAD1DC", "chamber": "GENERAL"}, {"code": "D3-R31-C03", "dep_id": "D3", "row": 31, "col": 3, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D3-R31-C04", "dep_id": "D3", "row": 31, "col": 4, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D3-R31-C05", "dep_id": "D3", "row": 31, "col": 5, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D3-R31-C06", "dep_id": "D3", "row": 31, "col": 6, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D3-R31-C09", "dep_id": "D3", "row": 31, "col": 9, "nivel": "A-B-C", "fill": "#EAD1DC", "chamber": "GENERAL"}, {"code": "D3-R32-C02", "dep_id": "D3", "row": 32, "col": 2, "nivel": "A-B-C", "fill": "#EAD1DC", "chamber": "GENERAL"}, {"code": "D3-R32-C03", "dep_id": "D3", "row": 32, "col": 3, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D3-R32-C04", "dep_id": "D3", "row": 32, "col": 4, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D3-R32-C05", "dep_id": "D3", "row": 32, "col": 5, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D3-R32-C06", "dep_id": "D3", "row": 32, "col": 6, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D3-R32-C09", "dep_id": "D3", "row": 32, "col": 9, "nivel": "A-B-C", "fill": "#EAD1DC", "chamber": "GENERAL"}, {"code": "D3-R33-C02", "dep_id": "D3", "row": 33, "col": 2, "nivel": "A-B-C", "fill": "#EAD1DC", "chamber": "GENERAL"}, {"code": "D3-R33-C09", "dep_id": "D3", "row": 33, "col": 9, "nivel": "A-B-C", "fill": "#EAD1DC", "chamber": "GENERAL"}, {"code": "D3-R34-C02", "dep_id": "D3", "row": 34, "col": 2, "nivel": "A-B-C", "fill": "#EAD1DC", "chamber": "GENERAL"}, {"code": "D3-R34-C03", "dep_id": "D3", "row": 34, "col": 3, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D3-R34-C04", "dep_id": "D3", "row": 34, "col": 4, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D3-R34-C05", "dep_id": "D3", "row": 34, "col": 5, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D3-R34-C06", "dep_id": "D3", "row": 34, "col": 6, "nivel": "A", "fill": "#FCE5CD", "chamber": "GENERAL"}, {"code": "D3-R34-C07", "dep_id": "D3", "row": 34, "col": 7, "nivel": "A-B-C", "fill": "#EAD1DC", "chamber": "GENERAL"}, {"code": "D3-R34-C08", "dep_id": "D3", "row": 34, "col": 8, "nivel": "A-B-C", "fill": "#EAD1DC", "chamber": "GENERAL"}].find((s: any) => s.row === cell.r && s.col === cell.c);
+                              if (foundSlotObj) {
+                                allProducts.forEach(p => {
+                                  if (p.lots && p.lots.length > 0) {
+                                    p.lots.forEach((l: any) => {
+                                      if ((l.location === foundSlotObj.code || l.location.startsWith(foundSlotObj.code)) && l.stock > 0) hasStock = true;
+                                    });
+                                  } else if (p.defaultLocation === foundSlotObj.code && p.stock > 0) {
+                                    hasStock = true;
+                                  }
+                                });
+                              }
+                            }
+
+                            const isChamberSelected = selectedSector !== 'ALL' && foundSlotObj && foundSlotObj.chamber === selectedSector;
+                            const isSelected = selectedSlot && foundSlotObj && selectedSlot.code === foundSlotObj.code;
+
+                            return (
+                              <td
+                                key={cIdx}
+                                onClick={() => {
+                                  if (isSlot && foundSlotObj) {
+                                    setSelectedSlot(foundSlotObj);
+                                    setSelectedMapLocation(foundSlotObj.code);
+                                  }
+                                }}
+                                onDoubleClick={() => {
+                                  if (isSlot && foundSlotObj) {
+                                    setSelectedSlot(foundSlotObj);
+                                    setIsSimpleStockModalOpen(true);
+                                  }
+                                }}
+                                style={{
+                                  border: isSelected 
+                                    ? '2.5px solid #007AFF' 
+                                    : isChamberSelected 
+                                    ? '2.5px solid #0284c7' 
+                                    : hasStock 
+                                    ? '2px solid #22c55e' 
+                                    : border,
+                                  backgroundColor: isSelected 
+                                    ? '#e0f2fe' 
+                                    : isChamberSelected 
+                                    ? '#bae6fd' 
+                                    : hasStock 
+                                    ? '#dcfce7' 
+                                    : bg,
+                                  color: isSelected ? '#007AFF' : isChamberSelected ? '#0369a1' : hasStock ? '#15803d' : color,
+                                  fontWeight: isSlot || cellText.length > 2 ? 'bold' : 'normal',
+                                  padding: '2px 3px',
+                                  textAlign: 'center',
+                                  height: '28px',
+                                  cursor: isSlot ? 'pointer' : 'default',
+                                  userSelect: 'none',
+                                  whiteSpace: 'nowrap',
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  borderRadius: isSlot ? '3px' : '1px'
+                                }}
+                                title={isSlot && foundSlotObj ? `${foundSlotObj.code} (${foundSlotObj.deposito})` : cellText}
+                              >
+                                {isSlot ? (
+                                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '2px' }}>
+                                    <span>{cellText}</span>
+                                    {hasStock && <span style={{ color: '#22c55e', fontSize: '0.6rem' }}>🟢</span>}
+                                  </div>
+                                ) : (
+                                  cellText
+                                )}
                               </td>
-                              <td style={{ textAlign: 'right', fontWeight: 'bold', padding: '8px 10px' }}>
-                                {zp.stock} u.
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    )}
+                            );
+                          })}
+                        </tr>
+                      ));
+                    })()}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Panel Lateral de Inspección y Carga de Stock */}
+            <div style={{ width: '350px', backgroundColor: '#ffffff', border: '1px solid var(--border-color)', borderRadius: '10px', padding: '16px', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
+              <h4 style={{ margin: '0 0 10px 0', fontSize: '0.95rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-primary)' }}>
+                📍 Detalle de Selección
+              </h4>
+
+              {selectedSector !== 'ALL' && !selectedSlot && (
+                <div style={{ backgroundColor: '#e0f2fe', border: '1px solid #7dd3fc', padding: '12px', borderRadius: '8px', marginBottom: '12px' }}>
+                  <div style={{ fontWeight: 800, fontSize: '0.95rem', color: '#0369a1', marginBottom: '4px' }}>
+                    {selectedSector === 'CAMARA_2' && '❄️ Cámara 2 Frío (8 Slots)'}
+                    {selectedSector === 'CAMARA_1' && '❄️ Cámara 1 Frío (4 Slots)'}
+                    {selectedSector === 'CAMARA_3' && '📦 Cámara 3 Seco (7 Slots)'}
                   </div>
-                  
-                  {loc !== 'ALL' && (
-                    <button 
-                      className="btn btn-ghost" 
-                      style={{ marginTop: '16px', fontSize: '0.8rem', alignSelf: 'flex-start' }}
-                      onClick={() => setSelectedMapLocation('')}
-                    >
-                      Limpiar filtro del mapa
-                    </button>
-                  )}
+                  <div style={{ fontSize: '0.78rem', color: '#0284c7' }}>
+                    Los slots exactos de esta cámara están resaltados en celeste. Tocá cualquier slot para cargar productos.
+                  </div>
                 </div>
-              );
-            })()}
+              )}
+
+              {selectedSlot ? (
+                <div>
+                  <div style={{ backgroundColor: '#f1f5f9', padding: '12px', borderRadius: '8px', marginBottom: '14px', border: '1px solid #cbd5e1' }}>
+                    <div style={{ fontWeight: 800, fontSize: '1.02rem', color: 'var(--text-primary)', marginBottom: '4px' }}>
+                      {selectedSlot.code}
+                    </div>
+                    <div style={{ fontSize: '0.84rem', fontWeight: 700, color: '#2563eb', marginBottom: '2px' }}>
+                      📍 {selectedSlot.deposito}
+                    </div>
+                    <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                      Fila {selectedSlot.row}, Columna {selectedSlot.col} de depositomapa.xlsx. Nivel: <strong>{selectedSlot.nivel}</strong>.
+                    </div>
+                  </div>
+
+                  {(() => {
+                    const matchingProducts: { product: any; lot: any }[] = [];
+                    allProducts.forEach(p => {
+                      if (p.lots && p.lots.length > 0) {
+                        p.lots.forEach((l: any) => {
+                          if ((l.location === selectedSlot.code || l.location.startsWith(selectedSlot.code)) && l.stock > 0) {
+                            matchingProducts.push({ product: p, lot: l });
+                          }
+                        });
+                      } else if (p.defaultLocation === selectedSlot.code && p.stock > 0) {
+                        matchingProducts.push({ product: p, lot: { lotNumber: 'S/L', stock: p.stock } });
+                      }
+                    });
+
+                    if (matchingProducts.length === 0) {
+                      return (
+                        <div style={{ padding: '20px 10px', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                          <div style={{ fontSize: '2rem', marginBottom: '6px' }}>⚪</div>
+                          <div style={{ fontWeight: 600, fontSize: '0.88rem', color: 'var(--text-primary)' }}>Slot Vacío (Disponible)</div>
+                          <div style={{ fontSize: '0.78rem', marginTop: '4px' }}>
+                            Posición sin productos asignados.
+                          </div>
+                          <button
+                            type="button"
+                            className="btn btn-primary"
+                            style={{ width: '100%', marginTop: '14px', fontSize: '0.84rem', padding: '9px 14px', fontWeight: 700, borderRadius: '8px' }}
+                            onClick={() => setIsSimpleStockModalOpen(true)}
+                          >
+                            ➕ Cargar Mercadería en este Slot
+                          </button>
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)' }}>MERCADERÍA ASIGNADA</span>
+                          <span className="badge badge-success" style={{ fontSize: '0.7rem' }}>🟢 OCUPADO</span>
+                        </div>
+
+                        {matchingProducts.map(({ product, lot }, idx) => (
+                          <div key={idx} style={{ border: '1px solid var(--border-color)', borderRadius: '8px', padding: '10px', backgroundColor: '#fafafa' }}>
+                            <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--text-primary)', marginBottom: '4px' }}>
+                              [{product.sku}] {product.name}
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                              <div>Lote: <strong style={{ color: 'var(--text-primary)' }}>{lot.lotNumber}</strong></div>
+                              <div>Stock: <strong style={{ color: 'var(--color-primary)' }}>{lot.stock} un.</strong></div>
+                            </div>
+                          </div>
+                        ))}
+
+                        <button
+                          type="button"
+                          className="btn btn-primary"
+                          style={{ width: '100%', marginTop: '8px', fontSize: '0.84rem', padding: '9px 14px', fontWeight: 700, borderRadius: '8px' }}
+                          onClick={() => setIsSimpleStockModalOpen(true)}
+                        >
+                          ➕ Cargar / Añadir Más Stock
+                        </button>
+                      </div>
+                    );
+                  })()}
+                </div>
+              ) : (
+                <div style={{ padding: '35px 10px', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                  <div style={{ fontSize: '2rem', marginBottom: '8px' }}>👆</div>
+                  <div style={{ fontWeight: 600, fontSize: '0.86rem' }}>Seleccioná una cámara o slot</div>
+                  <div style={{ fontSize: '0.78rem', marginTop: '4px' }}>Tocá los botones de cámaras o cualquier celda A, A-B para inspeccionar.</div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -3445,6 +3326,63 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
           }
         }
       `}} />
+      {/* Modal / Ventana Ampliada del Plano Gráfico 95-100% Fiel a mapa deposito.xlsx */}
+      <ExcelSpatialMapModal
+        isOpen={isMapModalOpen}
+        onClose={() => setIsMapModalOpen(false)}
+        allProducts={allProducts}
+        onAssignStock={async (slotCode, productId, lotNumber, expDate, qty) => {
+          try {
+            const token = localStorage.getItem('token');
+            await fetch('http://localhost:3001/api/products/' + productId + '/stock', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + token
+              },
+              body: JSON.stringify({
+                quantityChange: qty,
+                reason: 'Carga inicial desde Plano 2D WMS',
+                lotNumber: lotNumber,
+                expirationDate: expDate,
+                location: slotCode
+              })
+            });
+            fetchData();
+          } catch (err) {
+            console.error('Error al asignar stock desde el plano:', err);
+          }
+        }}
+      />
+      {/* Modal Popup Simple y Efectivo para Cargar Stock */}
+      <SimpleStockLoadModal
+        isOpen={isSimpleStockModalOpen}
+        onClose={() => setIsSimpleStockModalOpen(false)}
+        slot={selectedSlot}
+        allProducts={allProducts}
+        onSaveStock={async (slotCode, productId, lotNumber, expDate, qty) => {
+          try {
+            const token = localStorage.getItem('token');
+            await fetch('http://localhost:3001/api/products/' + productId + '/stock', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + token
+              },
+              body: JSON.stringify({
+                quantityChange: qty,
+                reason: 'Carga desde Plano WMS',
+                lotNumber: lotNumber,
+                expirationDate: expDate,
+                location: slotCode
+              })
+            });
+            fetchData();
+          } catch (err) {
+            console.error('Error al guardar stock:', err);
+          }
+        }}
+      />
     </div>
   );
 }
