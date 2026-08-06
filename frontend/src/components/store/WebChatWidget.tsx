@@ -26,8 +26,7 @@ interface Message {
 
 export const WebChatWidget: React.FC<WebChatWidgetProps> = ({
   customerName = 'Visitante',
-  priceListType = 'LISTA_A',
-  onAddToCart
+  priceListType = 'LISTA_A'
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [inputText, setInputText] = useState('');
@@ -37,7 +36,7 @@ export const WebChatWidget: React.FC<WebChatWidgetProps> = ({
     {
       id: 'welcome',
       sender: 'bot',
-      text: `¡Hola ${customerName}! 👋 Soy **Santi**, el asistente virtual de **DV Distribuidora**.\n\nPuedo ayudarte a consultar precios, verificar stock, procesar fotos de pedidos anotados o comprobantes de transferencia. ¿En qué te puedo colaborar hoy?`,
+      text: `¡Hola ${customerName}! 👋 Soy Santi, el asistente virtual de DV Distribuidora.\n\nPuedo ayudarte a consultar precios, verificar stock, procesar fotos de pedidos anotados a mano o comprobantes de transferencia. ¿En qué te puedo colaborar hoy?`,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     }
   ]);
@@ -76,10 +75,9 @@ export const WebChatWidget: React.FC<WebChatWidgetProps> = ({
     const text = textToSend || inputText;
     if ((!text || !text.trim()) && !selectedImage) return;
 
-    const currentText = text.trim();
+    const currentText = (text || '').trim();
     const currentImg = selectedImage;
 
-    // Agregar mensaje del usuario a la vista
     const userMsg: Message = {
       id: `user_${Date.now()}`,
       sender: 'user',
@@ -94,7 +92,6 @@ export const WebChatWidget: React.FC<WebChatWidgetProps> = ({
     setLoading(true);
 
     try {
-      // Formatear historial reciente para el contexto de Gemini
       const historyContext = messages.slice(-6).map(m => ({
         role: m.sender === 'user' ? ('user' as const) : ('model' as const),
         content: m.text
@@ -144,114 +141,109 @@ export const WebChatWidget: React.FC<WebChatWidgetProps> = ({
   };
 
   return (
-    <div className="fixed bottom-6 right-6 z-50 font-sans">
-      {/* Botón flotante de activación */}
+    <div style={styles.widgetContainer}>
+      {/* Botón flotante launcher */}
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className="group relative flex items-center gap-3 bg-gradient-to-r from-red-600 to-red-700 text-white px-5 py-3.5 rounded-full shadow-2xl hover:scale-105 transition-all duration-300 border border-red-500/30 active:scale-95"
+          style={styles.launcherBtn}
         >
-          <span className="relative flex h-3 w-3">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
-          </span>
-          <Bot className="w-6 h-6 text-white group-hover:rotate-12 transition-transform duration-300" />
-          <span className="font-semibold text-sm tracking-wide">Asistente Virtual IA</span>
+          <span style={styles.pingDot} />
+          <Bot style={{ width: 22, height: 22, color: '#ffffff' }} />
+          <span style={styles.launcherText}>Asistente Virtual IA</span>
         </button>
       )}
 
-      {/* Ventana Modal del Chatbot */}
+      {/* Ventana flotante del Chatbot */}
       {isOpen && (
-        <div className="w-[380px] sm:w-[420px] h-[580px] bg-slate-900/95 backdrop-blur-xl border border-slate-800 rounded-3xl shadow-2xl flex flex-col overflow-hidden transition-all duration-300 animate-in fade-in slide-in-from-bottom-5">
+        <div style={styles.chatWindow}>
           {/* Header */}
-          <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 p-4 border-b border-slate-800/80 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="relative w-10 h-10 rounded-2xl bg-gradient-to-tr from-red-600 to-red-500 flex items-center justify-center shadow-lg shadow-red-950/50">
-                <Bot className="w-5 h-5 text-white" />
-                <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 border-2 border-slate-900 rounded-full"></span>
+          <div style={styles.header}>
+            <div style={styles.headerTitleContainer}>
+              <div style={styles.avatarBox}>
+                <Bot style={{ width: 20, height: 20, color: '#ffffff' }} />
+                <span style={styles.onlineBadge} />
               </div>
               <div>
-                <h3 className="font-bold text-slate-100 text-base flex items-center gap-1.5">
-                  Santi <Sparkles className="w-3.5 h-3.5 text-amber-400 inline" />
+                <h3 style={styles.headerTitle}>
+                  Santi <Sparkles style={{ width: 14, height: 14, color: '#fbbf24', display: 'inline' }} />
                 </h3>
-                <p className="text-xs text-slate-400 flex items-center gap-1">
-                  <span>Asistente DV</span> • <span className="text-emerald-400 font-medium">En línea</span>
+                <p style={styles.headerSubtitle}>
+                  Asistente DV • <span style={{ color: '#10b981', fontWeight: 600 }}>En línea</span>
                 </p>
               </div>
             </div>
-            <button
-              onClick={() => setIsOpen(false)}
-              className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
-            >
-              <X className="w-5 h-5" />
+            <button onClick={() => setIsOpen(false)} style={styles.closeBtn}>
+              <X style={{ width: 18, height: 18 }} />
             </button>
           </div>
 
           {/* Área de Mensajes */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4 text-sm scrollbar-thin scrollbar-thumb-slate-800">
+          <div style={styles.messagesArea}>
             {messages.map(msg => (
               <div
                 key={msg.id}
-                className={`flex gap-3 ${msg.sender === 'user' ? 'flex-row-reverse' : 'flex-row'}`}
+                style={{
+                  ...styles.messageRow,
+                  flexDirection: msg.sender === 'user' ? 'row-reverse' : 'row'
+                }}
               >
                 <div
-                  className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-xs font-bold ${
-                    msg.sender === 'user'
-                      ? 'bg-red-600 text-white'
-                      : 'bg-slate-800 text-slate-300 border border-slate-700'
-                  }`}
+                  style={{
+                    ...styles.avatarSmall,
+                    background: msg.sender === 'user' ? '#E30613' : '#1e293b',
+                    color: '#ffffff'
+                  }}
                 >
-                  {msg.sender === 'user' ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4 text-red-400" />}
+                  {msg.sender === 'user' ? <User style={{ width: 14, height: 14 }} /> : <Bot style={{ width: 14, height: 14, color: '#f87171' }} />}
                 </div>
 
-                <div className={`max-w-[82%] space-y-2`}>
+                <div style={{ maxWidth: '82%' }}>
                   <div
-                    className={`p-3.5 rounded-2xl ${
-                      msg.sender === 'user'
-                        ? 'bg-red-600 text-white rounded-tr-none shadow-md shadow-red-950/20'
-                        : 'bg-slate-800/90 text-slate-200 border border-slate-700/60 rounded-tl-none'
-                    }`}
+                    style={{
+                      ...styles.bubble,
+                      background: msg.sender === 'user' ? '#E30613' : '#1e293b',
+                      color: '#ffffff',
+                      borderRadius: msg.sender === 'user' ? '16px 16px 2px 16px' : '16px 16px 16px 2px'
+                    }}
                   >
                     {msg.imageUrl && (
                       <img
                         src={msg.imageUrl}
                         alt="Adjunto"
-                        className="w-full max-h-40 object-cover rounded-lg mb-2 border border-slate-700"
+                        style={styles.attachedImg}
                       />
                     )}
-                    <div className="whitespace-pre-line leading-relaxed text-xs sm:text-sm">
+                    <div style={{ whitespace: 'pre-line', lineHeight: '1.45', fontSize: '13px' }}>
                       {msg.text}
                     </div>
                   </div>
 
-                  {/* Si el mensaje del bot incluye un borrador de pedido detectado */}
                   {msg.items && msg.items.length > 0 && (
-                    <div className="bg-slate-800/60 border border-emerald-500/30 rounded-xl p-3 space-y-2">
-                      <div className="text-xs font-semibold text-emerald-400 flex items-center justify-between">
+                    <div style={styles.draftBox}>
+                      <div style={styles.draftHeader}>
                         <span>🛒 Borrador Detectado ({msg.items.length} ítems):</span>
                         <span>${msg.items.reduce((acc, i) => acc + i.subtotal, 0).toLocaleString('es-AR')}</span>
                       </div>
-                      <div className="space-y-1">
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                         {msg.items.map((item, idx) => (
-                          <div key={idx} className="flex justify-between text-xs text-slate-300">
+                          <div key={idx} style={styles.draftItemRow}>
                             <span>• {item.quantity}x {item.productName}</span>
-                            <span className="font-mono text-slate-400">${item.subtotal.toLocaleString('es-AR')}</span>
+                            <span style={{ fontFamily: 'monospace', color: '#94a3b8' }}>${item.subtotal.toLocaleString('es-AR')}</span>
                           </div>
                         ))}
                       </div>
                     </div>
                   )}
 
-                  <span className="text-[10px] text-slate-500 block px-1">
-                    {msg.timestamp}
-                  </span>
+                  <span style={styles.timestamp}>{msg.timestamp}</span>
                 </div>
               </div>
             ))}
 
             {loading && (
-              <div className="flex items-center gap-2 text-slate-400 text-xs p-2">
-                <Loader2 className="w-4 h-4 animate-spin text-red-500" />
+              <div style={styles.loadingRow}>
+                <Loader2 style={{ width: 16, height: 16, color: '#E30613', animation: 'spin 1s linear infinite' }} />
                 <span>Santi está consultando la base de datos...</span>
               </div>
             )}
@@ -259,59 +251,47 @@ export const WebChatWidget: React.FC<WebChatWidgetProps> = ({
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Botones de acción rápida */}
-          <div className="px-4 py-2 bg-slate-950/60 border-t border-slate-800/60 flex items-center gap-2 overflow-x-auto text-xs no-scrollbar">
-            <button
-              onClick={() => handleSendMessage('¿Cuáles son los productos en oferta?')}
-              className="px-3 py-1.5 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 whitespace-nowrap transition-colors"
-            >
+          {/* Botones de sugerencia rápida */}
+          <div style={styles.suggestionsContainer}>
+            <button onClick={() => handleSendMessage('¿Cuáles son los productos en oferta?')} style={styles.suggestionBtn}>
               🔥 Ver Ofertas
             </button>
-            <button
-              onClick={() => handleSendMessage('Quiero hacer un pedido')}
-              className="px-3 py-1.5 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 whitespace-nowrap transition-colors"
-            >
+            <button onClick={() => handleSendMessage('Quiero hacer un pedido')} style={styles.suggestionBtn}>
               🛒 Armar Pedido
             </button>
-            <button
-              onClick={() => handleSendMessage('Quiero hablar con un representante comercial')}
-              className="px-3 py-1.5 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 whitespace-nowrap transition-colors"
-            >
+            <button onClick={() => handleSendMessage('Quiero hablar con un representante comercial')} style={styles.suggestionBtn}>
               👤 Asesor Humano
             </button>
           </div>
 
-          {/* Previsualización de imagen a subir */}
+          {/* Preview de foto seleccionada */}
           {selectedImage && (
-            <div className="px-4 py-2 bg-slate-900 border-t border-slate-800 flex items-center justify-between">
-              <div className="flex items-center gap-2 text-xs text-slate-300">
-                <img src={selectedImage.preview} alt="Preview" className="w-8 h-8 rounded object-cover border border-slate-700" />
-                <span>Foto lista para enviar</span>
+            <div style={styles.previewBar}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: '#cbd5e1' }}>
+                <img src={selectedImage.preview} alt="Preview" style={{ width: 28, height: 28, borderRadius: 4, objectFit: 'cover' }} />
+                <span>Foto cargada para enviar</span>
               </div>
-              <button
-                onClick={() => setSelectedImage(null)}
-                className="text-slate-400 hover:text-white text-xs"
-              >
+              <button onClick={() => setSelectedImage(null)} style={{ background: 'none', border: 'none', color: '#94a3b8', fontSize: '12px', cursor: 'pointer' }}>
                 Cancelar
               </button>
             </div>
           )}
 
-          {/* Input de Mensaje */}
-          <div className="p-3 bg-slate-900 border-t border-slate-800 flex items-center gap-2">
+          {/* Bar de Input */}
+          <div style={styles.inputBar}>
             <input
               type="file"
               accept="image/*"
-              className="hidden"
+              style={{ display: 'none' }}
               ref={fileInputRef}
               onChange={handleImageSelect}
             />
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="p-2.5 text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded-xl transition-colors"
-              title="Adjuntar foto de pedido o comprobante"
+              style={styles.iconBtn}
+              title="Adjuntar foto o comprobante"
             >
-              <ImageIcon className="w-5 h-5" />
+              <ImageIcon style={{ width: 18, height: 18, color: '#94a3b8' }} />
             </button>
 
             <input
@@ -320,19 +300,258 @@ export const WebChatWidget: React.FC<WebChatWidgetProps> = ({
               onChange={e => setInputText(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleSendMessage()}
               placeholder="Escribe tu consulta o pedido..."
-              className="flex-1 bg-slate-800 text-slate-100 text-sm px-4 py-2.5 rounded-xl border border-slate-700/60 focus:outline-none focus:border-red-500 placeholder-slate-500"
+              style={styles.textInput}
             />
 
             <button
               onClick={() => handleSendMessage()}
               disabled={loading || (!inputText.trim() && !selectedImage)}
-              className="p-2.5 bg-red-600 text-white rounded-xl hover:bg-red-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-red-950/40"
+              style={{
+                ...styles.sendBtn,
+                opacity: loading || (!inputText.trim() && !selectedImage) ? 0.5 : 1
+              }}
             >
-              <Send className="w-5 h-5" />
+              <Send style={{ width: 16, height: 16, color: '#ffffff' }} />
             </button>
           </div>
         </div>
       )}
     </div>
   );
+};
+
+const styles: { [key: string]: React.CSSProperties } = {
+  widgetContainer: {
+    position: 'fixed',
+    bottom: '24px',
+    right: '24px',
+    zIndex: 99999,
+    fontFamily: "'Plus Jakarta Sans', Inter, system-ui, sans-serif"
+  },
+  launcherBtn: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px',
+    background: 'linear-gradient(135deg, #E30613 0%, #b91c1c 100%)',
+    color: '#ffffff',
+    padding: '12px 20px',
+    borderRadius: '30px',
+    boxShadow: '0 10px 25px rgba(227, 6, 19, 0.4)',
+    border: '1px solid rgba(255, 255, 255, 0.2)',
+    cursor: 'pointer',
+    fontWeight: 600,
+    fontSize: '14px',
+    transition: 'transform 0.2s ease'
+  },
+  pingDot: {
+    width: '10px',
+    height: '10px',
+    backgroundColor: '#10b981',
+    borderRadius: '50%',
+    display: 'inline-block',
+    boxShadow: '0 0 8px #10b981'
+  },
+  launcherText: {
+    color: '#ffffff',
+    fontWeight: 600,
+    fontSize: '13px'
+  },
+  chatWindow: {
+    width: '380px',
+    height: '560px',
+    background: '#0f172a',
+    borderRadius: '24px',
+    border: '1px solid #1e293b',
+    boxShadow: '0 20px 50px rgba(0, 0, 0, 0.5)',
+    display: 'flex',
+    flexDirection: 'column',
+    overflow: 'hidden'
+  },
+  header: {
+    background: '#1e293b',
+    padding: '14px 18px',
+    borderBottom: '1px solid #334155',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between'
+  },
+  headerTitleContainer: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px'
+  },
+  avatarBox: {
+    position: 'relative',
+    width: '38px',
+    height: '38px',
+    borderRadius: '12px',
+    background: 'linear-gradient(135deg, #E30613 0%, #991b1b 100%)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  onlineBadge: {
+    position: 'absolute',
+    bottom: '-2px',
+    right: '-2px',
+    width: '10px',
+    height: '10px',
+    backgroundColor: '#10b981',
+    border: '2px solid #0f172a',
+    borderRadius: '50%'
+  },
+  headerTitle: {
+    color: '#f8fafc',
+    fontSize: '15px',
+    fontWeight: 700,
+    margin: 0
+  },
+  headerSubtitle: {
+    color: '#94a3b8',
+    fontSize: '11px',
+    margin: 0
+  },
+  closeBtn: {
+    background: 'none',
+    border: 'none',
+    color: '#94a3b8',
+    cursor: 'pointer',
+    padding: '4px',
+    borderRadius: '50%',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  messagesArea: {
+    flex: 1,
+    padding: '16px',
+    overflowY: 'auto',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '14px'
+  },
+  messageRow: {
+    display: 'flex',
+    gap: '10px'
+  },
+  avatarSmall: {
+    width: '28px',
+    height: '28px',
+    borderRadius: '50%',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0
+  },
+  bubble: {
+    padding: '12px 14px',
+    fontSize: '13px',
+    border: '1px solid rgba(255, 255, 255, 0.06)'
+  },
+  attachedImg: {
+    width: '100%',
+    maxHeight: '160px',
+    objectFit: 'cover',
+    borderRadius: '8px',
+    marginBottom: '8px'
+  },
+  draftBox: {
+    background: 'rgba(16, 185, 129, 0.1)',
+    border: '1px solid rgba(16, 185, 129, 0.3)',
+    borderRadius: '12px',
+    padding: '10px 12px',
+    marginTop: '6px',
+    fontSize: '12px'
+  },
+  draftHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    fontWeight: 600,
+    color: '#34d399',
+    marginBottom: '6px'
+  },
+  draftItemRow: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    color: '#cbd5e1',
+    fontSize: '11px'
+  },
+  timestamp: {
+    fontSize: '10px',
+    color: '#64748b',
+    marginTop: '4px',
+    display: 'block'
+  },
+  loadingRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    color: '#94a3b8',
+    fontSize: '12px',
+    padding: '4px'
+  },
+  suggestionsContainer: {
+    padding: '8px 12px',
+    background: '#020617',
+    borderTop: '1px solid #1e293b',
+    display: 'flex',
+    gap: '8px',
+    overflowX: 'auto'
+  },
+  suggestionBtn: {
+    background: '#1e293b',
+    color: '#cbd5e1',
+    border: '1px solid #334155',
+    padding: '6px 12px',
+    borderRadius: '20px',
+    fontSize: '11px',
+    whiteSpace: 'nowrap',
+    cursor: 'pointer'
+  },
+  previewBar: {
+    padding: '8px 14px',
+    background: '#0f172a',
+    borderTop: '1px solid #1e293b',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between'
+  },
+  inputBar: {
+    padding: '12px 14px',
+    background: '#1e293b',
+    borderTop: '1px solid #334155',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px'
+  },
+  iconBtn: {
+    background: 'none',
+    border: 'none',
+    padding: '6px',
+    cursor: 'pointer',
+    borderRadius: '8px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  textInput: {
+    flex: 1,
+    background: '#0f172a',
+    border: '1px solid #334155',
+    borderRadius: '10px',
+    padding: '10px 14px',
+    color: '#f8fafc',
+    fontSize: '13px',
+    outline: 'none'
+  },
+  sendBtn: {
+    background: '#E30613',
+    border: 'none',
+    borderRadius: '10px',
+    padding: '10px 12px',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center'
+  }
 };
