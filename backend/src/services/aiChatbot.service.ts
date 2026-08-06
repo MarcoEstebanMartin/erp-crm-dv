@@ -70,8 +70,8 @@ export class AiChatbotService {
         listPriceB: true,
         listPriceC: true,
         unitsPerBox: true,
-        currentStock: true,
-        unit: true
+        stock: true,
+        isPesable: true
       },
       take: 300 // Límite razonable para ventana de contexto
     });
@@ -85,8 +85,8 @@ export class AiChatbotService {
       precioB: p.listPriceB || p.listPrice,
       precioC: p.listPriceC || p.listPrice,
       unidCaja: p.unitsPerBox || 1,
-      stock: p.currentStock,
-      unid: p.unit || 'UN'
+      stock: p.stock,
+      unid: p.isPesable ? 'KG' : 'UN'
     }));
   }
 

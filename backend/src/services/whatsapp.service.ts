@@ -211,7 +211,11 @@ export class WhatsAppService {
 
     // 🤖 MOTOR DE RESPUESTAS AUTOMÁTICAS 24/7
     if (conversation.autoReplyEnabled) {
-      await this.autoRespondIfEnabled(conversation, body);
+      try {
+        await this.autoRespondIfEnabled(conversation, body);
+      } catch (err: any) {
+        console.error('⚠️ Error en motor de auto-respuesta IA de WhatsApp:', err?.message || err);
+      }
     }
 
     return { message, conversation };
