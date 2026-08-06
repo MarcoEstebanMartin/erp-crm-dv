@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { X, Package, Check, Layers, Plus, Box, ShieldCheck, Tag } from 'lucide-react';
+import { X, Package, Check, Layers, Plus, Box, Trash2, MinusCircle } from 'lucide-react';
 import { api } from '../utils/api';
 
 interface RackLevelViewerModalProps {
@@ -103,6 +103,7 @@ export default function RackLevelViewerModal({
 
   const currentLevelProducts = getProductsInLevel(selectedSubLevel);
 
+  // Cargar stock nuevo
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedProductId || quantity <= 0) {
@@ -116,8 +117,6 @@ export default function RackLevelViewerModal({
     try {
       const finalCode = slot.nivel !== 'A' ? `${slot.code}-${selectedSubLevel}` : slot.code;
       
-      // Si no se especifica lote, generar un código de lote único vinculado a esta viga/posicion exacta
-      // para evitar que Prisma actualice la ubicacion de un lote "S/L" previo en otra posicion.
       let finalLotNumber = lotNumber.trim();
       if (!finalLotNumber) {
         finalLotNumber = `L-${finalCode}-${Date.now().toString().slice(-4)}`;
@@ -146,6 +145,54 @@ export default function RackLevelViewerModal({
     } catch (err: any) {
       console.error('Error cargando stock:', err);
       setErrorMsg(err.message || 'Ocurrió un error al registrar el movimiento.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Retirar / Eliminar stock de un lote específico
+  const handleRemoveStock = async (product: any, lot: any, removeAll: boolean) => {
+    let qtyToRemove = lot.stock;
+    if (!removeAll) {
+      const inputVal = window.prompt(`¿Cuántos bultos deseas retirar del lote "${lot.lotNumber}"? (Disponible: ${lot.stock} u.)`, '1');
+      if (!inputVal) return;
+      const numVal = parseInt(inputVal, 10);
+      if (isNaN(numVal) || numVal <= 0) {
+        alert('Por favor ingresá una cantidad válida.');
+        return;
+      }
+      if (numVal > lot.stock) {
+        alert(`La cantidad no puede superar el stock disponible (${lot.stock} u.).`);
+        return;
+      }
+      qtyToRemove = numVal;
+    } else {
+      if (!window.confirm(`¿Confirmás vaciar el lote "${lot.lotNumber}" de [${product.sku}] ${product.name}? Se retirarán ${lot.stock} unidades.`)) {
+        return;
+      }
+    }
+
+    setIsSubmitting(true);
+    setErrorMsg(null);
+
+    try {
+      await api.adjustStock(
+        product.id,
+        -qtyToRemove,
+        removeAll ? 'Eliminación completa de lote desde Estantería WMS' : 'Retiro parcial de stock desde Estantería WMS',
+        lot.lotNumber,
+        lot.expirationDate,
+        lot.location
+      );
+
+      await fetchFreshProducts();
+      await onRefresh();
+
+      setSuccessMsg(`¡Se retiraron ${qtyToRemove} u. del lote ${lot.lotNumber}!`);
+      setTimeout(() => setSuccessMsg(null), 1400);
+    } catch (err: any) {
+      console.error('Error al retirar stock:', err);
+      setErrorMsg(err.message || 'Ocurrió un error al retirar la mercadería.');
     } finally {
       setIsSubmitting(false);
     }
@@ -213,7 +260,7 @@ export default function RackLevelViewerModal({
           }}>
             
             <div style={{ width: '100%', marginBottom: '16px', fontSize: '0.78rem', color: '#94a3b8', fontWeight: 600, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span>💡 Seleccioná una viga para inspeccionar o añadir bultos</span>
+              <span>💡 Seleccioná una viga para inspeccionar, añadir o eliminar bultos</span>
               {loadingProducts && <span style={{ color: '#60a5fa' }}>(Actualizando stock...)</span>}
             </div>
 
@@ -278,7 +325,7 @@ export default function RackLevelViewerModal({
                       </span>
                     </div>
 
-                    {/* Lista de Mercadería Almacenada en la Viga */}
+                    {/* Lista de Mercadería Almacenada en la Viga con Botones de Eliminación */}
                     {hasProds ? (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '6px' }}>
                         {prodsInLvl.map(({ product, lot }, pIdx) => (
@@ -308,11 +355,33 @@ export default function RackLevelViewerModal({
                               </div>
                             </div>
 
-                            <div style={{ textAlign: 'right' }}>
-                              <span style={{ fontSize: '0.92rem', fontWeight: 900, color: '#34d399', display: 'block' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                              <span style={{ fontSize: '0.92rem', fontWeight: 900, color: '#34d399' }}>
                                 {lot.stock} un.
                               </span>
-                              <span style={{ fontSize: '0.68rem', color: '#64748b' }}>Stock Asignado</span>
+                              
+                              {/* Botones de Retiro y Eliminacion de Lote */}
+                              <div style={{ display: 'flex', gap: '4px' }}>
+                                <button
+                                  type="button"
+                                  title="Restar bultos"
+                                  className="btn btn-secondary btn-sm"
+                                  style={{ padding: '4px 6px', fontSize: '0.7rem', backgroundColor: '#1e293b', color: '#f59e0b', border: '1px solid #d97706', borderRadius: '4px' }}
+                                  onClick={(e) => { e.stopPropagation(); handleRemoveStock(product, lot, false); }}
+                                >
+                                  <MinusCircle size={14} />
+                                </button>
+
+                                <button
+                                  type="button"
+                                  title="Vaciar / Eliminar lote completo"
+                                  className="btn btn-danger btn-sm"
+                                  style={{ padding: '4px 6px', fontSize: '0.7rem', backgroundColor: '#881337', color: '#ffe4e6', border: '1px solid #e11d48', borderRadius: '4px' }}
+                                  onClick={(e) => { e.stopPropagation(); handleRemoveStock(product, lot, true); }}
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              </div>
                             </div>
                           </div>
                         ))}
@@ -342,7 +411,7 @@ export default function RackLevelViewerModal({
               </div>
               <div style={{ fontSize: '0.78rem', color: '#64748b', lineHeight: '1.4' }}>
                 {currentLevelProducts.length > 0
-                  ? `Esta viga contiene actualmente ${currentLevelProducts.length} lote(s) guardado(s). Podés ingresar bultos adicionales abajo.`
+                  ? `Esta viga contiene actualmente ${currentLevelProducts.length} lote(s) guardado(s). Podés ingresar bultos adicionales o usar los botones de basura/restar para modificar.`
                   : `La viga ${selectedSubLevel} está disponible. Seleccioná un producto del catálogo para ubicar la mercadería.`}
               </div>
             </div>

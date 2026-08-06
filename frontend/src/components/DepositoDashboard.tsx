@@ -4,7 +4,7 @@ import RackLevelViewerModal from './RackLevelViewerModal';
 import { api } from '../utils/api';
 import { OrderStatus } from '../utils/types';
 import type { Order, Product, ProductLot } from '../types';
-import { Play, Check, RefreshCw, Eye, Warehouse, ClipboardList, Calendar, ShoppingCart, Map, Printer } from 'lucide-react';
+import { Play, Check, RefreshCw, Eye, Warehouse, ClipboardList, Calendar, ShoppingCart, Map, Printer, Trash2, MinusCircle } from 'lucide-react';
 import { useConfirm } from '../context/ConfirmContext';
 
 interface DepositoDashboardProps {
@@ -2798,8 +2798,52 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
                             border: '1px solid var(--border-color)', borderRadius: '8px', padding: '12px',
                             backgroundColor: '#ffffff', boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)'
                           }}>
-                            <div style={{ fontWeight: 700, fontSize: '0.86rem', color: 'var(--text-primary)', marginBottom: '6px' }}>
-                              [{product.sku}] {product.name}
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px' }}>
+                              <div style={{ fontWeight: 700, fontSize: '0.86rem', color: 'var(--text-primary)' }}>
+                                [{product.sku}] {product.name}
+                              </div>
+                              <div style={{ display: 'flex', gap: '4px' }}>
+                                <button
+                                  type="button"
+                                  title="Restar bultos"
+                                  className="btn btn-secondary btn-sm"
+                                  style={{ padding: '3px 6px', fontSize: '0.7rem', color: '#d97706', border: '1px solid #f59e0b', backgroundColor: '#fffbeb' }}
+                                  onClick={async () => {
+                                    const inputVal = window.prompt(`¿Cuántos bultos deseas retirar del lote "${lot.lotNumber}"? (Disponible: ${lot.stock} u.)`, '1');
+                                    if (!inputVal) return;
+                                    const numVal = parseInt(inputVal, 10);
+                                    if (isNaN(numVal) || numVal <= 0 || numVal > lot.stock) {
+                                      alert('Cantidad inválida.');
+                                      return;
+                                    }
+                                    try {
+                                      await api.adjustStock(product.id, -numVal, 'Retiro parcial desde Panel WMS', lot.lotNumber, lot.expirationDate, lot.location);
+                                      fetchData();
+                                    } catch (err: any) {
+                                      alert(err.message || 'Error al retirar stock.');
+                                    }
+                                  }}
+                                >
+                                  <MinusCircle size={13} />
+                                </button>
+                                <button
+                                  type="button"
+                                  title="Vaciar / Eliminar lote"
+                                  className="btn btn-danger btn-sm"
+                                  style={{ padding: '3px 6px', fontSize: '0.7rem', color: '#e11d48', border: '1px solid #fda4af', backgroundColor: '#fff1f2' }}
+                                  onClick={async () => {
+                                    if (!window.confirm(`¿Vaciar totalmente el lote "${lot.lotNumber}" de ${product.name}? Se retirarán ${lot.stock} u.`)) return;
+                                    try {
+                                      await api.adjustStock(product.id, -lot.stock, 'Eliminación completa de lote desde Panel WMS', lot.lotNumber, lot.expirationDate, lot.location);
+                                      fetchData();
+                                    } catch (err: any) {
+                                      alert(err.message || 'Error al vaciar lote.');
+                                    }
+                                  }}
+                                >
+                                  <Trash2 size={13} />
+                                </button>
+                              </div>
                             </div>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
                               <div>Lote: <strong style={{ color: '#2563eb' }}>{lot.lotNumber}</strong></div>
