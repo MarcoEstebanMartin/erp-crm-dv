@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import prisma from '../utils/prisma';
 import { BillingType } from '@prisma/client';
+import { appCache } from '../utils/cache';
 
 /**
  * Obtiene todas las reglas de precios y configs de split.
@@ -60,6 +61,8 @@ export async function createDiscountRule(req: Request, res: Response): Promise<v
       }
     });
 
+    appCache.invalidateProductCatalog();
+
     res.status(201).json({
       status: 'success',
       data: { rule: newRule }
@@ -82,6 +85,8 @@ export async function deleteDiscountRule(req: Request, res: Response): Promise<v
     await prisma.discountRule.delete({
       where: { id: Number(id) }
     });
+
+    appCache.invalidateProductCatalog();
 
     res.status(200).json({
       status: 'success',

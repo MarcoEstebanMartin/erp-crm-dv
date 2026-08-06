@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import prisma from '../utils/prisma';
 import { Role, OrderStatus, BillingType, InvoiceType } from '@prisma/client';
 import jwt from 'jsonwebtoken';
+import { appCache } from '../utils/cache';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'seguridad-erp-distribuidora-2026-key-local-development';
 
@@ -247,6 +248,13 @@ export async function getStoreCatalog(req: Request, res: Response): Promise<void
   try {
     const { priceList = 'A', rubroId, search } = req.query;
     const requestedList = String(priceList).toUpperCase();
+    const cacheKey = `store_catalog_${requestedList}_${rubroId || 'all'}_${search || ''}`;
+
+    const cachedData = appCache.get<any>(cacheKey);
+    if (cachedData) {
+      res.status(200).json(cachedData);
+      return;
+    }
 
     const whereClause: any = {
       isActive: true
@@ -510,7 +518,7 @@ export async function getStoreCatalog(req: Request, res: Response): Promise<void
       }))
     ];
 
-    res.status(200).json({
+    const responsePayload = {
       status: 'success',
       data: {
         products: formattedProducts,
@@ -518,7 +526,10 @@ export async function getStoreCatalog(req: Request, res: Response): Promise<void
         commercialGroups: commercialCategories,
         rubros
       }
-    });
+    };
+
+    appCache.set(cacheKey, responsePayload, 86400);
+    res.status(200).json(responsePayload);
   } catch (error: any) {
     console.error('⚠️ Error en getStoreCatalog:', error);
     res.status(500).json({

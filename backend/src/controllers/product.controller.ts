@@ -3,6 +3,7 @@ import { AuthenticatedRequest } from '../types';
 import { productService } from '../services/product.service';
 import prisma from '../utils/prisma';
 import { logAudit } from '../utils/audit';
+import { appCache } from '../utils/cache';
 import path from 'path';
 import fs from 'fs';
 import AdmZip from 'adm-zip';
@@ -16,9 +17,17 @@ export async function getProducts(req: AuthenticatedRequest, res: Response): Pro
   
   // Si no es ADMIN, o si no se solicita explicitamente 'all', solo mostramos activos
   const includeInactive = (userRole === 'ADMIN' && all === 'true');
+  const cacheKey = `products_${search || ''}_${includeInactive}`;
+
+  const cached = appCache.get<any>(cacheKey);
+  if (cached) {
+    res.status(200).json({ status: 'success', data: { products: cached } });
+    return;
+  }
   
   try {
     const products = await productService.getProducts(search as string, includeInactive);
+    appCache.set(cacheKey, products, 86400);
     res.status(200).json({ status: 'success', data: { products } });
   } catch (error: any) {
     res.status(500).json({ status: 'error', message: 'Error al obtener los productos.' });
@@ -49,6 +58,7 @@ export async function createProduct(req: AuthenticatedRequest, res: Response): P
   const userId = req.user?.id;
   try {
     const product = await productService.createProduct(req.body, userId);
+    appCache.invalidateProductCatalog();
     res.status(201).json({ status: 'success', data: { product } });
   } catch (error: any) {
     res.status(400).json({ status: 'error', message: error.message || 'Error al crear el producto.' });
@@ -63,6 +73,7 @@ export async function updateProduct(req: AuthenticatedRequest, res: Response): P
   const userId = req.user?.id;
   try {
     const product = await productService.updateProduct(Number(id), req.body, userId);
+    appCache.invalidateProductCatalog();
     res.status(200).json({ status: 'success', data: { product } });
   } catch (error: any) {
     res.status(400).json({ status: 'error', message: error.message || 'Error al actualizar el producto.' });
@@ -112,6 +123,7 @@ export async function importPrices(req: AuthenticatedRequest, res: Response): Pr
   const userId = req.user?.id;
   try {
     const result = await productService.importPrices(products, userId);
+    appCache.invalidateProductCatalog();
     res.status(200).json({ status: 'success', data: result });
   } catch (error: any) {
     res.status(500).json({ status: 'error', message: error.message || 'Error al procesar la importación masiva.' });
