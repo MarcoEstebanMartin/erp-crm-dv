@@ -233,12 +233,16 @@ export class ProductService {
         lot = await tx.productLot.findFirst({
           where: {
             productId: product.id,
-            location: cleanLoc
+            OR: [
+              { location: cleanLoc },
+              { location: { startsWith: `${cleanLoc}-` } },
+              { location: { contains: cleanLoc } }
+            ]
           }
         });
       }
 
-      // 4. Si es salida (change < 0) y no se especificó lote, buscar cualquier lote activo del producto en esta ubicación o con stock
+      // 4b. Si es salida (change < 0) y no se especificó lote, buscar cualquier lote activo del producto en esta ubicación o con stock
       if (!lot && change < 0) {
         lot = await tx.productLot.findFirst({
           where: {
@@ -248,7 +252,7 @@ export class ProductService {
         });
       }
 
-      // 5. Creación de lote si no se encontró
+      // 5. Creación de lote si no se encontró y es entrada
       const finalTargetLotNum = rawLotNum || (cleanLoc !== 'S/U' ? `S/L-${cleanLoc}` : 'S/L');
       let finalExpDate = new Date('2036-12-31T00:00:00Z');
       if (expirationDate && typeof expirationDate === 'string' && expirationDate.trim()) {
@@ -270,7 +274,13 @@ export class ProductService {
         });
       }
 
-      const updatedLotStock = change < 0 ? Math.max(0, lot.stock + change) : lot.stock + change;
+      // Determinar la cantidad exacta a sustraer si es una operación de vaciado/eliminación
+      const isVacateAction = change < 0 && reason && (reason.includes('Vaciam') || reason.includes('Elimina'));
+      const effectiveSubQty = isVacateAction ? lot.stock : Math.min(lot.stock, Math.abs(change));
+      const actualChange = change < 0 ? -effectiveSubQty : change;
+
+      const updatedProductStock = Math.max(0, product.stock + actualChange);
+      const updatedLotStock = change < 0 ? Math.max(0, lot.stock - effectiveSubQty) : lot.stock + change;
 
       if (updatedLotStock <= 0) {
         await tx.productLot.delete({
@@ -306,7 +316,7 @@ export class ProductService {
       const updatedProduct = await tx.product.update({
         where: { id: product.id },
         data: { 
-          stock: newStock,
+          stock: updatedProductStock,
           ...(clearDefaultLoc ? { defaultLocation: null } : {})
         },
       });
