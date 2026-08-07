@@ -106,10 +106,11 @@ import {
   Search,
   DollarSign,
   Truck,
-  Warehouse,
   FileText,
-  TrendingUp
+  TrendingUp,
+  MapPin
 } from 'lucide-react';
+
 
 interface AdminDashboardProps {
   activeTab: string;
@@ -1382,8 +1383,11 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
           GESTIÓN DE DEPÓSITO & SLOTS (WMS)
           ==================================================================== */}
       {activeTab === 'deposito' && (
-        <DepositoDashboard activeTab="deposito" setActiveTab={setActiveTab} />
+        <Suspense fallback={<LoadingDashboard />}>
+          <DepositoDashboard activeTab="deposito" setActiveTab={setActiveTab} />
+        </Suspense>
       )}
+
 
       {/* ====================================================================
           2. FICHERO DE PERSONAS
@@ -1408,10 +1412,11 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
           {/* Sub-tab Navigation */}
           <div style={{ display: 'flex', gap: '8px', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px', overflowX: 'auto' }}>
             {[
-              { id: 'fulfillment', label: 'Armado y Facturación', icon: <Warehouse size={15} /> },
+              { id: 'fulfillment', label: 'Armado de Pedidos', icon: <Warehouse size={15} /> },
               { id: 'orders', label: 'Historial', icon: <ShoppingCart size={15} /> },
               { id: 'billing', label: 'Facturación', icon: <FileText size={15} /> }
             ].map(tab => (
+
               <button
                 key={tab.id}
                 type="button"
