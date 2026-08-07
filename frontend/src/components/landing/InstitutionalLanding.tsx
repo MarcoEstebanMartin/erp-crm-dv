@@ -48,7 +48,7 @@ export const InstitutionalLanding: React.FC<InstitutionalLandingProps> = ({
   onOpenStaffLogin
 }) => {
   const [logoFailed, setLogoFailed] = useState(false);
-  const [activeNav, setActiveNav] = useState<'inicio' | 'empresa' | 'marcas' | 'contacto' | 'tienda'>('inicio');
+  const [activeNav, setActiveNav] = useState<'inicio' | 'empresa' | 'marcas' | 'contacto' | 'tienda' | 'erp'>('inicio');
   const [activeSocial, setActiveSocial] = useState<'ig' | 'wsp' | 'fb' | null>(null);
   
   const [contactForm, setContactForm] = useState({
@@ -58,10 +58,14 @@ export const InstitutionalLanding: React.FC<InstitutionalLandingProps> = ({
   });
   const [formSent, setFormSent] = useState(false);
 
-  const handleNavClick = (sectionId: string, navKey: 'inicio' | 'empresa' | 'marcas' | 'contacto' | 'tienda') => {
+  const handleNavClick = (sectionId: string, navKey: 'inicio' | 'empresa' | 'marcas' | 'contacto' | 'tienda' | 'erp') => {
     setActiveNav(navKey);
     if (navKey === 'tienda') {
       onOpenStore();
+      return;
+    }
+    if (navKey === 'erp') {
+      onOpenStaffLogin();
       return;
     }
     const elem = document.getElementById(sectionId);
@@ -155,6 +159,18 @@ export const InstitutionalLanding: React.FC<InstitutionalLandingProps> = ({
               }}
             >
               🛒 Tienda
+            </button>
+
+            <button
+              onClick={() => handleNavClick('erp', 'erp')}
+              style={{
+                ...styles.pillNavItem,
+                ...styles.pillNavItemErp,
+                ...(activeNav === 'erp' ? styles.pillNavItemActive : {})
+              }}
+              title="Acceso al Sistema ERP / CRM Don Venancio"
+            >
+              🔒 Acceso ERP
             </button>
           </nav>
 
@@ -385,6 +401,7 @@ export const InstitutionalLanding: React.FC<InstitutionalLandingProps> = ({
           <span>© {new Date().getFullYear()} Don Venancio Distribuidora</span>
           <div style={{ display: 'flex', gap: '16px' }}>
             <button onClick={onOpenStore} style={styles.footerLinkBtn}>Tienda B2B</button>
+            <button onClick={onOpenStaffLogin} style={styles.footerLinkBtn}>Acceso ERP</button>
           </div>
         </div>
       </footer>
@@ -470,6 +487,10 @@ const styles: Record<string, React.CSSProperties> = {
     boxShadow: '0 2px 8px rgba(227, 6, 19, 0.15)'
   },
   pillNavItemTienda: {
+    fontWeight: 700,
+    color: '#0F172A'
+  },
+  pillNavItemErp: {
     fontWeight: 700,
     color: '#0F172A'
   },
