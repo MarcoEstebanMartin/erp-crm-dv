@@ -4,6 +4,7 @@ import type { DepositSlot } from './depositomapaData';
 import { SECTORS_INFO } from './depositomapaData';
 import { X, AlertCircle, ShieldCheck } from 'lucide-react';
 import { api } from '../../utils/api';
+import { useConfirm } from '../../context/ConfirmContext';
 
 interface Slot3DInspectorModalProps {
   isOpen: boolean;
@@ -21,6 +22,8 @@ export const Slot3DInspectorModal: React.FC<Slot3DInspectorModalProps> = ({
   onStockUpdated
 }) => {
   if (!isOpen || !slot) return null;
+
+  const confirm = useConfirm();
 
   const chamberInfo = SECTORS_INFO[slot.chamber] || SECTORS_INFO.GENERAL;
 
@@ -170,9 +173,14 @@ export const Slot3DInspectorModal: React.FC<Slot3DInspectorModalProps> = ({
 
   // Vaciar y liberar posición de forma unificada vía API atómica
   const handleVacatePosition = async (product: Product, lot: ProductLot) => {
-    if (!window.confirm(`¿Confirmás vaciar y liberar la posición del producto [${product.sku}] ${product.name}?`)) {
-      return;
-    }
+    const isConfirmed = await confirm({
+      title: 'Vaciar y Liberar Posición',
+      message: `¿Confirmás vaciar y liberar la posición del producto [${product.sku}] ${product.name}?`,
+      type: 'danger',
+      confirmText: 'Sí, Vaciar Posición',
+      cancelText: 'Cancelar'
+    });
+    if (!isConfirmed) return;
 
     const currentLevelCode = lot.location && lot.location !== 'S/U' ? lot.location : `${slot.code}-${activeLevel}`;
 
@@ -211,9 +219,14 @@ export const Slot3DInspectorModal: React.FC<Slot3DInspectorModalProps> = ({
 
   // Vaciar completamanete el slot entero (todos sus pisos)
   const handleVacateEntireSlot = async () => {
-    if (!window.confirm(`¿Confirmás VACIAR COMPLETAMENTE el slot ${slot.code} (todos sus pisos A, B, C)?`)) {
-      return;
-    }
+    const isConfirmed = await confirm({
+      title: 'Vaciar Slot Completo',
+      message: `¿Confirmás VACIAR COMPLETAMENTE el slot ${slot.code} (todos sus pisos A, B, C)?`,
+      type: 'danger',
+      confirmText: 'Sí, Vaciar Slot Completo',
+      cancelText: 'Cancelar'
+    });
+    if (!isConfirmed) return;
 
     try {
       setLoading(true);
