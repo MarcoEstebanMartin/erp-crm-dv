@@ -744,14 +744,16 @@ export const Slot3DInspectorModal: React.FC<Slot3DInspectorModalProps> = ({
                     <span className="badge badge-secondary" style={{ fontSize: '0.72rem' }}>
                       {getItemsForLevel(activeLevel).length} producto(s)
                     </span>
-                    <button
-                      type="button"
-                      className="btn btn-sm btn-primary"
-                      style={{ fontSize: '0.76rem', padding: '4px 10px', borderRadius: '6px', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '4px' }}
-                      onClick={() => setShowLoadForm(true)}
-                    >
-                      ➕ Cargar Mercadería
-                    </button>
+                    {getItemsForLevel(activeLevel).length > 0 && (
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-primary"
+                        style={{ fontSize: '0.76rem', padding: '4px 10px', borderRadius: '6px', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                        onClick={() => setShowLoadForm(true)}
+                      >
+                        ➕ Agregar Mercadería
+                      </button>
+                    )}
                   </div>
                 </div>
 
