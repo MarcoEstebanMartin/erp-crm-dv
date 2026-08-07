@@ -224,14 +224,20 @@ export class ProductService {
 
       const updatedLotStock = change < 0 ? Math.max(0, lot.stock + change) : lot.stock + change;
 
-      const updatedLot = await tx.productLot.update({
-        where: { id: lot.id },
-        data: { 
-          stock: updatedLotStock,
-          location: location ? location.trim() : lot.location,
-        },
-      });
-      lotId = updatedLot.id;
+      if (updatedLotStock <= 0) {
+        await tx.productLot.delete({
+          where: { id: lot.id }
+        });
+      } else {
+        await tx.productLot.update({
+          where: { id: lot.id },
+          data: { 
+            stock: updatedLotStock,
+            location: location ? location.trim() : lot.location,
+          },
+        });
+      }
+      lotId = lot.id;
 
       const updatedProduct = await tx.product.update({
         where: { id: product.id },

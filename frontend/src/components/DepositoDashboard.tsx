@@ -272,7 +272,7 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
       }
 
       // Carga incondicional de todos los productos y lotes para el mapa WMS y trazabilidad
-      const allProds = await api.getProducts('');
+      const allProds = await api.getProducts('', true);
       setAllProducts(allProds);
 
       if (subTab === 'replenishment') {
