@@ -275,21 +275,21 @@ export const WarehouseMap: React.FC<WarehouseMapProps> = ({ products, onStockUpd
                 {filteredMatrix.map((row, rIdx) => (
                   <tr key={rIdx}>
                     {row.map((cell, cIdx) => {
-                      const isSlot = cell.is_storage;
-                      const cellText = cell.val;
-                      const slotCode = isSlot ? `${cell.dep_id}-R${cell.r.toString().padStart(2, '0')}-C${cell.c.toString().padStart(2, '0')}` : null;
+                      const isSlot = Boolean(cell?.is_storage);
+                      const cellText = cell?.val || '';
+                      const slotCode = isSlot && cell ? `${cell.dep_id}-R${cell.r.toString().padStart(2, '0')}-C${cell.c.toString().padStart(2, '0')}` : null;
                       
                       const stockData = slotCode ? slotStockMap[slotCode] : null;
                       const hasStock = Boolean(stockData && stockData.hasStock);
                       const isSelected = selectedSlot && slotCode && selectedSlot.code === slotCode;
-                      const isChamberMatch = selectedSector !== 'ALL' && cell.chamber === selectedSector;
+                      const isChamberMatch = selectedSector !== 'ALL' && cell?.chamber === selectedSector;
                       const isSearchMatch = slotCode ? matchingSlotCodes.has(slotCode) : false;
 
-                      let bg = (cell.fill && cell.fill.toUpperCase() !== '#000000' && cell.fill.toUpperCase() !== '#000') ? cell.fill : '#ffffff';
+                      let bg = (cell?.fill && cell.fill.toUpperCase() !== '#000000' && cell.fill.toUpperCase() !== '#000') ? cell.fill : '#ffffff';
                       let color = '#334155';
                       let border = '1px solid #e2e8f0';
 
-                      const chamberMeta = SECTORS_INFO[cell.chamber];
+                      const chamberMeta = cell?.chamber ? SECTORS_INFO[cell.chamber] : null;
                       if (chamberMeta && chamberMeta !== SECTORS_INFO.GENERAL) {
                         bg = chamberMeta.bg;
                         color = chamberMeta.color;
@@ -316,7 +316,7 @@ export const WarehouseMap: React.FC<WarehouseMapProps> = ({ products, onStockUpd
                       return (
                         <td
                           key={cIdx}
-                          onClick={() => handleCellClick(cell)}
+                          onClick={() => cell && handleCellClick(cell)}
                           style={{
                             border: isSelected 
                               ? '2.5px solid #007AFF' 
@@ -337,8 +337,8 @@ export const WarehouseMap: React.FC<WarehouseMapProps> = ({ products, onStockUpd
                               ? '#dcfce7' 
                               : bg,
                             color: isSelected ? '#007AFF' : isChamberMatch ? '#0369a1' : hasStock ? '#15803d' : color,
-                            fontWeight: isSlot || cellText.length > 2 ? 'bold' : 'normal',
-                            fontSize: !isSlot && cellText.length > 3 ? '0.6rem' : '0.66rem',
+                            fontWeight: isSlot || (cellText && cellText.length > 2) ? 'bold' : 'normal',
+                            fontSize: !isSlot && (cellText && cellText.length > 3) ? '0.6rem' : '0.66rem',
                             padding: '1px 2px',
                             textAlign: 'center',
                             height: '32px',
