@@ -101,11 +101,6 @@ export default function RackLevelViewerModal({
             }
           }
         });
-      } else if (p.stock > 0) {
-        const defLoc = (p.defaultLocation || '').toUpperCase().trim();
-        if (defLoc === targetLvlCode || defLoc === targetSlotCode || defLoc.startsWith(targetSlotCode)) {
-          matching.push({ product: p, lot: { lotNumber: 'S/L', stock: p.stock } });
-        }
       }
     });
 
