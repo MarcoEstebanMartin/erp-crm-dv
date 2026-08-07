@@ -2342,14 +2342,6 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
               >
                 🔄 Depósito 3
               </button>
-              <button
-                type="button"
-                className="btn btn-secondary"
-                style={{ fontSize: '0.8rem', padding: '6px 12px', borderRadius: '6px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}
-                onClick={() => setIsMapModalOpen(true)}
-              >
-                🖥️ Pantalla Completa
-              </button>
             </div>
           </div>
 
@@ -2735,13 +2727,12 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
                     allProducts.forEach(p => {
                       if (p.lots && p.lots.length > 0) {
                         p.lots.forEach((l: any) => {
-                          const loc = l.location || '';
-                          if ((loc === selectedSlot.code || loc.startsWith(selectedSlot.code) || loc.includes(selectedSlot.code)) && l.stock > 0) {
+                          const loc = (l.location || '').toUpperCase().trim();
+                          const code = selectedSlot.code.toUpperCase().trim();
+                          if ((loc === code || loc.startsWith(code) || loc.includes(code)) && l.stock > 0) {
                             matchingProducts.push({ product: p, lot: l });
                           }
                         });
-                      } else if (p.stock > 0 && (p.defaultLocation === selectedSlot.code || (p.defaultLocation && (p.defaultLocation.startsWith(selectedSlot.code) || p.defaultLocation.includes(selectedSlot.code))))) {
-                        matchingProducts.push({ product: p, lot: { lotNumber: 'S/L', stock: p.stock } });
                       }
                     });
 

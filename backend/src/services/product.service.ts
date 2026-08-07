@@ -237,11 +237,21 @@ export class ProductService {
           },
         });
       }
-      lotId = lot.id;
+      let clearDefaultLoc = false;
+      if (updatedLotStock <= 0 && location && product.defaultLocation) {
+        const cleanLoc = location.trim().toUpperCase();
+        const defLoc = product.defaultLocation.trim().toUpperCase();
+        if (defLoc === cleanLoc || defLoc.startsWith(cleanLoc) || cleanLoc.startsWith(defLoc)) {
+          clearDefaultLoc = true;
+        }
+      }
 
       const updatedProduct = await tx.product.update({
         where: { id: product.id },
-        data: { stock: newStock },
+        data: { 
+          stock: newStock,
+          ...(clearDefaultLoc ? { defaultLocation: null } : {})
+        },
       });
 
       const movement = await tx.stockMovement.create({
