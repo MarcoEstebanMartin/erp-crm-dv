@@ -251,7 +251,7 @@ export class ProductService {
           type: change > 0 ? 'IN' : 'OUT',
           reason: reason || 'Ajuste de stock manual',
           userId: userId,
-          productLotId: lotId,
+          productLotId: updatedLotStock <= 0 ? null : lotId,
         },
       });
 
