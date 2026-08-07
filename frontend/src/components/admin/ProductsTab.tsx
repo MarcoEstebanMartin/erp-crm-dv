@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import ProductsList from '../ProductsList';
 import StockDashboard from '../StockDashboard';
 import OffersDashboard from './OffersDashboard';
-import DepositoDashboard from '../DepositoDashboard';
+import { WarehouseMap } from '../deposito/WarehouseMap';
 
 interface ProductsTabProps {
   products: any[];
@@ -11,7 +11,7 @@ interface ProductsTabProps {
   handleUpdateProductInline: (updatedProduct: any) => void;
   onOpenImportZip?: () => void;
   onUploadImage?: (productId: number, file: File) => Promise<void>;
-  initialCatalogTab?: 'products' | 'offers' | 'inactive_products' | 'stock';
+  initialCatalogTab?: 'products' | 'offers' | 'inactive_products' | 'stock' | 'map';
 }
 
 export default function ProductsTab({
@@ -23,7 +23,7 @@ export default function ProductsTab({
   onUploadImage,
   initialCatalogTab = 'products'
 }: ProductsTabProps) {
-  const [catalogTab, setCatalogTab] = useState<'products' | 'offers' | 'inactive_products' | 'stock' | 'deposito'>(initialCatalogTab);
+  const [catalogTab, setCatalogTab] = useState<'products' | 'offers' | 'inactive_products' | 'stock' | 'map'>(initialCatalogTab);
   const [searchQuery, setSearchQuery] = useState('');
 
   return (
@@ -51,11 +51,11 @@ export default function ProductsTab({
           {catalogTab === 'stock' && <div style={{ position: 'absolute', bottom: '-13px', left: 0, right: 0, height: '2px', backgroundColor: 'var(--color-primary)' }} />}
         </div>
         <div 
-          style={{ cursor: 'pointer', fontWeight: catalogTab === 'deposito' ? 600 : 400, color: catalogTab === 'deposito' ? 'var(--color-primary)' : 'var(--text-secondary)', position: 'relative' }}
-          onClick={() => setCatalogTab('deposito')}
+          style={{ cursor: 'pointer', fontWeight: catalogTab === 'map' ? 600 : 400, color: catalogTab === 'map' ? 'var(--color-primary)' : 'var(--text-secondary)', position: 'relative' }}
+          onClick={() => setCatalogTab('map')}
         >
-          📍 Mapa Depósito & Slots (WMS)
-          {catalogTab === 'deposito' && <div style={{ position: 'absolute', bottom: '-13px', left: 0, right: 0, height: '2px', backgroundColor: 'var(--color-primary)' }} />}
+          🗺️ Mapa Interactivo Depósito
+          {catalogTab === 'map' && <div style={{ position: 'absolute', bottom: '-13px', left: 0, right: 0, height: '2px', backgroundColor: 'var(--color-primary)' }} />}
         </div>
         <div 
           style={{ cursor: 'pointer', fontWeight: catalogTab === 'inactive_products' ? 600 : 400, color: catalogTab === 'inactive_products' ? 'var(--color-primary)' : 'var(--text-secondary)', position: 'relative' }}
@@ -90,11 +90,13 @@ export default function ProductsTab({
         />
       )}
 
-      {catalogTab === 'deposito' && (
-        <DepositoDashboard activeTab="stock-adjust" setActiveTab={() => {}} />
+      {catalogTab === 'map' && (
+        <WarehouseMap
+          products={products}
+          onStockUpdated={async () => fetchData()}
+        />
       )}
 
     </div>
   );
 }
-

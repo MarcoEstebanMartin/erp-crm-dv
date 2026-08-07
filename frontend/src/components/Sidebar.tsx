@@ -69,6 +69,7 @@ export default function Sidebar({ username, role, activeTab, setActiveTab, onLog
         { id: 'dashboard', label: 'Panel Principal', icon: <LayoutDashboard size={18} /> },
         { id: 'crm', label: 'CRM & WhatsApp', icon: <MessageSquare size={18} /> },
         { id: 'fulfillment', label: 'Armado y Facturación', icon: <Warehouse size={18} /> },
+        { id: 'deposito', label: 'Mapa del Depósito', icon: <MapPin size={18} /> },
         { id: 'clients', label: 'Personas', icon: <Users size={18} /> },
         { id: 'logistica', label: 'Logística y Flota', icon: <Truck size={18} /> },
         { id: 'products', label: 'Productos y Stock', icon: <Package size={18} /> },
@@ -83,6 +84,7 @@ export default function Sidebar({ username, role, activeTab, setActiveTab, onLog
         { id: 'dashboard', label: 'Panel Principal', icon: <LayoutDashboard size={18} /> },
         { id: 'crm', label: 'CRM & WhatsApp', icon: <MessageSquare size={18} /> },
         { id: 'fulfillment', label: 'Armado y Facturación', icon: <Warehouse size={18} /> },
+        { id: 'deposito', label: 'Mapa del Depósito', icon: <MapPin size={18} /> },
         { id: 'clients', label: 'Personas', icon: <Users size={18} /> },
         { id: 'logistica', label: 'Logística y Flota', icon: <Truck size={18} /> },
         { id: 'products', label: 'Productos y Stock', icon: <Package size={18} /> },
@@ -90,6 +92,7 @@ export default function Sidebar({ username, role, activeTab, setActiveTab, onLog
         { id: 'config', label: 'General & Empresa', icon: <Building2 size={18} /> },
       ];
     }
+
 
     // Para personal operativo (VENDEDOR, DEPOSITO, etc.) construimos según permisos granulares
     const items: any[] = [];

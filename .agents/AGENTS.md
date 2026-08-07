@@ -30,7 +30,8 @@ Este archivo define las reglas de comportamiento, estética y calidad profesiona
 - **Comando "abri" / "abrir" / "abre todo"**: Cuando el usuario indique una palabra clave de inicio (como "abri", "abrir", "abre", "abre todo", "iniciar local"), el asistente debe de inmediato y sin necesidad de planes o aprobaciones complejas:
   1. Ejecutar `ipconfig` en la terminal para obtener la dirección IPv4 local activa.
   2. Iniciar el entorno de desarrollo local ejecutando `npm run dev` en la raíz del proyecto como tarea en segundo plano.
-  3. Mostrar un resumen claro con el estado de los servidores, la IP local / enlace de acceso directo para el celular (ej. `http://<IP>:5173`) y el recordatorio de las credenciales de prueba disponibles para vendedores y administración.
+  3. Iniciar el túnel estático de Ngrok ejecutando `ngrok http 3000 --url=numerally-diaristic-maryrose.ngrok-free.dev` en segundo plano.
+  4. Mostrar un resumen claro con el estado de los servidores, la IP local / enlace para celular, la URL estática del Webhook de WhatsApp (`https://numerally-diaristic-maryrose.ngrok-free.dev/api/crm/whatsapp/webhook`) y el recordatorio de las credenciales de prueba.
 
 ## 6. Protección de Imágenes de Productos y Archivos Maestros
 - **Carpeta Maestra Inmutable (`ARCHIVOS/fotos/Productos`)**: La carpeta `ARCHIVOS/fotos/Productos/` es el repositorio maestro sagrado e inmutable de imágenes de catálogo. Jamás se deben eliminar ni sobrescribir archivos en ese directorio con scripts automatizados o reemplazos masivos.
