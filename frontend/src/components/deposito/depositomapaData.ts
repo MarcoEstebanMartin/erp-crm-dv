@@ -870,7 +870,7 @@ export const DEPOSITO_MATRIX: SlotCellData[][] = [
     {
       "r": 5,
       "c": 2,
-      "val": "1",
+      "val": "",
       "fill": "#FFFFFF",
       "is_storage": false,
       "dep_id": "D1",

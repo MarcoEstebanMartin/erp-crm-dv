@@ -6,7 +6,7 @@ ws = wb.active
 
 matrix = []
 all_slots = []
-BLOCKED_TEXTS = ['DEPOSITO 1', 'DEPOSITO 2', 'DEPOSITO 3', '1.0', '1', '2', '3']
+BLOCKED_TEXTS = ['DEPOSITO 1', 'DEPOSITO 2', 'DEPOSITO 3', '1.0', '1', '2', '3', '2.0', '3.0']
 
 for r in range(1, ws.max_row + 1):
     row_cells = []
@@ -16,7 +16,8 @@ for r in range(1, ws.max_row + 1):
         s_val = str(val).strip() if val is not None else ""
 
         display_val = s_val
-        if s_val in BLOCKED_TEXTS or s_val.startswith('DEPOSITO'):
+        # Ocultar números sueltos de índice (ej: 1, 2, 3) y encabezados "DEPOSITO X"
+        if s_val in BLOCKED_TEXTS or s_val.startswith('DEPOSITO') or s_val.isdigit():
             display_val = ""
 
         # Manejo estricto de color HEX para evitar negros 00000000
@@ -65,7 +66,7 @@ for r in range(1, ws.max_row + 1):
         cell_data = {
             'r': r,
             'c': c,
-            'val': display_val if is_storage else s_val,
+            'val': display_val,
             'fill': f"#{fill_hex}",
             'is_storage': is_storage,
             'dep_id': dep_id,
