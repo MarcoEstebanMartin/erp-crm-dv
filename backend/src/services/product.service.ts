@@ -203,6 +203,16 @@ export class ProductService {
         });
       }
 
+      if (!lot && change < 0) {
+        // Buscar cualquier lote activo del producto con stock > 0
+        lot = await tx.productLot.findFirst({
+          where: {
+            productId: product.id,
+            stock: { gt: 0 }
+          }
+        });
+      }
+
       if (change > 0) {
         if (!lot) {
           const finalExpDate = expirationDate ? new Date(expirationDate) : new Date('2036-12-31T00:00:00Z');
@@ -218,7 +228,17 @@ export class ProductService {
         }
       } else {
         if (!lot) {
-          throw new Error(`El lote "${targetLotNumber}" no existe para este producto.`);
+          // Si es un producto con stock sin lote específico, crear lote temporal para saldar la salida
+          const finalExpDate = expirationDate ? new Date(expirationDate) : new Date('2036-12-31T00:00:00Z');
+          lot = await tx.productLot.create({
+            data: {
+              productId: product.id,
+              lotNumber: targetLotNumber,
+              expirationDate: finalExpDate,
+              stock: Math.abs(change),
+              location: location ? location.trim() : 'S/U',
+            },
+          });
         }
       }
 

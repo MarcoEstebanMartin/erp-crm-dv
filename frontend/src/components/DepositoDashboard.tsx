@@ -2816,7 +2816,7 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
                                       await fetchData();
                                     } catch (err: any) {
                                       playBeep('error');
-                                      alert(err.message || 'Error al retirar stock.');
+                                      await confirm(err.message || 'Error al retirar stock.', { title: 'Atención WMS', isAlert: true, type: 'danger' });
                                     }
                                   }}
                                 >
@@ -2844,7 +2844,7 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
                                       await fetchData();
                                     } catch (err: any) {
                                       playBeep('error');
-                                      alert(err.message || 'Error al vaciar lote.');
+                                      await confirm(err.message || 'Error al vaciar lote.', { title: 'Atención WMS', isAlert: true, type: 'danger' });
                                     }
                                   }}
                                 >
