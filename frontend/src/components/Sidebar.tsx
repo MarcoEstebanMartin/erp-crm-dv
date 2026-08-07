@@ -20,7 +20,9 @@ import {
   Tag,
   Briefcase,
   MessageSquare,
-  Building2
+  Building2,
+  Menu,
+  X
 } from 'lucide-react';
 import { api } from '../utils/api';
 
@@ -35,6 +37,7 @@ interface SidebarProps {
 export default function Sidebar({ username, role, activeTab, setActiveTab, onLogout }: SidebarProps) {
   const navigate = useNavigate();
   const location = useLocation();
+  const [isMobileOpen, setIsMobileOpen] = useState(false);
 
   // Mapear ruta actual a pestaña activa
   const currentTab = (() => {
@@ -44,6 +47,11 @@ export default function Sidebar({ username, role, activeTab, setActiveTab, onLog
     }
     return activeTab || (role === 'VENDEDOR' ? 'orders' : role === 'DEPOSITO' ? 'deposito' : 'dashboard');
   })();
+
+  // Cerrar menú móvil en cambios de ruta
+  useEffect(() => {
+    setIsMobileOpen(false);
+  }, [location.pathname]);
 
   const userObj = api.getCurrentUser();
   const permissions = userObj?.permissions || {
@@ -109,6 +117,7 @@ export default function Sidebar({ username, role, activeTab, setActiveTab, onLog
 
   const handleTabSelect = (tabId: string) => {
     setActiveTab(tabId);
+    setIsMobileOpen(false);
     let targetPath = `/admin/${tabId}`;
     if (role === 'VENDEDOR') {
       targetPath = `/vendedor/${tabId}`;
@@ -131,88 +140,131 @@ export default function Sidebar({ username, role, activeTab, setActiveTab, onLog
     onLogout();
   };
 
+  const currentItemLabel = menuItems.find(item => item.id === currentTab)?.label || 'Don Venancio ERP';
+
   return (
-    <aside className="sidebar">
-      {/* Cabecera del Sidebar con el Logo y Rol Debajo */}
-      <div className="sidebar-brand">
-        <img 
-          src="/logo.png" 
-          alt="Logo DV" 
-          className="sidebar-logo"
-          onError={(e) => {
-            // Si el logo no carga, ocultarlo
-            e.currentTarget.style.display = 'none';
-          }}
+    <>
+      {/* Header Fijo Móvil (Solo visible en pantallas <= 768px) */}
+      <header className="mobile-header">
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <button 
+            className="mobile-hamburger-btn" 
+            onClick={() => setIsMobileOpen(!isMobileOpen)}
+            aria-label="Abrir menú"
+          >
+            {isMobileOpen ? <X size={22} /> : <Menu size={22} />}
+          </button>
+          <img 
+            src="/logo.png" 
+            alt="Logo DV" 
+            className="mobile-header-logo"
+            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+          />
+          <span className="mobile-header-title">{currentItemLabel}</span>
+        </div>
+
+        <div className="mobile-header-status">
+          <div style={{
+            width: '8px',
+            height: '8px',
+            borderRadius: '50%',
+            backgroundColor: 'var(--color-success)',
+            animation: 'pulse 2s infinite'
+          }} />
+          <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
+            {username || role}
+          </span>
+        </div>
+      </header>
+
+      {/* Backdrop traslúcido para móviles cuando el menú está abierto */}
+      {isMobileOpen && (
+        <div 
+          className="sidebar-backdrop" 
+          onClick={() => setIsMobileOpen(false)} 
         />
-        {(() => {
-          let dotColor = 'var(--color-success)'; // Verde
-          let tooltip = 'Servidor en Línea';
+      )}
 
-          return (
-            <div className="sidebar-status" title={tooltip} style={{ marginTop: '12px' }}>
-              <div style={{
-                width: '8px',
-                height: '8px',
-                borderRadius: '50%',
-                backgroundColor: dotColor,
-                animation: 'pulse 2s infinite'
-              }} />
-              <span style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
-                {role === 'ADMIN' ? 'Administrador' : role === 'FACTURACION' ? 'Administrativo' : 'Operativo'}
-              </span>
-            </div>
-          );
-        })()}
-      </div>
-
-      <nav className="sidebar-menu" style={{ flex: 1, overflowY: 'auto', paddingRight: '4px' }}>
-        {menuItems.map((item: any) => {
-          const isActive = currentTab === item.id;
-
-          return (
-            <div
-              key={item.id}
-              className={`sidebar-link ${isActive ? 'sidebar-link-active' : ''}`}
-              onClick={() => handleTabSelect(item.id)}
-              style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: '10px', 
-                padding: '9px 14px', 
-                borderRadius: '6px', 
-                cursor: 'pointer', 
-                marginBottom: '3px',
-                fontWeight: isActive ? 600 : 400
-              }}
+      {/* Contenedor del Sidebar (Drawer en Móvil / Fijo en Escritorio) */}
+      <aside className={`sidebar ${isMobileOpen ? 'sidebar-mobile-active' : ''}`}>
+        {/* Cabecera del Sidebar con el Logo y Rol Debajo */}
+        <div className="sidebar-brand">
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+            <img 
+              src="/logo.png" 
+              alt="Logo DV" 
+              className="sidebar-logo"
+              onError={(e) => { e.currentTarget.style.display = 'none'; }}
+            />
+            {/* Botón para cerrar drawer en móvil */}
+            <button 
+              className="mobile-drawer-close-btn"
+              onClick={() => setIsMobileOpen(false)}
             >
-              <span style={{ display: 'flex', alignItems: 'center' }}>
-                {item.icon}
-              </span>
-              <span style={{ fontSize: '0.86rem' }}>{item.label}</span>
-            </div>
-          );
-        })}
-      </nav>
+              <X size={20} />
+            </button>
+          </div>
+          {(() => {
+            let dotColor = 'var(--color-success)'; // Verde
+            let tooltip = 'Servidor en Línea';
 
-      <div className="sidebar-user" style={{ borderTop: '1px solid var(--border-color)', paddingTop: '16px', marginTop: 'auto' }}>
-        <button
-          className="btn btn-ghost"
-          style={{ width: '100%', justifyContent: 'flex-start', padding: '8px 12px', fontSize: '0.85rem' }}
-          onClick={handleLogoutClick}
-        >
-          <LogOut size={16} />
-          <span>Cerrar sesión</span>
-        </button>
-      </div>
+            return (
+              <div className="sidebar-status" title={tooltip} style={{ marginTop: '8px' }}>
+                <div style={{
+                  width: '8px',
+                  height: '8px',
+                  borderRadius: '50%',
+                  backgroundColor: dotColor,
+                  animation: 'pulse 2s infinite'
+                }} />
+                <span style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
+                  {role === 'ADMIN' ? 'Administrador' : role === 'FACTURACION' ? 'Administrativo' : 'Operativo'}
+                </span>
+              </div>
+            );
+          })()}
+        </div>
 
-      <style>{`
-        @keyframes pulse {
-          0% { transform: scale(0.95); opacity: 0.7; }
-          50% { transform: scale(1.15); opacity: 1; }
-          100% { transform: scale(0.95); opacity: 0.7; }
-        }
-      `}</style>
-    </aside>
+        <nav className="sidebar-menu">
+          {menuItems.map((item: any) => {
+            const isActive = currentTab === item.id;
+
+            return (
+              <div
+                key={item.id}
+                className={`sidebar-link ${isActive ? 'sidebar-link-active' : ''}`}
+                onClick={() => handleTabSelect(item.id)}
+              >
+                <span style={{ display: 'flex', alignItems: 'center' }}>
+                  {item.icon}
+                </span>
+                <span style={{ fontSize: '0.88rem' }}>{item.label}</span>
+              </div>
+            );
+          })}
+        </nav>
+
+        <div className="sidebar-user">
+          <button
+            className="btn btn-ghost"
+            style={{ width: '100%', justifyContent: 'flex-start', padding: '10px 12px', fontSize: '0.88rem' }}
+            onClick={handleLogoutClick}
+          >
+            <LogOut size={18} />
+            <span>Cerrar sesión</span>
+          </button>
+        </div>
+
+        <style>{`
+          @keyframes pulse {
+            0% { transform: scale(0.95); opacity: 0.7; }
+            50% { transform: scale(1.15); opacity: 1; }
+            100% { transform: scale(0.95); opacity: 0.7; }
+          }
+        `}</style>
+      </aside>
+    </>
   );
 }
+
 
