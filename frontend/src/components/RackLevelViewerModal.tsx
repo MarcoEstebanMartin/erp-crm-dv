@@ -35,24 +35,6 @@ export default function RackLevelViewerModal({
     qtyToRemove: number;
   } | null>(null);
   
-  // Productos y lotes locales sincronizados en tiempo real con PostgreSQL
-  const [localProducts, setLocalProducts] = useState<any[]>([]);
-  const [loadingProducts, setLoadingProducts] = useState(false);
-
-  const fetchFreshProducts = useCallback(async () => {
-    setLoadingProducts(true);
-    try {
-      const prods = await api.getProducts('', true);
-      if (Array.isArray(prods)) {
-        setLocalProducts(prods);
-      }
-    } catch (err) {
-      console.error('Error al actualizar productos en modal de viga:', err);
-    } finally {
-      setLoadingProducts(false);
-    }
-  }, []);
-
   useEffect(() => {
     if (isOpen && slot) {
       setSelectedSubLevel('A');
@@ -63,9 +45,9 @@ export default function RackLevelViewerModal({
       setSuccessMsg(null);
       setErrorMsg(null);
       setActionModal(null);
-      fetchFreshProducts();
+      onRefresh();
     }
-  }, [isOpen, slot, fetchFreshProducts]);
+  }, [isOpen, slot, onRefresh]);
 
   if (!isOpen || !slot) return null;
 
@@ -77,7 +59,7 @@ export default function RackLevelViewerModal({
   };
 
   const levelsList = getSubLevelsList(slot.nivel || 'A');
-  const activeProductsSource = localProducts.length > 0 ? localProducts : parentProducts;
+  const activeProductsSource = parentProducts;
 
   // Filtrado de lotes para un nivel específico con normalización de claves
   const getProductsInLevel = (lvl: string) => {
@@ -149,7 +131,6 @@ export default function RackLevelViewerModal({
         finalCode
       );
 
-      await fetchFreshProducts();
       await onRefresh();
 
       setSuccessMsg(`¡Mercadería cargada con éxito en ${finalCode}!`);
@@ -188,7 +169,6 @@ export default function RackLevelViewerModal({
         lot.id || undefined
       );
 
-      await fetchFreshProducts();
       await onRefresh();
 
       setSuccessMsg(`¡${mode === 'delete' ? 'Lote vaciado' : '1 u. retirada'} con éxito de ${locToSub}!`);
