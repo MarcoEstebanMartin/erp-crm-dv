@@ -2839,10 +2839,14 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
                                     );
                                     if (!ok) return;
                                     try {
-                                      await api.adjustStock(product.id, -lot.stock, 'Eliminación completa de lote desde Panel WMS', lot.lotNumber, lot.expirationDate, lot.location);
+                                      const qtyToSub = Number(lot.stock) > 0 ? Number(lot.stock) : 1;
+                                      const locToSub = lot.location || selectedSlot.code;
+                                      const lotNumToSub = lot.lotNumber || 'S/L';
+                                      await api.adjustStock(product.id, -qtyToSub, 'Eliminación completa de lote desde Panel WMS', lotNumToSub, lot.expirationDate, locToSub);
                                       playBeep('success');
                                       await fetchData();
                                     } catch (err: any) {
+                                      console.error('Error al vaciar lote:', err);
                                       playBeep('error');
                                       await confirm(err.message || 'Error al vaciar lote.', { title: 'Atención WMS', isAlert: true, type: 'danger' });
                                     }

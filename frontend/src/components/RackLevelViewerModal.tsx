@@ -187,20 +187,24 @@ export default function RackLevelViewerModal({
     setErrorMsg(null);
 
     try {
+      const numQtyToSub = Number(qtyToRemove) > 0 ? Number(qtyToRemove) : 1;
+      const locToSub = lot.location || `${slot.code}-${selectedSubLevel}`;
+      const lotNumToSub = lot.lotNumber || 'S/L';
+
       await api.adjustStock(
         product.id,
-        -qtyToRemove,
+        -numQtyToSub,
         mode === 'delete' ? 'Eliminación completa de lote desde Estantería WMS' : 'Retiro parcial de stock desde Estantería WMS',
-        lot.lotNumber,
+        lotNumToSub,
         lot.expirationDate,
-        lot.location || `${slot.code}-${selectedSubLevel}`
+        locToSub
       );
 
       await fetchFreshProducts();
       await onRefresh();
 
       setActionModal(null);
-      setSuccessMsg(`¡Se retiraron ${qtyToRemove} u. del lote ${lot.lotNumber} exitosamente!`);
+      setSuccessMsg(`¡Se retiraron ${numQtyToSub} u. del lote ${lotNumToSub} exitosamente!`);
       setTimeout(() => setSuccessMsg(null), 1400);
     } catch (err: any) {
       console.error('Error al retirar stock:', err);
