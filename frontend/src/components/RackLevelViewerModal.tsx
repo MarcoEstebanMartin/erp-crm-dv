@@ -167,32 +167,13 @@ export default function RackLevelViewerModal({
     }
   };
 
-  // Abrir modal personalizado de confirmación de retiro/eliminación
-  const openActionModal = (product: any, lot: any, mode: 'subtract' | 'delete') => {
-    setActionModal({
-      open: true,
-      mode,
-      product,
-      lot,
-      qtyToRemove: mode === 'delete' ? lot.stock : 1
-    });
-  };
-
-  // Ejecutar retiro de stock sin bloqueos de servidor
-  const confirmExecuteRemoveStock = async () => {
-    if (!actionModal) return;
-    const { product, lot, mode, qtyToRemove } = actionModal;
-    
-    if (qtyToRemove <= 0) {
-      setErrorMsg('La cantidad a retirar debe ser mayor a 0.');
-      return;
-    }
-
+  // Ejecutar retiro directo o vaciado instantáneo de lote
+  const handleDirectRemoveStock = async (product: any, lot: any, qty: number, mode: 'subtract' | 'delete') => {
     setIsSubmitting(true);
     setErrorMsg(null);
 
     try {
-      const numQtyToSub = Number(qtyToRemove) > 0 ? Number(qtyToRemove) : 1;
+      const numQtyToSub = Number(qty) > 0 ? Number(qty) : 1;
       const locToSub = lot.location || `${slot.code}-${selectedSubLevel}`;
       const lotNumToSub = lot.lotNumber || 'S/L';
 
@@ -209,8 +190,7 @@ export default function RackLevelViewerModal({
       await fetchFreshProducts();
       await onRefresh();
 
-      setActionModal(null);
-      setSuccessMsg(`¡Se retiraron ${numQtyToSub} u. del lote ${lotNumToSub} exitosamente!`);
+      setSuccessMsg(`¡${mode === 'delete' ? 'Lote vaciado' : '1 u. retirada'} con éxito de ${locToSub}!`);
       setTimeout(() => setSuccessMsg(null), 1400);
     } catch (err: any) {
       console.error('Error al retirar stock:', err);
@@ -218,6 +198,31 @@ export default function RackLevelViewerModal({
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  // Abrir modal personalizado de confirmación de retiro/eliminación
+  const openActionModal = (product: any, lot: any, mode: 'subtract' | 'delete') => {
+    setActionModal({
+      open: true,
+      mode,
+      product,
+      lot,
+      qtyToRemove: mode === 'delete' ? lot.stock : 1
+    });
+  };
+
+  // Ejecutar retiro de stock desde modal interno
+  const confirmExecuteRemoveStock = async () => {
+    if (!actionModal) return;
+    const { product, lot, mode, qtyToRemove } = actionModal;
+    
+    if (qtyToRemove <= 0) {
+      setErrorMsg('La cantidad a retirar debe ser mayor a 0.');
+      return;
+    }
+
+    await handleDirectRemoveStock(product, lot, qtyToRemove, mode);
+    setActionModal(null);
   };
 
   return (
@@ -387,20 +392,20 @@ export default function RackLevelViewerModal({
                               <div style={{ display: 'flex', gap: '4px' }}>
                                 <button
                                   type="button"
-                                  title="Restar bultos"
+                                  title="Restar 1 bulto"
                                   className="btn btn-secondary btn-sm"
                                   style={{ padding: '4px 6px', fontSize: '0.7rem', backgroundColor: '#1e293b', color: '#f59e0b', border: '1px solid #d97706', borderRadius: '4px' }}
-                                  onClick={(e) => { e.stopPropagation(); openActionModal(product, lot, 'subtract'); }}
+                                  onClick={(e) => { e.stopPropagation(); handleDirectRemoveStock(product, lot, 1, 'subtract'); }}
                                 >
                                   <MinusCircle size={14} />
                                 </button>
 
                                 <button
                                   type="button"
-                                  title="Vaciar / Eliminar lote completo"
+                                  title="Vaciar / Eliminar lote completo de esta viga"
                                   className="btn btn-danger btn-sm"
                                   style={{ padding: '4px 6px', fontSize: '0.7rem', backgroundColor: '#881337', color: '#ffe4e6', border: '1px solid #e11d48', borderRadius: '4px' }}
-                                  onClick={(e) => { e.stopPropagation(); openActionModal(product, lot, 'delete'); }}
+                                  onClick={(e) => { e.stopPropagation(); handleDirectRemoveStock(product, lot, lot.stock, 'delete'); }}
                                 >
                                   <Trash2 size={14} />
                                 </button>

@@ -211,7 +211,24 @@ export class ProductService {
         });
       }
 
-      // 3. Buscar por ubicación si aún no se encontró el lote
+      // 3. Si el lote existe pero su ubicación es DIFERENTE a la actual y estamos agregando stock,
+      // evitar mover el lote del estante anterior creando un lote específico para esta nueva ubicación.
+      if (lot && lot.location && cleanLoc !== 'S/U' && lot.location.toUpperCase().trim() !== cleanLoc && change > 0) {
+        const locLotNum = `${rawLotNum}-${cleanLoc}`;
+        const existingLocLot = await tx.productLot.findUnique({
+          where: {
+            productId_lotNumber: { productId: product.id, lotNumber: locLotNum },
+          },
+        });
+        if (existingLocLot) {
+          lot = existingLocLot;
+        } else {
+          lot = null;
+          rawLotNum = locLotNum;
+        }
+      }
+
+      // 4. Buscar por ubicación si aún no se encontró el lote
       if (!lot && cleanLoc !== 'S/U') {
         lot = await tx.productLot.findFirst({
           where: {
