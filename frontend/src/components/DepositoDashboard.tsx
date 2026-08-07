@@ -2549,13 +2549,6 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
                                   }
                                 });
                               }
-                              const hasActiveLots = p.lots && p.lots.some((l: any) => Number(l.stock) > 0);
-                              if (!hasActiveLots && Number(p.stock) > 0) {
-                                const defLoc = (p.defaultLocation || '').toUpperCase().trim();
-                                if (cleanSlotCode && defLoc && (defLoc === cleanSlotCode || defLoc === `${cleanSlotCode}-A`)) {
-                                  hasStock = true;
-                                }
-                              }
                             });
                             
                             const depName = cell.dep_id === 'D1' ? 'Depósito 1' : cell.dep_id === 'D2' ? 'Depósito 2' : 'Depósito 3';
@@ -2612,13 +2605,15 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
                                       localStorage.setItem('wms_custom_chamber_map_v2', JSON.stringify(newChamberMap));
                                     }
                                   } else {
-                                    // MODO INSPECCIÓN NORMAL: HABILITADO EN EL 100% DE LAS CELDAS
-                                    setSelectedSlot(foundSlotObj);
-                                    setSelectedMapLocation(foundSlotObj.code);
+                                    // MODO INSPECCIÓN NORMAL: SOLO SE PUEDEN SELECCIONAR ESTANTERÍAS REALES (isSlot === true)
+                                    if (isSlot && foundSlotObj) {
+                                      setSelectedSlot(foundSlotObj);
+                                      setSelectedMapLocation(foundSlotObj.code);
+                                    }
                                   }
                                 }}
                                 onDoubleClick={() => {
-                                  if (!isEditMode) {
+                                  if (!isEditMode && isSlot && foundSlotObj) {
                                     setSelectedSlot(foundSlotObj);
                                     setIsLevelModalOpen(true);
                                   }
@@ -2743,16 +2738,6 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
                             matchedInLots = true;
                           }
                         });
-                      }
-                      const hasActiveLots = p.lots && p.lots.some((l: any) => Number(l.stock) > 0);
-                      if (!hasActiveLots && !matchedInLots && Number(p.stock) > 0) {
-                        const defLoc = (p.defaultLocation || '').toUpperCase().trim();
-                        if (defLoc && (defLoc === code || defLoc === `${code}-A`)) {
-                          matchingProducts.push({
-                            product: p,
-                            lot: { id: null, lotNumber: 'S/L', stock: p.stock, location: p.defaultLocation, expirationDate: null }
-                          });
-                        }
                       }
                     });
 
