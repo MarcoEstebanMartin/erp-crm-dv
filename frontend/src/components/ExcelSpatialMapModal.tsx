@@ -204,12 +204,16 @@ export default function ExcelSpatialMapModal({
                         if (isSlot) {
                           foundSlotObj = slotsInfo.find((s: any) => s.row === (rIdx + 1) && s.col === (cIdx + 1));
                           if (foundSlotObj) {
+                            const cleanSlotCode = (foundSlotObj.code || '').toUpperCase().trim();
                             allProducts.forEach(p => {
                               if (p.lots && p.lots.length > 0) {
                                 p.lots.forEach((l: any) => {
-                                  if ((l.location === foundSlotObj.code || l.location.startsWith(foundSlotObj.code)) && l.stock > 0) hasStock = true;
+                                  const loc = (l.location || '').toUpperCase().trim();
+                                  if (cleanSlotCode && (loc === cleanSlotCode || loc.startsWith(cleanSlotCode) || loc.includes(cleanSlotCode)) && Number(l.stock) > 0) hasStock = true;
                                 });
-                              } else if (p.defaultLocation === foundSlotObj.code && p.stock > 0) {
+                              }
+                              const defLoc = (p.defaultLocation || '').toUpperCase().trim();
+                              if (cleanSlotCode && defLoc && (defLoc === cleanSlotCode || defLoc.startsWith(cleanSlotCode) || cleanSlotCode.startsWith(defLoc)) && Number(p.stock) > 0) {
                                 hasStock = true;
                               }
                             });

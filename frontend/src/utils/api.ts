@@ -178,10 +178,10 @@ export const api = {
     return json.data;
   },
 
-  adjustStock: async (id: number, quantityChange: number, reason: string, lotNumber?: string, expirationDate?: string, location?: string) => {    
+  adjustStock: async (id: number, quantityChange: number, reason: string, lotNumber?: string, expirationDate?: string, location?: string, lotId?: number) => {    
     const res = await request(`/products/${id}/adjust-stock`, {
       method: 'POST',
-      body: JSON.stringify({ quantityChange, reason, lotNumber, expirationDate, location })
+      body: JSON.stringify({ quantityChange, reason, lotNumber, expirationDate, location, lotId })
     });
     return res?.updatedProduct || res?.product || res;
   },

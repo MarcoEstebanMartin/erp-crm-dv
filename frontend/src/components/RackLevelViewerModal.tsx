@@ -86,21 +86,31 @@ export default function RackLevelViewerModal({
     const targetSlotCode = slot.code.toUpperCase().trim();
 
     activeProductsSource.forEach(p => {
+      let matchedInLots = false;
       if (p.lots && p.lots.length > 0) {
         p.lots.forEach((l: any) => {
           const loc = (l.location || '').toUpperCase().trim();
-          if (l.stock > 0) {
+          if (Number(l.stock) > 0) {
             if (
               loc === targetLvlCode ||
               loc === `${targetSlotCode}-${lvl}` ||
-              loc === targetSlotCode ||
-              loc.startsWith(targetLvlCode) ||
-              loc.startsWith(targetSlotCode)
+              (loc === targetSlotCode && lvl === 'A') ||
+              loc.startsWith(`${targetLvlCode}-`)
             ) {
               matching.push({ product: p, lot: l });
+              matchedInLots = true;
             }
           }
         });
+      }
+      if (!matchedInLots && Number(p.stock) > 0) {
+        const defLoc = (p.defaultLocation || '').toUpperCase().trim();
+        if (defLoc === targetLvlCode || defLoc === `${targetSlotCode}-${lvl}` || (defLoc === targetSlotCode && lvl === 'A')) {
+          matching.push({
+            product: p,
+            lot: { id: null, lotNumber: 'S/L', stock: p.stock, location: p.defaultLocation, expirationDate: null }
+          });
+        }
       }
     });
 
@@ -122,11 +132,11 @@ export default function RackLevelViewerModal({
 
     try {
       // Normalización garantizada de código de nivel (ej. D1-R05-C07-A)
-      const finalCode = `${slot.code}-${selectedSubLevel}`;
+      const finalCode = `${slot.code}-${selectedSubLevel}`.toUpperCase().trim();
       
       let finalLotNumber = lotNumber.trim();
       if (!finalLotNumber) {
-        finalLotNumber = `L-${finalCode}-${Date.now().toString().slice(-4)}`;
+        finalLotNumber = `S/L-${finalCode}`;
       }
       
       await api.adjustStock(
@@ -192,7 +202,8 @@ export default function RackLevelViewerModal({
         mode === 'delete' ? 'Eliminación completa de lote desde Estantería WMS' : 'Retiro parcial de stock desde Estantería WMS',
         lotNumToSub,
         lot.expirationDate,
-        locToSub
+        locToSub,
+        lot.id || undefined
       );
 
       await fetchFreshProducts();

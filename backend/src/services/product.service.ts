@@ -175,8 +175,9 @@ export class ProductService {
    * Ajustar stock físicamente (Transacción atómica).
    */
   async adjustStock(id: number, data: any, userId: number) {
-    const { quantityChange, reason, lotNumber, expirationDate, location } = data;
+    const { quantityChange, reason, lotNumber, expirationDate, location, lotId: inputLotId } = data;
     const change = Number(quantityChange);
+    const cleanLoc = (location && typeof location === 'string' && location.trim()) ? location.trim().toUpperCase() : 'S/U';
 
     const result = await prisma.$transaction(async (tx) => {
       const product = await tx.product.findUnique({ where: { id } });
@@ -184,27 +185,44 @@ export class ProductService {
 
       const newStock = Math.max(0, product.stock + change);
 
-      let lotId: number | null = null;
-      const targetLotNumber = (lotNumber && lotNumber.trim()) ? lotNumber.trim() : 'S/L';
+      let lot: any = null;
 
-      let lot = await tx.productLot.findUnique({
-        where: {
-          productId_lotNumber: { productId: product.id, lotNumber: targetLotNumber },
-        },
-      });
+      // 1. Si viene lotId explicito, buscar directamente por ID primario
+      if (inputLotId) {
+        lot = await tx.productLot.findUnique({
+          where: { id: Number(inputLotId) }
+        });
+      }
 
-      if (!lot && location) {
-        // Buscar por combinación de producto y ubicación si cambió la clave del lote
+      // 2. Si no se especificó o no se encontró por ID, determinar número de lote adecuado
+      let rawLotNum = (lotNumber && typeof lotNumber === 'string' && lotNumber.trim()) ? lotNumber.trim() : '';
+
+      if (!lot) {
+        if (!rawLotNum || rawLotNum.toUpperCase() === 'S/L') {
+          // Generar clave de lote vinculada a la ubicación si no viene un número de lote explícito
+          rawLotNum = cleanLoc !== 'S/U' ? `S/L-${cleanLoc}` : 'S/L';
+        }
+
+        // Buscar lote existente por combinación productId + lotNumber
+        lot = await tx.productLot.findUnique({
+          where: {
+            productId_lotNumber: { productId: product.id, lotNumber: rawLotNum },
+          },
+        });
+      }
+
+      // 3. Buscar por ubicación si aún no se encontró el lote
+      if (!lot && cleanLoc !== 'S/U') {
         lot = await tx.productLot.findFirst({
           where: {
             productId: product.id,
-            location: location.trim()
+            location: cleanLoc
           }
         });
       }
 
+      // 4. Si es salida (change < 0) y no se especificó lote, buscar cualquier lote activo del producto en esta ubicación o con stock
       if (!lot && change < 0) {
-        // Buscar cualquier lote activo del producto con stock > 0
         lot = await tx.productLot.findFirst({
           where: {
             productId: product.id,
@@ -213,33 +231,20 @@ export class ProductService {
         });
       }
 
-      if (change > 0) {
-        if (!lot) {
-          const finalExpDate = expirationDate ? new Date(expirationDate) : new Date('2036-12-31T00:00:00Z');
-          lot = await tx.productLot.create({
-            data: {
-              productId: product.id,
-              lotNumber: targetLotNumber,
-              expirationDate: finalExpDate,
-              stock: 0,
-              location: location ? location.trim() : 'S/U',
-            },
-          });
-        }
-      } else {
-        if (!lot) {
-          // Si es un producto con stock sin lote específico, crear lote temporal para saldar la salida
-          const finalExpDate = expirationDate ? new Date(expirationDate) : new Date('2036-12-31T00:00:00Z');
-          lot = await tx.productLot.create({
-            data: {
-              productId: product.id,
-              lotNumber: targetLotNumber,
-              expirationDate: finalExpDate,
-              stock: Math.abs(change),
-              location: location ? location.trim() : 'S/U',
-            },
-          });
-        }
+      // 5. Creación de lote si no se encontró
+      const finalTargetLotNum = rawLotNum || (cleanLoc !== 'S/U' ? `S/L-${cleanLoc}` : 'S/L');
+      const finalExpDate = expirationDate ? new Date(expirationDate) : new Date('2036-12-31T00:00:00Z');
+
+      if (!lot) {
+        lot = await tx.productLot.create({
+          data: {
+            productId: product.id,
+            lotNumber: finalTargetLotNum,
+            expirationDate: finalExpDate,
+            stock: change > 0 ? 0 : Math.abs(change),
+            location: cleanLoc,
+          },
+        });
       }
 
       const updatedLotStock = change < 0 ? Math.max(0, lot.stock + change) : lot.stock + change;
@@ -253,7 +258,7 @@ export class ProductService {
           where: { id: lot.id },
           data: { 
             stock: updatedLotStock,
-            location: location ? location.trim() : lot.location,
+            location: cleanLoc !== 'S/U' ? cleanLoc : lot.location,
           },
         });
       }
@@ -281,7 +286,7 @@ export class ProductService {
           type: change > 0 ? 'IN' : 'OUT',
           reason: reason || 'Ajuste de stock manual',
           userId: userId,
-          productLotId: updatedLotStock <= 0 ? null : lotId,
+          productLotId: updatedLotStock <= 0 ? null : (lot ? lot.id : null),
         },
       });
 

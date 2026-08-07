@@ -48,6 +48,7 @@ export const adjustStockSchema = z.object({
     lotNumber: z.string().optional(),
     expirationDate: z.string().optional(),
     location: z.string().optional().nullable(),
+    lotId: z.number().optional().nullable(),
   }),
 });
 

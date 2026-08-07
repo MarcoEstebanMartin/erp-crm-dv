@@ -2539,6 +2539,21 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
 
                             let hasStock = false;
                             let foundSlotObj: any = defaultSlots.find((s: any) => s.row === cell.r && s.col === cell.c && s.dep_id === cell.dep_id);
+                            const cleanSlotCode = (foundSlotObj?.code || '').toUpperCase().trim();
+                            allProducts.forEach(p => {
+                              if (p.lots && p.lots.length > 0) {
+                                p.lots.forEach((l: any) => {
+                                  const loc = (l.location || '').toUpperCase().trim();
+                                  if (cleanSlotCode && (loc === cleanSlotCode || loc.startsWith(cleanSlotCode) || loc.includes(cleanSlotCode)) && Number(l.stock) > 0) {
+                                    hasStock = true;
+                                  }
+                                });
+                              }
+                              const defLoc = (p.defaultLocation || '').toUpperCase().trim();
+                              if (cleanSlotCode && defLoc && (defLoc === cleanSlotCode || defLoc.startsWith(cleanSlotCode) || cleanSlotCode.startsWith(defLoc)) && Number(p.stock) > 0) {
+                                hasStock = true;
+                              }
+                            });
                             
                             const depName = cell.dep_id === 'D1' ? 'Depósito 1' : cell.dep_id === 'D2' ? 'Depósito 2' : 'Depósito 3';
                             if (!foundSlotObj) {
@@ -2555,17 +2570,6 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
                               const effChamber = chamberMap[cellPosKey] || foundSlotObj.chamber;
                               foundSlotObj = { ...foundSlotObj, chamber: effChamber, nivel: cellText || foundSlotObj.nivel || 'A' };
                             }
-
-                            allProducts.forEach(p => {
-                              if (p.lots && p.lots.length > 0) {
-                                p.lots.forEach((l: any) => {
-                                  const loc = l.location || '';
-                                  if ((loc === foundSlotObj.code || loc.startsWith(foundSlotObj.code) || loc.includes(foundSlotObj.code)) && l.stock > 0) hasStock = true;
-                                });
-                              } else if (p.defaultLocation === foundSlotObj.code && p.stock > 0) {
-                                hasStock = true;
-                              }
-                            });
 
                             const currentChamber = chamberMap[cellPosKey] || foundSlotObj.chamber || 'GENERAL';
                             const isChamberSelected = selectedSector !== 'ALL' && currentChamber === selectedSector;
@@ -2724,15 +2728,27 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
 
                   {(() => {
                     const matchingProducts: { product: any; lot: any }[] = [];
+                    const code = (selectedSlot.code || '').toUpperCase().trim();
+
                     allProducts.forEach(p => {
+                      let matchedInLots = false;
                       if (p.lots && p.lots.length > 0) {
                         p.lots.forEach((l: any) => {
                           const loc = (l.location || '').toUpperCase().trim();
-                          const code = selectedSlot.code.toUpperCase().trim();
-                          if ((loc === code || loc.startsWith(code) || loc.includes(code)) && l.stock > 0) {
+                          if ((loc === code || loc.startsWith(code) || loc.includes(code)) && Number(l.stock) > 0) {
                             matchingProducts.push({ product: p, lot: l });
+                            matchedInLots = true;
                           }
                         });
+                      }
+                      if (!matchedInLots && Number(p.stock) > 0) {
+                        const defLoc = (p.defaultLocation || '').toUpperCase().trim();
+                        if (defLoc && (defLoc === code || defLoc.startsWith(code) || code.startsWith(defLoc))) {
+                          matchingProducts.push({
+                            product: p,
+                            lot: { id: null, lotNumber: 'S/L', stock: p.stock, location: p.defaultLocation, expirationDate: null }
+                          });
+                        }
                       }
                     });
 
@@ -2779,9 +2795,45 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
 
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '4px 0 2px 0' }}>
                           <span style={{ fontSize: '0.74rem', fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: '0.4px' }}>MERCADERÍA ASIGNADA</span>
-                          <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#047857', backgroundColor: '#dcfce7', padding: '2px 8px', borderRadius: '12px', border: '1px solid #a7f3d0' }}>
-                            🟢 OCUPADO ({matchingProducts.reduce((acc, curr) => acc + (curr.lot.stock || 0), 0)} u.)
-                          </span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#047857', backgroundColor: '#dcfce7', padding: '2px 8px', borderRadius: '12px', border: '1px solid #a7f3d0' }}>
+                              🟢 OCUPADO ({matchingProducts.reduce((acc, curr) => acc + (curr.lot.stock || 0), 0)} u.)
+                            </span>
+                            <button
+                              type="button"
+                              title="Vaciar todos los lotes de esta posición"
+                              className="btn btn-danger btn-sm"
+                              style={{ padding: '2px 6px', fontSize: '0.68rem', fontWeight: 700, borderRadius: '6px' }}
+                              onClick={async () => {
+                                const ok = await confirm(
+                                  `¿Confirmás vaciar TODA la mercadería asignada a la posición ${selectedSlot.code}?`,
+                                  {
+                                    title: 'Vaciar Posición Completa',
+                                    confirmText: '🗑️ Vaciar Posición',
+                                    cancelText: 'Cancelar',
+                                    type: 'danger'
+                                  }
+                                );
+                                if (!ok) return;
+                                try {
+                                  for (const item of matchingProducts) {
+                                    const qtyToSub = Number(item.lot.stock) > 0 ? Number(item.lot.stock) : 1;
+                                    const locToSub = item.lot.location || selectedSlot.code;
+                                    const lotNumToSub = item.lot.lotNumber || 'S/L';
+                                    await api.adjustStock(item.product.id, -qtyToSub, 'Vaciamiento completo de posición desde Panel WMS', lotNumToSub, item.lot.expirationDate, locToSub, item.lot.id || undefined);
+                                  }
+                                  playBeep('success');
+                                  await fetchData();
+                                } catch (err: any) {
+                                  console.error('Error al vaciar posición completa:', err);
+                                  playBeep('error');
+                                  await confirm(err.message || 'Error al vaciar la posición.', { title: 'Atención WMS', isAlert: true, type: 'danger' });
+                                }
+                              }}
+                            >
+                              Vaciar Posición
+                            </button>
+                          </div>
                         </div>
 
                         {matchingProducts.map(({ product, lot }, idx) => (
@@ -2811,7 +2863,7 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
                                     );
                                     if (!ok) return;
                                     try {
-                                      await api.adjustStock(product.id, -1, 'Retiro parcial desde Panel WMS', lot.lotNumber, lot.expirationDate, lot.location);
+                                      await api.adjustStock(product.id, -1, 'Retiro parcial desde Panel WMS', lot.lotNumber, lot.expirationDate, lot.location || selectedSlot.code, lot.id || undefined);
                                       playBeep('success');
                                       await fetchData();
                                     } catch (err: any) {
@@ -2842,7 +2894,7 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
                                       const qtyToSub = Number(lot.stock) > 0 ? Number(lot.stock) : 1;
                                       const locToSub = lot.location || selectedSlot.code;
                                       const lotNumToSub = lot.lotNumber || 'S/L';
-                                      await api.adjustStock(product.id, -qtyToSub, 'Eliminación completa de lote desde Panel WMS', lotNumToSub, lot.expirationDate, locToSub);
+                                      await api.adjustStock(product.id, -qtyToSub, 'Eliminación completa de lote desde Panel WMS', lotNumToSub, lot.expirationDate, locToSub, lot.id || undefined);
                                       playBeep('success');
                                       await fetchData();
                                     } catch (err: any) {
