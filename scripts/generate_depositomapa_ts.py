@@ -20,7 +20,7 @@ for r in range(1, ws.max_row + 1):
         if s_val in BLOCKED_TEXTS or s_val.startswith('DEPOSITO') or s_val.isdigit():
             display_val = ""
 
-        # Manejo estricto de color HEX para evitar negros 00000000
+        # Manejo de color HEX exacto de MAPADEPOSITO.xlsx
         fill_hex = "FFFFFF"
         if cell_obj.fill and cell_obj.fill.start_color and cell_obj.fill.start_color.rgb:
             raw = str(cell_obj.fill.start_color.rgb).upper()
@@ -34,11 +34,11 @@ for r in range(1, ws.max_row + 1):
             if fill_hex == "000000":
                 fill_hex = "FFFFFF"
 
-        # Clasificación por Depósito
-        if r <= 10:
+        # Clasificación estricta de Depósitos según filas de MAPADEPOSITO.xlsx
+        if r <= 7:
             dep_id = 'D1'
             dep_nombre = 'Depósito 1'
-        elif r >= 11 and r <= 24:
+        elif r >= 8 and r <= 22:
             dep_id = 'D2'
             dep_nombre = 'Depósito 2'
         else:
@@ -48,18 +48,20 @@ for r in range(1, ws.max_row + 1):
         # Clasificación por Cámara / Sector
         chamber = 'GENERAL'
         upper_val = s_val.upper()
-        if 'CAMARA 2' in upper_val or (r in [4, 5, 6] and c in [7, 8, 9, 10, 11]):
+        if 'CAMARA 2' in upper_val or (dep_id == 'D1' and r in [1, 2, 3] and c in [7, 8, 9, 10, 11]):
             chamber = 'CAMARA_2'
-        elif 'CAMARA 1' in upper_val or (r in [6, 7, 8, 9, 10] and c in [6, 7, 8, 9]):
+        elif 'CAMARA 1' in upper_val or (dep_id == 'D1' and r in [4, 5] and c in [6, 7, 8, 9]):
             chamber = 'CAMARA_1'
-        elif 'CAMARA 3' in upper_val or (r in [7, 8, 9, 10] and c in [11, 12, 13, 14, 15]):
+        elif 'CAMARA 3' in upper_val or (dep_id == 'D1' and r in [5, 6] and c in [11, 12, 13, 14, 15]):
             chamber = 'CAMARA_3'
-        elif 'BAÑO' in upper_val or 'BANO' in upper_val or fill_hex == 'F4CCCC':
+        elif 'BAÑO' in upper_val or 'BANO' in upper_val or (dep_id == 'D1' and c in [16, 17] and r == 6):
             chamber = 'BANO'
-        elif (r in [4, 5, 6] and c == 4) or (r == 10 and c in [1, 2, 3, 4]) or fill_hex == 'EAD1DC':
+        elif dep_id == 'D1' and c in [1, 2, 3, 4]:
             chamber = 'ESTANTERIA'
-        elif (r == 9 and c in [1, 2, 3, 4]) or fill_hex == 'FCE5CD':
-            chamber = 'RACK_ENTRADA'
+        elif dep_id == 'D2':
+            chamber = 'D2_GENERAL'
+        elif dep_id == 'D3':
+            chamber = 'D3_GENERAL'
 
         is_storage = s_val in ['A', 'A-B', 'A-B-C', 'A-B-C-D-E-F']
 
@@ -116,13 +118,15 @@ export const DEPOSITO_MATRIX: SlotCellData[][] = {json.dumps(matrix, indent=2, e
 export const DEPOSITO_SLOTS: DepositSlot[] = {json.dumps(all_slots, indent=2, ensure_ascii=False)};
 
 export const SECTORS_INFO: Record<string, {{ label: string; bg: string; color: string; border: string; icon: string }}> = {{
-  ESTANTERIA: {{ label: 'Estanterías', bg: '#fce7f3', color: '#9d174d', border: '#f472b6', icon: '🏷️' }},
+  ESTANTERIA: {{ label: 'Depósito 1 - Estanterías', bg: '#fce7f3', color: '#9d174d', border: '#f472b6', icon: '🏷️' }},
   RACK_ENTRADA: {{ label: 'Rack Entrada', bg: '#fef3c7', color: '#92400e', border: '#f59e0b', icon: '🚪' }},
   CAMARA_2: {{ label: 'Cámara 2 Frío (Quesos)', bg: '#e0f2fe', color: '#0369a1', border: '#0284c7', icon: '❄️' }},
   CAMARA_1: {{ label: 'Cámara 1 Frío (Lácteos)', bg: '#ecfeff', color: '#0e7490', border: '#0891b2', icon: '🥛' }},
   CAMARA_3: {{ label: 'Cámara 3 Seco (Conservas)', bg: '#f3e8ff', color: '#6b21a8', border: '#7e22ce', icon: '📦' }},
   BANO: {{ label: 'Baño / Sanitarios', bg: '#ffe4e6', color: '#9f1239', border: '#fb7185', icon: '🚻' }},
-  GENERAL: {{ label: 'Pasillo / General', bg: '#ffffff', color: '#334155', border: '#e2e8f0', icon: '📍' }},
+  D2_GENERAL: {{ label: 'Depósito 2 (Sector General)', bg: '#fce5cd', color: '#7c2d12', border: '#f97316', icon: '🏢' }},
+  D3_GENERAL: {{ label: 'Depósito 3 (Sector General)', bg: '#d9d2e9', color: '#4c1d95', border: '#8b5cf6', icon: '🏭' }},
+  GENERAL: {{ label: 'Pasillo / Circulación', bg: '#ffffff', color: '#334155', border: '#e2e8f0', icon: '📍' }},
 }};
 """
 

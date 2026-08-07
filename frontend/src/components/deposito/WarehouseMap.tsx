@@ -54,9 +54,9 @@ export const WarehouseMap: React.FC<WarehouseMapProps> = ({ products, onStockUpd
 
   // Filtrar filas según el depósito seleccionado
   const filteredMatrix = useMemo(() => {
-    if (selectedWarehouse === 'D1') return DEPOSITO_MATRIX.slice(0, 10);
-    if (selectedWarehouse === 'D2') return DEPOSITO_MATRIX.slice(10, 24);
-    if (selectedWarehouse === 'D3') return DEPOSITO_MATRIX.slice(24, 35);
+    if (selectedWarehouse === 'D1') return DEPOSITO_MATRIX.slice(0, 7);
+    if (selectedWarehouse === 'D2') return DEPOSITO_MATRIX.slice(7, 22);
+    if (selectedWarehouse === 'D3') return DEPOSITO_MATRIX.slice(22, 36);
     return DEPOSITO_MATRIX;
   }, [selectedWarehouse]);
 
@@ -307,10 +307,16 @@ export const WarehouseMap: React.FC<WarehouseMapProps> = ({ products, onStockUpd
                       }
 
                       if (isSlot) {
-                        if (cellText === 'A') { bg = '#ffffff'; color = '#334155'; border = '1px solid #94a3b8'; }
-                        else if (cellText === 'A-B') { bg = '#fef3c7'; color = '#92400e'; border = '1.5px solid #f59e0b'; }
-                        else if (cellText === 'A-B-C') { bg = '#dbeafe'; color = '#1e40af'; border = '1.5px solid #3b82f6'; }
-                        else if (cellText === 'A-B-C-D-E-F') { bg = '#dcfce7'; color = '#166534'; border = '2px solid #22c55e'; }
+                        if (cell?.fill && cell.fill.toUpperCase() !== '#FFFFFF' && cell.fill.toUpperCase() !== '#000000') {
+                          bg = cell.fill;
+                          border = '1px solid rgba(0,0,0,0.18)';
+                          color = '#0f172a';
+                        } else {
+                          if (cellText === 'A') { bg = '#ffffff'; color = '#334155'; border = '1px solid #94a3b8'; }
+                          else if (cellText === 'A-B') { bg = '#fef3c7'; color = '#92400e'; border = '1.5px solid #f59e0b'; }
+                          else if (cellText === 'A-B-C') { bg = '#dbeafe'; color = '#1e40af'; border = '1.5px solid #3b82f6'; }
+                          else if (cellText === 'A-B-C-D-E-F') { bg = '#dcfce7'; color = '#166534'; border = '2px solid #22c55e'; }
+                        }
                       }
 
                       return (
