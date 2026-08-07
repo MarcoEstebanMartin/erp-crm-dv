@@ -301,8 +301,8 @@ export const WarehouseMap: React.FC<WarehouseMapProps> = ({ products, onStockUpd
                           border = '1px solid #cbd5e1';
                           color = '#0f172a';
                         } else if (!chamberMeta || chamberMeta === SECTORS_INFO.GENERAL) {
-                          bg = '#ffffff';
-                          border = '1px solid #f1f5f9';
+                          bg = '#fafafa';
+                          border = '1px solid #f3f4f6';
                         }
                       }
 
@@ -338,14 +338,16 @@ export const WarehouseMap: React.FC<WarehouseMapProps> = ({ products, onStockUpd
                               : bg,
                             color: isSelected ? '#007AFF' : isChamberMatch ? '#0369a1' : hasStock ? '#15803d' : color,
                             fontWeight: isSlot || cellText.length > 2 ? 'bold' : 'normal',
-                            padding: '2px 3px',
+                            fontSize: !isSlot && cellText.length > 3 ? '0.6rem' : '0.66rem',
+                            padding: '1px 2px',
                             textAlign: 'center',
-                            height: '30px',
+                            height: '32px',
                             cursor: isSlot ? 'pointer' : 'default',
                             userSelect: 'none',
-                            whiteSpace: 'nowrap',
+                            whiteSpace: !isSlot ? 'normal' : 'nowrap',
+                            wordBreak: 'break-word',
+                            lineHeight: 1.1,
                             overflow: 'hidden',
-                            textOverflow: 'ellipsis',
                             borderRadius: isSlot ? '4px' : '1px',
                             transition: 'all 0.1s ease'
                           }}
