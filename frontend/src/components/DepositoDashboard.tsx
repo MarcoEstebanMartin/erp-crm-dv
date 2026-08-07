@@ -2809,17 +2809,19 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
                                   className="btn btn-secondary btn-sm"
                                   style={{ padding: '3px 6px', fontSize: '0.7rem', color: '#d97706', border: '1px solid #f59e0b', backgroundColor: '#fffbeb' }}
                                   onClick={async () => {
-                                    const inputVal = window.prompt(`¿Cuántos bultos deseas retirar del lote "${lot.lotNumber}"? (Disponible: ${lot.stock} u.)`, '1');
-                                    if (!inputVal) return;
-                                    const numVal = parseInt(inputVal, 10);
-                                    if (isNaN(numVal) || numVal <= 0 || numVal > lot.stock) {
-                                      alert('Cantidad inválida.');
-                                      return;
-                                    }
+                                    const ok = await confirm({
+                                      title: 'Restar Stock de Estantería',
+                                      message: `¿Deseas retirar 1 unidad del lote "${lot.lotNumber}" (${product.name})?`,
+                                      confirmText: '➖ Confirmar Retiro',
+                                      cancelText: 'Cancelar'
+                                    });
+                                    if (!ok) return;
                                     try {
-                                      await api.adjustStock(product.id, -numVal, 'Retiro parcial desde Panel WMS', lot.lotNumber, lot.expirationDate, lot.location);
-                                      fetchData();
+                                      await api.adjustStock(product.id, -1, 'Retiro parcial desde Panel WMS', lot.lotNumber, lot.expirationDate, lot.location);
+                                      playBeep('success');
+                                      await fetchData();
                                     } catch (err: any) {
+                                      playBeep('error');
                                       alert(err.message || 'Error al retirar stock.');
                                     }
                                   }}
@@ -2832,11 +2834,20 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
                                   className="btn btn-danger btn-sm"
                                   style={{ padding: '3px 6px', fontSize: '0.7rem', color: '#e11d48', border: '1px solid #fda4af', backgroundColor: '#fff1f2' }}
                                   onClick={async () => {
-                                    if (!window.confirm(`¿Vaciar totalmente el lote "${lot.lotNumber}" de ${product.name}? Se retirarán ${lot.stock} u.`)) return;
+                                    const ok = await confirm({
+                                      title: 'Vaciar Lote de Mercadería',
+                                      message: `¿Confirmás vaciar las ${lot.stock} unidades del lote "${lot.lotNumber}" (${product.name})? La viga quedará liberada.`,
+                                      confirmText: '🗑️ Vaciar Lote',
+                                      cancelText: 'Cancelar',
+                                      type: 'danger'
+                                    });
+                                    if (!ok) return;
                                     try {
                                       await api.adjustStock(product.id, -lot.stock, 'Eliminación completa de lote desde Panel WMS', lot.lotNumber, lot.expirationDate, lot.location);
-                                      fetchData();
+                                      playBeep('success');
+                                      await fetchData();
                                     } catch (err: any) {
+                                      playBeep('error');
                                       alert(err.message || 'Error al vaciar lote.');
                                     }
                                   }}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { X, Package, Check, Layers, Plus, Box, Trash2, MinusCircle } from 'lucide-react';
+import { X, Package, Check, Layers, Plus, Box, Trash2, MinusCircle, AlertTriangle } from 'lucide-react';
 import { api } from '../utils/api';
 
 interface RackLevelViewerModalProps {
@@ -25,6 +25,15 @@ export default function RackLevelViewerModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  // Modal personalizado para vaciar o restar stock (Reemplazo de window.confirm/prompt)
+  const [actionModal, setActionModal] = useState<{
+    open: boolean;
+    mode: 'subtract' | 'delete';
+    product: any;
+    lot: any;
+    qtyToRemove: number;
+  } | null>(null);
   
   // Productos y lotes locales sincronizados en tiempo real con PostgreSQL
   const [localProducts, setLocalProducts] = useState<any[]>([]);
@@ -53,6 +62,7 @@ export default function RackLevelViewerModal({
       setQuantity(1);
       setSuccessMsg(null);
       setErrorMsg(null);
+      setActionModal(null);
       fetchFreshProducts();
     }
   }, [isOpen, slot, fetchFreshProducts]);
@@ -60,7 +70,7 @@ export default function RackLevelViewerModal({
   if (!isOpen || !slot) return null;
 
   const getSubLevelsList = (nivelStr: string): string[] => {
-    if (nivelStr === 'A-B-C-D-E-F') return ['F', 'E', 'D', 'C', 'B', 'A']; // De arriba hacia abajo
+    if (nivelStr === 'A-B-C-D-E-F') return ['F', 'E', 'D', 'C', 'B', 'A'];
     if (nivelStr === 'A-B-C') return ['C', 'B', 'A'];
     if (nivelStr === 'A-B') return ['B', 'A'];
     return ['A'];
@@ -69,7 +79,7 @@ export default function RackLevelViewerModal({
   const levelsList = getSubLevelsList(slot.nivel || 'A');
   const activeProductsSource = localProducts.length > 0 ? localProducts : parentProducts;
 
-  // Filtrado de lotes para un nivel específico
+  // Filtrado de lotes para un nivel específico con normalización de claves
   const getProductsInLevel = (lvl: string) => {
     const matching: { product: any; lot: any }[] = [];
     const targetLvlCode = `${slot.code}-${lvl}`.toUpperCase().trim();
@@ -83,8 +93,9 @@ export default function RackLevelViewerModal({
             if (
               loc === targetLvlCode ||
               loc === `${targetSlotCode}-${lvl}` ||
-              (lvl === 'A' && loc === targetSlotCode) ||
-              loc.startsWith(targetLvlCode)
+              loc === targetSlotCode ||
+              loc.startsWith(targetLvlCode) ||
+              loc.startsWith(targetSlotCode)
             ) {
               matching.push({ product: p, lot: l });
             }
@@ -92,7 +103,7 @@ export default function RackLevelViewerModal({
         });
       } else if (p.stock > 0) {
         const defLoc = (p.defaultLocation || '').toUpperCase().trim();
-        if (defLoc === targetLvlCode || (lvl === 'A' && defLoc === targetSlotCode)) {
+        if (defLoc === targetLvlCode || defLoc === targetSlotCode || defLoc.startsWith(targetSlotCode)) {
           matching.push({ product: p, lot: { lotNumber: 'S/L', stock: p.stock } });
         }
       }
@@ -115,7 +126,8 @@ export default function RackLevelViewerModal({
     setErrorMsg(null);
 
     try {
-      const finalCode = slot.nivel !== 'A' ? `${slot.code}-${selectedSubLevel}` : slot.code;
+      // Normalización garantizada de código de nivel (ej. D1-R05-C07-A)
+      const finalCode = `${slot.code}-${selectedSubLevel}`;
       
       let finalLotNumber = lotNumber.trim();
       if (!finalLotNumber) {
@@ -150,26 +162,25 @@ export default function RackLevelViewerModal({
     }
   };
 
-  // Retirar / Eliminar stock de un lote específico
-  const handleRemoveStock = async (product: any, lot: any, removeAll: boolean) => {
-    let qtyToRemove = lot.stock;
-    if (!removeAll) {
-      const inputVal = window.prompt(`¿Cuántos bultos deseas retirar del lote "${lot.lotNumber}"? (Disponible: ${lot.stock} u.)`, '1');
-      if (!inputVal) return;
-      const numVal = parseInt(inputVal, 10);
-      if (isNaN(numVal) || numVal <= 0) {
-        alert('Por favor ingresá una cantidad válida.');
-        return;
-      }
-      if (numVal > lot.stock) {
-        alert(`La cantidad no puede superar el stock disponible (${lot.stock} u.).`);
-        return;
-      }
-      qtyToRemove = numVal;
-    } else {
-      if (!window.confirm(`¿Confirmás vaciar el lote "${lot.lotNumber}" de [${product.sku}] ${product.name}? Se retirarán ${lot.stock} unidades.`)) {
-        return;
-      }
+  // Abrir modal personalizado de confirmación de retiro/eliminación
+  const openActionModal = (product: any, lot: any, mode: 'subtract' | 'delete') => {
+    setActionModal({
+      open: true,
+      mode,
+      product,
+      lot,
+      qtyToRemove: mode === 'delete' ? lot.stock : 1
+    });
+  };
+
+  // Ejecutar retiro de stock sin bloqueos de servidor
+  const confirmExecuteRemoveStock = async () => {
+    if (!actionModal) return;
+    const { product, lot, mode, qtyToRemove } = actionModal;
+    
+    if (qtyToRemove <= 0) {
+      setErrorMsg('La cantidad a retirar debe ser mayor a 0.');
+      return;
     }
 
     setIsSubmitting(true);
@@ -179,16 +190,17 @@ export default function RackLevelViewerModal({
       await api.adjustStock(
         product.id,
         -qtyToRemove,
-        removeAll ? 'Eliminación completa de lote desde Estantería WMS' : 'Retiro parcial de stock desde Estantería WMS',
+        mode === 'delete' ? 'Eliminación completa de lote desde Estantería WMS' : 'Retiro parcial de stock desde Estantería WMS',
         lot.lotNumber,
         lot.expirationDate,
-        lot.location
+        lot.location || `${slot.code}-${selectedSubLevel}`
       );
 
       await fetchFreshProducts();
       await onRefresh();
 
-      setSuccessMsg(`¡Se retiraron ${qtyToRemove} u. del lote ${lot.lotNumber}!`);
+      setActionModal(null);
+      setSuccessMsg(`¡Se retiraron ${qtyToRemove} u. del lote ${lot.lotNumber} exitosamente!`);
       setTimeout(() => setSuccessMsg(null), 1400);
     } catch (err: any) {
       console.error('Error al retirar stock:', err);
@@ -216,7 +228,8 @@ export default function RackLevelViewerModal({
         boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.35)',
         display: 'flex', flexDirection: 'column',
         overflow: 'hidden',
-        border: '1px solid var(--border-color)'
+        border: '1px solid var(--border-color)',
+        position: 'relative'
       }}>
         {/* Header Unificado Modal de Estantería */}
         <div style={{
@@ -360,14 +373,14 @@ export default function RackLevelViewerModal({
                                 {lot.stock} un.
                               </span>
                               
-                              {/* Botones de Retiro y Eliminacion de Lote */}
+                              {/* Botones de Retiro y Eliminacion de Lote (Abre Modal Premium) */}
                               <div style={{ display: 'flex', gap: '4px' }}>
                                 <button
                                   type="button"
                                   title="Restar bultos"
                                   className="btn btn-secondary btn-sm"
                                   style={{ padding: '4px 6px', fontSize: '0.7rem', backgroundColor: '#1e293b', color: '#f59e0b', border: '1px solid #d97706', borderRadius: '4px' }}
-                                  onClick={(e) => { e.stopPropagation(); handleRemoveStock(product, lot, false); }}
+                                  onClick={(e) => { e.stopPropagation(); openActionModal(product, lot, 'subtract'); }}
                                 >
                                   <MinusCircle size={14} />
                                 </button>
@@ -377,7 +390,7 @@ export default function RackLevelViewerModal({
                                   title="Vaciar / Eliminar lote completo"
                                   className="btn btn-danger btn-sm"
                                   style={{ padding: '4px 6px', fontSize: '0.7rem', backgroundColor: '#881337', color: '#ffe4e6', border: '1px solid #e11d48', borderRadius: '4px' }}
-                                  onClick={(e) => { e.stopPropagation(); handleRemoveStock(product, lot, true); }}
+                                  onClick={(e) => { e.stopPropagation(); openActionModal(product, lot, 'delete'); }}
                                 >
                                   <Trash2 size={14} />
                                 </button>
@@ -512,6 +525,99 @@ export default function RackLevelViewerModal({
 
           </div>
         </div>
+
+        {/* MODAL DE CONFIRMACIÓN / RETIRO PREMIUM (REEMPLAZO DE WINDOW.CONFIRM / PROMPT) */}
+        {actionModal && actionModal.open && (
+          <div style={{
+            position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+            backgroundColor: 'rgba(15, 23, 42, 0.75)',
+            backdropFilter: 'blur(4px)',
+            zIndex: 10001,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: '20px'
+          }}>
+            <div style={{
+              backgroundColor: '#ffffff',
+              borderRadius: '14px',
+              padding: '24px',
+              maxWidth: '440px',
+              width: '100%',
+              boxShadow: '0 20px 40px rgba(0, 0, 0, 0.3)',
+              border: '1px solid #cbd5e1',
+              display: 'flex', flexDirection: 'column', gap: '16px'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{
+                  padding: '10px', borderRadius: '10px',
+                  backgroundColor: actionModal.mode === 'delete' ? '#ffe4e6' : '#fef3c7',
+                  color: actionModal.mode === 'delete' ? '#e11d48' : '#d97706'
+                }}>
+                  {actionModal.mode === 'delete' ? <AlertTriangle size={24} /> : <MinusCircle size={24} />}
+                </div>
+                <div>
+                  <h4 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#0f172a' }}>
+                    {actionModal.mode === 'delete' ? 'Confirmar Vaciar Lote' : 'Restar Bultos de Estantería'}
+                  </h4>
+                  <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '2px' }}>
+                    [{actionModal.product.sku}] {actionModal.product.name}
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ backgroundColor: '#f8fafc', padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '0.84rem' }}>
+                <div>Lote: <strong style={{ color: '#2563eb' }}>{actionModal.lot.lotNumber}</strong></div>
+                <div>Stock Actual en Viga: <strong style={{ color: '#059669' }}>{actionModal.lot.stock} unidades</strong></div>
+              </div>
+
+              {actionModal.mode === 'subtract' ? (
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#0f172a', marginBottom: '6px' }}>
+                    Cantidad de bultos a retirar:
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    max={actionModal.lot.stock}
+                    className="form-control"
+                    style={{ fontSize: '0.9rem', padding: '10px 12px', borderRadius: '8px' }}
+                    value={actionModal.qtyToRemove}
+                    onChange={(e) => setActionModal({ ...actionModal, qtyToRemove: Math.min(actionModal.lot.stock, Math.max(1, Number(e.target.value))) })}
+                  />
+                </div>
+              ) : (
+                <div style={{ fontSize: '0.84rem', color: '#b91c1c', fontWeight: 600 }}>
+                  ⚠️ Se retirarán las <strong>{actionModal.lot.stock} unidades</strong> de este lote y la viga quedará liberada.
+                </div>
+              )}
+
+              <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '6px' }}>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  style={{ padding: '9px 16px', borderRadius: '8px', fontSize: '0.86rem', fontWeight: 700 }}
+                  onClick={() => setActionModal(null)}
+                  disabled={isSubmitting}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  className="btn"
+                  style={{
+                    padding: '9px 18px', borderRadius: '8px', fontSize: '0.86rem', fontWeight: 800,
+                    backgroundColor: actionModal.mode === 'delete' ? '#e11d48' : '#2563eb',
+                    color: '#ffffff', border: 'none'
+                  }}
+                  onClick={confirmExecuteRemoveStock}
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? 'Procesando...' : actionModal.mode === 'delete' ? '🗑️ Vaciar Lote' : '➖ Confirmar Retiro'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
       </div>
     </div>
   );

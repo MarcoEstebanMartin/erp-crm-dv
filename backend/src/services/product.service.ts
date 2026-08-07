@@ -182,10 +182,7 @@ export class ProductService {
       const product = await tx.product.findUnique({ where: { id } });
       if (!product) throw new Error('Producto no encontrado.');
 
-      const newStock = product.stock + change;
-      if (newStock < 0) {
-        throw new Error(`Ajuste inválido. El stock general no puede ser negativo (Stock actual: ${product.stock}, Cambio solicitado: ${change}).`);
-      }
+      const newStock = Math.max(0, product.stock + change);
 
       let lotId: number | null = null;
       const targetLotNumber = (lotNumber && lotNumber.trim()) ? lotNumber.trim() : 'S/L';
@@ -195,6 +192,16 @@ export class ProductService {
           productId_lotNumber: { productId: product.id, lotNumber: targetLotNumber },
         },
       });
+
+      if (!lot && location) {
+        // Buscar por combinación de producto y ubicación si cambió la clave del lote
+        lot = await tx.productLot.findFirst({
+          where: {
+            productId: product.id,
+            location: location.trim()
+          }
+        });
+      }
 
       if (change > 0) {
         if (!lot) {
@@ -213,15 +220,14 @@ export class ProductService {
         if (!lot) {
           throw new Error(`El lote "${targetLotNumber}" no existe para este producto.`);
         }
-        if (lot.stock + change < 0) {
-          throw new Error(`Stock insuficiente en el lote "${targetLotNumber}" (Disponible: ${lot.stock}, Solicitado: ${change}).`);
-        }
       }
+
+      const updatedLotStock = change < 0 ? Math.max(0, lot.stock + change) : lot.stock + change;
 
       const updatedLot = await tx.productLot.update({
         where: { id: lot.id },
         data: { 
-          stock: lot.stock + change,
+          stock: updatedLotStock,
           location: location ? location.trim() : lot.location,
         },
       });
