@@ -43,6 +43,16 @@ export default function ProductsList({ products, searchQuery, setSearchQuery, se
   const [editValue, setEditValue] = useState<string>('');
   const [previewModal, setPreviewModal] = useState<{ open: boolean; imageUrl: string; name: string; sku: string; productId: number; categoryName: string; categoryIcon: string } | null>(null);
 
+  const extractLabel = (val: any): string => {
+    if (!val) return '';
+    if (typeof val === 'string') return val.trim();
+    if (typeof val === 'object') {
+      if (val.name) return String(val.name).trim();
+      if (val.nombre) return String(val.nombre).trim();
+    }
+    return '';
+  };
+
   const getCategoryInfo = (p: any) => {
     const catName = p.commercialCategory || extractLabel(p.rubro) || 'Varios';
     let icon = CATEGORY_EMOJIS[catName];
@@ -115,17 +125,6 @@ export default function ProductsList({ products, searchQuery, setSearchQuery, se
 
     await onUpdateProduct(updatedProduct);
     setEditingCell(null);
-  };
-
-
-  const extractLabel = (val: any): string => {
-    if (!val) return '';
-    if (typeof val === 'string') return val.trim();
-    if (typeof val === 'object') {
-      if (val.name) return String(val.name).trim();
-      if (val.nombre) return String(val.nombre).trim();
-    }
-    return '';
   };
 
   const filteredProducts = products
