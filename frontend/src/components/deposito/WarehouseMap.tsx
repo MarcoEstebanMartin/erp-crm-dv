@@ -56,7 +56,7 @@ export const WarehouseMap: React.FC<WarehouseMapProps> = ({ products, onStockUpd
   const filteredMatrix = useMemo(() => {
     if (selectedWarehouse === 'D1') return DEPOSITO_MATRIX.slice(0, 10);
     if (selectedWarehouse === 'D2') return DEPOSITO_MATRIX.slice(10, 24);
-    if (selectedWarehouse === 'D3') return DEPOSITO_MATRIX.slice(24, 34);
+    if (selectedWarehouse === 'D3') return DEPOSITO_MATRIX.slice(24, 35);
     return DEPOSITO_MATRIX;
   }, [selectedWarehouse]);
 
