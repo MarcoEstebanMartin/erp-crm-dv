@@ -19,14 +19,21 @@ for r in range(1, ws.max_row + 1):
         if s_val in BLOCKED_TEXTS or s_val.startswith('DEPOSITO'):
             display_val = ""
 
+        # Manejo estricto de color HEX para evitar negros 00000000
         fill_hex = "FFFFFF"
         if cell_obj.fill and cell_obj.fill.start_color and cell_obj.fill.start_color.rgb:
             raw = str(cell_obj.fill.start_color.rgb).upper()
-            if len(raw) == 8:
+            if raw in ['00000000', '000000', '0']:
+                fill_hex = "FFFFFF"
+            elif len(raw) == 8:
                 fill_hex = raw[2:]
             elif len(raw) == 6:
                 fill_hex = raw
+            
+            if fill_hex == "000000":
+                fill_hex = "FFFFFF"
 
+        # Clasificación por Depósito
         if r <= 10:
             dep_id = 'D1'
             dep_nombre = 'Depósito 1'
@@ -37,18 +44,21 @@ for r in range(1, ws.max_row + 1):
             dep_id = 'D3'
             dep_nombre = 'Depósito 3'
 
+        # Clasificación por Cámara / Sector
         chamber = 'GENERAL'
-        if dep_id == 'D1':
-            if (r in [4, 5, 6] and c == 4) or (r == 10 and c in [1, 2, 3, 4]):
-                chamber = 'ESTANTERIA'
-            elif r == 9 and c in [1, 2, 3, 4]:
-                chamber = 'RACK_ENTRADA'
-            elif r in [4, 5, 6] and c in [7, 8, 9, 10, 11]:
-                chamber = 'CAMARA_2'
-            elif r in [6, 7, 8, 9, 10] and c in [6, 7, 8, 9]:
-                chamber = 'CAMARA_1'
-            elif r in [7, 8, 9, 10] and c in [11, 12, 13, 14, 15]:
-                chamber = 'CAMARA_3'
+        upper_val = s_val.upper()
+        if 'CAMARA 2' in upper_val or (r in [4, 5, 6] and c in [7, 8, 9, 10, 11]):
+            chamber = 'CAMARA_2'
+        elif 'CAMARA 1' in upper_val or (r in [6, 7, 8, 9, 10] and c in [6, 7, 8, 9]):
+            chamber = 'CAMARA_1'
+        elif 'CAMARA 3' in upper_val or (r in [7, 8, 9, 10] and c in [11, 12, 13, 14, 15]):
+            chamber = 'CAMARA_3'
+        elif 'BAÑO' in upper_val or 'BANO' in upper_val or fill_hex == 'F4CCCC':
+            chamber = 'BANO'
+        elif (r in [4, 5, 6] and c == 4) or (r == 10 and c in [1, 2, 3, 4]) or fill_hex == 'EAD1DC':
+            chamber = 'ESTANTERIA'
+        elif (r == 9 and c in [1, 2, 3, 4]) or fill_hex == 'FCE5CD':
+            chamber = 'RACK_ENTRADA'
 
         is_storage = s_val in ['A', 'A-B', 'A-B-C', 'A-B-C-D-E-F']
 
@@ -118,4 +128,4 @@ export const SECTORS_INFO: Record<string, {{ label: string; bg: string; color: s
 with open('frontend/src/components/deposito/depositomapaData.ts', 'w', encoding='utf-8') as f:
     f.write(ts_content)
 
-print(f"OK: depositomapaData.ts generado exitosamente desde MAPADEPOSITO.xlsx ({len(all_slots)} slots, {len(matrix)} filas x {len(matrix[0])} columnas)")
+print(f"OK: depositomapaData.ts re-generado exitosamente ({len(all_slots)} slots, {len(matrix)} filas x {len(matrix[0])} columnas)")

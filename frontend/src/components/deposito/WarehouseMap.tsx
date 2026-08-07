@@ -285,7 +285,7 @@ export const WarehouseMap: React.FC<WarehouseMapProps> = ({ products, onStockUpd
                       const isChamberMatch = selectedSector !== 'ALL' && cell.chamber === selectedSector;
                       const isSearchMatch = slotCode ? matchingSlotCodes.has(slotCode) : false;
 
-                      let bg = cell.fill || '#ffffff';
+                      let bg = (cell.fill && cell.fill.toUpperCase() !== '#000000' && cell.fill.toUpperCase() !== '#000') ? cell.fill : '#ffffff';
                       let color = '#334155';
                       let border = '1px solid #e2e8f0';
 
@@ -294,6 +294,16 @@ export const WarehouseMap: React.FC<WarehouseMapProps> = ({ products, onStockUpd
                         bg = chamberMeta.bg;
                         color = chamberMeta.color;
                         border = `1.5px solid ${chamberMeta.border}`;
+                      }
+
+                      if (!isSlot) {
+                        if (cellText && cellText.trim() !== '') {
+                          border = '1px solid #cbd5e1';
+                          color = '#0f172a';
+                        } else if (!chamberMeta || chamberMeta === SECTORS_INFO.GENERAL) {
+                          bg = '#ffffff';
+                          border = '1px solid #f1f5f9';
+                        }
                       }
 
                       if (isSlot) {
