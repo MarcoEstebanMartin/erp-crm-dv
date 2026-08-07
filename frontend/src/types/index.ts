@@ -54,6 +54,8 @@ export interface ProductLot {
   expirationDate: string;
   stock: number;
   location: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface Rubro {
@@ -83,6 +85,7 @@ export interface Product {
   approximateWeight?: number | string;
   imageUrl?: string;
   isActive: boolean;
+  defaultLocation?: string | null;
   rubroId?: number;
   rubro?: Rubro;
   providerId?: number;

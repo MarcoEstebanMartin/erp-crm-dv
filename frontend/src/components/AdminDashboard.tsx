@@ -108,7 +108,8 @@ import {
   Truck,
   FileText,
   TrendingUp,
-  MapPin
+  MapPin,
+  Warehouse
 } from 'lucide-react';
 
 

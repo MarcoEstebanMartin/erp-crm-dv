@@ -535,79 +535,90 @@ export const Slot3DInspectorModal: React.FC<Slot3DInspectorModalProps> = ({
                     1. Seleccionar Producto (Catálogo)
                   </label>
 
-                  {/* Campo de Búsqueda Rápida */}
-                  <input
-                    type="text"
-                    className="form-control"
-                    placeholder="🔍 Buscar por nombre o SKU (ej: Cremoso, Tybo)..."
-                    value={productSearch}
-                    onChange={e => {
-                      setProductSearch(e.target.value);
-                      if (selectedProductId !== '') setSelectedProductId('');
-                    }}
-                    style={{
-                      height: '38px',
-                      fontSize: '0.84rem',
-                      borderRadius: '8px',
-                      border: '1px solid #E2E8F0',
-                      backgroundColor: '#FFFFFF',
-                      marginBottom: '6px',
-                      paddingLeft: '10px'
-                    }}
-                  />
-
-                  {/* Dropdown de Selección */}
-                  <select
-                    className="form-control"
-                    value={selectedProductId}
-                    onChange={e => {
-                      const id = e.target.value ? Number(e.target.value) : '';
-                      setSelectedProductId(id);
-                      const found = (products || []).find(p => p.id === id);
-                      if (found) {
-                        setProductSearch(`[${found.sku}] ${found.name}`);
-                      }
-                    }}
-                    style={{
-                      height: '38px',
-                      fontSize: '0.84rem',
-                      borderRadius: '8px',
-                      border: selectedProduct ? '1.5px solid #007AFF' : '1px solid #CBD5E1',
-                      backgroundColor: selectedProduct ? '#F0F9FF' : '#FFFFFF',
-                      fontWeight: selectedProduct ? 700 : 400,
-                      color: '#0F172A'
-                    }}
-                  >
-                    <option value="">-- Seleccionar Producto del Catálogo ({(products || []).length} disponibles) --</option>
-                    {(filteredProducts.length > 0 ? filteredProducts : (products || [])).map(p => (
-                      <option key={p.id} value={p.id}>
-                        [{p.sku}] {p.name} — Stock Global: {p.stock} u.
-                      </option>
-                    ))}
-                  </select>
-
-                  {/* Ficha Resumen del Producto Seleccionado */}
-                  {selectedProduct && (
+                  {selectedProduct ? (
                     <div style={{
-                      marginTop: '8px',
-                      padding: '10px 12px',
+                      padding: '10px 14px',
                       backgroundColor: '#F0F9FF',
-                      border: '1px solid #BAE6FD',
+                      border: '1.5px solid #007AFF',
                       borderRadius: '8px',
                       display: 'flex',
-                      justify: 'space-between',
+                      justifyContent: 'space-between',
                       alignItems: 'center',
-                      fontSize: '0.82rem'
+                      boxShadow: '0 1px 3px rgba(0,122,255,0.06)'
                     }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ fontWeight: 800, color: '#0369A1', backgroundColor: '#E0F2FE', padding: '2px 6px', borderRadius: '4px', fontSize: '0.75rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <span style={{ fontWeight: 800, color: '#007AFF', backgroundColor: '#E0F2FE', padding: '3px 8px', borderRadius: '6px', fontSize: '0.78rem' }}>
                           {selectedProduct.sku}
                         </span>
-                        <strong style={{ color: '#0F172A' }}>{selectedProduct.name}</strong>
+                        <div>
+                          <div style={{ fontWeight: 700, fontSize: '0.86rem', color: '#0F172A' }}>{selectedProduct.name}</div>
+                          <div style={{ fontSize: '0.74rem', color: '#64748B', marginTop: '1px' }}>
+                            Stock Global Disponible: <strong>{selectedProduct.stock} u.</strong>
+                          </div>
+                        </div>
                       </div>
-                      <span className="badge" style={{ backgroundColor: '#0284C7', color: '#FFF', fontSize: '0.72rem', fontWeight: 700 }}>
-                        Stock: {selectedProduct.stock} u.
-                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedProductId('');
+                          setProductSearch('');
+                        }}
+                        style={{
+                          fontSize: '0.76rem',
+                          fontWeight: 700,
+                          color: '#0F172A',
+                          backgroundColor: '#FFFFFF',
+                          border: '1px solid #CBD5E1',
+                          borderRadius: '6px',
+                          padding: '4px 10px',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        ✕ Cambiar
+                      </button>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <input
+                        type="text"
+                        className="form-control"
+                        placeholder="🔍 Buscar por nombre o SKU (ej: Cremoso, 0001)..."
+                        value={productSearch}
+                        onChange={e => setProductSearch(e.target.value)}
+                        style={{
+                          height: '38px',
+                          fontSize: '0.84rem',
+                          borderRadius: '8px',
+                          border: '1px solid #CBD5E1',
+                          backgroundColor: '#FFFFFF',
+                          paddingLeft: '12px'
+                        }}
+                      />
+
+                      <select
+                        className="form-control"
+                        value={selectedProductId}
+                        onChange={e => {
+                          const id = e.target.value ? Number(e.target.value) : '';
+                          setSelectedProductId(id);
+                        }}
+                        style={{
+                          height: '38px',
+                          fontSize: '0.84rem',
+                          borderRadius: '8px',
+                          border: '1px solid #CBD5E1',
+                          backgroundColor: '#FFFFFF',
+                          color: '#0F172A'
+                        }}
+                      >
+                        <option value="">-- Seleccionar de los {(filteredProducts.length > 0 ? filteredProducts : (products || [])).length} productos disponibles --</option>
+                        {(filteredProducts.length > 0 ? filteredProducts : (products || [])).map(p => (
+                          <option key={p.id} value={p.id}>
+                            [{p.sku}] {p.name} — Stock Global: {p.stock} u.
+                          </option>
+                        ))}
+                      </select>
                     </div>
                   )}
                 </div>

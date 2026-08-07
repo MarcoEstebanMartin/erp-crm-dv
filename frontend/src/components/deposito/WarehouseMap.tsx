@@ -110,7 +110,7 @@ export const WarehouseMap: React.FC<WarehouseMapProps> = ({ products, onStockUpd
         borderRadius: '10px',
         padding: '14px 18px',
         display: 'flex',
-        justify: 'space-between',
+        justifyContent: 'space-between',
         alignItems: 'center',
         flexWrap: 'wrap',
         gap: '12px',
@@ -282,31 +282,43 @@ export const WarehouseMap: React.FC<WarehouseMapProps> = ({ products, onStockUpd
                       const stockData = slotCode ? slotStockMap[slotCode] : null;
                       const hasStock = Boolean(stockData && stockData.hasStock);
                       const isSelected = selectedSlot && slotCode && selectedSlot.code === slotCode;
-                      const isChamberMatch = selectedSector !== 'ALL' && cell?.chamber === selectedSector;
+                      const isChamberMatch = selectedSector !== 'ALL' && isSlot && cell?.chamber === selectedSector;
                       const isSearchMatch = slotCode ? matchingSlotCodes.has(slotCode) : false;
 
-                      let bg = (cell?.fill && cell.fill.toUpperCase() !== '#000000' && cell.fill.toUpperCase() !== '#000') ? cell.fill : '#ffffff';
+                      let bg = 'transparent';
                       let color = '#334155';
-                      let border = '1px solid #e2e8f0';
+                      let border = '1px solid transparent';
+                      let opacity = 1;
 
                       const chamberMeta = cell?.chamber ? SECTORS_INFO[cell.chamber] : null;
-                      if (chamberMeta && chamberMeta !== SECTORS_INFO.GENERAL) {
-                        bg = chamberMeta.bg;
-                        color = chamberMeta.color;
-                        border = `1.5px solid ${chamberMeta.border}`;
-                      }
 
                       if (!isSlot) {
+                        // CELDAS PISO / PASILLOS / ZONAS LIBRES DE CÁMARA (Sin almacenamiento)
+                        bg = 'transparent';
+                        border = '1px solid transparent';
+                        color = '#94a3b8';
+
                         if (cellText && cellText.trim() !== '') {
                           border = '1px solid #cbd5e1';
                           color = '#0f172a';
-                        } else if (!chamberMeta || chamberMeta === SECTORS_INFO.GENERAL) {
-                          bg = 'transparent';
-                          border = '1px solid transparent';
+                          bg = '#f8fafc';
+                        } else if (chamberMeta && chamberMeta !== SECTORS_INFO.GENERAL) {
+                          // Zona libre dentro de la cámara (exclusión de mercadería N5:N6, L6:M6, etc.)
+                          bg = chamberMeta.bg;
+                          border = `1px dashed ${chamberMeta.border}`;
+                          opacity = 0.55;
                         }
-                      }
+                      } else {
+                        // CELDAS DE ESTANTERÍA / POSICIÓN DE STOCK
+                        bg = (cell?.fill && cell.fill.toUpperCase() !== '#000000' && cell.fill.toUpperCase() !== '#000') ? cell.fill : '#ffffff';
+                        border = '1px solid #cbd5e1';
 
-                      if (isSlot) {
+                        if (chamberMeta && chamberMeta !== SECTORS_INFO.GENERAL) {
+                          bg = chamberMeta.bg;
+                          color = chamberMeta.color;
+                          border = `1.5px solid ${chamberMeta.border}`;
+                        }
+
                         if (cell?.fill && cell.fill.toUpperCase() !== '#FFFFFF' && cell.fill.toUpperCase() !== '#000000') {
                           bg = cell.fill;
                           border = '1px solid rgba(0,0,0,0.18)';
@@ -328,6 +340,7 @@ export const WarehouseMap: React.FC<WarehouseMapProps> = ({ products, onStockUpd
                             minWidth: '36px',
                             maxWidth: '36px',
                             height: '34px',
+                            opacity: opacity,
                             border: isSelected 
                               ? '2.5px solid #007AFF' 
                               : isSearchMatch 

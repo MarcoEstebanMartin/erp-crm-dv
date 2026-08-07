@@ -1573,21 +1573,20 @@ tr:hover td {
 
 .wms-modal-card {
   background-color: #ffffff;
-  border-radius: 14px;
-  width: 100%;
-  max-width: 960px;
-  min-height: 640px;
-  height: 650px;
-  max-height: 90vh;
+  border-radius: 16px;
+  width: 95vw;
+  max-width: 1240px;
+  height: min(860px, 92vh);
+  max-height: 92vh;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.25);
   border: 1px solid #cbd5e1;
   overflow: hidden;
 }
 
 .wms-modal-header {
-  padding: 16px 20px;
+  padding: 18px 24px;
   border-bottom: 1px solid #e2e8f0;
   display: flex;
   justify-content: space-between;
@@ -1614,15 +1613,15 @@ tr:hover td {
 }
 
 .wms-modal-body {
-  padding: 20px;
+  padding: 24px;
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 20px;
+  grid-template-columns: 360px 1fr;
+  gap: 24px;
   overflow-y: auto;
   flex: 1;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 900px) {
   .wms-modal-body {
     grid-template-columns: 1fr;
   }
