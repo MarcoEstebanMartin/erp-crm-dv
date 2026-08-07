@@ -103,7 +103,8 @@ export default function RackLevelViewerModal({
           }
         });
       }
-      if (!matchedInLots && Number(p.stock) > 0) {
+      const hasActiveLots = p.lots && p.lots.some((l: any) => Number(l.stock) > 0);
+      if (!hasActiveLots && !matchedInLots && Number(p.stock) > 0) {
         const defLoc = (p.defaultLocation || '').toUpperCase().trim();
         if (defLoc === targetLvlCode || defLoc === `${targetSlotCode}-${lvl}` || (defLoc === targetSlotCode && lvl === 'A')) {
           matching.push({

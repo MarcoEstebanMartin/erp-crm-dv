@@ -250,7 +250,13 @@ export class ProductService {
 
       // 5. Creación de lote si no se encontró
       const finalTargetLotNum = rawLotNum || (cleanLoc !== 'S/U' ? `S/L-${cleanLoc}` : 'S/L');
-      const finalExpDate = expirationDate ? new Date(expirationDate) : new Date('2036-12-31T00:00:00Z');
+      let finalExpDate = new Date('2036-12-31T00:00:00Z');
+      if (expirationDate && typeof expirationDate === 'string' && expirationDate.trim()) {
+        const parsedDate = new Date(expirationDate);
+        if (!isNaN(parsedDate.getTime())) {
+          finalExpDate = parsedDate;
+        }
+      }
 
       if (!lot) {
         lot = await tx.productLot.create({
@@ -279,11 +285,20 @@ export class ProductService {
           },
         });
       }
+
       let clearDefaultLoc = false;
-      if (updatedLotStock <= 0 && location && product.defaultLocation) {
-        const cleanLoc = location.trim().toUpperCase();
-        const defLoc = product.defaultLocation.trim().toUpperCase();
-        if (defLoc === cleanLoc || defLoc.startsWith(cleanLoc) || cleanLoc.startsWith(defLoc)) {
+      if ((updatedLotStock <= 0 || change < 0) && product.defaultLocation) {
+        const cleanLocUpper = cleanLoc.toUpperCase();
+        const defLocUpper = product.defaultLocation.trim().toUpperCase();
+        if (
+          cleanLocUpper !== 'S/U' && (
+            defLocUpper === cleanLocUpper ||
+            defLocUpper.startsWith(cleanLocUpper) ||
+            cleanLocUpper.startsWith(defLocUpper) ||
+            defLocUpper.includes(cleanLocUpper) ||
+            cleanLocUpper.includes(defLocUpper)
+          )
+        ) {
           clearDefaultLoc = true;
         }
       }

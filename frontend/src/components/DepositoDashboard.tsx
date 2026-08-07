@@ -2544,14 +2544,17 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
                               if (p.lots && p.lots.length > 0) {
                                 p.lots.forEach((l: any) => {
                                   const loc = (l.location || '').toUpperCase().trim();
-                                  if (cleanSlotCode && (loc === cleanSlotCode || loc.startsWith(cleanSlotCode) || loc.includes(cleanSlotCode)) && Number(l.stock) > 0) {
+                                  if (cleanSlotCode && (loc === cleanSlotCode || loc.startsWith(cleanSlotCode + '-') || loc === cleanSlotCode + '-A') && Number(l.stock) > 0) {
                                     hasStock = true;
                                   }
                                 });
                               }
-                              const defLoc = (p.defaultLocation || '').toUpperCase().trim();
-                              if (cleanSlotCode && defLoc && (defLoc === cleanSlotCode || defLoc.startsWith(cleanSlotCode) || cleanSlotCode.startsWith(defLoc)) && Number(p.stock) > 0) {
-                                hasStock = true;
+                              const hasActiveLots = p.lots && p.lots.some((l: any) => Number(l.stock) > 0);
+                              if (!hasActiveLots && Number(p.stock) > 0) {
+                                const defLoc = (p.defaultLocation || '').toUpperCase().trim();
+                                if (cleanSlotCode && defLoc && (defLoc === cleanSlotCode || defLoc === `${cleanSlotCode}-A`)) {
+                                  hasStock = true;
+                                }
                               }
                             });
                             
@@ -2735,15 +2738,16 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
                       if (p.lots && p.lots.length > 0) {
                         p.lots.forEach((l: any) => {
                           const loc = (l.location || '').toUpperCase().trim();
-                          if ((loc === code || loc.startsWith(code) || loc.includes(code)) && Number(l.stock) > 0) {
+                          if ((loc === code || loc.startsWith(code + '-') || loc === code + '-A') && Number(l.stock) > 0) {
                             matchingProducts.push({ product: p, lot: l });
                             matchedInLots = true;
                           }
                         });
                       }
-                      if (!matchedInLots && Number(p.stock) > 0) {
+                      const hasActiveLots = p.lots && p.lots.some((l: any) => Number(l.stock) > 0);
+                      if (!hasActiveLots && !matchedInLots && Number(p.stock) > 0) {
                         const defLoc = (p.defaultLocation || '').toUpperCase().trim();
-                        if (defLoc && (defLoc === code || defLoc.startsWith(code) || code.startsWith(defLoc))) {
+                        if (defLoc && (defLoc === code || defLoc === `${code}-A`)) {
                           matchingProducts.push({
                             product: p,
                             lot: { id: null, lotNumber: 'S/L', stock: p.stock, location: p.defaultLocation, expirationDate: null }
