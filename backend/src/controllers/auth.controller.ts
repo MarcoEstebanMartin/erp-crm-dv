@@ -62,7 +62,7 @@ export async function login(req: Request, res: Response): Promise<void> {
 
     const effectivePermissions: UserPermissions = (user.permissions as unknown as UserPermissions) || getDefaultPermissions(user.role);
 
-    // Generar JWT (válido por 12 horas)
+    // Generar JWT (válido por 30 días)
     const token = jwt.sign(
       {
         id: user.id,
@@ -71,7 +71,7 @@ export async function login(req: Request, res: Response): Promise<void> {
         permissions: effectivePermissions
       },
       getJwtSecret(),
-      { expiresIn: '12h' }
+      { expiresIn: '30d' }
     );
 
     res.status(200).json({
