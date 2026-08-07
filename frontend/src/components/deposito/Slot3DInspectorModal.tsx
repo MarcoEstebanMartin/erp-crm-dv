@@ -658,10 +658,10 @@ export const Slot3DInspectorModal: React.FC<Slot3DInspectorModalProps> = ({
                   )}
                 </div>
 
-                {/* 3 y 4. Cantidad y Motivo */}
-                <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: '10px' }}>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#475569', marginBottom: '4px' }}>
+                {/* 3 y 4. Cantidad y Motivo (Separados con espacio claro de 16px) */}
+                <div style={{ display: 'flex', gap: '16px', width: '100%', marginTop: '4px' }}>
+                  <div style={{ width: '130px', flexShrink: 0 }}>
+                    <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#475569', marginBottom: '6px' }}>
                       3. Cantidad (u.)
                     </label>
                     <input
@@ -671,11 +671,11 @@ export const Slot3DInspectorModal: React.FC<Slot3DInspectorModalProps> = ({
                       placeholder="Cant."
                       value={quantity}
                       onChange={e => setQuantity(e.target.value ? Number(e.target.value) : '')}
-                      style={{ height: '38px', fontSize: '0.88rem', fontWeight: 700, borderRadius: '8px', border: '1px solid #E2E8F0' }}
+                      style={{ height: '38px', fontSize: '0.88rem', fontWeight: 700, borderRadius: '8px', border: '1px solid #CBD5E1', width: '100%', boxSizing: 'border-box' }}
                     />
                   </div>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#475569', marginBottom: '4px' }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#475569', marginBottom: '6px' }}>
                       4. Observación / Motivo
                     </label>
                     <input
@@ -684,7 +684,7 @@ export const Slot3DInspectorModal: React.FC<Slot3DInspectorModalProps> = ({
                       placeholder="Ej: Carga inicial WMS"
                       value={reason}
                       onChange={e => setReason(e.target.value)}
-                      style={{ height: '38px', fontSize: '0.82rem', borderRadius: '8px', border: '1px solid #E2E8F0' }}
+                      style={{ height: '38px', fontSize: '0.82rem', borderRadius: '8px', border: '1px solid #CBD5E1', width: '100%', boxSizing: 'border-box' }}
                     />
                   </div>
                 </div>
