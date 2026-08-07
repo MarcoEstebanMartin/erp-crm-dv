@@ -270,7 +270,6 @@ export default function RackLevelViewerModal({
             
             <div style={{ width: '100%', marginBottom: '16px', fontSize: '0.78rem', color: '#94a3b8', fontWeight: 600, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span>💡 Seleccioná una viga para inspeccionar, añadir o eliminar bultos</span>
-              {loadingProducts && <span style={{ color: '#60a5fa' }}>(Actualizando stock...)</span>}
             </div>
 
             {/* Estructura del Rack 2D Elevación Limpia */}
