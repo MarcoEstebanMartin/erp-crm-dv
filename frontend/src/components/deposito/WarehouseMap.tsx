@@ -270,7 +270,7 @@ export const WarehouseMap: React.FC<WarehouseMapProps> = ({ products, onStockUpd
             padding: '8px',
             overflowX: 'auto'
           }}>
-            <table style={{ borderCollapse: 'separate', borderSpacing: '2px', width: '100%', tableLayout: 'fixed', fontSize: '0.66rem', fontFamily: 'sans-serif' }}>
+            <table style={{ borderCollapse: 'separate', borderSpacing: '3px', width: 'max-content', minWidth: '100%', fontSize: '0.66rem', fontFamily: 'sans-serif' }}>
               <tbody>
                 {filteredMatrix.map((row, rIdx) => (
                   <tr key={rIdx}>
@@ -301,8 +301,8 @@ export const WarehouseMap: React.FC<WarehouseMapProps> = ({ products, onStockUpd
                           border = '1px solid #cbd5e1';
                           color = '#0f172a';
                         } else if (!chamberMeta || chamberMeta === SECTORS_INFO.GENERAL) {
-                          bg = '#fafafa';
-                          border = '1px solid #f3f4f6';
+                          bg = 'transparent';
+                          border = '1px solid transparent';
                         }
                       }
 
@@ -318,6 +318,10 @@ export const WarehouseMap: React.FC<WarehouseMapProps> = ({ products, onStockUpd
                           key={cIdx}
                           onClick={() => cell && handleCellClick(cell)}
                           style={{
+                            width: '36px',
+                            minWidth: '36px',
+                            maxWidth: '36px',
+                            height: '34px',
                             border: isSelected 
                               ? '2.5px solid #007AFF' 
                               : isSearchMatch 
@@ -341,14 +345,14 @@ export const WarehouseMap: React.FC<WarehouseMapProps> = ({ products, onStockUpd
                             fontSize: !isSlot && (cellText && cellText.length > 3) ? '0.6rem' : '0.66rem',
                             padding: '1px 2px',
                             textAlign: 'center',
-                            height: '32px',
                             cursor: isSlot ? 'pointer' : 'default',
                             userSelect: 'none',
                             whiteSpace: !isSlot ? 'normal' : 'nowrap',
                             wordBreak: 'break-word',
                             lineHeight: 1.1,
                             overflow: 'hidden',
-                            borderRadius: isSlot ? '4px' : '1px',
+                            borderRadius: isSlot ? '5px' : '3px',
+                            boxShadow: isSlot ? '0 1px 2px rgba(0,0,0,0.05)' : 'none',
                             transition: 'all 0.1s ease'
                           }}
                           title={isSlot && slotCode ? `Slot ${slotCode} (${cellText}) - ${hasStock ? `${stockData?.totalStock} u.` : 'Vacío'}` : cellText}
