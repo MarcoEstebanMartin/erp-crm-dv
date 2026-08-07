@@ -13,8 +13,6 @@ function getHeaders() {
 }
 
 async function request(path: string, options: RequestInit = {}) {
-  
-
   const url = `${API_BASE_URL}${path}`;
   const response = await fetch(url, {
     ...options,
@@ -24,8 +22,24 @@ async function request(path: string, options: RequestInit = {}) {
     }
   });
 
+  if (response.status === 401) {
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('auth_user');
+    if (!window.location.pathname.startsWith('/login')) {
+      window.location.href = '/login';
+    }
+    throw new Error('Sesión expirada. Por favor iniciá sesión nuevamente.');
+  }
+
   const json = await response.json();
   if (json.status === 'error') {
+    if (json.message && (json.message.includes('Token') || json.message.includes('expirado'))) {
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('auth_user');
+      if (!window.location.pathname.startsWith('/login')) {
+        window.location.href = '/login';
+      }
+    }
     const details = Array.isArray(json.errors)
       ? ': ' + json.errors.map((e: any) => `${e.field.replace('body.', '')} (${e.message})`).join(', ')
       : '';
