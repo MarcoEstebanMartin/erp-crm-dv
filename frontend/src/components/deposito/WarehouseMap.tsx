@@ -89,7 +89,7 @@ export const WarehouseMap: React.FC<WarehouseMapProps> = ({ products, onStockUpd
     return matches;
   }, [searchQuery, products]);
 
-  // Manejar clic en una celda
+  // Manejar clic en una celda: Selecciona el slot para inspección en el panel lateral
   const handleCellClick = (cell: SlotCellData) => {
     if (!cell.is_storage) return;
     const targetCode = `${cell.dep_id}-R${cell.r.toString().padStart(2, '0')}-C${cell.c.toString().padStart(2, '0')}`;
@@ -97,7 +97,6 @@ export const WarehouseMap: React.FC<WarehouseMapProps> = ({ products, onStockUpd
                       DEPOSITO_SLOTS.find(s => s.dep_id === cell.dep_id && s.row === cell.r && s.col === cell.c);
     if (foundSlot) {
       setSelectedSlot(foundSlot);
-      setIs3DModalOpen(true);
     }
   };
 

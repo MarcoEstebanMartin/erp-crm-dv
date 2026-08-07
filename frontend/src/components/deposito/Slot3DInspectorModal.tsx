@@ -464,12 +464,12 @@ export const Slot3DInspectorModal: React.FC<Slot3DInspectorModalProps> = ({
           <div className="wms-shelf-detail-container">
             
             {/* Nav Tabs para alternar nivel activo */}
-            <div style={{ display: 'flex', borderBottom: '1px solid var(--border-color)', marginBottom: '14px', gap: '4px' }}>
+            <div style={{ display: 'flex', borderBottom: '1px solid var(--border-color)', marginBottom: '14px', gap: '6px', alignItems: 'center' }}>
               <button
                 type="button"
                 className={`btn btn-sm ${activeLevel === 'A' ? 'btn-primary' : 'btn-ghost'}`}
-                onClick={() => setActiveLevel('A')}
-                style={{ fontSize: '0.8rem', padding: '6px 12px', fontWeight: 700 }}
+                onClick={() => { setActiveLevel('A'); setShowLoadForm(false); }}
+                style={{ fontSize: '0.8rem', padding: '6px 14px', fontWeight: 700, borderRadius: '6px' }}
               >
                 Piso 1 (Nivel A)
               </button>
@@ -477,8 +477,8 @@ export const Slot3DInspectorModal: React.FC<Slot3DInspectorModalProps> = ({
                 <button
                   type="button"
                   className={`btn btn-sm ${activeLevel === 'B' ? 'btn-primary' : 'btn-ghost'}`}
-                  onClick={() => setActiveLevel('B')}
-                  style={{ fontSize: '0.8rem', padding: '6px 12px', fontWeight: 700 }}
+                  onClick={() => { setActiveLevel('B'); setShowLoadForm(false); }}
+                  style={{ fontSize: '0.8rem', padding: '6px 14px', fontWeight: 700, borderRadius: '6px' }}
                 >
                   Piso 2 (Nivel B)
                 </button>
@@ -487,50 +487,63 @@ export const Slot3DInspectorModal: React.FC<Slot3DInspectorModalProps> = ({
                 <button
                   type="button"
                   className={`btn btn-sm ${activeLevel === 'C' ? 'btn-primary' : 'btn-ghost'}`}
-                  onClick={() => setActiveLevel('C')}
-                  style={{ fontSize: '0.8rem', padding: '6px 12px', fontWeight: 700 }}
+                  onClick={() => { setActiveLevel('C'); setShowLoadForm(false); }}
+                  style={{ fontSize: '0.8rem', padding: '6px 14px', fontWeight: 700, borderRadius: '6px' }}
                 >
                   Piso 3 (Nivel C)
                 </button>
               )}
-
-              <button
-                type="button"
-                className={`btn btn-sm ${showLoadForm ? 'btn-secondary' : 'btn-outline'}`}
-                style={{ marginLeft: 'auto', fontSize: '0.78rem', padding: '6px 12px', fontWeight: 600, color: 'var(--color-primary)' }}
-                onClick={() => setShowLoadForm(!showLoadForm)}
-              >
-                {showLoadForm ? '📋 Ver Detalle' : '➕ Cargar Mercadería'}
-              </button>
             </div>
 
-            {/* VISTA 1: Formulario de Carga Directa de Mercadería */}
+            {/* VISTA 1: Formulario de Carga Directa de Mercadería (Estilo Premium Minimalista Stripe / Linear) */}
             {showLoadForm ? (
-              <form onSubmit={handleLoadStock} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                <h4 style={{ margin: '0 0 4px 0', fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                  📥 Cargar Mercadería en Piso {activeLevel === 'A' ? '1 (Nivel A)' : activeLevel === 'B' ? '2 (Nivel B)' : '3 (Nivel C)'}
-                </h4>
+              <form onSubmit={handleLoadStock} style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '14px',
+                backgroundColor: '#F8FAFC',
+                border: '1px solid #E2E8F0',
+                borderRadius: '12px',
+                padding: '16px',
+                boxShadow: '0 1px 4px rgba(0,0,0,0.03)'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #E2E8F0', paddingBottom: '10px' }}>
+                  <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800, color: '#0F172A', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    📥 Cargar Mercadería en Piso {activeLevel === 'A' ? '1 (Nivel A)' : activeLevel === 'B' ? '2 (Nivel B)' : '3 (Nivel C)'}
+                  </h4>
+                  <span className="badge" style={{ backgroundColor: '#E2E8F0', color: '#475569', fontSize: '0.72rem', fontWeight: 700 }}>
+                    Slot {slot.code}-{activeLevel}
+                  </span>
+                </div>
 
-                {/* Buscador y Selección de Producto */}
+                {/* 1. Seleccionar Producto */}
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '4px' }}>
-                    1. Seleccionar Producto (Buscar por Nombre / SKU / Código)
+                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#475569', marginBottom: '6px' }}>
+                    1. Seleccionar Producto (Catálogo)
                   </label>
 
-                  {/* Campo de búsqueda rápida */}
+                  {/* Campo de Búsqueda Rápida */}
                   <input
                     type="text"
                     className="form-control"
-                    placeholder="🔍 Escribí para buscar (ej: Cremoso, Melincue, Queso...)"
+                    placeholder="🔍 Buscar por nombre o SKU (ej: Cremoso, Tybo)..."
                     value={productSearch}
                     onChange={e => {
                       setProductSearch(e.target.value);
                       if (selectedProductId !== '') setSelectedProductId('');
                     }}
-                    style={{ fontSize: '0.84rem', marginBottom: '6px' }}
+                    style={{
+                      height: '38px',
+                      fontSize: '0.84rem',
+                      borderRadius: '8px',
+                      border: '1px solid #E2E8F0',
+                      backgroundColor: '#FFFFFF',
+                      marginBottom: '6px',
+                      paddingLeft: '10px'
+                    }}
                   />
 
-                  {/* Selector desplegable de productos filtrados o todos */}
+                  {/* Dropdown de Selección */}
                   <select
                     className="form-control"
                     value={selectedProductId}
@@ -542,7 +555,15 @@ export const Slot3DInspectorModal: React.FC<Slot3DInspectorModalProps> = ({
                         setProductSearch(`[${found.sku}] ${found.name}`);
                       }
                     }}
-                    style={{ fontSize: '0.84rem', fontWeight: selectedProductId ? 700 : 400, backgroundColor: selectedProductId ? '#f0f9ff' : '#ffffff', borderColor: selectedProductId ? '#0284c7' : '#cbd5e1' }}
+                    style={{
+                      height: '38px',
+                      fontSize: '0.84rem',
+                      borderRadius: '8px',
+                      border: selectedProduct ? '1.5px solid #007AFF' : '1px solid #CBD5E1',
+                      backgroundColor: selectedProduct ? '#F0F9FF' : '#FFFFFF',
+                      fontWeight: selectedProduct ? 700 : 400,
+                      color: '#0F172A'
+                    }}
                   >
                     <option value="">-- Seleccionar Producto del Catálogo ({(products || []).length} disponibles) --</option>
                     {(filteredProducts.length > 0 ? filteredProducts : (products || [])).map(p => (
@@ -552,26 +573,44 @@ export const Slot3DInspectorModal: React.FC<Slot3DInspectorModalProps> = ({
                     ))}
                   </select>
 
+                  {/* Ficha Resumen del Producto Seleccionado */}
                   {selectedProduct && (
-                    <div style={{ marginTop: '4px', fontSize: '0.76rem', color: '#0369a1', fontWeight: 600, backgroundColor: '#e0f2fe', padding: '4px 8px', borderRadius: '4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span>✓ Seleccionado: [{selectedProduct.sku}] {selectedProduct.name}</span>
-                      <span>Stock Global: {selectedProduct.stock} u.</span>
+                    <div style={{
+                      marginTop: '8px',
+                      padding: '10px 12px',
+                      backgroundColor: '#F0F9FF',
+                      border: '1px solid #BAE6FD',
+                      borderRadius: '8px',
+                      display: 'flex',
+                      justify: 'space-between',
+                      alignItems: 'center',
+                      fontSize: '0.82rem'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontWeight: 800, color: '#0369A1', backgroundColor: '#E0F2FE', padding: '2px 6px', borderRadius: '4px', fontSize: '0.75rem' }}>
+                          {selectedProduct.sku}
+                        </span>
+                        <strong style={{ color: '#0F172A' }}>{selectedProduct.name}</strong>
+                      </div>
+                      <span className="badge" style={{ backgroundColor: '#0284C7', color: '#FFF', fontSize: '0.72rem', fontWeight: 700 }}>
+                        Stock: {selectedProduct.stock} u.
+                      </span>
                     </div>
                   )}
                 </div>
 
-
-                {/* Datos del Lote */}
-                <div style={{ backgroundColor: '#f8fafc', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                {/* 2. Datos del Lote */}
+                <div style={{ backgroundColor: '#FFFFFF', padding: '12px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                    <label style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                    <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569', margin: 0 }}>
                       2. Número de Lote
                     </label>
-                    <label style={{ fontSize: '0.75rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <label style={{ fontSize: '0.75rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', color: '#64748B', fontWeight: 600 }}>
                       <input 
                         type="checkbox" 
                         checked={isNewLot} 
                         onChange={e => setIsNewLot(e.target.checked)} 
+                        style={{ borderRadius: '4px' }}
                       />
                       <span>Crear como Lote Nuevo</span>
                     </label>
@@ -582,7 +621,7 @@ export const Slot3DInspectorModal: React.FC<Slot3DInspectorModalProps> = ({
                       className="form-control"
                       value={lotNumber}
                       onChange={e => setLotNumber(e.target.value)}
-                      style={{ fontSize: '0.82rem' }}
+                      style={{ height: '36px', fontSize: '0.82rem', borderRadius: '8px', border: '1px solid #E2E8F0' }}
                     >
                       <option value="">-- Seleccionar Lote Existente del Producto --</option>
                       {selectedProduct.lots.map(l => (
@@ -598,14 +637,14 @@ export const Slot3DInspectorModal: React.FC<Slot3DInspectorModalProps> = ({
                       placeholder="Nro de Lote (ej: L-2026-001)"
                       value={lotNumber}
                       onChange={e => setLotNumber(e.target.value)}
-                      style={{ fontSize: '0.84rem' }}
+                      style={{ height: '36px', fontSize: '0.84rem', borderRadius: '8px', border: '1px solid #E2E8F0' }}
                     />
                   )}
 
-                  {/* Fecha de vencimiento si es lote nuevo */}
+                  {/* Fecha de Vencimiento */}
                   {(isNewLot || (selectedProduct && (!selectedProduct.lots || selectedProduct.lots.length === 0))) && (
                     <div style={{ marginTop: '8px' }}>
-                      <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '2px' }}>
+                      <label style={{ display: 'block', fontSize: '0.75rem', color: '#64748B', marginBottom: '4px', fontWeight: 600 }}>
                         Fecha de Vencimiento
                       </label>
                       <input
@@ -613,16 +652,16 @@ export const Slot3DInspectorModal: React.FC<Slot3DInspectorModalProps> = ({
                         className="form-control"
                         value={expirationDate}
                         onChange={e => setExpirationDate(e.target.value)}
-                        style={{ fontSize: '0.82rem' }}
+                        style={{ height: '36px', fontSize: '0.82rem', borderRadius: '8px', border: '1px solid #E2E8F0' }}
                       />
                     </div>
                   )}
                 </div>
 
-                {/* Cantidad y Motivo */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '8px' }}>
+                {/* 3 y 4. Cantidad y Motivo */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr', gap: '10px' }}>
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '2px' }}>
+                    <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#475569', marginBottom: '4px' }}>
                       3. Cantidad (u.)
                     </label>
                     <input
@@ -632,30 +671,46 @@ export const Slot3DInspectorModal: React.FC<Slot3DInspectorModalProps> = ({
                       placeholder="Cant."
                       value={quantity}
                       onChange={e => setQuantity(e.target.value ? Number(e.target.value) : '')}
-                      style={{ fontSize: '0.85rem', fontWeight: 700 }}
+                      style={{ height: '38px', fontSize: '0.88rem', fontWeight: 700, borderRadius: '8px', border: '1px solid #E2E8F0' }}
                     />
                   </div>
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '2px' }}>
+                    <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#475569', marginBottom: '4px' }}>
                       4. Observación / Motivo
                     </label>
                     <input
                       type="text"
                       className="form-control"
-                      placeholder="Ej: Ingreso por recepción"
+                      placeholder="Ej: Carga inicial WMS"
                       value={reason}
                       onChange={e => setReason(e.target.value)}
-                      style={{ fontSize: '0.82rem' }}
+                      style={{ height: '38px', fontSize: '0.82rem', borderRadius: '8px', border: '1px solid #E2E8F0' }}
                     />
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', gap: '8px', marginTop: '6px' }}>
+                {/* Botones de Acción */}
+                <div style={{ display: 'flex', gap: '10px', marginTop: '6px' }}>
                   <button
                     type="submit"
                     className="btn btn-primary"
                     disabled={loading}
-                    style={{ flex: 1, fontSize: '0.85rem', padding: '8px 14px', fontWeight: 700 }}
+                    style={{
+                      flex: 1,
+                      height: '40px',
+                      fontSize: '0.86rem',
+                      fontWeight: 700,
+                      borderRadius: '8px',
+                      backgroundColor: '#0F172A',
+                      borderColor: '#0F172A',
+                      color: '#FFFFFF',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px',
+                      boxShadow: '0 2px 6px rgba(15, 23, 42, 0.15)',
+                      transition: 'all 0.15s ease'
+                    }}
                   >
                     {loading ? 'Guardando...' : `📥 Guardar en Piso ${activeLevel}`}
                   </button>
@@ -663,7 +718,16 @@ export const Slot3DInspectorModal: React.FC<Slot3DInspectorModalProps> = ({
                     type="button"
                     className="btn btn-secondary"
                     onClick={() => setShowLoadForm(false)}
-                    style={{ fontSize: '0.82rem' }}
+                    style={{
+                      height: '40px',
+                      fontSize: '0.84rem',
+                      fontWeight: 600,
+                      borderRadius: '8px',
+                      padding: '0 16px',
+                      border: '1px solid #E2E8F0',
+                      backgroundColor: '#FFFFFF',
+                      color: '#64748B'
+                    }}
                   >
                     Cancelar
                   </button>
@@ -676,9 +740,19 @@ export const Slot3DInspectorModal: React.FC<Slot3DInspectorModalProps> = ({
                   <span style={{ fontSize: '0.84rem', fontWeight: 700, color: 'var(--text-primary)' }}>
                     Mercadería Asignada en Piso {activeLevel === 'A' ? '1 (Base A)' : activeLevel === 'B' ? '2 (Estante B)' : '3 (Altillo C)'}
                   </span>
-                  <span className="badge badge-secondary" style={{ fontSize: '0.72rem' }}>
-                    {getItemsForLevel(activeLevel).length} producto(s)
-                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span className="badge badge-secondary" style={{ fontSize: '0.72rem' }}>
+                      {getItemsForLevel(activeLevel).length} producto(s)
+                    </span>
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-primary"
+                      style={{ fontSize: '0.76rem', padding: '4px 10px', borderRadius: '6px', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                      onClick={() => setShowLoadForm(true)}
+                    >
+                      ➕ Cargar Mercadería
+                    </button>
+                  </div>
                 </div>
 
                 {getItemsForLevel(activeLevel).length === 0 ? (
