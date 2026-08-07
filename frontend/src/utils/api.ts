@@ -183,7 +183,7 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ quantityChange, reason, lotNumber, expirationDate, location })
     });
-    return res.product;
+    return res?.updatedProduct || res?.product || res;
   },
 
   updateLot: async (lotId: number, lotData: { lotNumber?: string; expirationDate?: string; location?: string }) => {
