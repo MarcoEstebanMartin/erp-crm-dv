@@ -363,6 +363,10 @@ tr:hover td {
 
 .mobile-drawer-close-btn {
   display: none;
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
 }
 
 .sidebar-backdrop {
@@ -417,12 +421,24 @@ tr:hover td {
   border-bottom: 1px solid var(--border-color);
   margin-bottom: 16px;
   width: 100%;
+  text-align: center;
+}
+
+.sidebar-brand-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  position: relative;
 }
 
 .sidebar-logo {
-  height: 80px;
-  width: 80px;
+  height: 70px;
+  width: auto;
+  max-width: 170px;
   object-fit: contain;
+  margin: 0 auto;
+  display: block;
 }
 
 .sidebar-status {
@@ -845,6 +861,10 @@ tr:hover td {
     color: var(--text-secondary);
     border-radius: var(--radius-sm);
     cursor: pointer;
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
   }
   .mobile-drawer-close-btn:hover {
     background: var(--bg-secondary);
@@ -855,12 +875,17 @@ tr:hover td {
     padding-bottom: 12px;
     margin-bottom: 12px;
     border-bottom: 1px solid var(--border-color);
-    align-items: flex-start;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
   }
 
   .sidebar-logo {
-    height: 40px;
+    height: 50px;
     width: auto;
+    max-width: 150px;
+    margin: 0 auto;
+    display: block;
   }
 
   .sidebar-menu {

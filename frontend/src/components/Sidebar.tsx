@@ -189,7 +189,7 @@ export default function Sidebar({ username, role, activeTab, setActiveTab, onLog
       <aside className={`sidebar ${isMobileOpen ? 'sidebar-mobile-active' : ''}`}>
         {/* Cabecera del Sidebar con el Logo y Rol Debajo */}
         <div className="sidebar-brand">
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+          <div className="sidebar-brand-header">
             <img 
               src="/logo.png" 
               alt="Logo DV" 
