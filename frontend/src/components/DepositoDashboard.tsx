@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import ExcelSpatialMapModal from './ExcelSpatialMapModal';
-import RackLevelViewerModal from './RackLevelViewerModal';
+import WmsLocationModal from './WmsLocationModal';
 import { api } from '../utils/api';
 import { OrderStatus } from '../utils/types';
 import type { Order, Product, ProductLot } from '../types';
@@ -3687,7 +3687,7 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
           }
         }}
       />
-      <RackLevelViewerModal
+      <WmsLocationModal
         isOpen={isLevelModalOpen}
         onClose={() => setIsLevelModalOpen(false)}
         slot={selectedSlot}

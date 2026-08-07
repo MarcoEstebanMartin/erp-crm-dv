@@ -127,7 +127,9 @@ export default function ProductsList({ products, searchQuery, setSearchQuery, se
     setEditingCell(null);
   };
 
-  const filteredProducts = products
+  const safeProducts = Array.isArray(products) ? products.filter(p => p && typeof p === 'object') : [];
+
+  const filteredProducts = safeProducts
     .filter((p: any) => {
       if (!selectedCategory) return true;
       const cat = getCategoryInfo(p).name;
@@ -179,7 +181,7 @@ export default function ProductsList({ products, searchQuery, setSearchQuery, se
       return strA.localeCompare(strB, undefined, { numeric: true, sensitivity: 'base' });
     });
 
-  const availableCategories = Array.from(new Set(products.map((p: any) => getCategoryInfo(p).name).filter(Boolean))).sort();
+  const availableCategories = Array.from(new Set(safeProducts.map((p: any) => getCategoryInfo(p).name).filter(Boolean))).sort();
 
   return (
     <div style={{ animation: 'fadeIn 0.3s ease-out' }}>
@@ -217,7 +219,7 @@ export default function ProductsList({ products, searchQuery, setSearchQuery, se
           onChange={(e) => { setSelectedRubro(e.target.value); setSelectedSubrubro(''); }}
         >
           <option value="">Todos los Rubros</option>
-          {Array.from(new Set(products.map((p: any) => extractLabel(p.rubro)).filter(Boolean))).sort().map(r => (
+          {Array.from(new Set(safeProducts.map((p: any) => extractLabel(p.rubro)).filter(Boolean))).sort().map(r => (
             <option key={String(r)} value={String(r)}>{String(r)}</option>
           ))}
         </select>
