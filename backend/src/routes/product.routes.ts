@@ -15,6 +15,8 @@ import {
   importProductsZip,
   auditStockDrift,
   reconcileStockDrift,
+  clearWmsLocation,
+  assignWmsLocation,
 } from '../controllers/product.controller';
 import {
   updateLot,
@@ -69,6 +71,10 @@ router.post('/:productId/lots/transfer', authenticateJWT, requireRole([Role.ADMI
 // Conciliación y Auditoría de Stock (ADMIN y FACTURACION)
 router.get('/stock/reconcile-audit', authenticateJWT, requireRole([Role.ADMIN, Role.FACTURACION]), auditStockDrift);
 router.post('/stock/reconcile', authenticateJWT, requireRole([Role.ADMIN]), reconcileStockDrift);
+
+// Operaciones WMS Mapa de Depósito (ADMIN, DEPOSITO, FACTURACION)
+router.post('/wms/clear-location', authenticateJWT, requireRole([Role.ADMIN, Role.DEPOSITO, Role.FACTURACION]), clearWmsLocation);
+router.post('/wms/assign-location', authenticateJWT, requireRole([Role.ADMIN, Role.DEPOSITO, Role.FACTURACION]), assignWmsLocation);
 
 export default router;
 

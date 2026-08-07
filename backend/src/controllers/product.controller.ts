@@ -423,3 +423,32 @@ export async function reconcileStockDrift(req: AuthenticatedRequest, res: Respon
   }
 }
 
+/**
+ * Vaciar limpiamente una ubicación/slot del mapa WMS.
+ */
+export async function clearWmsLocation(req: AuthenticatedRequest, res: Response): Promise<void> {
+  const userId = req.user?.id || 1;
+  const { locationCode } = req.body;
+  try {
+    const result = await productService.clearWmsLocation(locationCode, userId);
+    appCache.invalidateProductCatalog();
+    res.status(200).json({ status: 'success', data: result });
+  } catch (error: any) {
+    res.status(400).json({ status: 'error', message: error.message || 'Error al vaciar la ubicación WMS.' });
+  }
+}
+
+/**
+ * Asignar limpiamente un producto a una ubicación/slot del mapa WMS.
+ */
+export async function assignWmsLocation(req: AuthenticatedRequest, res: Response): Promise<void> {
+  const userId = req.user?.id || 1;
+  try {
+    const result = await productService.assignWmsLocation(req.body, userId);
+    appCache.invalidateProductCatalog();
+    res.status(200).json({ status: 'success', data: result });
+  } catch (error: any) {
+    res.status(400).json({ status: 'error', message: error.message || 'Error al asignar la ubicación WMS.' });
+  }
+}
+

@@ -192,13 +192,42 @@ export const api = {
     return json.data;
   },
 
-  adjustStock: async (id: number, quantityChange: number, reason: string, lotNumber?: string, expirationDate?: string, location?: string, lotId?: number) => {    
+  adjustStock: async (
+    id: number,
+    quantityChange: number | { quantityChange: number; reason?: string; lotNumber?: string; isNewLot?: boolean; expirationDate?: string; location?: string; lotId?: number },
+    reason?: string,
+    lotNumber?: string,
+    expirationDate?: string,
+    location?: string,
+    lotId?: number
+  ) => {
+    let payload: any;
+    if (typeof quantityChange === 'object' && quantityChange !== null) {
+      payload = quantityChange;
+    } else {
+      payload = { quantityChange, reason, lotNumber, expirationDate, location, lotId };
+    }
     const res = await request(`/products/${id}/adjust-stock`, {
       method: 'POST',
-      body: JSON.stringify({ quantityChange, reason, lotNumber, expirationDate, location, lotId })
+      body: JSON.stringify(payload)
     });
     return res?.updatedProduct || res?.product || res;
   },
+
+  clearWmsLocation: async (locationCode: string) => {
+    return request('/products/wms/clear-location', {
+      method: 'POST',
+      body: JSON.stringify({ locationCode })
+    });
+  },
+
+  assignWmsLocation: async (data: { productId: number; locationCode: string; quantity: number; lotNumber?: string; expirationDate?: string }) => {
+    return request('/products/wms/assign-location', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  },
+
 
   updateLot: async (lotId: number, lotData: { lotNumber?: string; expirationDate?: string; location?: string }) => {
     const res = await request(`/products/lots/${lotId}`, {
