@@ -2615,7 +2615,6 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
                                     // MODO INSPECCIÓN NORMAL: HABILITADO EN EL 100% DE LAS CELDAS
                                     setSelectedSlot(foundSlotObj);
                                     setSelectedMapLocation(foundSlotObj.code);
-                                    setIsLevelModalOpen(true);
                                   }
                                 }}
                                 onDoubleClick={() => {
