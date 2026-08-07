@@ -433,9 +433,9 @@ tr:hover td {
 }
 
 .sidebar-logo {
-  height: 70px;
+  height: 48px;
   width: auto;
-  max-width: 170px;
+  max-width: 135px;
   object-fit: contain;
   margin: 0 auto;
   display: block;
@@ -881,9 +881,9 @@ tr:hover td {
   }
 
   .sidebar-logo {
-    height: 50px;
+    height: 40px;
     width: auto;
-    max-width: 150px;
+    max-width: 120px;
     margin: 0 auto;
     display: block;
   }
@@ -1316,77 +1316,6 @@ tr:hover td {
   font-weight: 600;
 }
 
-/* WMS Map Styles */
-.wms-container {
-  display: grid;
-  grid-template-columns: 1.8fr 1fr;
-  gap: 20px;
-  margin-bottom: 24px;
-}
-
-@media (max-width: 1024px) {
-  .wms-container {
-    grid-template-columns: 1fr;
-  }
-}
-
-.wms-map-card {
-  padding: 20px;
-  background: var(--bg-card);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-sm);
-}
-
-.wms-info-card {
-  padding: 20px;
-  background: var(--bg-card);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-sm);
-  display: flex;
-  flex-direction: column;
-}
-
-.wms-svg-wrapper {
-  position: relative;
-  width: 100%;
-  border-radius: var(--radius-sm);
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  padding: 10px;
-}
-
-.wms-zone {
-  transition: all 0.2s ease;
-  cursor: pointer;
-}
-
-.wms-zone:hover {
-  fill-opacity: 0.85;
-  filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1));
-}
-
-.wms-zone.active {
-  stroke: var(--accent-color);
-  stroke-width: 3px;
-  stroke-dasharray: 4 2;
-  filter: drop-shadow(0 0 8px rgba(0,0,0,0.15));
-}
-
-.wms-zone-title {
-  font-size: 11px;
-  font-weight: bold;
-  pointer-events: none;
-  user-select: none;
-}
-
-.wms-zone-subtitle {
-  font-size: 9px;
-  pointer-events: none;
-  user-select: none;
-}
-
 /* Semáforo de vencimientos */
 .expiry-dot {
   width: 10px;
@@ -1607,3 +1536,198 @@ tr:hover td {
 .social-circle-btn.btn-fb.active i {
   color: #1877F2 !important;
 }
+
+/* ==========================================================================
+   WMS MAP & 3D ISOMETRIC INSPECTOR STYLES (Stripe / Linear Minimalist)
+   ========================================================================== */
+
+.wms-map-fullscreen {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  z-index: 2000 !important;
+  background-color: #f8fafc !important;
+  padding: 16px !important;
+  overflow-y: auto !important;
+}
+
+.wms-modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(15, 23, 42, 0.55);
+  backdrop-filter: blur(4px);
+  z-index: 2100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.wms-modal-card {
+  background-color: #ffffff;
+  border-radius: 14px;
+  width: 100%;
+  max-width: 960px;
+  min-height: 640px;
+  height: 650px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+  border: 1px solid #cbd5e1;
+  overflow: hidden;
+}
+
+.wms-modal-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #ffffff;
+}
+
+.wms-close-btn {
+  background: transparent;
+  border: none;
+  color: #64748b;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.wms-close-btn:hover {
+  background-color: #f1f5f9;
+  color: #0f172a;
+}
+
+.wms-modal-body {
+  padding: 20px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+@media (max-width: 768px) {
+  .wms-modal-body {
+    grid-template-columns: 1fr;
+  }
+}
+
+.wms-modal-footer {
+  padding: 12px 20px;
+  border-top: 1px solid #e2e8f0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #f8fafc;
+}
+
+/* ESTANTERÍA RACK 3D ISOMÉTRICA */
+.wms-rack-3d-container {
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.wms-rack-3d-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #cbd5e1;
+  padding-bottom: 8px;
+}
+
+.wms-isometric-rack-wrapper {
+  perspective: 1000px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 10px 0;
+}
+
+.wms-3d-shelf-level {
+  position: relative;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  transform: rotateX(8deg);
+}
+
+.wms-3d-shelf-level:hover:not(.disabled) {
+  transform: rotateX(0deg) scale(1.02);
+}
+
+.wms-3d-shelf-level.selected {
+  transform: rotateX(0deg) scale(1.02);
+}
+
+.wms-3d-shelf-level.disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.wms-3d-shelf-top {
+  height: 8px;
+  background: linear-gradient(90deg, #cbd5e1, #94a3b8);
+  border-top-left-radius: 6px;
+  border-top-right-radius: 6px;
+}
+
+.wms-3d-shelf-front {
+  background-color: #ffffff;
+  border: 1.5px solid #cbd5e1;
+  border-top: none;
+  border-bottom-left-radius: 8px;
+  border-bottom-right-radius: 8px;
+  padding: 10px 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+}
+
+.wms-3d-shelf-level.selected .wms-3d-shelf-front {
+  border-color: #007AFF;
+  box-shadow: 0 6px 16px rgba(0, 122, 255, 0.2);
+  background-color: #f0f9ff;
+}
+
+.wms-3d-items-preview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.wms-3d-item-pill {
+  background-color: #e0f2fe;
+  color: #0369a1;
+  border: 1px solid #7dd3fc;
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.wms-shelf-detail-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+

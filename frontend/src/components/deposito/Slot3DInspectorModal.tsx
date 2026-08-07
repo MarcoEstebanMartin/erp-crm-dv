@@ -634,7 +634,7 @@ export const Slot3DInspectorModal: React.FC<Slot3DInspectorModalProps> = ({
                     <input
                       type="text"
                       className="form-control"
-                      placeholder="Nro de Lote (ej: L-2026-001)"
+                      placeholder="(ej: L-2026)"
                       value={lotNumber}
                       onChange={e => setLotNumber(e.target.value)}
                       style={{ height: '36px', fontSize: '0.84rem', borderRadius: '8px', border: '1px solid #E2E8F0' }}
@@ -659,7 +659,7 @@ export const Slot3DInspectorModal: React.FC<Slot3DInspectorModalProps> = ({
                 </div>
 
                 {/* 3 y 4. Cantidad y Motivo */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr', gap: '10px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: '10px' }}>
                   <div>
                     <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#475569', marginBottom: '4px' }}>
                       3. Cantidad (u.)
