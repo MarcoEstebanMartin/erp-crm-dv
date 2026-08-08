@@ -55,8 +55,8 @@ export const WarehouseMap: React.FC<WarehouseMapProps> = ({ products, onStockUpd
   // Filtrar filas según el depósito seleccionado
   const filteredMatrix = useMemo(() => {
     if (selectedWarehouse === 'D1') return DEPOSITO_MATRIX.slice(0, 7);
-    if (selectedWarehouse === 'D2') return DEPOSITO_MATRIX.slice(7, 22);
-    if (selectedWarehouse === 'D3') return DEPOSITO_MATRIX.slice(22, 36);
+    if (selectedWarehouse === 'D2') return DEPOSITO_MATRIX.slice(8, 21);
+    if (selectedWarehouse === 'D3') return DEPOSITO_MATRIX.slice(22, 32);
     return DEPOSITO_MATRIX;
   }, [selectedWarehouse]);
 
@@ -302,11 +302,6 @@ export const WarehouseMap: React.FC<WarehouseMapProps> = ({ products, onStockUpd
                           border = '1px solid #cbd5e1';
                           color = '#0f172a';
                           bg = '#f8fafc';
-                        } else if (chamberMeta && chamberMeta !== SECTORS_INFO.GENERAL) {
-                          // Zona libre dentro de la cámara (exclusión de mercadería N5:N6, L6:M6, etc.)
-                          bg = chamberMeta.bg;
-                          border = `1px dashed ${chamberMeta.border}`;
-                          opacity = 0.55;
                         }
                       } else {
                         // CELDAS DE ESTANTERÍA / POSICIÓN DE STOCK

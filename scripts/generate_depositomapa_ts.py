@@ -92,7 +92,7 @@ for r in range(1, 33):
         if r <= 7:
             dep_id = 'D1'
             dep_nombre = 'Depósito 1'
-        elif r >= 8 and r <= 22:
+        elif r >= 9 and r <= 21:
             dep_id = 'D2'
             dep_nombre = 'Depósito 2'
         else:
