@@ -1,4 +1,4 @@
-// Archivo autogenerado con el plano fiel de MAPADEPOSITO.xlsx
+// Archivo autogenerado con el plano fiel de mapadeposito.xlsx y su tabla de parámetros
 export interface SlotCellData {
   r: number;
   c: number;
@@ -53,7 +53,7 @@ export const DEPOSITO_MATRIX: SlotCellData[][] = [
       "r": 1,
       "c": 4,
       "val": "A-B-C",
-      "fill": "#fce7f3",
+      "fill": "#B6D7A8",
       "is_storage": true,
       "dep_id": "D1",
       "chamber": "ESTANTERIA"
@@ -80,7 +80,7 @@ export const DEPOSITO_MATRIX: SlotCellData[][] = [
       "r": 1,
       "c": 7,
       "val": "A-B-C",
-      "fill": "#ecfeff",
+      "fill": "#B6D7A8",
       "is_storage": true,
       "dep_id": "D1",
       "chamber": "CAMARA_1"
@@ -89,7 +89,7 @@ export const DEPOSITO_MATRIX: SlotCellData[][] = [
       "r": 1,
       "c": 8,
       "val": "A",
-      "fill": "#ecfeff",
+      "fill": "#B6D7A8",
       "is_storage": true,
       "dep_id": "D1",
       "chamber": "CAMARA_1"
@@ -98,7 +98,7 @@ export const DEPOSITO_MATRIX: SlotCellData[][] = [
       "r": 1,
       "c": 9,
       "val": "A",
-      "fill": "#ecfeff",
+      "fill": "#B6D7A8",
       "is_storage": true,
       "dep_id": "D1",
       "chamber": "CAMARA_1"
@@ -107,7 +107,7 @@ export const DEPOSITO_MATRIX: SlotCellData[][] = [
       "r": 1,
       "c": 10,
       "val": "A",
-      "fill": "#ecfeff",
+      "fill": "#B6D7A8",
       "is_storage": true,
       "dep_id": "D1",
       "chamber": "CAMARA_1"
@@ -116,7 +116,7 @@ export const DEPOSITO_MATRIX: SlotCellData[][] = [
       "r": 1,
       "c": 11,
       "val": "A",
-      "fill": "#ecfeff",
+      "fill": "#B6D7A8",
       "is_storage": true,
       "dep_id": "D1",
       "chamber": "CAMARA_1"
@@ -169,6 +169,60 @@ export const DEPOSITO_MATRIX: SlotCellData[][] = [
     {
       "r": 1,
       "c": 17,
+      "val": "",
+      "fill": "#FFFFFF",
+      "is_storage": false,
+      "dep_id": "D1",
+      "chamber": "GENERAL"
+    },
+    {
+      "r": 1,
+      "c": 18,
+      "val": "",
+      "fill": "#FFFFFF",
+      "is_storage": false,
+      "dep_id": "D1",
+      "chamber": "GENERAL"
+    },
+    {
+      "r": 1,
+      "c": 19,
+      "val": "",
+      "fill": "#FFFFFF",
+      "is_storage": false,
+      "dep_id": "D1",
+      "chamber": "GENERAL"
+    },
+    {
+      "r": 1,
+      "c": 20,
+      "val": "",
+      "fill": "#FFFFFF",
+      "is_storage": false,
+      "dep_id": "D1",
+      "chamber": "GENERAL"
+    },
+    {
+      "r": 1,
+      "c": 21,
+      "val": "",
+      "fill": "#FFFFFF",
+      "is_storage": false,
+      "dep_id": "D1",
+      "chamber": "GENERAL"
+    },
+    {
+      "r": 1,
+      "c": 22,
+      "val": "",
+      "fill": "#FFFFFF",
+      "is_storage": false,
+      "dep_id": "D1",
+      "chamber": "GENERAL"
+    },
+    {
+      "r": 1,
+      "c": 23,
       "val": "",
       "fill": "#FFFFFF",
       "is_storage": false,
@@ -208,7 +262,7 @@ export const DEPOSITO_MATRIX: SlotCellData[][] = [
       "r": 2,
       "c": 4,
       "val": "A-B-C",
-      "fill": "#fce7f3",
+      "fill": "#B6D7A8",
       "is_storage": true,
       "dep_id": "D1",
       "chamber": "ESTANTERIA"
@@ -235,7 +289,7 @@ export const DEPOSITO_MATRIX: SlotCellData[][] = [
       "r": 2,
       "c": 7,
       "val": "A",
-      "fill": "#ecfeff",
+      "fill": "#B6D7A8",
       "is_storage": true,
       "dep_id": "D1",
       "chamber": "CAMARA_1"
@@ -244,7 +298,7 @@ export const DEPOSITO_MATRIX: SlotCellData[][] = [
       "r": 2,
       "c": 8,
       "val": "A",
-      "fill": "#ecfeff",
+      "fill": "#B6D7A8",
       "is_storage": true,
       "dep_id": "D1",
       "chamber": "CAMARA_1"
@@ -253,7 +307,7 @@ export const DEPOSITO_MATRIX: SlotCellData[][] = [
       "r": 2,
       "c": 9,
       "val": "A",
-      "fill": "#ecfeff",
+      "fill": "#B6D7A8",
       "is_storage": true,
       "dep_id": "D1",
       "chamber": "CAMARA_1"
@@ -262,7 +316,7 @@ export const DEPOSITO_MATRIX: SlotCellData[][] = [
       "r": 2,
       "c": 10,
       "val": "A",
-      "fill": "#ecfeff",
+      "fill": "#B6D7A8",
       "is_storage": true,
       "dep_id": "D1",
       "chamber": "CAMARA_1"
@@ -271,7 +325,7 @@ export const DEPOSITO_MATRIX: SlotCellData[][] = [
       "r": 2,
       "c": 11,
       "val": "A",
-      "fill": "#ecfeff",
+      "fill": "#B6D7A8",
       "is_storage": true,
       "dep_id": "D1",
       "chamber": "CAMARA_1"
@@ -324,6 +378,60 @@ export const DEPOSITO_MATRIX: SlotCellData[][] = [
     {
       "r": 2,
       "c": 17,
+      "val": "",
+      "fill": "#FFFFFF",
+      "is_storage": false,
+      "dep_id": "D1",
+      "chamber": "GENERAL"
+    },
+    {
+      "r": 2,
+      "c": 18,
+      "val": "",
+      "fill": "#FFFFFF",
+      "is_storage": false,
+      "dep_id": "D1",
+      "chamber": "GENERAL"
+    },
+    {
+      "r": 2,
+      "c": 19,
+      "val": "",
+      "fill": "#FFFFFF",
+      "is_storage": false,
+      "dep_id": "D1",
+      "chamber": "GENERAL"
+    },
+    {
+      "r": 2,
+      "c": 20,
+      "val": "",
+      "fill": "#FFFFFF",
+      "is_storage": false,
+      "dep_id": "D1",
+      "chamber": "GENERAL"
+    },
+    {
+      "r": 2,
+      "c": 21,
+      "val": "",
+      "fill": "#FFFFFF",
+      "is_storage": false,
+      "dep_id": "D1",
+      "chamber": "GENERAL"
+    },
+    {
+      "r": 2,
+      "c": 22,
+      "val": "",
+      "fill": "#FFFFFF",
+      "is_storage": false,
+      "dep_id": "D1",
+      "chamber": "GENERAL"
+    },
+    {
+      "r": 2,
+      "c": 23,
       "val": "",
       "fill": "#FFFFFF",
       "is_storage": false,
@@ -363,7 +471,7 @@ export const DEPOSITO_MATRIX: SlotCellData[][] = [
       "r": 3,
       "c": 4,
       "val": "A-B-C",
-      "fill": "#fce7f3",
+      "fill": "#B6D7A8",
       "is_storage": true,
       "dep_id": "D1",
       "chamber": "ESTANTERIA"
@@ -389,8 +497,8 @@ export const DEPOSITO_MATRIX: SlotCellData[][] = [
     {
       "r": 3,
       "c": 7,
-      "val": "A",
-      "fill": "#ecfeff",
+      "val": "A-B-C",
+      "fill": "#B6D7A8",
       "is_storage": true,
       "dep_id": "D1",
       "chamber": "CAMARA_1"
@@ -398,26 +506,26 @@ export const DEPOSITO_MATRIX: SlotCellData[][] = [
     {
       "r": 3,
       "c": 8,
-      "val": "A",
-      "fill": "#ecfeff",
-      "is_storage": true,
+      "val": "CAMARA 2 FRIO",
+      "fill": "#FFFFFF",
+      "is_storage": false,
       "dep_id": "D1",
-      "chamber": "CAMARA_1"
+      "chamber": "CAMARA_2"
     },
     {
       "r": 3,
       "c": 9,
-      "val": "A",
-      "fill": "#ecfeff",
-      "is_storage": true,
+      "val": "",
+      "fill": "#FFFFFF",
+      "is_storage": false,
       "dep_id": "D1",
-      "chamber": "CAMARA_1"
+      "chamber": "CAMARA_2"
     },
     {
       "r": 3,
       "c": 10,
       "val": "A",
-      "fill": "#ecfeff",
+      "fill": "#B6D7A8",
       "is_storage": true,
       "dep_id": "D1",
       "chamber": "CAMARA_1"
@@ -426,7 +534,7 @@ export const DEPOSITO_MATRIX: SlotCellData[][] = [
       "r": 3,
       "c": 11,
       "val": "A",
-      "fill": "#ecfeff",
+      "fill": "#B6D7A8",
       "is_storage": true,
       "dep_id": "D1",
       "chamber": "CAMARA_1"
@@ -479,6 +587,60 @@ export const DEPOSITO_MATRIX: SlotCellData[][] = [
     {
       "r": 3,
       "c": 17,
+      "val": "",
+      "fill": "#FFFFFF",
+      "is_storage": false,
+      "dep_id": "D1",
+      "chamber": "GENERAL"
+    },
+    {
+      "r": 3,
+      "c": 18,
+      "val": "",
+      "fill": "#FFFFFF",
+      "is_storage": false,
+      "dep_id": "D1",
+      "chamber": "GENERAL"
+    },
+    {
+      "r": 3,
+      "c": 19,
+      "val": "",
+      "fill": "#FFFFFF",
+      "is_storage": false,
+      "dep_id": "D1",
+      "chamber": "GENERAL"
+    },
+    {
+      "r": 3,
+      "c": 20,
+      "val": "",
+      "fill": "#FFFFFF",
+      "is_storage": false,
+      "dep_id": "D1",
+      "chamber": "GENERAL"
+    },
+    {
+      "r": 3,
+      "c": 21,
+      "val": "",
+      "fill": "#FFFFFF",
+      "is_storage": false,
+      "dep_id": "D1",
+      "chamber": "GENERAL"
+    },
+    {
+      "r": 3,
+      "c": 22,
+      "val": "",
+      "fill": "#FFFFFF",
+      "is_storage": false,
+      "dep_id": "D1",
+      "chamber": "GENERAL"
+    },
+    {
+      "r": 3,
+      "c": 23,
       "val": "",
       "fill": "#FFFFFF",
       "is_storage": false,
@@ -639,6 +801,60 @@ export const DEPOSITO_MATRIX: SlotCellData[][] = [
       "is_storage": false,
       "dep_id": "D1",
       "chamber": "GENERAL"
+    },
+    {
+      "r": 4,
+      "c": 18,
+      "val": "",
+      "fill": "#FFFFFF",
+      "is_storage": false,
+      "dep_id": "D1",
+      "chamber": "GENERAL"
+    },
+    {
+      "r": 4,
+      "c": 19,
+      "val": "",
+      "fill": "#FFFFFF",
+      "is_storage": false,
+      "dep_id": "D1",
+      "chamber": "GENERAL"
+    },
+    {
+      "r": 4,
+      "c": 20,
+      "val": "",
+      "fill": "#FFFFFF",
+      "is_storage": false,
+      "dep_id": "D1",
+      "chamber": "GENERAL"
+    },
+    {
+      "r": 4,
+      "c": 21,
+      "val": "",
+      "fill": "#FFFFFF",
+      "is_storage": false,
+      "dep_id": "D1",
+      "chamber": "GENERAL"
+    },
+    {
+      "r": 4,
+      "c": 22,
+      "val": "",
+      "fill": "#FFFFFF",
+      "is_storage": false,
+      "dep_id": "D1",
+      "chamber": "GENERAL"
+    },
+    {
+      "r": 4,
+      "c": 23,
+      "val": "",
+      "fill": "#FFFFFF",
+      "is_storage": false,
+      "dep_id": "D1",
+      "chamber": "GENERAL"
     }
   ],
   [
@@ -691,7 +907,7 @@ export const DEPOSITO_MATRIX: SlotCellData[][] = [
       "r": 5,
       "c": 6,
       "val": "A",
-      "fill": "#e0f2fe",
+      "fill": "#B6D7A8",
       "is_storage": true,
       "dep_id": "D1",
       "chamber": "CAMARA_2"
@@ -699,26 +915,26 @@ export const DEPOSITO_MATRIX: SlotCellData[][] = [
     {
       "r": 5,
       "c": 7,
-      "val": "A",
-      "fill": "#e0f2fe",
-      "is_storage": true,
+      "val": "CAMARA 1 FRIO",
+      "fill": "#FFFFFF",
+      "is_storage": false,
       "dep_id": "D1",
-      "chamber": "CAMARA_2"
+      "chamber": "CAMARA_1"
     },
     {
       "r": 5,
       "c": 8,
-      "val": "A",
-      "fill": "#e0f2fe",
-      "is_storage": true,
+      "val": "",
+      "fill": "#FFFFFF",
+      "is_storage": false,
       "dep_id": "D1",
-      "chamber": "CAMARA_2"
+      "chamber": "CAMARA_1"
     },
     {
       "r": 5,
       "c": 9,
       "val": "A",
-      "fill": "#e0f2fe",
+      "fill": "#B6D7A8",
       "is_storage": true,
       "dep_id": "D1",
       "chamber": "CAMARA_2"
@@ -735,8 +951,8 @@ export const DEPOSITO_MATRIX: SlotCellData[][] = [
     {
       "r": 5,
       "c": 11,
-      "val": "A",
-      "fill": "#f3e8ff",
+      "val": "A-B-C",
+      "fill": "#B6D7A8",
       "is_storage": true,
       "dep_id": "D1",
       "chamber": "CAMARA_3"
@@ -745,7 +961,7 @@ export const DEPOSITO_MATRIX: SlotCellData[][] = [
       "r": 5,
       "c": 12,
       "val": "A",
-      "fill": "#f3e8ff",
+      "fill": "#B6D7A8",
       "is_storage": true,
       "dep_id": "D1",
       "chamber": "CAMARA_3"
@@ -754,7 +970,7 @@ export const DEPOSITO_MATRIX: SlotCellData[][] = [
       "r": 5,
       "c": 13,
       "val": "A",
-      "fill": "#f3e8ff",
+      "fill": "#B6D7A8",
       "is_storage": true,
       "dep_id": "D1",
       "chamber": "CAMARA_3"
@@ -763,7 +979,7 @@ export const DEPOSITO_MATRIX: SlotCellData[][] = [
       "r": 5,
       "c": 14,
       "val": "",
-      "fill": "#f3e8ff",
+      "fill": "#FFFFFF",
       "is_storage": false,
       "dep_id": "D1",
       "chamber": "CAMARA_3"
@@ -772,7 +988,7 @@ export const DEPOSITO_MATRIX: SlotCellData[][] = [
       "r": 5,
       "c": 15,
       "val": "A",
-      "fill": "#f3e8ff",
+      "fill": "#B6D7A8",
       "is_storage": true,
       "dep_id": "D1",
       "chamber": "CAMARA_3"
@@ -788,53 +1004,316 @@ export const DEPOSITO_MATRIX: SlotCellData[][] = [
     },
     {
       "r": 5,
+      "c": 17,
+      "val": "A",
+      "fill": "#B6D7A8",
+      "is_storage": true,
+      "dep_id": "D1",
+      "chamber": "BANO"
+    },
+    {
+      "r": 5,
+      "c": 18,
+      "val": "",
+      "fill": "#FFFFFF",
+      "is_storage": false,
+      "dep_id": "D1",
+      "chamber": "GENERAL"
+    },
+    {
+      "r": 5,
+      "c": 19,
+      "val": "",
+      "fill": "#FFFFFF",
+      "is_storage": false,
+      "dep_id": "D1",
+      "chamber": "GENERAL"
+    },
+    {
+      "r": 5,
+      "c": 20,
+      "val": "",
+      "fill": "#FFFFFF",
+      "is_storage": false,
+      "dep_id": "D1",
+      "chamber": "GENERAL"
+    },
+    {
+      "r": 5,
+      "c": 21,
+      "val": "",
+      "fill": "#FFFFFF",
+      "is_storage": false,
+      "dep_id": "D1",
+      "chamber": "GENERAL"
+    },
+    {
+      "r": 5,
+      "c": 22,
+      "val": "",
+      "fill": "#FFFFFF",
+      "is_storage": false,
+      "dep_id": "D1",
+      "chamber": "GENERAL"
+    },
+    {
+      "r": 5,
+      "c": 23,
+      "val": "",
+      "fill": "#FFFFFF",
+      "is_storage": false,
+      "dep_id": "D1",
+      "chamber": "GENERAL"
+    }
+  ],
+  [
+    {
+      "r": 6,
+      "c": 1,
+      "val": "A",
+      "fill": "#B6D7A8",
+      "is_storage": true,
+      "dep_id": "D1",
+      "chamber": "RACK_ENTRADA"
+    },
+    {
+      "r": 6,
+      "c": 2,
+      "val": "A",
+      "fill": "#B6D7A8",
+      "is_storage": true,
+      "dep_id": "D1",
+      "chamber": "RACK_ENTRADA"
+    },
+    {
+      "r": 6,
+      "c": 3,
+      "val": "A",
+      "fill": "#B6D7A8",
+      "is_storage": true,
+      "dep_id": "D1",
+      "chamber": "RACK_ENTRADA"
+    },
+    {
+      "r": 6,
+      "c": 4,
+      "val": "A",
+      "fill": "#B6D7A8",
+      "is_storage": true,
+      "dep_id": "D1",
+      "chamber": "RACK_ENTRADA"
+    },
+    {
+      "r": 6,
+      "c": 5,
+      "val": "",
+      "fill": "#FFFFFF",
+      "is_storage": false,
+      "dep_id": "D1",
+      "chamber": "GENERAL"
+    },
+    {
+      "r": 6,
+      "c": 6,
+      "val": "A",
+      "fill": "#B6D7A8",
+      "is_storage": true,
+      "dep_id": "D1",
+      "chamber": "CAMARA_2"
+    },
+    {
+      "r": 6,
+      "c": 7,
+      "val": "A",
+      "fill": "#B6D7A8",
+      "is_storage": true,
+      "dep_id": "D1",
+      "chamber": "CAMARA_2"
+    },
+    {
+      "r": 6,
+      "c": 8,
+      "val": "",
+      "fill": "#B6D7A8",
+      "is_storage": false,
+      "dep_id": "D1",
+      "chamber": "CAMARA_2"
+    },
+    {
+      "r": 6,
+      "c": 9,
+      "val": "A",
+      "fill": "#B6D7A8",
+      "is_storage": true,
+      "dep_id": "D1",
+      "chamber": "CAMARA_2"
+    },
+    {
+      "r": 6,
+      "c": 10,
+      "val": "",
+      "fill": "#FFFFFF",
+      "is_storage": false,
+      "dep_id": "D1",
+      "chamber": "GENERAL"
+    },
+    {
+      "r": 6,
+      "c": 11,
+      "val": "A-B-C",
+      "fill": "#B6D7A8",
+      "is_storage": true,
+      "dep_id": "D1",
+      "chamber": "CAMARA_3"
+    },
+    {
+      "r": 6,
+      "c": 12,
+      "val": "CAMARA 3 SECO",
+      "fill": "#FFFFFF",
+      "is_storage": false,
+      "dep_id": "D1",
+      "chamber": "CAMARA_3"
+    },
+    {
+      "r": 6,
+      "c": 13,
+      "val": "",
+      "fill": "#FFFFFF",
+      "is_storage": false,
+      "dep_id": "D1",
+      "chamber": "CAMARA_3"
+    },
+    {
+      "r": 6,
+      "c": 14,
+      "val": "",
+      "fill": "#FFFFFF",
+      "is_storage": false,
+      "dep_id": "D1",
+      "chamber": "CAMARA_3"
+    },
+    {
+      "r": 6,
+      "c": 15,
+      "val": "A",
+      "fill": "#B6D7A8",
+      "is_storage": true,
+      "dep_id": "D1",
+      "chamber": "CAMARA_3"
+    },
+    {
+      "r": 6,
+      "c": 16,
+      "val": "",
+      "fill": "#FFFFFF",
+      "is_storage": false,
+      "dep_id": "D1",
+      "chamber": "GENERAL"
+    },
+    {
+      "r": 6,
       "c": 17,
       "val": "BAÑO",
-      "fill": "#ffe4e6",
+      "fill": "#FFFFFF",
       "is_storage": false,
       "dep_id": "D1",
       "chamber": "BANO"
+    },
+    {
+      "r": 6,
+      "c": 18,
+      "val": "",
+      "fill": "#FFFFFF",
+      "is_storage": false,
+      "dep_id": "D1",
+      "chamber": "GENERAL"
+    },
+    {
+      "r": 6,
+      "c": 19,
+      "val": "",
+      "fill": "#FFFFFF",
+      "is_storage": false,
+      "dep_id": "D1",
+      "chamber": "GENERAL"
+    },
+    {
+      "r": 6,
+      "c": 20,
+      "val": "",
+      "fill": "#FFFFFF",
+      "is_storage": false,
+      "dep_id": "D1",
+      "chamber": "GENERAL"
+    },
+    {
+      "r": 6,
+      "c": 21,
+      "val": "",
+      "fill": "#FFFFFF",
+      "is_storage": false,
+      "dep_id": "D1",
+      "chamber": "GENERAL"
+    },
+    {
+      "r": 6,
+      "c": 22,
+      "val": "",
+      "fill": "#FFFFFF",
+      "is_storage": false,
+      "dep_id": "D1",
+      "chamber": "GENERAL"
+    },
+    {
+      "r": 6,
+      "c": 23,
+      "val": "",
+      "fill": "#FFFFFF",
+      "is_storage": false,
+      "dep_id": "D1",
+      "chamber": "GENERAL"
     }
   ],
   [
     {
-      "r": 6,
+      "r": 7,
       "c": 1,
-      "val": "A",
-      "fill": "#fef3c7",
+      "val": "A-B-C",
+      "fill": "#B6D7A8",
       "is_storage": true,
       "dep_id": "D1",
       "chamber": "RACK_ENTRADA"
     },
     {
-      "r": 6,
+      "r": 7,
       "c": 2,
-      "val": "A",
-      "fill": "#fef3c7",
+      "val": "A-B-C",
+      "fill": "#B6D7A8",
       "is_storage": true,
       "dep_id": "D1",
       "chamber": "RACK_ENTRADA"
     },
     {
-      "r": 6,
+      "r": 7,
       "c": 3,
-      "val": "A",
-      "fill": "#fef3c7",
+      "val": "A-B-C",
+      "fill": "#B6D7A8",
       "is_storage": true,
       "dep_id": "D1",
       "chamber": "RACK_ENTRADA"
     },
     {
-      "r": 6,
+      "r": 7,
       "c": 4,
-      "val": "A",
-      "fill": "#fef3c7",
+      "val": "A-B-C",
+      "fill": "#B6D7A8",
       "is_storage": true,
       "dep_id": "D1",
       "chamber": "RACK_ENTRADA"
     },
     {
-      "r": 6,
+      "r": 7,
       "c": 5,
       "val": "",
       "fill": "#FFFFFF",
@@ -843,43 +1322,43 @@ export const DEPOSITO_MATRIX: SlotCellData[][] = [
       "chamber": "GENERAL"
     },
     {
-      "r": 6,
+      "r": 7,
       "c": 6,
-      "val": "A",
-      "fill": "#e0f2fe",
+      "val": "A-B-C-D-E-F",
+      "fill": "#B6D7A8",
       "is_storage": true,
       "dep_id": "D1",
       "chamber": "CAMARA_2"
     },
     {
-      "r": 6,
+      "r": 7,
       "c": 7,
       "val": "A",
-      "fill": "#e0f2fe",
+      "fill": "#B6D7A8",
       "is_storage": true,
       "dep_id": "D1",
       "chamber": "CAMARA_2"
     },
     {
-      "r": 6,
+      "r": 7,
       "c": 8,
       "val": "A",
-      "fill": "#e0f2fe",
+      "fill": "#B6D7A8",
       "is_storage": true,
       "dep_id": "D1",
       "chamber": "CAMARA_2"
     },
     {
-      "r": 6,
+      "r": 7,
       "c": 9,
       "val": "A",
-      "fill": "#e0f2fe",
+      "fill": "#B6D7A8",
       "is_storage": true,
       "dep_id": "D1",
       "chamber": "CAMARA_2"
     },
     {
-      "r": 6,
+      "r": 7,
       "c": 10,
       "val": "",
       "fill": "#FFFFFF",
@@ -888,52 +1367,52 @@ export const DEPOSITO_MATRIX: SlotCellData[][] = [
       "chamber": "GENERAL"
     },
     {
-      "r": 6,
+      "r": 7,
       "c": 11,
       "val": "A",
-      "fill": "#f3e8ff",
+      "fill": "#B6D7A8",
       "is_storage": true,
       "dep_id": "D1",
       "chamber": "CAMARA_3"
     },
     {
-      "r": 6,
+      "r": 7,
       "c": 12,
-      "val": "",
-      "fill": "#f3e8ff",
-      "is_storage": false,
+      "val": "A",
+      "fill": "#B6D7A8",
+      "is_storage": true,
       "dep_id": "D1",
       "chamber": "CAMARA_3"
     },
     {
-      "r": 6,
+      "r": 7,
       "c": 13,
-      "val": "",
-      "fill": "#f3e8ff",
-      "is_storage": false,
+      "val": "A",
+      "fill": "#B6D7A8",
+      "is_storage": true,
       "dep_id": "D1",
       "chamber": "CAMARA_3"
     },
     {
-      "r": 6,
+      "r": 7,
       "c": 14,
-      "val": "",
-      "fill": "#f3e8ff",
-      "is_storage": false,
+      "val": "A",
+      "fill": "#B6D7A8",
+      "is_storage": true,
       "dep_id": "D1",
       "chamber": "CAMARA_3"
     },
     {
-      "r": 6,
+      "r": 7,
       "c": 15,
       "val": "A",
-      "fill": "#f3e8ff",
+      "fill": "#B6D7A8",
       "is_storage": true,
       "dep_id": "D1",
       "chamber": "CAMARA_3"
     },
     {
-      "r": 6,
+      "r": 7,
       "c": 16,
       "val": "",
       "fill": "#FFFFFF",
@@ -942,55 +1421,17 @@ export const DEPOSITO_MATRIX: SlotCellData[][] = [
       "chamber": "GENERAL"
     },
     {
-      "r": 6,
+      "r": 7,
       "c": 17,
       "val": "",
-      "fill": "#ffe4e6",
+      "fill": "#FFFFFF",
       "is_storage": false,
       "dep_id": "D1",
       "chamber": "BANO"
-    }
-  ],
-  [
-    {
-      "r": 7,
-      "c": 1,
-      "val": "A-B-C",
-      "fill": "#fef3c7",
-      "is_storage": true,
-      "dep_id": "D1",
-      "chamber": "RACK_ENTRADA"
     },
     {
       "r": 7,
-      "c": 2,
-      "val": "A-B-C",
-      "fill": "#fef3c7",
-      "is_storage": true,
-      "dep_id": "D1",
-      "chamber": "RACK_ENTRADA"
-    },
-    {
-      "r": 7,
-      "c": 3,
-      "val": "A-B-C",
-      "fill": "#fef3c7",
-      "is_storage": true,
-      "dep_id": "D1",
-      "chamber": "RACK_ENTRADA"
-    },
-    {
-      "r": 7,
-      "c": 4,
-      "val": "A-B-C",
-      "fill": "#fef3c7",
-      "is_storage": true,
-      "dep_id": "D1",
-      "chamber": "RACK_ENTRADA"
-    },
-    {
-      "r": 7,
-      "c": 5,
+      "c": 18,
       "val": "",
       "fill": "#FFFFFF",
       "is_storage": false,
@@ -999,43 +1440,7 @@ export const DEPOSITO_MATRIX: SlotCellData[][] = [
     },
     {
       "r": 7,
-      "c": 6,
-      "val": "A-B-C",
-      "fill": "#e0f2fe",
-      "is_storage": true,
-      "dep_id": "D1",
-      "chamber": "CAMARA_2"
-    },
-    {
-      "r": 7,
-      "c": 7,
-      "val": "A-B-C",
-      "fill": "#e0f2fe",
-      "is_storage": true,
-      "dep_id": "D1",
-      "chamber": "CAMARA_2"
-    },
-    {
-      "r": 7,
-      "c": 8,
-      "val": "A-B-C",
-      "fill": "#e0f2fe",
-      "is_storage": true,
-      "dep_id": "D1",
-      "chamber": "CAMARA_2"
-    },
-    {
-      "r": 7,
-      "c": 9,
-      "val": "A-B-C",
-      "fill": "#e0f2fe",
-      "is_storage": true,
-      "dep_id": "D1",
-      "chamber": "CAMARA_2"
-    },
-    {
-      "r": 7,
-      "c": 10,
+      "c": 19,
       "val": "",
       "fill": "#FFFFFF",
       "is_storage": false,
@@ -1044,52 +1449,7 @@ export const DEPOSITO_MATRIX: SlotCellData[][] = [
     },
     {
       "r": 7,
-      "c": 11,
-      "val": "A-B-C",
-      "fill": "#f3e8ff",
-      "is_storage": true,
-      "dep_id": "D1",
-      "chamber": "CAMARA_3"
-    },
-    {
-      "r": 7,
-      "c": 12,
-      "val": "A-B-C",
-      "fill": "#f3e8ff",
-      "is_storage": true,
-      "dep_id": "D1",
-      "chamber": "CAMARA_3"
-    },
-    {
-      "r": 7,
-      "c": 13,
-      "val": "A-B-C",
-      "fill": "#f3e8ff",
-      "is_storage": true,
-      "dep_id": "D1",
-      "chamber": "CAMARA_3"
-    },
-    {
-      "r": 7,
-      "c": 14,
-      "val": "A-B-C",
-      "fill": "#f3e8ff",
-      "is_storage": true,
-      "dep_id": "D1",
-      "chamber": "CAMARA_3"
-    },
-    {
-      "r": 7,
-      "c": 15,
-      "val": "A-B-C",
-      "fill": "#f3e8ff",
-      "is_storage": true,
-      "dep_id": "D1",
-      "chamber": "CAMARA_3"
-    },
-    {
-      "r": 7,
-      "c": 16,
+      "c": 20,
       "val": "",
       "fill": "#FFFFFF",
       "is_storage": false,
@@ -1098,12 +1458,30 @@ export const DEPOSITO_MATRIX: SlotCellData[][] = [
     },
     {
       "r": 7,
-      "c": 17,
+      "c": 21,
       "val": "",
-      "fill": "#ffe4e6",
+      "fill": "#FFFFFF",
       "is_storage": false,
       "dep_id": "D1",
-      "chamber": "BANO"
+      "chamber": "GENERAL"
+    },
+    {
+      "r": 7,
+      "c": 22,
+      "val": "",
+      "fill": "#FFFFFF",
+      "is_storage": false,
+      "dep_id": "D1",
+      "chamber": "GENERAL"
+    },
+    {
+      "r": 7,
+      "c": 23,
+      "val": "",
+      "fill": "#FFFFFF",
+      "is_storage": false,
+      "dep_id": "D1",
+      "chamber": "GENERAL"
     }
   ],
   [
@@ -6323,842 +6701,6 @@ export const DEPOSITO_MATRIX: SlotCellData[][] = [
     },
     {
       "r": 32,
-      "c": 23,
-      "val": "",
-      "fill": "#FFFFFF",
-      "is_storage": false,
-      "dep_id": "D3",
-      "chamber": "D3_GENERAL"
-    }
-  ],
-  [
-    {
-      "r": 33,
-      "c": 1,
-      "val": "",
-      "fill": "#FFFFFF",
-      "is_storage": false,
-      "dep_id": "D3",
-      "chamber": "D3_GENERAL"
-    },
-    {
-      "r": 33,
-      "c": 2,
-      "val": "",
-      "fill": "#FFFFFF",
-      "is_storage": false,
-      "dep_id": "D3",
-      "chamber": "D3_GENERAL"
-    },
-    {
-      "r": 33,
-      "c": 3,
-      "val": "",
-      "fill": "#FFFFFF",
-      "is_storage": false,
-      "dep_id": "D3",
-      "chamber": "D3_GENERAL"
-    },
-    {
-      "r": 33,
-      "c": 4,
-      "val": "",
-      "fill": "#FFFFFF",
-      "is_storage": false,
-      "dep_id": "D3",
-      "chamber": "D3_GENERAL"
-    },
-    {
-      "r": 33,
-      "c": 5,
-      "val": "",
-      "fill": "#FFFFFF",
-      "is_storage": false,
-      "dep_id": "D3",
-      "chamber": "D3_GENERAL"
-    },
-    {
-      "r": 33,
-      "c": 6,
-      "val": "",
-      "fill": "#FFFFFF",
-      "is_storage": false,
-      "dep_id": "D3",
-      "chamber": "D3_GENERAL"
-    },
-    {
-      "r": 33,
-      "c": 7,
-      "val": "",
-      "fill": "#FFFFFF",
-      "is_storage": false,
-      "dep_id": "D3",
-      "chamber": "D3_GENERAL"
-    },
-    {
-      "r": 33,
-      "c": 8,
-      "val": "",
-      "fill": "#FFFFFF",
-      "is_storage": false,
-      "dep_id": "D3",
-      "chamber": "D3_GENERAL"
-    },
-    {
-      "r": 33,
-      "c": 9,
-      "val": "",
-      "fill": "#FFFFFF",
-      "is_storage": false,
-      "dep_id": "D3",
-      "chamber": "D3_GENERAL"
-    },
-    {
-      "r": 33,
-      "c": 10,
-      "val": "",
-      "fill": "#FFFFFF",
-      "is_storage": false,
-      "dep_id": "D3",
-      "chamber": "D3_GENERAL"
-    },
-    {
-      "r": 33,
-      "c": 11,
-      "val": "",
-      "fill": "#FFFFFF",
-      "is_storage": false,
-      "dep_id": "D3",
-      "chamber": "D3_GENERAL"
-    },
-    {
-      "r": 33,
-      "c": 12,
-      "val": "",
-      "fill": "#FFFFFF",
-      "is_storage": false,
-      "dep_id": "D3",
-      "chamber": "D3_GENERAL"
-    },
-    {
-      "r": 33,
-      "c": 13,
-      "val": "",
-      "fill": "#FFFFFF",
-      "is_storage": false,
-      "dep_id": "D3",
-      "chamber": "D3_GENERAL"
-    },
-    {
-      "r": 33,
-      "c": 14,
-      "val": "",
-      "fill": "#FFFFFF",
-      "is_storage": false,
-      "dep_id": "D3",
-      "chamber": "D3_GENERAL"
-    },
-    {
-      "r": 33,
-      "c": 15,
-      "val": "",
-      "fill": "#FFFFFF",
-      "is_storage": false,
-      "dep_id": "D3",
-      "chamber": "D3_GENERAL"
-    },
-    {
-      "r": 33,
-      "c": 16,
-      "val": "",
-      "fill": "#FFFFFF",
-      "is_storage": false,
-      "dep_id": "D3",
-      "chamber": "D3_GENERAL"
-    },
-    {
-      "r": 33,
-      "c": 17,
-      "val": "",
-      "fill": "#FFFFFF",
-      "is_storage": false,
-      "dep_id": "D3",
-      "chamber": "D3_GENERAL"
-    },
-    {
-      "r": 33,
-      "c": 18,
-      "val": "",
-      "fill": "#FFFFFF",
-      "is_storage": false,
-      "dep_id": "D3",
-      "chamber": "D3_GENERAL"
-    },
-    {
-      "r": 33,
-      "c": 19,
-      "val": "",
-      "fill": "#FFFFFF",
-      "is_storage": false,
-      "dep_id": "D3",
-      "chamber": "D3_GENERAL"
-    },
-    {
-      "r": 33,
-      "c": 20,
-      "val": "",
-      "fill": "#FFFFFF",
-      "is_storage": false,
-      "dep_id": "D3",
-      "chamber": "D3_GENERAL"
-    },
-    {
-      "r": 33,
-      "c": 21,
-      "val": "",
-      "fill": "#FFFFFF",
-      "is_storage": false,
-      "dep_id": "D3",
-      "chamber": "D3_GENERAL"
-    },
-    {
-      "r": 33,
-      "c": 22,
-      "val": "",
-      "fill": "#FFFFFF",
-      "is_storage": false,
-      "dep_id": "D3",
-      "chamber": "D3_GENERAL"
-    },
-    {
-      "r": 33,
-      "c": 23,
-      "val": "",
-      "fill": "#FFFFFF",
-      "is_storage": false,
-      "dep_id": "D3",
-      "chamber": "D3_GENERAL"
-    }
-  ],
-  [
-    {
-      "r": 34,
-      "c": 1,
-      "val": "",
-      "fill": "#FFFFFF",
-      "is_storage": false,
-      "dep_id": "D3",
-      "chamber": "D3_GENERAL"
-    },
-    {
-      "r": 34,
-      "c": 2,
-      "val": "",
-      "fill": "#FFFFFF",
-      "is_storage": false,
-      "dep_id": "D3",
-      "chamber": "D3_GENERAL"
-    },
-    {
-      "r": 34,
-      "c": 3,
-      "val": "",
-      "fill": "#FFFFFF",
-      "is_storage": false,
-      "dep_id": "D3",
-      "chamber": "D3_GENERAL"
-    },
-    {
-      "r": 34,
-      "c": 4,
-      "val": "",
-      "fill": "#FFFFFF",
-      "is_storage": false,
-      "dep_id": "D3",
-      "chamber": "D3_GENERAL"
-    },
-    {
-      "r": 34,
-      "c": 5,
-      "val": "",
-      "fill": "#FFFFFF",
-      "is_storage": false,
-      "dep_id": "D3",
-      "chamber": "D3_GENERAL"
-    },
-    {
-      "r": 34,
-      "c": 6,
-      "val": "",
-      "fill": "#FFFFFF",
-      "is_storage": false,
-      "dep_id": "D3",
-      "chamber": "D3_GENERAL"
-    },
-    {
-      "r": 34,
-      "c": 7,
-      "val": "",
-      "fill": "#FFFFFF",
-      "is_storage": false,
-      "dep_id": "D3",
-      "chamber": "D3_GENERAL"
-    },
-    {
-      "r": 34,
-      "c": 8,
-      "val": "",
-      "fill": "#FFFFFF",
-      "is_storage": false,
-      "dep_id": "D3",
-      "chamber": "D3_GENERAL"
-    },
-    {
-      "r": 34,
-      "c": 9,
-      "val": "",
-      "fill": "#FFFFFF",
-      "is_storage": false,
-      "dep_id": "D3",
-      "chamber": "D3_GENERAL"
-    },
-    {
-      "r": 34,
-      "c": 10,
-      "val": "",
-      "fill": "#FFFFFF",
-      "is_storage": false,
-      "dep_id": "D3",
-      "chamber": "D3_GENERAL"
-    },
-    {
-      "r": 34,
-      "c": 11,
-      "val": "",
-      "fill": "#FFFFFF",
-      "is_storage": false,
-      "dep_id": "D3",
-      "chamber": "D3_GENERAL"
-    },
-    {
-      "r": 34,
-      "c": 12,
-      "val": "",
-      "fill": "#FFFFFF",
-      "is_storage": false,
-      "dep_id": "D3",
-      "chamber": "D3_GENERAL"
-    },
-    {
-      "r": 34,
-      "c": 13,
-      "val": "",
-      "fill": "#FFFFFF",
-      "is_storage": false,
-      "dep_id": "D3",
-      "chamber": "D3_GENERAL"
-    },
-    {
-      "r": 34,
-      "c": 14,
-      "val": "",
-      "fill": "#FFFFFF",
-      "is_storage": false,
-      "dep_id": "D3",
-      "chamber": "D3_GENERAL"
-    },
-    {
-      "r": 34,
-      "c": 15,
-      "val": "",
-      "fill": "#FFFFFF",
-      "is_storage": false,
-      "dep_id": "D3",
-      "chamber": "D3_GENERAL"
-    },
-    {
-      "r": 34,
-      "c": 16,
-      "val": "",
-      "fill": "#FFFFFF",
-      "is_storage": false,
-      "dep_id": "D3",
-      "chamber": "D3_GENERAL"
-    },
-    {
-      "r": 34,
-      "c": 17,
-      "val": "",
-      "fill": "#FFFFFF",
-      "is_storage": false,
-      "dep_id": "D3",
-      "chamber": "D3_GENERAL"
-    },
-    {
-      "r": 34,
-      "c": 18,
-      "val": "",
-      "fill": "#FFFFFF",
-      "is_storage": false,
-      "dep_id": "D3",
-      "chamber": "D3_GENERAL"
-    },
-    {
-      "r": 34,
-      "c": 19,
-      "val": "",
-      "fill": "#FFFFFF",
-      "is_storage": false,
-      "dep_id": "D3",
-      "chamber": "D3_GENERAL"
-    },
-    {
-      "r": 34,
-      "c": 20,
-      "val": "",
-      "fill": "#FFFFFF",
-      "is_storage": false,
-      "dep_id": "D3",
-      "chamber": "D3_GENERAL"
-    },
-    {
-      "r": 34,
-      "c": 21,
-      "val": "",
-      "fill": "#FFFFFF",
-      "is_storage": false,
-      "dep_id": "D3",
-      "chamber": "D3_GENERAL"
-    },
-    {
-      "r": 34,
-      "c": 22,
-      "val": "",
-      "fill": "#FFFFFF",
-      "is_storage": false,
-      "dep_id": "D3",
-      "chamber": "D3_GENERAL"
-    },
-    {
-      "r": 34,
-      "c": 23,
-      "val": "",
-      "fill": "#FFFFFF",
-      "is_storage": false,
-      "dep_id": "D3",
-      "chamber": "D3_GENERAL"
-    }
-  ],
-  [
-    {
-      "r": 35,
-      "c": 1,
-      "val": "",
-      "fill": "#FFFFFF",
-      "is_storage": false,
-      "dep_id": "D3",
-      "chamber": "D3_GENERAL"
-    },
-    {
-      "r": 35,
-      "c": 2,
-      "val": "",
-      "fill": "#FFFFFF",
-      "is_storage": false,
-      "dep_id": "D3",
-      "chamber": "D3_GENERAL"
-    },
-    {
-      "r": 35,
-      "c": 3,
-      "val": "",
-      "fill": "#FFFFFF",
-      "is_storage": false,
-      "dep_id": "D3",
-      "chamber": "D3_GENERAL"
-    },
-    {
-      "r": 35,
-      "c": 4,
-      "val": "",
-      "fill": "#FFFFFF",
-      "is_storage": false,
-      "dep_id": "D3",
-      "chamber": "D3_GENERAL"
-    },
-    {
-      "r": 35,
-      "c": 5,
-      "val": "",
-      "fill": "#FFFFFF",
-      "is_storage": false,
-      "dep_id": "D3",
-      "chamber": "D3_GENERAL"
-    },
-    {
-      "r": 35,
-      "c": 6,
-      "val": "",
-      "fill": "#FFFFFF",
-      "is_storage": false,
-      "dep_id": "D3",
-      "chamber": "D3_GENERAL"
-    },
-    {
-      "r": 35,
-      "c": 7,
-      "val": "",
-      "fill": "#FFFFFF",
-      "is_storage": false,
-      "dep_id": "D3",
-      "chamber": "D3_GENERAL"
-    },
-    {
-      "r": 35,
-      "c": 8,
-      "val": "",
-      "fill": "#FFFFFF",
-      "is_storage": false,
-      "dep_id": "D3",
-      "chamber": "D3_GENERAL"
-    },
-    {
-      "r": 35,
-      "c": 9,
-      "val": "",
-      "fill": "#FFFFFF",
-      "is_storage": false,
-      "dep_id": "D3",
-      "chamber": "D3_GENERAL"
-    },
-    {
-      "r": 35,
-      "c": 10,
-      "val": "",
-      "fill": "#FFFFFF",
-      "is_storage": false,
-      "dep_id": "D3",
-      "chamber": "D3_GENERAL"
-    },
-    {
-      "r": 35,
-      "c": 11,
-      "val": "",
-      "fill": "#FFFFFF",
-      "is_storage": false,
-      "dep_id": "D3",
-      "chamber": "D3_GENERAL"
-    },
-    {
-      "r": 35,
-      "c": 12,
-      "val": "",
-      "fill": "#FFFFFF",
-      "is_storage": false,
-      "dep_id": "D3",
-      "chamber": "D3_GENERAL"
-    },
-    {
-      "r": 35,
-      "c": 13,
-      "val": "",
-      "fill": "#FFFFFF",
-      "is_storage": false,
-      "dep_id": "D3",
-      "chamber": "D3_GENERAL"
-    },
-    {
-      "r": 35,
-      "c": 14,
-      "val": "",
-      "fill": "#FFFFFF",
-      "is_storage": false,
-      "dep_id": "D3",
-      "chamber": "D3_GENERAL"
-    },
-    {
-      "r": 35,
-      "c": 15,
-      "val": "",
-      "fill": "#FFFFFF",
-      "is_storage": false,
-      "dep_id": "D3",
-      "chamber": "D3_GENERAL"
-    },
-    {
-      "r": 35,
-      "c": 16,
-      "val": "",
-      "fill": "#FFFFFF",
-      "is_storage": false,
-      "dep_id": "D3",
-      "chamber": "D3_GENERAL"
-    },
-    {
-      "r": 35,
-      "c": 17,
-      "val": "",
-      "fill": "#FFFFFF",
-      "is_storage": false,
-      "dep_id": "D3",
-      "chamber": "D3_GENERAL"
-    },
-    {
-      "r": 35,
-      "c": 18,
-      "val": "",
-      "fill": "#FFFFFF",
-      "is_storage": false,
-      "dep_id": "D3",
-      "chamber": "D3_GENERAL"
-    },
-    {
-      "r": 35,
-      "c": 19,
-      "val": "",
-      "fill": "#FFFFFF",
-      "is_storage": false,
-      "dep_id": "D3",
-      "chamber": "D3_GENERAL"
-    },
-    {
-      "r": 35,
-      "c": 20,
-      "val": "",
-      "fill": "#FFFFFF",
-      "is_storage": false,
-      "dep_id": "D3",
-      "chamber": "D3_GENERAL"
-    },
-    {
-      "r": 35,
-      "c": 21,
-      "val": "",
-      "fill": "#FFFFFF",
-      "is_storage": false,
-      "dep_id": "D3",
-      "chamber": "D3_GENERAL"
-    },
-    {
-      "r": 35,
-      "c": 22,
-      "val": "",
-      "fill": "#FFFFFF",
-      "is_storage": false,
-      "dep_id": "D3",
-      "chamber": "D3_GENERAL"
-    },
-    {
-      "r": 35,
-      "c": 23,
-      "val": "",
-      "fill": "#FFFFFF",
-      "is_storage": false,
-      "dep_id": "D3",
-      "chamber": "D3_GENERAL"
-    }
-  ],
-  [
-    {
-      "r": 36,
-      "c": 1,
-      "val": "",
-      "fill": "#FFFFFF",
-      "is_storage": false,
-      "dep_id": "D3",
-      "chamber": "D3_GENERAL"
-    },
-    {
-      "r": 36,
-      "c": 2,
-      "val": "",
-      "fill": "#FFFFFF",
-      "is_storage": false,
-      "dep_id": "D3",
-      "chamber": "D3_GENERAL"
-    },
-    {
-      "r": 36,
-      "c": 3,
-      "val": "",
-      "fill": "#FFFFFF",
-      "is_storage": false,
-      "dep_id": "D3",
-      "chamber": "D3_GENERAL"
-    },
-    {
-      "r": 36,
-      "c": 4,
-      "val": "",
-      "fill": "#FFFFFF",
-      "is_storage": false,
-      "dep_id": "D3",
-      "chamber": "D3_GENERAL"
-    },
-    {
-      "r": 36,
-      "c": 5,
-      "val": "",
-      "fill": "#FFFFFF",
-      "is_storage": false,
-      "dep_id": "D3",
-      "chamber": "D3_GENERAL"
-    },
-    {
-      "r": 36,
-      "c": 6,
-      "val": "",
-      "fill": "#FFFFFF",
-      "is_storage": false,
-      "dep_id": "D3",
-      "chamber": "D3_GENERAL"
-    },
-    {
-      "r": 36,
-      "c": 7,
-      "val": "",
-      "fill": "#FFFFFF",
-      "is_storage": false,
-      "dep_id": "D3",
-      "chamber": "D3_GENERAL"
-    },
-    {
-      "r": 36,
-      "c": 8,
-      "val": "",
-      "fill": "#FFFFFF",
-      "is_storage": false,
-      "dep_id": "D3",
-      "chamber": "D3_GENERAL"
-    },
-    {
-      "r": 36,
-      "c": 9,
-      "val": "",
-      "fill": "#FFFFFF",
-      "is_storage": false,
-      "dep_id": "D3",
-      "chamber": "D3_GENERAL"
-    },
-    {
-      "r": 36,
-      "c": 10,
-      "val": "",
-      "fill": "#FFFFFF",
-      "is_storage": false,
-      "dep_id": "D3",
-      "chamber": "D3_GENERAL"
-    },
-    {
-      "r": 36,
-      "c": 11,
-      "val": "",
-      "fill": "#FFFFFF",
-      "is_storage": false,
-      "dep_id": "D3",
-      "chamber": "D3_GENERAL"
-    },
-    {
-      "r": 36,
-      "c": 12,
-      "val": "",
-      "fill": "#FFFFFF",
-      "is_storage": false,
-      "dep_id": "D3",
-      "chamber": "D3_GENERAL"
-    },
-    {
-      "r": 36,
-      "c": 13,
-      "val": "",
-      "fill": "#FFFFFF",
-      "is_storage": false,
-      "dep_id": "D3",
-      "chamber": "D3_GENERAL"
-    },
-    {
-      "r": 36,
-      "c": 14,
-      "val": "",
-      "fill": "#FFFFFF",
-      "is_storage": false,
-      "dep_id": "D3",
-      "chamber": "D3_GENERAL"
-    },
-    {
-      "r": 36,
-      "c": 15,
-      "val": "",
-      "fill": "#FFFFFF",
-      "is_storage": false,
-      "dep_id": "D3",
-      "chamber": "D3_GENERAL"
-    },
-    {
-      "r": 36,
-      "c": 16,
-      "val": "",
-      "fill": "#FFFFFF",
-      "is_storage": false,
-      "dep_id": "D3",
-      "chamber": "D3_GENERAL"
-    },
-    {
-      "r": 36,
-      "c": 17,
-      "val": "",
-      "fill": "#FFFFFF",
-      "is_storage": false,
-      "dep_id": "D3",
-      "chamber": "D3_GENERAL"
-    },
-    {
-      "r": 36,
-      "c": 18,
-      "val": "",
-      "fill": "#FFFFFF",
-      "is_storage": false,
-      "dep_id": "D3",
-      "chamber": "D3_GENERAL"
-    },
-    {
-      "r": 36,
-      "c": 19,
-      "val": "",
-      "fill": "#FFFFFF",
-      "is_storage": false,
-      "dep_id": "D3",
-      "chamber": "D3_GENERAL"
-    },
-    {
-      "r": 36,
-      "c": 20,
-      "val": "",
-      "fill": "#FFFFFF",
-      "is_storage": false,
-      "dep_id": "D3",
-      "chamber": "D3_GENERAL"
-    },
-    {
-      "r": 36,
-      "c": 21,
-      "val": "",
-      "fill": "#FFFFFF",
-      "is_storage": false,
-      "dep_id": "D3",
-      "chamber": "D3_GENERAL"
-    },
-    {
-      "r": 36,
-      "c": 22,
-      "val": "",
-      "fill": "#FFFFFF",
-      "is_storage": false,
-      "dep_id": "D3",
-      "chamber": "D3_GENERAL"
-    },
-    {
-      "r": 36,
       "c": 23,
       "val": "",
       "fill": "#FFFFFF",
@@ -7177,7 +6719,7 @@ export const DEPOSITO_SLOTS: DepositSlot[] = [
     "row": 1,
     "col": 4,
     "nivel": "A-B-C",
-    "fill": "#fce7f3",
+    "fill": "#B6D7A8",
     "chamber": "ESTANTERIA"
   },
   {
@@ -7187,7 +6729,7 @@ export const DEPOSITO_SLOTS: DepositSlot[] = [
     "row": 1,
     "col": 7,
     "nivel": "A-B-C",
-    "fill": "#ecfeff",
+    "fill": "#B6D7A8",
     "chamber": "CAMARA_1"
   },
   {
@@ -7197,7 +6739,7 @@ export const DEPOSITO_SLOTS: DepositSlot[] = [
     "row": 1,
     "col": 8,
     "nivel": "A",
-    "fill": "#ecfeff",
+    "fill": "#B6D7A8",
     "chamber": "CAMARA_1"
   },
   {
@@ -7207,7 +6749,7 @@ export const DEPOSITO_SLOTS: DepositSlot[] = [
     "row": 1,
     "col": 9,
     "nivel": "A",
-    "fill": "#ecfeff",
+    "fill": "#B6D7A8",
     "chamber": "CAMARA_1"
   },
   {
@@ -7217,7 +6759,7 @@ export const DEPOSITO_SLOTS: DepositSlot[] = [
     "row": 1,
     "col": 10,
     "nivel": "A",
-    "fill": "#ecfeff",
+    "fill": "#B6D7A8",
     "chamber": "CAMARA_1"
   },
   {
@@ -7227,7 +6769,7 @@ export const DEPOSITO_SLOTS: DepositSlot[] = [
     "row": 1,
     "col": 11,
     "nivel": "A",
-    "fill": "#ecfeff",
+    "fill": "#B6D7A8",
     "chamber": "CAMARA_1"
   },
   {
@@ -7237,7 +6779,7 @@ export const DEPOSITO_SLOTS: DepositSlot[] = [
     "row": 2,
     "col": 4,
     "nivel": "A-B-C",
-    "fill": "#fce7f3",
+    "fill": "#B6D7A8",
     "chamber": "ESTANTERIA"
   },
   {
@@ -7247,7 +6789,7 @@ export const DEPOSITO_SLOTS: DepositSlot[] = [
     "row": 2,
     "col": 7,
     "nivel": "A",
-    "fill": "#ecfeff",
+    "fill": "#B6D7A8",
     "chamber": "CAMARA_1"
   },
   {
@@ -7257,7 +6799,7 @@ export const DEPOSITO_SLOTS: DepositSlot[] = [
     "row": 2,
     "col": 8,
     "nivel": "A",
-    "fill": "#ecfeff",
+    "fill": "#B6D7A8",
     "chamber": "CAMARA_1"
   },
   {
@@ -7267,7 +6809,7 @@ export const DEPOSITO_SLOTS: DepositSlot[] = [
     "row": 2,
     "col": 9,
     "nivel": "A",
-    "fill": "#ecfeff",
+    "fill": "#B6D7A8",
     "chamber": "CAMARA_1"
   },
   {
@@ -7277,7 +6819,7 @@ export const DEPOSITO_SLOTS: DepositSlot[] = [
     "row": 2,
     "col": 10,
     "nivel": "A",
-    "fill": "#ecfeff",
+    "fill": "#B6D7A8",
     "chamber": "CAMARA_1"
   },
   {
@@ -7287,7 +6829,7 @@ export const DEPOSITO_SLOTS: DepositSlot[] = [
     "row": 2,
     "col": 11,
     "nivel": "A",
-    "fill": "#ecfeff",
+    "fill": "#B6D7A8",
     "chamber": "CAMARA_1"
   },
   {
@@ -7297,7 +6839,7 @@ export const DEPOSITO_SLOTS: DepositSlot[] = [
     "row": 3,
     "col": 4,
     "nivel": "A-B-C",
-    "fill": "#fce7f3",
+    "fill": "#B6D7A8",
     "chamber": "ESTANTERIA"
   },
   {
@@ -7306,28 +6848,8 @@ export const DEPOSITO_SLOTS: DepositSlot[] = [
     "deposito": "Depósito 1",
     "row": 3,
     "col": 7,
-    "nivel": "A",
-    "fill": "#ecfeff",
-    "chamber": "CAMARA_1"
-  },
-  {
-    "code": "D1-R03-C08",
-    "dep_id": "D1",
-    "deposito": "Depósito 1",
-    "row": 3,
-    "col": 8,
-    "nivel": "A",
-    "fill": "#ecfeff",
-    "chamber": "CAMARA_1"
-  },
-  {
-    "code": "D1-R03-C09",
-    "dep_id": "D1",
-    "deposito": "Depósito 1",
-    "row": 3,
-    "col": 9,
-    "nivel": "A",
-    "fill": "#ecfeff",
+    "nivel": "A-B-C",
+    "fill": "#B6D7A8",
     "chamber": "CAMARA_1"
   },
   {
@@ -7337,7 +6859,7 @@ export const DEPOSITO_SLOTS: DepositSlot[] = [
     "row": 3,
     "col": 10,
     "nivel": "A",
-    "fill": "#ecfeff",
+    "fill": "#B6D7A8",
     "chamber": "CAMARA_1"
   },
   {
@@ -7347,7 +6869,7 @@ export const DEPOSITO_SLOTS: DepositSlot[] = [
     "row": 3,
     "col": 11,
     "nivel": "A",
-    "fill": "#ecfeff",
+    "fill": "#B6D7A8",
     "chamber": "CAMARA_1"
   },
   {
@@ -7357,27 +6879,7 @@ export const DEPOSITO_SLOTS: DepositSlot[] = [
     "row": 5,
     "col": 6,
     "nivel": "A",
-    "fill": "#e0f2fe",
-    "chamber": "CAMARA_2"
-  },
-  {
-    "code": "D1-R05-C07",
-    "dep_id": "D1",
-    "deposito": "Depósito 1",
-    "row": 5,
-    "col": 7,
-    "nivel": "A",
-    "fill": "#e0f2fe",
-    "chamber": "CAMARA_2"
-  },
-  {
-    "code": "D1-R05-C08",
-    "dep_id": "D1",
-    "deposito": "Depósito 1",
-    "row": 5,
-    "col": 8,
-    "nivel": "A",
-    "fill": "#e0f2fe",
+    "fill": "#B6D7A8",
     "chamber": "CAMARA_2"
   },
   {
@@ -7387,7 +6889,7 @@ export const DEPOSITO_SLOTS: DepositSlot[] = [
     "row": 5,
     "col": 9,
     "nivel": "A",
-    "fill": "#e0f2fe",
+    "fill": "#B6D7A8",
     "chamber": "CAMARA_2"
   },
   {
@@ -7396,8 +6898,8 @@ export const DEPOSITO_SLOTS: DepositSlot[] = [
     "deposito": "Depósito 1",
     "row": 5,
     "col": 11,
-    "nivel": "A",
-    "fill": "#f3e8ff",
+    "nivel": "A-B-C",
+    "fill": "#B6D7A8",
     "chamber": "CAMARA_3"
   },
   {
@@ -7407,7 +6909,7 @@ export const DEPOSITO_SLOTS: DepositSlot[] = [
     "row": 5,
     "col": 12,
     "nivel": "A",
-    "fill": "#f3e8ff",
+    "fill": "#B6D7A8",
     "chamber": "CAMARA_3"
   },
   {
@@ -7417,7 +6919,7 @@ export const DEPOSITO_SLOTS: DepositSlot[] = [
     "row": 5,
     "col": 13,
     "nivel": "A",
-    "fill": "#f3e8ff",
+    "fill": "#B6D7A8",
     "chamber": "CAMARA_3"
   },
   {
@@ -7427,8 +6929,18 @@ export const DEPOSITO_SLOTS: DepositSlot[] = [
     "row": 5,
     "col": 15,
     "nivel": "A",
-    "fill": "#f3e8ff",
+    "fill": "#B6D7A8",
     "chamber": "CAMARA_3"
+  },
+  {
+    "code": "D1-R05-C17",
+    "dep_id": "D1",
+    "deposito": "Depósito 1",
+    "row": 5,
+    "col": 17,
+    "nivel": "A",
+    "fill": "#B6D7A8",
+    "chamber": "BANO"
   },
   {
     "code": "D1-R06-C01",
@@ -7437,7 +6949,7 @@ export const DEPOSITO_SLOTS: DepositSlot[] = [
     "row": 6,
     "col": 1,
     "nivel": "A",
-    "fill": "#fef3c7",
+    "fill": "#B6D7A8",
     "chamber": "RACK_ENTRADA"
   },
   {
@@ -7447,7 +6959,7 @@ export const DEPOSITO_SLOTS: DepositSlot[] = [
     "row": 6,
     "col": 2,
     "nivel": "A",
-    "fill": "#fef3c7",
+    "fill": "#B6D7A8",
     "chamber": "RACK_ENTRADA"
   },
   {
@@ -7457,7 +6969,7 @@ export const DEPOSITO_SLOTS: DepositSlot[] = [
     "row": 6,
     "col": 3,
     "nivel": "A",
-    "fill": "#fef3c7",
+    "fill": "#B6D7A8",
     "chamber": "RACK_ENTRADA"
   },
   {
@@ -7467,7 +6979,7 @@ export const DEPOSITO_SLOTS: DepositSlot[] = [
     "row": 6,
     "col": 4,
     "nivel": "A",
-    "fill": "#fef3c7",
+    "fill": "#B6D7A8",
     "chamber": "RACK_ENTRADA"
   },
   {
@@ -7477,7 +6989,7 @@ export const DEPOSITO_SLOTS: DepositSlot[] = [
     "row": 6,
     "col": 6,
     "nivel": "A",
-    "fill": "#e0f2fe",
+    "fill": "#B6D7A8",
     "chamber": "CAMARA_2"
   },
   {
@@ -7487,17 +6999,7 @@ export const DEPOSITO_SLOTS: DepositSlot[] = [
     "row": 6,
     "col": 7,
     "nivel": "A",
-    "fill": "#e0f2fe",
-    "chamber": "CAMARA_2"
-  },
-  {
-    "code": "D1-R06-C08",
-    "dep_id": "D1",
-    "deposito": "Depósito 1",
-    "row": 6,
-    "col": 8,
-    "nivel": "A",
-    "fill": "#e0f2fe",
+    "fill": "#B6D7A8",
     "chamber": "CAMARA_2"
   },
   {
@@ -7507,7 +7009,7 @@ export const DEPOSITO_SLOTS: DepositSlot[] = [
     "row": 6,
     "col": 9,
     "nivel": "A",
-    "fill": "#e0f2fe",
+    "fill": "#B6D7A8",
     "chamber": "CAMARA_2"
   },
   {
@@ -7516,8 +7018,8 @@ export const DEPOSITO_SLOTS: DepositSlot[] = [
     "deposito": "Depósito 1",
     "row": 6,
     "col": 11,
-    "nivel": "A",
-    "fill": "#f3e8ff",
+    "nivel": "A-B-C",
+    "fill": "#B6D7A8",
     "chamber": "CAMARA_3"
   },
   {
@@ -7527,7 +7029,7 @@ export const DEPOSITO_SLOTS: DepositSlot[] = [
     "row": 6,
     "col": 15,
     "nivel": "A",
-    "fill": "#f3e8ff",
+    "fill": "#B6D7A8",
     "chamber": "CAMARA_3"
   },
   {
@@ -7537,7 +7039,7 @@ export const DEPOSITO_SLOTS: DepositSlot[] = [
     "row": 7,
     "col": 1,
     "nivel": "A-B-C",
-    "fill": "#fef3c7",
+    "fill": "#B6D7A8",
     "chamber": "RACK_ENTRADA"
   },
   {
@@ -7547,7 +7049,7 @@ export const DEPOSITO_SLOTS: DepositSlot[] = [
     "row": 7,
     "col": 2,
     "nivel": "A-B-C",
-    "fill": "#fef3c7",
+    "fill": "#B6D7A8",
     "chamber": "RACK_ENTRADA"
   },
   {
@@ -7557,7 +7059,7 @@ export const DEPOSITO_SLOTS: DepositSlot[] = [
     "row": 7,
     "col": 3,
     "nivel": "A-B-C",
-    "fill": "#fef3c7",
+    "fill": "#B6D7A8",
     "chamber": "RACK_ENTRADA"
   },
   {
@@ -7567,7 +7069,7 @@ export const DEPOSITO_SLOTS: DepositSlot[] = [
     "row": 7,
     "col": 4,
     "nivel": "A-B-C",
-    "fill": "#fef3c7",
+    "fill": "#B6D7A8",
     "chamber": "RACK_ENTRADA"
   },
   {
@@ -7576,8 +7078,8 @@ export const DEPOSITO_SLOTS: DepositSlot[] = [
     "deposito": "Depósito 1",
     "row": 7,
     "col": 6,
-    "nivel": "A-B-C",
-    "fill": "#e0f2fe",
+    "nivel": "A-B-C-D-E-F",
+    "fill": "#B6D7A8",
     "chamber": "CAMARA_2"
   },
   {
@@ -7586,8 +7088,8 @@ export const DEPOSITO_SLOTS: DepositSlot[] = [
     "deposito": "Depósito 1",
     "row": 7,
     "col": 7,
-    "nivel": "A-B-C",
-    "fill": "#e0f2fe",
+    "nivel": "A",
+    "fill": "#B6D7A8",
     "chamber": "CAMARA_2"
   },
   {
@@ -7596,8 +7098,8 @@ export const DEPOSITO_SLOTS: DepositSlot[] = [
     "deposito": "Depósito 1",
     "row": 7,
     "col": 8,
-    "nivel": "A-B-C",
-    "fill": "#e0f2fe",
+    "nivel": "A",
+    "fill": "#B6D7A8",
     "chamber": "CAMARA_2"
   },
   {
@@ -7606,8 +7108,8 @@ export const DEPOSITO_SLOTS: DepositSlot[] = [
     "deposito": "Depósito 1",
     "row": 7,
     "col": 9,
-    "nivel": "A-B-C",
-    "fill": "#e0f2fe",
+    "nivel": "A",
+    "fill": "#B6D7A8",
     "chamber": "CAMARA_2"
   },
   {
@@ -7616,8 +7118,8 @@ export const DEPOSITO_SLOTS: DepositSlot[] = [
     "deposito": "Depósito 1",
     "row": 7,
     "col": 11,
-    "nivel": "A-B-C",
-    "fill": "#f3e8ff",
+    "nivel": "A",
+    "fill": "#B6D7A8",
     "chamber": "CAMARA_3"
   },
   {
@@ -7626,8 +7128,8 @@ export const DEPOSITO_SLOTS: DepositSlot[] = [
     "deposito": "Depósito 1",
     "row": 7,
     "col": 12,
-    "nivel": "A-B-C",
-    "fill": "#f3e8ff",
+    "nivel": "A",
+    "fill": "#B6D7A8",
     "chamber": "CAMARA_3"
   },
   {
@@ -7636,8 +7138,8 @@ export const DEPOSITO_SLOTS: DepositSlot[] = [
     "deposito": "Depósito 1",
     "row": 7,
     "col": 13,
-    "nivel": "A-B-C",
-    "fill": "#f3e8ff",
+    "nivel": "A",
+    "fill": "#B6D7A8",
     "chamber": "CAMARA_3"
   },
   {
@@ -7646,8 +7148,8 @@ export const DEPOSITO_SLOTS: DepositSlot[] = [
     "deposito": "Depósito 1",
     "row": 7,
     "col": 14,
-    "nivel": "A-B-C",
-    "fill": "#f3e8ff",
+    "nivel": "A",
+    "fill": "#B6D7A8",
     "chamber": "CAMARA_3"
   },
   {
@@ -7656,8 +7158,8 @@ export const DEPOSITO_SLOTS: DepositSlot[] = [
     "deposito": "Depósito 1",
     "row": 7,
     "col": 15,
-    "nivel": "A-B-C",
-    "fill": "#f3e8ff",
+    "nivel": "A",
+    "fill": "#B6D7A8",
     "chamber": "CAMARA_3"
   },
   {
