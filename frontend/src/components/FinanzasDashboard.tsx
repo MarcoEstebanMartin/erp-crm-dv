@@ -142,12 +142,12 @@ export default function FinanzasDashboard() {
     if (!editingBankId || !editingBankName.trim()) return;
     setSubmittingEditBank(true);
     try {
-      await api.finance.updateBankAccount(editingBankId, {
+      await api.updateBankAccount(editingBankId, {
         name: editingBankName.trim(),
         accountNumber: editingBankAccountNumber.trim(),
       });
       setEditingBankModalOpen(false);
-      const banks = await api.finance.getBankAccounts();
+      const banks = await api.getBankAccounts();
       setBankAccounts(banks || []);
     } catch (err: any) {
       alert(err?.message || 'Error al guardar los datos de la cuenta bancaria');
@@ -170,7 +170,7 @@ export default function FinanzasDashboard() {
       message: `Se cerrará la Caja Grande (Saldo acumulado actual: $${cajaGrandeBalance.toLocaleString('es-AR')}). El nuevo ciclo recomenzará con $${realBal.toLocaleString('es-AR')}. ¿Desea continuar?`,
       confirmText: 'Sí, Cerrar Caja Grande',
       cancelText: 'Cancelar',
-      variant: 'warning'
+      type: 'warning'
     });
 
     if (!confirmed) return;

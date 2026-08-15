@@ -1747,6 +1747,7 @@ export default function ComprasDashboard() {
                     step="0.01"
                     className="input"
                     placeholder="0.00"
+                    onFocus={(e) => e.target.select()}
                     value={supplierForm.percepcionPampa}
                     onChange={(e) => setSupplierForm(prev => ({ ...prev, percepcionPampa: e.target.value }))}
                   />
@@ -1758,6 +1759,7 @@ export default function ComprasDashboard() {
                     step="0.01"
                     className="input"
                     placeholder="0.00"
+                    onFocus={(e) => e.target.select()}
                     value={supplierForm.percepcionBsAs}
                     onChange={(e) => setSupplierForm(prev => ({ ...prev, percepcionBsAs: e.target.value }))}
                   />
@@ -1772,6 +1774,7 @@ export default function ComprasDashboard() {
                     step="0.01"
                     className="input"
                     placeholder="0.00"
+                    onFocus={(e) => e.target.select()}
                     value={supplierForm.percepcionIva}
                     onChange={(e) => setSupplierForm(prev => ({ ...prev, percepcionIva: e.target.value }))}
                   />
@@ -1783,6 +1786,7 @@ export default function ComprasDashboard() {
                     step="0.01"
                     className="input"
                     placeholder="0.00"
+                    onFocus={(e) => e.target.select()}
                     value={supplierForm.percepcionIva5329}
                     onChange={(e) => setSupplierForm(prev => ({ ...prev, percepcionIva5329: e.target.value }))}
                   />
@@ -1797,6 +1801,7 @@ export default function ComprasDashboard() {
                     step="0.01"
                     className="input"
                     placeholder="0.00"
+                    onFocus={(e) => e.target.select()}
                     value={supplierForm.impuestosInternos}
                     onChange={(e) => setSupplierForm(prev => ({ ...prev, impuestosInternos: e.target.value }))}
                   />
@@ -1810,6 +1815,7 @@ export default function ComprasDashboard() {
                   step="0.01"
                   className="input"
                   placeholder={autoCalculatedTotal}
+                  onFocus={(e) => e.target.select()}
                   value={supplierForm.totalAmount}
                   onChange={(e) => setSupplierForm(prev => ({ ...prev, totalAmount: e.target.value }))}
                   required

@@ -908,7 +908,9 @@ export const PurchaseScannerModal: React.FC<PurchaseScannerModalProps> = ({
                       <label style={{ display: 'block', fontSize: '10px', color: 'var(--text-secondary)', marginBottom: '4px', textTransform: 'uppercase', fontWeight: 600 }}>Neto Gravado</label>
                       <input 
                         type="number" 
-                        value={extractedData.netAmount ?? 0} 
+                        value={extractedData.netAmount || ''} 
+                        placeholder="0.00"
+                        onFocus={(e) => e.target.select()}
                         onChange={(e) => updateExtractedField('netAmount', e.target.value)}
                         style={{ width: '100%', padding: '6px 8px', fontSize: '12px', border: '1px solid var(--border-color)', borderRadius: '6px', backgroundColor: '#fff', color: 'var(--text-primary)' }}
                       />
@@ -917,7 +919,9 @@ export const PurchaseScannerModal: React.FC<PurchaseScannerModalProps> = ({
                       <label style={{ display: 'block', fontSize: '10px', color: 'var(--text-secondary)', marginBottom: '4px', textTransform: 'uppercase', fontWeight: 600 }}>IVA (21%)</label>
                       <input 
                         type="number" 
-                        value={extractedData.taxAmount ?? 0} 
+                        value={extractedData.taxAmount || ''} 
+                        placeholder="0.00"
+                        onFocus={(e) => e.target.select()}
                         onChange={(e) => updateExtractedField('taxAmount', e.target.value)}
                         style={{ width: '100%', padding: '6px 8px', fontSize: '12px', border: '1px solid var(--border-color)', borderRadius: '6px', backgroundColor: '#fff', color: 'var(--text-primary)' }}
                       />
@@ -929,7 +933,9 @@ export const PurchaseScannerModal: React.FC<PurchaseScannerModalProps> = ({
                       <label style={{ display: 'block', fontSize: '10px', color: 'var(--text-secondary)', marginBottom: '4px', textTransform: 'uppercase', fontWeight: 600 }}>IIBB La Pampa</label>
                       <input 
                         type="number" 
-                        value={extractedData.percepcionPampa ?? 0} 
+                        value={extractedData.percepcionPampa || ''} 
+                        placeholder="0.00"
+                        onFocus={(e) => e.target.select()}
                         onChange={(e) => updateExtractedField('percepcionPampa', e.target.value)}
                         style={{ width: '100%', padding: '6px 8px', fontSize: '12px', border: '1px solid var(--border-color)', borderRadius: '6px', backgroundColor: '#fff', color: 'var(--text-primary)' }}
                       />
@@ -938,7 +944,9 @@ export const PurchaseScannerModal: React.FC<PurchaseScannerModalProps> = ({
                       <label style={{ display: 'block', fontSize: '10px', color: 'var(--text-secondary)', marginBottom: '4px', textTransform: 'uppercase', fontWeight: 600 }}>Percepcion IIBB Bs As</label>
                       <input 
                         type="number" 
-                        value={extractedData.percepcionBsAs ?? 0} 
+                        value={extractedData.percepcionBsAs || ''} 
+                        placeholder="0.00"
+                        onFocus={(e) => e.target.select()}
                         onChange={(e) => updateExtractedField('percepcionBsAs', e.target.value)}
                         style={{ width: '100%', padding: '6px 8px', fontSize: '12px', border: '1px solid var(--border-color)', borderRadius: '6px', backgroundColor: '#fff', color: 'var(--text-primary)' }}
                       />
@@ -950,7 +958,9 @@ export const PurchaseScannerModal: React.FC<PurchaseScannerModalProps> = ({
                       <label style={{ display: 'block', fontSize: '10px', color: 'var(--text-secondary)', marginBottom: '4px', textTransform: 'uppercase', fontWeight: 600 }}>Percepción IVA RG 3337</label>
                       <input 
                         type="number" 
-                        value={extractedData.percepcionIva ?? 0} 
+                        value={extractedData.percepcionIva || ''} 
+                        placeholder="0.00"
+                        onFocus={(e) => e.target.select()}
                         onChange={(e) => updateExtractedField('percepcionIva', e.target.value)}
                         style={{ width: '100%', padding: '6px 8px', fontSize: '12px', border: '1px solid var(--border-color)', borderRadius: '6px', backgroundColor: '#fff', color: 'var(--text-primary)' }}
                       />
@@ -959,7 +969,9 @@ export const PurchaseScannerModal: React.FC<PurchaseScannerModalProps> = ({
                       <label style={{ display: 'block', fontSize: '10px', color: 'var(--text-secondary)', marginBottom: '4px', textTransform: 'uppercase', fontWeight: 600 }}>Percepción IVA RG 5329</label>
                       <input 
                         type="number" 
-                        value={extractedData.percepcionIva5329 ?? 0} 
+                        value={extractedData.percepcionIva5329 || ''} 
+                        placeholder="0.00"
+                        onFocus={(e) => e.target.select()}
                         onChange={(e) => updateExtractedField('percepcionIva5329', e.target.value)}
                         style={{ width: '100%', padding: '6px 8px', fontSize: '12px', border: '1px solid var(--border-color)', borderRadius: '6px', backgroundColor: '#fff', color: 'var(--text-primary)' }}
                       />
@@ -971,7 +983,9 @@ export const PurchaseScannerModal: React.FC<PurchaseScannerModalProps> = ({
                       <label style={{ display: 'block', fontSize: '10px', color: 'var(--text-secondary)', marginBottom: '4px', textTransform: 'uppercase', fontWeight: 600 }}>Impuestos Internos</label>
                       <input 
                         type="number" 
-                        value={extractedData.impuestosInternos ?? 0} 
+                        value={extractedData.impuestosInternos || ''} 
+                        placeholder="0.00"
+                        onFocus={(e) => e.target.select()}
                         onChange={(e) => updateExtractedField('impuestosInternos', e.target.value)}
                         style={{ width: '100%', padding: '6px 8px', fontSize: '12px', border: '1px solid var(--border-color)', borderRadius: '6px', backgroundColor: '#fff', color: 'var(--text-primary)' }}
                       />
@@ -988,7 +1002,9 @@ export const PurchaseScannerModal: React.FC<PurchaseScannerModalProps> = ({
                     <span style={{ color: 'var(--text-primary)', fontWeight: 600, fontSize: '14px' }}>Monto Factura</span>
                     <input 
                       type="number" 
-                      value={extractedData.totalAmount ?? 0} 
+                      value={extractedData.totalAmount || ''} 
+                      placeholder="0.00"
+                      onFocus={(e) => e.target.select()}
                       onChange={(e) => setExtractedData({...extractedData, totalAmount: Number(e.target.value)})}
                       style={{ width: '140px', padding: '6px 10px', fontSize: '15px', fontWeight: 'bold', border: '1px solid var(--color-corp-red)', borderRadius: '6px', backgroundColor: '#fff', color: 'var(--color-corp-red)', textAlign: 'right' }}
                     />
