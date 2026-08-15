@@ -74,11 +74,6 @@ const masterProductosFotosDir = path.join(archivosDir, 'fotos/Productos');
 
 // 4. Servidor de Archivos Estáticos
 app.use('/uploads', express.static(uploadsDir, { maxAge: 0, etag: true, lastModified: true }));
-
-if (env.NODE_ENV === 'development') {
-  app.use('/uploads/products', express.static(masterProductosFotosDir, { maxAge: 0, etag: true, lastModified: true }));
-}
-
 app.use('/api/purchases/files', authenticateJWT, express.static(archivosDir));
 
 // 5. Montar Rutas del API
