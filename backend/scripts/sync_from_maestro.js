@@ -68,11 +68,10 @@ async function syncFromMaestro() {
     const targetFileName = `${sku}.jpg`;
     let sourceFileName = null;
 
-    const oldCode = changesMap.get(sku);
-    if (oldCode && masterPhotoSet.has(`${oldCode}.jpg`)) {
-      sourceFileName = `${oldCode}.jpg`;
-    } else if (masterPhotoSet.has(targetFileName)) {
+    if (masterPhotoSet.has(targetFileName)) {
       sourceFileName = targetFileName;
+    } else if (oldCode && masterPhotoSet.has(`${oldCode}.jpg`)) {
+      sourceFileName = `${oldCode}.jpg`;
     }
 
     if (sourceFileName) {
@@ -88,55 +87,58 @@ async function syncFromMaestro() {
     const existing = skuMap.get(sku) || nameMap.get(productName.toLowerCase());
 
     if (existing) {
-      updates.push(
-        prisma.product.update({
-          where: { id: existing.id },
-          data: {
-            sku: sku,
-            name: productName,
-            barcode: barcode || existing.barcode,
-            costPrice: costPrice > 0 ? costPrice : existing.costPrice,
-            listPrice: listPrice > 0 ? listPrice : existing.listPrice,
-            isPesable: isPesable,
-            approximateWeight: approximateWeight,
-            unitsPerBox: unitsPerBox,
-            minOrderQuantity: minOrderQuantity,
-            imageUrl: imageUrl || existing.imageUrl
-          }
-        })
-      );
+      updates.push({
+        where: { id: existing.id },
+        data: {
+          sku: sku,
+          name: productName,
+          barcode: barcode || existing.barcode,
+          costPrice: costPrice > 0 ? costPrice : existing.costPrice,
+          listPrice: listPrice > 0 ? listPrice : existing.listPrice,
+          isPesable: isPesable,
+          approximateWeight: approximateWeight,
+          unitsPerBox: unitsPerBox,
+          minOrderQuantity: minOrderQuantity,
+          imageUrl: imageUrl || existing.imageUrl
+        }
+      });
     } else {
-      creates.push(
-        prisma.product.create({
-          data: {
-            sku: sku,
-            name: productName,
-            description: row.SUBRUBRO || row.RUBRO || 'PRODUCTO',
-            barcode: barcode,
-            costPrice: costPrice,
-            listPrice: listPrice,
-            listPriceB: listPrice * 0.95,
-            listPriceC: listPrice * 0.90,
-            stock: 100,
-            minStock: Number(row['STOCK MINIMO'] || 10),
-            isPesable: isPesable,
-            approximateWeight: approximateWeight,
-            unitsPerBox: unitsPerBox,
-            minOrderQuantity: minOrderQuantity,
-            imageUrl: imageUrl,
-            category: row.RUBRO || 'GENERAL'
-          }
-        })
-      );
+      creates.push({
+        data: {
+          sku: sku,
+          name: productName,
+          description: row.SUBRUBRO || row.RUBRO || 'PRODUCTO',
+          barcode: barcode,
+          costPrice: costPrice,
+          listPrice: listPrice,
+          listPriceB: listPrice * 0.95,
+          listPriceC: listPrice * 0.90,
+          stock: 100,
+          minStock: Number(row['STOCK MINIMO'] || 10),
+          isPesable: isPesable,
+          approximateWeight: approximateWeight,
+          unitsPerBox: unitsPerBox,
+          minOrderQuantity: minOrderQuantity,
+          imageUrl: imageUrl,
+          category: row.RUBRO || 'GENERAL'
+        }
+      });
     }
   }
 
   console.log(`⏳ Procesando ${updates.length} actualizaciones y ${creates.length} creaciones...`);
   
-  const batchSize = 50;
-  const allOps = [...updates, ...creates];
-  for (let i = 0; i < allOps.length; i += batchSize) {
-    await Promise.all(allOps.slice(i, i + batchSize));
+  for (const item of updates) {
+    try {
+      await prisma.product.update(item);
+    } catch (e) {
+      // If barcode collision occurs, update without barcode override
+      const { barcode, ...dataWithoutBarcode } = item.data;
+      await prisma.product.update({ where: item.where, data: dataWithoutBarcode });
+    }
+  }
+  for (const item of creates) {
+    await prisma.product.create(item);
   }
 
   console.log(`\n⚡ ¡Sincronización con Maestro.xlsx Completada Exitosamente!`);
