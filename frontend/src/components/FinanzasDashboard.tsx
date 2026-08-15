@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../utils/api';
-import { DollarSign, RefreshCw, PlusCircle, AlertCircle, Landmark, Upload, Check, CheckSquare, Eye, ChevronRight, FileText } from 'lucide-react';
+import { DollarSign, RefreshCw, PlusCircle, AlertCircle, Landmark, Upload, Check, CheckSquare, Eye, ChevronRight, FileText, ArrowUpRight, Lock, Building2, Calendar } from 'lucide-react';
 import { useConfirm } from '../context/ConfirmContext';
 import FinanceMovementModal from './FinanceMovementModal';
 import { formatResponsibleName } from '../utils/formatters';
@@ -13,6 +13,23 @@ export default function FinanzasDashboard() {
   const [cajaGrandeBalance, setCajaGrandeBalance] = useState(0);
   const [bankAccounts, setBankAccounts] = useState<any[]>([]);
   const [inspectingDrawer, setInspectingDrawer] = useState<any | null>(null);
+
+  // Modals y Operaciones de Caja Grande (Central)
+  const [centralTransferModalOpen, setCentralTransferModalOpen] = useState(false);
+  const [centralTransferType, setCentralTransferType] = useState<'BANK_DEPOSIT' | 'TREASURY_WITHDRAWAL'>('BANK_DEPOSIT');
+  const [centralTransferAmount, setCentralTransferAmount] = useState('');
+  const [centralTransferBankId, setCentralTransferBankId] = useState('');
+  const [centralTransferDesc, setCentralTransferDesc] = useState('');
+  const [submittingCentralTransfer, setSubmittingCentralTransfer] = useState(false);
+
+  const [centralCloseModalOpen, setCentralCloseModalOpen] = useState(false);
+  const [centralCloseRealBalance, setCentralCloseRealBalance] = useState('');
+  const [centralCloseNewOpening, setCentralCloseNewOpening] = useState('0');
+  const [centralCloseBankId, setCentralCloseBankId] = useState('');
+  const [centralCloseBankAmount, setCentralCloseBankAmount] = useState('0');
+  const [centralCloseWithdrawnAmount, setCentralCloseWithdrawnAmount] = useState('0');
+  const [centralCloseNotes, setCentralCloseNotes] = useState('');
+  const [submittingCentralClose, setSubmittingCentralClose] = useState(false);
 
   // Conciliación Bancaria Modal y estados
   const [reconModalOpen, setReconModalOpen] = useState(false);
@@ -73,16 +90,36 @@ export default function FinanzasDashboard() {
       const allTxs = await api.getTransactions();
       setTransactions(allTxs || []);
 
-      // 3. Compute overall Caja Grande Balance
-      const closed = (allDrawers || []).filter((d: any) => d.status === 'CLOSED');
+      // 3. Compute overall Caja Grande Balance with cutoff from latest CENTRAL drawer closure
+      const centralClosed = (allDrawers || [])
+        .filter((d: any) => d.status === 'CLOSED' && d.drawerType === 'CENTRAL')
+        .sort((a: any, b: any) => new Date(b.closedAt).getTime() - new Date(a.closedAt).getTime());
+
+      const lastCentral = centralClosed[0] || null;
+      const cutoffDate = lastCentral ? new Date(lastCentral.closedAt) : null;
+      const baseBalance = lastCentral ? Number(lastCentral.realBalance || 0) : 0;
+
+      const closed = (allDrawers || []).filter((d: any) => {
+        if (d.status !== 'CLOSED' || d.drawerType === 'CENTRAL') return false;
+        if (cutoffDate) {
+          return new Date(d.closedAt) > cutoffDate;
+        }
+        return true;
+      });
+
       const netDrawersCash = closed.reduce((acc: number, curr: any) => acc + (Number(curr.realBalance || 0) - Number(curr.openingBalance || 0)), 0);
       
-      const overallExpenses = (allTxs || []).filter(
-        (t: any) => t.type === 'OUTCOME' && t.cashDrawerId === null && t.bankAccountId === null
-      );
+      const overallExpenses = (allTxs || []).filter((t: any) => {
+        if (t.type !== 'OUTCOME' || t.cashDrawerId !== null || t.bankAccountId !== null) return false;
+        if (cutoffDate) {
+          return new Date(t.createdAt) > cutoffDate;
+        }
+        return true;
+      });
+
       const totalExpensesOverall = overallExpenses.reduce((acc: number, curr: any) => acc + Number(curr.amount || 0), 0);
 
-      setCajaGrandeBalance(netDrawersCash - totalExpensesOverall);
+      setCajaGrandeBalance(baseBalance + netDrawersCash - totalExpensesOverall);
 
       // 4. Cargar cuentas bancarias
       const banks = await api.getBankAccounts();
@@ -94,6 +131,127 @@ export default function FinanzasDashboard() {
       console.error('Error fetching financial data', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const applyPresetFilter = (preset: 'today' | 'week' | 'month' | 'last_month' | 'all') => {
+    const today = new Date();
+    const todayStr = today.toISOString().split('T')[0];
+
+    if (preset === 'today') {
+      setFilterStartDate(todayStr);
+      setFilterEndDate(todayStr);
+    } else if (preset === 'week') {
+      const day = today.getDay();
+      const diff = today.getDate() - (day === 0 ? 6 : day - 1); // Monday
+      const monday = new Date(today);
+      monday.setDate(diff);
+      setFilterStartDate(monday.toISOString().split('T')[0]);
+      setFilterEndDate(todayStr);
+    } else if (preset === 'month') {
+      const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+      setFilterStartDate(firstDay.toISOString().split('T')[0]);
+      setFilterEndDate(todayStr);
+    } else if (preset === 'last_month') {
+      const firstDayPrev = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+      const lastDayPrev = new Date(today.getFullYear(), today.getMonth(), 0);
+      setFilterStartDate(firstDayPrev.toISOString().split('T')[0]);
+      setFilterEndDate(lastDayPrev.toISOString().split('T')[0]);
+    } else if (preset === 'all') {
+      setFilterStartDate('2025-01-01');
+      setFilterEndDate(todayStr);
+    }
+  };
+
+  const handleCentralTransfer = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const amt = Number(centralTransferAmount);
+    if (isNaN(amt) || amt <= 0) {
+      setModalError('Por favor, ingrese un monto válido mayor a 0.');
+      return;
+    }
+    if (centralTransferType === 'BANK_DEPOSIT' && !centralTransferBankId) {
+      setModalError('Por favor, seleccione una cuenta bancaria de destino.');
+      return;
+    }
+
+    setSubmittingCentralTransfer(true);
+    setModalError(null);
+
+    try {
+      await api.transferCentralFunds({
+        amount: amt,
+        type: centralTransferType,
+        bankAccountId: centralTransferBankId ? Number(centralTransferBankId) : undefined,
+        description: centralTransferDesc.trim() || undefined
+      });
+
+      setCentralTransferModalOpen(false);
+      setCentralTransferAmount('');
+      setCentralTransferBankId('');
+      setCentralTransferDesc('');
+      fetchFinancialData();
+    } catch (err: any) {
+      console.error(err);
+      setModalError(err.message || 'Error al procesar la operación de Caja Grande.');
+    } finally {
+      setSubmittingCentralTransfer(false);
+    }
+  };
+
+  const handleCentralClose = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const realBal = Number(centralCloseRealBalance || cajaGrandeBalance);
+    const newOpening = Number(centralCloseNewOpening || 0);
+    const bankAmt = Number(centralCloseBankAmount || 0);
+    const withdrawnAmt = Number(centralCloseWithdrawnAmount || 0);
+
+    if (isNaN(realBal) || realBal < 0) {
+      setModalError('Ingrese un conteo real válido.');
+      return;
+    }
+
+    if (bankAmt > 0 && !centralCloseBankId) {
+      setModalError('Seleccione la cuenta bancaria para el depósito.');
+      return;
+    }
+
+    const confirmed = await confirm({
+      title: '¿Confirmar Cierre de Caja Grande?',
+      message: `Se cerrará el ciclo actual de la Caja Grande (Saldo acumulado: $${cajaGrandeBalance.toLocaleString('es-AR')}). El nuevo ciclo iniciará con un saldo inicial de $${newOpening.toLocaleString('es-AR')}. ¿Desea continuar?`,
+      confirmText: 'Sí, Cerrar Caja Grande',
+      cancelText: 'Cancelar',
+      variant: 'warning'
+    });
+
+    if (!confirmed) return;
+
+    setSubmittingCentralClose(true);
+    setModalError(null);
+
+    try {
+      await api.closeCentralDrawer({
+        realBalance: realBal,
+        newOpeningBalance: newOpening,
+        bankAccountId: centralCloseBankId ? Number(centralCloseBankId) : undefined,
+        transferToBankAmount: bankAmt,
+        withdrawnAmount: withdrawnAmt,
+        notes: centralCloseNotes.trim() || undefined
+      });
+
+      setCentralCloseModalOpen(false);
+      setCentralCloseRealBalance('');
+      setCentralCloseNewOpening('0');
+      setCentralCloseBankId('');
+      setCentralCloseBankAmount('0');
+      setCentralCloseWithdrawnAmount('0');
+      setCentralCloseNotes('');
+      fetchFinancialData();
+    } catch (err: any) {
+      console.error(err);
+      setModalError(err.message || 'Error al cerrar la Caja Grande.');
+    } finally {
+      setSubmittingCentralClose(false);
     }
   };
 
@@ -745,23 +903,29 @@ export default function FinanzasDashboard() {
     <div style={{ padding: '0px', width: '100%', display: 'flex', flexDirection: 'column', gap: '20px' }}>
       
       {/* Header Caja Grande */}
-      <div className="card" style={{ marginBottom: '30px', background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)', color: 'white', padding: '30px', borderRadius: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div className="card" style={{ marginBottom: '30px', background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)', color: 'white', padding: '24px 30px', borderRadius: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '20px' }}>
         <div>
           <h2 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '10px', color: '#e5e7eb' }}>
             <DollarSign size={28} color="#10b981" /> Caja Grande (Central)
           </h2>
-          <p style={{ margin: '8px 0 0 0', opacity: 0.8, fontSize: '0.95rem', color: '#e5e7eb' }}>
+          <p style={{ margin: '8px 0 0 0', opacity: 0.8, fontSize: '0.92rem', color: '#e5e7eb' }}>
             Fondo consolidado acumulativo de arqueos y egresos generales de tesorería.
           </p>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '24px', flexWrap: 'wrap' }}>
           <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: '0.9rem', opacity: 0.8, marginBottom: '4px' }}>Saldo Disponible</div>
-            <div style={{ fontSize: '2.5rem', fontWeight: 'bold', color: '#10b981', fontFamily: 'monospace' }}>
+            <div style={{ fontSize: '0.85rem', opacity: 0.8, marginBottom: '2px' }}>Saldo Disponible en Bóveda</div>
+            <div style={{ fontSize: '2.4rem', fontWeight: 'bold', color: '#10b981', fontFamily: 'monospace' }}>
               ${cajaGrandeBalance.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
             </div>
           </div>
-          <div style={{ display: 'flex', gap: '10px' }}>
+          <div style={{ borderLeft: '1px solid #334155', paddingLeft: '20px', textAlign: 'right' }}>
+            <div style={{ fontSize: '0.85rem', opacity: 0.8, marginBottom: '2px' }}>Neto del Período Filtrado</div>
+            <div style={{ fontSize: '1.6rem', fontWeight: 'bold', color: netIncome >= 0 ? '#38bdf8' : '#f87171', fontFamily: 'monospace' }}>
+              {netIncome >= 0 ? '+' : ''}${netIncome.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
             <button 
               type="button" 
               className="btn btn-secondary"
@@ -772,7 +936,58 @@ export default function FinanzasDashboard() {
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '6px',
-                padding: '12px 18px',
+                padding: '10px 16px',
+                fontWeight: 600,
+                fontSize: '0.88rem',
+                borderRadius: '8px',
+                cursor: 'pointer'
+              }}
+              onClick={() => {
+                setModalError(null);
+                setCentralTransferModalOpen(true);
+              }}
+              title="Depositar efectivo en banco o registrar extracción de tesorería"
+            >
+              <ArrowUpRight size={16} color="#38bdf8" /> Depositar / Retirar
+            </button>
+
+            <button 
+              type="button" 
+              className="btn btn-secondary"
+              style={{ 
+                backgroundColor: '#334155', 
+                borderColor: '#475569',
+                color: 'white',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '10px 16px',
+                fontWeight: 600,
+                fontSize: '0.88rem',
+                borderRadius: '8px',
+                cursor: 'pointer'
+              }}
+              onClick={() => {
+                setModalError(null);
+                setCentralCloseRealBalance(cajaGrandeBalance.toString());
+                setCentralCloseModalOpen(true);
+              }}
+              title="Cerrar el período actual de Caja Grande y reiniciar el ciclo"
+            >
+              <Lock size={16} color="#f59e0b" /> Cerrar Caja Grande
+            </button>
+
+            <button 
+              type="button" 
+              className="btn btn-secondary"
+              style={{ 
+                backgroundColor: '#334155', 
+                borderColor: '#475569',
+                color: 'white',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '10px 16px',
                 fontWeight: 600,
                 fontSize: '0.88rem',
                 borderRadius: '8px',
@@ -787,6 +1002,7 @@ export default function FinanzasDashboard() {
             >
               <CheckSquare size={16} /> Conciliación Bancaria
             </button>
+
             <button 
               type="button" 
               className="btn btn-primary"
@@ -796,7 +1012,7 @@ export default function FinanzasDashboard() {
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '6px',
-                padding: '12px 18px',
+                padding: '10px 16px',
                 fontWeight: 600,
                 fontSize: '0.88rem',
                 borderRadius: '8px',
@@ -810,10 +1026,20 @@ export default function FinanzasDashboard() {
         </div>
       </div>
 
-      {/* Date Filters & Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+      {/* Date Filters & Presets Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
         <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 600 }}>Rendimiento & Margen Financiero</h3>
-        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+        
+        <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+          {/* Preset Buttons */}
+          <div style={{ display: 'flex', gap: '6px', backgroundColor: 'var(--bg-light)', padding: '4px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+            <button type="button" className="btn btn-ghost" style={{ fontSize: '0.78rem', padding: '4px 10px', fontWeight: 600 }} onClick={() => applyPresetFilter('today')}>Hoy</button>
+            <button type="button" className="btn btn-ghost" style={{ fontSize: '0.78rem', padding: '4px 10px', fontWeight: 600 }} onClick={() => applyPresetFilter('week')}>Esta Semana</button>
+            <button type="button" className="btn btn-ghost" style={{ fontSize: '0.78rem', padding: '4px 10px', fontWeight: 600 }} onClick={() => applyPresetFilter('month')}>Este Mes</button>
+            <button type="button" className="btn btn-ghost" style={{ fontSize: '0.78rem', padding: '4px 10px', fontWeight: 600 }} onClick={() => applyPresetFilter('last_month')}>Mes Pasado</button>
+            <button type="button" className="btn btn-ghost" style={{ fontSize: '0.78rem', padding: '4px 10px', fontWeight: 600 }} onClick={() => applyPresetFilter('all')}>Histórico</button>
+          </div>
+
           <div className="form-group" style={{ margin: 0 }}>
             <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginRight: '8px' }}>Desde</span>
             <input type="date" className="input" value={filterStartDate} onChange={e => setFilterStartDate(e.target.value)} style={{ padding: '6px 12px' }} />
@@ -1986,6 +2212,233 @@ export default function FinanzasDashboard() {
                 Cerrar
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL DE DEPOSITAR / RETIRAR CAJA GRANDE */}
+      {centralTransferModalOpen && (
+        <div className="modal-overlay" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setCentralTransferModalOpen(false)}>
+          <div className="modal-content" style={{ maxWidth: '500px', width: '95%', padding: '24px', borderRadius: '12px' }} onClick={e => e.stopPropagation()}>
+            <div className="modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '1px solid var(--border-color)', paddingBottom: '12px' }}>
+              <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <ArrowUpRight size={20} color="#38bdf8" /> Operación de Tesorería — Caja Grande
+              </h3>
+              <button type="button" className="btn btn-ghost" onClick={() => setCentralTransferModalOpen(false)}>✕</button>
+            </div>
+
+            {modalError && (
+              <div style={{ backgroundColor: '#fff5f5', color: '#c53030', padding: '10px 14px', borderRadius: '6px', fontSize: '0.85rem', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <AlertCircle size={16} />
+                {modalError}
+              </div>
+            )}
+
+            <form onSubmit={handleCentralTransfer}>
+              <div style={{ backgroundColor: '#f8fafc', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)', marginBottom: '16px' }}>
+                <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Saldo Actual Disponible en Bóveda</div>
+                <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#047857', fontFamily: 'monospace' }}>
+                  ${cajaGrandeBalance.toLocaleString('es-AR')}
+                </div>
+              </div>
+
+              <div className="form-group" style={{ marginBottom: '14px' }}>
+                <label className="label" style={{ fontWeight: 600, fontSize: '0.85rem' }}>Tipo de Operación</label>
+                <select
+                  className="input"
+                  value={centralTransferType}
+                  onChange={e => setCentralTransferType(e.target.value as any)}
+                  style={{ width: '100%', padding: '8px 12px' }}
+                >
+                  <option value="BANK_DEPOSIT">Depósito en Banco (Efectivo -&gt; Cuenta Bancaria)</option>
+                  <option value="TREASURY_WITHDRAWAL">Retiro de Tesorería (Extracción de Bóveda / Reserva)</option>
+                </select>
+              </div>
+
+              <div className="form-group" style={{ marginBottom: '14px' }}>
+                <label className="label" style={{ fontWeight: 600, fontSize: '0.85rem' }}>Monto ($)</label>
+                <input
+                  type="number"
+                  className="input"
+                  placeholder="Ej: 500000"
+                  value={centralTransferAmount}
+                  onChange={e => setCentralTransferAmount(e.target.value)}
+                  style={{ width: '100%', padding: '8px 12px', fontFamily: 'monospace', fontWeight: 600 }}
+                  required
+                />
+              </div>
+
+              {centralTransferType === 'BANK_DEPOSIT' && (
+                <div className="form-group" style={{ marginBottom: '14px' }}>
+                  <label className="label" style={{ fontWeight: 600, fontSize: '0.85rem' }}>Cuenta Bancaria Destino</label>
+                  <select
+                    className="input"
+                    value={centralTransferBankId}
+                    onChange={e => setCentralTransferBankId(e.target.value)}
+                    style={{ width: '100%', padding: '8px 12px' }}
+                    required
+                  >
+                    <option value="">-- Seleccionar Banco --</option>
+                    {bankAccounts.map(b => (
+                      <option key={b.id} value={b.id}>
+                        {b.name} ({b.accountNumber || 'S/N'}) - Saldo actual: ${Number(b.balance).toLocaleString()}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              <div className="form-group" style={{ marginBottom: '20px' }}>
+                <label className="label" style={{ fontWeight: 600, fontSize: '0.85rem' }}>Descripción / Referencia</label>
+                <input
+                  type="text"
+                  className="input"
+                  placeholder={centralTransferType === 'BANK_DEPOSIT' ? 'Ej: Depósito semanal recaudo efect.' : 'Ej: Retiro reserva socios'}
+                  value={centralTransferDesc}
+                  onChange={e => setCentralTransferDesc(e.target.value)}
+                  style={{ width: '100%', padding: '8px 12px' }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', borderTop: '1px solid var(--border-color)', paddingTop: '16px' }}>
+                <button type="button" className="btn btn-secondary" onClick={() => setCentralTransferModalOpen(false)}>
+                  Cancelar
+                </button>
+                <button type="submit" className="btn btn-primary" style={{ backgroundColor: 'var(--color-corp-red)', borderColor: 'var(--color-corp-red)' }} disabled={submittingCentralTransfer}>
+                  {submittingCentralTransfer ? 'Procesando...' : 'Confirmar Operación'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL DE ARQUEO Y CIERRE DE CAJA GRANDE */}
+      {centralCloseModalOpen && (
+        <div className="modal-overlay" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setCentralCloseModalOpen(false)}>
+          <div className="modal-content" style={{ maxWidth: '600px', width: '95%', padding: '24px', borderRadius: '12px', maxHeight: '90vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
+            <div className="modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '1px solid var(--border-color)', paddingBottom: '12px' }}>
+              <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Lock size={20} color="#f59e0b" /> Arqueo y Cierre de Ciclo — Caja Grande
+              </h3>
+              <button type="button" className="btn btn-ghost" onClick={() => setCentralCloseModalOpen(false)}>✕</button>
+            </div>
+
+            {modalError && (
+              <div style={{ backgroundColor: '#fff5f5', color: '#c53030', padding: '10px 14px', borderRadius: '6px', fontSize: '0.85rem', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <AlertCircle size={16} />
+                {modalError}
+              </div>
+            )}
+
+            <form onSubmit={handleCentralClose}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
+                <div style={{ backgroundColor: '#f8fafc', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Saldo Teórico del Ciclo Actual</div>
+                  <div style={{ fontSize: '1.4rem', fontWeight: 700, color: 'var(--text-primary)', fontFamily: 'monospace' }}>
+                    ${cajaGrandeBalance.toLocaleString('es-AR')}
+                  </div>
+                </div>
+                <div style={{ backgroundColor: '#f8fafc', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Diferencia Arqueo vs Teórico</div>
+                  <div style={{ fontSize: '1.4rem', fontWeight: 700, fontFamily: 'monospace', color: (Number(centralCloseRealBalance || 0) - cajaGrandeBalance) === 0 ? '#047857' : (Number(centralCloseRealBalance || 0) - cajaGrandeBalance) < 0 ? '#c53030' : '#1d4ed8' }}>
+                    {(Number(centralCloseRealBalance || 0) - cajaGrandeBalance) >= 0 ? '+' : ''}${(Number(centralCloseRealBalance || 0) - cajaGrandeBalance).toLocaleString('es-AR')}
+                  </div>
+                </div>
+              </div>
+
+              <div className="form-group" style={{ marginBottom: '14px' }}>
+                <label className="label" style={{ fontWeight: 600, fontSize: '0.85rem' }}>Conteo Físico Real Declarado en Bóveda ($)</label>
+                <input
+                  type="number"
+                  className="input"
+                  value={centralCloseRealBalance}
+                  onChange={e => setCentralCloseRealBalance(e.target.value)}
+                  style={{ width: '100%', padding: '8px 12px', fontFamily: 'monospace', fontWeight: 700 }}
+                  required
+                />
+              </div>
+
+              <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '14px', marginBottom: '14px' }}>
+                <h4 style={{ margin: '0 0 10px 0', fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                  Acciones opcionales al cerrar el período:
+                </h4>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label className="label" style={{ fontSize: '0.8rem', fontWeight: 600 }}>Depositar en Banco ($)</label>
+                    <input
+                      type="number"
+                      className="input"
+                      placeholder="0"
+                      value={centralCloseBankAmount}
+                      onChange={e => setCentralCloseBankAmount(e.target.value)}
+                      style={{ width: '100%', padding: '6px 10px', fontFamily: 'monospace' }}
+                    />
+                  </div>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label className="label" style={{ fontSize: '0.8rem', fontWeight: 600 }}>Banco Destino</label>
+                    <select
+                      className="input"
+                      value={centralCloseBankId}
+                      onChange={e => setCentralCloseBankId(e.target.value)}
+                      style={{ width: '100%', padding: '6px 10px' }}
+                    >
+                      <option value="">-- Seleccionar --</option>
+                      {bankAccounts.map(b => (
+                        <option key={b.id} value={b.id}>{b.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label className="label" style={{ fontSize: '0.8rem', fontWeight: 600 }}>Retiro de Tesorería ($)</label>
+                    <input
+                      type="number"
+                      className="input"
+                      placeholder="0"
+                      value={centralCloseWithdrawnAmount}
+                      onChange={e => setCentralCloseWithdrawnAmount(e.target.value)}
+                      style={{ width: '100%', padding: '6px 10px', fontFamily: 'monospace' }}
+                    />
+                  </div>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label className="label" style={{ fontSize: '0.8rem', fontWeight: 600 }}>Saldo Inicial Nuevo Ciclo ($)</label>
+                    <input
+                      type="number"
+                      className="input"
+                      value={centralCloseNewOpening}
+                      onChange={e => setCentralCloseNewOpening(e.target.value)}
+                      style={{ width: '100%', padding: '6px 10px', fontFamily: 'monospace', fontWeight: 700 }}
+                      required
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="form-group" style={{ marginBottom: '20px' }}>
+                <label className="label" style={{ fontWeight: 600, fontSize: '0.85rem' }}>Observaciones del Cierre</label>
+                <textarea
+                  className="input"
+                  rows={2}
+                  placeholder="Ej: Cierre quincenal de bóveda central. Arqueo correcto."
+                  value={centralCloseNotes}
+                  onChange={e => setCentralCloseNotes(e.target.value)}
+                  style={{ width: '100%', padding: '8px 12px' }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', borderTop: '1px solid var(--border-color)', paddingTop: '16px' }}>
+                <button type="button" className="btn btn-secondary" onClick={() => setCentralCloseModalOpen(false)}>
+                  Cancelar
+                </button>
+                <button type="submit" className="btn btn-primary" style={{ backgroundColor: 'var(--color-corp-red)', borderColor: 'var(--color-corp-red)' }} disabled={submittingCentralClose}>
+                  {submittingCentralClose ? 'Guardando Cierre...' : 'Confirmar Cierre de Caja Grande'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

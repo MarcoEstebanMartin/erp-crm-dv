@@ -13,6 +13,8 @@ import {
   getDrawersHistory,
   createExpense,
   getTransactionById,
+  transferCentralFunds,
+  closeCentralDrawer,
 } from '../controllers/finance.controller';
 import { authenticateJWT, requireRole } from '../middlewares/auth';
 import { Role } from '@prisma/client';
@@ -26,6 +28,10 @@ router.get('/drawers/active', authenticateJWT, getActiveDrawer);
 router.get('/drawers/active-all', authenticateJWT, getActiveDrawers);
 router.get('/drawers/history', authenticateJWT, getDrawersHistory);
 router.post('/drawers/close-joint', authenticateJWT, closeJointDrawers);
+
+// Operaciones de Caja Grande (Tesorería Central)
+router.post('/central-drawer/transfer', authenticateJWT, requireRole([Role.ADMIN, Role.FACTURACION]), transferCentralFunds);
+router.post('/central-drawer/close', authenticateJWT, requireRole([Role.ADMIN]), closeCentralDrawer);
 
 // Rutas administrativas y de cuentas bancarias
 router.get('/transactions', authenticateJWT, requireRole([Role.ADMIN, Role.FACTURACION]), getTransactions);

@@ -867,3 +867,252 @@ export async function createExpense(req: AuthenticatedRequest, res: Response): P
     res.status(500).json({ status: 'error', message: 'Error interno del servidor al registrar el gasto.' });
   }
 }
+
+/**
+ * Transferir o retirar fondos directamente desde la Caja Grande (Tesorería Central).
+ * Puede ser un Depósito Bancario (Efectivo Caja Grande -> Banco) o un Retiro de Tesorería (Extracción).
+ */
+export async function transferCentralFunds(req: AuthenticatedRequest, res: Response): Promise<void> {
+  const { amount, type, bankAccountId, description } = req.body;
+  const userId = req.user?.id;
+
+  if (!userId) {
+    res.status(401).json({ status: 'error', message: 'No autenticado.' });
+    return;
+  }
+
+  const numAmount = Math.round(Number(amount));
+  if (isNaN(numAmount) || numAmount <= 0) {
+    res.status(400).json({ status: 'error', message: 'El monto debe ser mayor a cero.' });
+    return;
+  }
+
+  if (type === 'BANK_DEPOSIT' && !bankAccountId) {
+    res.status(400).json({ status: 'error', message: 'Debe seleccionar la cuenta bancaria de destino.' });
+    return;
+  }
+
+  try {
+    const result = await prisma.$transaction(async (tx) => {
+      // 1. Egreso directo de Caja Grande (cashDrawerId: null, bankAccountId: null)
+      const outcomeTrans = await tx.transaction.create({
+        data: {
+          userId,
+          billingType: BillingType.INTERNAL,
+          type: TransactionType.OUTCOME,
+          paymentMethod: PaymentMethod.CASH,
+          amount: numAmount,
+          description: description || (type === 'BANK_DEPOSIT' ? 'Depósito en Banco desde Caja Grande' : 'Retiro de Tesorería / Extracción de Bóveda'),
+          cashDrawerId: null,
+          bankAccountId: null,
+          verified: true,
+        },
+      });
+
+      let incomeTrans = null;
+      let updatedBank = null;
+
+      // 2. Si es depósito bancario, crear ingreso en la cuenta de banco
+      if (type === 'BANK_DEPOSIT' && bankAccountId) {
+        incomeTrans = await tx.transaction.create({
+          data: {
+            userId,
+            billingType: BillingType.INTERNAL,
+            type: TransactionType.INCOME,
+            paymentMethod: PaymentMethod.BANK_TRANSFER,
+            amount: numAmount,
+            description: description || 'Depósito en efectivo recibido desde Caja Grande',
+            cashDrawerId: null,
+            bankAccountId: Number(bankAccountId),
+            verified: true,
+          },
+        });
+
+        updatedBank = await tx.bankAccount.update({
+          where: { id: Number(bankAccountId) },
+          data: {
+            balance: {
+              increment: numAmount,
+            },
+          },
+        });
+      }
+
+      return { outcomeTrans, incomeTrans, updatedBank };
+    });
+
+    await logAudit({
+      userId,
+      action: type === 'BANK_DEPOSIT' ? 'CENTRAL_DEPOSIT_TO_BANK' : 'CENTRAL_TREASURY_WITHDRAWAL',
+      entityType: 'Transaction',
+      entityId: result.outcomeTrans.id,
+      newValues: {
+        amount: numAmount,
+        type,
+        bankAccountId: bankAccountId ? Number(bankAccountId) : null,
+      },
+    });
+
+    res.status(200).json({
+      status: 'success',
+      message: type === 'BANK_DEPOSIT' ? 'Depósito en banco realizado con éxito desde la Caja Grande.' : 'Retiro de tesorería registrado con éxito.',
+      data: result,
+    });
+  } catch (error: any) {
+    console.error('Error al transferir fondos de Caja Grande:', error);
+    res.status(500).json({ status: 'error', message: 'Error interno al procesar la operación de Caja Grande.' });
+  }
+}
+
+/**
+ * Realizar Arqueo y Cierre de Ciclo de Caja Grande (Tesorería Central).
+ * Cierra la etapa actual, realiza depósitos/retiros opcionales y reinicia con un nuevo saldo inicial.
+ */
+export async function closeCentralDrawer(req: AuthenticatedRequest, res: Response): Promise<void> {
+  const { realBalance, newOpeningBalance, bankAccountId, transferToBankAmount, withdrawnAmount, notes } = req.body;
+  const userId = req.user?.id;
+
+  if (!userId) {
+    res.status(401).json({ status: 'error', message: 'No autenticado.' });
+    return;
+  }
+
+  const numRealBalance = Number(realBalance || 0);
+  const numNewOpeningBalance = Number(newOpeningBalance || 0);
+  const numBankAmount = Math.round(Number(transferToBankAmount || 0));
+  const numWithdrawnAmount = Math.round(Number(withdrawnAmount || 0));
+
+  try {
+    // 1. Obtener el último cierre central previo para calcular el acumulado actual
+    const lastCentral = await prisma.cashDrawer.findFirst({
+      where: { drawerType: 'CENTRAL', status: 'CLOSED' },
+      orderBy: { closedAt: 'desc' },
+    });
+
+    const cutoffDate = lastCentral?.closedAt || null;
+
+    // Sumar arqueos cerrados posteriores
+    const closedDrawers = await prisma.cashDrawer.findMany({
+      where: {
+        status: 'CLOSED',
+        drawerType: { not: 'CENTRAL' },
+        ...(cutoffDate ? { closedAt: { gt: cutoffDate } } : {}),
+      },
+    });
+
+    const netDrawersCash = closedDrawers.reduce((acc, curr) => acc + (Number(curr.realBalance || 0) - Number(curr.openingBalance || 0)), 0);
+
+    // Restar egresos de caja grande posteriores
+    const overallExpenses = await prisma.transaction.findMany({
+      where: {
+        type: 'OUTCOME',
+        cashDrawerId: null,
+        bankAccountId: null,
+        ...(cutoffDate ? { createdAt: { gt: cutoffDate } } : {}),
+      },
+    });
+
+    const totalExpensesOverall = overallExpenses.reduce((acc, curr) => acc + Number(curr.amount || 0), 0);
+
+    const baseBalance = lastCentral ? Number(lastCentral.realBalance) : 0;
+    const currentCalculatedBalance = baseBalance + netDrawersCash - totalExpensesOverall;
+
+    // 2. Ejecutar Cierre en Transacción
+    const result = await prisma.$transaction(async (tx) => {
+      // Depósito a Banco opcional durante el cierre
+      if (numBankAmount > 0 && bankAccountId) {
+        await tx.transaction.create({
+          data: {
+            userId,
+            billingType: BillingType.INTERNAL,
+            type: TransactionType.OUTCOME,
+            paymentMethod: PaymentMethod.CASH,
+            amount: numBankAmount,
+            description: `Depósito en Banco al cerrar Caja Grande`,
+            cashDrawerId: null,
+            bankAccountId: null,
+            verified: true,
+          },
+        });
+
+        await tx.transaction.create({
+          data: {
+            userId,
+            billingType: BillingType.INTERNAL,
+            type: TransactionType.INCOME,
+            paymentMethod: PaymentMethod.BANK_TRANSFER,
+            amount: numBankAmount,
+            description: `Depósito recibido al cerrar Caja Grande`,
+            cashDrawerId: null,
+            bankAccountId: Number(bankAccountId),
+            verified: true,
+          },
+        });
+
+        await tx.bankAccount.update({
+          where: { id: Number(bankAccountId) },
+          data: { balance: { increment: numBankAmount } },
+        });
+      }
+
+      // Retiro de Tesorería opcional durante el cierre
+      if (numWithdrawnAmount > 0) {
+        await tx.transaction.create({
+          data: {
+            userId,
+            billingType: BillingType.INTERNAL,
+            type: TransactionType.OUTCOME,
+            paymentMethod: PaymentMethod.CASH,
+            amount: numWithdrawnAmount,
+            description: `Retiro de Tesorería al cerrar Caja Grande`,
+            cashDrawerId: null,
+            bankAccountId: null,
+            verified: true,
+          },
+        });
+      }
+
+      // Crear el registro de Cierre de Caja Grande (CENTRAL)
+      const centralDrawer = await tx.cashDrawer.create({
+        data: {
+          userId,
+          branch: 'CENTRAL',
+          drawerType: 'CENTRAL',
+          openingBalance: currentCalculatedBalance,
+          closingBalance: currentCalculatedBalance,
+          realBalance: numNewOpeningBalance,
+          status: 'CLOSED',
+          openedAt: new Date(),
+          closedAt: new Date(),
+          notes: notes || `Cierre de Caja Grande (Bóveda Central). Conteo real declarado: $${numRealBalance.toLocaleString('es-AR')}. Nuevo saldo inicial: $${numNewOpeningBalance.toLocaleString('es-AR')}.`,
+        },
+      });
+
+      return centralDrawer;
+    });
+
+    await logAudit({
+      userId,
+      action: 'CLOSE_CENTRAL_DRAWER',
+      entityType: 'CashDrawer',
+      entityId: result.id,
+      newValues: {
+        previousBalance: currentCalculatedBalance,
+        realBalanceDeclared: numRealBalance,
+        newOpeningBalance: numNewOpeningBalance,
+        transferredToBank: numBankAmount,
+        withdrawn: numWithdrawnAmount,
+      },
+    });
+
+    res.status(200).json({
+      status: 'success',
+      message: 'Cierre de Caja Grande completado con éxito. Se ha iniciado un nuevo ciclo de tesorería central.',
+      data: { centralDrawer: result },
+    });
+  } catch (error: any) {
+    console.error('Error al cerrar Caja Grande:', error);
+    res.status(500).json({ status: 'error', message: 'Error interno al realizar el cierre de Caja Grande.' });
+  }
+}
+
