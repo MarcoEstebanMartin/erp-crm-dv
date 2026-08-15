@@ -352,8 +352,15 @@ export default function ProductsList({ products, searchQuery, setSearchQuery, se
                           >
                             {p.imageUrl ? (
                               <img 
-                                src={p.imageUrl.startsWith('http') ? p.imageUrl : (p.imageUrl.startsWith('/') ? `${p.imageUrl}?v=2.0` : `/uploads/products/${p.imageUrl}?v=2.0`)} 
+                                src={p.imageUrl.startsWith('http') ? p.imageUrl : (p.imageUrl.startsWith('/') ? `${p.imageUrl}?v=3.5` : `/uploads/products/${p.imageUrl}?v=3.5`)} 
                                 alt={p.name} 
+                                onError={(e) => {
+                                  const target = e.currentTarget;
+                                  if (!target.dataset.retried) {
+                                    target.dataset.retried = 'true';
+                                    target.src = `${target.src.split('?')[0]}?t=${Date.now()}`;
+                                  }
+                                }}
                                 style={{ width: '40px', height: '40px', minWidth: '40px', objectFit: 'contain', borderRadius: '6px', border: '1px solid var(--border-color)', backgroundColor: '#fff', padding: '2px' }} 
                               />
                             ) : (

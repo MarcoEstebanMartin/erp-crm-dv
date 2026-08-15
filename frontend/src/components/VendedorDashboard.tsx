@@ -1129,16 +1129,17 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
                                      style={{ width: '100%', height: '100%', objectFit: 'contain', padding: '4px' }} 
                                      loading="lazy" 
                                      onError={(e) => {
-                                       const target = e.currentTarget;
-                                       if (target.src.includes('?v=1.2')) {
-                                         target.src = target.src.replace('?v=1.2', '');
-                                         return;
-                                       }
-                                       target.style.display = 'none';
-                                       if (target.nextElementSibling) {
-                                         (target.nextElementSibling as HTMLElement).style.display = 'flex';
-                                       }
-                                     }}
+                                        const target = e.currentTarget;
+                                        if (!target.dataset.retried) {
+                                          target.dataset.retried = 'true';
+                                          target.src = target.src.split('?')[0];
+                                          return;
+                                        }
+                                        target.style.display = 'none';
+                                        if (target.nextElementSibling) {
+                                          (target.nextElementSibling as HTMLElement).style.display = 'flex';
+                                        }
+                                      }}
                                    />
                                  ) : null}
                                  <div 
@@ -1778,8 +1779,9 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
                             loading="lazy" 
                             onError={(e) => {
                               const target = e.currentTarget;
-                              if (target.src.includes('?v=1.2')) {
-                                target.src = target.src.replace('?v=1.2', '');
+                              if (!target.dataset.retried) {
+                                target.dataset.retried = 'true';
+                                target.src = target.src.split('?')[0];
                                 return;
                               }
                               target.style.display = 'none';
