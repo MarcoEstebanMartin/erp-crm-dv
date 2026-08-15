@@ -20,64 +20,11 @@ import {
   Bot,
   Kanban,
   FlaskConical,
-  Cake,
-  Gift,
   Trash2
 } from 'lucide-react';
 import OrderDraftApprovalModal from './modals/OrderDraftApprovalModal';
 import WhatsAppSimulatorModal from './modals/WhatsAppSimulatorModal';
 import CrmWholesaleBoard from './crm/CrmWholesaleBoard';
-
-function BirthDateInput({ 
-  personaId, 
-  initialBirthDate, 
-  onSave 
-}: { 
-  personaId: number; 
-  initialBirthDate?: string | null; 
-  onSave: (personaId: number, val: string) => void;
-}) {
-  const formattedInitial = useMemo(() => {
-    if (!initialBirthDate) return '';
-    try {
-      return new Date(initialBirthDate).toISOString().split('T')[0];
-    } catch {
-      return '';
-    }
-  }, [initialBirthDate]);
-
-  const [value, setValue] = useState(formattedInitial);
-
-  useEffect(() => {
-    setValue(formattedInitial);
-  }, [personaId, formattedInitial]);
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value;
-    setValue(val);
-    if (val && /^\d{4}-\d{2}-\d{2}$/.test(val) && val !== formattedInitial) {
-      onSave(personaId, val);
-    }
-  };
-
-  const handleBlur = () => {
-    if (value !== formattedInitial) {
-      if (!value || /^\d{4}-\d{2}-\d{2}$/.test(value)) {
-        onSave(personaId, value);
-      }
-    }
-  };
-
-  return (
-    <input 
-      type="date" 
-      value={value}
-      onChange={handleChange}
-      onBlur={handleBlur}
-      style={{ fontSize: '0.72rem', padding: '2px 4px', borderRadius: '4px', border: '1px solid #CBD5E1', outline: 'none' }}
-    />
-  );
-}
 
 interface CrmDashboardProps {
   initialTab?: 'whatsapp' | 'pipeline' | 'alerts';
@@ -349,18 +296,7 @@ export default function CrmDashboard({ initialTab = 'whatsapp', hideHeaderTabs =
     setReplyText(text);
   };
 
-  // Actualizar Fecha de Nacimiento del Cliente desde el CRM
-  const handleUpdateBirthDate = async (personaId: number, birthDateStr: string) => {
-    try {
-      const res = await api.updatePersona(personaId, { birthDate: birthDateStr || null });
-      const updatedPersona = res.data?.persona || res.persona || res;
-      setSelectedConversation((prev: any) => prev ? { ...prev, persona: { ...prev.persona, birthDate: updatedPersona.birthDate || birthDateStr } } : null);
-      setConversations((prev: any[]) => prev.map((c: any) => c.persona?.id === personaId ? { ...c, persona: { ...c.persona, birthDate: updatedPersona.birthDate || birthDateStr } } : c));
-      setSuccessMsg('🎉 Fecha de nacimiento guardada exitosamente.');
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Error al guardar la fecha de nacimiento.');
-    }
-  };
+
 
   // Toggle Auto-Reply 24/7 (Bot)
   const handleToggleAutoReply = async (convId: number, enabled: boolean) => {
@@ -937,39 +873,6 @@ export default function CrmDashboard({ initialTab = 'whatsapp', hideHeaderTabs =
 
                 {selectedConversation.persona ? (
                   <>
-                    {/* Alerta & Saludo de Cumpleaños si hoy es su cumpleaños */}
-                    {(() => {
-                      const p = selectedConversation.persona;
-                      if (!p.birthDate) return null;
-                      const b = new Date(p.birthDate);
-                      const today = new Date();
-                      const isBirthdayToday = b.getUTCDate() === today.getDate() && b.getUTCMonth() === today.getMonth();
-                      if (!isBirthdayToday) return null;
-
-                      return (
-                        <div style={{ backgroundColor: '#EEF2FF', border: '1px solid #C7D2FE', padding: '10px 12px', borderRadius: '8px', fontSize: '0.78rem' }}>
-                          <div style={{ color: '#4338CA', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
-                            <Cake size={16} style={{ color: '#6366F1' }} />
-                            <span>¡Hoy es su Cumpleaños! 🥳🎂</span>
-                          </div>
-                          <div style={{ color: '#3730A3', fontSize: '0.74rem', marginBottom: '8px' }}>
-                            ¡Enviále un saludo festivo institucional a {p.name}!
-                          </div>
-                          <button
-                            type="button"
-                            className="btn btn-primary"
-                            style={{ width: '100%', fontSize: '0.74rem', padding: '6px 8px', backgroundColor: '#4F46E5', borderColor: '#4F46E5', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
-                            onClick={() => {
-                              setReplyText(`¡Hola ${p.name}! 🎂🎈 De parte de todo el equipo de DV Distribuidora te deseamos un muy feliz cumpleaños. ¡Que tengas un día excelente! 🎉🥂`);
-                            }}
-                          >
-                            <Gift size={13} />
-                            <span>Enviar Saludo de Cumpleaños</span>
-                          </button>
-                        </div>
-                      );
-                    })()}
-
                     {/* Alerta de Datos Incompletos del Cliente */}
                     {(() => {
                       const p = selectedConversation.persona;
@@ -978,7 +881,6 @@ export default function CrmDashboard({ initialTab = 'whatsapp', hideHeaderTabs =
                       if (!p.address) missing.push('Dirección');
                       if (!p.city) missing.push('Localidad');
                       if (!p.email) missing.push('Email');
-                      if (!p.birthDate) missing.push('Fecha de Nacimiento');
 
                       if (missing.length === 0) return null;
 
@@ -1016,17 +918,6 @@ export default function CrmDashboard({ initialTab = 'whatsapp', hideHeaderTabs =
                         {selectedConversation.persona.city && <span>📍 {selectedConversation.persona.city} ({selectedConversation.persona.province || 'BsAs'})</span>}
                         {selectedConversation.persona.email && <span>✉️ {selectedConversation.persona.email}</span>}
                         {selectedConversation.persona.route && <span>🚚 Ruta: {selectedConversation.persona.route}</span>}
-
-                        <div style={{ marginTop: '6px', paddingTop: '6px', borderTop: '1px dashed #E2E8F0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '4px' }}>
-                          <span style={{ fontSize: '0.74rem', fontWeight: 600, color: '#475569', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                            <Cake size={13} style={{ color: '#E11D48' }} /> Cumpleaños:
-                          </span>
-                          <BirthDateInput 
-                            personaId={selectedConversation.persona.id}
-                            initialBirthDate={selectedConversation.persona.birthDate}
-                            onSave={handleUpdateBirthDate}
-                          />
-                        </div>
                       </div>
                     </div>
 
