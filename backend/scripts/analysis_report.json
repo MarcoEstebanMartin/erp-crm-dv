@@ -1,0 +1,5295 @@
+{
+  "stats": {
+    "dbProductsCount": 320,
+    "excelRowsCount": 989,
+    "parsedExcelItemsCount": 361,
+    "matchedCount": 214,
+    "unmatchedCount": 147
+  },
+  "matchedItems": [
+    {
+      "excelRow": {
+        "rowIndex": 7,
+        "category": "ACEITES Y VINAGRES",
+        "rawProduct": "2112 - NATURA ACEITE PVCx1500CC",
+        "oldCode": "2112",
+        "cleanedName": "NATURA ACEITE PVCx1500CC",
+        "margin": 30
+      },
+      "dbProduct": {
+        "id": 252,
+        "sku": "0176",
+        "name": "NATURA ACEITE PVCx1500CC",
+        "currentMargin": "1.25",
+        "costPrice": "4797.6",
+        "listPrice": "5997"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 8,
+        "category": "ACEITES Y VINAGRES",
+        "rawProduct": "2113 - NATURA ACEITE PVCx900CC",
+        "oldCode": "2113",
+        "cleanedName": "NATURA ACEITE PVCx900CC",
+        "margin": 30
+      },
+      "dbProduct": {
+        "id": 255,
+        "sku": "0179",
+        "name": "NATURA ACEITE PVCx900CC",
+        "currentMargin": "1.25",
+        "costPrice": "3101.62",
+        "listPrice": "3877.02"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 9,
+        "category": "ACEITES Y VINAGRES",
+        "rawProduct": "2114 - NATURA ACEITE PVCx3LT",
+        "oldCode": "2114",
+        "cleanedName": "NATURA ACEITE PVCx3LT",
+        "margin": 35
+      },
+      "dbProduct": {
+        "id": 253,
+        "sku": "0177",
+        "name": "NATURA ACEITE PVCx3LT",
+        "currentMargin": "1.25",
+        "costPrice": "9583.2",
+        "listPrice": "11979"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 10,
+        "category": "ACEITES Y VINAGRES",
+        "rawProduct": "2116 - NATURA ROCIO OLIVA AEROSOL X120cc",
+        "oldCode": "2116",
+        "cleanedName": "NATURA ROCIO OLIVA AEROSOL X120cc",
+        "margin": 25
+      },
+      "dbProduct": {
+        "id": 259,
+        "sku": "0183",
+        "name": "NATURA ROCIO OLIVA AEROSOL X120cc",
+        "currentMargin": "1.25",
+        "costPrice": "4217.6",
+        "listPrice": "5272"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 11,
+        "category": "ACEITES Y VINAGRES",
+        "rawProduct": "2117 - COCINERO ACEITE GIRASOL x 900 ml",
+        "oldCode": "2117",
+        "cleanedName": "COCINERO ACEITE GIRASOL x 900 ml",
+        "margin": 21
+      },
+      "dbProduct": {
+        "id": 206,
+        "sku": "0170",
+        "name": "COCINERO ACEITE GIRASOL x 900 ml",
+        "currentMargin": "1.25",
+        "costPrice": "3016",
+        "listPrice": "3770"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 12,
+        "category": "ACEITES Y VINAGRES",
+        "rawProduct": "2118 - NATURA ROCIO GIRASOL AEROSOL x 126cc",
+        "oldCode": "2118",
+        "cleanedName": "NATURA ROCIO GIRASOL AEROSOL x 126cc",
+        "margin": 30
+      },
+      "dbProduct": {
+        "id": 258,
+        "sku": "0182",
+        "name": "NATURA ROCIO GIRASOL AEROSOL x 126cc",
+        "currentMargin": "1.25",
+        "costPrice": "3218.4",
+        "listPrice": "4023"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 13,
+        "category": "ACEITES Y VINAGRES",
+        "rawProduct": "2119 - NATURA ACEITE PVCx5LT",
+        "oldCode": "2119",
+        "cleanedName": "NATURA ACEITE PVCx5LT",
+        "margin": 30
+      },
+      "dbProduct": {
+        "id": 254,
+        "sku": "0178",
+        "name": "NATURA ACEITE PVCx5LT",
+        "currentMargin": "1.25",
+        "costPrice": "15729.6",
+        "listPrice": "19662"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 14,
+        "category": "ACEITES Y VINAGRES",
+        "rawProduct": "2120 - NATURA OLIVA ANDx500cc VIDRIO",
+        "oldCode": "2120",
+        "cleanedName": "NATURA OLIVA ANDx500cc VIDRIO",
+        "margin": 30
+      },
+      "dbProduct": {
+        "id": 257,
+        "sku": "0181",
+        "name": "NATURA OLIVA ANDx500cc VIDRIO",
+        "currentMargin": "1.25",
+        "costPrice": "13580.8",
+        "listPrice": "16976"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 16,
+        "category": "ACEITES Y VINAGRES",
+        "rawProduct": "2138 - NATURA TRI OLIVA FUERTE PET X500",
+        "oldCode": "2138",
+        "cleanedName": "NATURA TRI OLIVA FUERTE PET X500",
+        "margin": 25
+      },
+      "dbProduct": {
+        "id": 260,
+        "sku": "0184",
+        "name": "NATURA TRI OLIVA FUERTE PET X500",
+        "currentMargin": "1.25",
+        "costPrice": "10339.2",
+        "listPrice": "12924"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 17,
+        "category": "ACEITES Y VINAGRES",
+        "rawProduct": "2139 - NATURA BI OLIVA SUAVE PET X500ml",
+        "oldCode": "2139",
+        "cleanedName": "NATURA BI OLIVA SUAVE PET X500ml",
+        "margin": 25
+      },
+      "dbProduct": {
+        "id": 256,
+        "sku": "0180",
+        "name": "NATURA BI OLIVA SUAVE PET X500ml",
+        "currentMargin": "1.25",
+        "costPrice": "10339.2",
+        "listPrice": "12924"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 19,
+        "category": "ACEITES Y VINAGRES",
+        "rawProduct": "4006 - MAROLIO VINAG ALC.BCO x 500 ml",
+        "oldCode": "4006",
+        "cleanedName": "MAROLIO VINAG ALC.BCO x 500 ml",
+        "margin": 30
+      },
+      "dbProduct": {
+        "id": 250,
+        "sku": "0174",
+        "name": "MAROLIO VINAG ALC.BCO x 500 ml",
+        "currentMargin": "1.25",
+        "costPrice": "746.4",
+        "listPrice": "933"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 23,
+        "category": "ADEREZOS",
+        "rawProduct": "2150 - NATURA MAYONESA 20x125cc.",
+        "oldCode": "2150",
+        "cleanedName": "NATURA MAYONESA 20x125cc.",
+        "margin": 30
+      },
+      "dbProduct": {
+        "id": 268,
+        "sku": "0192",
+        "name": "NATURA MAYONESA 20x125cc.",
+        "currentMargin": "1.25",
+        "costPrice": "11124",
+        "listPrice": "13905"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 24,
+        "category": "ADEREZOS",
+        "rawProduct": "2151 - NATURA MAYONESA 12x250gr",
+        "oldCode": "2151",
+        "cleanedName": "NATURA MAYONESA 12x250gr",
+        "margin": 35
+      },
+      "dbProduct": {
+        "id": 266,
+        "sku": "0190",
+        "name": "NATURA MAYONESA 12x250gr",
+        "currentMargin": "1.25",
+        "costPrice": "13999.2",
+        "listPrice": "17499"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 25,
+        "category": "ADEREZOS",
+        "rawProduct": "2152 - NATURA MAYONESA X500GR",
+        "oldCode": "2152",
+        "cleanedName": "NATURA MAYONESA X500GR",
+        "margin": 35
+      },
+      "dbProduct": {
+        "id": 76,
+        "sku": "0195",
+        "name": "NATURA MAYONESA X500GR",
+        "currentMargin": "1.25",
+        "costPrice": "2236",
+        "listPrice": "2795"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 26,
+        "category": "ADEREZOS",
+        "rawProduct": "2153 - NATURA MAYONESA X KG",
+        "oldCode": "2153",
+        "cleanedName": "NATURA MAYONESA X KG",
+        "margin": 30
+      },
+      "dbProduct": {
+        "id": 269,
+        "sku": "0193",
+        "name": "NATURA MAYONESA X KG",
+        "currentMargin": "1.25",
+        "costPrice": "4376.8",
+        "listPrice": "5471"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 27,
+        "category": "ADEREZOS",
+        "rawProduct": "2154 - NATURA MAYONESA 192x8cc.",
+        "oldCode": "2154",
+        "cleanedName": "NATURA MAYONESA 192x8cc.",
+        "margin": 30
+      },
+      "dbProduct": {
+        "id": 267,
+        "sku": "0191",
+        "name": "NATURA MAYONESA 192x8cc.",
+        "currentMargin": "1.25",
+        "costPrice": "14163.2",
+        "listPrice": "17704"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 29,
+        "category": "ADEREZOS",
+        "rawProduct": "2158 - NATURA MAYOLIVA 20X 125gr",
+        "oldCode": "2158",
+        "cleanedName": "NATURA MAYOLIVA 20X 125gr",
+        "margin": 25
+      },
+      "dbProduct": {
+        "id": 265,
+        "sku": "0189",
+        "name": "NATURA MAYOLIVA 20X 125gr",
+        "currentMargin": "1.25",
+        "costPrice": "18343.2",
+        "listPrice": "22929"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 30,
+        "category": "ADEREZOS",
+        "rawProduct": "2160 - NATURA KETCHUP X 250GR",
+        "oldCode": "2160",
+        "cleanedName": "NATURA KETCHUP X 250GR",
+        "margin": 30
+      },
+      "dbProduct": {
+        "id": 264,
+        "sku": "0188",
+        "name": "NATURA KETCHUP X 250GR",
+        "currentMargin": "1.25",
+        "costPrice": "1296",
+        "listPrice": "1620"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 31,
+        "category": "ADEREZOS",
+        "rawProduct": "2161 - NATURA MOSTAZA X250gr",
+        "oldCode": "2161",
+        "cleanedName": "NATURA MOSTAZA X250gr",
+        "margin": 30
+      },
+      "dbProduct": {
+        "id": 77,
+        "sku": "0196",
+        "name": "NATURA MOSTAZA X250gr",
+        "currentMargin": "1.25",
+        "costPrice": "867.2",
+        "listPrice": "1084"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 32,
+        "category": "ADEREZOS",
+        "rawProduct": "2162 - NATURA SALSA GOLF 20 X125gr",
+        "oldCode": "2162",
+        "cleanedName": "NATURA SALSA GOLF 20 X125gr",
+        "margin": 30
+      },
+      "dbProduct": {
+        "id": 78,
+        "sku": "0197",
+        "name": "NATURA SALSA GOLF 20 X125gr",
+        "currentMargin": "1.25",
+        "costPrice": "14981.76",
+        "listPrice": "18727.2"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 33,
+        "category": "ADEREZOS",
+        "rawProduct": "2163 - NATURA SALSA GOLF X250gr",
+        "oldCode": "2163",
+        "cleanedName": "NATURA SALSA GOLF X250gr",
+        "margin": 30
+      },
+      "dbProduct": {
+        "id": 79,
+        "sku": "0198",
+        "name": "NATURA SALSA GOLF X250gr",
+        "currentMargin": "1.25",
+        "costPrice": "1360.8",
+        "listPrice": "1701"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 35,
+        "category": "ADEREZOS",
+        "rawProduct": "2170 - CADA DIA MAYONESA 12x250gr",
+        "oldCode": "2170",
+        "cleanedName": "CADA DIA MAYONESA 12x250gr",
+        "margin": 25
+      },
+      "dbProduct": {
+        "id": 261,
+        "sku": "0185",
+        "name": "CADA DIA MAYONESA 12x250gr",
+        "currentMargin": "1.25",
+        "costPrice": "7965.6",
+        "listPrice": "9957"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 37,
+        "category": "ARROZ",
+        "rawProduct": "4019 - MAROLIO ARROZ 12 X 500gr",
+        "oldCode": "4019",
+        "cleanedName": "MAROLIO ARROZ 12 X 500gr",
+        "margin": 30
+      },
+      "dbProduct": {
+        "id": 95,
+        "sku": "0262",
+        "name": "MAROLIO ARROZ 12 X 500gr",
+        "currentMargin": "1.25",
+        "costPrice": "6842.98",
+        "listPrice": "8553.72"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 38,
+        "category": "ARROZ",
+        "rawProduct": "4020 - MAROLIO ARROZ 10X1 KG.",
+        "oldCode": "4020",
+        "cleanedName": "MAROLIO ARROZ 10X1 KG.",
+        "margin": 30
+      },
+      "dbProduct": {
+        "id": 94,
+        "sku": "0261",
+        "name": "MAROLIO ARROZ 10X1 KG.",
+        "currentMargin": "1.25",
+        "costPrice": "10938.4",
+        "listPrice": "13673"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 40,
+        "category": "ARROZ",
+        "rawProduct": "4025 - EL.DIQUE ARROZ 12X500gr",
+        "oldCode": "4025",
+        "cleanedName": "EL.DIQUE ARROZ 12X500gr",
+        "margin": 30
+      },
+      "dbProduct": {
+        "id": 93,
+        "sku": "0260",
+        "name": "EL.DIQUE ARROZ 12X500gr",
+        "currentMargin": "1.25",
+        "costPrice": "6569.62",
+        "listPrice": "8212.02"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 44,
+        "category": "AZUCAR",
+        "rawProduct": "10179 - SAN VICENTE AZUCAR 10X1kg",
+        "oldCode": "10179",
+        "cleanedName": "SAN VICENTE AZUCAR 10X1kg",
+        "margin": 25
+      },
+      "dbProduct": {
+        "id": 27,
+        "sku": "0292",
+        "name": "SAN VICENTE AZUCAR 10X1kg",
+        "currentMargin": "1.25",
+        "costPrice": "11128",
+        "listPrice": "13910"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 45,
+        "category": "AZUCAR",
+        "rawProduct": "10180 - LEDESMA AZUCAR 10 X 1KG",
+        "oldCode": "10180",
+        "cleanedName": "LEDESMA AZUCAR 10 X 1KG",
+        "margin": 21
+      },
+      "dbProduct": {
+        "id": 25,
+        "sku": "0290",
+        "name": "LEDESMA AZUCAR 10 X 1KG",
+        "currentMargin": "1.25",
+        "costPrice": "11827.92",
+        "listPrice": "14784.9"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 50,
+        "category": "BEBIDAS",
+        "rawProduct": "2501 - SALDAN SODA SIFON 6x2 LTS",
+        "oldCode": "2501",
+        "cleanedName": "SALDAN SODA SIFON 6x2 LTS",
+        "margin": 30
+      },
+      "dbProduct": {
+        "id": 58,
+        "sku": "0422",
+        "name": "SALDAN SODA SIFON 6x2 LTS",
+        "currentMargin": "1.25",
+        "costPrice": "8510.4",
+        "listPrice": "10638"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 51,
+        "category": "BEBIDAS",
+        "rawProduct": "2504 - VIDA AGUA DE MESA 6x1.5LTS",
+        "oldCode": "2504",
+        "cleanedName": "VIDA AGUA DE MESA 6x1.5LTS",
+        "margin": 30
+      },
+      "dbProduct": {
+        "id": 59,
+        "sku": "0423",
+        "name": "VIDA AGUA DE MESA 6x1.5LTS",
+        "currentMargin": "1.25",
+        "costPrice": "3655.68",
+        "listPrice": "4569.6"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 54,
+        "category": "APERITIVOS Y BEBIDAS ESPECIALES",
+        "rawProduct": "1065 - CINZANO ROSSO X950ml",
+        "oldCode": "1065",
+        "cleanedName": "CINZANO ROSSO X950ml",
+        "margin": 20
+      },
+      "dbProduct": {
+        "id": 66,
+        "sku": "0435",
+        "name": "CINZANO ROSSO X950ml",
+        "currentMargin": "1.25",
+        "costPrice": "6395.2",
+        "listPrice": "7994"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 56,
+        "category": "APERITIVOS Y BEBIDAS ESPECIALES",
+        "rawProduct": "1119 - GIN SPIRITO BLUE x700ml",
+        "oldCode": "1119",
+        "cleanedName": "GIN SPIRITO BLUE x700ml",
+        "margin": 15
+      },
+      "dbProduct": {
+        "id": 67,
+        "sku": "0436",
+        "name": "GIN SPIRITO BLUE x700ml",
+        "currentMargin": "1.25",
+        "costPrice": "9847.49",
+        "listPrice": "12309.36"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 57,
+        "category": "APERITIVOS Y BEBIDAS ESPECIALES",
+        "rawProduct": "1120 - GORDON`S GIN x700ml",
+        "oldCode": "1120",
+        "cleanedName": "GORDON`S GIN x700ml",
+        "margin": 21
+      },
+      "dbProduct": {
+        "id": 68,
+        "sku": "0437",
+        "name": "GORDON`S GIN x700ml",
+        "currentMargin": "1.25",
+        "costPrice": "11822.21",
+        "listPrice": "14777.76"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 58,
+        "category": "APERITIVOS Y BEBIDAS ESPECIALES",
+        "rawProduct": "1121 - SERNOVA VODKA x700ml",
+        "oldCode": "1121",
+        "cleanedName": "SERNOVA VODKA x700ml",
+        "margin": 15
+      },
+      "dbProduct": {
+        "id": 70,
+        "sku": "0439",
+        "name": "SERNOVA VODKA x700ml",
+        "currentMargin": "1.25",
+        "costPrice": "5127.2",
+        "listPrice": "6409"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 59,
+        "category": "APERITIVOS Y BEBIDAS ESPECIALES",
+        "rawProduct": "1122 - SERNOVA WILD BERRIES x700ml",
+        "oldCode": "1122",
+        "cleanedName": "SERNOVA WILD BERRIES x700ml",
+        "margin": 15
+      },
+      "dbProduct": {
+        "id": 71,
+        "sku": "0440",
+        "name": "SERNOVA WILD BERRIES x700ml",
+        "currentMargin": "1.25",
+        "costPrice": "6207.2",
+        "listPrice": "7759"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 60,
+        "category": "APERITIVOS Y BEBIDAS ESPECIALES",
+        "rawProduct": "1123 - SMIRNOFF VODKA x700ml",
+        "oldCode": "1123",
+        "cleanedName": "SMIRNOFF VODKA x700ml",
+        "margin": 21
+      },
+      "dbProduct": {
+        "id": 73,
+        "sku": "0442",
+        "name": "SMIRNOFF VODKA x700ml",
+        "currentMargin": "1.25",
+        "costPrice": "7557.79",
+        "listPrice": "9447.24"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 61,
+        "category": "APERITIVOS Y BEBIDAS ESPECIALES",
+        "rawProduct": "1125 - SMIRNOFF RASPBERRY x 700ml",
+        "oldCode": "1125",
+        "cleanedName": "SMIRNOFF RASPBERRY x 700ml",
+        "margin": 21
+      },
+      "dbProduct": {
+        "id": 72,
+        "sku": "0441",
+        "name": "SMIRNOFF RASPBERRY x 700ml",
+        "currentMargin": "1.25",
+        "costPrice": "8364",
+        "listPrice": "10455"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 63,
+        "category": "APERITIVOS Y BEBIDAS ESPECIALES",
+        "rawProduct": "1500 - AMERICANO GANCIA x 950ml",
+        "oldCode": "1500",
+        "cleanedName": "AMERICANO GANCIA x 950ml",
+        "margin": 21
+      },
+      "dbProduct": {
+        "id": 60,
+        "sku": "0429",
+        "name": "AMERICANO GANCIA x 950ml",
+        "currentMargin": "1.25",
+        "costPrice": "5599.2",
+        "listPrice": "6999"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 64,
+        "category": "APERITIVOS Y BEBIDAS ESPECIALES",
+        "rawProduct": "1501 - AMERICANO GANCIA X450ml",
+        "oldCode": "1501",
+        "cleanedName": "AMERICANO GANCIA X450ml",
+        "margin": 21
+      },
+      "dbProduct": {
+        "id": 61,
+        "sku": "0430",
+        "name": "AMERICANO GANCIA X450ml",
+        "currentMargin": "1.25",
+        "costPrice": "3509.62",
+        "listPrice": "4387.02"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 65,
+        "category": "APERITIVOS Y BEBIDAS ESPECIALES",
+        "rawProduct": "1503 - CARPANO ROSSO X950ml",
+        "oldCode": "1503",
+        "cleanedName": "CARPANO ROSSO X950ml",
+        "margin": 10
+      },
+      "dbProduct": {
+        "id": 64,
+        "sku": "0433",
+        "name": "CARPANO ROSSO X950ml",
+        "currentMargin": "1.25",
+        "costPrice": "5203.2",
+        "listPrice": "6504"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 66,
+        "category": "APERITIVOS Y BEBIDAS ESPECIALES",
+        "rawProduct": "1504 - CAZALIS LEGER X950ml",
+        "oldCode": "1504",
+        "cleanedName": "CAZALIS LEGER X950ml",
+        "margin": 20
+      },
+      "dbProduct": {
+        "id": 65,
+        "sku": "0434",
+        "name": "CAZALIS LEGER X950ml",
+        "currentMargin": "1.25",
+        "costPrice": "4796",
+        "listPrice": "5995"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 69,
+        "category": "CEPAS",
+        "rawProduct": "1078 - DR. LEMON LIMON 1 LT",
+        "oldCode": "1078",
+        "cleanedName": "DR. LEMON LIMON 1 LT",
+        "margin": 22
+      },
+      "dbProduct": {
+        "id": 75,
+        "sku": "0450",
+        "name": "DR. LEMON LIMON 1 LT",
+        "currentMargin": "1.25",
+        "costPrice": "2887.82",
+        "listPrice": "3609.78"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 70,
+        "category": "CEPAS",
+        "rawProduct": "1079 - DR. LEMON C/VODKA 1 LT",
+        "oldCode": "1079",
+        "cleanedName": "DR. LEMON C/VODKA 1 LT",
+        "margin": 22
+      },
+      "dbProduct": {
+        "id": 74,
+        "sku": "0449",
+        "name": "DR. LEMON C/VODKA 1 LT",
+        "currentMargin": "1.25",
+        "costPrice": "2887.82",
+        "listPrice": "3609.78"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 71,
+        "category": "CEPAS",
+        "rawProduct": "1082 - DR.LEMON LIMON LATA X 473",
+        "oldCode": "1082",
+        "cleanedName": "DR.LEMON LIMON LATA X 473",
+        "margin": 22
+      },
+      "dbProduct": {
+        "id": 1,
+        "sku": "0452",
+        "name": "DR.LEMON LIMON LATA X 473",
+        "currentMargin": "1.25",
+        "costPrice": "1645.87",
+        "listPrice": "2057.34"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 72,
+        "category": "CEPAS",
+        "rawProduct": "1083 - DR.LEMON VODKA LATA x 473ml",
+        "oldCode": "1083",
+        "cleanedName": "DR.LEMON VODKA LATA x 473ml",
+        "margin": 22
+      },
+      "dbProduct": {
+        "id": 119,
+        "sku": "0453",
+        "name": "DR.LEMON VODKA LATA x 473ml",
+        "currentMargin": "1.25",
+        "costPrice": "1645.87",
+        "listPrice": "2057.34"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 73,
+        "category": "CEPAS",
+        "rawProduct": "1088 - DR. LEMON POMELO 1 LT",
+        "oldCode": "1088",
+        "cleanedName": "DR. LEMON POMELO 1 LT",
+        "margin": 22
+      },
+      "dbProduct": {
+        "id": 118,
+        "sku": "0451",
+        "name": "DR. LEMON POMELO 1 LT",
+        "currentMargin": "1.25",
+        "costPrice": "2887.82",
+        "listPrice": "3609.78"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 75,
+        "category": "CEPAS",
+        "rawProduct": "1508 - PRONTO SHAKE LATA X 473",
+        "oldCode": "1508",
+        "cleanedName": "PRONTO SHAKE LATA X 473",
+        "margin": 22
+      },
+      "dbProduct": {
+        "id": 121,
+        "sku": "0455",
+        "name": "PRONTO SHAKE LATA X 473",
+        "currentMargin": "1.25",
+        "costPrice": "1645.87",
+        "listPrice": "2057.34"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 77,
+        "category": "CEPAS",
+        "rawProduct": "2041 - TERMA LIMON 1350ml",
+        "oldCode": "2041",
+        "cleanedName": "TERMA LIMON 1350ml",
+        "margin": 20
+      },
+      "dbProduct": {
+        "id": 122,
+        "sku": "0456",
+        "name": "TERMA LIMON 1350ml",
+        "currentMargin": "1.25",
+        "costPrice": "1510.4",
+        "listPrice": "1888"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 79,
+        "category": "CEPAS",
+        "rawProduct": "2043 - TERMA SERRANO 1.35ml",
+        "oldCode": "2043",
+        "cleanedName": "TERMA SERRANO 1.35ml",
+        "margin": 20
+      },
+      "dbProduct": {
+        "id": 125,
+        "sku": "0459",
+        "name": "TERMA SERRANO 1.35ml",
+        "currentMargin": "1.25",
+        "costPrice": "1510.4",
+        "listPrice": "1888"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 81,
+        "category": "CEPAS",
+        "rawProduct": "2045 - TERMA LIMON LIGHT 1.35ml",
+        "oldCode": "2045",
+        "cleanedName": "TERMA LIMON LIGHT 1.35ml",
+        "margin": 20
+      },
+      "dbProduct": {
+        "id": 123,
+        "sku": "0457",
+        "name": "TERMA LIMON LIGHT 1.35ml",
+        "currentMargin": "1.25",
+        "costPrice": "1510.4",
+        "listPrice": "1888"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 82,
+        "category": "CEPAS",
+        "rawProduct": "2048 - TERMA POM.ROSADO 1.35ML",
+        "oldCode": "2048",
+        "cleanedName": "TERMA POM.ROSADO 1.35ML",
+        "margin": 20
+      },
+      "dbProduct": {
+        "id": 124,
+        "sku": "0458",
+        "name": "TERMA POM.ROSADO 1.35ML",
+        "currentMargin": "1.25",
+        "costPrice": "1510.4",
+        "listPrice": "1888"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 84,
+        "category": "ESPUMANTES",
+        "rawProduct": "1200 - CHANDON CHAMP. EXT.BRUT X750ml",
+        "oldCode": "1200",
+        "cleanedName": "CHANDON CHAMP. EXT.BRUT X750ml",
+        "margin": 20
+      },
+      "dbProduct": {
+        "id": 643,
+        "sku": "0476",
+        "name": "CHANDON CHAMP. EXT.BRUT X750ml",
+        "currentMargin": "1.25",
+        "costPrice": "13551.31",
+        "listPrice": "16939.14"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 85,
+        "category": "ESPUMANTES",
+        "rawProduct": "1204 - S.BRIONES SIDRA 1888 x 750ml",
+        "oldCode": "1204",
+        "cleanedName": "S.BRIONES SIDRA 1888 x 750ml",
+        "margin": 21
+      },
+      "dbProduct": {
+        "id": 649,
+        "sku": "0485",
+        "name": "S.BRIONES SIDRA 1888 x 750ml",
+        "currentMargin": "1.25",
+        "costPrice": "6018",
+        "listPrice": "7522.5"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 86,
+        "category": "ESPUMANTES",
+        "rawProduct": "1206 - LAS PERDICES CHAMP.BRUT ROSE x 750ml",
+        "oldCode": "1206",
+        "cleanedName": "LAS PERDICES CHAMP.BRUT ROSE x 750ml",
+        "margin": 20
+      },
+      "dbProduct": {
+        "id": 644,
+        "sku": "0483",
+        "name": "LAS PERDICES CHAMP.BRUT ROSE x 750ml",
+        "currentMargin": "1.25",
+        "costPrice": "6486.38",
+        "listPrice": "8107.98"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 87,
+        "category": "ESPUMANTES",
+        "rawProduct": "1207 - LAS PERDICES CHAMP.SWEETY x 750ml",
+        "oldCode": "1207",
+        "cleanedName": "LAS PERDICES CHAMP.SWEETY x 750ml",
+        "margin": 20
+      },
+      "dbProduct": {
+        "id": 645,
+        "sku": "0484",
+        "name": "LAS PERDICES CHAMP.SWEETY x 750ml",
+        "currentMargin": "1.25",
+        "costPrice": "6486.38",
+        "listPrice": "8107.98"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 90,
+        "category": "ESPUMANTES",
+        "rawProduct": "1214 - CHATEAU MDZA.CHAMPAGNE EXT.BRUTx 750ml",
+        "oldCode": "1214",
+        "cleanedName": "CHATEAU MDZA.CHAMPAGNE EXT.BRUTx 750ml",
+        "margin": 25
+      },
+      "dbProduct": {
+        "id": 641,
+        "sku": "0478",
+        "name": "CHATEAU MDZA.CHAMPAGNE EXT.BRUTx 750ml",
+        "currentMargin": "1.25",
+        "costPrice": "2601.41",
+        "listPrice": "3251.76"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 91,
+        "category": "ESPUMANTES",
+        "rawProduct": "1259 - SANTA JULIA ESPUMANTE CUVEE x750 ml",
+        "oldCode": "1259",
+        "cleanedName": "SANTA JULIA ESPUMANTE CUVEE x750 ml",
+        "margin": 25
+      },
+      "dbProduct": {
+        "id": 650,
+        "sku": "0487",
+        "name": "SANTA JULIA ESPUMANTE CUVEE x750 ml",
+        "currentMargin": "1.25",
+        "costPrice": "6743.42",
+        "listPrice": "8429.28"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 93,
+        "category": "FERNET",
+        "rawProduct": "1400 - BRANCA FERNET x1LT",
+        "oldCode": "1400",
+        "cleanedName": "BRANCA FERNET x1LT",
+        "margin": 25
+      },
+      "dbProduct": {
+        "id": 137,
+        "sku": "0489",
+        "name": "BRANCA FERNET x1LT",
+        "currentMargin": "1.25",
+        "costPrice": "16919.2",
+        "listPrice": "21149"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 94,
+        "category": "FERNET",
+        "rawProduct": "1401 - BRANCA FERNET x750ml",
+        "oldCode": "1401",
+        "cleanedName": "BRANCA FERNET x750ml",
+        "margin": 25
+      },
+      "dbProduct": {
+        "id": 139,
+        "sku": "0491",
+        "name": "BRANCA FERNET x750ml",
+        "currentMargin": "1.25",
+        "costPrice": "13442.4",
+        "listPrice": "16803"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 95,
+        "category": "FERNET",
+        "rawProduct": "1402 - BRANCA FERNET x450ml",
+        "oldCode": "1402",
+        "cleanedName": "BRANCA FERNET x450ml",
+        "margin": 25
+      },
+      "dbProduct": {
+        "id": 138,
+        "sku": "0490",
+        "name": "BRANCA FERNET x450ml",
+        "currentMargin": "1.25",
+        "costPrice": "8440.8",
+        "listPrice": "10551"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 96,
+        "category": "FERNET",
+        "rawProduct": "1403 - BRANCA MENTA x750ml",
+        "oldCode": "1403",
+        "cleanedName": "BRANCA MENTA x750ml",
+        "margin": 10
+      },
+      "dbProduct": {
+        "id": 140,
+        "sku": "0492",
+        "name": "BRANCA MENTA x750ml",
+        "currentMargin": "1.25",
+        "costPrice": "6445.49",
+        "listPrice": "8056.86"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 97,
+        "category": "FERNET",
+        "rawProduct": "1404 - VITTONE FERNET SPECIALE x750ml",
+        "oldCode": "1404",
+        "cleanedName": "VITTONE FERNET SPECIALE x750ml",
+        "margin": 20
+      },
+      "dbProduct": {
+        "id": 141,
+        "sku": "0493",
+        "name": "VITTONE FERNET SPECIALE x750ml",
+        "currentMargin": "1.25",
+        "costPrice": "4600.61",
+        "listPrice": "5750.76"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 100,
+        "category": "GASEOSAS",
+        "rawProduct": "2050 - MOCORETA GASEOSA NARANJA 6x2.25 LTS",
+        "oldCode": "2050",
+        "cleanedName": "MOCORETA GASEOSA NARANJA 6x2.25 LTS",
+        "margin": 30
+      },
+      "dbProduct": {
+        "id": 145,
+        "sku": "0507",
+        "name": "MOCORETA GASEOSA NARANJA 6x2.25 LTS",
+        "currentMargin": "1.25",
+        "costPrice": "7152",
+        "listPrice": "8940"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 101,
+        "category": "GASEOSAS",
+        "rawProduct": "2052 - MOCORETA GASEOSA LIMA LIMON 6x2.25 LTS",
+        "oldCode": "2052",
+        "cleanedName": "MOCORETA GASEOSA LIMA LIMON 6x2.25 LTS",
+        "margin": 30
+      },
+      "dbProduct": {
+        "id": 144,
+        "sku": "0506",
+        "name": "MOCORETA GASEOSA LIMA LIMON 6x2.25 LTS",
+        "currentMargin": "1.25",
+        "costPrice": "7152",
+        "listPrice": "8940"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 102,
+        "category": "GASEOSAS",
+        "rawProduct": "2053 - MOCORETA GASEOSA COLA 6x2.25 LTS",
+        "oldCode": "2053",
+        "cleanedName": "MOCORETA GASEOSA COLA 6x2.25 LTS",
+        "margin": 30
+      },
+      "dbProduct": {
+        "id": 143,
+        "sku": "0505",
+        "name": "MOCORETA GASEOSA COLA 6x2.25 LTS",
+        "currentMargin": "1.25",
+        "costPrice": "7152",
+        "listPrice": "8940"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 105,
+        "category": "LICORES",
+        "rawProduct": "1105 - BORGHETTI AL CONAG x700ml",
+        "oldCode": "1105",
+        "cleanedName": "BORGHETTI AL CONAG x700ml",
+        "margin": 15
+      },
+      "dbProduct": {
+        "id": 146,
+        "sku": "0521",
+        "name": "BORGHETTI AL CONAG x700ml",
+        "currentMargin": "1.25",
+        "costPrice": "11096.8",
+        "listPrice": "13871"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 117,
+        "category": "VINOS FINOS",
+        "rawProduct": "1000 - TRAPICHE ALARIS BCO DULCE X 750m",
+        "oldCode": "1000",
+        "cleanedName": "TRAPICHE ALARIS BCO DULCE X 750m",
+        "margin": 22
+      },
+      "dbProduct": {
+        "id": 288,
+        "sku": "0622",
+        "name": "TRAPICHE ALARIS BCO DULCE X 750m",
+        "currentMargin": "1.25",
+        "costPrice": "3043.68",
+        "listPrice": "3804.6"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 118,
+        "category": "VINOS FINOS",
+        "rawProduct": "1001 - TRAPICHE ALARIS MALBEC x750ml",
+        "oldCode": "1001",
+        "cleanedName": "TRAPICHE ALARIS MALBEC x750ml",
+        "margin": 22
+      },
+      "dbProduct": {
+        "id": 320,
+        "sku": "0623",
+        "name": "TRAPICHE ALARIS MALBEC x750ml",
+        "currentMargin": "1.25",
+        "costPrice": "3043.68",
+        "listPrice": "3804.6"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 119,
+        "category": "VINOS FINOS",
+        "rawProduct": "1003 - ALMA MORA MALBEC x750ml",
+        "oldCode": "1003",
+        "cleanedName": "ALMA MORA MALBEC x750ml",
+        "margin": 22
+      },
+      "dbProduct": {
+        "id": 303,
+        "sku": "0607",
+        "name": "ALMA MORA MALBEC x750ml",
+        "currentMargin": "1.25",
+        "costPrice": "3978.82",
+        "listPrice": "4973.52"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 121,
+        "category": "VINOS FINOS",
+        "rawProduct": "1005 - BIANCHI FAMIGLIA MALBEC 750ml",
+        "oldCode": "1005",
+        "cleanedName": "BIANCHI FAMIGLIA MALBEC 750ml",
+        "margin": 22
+      },
+      "dbProduct": {
+        "id": 651,
+        "sku": "0545",
+        "name": "BIANCHI FAMIGLIA MALBEC 750ml",
+        "currentMargin": "1.25",
+        "costPrice": "5400.29",
+        "listPrice": "6750.36"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 122,
+        "category": "VINOS FINOS",
+        "rawProduct": "1006 - BIANCHI PART. MALB 750ml",
+        "oldCode": "1006",
+        "cleanedName": "BIANCHI PART. MALB 750ml",
+        "margin": 20
+      },
+      "dbProduct": {
+        "id": 190,
+        "sku": "0544",
+        "name": "BIANCHI PART. MALB 750ml",
+        "currentMargin": "1.25",
+        "costPrice": "19702.77",
+        "listPrice": "24628.46"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 124,
+        "category": "VINOS FINOS",
+        "rawProduct": "1010 - EMILIA MALBEC x750ml",
+        "oldCode": "1010",
+        "cleanedName": "EMILIA MALBEC x750ml",
+        "margin": 22
+      },
+      "dbProduct": {
+        "id": 298,
+        "sku": "0636",
+        "name": "EMILIA MALBEC x750ml",
+        "currentMargin": "1.25",
+        "costPrice": "5539.01",
+        "listPrice": "6923.76"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 125,
+        "category": "VINOS FINOS",
+        "rawProduct": "1011 - EMILIA BCO DULCE x750ml",
+        "oldCode": "1011",
+        "cleanedName": "EMILIA BCO DULCE x750ml",
+        "margin": 22
+      },
+      "dbProduct": {
+        "id": 287,
+        "sku": "0635",
+        "name": "EMILIA BCO DULCE x750ml",
+        "currentMargin": "1.25",
+        "costPrice": "5587.97",
+        "listPrice": "6984.96"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 127,
+        "category": "VINOS FINOS",
+        "rawProduct": "1015 - CHACABUCO CHENIN DULCE x750ml",
+        "oldCode": "1015",
+        "cleanedName": "CHACABUCO CHENIN DULCE x750ml",
+        "margin": 22
+      },
+      "dbProduct": {
+        "id": 274,
+        "sku": "0581",
+        "name": "CHACABUCO CHENIN DULCE x750ml",
+        "currentMargin": "1.25",
+        "costPrice": "4776.8",
+        "listPrice": "5971"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 130,
+        "category": "VINOS FINOS",
+        "rawProduct": "1018 - DADA No1 x750ml",
+        "oldCode": "1018",
+        "cleanedName": "DADA No1 x750ml",
+        "margin": 22
+      },
+      "dbProduct": {
+        "id": 296,
+        "sku": "0610",
+        "name": "DADA No1 x750ml",
+        "currentMargin": "1.25",
+        "costPrice": "3800.93",
+        "listPrice": "4751.16"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 131,
+        "category": "VINOS FINOS",
+        "rawProduct": "1019 - DADA ART MALBEC 391 x750ml",
+        "oldCode": "1019",
+        "cleanedName": "DADA ART MALBEC 391 x750ml",
+        "margin": 22
+      },
+      "dbProduct": {
+        "id": 316,
+        "sku": "0608",
+        "name": "DADA ART MALBEC 391 x750ml",
+        "currentMargin": "1.25",
+        "costPrice": "3800.93",
+        "listPrice": "4751.16"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 132,
+        "category": "VINOS FINOS",
+        "rawProduct": "1021 - DADA INCREDIBLENDS x750ml",
+        "oldCode": "1021",
+        "cleanedName": "DADA INCREDIBLENDS x750ml",
+        "margin": 22
+      },
+      "dbProduct": {
+        "id": 281,
+        "sku": "0609",
+        "name": "DADA INCREDIBLENDS x750ml",
+        "currentMargin": "1.25",
+        "costPrice": "3939.57",
+        "listPrice": "4924.46"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 133,
+        "category": "VINOS FINOS",
+        "rawProduct": "1023 - DADA No2 MOKKA x750ml",
+        "oldCode": "1023",
+        "cleanedName": "DADA No2 MOKKA x750ml",
+        "margin": 22
+      },
+      "dbProduct": {
+        "id": 318,
+        "sku": "0611",
+        "name": "DADA No2 MOKKA x750ml",
+        "currentMargin": "1.25",
+        "costPrice": "3800.93",
+        "listPrice": "4751.16"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 134,
+        "category": "VINOS FINOS",
+        "rawProduct": "1025 - DON DAVID MALBEC x750ml",
+        "oldCode": "1025",
+        "cleanedName": "DON DAVID MALBEC x750ml",
+        "margin": 22
+      },
+      "dbProduct": {
+        "id": 297,
+        "sku": "0613",
+        "name": "DON DAVID MALBEC x750ml",
+        "currentMargin": "1.25",
+        "costPrice": "5767.2",
+        "listPrice": "7209"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 135,
+        "category": "VINOS FINOS",
+        "rawProduct": "1026 - EL BAUTISMO MALBEC x750ml",
+        "oldCode": "1026",
+        "cleanedName": "EL BAUTISMO MALBEC x750ml",
+        "margin": 22
+      },
+      "dbProduct": {
+        "id": 314,
+        "sku": "0614",
+        "name": "EL BAUTISMO MALBEC x750ml",
+        "currentMargin": "1.25",
+        "costPrice": "3524.87",
+        "listPrice": "4406.09"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 137,
+        "category": "VINOS FINOS",
+        "rawProduct": "1028 - ELEMENTOS MALBEC x750ml",
+        "oldCode": "1028",
+        "cleanedName": "ELEMENTOS MALBEC x750ml",
+        "margin": 22
+      },
+      "dbProduct": {
+        "id": 312,
+        "sku": "0616",
+        "name": "ELEMENTOS MALBEC x750ml",
+        "currentMargin": "1.25",
+        "costPrice": "3504.8",
+        "listPrice": "4381"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 138,
+        "category": "VINOS FINOS",
+        "rawProduct": "1034 - F.L.M FAIR FOR LIFE MALBEC x 750 ml",
+        "oldCode": "1034",
+        "cleanedName": "F.L.M FAIR FOR LIFE MALBEC x 750 ml",
+        "margin": 22
+      },
+      "dbProduct": {
+        "id": 294,
+        "sku": "0617",
+        "name": "F.L.M FAIR FOR LIFE MALBEC x 750 ml",
+        "currentMargin": "1.25",
+        "costPrice": "3810.72",
+        "listPrice": "4763.4"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 140,
+        "category": "VINOS FINOS",
+        "rawProduct": "1035 - F.LAS MORAS MALBEC x750ml",
+        "oldCode": "1035",
+        "cleanedName": "F.LAS MORAS MALBEC x750ml",
+        "margin": 22
+      },
+      "dbProduct": {
+        "id": 319,
+        "sku": "0618",
+        "name": "F.LAS MORAS MALBEC x750ml",
+        "currentMargin": "1.25",
+        "costPrice": "3218.3",
+        "listPrice": "4022.88"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 142,
+        "category": "VINOS FINOS",
+        "rawProduct": "1037 - BIANCHI FINCA LOS PRIMOS MALBEC x 750ml",
+        "oldCode": "1037",
+        "cleanedName": "BIANCHI FINCA LOS PRIMOS MALBEC x 750ml",
+        "margin": 25
+      },
+      "dbProduct": {
+        "id": 189,
+        "sku": "0546",
+        "name": "BIANCHI FINCA LOS PRIMOS MALBEC x 750ml",
+        "currentMargin": "1.25",
+        "costPrice": "3455.2",
+        "listPrice": "4319"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 143,
+        "category": "VINOS FINOS",
+        "rawProduct": "1038 - FOND DE CAVE MALBEC x750ml",
+        "oldCode": "1038",
+        "cleanedName": "FOND DE CAVE MALBEC x750ml",
+        "margin": 22
+      },
+      "dbProduct": {
+        "id": 290,
+        "sku": "0619",
+        "name": "FOND DE CAVE MALBEC x750ml",
+        "currentMargin": "1.25",
+        "costPrice": "5686.7",
+        "listPrice": "7108.38"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 145,
+        "category": "VINOS FINOS",
+        "rawProduct": "1040 - LATITUD 33 MALBEC x750ml",
+        "oldCode": "1040",
+        "cleanedName": "LATITUD 33 MALBEC x750ml",
+        "margin": 25
+      },
+      "dbProduct": {
+        "id": 194,
+        "sku": "0557",
+        "name": "LATITUD 33 MALBEC x750ml",
+        "currentMargin": "1.25",
+        "costPrice": "5217.6",
+        "listPrice": "6522"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 146,
+        "category": "VINOS FINOS",
+        "rawProduct": "1041 - LOPEZ MALBEC x750ml",
+        "oldCode": "1041",
+        "cleanedName": "LOPEZ MALBEC x750ml",
+        "margin": 25
+      },
+      "dbProduct": {
+        "id": 200,
+        "sku": "0572",
+        "name": "LOPEZ MALBEC x750ml",
+        "currentMargin": "1.25",
+        "costPrice": "3195.2",
+        "listPrice": "3994"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 147,
+        "category": "VINOS FINOS",
+        "rawProduct": "1042 - LOPEZ SEMILLON BLANCO x750ml",
+        "oldCode": "1042",
+        "cleanedName": "LOPEZ SEMILLON BLANCO x750ml",
+        "margin": 25
+      },
+      "dbProduct": {
+        "id": 201,
+        "sku": "0573",
+        "name": "LOPEZ SEMILLON BLANCO x750ml",
+        "currentMargin": "1.25",
+        "costPrice": "3195.2",
+        "listPrice": "3994"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 148,
+        "category": "VINOS FINOS",
+        "rawProduct": "1043 - NAMPE MALBEC x750ml",
+        "oldCode": "1043",
+        "cleanedName": "NAMPE MALBEC x750ml",
+        "margin": 25
+      },
+      "dbProduct": {
+        "id": 273,
+        "sku": "0584",
+        "name": "NAMPE MALBEC x750ml",
+        "currentMargin": "1.25",
+        "costPrice": "2695.25",
+        "listPrice": "3369.06"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 149,
+        "category": "VINOS FINOS",
+        "rawProduct": "1045 - RUTINI CAB/MAL 750ml",
+        "oldCode": "1045",
+        "cleanedName": "RUTINI CAB/MAL 750ml",
+        "margin": 22
+      },
+      "dbProduct": {
+        "id": 195,
+        "sku": "0562",
+        "name": "RUTINI CAB/MAL 750ml",
+        "currentMargin": "1.25",
+        "costPrice": "11653.3",
+        "listPrice": "14566.62"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 150,
+        "category": "VINOS FINOS",
+        "rawProduct": "1046 - RUTINI MALBEC 750ml",
+        "oldCode": "1046",
+        "cleanedName": "RUTINI MALBEC 750ml",
+        "margin": 25
+      },
+      "dbProduct": {
+        "id": 197,
+        "sku": "0564",
+        "name": "RUTINI MALBEC 750ml",
+        "currentMargin": "1.25",
+        "costPrice": "20811.26",
+        "listPrice": "26014.08"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 151,
+        "category": "VINOS FINOS",
+        "rawProduct": "1048 - SAN TELMO CAB.SAU x750ml",
+        "oldCode": "1048",
+        "cleanedName": "SAN TELMO CAB.SAU x750ml",
+        "margin": 25
+      },
+      "dbProduct": {
+        "id": 291,
+        "sku": "0620",
+        "name": "SAN TELMO CAB.SAU x750ml",
+        "currentMargin": "1.25",
+        "costPrice": "2799.2",
+        "listPrice": "3499"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 152,
+        "category": "VINOS FINOS",
+        "rawProduct": "1049 - SAN TELMO MALBEC x750ml",
+        "oldCode": "1049",
+        "cleanedName": "SAN TELMO MALBEC x750ml",
+        "margin": 22
+      },
+      "dbProduct": {
+        "id": 293,
+        "sku": "0621",
+        "name": "SAN TELMO MALBEC x750ml",
+        "currentMargin": "1.25",
+        "costPrice": "2799.2",
+        "listPrice": "3499"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 153,
+        "category": "VINOS FINOS",
+        "rawProduct": "1050 - TRAPICHE IMPURO MAL X 750ml",
+        "oldCode": "1050",
+        "cleanedName": "TRAPICHE IMPURO MAL X 750ml",
+        "margin": 22
+      },
+      "dbProduct": {
+        "id": 289,
+        "sku": "0624",
+        "name": "TRAPICHE IMPURO MAL X 750ml",
+        "currentMargin": "1.25",
+        "costPrice": "6369.6",
+        "listPrice": "7962"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 154,
+        "category": "VINOS FINOS",
+        "rawProduct": "1051 - VASCO VIEJO TINTO x 750ml",
+        "oldCode": "1051",
+        "cleanedName": "VASCO VIEJO TINTO x 750ml",
+        "margin": 22
+      },
+      "dbProduct": {
+        "id": 272,
+        "sku": "0575",
+        "name": "VASCO VIEJO TINTO x 750ml",
+        "currentMargin": "1.25",
+        "costPrice": "2139.55",
+        "listPrice": "2674.44"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 155,
+        "category": "VINOS FINOS",
+        "rawProduct": "1052 - TRAPICHE ORIGEN MALBEC x 750ml",
+        "oldCode": "1052",
+        "cleanedName": "TRAPICHE ORIGEN MALBEC x 750ml",
+        "margin": 25
+      },
+      "dbProduct": {
+        "id": 315,
+        "sku": "0625",
+        "name": "TRAPICHE ORIGEN MALBEC x 750ml",
+        "currentMargin": "1.25",
+        "costPrice": "4097.14",
+        "listPrice": "5121.42"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 157,
+        "category": "VINOS FINOS",
+        "rawProduct": "1056 - TRUMPETER MALBEC x750ml",
+        "oldCode": "1056",
+        "cleanedName": "TRUMPETER MALBEC x750ml",
+        "margin": 25
+      },
+      "dbProduct": {
+        "id": 198,
+        "sku": "0565",
+        "name": "TRUMPETER MALBEC x750ml",
+        "currentMargin": "1.25",
+        "costPrice": "6498.4",
+        "listPrice": "8123"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 159,
+        "category": "VINOS FINOS",
+        "rawProduct": "1058 - NAMPE BLANCO DULCE x 750ml",
+        "oldCode": "1058",
+        "cleanedName": "NAMPE BLANCO DULCE x 750ml",
+        "margin": 25
+      },
+      "dbProduct": {
+        "id": 275,
+        "sku": "0583",
+        "name": "NAMPE BLANCO DULCE x 750ml",
+        "currentMargin": "1.25",
+        "costPrice": "2912.3",
+        "listPrice": "3640.38"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 160,
+        "category": "VINOS FINOS",
+        "rawProduct": "1059 - V.DE BALBO BCO x1125ml",
+        "oldCode": "1059",
+        "cleanedName": "V.DE BALBO BCO x1125ml",
+        "margin": 21
+      },
+      "dbProduct": {
+        "id": 276,
+        "sku": "0585",
+        "name": "V.DE BALBO BCO x1125ml",
+        "currentMargin": "1.25",
+        "costPrice": "2239.2",
+        "listPrice": "2799"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 161,
+        "category": "VINOS FINOS",
+        "rawProduct": "1060 - V.DE BALBO TTO x1125ml",
+        "oldCode": "1060",
+        "cleanedName": "V.DE BALBO TTO x1125ml",
+        "margin": 21
+      },
+      "dbProduct": {
+        "id": 278,
+        "sku": "0586",
+        "name": "V.DE BALBO TTO x1125ml",
+        "currentMargin": "1.25",
+        "costPrice": "2239.2",
+        "listPrice": "2799"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 164,
+        "category": "VINOS FINOS",
+        "rawProduct": "1064 - TRUMPETER SAUV. BCO x750ml",
+        "oldCode": "1064",
+        "cleanedName": "TRUMPETER SAUV. BCO x750ml",
+        "margin": 25
+      },
+      "dbProduct": {
+        "id": 199,
+        "sku": "0566",
+        "name": "TRUMPETER SAUV. BCO x750ml",
+        "currentMargin": "1.25",
+        "costPrice": "6498.62",
+        "listPrice": "8123.28"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 168,
+        "category": "VINOS FINOS",
+        "rawProduct": "1073 - VASCO VIEJO MALBEC VINTAGE x 750 ml",
+        "oldCode": "1073",
+        "cleanedName": "VASCO VIEJO MALBEC VINTAGE x 750 ml",
+        "margin": 25
+      },
+      "dbProduct": {
+        "id": 202,
+        "sku": "0574",
+        "name": "VASCO VIEJO MALBEC VINTAGE x 750 ml",
+        "currentMargin": "1.25",
+        "costPrice": "2640.58",
+        "listPrice": "3300.72"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 170,
+        "category": "VINOS FINOS",
+        "rawProduct": "1250 - SANTA JULIA MALBEC x750ml",
+        "oldCode": "1250",
+        "cleanedName": "SANTA JULIA MALBEC x750ml",
+        "margin": 25
+      },
+      "dbProduct": {
+        "id": 304,
+        "sku": "0599",
+        "name": "SANTA JULIA MALBEC x750ml",
+        "currentMargin": "1.25",
+        "costPrice": "3574.08",
+        "listPrice": "4467.6"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 171,
+        "category": "VINOS FINOS",
+        "rawProduct": "1252 - SANTA JULIA SAUVIGNON BCO x750ml",
+        "oldCode": "1252",
+        "cleanedName": "SANTA JULIA SAUVIGNON BCO x750ml",
+        "margin": 25
+      },
+      "dbProduct": {
+        "id": 284,
+        "sku": "0600",
+        "name": "SANTA JULIA SAUVIGNON BCO x750ml",
+        "currentMargin": "1.25",
+        "costPrice": "3574.08",
+        "listPrice": "4467.6"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 172,
+        "category": "VINOS FINOS",
+        "rawProduct": "1253 - SANTA JULIA MALBEC NEW x375ml",
+        "oldCode": "1253",
+        "cleanedName": "SANTA JULIA MALBEC NEW x375ml",
+        "margin": 25
+      },
+      "dbProduct": {
+        "id": 282,
+        "sku": "0598",
+        "name": "SANTA JULIA MALBEC NEW x375ml",
+        "currentMargin": "1.25",
+        "costPrice": "2767.06",
+        "listPrice": "3458.82"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 173,
+        "category": "VINOS FINOS",
+        "rawProduct": "1254 - SANTA JULIA CHARD. NEW x375ml",
+        "oldCode": "1254",
+        "cleanedName": "SANTA JULIA CHARD. NEW x375ml",
+        "margin": 25
+      },
+      "dbProduct": {
+        "id": 283,
+        "sku": "0596",
+        "name": "SANTA JULIA CHARD. NEW x375ml",
+        "currentMargin": "1.25",
+        "costPrice": "2766.24",
+        "listPrice": "3457.8"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 175,
+        "category": "VINOS FINOS",
+        "rawProduct": "1256 - SANTA JULIA DULCE TINTO x750ml",
+        "oldCode": "1256",
+        "cleanedName": "SANTA JULIA DULCE TINTO x750ml",
+        "margin": 25
+      },
+      "dbProduct": {
+        "id": 302,
+        "sku": "0597",
+        "name": "SANTA JULIA DULCE TINTO x750ml",
+        "currentMargin": "1.25",
+        "costPrice": "4265.23",
+        "listPrice": "5331.54"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 177,
+        "category": "VINOS FINOS",
+        "rawProduct": "1258 - SANTA JULIA CAB.FRANC x750ml",
+        "oldCode": "1258",
+        "cleanedName": "SANTA JULIA CAB.FRANC x750ml",
+        "margin": 25
+      },
+      "dbProduct": {
+        "id": 286,
+        "sku": "0594",
+        "name": "SANTA JULIA CAB.FRANC x750ml",
+        "currentMargin": "1.25",
+        "costPrice": "3376.61",
+        "listPrice": "4220.76"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 178,
+        "category": "VINOS FINOS",
+        "rawProduct": "1260 - ALAMBRADO MALBEC x750ml",
+        "oldCode": "1260",
+        "cleanedName": "ALAMBRADO MALBEC x750ml",
+        "margin": 25
+      },
+      "dbProduct": {
+        "id": 280,
+        "sku": "0593",
+        "name": "ALAMBRADO MALBEC x750ml",
+        "currentMargin": "1.25",
+        "costPrice": "5513.71",
+        "listPrice": "6892.14"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 180,
+        "category": "VINOS FINOS",
+        "rawProduct": "990 - CHACABUCO MALBEC x750ml",
+        "oldCode": "990",
+        "cleanedName": "CHACABUCO MALBEC x750ml",
+        "margin": 25
+      },
+      "dbProduct": {
+        "id": 277,
+        "sku": "0582",
+        "name": "CHACABUCO MALBEC x750ml",
+        "currentMargin": "1.25",
+        "costPrice": "3317.04",
+        "listPrice": "4146.3"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 181,
+        "category": "VINOS FINOS",
+        "rawProduct": "991 - RUTINI DOMINIO MALBEC x750ml",
+        "oldCode": "991",
+        "cleanedName": "RUTINI DOMINIO MALBEC x750ml",
+        "margin": 25
+      },
+      "dbProduct": {
+        "id": 3,
+        "sku": "0563",
+        "name": "RUTINI DOMINIO MALBEC x750ml",
+        "currentMargin": "1.25",
+        "costPrice": "14938.51",
+        "listPrice": "18673.14"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 184,
+        "category": "VINOS FINOS",
+        "rawProduct": "SANTA JULIA CABERNET SAUV. x 750ml",
+        "oldCode": null,
+        "cleanedName": "SANTA JULIA CABERNET SAUV. x 750ml",
+        "margin": 25
+      },
+      "dbProduct": {
+        "id": 285,
+        "sku": "0595",
+        "name": "SANTA JULIA CABERNET SAUV. x 750ml",
+        "currentMargin": "1.25",
+        "costPrice": "3376.61",
+        "listPrice": "4220.76"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 186,
+        "category": "WHISKIES",
+        "rawProduct": "1100 - BALLANTINES x750ml",
+        "oldCode": "1100",
+        "cleanedName": "BALLANTINES x750ml",
+        "margin": 25
+      },
+      "dbProduct": {
+        "id": 301,
+        "sku": "0646",
+        "name": "BALLANTINES x750ml",
+        "currentMargin": "1.25",
+        "costPrice": "23113.6",
+        "listPrice": "28892"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 189,
+        "category": "WHISKIES",
+        "rawProduct": "1103 - BLENDERS PRIDE 1LT",
+        "oldCode": "1103",
+        "cleanedName": "BLENDERS PRIDE 1LT",
+        "margin": 25
+      },
+      "dbProduct": {
+        "id": 299,
+        "sku": "0647",
+        "name": "BLENDERS PRIDE 1LT",
+        "currentMargin": "1.25",
+        "costPrice": "8588.8",
+        "listPrice": "10736"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 190,
+        "category": "WHISKIES",
+        "rawProduct": "1111 - WHITE HORSE X750ml",
+        "oldCode": "1111",
+        "cleanedName": "WHITE HORSE X750ml",
+        "margin": 25
+      },
+      "dbProduct": {
+        "id": 306,
+        "sku": "0651",
+        "name": "WHITE HORSE X750ml",
+        "currentMargin": "1.25",
+        "costPrice": "14642.3",
+        "listPrice": "18302.88"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 191,
+        "category": "WHISKIES",
+        "rawProduct": "1112 - JACK DANIEL'S WHISKY x750ml",
+        "oldCode": "1112",
+        "cleanedName": "JACK DANIEL'S WHISKY x750ml",
+        "margin": 20
+      },
+      "dbProduct": {
+        "id": 305,
+        "sku": "0649",
+        "name": "JACK DANIELS WHISKY x750ml",
+        "currentMargin": "1.25",
+        "costPrice": "36294.86",
+        "listPrice": "45368.58"
+      },
+      "matchMethod": "Normalized Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 192,
+        "category": "WHISKIES",
+        "rawProduct": "1113 - J&B RARE x 750ml",
+        "oldCode": "1113",
+        "cleanedName": "J&B RARE x 750ml",
+        "margin": 25
+      },
+      "dbProduct": {
+        "id": 300,
+        "sku": "0648",
+        "name": "J&B RARE x 750ml",
+        "currentMargin": "1.25",
+        "costPrice": "22580.35",
+        "listPrice": "28225.44"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 193,
+        "category": "WHISKIES",
+        "rawProduct": "1114 - SMUGGLER WHISKY x750ml",
+        "oldCode": "1114",
+        "cleanedName": "SMUGGLER WHISKY x750ml",
+        "margin": 25
+      },
+      "dbProduct": {
+        "id": 307,
+        "sku": "0650",
+        "name": "SMUGGLER WHISKY x750ml",
+        "currentMargin": "1.25",
+        "costPrice": "7167.74",
+        "listPrice": "8959.68"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 195,
+        "category": "CAFE",
+        "rawProduct": "4032 - ARLISTAN CAFE INST.X 170GR",
+        "oldCode": "4032",
+        "cleanedName": "ARLISTAN CAFE INST.X 170GR",
+        "margin": 22
+      },
+      "dbProduct": {
+        "id": 81,
+        "sku": "0226",
+        "name": "ARLISTAN CAFE INST.X 170GR",
+        "currentMargin": "1.25",
+        "costPrice": "5352.8",
+        "listPrice": "6691"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 196,
+        "category": "CAFE",
+        "rawProduct": "4052 - ARLISTAN CAFE INST.X 100GR",
+        "oldCode": "4052",
+        "cleanedName": "ARLISTAN CAFE INST.X 100GR",
+        "margin": 22
+      },
+      "dbProduct": {
+        "id": 80,
+        "sku": "0225",
+        "name": "ARLISTAN CAFE INST.X 100GR",
+        "currentMargin": "1.25",
+        "costPrice": "3570",
+        "listPrice": "4462.5"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 199,
+        "category": "CAFE",
+        "rawProduct": "4070 - LA VIRG CAFE SAQ.TORRADO X20X5GR",
+        "oldCode": "4070",
+        "cleanedName": "LA VIRG CAFE SAQ.TORRADO X20X5GR",
+        "margin": 25
+      },
+      "dbProduct": {
+        "id": 87,
+        "sku": "0232",
+        "name": "LA VIRG CAFE SAQ.TORRADO X20X5GR",
+        "currentMargin": "1.25",
+        "costPrice": "3625.6",
+        "listPrice": "4532"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 200,
+        "category": "CAFE",
+        "rawProduct": "4071 - LA VIRG CAFE INST. CLASICO FRASCO x 100GR",
+        "oldCode": "4071",
+        "cleanedName": "LA VIRG CAFE INST. CLASICO FRASCO x 100GR",
+        "margin": 25
+      },
+      "dbProduct": {
+        "id": 85,
+        "sku": "0230",
+        "name": "LA VIRG CAFE INST. CLASICO FRASCO x 100GR",
+        "currentMargin": "1.25",
+        "costPrice": "3598.56",
+        "listPrice": "4498.2"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 201,
+        "category": "CAFE",
+        "rawProduct": "4077 - LA VIRG CAFE INST. SUAVE FRASCO x 100 gr",
+        "oldCode": "4077",
+        "cleanedName": "LA VIRG CAFE INST. SUAVE FRASCO x 100 gr",
+        "margin": 25
+      },
+      "dbProduct": {
+        "id": 86,
+        "sku": "0231",
+        "name": "LA VIRG CAFE INST. SUAVE FRASCO x 100 gr",
+        "currentMargin": "1.25",
+        "costPrice": "3598.56",
+        "listPrice": "4498.2"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 203,
+        "category": "CAFE",
+        "rawProduct": "4080 - LA VIRG CHOCOLINO CACAO x 180gr",
+        "oldCode": "4080",
+        "cleanedName": "LA VIRG CHOCOLINO CACAO x 180gr",
+        "margin": 25
+      },
+      "dbProduct": {
+        "id": 88,
+        "sku": "0233",
+        "name": "LA VIRG CHOCOLINO CACAO x 180gr",
+        "currentMargin": "1.25",
+        "costPrice": "1503.2",
+        "listPrice": "1879"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 210,
+        "category": "CONSERVAS",
+        "rawProduct": "25 - M.ROJO COCTEL FRUTAL x820gr",
+        "oldCode": "25",
+        "cleanedName": "M.ROJO COCTEL FRUTAL x820gr",
+        "margin": 25
+      },
+      "dbProduct": {
+        "id": 234,
+        "sku": "0138",
+        "name": "M.ROJO COCTEL FRUTAL x820gr",
+        "currentMargin": "1.25",
+        "costPrice": "2399.04",
+        "listPrice": "2998.8"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 212,
+        "category": "CONSERVAS",
+        "rawProduct": "28 - M.ROJO DURAZNOS MITADES x820gr",
+        "oldCode": "28",
+        "cleanedName": "M.ROJO DURAZNOS MITADES x820gr",
+        "margin": 25
+      },
+      "dbProduct": {
+        "id": 235,
+        "sku": "0139",
+        "name": "M.ROJO DURAZNOS MITADES x820gr",
+        "currentMargin": "1.25",
+        "costPrice": "1850.69",
+        "listPrice": "2313.36"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 213,
+        "category": "CONSERVAS",
+        "rawProduct": "29 - M.ROJO DURAZNOS TROZOS X820gr",
+        "oldCode": "29",
+        "cleanedName": "M.ROJO DURAZNOS TROZOS X820gr",
+        "margin": 25
+      },
+      "dbProduct": {
+        "id": 236,
+        "sku": "0140",
+        "name": "M.ROJO DURAZNOS TROZOS X820gr",
+        "currentMargin": "1.25",
+        "costPrice": "1676.88",
+        "listPrice": "2096.1"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 222,
+        "category": "CONSERVAS",
+        "rawProduct": "4018 - MAROLIO ARVEJAS TETRA 340gr",
+        "oldCode": "4018",
+        "cleanedName": "MAROLIO ARVEJAS TETRA 340gr",
+        "margin": 30
+      },
+      "dbProduct": {
+        "id": 237,
+        "sku": "0141",
+        "name": "MAROLIO ARVEJAS TETRA 340gr",
+        "currentMargin": "1.25",
+        "costPrice": "540.8",
+        "listPrice": "676"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 225,
+        "category": "CONSERVAS",
+        "rawProduct": "42 - CUMANA CHOCLO CREMOSO BLANCO x300",
+        "oldCode": "42",
+        "cleanedName": "CUMANA CHOCLO CREMOSO BLANCO x300",
+        "margin": 30
+      },
+      "dbProduct": {
+        "id": 220,
+        "sku": "0124",
+        "name": "CUMANA CHOCLO CREMOSO BLANCO x300",
+        "currentMargin": "1.25",
+        "costPrice": "768",
+        "listPrice": "960"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 228,
+        "category": "CONSERVAS",
+        "rawProduct": "837 - CUMANA PALMITOS ENTEROS x396gr",
+        "oldCode": "837",
+        "cleanedName": "CUMANA PALMITOS ENTEROS x396gr",
+        "margin": 30
+      },
+      "dbProduct": {
+        "id": 224,
+        "sku": "0128",
+        "name": "CUMANA PALMITOS ENTEROS x396gr",
+        "currentMargin": "1.25",
+        "costPrice": "3001.25",
+        "listPrice": "3751.56"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 232,
+        "category": "CONSERVAS",
+        "rawProduct": "839 - CUMANA PALMITOS TROZ. x396gr",
+        "oldCode": "839",
+        "cleanedName": "CUMANA PALMITOS TROZ. x396gr",
+        "margin": 30
+      },
+      "dbProduct": {
+        "id": 225,
+        "sku": "0129",
+        "name": "CUMANA PALMITOS TROZ. x396gr",
+        "currentMargin": "1.25",
+        "costPrice": "1542.24",
+        "listPrice": "1927.8"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 233,
+        "category": "CONSERVAS",
+        "rawProduct": "840 - CUMANA CHAMPIGNON LAM. x400g",
+        "oldCode": "840",
+        "cleanedName": "CUMANA CHAMPIGNON LAM. x400g",
+        "margin": 30
+      },
+      "dbProduct": {
+        "id": 219,
+        "sku": "0123",
+        "name": "CUMANA CHAMPIGNON LAM. x400g",
+        "currentMargin": "1.25",
+        "costPrice": "1858.85",
+        "listPrice": "2323.56"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 235,
+        "category": "CONSERVAS",
+        "rawProduct": "845 - CUMANA ARVEJAS LATA x300gr",
+        "oldCode": "845",
+        "cleanedName": "CUMANA ARVEJAS LATA x300gr",
+        "margin": 30
+      },
+      "dbProduct": {
+        "id": 217,
+        "sku": "0121",
+        "name": "CUMANA ARVEJAS LATA x300gr",
+        "currentMargin": "1.25",
+        "costPrice": "582.62",
+        "listPrice": "728.28"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 238,
+        "category": "TOMATES",
+        "rawProduct": "21 - LA HUERTA PURE DE TOMATE 12x530gr",
+        "oldCode": "21",
+        "cleanedName": "LA HUERTA PURE DE TOMATE 12x530gr",
+        "margin": 30
+      },
+      "dbProduct": {
+        "id": 231,
+        "sku": "0135",
+        "name": "LA HUERTA PURE DE TOMATE 12x530gr",
+        "currentMargin": "1.25",
+        "costPrice": "7868.69",
+        "listPrice": "9835.86"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 239,
+        "category": "TOMATES",
+        "rawProduct": "22 - LA HUERTA PURE DE TOMATE 18x210gr",
+        "oldCode": "22",
+        "cleanedName": "LA HUERTA PURE DE TOMATE 18x210gr",
+        "margin": 30
+      },
+      "dbProduct": {
+        "id": 232,
+        "sku": "0136",
+        "name": "LA HUERTA PURE DE TOMATE 18x210gr",
+        "currentMargin": "1.25",
+        "costPrice": "6903.2",
+        "listPrice": "8629"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 240,
+        "category": "TOMATES",
+        "rawProduct": "23 - LA HUERTA PURE DE TOMATE x 1.030gr",
+        "oldCode": "23",
+        "cleanedName": "LA HUERTA PURE DE TOMATE x 1.030gr",
+        "margin": 30
+      },
+      "dbProduct": {
+        "id": 233,
+        "sku": "0137",
+        "name": "LA HUERTA PURE DE TOMATE x 1.030gr",
+        "currentMargin": "1.25",
+        "costPrice": "1237.06",
+        "listPrice": "1546.32"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 241,
+        "category": "TOMATES",
+        "rawProduct": "36 - LA HUERTA PULPA TOMATE 12x520gr",
+        "oldCode": "36",
+        "cleanedName": "LA HUERTA PULPA TOMATE 12x520gr",
+        "margin": 30
+      },
+      "dbProduct": {
+        "id": 230,
+        "sku": "0134",
+        "name": "LA HUERTA PULPA TOMATE 12x520gr",
+        "currentMargin": "1.25",
+        "costPrice": "6076",
+        "listPrice": "7595"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 248,
+        "category": "LECHES EN POLVO",
+        "rawProduct": "283 - CREMIGAL LECHE EN POLVO x 800grs",
+        "oldCode": "283",
+        "cleanedName": "CREMIGAL LECHE EN POLVO x 800grs",
+        "margin": 25
+      },
+      "dbProduct": {
+        "id": 109,
+        "sku": "0031",
+        "name": "CREMIGAL LECHE EN POLVO x 800grs",
+        "currentMargin": "1.25",
+        "costPrice": "6909.6",
+        "listPrice": "8637"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 249,
+        "category": "LECHES EN POLVO",
+        "rawProduct": "284 - CREMIGAL LECHE EN POLVO x 400grs",
+        "oldCode": "284",
+        "cleanedName": "CREMIGAL LECHE EN POLVO x 400grs",
+        "margin": 25
+      },
+      "dbProduct": {
+        "id": 162,
+        "sku": "0030",
+        "name": "CREMIGAL LECHE EN POLVO x 400grs",
+        "currentMargin": "1.25",
+        "costPrice": "3455.2",
+        "listPrice": "4319"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 262,
+        "category": "HIGIENICOS",
+        "rawProduct": "3991 - CAMPANITA PAPEL HIGIENICO BCO 12x4x30",
+        "oldCode": "3991",
+        "cleanedName": "CAMPANITA PAPEL HIGIENICO BCO 12x4x30",
+        "margin": 30
+      },
+      "dbProduct": {
+        "id": 45,
+        "sku": "0386",
+        "name": "CAMPANITA PAPEL HIGIENICO BCO 12x4x30",
+        "currentMargin": "1.25",
+        "costPrice": "16030.4",
+        "listPrice": "20038"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 263,
+        "category": "HIGIENICOS",
+        "rawProduct": "3993 - HIGIENOL PAPEL HIGIENICO TEXT 12x4x30",
+        "oldCode": "3993",
+        "cleanedName": "HIGIENOL PAPEL HIGIENICO TEXT 12x4x30",
+        "margin": 30
+      },
+      "dbProduct": {
+        "id": 48,
+        "sku": "0389",
+        "name": "HIGIENOL PAPEL HIGIENICO TEXT 12x4x30",
+        "currentMargin": "1.25",
+        "costPrice": "19709.66",
+        "listPrice": "24637.08"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 265,
+        "category": "HIGIENICOS",
+        "rawProduct": "3995 - HIGIENOL PAPEL HIGIENICO FRESH 12x4x30",
+        "oldCode": "3995",
+        "cleanedName": "HIGIENOL PAPEL HIGIENICO FRESH 12x4x30",
+        "margin": 30
+      },
+      "dbProduct": {
+        "id": 47,
+        "sku": "0388",
+        "name": "HIGIENOL PAPEL HIGIENICO FRESH 12x4x30",
+        "currentMargin": "1.25",
+        "costPrice": "17713.73",
+        "listPrice": "22142.16"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 267,
+        "category": "NO COMESTIBLES",
+        "rawProduct": "901 - AMANDA TERMO TERMOLAR 1 LT",
+        "oldCode": "901",
+        "cleanedName": "AMANDA TERMO TERMOLAR 1 LT",
+        "margin": 35
+      },
+      "dbProduct": {
+        "id": 309,
+        "sku": "0780",
+        "name": "AMANDA TERMO TERMOLAR 1 LT",
+        "currentMargin": "1.25",
+        "costPrice": "18502.8",
+        "listPrice": "23128.5"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 268,
+        "category": "NO COMESTIBLES",
+        "rawProduct": "904 - RAID INSECT. AEROSOL x360cc",
+        "oldCode": "904",
+        "cleanedName": "RAID INSECT. AEROSOL x360cc",
+        "margin": 25
+      },
+      "dbProduct": {
+        "id": 310,
+        "sku": "0784",
+        "name": "RAID INSECT. AEROSOL x360cc",
+        "currentMargin": "1.25",
+        "costPrice": "5315.2",
+        "listPrice": "6644"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 269,
+        "category": "NO COMESTIBLES",
+        "rawProduct": "906 - FUYI INSECT. AEROSOL x360cc",
+        "oldCode": "906",
+        "cleanedName": "FUYI INSECT. AEROSOL x360cc",
+        "margin": 25
+      },
+      "dbProduct": {
+        "id": 317,
+        "sku": "0782",
+        "name": "FUYI INSECT. AEROSOL x360cc",
+        "currentMargin": "1.25",
+        "costPrice": "4426.4",
+        "listPrice": "5533"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 270,
+        "category": "NO COMESTIBLES",
+        "rawProduct": "908 - RAID MATA CUCARACHA AEROSOL EXT x 360cc",
+        "oldCode": "908",
+        "cleanedName": "RAID MATA CUCARACHA AEROSOL EXT x 360cc",
+        "margin": 25
+      },
+      "dbProduct": {
+        "id": 311,
+        "sku": "0785",
+        "name": "RAID MATA CUCARACHA AEROSOL EXT x 360cc",
+        "currentMargin": "1.25",
+        "costPrice": "4862.54",
+        "listPrice": "6078.18"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 275,
+        "category": "ROLLOS DE COCINA",
+        "rawProduct": "4044 - ELEGANTE ROLLO COC GIG 1X12X200 PAÑOS",
+        "oldCode": "4044",
+        "cleanedName": "ELEGANTE ROLLO COC GIG 1X12X200 PAÑOS",
+        "margin": 30
+      },
+      "dbProduct": {
+        "id": 51,
+        "sku": "0392",
+        "name": "ELEGANTE ROLLO COC GIG 1X12X200 PAÑOS",
+        "currentMargin": "1.25",
+        "costPrice": "20309.42",
+        "listPrice": "25386.78"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 276,
+        "category": "ROLLOS DE COCINA",
+        "rawProduct": "4045 - SOL MAYOR ROLLO COC GIG 1X12X200 PAÑOS",
+        "oldCode": "4045",
+        "cleanedName": "SOL MAYOR ROLLO COC GIG 1X12X200 PAÑOS",
+        "margin": 30
+      },
+      "dbProduct": {
+        "id": 52,
+        "sku": "0393",
+        "name": "SOL MAYOR ROLLO COC GIG 1X12X200 PAÑOS",
+        "currentMargin": "1.25",
+        "costPrice": "16746.77",
+        "listPrice": "20933.46"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 277,
+        "category": "ROLLOS DE COCINA",
+        "rawProduct": "4046 - CAMPANITA PRACTIROLLO 1X12X200PAÑOS",
+        "oldCode": "4046",
+        "cleanedName": "CAMPANITA PRACTIROLLO 1X12X200PAÑOS",
+        "margin": 30
+      },
+      "dbProduct": {
+        "id": 49,
+        "sku": "0390",
+        "name": "CAMPANITA PRACTIROLLO 1X12X200PAÑOS",
+        "currentMargin": "1.25",
+        "costPrice": "20628.48",
+        "listPrice": "25785.6"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 279,
+        "category": "PASTAS SECAS",
+        "rawProduct": "4801 - 308 NIDO HUEVO No1 x500gr",
+        "oldCode": "4801",
+        "cleanedName": "308 NIDO HUEVO No1 x500gr",
+        "margin": 30
+      },
+      "dbProduct": {
+        "id": 100,
+        "sku": "0346",
+        "name": "308 NIDO HUEVO No1 x500gr",
+        "currentMargin": "1.25",
+        "costPrice": "1450.4",
+        "listPrice": "1813"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 280,
+        "category": "PASTAS SECAS",
+        "rawProduct": "4802 - 308 NIDO HUEVO No2 x500gr",
+        "oldCode": "4802",
+        "cleanedName": "308 NIDO HUEVO No2 x500gr",
+        "margin": 30
+      },
+      "dbProduct": {
+        "id": 101,
+        "sku": "0347",
+        "name": "308 NIDO HUEVO No2 x500gr",
+        "currentMargin": "1.25",
+        "costPrice": "1450.4",
+        "listPrice": "1813"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 281,
+        "category": "PASTAS SECAS",
+        "rawProduct": "4803 - 308 NIDO HUEVO No3 x500gr",
+        "oldCode": "4803",
+        "cleanedName": "308 NIDO HUEVO No3 x500gr",
+        "margin": 30
+      },
+      "dbProduct": {
+        "id": 102,
+        "sku": "0348",
+        "name": "308 NIDO HUEVO No3 x500gr",
+        "currentMargin": "1.25",
+        "costPrice": "1450.4",
+        "listPrice": "1813"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 282,
+        "category": "PASTAS SECAS",
+        "rawProduct": "4804 - 308 NIDO HUEVO No4 X500gr",
+        "oldCode": "4804",
+        "cleanedName": "308 NIDO HUEVO No4 X500gr",
+        "margin": 30
+      },
+      "dbProduct": {
+        "id": 103,
+        "sku": "0349",
+        "name": "308 NIDO HUEVO No4 X500gr",
+        "currentMargin": "1.25",
+        "costPrice": "1450.4",
+        "listPrice": "1813"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 284,
+        "category": "PASTAS SECAS",
+        "rawProduct": "4808 - 308 CABELLO HUEVO X500gr",
+        "oldCode": "4808",
+        "cleanedName": "308 CABELLO HUEVO X500gr",
+        "margin": 30
+      },
+      "dbProduct": {
+        "id": 41,
+        "sku": "0341",
+        "name": "308 CABELLO HUEVO X500gr",
+        "currentMargin": "1.25",
+        "costPrice": "1436.98",
+        "listPrice": "1796.22"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 285,
+        "category": "PASTAS SECAS",
+        "rawProduct": "4812 - 308 NIDOS ESPINACA X500gr",
+        "oldCode": "4812",
+        "cleanedName": "308 NIDOS ESPINACA X500gr",
+        "margin": 30
+      },
+      "dbProduct": {
+        "id": 104,
+        "sku": "0350",
+        "name": "308 NIDOS ESPINACA X500gr",
+        "currentMargin": "1.25",
+        "costPrice": "1527.2",
+        "listPrice": "1909"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 286,
+        "category": "PASTAS SECAS",
+        "rawProduct": "4813 - 308 TIRABUZON TRISABOR x 500gr",
+        "oldCode": "4813",
+        "cleanedName": "308 TIRABUZON TRISABOR x 500gr",
+        "margin": 30
+      },
+      "dbProduct": {
+        "id": 8,
+        "sku": "0354",
+        "name": "308 TIRABUZON TRISABOR x 500gr",
+        "currentMargin": "1.25",
+        "costPrice": "1032.8",
+        "listPrice": "1291"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 287,
+        "category": "PASTAS SECAS",
+        "rawProduct": "4816 - 308 TRISABOR MOSTACHOL x 500gr",
+        "oldCode": "4816",
+        "cleanedName": "308 TRISABOR MOSTACHOL x 500gr",
+        "margin": 30
+      },
+      "dbProduct": {
+        "id": 9,
+        "sku": "0355",
+        "name": "308 TRISABOR MOSTACHOL x 500gr",
+        "currentMargin": "1.25",
+        "costPrice": "1032.8",
+        "listPrice": "1291"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 288,
+        "category": "PASTAS SECAS",
+        "rawProduct": "4823 - 308 TIRABUZON HUEVO x 500gr",
+        "oldCode": "4823",
+        "cleanedName": "308 TIRABUZON HUEVO x 500gr",
+        "margin": 30
+      },
+      "dbProduct": {
+        "id": 6,
+        "sku": "0353",
+        "name": "308 TIRABUZON HUEVO x 500gr",
+        "currentMargin": "1.25",
+        "costPrice": "915.2",
+        "listPrice": "1144"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 289,
+        "category": "PASTAS SECAS",
+        "rawProduct": "4824 - 308 MOSTACHOL HUEVO x 500gr",
+        "oldCode": "4824",
+        "cleanedName": "308 MOSTACHOL HUEVO x 500gr",
+        "margin": 30
+      },
+      "dbProduct": {
+        "id": 44,
+        "sku": "0344",
+        "name": "308 MOSTACHOL HUEVO x 500gr",
+        "currentMargin": "1.25",
+        "costPrice": "915.2",
+        "listPrice": "1144"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 290,
+        "category": "PASTAS SECAS",
+        "rawProduct": "4825 - 308 CODO GDE HUEVO x 500gr",
+        "oldCode": "4825",
+        "cleanedName": "308 CODO GDE HUEVO x 500gr",
+        "margin": 30
+      },
+      "dbProduct": {
+        "id": 43,
+        "sku": "0343",
+        "name": "308 CODO GDE HUEVO x 500gr",
+        "currentMargin": "1.25",
+        "costPrice": "915.2",
+        "listPrice": "1144"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 291,
+        "category": "PASTAS SECAS",
+        "rawProduct": "4827 - 308 TALLARIN N°2 MORRON x500gr",
+        "oldCode": "4827",
+        "cleanedName": "308 TALLARIN N°2 MORRON x500gr",
+        "margin": 30
+      },
+      "dbProduct": {
+        "id": 5,
+        "sku": "0352",
+        "name": "308 TALLARIN N°2 MORRON x500gr",
+        "currentMargin": "1.25",
+        "costPrice": "1398.4",
+        "listPrice": "1748"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 292,
+        "category": "PASTAS SECAS",
+        "rawProduct": "4850 - GIACOMO CARNE x 500 gr",
+        "oldCode": "4850",
+        "cleanedName": "GIACOMO CARNE x 500 gr",
+        "margin": 25
+      },
+      "dbProduct": {
+        "id": 15,
+        "sku": "0361",
+        "name": "GIACOMO CARNE x 500 gr",
+        "currentMargin": "1.25",
+        "costPrice": "3535.2",
+        "listPrice": "4419"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 293,
+        "category": "PASTAS SECAS",
+        "rawProduct": "4851 - GIACOMO JAMON Y QUESO x 500gr",
+        "oldCode": "4851",
+        "cleanedName": "GIACOMO JAMON Y QUESO x 500gr",
+        "margin": 25
+      },
+      "dbProduct": {
+        "id": 16,
+        "sku": "0362",
+        "name": "GIACOMO JAMON Y QUESO x 500gr",
+        "currentMargin": "1.25",
+        "costPrice": "3535.2",
+        "listPrice": "4419"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 294,
+        "category": "PASTAS SECAS",
+        "rawProduct": "4852 - GIACOMO TRIDICCI x 500gr",
+        "oldCode": "4852",
+        "cleanedName": "GIACOMO TRIDICCI x 500gr",
+        "margin": 25
+      },
+      "dbProduct": {
+        "id": 18,
+        "sku": "0364",
+        "name": "GIACOMO TRIDICCI x 500gr",
+        "currentMargin": "1.25",
+        "costPrice": "3535.2",
+        "listPrice": "4419"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 295,
+        "category": "PASTAS SECAS",
+        "rawProduct": "4853 - GIACOMO VERDURA x 500gr",
+        "oldCode": "4853",
+        "cleanedName": "GIACOMO VERDURA x 500gr",
+        "margin": 25
+      },
+      "dbProduct": {
+        "id": 19,
+        "sku": "0365",
+        "name": "GIACOMO VERDURA x 500gr",
+        "currentMargin": "1.25",
+        "costPrice": "3535.2",
+        "listPrice": "4419"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 298,
+        "category": "PESCADERIA",
+        "rawProduct": "805 - CUMANA ATUN DESM.ACEITEx170g",
+        "oldCode": "805",
+        "cleanedName": "CUMANA ATUN DESM.ACEITEx170g",
+        "margin": 25
+      },
+      "dbProduct": {
+        "id": 30,
+        "sku": "0310",
+        "name": "CUMANA ATUN DESM.ACEITEx170g",
+        "currentMargin": "1.25",
+        "costPrice": "959.2",
+        "listPrice": "1199"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 301,
+        "category": "PESCADERIA",
+        "rawProduct": "825 - MARECHIARE MERLUZA NAT X380gr",
+        "oldCode": "825",
+        "cleanedName": "MARECHIARE MERLUZA NAT X380gr",
+        "margin": 25
+      },
+      "dbProduct": {
+        "id": 39,
+        "sku": "0318",
+        "name": "MARECHIARE MERLUZA NAT X380gr",
+        "currentMargin": "1.25",
+        "costPrice": "2754.82",
+        "listPrice": "3443.52"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 302,
+        "category": "PESCADERIA",
+        "rawProduct": "830 - CUMANA ATUN DESM.NAT x170g",
+        "oldCode": "830",
+        "cleanedName": "CUMANA ATUN DESM.NAT x170g",
+        "margin": 25
+      },
+      "dbProduct": {
+        "id": 31,
+        "sku": "0311",
+        "name": "CUMANA ATUN DESM.NAT x170g",
+        "currentMargin": "1.25",
+        "costPrice": "959.2",
+        "listPrice": "1199"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 306,
+        "category": "PESCADERIA",
+        "rawProduct": "841 - CUMANA ATUN LOMO ACEITE x170gr",
+        "oldCode": "841",
+        "cleanedName": "CUMANA ATUN LOMO ACEITE x170gr",
+        "margin": 25
+      },
+      "dbProduct": {
+        "id": 32,
+        "sku": "0312",
+        "name": "CUMANA ATUN LOMO ACEITE x170gr",
+        "currentMargin": "1.25",
+        "costPrice": "2132.21",
+        "listPrice": "2665.26"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 307,
+        "category": "PESCADERIA",
+        "rawProduct": "842 - CUMANA CABALLA NATURAL x380gr",
+        "oldCode": "842",
+        "cleanedName": "CUMANA CABALLA NATURAL x380gr",
+        "margin": 25
+      },
+      "dbProduct": {
+        "id": 36,
+        "sku": "0315",
+        "name": "CUMANA CABALLA NATURAL x380gr",
+        "currentMargin": "1.25",
+        "costPrice": "3591.2",
+        "listPrice": "4489"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 313,
+        "category": "CREMIGAL",
+        "rawProduct": "355 - CREMIGAL QUESO CREMA ORIGINAL x 4KG",
+        "oldCode": "355",
+        "cleanedName": "CREMIGAL QUESO CREMA ORIGINAL x 4KG",
+        "margin": 30
+      },
+      "dbProduct": {
+        "id": 205,
+        "sku": "0070",
+        "name": "CREMIGAL QUESO CREMA ORIGINAL x 4KG",
+        "currentMargin": "1.25",
+        "costPrice": "28190.4",
+        "listPrice": "35238"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 325,
+        "category": "REGALERIA",
+        "rawProduct": "1271 - ALAMBRADO MALBEC 1x750 ml ESTUCHE",
+        "oldCode": "1271",
+        "cleanedName": "ALAMBRADO MALBEC 1x750 ml ESTUCHE",
+        "margin": 30
+      },
+      "dbProduct": {
+        "id": 53,
+        "sku": "0410",
+        "name": "ALAMBRADO MALBEC 1x750 ml ESTUCHE",
+        "currentMargin": "1.25",
+        "costPrice": "8167.34",
+        "listPrice": "10209.18"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 326,
+        "category": "REGALERIA",
+        "rawProduct": "1272 - STA. JULIA MALBEC 1x750 ml ESTUCHE",
+        "oldCode": "1272",
+        "cleanedName": "STA. JULIA MALBEC 1x750 ml ESTUCHE",
+        "margin": 30
+      },
+      "dbProduct": {
+        "id": 55,
+        "sku": "0412",
+        "name": "STA. JULIA MALBEC 1x750 ml ESTUCHE",
+        "currentMargin": "1.25",
+        "costPrice": "6932.8",
+        "listPrice": "8666"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 332,
+        "category": "MELINCUE",
+        "rawProduct": "100 - MELINCUE RALLADO X 40 gr",
+        "oldCode": "100",
+        "cleanedName": "MELINCUE RALLADO X 40 gr",
+        "margin": 35
+      },
+      "dbProduct": {
+        "id": 186,
+        "sku": "0091",
+        "name": "MELINCUE RALLADO X 40 gr",
+        "currentMargin": "1.25",
+        "costPrice": "22020.58",
+        "listPrice": "27525.72"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 334,
+        "category": "MELINCUE",
+        "rawProduct": "108 - MELINCUE POR SALUT x KG",
+        "oldCode": "108",
+        "cleanedName": "MELINCUE POR SALUT x KG",
+        "margin": 35
+      },
+      "dbProduct": {
+        "id": 154,
+        "sku": "0014",
+        "name": "MELINCUE POR SALUT x KG",
+        "currentMargin": "1.25",
+        "costPrice": "7976",
+        "listPrice": "9970"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 336,
+        "category": "MELINCUE",
+        "rawProduct": "110 - MELINCUE BARRA TYBO x KG",
+        "oldCode": "110",
+        "cleanedName": "MELINCUE BARRA TYBO x KG",
+        "margin": 35
+      },
+      "dbProduct": {
+        "id": 204,
+        "sku": "0001",
+        "name": "MELINCUE BARRA TYBO x KG",
+        "currentMargin": "1.25",
+        "costPrice": "9131.2",
+        "listPrice": "11414"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 337,
+        "category": "MELINCUE",
+        "rawProduct": "111 - MELINCUE PATEGRAS x KG",
+        "oldCode": "111",
+        "cleanedName": "MELINCUE PATEGRAS x KG",
+        "margin": 35
+      },
+      "dbProduct": {
+        "id": 152,
+        "sku": "0012",
+        "name": "MELINCUE PATEGRAS x KG",
+        "currentMargin": "1.25",
+        "costPrice": "12428.8",
+        "listPrice": "15536"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 339,
+        "category": "MELINCUE",
+        "rawProduct": "113 - MELINCUE REGG.1/2 HORMA x KG",
+        "oldCode": "113",
+        "cleanedName": "MELINCUE REGG.1/2 HORMA x KG",
+        "margin": 35
+      },
+      "dbProduct": {
+        "id": 156,
+        "sku": "0016",
+        "name": "MELINCUE REGG.1/2 HORMA x KG",
+        "currentMargin": "1.25",
+        "costPrice": "14965.6",
+        "listPrice": "18707"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 340,
+        "category": "MELINCUE",
+        "rawProduct": "114 - MELINCUE MOZZARELLA BARRA x KG",
+        "oldCode": "114",
+        "cleanedName": "MELINCUE MOZZARELLA BARRA x KG",
+        "margin": 35
+      },
+      "dbProduct": {
+        "id": 116,
+        "sku": "0008",
+        "name": "MELINCUE MOZZARELLA BARRA x KG",
+        "currentMargin": "1.25",
+        "costPrice": "9706.4",
+        "listPrice": "12133"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 341,
+        "category": "MELINCUE",
+        "rawProduct": "116 - MELINCUE P.SALUT S/SAL Kg",
+        "oldCode": "116",
+        "cleanedName": "MELINCUE P.SALUT S/SAL Kg",
+        "margin": 35
+      },
+      "dbProduct": {
+        "id": 2,
+        "sku": "0010",
+        "name": "MELINCUE P.SALUT S/SAL Kg",
+        "currentMargin": "1.25",
+        "costPrice": "10364",
+        "listPrice": "12955"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 342,
+        "category": "MELINCUE",
+        "rawProduct": "117 - MELINCUE P.SALUT EQUILIBRIO x KG",
+        "oldCode": "117",
+        "cleanedName": "MELINCUE P.SALUT EQUILIBRIO x KG",
+        "margin": 35
+      },
+      "dbProduct": {
+        "id": 117,
+        "sku": "0009",
+        "name": "MELINCUE P.SALUT EQUILIBRIO x KG",
+        "currentMargin": "1.25",
+        "costPrice": "8652.8",
+        "listPrice": "10816"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 344,
+        "category": "MELINCUE",
+        "rawProduct": "119 - MELINCUE GOUDA x Kg",
+        "oldCode": "119",
+        "cleanedName": "MELINCUE GOUDA x Kg",
+        "margin": 35
+      },
+      "dbProduct": {
+        "id": 114,
+        "sku": "0006",
+        "name": "MELINCUE GOUDA x Kg",
+        "currentMargin": "1.25",
+        "costPrice": "12031.2",
+        "listPrice": "15039"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 345,
+        "category": "MELINCUE",
+        "rawProduct": "121 - MELINCUE SBRINZ 1/2 HORMA x KG",
+        "oldCode": "121",
+        "cleanedName": "MELINCUE SBRINZ 1/2 HORMA x KG",
+        "margin": 35
+      },
+      "dbProduct": {
+        "id": 159,
+        "sku": "0019",
+        "name": "MELINCUE SBRINZ 1/2 HORMA x KG",
+        "currentMargin": "1.25",
+        "costPrice": "18759.2",
+        "listPrice": "23449"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 346,
+        "category": "MELINCUE",
+        "rawProduct": "122 - MELINCUE GOYA x Kg",
+        "oldCode": "122",
+        "cleanedName": "MELINCUE GOYA x Kg",
+        "margin": 35
+      },
+      "dbProduct": {
+        "id": 115,
+        "sku": "0007",
+        "name": "MELINCUE GOYA x Kg",
+        "currentMargin": "1.25",
+        "costPrice": "14361.6",
+        "listPrice": "17952"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 347,
+        "category": "MELINCUE",
+        "rawProduct": "123 - MELINCUE PEPATO x Kg",
+        "oldCode": "123",
+        "cleanedName": "MELINCUE PEPATO x Kg",
+        "margin": 35
+      },
+      "dbProduct": {
+        "id": 153,
+        "sku": "0013",
+        "name": "MELINCUE PEPATO x Kg",
+        "currentMargin": "1.25",
+        "costPrice": "14832",
+        "listPrice": "18540"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 348,
+        "category": "MELINCUE",
+        "rawProduct": "124 - MELINCUE FONTINA PICANTE x Kg",
+        "oldCode": "124",
+        "cleanedName": "MELINCUE FONTINA PICANTE x Kg",
+        "margin": 35
+      },
+      "dbProduct": {
+        "id": 112,
+        "sku": "0004",
+        "name": "MELINCUE FONTINA PICANTE x Kg",
+        "currentMargin": "1.25",
+        "costPrice": "14361.6",
+        "listPrice": "17952"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 349,
+        "category": "MELINCUE",
+        "rawProduct": "125 - MELINCUE MANTECA 5KG",
+        "oldCode": "125",
+        "cleanedName": "MELINCUE MANTECA 5KG",
+        "margin": 35
+      },
+      "dbProduct": {
+        "id": 176,
+        "sku": "0059",
+        "name": "MELINCUE MANTECA 5KG",
+        "currentMargin": "1.25",
+        "costPrice": "58647.2",
+        "listPrice": "73309"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 350,
+        "category": "MELINCUE",
+        "rawProduct": "127 - MELINCUE PARRIQUESO kg",
+        "oldCode": "127",
+        "cleanedName": "MELINCUE PARRIQUESO kg",
+        "margin": 35
+      },
+      "dbProduct": {
+        "id": 151,
+        "sku": "0011",
+        "name": "MELINCUE PARRIQUESO kg",
+        "currentMargin": "1.25",
+        "costPrice": "15992",
+        "listPrice": "19990"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 351,
+        "category": "MELINCUE",
+        "rawProduct": "129 - MELINCUE CHEDDAR X KG",
+        "oldCode": "129",
+        "cleanedName": "MELINCUE CHEDDAR X KG",
+        "margin": 35
+      },
+      "dbProduct": {
+        "id": 7,
+        "sku": "0002",
+        "name": "MELINCUE CHEDDAR X KG",
+        "currentMargin": "1.25",
+        "costPrice": "11084.8",
+        "listPrice": "13856"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 355,
+        "category": "MELINCUE",
+        "rawProduct": "140 - MELINCUE QUESO AZUL x KG",
+        "oldCode": "140",
+        "cleanedName": "MELINCUE QUESO AZUL x KG",
+        "margin": 35
+      },
+      "dbProduct": {
+        "id": 155,
+        "sku": "0015",
+        "name": "MELINCUE QUESO AZUL x KG",
+        "currentMargin": "1.25",
+        "costPrice": "14556.8",
+        "listPrice": "18196"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 356,
+        "category": "MELINCUE",
+        "rawProduct": "141 - MELINCUE REGG.HORMA ENTERA X KG",
+        "oldCode": "141",
+        "cleanedName": "MELINCUE REGG.HORMA ENTERA X KG",
+        "margin": 35
+      },
+      "dbProduct": {
+        "id": 157,
+        "sku": "0017",
+        "name": "MELINCUE REGG.HORMA ENTERA X KG",
+        "currentMargin": "1.25",
+        "costPrice": "13852",
+        "listPrice": "17315"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 358,
+        "category": "SANCOR y CREMIGAL",
+        "rawProduct": "107 - MELINCUE CREMOSO x KG",
+        "oldCode": "107",
+        "cleanedName": "MELINCUE CREMOSO x KG",
+        "margin": 30
+      },
+      "dbProduct": {
+        "id": 33,
+        "sku": "0003",
+        "name": "MELINCUE CREMOSO x KG",
+        "currentMargin": "1.25",
+        "costPrice": "7423.2",
+        "listPrice": "9279"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 360,
+        "category": "CREMAS",
+        "rawProduct": "297 - CREMIGAL CREMA DE LECHE x 190gr",
+        "oldCode": "297",
+        "cleanedName": "CREMIGAL CREMA DE LECHE x 190gr",
+        "margin": 30
+      },
+      "dbProduct": {
+        "id": 168,
+        "sku": "0051",
+        "name": "CREMIGAL CREMA DE LECHE x 190gr",
+        "currentMargin": "1.25",
+        "costPrice": "1475.2",
+        "listPrice": "1844"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 372,
+        "category": "MIEL",
+        "rawProduct": "5502 - AL.BAS.MIEL G.ROSALIA 500gr",
+        "oldCode": "5502",
+        "cleanedName": "AL.BAS.MIEL G.ROSALIA 500gr",
+        "margin": 30
+      },
+      "dbProduct": {
+        "id": 178,
+        "sku": "0061",
+        "name": "AL.BAS.MIEL G.ROSALIA 500gr",
+        "currentMargin": "1.25",
+        "costPrice": "1921.4",
+        "listPrice": "2401.75"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 373,
+        "category": "MIEL",
+        "rawProduct": "5503 - AL.BAS.MIEL G.ROSALIA 250gr",
+        "oldCode": "5503",
+        "cleanedName": "AL.BAS.MIEL G.ROSALIA 250gr",
+        "margin": 30
+      },
+      "dbProduct": {
+        "id": 177,
+        "sku": "0060",
+        "name": "AL.BAS.MIEL G.ROSALIA 250gr",
+        "currentMargin": "1.25",
+        "costPrice": "1198.4",
+        "listPrice": "1498"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 375,
+        "category": "QUESOS SEMIDUROS",
+        "rawProduct": "0292 - CREMIGAL MOZZARELLA CILINDRO x KG",
+        "oldCode": "0292",
+        "cleanedName": "CREMIGAL MOZZARELLA CILINDRO x KG",
+        "margin": 30
+      },
+      "dbProduct": {
+        "id": 27,
+        "sku": "0292",
+        "name": "SAN VICENTE AZUCAR 10X1kg",
+        "currentMargin": "1.25",
+        "costPrice": "11128",
+        "listPrice": "13910"
+      },
+      "matchMethod": "SKU (oldCode)"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 379,
+        "category": "QUESOS SEMIDUROS",
+        "rawProduct": "294 - CREMIGAL QUESO POR SALUT SIN SAL x KG",
+        "oldCode": "294",
+        "cleanedName": "CREMIGAL QUESO POR SALUT SIN SAL x KG",
+        "margin": 30
+      },
+      "dbProduct": {
+        "id": 180,
+        "sku": "0063",
+        "name": "CREMIGAL QUESO POR SALUT SIN SAL x KG",
+        "currentMargin": "1.25",
+        "costPrice": "9310.56",
+        "listPrice": "11638.2"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 381,
+        "category": "QUESOS UNTABLES",
+        "rawProduct": "301 - CREMIGAL Q.UNTABLE CLASICO x 190 gr",
+        "oldCode": "301",
+        "cleanedName": "CREMIGAL Q.UNTABLE CLASICO x 190 gr",
+        "margin": 30
+      },
+      "dbProduct": {
+        "id": 182,
+        "sku": "0067",
+        "name": "CREMIGAL Q.UNTABLE CLASICO x 190 gr",
+        "currentMargin": "1.25",
+        "costPrice": "1486.4",
+        "listPrice": "1858"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 383,
+        "category": "QUESOS UNTABLES",
+        "rawProduct": "303 - CREMIGAL Q.UNTABLE JAMON x 190gr",
+        "oldCode": "303",
+        "cleanedName": "CREMIGAL Q.UNTABLE JAMON x 190gr",
+        "margin": 30
+      },
+      "dbProduct": {
+        "id": 183,
+        "sku": "0068",
+        "name": "CREMIGAL Q.UNTABLE JAMON x 190gr",
+        "currentMargin": "1.25",
+        "costPrice": "1486.4",
+        "listPrice": "1858"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 384,
+        "category": "QUESOS UNTABLES",
+        "rawProduct": "304 - CREMIGAL Q.UNTABLE CHEDDAR x 190 gr",
+        "oldCode": "304",
+        "cleanedName": "CREMIGAL Q.UNTABLE CHEDDAR x 190 gr",
+        "margin": 30
+      },
+      "dbProduct": {
+        "id": 181,
+        "sku": "0066",
+        "name": "CREMIGAL Q.UNTABLE CHEDDAR x 190 gr",
+        "currentMargin": "1.25",
+        "costPrice": "1486.4",
+        "listPrice": "1858"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 385,
+        "category": "QUESOS UNTABLES",
+        "rawProduct": "305 - CREMIGAL Q.UNTABLE AZUL x 190gr",
+        "oldCode": "305",
+        "cleanedName": "CREMIGAL Q.UNTABLE AZUL x 190gr",
+        "margin": 30
+      },
+      "dbProduct": {
+        "id": 111,
+        "sku": "0065",
+        "name": "CREMIGAL Q.UNTABLE AZUL x 190gr",
+        "currentMargin": "1.25",
+        "costPrice": "1486.4",
+        "listPrice": "1858"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 386,
+        "category": "QUESOS UNTABLES",
+        "rawProduct": "306 - CREMIGAL QUESO CREMA x 290gr",
+        "oldCode": "306",
+        "cleanedName": "CREMIGAL QUESO CREMA x 290gr",
+        "margin": 30
+      },
+      "dbProduct": {
+        "id": 247,
+        "sku": "0071",
+        "name": "CREMIGAL QUESO CREMA x 290gr",
+        "currentMargin": "1.25",
+        "costPrice": "2246.4",
+        "listPrice": "2808"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 388,
+        "category": "SODECAR",
+        "rawProduct": "7608 - FIAMBRE DE CERDO H. CHICA x KG",
+        "oldCode": "7608",
+        "cleanedName": "FIAMBRE DE CERDO H. CHICA x KG",
+        "margin": 30
+      },
+      "dbProduct": {
+        "id": 208,
+        "sku": "0099",
+        "name": "FIAMBRE DE CERDO H. CHICA x KG",
+        "currentMargin": "1.25",
+        "costPrice": "7225.68",
+        "listPrice": "9032.1"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 389,
+        "category": "SODECAR",
+        "rawProduct": "7613 - BONDIOLA VAC. HORMA x KG",
+        "oldCode": "7613",
+        "cleanedName": "BONDIOLA VAC. HORMA x KG",
+        "margin": 30
+      },
+      "dbProduct": {
+        "id": 207,
+        "sku": "0098",
+        "name": "BONDIOLA VAC. HORMA x KG",
+        "currentMargin": "1.25",
+        "costPrice": "21460.8",
+        "listPrice": "26826"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 390,
+        "category": "SODECAR",
+        "rawProduct": "7619 - FIAMBRE DE CERDO RECTANGULAR x KG",
+        "oldCode": "7619",
+        "cleanedName": "FIAMBRE DE CERDO RECTANGULAR x KG",
+        "margin": 30
+      },
+      "dbProduct": {
+        "id": 209,
+        "sku": "0100",
+        "name": "FIAMBRE DE CERDO RECTANGULAR x KG",
+        "currentMargin": "1.25",
+        "costPrice": "4935.98",
+        "listPrice": "6169.98"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 391,
+        "category": "SODECAR",
+        "rawProduct": "7625 - SALAME CANTIMPALO LC. x KG",
+        "oldCode": "7625",
+        "cleanedName": "SALAME CANTIMPALO LC. x KG",
+        "margin": 30
+      },
+      "dbProduct": {
+        "id": 213,
+        "sku": "0104",
+        "name": "SALAME CANTIMPALO LC. x KG",
+        "currentMargin": "1.25",
+        "costPrice": "15690.05",
+        "listPrice": "19612.56"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 392,
+        "category": "SODECAR",
+        "rawProduct": "7637 - SALAME MILAN LA CASONA x KG",
+        "oldCode": "7637",
+        "cleanedName": "SALAME MILAN LA CASONA x KG",
+        "margin": 30
+      },
+      "dbProduct": {
+        "id": 214,
+        "sku": "0105",
+        "name": "SALAME MILAN LA CASONA x KG",
+        "currentMargin": "1.25",
+        "costPrice": "12490.51",
+        "listPrice": "15613.14"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 393,
+        "category": "SODECAR",
+        "rawProduct": "7640 - SALAME x METRO BASTON P.GRUESO x KG",
+        "oldCode": "7640",
+        "cleanedName": "SALAME x METRO BASTON P.GRUESO x KG",
+        "margin": 30
+      },
+      "dbProduct": {
+        "id": 215,
+        "sku": "0106",
+        "name": "SALAME x METRO BASTON P.GRUESO x KG",
+        "currentMargin": "1.25",
+        "costPrice": "16128.24",
+        "listPrice": "20160.3"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 394,
+        "category": "SODECAR",
+        "rawProduct": "7647 - JAMON CRUDO LA CASONA x KG",
+        "oldCode": "7647",
+        "cleanedName": "JAMON CRUDO LA CASONA x KG",
+        "margin": 30
+      },
+      "dbProduct": {
+        "id": 211,
+        "sku": "0102",
+        "name": "JAMON CRUDO LA CASONA x KG",
+        "currentMargin": "1.25",
+        "costPrice": "43183.54",
+        "listPrice": "53979.42"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 398,
+        "category": "YERBAS",
+        "rawProduct": "9000 - AMANDA YERBA 10x500gr",
+        "oldCode": "9000",
+        "cleanedName": "AMANDA YERBA 10x500gr",
+        "margin": 22
+      },
+      "dbProduct": {
+        "id": 96,
+        "sku": "0275",
+        "name": "AMANDA YERBA 10x500gr",
+        "currentMargin": "1.25",
+        "costPrice": "13054.37",
+        "listPrice": "16317.96"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 399,
+        "category": "YERBAS",
+        "rawProduct": "9001 - AMANDA YERBA 10x1KG",
+        "oldCode": "9001",
+        "cleanedName": "AMANDA YERBA 10x1KG",
+        "margin": 22
+      },
+      "dbProduct": {
+        "id": 97,
+        "sku": "0276",
+        "name": "AMANDA YERBA 10x1KG",
+        "currentMargin": "1.25",
+        "costPrice": "22392",
+        "listPrice": "27990"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 401,
+        "category": "YERBAS",
+        "rawProduct": "9003 - ANDRESITO YERBA 10x1Kg",
+        "oldCode": "9003",
+        "cleanedName": "ANDRESITO YERBA 10x1Kg",
+        "margin": 25
+      },
+      "dbProduct": {
+        "id": 21,
+        "sku": "0279",
+        "name": "ANDRESITO YERBA 10x1Kg",
+        "currentMargin": "1.25",
+        "costPrice": "22234.4",
+        "listPrice": "27793"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 402,
+        "category": "YERBAS",
+        "rawProduct": "9004 - PLAYADITO YERBA 10X500gr",
+        "oldCode": "9004",
+        "cleanedName": "PLAYADITO YERBA 10X500gr",
+        "margin": 20
+      },
+      "dbProduct": {
+        "id": 24,
+        "sku": "0282",
+        "name": "PLAYADITO YERBA 10X500gr",
+        "currentMargin": "1.25",
+        "costPrice": "18304.8",
+        "listPrice": "22881"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 403,
+        "category": "YERBAS",
+        "rawProduct": "9005 - PLAYADITO YERBA 10X1 kg",
+        "oldCode": "9005",
+        "cleanedName": "PLAYADITO YERBA 10X1 kg",
+        "margin": 20
+      },
+      "dbProduct": {
+        "id": 23,
+        "sku": "0281",
+        "name": "PLAYADITO YERBA 10X1 kg",
+        "currentMargin": "1.25",
+        "costPrice": "34706.11",
+        "listPrice": "43382.64"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    },
+    {
+      "excelRow": {
+        "rowIndex": 406,
+        "category": "YERBAS",
+        "rawProduct": "9009 - AMANDA YERBA PREMIUM CAJA x500gr",
+        "oldCode": "9009",
+        "cleanedName": "AMANDA YERBA PREMIUM CAJA x500gr",
+        "margin": 25
+      },
+      "dbProduct": {
+        "id": 20,
+        "sku": "0278",
+        "name": "AMANDA YERBA PREMIUM CAJA x500gr",
+        "currentMargin": "1.25",
+        "costPrice": "1916.78",
+        "listPrice": "2395.98"
+      },
+      "matchMethod": "Exact Cleaned Name"
+    }
+  ],
+  "unmatchedItems": [
+    {
+      "rowIndex": 5,
+      "category": "ACEITES Y VINAGRES",
+      "rawProduct": "2104 - COCINERO ACEIT SOJA/GIRASOL x 900 ml",
+      "oldCode": "2104",
+      "cleanedName": "COCINERO ACEIT SOJA/GIRASOL x 900 ml",
+      "margin": 21
+    },
+    {
+      "rowIndex": 6,
+      "category": "ACEITES Y VINAGRES",
+      "rawProduct": "2106 - COCINERO ACEITE GIR. 1.5cc",
+      "oldCode": "2106",
+      "cleanedName": "COCINERO ACEITE GIR. 1.5cc",
+      "margin": 21
+    },
+    {
+      "rowIndex": 15,
+      "category": "ACEITES Y VINAGRES",
+      "rawProduct": "2134 - MAROLIO ACEIT MEZCLA.x900ml",
+      "oldCode": "2134",
+      "cleanedName": "MAROLIO ACEIT MEZCLA.x900ml",
+      "margin": 30
+    },
+    {
+      "rowIndex": 18,
+      "category": "ACEITES Y VINAGRES",
+      "rawProduct": "2140 - COCINERO ACEITE SOJA/GIRASOL x 1.5cc",
+      "oldCode": "2140",
+      "cleanedName": "COCINERO ACEITE SOJA/GIRASOL x 1.5cc",
+      "margin": 21
+    },
+    {
+      "rowIndex": 20,
+      "category": "ACEITES Y VINAGRES",
+      "rawProduct": "4050 - MOLTO VINAGRE BCO x 1LT",
+      "oldCode": "4050",
+      "cleanedName": "MOLTO VINAGRE BCO x 1LT",
+      "margin": 30
+    },
+    {
+      "rowIndex": 21,
+      "category": "ACEITES Y VINAGRES",
+      "rawProduct": "4051 - MAROLIO VINAGRE VINO x 500ml",
+      "oldCode": "4051",
+      "cleanedName": "MAROLIO VINAGRE VINO x 500ml",
+      "margin": 30
+    },
+    {
+      "rowIndex": 28,
+      "category": "ADEREZOS",
+      "rawProduct": "2155 - NATURA MAYONESA X2970gr SACHET",
+      "oldCode": "2155",
+      "cleanedName": "NATURA MAYONESA X2970gr SACHET",
+      "margin": 30
+    },
+    {
+      "rowIndex": 34,
+      "category": "ADEREZOS",
+      "rawProduct": "2168 - NATURA KETCHUP x 3KG",
+      "oldCode": "2168",
+      "cleanedName": "NATURA KETCHUP x 3KG",
+      "margin": 25
+    },
+    {
+      "rowIndex": 39,
+      "category": "ARROZ",
+      "rawProduct": "4022 - MONARCA ARROZ 10x500gr",
+      "oldCode": "4022",
+      "cleanedName": "MONARCA ARROZ 10x500gr",
+      "margin": 30
+    },
+    {
+      "rowIndex": 41,
+      "category": "ARROZ",
+      "rawProduct": "4026 - EL DIQUE ARROZ 10X1KG",
+      "oldCode": "4026",
+      "cleanedName": "EL DIQUE ARROZ 10X1KG",
+      "margin": 30
+    },
+    {
+      "rowIndex": 43,
+      "category": "AZUCAR",
+      "rawProduct": "10178 - LEDESMA AZUCAR MASCABO X 800GR",
+      "oldCode": "10178",
+      "cleanedName": "LEDESMA AZUCAR MASCABO X 800GR",
+      "margin": 21
+    },
+    {
+      "rowIndex": 47,
+      "category": "BEBIDAS",
+      "rawProduct": "AGUAS SABORIZADAS Y JUGOS",
+      "oldCode": null,
+      "cleanedName": "AGUAS SABORIZADAS Y JUGOS",
+      "margin": 30
+    },
+    {
+      "rowIndex": 48,
+      "category": "BEBIDAS",
+      "rawProduct": "2018 - BAGGIO AGUA SAB. NARANJA 6x1500c",
+      "oldCode": "2018",
+      "cleanedName": "BAGGIO AGUA SAB. NARANJA 6x1500c",
+      "margin": 30
+    },
+    {
+      "rowIndex": 49,
+      "category": "BEBIDAS",
+      "rawProduct": "AGUAS Y SODAS",
+      "oldCode": null,
+      "cleanedName": "AGUAS Y SODAS",
+      "margin": 30
+    },
+    {
+      "rowIndex": 52,
+      "category": "BEBIDAS",
+      "rawProduct": "2505 - FRESH AGUA DE MESA 6x1.5LTS",
+      "oldCode": "2505",
+      "cleanedName": "FRESH AGUA DE MESA 6x1.5LTS",
+      "margin": 30
+    },
+    {
+      "rowIndex": 55,
+      "category": "APERITIVOS Y BEBIDAS ESPECIALES",
+      "rawProduct": "1109 - PADILLA CANA DURAZ x750ml",
+      "oldCode": "1109",
+      "cleanedName": "PADILLA CANA DURAZ x750ml",
+      "margin": 30
+    },
+    {
+      "rowIndex": 62,
+      "category": "APERITIVOS Y BEBIDAS ESPECIALES",
+      "rawProduct": "1126 - PUNT E. MES x700ml",
+      "oldCode": "1126",
+      "cleanedName": "PUNT E. MES x700ml",
+      "margin": 10
+    },
+    {
+      "rowIndex": 68,
+      "category": "CEPAS",
+      "rawProduct": "1077 - DR. LEMON BERRY 1 LT",
+      "oldCode": "1077",
+      "cleanedName": "DR. LEMON BERRY 1 LT",
+      "margin": 22
+    },
+    {
+      "rowIndex": 74,
+      "category": "CEPAS",
+      "rawProduct": "1505 - GANCIA LATA X 473ML",
+      "oldCode": "1505",
+      "cleanedName": "GANCIA LATA X 473ML",
+      "margin": 22
+    },
+    {
+      "rowIndex": 76,
+      "category": "CEPAS",
+      "rawProduct": "2040 - TERMA CUYANO 1.35ml",
+      "oldCode": "2040",
+      "cleanedName": "TERMA CUYANO 1.35ml",
+      "margin": 20
+    },
+    {
+      "rowIndex": 78,
+      "category": "CEPAS",
+      "rawProduct": "2042 - TERMA POMELO AMAR. 1.35ML",
+      "oldCode": "2042",
+      "cleanedName": "TERMA POMELO AMAR. 1.35ML",
+      "margin": 20
+    },
+    {
+      "rowIndex": 80,
+      "category": "CEPAS",
+      "rawProduct": "2044 - TERMA SERRANO CERO 1.35ml",
+      "oldCode": "2044",
+      "cleanedName": "TERMA SERRANO CERO 1.35ml",
+      "margin": 20
+    },
+    {
+      "rowIndex": 88,
+      "category": "ESPUMANTES",
+      "rawProduct": "1211 - LA FARRUCA ANANA FIZZ x 710ml",
+      "oldCode": "1211",
+      "cleanedName": "LA FARRUCA ANANA FIZZ x 710ml",
+      "margin": 25
+    },
+    {
+      "rowIndex": 89,
+      "category": "ESPUMANTES",
+      "rawProduct": "1213 - LA FARRUCA DURAZNO x 710ml",
+      "oldCode": "1213",
+      "cleanedName": "LA FARRUCA DURAZNO x 710ml",
+      "margin": 25
+    },
+    {
+      "rowIndex": 98,
+      "category": "FERNET",
+      "rawProduct": "1405 - 1882 FERNET x 750ml",
+      "oldCode": "1405",
+      "cleanedName": "1882 FERNET x 750ml",
+      "margin": 20
+    },
+    {
+      "rowIndex": 103,
+      "category": "GASEOSAS",
+      "rawProduct": "2054 - MOCORETA GASEOSA P.ROSADO 6x2.25 LTS",
+      "oldCode": "2054",
+      "cleanedName": "MOCORETA GASEOSA P.ROSADO 6x2.25 LTS",
+      "margin": 30
+    },
+    {
+      "rowIndex": 107,
+      "category": "R.P.B",
+      "rawProduct": "2000 - BAGGIO PRONTO DURAZNO x1LT",
+      "oldCode": "2000",
+      "cleanedName": "BAGGIO PRONTO DURAZNO x1LT",
+      "margin": 30
+    },
+    {
+      "rowIndex": 108,
+      "category": "R.P.B",
+      "rawProduct": "2001 - BAGGIO PRONTO MULTIF x1LT",
+      "oldCode": "2001",
+      "cleanedName": "BAGGIO PRONTO MULTIF x1LT",
+      "margin": 30
+    },
+    {
+      "rowIndex": 109,
+      "category": "R.P.B",
+      "rawProduct": "2002 - BAGGIO PRONTO NARANJA x1LT",
+      "oldCode": "2002",
+      "cleanedName": "BAGGIO PRONTO NARANJA x1LT",
+      "margin": 30
+    },
+    {
+      "rowIndex": 110,
+      "category": "R.P.B",
+      "rawProduct": "2003 - BAGGIO DURAZNO 18x200ml",
+      "oldCode": "2003",
+      "cleanedName": "BAGGIO DURAZNO 18x200ml",
+      "margin": 30
+    },
+    {
+      "rowIndex": 111,
+      "category": "R.P.B",
+      "rawProduct": "2004 - BAGGIO MULTI 18x200ml",
+      "oldCode": "2004",
+      "cleanedName": "BAGGIO MULTI 18x200ml",
+      "margin": 30
+    },
+    {
+      "rowIndex": 112,
+      "category": "R.P.B",
+      "rawProduct": "2005 - BAGGIO NARANJA 18x200ml",
+      "oldCode": "2005",
+      "cleanedName": "BAGGIO NARANJA 18x200ml",
+      "margin": 30
+    },
+    {
+      "rowIndex": 113,
+      "category": "R.P.B",
+      "rawProduct": "2006 - BAGGIO FRESH MULT 18x200ml",
+      "oldCode": "2006",
+      "cleanedName": "BAGGIO FRESH MULT 18x200ml",
+      "margin": 30
+    },
+    {
+      "rowIndex": 114,
+      "category": "R.P.B",
+      "rawProduct": "2022 - SI-DIET TRADIC. 6X250ML",
+      "oldCode": "2022",
+      "cleanedName": "SI-DIET TRADIC. 6X250ML",
+      "margin": 25
+    },
+    {
+      "rowIndex": 115,
+      "category": "R.P.B",
+      "rawProduct": "2023 - SI-DIET TRADIC. 6X600ML",
+      "oldCode": "2023",
+      "cleanedName": "SI-DIET TRADIC. 6X600ML",
+      "margin": 25
+    },
+    {
+      "rowIndex": 120,
+      "category": "VINOS FINOS",
+      "rawProduct": "1004 - BIANCHI D.VALENTIN TTO 750ml",
+      "oldCode": "1004",
+      "cleanedName": "BIANCHI D.VALENTIN TTO 750ml",
+      "margin": 25
+    },
+    {
+      "rowIndex": 123,
+      "category": "VINOS FINOS",
+      "rawProduct": "1008 - BIANCHI D.VALENTIN BCO 750ml",
+      "oldCode": "1008",
+      "cleanedName": "BIANCHI D.VALENTIN BCO 750ml",
+      "margin": 25
+    },
+    {
+      "rowIndex": 126,
+      "category": "VINOS FINOS",
+      "rawProduct": "1012 - LATITUD 33 CABERNET x750ml",
+      "oldCode": "1012",
+      "cleanedName": "LATITUD 33 CABERNET x750ml",
+      "margin": 25
+    },
+    {
+      "rowIndex": 128,
+      "category": "VINOS FINOS",
+      "rawProduct": "1016 - CHACABUCO CHENIN BOT. ALUM. X500 ml",
+      "oldCode": "1016",
+      "cleanedName": "CHACABUCO CHENIN BOT. ALUM. X500 ml",
+      "margin": 22
+    },
+    {
+      "rowIndex": 129,
+      "category": "VINOS FINOS",
+      "rawProduct": "1017 - F.L.M FAIR FOR LIFE CABERNET x 750 ml",
+      "oldCode": "1017",
+      "cleanedName": "F.L.M FAIR FOR LIFE CABERNET x 750 ml",
+      "margin": 22
+    },
+    {
+      "rowIndex": 136,
+      "category": "VINOS FINOS",
+      "rawProduct": "1027 - EL QUE RIE ULTIMO X 750ml",
+      "oldCode": "1027",
+      "cleanedName": "EL QUE RIE ULTIMO X 750ml",
+      "margin": 22
+    },
+    {
+      "rowIndex": 139,
+      "category": "VINOS FINOS",
+      "rawProduct": "1035 - F.LAS MORAS CHARD. x 750ml",
+      "oldCode": "1035",
+      "cleanedName": "F.LAS MORAS CHARD. x 750ml",
+      "margin": 22
+    },
+    {
+      "rowIndex": 141,
+      "category": "VINOS FINOS",
+      "rawProduct": "1036 - BIANCHI FINCA LOS PRIMOS CHARD.x 750ml",
+      "oldCode": "1036",
+      "cleanedName": "BIANCHI FINCA LOS PRIMOS CHARD.x 750ml",
+      "margin": 25
+    },
+    {
+      "rowIndex": 144,
+      "category": "VINOS FINOS",
+      "rawProduct": "1039 - LAS PERDICES MALBEC x750ml",
+      "oldCode": "1039",
+      "cleanedName": "LAS PERDICES MALBEC x750ml",
+      "margin": 25
+    },
+    {
+      "rowIndex": 156,
+      "category": "VINOS FINOS",
+      "rawProduct": "1053 - TRAPICHE PURO MALBEC x750ml",
+      "oldCode": "1053",
+      "cleanedName": "TRAPICHE PURO MALBEC x750ml",
+      "margin": 22
+    },
+    {
+      "rowIndex": 158,
+      "category": "VINOS FINOS",
+      "rawProduct": "1057 - TRUMPETER RESERVA x750ml",
+      "oldCode": "1057",
+      "cleanedName": "TRUMPETER RESERVA x750ml",
+      "margin": 25
+    },
+    {
+      "rowIndex": 162,
+      "category": "VINOS FINOS",
+      "rawProduct": "1061 - VASCO VIEJO BCO x750ml",
+      "oldCode": "1061",
+      "cleanedName": "VASCO VIEJO BCO x750ml",
+      "margin": 25
+    },
+    {
+      "rowIndex": 163,
+      "category": "VINOS FINOS",
+      "rawProduct": "1062 - TRUMPETER CAB.FRAN.MAL x750ml",
+      "oldCode": "1062",
+      "cleanedName": "TRUMPETER CAB.FRAN.MAL x750ml",
+      "margin": 25
+    },
+    {
+      "rowIndex": 165,
+      "category": "VINOS FINOS",
+      "rawProduct": "1068 - FOND DE CAVE CHARD x750ml",
+      "oldCode": "1068",
+      "cleanedName": "FOND DE CAVE CHARD x750ml",
+      "margin": 22
+    },
+    {
+      "rowIndex": 166,
+      "category": "VINOS FINOS",
+      "rawProduct": "1071 - RUTINI CAB/FRANC x750ml",
+      "oldCode": "1071",
+      "cleanedName": "RUTINI CAB/FRANC x750ml",
+      "margin": 25
+    },
+    {
+      "rowIndex": 167,
+      "category": "VINOS FINOS",
+      "rawProduct": "1072 - RUTINI SYRAH x750ml",
+      "oldCode": "1072",
+      "cleanedName": "RUTINI SYRAH x750ml",
+      "margin": 25
+    },
+    {
+      "rowIndex": 169,
+      "category": "VINOS FINOS",
+      "rawProduct": "1076 - NICASIA RED BLEND MALBEC x750ml",
+      "oldCode": "1076",
+      "cleanedName": "NICASIA RED BLEND MALBEC x750ml",
+      "margin": 20
+    },
+    {
+      "rowIndex": 174,
+      "category": "VINOS FINOS",
+      "rawProduct": "1255 - SANTA JULIA CHENIN DULCE x750ml",
+      "oldCode": "1255",
+      "cleanedName": "SANTA JULIA CHENIN DULCE x750ml",
+      "margin": 25
+    },
+    {
+      "rowIndex": 176,
+      "category": "VINOS FINOS",
+      "rawProduct": "1257 - SANTA JULIA MAGNA MALBEC x750ml",
+      "oldCode": "1257",
+      "cleanedName": "SANTA JULIA MAGNA MALBEC x750ml",
+      "margin": 25
+    },
+    {
+      "rowIndex": 179,
+      "category": "VINOS FINOS",
+      "rawProduct": "1263 - FABRE MONT MAYOU MALBEC x750ml",
+      "oldCode": "1263",
+      "cleanedName": "FABRE MONT MAYOU MALBEC x750ml",
+      "margin": 20
+    },
+    {
+      "rowIndex": 182,
+      "category": "VINOS FINOS",
+      "rawProduct": "995 - LATITUD 33 SAUV. BLANC x750ml",
+      "oldCode": "995",
+      "cleanedName": "LATITUD 33 SAUV. BLANC x750ml",
+      "margin": 25
+    },
+    {
+      "rowIndex": 183,
+      "category": "VINOS FINOS",
+      "rawProduct": "999 - ALMA MORA CHARDONNAY x 750ml",
+      "oldCode": "999",
+      "cleanedName": "ALMA MORA CHARDONNAY x 750ml",
+      "margin": 22
+    },
+    {
+      "rowIndex": 187,
+      "category": "WHISKIES",
+      "rawProduct": "1101 - BLENDERS HONEY X 750ML",
+      "oldCode": "1101",
+      "cleanedName": "BLENDERS HONEY X 750ML",
+      "margin": 25
+    },
+    {
+      "rowIndex": 188,
+      "category": "WHISKIES",
+      "rawProduct": "1102 - BLENDERS X 750ML",
+      "oldCode": "1102",
+      "cleanedName": "BLENDERS X 750ML",
+      "margin": 25
+    },
+    {
+      "rowIndex": 197,
+      "category": "CAFE",
+      "rawProduct": "4053 - EL POCILLO CEBADA X 170GR",
+      "oldCode": "4053",
+      "cleanedName": "EL POCILLO CEBADA X 170GR",
+      "margin": 22
+    },
+    {
+      "rowIndex": 198,
+      "category": "CAFE",
+      "rawProduct": "4055 - EL POCILLO CEBADA X 115gr",
+      "oldCode": "4055",
+      "cleanedName": "EL POCILLO CEBADA X 115gr",
+      "margin": 22
+    },
+    {
+      "rowIndex": 202,
+      "category": "CAFE",
+      "rawProduct": "4078 - LA VIRG CAFE MOLIDO TORRADO x125 gr",
+      "oldCode": "4078",
+      "cleanedName": "LA VIRG CAFE MOLIDO TORRADO x125 gr",
+      "margin": 25
+    },
+    {
+      "rowIndex": 205,
+      "category": "CONSERVAS",
+      "rawProduct": "16 - LA HUERTA MERMEL.CIR x 454cc",
+      "oldCode": "16",
+      "cleanedName": "LA HUERTA MERMEL.CIR x 454cc",
+      "margin": 25
+    },
+    {
+      "rowIndex": 206,
+      "category": "CONSERVAS",
+      "rawProduct": "17 - LA HUERTA MERMEL.DAM x 454cc",
+      "oldCode": "17",
+      "cleanedName": "LA HUERTA MERMEL.DAM x 454cc",
+      "margin": 25
+    },
+    {
+      "rowIndex": 207,
+      "category": "CONSERVAS",
+      "rawProduct": "18 - LA HUERTA MERMEL.DUR x 454cc",
+      "oldCode": "18",
+      "cleanedName": "LA HUERTA MERMEL.DUR x 454cc",
+      "margin": 25
+    },
+    {
+      "rowIndex": 208,
+      "category": "CONSERVAS",
+      "rawProduct": "20 - LA HUERTA MERMEL.MULTI x 454cc",
+      "oldCode": "20",
+      "cleanedName": "LA HUERTA MERMEL.MULTI x 454cc",
+      "margin": 25
+    },
+    {
+      "rowIndex": 209,
+      "category": "CONSERVAS",
+      "rawProduct": "24 - M. ROJO PERA LATA MITADx820gr",
+      "oldCode": "24",
+      "cleanedName": "M. ROJO PERA LATA MITADx820gr",
+      "margin": 25
+    },
+    {
+      "rowIndex": 211,
+      "category": "CONSERVAS",
+      "rawProduct": "26 - M.ROJO COCTEL FRUTAL LIGHT x820gr",
+      "oldCode": "26",
+      "cleanedName": "M.ROJO COCTEL FRUTAL LIGHT x820gr",
+      "margin": 25
+    },
+    {
+      "rowIndex": 214,
+      "category": "CONSERVAS",
+      "rawProduct": "34 - 7 DIAS MEMBRILLO 5KG SIN TACC",
+      "oldCode": "34",
+      "cleanedName": "7 DIAS MEMBRILLO 5KG SIN TACC",
+      "margin": 25
+    },
+    {
+      "rowIndex": 215,
+      "category": "CONSERVAS",
+      "rawProduct": "38 - LA HUERTA MEMBRILLO 5KG SIN TACC",
+      "oldCode": "38",
+      "cleanedName": "LA HUERTA MEMBRILLO 5KG SIN TACC",
+      "margin": 25
+    },
+    {
+      "rowIndex": 216,
+      "category": "CONSERVAS",
+      "rawProduct": "39 - LA HUERTA MEMBRILLO 2KG SIN TACC",
+      "oldCode": "39",
+      "cleanedName": "LA HUERTA MEMBRILLO 2KG SIN TACC",
+      "margin": 25
+    },
+    {
+      "rowIndex": 217,
+      "category": "CONSERVAS",
+      "rawProduct": "4010 - MAROLIO POROTO BLANCO X 340gr",
+      "oldCode": "4010",
+      "cleanedName": "MAROLIO POROTO BLANCO X 340gr",
+      "margin": 30
+    },
+    {
+      "rowIndex": 218,
+      "category": "CONSERVAS",
+      "rawProduct": "4011 - MAROLIO LENTEJAS LATA x 350 gr",
+      "oldCode": "4011",
+      "cleanedName": "MAROLIO LENTEJAS LATA x 350 gr",
+      "margin": 30
+    },
+    {
+      "rowIndex": 219,
+      "category": "CONSERVAS",
+      "rawProduct": "4012 - MAROLIO JARDINERA LATA 340GR",
+      "oldCode": "4012",
+      "cleanedName": "MAROLIO JARDINERA LATA 340GR",
+      "margin": 30
+    },
+    {
+      "rowIndex": 220,
+      "category": "CONSERVAS",
+      "rawProduct": "4015 - MAROLIO CHOCLO CREM.BCO x340gr",
+      "oldCode": "4015",
+      "cleanedName": "MAROLIO CHOCLO CREM.BCO x340gr",
+      "margin": 30
+    },
+    {
+      "rowIndex": 221,
+      "category": "CONSERVAS",
+      "rawProduct": "4016 - MAROLIO CHOCLO GRANO AMARx300",
+      "oldCode": "4016",
+      "cleanedName": "MAROLIO CHOCLO GRANO AMARx300",
+      "margin": 30
+    },
+    {
+      "rowIndex": 223,
+      "category": "CONSERVAS",
+      "rawProduct": "4039 - MAROLIO POROTO ALUBIA X 340gr",
+      "oldCode": "4039",
+      "cleanedName": "MAROLIO POROTO ALUBIA X 340gr",
+      "margin": 30
+    },
+    {
+      "rowIndex": 224,
+      "category": "CONSERVAS",
+      "rawProduct": "4054 - MAROLIO GARBANZOS TETRA 340gr",
+      "oldCode": "4054",
+      "cleanedName": "MAROLIO GARBANZOS TETRA 340gr",
+      "margin": 30
+    },
+    {
+      "rowIndex": 226,
+      "category": "CONSERVAS",
+      "rawProduct": "43 - CUMANA CHOCLO GRANO AMARILLO x300",
+      "oldCode": "43",
+      "cleanedName": "CUMANA CHOCLO GRANO AMARILLO x300",
+      "margin": 30
+    },
+    {
+      "rowIndex": 227,
+      "category": "CONSERVAS",
+      "rawProduct": "834 - CUMANA CHAMPIGNON ENTERO x284g",
+      "oldCode": "834",
+      "cleanedName": "CUMANA CHAMPIGNON ENTERO x284g",
+      "margin": 30
+    },
+    {
+      "rowIndex": 229,
+      "category": "CONSERVAS",
+      "rawProduct": "838 - CUMANA CHAMP. ENTEROS x 400gr",
+      "oldCode": "838",
+      "cleanedName": "CUMANA CHAMP. ENTEROS x 400gr",
+      "margin": 30
+    },
+    {
+      "rowIndex": 230,
+      "category": "CONSERVAS",
+      "rawProduct": "838 - CUMANA CHAMP.LAM x 400 gr",
+      "oldCode": "838",
+      "cleanedName": "CUMANA CHAMP.LAM x 400 gr",
+      "margin": 30
+    },
+    {
+      "rowIndex": 231,
+      "category": "CONSERVAS",
+      "rawProduct": "838 - CUMANA CHAMPIGNON LAMIN. x284gr",
+      "oldCode": "838",
+      "cleanedName": "CUMANA CHAMPIGNON LAMIN. x284gr",
+      "margin": 30
+    },
+    {
+      "rowIndex": 234,
+      "category": "CONSERVAS",
+      "rawProduct": "844 - CARACAS MORRON X 185gr",
+      "oldCode": "844",
+      "cleanedName": "CARACAS MORRON X 185gr",
+      "margin": 30
+    },
+    {
+      "rowIndex": 236,
+      "category": "CONSERVAS",
+      "rawProduct": "847 - MAROLIO CHAMP. ENT. FRASCO x 170 gr",
+      "oldCode": "847",
+      "cleanedName": "MAROLIO CHAMP. ENT. FRASCO x 170 gr",
+      "margin": 30
+    },
+    {
+      "rowIndex": 242,
+      "category": "TOMATES",
+      "rawProduct": "4007 - MAROLIO TOMATE PERITA LATA X400gr",
+      "oldCode": "4007",
+      "cleanedName": "MAROLIO TOMATE PERITA LATA X400gr",
+      "margin": 30
+    },
+    {
+      "rowIndex": 243,
+      "category": "TOMATES",
+      "rawProduct": "4009 - MAROLIO PURE 24 X 520GR",
+      "oldCode": "4009",
+      "cleanedName": "MAROLIO PURE 24 X 520GR",
+      "margin": 30
+    },
+    {
+      "rowIndex": 244,
+      "category": "TOMATES",
+      "rawProduct": "843 - CUMANA TOMATE PERITA x400gr",
+      "oldCode": "843",
+      "cleanedName": "CUMANA TOMATE PERITA x400gr",
+      "margin": 30
+    },
+    {
+      "rowIndex": 250,
+      "category": "LECHES EN POLVO",
+      "rawProduct": "4383 - SANCOR L.POLV ENT. Caja 800gr",
+      "oldCode": "4383",
+      "cleanedName": "SANCOR L.POLV ENT. Caja 800gr",
+      "margin": 25
+    },
+    {
+      "rowIndex": 251,
+      "category": "LECHES EN POLVO",
+      "rawProduct": "4418 - L.POLVO SAN REGIN x 500 Gr",
+      "oldCode": "4418",
+      "cleanedName": "L.POLVO SAN REGIN x 500 Gr",
+      "margin": 25
+    },
+    {
+      "rowIndex": 253,
+      "category": "LECHES LIQUIDAS",
+      "rawProduct": "281 - CREMIGAL LECHE UAT ENTERA SACHET x LT",
+      "oldCode": "281",
+      "cleanedName": "CREMIGAL LECHE UAT ENTERA SACHET x LT",
+      "margin": 30
+    },
+    {
+      "rowIndex": 254,
+      "category": "LECHES LIQUIDAS",
+      "rawProduct": "282 - CREMIGAL LECHE UAT DESC. SACHET x LT",
+      "oldCode": "282",
+      "cleanedName": "CREMIGAL LECHE UAT DESC. SACHET x LT",
+      "margin": 30
+    },
+    {
+      "rowIndex": 256,
+      "category": "YOGURT",
+      "rawProduct": "285 - CREMIGAL YOGURT SACHET x 1LTS FRUTILLA",
+      "oldCode": "285",
+      "cleanedName": "CREMIGAL YOGURT SACHET x 1LTS FRUTILLA",
+      "margin": 30
+    },
+    {
+      "rowIndex": 257,
+      "category": "YOGURT",
+      "rawProduct": "286 - CREMIGAL YOGURT SACHET x 1LTS VAINILLA",
+      "oldCode": "286",
+      "cleanedName": "CREMIGAL YOGURT SACHET x 1LTS VAINILLA",
+      "margin": 30
+    },
+    {
+      "rowIndex": 258,
+      "category": "YOGURT",
+      "rawProduct": "287 - CREMIGAL YOGURT SACHET x 1LTS DURAZO",
+      "oldCode": "287",
+      "cleanedName": "CREMIGAL YOGURT SACHET x 1LTS DURAZO",
+      "margin": 30
+    },
+    {
+      "rowIndex": 259,
+      "category": "YOGURT",
+      "rawProduct": "290 - CREMIGAL YOGURT SACHET x 1LTS BANANA",
+      "oldCode": "290",
+      "cleanedName": "CREMIGAL YOGURT SACHET x 1LTS BANANA",
+      "margin": 30
+    },
+    {
+      "rowIndex": 264,
+      "category": "HIGIENICOS",
+      "rawProduct": "3994 - ELEGANTE PAPEL HIGIENICO BCO 12X4x30",
+      "oldCode": "3994",
+      "cleanedName": "ELEGANTE PAPEL HIGIENICO BCO 12X4x30",
+      "margin": 30
+    },
+    {
+      "rowIndex": 272,
+      "category": "ROLLOS DE COCINA",
+      "rawProduct": "3986 - SOL MAYOR ROLLO COCINA 12X3X40",
+      "oldCode": "3986",
+      "cleanedName": "SOL MAYOR ROLLO COCINA 12X3X40",
+      "margin": 30
+    },
+    {
+      "rowIndex": 273,
+      "category": "ROLLOS DE COCINA",
+      "rawProduct": "4041 - CELESTIAL ROLLO COC 12X3X40 PAÑOS",
+      "oldCode": "4041",
+      "cleanedName": "CELESTIAL ROLLO COC 12X3X40 PAÑOS",
+      "margin": 30
+    },
+    {
+      "rowIndex": 274,
+      "category": "ROLLOS DE COCINA",
+      "rawProduct": "4043 - ELEGANTE ROLLO COC 8X3X40",
+      "oldCode": "4043",
+      "cleanedName": "ELEGANTE ROLLO COC 8X3X40",
+      "margin": 30
+    },
+    {
+      "rowIndex": 283,
+      "category": "PASTAS SECAS",
+      "rawProduct": "4805 - 308 AVE MARIA x 500gr",
+      "oldCode": "4805",
+      "cleanedName": "308 AVE MARIA x 500gr",
+      "margin": 30
+    },
+    {
+      "rowIndex": 297,
+      "category": "PESCADERIA",
+      "rawProduct": "804 - CASCABEL ATUN DES.ACEIT x170gr",
+      "oldCode": "804",
+      "cleanedName": "CASCABEL ATUN DES.ACEIT x170gr",
+      "margin": 30
+    },
+    {
+      "rowIndex": 299,
+      "category": "PESCADERIA",
+      "rawProduct": "815 - MARECHIARE CABALLA NATURAL X380g",
+      "oldCode": "815",
+      "cleanedName": "MARECHIARE CABALLA NATURAL X380g",
+      "margin": 25
+    },
+    {
+      "rowIndex": 300,
+      "category": "PESCADERIA",
+      "rawProduct": "824 - MARECHIARE ATUN LOMO NAT X170gr",
+      "oldCode": "824",
+      "cleanedName": "MARECHIARE ATUN LOMO NAT X170gr",
+      "margin": 25
+    },
+    {
+      "rowIndex": 303,
+      "category": "PESCADERIA",
+      "rawProduct": "832 - CUMANA SARDINAS AC. x125gr",
+      "oldCode": "832",
+      "cleanedName": "CUMANA SARDINAS AC. x125gr",
+      "margin": 25
+    },
+    {
+      "rowIndex": 304,
+      "category": "PESCADERIA",
+      "rawProduct": "835 - MAROLIO ATUN LOMO AC x170gr",
+      "oldCode": "835",
+      "cleanedName": "MAROLIO ATUN LOMO AC x170gr",
+      "margin": 30
+    },
+    {
+      "rowIndex": 305,
+      "category": "PESCADERIA",
+      "rawProduct": "836 - MAROLIO ATUN LOMO NAT x170gr",
+      "oldCode": "836",
+      "cleanedName": "MAROLIO ATUN LOMO NAT x170gr",
+      "margin": 30
+    },
+    {
+      "rowIndex": 308,
+      "category": "PESCADERIA",
+      "rawProduct": "848 - CASCABEL ATUN DES.NAT x170gr",
+      "oldCode": "848",
+      "cleanedName": "CASCABEL ATUN DES.NAT x170gr",
+      "margin": 30
+    },
+    {
+      "rowIndex": 311,
+      "category": "CREMIGAL",
+      "rawProduct": "3320 - CREMIGAL CREMA DE LECHE x 10kg",
+      "oldCode": "3320",
+      "cleanedName": "CREMIGAL CREMA DE LECHE x 10kg",
+      "margin": 30
+    },
+    {
+      "rowIndex": 312,
+      "category": "CREMIGAL",
+      "rawProduct": "3321 - CREMIGAL CREMA DE LECHE x 3.5kg",
+      "oldCode": "3321",
+      "cleanedName": "CREMIGAL CREMA DE LECHE x 3.5kg",
+      "margin": 30
+    },
+    {
+      "rowIndex": 314,
+      "category": "CREMIGAL",
+      "rawProduct": "356 - CREMIGAL D.D. LECHE HELADERO x 10 KG",
+      "oldCode": "356",
+      "cleanedName": "CREMIGAL D.D. LECHE HELADERO x 10 KG",
+      "margin": 30
+    },
+    {
+      "rowIndex": 315,
+      "category": "CREMIGAL",
+      "rawProduct": "357 - CREMIGAL D.D. LECHE REPOSTERO x 10KG",
+      "oldCode": "357",
+      "cleanedName": "CREMIGAL D.D. LECHE REPOSTERO x 10KG",
+      "margin": 30
+    },
+    {
+      "rowIndex": 316,
+      "category": "CREMIGAL",
+      "rawProduct": "358 - CREMIGAL D.D. LECHE CLASICO x 10 KG",
+      "oldCode": "358",
+      "cleanedName": "CREMIGAL D.D. LECHE CLASICO x 10 KG",
+      "margin": 30
+    },
+    {
+      "rowIndex": 317,
+      "category": "CREMIGAL",
+      "rawProduct": "359 - CREMIGAL LECHE EN POLVO x 25KG MODIF",
+      "oldCode": "359",
+      "cleanedName": "CREMIGAL LECHE EN POLVO x 25KG MODIF",
+      "margin": 30
+    },
+    {
+      "rowIndex": 318,
+      "category": "CREMIGAL",
+      "rawProduct": "360 - CREMIGAL LECHE EN POLVO x 25 kg ENT/DESC",
+      "oldCode": "360",
+      "cleanedName": "CREMIGAL LECHE EN POLVO x 25 kg ENT/DESC",
+      "margin": 30
+    },
+    {
+      "rowIndex": 319,
+      "category": "CREMIGAL",
+      "rawProduct": "361 - CREMIGAL QUESO CHEDDAR FUNDIDO x 4 KG",
+      "oldCode": "361",
+      "cleanedName": "CREMIGAL QUESO CHEDDAR FUNDIDO x 4 KG",
+      "margin": 30
+    },
+    {
+      "rowIndex": 321,
+      "category": "REGALERIA",
+      "rawProduct": "1066 - TRUMPETER ESTUCHE MALBEC 1x750ml",
+      "oldCode": "1066",
+      "cleanedName": "TRUMPETER ESTUCHE MALBEC 1x750ml",
+      "margin": 30
+    },
+    {
+      "rowIndex": 322,
+      "category": "REGALERIA",
+      "rawProduct": "1067 - TRUMPETER ESTUCHE RESERVE 1x750ml",
+      "oldCode": "1067",
+      "cleanedName": "TRUMPETER ESTUCHE RESERVE 1x750ml",
+      "margin": 30
+    },
+    {
+      "rowIndex": 323,
+      "category": "REGALERIA",
+      "rawProduct": "1249 - SANTA JULIA MALBEC 1 x 750ml + COPON",
+      "oldCode": "1249",
+      "cleanedName": "SANTA JULIA MALBEC 1 x 750ml + COPON",
+      "margin": 30
+    },
+    {
+      "rowIndex": 324,
+      "category": "REGALERIA",
+      "rawProduct": "1270 - S.JULIA CHENIN DULCE 1x750ml + 2 VASOS",
+      "oldCode": "1270",
+      "cleanedName": "S.JULIA CHENIN DULCE 1x750ml + 2 VASOS",
+      "margin": 30
+    },
+    {
+      "rowIndex": 329,
+      "category": "LA FAMILIA",
+      "rawProduct": "PROVOLETA EN RODAJAS x 320gr",
+      "oldCode": null,
+      "cleanedName": "PROVOLETA EN RODAJAS x 320gr",
+      "margin": 30
+    },
+    {
+      "rowIndex": 330,
+      "category": "LA FAMILIA",
+      "rawProduct": "ROMANO EN CUÑAS x KG",
+      "oldCode": null,
+      "cleanedName": "ROMANO EN CUÑAS x KG",
+      "margin": 30
+    },
+    {
+      "rowIndex": 333,
+      "category": "MELINCUE",
+      "rawProduct": "106 - MELINCUE RALLADO 120 GR",
+      "oldCode": "106",
+      "cleanedName": "MELINCUE RALLADO 120 GR",
+      "margin": 35
+    },
+    {
+      "rowIndex": 335,
+      "category": "MELINCUE",
+      "rawProduct": "109 - MELINCUE PARMESANO KG",
+      "oldCode": "109",
+      "cleanedName": "MELINCUE PARMESANO KG",
+      "margin": 35
+    },
+    {
+      "rowIndex": 338,
+      "category": "MELINCUE",
+      "rawProduct": "112 - MELINCUE SARDO HORMA x KG",
+      "oldCode": "112",
+      "cleanedName": "MELINCUE SARDO HORMA x KG",
+      "margin": 35
+    },
+    {
+      "rowIndex": 343,
+      "category": "MELINCUE",
+      "rawProduct": "118 - MELINCUE EDAM x Kg",
+      "oldCode": "118",
+      "cleanedName": "MELINCUE EDAM x Kg",
+      "margin": 35
+    },
+    {
+      "rowIndex": 352,
+      "category": "MELINCUE",
+      "rawProduct": "131 - MELINCUE PROVOLONE GIGANTE x KG",
+      "oldCode": "131",
+      "cleanedName": "MELINCUE PROVOLONE GIGANTE x KG",
+      "margin": 35
+    },
+    {
+      "rowIndex": 353,
+      "category": "MELINCUE",
+      "rawProduct": "134 - MELINCUE FONT. SUAV kg",
+      "oldCode": "134",
+      "cleanedName": "MELINCUE FONT. SUAV kg",
+      "margin": 35
+    },
+    {
+      "rowIndex": 354,
+      "category": "MELINCUE",
+      "rawProduct": "136 - MELINCUE MANTECA x200gr",
+      "oldCode": "136",
+      "cleanedName": "MELINCUE MANTECA x200gr",
+      "margin": 35
+    },
+    {
+      "rowIndex": 361,
+      "category": "CREMAS",
+      "rawProduct": "3318 - SANCOR CREMA POTE 360gr",
+      "oldCode": "3318",
+      "cleanedName": "SANCOR CREMA POTE 360gr",
+      "margin": 30
+    },
+    {
+      "rowIndex": 362,
+      "category": "CREMAS",
+      "rawProduct": "3319 - SANCOR CREMA POTE 200gr",
+      "oldCode": "3319",
+      "cleanedName": "SANCOR CREMA POTE 200gr",
+      "margin": 30
+    },
+    {
+      "rowIndex": 364,
+      "category": "DULCES DE LECHE",
+      "rawProduct": "220 - CHELITA DULCE DE LECHE x400gr",
+      "oldCode": "220",
+      "cleanedName": "CHELITA DULCE DE LECHE x400gr",
+      "margin": 30
+    },
+    {
+      "rowIndex": 365,
+      "category": "DULCES DE LECHE",
+      "rawProduct": "260 - CREMIGAL D. DE LECHE REPOSTERO x 400gr",
+      "oldCode": "260",
+      "cleanedName": "CREMIGAL D. DE LECHE REPOSTERO x 400gr",
+      "margin": 30
+    },
+    {
+      "rowIndex": 366,
+      "category": "DULCES DE LECHE",
+      "rawProduct": "295 - CREMIGAL D.DE LECHE x 400 gr",
+      "oldCode": "295",
+      "cleanedName": "CREMIGAL D.DE LECHE x 400 gr",
+      "margin": 30
+    },
+    {
+      "rowIndex": 367,
+      "category": "DULCES DE LECHE",
+      "rawProduct": "3186 - SANCOR D.D LECHE x 400 gr",
+      "oldCode": "3186",
+      "cleanedName": "SANCOR D.D LECHE x 400 gr",
+      "margin": 30
+    },
+    {
+      "rowIndex": 369,
+      "category": "MANTECAS",
+      "rawProduct": "1086 - MANTECA SANCOR X100gr",
+      "oldCode": "1086",
+      "cleanedName": "MANTECA SANCOR X100gr",
+      "margin": 30
+    },
+    {
+      "rowIndex": 370,
+      "category": "MANTECAS",
+      "rawProduct": "1087 - MANTECA SANCOR x200gr",
+      "oldCode": "1087",
+      "cleanedName": "MANTECA SANCOR x200gr",
+      "margin": 30
+    },
+    {
+      "rowIndex": 376,
+      "category": "QUESOS SEMIDUROS",
+      "rawProduct": "0293 - CREMIGAL PATEGRAS CON OJOS x KG",
+      "oldCode": "0293",
+      "cleanedName": "CREMIGAL PATEGRAS CON OJOS x KG",
+      "margin": 30
+    },
+    {
+      "rowIndex": 377,
+      "category": "QUESOS SEMIDUROS",
+      "rawProduct": "1899 - PATEGRAS QUESO SANCOR KG",
+      "oldCode": "1899",
+      "cleanedName": "PATEGRAS QUESO SANCOR KG",
+      "margin": 25
+    },
+    {
+      "rowIndex": 378,
+      "category": "QUESOS SEMIDUROS",
+      "rawProduct": "1986 - DANBO QUESO SANCOR KG",
+      "oldCode": "1986",
+      "cleanedName": "DANBO QUESO SANCOR KG",
+      "margin": 25
+    },
+    {
+      "rowIndex": 382,
+      "category": "QUESOS UNTABLES",
+      "rawProduct": "302 - CREMIGAL Q.UNTABLE P.SALUT LIGHT x 190 gr",
+      "oldCode": "302",
+      "cleanedName": "CREMIGAL Q.UNTABLE P.SALUT LIGHT x 190 gr",
+      "margin": 30
+    },
+    {
+      "rowIndex": 395,
+      "category": "SODECAR",
+      "rawProduct": "7648 - JAMON CRUDO PINO DORADO x KG",
+      "oldCode": "7648",
+      "cleanedName": "JAMON CRUDO PINO DORADO x KG",
+      "margin": 30
+    },
+    {
+      "rowIndex": 396,
+      "category": "SODECAR",
+      "rawProduct": "7697 - JAMON COCIDO TIPO NATURAL x KG",
+      "oldCode": "7697",
+      "cleanedName": "JAMON COCIDO TIPO NATURAL x KG",
+      "margin": 30
+    },
+    {
+      "rowIndex": 400,
+      "category": "YERBAS",
+      "rawProduct": "9002 - ANDRESITO YERBA 10x500 gr",
+      "oldCode": "9002",
+      "cleanedName": "ANDRESITO YERBA 10x500 gr",
+      "margin": 25
+    },
+    {
+      "rowIndex": 404,
+      "category": "YERBAS",
+      "rawProduct": "9007 - AMANDA MATE COCIDO 1X25un",
+      "oldCode": "9007",
+      "cleanedName": "AMANDA MATE COCIDO 1X25un",
+      "margin": 25
+    },
+    {
+      "rowIndex": 405,
+      "category": "YERBAS",
+      "rawProduct": "9008 - AMANDA YERBA HIERBAS SERRANAS x 500 gr",
+      "oldCode": "9008",
+      "cleanedName": "AMANDA YERBA HIERBAS SERRANAS x 500 gr",
+      "margin": 25
+    },
+    {
+      "rowIndex": 407,
+      "category": "YERBAS",
+      "rawProduct": "9010 - AMANDA YERBA ORGANICA 10x500gr",
+      "oldCode": "9010",
+      "cleanedName": "AMANDA YERBA ORGANICA 10x500gr",
+      "margin": 25
+    }
+  ],
+  "categories": [
+    "ACEITES Y VINAGRES",
+    "ADEREZOS",
+    "ARROZ",
+    "AZUCAR",
+    "BEBIDAS",
+    "APERITIVOS Y BEBIDAS ESPECIALES",
+    "CEPAS",
+    "ESPUMANTES",
+    "FERNET",
+    "GASEOSAS",
+    "LICORES",
+    "R.P.B",
+    "VINOS FINOS",
+    "WHISKIES",
+    "CAFE",
+    "CONSERVAS",
+    "TOMATES",
+    "LECHES EN POLVO",
+    "LECHES LIQUIDAS",
+    "YOGURT",
+    "HIGIENICOS",
+    "NO COMESTIBLES",
+    "ROLLOS DE COCINA",
+    "PASTAS SECAS",
+    "PESCADERIA",
+    "CREMIGAL",
+    "REGALERIA",
+    "LA FAMILIA",
+    "MELINCUE",
+    "SANCOR y CREMIGAL",
+    "CREMAS",
+    "DULCES DE LECHE",
+    "MANTECAS",
+    "MIEL",
+    "QUESOS SEMIDUROS",
+    "QUESOS UNTABLES",
+    "SODECAR",
+    "YERBAS"
+  ]
+}

@@ -1,4 +1,15 @@
-const API_BASE_URL = `http://${window.location.hostname}:3000/api`;
+import { API_BASE_URL } from '../utils/api';
+
+async function parseJsonResponse(response: Response) {
+  const text = await response.text();
+  if (!text || !text.trim()) return {};
+  try {
+    return JSON.parse(text);
+  } catch (e) {
+    console.error('Error al parsear respuesta JSON:', e);
+    return {};
+  }
+}
 
 export const apiClient = {
   async get<T = any>(endpoint: string): Promise<T> {
@@ -8,7 +19,7 @@ export const apiClient = {
         'Authorization': `Bearer ${token}`
       }
     });
-    const data = await response.json();
+    const data = await parseJsonResponse(response);
     if (!response.ok) {
       throw new Error(data.message || 'Error en la petición GET');
     }
@@ -25,7 +36,7 @@ export const apiClient = {
       },
       body: body ? JSON.stringify(body) : undefined
     });
-    const data = await response.json();
+    const data = await parseJsonResponse(response);
     if (!response.ok) {
       throw new Error(data.message || 'Error en la petición POST');
     }
@@ -42,7 +53,7 @@ export const apiClient = {
       },
       body: body ? JSON.stringify(body) : undefined
     });
-    const data = await response.json();
+    const data = await parseJsonResponse(response);
     if (!response.ok) {
       throw new Error(data.message || 'Error en la petición PUT');
     }
@@ -57,7 +68,7 @@ export const apiClient = {
         'Authorization': `Bearer ${token}`
       }
     });
-    const data = await response.json();
+    const data = await parseJsonResponse(response);
     if (!response.ok) {
       throw new Error(data.message || 'Error en la petición DELETE');
     }
@@ -73,7 +84,7 @@ export const apiClient = {
       },
       body: formData
     });
-    const data = await response.json();
+    const data = await parseJsonResponse(response);
     if (!response.ok) {
       throw new Error(data.message || 'Error en la petición POST FormData');
     }

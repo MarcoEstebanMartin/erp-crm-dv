@@ -1,15 +1,8 @@
 import { Response, NextFunction } from 'express';
-import jwt from 'jsonwebtoken';
+import jwt, { TokenExpiredError, JsonWebTokenError } from 'jsonwebtoken';
 import { Role } from '@prisma/client';
 import { AuthenticatedRequest, UserPayload } from '../types';
-
-function getJwtSecret(): string {
-  const secret = process.env.JWT_SECRET;
-  if (!secret) {
-    throw new Error('FATAL: La variable de entorno JWT_SECRET no está definida en la configuración del servidor.');
-  }
-  return secret;
-}
+import { env } from '../config/env.config';
 
 /**
  * Middleware para autenticar requests mediante JWT en el header Authorization.
@@ -24,7 +17,7 @@ export function authenticateJWT(
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     res.status(401).json({
       status: 'error',
-      message: 'Acceso denegado. Token no provisto o inválido.',
+      message: 'Acceso denegado. Token no provisto o con formato inválido.',
     });
     return;
   }
@@ -32,13 +25,31 @@ export function authenticateJWT(
   const token = authHeader.split(' ')[1];
 
   try {
-    const decoded = jwt.verify(token, getJwtSecret()) as UserPayload;
+    const decoded = jwt.verify(token, env.JWT_SECRET) as UserPayload;
     req.user = decoded;
     next();
   } catch (error) {
+    if (error instanceof TokenExpiredError) {
+      res.status(401).json({
+        status: 'error',
+        message: 'Sesión expirada. Por favor, inicie sesión nuevamente.',
+        code: 'TOKEN_EXPIRED',
+      });
+      return;
+    }
+
+    if (error instanceof JsonWebTokenError) {
+      res.status(401).json({
+        status: 'error',
+        message: 'Token inválido o firma no reconocida.',
+        code: 'TOKEN_INVALID',
+      });
+      return;
+    }
+
     res.status(403).json({
       status: 'error',
-      message: 'Token inválido o expirado.',
+      message: 'No fue posible validar la autenticación.',
     });
   }
 }

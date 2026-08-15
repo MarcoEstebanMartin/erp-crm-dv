@@ -8,7 +8,10 @@ import {
   Search,
   UserPlus,
   Edit,
-  Trash2
+  Trash2,
+  DollarSign,
+  CreditCard,
+  Check
 } from 'lucide-react';
 import { PurchaseScannerModal } from './PurchaseScannerModal';
 import { useConfirm } from '../context/ConfirmContext';
@@ -80,11 +83,108 @@ export default function ComprasDashboard() {
   const [accountSummaryModal, setAccountSummaryModal] = useState<any | null>(null);
   const [ledgerData, setLedgerData] = useState<any[]>([]);
 
+  // Modal para Cargar Pago de Factura de Proveedor
+  const [payInvoiceModal, setPayInvoiceModal] = useState<{ open: boolean; invoice: any | null }>({ open: false, invoice: null });
+  const [paymentForm, setPaymentForm] = useState({
+    amount: '',
+    paymentMethod: 'CASH',
+    bankAccountId: '',
+    branch: 'A',
+    description: ''
+  });
+  const [paymentItems, setPaymentItems] = useState<Array<{ amount: string; paymentMethod: string; bankAccountId: string }>>([
+    { amount: '', paymentMethod: 'CASH', bankAccountId: '' }
+  ]);
+  const [bankAccounts, setBankAccounts] = useState<any[]>([]);
+
 
   // Feedback states
   const [_loading, setLoading] = useState(false);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const handleOpenPayInvoice = async (inv: any) => {
+    const pendingAmount = Number(inv.totalAmount || 0) - Number(inv.paidAmount || 0);
+    const initialAmt = pendingAmount > 0 ? pendingAmount.toFixed(2) : Number(inv.totalAmount || 0).toFixed(2);
+    setPaymentForm({
+      amount: initialAmt,
+      paymentMethod: 'CASH',
+      bankAccountId: '',
+      branch: inv.billingType === 'OFFICIAL' ? 'A' : 'X',
+      description: `Pago Factura ${inv.invoiceNumber}`
+    });
+    setPaymentItems([
+      { amount: initialAmt, paymentMethod: 'CASH', bankAccountId: '' }
+    ]);
+    setPayInvoiceModal({ open: true, invoice: inv });
+
+    try {
+      const banks = await api.getBankAccounts();
+      setBankAccounts(banks || []);
+    } catch (err) {
+      console.error('Error al cargar cuentas bancarias:', err);
+    }
+  };
+
+  const handlePayInvoiceSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMsg(null);
+    setSuccessMsg(null);
+
+    const inv = payInvoiceModal.invoice;
+    if (!inv) return;
+
+    // Validar items
+    const validItems: Array<{ amount: number; paymentMethod: string; bankAccountId: number | null }> = [];
+    for (let i = 0; i < paymentItems.length; i++) {
+      const item = paymentItems[i];
+      const amt = Number(item.amount);
+      if (!amt || amt <= 0) {
+        setErrorMsg(`Por favor ingrese un monto válido mayor a 0 en el ítem de pago #${i + 1}.`);
+        return;
+      }
+      if ((item.paymentMethod === 'BANK_TRANSFER' || item.paymentMethod === 'CHECK') && !item.bankAccountId && bankAccounts.length > 0) {
+        setErrorMsg(`Debe seleccionar la cuenta bancaria para el pago en ${item.paymentMethod === 'CHECK' ? 'Cheque' : 'Transferencia'} (Ítem #${i + 1}).`);
+        return;
+      }
+      validItems.push({
+        amount: amt,
+        paymentMethod: item.paymentMethod,
+        bankAccountId: item.bankAccountId ? Number(item.bankAccountId) : null
+      });
+    }
+
+    const totalPay = validItems.reduce((sum, item) => sum + item.amount, 0);
+
+    try {
+      setLoading(true);
+      if (validItems.length > 1) {
+        await api.registerPayment(inv.personaId, {
+          payments: validItems,
+          description: paymentForm.description,
+          branch: paymentForm.branch,
+          supplierInvoiceId: inv.id
+        });
+      } else {
+        await api.registerPayment(inv.personaId, {
+          amount: validItems[0].amount,
+          paymentMethod: validItems[0].paymentMethod,
+          bankAccountId: validItems[0].bankAccountId,
+          description: paymentForm.description,
+          branch: paymentForm.branch,
+          supplierInvoiceId: inv.id
+        });
+      }
+
+      setSuccessMsg(`✅ Pago de $${totalPay.toLocaleString('es-AR')} registrado con éxito (${validItems.length} forma(s) de pago) para la factura ${inv.invoiceNumber}.`);
+      setPayInvoiceModal({ open: false, invoice: null });
+      loadData();
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Error al registrar el pago de la factura.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const loadData = async () => {
     setLoading(true);
@@ -866,11 +966,11 @@ export default function ComprasDashboard() {
                   />
                   <select
                     className="input"
-                    style={{ fontSize: '0.8rem', padding: '6px 12px', width: '150px', backgroundColor: '#fff', color: 'var(--text-primary)' }}
+                    style={{ fontSize: '0.8rem', padding: '6px 12px', minWidth: '185px', backgroundColor: '#fff', color: 'var(--text-primary)' }}
                     value={branchFilter}
                     onChange={(e) => setBranchFilter(e.target.value as any)}
                   >
-                    <option value="ALL">🏢 Sucursal (Todas)</option>
+                    <option value="ALL">🏢 Todas las Sucursales</option>
                     <option value="OFFICIAL">Sucursal A</option>
                     <option value="INTERNAL">Sucursal X</option>
                   </select>
@@ -945,21 +1045,66 @@ export default function ComprasDashboard() {
                             </span>
                           </td>
                           <td style={{ textAlign: 'center' }}>
-                            <button
-                              onClick={() => handleDeleteInvoice(inv.id, inv.invoiceNumber)}
-                              className="btn-icon"
-                              style={{ 
-                                background: 'none', 
-                                border: 'none', 
-                                padding: '4px', 
-                                cursor: 'pointer', 
-                                color: 'var(--color-danger)',
-                                transition: 'color 0.2s',
-                              }}
-                              title="Anular/Eliminar Factura"
-                            >
-                              <Trash2 size={15} />
-                            </button>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                              {inv.status === 'PAID' ? (
+                                <span style={{
+                                  fontSize: '0.72rem',
+                                  fontWeight: 600,
+                                  padding: '3px 8px',
+                                  borderRadius: '6px',
+                                  backgroundColor: 'var(--color-success-bg)',
+                                  color: 'var(--color-success)',
+                                  border: '1px solid rgba(16, 185, 129, 0.2)',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '3px'
+                                }}>
+                                  <Check size={12} /> Saldada
+                                </span>
+                              ) : (
+                                <button
+                                  onClick={() => handleOpenPayInvoice(inv)}
+                                  className="btn"
+                                  style={{
+                                    padding: '4px 10px',
+                                    fontSize: '0.76rem',
+                                    fontWeight: 600,
+                                    backgroundColor: 'var(--color-success)',
+                                    color: '#FFFFFF',
+                                    border: 'none',
+                                    borderRadius: '6px',
+                                    cursor: 'pointer',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '4px',
+                                    boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
+                                    transition: 'all 0.15s ease'
+                                  }}
+                                  onMouseEnter={(e) => e.currentTarget.style.opacity = '0.9'}
+                                  onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
+                                  title="Registrar pago a esta factura"
+                                >
+                                  <DollarSign size={13} />
+                                  Cargar Pago
+                                </button>
+                              )}
+                              <button
+                                onClick={() => handleDeleteInvoice(inv.id, inv.invoiceNumber)}
+                                className="btn-icon"
+                                style={{ 
+                                  background: 'none', 
+                                  border: 'none', 
+                                  padding: '4px', 
+                                  cursor: 'pointer', 
+                                  color: 'var(--color-danger)',
+                                  transition: 'color 0.2s',
+                                  borderRadius: '4px'
+                                }}
+                                title="Anular/Eliminar Factura"
+                              >
+                                <Trash2 size={15} />
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       );
@@ -2007,6 +2152,372 @@ export default function ComprasDashboard() {
             <div className="modal-footer" style={{ marginTop: '20px' }}>
               <button className="btn btn-secondary" onClick={() => setAccountSummaryModal(null)}>Cerrar</button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ====================================================================
+          MODAL: CARGAR PAGO DE FACTURA PROVEEDOR
+          ==================================================================== */}
+      {payInvoiceModal.open && payInvoiceModal.invoice && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.5)',
+          backdropFilter: 'blur(4px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          padding: '20px',
+          animation: 'fadeIn 0.15s ease-out'
+        }}>
+          <div style={{
+            backgroundColor: '#FFFFFF',
+            borderRadius: '14px',
+            border: '1px solid var(--border-color)',
+            width: '100%',
+            maxWidth: '520px',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+            overflow: 'hidden',
+            display: 'flex',
+            flexDirection: 'column'
+          }}>
+            {/* Modal Header */}
+            <div style={{
+              padding: '16px 20px',
+              borderBottom: '1px solid var(--border-color)',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              backgroundColor: 'var(--accent-bg-light)'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <CreditCard size={18} style={{ color: 'var(--color-success)' }} />
+                <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                  Registrar Pago de Factura
+                </h3>
+              </div>
+              <button
+                onClick={() => setPayInvoiceModal({ open: false, invoice: null })}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Modal Form */}
+            <form onSubmit={handlePayInvoiceSubmit} style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {/* Summary Box */}
+              <div style={{
+                backgroundColor: 'var(--bg-app)',
+                border: '1px solid var(--border-color)',
+                borderRadius: '10px',
+                padding: '14px 16px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '8px'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+                  <span style={{ color: 'var(--text-secondary)' }}>Proveedor:</span>
+                  <strong style={{ color: 'var(--text-primary)' }}>{payInvoiceModal.invoice.persona?.name}</strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+                  <span style={{ color: 'var(--text-secondary)' }}>Comprobante:</span>
+                  <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>{payInvoiceModal.invoice.invoiceNumber}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', paddingTop: '6px', borderTop: '1px dashed var(--border-color)' }}>
+                  <span style={{ color: 'var(--text-secondary)' }}>Total Factura:</span>
+                  <span>${Number(payInvoiceModal.invoice.totalAmount || 0).toLocaleString('es-AR')}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+                  <span style={{ color: 'var(--text-secondary)' }}>Abonado previo:</span>
+                  <span>${Number(payInvoiceModal.invoice.paidAmount || 0).toLocaleString('es-AR')}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.92rem', fontWeight: 700, color: 'var(--color-danger)', paddingTop: '4px' }}>
+                  <span>Saldo Pendiente:</span>
+                  <span>${(Number(payInvoiceModal.invoice.totalAmount || 0) - Number(payInvoiceModal.invoice.paidAmount || 0)).toLocaleString('es-AR')}</span>
+                </div>
+              </div>
+
+              {/* Sucursal Imputación */}
+              <div>
+                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px', textTransform: 'uppercase' }}>
+                  Sucursal Imputación *
+                </label>
+                <select
+                  value={paymentForm.branch}
+                  onChange={(e) => setPaymentForm({ ...paymentForm, branch: e.target.value })}
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px',
+                    fontSize: '0.85rem',
+                    borderRadius: '8px',
+                    border: '1px solid var(--border-color)',
+                    backgroundColor: '#FFFFFF',
+                    color: 'var(--text-primary)'
+                  }}
+                >
+                  <option value="A">Sucursal A (Oficial)</option>
+                  <option value="X">Sucursal X (Interna)</option>
+                </select>
+              </div>
+
+              {/* Formas de Pago (Pago Dividido) */}
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <label style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>
+                    Formas de Pago / Desglose *
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const pendingAmount = (Number(payInvoiceModal.invoice?.totalAmount || 0) - Number(payInvoiceModal.invoice?.paidAmount || 0));
+                      const currentSum = paymentItems.reduce((acc, item) => acc + (Number(item.amount) || 0), 0);
+                      const rem = Math.max(0, pendingAmount - currentSum);
+                      setPaymentItems([
+                        ...paymentItems,
+                        { amount: rem > 0 ? rem.toFixed(2) : '0.00', paymentMethod: 'BANK_TRANSFER', bankAccountId: bankAccounts[0]?.id ? String(bankAccounts[0].id) : '' }
+                      ]);
+                    }}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: 'var(--color-success, #10b981)',
+                      fontSize: '0.78rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}
+                  >
+                    + Agregar otra forma de pago
+                  </button>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {paymentItems.map((item, idx) => (
+                    <div key={idx} style={{
+                      backgroundColor: 'var(--bg-app)',
+                      border: '1px solid var(--border-color)',
+                      borderRadius: '8px',
+                      padding: '10px 12px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '8px'
+                    }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: '10px', alignItems: 'center' }}>
+                        <div>
+                          <label style={{ display: 'block', fontSize: '0.7rem', color: 'var(--text-secondary)', marginBottom: '3px' }}>
+                            Monto (${idx + 1})
+                          </label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            required
+                            value={item.amount}
+                            onChange={(e) => {
+                              const newItems = [...paymentItems];
+                              newItems[idx].amount = e.target.value;
+                              setPaymentItems(newItems);
+                            }}
+                            style={{
+                              width: '100%',
+                              padding: '6px 8px',
+                              fontSize: '0.95rem',
+                              fontWeight: 700,
+                              borderRadius: '6px',
+                              border: '1px solid var(--border-color)',
+                              color: 'var(--color-success)'
+                            }}
+                          />
+                        </div>
+
+                        <div>
+                          <label style={{ display: 'block', fontSize: '0.7rem', color: 'var(--text-secondary)', marginBottom: '3px' }}>
+                            Forma de Pago
+                          </label>
+                          <select
+                            value={item.paymentMethod}
+                            onChange={(e) => {
+                              const newItems = [...paymentItems];
+                              newItems[idx].paymentMethod = e.target.value;
+                              setPaymentItems(newItems);
+                            }}
+                            style={{
+                              width: '100%',
+                              padding: '6px 8px',
+                              fontSize: '0.82rem',
+                              borderRadius: '6px',
+                              border: '1px solid var(--border-color)',
+                              backgroundColor: '#FFFFFF',
+                              color: 'var(--text-primary)'
+                            }}
+                          >
+                            <option value="CASH">💵 Efectivo (Caja)</option>
+                            <option value="BANK_TRANSFER">🏦 Transferencia Bancaria</option>
+                            <option value="CHECK">📜 Cheque</option>
+                          </select>
+                        </div>
+
+                        {paymentItems.length > 1 && (
+                          <div style={{ paddingTop: '16px' }}>
+                            <button
+                              type="button"
+                              onClick={() => setPaymentItems(paymentItems.filter((_, i) => i !== idx))}
+                              style={{
+                                background: 'none',
+                                border: 'none',
+                                color: 'var(--color-danger)',
+                                cursor: 'pointer',
+                                padding: '4px'
+                              }}
+                              title="Eliminar forma de pago"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+
+                      {(item.paymentMethod === 'BANK_TRANSFER' || item.paymentMethod === 'CHECK') && (
+                        <div>
+                          <label style={{ display: 'block', fontSize: '0.7rem', color: 'var(--text-secondary)', marginBottom: '3px' }}>
+                            Cuenta Bancaria Origen *
+                          </label>
+                          <select
+                            value={item.bankAccountId}
+                            onChange={(e) => {
+                              const newItems = [...paymentItems];
+                              newItems[idx].bankAccountId = e.target.value;
+                              setPaymentItems(newItems);
+                            }}
+                            style={{
+                              width: '100%',
+                              padding: '6px 8px',
+                              fontSize: '0.82rem',
+                              borderRadius: '6px',
+                              border: '1px solid var(--border-color)',
+                              backgroundColor: '#FFFFFF',
+                              color: 'var(--text-primary)'
+                            }}
+                          >
+                            <option value="">Seleccione cuenta bancaria...</option>
+                            {bankAccounts.map((b: any) => (
+                              <option key={b.id} value={b.id}>
+                                {b.bankName} - {b.accountType || 'Cta'} N° {b.accountNumber || b.id} (Saldo: ${Number(b.balance || 0).toLocaleString('es-AR')})
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Summary bar desglosado */}
+                {(() => {
+                  const totalPending = (Number(payInvoiceModal.invoice?.totalAmount || 0) - Number(payInvoiceModal.invoice?.paidAmount || 0));
+                  const totalDesglosado = paymentItems.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+                  const diff = totalPending - totalDesglosado;
+
+                  return (
+                    <div style={{
+                      marginTop: '10px',
+                      padding: '8px 12px',
+                      borderRadius: '6px',
+                      backgroundColor: Math.abs(diff) < 0.01 ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                      border: `1px solid ${Math.abs(diff) < 0.01 ? '#10b981' : '#ef4444'}`,
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      fontSize: '0.82rem',
+                      fontWeight: 600,
+                      color: Math.abs(diff) < 0.01 ? '#047857' : '#b91c1c'
+                    }}>
+                      <span>Total desglosado: ${totalDesglosado.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
+                      {Math.abs(diff) >= 0.01 ? (
+                        <span>({diff > 0 ? `Faltan $${diff.toLocaleString('es-AR', { minimumFractionDigits: 2 })}` : `Exceso de $${Math.abs(diff).toLocaleString('es-AR', { minimumFractionDigits: 2 })}`})</span>
+                      ) : (
+                        <span>✓ Cubierto exacto</span>
+                      )}
+                    </div>
+                  );
+                })()}
+              </div>
+
+              {/* Observaciones / Referencia */}
+              <div>
+                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px', textTransform: 'uppercase' }}>
+                  Detalle / Referencia
+                </label>
+                <input
+                  type="text"
+                  placeholder="Ej: Pago parcial / Transferencia 8492"
+                  value={paymentForm.description}
+                  onChange={(e) => setPaymentForm({ ...paymentForm, description: e.target.value })}
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px',
+                    fontSize: '0.85rem',
+                    borderRadius: '8px',
+                    border: '1px solid var(--border-color)',
+                    color: 'var(--text-primary)'
+                  }}
+                />
+              </div>
+
+              {/* Footer Actions */}
+              <div style={{
+                display: 'flex',
+                justifyContent: 'flex-end',
+                gap: '10px',
+                paddingTop: '12px',
+                borderTop: '1px solid var(--border-color)',
+                marginTop: '6px'
+              }}>
+                <button
+                  type="button"
+                  onClick={() => setPayInvoiceModal({ open: false, invoice: null })}
+                  style={{
+                    padding: '8px 16px',
+                    borderRadius: '8px',
+                    border: '1px solid var(--border-color)',
+                    backgroundColor: '#FFFFFF',
+                    color: 'var(--text-secondary)',
+                    fontSize: '0.82rem',
+                    fontWeight: 500,
+                    cursor: 'pointer'
+                  }}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  style={{
+                    padding: '8px 18px',
+                    borderRadius: '8px',
+                    border: 'none',
+                    backgroundColor: 'var(--color-success)',
+                    color: '#FFFFFF',
+                    fontSize: '0.82rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    boxShadow: '0 2px 4px rgba(16, 185, 129, 0.2)'
+                  }}
+                >
+                  <Check size={16} />
+                  Confirmar Pago
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

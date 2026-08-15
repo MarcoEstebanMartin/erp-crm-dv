@@ -1,14 +1,14 @@
 import { Request, Response, NextFunction } from 'express';
 import { ZodError } from 'zod';
 import AppError from '../utils/AppError';
+import { env } from '../config/env.config';
 
 export function errorHandler(
-  err: any,
-  req: Request,
+  err: Error | AppError | ZodError | any,
+  _req: Request,
   res: Response,
-  next: NextFunction
-) {
-  // 1. Manejo de AppError personalizado
+  _next: NextFunction
+): Response {
   if (err instanceof AppError) {
     return res.status(err.statusCode).json({
       status: 'error',
@@ -16,9 +16,8 @@ export function errorHandler(
     });
   }
 
-  // 2. Manejo de errores de validación de Zod
   if (err instanceof ZodError) {
-    const formattedErrors = err.issues.map(issue => ({
+    const formattedErrors = err.issues.map((issue) => ({
       field: issue.path.join('.'),
       message: issue.message,
     }));
@@ -30,7 +29,6 @@ export function errorHandler(
     });
   }
 
-  // 3. Manejo de errores conocidos de Prisma ORM
   if (err?.code === 'P2002') {
     const fields = err.meta?.target ? (err.meta.target as string[]).join(', ') : 'campo único';
     return res.status(409).json({
@@ -46,13 +44,12 @@ export function errorHandler(
     });
   }
 
-  // 4. Fallback de error 500 no capturado
   console.error('⚠️ [Unhandled Server Error]:', err);
-  
+
   return res.status(500).json({
     status: 'error',
-    message: err.message || 'Error interno del servidor',
-    error: process.env.NODE_ENV === 'development' ? err : undefined,
+    message: err?.message || 'Error interno del servidor',
+    error: env.NODE_ENV === 'development' ? err : undefined,
   });
 }
 

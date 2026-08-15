@@ -248,7 +248,7 @@ export class PersonaService {
    * Registrar pago/cobro.
    */
   async recordPersonaPayment(id: number, data: any, userId: number, userRole: string) {
-    const { amount, paymentMethod, description, branch, type, supplierInvoiceId, orderId, bankAccountId: reqBankAccountId } = data;
+    const { description, branch, type, supplierInvoiceId, orderId, bankAccountId: reqBankAccountId } = data;
     const selectedBranch = branch || 'X';
 
     const persona = await prisma.persona.findUnique({ where: { id } });
@@ -258,18 +258,39 @@ export class PersonaService {
       throw new Error('Acceso denegado.');
     }
 
-    const paymentAmount = Number(Number(amount).toFixed(2));
     const isSupplier = persona.isProvider && !persona.isClient;
     const resolvedType = (type === 'OUTCOME' || type === 'INCOME') ? (type as TransactionType) : (isSupplier ? TransactionType.OUTCOME : TransactionType.INCOME);
 
-    // Control de duplicados (Idempotencia)
-    if (resolvedType === TransactionType.INCOME) {
+    // Preparar lista de ítems de pago desglosados (Múltiples formas de pago)
+    const rawPayments = (Array.isArray(data.payments) && data.payments.length > 0)
+      ? data.payments
+      : [{
+          amount: data.amount,
+          paymentMethod: data.paymentMethod,
+          bankAccountId: reqBankAccountId,
+          description: data.description
+        }];
+
+    const paymentItems = rawPayments.map((p: any) => ({
+      amount: Number(Number(p.amount).toFixed(2)),
+      paymentMethod: p.paymentMethod as PaymentMethod,
+      bankAccountId: p.bankAccountId ? Number(p.bankAccountId) : (reqBankAccountId ? Number(reqBankAccountId) : null),
+      description: p.description || description
+    }));
+
+    const totalPaymentAmount = Number(paymentItems.reduce((acc: number, p: any) => acc + p.amount, 0).toFixed(2));
+    if (totalPaymentAmount <= 0) {
+      throw new Error('El monto total a pagar debe ser mayor a 0.');
+    }
+
+    // Control de duplicados (Idempotencia) para cobro individual de clientes
+    if (resolvedType === TransactionType.INCOME && paymentItems.length === 1) {
       const fifteenSecondsAgo = new Date(Date.now() - 15000);
       const duplicateTx = await prisma.transaction.findFirst({
         where: {
           personaId: persona.id,
-          amount: paymentAmount,
-          paymentMethod: paymentMethod as PaymentMethod,
+          amount: paymentItems[0].amount,
+          paymentMethod: paymentItems[0].paymentMethod,
           type: TransactionType.INCOME,
           createdAt: {
             gte: fifteenSecondsAgo
@@ -289,7 +310,7 @@ export class PersonaService {
         if (supplierInvoice.personaId !== persona.id) throw new Error('El comprobante no pertenece a este proveedor.');
 
         const currentPaid = Number(supplierInvoice.paidAmount || 0);
-        const newPaid = currentPaid + paymentAmount;
+        const newPaid = currentPaid + totalPaymentAmount;
         const newStatus = newPaid >= Number(supplierInvoice.totalAmount) ? 'PAID' : 'PARTIALLY_PAID';
 
         await tx.supplierInvoice.update({
@@ -297,44 +318,6 @@ export class PersonaService {
           data: { paidAmount: newPaid, status: newStatus },
         });
         invoiceNumberToLog = supplierInvoice.invoiceNumber;
-      }
-
-      let cashDrawerId: number | null = null;
-      if (paymentMethod === PaymentMethod.CASH) {
-        let activeDrawer = await tx.cashDrawer.findFirst({
-          where: { userId, status: 'OPEN' },
-        });
-
-        if (!activeDrawer) {
-          activeDrawer = await tx.cashDrawer.findFirst({
-            where: { status: 'OPEN' }
-          });
-        }
-
-        if (!activeDrawer) {
-          const user = await tx.user.findUnique({ where: { id: userId } });
-          if (user && (user.role === Role.ADMIN || user.role === Role.FACTURACION)) {
-            cashDrawerId = null;
-          } else {
-            throw new Error(`Debés tener una Caja Abierta antes de registrar cobros/pagos en efectivo.`);
-          }
-        } else {
-          cashDrawerId = activeDrawer.id;
-        }
-      }
-
-      let bankAccountId: number | null = null;
-      if (paymentMethod === PaymentMethod.BANK_TRANSFER || paymentMethod === PaymentMethod.CHECK) {
-        const selectedBankId = reqBankAccountId ? Number(reqBankAccountId) : (await tx.bankAccount.findFirst())?.id;
-        if (!selectedBankId) throw new Error('No hay ninguna cuenta bancaria registrada en el sistema.');
-        bankAccountId = selectedBankId;
-
-        await tx.bankAccount.update({
-          where: { id: bankAccountId },
-          data: {
-            balance: { increment: resolvedType === TransactionType.INCOME ? paymentAmount : -paymentAmount },
-          },
-        });
       }
 
       // Buscar número de factura si se especificó orderId para la descripción
@@ -346,26 +329,70 @@ export class PersonaService {
         }
       }
 
-      const transaction = await tx.transaction.create({
-        data: {
-          personaId: persona.id,
-          userId,
-          billingType: selectedBranch === 'A' ? BillingType.OFFICIAL : BillingType.INTERNAL,
-          type: resolvedType,
-          paymentMethod: paymentMethod as PaymentMethod,
-          amount: paymentAmount,
-          description: description || (supplierInvoiceId 
-            ? `Pago de Factura Nro ${invoiceNumberToLog}`
-            : (orderId 
-              ? `Cobro de Factura ${orderNumberDesc}`
-              : `${resolvedType === TransactionType.OUTCOME ? 'Pago' : 'Cobro'} en cuenta corriente de ${persona.name}`)),
-          cashDrawerId,
-          bankAccountId,
-          supplierInvoiceId: supplierInvoiceId ? Number(supplierInvoiceId) : null,
-          orderId: orderId ? Number(orderId) : null,
-          verified: true, // Cobro/pago administrativo directo en backoffice -> autoverificado
-        },
-      });
+      const createdTransactions = [];
+
+      for (const item of paymentItems) {
+        let cashDrawerId: number | null = null;
+        if (item.paymentMethod === PaymentMethod.CASH) {
+          let activeDrawer = await tx.cashDrawer.findFirst({
+            where: { userId, status: 'OPEN' },
+          });
+
+          if (!activeDrawer) {
+            activeDrawer = await tx.cashDrawer.findFirst({
+              where: { status: 'OPEN' }
+            });
+          }
+
+          if (!activeDrawer) {
+            const user = await tx.user.findUnique({ where: { id: userId } });
+            if (user && (user.role === Role.ADMIN || user.role === Role.FACTURACION)) {
+              cashDrawerId = null;
+            } else {
+              throw new Error(`Debés tener una Caja Abierta antes de registrar cobros/pagos en efectivo.`);
+            }
+          } else {
+            cashDrawerId = activeDrawer.id;
+          }
+        }
+
+        let bankAccountId: number | null = null;
+        if (item.paymentMethod === PaymentMethod.BANK_TRANSFER || item.paymentMethod === PaymentMethod.CHECK) {
+          const selectedBankId = item.bankAccountId ? Number(item.bankAccountId) : (await tx.bankAccount.findFirst())?.id;
+          if (!selectedBankId) throw new Error('No hay ninguna cuenta bancaria registrada en el sistema.');
+          const targetBankId: number = Number(selectedBankId);
+          bankAccountId = targetBankId;
+
+          await tx.bankAccount.update({
+            where: { id: targetBankId },
+            data: {
+              balance: { increment: resolvedType === TransactionType.INCOME ? item.amount : -item.amount },
+            },
+          });
+        }
+
+        const transaction = await tx.transaction.create({
+          data: {
+            personaId: persona.id,
+            userId,
+            billingType: selectedBranch === 'A' ? BillingType.OFFICIAL : BillingType.INTERNAL,
+            type: resolvedType,
+            paymentMethod: item.paymentMethod,
+            amount: item.amount,
+            description: item.description || (supplierInvoiceId 
+              ? `Pago de Factura Nro ${invoiceNumberToLog}`
+              : (orderId 
+                ? `Cobro de Factura ${orderNumberDesc}`
+                : `${resolvedType === TransactionType.OUTCOME ? 'Pago' : 'Cobro'} en cuenta corriente de ${persona.name}`)),
+            cashDrawerId,
+            bankAccountId,
+            supplierInvoiceId: supplierInvoiceId ? Number(supplierInvoiceId) : null,
+            orderId: orderId ? Number(orderId) : null,
+            verified: true, // Autoverificado
+          },
+        });
+        createdTransactions.push(transaction);
+      }
 
       // Guardar retenciones si corresponden
       let retencionesTotal = 0;
@@ -380,14 +407,14 @@ export class PersonaService {
               number: ret.number,
               date: new Date(),
               amount: Number(ret.amount),
-              jurisdiction: ret.taxType === 'IIBB' ? 'AR-B' : null, // Por defecto Buenos Aires (AR-B)
+              jurisdiction: ret.taxType === 'IIBB' ? 'AR-B' : null,
             }
           });
         }
       }
 
-      // El total que cancela la cuenta corriente es el monto cobrado + retenciones
-      const totalCredit = paymentAmount + retencionesTotal;
+      // El total que cancela la cuenta corriente es el monto cobrado/pagado + retenciones
+      const totalCredit = totalPaymentAmount + retencionesTotal;
 
       const updatedPersona = await tx.persona.update({
         where: { id: persona.id },
@@ -398,7 +425,7 @@ export class PersonaService {
         },
       });
 
-      return { transaction, updatedPersona };
+      return { transaction: createdTransactions[0], transactions: createdTransactions, updatedPersona };
     });
 
     await logAudit({
@@ -407,8 +434,8 @@ export class PersonaService {
       entityType: 'Persona',
       entityId: persona.id,
       newValues: {
-        transactionId: result.transaction.id,
-        amount: paymentAmount,
+        transactionCount: result.transactions.length,
+        totalAmount: totalPaymentAmount,
         type: resolvedType,
         newOutstandingBalance: result.updatedPersona.outstandingBalance.toString(),
       },

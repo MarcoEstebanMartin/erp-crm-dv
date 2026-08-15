@@ -3,16 +3,9 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import prisma from '../utils/prisma';
 import { AuthenticatedRequest, UserPermissions } from '../types';
+import { env } from '../config/env.config';
 
-function getJwtSecret(): string {
-  const secret = process.env.JWT_SECRET;
-  if (!secret) {
-    throw new Error('FATAL: La variable de entorno JWT_SECRET no está definida en la configuración del servidor.');
-  }
-  return secret;
-}
-
-export function getDefaultPermissions(role: string) {
+export function getDefaultPermissions(role: string): UserPermissions {
   if (role === 'ADMIN' || role === 'FACTURACION') {
     return { canSell: true, canPick: true, canDeliver: true, canCollect: true, canManageStock: true };
   }
@@ -37,7 +30,6 @@ export async function login(req: Request, res: Response): Promise<void> {
   }
 
   try {
-    // Buscar usuario en la base de datos
     const user = await prisma.user.findUnique({
       where: { username },
     });
@@ -50,7 +42,6 @@ export async function login(req: Request, res: Response): Promise<void> {
       return;
     }
 
-    // Verificar contraseña
     const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
     if (!isPasswordValid) {
       res.status(401).json({
@@ -60,17 +51,17 @@ export async function login(req: Request, res: Response): Promise<void> {
       return;
     }
 
-    const effectivePermissions: UserPermissions = (user.permissions as unknown as UserPermissions) || getDefaultPermissions(user.role);
+    const effectivePermissions: UserPermissions =
+      (user.permissions as unknown as UserPermissions) || getDefaultPermissions(user.role);
 
-    // Generar JWT (válido por 30 días)
     const token = jwt.sign(
       {
         id: user.id,
         username: user.username,
         role: user.role,
-        permissions: effectivePermissions
+        permissions: effectivePermissions,
       },
-      getJwtSecret(),
+      env.JWT_SECRET,
       { expiresIn: '30d' }
     );
 
@@ -82,15 +73,15 @@ export async function login(req: Request, res: Response): Promise<void> {
           id: user.id,
           username: user.username,
           role: user.role,
-          permissions: effectivePermissions
+          permissions: effectivePermissions,
         },
         config: {
-          ignoreStock: process.env.IGNORE_STOCK_CHECK === 'true',
-          afipProduction: process.env.AFIP_PRODUCTION === 'true'
-        }
+          ignoreStock: env.IGNORE_STOCK_CHECK,
+          afipProduction: env.AFIP_PRODUCTION,
+        },
       },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error en Login:', error);
     res.status(500).json({
       status: 'error',
@@ -129,22 +120,24 @@ export async function getMe(req: AuthenticatedRequest, res: Response): Promise<v
       return;
     }
 
-    const effectivePermissions: UserPermissions = (user.permissions as unknown as UserPermissions) || getDefaultPermissions(user.role);
+    const effectivePermissions: UserPermissions =
+      (user.permissions as unknown as UserPermissions) || getDefaultPermissions(user.role);
 
     res.status(200).json({
       status: 'success',
-      data: { 
+      data: {
         user: {
           ...user,
-          permissions: effectivePermissions
+          permissions: effectivePermissions,
         },
         config: {
-          ignoreStock: process.env.IGNORE_STOCK_CHECK === 'true',
-          afipProduction: process.env.AFIP_PRODUCTION === 'true'
-        }
+          ignoreStock: env.IGNORE_STOCK_CHECK,
+          afipProduction: env.AFIP_PRODUCTION,
+        },
       },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    console.error('Error en getMe:', error);
     res.status(500).json({
       status: 'error',
       message: 'Error al obtener datos del usuario.',

@@ -31,7 +31,15 @@ async function request(path: string, options: RequestInit = {}) {
     throw new Error('Sesión expirada. Por favor iniciá sesión nuevamente.');
   }
 
-  const json = await response.json();
+  const text = await response.text();
+  let json: any = {};
+  if (text && text.trim()) {
+    try {
+      json = JSON.parse(text);
+    } catch (e) {
+      json = {};
+    }
+  }
   if (json.status === 'error') {
     if (json.message && (json.message.includes('Token') || json.message.includes('expirado'))) {
       localStorage.removeItem('auth_token');
@@ -45,7 +53,7 @@ async function request(path: string, options: RequestInit = {}) {
       : '';
     throw new Error(`${json.message}${details}`);
   }
-  return json.data;
+  return json.data !== undefined ? json.data : json;
 }
 
 // Comprobar la conexión con el servidor
@@ -65,14 +73,20 @@ export async function testServerConnection(): Promise<boolean> {
 export const api = {
   // --- AUTENTICACIÓN ---
   login: async (username: string, password: string) => {
-    
-
     const res = await request('/auth/login', {
       method: 'POST',
       body: JSON.stringify({ username, password })
     });
-    localStorage.setItem('auth_token', res.token);
-    localStorage.setItem('auth_user', JSON.stringify(res.user));
+    if (!res) {
+      throw new Error('Respuesta inválida del servidor');
+    }
+    const token = res.token || res.accessToken;
+    if (token) {
+      localStorage.setItem('auth_token', token);
+    }
+    if (res.user) {
+      localStorage.setItem('auth_user', JSON.stringify(res.user));
+    }
     if (res.config) {
       localStorage.setItem('auth_config', JSON.stringify(res.config));
     }
@@ -338,7 +352,7 @@ export const api = {
     });
   },
 
-  registerPayment: async (personaId: number, paymentData: { amount: number, paymentMethod: string, description?: string, branch?: string, type?: string, supplierInvoiceId?: number, orderId?: number, bankAccountId?: number | null, retenciones?: { taxType: 'GANANCIAS' | 'IIBB', number: string, amount: number }[] }) => {    
+  registerPayment: async (personaId: number, paymentData: { amount?: number, paymentMethod?: string, payments?: { amount: number, paymentMethod: string, bankAccountId?: number | null, description?: string }[], description?: string, branch?: string, type?: string, supplierInvoiceId?: number, orderId?: number, bankAccountId?: number | null, retenciones?: { taxType: 'GANANCIAS' | 'IIBB', number: string, amount: number }[] }) => {    
     const res = await request(`/personas/${personaId}/payments`, {
       method: 'POST',
       body: JSON.stringify(paymentData)

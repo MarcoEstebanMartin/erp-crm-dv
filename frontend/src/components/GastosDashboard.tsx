@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { api } from '../utils/api';
+import { api, API_BASE_URL } from '../utils/api';
 import { DollarSign, Plus, Trash2, X, RefreshCw, Calendar, FileText, CheckCircle, Tag, Truck, UploadCloud, AlertCircle, Filter, Check, FileSpreadsheet, TrendingDown, Info, Car, Copy } from 'lucide-react';
 import { useConfirm } from '../context/ConfirmContext';
 
@@ -96,13 +96,14 @@ export default function GastosDashboard() {
         console.error('Error fetching bank accounts', e);
       }
       
-      // Intentamos cargar vehículos usando la ruta directa en el backend
+      // Intentamos cargar vehículos usando la ruta configurada en la API
       try {
         const token = localStorage.getItem('auth_token');
-        const res = await fetch(`http://${window.location.hostname}:3000/api/fleet/vehicles`, {
+        const res = await fetch(`${API_BASE_URL}/fleet/vehicles`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
-        const json = await res.json();
+        const text = await res.text();
+        const json = text && text.trim() ? JSON.parse(text) : {};
         if (json.status === 'success') {
           setVehicles(json.data.vehicles || []);
         }

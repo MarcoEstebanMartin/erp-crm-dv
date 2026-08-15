@@ -74,8 +74,14 @@ export const recordPersonaPaymentSchema = z.object({
     id: z.string().regex(/^\d+$/, 'El ID debe ser numérico'),
   }),
   body: z.object({
-    amount: z.number().positive('El monto debe ser mayor a cero'),
-    paymentMethod: z.enum(['CASH', 'BANK_TRANSFER', 'CHECK']),
+    amount: z.number().positive('El monto debe ser mayor a cero').optional(),
+    paymentMethod: z.enum(['CASH', 'BANK_TRANSFER', 'CHECK']).optional(),
+    payments: z.array(z.object({
+      amount: z.number().positive('El monto debe ser mayor a cero'),
+      paymentMethod: z.enum(['CASH', 'BANK_TRANSFER', 'CHECK']),
+      bankAccountId: z.union([z.number(), z.string()]).optional().nullable(),
+      description: z.string().optional(),
+    })).optional(),
     description: z.string().optional(),
     branch: z.enum(['A', 'X']).optional(),
     type: z.enum(['INCOME', 'OUTCOME']).optional(),

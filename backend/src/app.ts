@@ -1,12 +1,9 @@
-import dotenv from 'dotenv';
-dotenv.config();
-
 import express, { Application, Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import path from 'path';
-import fs from 'fs';
+import { env } from './config/env.config';
+import { ensureDirectoriesExist, syncMasterProductImages } from './utils/fileSync.util';
 import { errorHandler } from './middlewares/errorHandler.middleware';
-
 import { authenticateJWT } from './middlewares/auth';
 
 // Importación de Rutas
@@ -38,18 +35,20 @@ import webChatRoutes from './routes/webChat.routes';
 
 const app: Application = express();
 
-// Asegurar existencia de carpetas de subida
-const uploadsDir = path.join(__dirname, '../uploads');
-const productsUploadsDir = path.join(uploadsDir, 'products');
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir);
-}
-if (!fs.existsSync(productsUploadsDir)) {
-  fs.mkdirSync(productsUploadsDir);
-}
+// 1. Headers de Seguridad Nativos & CORS
+app.use((_req: Request, res: Response, next: NextFunction) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  next();
+});
 
-// Middleware de rendimiento (X-Response-Time)
-app.use((req: Request, res: Response, next: NextFunction) => {
+app.use(cors({ origin: env.CORS_ORIGIN }));
+app.use(express.json());
+
+// 2. Middleware de Rendimiento (X-Response-Time Seguro)
+app.use((_req: Request, res: Response, next: NextFunction) => {
   const start = Date.now();
   const originalWriteHead = res.writeHead;
   res.writeHead = function (...args: any[]) {
@@ -62,43 +61,27 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   next();
 });
 
-// Middlewares globales
-app.use(cors());
-app.use(express.json());
-app.use('/uploads', express.static(uploadsDir, {
-  maxAge: 0,
-  etag: true,
-  lastModified: true
-}));
-
-const archivosDir = process.env.ARCHIVOS_PATH || path.join(__dirname, '../../ARCHIVOS');
+// 3. Inicialización Asincrónica de Directorios y Archivos Maestros
+const uploadsDir = path.join(__dirname, '../uploads');
+const productsUploadsDir = path.join(uploadsDir, 'products');
+const archivosDir = path.resolve(__dirname, env.ARCHIVOS_PATH);
 const masterProductosFotosDir = path.join(archivosDir, 'fotos/Productos');
 
-// Auto-restaurar imágenes maestras de productos al arrancar el servidor
-if (fs.existsSync(masterProductosFotosDir)) {
-  try {
-    const masterFiles = fs.readdirSync(masterProductosFotosDir);
-    masterFiles.forEach(f => {
-      const srcFile = path.join(masterProductosFotosDir, f);
-      const dstFile = path.join(productsUploadsDir, f);
-      if (!fs.existsSync(dstFile) || fs.statSync(srcFile).size !== fs.statSync(dstFile).size) {
-        fs.copyFileSync(srcFile, dstFile);
-      }
-    });
-  } catch (err) {
-    console.error('⚠️ Error al auto-sincronizar imágenes maestras:', err);
-  }
+(async () => {
+  await ensureDirectoriesExist([uploadsDir, productsUploadsDir]);
+  await syncMasterProductImages(masterProductosFotosDir, productsUploadsDir);
+})();
 
-  app.use('/uploads/products', express.static(masterProductosFotosDir, {
-    maxAge: 0,
-    etag: true,
-    lastModified: true
-  }));
+// 4. Servidor de Archivos Estáticos
+app.use('/uploads', express.static(uploadsDir, { maxAge: 0, etag: true, lastModified: true }));
+
+if (env.NODE_ENV === 'development') {
+  app.use('/uploads/products', express.static(masterProductosFotosDir, { maxAge: 0, etag: true, lastModified: true }));
 }
 
 app.use('/api/purchases/files', authenticateJWT, express.static(archivosDir));
 
-// Montar Rutas
+// 5. Montar Rutas del API
 app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/personas', personaRoutes);
@@ -125,16 +108,16 @@ app.use('/api/store', storeRoutes);
 app.use('/api/weekly-schedule', weeklyScheduleRoutes);
 app.use('/api/web-chat', webChatRoutes);
 
-// Ruta de comprobación de estado (Healthcheck)
-app.get('/api/health', (req: Request, res: Response) => {
+// 6. Endpoint de Healthcheck
+app.get('/api/health', (_req: Request, res: Response) => {
   res.status(200).json({
     status: 'success',
     message: 'ERP-CRM Backend is running smoothly',
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
   });
 });
 
-// Manejador global de errores atómico y resiliente
+// 7. Manejador Global de Errores
 app.use(errorHandler);
 
 export default app;

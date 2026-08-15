@@ -1,0 +1,2911 @@
+{
+  "timestamp": "2026-08-08T10:44:07.810Z",
+  "isDryRun": true,
+  "stats": {
+    "totalProductsInDb": 320,
+    "matchedFromExcel": 250,
+    "defaultAssignedFromRubro": 70
+  },
+  "rubroDefaults": {
+    "1": 34.72,
+    "2": 28.33,
+    "3": 30,
+    "4": 35,
+    "5": 30,
+    "6": 28.75,
+    "7": 28.78,
+    "8": 23.5,
+    "9": 30,
+    "10": 23,
+    "11": 22.33,
+    "12": 25,
+    "13": 25,
+    "14": 28.82,
+    "15": 30,
+    "16": 30,
+    "17": 23.09,
+    "18": 27.5
+  },
+  "updates": [
+    {
+      "productId": 98,
+      "sku": "0171",
+      "name": "COCINERO ACEITE MEZCLA x 1.5cc",
+      "rubro": "A.G.D Y NIZA",
+      "assignedProfitMargin": 21,
+      "isDefaultRubro": false,
+      "matchType": "TOKEN_OVERLAP"
+    },
+    {
+      "productId": 252,
+      "sku": "0176",
+      "name": "NATURA ACEITE PVCx1500CC",
+      "rubro": "A.G.D Y NIZA",
+      "assignedProfitMargin": 30,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 255,
+      "sku": "0179",
+      "name": "NATURA ACEITE PVCx900CC",
+      "rubro": "A.G.D Y NIZA",
+      "assignedProfitMargin": 30,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 253,
+      "sku": "0177",
+      "name": "NATURA ACEITE PVCx3LT",
+      "rubro": "A.G.D Y NIZA",
+      "assignedProfitMargin": 35,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 259,
+      "sku": "0183",
+      "name": "NATURA ROCIO OLIVA AEROSOL X120cc",
+      "rubro": "A.G.D Y NIZA",
+      "assignedProfitMargin": 25,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 206,
+      "sku": "0170",
+      "name": "COCINERO ACEITE GIRASOL x 900 ml",
+      "rubro": "A.G.D Y NIZA",
+      "assignedProfitMargin": 21,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 258,
+      "sku": "0182",
+      "name": "NATURA ROCIO GIRASOL AEROSOL x 126cc",
+      "rubro": "A.G.D Y NIZA",
+      "assignedProfitMargin": 30,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 254,
+      "sku": "0178",
+      "name": "NATURA ACEITE PVCx5LT",
+      "rubro": "A.G.D Y NIZA",
+      "assignedProfitMargin": 30,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 257,
+      "sku": "0181",
+      "name": "NATURA OLIVA ANDx500cc VIDRIO",
+      "rubro": "A.G.D Y NIZA",
+      "assignedProfitMargin": 30,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 260,
+      "sku": "0184",
+      "name": "NATURA TRI OLIVA FUERTE PET X500",
+      "rubro": "A.G.D Y NIZA",
+      "assignedProfitMargin": 25,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 256,
+      "sku": "0180",
+      "name": "NATURA BI OLIVA SUAVE PET X500ml",
+      "rubro": "A.G.D Y NIZA",
+      "assignedProfitMargin": 25,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 250,
+      "sku": "0174",
+      "name": "MAROLIO VINAG ALC.BCO x 500 ml",
+      "rubro": "A.G.D Y NIZA",
+      "assignedProfitMargin": 30,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 268,
+      "sku": "0192",
+      "name": "NATURA MAYONESA 20x125cc.",
+      "rubro": "A.G.D Y NIZA",
+      "assignedProfitMargin": 30,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 266,
+      "sku": "0190",
+      "name": "NATURA MAYONESA 12x250gr",
+      "rubro": "A.G.D Y NIZA",
+      "assignedProfitMargin": 35,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 76,
+      "sku": "0195",
+      "name": "NATURA MAYONESA X500GR",
+      "rubro": "A.G.D Y NIZA",
+      "assignedProfitMargin": 35,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 269,
+      "sku": "0193",
+      "name": "NATURA MAYONESA X KG",
+      "rubro": "A.G.D Y NIZA",
+      "assignedProfitMargin": 30,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 267,
+      "sku": "0191",
+      "name": "NATURA MAYONESA 192x8cc.",
+      "rubro": "A.G.D Y NIZA",
+      "assignedProfitMargin": 30,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 265,
+      "sku": "0189",
+      "name": "NATURA MAYOLIVA 20X 125gr",
+      "rubro": "A.G.D Y NIZA",
+      "assignedProfitMargin": 25,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 264,
+      "sku": "0188",
+      "name": "NATURA KETCHUP X 250GR",
+      "rubro": "A.G.D Y NIZA",
+      "assignedProfitMargin": 30,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 77,
+      "sku": "0196",
+      "name": "NATURA MOSTAZA X250gr",
+      "rubro": "A.G.D Y NIZA",
+      "assignedProfitMargin": 30,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 78,
+      "sku": "0197",
+      "name": "NATURA SALSA GOLF 20 X125gr",
+      "rubro": "A.G.D Y NIZA",
+      "assignedProfitMargin": 30,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 79,
+      "sku": "0198",
+      "name": "NATURA SALSA GOLF X250gr",
+      "rubro": "A.G.D Y NIZA",
+      "assignedProfitMargin": 30,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 261,
+      "sku": "0185",
+      "name": "CADA DIA MAYONESA 12x250gr",
+      "rubro": "A.G.D Y NIZA",
+      "assignedProfitMargin": 25,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 95,
+      "sku": "0262",
+      "name": "MAROLIO ARROZ 12 X 500gr",
+      "rubro": "ARROZ",
+      "assignedProfitMargin": 30,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 94,
+      "sku": "0261",
+      "name": "MAROLIO ARROZ 10X1 KG.",
+      "rubro": "ARROZ",
+      "assignedProfitMargin": 30,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 93,
+      "sku": "0260",
+      "name": "EL.DIQUE ARROZ 12X500gr",
+      "rubro": "ARROZ",
+      "assignedProfitMargin": 30,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 26,
+      "sku": "0291",
+      "name": "LEDESMA AZUCAR MASCABO 6 x 800GR",
+      "rubro": "AZUCAR",
+      "assignedProfitMargin": 21,
+      "isDefaultRubro": false,
+      "matchType": "TOKEN_OVERLAP"
+    },
+    {
+      "productId": 27,
+      "sku": "0292",
+      "name": "SAN VICENTE AZUCAR 10X1kg",
+      "rubro": "AZUCAR",
+      "assignedProfitMargin": 25,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 25,
+      "sku": "0290",
+      "name": "LEDESMA AZUCAR 10 X 1KG",
+      "rubro": "AZUCAR",
+      "assignedProfitMargin": 21,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 58,
+      "sku": "0422",
+      "name": "SALDAN SODA SIFON 6x2 LTS",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 30,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 59,
+      "sku": "0423",
+      "name": "VIDA AGUA DE MESA 6x1.5LTS",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 30,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 66,
+      "sku": "0435",
+      "name": "CINZANO ROSSO X950ml",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 20,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 69,
+      "sku": "0438",
+      "name": "PADILLA CAÑA DURAZ x700ml",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 30,
+      "isDefaultRubro": false,
+      "matchType": "TOKEN_OVERLAP"
+    },
+    {
+      "productId": 67,
+      "sku": "0436",
+      "name": "GIN SPIRITO BLUE x700ml",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 15,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 68,
+      "sku": "0437",
+      "name": "GORDON`S GIN x700ml",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 21,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 70,
+      "sku": "0439",
+      "name": "SERNOVA VODKA x700ml",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 15,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 71,
+      "sku": "0440",
+      "name": "SERNOVA WILD BERRIES x700ml",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 15,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 73,
+      "sku": "0442",
+      "name": "SMIRNOFF VODKA x700ml",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 21,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 72,
+      "sku": "0441",
+      "name": "SMIRNOFF RASPBERRY x 700ml",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 21,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 60,
+      "sku": "0429",
+      "name": "AMERICANO GANCIA x 950ml",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 21,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 61,
+      "sku": "0430",
+      "name": "AMERICANO GANCIA X450ml",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 21,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 64,
+      "sku": "0433",
+      "name": "CARPANO ROSSO X950ml",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 10,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 65,
+      "sku": "0434",
+      "name": "CAZALIS LEGER X950ml",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 20,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 75,
+      "sku": "0450",
+      "name": "DR. LEMON LIMON 1 LT",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 22,
+      "isDefaultRubro": false,
+      "matchType": "TOKEN_OVERLAP"
+    },
+    {
+      "productId": 74,
+      "sku": "0449",
+      "name": "DR. LEMON C/VODKA 1 LT",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 22,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 1,
+      "sku": "0452",
+      "name": "DR.LEMON LIMON LATA X 473",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 22,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 119,
+      "sku": "0453",
+      "name": "DR.LEMON VODKA LATA x 473ml",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 22,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 118,
+      "sku": "0451",
+      "name": "DR. LEMON POMELO 1 LT",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 22,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 120,
+      "sku": "0454",
+      "name": "GANCIA LATA LIMON x 473ml",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 22,
+      "isDefaultRubro": false,
+      "matchType": "TOKEN_OVERLAP"
+    },
+    {
+      "productId": 121,
+      "sku": "0455",
+      "name": "PRONTO SHAKE LATA X 473",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 22,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 125,
+      "sku": "0459",
+      "name": "TERMA SERRANO 1.35ml",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 20,
+      "isDefaultRubro": false,
+      "matchType": "TOKEN_OVERLAP"
+    },
+    {
+      "productId": 122,
+      "sku": "0456",
+      "name": "TERMA LIMON 1350ml",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 20,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 123,
+      "sku": "0457",
+      "name": "TERMA LIMON LIGHT 1.35ml",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 20,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 124,
+      "sku": "0458",
+      "name": "TERMA POM.ROSADO 1.35ML",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 20,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 643,
+      "sku": "0476",
+      "name": "CHANDON CHAMP. EXT.BRUT X750ml",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 20,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 649,
+      "sku": "0485",
+      "name": "S.BRIONES SIDRA 1888 x 750ml",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 21,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 644,
+      "sku": "0483",
+      "name": "LAS PERDICES CHAMP.BRUT ROSE x 750ml",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 20,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 645,
+      "sku": "0484",
+      "name": "LAS PERDICES CHAMP.SWEETY x 750ml",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 20,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 642,
+      "sku": "0479",
+      "name": "LA FARRUCA DURAZNO FIZZ x 710ml",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 25,
+      "isDefaultRubro": false,
+      "matchType": "TOKEN_OVERLAP"
+    },
+    {
+      "productId": 641,
+      "sku": "0478",
+      "name": "CHATEAU MDZA.CHAMPAGNE EXT.BRUTx 750ml",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 25,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 650,
+      "sku": "0487",
+      "name": "SANTA JULIA ESPUMANTE CUVEE x750 ml",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 25,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 137,
+      "sku": "0489",
+      "name": "BRANCA FERNET x1LT",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 25,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 139,
+      "sku": "0491",
+      "name": "BRANCA FERNET x750ml",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 25,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 138,
+      "sku": "0490",
+      "name": "BRANCA FERNET x450ml",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 25,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 140,
+      "sku": "0492",
+      "name": "BRANCA MENTA x750ml",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 10,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 141,
+      "sku": "0493",
+      "name": "VITTONE FERNET SPECIALE x750ml",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 20,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 145,
+      "sku": "0507",
+      "name": "MOCORETA GASEOSA NARANJA 6x2.25 LTS",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 30,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 144,
+      "sku": "0506",
+      "name": "MOCORETA GASEOSA LIMA LIMON 6x2.25 LTS",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 30,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 143,
+      "sku": "0505",
+      "name": "MOCORETA GASEOSA COLA 6x2.25 LTS",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 30,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 142,
+      "sku": "0504",
+      "name": "MOCORETA GASEOSA P.AMARILLO 6x2.25 LTS",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 30,
+      "isDefaultRubro": false,
+      "matchType": "TOKEN_OVERLAP"
+    },
+    {
+      "productId": 146,
+      "sku": "0521",
+      "name": "BORGHETTI AL CONAG x700ml",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 15,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 150,
+      "sku": "0534",
+      "name": "DURAZNO x1LT BAGGIO PRONTO",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 30,
+      "isDefaultRubro": false,
+      "matchType": "TOKEN_SET_EXACT"
+    },
+    {
+      "productId": 106,
+      "sku": "0536",
+      "name": "MULTIFRUTA x1LT BAGGIO PRONTO",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 30,
+      "isDefaultRubro": false,
+      "matchType": "TOKEN_OVERLAP"
+    },
+    {
+      "productId": 187,
+      "sku": "0539",
+      "name": "NARANJA x1LT BAGGIO PRONTO",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 30,
+      "isDefaultRubro": false,
+      "matchType": "TOKEN_SET_EXACT"
+    },
+    {
+      "productId": 108,
+      "sku": "0538",
+      "name": "NARANJA 18x200ml BAGGIO PRONTO",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 30,
+      "isDefaultRubro": false,
+      "matchType": "TOKEN_OVERLAP"
+    },
+    {
+      "productId": 29,
+      "sku": "0297",
+      "name": "SI-DIET TRADIC x 250ml",
+      "rubro": "EDULCORANTES",
+      "assignedProfitMargin": 25,
+      "isDefaultRubro": false,
+      "matchType": "TOKEN_OVERLAP"
+    },
+    {
+      "productId": 288,
+      "sku": "0622",
+      "name": "TRAPICHE ALARIS BCO DULCE X 750m",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 22,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 320,
+      "sku": "0623",
+      "name": "TRAPICHE ALARIS MALBEC x750ml",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 22,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 303,
+      "sku": "0607",
+      "name": "ALMA MORA MALBEC x750ml",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 22,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 651,
+      "sku": "0545",
+      "name": "BIANCHI FAMIGLIA MALBEC 750ml",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 22,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 190,
+      "sku": "0544",
+      "name": "BIANCHI PART. MALB 750ml",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 20,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 298,
+      "sku": "0636",
+      "name": "EMILIA MALBEC x750ml",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 22,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 287,
+      "sku": "0635",
+      "name": "EMILIA BCO DULCE x750ml",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 22,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 192,
+      "sku": "0555",
+      "name": "LATITUD 33 CABERNET SAVIGNON x750ml",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 25,
+      "isDefaultRubro": false,
+      "matchType": "TOKEN_OVERLAP"
+    },
+    {
+      "productId": 274,
+      "sku": "0581",
+      "name": "CHACABUCO CHENIN DULCE x750ml",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 22,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 271,
+      "sku": "0580",
+      "name": "CHACABUCO CHENIN DULCE BOT. ALUM. x500 ml",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 22,
+      "isDefaultRubro": false,
+      "matchType": "TOKEN_OVERLAP"
+    },
+    {
+      "productId": 294,
+      "sku": "0617",
+      "name": "F.L.M FAIR FOR LIFE MALBEC x 750 ml",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 22,
+      "isDefaultRubro": false,
+      "matchType": "TOKEN_OVERLAP"
+    },
+    {
+      "productId": 296,
+      "sku": "0610",
+      "name": "DADA No1 x750ml",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 22,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 316,
+      "sku": "0608",
+      "name": "DADA ART MALBEC 391 x750ml",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 22,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 281,
+      "sku": "0609",
+      "name": "DADA INCREDIBLENDS x750ml",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 22,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 318,
+      "sku": "0611",
+      "name": "DADA No2 MOKKA x750ml",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 22,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 297,
+      "sku": "0613",
+      "name": "DON DAVID MALBEC x750ml",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 22,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 314,
+      "sku": "0614",
+      "name": "EL BAUTISMO MALBEC x750ml",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 22,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 312,
+      "sku": "0616",
+      "name": "ELEMENTOS MALBEC x750ml",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 22,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 319,
+      "sku": "0618",
+      "name": "F.LAS MORAS MALBEC x750ml",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 22,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 189,
+      "sku": "0546",
+      "name": "BIANCHI FINCA LOS PRIMOS MALBEC x 750ml",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 25,
+      "isDefaultRubro": false,
+      "matchType": "TOKEN_OVERLAP"
+    },
+    {
+      "productId": 290,
+      "sku": "0619",
+      "name": "FOND DE CAVE MALBEC x750ml",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 22,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 194,
+      "sku": "0557",
+      "name": "LATITUD 33 MALBEC x750ml",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 25,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 200,
+      "sku": "0572",
+      "name": "LOPEZ MALBEC x750ml",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 25,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 201,
+      "sku": "0573",
+      "name": "LOPEZ SEMILLON BLANCO x750ml",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 25,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 273,
+      "sku": "0584",
+      "name": "NAMPE MALBEC x750ml",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 25,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 195,
+      "sku": "0562",
+      "name": "RUTINI CAB/MAL 750ml",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 22,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 197,
+      "sku": "0564",
+      "name": "RUTINI MALBEC 750ml",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 25,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 291,
+      "sku": "0620",
+      "name": "SAN TELMO CAB.SAU x750ml",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 25,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 293,
+      "sku": "0621",
+      "name": "SAN TELMO MALBEC x750ml",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 22,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 289,
+      "sku": "0624",
+      "name": "TRAPICHE IMPURO MAL X 750ml",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 22,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 272,
+      "sku": "0575",
+      "name": "VASCO VIEJO TINTO x 750ml",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 22,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 315,
+      "sku": "0625",
+      "name": "TRAPICHE ORIGEN MALBEC x 750ml",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 25,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 198,
+      "sku": "0565",
+      "name": "TRUMPETER MALBEC x750ml",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 25,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 275,
+      "sku": "0583",
+      "name": "NAMPE BLANCO DULCE x 750ml",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 25,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 276,
+      "sku": "0585",
+      "name": "V.DE BALBO BCO x1125ml",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 21,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 278,
+      "sku": "0586",
+      "name": "V.DE BALBO TTO x1125ml",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 21,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 199,
+      "sku": "0566",
+      "name": "TRUMPETER SAUV. BCO x750ml",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 25,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 202,
+      "sku": "0574",
+      "name": "VASCO VIEJO MALBEC VINTAGE x 750 ml",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 25,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 304,
+      "sku": "0599",
+      "name": "SANTA JULIA MALBEC x750ml",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 25,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 284,
+      "sku": "0600",
+      "name": "SANTA JULIA SAUVIGNON BCO x750ml",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 25,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 282,
+      "sku": "0598",
+      "name": "SANTA JULIA MALBEC NEW x375ml",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 25,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 283,
+      "sku": "0596",
+      "name": "SANTA JULIA CHARD. NEW x375ml",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 25,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 302,
+      "sku": "0597",
+      "name": "SANTA JULIA DULCE TINTO x750ml",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 25,
+      "isDefaultRubro": false,
+      "matchType": "TOKEN_OVERLAP"
+    },
+    {
+      "productId": 286,
+      "sku": "0594",
+      "name": "SANTA JULIA CAB.FRANC x750ml",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 25,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 280,
+      "sku": "0593",
+      "name": "ALAMBRADO MALBEC x750ml",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 25,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 277,
+      "sku": "0582",
+      "name": "CHACABUCO MALBEC x750ml",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 25,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 3,
+      "sku": "0563",
+      "name": "RUTINI DOMINIO MALBEC x750ml",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 25,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 285,
+      "sku": "0595",
+      "name": "SANTA JULIA CABERNET SAUV. x 750ml",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 25,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 301,
+      "sku": "0646",
+      "name": "BALLANTINES x750ml",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 25,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 299,
+      "sku": "0647",
+      "name": "BLENDERS PRIDE 1LT",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 25,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 306,
+      "sku": "0651",
+      "name": "WHITE HORSE X750ml",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 25,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 300,
+      "sku": "0648",
+      "name": "J&B RARE x 750ml",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 25,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 307,
+      "sku": "0650",
+      "name": "SMUGGLER WHISKY x750ml",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 25,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 81,
+      "sku": "0226",
+      "name": "ARLISTAN CAFE INST.X 170GR",
+      "rubro": "CAFE",
+      "assignedProfitMargin": 22,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 80,
+      "sku": "0225",
+      "name": "ARLISTAN CAFE INST.X 100GR",
+      "rubro": "CAFE",
+      "assignedProfitMargin": 22,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 84,
+      "sku": "0229",
+      "name": "EL POCILLO MALTA x 170GR",
+      "rubro": "CAFE",
+      "assignedProfitMargin": 22,
+      "isDefaultRubro": false,
+      "matchType": "TOKEN_OVERLAP"
+    },
+    {
+      "productId": 83,
+      "sku": "0228",
+      "name": "EL POCILLO MALTA x 115gr",
+      "rubro": "CAFE",
+      "assignedProfitMargin": 22,
+      "isDefaultRubro": false,
+      "matchType": "TOKEN_OVERLAP"
+    },
+    {
+      "productId": 87,
+      "sku": "0232",
+      "name": "LA VIRG CAFE SAQ.TORRADO X20X5GR",
+      "rubro": "CAFE",
+      "assignedProfitMargin": 25,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 85,
+      "sku": "0230",
+      "name": "LA VIRG CAFE INST. CLASICO FRASCO x 100GR",
+      "rubro": "CAFE",
+      "assignedProfitMargin": 25,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 86,
+      "sku": "0231",
+      "name": "LA VIRG CAFE INST. SUAVE FRASCO x 100 gr",
+      "rubro": "CAFE",
+      "assignedProfitMargin": 25,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 88,
+      "sku": "0233",
+      "name": "LA VIRG CHOCOLINO CACAO x 180gr",
+      "rubro": "CAFE",
+      "assignedProfitMargin": 25,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 234,
+      "sku": "0138",
+      "name": "M.ROJO COCTEL FRUTAL x820gr",
+      "rubro": "CONSERVAS",
+      "assignedProfitMargin": 25,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 235,
+      "sku": "0139",
+      "name": "M.ROJO DURAZNOS MITADES x820gr",
+      "rubro": "CONSERVAS",
+      "assignedProfitMargin": 25,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 236,
+      "sku": "0140",
+      "name": "M.ROJO DURAZNOS TROZOS X820gr",
+      "rubro": "CONSERVAS",
+      "assignedProfitMargin": 25,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 196,
+      "sku": "0147",
+      "name": "MEMBRILLO 5KG LA HUERTA SIN TACC",
+      "rubro": "CONSERVAS",
+      "assignedProfitMargin": 25,
+      "isDefaultRubro": false,
+      "matchType": "TOKEN_SET_EXACT"
+    },
+    {
+      "productId": 242,
+      "sku": "0146",
+      "name": "MEMBRILLO 2KG LA HUERTA SIN TACC",
+      "rubro": "CONSERVAS",
+      "assignedProfitMargin": 25,
+      "isDefaultRubro": false,
+      "matchType": "TOKEN_SET_EXACT"
+    },
+    {
+      "productId": 239,
+      "sku": "0143",
+      "name": "MAROLIO JARDINERA TETRA 340gr",
+      "rubro": "CONSERVAS",
+      "assignedProfitMargin": 30,
+      "isDefaultRubro": false,
+      "matchType": "TOKEN_OVERLAP"
+    },
+    {
+      "productId": 237,
+      "sku": "0141",
+      "name": "MAROLIO ARVEJAS TETRA 340gr",
+      "rubro": "CONSERVAS",
+      "assignedProfitMargin": 30,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 220,
+      "sku": "0124",
+      "name": "CUMANA CHOCLO CREMOSO BLANCO x300",
+      "rubro": "CONSERVAS",
+      "assignedProfitMargin": 30,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 221,
+      "sku": "0125",
+      "name": "CUMANA CHOCLO GRANO AMARILLO x300gr",
+      "rubro": "CONSERVAS",
+      "assignedProfitMargin": 30,
+      "isDefaultRubro": false,
+      "matchType": "TOKEN_OVERLAP"
+    },
+    {
+      "productId": 224,
+      "sku": "0128",
+      "name": "CUMANA PALMITOS ENTEROS x396gr",
+      "rubro": "CONSERVAS",
+      "assignedProfitMargin": 30,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 218,
+      "sku": "0122",
+      "name": "CUMANA CHAMPIGNON ENTEROS x 400gr",
+      "rubro": "CONSERVAS",
+      "assignedProfitMargin": 30,
+      "isDefaultRubro": false,
+      "matchType": "TOKEN_OVERLAP"
+    },
+    {
+      "productId": 225,
+      "sku": "0129",
+      "name": "CUMANA PALMITOS TROZ. x396gr",
+      "rubro": "CONSERVAS",
+      "assignedProfitMargin": 30,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 219,
+      "sku": "0123",
+      "name": "CUMANA CHAMPIGNON LAM. x400g",
+      "rubro": "CONSERVAS",
+      "assignedProfitMargin": 30,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 217,
+      "sku": "0121",
+      "name": "CUMANA ARVEJAS LATA x300gr",
+      "rubro": "CONSERVAS",
+      "assignedProfitMargin": 30,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 238,
+      "sku": "0142",
+      "name": "MAROLIO CHAMP. ENT. FRASCO x 280 gr",
+      "rubro": "CONSERVAS",
+      "assignedProfitMargin": 30,
+      "isDefaultRubro": false,
+      "matchType": "TOKEN_OVERLAP"
+    },
+    {
+      "productId": 231,
+      "sku": "0135",
+      "name": "LA HUERTA PURE DE TOMATE 12x530gr",
+      "rubro": "CONSERVAS",
+      "assignedProfitMargin": 30,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 232,
+      "sku": "0136",
+      "name": "LA HUERTA PURE DE TOMATE 18x210gr",
+      "rubro": "CONSERVAS",
+      "assignedProfitMargin": 30,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 233,
+      "sku": "0137",
+      "name": "LA HUERTA PURE DE TOMATE x 1.030gr",
+      "rubro": "CONSERVAS",
+      "assignedProfitMargin": 30,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 230,
+      "sku": "0134",
+      "name": "LA HUERTA PULPA TOMATE 12x520gr",
+      "rubro": "CONSERVAS",
+      "assignedProfitMargin": 30,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 240,
+      "sku": "0144",
+      "name": "MAROLIO PERITA LATA TOMATE x400gr",
+      "rubro": "CONSERVAS",
+      "assignedProfitMargin": 30,
+      "isDefaultRubro": false,
+      "matchType": "TOKEN_SET_EXACT"
+    },
+    {
+      "productId": 109,
+      "sku": "0031",
+      "name": "CREMIGAL LECHE EN POLVO x 800grs",
+      "rubro": "LECHES",
+      "assignedProfitMargin": 25,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 162,
+      "sku": "0030",
+      "name": "CREMIGAL LECHE EN POLVO x 400grs",
+      "rubro": "LECHES",
+      "assignedProfitMargin": 25,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 164,
+      "sku": "0033",
+      "name": "LECHE UAT ENTERA SACHET x LT CREMIGAL",
+      "rubro": "LECHES",
+      "assignedProfitMargin": 30,
+      "isDefaultRubro": false,
+      "matchType": "TOKEN_SET_EXACT"
+    },
+    {
+      "productId": 163,
+      "sku": "0032",
+      "name": "LECHE UAT DESC. SACHET x LT CREMIGAL",
+      "rubro": "LECHES",
+      "assignedProfitMargin": 30,
+      "isDefaultRubro": false,
+      "matchType": "TOKEN_SET_EXACT"
+    },
+    {
+      "productId": 165,
+      "sku": "0034",
+      "name": "CREMIGAL YOGURT SACHET x 900ml FRUTILLA",
+      "rubro": "LECHES",
+      "assignedProfitMargin": 30,
+      "isDefaultRubro": false,
+      "matchType": "TOKEN_OVERLAP"
+    },
+    {
+      "productId": 166,
+      "sku": "0035",
+      "name": "CREMIGAL YOGURT SACHET x 900ml VAINILLA",
+      "rubro": "LECHES",
+      "assignedProfitMargin": 30,
+      "isDefaultRubro": false,
+      "matchType": "TOKEN_OVERLAP"
+    },
+    {
+      "productId": 45,
+      "sku": "0386",
+      "name": "CAMPANITA PAPEL HIGIENICO BCO 12x4x30",
+      "rubro": "PAPELES",
+      "assignedProfitMargin": 30,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 48,
+      "sku": "0389",
+      "name": "HIGIENOL PAPEL HIGIENICO TEXT 12x4x30",
+      "rubro": "PAPELES",
+      "assignedProfitMargin": 30,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 47,
+      "sku": "0388",
+      "name": "HIGIENOL PAPEL HIGIENICO FRESH 12x4x30",
+      "rubro": "PAPELES",
+      "assignedProfitMargin": 30,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 309,
+      "sku": "0780",
+      "name": "AMANDA TERMO TERMOLAR 1 LT",
+      "rubro": "NO COMESTIBLES",
+      "assignedProfitMargin": 35,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 310,
+      "sku": "0784",
+      "name": "RAID INSECT. AEROSOL x360cc",
+      "rubro": "NO COMESTIBLES",
+      "assignedProfitMargin": 25,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 317,
+      "sku": "0782",
+      "name": "FUYI INSECT. AEROSOL x360cc",
+      "rubro": "NO COMESTIBLES",
+      "assignedProfitMargin": 25,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 311,
+      "sku": "0785",
+      "name": "RAID MATA CUCARACHA AEROSOL EXT x 360cc",
+      "rubro": "NO COMESTIBLES",
+      "assignedProfitMargin": 25,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 51,
+      "sku": "0392",
+      "name": "ELEGANTE ROLLO COC GIG 1X12X200 PAÑOS",
+      "rubro": "PAPELES",
+      "assignedProfitMargin": 30,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 52,
+      "sku": "0393",
+      "name": "SOL MAYOR ROLLO COC GIG 1X12X200 PAÑOS",
+      "rubro": "PAPELES",
+      "assignedProfitMargin": 30,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 49,
+      "sku": "0390",
+      "name": "CAMPANITA PRACTIROLLO 1X12X200PAÑOS",
+      "rubro": "PAPELES",
+      "assignedProfitMargin": 30,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 100,
+      "sku": "0346",
+      "name": "308 NIDO HUEVO No1 x500gr",
+      "rubro": "PASTAS SECAS",
+      "assignedProfitMargin": 30,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 101,
+      "sku": "0347",
+      "name": "308 NIDO HUEVO No2 x500gr",
+      "rubro": "PASTAS SECAS",
+      "assignedProfitMargin": 30,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 102,
+      "sku": "0348",
+      "name": "308 NIDO HUEVO No3 x500gr",
+      "rubro": "PASTAS SECAS",
+      "assignedProfitMargin": 30,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 103,
+      "sku": "0349",
+      "name": "308 NIDO HUEVO No4 X500gr",
+      "rubro": "PASTAS SECAS",
+      "assignedProfitMargin": 30,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 40,
+      "sku": "0340",
+      "name": "308 AVE MARIA SEMOLA x 500gr",
+      "rubro": "PASTAS SECAS",
+      "assignedProfitMargin": 30,
+      "isDefaultRubro": false,
+      "matchType": "TOKEN_OVERLAP"
+    },
+    {
+      "productId": 41,
+      "sku": "0341",
+      "name": "308 CABELLO HUEVO X500gr",
+      "rubro": "PASTAS SECAS",
+      "assignedProfitMargin": 30,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 104,
+      "sku": "0350",
+      "name": "308 NIDOS ESPINACA X500gr",
+      "rubro": "PASTAS SECAS",
+      "assignedProfitMargin": 30,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 8,
+      "sku": "0354",
+      "name": "308 TIRABUZON TRISABOR x 500gr",
+      "rubro": "PASTAS SECAS",
+      "assignedProfitMargin": 30,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 9,
+      "sku": "0355",
+      "name": "308 TRISABOR MOSTACHOL x 500gr",
+      "rubro": "PASTAS SECAS",
+      "assignedProfitMargin": 30,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 6,
+      "sku": "0353",
+      "name": "308 TIRABUZON HUEVO x 500gr",
+      "rubro": "PASTAS SECAS",
+      "assignedProfitMargin": 30,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 44,
+      "sku": "0344",
+      "name": "308 MOSTACHOL HUEVO x 500gr",
+      "rubro": "PASTAS SECAS",
+      "assignedProfitMargin": 30,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 43,
+      "sku": "0343",
+      "name": "308 CODO GDE HUEVO x 500gr",
+      "rubro": "PASTAS SECAS",
+      "assignedProfitMargin": 30,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 5,
+      "sku": "0352",
+      "name": "308 TALLARIN N°2 MORRON x500gr",
+      "rubro": "PASTAS SECAS",
+      "assignedProfitMargin": 30,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 15,
+      "sku": "0361",
+      "name": "GIACOMO CARNE x 500 gr",
+      "rubro": "PASTAS SECAS",
+      "assignedProfitMargin": 25,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 16,
+      "sku": "0362",
+      "name": "GIACOMO JAMON Y QUESO x 500gr",
+      "rubro": "PASTAS SECAS",
+      "assignedProfitMargin": 25,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 18,
+      "sku": "0364",
+      "name": "GIACOMO TRIDICCI x 500gr",
+      "rubro": "PASTAS SECAS",
+      "assignedProfitMargin": 25,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 19,
+      "sku": "0365",
+      "name": "GIACOMO VERDURA x 500gr",
+      "rubro": "PASTAS SECAS",
+      "assignedProfitMargin": 25,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 30,
+      "sku": "0310",
+      "name": "CUMANA ATUN DESM.ACEITEx170g",
+      "rubro": "PESCADERIA",
+      "assignedProfitMargin": 25,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 39,
+      "sku": "0318",
+      "name": "MARECHIARE MERLUZA NAT X380gr",
+      "rubro": "PESCADERIA",
+      "assignedProfitMargin": 25,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 31,
+      "sku": "0311",
+      "name": "CUMANA ATUN DESM.NAT x170g",
+      "rubro": "PESCADERIA",
+      "assignedProfitMargin": 25,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 32,
+      "sku": "0312",
+      "name": "CUMANA ATUN LOMO ACEITE x170gr",
+      "rubro": "PESCADERIA",
+      "assignedProfitMargin": 25,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 36,
+      "sku": "0315",
+      "name": "CUMANA CABALLA NATURAL x380gr",
+      "rubro": "PESCADERIA",
+      "assignedProfitMargin": 25,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 168,
+      "sku": "0051",
+      "name": "CREMIGAL CREMA DE LECHE x 190gr",
+      "rubro": "SANCOR y CREMIGAL",
+      "assignedProfitMargin": 30,
+      "isDefaultRubro": false,
+      "matchType": "TOKEN_OVERLAP"
+    },
+    {
+      "productId": 205,
+      "sku": "0070",
+      "name": "CREMIGAL QUESO CREMA ORIGINAL x 4KG",
+      "rubro": "SANCOR y CREMIGAL",
+      "assignedProfitMargin": 30,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 54,
+      "sku": "0411",
+      "name": "S.JULIA CHENIN DULCE 1x750ml C/2 VASOS",
+      "rubro": "REGALERIA",
+      "assignedProfitMargin": 30,
+      "isDefaultRubro": false,
+      "matchType": "TOKEN_OVERLAP"
+    },
+    {
+      "productId": 53,
+      "sku": "0410",
+      "name": "ALAMBRADO MALBEC 1x750 ml ESTUCHE",
+      "rubro": "REGALERIA",
+      "assignedProfitMargin": 30,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 55,
+      "sku": "0412",
+      "name": "STA. JULIA MALBEC 1x750 ml ESTUCHE",
+      "rubro": "REGALERIA",
+      "assignedProfitMargin": 30,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 186,
+      "sku": "0091",
+      "name": "MELINCUE RALLADO X 40 gr",
+      "rubro": "QUESOS RALLADOS",
+      "assignedProfitMargin": 35,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 185,
+      "sku": "0090",
+      "name": "MELINCUE RALLADO X 120 GR",
+      "rubro": "QUESOS RALLADOS",
+      "assignedProfitMargin": 35,
+      "isDefaultRubro": false,
+      "matchType": "TOKEN_SET_EXACT"
+    },
+    {
+      "productId": 154,
+      "sku": "0014",
+      "name": "MELINCUE POR SALUT x KG",
+      "rubro": "REMOTTI",
+      "assignedProfitMargin": 35,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 204,
+      "sku": "0001",
+      "name": "MELINCUE BARRA TYBO x KG",
+      "rubro": "REMOTTI",
+      "assignedProfitMargin": 35,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 152,
+      "sku": "0012",
+      "name": "MELINCUE PATEGRAS x KG",
+      "rubro": "REMOTTI",
+      "assignedProfitMargin": 35,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 158,
+      "sku": "0018",
+      "name": "MELINCUE SARDO BLOQUE x KG",
+      "rubro": "REMOTTI",
+      "assignedProfitMargin": 35,
+      "isDefaultRubro": false,
+      "matchType": "TOKEN_OVERLAP"
+    },
+    {
+      "productId": 156,
+      "sku": "0016",
+      "name": "MELINCUE REGG.1/2 HORMA x KG",
+      "rubro": "REMOTTI",
+      "assignedProfitMargin": 35,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 116,
+      "sku": "0008",
+      "name": "MELINCUE MOZZARELLA BARRA x KG",
+      "rubro": "REMOTTI",
+      "assignedProfitMargin": 35,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 2,
+      "sku": "0010",
+      "name": "MELINCUE P.SALUT S/SAL Kg",
+      "rubro": "REMOTTI",
+      "assignedProfitMargin": 35,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 117,
+      "sku": "0009",
+      "name": "MELINCUE P.SALUT EQUILIBRIO x KG",
+      "rubro": "REMOTTI",
+      "assignedProfitMargin": 35,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 114,
+      "sku": "0006",
+      "name": "MELINCUE GOUDA x Kg",
+      "rubro": "REMOTTI",
+      "assignedProfitMargin": 35,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 159,
+      "sku": "0019",
+      "name": "MELINCUE SBRINZ 1/2 HORMA x KG",
+      "rubro": "REMOTTI",
+      "assignedProfitMargin": 35,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 115,
+      "sku": "0007",
+      "name": "MELINCUE GOYA x Kg",
+      "rubro": "REMOTTI",
+      "assignedProfitMargin": 35,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 153,
+      "sku": "0013",
+      "name": "MELINCUE PEPATO x Kg",
+      "rubro": "REMOTTI",
+      "assignedProfitMargin": 35,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 112,
+      "sku": "0004",
+      "name": "MELINCUE FONTINA PICANTE x Kg",
+      "rubro": "REMOTTI",
+      "assignedProfitMargin": 35,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 176,
+      "sku": "0059",
+      "name": "MELINCUE MANTECA 5KG",
+      "rubro": "SANCOR y CREMIGAL",
+      "assignedProfitMargin": 35,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 151,
+      "sku": "0011",
+      "name": "MELINCUE PARRIQUESO kg",
+      "rubro": "REMOTTI",
+      "assignedProfitMargin": 35,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 7,
+      "sku": "0002",
+      "name": "MELINCUE CHEDDAR X KG",
+      "rubro": "REMOTTI",
+      "assignedProfitMargin": 35,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 155,
+      "sku": "0015",
+      "name": "MELINCUE QUESO AZUL x KG",
+      "rubro": "REMOTTI",
+      "assignedProfitMargin": 35,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 157,
+      "sku": "0017",
+      "name": "MELINCUE REGG.HORMA ENTERA X KG",
+      "rubro": "REMOTTI",
+      "assignedProfitMargin": 35,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 33,
+      "sku": "0003",
+      "name": "MELINCUE CREMOSO x KG",
+      "rubro": "REMOTTI",
+      "assignedProfitMargin": 30,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 172,
+      "sku": "0055",
+      "name": "DULCE DE LECHE REPOSTERO CREMIGAL x 400gr",
+      "rubro": "SANCOR y CREMIGAL",
+      "assignedProfitMargin": 30,
+      "isDefaultRubro": false,
+      "matchType": "TOKEN_OVERLAP"
+    },
+    {
+      "productId": 171,
+      "sku": "0054",
+      "name": "DULCE DE LECHE CREMIGAL x 400 gr",
+      "rubro": "SANCOR y CREMIGAL",
+      "assignedProfitMargin": 30,
+      "isDefaultRubro": false,
+      "matchType": "TOKEN_OVERLAP"
+    },
+    {
+      "productId": 178,
+      "sku": "0061",
+      "name": "AL.BAS.MIEL G.ROSALIA 500gr",
+      "rubro": "SANCOR y CREMIGAL",
+      "assignedProfitMargin": 30,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 177,
+      "sku": "0060",
+      "name": "AL.BAS.MIEL G.ROSALIA 250gr",
+      "rubro": "SANCOR y CREMIGAL",
+      "assignedProfitMargin": 30,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 179,
+      "sku": "0062",
+      "name": "CREMIGAL MOZZARELLA CILINDRO x KG",
+      "rubro": "SANCOR y CREMIGAL",
+      "assignedProfitMargin": 30,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 110,
+      "sku": "0064",
+      "name": "SARDO SANCOR QUESO x KG",
+      "rubro": "SANCOR y CREMIGAL",
+      "assignedProfitMargin": 25,
+      "isDefaultRubro": false,
+      "matchType": "TOKEN_OVERLAP"
+    },
+    {
+      "productId": 180,
+      "sku": "0063",
+      "name": "CREMIGAL QUESO POR SALUT SIN SAL x KG",
+      "rubro": "SANCOR y CREMIGAL",
+      "assignedProfitMargin": 30,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 182,
+      "sku": "0067",
+      "name": "CREMIGAL Q.UNTABLE CLASICO x 190 gr",
+      "rubro": "SANCOR y CREMIGAL",
+      "assignedProfitMargin": 30,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 184,
+      "sku": "0069",
+      "name": "CREMIGAL Q.UNTABLE LIGHT x 190 gr",
+      "rubro": "SANCOR y CREMIGAL",
+      "assignedProfitMargin": 30,
+      "isDefaultRubro": false,
+      "matchType": "TOKEN_OVERLAP"
+    },
+    {
+      "productId": 183,
+      "sku": "0068",
+      "name": "CREMIGAL Q.UNTABLE JAMON x 190gr",
+      "rubro": "SANCOR y CREMIGAL",
+      "assignedProfitMargin": 30,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 181,
+      "sku": "0066",
+      "name": "CREMIGAL Q.UNTABLE CHEDDAR x 190 gr",
+      "rubro": "SANCOR y CREMIGAL",
+      "assignedProfitMargin": 30,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 111,
+      "sku": "0065",
+      "name": "CREMIGAL Q.UNTABLE AZUL x 190gr",
+      "rubro": "SANCOR y CREMIGAL",
+      "assignedProfitMargin": 30,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 247,
+      "sku": "0071",
+      "name": "CREMIGAL QUESO CREMA x 290gr",
+      "rubro": "SANCOR y CREMIGAL",
+      "assignedProfitMargin": 30,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 208,
+      "sku": "0099",
+      "name": "FIAMBRE DE CERDO H. CHICA x KG",
+      "rubro": "SODECAR",
+      "assignedProfitMargin": 30,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 207,
+      "sku": "0098",
+      "name": "BONDIOLA VAC. HORMA x KG",
+      "rubro": "SODECAR",
+      "assignedProfitMargin": 30,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 209,
+      "sku": "0100",
+      "name": "FIAMBRE DE CERDO RECTANGULAR x KG",
+      "rubro": "SODECAR",
+      "assignedProfitMargin": 30,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 213,
+      "sku": "0104",
+      "name": "SALAME CANTIMPALO LC. x KG",
+      "rubro": "SODECAR",
+      "assignedProfitMargin": 30,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 214,
+      "sku": "0105",
+      "name": "SALAME MILAN LA CASONA x KG",
+      "rubro": "SODECAR",
+      "assignedProfitMargin": 30,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 215,
+      "sku": "0106",
+      "name": "SALAME x METRO BASTON P.GRUESO x KG",
+      "rubro": "SODECAR",
+      "assignedProfitMargin": 30,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 211,
+      "sku": "0102",
+      "name": "JAMON CRUDO LA CASONA x KG",
+      "rubro": "SODECAR",
+      "assignedProfitMargin": 30,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 210,
+      "sku": "0101",
+      "name": "JAMON COCIDO TIPO NATURAL PLATEADO x KG",
+      "rubro": "SODECAR",
+      "assignedProfitMargin": 30,
+      "isDefaultRubro": false,
+      "matchType": "TOKEN_OVERLAP"
+    },
+    {
+      "productId": 96,
+      "sku": "0275",
+      "name": "AMANDA YERBA 10x500gr",
+      "rubro": "YERBAS",
+      "assignedProfitMargin": 22,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 97,
+      "sku": "0276",
+      "name": "AMANDA YERBA 10x1KG",
+      "rubro": "YERBAS",
+      "assignedProfitMargin": 22,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 22,
+      "sku": "0280",
+      "name": "ANDRESITO YERBA 10x500 grs",
+      "rubro": "YERBAS",
+      "assignedProfitMargin": 25,
+      "isDefaultRubro": false,
+      "matchType": "TOKEN_OVERLAP"
+    },
+    {
+      "productId": 21,
+      "sku": "0279",
+      "name": "ANDRESITO YERBA 10x1Kg",
+      "rubro": "YERBAS",
+      "assignedProfitMargin": 25,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 24,
+      "sku": "0282",
+      "name": "PLAYADITO YERBA 10X500gr",
+      "rubro": "YERBAS",
+      "assignedProfitMargin": 20,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 23,
+      "sku": "0281",
+      "name": "PLAYADITO YERBA 10X1 kg",
+      "rubro": "YERBAS",
+      "assignedProfitMargin": 20,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 20,
+      "sku": "0278",
+      "name": "AMANDA YERBA PREMIUM CAJA x500gr",
+      "rubro": "YERBAS",
+      "assignedProfitMargin": 25,
+      "isDefaultRubro": false,
+      "matchType": "EXACT_CLEANED"
+    },
+    {
+      "productId": 203,
+      "sku": "0277",
+      "name": "AMANDA YERBA ORGANICA x 500gr",
+      "rubro": "YERBAS",
+      "assignedProfitMargin": 25,
+      "isDefaultRubro": false,
+      "matchType": "TOKEN_OVERLAP"
+    },
+    {
+      "productId": 113,
+      "sku": "0005",
+      "name": "MELINCUE FONTINA SUAVE kg",
+      "rubro": "REMOTTI",
+      "assignedProfitMargin": 34.72,
+      "isDefaultRubro": true,
+      "matchType": "DEFAULT_BY_RUBRO"
+    },
+    {
+      "productId": 646,
+      "sku": "0482",
+      "name": "LA FARRUCA SIDRA VIDRIO x 710ml",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 23.09,
+      "isDefaultRubro": true,
+      "matchType": "DEFAULT_BY_RUBRO"
+    },
+    {
+      "productId": 313,
+      "sku": "0783",
+      "name": "MOSQUI-TRAP INSECT. AEROSOL x 370cc",
+      "rubro": "NO COMESTIBLES",
+      "assignedProfitMargin": 27.5,
+      "isDefaultRubro": true,
+      "matchType": "DEFAULT_BY_RUBRO"
+    },
+    {
+      "productId": 228,
+      "sku": "0132",
+      "name": "CUMANA TOMATE PERITA ENT. x 400gr",
+      "rubro": "CONSERVAS",
+      "assignedProfitMargin": 28.75,
+      "isDefaultRubro": true,
+      "matchType": "DEFAULT_BY_RUBRO"
+    },
+    {
+      "productId": 243,
+      "sku": "0148",
+      "name": "MERMELADA CIRUELA x 454cc LA HUERTA",
+      "rubro": "CONSERVAS",
+      "assignedProfitMargin": 28.75,
+      "isDefaultRubro": true,
+      "matchType": "DEFAULT_BY_RUBRO"
+    },
+    {
+      "productId": 241,
+      "sku": "0145",
+      "name": "MAROLIO POROTOS ALUBIA LATA X 340gr",
+      "rubro": "CONSERVAS",
+      "assignedProfitMargin": 28.75,
+      "isDefaultRubro": true,
+      "matchType": "DEFAULT_BY_RUBRO"
+    },
+    {
+      "productId": 34,
+      "sku": "0313",
+      "name": "CUMANA ATUN LOMO NAT. x 170gr",
+      "rubro": "PESCADERIA",
+      "assignedProfitMargin": 25,
+      "isDefaultRubro": true,
+      "matchType": "DEFAULT_BY_RUBRO"
+    },
+    {
+      "productId": 42,
+      "sku": "0342",
+      "name": "308 CABELLO SEMOLA x 500gr",
+      "rubro": "PASTAS SECAS",
+      "assignedProfitMargin": 28.82,
+      "isDefaultRubro": true,
+      "matchType": "DEFAULT_BY_RUBRO"
+    },
+    {
+      "productId": 161,
+      "sku": "0029",
+      "name": "BAGGIO LATTE CHOCOLATADA x1LT",
+      "rubro": "LECHES",
+      "assignedProfitMargin": 28.33,
+      "isDefaultRubro": true,
+      "matchType": "DEFAULT_BY_RUBRO"
+    },
+    {
+      "productId": 13,
+      "sku": "0359",
+      "name": "EL RECORD NIDO No3 HUEVO x 500gr",
+      "rubro": "PASTAS SECAS",
+      "assignedProfitMargin": 28.82,
+      "isDefaultRubro": true,
+      "matchType": "DEFAULT_BY_RUBRO"
+    },
+    {
+      "productId": 4,
+      "sku": "0351",
+      "name": "308 TALLARIN AL HUEVO N°2 x 500 gr",
+      "rubro": "PASTAS SECAS",
+      "assignedProfitMargin": 28.82,
+      "isDefaultRubro": true,
+      "matchType": "DEFAULT_BY_RUBRO"
+    },
+    {
+      "productId": 11,
+      "sku": "0357",
+      "name": "EL RECORD NIDO MORRON x 500gr",
+      "rubro": "PASTAS SECAS",
+      "assignedProfitMargin": 28.82,
+      "isDefaultRubro": true,
+      "matchType": "DEFAULT_BY_RUBRO"
+    },
+    {
+      "productId": 50,
+      "sku": "0391",
+      "name": "ELEGANTE ROLLO COC 8X3X50 PAÑOS",
+      "rubro": "PAPELES",
+      "assignedProfitMargin": 30,
+      "isDefaultRubro": true,
+      "matchType": "DEFAULT_BY_RUBRO"
+    },
+    {
+      "productId": 90,
+      "sku": "0235",
+      "name": "LA VIRG TE COMUN SAQ 10X25GR",
+      "rubro": "CAFE",
+      "assignedProfitMargin": 23.5,
+      "isDefaultRubro": true,
+      "matchType": "DEFAULT_BY_RUBRO"
+    },
+    {
+      "productId": 89,
+      "sku": "0234",
+      "name": "LA VIRG TE BOLDO SAQ 6X25GR",
+      "rubro": "CAFE",
+      "assignedProfitMargin": 23.5,
+      "isDefaultRubro": true,
+      "matchType": "DEFAULT_BY_RUBRO"
+    },
+    {
+      "productId": 62,
+      "sku": "0431",
+      "name": "CAMPARI APERITIVO x 750ml",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 23.09,
+      "isDefaultRubro": true,
+      "matchType": "DEFAULT_BY_RUBRO"
+    },
+    {
+      "productId": 173,
+      "sku": "0056",
+      "name": "CREMIGAL MANTECA x 2.5 KG",
+      "rubro": "SANCOR y CREMIGAL",
+      "assignedProfitMargin": 30,
+      "isDefaultRubro": true,
+      "matchType": "DEFAULT_BY_RUBRO"
+    },
+    {
+      "productId": 46,
+      "sku": "0387",
+      "name": "ELEGANTE PAPEL HIGIENICO 12X4x30",
+      "rubro": "PAPELES",
+      "assignedProfitMargin": 30,
+      "isDefaultRubro": true,
+      "matchType": "DEFAULT_BY_RUBRO"
+    },
+    {
+      "productId": 12,
+      "sku": "0358",
+      "name": "EL RECORD NIDO No2 HUEVO x 500gr",
+      "rubro": "PASTAS SECAS",
+      "assignedProfitMargin": 28.82,
+      "isDefaultRubro": true,
+      "matchType": "DEFAULT_BY_RUBRO"
+    },
+    {
+      "productId": 160,
+      "sku": "0028",
+      "name": "BAGGIO LATTE CHOCOLATADA x 200ml",
+      "rubro": "LECHES",
+      "assignedProfitMargin": 28.33,
+      "isDefaultRubro": true,
+      "matchType": "DEFAULT_BY_RUBRO"
+    },
+    {
+      "productId": 216,
+      "sku": "0120",
+      "name": "CUMANÁ ANANA ROD x 565gr",
+      "rubro": "CONSERVAS",
+      "assignedProfitMargin": 28.75,
+      "isDefaultRubro": true,
+      "matchType": "DEFAULT_BY_RUBRO"
+    },
+    {
+      "productId": 10,
+      "sku": "0356",
+      "name": "EL RECORD NIDO ESPINACA x 500gr",
+      "rubro": "PASTAS SECAS",
+      "assignedProfitMargin": 28.82,
+      "isDefaultRubro": true,
+      "matchType": "DEFAULT_BY_RUBRO"
+    },
+    {
+      "productId": 35,
+      "sku": "0314",
+      "name": "CUMANA CABALLA ACEITE x 380g",
+      "rubro": "PESCADERIA",
+      "assignedProfitMargin": 25,
+      "isDefaultRubro": true,
+      "matchType": "DEFAULT_BY_RUBRO"
+    },
+    {
+      "productId": 167,
+      "sku": "0050",
+      "name": "CREMIGAL CREMA DE LECHE DOBLE x 190gr",
+      "rubro": "SANCOR y CREMIGAL",
+      "assignedProfitMargin": 30,
+      "isDefaultRubro": true,
+      "matchType": "DEFAULT_BY_RUBRO"
+    },
+    {
+      "productId": 222,
+      "sku": "0126",
+      "name": "CUMANA GARBANZOS LATA x 300gr",
+      "rubro": "CONSERVAS",
+      "assignedProfitMargin": 28.75,
+      "isDefaultRubro": true,
+      "matchType": "DEFAULT_BY_RUBRO"
+    },
+    {
+      "productId": 223,
+      "sku": "0127",
+      "name": "CUMANA MORRON x 185gr",
+      "rubro": "CONSERVAS",
+      "assignedProfitMargin": 28.75,
+      "isDefaultRubro": true,
+      "matchType": "DEFAULT_BY_RUBRO"
+    },
+    {
+      "productId": 229,
+      "sku": "0133",
+      "name": "LA GIOCONDA COCTEL 4 FRUTAS x820gr",
+      "rubro": "CONSERVAS",
+      "assignedProfitMargin": 28.75,
+      "isDefaultRubro": true,
+      "matchType": "DEFAULT_BY_RUBRO"
+    },
+    {
+      "productId": 38,
+      "sku": "0317",
+      "name": "LA CAMPAGNOLA CABALLA ACEITE x 300gr",
+      "rubro": "PESCADERIA",
+      "assignedProfitMargin": 25,
+      "isDefaultRubro": true,
+      "matchType": "DEFAULT_BY_RUBRO"
+    },
+    {
+      "productId": 37,
+      "sku": "0316",
+      "name": "CUMANA JUREL ACEITE x 425gr",
+      "rubro": "PESCADERIA",
+      "assignedProfitMargin": 25,
+      "isDefaultRubro": true,
+      "matchType": "DEFAULT_BY_RUBRO"
+    },
+    {
+      "productId": 212,
+      "sku": "0103",
+      "name": "PERNIL DE CERDO LA RESIDENCIA x KG",
+      "rubro": "SODECAR",
+      "assignedProfitMargin": 30,
+      "isDefaultRubro": true,
+      "matchType": "DEFAULT_BY_RUBRO"
+    },
+    {
+      "productId": 245,
+      "sku": "0150",
+      "name": "MERMELADA DURAZNO x 454cc LA HUERTA",
+      "rubro": "CONSERVAS",
+      "assignedProfitMargin": 28.75,
+      "isDefaultRubro": true,
+      "matchType": "DEFAULT_BY_RUBRO"
+    },
+    {
+      "productId": 148,
+      "sku": "0532",
+      "name": "BAGGIO FORZA FRUTOS ROJOS 6x500ml",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 23.09,
+      "isDefaultRubro": true,
+      "matchType": "DEFAULT_BY_RUBRO"
+    },
+    {
+      "productId": 169,
+      "sku": "0052",
+      "name": "CREMIGAL CREMA x 3.5 KG",
+      "rubro": "SANCOR y CREMIGAL",
+      "assignedProfitMargin": 30,
+      "isDefaultRubro": true,
+      "matchType": "DEFAULT_BY_RUBRO"
+    },
+    {
+      "productId": 244,
+      "sku": "0149",
+      "name": "MERMELADA DAMAZCO x 454cc LA HUERTA",
+      "rubro": "CONSERVAS",
+      "assignedProfitMargin": 28.75,
+      "isDefaultRubro": true,
+      "matchType": "DEFAULT_BY_RUBRO"
+    },
+    {
+      "productId": 14,
+      "sku": "0360",
+      "name": "EL RECORD NIDO No6 HUEVO x 500gr",
+      "rubro": "PASTAS SECAS",
+      "assignedProfitMargin": 28.82,
+      "isDefaultRubro": true,
+      "matchType": "DEFAULT_BY_RUBRO"
+    },
+    {
+      "productId": 107,
+      "sku": "0537",
+      "name": "MULTIFRUTA18x200mlBAGGIO PRONTO",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 23.09,
+      "isDefaultRubro": true,
+      "matchType": "DEFAULT_BY_RUBRO"
+    },
+    {
+      "productId": 99,
+      "sku": "0345",
+      "name": "308 MUNICION SEMOLA x 500 gr",
+      "rubro": "PASTAS SECAS",
+      "assignedProfitMargin": 28.82,
+      "isDefaultRubro": true,
+      "matchType": "DEFAULT_BY_RUBRO"
+    },
+    {
+      "productId": 193,
+      "sku": "0556",
+      "name": "LATITUD 33 CHARDONNAY x 750ml",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 23.09,
+      "isDefaultRubro": true,
+      "matchType": "DEFAULT_BY_RUBRO"
+    },
+    {
+      "productId": 647,
+      "sku": "0481",
+      "name": "LA FARRUCA SIDRA S/ALCOHOL x 710ml",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 23.09,
+      "isDefaultRubro": true,
+      "matchType": "DEFAULT_BY_RUBRO"
+    },
+    {
+      "productId": 295,
+      "sku": "0615",
+      "name": "ELEMENTOS CABERNET x 750ml",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 23.09,
+      "isDefaultRubro": true,
+      "matchType": "DEFAULT_BY_RUBRO"
+    },
+    {
+      "productId": 91,
+      "sku": "0236",
+      "name": "LA VIRG TE MANZANILLA SAQ 6X25GR",
+      "rubro": "CAFE",
+      "assignedProfitMargin": 23.5,
+      "isDefaultRubro": true,
+      "matchType": "DEFAULT_BY_RUBRO"
+    },
+    {
+      "productId": 92,
+      "sku": "0237",
+      "name": "LA VIRG TE MENTA SAQ 6X25GR",
+      "rubro": "CAFE",
+      "assignedProfitMargin": 23.5,
+      "isDefaultRubro": true,
+      "matchType": "DEFAULT_BY_RUBRO"
+    },
+    {
+      "productId": 648,
+      "sku": "0486",
+      "name": "SANTA JULIA ESPUM DULCE NAT x 750ml",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 23.09,
+      "isDefaultRubro": true,
+      "matchType": "DEFAULT_BY_RUBRO"
+    },
+    {
+      "productId": 292,
+      "sku": "0612",
+      "name": "DON DAVID CHARDONNAY x 750ml",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 23.09,
+      "isDefaultRubro": true,
+      "matchType": "DEFAULT_BY_RUBRO"
+    },
+    {
+      "productId": 249,
+      "sku": "0173",
+      "name": "MAROLIO ACEITE MEZCLA x 900ml",
+      "rubro": "A.G.D Y NIZA",
+      "assignedProfitMargin": 28.78,
+      "isDefaultRubro": true,
+      "matchType": "DEFAULT_BY_RUBRO"
+    },
+    {
+      "productId": 251,
+      "sku": "0175",
+      "name": "MAROLIO VINAGRE ALCOHOL BCO x LT",
+      "rubro": "A.G.D Y NIZA",
+      "assignedProfitMargin": 28.78,
+      "isDefaultRubro": true,
+      "matchType": "DEFAULT_BY_RUBRO"
+    },
+    {
+      "productId": 262,
+      "sku": "0186",
+      "name": "CADA DIA MAYONESA 20x125gr",
+      "rubro": "A.G.D Y NIZA",
+      "assignedProfitMargin": 28.78,
+      "isDefaultRubro": true,
+      "matchType": "DEFAULT_BY_RUBRO"
+    },
+    {
+      "productId": 652,
+      "sku": "0547",
+      "name": "NICASIA MALBEC x750ml",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 23.09,
+      "isDefaultRubro": true,
+      "matchType": "DEFAULT_BY_RUBRO"
+    },
+    {
+      "productId": 174,
+      "sku": "0057",
+      "name": "MANTECA CREMIGAL x 100gr",
+      "rubro": "SANCOR y CREMIGAL",
+      "assignedProfitMargin": 30,
+      "isDefaultRubro": true,
+      "matchType": "DEFAULT_BY_RUBRO"
+    },
+    {
+      "productId": 57,
+      "sku": "0421",
+      "name": "MOCORETA JUGO POM 6X1500cc",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 23.09,
+      "isDefaultRubro": true,
+      "matchType": "DEFAULT_BY_RUBRO"
+    },
+    {
+      "productId": 133,
+      "sku": "0480",
+      "name": "LA FARRUCA SIDRA ET.NEGRA x 710ml",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 23.09,
+      "isDefaultRubro": true,
+      "matchType": "DEFAULT_BY_RUBRO"
+    },
+    {
+      "productId": 149,
+      "sku": "0533",
+      "name": "BAGGIO JUGO 100% EXPRIMIDO NAR. x 1LT",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 23.09,
+      "isDefaultRubro": true,
+      "matchType": "DEFAULT_BY_RUBRO"
+    },
+    {
+      "productId": 63,
+      "sku": "0432",
+      "name": "CARPANO BIANCO X950ml",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 23.09,
+      "isDefaultRubro": true,
+      "matchType": "DEFAULT_BY_RUBRO"
+    },
+    {
+      "productId": 147,
+      "sku": "0531",
+      "name": "BAGGIO FORZA FRUTAS TROP. 6x500ml",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 23.09,
+      "isDefaultRubro": true,
+      "matchType": "DEFAULT_BY_RUBRO"
+    },
+    {
+      "productId": 105,
+      "sku": "0535",
+      "name": "DURAZNO18x200ml BAGGIO PRONTO",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 23.09,
+      "isDefaultRubro": true,
+      "matchType": "DEFAULT_BY_RUBRO"
+    },
+    {
+      "productId": 308,
+      "sku": "0781",
+      "name": "BAYGON INSECT. AEROSOL x 300cc",
+      "rubro": "NO COMESTIBLES",
+      "assignedProfitMargin": 27.5,
+      "isDefaultRubro": true,
+      "matchType": "DEFAULT_BY_RUBRO"
+    },
+    {
+      "productId": 226,
+      "sku": "0130",
+      "name": "CUMANA PERA MITADES S/TACC x820gr",
+      "rubro": "CONSERVAS",
+      "assignedProfitMargin": 28.75,
+      "isDefaultRubro": true,
+      "matchType": "DEFAULT_BY_RUBRO"
+    },
+    {
+      "productId": 263,
+      "sku": "0187",
+      "name": "NATURA BARBACOA x 250gr",
+      "rubro": "A.G.D Y NIZA",
+      "assignedProfitMargin": 28.78,
+      "isDefaultRubro": true,
+      "matchType": "DEFAULT_BY_RUBRO"
+    },
+    {
+      "productId": 248,
+      "sku": "0172",
+      "name": "COCINERO ACEITE MEZCLA x 900 ml",
+      "rubro": "A.G.D Y NIZA",
+      "assignedProfitMargin": 28.78,
+      "isDefaultRubro": true,
+      "matchType": "DEFAULT_BY_RUBRO"
+    },
+    {
+      "productId": 56,
+      "sku": "0420",
+      "name": "MOCORETA JUGO NJA 6X1500cc",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 23.09,
+      "isDefaultRubro": true,
+      "matchType": "DEFAULT_BY_RUBRO"
+    },
+    {
+      "productId": 17,
+      "sku": "0363",
+      "name": "GIACOMO MIX LEGUMBRES x 500gr",
+      "rubro": "PASTAS SECAS",
+      "assignedProfitMargin": 28.82,
+      "isDefaultRubro": true,
+      "matchType": "DEFAULT_BY_RUBRO"
+    },
+    {
+      "productId": 227,
+      "sku": "0131",
+      "name": "CUMANA POROTOS LATA x 300gr",
+      "rubro": "CONSERVAS",
+      "assignedProfitMargin": 28.75,
+      "isDefaultRubro": true,
+      "matchType": "DEFAULT_BY_RUBRO"
+    },
+    {
+      "productId": 270,
+      "sku": "0194",
+      "name": "NATURA MAYONESA X2900gr SACH",
+      "rubro": "A.G.D Y NIZA",
+      "assignedProfitMargin": 28.78,
+      "isDefaultRubro": true,
+      "matchType": "DEFAULT_BY_RUBRO"
+    },
+    {
+      "productId": 82,
+      "sku": "0227",
+      "name": "CEREAL BOLITAS CHOCOLINO LA VIRG x 200gr",
+      "rubro": "CAFE",
+      "assignedProfitMargin": 23.5,
+      "isDefaultRubro": true,
+      "matchType": "DEFAULT_BY_RUBRO"
+    },
+    {
+      "productId": 28,
+      "sku": "0296",
+      "name": "SI-DIET C/STEVIA x 250 ml",
+      "rubro": "EDULCORANTES",
+      "assignedProfitMargin": 25,
+      "isDefaultRubro": true,
+      "matchType": "DEFAULT_BY_RUBRO"
+    },
+    {
+      "productId": 170,
+      "sku": "0053",
+      "name": "DULCE DE LECHE CREMIGAL x 250gr",
+      "rubro": "SANCOR y CREMIGAL",
+      "assignedProfitMargin": 30,
+      "isDefaultRubro": true,
+      "matchType": "DEFAULT_BY_RUBRO"
+    },
+    {
+      "productId": 246,
+      "sku": "0151",
+      "name": "MERMELADA MULTIFRUTA x 454cc LA HUERTA",
+      "rubro": "CONSERVAS",
+      "assignedProfitMargin": 28.75,
+      "isDefaultRubro": true,
+      "matchType": "DEFAULT_BY_RUBRO"
+    },
+    {
+      "productId": 279,
+      "sku": "0592",
+      "name": "ALAMBRADO CABERNET SAUVIG x750ml",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 23.09,
+      "isDefaultRubro": true,
+      "matchType": "DEFAULT_BY_RUBRO"
+    },
+    {
+      "productId": 305,
+      "sku": "0649",
+      "name": "JACK DANIELS WHISKY x750ml",
+      "rubro": "BEBIDAS",
+      "assignedProfitMargin": 23.09,
+      "isDefaultRubro": true,
+      "matchType": "DEFAULT_BY_RUBRO"
+    },
+    {
+      "productId": 175,
+      "sku": "0058",
+      "name": "MANTECA CREMIGAL x 200gr",
+      "rubro": "SANCOR y CREMIGAL",
+      "assignedProfitMargin": 30,
+      "isDefaultRubro": true,
+      "matchType": "DEFAULT_BY_RUBRO"
+    }
+  ]
+}

@@ -735,7 +735,7 @@ export async function confirmDocument(req: AuthenticatedRequest, res: Response):
 
       // Actualizar Stock, Costos, Lotes y Mapeos de Productos
       for (const item of items) {
-        if (!item.productId) continue; // Si no lo vincularon, ignorar
+        if (!item.productId || item.isNonStock) continue; // Si es gasto o no tiene producto vinculado, omitir stock y lotes
 
         await tx.product.update({
           where: { id: item.productId },

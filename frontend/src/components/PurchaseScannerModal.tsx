@@ -92,11 +92,38 @@ export const PurchaseScannerModal: React.FC<PurchaseScannerModalProps> = ({
     newItems[index].matchedProductId = product.id;
     newItems[index].matchedProductName = product.name;
     newItems[index].matchMethod = 'MANUAL';
+    newItems[index].isNonStock = false;
     
     setExtractedData({ ...extractedData, items: newItems });
     setActiveSearchIndex(null);
     // Limpiar búsqueda
     setProductSearchResults(prev => ({ ...prev, [index]: [] }));
+  };
+
+  const handleToggleNonStock = (index: number) => {
+    const newItems = [...extractedData.items];
+    const isCurrentlyNonStock = !!newItems[index].isNonStock;
+    newItems[index].isNonStock = !isCurrentlyNonStock;
+    if (!isCurrentlyNonStock) {
+      newItems[index].matchedProductId = null;
+      newItems[index].matchedProductName = null;
+      newItems[index].matchMethod = 'NON_STOCK';
+    } else {
+      newItems[index].matchMethod = 'NONE';
+    }
+    setExtractedData({ ...extractedData, items: newItems });
+  };
+
+  const handleMarkAllNonStock = (nonStock: boolean) => {
+    if (!extractedData?.items) return;
+    const newItems = extractedData.items.map((item: any) => ({
+      ...item,
+      isNonStock: nonStock,
+      matchedProductId: nonStock ? null : item.matchedProductId,
+      matchedProductName: nonStock ? null : item.matchedProductName,
+      matchMethod: nonStock ? 'NON_STOCK' : (item.matchedProductId ? item.matchMethod : 'NONE')
+    }));
+    setExtractedData({ ...extractedData, items: newItems });
   };
 
   const handleConfirm = async () => {
@@ -115,7 +142,8 @@ export const PurchaseScannerModal: React.FC<PurchaseScannerModalProps> = ({
         issueDate: extractedData.issueDate,
         billingType: extractedData.billingType || 'OFFICIAL',
         items: extractedData.items.map((item: any) => ({
-          productId: item.matchedProductId ? Number(item.matchedProductId) : null,
+          productId: (item.isNonStock || !item.matchedProductId) ? null : Number(item.matchedProductId),
+          isNonStock: !!item.isNonStock,
           code: item.code,
           description: item.description,
           quantity: Number(item.quantity),
@@ -516,9 +544,40 @@ export const PurchaseScannerModal: React.FC<PurchaseScannerModalProps> = ({
 
                 {/* Items */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                  <h3 style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>
-                    Artículos y Vinculación con Stock
-                  </h3>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <h3 style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>
+                      Artículos y Vinculación con Stock
+                    </h3>
+                    {extractedData.items && extractedData.items.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const allNonStock = extractedData.items.every((i: any) => i.isNonStock);
+                          handleMarkAllNonStock(!allNonStock);
+                        }}
+                        style={{
+                          fontSize: '11px',
+                          fontWeight: 500,
+                          padding: '4px 10px',
+                          borderRadius: '6px',
+                          border: '1px solid var(--border-color)',
+                          backgroundColor: 'var(--accent-bg-light)',
+                          color: 'var(--text-primary)',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          transition: 'all 0.15s ease'
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--border-color)'}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--accent-bg-light)'}
+                      >
+                        {extractedData.items.every((i: any) => i.isNonStock)
+                          ? 'Desmarcar todos como Gasto'
+                          : '⚡ Marcar todos como Gasto (Sin Stock)'}
+                      </button>
+                    )}
+                  </div>
                   
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                     {extractedData.items?.map((item: any, idx: number) => {
@@ -573,23 +632,29 @@ export const PurchaseScannerModal: React.FC<PurchaseScannerModalProps> = ({
                             <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px' }}>
                               <span style={{ fontSize: '14px', fontWeight: 'bold', color: 'var(--text-primary)' }}>${item.subtotal}</span>
                               <div>
-                                {item.matchMethod === 'PREVIOUS_MAPPING' && (
-                                  <span style={{ fontSize: '10px', fontWeight: 600, backgroundColor: 'var(--color-success-bg)', color: 'var(--color-success)', padding: '2px 8px', borderRadius: '20px', border: '1px solid rgba(16, 185, 129, 0.2)' }}>Mapeo Recordado</span>
-                                )}
-                                {item.matchMethod === 'CODE_MATCH' && (
-                                  <span style={{ fontSize: '10px', fontWeight: 600, backgroundColor: 'var(--color-info-bg)', color: 'var(--color-info)', padding: '2px 8px', borderRadius: '20px', border: '1px solid rgba(59, 130, 246, 0.2)' }}>Código SKU/Barras</span>
-                                )}
-                                {item.matchMethod === 'DESCRIPTION_EXACT' && (
-                                  <span style={{ fontSize: '10px', fontWeight: 600, backgroundColor: 'var(--color-info-bg)', color: 'var(--color-info)', padding: '2px 8px', borderRadius: '20px', border: '1px solid rgba(59, 130, 246, 0.2)' }}>Nombre Exacto</span>
-                                )}
-                                {item.matchMethod === 'DESCRIPTION_PARTIAL' && (
-                                  <span style={{ fontSize: '10px', fontWeight: 600, backgroundColor: 'var(--color-warning-bg)', color: 'var(--color-warning)', padding: '2px 8px', borderRadius: '20px', border: '1px solid rgba(245, 158, 11, 0.2)' }}>Nombre Parcial</span>
-                                )}
-                                {item.matchMethod === 'MANUAL' && (
-                                  <span style={{ fontSize: '10px', fontWeight: 600, backgroundColor: 'var(--color-info-bg)', color: 'var(--color-info)', padding: '2px 8px', borderRadius: '20px', border: '1px solid rgba(59, 130, 246, 0.2)' }}>Vínculo Manual</span>
-                                )}
-                                {(!item.matchMethod || item.matchMethod === 'NONE') && (
-                                  <span style={{ fontSize: '10px', fontWeight: 600, backgroundColor: 'var(--color-danger-bg)', color: 'var(--color-danger)', padding: '2px 8px', borderRadius: '20px', border: '1px solid rgba(239, 68, 68, 0.2)' }}>Sin Vincular</span>
+                                {item.isNonStock ? (
+                                  <span style={{ fontSize: '10px', fontWeight: 600, backgroundColor: 'var(--accent-bg-light)', color: 'var(--text-secondary)', padding: '2px 8px', borderRadius: '20px', border: '1px solid var(--border-color)' }}>⚡ Gasto (Sin Stock)</span>
+                                ) : (
+                                  <>
+                                    {item.matchMethod === 'PREVIOUS_MAPPING' && (
+                                      <span style={{ fontSize: '10px', fontWeight: 600, backgroundColor: 'var(--color-success-bg)', color: 'var(--color-success)', padding: '2px 8px', borderRadius: '20px', border: '1px solid rgba(16, 185, 129, 0.2)' }}>Mapeo Recordado</span>
+                                    )}
+                                    {item.matchMethod === 'CODE_MATCH' && (
+                                      <span style={{ fontSize: '10px', fontWeight: 600, backgroundColor: 'var(--color-info-bg)', color: 'var(--color-info)', padding: '2px 8px', borderRadius: '20px', border: '1px solid rgba(59, 130, 246, 0.2)' }}>Código SKU/Barras</span>
+                                    )}
+                                    {item.matchMethod === 'DESCRIPTION_EXACT' && (
+                                      <span style={{ fontSize: '10px', fontWeight: 600, backgroundColor: 'var(--color-info-bg)', color: 'var(--color-info)', padding: '2px 8px', borderRadius: '20px', border: '1px solid rgba(59, 130, 246, 0.2)' }}>Nombre Exacto</span>
+                                    )}
+                                    {item.matchMethod === 'DESCRIPTION_PARTIAL' && (
+                                      <span style={{ fontSize: '10px', fontWeight: 600, backgroundColor: 'var(--color-warning-bg)', color: 'var(--color-warning)', padding: '2px 8px', borderRadius: '20px', border: '1px solid rgba(245, 158, 11, 0.2)' }}>Nombre Parcial</span>
+                                    )}
+                                    {item.matchMethod === 'MANUAL' && (
+                                      <span style={{ fontSize: '10px', fontWeight: 600, backgroundColor: 'var(--color-info-bg)', color: 'var(--color-info)', padding: '2px 8px', borderRadius: '20px', border: '1px solid rgba(59, 130, 246, 0.2)' }}>Vínculo Manual</span>
+                                    )}
+                                    {(!item.matchMethod || item.matchMethod === 'NONE') && (
+                                      <span style={{ fontSize: '10px', fontWeight: 600, backgroundColor: 'var(--color-danger-bg)', color: 'var(--color-danger)', padding: '2px 8px', borderRadius: '20px', border: '1px solid rgba(239, 68, 68, 0.2)' }}>Sin Vincular</span>
+                                    )}
+                                  </>
                                 )}
                               </div>
                             </div>
@@ -597,127 +662,186 @@ export const PurchaseScannerModal: React.FC<PurchaseScannerModalProps> = ({
 
                           {/* Matching Input */}
                           <div style={{ paddingTop: '12px', borderTop: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                              <CornerDownRight size={14} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
-                              <div style={{ flex: 1, position: 'relative' }}>
-                                {showSearch ? (
-                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', position: 'relative' }}>
-                                    <div style={{ position: 'relative' }}>
-                                      <input
-                                        type="text"
-                                        autoFocus
-                                        placeholder="Escriba para buscar producto..."
-                                        value={searchQuery}
-                                        onChange={(e) => handleProductSearch(idx, e.target.value)}
-                                        style={{
-                                          width: '100%',
-                                          backgroundColor: '#FFFFFF',
-                                          border: '1px solid var(--color-corp-red)',
-                                          borderRadius: '8px',
-                                          padding: '8px 12px 8px 36px',
-                                          fontSize: '12px',
-                                          color: 'var(--text-primary)',
-                                          boxShadow: '0 0 0 2px rgba(227, 6, 19, 0.1)',
-                                          outline: 'none'
-                                        }}
-                                      />
-                                      <Search size={14} style={{ color: 'var(--text-muted)', position: 'absolute', left: '12px', top: '10px' }} />
-                                    </div>
-                                    
-                                    {/* Dropdown Results */}
-                                    {results.length > 0 && (
-                                      <div style={{
-                                        position: 'absolute',
-                                        left: 0,
-                                        right: 0,
-                                        top: '40px',
-                                        backgroundColor: '#FFFFFF',
-                                        border: '1px solid var(--border-color)',
-                                        borderRadius: '8px',
-                                        boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
-                                        zIndex: 100,
-                                        maxHeight: '200px',
-                                        overflowY: 'auto'
-                                      }} className="custom-scrollbar">
-                                        {results.map((p) => (
-                                          <button
-                                            key={p.id}
-                                            type="button"
-                                            onClick={() => handleSelectProduct(idx, p)}
-                                            style={{
-                                              width: '100%',
-                                              border: 'none',
-                                              borderBottom: '1px solid var(--border-color)',
-                                              backgroundColor: 'transparent',
-                                              padding: '10px 14px',
-                                              textAlign: 'left',
-                                              cursor: 'pointer',
-                                              display: 'flex',
-                                              justifyContent: 'space-between',
-                                              alignItems: 'center',
-                                              transition: 'background-color 0.1s ease'
-                                            }}
-                                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--accent-bg-light)'}
-                                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                                          >
-                                            <div>
-                                              <p style={{ fontWeight: 600, fontSize: '12px', color: 'var(--text-primary)', margin: 0 }}>{p.name}</p>
-                                              <p style={{ fontSize: '10px', color: 'var(--text-secondary)', marginTop: '2px', margin: 0 }}>
-                                                SKU: {p.sku} | Barras: {p.barcode || 'S/B'}
-                                              </p>
-                                            </div>
-                                            <span style={{ fontSize: '10px', backgroundColor: 'var(--accent-bg-light)', color: 'var(--text-secondary)', padding: '2px 6px', borderRadius: '4px' }}>
-                                              ID: {p.id}
-                                            </span>
-                                          </button>
-                                        ))}
-                                      </div>
-                                    )}
-                                  </div>
-                                ) : (
-                                  <div 
-                                    onClick={() => {
-                                      setActiveSearchIndex(idx);
-                                      handleProductSearch(idx, item.description);
-                                    }}
-                                    style={{
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      justifyContent: 'space-between',
-                                      padding: '10px 14px',
-                                      borderRadius: '8px',
-                                      fontSize: '12px',
-                                      cursor: 'pointer',
-                                      transition: 'all 0.15s ease',
-                                      border: hasMatch ? '1px dashed var(--color-success)' : '1px dashed var(--color-danger)',
-                                      backgroundColor: hasMatch ? 'var(--color-success-bg)' : 'var(--color-danger-bg)',
-                                      color: hasMatch ? 'var(--text-primary)' : 'var(--color-danger)',
-                                    }}
-                                    onMouseEnter={(e) => {
-                                      e.currentTarget.style.borderColor = hasMatch ? 'var(--color-success)' : 'var(--color-danger)';
-                                      e.currentTarget.style.backgroundColor = hasMatch ? 'rgba(16, 185, 129, 0.08)' : 'rgba(239, 68, 68, 0.08)';
-                                    }}
-                                    onMouseLeave={(e) => {
-                                      e.currentTarget.style.borderColor = hasMatch ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)';
-                                      e.currentTarget.style.backgroundColor = hasMatch ? 'var(--color-success-bg)' : 'var(--color-danger-bg)';
-                                    }}
-                                  >
-                                    <span style={{
-                                      overflow: 'hidden',
-                                      textOverflow: 'ellipsis',
-                                      whiteSpace: 'nowrap',
-                                      fontWeight: hasMatch ? 500 : 400
-                                    }}>
-                                      {hasMatch 
-                                        ? `VINCULADO: ${item.matchedProductName} (ID: ${item.matchedProductId})` 
-                                        : '⚠️ Haga clic aquí para buscar y vincular a un producto local.'
-                                      }
-                                    </span>
-                                    <Search size={14} style={{ color: 'var(--text-muted)', marginLeft: '8px', flexShrink: 0 }} />
-                                  </div>
-                                )}
+                            {item.isNonStock ? (
+                              <div style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                padding: '10px 14px',
+                                borderRadius: '8px',
+                                fontSize: '12px',
+                                border: '1px solid var(--border-color)',
+                                backgroundColor: 'var(--accent-bg-light)',
+                                color: 'var(--text-secondary)'
+                              }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                  <CornerDownRight size={14} style={{ color: 'var(--text-muted)' }} />
+                                  <span style={{ fontWeight: 500, color: 'var(--text-primary)' }}>
+                                    ⚡ Marcado como Gasto / Servicio (No ingresa al inventario)
+                                  </span>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => handleToggleNonStock(idx)}
+                                  style={{
+                                    fontSize: '11px',
+                                    fontWeight: 500,
+                                    border: '1px solid var(--border-color)',
+                                    borderRadius: '6px',
+                                    padding: '4px 10px',
+                                    backgroundColor: '#FFFFFF',
+                                    color: 'var(--text-primary)',
+                                    cursor: 'pointer'
+                                  }}
+                                >
+                                  Vincular a producto local
+                                </button>
                               </div>
-                            </div>
+                            ) : (
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <CornerDownRight size={14} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+                                <div style={{ flex: 1, position: 'relative' }}>
+                                  {showSearch ? (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', position: 'relative' }}>
+                                      <div style={{ position: 'relative' }}>
+                                        <input
+                                          type="text"
+                                          autoFocus
+                                          placeholder="Escriba para buscar producto..."
+                                          value={searchQuery}
+                                          onChange={(e) => handleProductSearch(idx, e.target.value)}
+                                          style={{
+                                            width: '100%',
+                                            backgroundColor: '#FFFFFF',
+                                            border: '1px solid var(--color-corp-red)',
+                                            borderRadius: '8px',
+                                            padding: '8px 12px 8px 36px',
+                                            fontSize: '12px',
+                                            color: 'var(--text-primary)',
+                                            boxShadow: '0 0 0 2px rgba(227, 6, 19, 0.1)',
+                                            outline: 'none'
+                                          }}
+                                        />
+                                        <Search size={14} style={{ color: 'var(--text-muted)', position: 'absolute', left: '12px', top: '10px' }} />
+                                      </div>
+                                      
+                                      {/* Dropdown Results */}
+                                      {results.length > 0 && (
+                                        <div style={{
+                                          position: 'absolute',
+                                          left: 0,
+                                          right: 0,
+                                          top: '40px',
+                                          backgroundColor: '#FFFFFF',
+                                          border: '1px solid var(--border-color)',
+                                          borderRadius: '8px',
+                                          boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+                                          zIndex: 100,
+                                          maxHeight: '200px',
+                                          overflowY: 'auto'
+                                        }} className="custom-scrollbar">
+                                          {results.map((p) => (
+                                            <button
+                                              key={p.id}
+                                              type="button"
+                                              onClick={() => handleSelectProduct(idx, p)}
+                                              style={{
+                                                width: '100%',
+                                                border: 'none',
+                                                borderBottom: '1px solid var(--border-color)',
+                                                backgroundColor: 'transparent',
+                                                padding: '10px 14px',
+                                                textAlign: 'left',
+                                                cursor: 'pointer',
+                                                display: 'flex',
+                                                justifyContent: 'space-between',
+                                                alignItems: 'center',
+                                                transition: 'background-color 0.1s ease'
+                                              }}
+                                              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--accent-bg-light)'}
+                                              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                            >
+                                              <div>
+                                                <p style={{ fontWeight: 600, fontSize: '12px', color: 'var(--text-primary)', margin: 0 }}>{p.name}</p>
+                                                <p style={{ fontSize: '10px', color: 'var(--text-secondary)', marginTop: '2px', margin: 0 }}>
+                                                  SKU: {p.sku} | Barras: {p.barcode || 'S/B'}
+                                                </p>
+                                              </div>
+                                              <span style={{ fontSize: '10px', backgroundColor: 'var(--accent-bg-light)', color: 'var(--text-secondary)', padding: '2px 6px', borderRadius: '4px' }}>
+                                                ID: {p.id}
+                                              </span>
+                                            </button>
+                                          ))}
+                                        </div>
+                                      )}
+                                    </div>
+                                  ) : (
+                                    <div 
+                                      onClick={() => {
+                                        setActiveSearchIndex(idx);
+                                        handleProductSearch(idx, item.description);
+                                      }}
+                                      style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'space-between',
+                                        padding: '10px 14px',
+                                        borderRadius: '8px',
+                                        fontSize: '12px',
+                                        cursor: 'pointer',
+                                        transition: 'all 0.15s ease',
+                                        border: hasMatch ? '1px dashed var(--color-success)' : '1px dashed var(--color-danger)',
+                                        backgroundColor: hasMatch ? 'var(--color-success-bg)' : 'var(--color-danger-bg)',
+                                        color: hasMatch ? 'var(--text-primary)' : 'var(--color-danger)',
+                                      }}
+                                      onMouseEnter={(e) => {
+                                        e.currentTarget.style.borderColor = hasMatch ? 'var(--color-success)' : 'var(--color-danger)';
+                                        e.currentTarget.style.backgroundColor = hasMatch ? 'rgba(16, 185, 129, 0.08)' : 'rgba(239, 68, 68, 0.08)';
+                                      }}
+                                      onMouseLeave={(e) => {
+                                        e.currentTarget.style.borderColor = hasMatch ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)';
+                                        e.currentTarget.style.backgroundColor = hasMatch ? 'var(--color-success-bg)' : 'var(--color-danger-bg)';
+                                      }}
+                                    >
+                                      <span style={{
+                                        overflow: 'hidden',
+                                        textOverflow: 'ellipsis',
+                                        whiteSpace: 'nowrap',
+                                        fontWeight: hasMatch ? 500 : 400
+                                      }}>
+                                        {hasMatch 
+                                          ? `VINCULADO: ${item.matchedProductName} (ID: ${item.matchedProductId})` 
+                                          : '⚠️ Haga clic aquí para buscar y vincular a un producto local.'
+                                        }
+                                      </span>
+                                      <Search size={14} style={{ color: 'var(--text-muted)', marginLeft: '8px', flexShrink: 0 }} />
+                                    </div>
+                                  )}
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => handleToggleNonStock(idx)}
+                                  title="Marcar este renglón como gasto o insumo sin afectación de stock"
+                                  style={{
+                                    padding: '9px 12px',
+                                    fontSize: '11px',
+                                    fontWeight: 500,
+                                    borderRadius: '8px',
+                                    border: '1px solid var(--border-color)',
+                                    backgroundColor: 'var(--accent-bg-light)',
+                                    color: 'var(--text-secondary)',
+                                    cursor: 'pointer',
+                                    whiteSpace: 'nowrap',
+                                    transition: 'all 0.15s ease',
+                                    flexShrink: 0
+                                  }}
+                                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--border-color)'}
+                                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--accent-bg-light)'}
+                                >
+                                  ⚡ Gasto (Sin Stock)
+                                </button>
+                              </div>
+                            )}
                           </div>
 
                         </div>
@@ -897,41 +1021,51 @@ export const PurchaseScannerModal: React.FC<PurchaseScannerModalProps> = ({
           >
             Cancelar
           </button>
-          <button 
-            onClick={handleConfirm}
-            disabled={loading || !extractedData || extractedData.items?.some((i: any) => !i.matchedProductId)}
-            style={{
-              padding: '10px 20px',
-              borderRadius: '8px',
-              border: 'none',
-              backgroundColor: 'var(--color-corp-red)',
-              color: '#FFFFFF',
-              fontSize: '13px',
-              fontWeight: 600,
-              cursor: 'pointer',
-              boxShadow: '0 4px 6px -1px rgba(227, 6, 19, 0.2)',
-              transition: 'all 0.15s ease',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              opacity: (loading || !extractedData || extractedData.items?.some((i: any) => !i.matchedProductId)) ? 0.5 : 1
-            }}
-            onMouseEnter={(e) => {
-              const disabled = loading || !extractedData || extractedData.items?.some((i: any) => !i.matchedProductId);
-              if (!disabled) e.currentTarget.style.backgroundColor = '#C70510';
-            }}
-            onMouseLeave={(e) => {
-              const disabled = loading || !extractedData || extractedData.items?.some((i: any) => !i.matchedProductId);
-              if (!disabled) e.currentTarget.style.backgroundColor = 'var(--color-corp-red)';
-            }}
-          >
-            {loading ? (
-              <Loader size={16} style={{ animation: 'spin 1s linear infinite' }} />
-            ) : (
-              <Check size={16} />
-            )}
-            <span>Confirmar e Inyectar Stock</span>
-          </button>
+          {(() => {
+            const allItemsValid = extractedData?.items?.length > 0 && extractedData.items.every((i: any) => i.isNonStock || !!i.matchedProductId);
+            const allNonStock = extractedData?.items?.length > 0 && extractedData.items.every((i: any) => i.isNonStock);
+            const isDisabled = loading || !extractedData || !allItemsValid;
+
+            const buttonLabel = allNonStock
+              ? 'Confirmar Factura (Sin afectar stock)'
+              : 'Confirmar e Inyectar Stock';
+
+            return (
+              <button 
+                onClick={handleConfirm}
+                disabled={isDisabled}
+                style={{
+                  padding: '10px 20px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  backgroundColor: 'var(--color-corp-red)',
+                  color: '#FFFFFF',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 6px -1px rgba(227, 6, 19, 0.2)',
+                  transition: 'all 0.15s ease',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  opacity: isDisabled ? 0.5 : 1
+                }}
+                onMouseEnter={(e) => {
+                  if (!isDisabled) e.currentTarget.style.backgroundColor = '#C70510';
+                }}
+                onMouseLeave={(e) => {
+                  if (!isDisabled) e.currentTarget.style.backgroundColor = 'var(--color-corp-red)';
+                }}
+              >
+                {loading ? (
+                  <Loader size={16} style={{ animation: 'spin 1s linear infinite' }} />
+                ) : (
+                  <Check size={16} />
+                )}
+                <span>{buttonLabel}</span>
+              </button>
+            );
+          })()}
         </div>
       </div>
     </div>

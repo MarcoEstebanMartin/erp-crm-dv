@@ -110,11 +110,11 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({ onBackToStaffLogin }
       const res = await fetch(`${API_BASE_URL}/store/magic-login?token=${encodeURIComponent(token)}${draftId ? `&draftId=${draftId}` : ''}`);
       const json = await res.json();
 
-      if (json.status === 'success' && json.data.client) {
+      if (json.status === 'success' && json.data?.client) {
         const loggedClient = json.data.client;
         setClient(loggedClient);
         localStorage.setItem('store_client_session', JSON.stringify(loggedClient));
-        if (json.data.token) {
+        if (json.data?.token) {
           localStorage.setItem('store_token', json.data.token);
         }
 
@@ -122,7 +122,7 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({ onBackToStaffLogin }
           setActiveTab('account');
         }
 
-        if (json.data.draft && json.data.draft.items && json.data.draft.items.length > 0) {
+        if (json.data?.draft && json.data.draft.items && json.data.draft.items.length > 0) {
           const draftItems = json.data.draft.items;
           const catalogRes = await fetch(`${API_BASE_URL}/store/catalog?priceList=${loggedClient.priceList || 'A'}`);
           const catalogJson = await catalogRes.json();
@@ -195,7 +195,7 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({ onBackToStaffLogin }
         body: JSON.stringify({ search: term.trim() })
       });
       const json = await res.json();
-      if (json.status === 'success') {
+      if (json.status === 'success' && json.data) {
         if (json.data.client) {
           handleSelectClient(json.data.client, json.data.token);
         } else if (json.data.clients && json.data.clients.length > 0) {
