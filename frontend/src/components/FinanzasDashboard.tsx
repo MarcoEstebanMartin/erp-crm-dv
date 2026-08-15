@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../utils/api';
-import { DollarSign, RefreshCw, PlusCircle, AlertCircle, Landmark, Upload, Check, CheckSquare, Eye, ChevronRight, FileText, ArrowUpRight, Lock, Building2, Calendar } from 'lucide-react';
+import { DollarSign, RefreshCw, PlusCircle, AlertCircle, Landmark, Upload, Check, CheckSquare, Eye, ChevronRight, FileText, ArrowUpRight, Lock, Building2, Calendar, Edit2 } from 'lucide-react';
 import { useConfirm } from '../context/ConfirmContext';
 import FinanceMovementModal from './FinanceMovementModal';
 import { formatResponsibleName } from '../utils/formatters';
@@ -13,6 +13,13 @@ export default function FinanzasDashboard() {
   const [cajaGrandeBalance, setCajaGrandeBalance] = useState(0);
   const [bankAccounts, setBankAccounts] = useState<any[]>([]);
   const [inspectingDrawer, setInspectingDrawer] = useState<any | null>(null);
+
+  // Modal de Edición de Cuenta Bancaria
+  const [editingBankModalOpen, setEditingBankModalOpen] = useState(false);
+  const [editingBankId, setEditingBankId] = useState<number | null>(null);
+  const [editingBankName, setEditingBankName] = useState('');
+  const [editingBankAccountNumber, setEditingBankAccountNumber] = useState('');
+  const [submittingEditBank, setSubmittingEditBank] = useState(false);
 
   // Modal de Cierre de Caja Grande (Central)
   const [centralCloseModalOpen, setCentralCloseModalOpen] = useState(false);
@@ -120,6 +127,32 @@ export default function FinanzasDashboard() {
       console.error('Error fetching financial data', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleOpenEditBank = (bank: any) => {
+    setEditingBankId(bank.id);
+    setEditingBankName(bank.name);
+    setEditingBankAccountNumber(bank.accountNumber || '');
+    setEditingBankModalOpen(true);
+  };
+
+  const handleSaveBank = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingBankId || !editingBankName.trim()) return;
+    setSubmittingEditBank(true);
+    try {
+      await api.finance.updateBankAccount(editingBankId, {
+        name: editingBankName.trim(),
+        accountNumber: editingBankAccountNumber.trim(),
+      });
+      setEditingBankModalOpen(false);
+      const banks = await api.finance.getBankAccounts();
+      setBankAccounts(banks || []);
+    } catch (err: any) {
+      alert(err?.message || 'Error al guardar los datos de la cuenta bancaria');
+    } finally {
+      setSubmittingEditBank(false);
     }
   };
 
@@ -1241,7 +1274,17 @@ export default function FinanzasDashboard() {
               bankAccounts.map((b: any) => (
                 <div key={b.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', border: '1px solid var(--border-color)', borderRadius: '8px', backgroundColor: 'var(--bg-light)' }}>
                   <div>
-                    <div style={{ fontWeight: 600, fontSize: '0.88rem', color: 'var(--text-primary)' }}>{b.name}</div>
+                    <div style={{ fontWeight: 600, fontSize: '0.88rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      {b.name}
+                      <button
+                        onClick={() => handleOpenEditBank(b)}
+                        title="Editar nombre o número de cuenta"
+                        style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--text-secondary)', padding: '2px', borderRadius: '4px', display: 'inline-flex', alignItems: 'center' }}
+                        className="hover-btn"
+                      >
+                        <Edit2 size={13} />
+                      </button>
+                    </div>
                     <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', fontFamily: 'monospace', marginTop: '2px' }}>{b.accountNumber || 'Sin Nro Cuenta'}</div>
                   </div>
                   <div style={{ fontWeight: 700, fontSize: '1.1rem', color: '#10b981', fontFamily: 'monospace' }}>
@@ -2138,6 +2181,52 @@ export default function FinanzasDashboard() {
                 </button>
                 <button type="submit" className="btn btn-primary" style={{ backgroundColor: 'var(--color-corp-red)', borderColor: 'var(--color-corp-red)' }} disabled={submittingCentralClose}>
                   {submittingCentralClose ? 'Cerrando...' : 'Confirmar Cierre de Caja Grande'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Edición de Cuenta Bancaria */}
+      {editingBankModalOpen && (
+        <div className="modal-overlay" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <div className="card" style={{ width: '100%', maxWidth: '450px', backgroundColor: 'var(--bg-primary)', padding: '24px', borderRadius: '12px', boxShadow: '0 10px 25px rgba(0,0,0,0.2)' }}>
+            <h3 style={{ margin: '0 0 16px 0', fontSize: '1.1rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Landmark size={18} /> Editar Cuenta Bancaria / Billetera
+            </h3>
+            <form onSubmit={handleSaveBank}>
+              <div className="form-group" style={{ marginBottom: '14px' }}>
+                <label className="label" style={{ fontWeight: 600, fontSize: '0.85rem' }}>Nombre de la Cuenta / Banco</label>
+                <input
+                  type="text"
+                  className="input"
+                  placeholder="Ej: Banco Provincia C/C"
+                  value={editingBankName}
+                  onChange={e => setEditingBankName(e.target.value)}
+                  style={{ width: '100%', padding: '8px 12px', fontSize: '0.9rem' }}
+                  required
+                />
+              </div>
+
+              <div className="form-group" style={{ marginBottom: '20px' }}>
+                <label className="label" style={{ fontWeight: 600, fontSize: '0.85rem' }}>Número de Cuenta / CBU / Alias</label>
+                <input
+                  type="text"
+                  className="input"
+                  placeholder="Ej: 10300/6 ó alias.ejemplo"
+                  value={editingBankAccountNumber}
+                  onChange={e => setEditingBankAccountNumber(e.target.value)}
+                  style={{ width: '100%', padding: '8px 12px', fontFamily: 'monospace', fontSize: '0.88rem' }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', borderTop: '1px solid var(--border-color)', paddingTop: '16px' }}>
+                <button type="button" className="btn btn-secondary" onClick={() => setEditingBankModalOpen(false)}>
+                  Cancelar
+                </button>
+                <button type="submit" className="btn btn-primary" style={{ backgroundColor: '#10b981', borderColor: '#10b981' }} disabled={submittingEditBank}>
+                  {submittingEditBank ? 'Guardando...' : 'Guardar Cambios'}
                 </button>
               </div>
             </form>

@@ -450,60 +450,6 @@ export async function getBankAccounts(req: AuthenticatedRequest, res: Response):
       accounts = await prisma.bankAccount.findMany({
         orderBy: { name: 'asc' },
       });
-    } else {
-      // Renombrar cuentas existentes a la nueva nomenclatura
-      const renameMap = [
-        { old: 'Mercado Pago Distribuidora', new: 'Mercado Pago Transferencias' },
-        { old: 'QR', new: 'QR MP' },
-        { old: 'Banco Provincia Corriente', new: 'Banco Provincia C/C' }
-      ];
-
-      for (const mapping of renameMap) {
-        const found = accounts.find(a => a.name === mapping.old);
-        if (found) {
-          await prisma.bankAccount.update({
-            where: { id: found.id },
-            data: { name: mapping.new }
-          });
-        }
-      }
-
-      // Asegurar la existencia de "Banco Provincia C.A"
-      accounts = await prisma.bankAccount.findMany({
-        orderBy: { name: 'asc' },
-      });
-      const hasProvinciaCA = accounts.some(a => a.name === 'Banco Provincia C.A');
-      if (!hasProvinciaCA) {
-        await prisma.bankAccount.create({
-          data: { name: 'Banco Provincia C.A', accountNumber: '520358/9', balance: 0.00 }
-        });
-      }
-
-      // Actualizar cuentas existentes con los números reales solicitados por el usuario si difieren
-      accounts = await prisma.bankAccount.findMany({
-        orderBy: { name: 'asc' },
-      });
-
-      const updates = [
-        { name: 'Mercado Pago Transferencias', accountNumber: '0000003100085432453321 (alias: donvenancio2024)' },
-        { name: 'Banco Provincia C/C', accountNumber: '10300/6' },
-        { name: 'Banco Provincia C.A', accountNumber: '520358/9' }
-      ];
-
-      for (const update of updates) {
-        const found = accounts.find(a => a.name === update.name);
-        if (found && found.accountNumber !== update.accountNumber) {
-          await prisma.bankAccount.update({
-            where: { id: found.id },
-            data: { accountNumber: update.accountNumber }
-          });
-        }
-      }
-
-      // Volver a cargar las cuentas actualizadas
-      accounts = await prisma.bankAccount.findMany({
-        orderBy: { name: 'asc' },
-      });
     }
 
     res.status(200).json({
@@ -512,6 +458,64 @@ export async function getBankAccounts(req: AuthenticatedRequest, res: Response):
     });
   } catch (error: any) {
     res.status(500).json({ status: 'error', message: 'Error al obtener las cuentas bancarias.' });
+  }
+}
+
+/**
+ * Actualizar una cuenta bancaria existente (nombre, nro de cuenta / CBU / alias).
+ */
+export async function updateBankAccount(req: AuthenticatedRequest, res: Response): Promise<void> {
+  const { id } = req.params;
+  const { name, accountNumber } = req.body;
+  const userId = req.user?.id;
+
+  if (!userId) {
+    res.status(401).json({ status: 'error', message: 'No autorizado.' });
+    return;
+  }
+
+  const bankId = Number(id);
+  if (isNaN(bankId)) {
+    res.status(400).json({ status: 'error', message: 'ID de cuenta bancaria inválido.' });
+    return;
+  }
+
+  if (!name || typeof name !== 'string' || !name.trim()) {
+    res.status(400).json({ status: 'error', message: 'El nombre de la cuenta bancaria es obligatorio.' });
+    return;
+  }
+
+  try {
+    const existing = await prisma.bankAccount.findUnique({ where: { id: bankId } });
+    if (!existing) {
+      res.status(404).json({ status: 'error', message: 'Cuenta bancaria no encontrada.' });
+      return;
+    }
+
+    const updatedAccount = await prisma.bankAccount.update({
+      where: { id: bankId },
+      data: {
+        name: name.trim(),
+        accountNumber: accountNumber !== undefined ? (accountNumber ? accountNumber.trim() : null) : existing.accountNumber,
+      },
+    });
+
+    await logAudit({
+      userId,
+      action: 'UPDATE_BANK_ACCOUNT',
+      entityType: 'BankAccount',
+      entityId: bankId,
+      oldValues: existing,
+      newValues: updatedAccount,
+    });
+
+    res.status(200).json({
+      status: 'success',
+      data: { account: updatedAccount },
+    });
+  } catch (error: any) {
+    console.error('Error al actualizar cuenta bancaria:', error);
+    res.status(500).json({ status: 'error', message: 'Error interno al actualizar la cuenta bancaria.' });
   }
 }
 

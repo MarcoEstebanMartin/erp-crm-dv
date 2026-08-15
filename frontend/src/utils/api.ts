@@ -666,6 +666,14 @@ export const api = {
     return res.account;
   },
 
+  updateBankAccount: async (id: number, bankData: { name: string; accountNumber?: string }) => {
+    const res = await request(`/finance/bank-accounts/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(bankData)
+    });
+    return res.data?.account || res.account;
+  },
+
   transferFunds: async (amount: number, bankAccountId: number, description?: string) => {    
     const res = await request('/finance/bank-accounts/transfer', {
       method: 'POST',

@@ -8,6 +8,7 @@ import {
   getTransactions,
   getBankAccounts,
   createBankAccount,
+  updateBankAccount,
   transferFunds,
   verifyTransaction,
   getDrawersHistory,
@@ -35,6 +36,7 @@ router.post('/central-drawer/close', authenticateJWT, requireRole([Role.ADMIN]),
 router.get('/transactions', authenticateJWT, requireRole([Role.ADMIN, Role.FACTURACION]), getTransactions);
 router.get('/bank-accounts', authenticateJWT, getBankAccounts);
 router.post('/bank-accounts', authenticateJWT, requireRole([Role.ADMIN]), createBankAccount);
+router.put('/bank-accounts/:id', authenticateJWT, requireRole([Role.ADMIN, Role.FACTURACION]), updateBankAccount);
 router.post('/bank-accounts/transfer', authenticateJWT, requireRole([Role.ADMIN, Role.FACTURACION]), transferFunds);
 router.put('/transactions/:id/verify', authenticateJWT, requireRole([Role.ADMIN, Role.FACTURACION]), verifyTransaction);
 router.get('/transactions/:id', authenticateJWT, getTransactionById);
