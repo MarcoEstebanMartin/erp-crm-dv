@@ -273,21 +273,34 @@ export default function CrmDashboard({ initialTab = 'whatsapp', hideHeaderTabs =
     e.preventDefault();
     if (!replyText.trim() || !selectedConversation) return;
 
+    const textToSend = replyText.trim();
+    setReplyText('');
     setSendingMsg(true);
+    setErrorMsg(null);
+
     try {
       const res = await api.sendCrmMessage({
         to: selectedConversation.waId,
-        text: replyText
+        text: textToSend
       });
 
-      const sentMsg = res?.data?.message || res?.data || res?.message;
+      const sentMsg = res?.message || res?.data?.message || (res?.id ? res : null);
       if (sentMsg) {
         setMessages(prev => [...prev, sentMsg]);
       }
-      setReplyText('');
+
+      // Re-consultar mensajes actualizados para mantener el historial sincronizado
+      const freshRes = await api.getCrmMessages(selectedConversation.id);
+      const msgList = freshRes?.messages || freshRes?.data?.messages || (Array.isArray(freshRes) ? freshRes : []);
+      if (Array.isArray(msgList) && msgList.length > 0) {
+        setMessages(msgList);
+      }
+
       fetchConversations(selectedConversation.id);
     } catch (err: any) {
+      console.error('Error al enviar mensaje:', err);
       setErrorMsg('Error al enviar el mensaje de WhatsApp.');
+      setReplyText(textToSend);
     } finally {
       setSendingMsg(false);
     }
