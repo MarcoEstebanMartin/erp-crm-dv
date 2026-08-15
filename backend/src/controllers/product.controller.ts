@@ -27,7 +27,7 @@ export async function getProducts(req: AuthenticatedRequest, res: Response): Pro
   
   try {
     const products = await productService.getProducts(search as string, includeInactive);
-    appCache.set(cacheKey, products, 86400);
+    appCache.set(cacheKey, products, 60); // 60 segundos TTL
     res.status(200).json({ status: 'success', data: { products } });
   } catch (error: any) {
     res.status(500).json({ status: 'error', message: 'Error al obtener los productos.' });
@@ -256,6 +256,9 @@ export async function uploadProductImage(req: AuthenticatedRequest, res: Respons
         newValues: { imageUrl },
       });
     }
+
+    // Invalidad caché en memoria de productos para que se actualice al instante
+    appCache.invalidateProductCatalog();
 
     res.status(200).json({ status: 'success', data: { product: updatedProduct } });
   } catch (error: any) {
