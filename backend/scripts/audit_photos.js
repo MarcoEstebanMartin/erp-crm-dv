@@ -36,6 +36,8 @@ async function auditPhotos() {
         corruptCount++;
         console.log(`⚠️ Foto corrupta o miniatura sospechosa (<5KB): SKU ${padSku} (${p.name}) | Tamaño: ${size} bytes`);
       }
+    } else if (inMaster || inUpload) {
+      okCount++;
     } else {
       missingCount++;
       console.log(`❌ Foto faltante: SKU ${padSku} (${p.name}) | Master: ${inMaster} | Upload: ${inUpload}`);

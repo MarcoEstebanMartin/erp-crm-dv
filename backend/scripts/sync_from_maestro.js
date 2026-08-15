@@ -120,7 +120,7 @@ async function syncFromMaestro() {
           unitsPerBox: unitsPerBox,
           minOrderQuantity: minOrderQuantity,
           imageUrl: imageUrl,
-          category: row.RUBRO || 'GENERAL'
+          commercialCategory: row.RUBRO || 'GENERAL'
         }
       });
     }
@@ -132,9 +132,13 @@ async function syncFromMaestro() {
     try {
       await prisma.product.update(item);
     } catch (e) {
-      // If barcode collision occurs, update without barcode override
-      const { barcode, ...dataWithoutBarcode } = item.data;
-      await prisma.product.update({ where: item.where, data: dataWithoutBarcode });
+      if (e.code === 'P2025') continue;
+      try {
+        const { barcode, ...dataWithoutBarcode } = item.data;
+        await prisma.product.update({ where: item.where, data: dataWithoutBarcode });
+      } catch (err) {
+        console.warn(`[Sync Warning] No se pudo actualizar producto ID ${item.where?.id}`);
+      }
     }
   }
   for (const item of creates) {
