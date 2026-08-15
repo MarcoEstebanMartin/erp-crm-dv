@@ -3,7 +3,7 @@ import React from 'react';
 import { api } from '../utils/api';
 import { getOrderStatusInfo } from '../utils/orderStatusHelper';
 
-import { Trash2, ShoppingCart, UserPlus, CheckCircle2, Eye, Edit, Printer, MapPin, Phone, Navigation, ArrowRight, RefreshCw, Package } from 'lucide-react';
+import { Trash2, ShoppingCart, UserPlus, CheckCircle2, Eye, Edit, Printer, MapPin, Phone, Navigation, ArrowRight, RefreshCw, Package, Users, DollarSign, History } from 'lucide-react';
 import PriceListModal from './PriceListModal';
 import MobileCobros from './MobileCobros';
 import type { Persona, Product, Order, Rubro, SaleRoute } from '../types';
@@ -745,8 +745,157 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
     printWindow.document.close();
   };
 
+  const todayStr = new Date().toISOString().split('T')[0];
+  const todayOrders = orders.filter(o => {
+    if (!o.createdAt) return false;
+    return new Date(o.createdAt).toISOString().split('T')[0] === todayStr;
+  });
+  const todayTotalSales = todayOrders.reduce((sum, o) => sum + Number(o.totalAmount || 0), 0);
+
   return (
     <div style={{ width: '100%' }}>
+      {/* Barra de Navegación Ágil y Resumen de Jornada (Sin Menú Hamburguesa) */}
+      <div style={{ marginBottom: '20px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', flexWrap: 'wrap', gap: '10px' }}>
+          <div>
+            <h1 style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>
+              App de Preventa & Pedidos
+            </h1>
+            <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: '2px 0 0 0' }}>
+              Toma de pedidos en la calle, clientes en ruta y cobranzas en tiempo real
+            </p>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => setIsPriceListModalOpen(true)}
+              style={{ fontSize: '0.8rem', padding: '6px 12px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+            >
+              <Package size={15} />
+              <span>Lista de Precios</span>
+            </button>
+
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => {
+                fetchData();
+                syncOfflineData();
+              }}
+              style={{ fontSize: '0.8rem', padding: '6px 12px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+            >
+              <RefreshCw size={15} />
+              <span>Sincronizar</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Pestañas Principales Visibles Juntas */}
+        <div className="vendedor-top-nav-bar">
+          <button
+            type="button"
+            className={`vendedor-nav-pill ${activeTab === 'orders' ? 'vendedor-nav-pill-active' : ''}`}
+            onClick={() => setActiveTab('orders')}
+          >
+            <ShoppingCart size={16} />
+            <span>Toma de Pedidos</span>
+            {cart.length > 0 && (
+              <span style={{
+                backgroundColor: activeTab === 'orders' ? '#fff' : 'var(--color-corp-red)',
+                color: activeTab === 'orders' ? 'var(--text-primary)' : '#fff',
+                fontSize: '0.7rem',
+                fontWeight: 700,
+                padding: '2px 6px',
+                borderRadius: '10px',
+                marginLeft: '4px'
+              }}>
+                {cart.length}
+              </span>
+            )}
+          </button>
+
+          <button
+            type="button"
+            className={`vendedor-nav-pill ${activeTab === 'clients' ? 'vendedor-nav-pill-active' : ''}`}
+            onClick={() => setActiveTab('clients')}
+          >
+            <Users size={16} />
+            <span>Mis Rutas Preventa</span>
+            <span style={{ fontSize: '0.72rem', opacity: 0.8 }}>({clients.length})</span>
+          </button>
+
+          <button
+            type="button"
+            className={`vendedor-nav-pill ${activeTab === 'cobranzas' ? 'vendedor-nav-pill-active' : ''}`}
+            onClick={() => setActiveTab('cobranzas')}
+          >
+            <DollarSign size={16} />
+            <span>Cobranzas y Recibos</span>
+          </button>
+
+          <button
+            type="button"
+            className={`vendedor-nav-pill ${activeTab === 'products' ? 'vendedor-nav-pill-active' : ''}`}
+            onClick={() => setActiveTab('products')}
+          >
+            <Package size={16} />
+            <span>Catálogo de Precios</span>
+          </button>
+
+          <button
+            type="button"
+            className={`vendedor-nav-pill ${activeTab === 'history' ? 'vendedor-nav-pill-active' : ''}`}
+            onClick={() => setActiveTab('history')}
+          >
+            <History size={16} />
+            <span>Historial de Pedidos</span>
+            <span style={{ fontSize: '0.72rem', opacity: 0.8 }}>({orders.length})</span>
+          </button>
+        </div>
+
+        {/* Resumen Rápido de Jornada */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
+          gap: '10px',
+          marginBottom: '16px'
+        }}>
+          <div className="card" style={{ padding: '10px 14px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+            <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', fontWeight: 600 }}>PEDIDOS HOY</span>
+            <span style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-primary)' }}>{todayOrders.length}</span>
+          </div>
+
+          <div className="card" style={{ padding: '10px 14px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+            <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', fontWeight: 600 }}>PREVENTA HOY</span>
+            <span style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--color-success)' }}>
+              ${Math.round(todayTotalSales).toLocaleString('es-AR')}
+            </span>
+          </div>
+
+          <div className="card" style={{ padding: '10px 14px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+            <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', fontWeight: 600 }}>CLIENTES EN RUTA</span>
+            <span style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-primary)' }}>{clients.length}</span>
+          </div>
+
+          <div className="card" style={{ padding: '10px 14px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+            <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', fontWeight: 600 }}>ESTADO RED</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
+              <div style={{
+                width: '8px',
+                height: '8px',
+                borderRadius: '50%',
+                backgroundColor: navigator.onLine ? 'var(--color-success)' : '#F59E0B'
+              }} />
+              <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                {navigator.onLine ? 'En Línea' : 'Offline'}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {errorMsg && (
         <div style={{
           backgroundColor: 'var(--accent-bg-light)',

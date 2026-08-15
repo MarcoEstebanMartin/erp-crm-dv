@@ -144,44 +144,90 @@ export default function Sidebar({ username, role, activeTab, setActiveTab, onLog
   };
 
   const currentItemLabel = menuItems.find(item => item.id === currentTab)?.label || 'Don Venancio ERP';
+  const isVendedor = role === 'VENDEDOR';
 
   return (
     <>
       {/* Header Fijo Móvil (Solo visible en pantallas <= 768px) */}
       <header className="mobile-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <button 
-            className="mobile-hamburger-btn" 
-            onClick={() => setIsMobileOpen(!isMobileOpen)}
-            aria-label="Abrir menú"
-          >
-            {isMobileOpen ? <X size={22} /> : <Menu size={22} />}
-          </button>
+          {!isVendedor && (
+            <button 
+              className="mobile-hamburger-btn" 
+              onClick={() => setIsMobileOpen(!isMobileOpen)}
+              aria-label="Abrir menú"
+            >
+              {isMobileOpen ? <X size={22} /> : <Menu size={22} />}
+            </button>
+          )}
           <img 
             src="/logo.png" 
             alt="Logo DV" 
             className="mobile-header-logo"
             onError={(e) => { e.currentTarget.style.display = 'none'; }}
           />
-          <span className="mobile-header-title">{currentItemLabel}</span>
+          <span className="mobile-header-title">
+            {isVendedor ? 'Preventa DV' : currentItemLabel}
+          </span>
         </div>
 
-        <div className="mobile-header-status">
-          <div style={{
-            width: '8px',
-            height: '8px',
-            borderRadius: '50%',
-            backgroundColor: 'var(--color-success)',
-            animation: 'pulse 2s infinite'
-          }} />
-          <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
-            {username || role}
-          </span>
+        <div className="mobile-header-status" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <div style={{
+              width: '8px',
+              height: '8px',
+              borderRadius: '50%',
+              backgroundColor: 'var(--color-success)',
+              animation: 'pulse 2s infinite'
+            }} />
+            <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
+              {username || role}
+            </span>
+          </div>
+
+          {/* Botón directo de salida para vendedores sin entrar a menús */}
+          <button
+            onClick={handleLogoutClick}
+            title="Cerrar sesión"
+            style={{
+              background: 'transparent',
+              border: 'none',
+              color: 'var(--text-secondary)',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              padding: '4px'
+            }}
+          >
+            <LogOut size={18} />
+          </button>
         </div>
       </header>
 
+      {/* Dock Inferior Fijo de Navegación Directa para Vendedores (Móvil) */}
+      {isVendedor && (
+        <nav className="vendedor-bottom-nav">
+          {menuItems.map((item: any) => {
+            const isActive = currentTab === item.id;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                className={`vendedor-bottom-nav-item ${isActive ? 'vendedor-bottom-nav-item-active' : ''}`}
+                onClick={() => handleTabSelect(item.id)}
+              >
+                <div className="bottom-nav-icon-wrapper">
+                  {item.icon}
+                </div>
+                <span>{item.label.replace('Toma de ', '').replace('Mis Rutas ', '').replace(' y Recibos', '').replace(' de Precios', '').replace(' de Pedidos', '')}</span>
+              </button>
+            );
+          })}
+        </nav>
+      )}
+
       {/* Backdrop traslúcido para móviles cuando el menú está abierto */}
-      {isMobileOpen && (
+      {!isVendedor && isMobileOpen && (
         <div 
           className="sidebar-backdrop" 
           onClick={() => setIsMobileOpen(false)} 
@@ -189,7 +235,7 @@ export default function Sidebar({ username, role, activeTab, setActiveTab, onLog
       )}
 
       {/* Contenedor del Sidebar (Drawer en Móvil / Fijo en Escritorio) */}
-      <aside className={`sidebar ${isMobileOpen ? 'sidebar-mobile-active' : ''}`}>
+      <aside className={`sidebar ${!isVendedor && isMobileOpen ? 'sidebar-mobile-active' : ''}`}>
         {/* Cabecera del Sidebar con el Logo y Rol Debajo */}
         <div className="sidebar-brand">
           <div className="sidebar-brand-header">
@@ -200,12 +246,14 @@ export default function Sidebar({ username, role, activeTab, setActiveTab, onLog
               onError={(e) => { e.currentTarget.style.display = 'none'; }}
             />
             {/* Botón para cerrar drawer en móvil */}
-            <button 
-              className="mobile-drawer-close-btn"
-              onClick={() => setIsMobileOpen(false)}
-            >
-              <X size={20} />
-            </button>
+            {!isVendedor && (
+              <button 
+                className="mobile-drawer-close-btn"
+                onClick={() => setIsMobileOpen(false)}
+              >
+                <X size={20} />
+              </button>
+            )}
           </div>
           {(() => {
             let dotColor = 'var(--color-success)'; // Verde
@@ -221,7 +269,7 @@ export default function Sidebar({ username, role, activeTab, setActiveTab, onLog
                   animation: 'pulse 2s infinite'
                 }} />
                 <span style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
-                  {role === 'ADMIN' ? 'Administrador' : role === 'FACTURACION' ? 'Administrativo' : 'Operativo'}
+                  {role === 'ADMIN' ? 'Administrador' : role === 'FACTURACION' ? 'Administrativo' : role === 'VENDEDOR' ? 'Preventista / Vendedor' : 'Operativo'}
                 </span>
               </div>
             );

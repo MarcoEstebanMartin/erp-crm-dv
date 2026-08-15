@@ -146,8 +146,8 @@ function App() {
         onLogout={handleLogout}
       />
       
-      <main className="main-content">
-        <section style={{ animation: 'fadeIn 0.4s cubic-bezier(0.25, 1, 0.5, 1)', paddingTop: user.role === 'VENDEDOR' ? '20px' : '0' }}>
+      <main className="main-content" style={{ paddingBottom: user?.role === 'VENDEDOR' ? '70px' : undefined }}>
+        <section style={{ animation: 'fadeIn 0.4s cubic-bezier(0.25, 1, 0.5, 1)', paddingTop: user.role === 'VENDEDOR' ? '8px' : '0' }}>
           <Suspense fallback={<LoadingSpinner />}>
             <Routes>
               {/* Rutas de Administración */}

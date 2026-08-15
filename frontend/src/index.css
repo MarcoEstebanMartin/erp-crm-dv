@@ -1730,3 +1730,113 @@ tr:hover td {
   gap: 12px;
 }
 
+/* ==========================================================================
+   Estilos de Navegación Ágil para Vendedores (Sin Menú Hamburguesa)
+   ========================================================================== */
+.vendedor-bottom-nav {
+  display: none;
+}
+
+.vendedor-top-nav-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 8px 0;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--border-color);
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.vendedor-top-nav-bar::-webkit-scrollbar {
+  display: none;
+}
+
+.vendedor-nav-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-card);
+  color: var(--text-secondary);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.vendedor-nav-pill:hover {
+  background-color: var(--bg-hover);
+  color: var(--text-primary);
+  border-color: var(--border-focus);
+}
+
+.vendedor-nav-pill-active {
+  background-color: var(--text-primary) !important;
+  color: #FFFFFF !important;
+  border-color: var(--text-primary) !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+}
+
+@media (max-width: 768px) {
+  .vendedor-bottom-nav {
+    display: flex;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 60px;
+    background-color: var(--bg-card);
+    border-top: 1px solid var(--border-color);
+    z-index: 1040;
+    justify-content: space-around;
+    align-items: center;
+    box-shadow: 0 -4px 15px rgba(0, 0, 0, 0.06);
+    padding: 0 4px;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .vendedor-bottom-nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+    height: 100%;
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 0.72rem;
+    font-weight: 500;
+    gap: 2px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    text-decoration: none;
+    padding: 4px 0;
+  }
+
+  .vendedor-bottom-nav-item .bottom-nav-icon-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 3px 10px;
+    border-radius: 12px;
+    transition: all 0.15s ease;
+  }
+
+  .vendedor-bottom-nav-item-active {
+    color: var(--text-primary);
+    font-weight: 700;
+  }
+
+  .vendedor-bottom-nav-item-active .bottom-nav-icon-wrapper {
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+  }
+}
+
+
