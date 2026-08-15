@@ -40,25 +40,6 @@ export async function syncMasterProductImages(masterDir: string, targetDir: stri
     });
 
     await Promise.all(syncTasks);
-
-    // Mapeo inteligente usando cambios de migración (ej: foto 0237.jpg del Fernet Branca -> SKU 0489.jpg)
-    const changesPath = path.join(__dirname, '../../changes.json');
-    if (fsSync.existsSync(changesPath)) {
-      const changesRaw = await fs.readFile(changesPath, 'utf8');
-      const changes = JSON.parse(changesRaw);
-      for (const c of changes) {
-        if (!c.new) continue;
-        const newFileName = `${c.new.padStart(4, '0')}.jpg`;
-        if (c.old) {
-          const oldFileName = `${c.old.padStart(4, '0')}.jpg`;
-          const srcPath = path.join(masterDir, oldFileName);
-          const dstPath = path.join(targetDir, newFileName);
-          if (fsSync.existsSync(srcPath)) {
-            await fs.copyFile(srcPath, dstPath).catch(() => null);
-          }
-        }
-      }
-    }
   } catch (err) {
     console.error('⚠️ Error al auto-sincronizar imágenes maestras:', err);
   }
