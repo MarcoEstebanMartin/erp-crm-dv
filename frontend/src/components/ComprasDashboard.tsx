@@ -417,22 +417,33 @@ export default function ComprasDashboard() {
     const pampa = Number(supplierForm.percepcionPampa) || 0;
     const bsas = Number(supplierForm.percepcionBsAs) || 0;
     const iva = Number(supplierForm.percepcionIva) || 0;
+    const iva5329 = Number(supplierForm.percepcionIva5329) || 0;
     const internos = Number(supplierForm.impuestosInternos) || 0;
-    return (net + tax + pampa + bsas + iva + internos).toFixed(2);
-  }, [supplierForm.netAmount, supplierForm.taxAmount, supplierForm.percepcionPampa, supplierForm.percepcionBsAs, supplierForm.percepcionIva, supplierForm.impuestosInternos]);
+    return (net + tax + pampa + bsas + iva + iva5329 + internos).toFixed(2);
+  }, [
+    supplierForm.netAmount,
+    supplierForm.taxAmount,
+    supplierForm.percepcionPampa,
+    supplierForm.percepcionBsAs,
+    supplierForm.percepcionIva,
+    supplierForm.percepcionIva5329,
+    supplierForm.impuestosInternos
+  ]);
+
+  useEffect(() => {
+    setSupplierForm(prev => {
+      if (prev.totalAmount === autoCalculatedTotal) return prev;
+      return { ...prev, totalAmount: autoCalculatedTotal };
+    });
+  }, [autoCalculatedTotal]);
 
   const handleNetChange = (val: string) => {
     const net = Number(val) || 0;
     const tax = (net * 0.21).toFixed(2);
-    const pampa = Number(supplierForm.percepcionPampa) || 0;
-    const bsas = Number(supplierForm.percepcionBsAs) || 0;
-    const iva = Number(supplierForm.percepcionIva) || 0;
-    const internos = Number(supplierForm.impuestosInternos) || 0;
     setSupplierForm(prev => ({
       ...prev,
       netAmount: val,
       taxAmount: tax,
-      totalAmount: (net + Number(tax) + pampa + bsas + iva + internos).toFixed(2)
     }));
   };
 
@@ -1737,11 +1748,7 @@ export default function ComprasDashboard() {
                     className="input"
                     placeholder="0.00"
                     value={supplierForm.percepcionPampa}
-                    onChange={(e) => setSupplierForm(prev => ({ 
-                      ...prev, 
-                      percepcionPampa: e.target.value,
-                      totalAmount: (Number(supplierForm.netAmount || 0) + Number(supplierForm.taxAmount || 0) + Number(e.target.value) + Number(prev.percepcionBsAs || 0) + Number(prev.percepcionIva || 0) + Number(prev.impuestosInternos || 0)).toFixed(2)
-                    }))}
+                    onChange={(e) => setSupplierForm(prev => ({ ...prev, percepcionPampa: e.target.value }))}
                   />
                 </div>
                 <div className="form-group">
@@ -1752,11 +1759,7 @@ export default function ComprasDashboard() {
                     className="input"
                     placeholder="0.00"
                     value={supplierForm.percepcionBsAs}
-                    onChange={(e) => setSupplierForm(prev => ({ 
-                      ...prev, 
-                      percepcionBsAs: e.target.value,
-                      totalAmount: (Number(supplierForm.netAmount || 0) + Number(supplierForm.taxAmount || 0) + Number(prev.percepcionPampa || 0) + Number(e.target.value) + Number(prev.percepcionIva || 0) + Number(prev.impuestosInternos || 0)).toFixed(2)
-                    }))}
+                    onChange={(e) => setSupplierForm(prev => ({ ...prev, percepcionBsAs: e.target.value }))}
                   />
                 </div>
               </div>
@@ -1770,11 +1773,7 @@ export default function ComprasDashboard() {
                     className="input"
                     placeholder="0.00"
                     value={supplierForm.percepcionIva}
-                    onChange={(e) => setSupplierForm(prev => ({ 
-                      ...prev, 
-                      percepcionIva: e.target.value,
-                      totalAmount: (Number(supplierForm.netAmount || 0) + Number(supplierForm.taxAmount || 0) + Number(prev.percepcionPampa || 0) + Number(prev.percepcionBsAs || 0) + Number(e.target.value) + Number(prev.percepcionIva5329 || 0) + Number(prev.impuestosInternos || 0)).toFixed(2)
-                    }))}
+                    onChange={(e) => setSupplierForm(prev => ({ ...prev, percepcionIva: e.target.value }))}
                   />
                 </div>
                 <div className="form-group">
@@ -1785,11 +1784,7 @@ export default function ComprasDashboard() {
                     className="input"
                     placeholder="0.00"
                     value={supplierForm.percepcionIva5329}
-                    onChange={(e) => setSupplierForm(prev => ({ 
-                      ...prev, 
-                      percepcionIva5329: e.target.value,
-                      totalAmount: (Number(supplierForm.netAmount || 0) + Number(supplierForm.taxAmount || 0) + Number(prev.percepcionPampa || 0) + Number(prev.percepcionBsAs || 0) + Number(prev.percepcionIva || 0) + Number(e.target.value) + Number(prev.impuestosInternos || 0)).toFixed(2)
-                    }))}
+                    onChange={(e) => setSupplierForm(prev => ({ ...prev, percepcionIva5329: e.target.value }))}
                   />
                 </div>
               </div>
@@ -1803,11 +1798,7 @@ export default function ComprasDashboard() {
                     className="input"
                     placeholder="0.00"
                     value={supplierForm.impuestosInternos}
-                    onChange={(e) => setSupplierForm(prev => ({ 
-                      ...prev, 
-                      impuestosInternos: e.target.value,
-                      totalAmount: (Number(supplierForm.netAmount || 0) + Number(supplierForm.taxAmount || 0) + Number(prev.percepcionPampa || 0) + Number(prev.percepcionBsAs || 0) + Number(prev.percepcionIva || 0) + Number(prev.percepcionIva5329 || 0) + Number(e.target.value)).toFixed(2)
-                    }))}
+                    onChange={(e) => setSupplierForm(prev => ({ ...prev, impuestosInternos: e.target.value }))}
                   />
                 </div>
               </div>

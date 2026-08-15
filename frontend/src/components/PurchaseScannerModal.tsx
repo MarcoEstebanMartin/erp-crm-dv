@@ -48,14 +48,54 @@ export const PurchaseScannerModal: React.FC<PurchaseScannerModalProps> = ({
     const isPampa = jurisdiction.toLowerCase().includes('pampa') || jurisdiction.toUpperCase() === 'AR-L';
     const isBsAs = jurisdiction.toLowerCase().includes('buenos') || jurisdiction.toLowerCase().includes('bs') || jurisdiction.toUpperCase() === 'AR-B';
 
+    const percepcionPampa = isPampa ? (rawIIBB || rawPercAmount) : 0;
+    const percepcionBsAs = isBsAs ? (rawIIBB || rawPercAmount) : 0;
+    const percepcionIva = rawIva || 0;
+    const percepcionIva5329 = 0;
+    const impuestosInternos = 0;
+
+    const netAmount = Number(response.extracted.netAmount || 0);
+    const taxAmount = Number(response.extracted.taxAmount || 0);
+
+    const calculatedTotal = Number((netAmount + taxAmount + percepcionPampa + percepcionBsAs + percepcionIva + percepcionIva5329 + impuestosInternos).toFixed(2));
+    const extractedTotal = Number(response.extracted.totalAmount || 0);
+    const totalAmount = (calculatedTotal > extractedTotal) ? calculatedTotal : (extractedTotal > 0 ? extractedTotal : calculatedTotal);
+
     return {
       ...response.extracted,
       providerId: response.matchedProvider ? response.matchedProvider.id : '',
-      percepcionPampa: isPampa ? (rawIIBB || rawPercAmount) : 0,
-      percepcionBsAs: isBsAs ? (rawIIBB || rawPercAmount) : 0,
-      percepcionIva: rawIva || 0,
-      impuestosInternos: 0
+      netAmount,
+      taxAmount,
+      percepcionPampa,
+      percepcionBsAs,
+      percepcionIva,
+      percepcionIva5329,
+      impuestosInternos,
+      totalAmount
     };
+  };
+
+  const updateExtractedField = (field: string, rawVal: any) => {
+    setExtractedData((prev: any) => {
+      if (!prev) return prev;
+      const val = Number(rawVal) || 0;
+      const updated = { ...prev, [field]: val };
+
+      if (field === 'netAmount' && (!prev.taxAmount || prev.taxAmount === 0)) {
+        updated.taxAmount = Number((val * 0.21).toFixed(2));
+      }
+
+      const net = Number(updated.netAmount || 0);
+      const tax = Number(updated.taxAmount || 0);
+      const pampa = Number(updated.percepcionPampa || 0);
+      const bsAs = Number(updated.percepcionBsAs || 0);
+      const iva = Number(updated.percepcionIva || 0);
+      const iva5329 = Number(updated.percepcionIva5329 || 0);
+      const internos = Number(updated.impuestosInternos || 0);
+
+      updated.totalAmount = Number((net + tax + pampa + bsAs + iva + iva5329 + internos).toFixed(2));
+      return updated;
+    });
   };
 
   const processUploadedDocument = async (fileToProcess: File) => {
@@ -869,7 +909,7 @@ export const PurchaseScannerModal: React.FC<PurchaseScannerModalProps> = ({
                       <input 
                         type="number" 
                         value={extractedData.netAmount ?? 0} 
-                        onChange={(e) => setExtractedData({...extractedData, netAmount: Number(e.target.value)})}
+                        onChange={(e) => updateExtractedField('netAmount', e.target.value)}
                         style={{ width: '100%', padding: '6px 8px', fontSize: '12px', border: '1px solid var(--border-color)', borderRadius: '6px', backgroundColor: '#fff', color: 'var(--text-primary)' }}
                       />
                     </div>
@@ -878,7 +918,7 @@ export const PurchaseScannerModal: React.FC<PurchaseScannerModalProps> = ({
                       <input 
                         type="number" 
                         value={extractedData.taxAmount ?? 0} 
-                        onChange={(e) => setExtractedData({...extractedData, taxAmount: Number(e.target.value)})}
+                        onChange={(e) => updateExtractedField('taxAmount', e.target.value)}
                         style={{ width: '100%', padding: '6px 8px', fontSize: '12px', border: '1px solid var(--border-color)', borderRadius: '6px', backgroundColor: '#fff', color: 'var(--text-primary)' }}
                       />
                     </div>
@@ -890,10 +930,7 @@ export const PurchaseScannerModal: React.FC<PurchaseScannerModalProps> = ({
                       <input 
                         type="number" 
                         value={extractedData.percepcionPampa ?? 0} 
-                        onChange={(e) => setExtractedData({
-                          ...extractedData, 
-                          percepcionPampa: Number(e.target.value)
-                        })}
+                        onChange={(e) => updateExtractedField('percepcionPampa', e.target.value)}
                         style={{ width: '100%', padding: '6px 8px', fontSize: '12px', border: '1px solid var(--border-color)', borderRadius: '6px', backgroundColor: '#fff', color: 'var(--text-primary)' }}
                       />
                     </div>
@@ -902,10 +939,7 @@ export const PurchaseScannerModal: React.FC<PurchaseScannerModalProps> = ({
                       <input 
                         type="number" 
                         value={extractedData.percepcionBsAs ?? 0} 
-                        onChange={(e) => setExtractedData({
-                          ...extractedData, 
-                          percepcionBsAs: Number(e.target.value)
-                        })}
+                        onChange={(e) => updateExtractedField('percepcionBsAs', e.target.value)}
                         style={{ width: '100%', padding: '6px 8px', fontSize: '12px', border: '1px solid var(--border-color)', borderRadius: '6px', backgroundColor: '#fff', color: 'var(--text-primary)' }}
                       />
                     </div>
@@ -917,10 +951,7 @@ export const PurchaseScannerModal: React.FC<PurchaseScannerModalProps> = ({
                       <input 
                         type="number" 
                         value={extractedData.percepcionIva ?? 0} 
-                        onChange={(e) => setExtractedData({
-                          ...extractedData, 
-                          percepcionIva: Number(e.target.value)
-                        })}
+                        onChange={(e) => updateExtractedField('percepcionIva', e.target.value)}
                         style={{ width: '100%', padding: '6px 8px', fontSize: '12px', border: '1px solid var(--border-color)', borderRadius: '6px', backgroundColor: '#fff', color: 'var(--text-primary)' }}
                       />
                     </div>
@@ -929,10 +960,7 @@ export const PurchaseScannerModal: React.FC<PurchaseScannerModalProps> = ({
                       <input 
                         type="number" 
                         value={extractedData.percepcionIva5329 ?? 0} 
-                        onChange={(e) => setExtractedData({
-                          ...extractedData, 
-                          percepcionIva5329: Number(e.target.value)
-                        })}
+                        onChange={(e) => updateExtractedField('percepcionIva5329', e.target.value)}
                         style={{ width: '100%', padding: '6px 8px', fontSize: '12px', border: '1px solid var(--border-color)', borderRadius: '6px', backgroundColor: '#fff', color: 'var(--text-primary)' }}
                       />
                     </div>
@@ -944,10 +972,7 @@ export const PurchaseScannerModal: React.FC<PurchaseScannerModalProps> = ({
                       <input 
                         type="number" 
                         value={extractedData.impuestosInternos ?? 0} 
-                        onChange={(e) => setExtractedData({
-                          ...extractedData, 
-                          impuestosInternos: Number(e.target.value)
-                        })}
+                        onChange={(e) => updateExtractedField('impuestosInternos', e.target.value)}
                         style={{ width: '100%', padding: '6px 8px', fontSize: '12px', border: '1px solid var(--border-color)', borderRadius: '6px', backgroundColor: '#fff', color: 'var(--text-primary)' }}
                       />
                     </div>
