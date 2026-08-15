@@ -25,8 +25,8 @@ const router = Router();
 router.get('/webhook', verifyWebhook);
 router.post('/webhook', handleWebhook);
 
-// 2. Rutas Internas de Gestión CRM (Protegidas con Autenticación JWT y Rol de Administración)
-const adminOnly = [authenticateJWT, requireRole([Role.ADMIN, Role.FACTURACION])];
+// 2. Rutas Internas de Gestión CRM (Protegidas con Autenticación JWT y Roles de Sistema)
+const adminOnly = [authenticateJWT, requireRole([Role.ADMIN, Role.FACTURACION, Role.VENDEDOR, Role.DEPOSITO])];
 
 router.get('/conversations', adminOnly, getConversations);
 router.get('/conversations/:id/messages', adminOnly, getMessagesByConversation);

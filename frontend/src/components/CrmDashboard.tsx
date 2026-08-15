@@ -127,13 +127,12 @@ export default function CrmDashboard({ initialTab = 'whatsapp', hideHeaderTabs =
     return true; // Acceso habilitado para administración y trabajo del CRM
   }, [currentUser]);
 
-  // Filtrar exclusivamente a los usuarios de Administración (Darío, Agustín, Esteban, Admin) para asignaciones
+  // Filtrar exclusivamente a los 3 responsables autorizados de CRM (Esteban, Agustín, Darío)
   const adminUsers = useMemo(() => {
-    const allowedUsernames = ['dario', 'agustin', 'esteban', 'admin', 'pablo'];
+    const allowedUsernames = ['esteban', 'agustin', 'dario'];
     return systemUsers.filter(u => {
-      const role = u.role?.toUpperCase();
-      const uname = u.username?.toLowerCase();
-      return role === 'ADMIN' || role === 'FACTURACION' || allowedUsernames.includes(uname);
+      const uname = u.username?.toLowerCase().trim();
+      return allowedUsernames.includes(uname);
     });
   }, [systemUsers]);
 
@@ -178,13 +177,22 @@ export default function CrmDashboard({ initialTab = 'whatsapp', hideHeaderTabs =
       setConversations(convList);
 
       const targetId = targetConvId || selectedConversation?.id;
-      let convToSelect = targetId 
-        ? convList.find((c: any) => c.id === targetId) 
-        : (convList.length > 0 ? convList[0] : null);
-
-      if (convToSelect) {
-        setSelectedConversation(convToSelect);
-        const res = await api.getCrmMessages(convToSelect.id);
+      if (targetId) {
+        const convToSelect = convList.find((c: any) => c.id === targetId);
+        if (convToSelect) {
+          setSelectedConversation((prev: any) => {
+            if (!prev) return convToSelect;
+            return {
+              ...prev,
+              ...convToSelect,
+              assignedUser: convToSelect.assignedUser || prev.assignedUser
+            };
+          });
+        }
+      } else if (convList.length > 0 && !selectedConversation) {
+        const firstConv = convList[0];
+        setSelectedConversation(firstConv);
+        const res = await api.getCrmMessages(firstConv.id);
         const msgList = res?.data?.messages || res?.messages || (Array.isArray(res) ? res : []);
         setMessages(msgList);
       }
@@ -352,14 +360,41 @@ export default function CrmDashboard({ initialTab = 'whatsapp', hideHeaderTabs =
     }
   };
 
-  // Asignar conversación a un Usuario Administrativo
+  // Asignar conversación a un Usuario Administrativo (Esteban, Agustín, Darío)
   const handleAssignUser = async (convId: number, userId: number | null) => {
     try {
       const updated = await api.assignCrmConversation(convId, userId);
-      const assignedUserObj = systemUsers.find(u => u.id === userId) || null;
-      setSelectedConversation((prev: any) => prev?.id === convId ? { ...prev, assignedSellerId: userId, assignedUser: assignedUserObj } : prev);
-      setConversations((prev: any[]) => prev.map((c: any) => c.id === convId ? { ...c, assignedSellerId: userId, assignedUser: assignedUserObj } : c));
+      const convData = updated?.data || updated;
+
+      const assignedUserObj = userId 
+        ? (convData?.assignedUser || systemUsers.find(u => u.id === userId) || null)
+        : null;
+      const newSellerId = userId ? Number(userId) : null;
+
+      setSelectedConversation((prev: any) => {
+        if (!prev || prev.id !== convId) return prev;
+        return { 
+          ...prev, 
+          assignedSellerId: newSellerId, 
+          assignedUser: assignedUserObj 
+        };
+      });
+
+      setConversations((prev: any[]) => {
+        if (!Array.isArray(prev)) return [];
+        return prev.map((c: any) => {
+          if (c.id === convId) {
+            return { 
+              ...c, 
+              assignedSellerId: newSellerId, 
+              assignedUser: assignedUserObj 
+            };
+          }
+          return c;
+        });
+      });
     } catch (err: any) {
+      console.error('Error al derivar conversación:', err);
       setErrorMsg('Error al derivar la conversación.');
     }
   };
@@ -526,12 +561,12 @@ export default function CrmDashboard({ initialTab = 'whatsapp', hideHeaderTabs =
           {/* Panel Izquierdo: Lista de Conversaciones */}
           <div style={{ borderRight: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', backgroundColor: '#FAFAFA', minHeight: 0, height: '100%', overflow: 'hidden' }}>
             
-            {/* Filtros de Asignación a Administrativos */}
-            <div style={{ padding: '10px 12px', borderBottom: '1px solid #E2E8F0', backgroundColor: '#F8FAFC', display: 'flex', gap: '4px', overflowX: 'auto' }}>
+            {/* Filtros de Asignación a Administrativos (Esteban, Agustín, Darío) */}
+            <div style={{ padding: '8px 12px', borderBottom: '1px solid #E2E8F0', backgroundColor: '#F8FAFC', display: 'flex', gap: '4px', overflowX: 'auto', alignItems: 'center' }}>
               <button 
                 type="button" 
                 className={`btn ${assignedFilter === 'all' ? 'btn-primary' : 'btn-ghost'}`}
-                style={{ fontSize: '0.72rem', padding: '5px 10px', borderRadius: '6px', fontWeight: 600 }}
+                style={{ fontSize: '0.72rem', padding: '4px 8px', borderRadius: '6px', fontWeight: 600, whiteSpace: 'nowrap' }}
                 onClick={() => setAssignedFilter('all')}
               >
                 📥 Todos ({conversations.length})
@@ -539,7 +574,7 @@ export default function CrmDashboard({ initialTab = 'whatsapp', hideHeaderTabs =
               <button 
                 type="button" 
                 className={`btn ${assignedFilter === 'mine' ? 'btn-primary' : 'btn-ghost'}`}
-                style={{ fontSize: '0.72rem', padding: '5px 10px', borderRadius: '6px', fontWeight: 600 }}
+                style={{ fontSize: '0.72rem', padding: '4px 8px', borderRadius: '6px', fontWeight: 600, whiteSpace: 'nowrap' }}
                 onClick={() => setAssignedFilter('mine')}
               >
                 👤 Mis Chats
@@ -547,11 +582,27 @@ export default function CrmDashboard({ initialTab = 'whatsapp', hideHeaderTabs =
               <button 
                 type="button" 
                 className={`btn ${assignedFilter === 'unassigned' ? 'btn-primary' : 'btn-ghost'}`}
-                style={{ fontSize: '0.72rem', padding: '5px 10px', borderRadius: '6px', fontWeight: 600 }}
+                style={{ fontSize: '0.72rem', padding: '4px 8px', borderRadius: '6px', fontWeight: 600, whiteSpace: 'nowrap' }}
                 onClick={() => setAssignedFilter('unassigned')}
               >
                 ❓ Sin Asignar
               </button>
+
+              {adminUsers.map(u => {
+                const isSelected = assignedFilter === u.id;
+                const formattedName = u.username.charAt(0).toUpperCase() + u.username.slice(1);
+                return (
+                  <button
+                    key={u.id}
+                    type="button"
+                    className={`btn ${isSelected ? 'btn-primary' : 'btn-ghost'}`}
+                    style={{ fontSize: '0.72rem', padding: '4px 8px', borderRadius: '6px', fontWeight: 600, whiteSpace: 'nowrap' }}
+                    onClick={() => setAssignedFilter(u.id)}
+                  >
+                    👨‍💼 {formattedName}
+                  </button>
+                );
+              })}
             </div>
 
             <div style={{ padding: '10px 12px', borderBottom: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#FFFFFF' }}>
@@ -846,19 +897,26 @@ export default function CrmDashboard({ initialTab = 'whatsapp', hideHeaderTabs =
                 
                 {/* Selector de Asignación / Derivación a Administrativo */}
                 <div style={{ backgroundColor: '#FFFFFF', padding: '12px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
-                  <label style={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748B', display: 'block', marginBottom: '4px' }}>
-                    👨‍💼 Responsable del Chat:
-                  </label>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                    <label style={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748B' }}>
+                      👨‍💼 Responsable del Chat:
+                    </label>
+                    {selectedConversation.assignedUser && (
+                      <span style={{ fontSize: '0.66rem', backgroundColor: '#EEF2FF', color: '#4338CA', padding: '2px 6px', borderRadius: '4px', fontWeight: 700, border: '1px solid #C7D2FE' }}>
+                        ✓ {selectedConversation.assignedUser.username.charAt(0).toUpperCase() + selectedConversation.assignedUser.username.slice(1)}
+                      </span>
+                    )}
+                  </div>
                   <select
                     className="input"
-                    style={{ width: '100%', fontSize: '0.82rem', padding: '6px 8px' }}
+                    style={{ width: '100%', fontSize: '0.82rem', padding: '6px 8px', fontWeight: 600, borderColor: selectedConversation.assignedSellerId ? '#4F46E5' : '#CBD5E1' }}
                     value={selectedConversation.assignedSellerId || ''}
                     onChange={(e) => handleAssignUser(selectedConversation.id, e.target.value ? Number(e.target.value) : null)}
                   >
                     <option value="">❓ Sin Asignar (General)</option>
                     {adminUsers.map(u => (
                       <option key={u.id} value={u.id}>
-                        👤 {u.username} ({u.role})
+                        👤 {u.username.charAt(0).toUpperCase() + u.username.slice(1)} ({u.role})
                       </option>
                     ))}
                   </select>
