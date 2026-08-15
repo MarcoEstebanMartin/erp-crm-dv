@@ -674,18 +674,10 @@ export const api = {
     return res;
   },
 
-  transferCentralFunds: async (data: { amount: number; type: 'BANK_DEPOSIT' | 'TREASURY_WITHDRAWAL'; bankAccountId?: number; description?: string }) => {
-    const res = await request('/finance/central-drawer/transfer', {
-      method: 'POST',
-      body: JSON.stringify(data)
-    });
-    return res;
-  },
-
-  closeCentralDrawer: async (data: { realBalance: number; newOpeningBalance: number; bankAccountId?: number; transferToBankAmount?: number; withdrawnAmount?: number; notes?: string }) => {
+  closeCentralDrawer: async (realBalance: number, notes?: string) => {
     const res = await request('/finance/central-drawer/close', {
       method: 'POST',
-      body: JSON.stringify(data)
+      body: JSON.stringify({ realBalance, notes })
     });
     return res;
   },
