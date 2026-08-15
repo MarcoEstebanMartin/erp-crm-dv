@@ -40,25 +40,6 @@ export async function syncMasterProductImages(masterDir: string, targetDir: stri
     });
 
     await Promise.all(syncTasks);
-
-    // Mapeo automático de SKUs actualizados según changes.json (ej: 0237.jpg -> 0489.jpg)
-    const changesPath = path.join(__dirname, '../../changes.json');
-    if (fsSync.existsSync(changesPath)) {
-      const changesRaw = await fs.readFile(changesPath, 'utf8');
-      const changes = JSON.parse(changesRaw);
-      for (const item of changes) {
-        if (item.old && item.new && item.old !== item.new) {
-          const oldFile = `${item.old.padStart(4, '0')}.jpg`;
-          const newFile = `${item.new.padStart(4, '0')}.jpg`;
-          const srcPath = path.join(masterDir, oldFile);
-          const dstPath = path.join(targetDir, newFile);
-
-          if (fsSync.existsSync(srcPath)) {
-            await fs.copyFile(srcPath, dstPath).catch(() => null);
-          }
-        }
-      }
-    }
   } catch (err) {
     console.error('⚠️ Error al auto-sincronizar imágenes maestras:', err);
   }
