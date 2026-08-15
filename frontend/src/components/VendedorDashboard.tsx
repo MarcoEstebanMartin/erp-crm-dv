@@ -745,155 +745,67 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
     printWindow.document.close();
   };
 
-  const todayStr = new Date().toISOString().split('T')[0];
-  const todayOrders = orders.filter(o => {
-    if (!o.createdAt) return false;
-    return new Date(o.createdAt).toISOString().split('T')[0] === todayStr;
-  });
-  const todayTotalSales = todayOrders.reduce((sum, o) => sum + Number(o.totalAmount || 0), 0);
-
   return (
     <div style={{ width: '100%' }}>
-      {/* Barra de Navegación Ágil y Resumen de Jornada (Sin Menú Hamburguesa) */}
-      <div style={{ marginBottom: '20px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', flexWrap: 'wrap', gap: '10px' }}>
-          <div>
-            <h1 style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>
-              App de Preventa & Pedidos
-            </h1>
-            <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: '2px 0 0 0' }}>
-              Toma de pedidos en la calle, clientes en ruta y cobranzas en tiempo real
-            </p>
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={() => setIsPriceListModalOpen(true)}
-              style={{ fontSize: '0.8rem', padding: '6px 12px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-            >
-              <Package size={15} />
-              <span>Lista de Precios</span>
-            </button>
-
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={() => {
-                fetchData();
-                syncOfflineData();
-              }}
-              style={{ fontSize: '0.8rem', padding: '6px 12px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-            >
-              <RefreshCw size={15} />
-              <span>Sincronizar</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Pestañas Principales Visibles Juntas */}
-        <div className="vendedor-top-nav-bar">
-          <button
-            type="button"
-            className={`vendedor-nav-pill ${activeTab === 'orders' ? 'vendedor-nav-pill-active' : ''}`}
-            onClick={() => setActiveTab('orders')}
-          >
-            <ShoppingCart size={16} />
-            <span>Toma de Pedidos</span>
-            {cart.length > 0 && (
-              <span style={{
-                backgroundColor: activeTab === 'orders' ? '#fff' : 'var(--color-corp-red)',
-                color: activeTab === 'orders' ? 'var(--text-primary)' : '#fff',
-                fontSize: '0.7rem',
-                fontWeight: 700,
-                padding: '2px 6px',
-                borderRadius: '10px',
-                marginLeft: '4px'
-              }}>
-                {cart.length}
-              </span>
-            )}
-          </button>
-
-          <button
-            type="button"
-            className={`vendedor-nav-pill ${activeTab === 'clients' ? 'vendedor-nav-pill-active' : ''}`}
-            onClick={() => setActiveTab('clients')}
-          >
-            <Users size={16} />
-            <span>Mis Rutas Preventa</span>
-            <span style={{ fontSize: '0.72rem', opacity: 0.8 }}>({clients.length})</span>
-          </button>
-
-          <button
-            type="button"
-            className={`vendedor-nav-pill ${activeTab === 'cobranzas' ? 'vendedor-nav-pill-active' : ''}`}
-            onClick={() => setActiveTab('cobranzas')}
-          >
-            <DollarSign size={16} />
-            <span>Cobranzas y Recibos</span>
-          </button>
-
-          <button
-            type="button"
-            className={`vendedor-nav-pill ${activeTab === 'products' ? 'vendedor-nav-pill-active' : ''}`}
-            onClick={() => setActiveTab('products')}
-          >
-            <Package size={16} />
-            <span>Catálogo de Precios</span>
-          </button>
-
-          <button
-            type="button"
-            className={`vendedor-nav-pill ${activeTab === 'history' ? 'vendedor-nav-pill-active' : ''}`}
-            onClick={() => setActiveTab('history')}
-          >
-            <History size={16} />
-            <span>Historial de Pedidos</span>
-            <span style={{ fontSize: '0.72rem', opacity: 0.8 }}>({orders.length})</span>
-          </button>
-        </div>
-
-        {/* Resumen Rápido de Jornada */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
-          gap: '10px',
-          marginBottom: '16px'
-        }}>
-          <div className="card" style={{ padding: '10px 14px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
-            <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', fontWeight: 600 }}>PEDIDOS HOY</span>
-            <span style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-primary)' }}>{todayOrders.length}</span>
-          </div>
-
-          <div className="card" style={{ padding: '10px 14px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
-            <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', fontWeight: 600 }}>PREVENTA HOY</span>
-            <span style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--color-success)' }}>
-              ${Math.round(todayTotalSales).toLocaleString('es-AR')}
+      {/* Navegación Mínima entre Secciones (Sin Títulos ni Banners) */}
+      <div className="vendedor-top-nav-bar" style={{ marginBottom: '16px', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
+        <button
+          type="button"
+          className={`vendedor-nav-pill ${activeTab === 'orders' ? 'vendedor-nav-pill-active' : ''}`}
+          onClick={() => setActiveTab('orders')}
+        >
+          <ShoppingCart size={16} />
+          <span>Toma de Pedidos</span>
+          {cart.length > 0 && (
+            <span style={{
+              backgroundColor: activeTab === 'orders' ? '#fff' : 'var(--color-corp-red)',
+              color: activeTab === 'orders' ? 'var(--text-primary)' : '#fff',
+              fontSize: '0.7rem',
+              fontWeight: 700,
+              padding: '2px 6px',
+              borderRadius: '10px',
+              marginLeft: '4px'
+            }}>
+              {cart.length}
             </span>
-          </div>
+          )}
+        </button>
 
-          <div className="card" style={{ padding: '10px 14px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
-            <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', fontWeight: 600 }}>CLIENTES EN RUTA</span>
-            <span style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-primary)' }}>{clients.length}</span>
-          </div>
+        <button
+          type="button"
+          className={`vendedor-nav-pill ${activeTab === 'clients' ? 'vendedor-nav-pill-active' : ''}`}
+          onClick={() => setActiveTab('clients')}
+        >
+          <Users size={16} />
+          <span>Rutas</span>
+        </button>
 
-          <div className="card" style={{ padding: '10px 14px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
-            <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', fontWeight: 600 }}>ESTADO RED</span>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
-              <div style={{
-                width: '8px',
-                height: '8px',
-                borderRadius: '50%',
-                backgroundColor: navigator.onLine ? 'var(--color-success)' : '#F59E0B'
-              }} />
-              <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-                {navigator.onLine ? 'En Línea' : 'Offline'}
-              </span>
-            </div>
-          </div>
-        </div>
+        <button
+          type="button"
+          className={`vendedor-nav-pill ${activeTab === 'cobranzas' ? 'vendedor-nav-pill-active' : ''}`}
+          onClick={() => setActiveTab('cobranzas')}
+        >
+          <DollarSign size={16} />
+          <span>Cobranzas</span>
+        </button>
+
+        <button
+          type="button"
+          className={`vendedor-nav-pill ${activeTab === 'products' ? 'vendedor-nav-pill-active' : ''}`}
+          onClick={() => setActiveTab('products')}
+        >
+          <Package size={16} />
+          <span>Catálogo</span>
+        </button>
+
+        <button
+          type="button"
+          className={`vendedor-nav-pill ${activeTab === 'history' ? 'vendedor-nav-pill-active' : ''}`}
+          onClick={() => setActiveTab('history')}
+        >
+          <History size={16} />
+          <span>Historial</span>
+        </button>
       </div>
 
       {errorMsg && (
@@ -930,27 +842,22 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
       )}
 
       {/* ====================================================================
-          1. TOMA DE PEDIDOS
+          1. TOMA DE PEDIDOS (Ultra Simple: Lupa Cliente + Lupa Productos)
           ==================================================================== */}
       {activeTab === 'orders' && (
         <div>
           <div>
             <div>
-              {/* Clic 1: Seleccionar Cliente */}
-              <div className="card" style={{ marginBottom: '20px', padding: '20px' }}>
-                <h3 style={{ fontSize: '0.95rem', fontWeight: 600, marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <span style={{ background: 'var(--text-primary)', color: '#fff', width: '20px', height: '20px', borderRadius: '50%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem' }}>1</span>
-                  <span>Seleccionar Cliente</span>
-                </h3>
-                
+              {/* Lupa 1: Seleccionar Cliente */}
+              <div className="card" style={{ marginBottom: '16px', padding: '16px' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   <input
                     type="text"
                     className="input"
-                    placeholder="🔍 Filtrar cliente por nombre..."
+                    placeholder="🔍 Buscar cliente por nombre, razón social..."
                     value={clientFilter}
                     onChange={(e) => setClientFilter(e.target.value)}
-                    style={{ fontSize: '0.85rem', padding: '10px' }}
+                    style={{ fontSize: '0.88rem', padding: '10px 12px' }}
                   />
 
                   {/* Chips horizontales de localidad */}
@@ -1091,13 +998,8 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
 
               {/* Clic 2: Armar Carrito de Compras */}
               <div className="order-creation-grid">
-                {/* Columna Izquierda: Catálogo */}
+                {/* Columna Izquierda: Catálogo con Lupa de Productos */}
                 <div className="card" style={{ display: 'flex', flexDirection: 'column' }}>
-                  <h3 style={{ fontSize: '0.95rem', fontWeight: 600, marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <span style={{ background: 'var(--text-primary)', color: '#fff', width: '20px', height: '20px', borderRadius: '50%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem' }}>2</span>
-                    <span>Agregar Productos al Carrito</span>
-                  </h3>
-                  
                   <div className="catalog-filters-row">
                     <div className="search-input-wrapper" style={{ flex: 1.2 }}>
                       <input
@@ -1566,36 +1468,7 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
             </button>
           </div>
 
-          {/* Barra de Progreso de la Ruta */}
-          {activeRouteDetail && (
-            (() => {
-              const total = clients.length;
-              const visitados = clients.filter(c => {
-                const hasOrder = orders.some(o => 
-                  o.clientId === c.id && 
-                  new Date(o.createdAt).toDateString() === new Date().toDateString() &&
-                  o.status !== 'CANCELLED'
-                );
-                const hasNoBuy = todayVisits.some(v => v.personaId === c.id);
-                return hasOrder || hasNoBuy;
-              }).length;
-              const porcentaje = total > 0 ? Math.round((visitados / total) * 100) : 0;
-
-              return (
-                <div style={{ padding: '12px 16px', border: '1px solid var(--border-color)', borderRadius: '8px', backgroundColor: 'var(--bg-light)', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
-                    <span>Efectividad de la Ruta de Hoy</span>
-                    <span>{visitados} / {total} Clientes Visitados ({porcentaje}%)</span>
-                  </div>
-                  <div style={{ width: '100%', height: '8px', backgroundColor: 'rgba(0,0,0,0.06)', borderRadius: '4px', overflow: 'hidden' }}>
-                    <div style={{ width: `${porcentaje}%`, height: '100%', backgroundColor: porcentaje === 100 ? 'var(--color-success)' : 'var(--accent-color)', borderRadius: '4px', transition: 'width 0.4s ease' }} />
-                  </div>
-                </div>
-              );
-            })()
-          )}
-
-          {/* Listado de Clientes Secuenciado */}
+          {/* Listado de Clientes de la Ruta */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             {clients.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '36px 12px', border: '1px dashed var(--border-color)', borderRadius: '8px', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
