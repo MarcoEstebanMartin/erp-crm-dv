@@ -70,10 +70,11 @@ export default function WeeklyOfferWizardModal({ isOpen, onClose, onCampaignCrea
         shuffle: isShuffle ? 'true' : 'false'
       } as any);
 
-      if (res && res.data) {
-        const groups: Record<string, RecommendedProduct[]> = res.data.recommendationsByGroup || {};
+      const payload = res?.recommendationsByGroup ? res : (res?.data || {});
+      if (payload && payload.recommendationsByGroup) {
+        const groups: Record<string, RecommendedProduct[]> = payload.recommendationsByGroup || {};
         setRecommendations(groups);
-        setDetectedWeekNumber(res.data.detectedWeekNumber || 1);
+        setDetectedWeekNumber(payload.detectedWeekNumber || 1);
 
         const initialSelected: Record<number, boolean> = {};
         const initialPrices: Record<number, number> = {};
@@ -99,8 +100,9 @@ export default function WeeklyOfferWizardModal({ isOpen, onClose, onCampaignCrea
   const loadComparison = async () => {
     try {
       const res = await api.getCampaignComparison();
-      if (res && res.data) {
-        setComparisonData(res.data);
+      const payload = res?.details ? res : (res?.data || {});
+      if (payload) {
+        setComparisonData(payload);
       }
     } catch (error) {
       console.error('Error loading comparison:', error);
