@@ -347,21 +347,32 @@ function shuffleArray<T>(array: T[]): T[] {
   return arr;
 }
 
-// Recomendaciones semanales inteligentes de rotación paramétrica
+// Recomendaciones semanales inteligentes de rotación paramétrica (Basado en Matrix de PARAMETROS)
 export const getWeeklyOfferRecommendations = async (req: Request, res: Response) => {
   try {
-    const {
-      numDuros = 2,
-      numSemiduros = 2,
-      numBlandos = 3,
-      numFiambres = 4,
-      numBebidas = 4,
-      numAlmacen = 5,
-      shuffle = 'false'
-    } = req.query;
-
+    const { week = 'auto', shuffle = 'false', baselineCampaignId } = req.query;
     const isShuffle = shuffle === 'true';
 
+    // 1. Obtener última campaña para determinar semana rotativa
+    const campaigns = await prisma.offerCampaign.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: 1
+    });
+
+    let currentWeekNumber = 1;
+    if (week === '1') currentWeekNumber = 1;
+    else if (week === '2') currentWeekNumber = 2;
+    else {
+      // Auto-detectar basándose en el título de la última campaña o alternancia
+      const last = campaigns[0];
+      if (last && (last.title.includes('Semana 1') || last.title.includes('15 de Agosto'))) {
+        currentWeekNumber = 2; // Si la última fue Semana 1 / 15 Ago, la siguiente es Semana 2
+      } else {
+        currentWeekNumber = 1;
+      }
+    }
+
+    // 2. Traer todos los productos activos de la DB con lotes e historia de ofertas
     const products = await prisma.product.findMany({
       where: { isActive: true },
       include: {
@@ -371,9 +382,7 @@ export const getWeeklyOfferRecommendations = async (req: Request, res: Response)
           orderBy: { expirationDate: 'asc' }
         },
         offerCampaignItems: {
-          include: {
-            campaign: true
-          },
+          include: { campaign: true },
           orderBy: { createdAt: 'desc' },
           take: 1
         }
@@ -383,35 +392,29 @@ export const getWeeklyOfferRecommendations = async (req: Request, res: Response)
     const fortyFiveDaysFromNow = new Date();
     fortyFiveDaysFromNow.setDate(fortyFiveDaysFromNow.getDate() + 45);
 
-    const enrichedProducts = products.map(p => {
-      const category = p.commercialCategory || p.rubro?.name || 'Varios';
-      const quesoSubtype = category === 'Refrigerados' ? classifyQuesoSubtype(p.name) : null;
-      
-      let reason = 'Rotación regular de catálogo';
-      let score = 50;
-      let suggestedTag: string | null = null;
-      let suggestedPrice = Number(p.listPrice);
+    const helperMatch = (name: string, terms: string[]) => {
+      const upper = name.toUpperCase();
+      return terms.some(t => upper.includes(t.toUpperCase()));
+    };
+
+    const helperExactMatch = (name: string, terms: string[]) => {
+      const upper = name.toUpperCase();
+      return terms.every(t => upper.includes(t.toUpperCase()));
+    };
+
+    const mapProduct = (p: any, group: string, isFixedAlways: boolean = false, isRotatedIn: boolean = false, overrideReason?: string, overrideTag?: string) => {
+      const listPriceNum = Number(p.listPrice);
+      let suggestedPrice = listPriceNum;
+      let tag = overrideTag || null;
+      let reason = overrideReason || (isFixedAlways ? 'Fijo Obligatorio (Catálogo)' : isRotatedIn ? `Rotación Semana ${currentWeekNumber}` : 'Sugerido por Stock');
 
       const earliestLot = p.lots[0];
       if (earliestLot && earliestLot.expirationDate && new Date(earliestLot.expirationDate) <= fortyFiveDaysFromNow) {
-        reason = `Lote próximo a vencer (${new Date(earliestLot.expirationDate).toLocaleDateString('es-AR')})`;
-        score += 40;
-        suggestedTag = '🔥 OPORTUNIDAD';
-        suggestedPrice = Math.round(Number(p.listPrice) * 0.9);
+        reason = `⚠️ Lote próximo a vencer (${new Date(earliestLot.expirationDate).toLocaleDateString('es-AR')})`;
+        tag = tag || '🔥 OPORTUNIDAD';
+        suggestedPrice = Math.round(listPriceNum * 0.9);
       } else if (p.stock > 40) {
-        reason = `Exceso de inventario (${p.stock} un.)`;
-        score += 30;
-        suggestedTag = '💥 MEGA OFERTA';
-      } else if (!p.offerCampaignItems || p.offerCampaignItems.length === 0) {
-        reason = 'Sin oferta en campañas previas';
-        score += 25;
-      } else {
-        const lastCampaignDate = p.offerCampaignItems[0]?.campaign?.createdAt;
-        if (lastCampaignDate) {
-          const daysDiff = Math.floor((Date.now() - new Date(lastCampaignDate).getTime()) / (1000 * 60 * 60 * 24));
-          reason = `Rotación (${Math.floor(daysDiff / 7)} sem. sin oferta)`;
-          score += Math.min(30, daysDiff);
-        }
+        tag = tag || '💥 OFERTÓN';
       }
 
       return {
@@ -419,57 +422,182 @@ export const getWeeklyOfferRecommendations = async (req: Request, res: Response)
         sku: p.sku,
         name: p.name,
         stock: p.stock,
-        listPrice: Number(p.listPrice),
+        minStock: p.minStock || 5,
+        listPrice: listPriceNum,
         suggestedPrice,
-        suggestedTag,
-        category,
-        quesoSubtype,
+        suggestedTag: tag,
+        campaignGroup: group,
+        isFixedAlways,
+        isRotatedIn,
         reason,
-        score
+        stockStatus: p.stock <= 0 ? 'OUT_OF_STOCK' : p.stock <= (p.minStock || 5) ? 'LOW_STOCK' : 'OK'
       };
-    });
-
-    const selectTopCandidates = (items: any[], count: number) => {
-      if (count <= 0) return [];
-      const sorted = items.sort((a, b) => b.score - a.score);
-      if (isShuffle) {
-        // Tomar el doble de candidatos principales y mezclarlos
-        const pool = sorted.slice(0, Math.max(count * 2, 8));
-        return shuffleArray(pool).slice(0, count);
-      }
-      return sorted.slice(0, count);
     };
 
-    // Separar por categorías y aplicar reglas paramétricas
-    const resultByGroup: Record<string, any[]> = {};
+    const resultByGroup: Record<string, any[]> = {
+      'MELINCUE': [],
+      'CREMIGAL': [],
+      'R.P.B': [],
+      'BEBIDAS': [],
+      'ALMACEN': [],
+      'ARTICULOS POR CANTIDAD': []
+    };
 
-    // 1. REFRIGERADOS (7 Quesos: Duros, Semiduros, Blandos)
-    const refrigeradosAll = enrichedProducts.filter(p => p.category === 'Refrigerados');
-    const duros = selectTopCandidates(refrigeradosAll.filter(p => p.quesoSubtype === 'duro'), Number(numDuros));
-    const semiduros = selectTopCandidates(refrigeradosAll.filter(p => p.quesoSubtype === 'semiduro'), Number(numSemiduros));
-    const blandos = selectTopCandidates(refrigeradosAll.filter(p => p.quesoSubtype === 'blando'), Number(numBlandos));
+    // ----------------------------------------------------
+    // 1. MELINCUE
+    // ----------------------------------------------------
+    const melincueProds = products.filter(p => helperMatch(p.name, ['MELINCUE']));
     
-    duros.forEach(p => p.reason = `Queso Duro | ${p.reason}`);
-    semiduros.forEach(p => p.reason = `Queso Semiduro | ${p.reason}`);
-    blandos.forEach(p => p.reason = `Queso Blando/Fresco | ${p.reason}`);
+    // Fijos: Rallado 40g y 120g
+    melincueProds.filter(p => helperMatch(p.name, ['RALLADO'])).forEach(p => {
+      resultByGroup['MELINCUE'].push(mapProduct(p, 'MELINCUE', true, false, 'Fijo Obligatorio (Rallados)'));
+    });
 
-    resultByGroup['Refrigerados'] = [...duros, ...semiduros, ...blandos];
+    // Duros (2), Semiduros (2), Blandos (2) por mayor stock
+    const duros = melincueProds.filter(p => classifyQuesoSubtype(p.name) === 'duro' && !helperMatch(p.name, ['RALLADO'])).sort((a,b) => b.stock - a.stock).slice(0, 2);
+    const semiduros = melincueProds.filter(p => classifyQuesoSubtype(p.name) === 'semiduro').sort((a,b) => b.stock - a.stock).slice(0, 2);
+    const blandos = melincueProds.filter(p => classifyQuesoSubtype(p.name) === 'blando').sort((a,b) => b.stock - a.stock).slice(0, 2);
 
-    // 2. FIAMBRES
-    const fiambresAll = enrichedProducts.filter(p => p.category === 'Fiambres');
-    resultByGroup['Fiambres'] = selectTopCandidates(fiambresAll, Number(numFiambres));
+    duros.forEach(p => resultByGroup['MELINCUE'].push(mapProduct(p, 'MELINCUE', false, true, 'Queso Duro (Stock)')));
+    semiduros.forEach(p => resultByGroup['MELINCUE'].push(mapProduct(p, 'MELINCUE', false, true, 'Queso Semiduro (Stock)')));
+    blandos.forEach(p => resultByGroup['MELINCUE'].push(mapProduct(p, 'MELINCUE', false, true, 'Queso Blando/Fresco (Stock)')));
 
-    // 3. BEBIDAS / ALCOHOLES
-    const bebidasAll = enrichedProducts.filter(p => p.category === 'Bebidas' || p.category === 'Bebidas Alcoholicas');
-    resultByGroup['Bebidas'] = selectTopCandidates(bebidasAll, Number(numBebidas));
+    // ----------------------------------------------------
+    // 2. CREMIGAL
+    // ----------------------------------------------------
+    const cremigalProds = products.filter(p => helperMatch(p.name, ['CREMIGAL']));
 
-    // 4. ALMACÉN / DESPENSA / CONSERVAS / PASTAS
-    const almacenAll = enrichedProducts.filter(p => ['Almacén', 'Pastas Secas', 'Aderezos y Aceites', 'Conservas', 'Yerbas'].includes(p.category));
-    resultByGroup['Almacén'] = selectTopCandidates(almacenAll, Number(numAlmacen));
+    // Fijos: Untables y Queso Crema
+    cremigalProds.filter(p => helperMatch(p.name, ['UNTABLE', 'QUESO CREMA'])).slice(0, 3).forEach(p => {
+      resultByGroup['CREMIGAL'].push(mapProduct(p, 'CREMIGAL', true, false, 'Fijo Obligatorio (Untables/Q.Crema)'));
+    });
+
+    // Rotación Semana 1 vs Semana 2
+    if (currentWeekNumber === 1) {
+      // Leche Polvo 800g, Dulce de Leche 400g, Manteca 200g
+      const l800 = cremigalProds.find(p => helperMatch(p.name, ['LECHE EN POLVO', '800']));
+      const d400 = cremigalProds.find(p => helperMatch(p.name, ['DULCE DE LECHE', '400']));
+      const m200 = cremigalProds.find(p => helperMatch(p.name, ['MANTECA', '200']));
+      if (l800) resultByGroup['CREMIGAL'].push(mapProduct(l800, 'CREMIGAL', false, true, 'Rotación Semana 1 (Polvo 800g)'));
+      if (d400) resultByGroup['CREMIGAL'].push(mapProduct(d400, 'CREMIGAL', false, true, 'Rotación Semana 1 (DDL 400g)'));
+      if (m200) resultByGroup['CREMIGAL'].push(mapProduct(m200, 'CREMIGAL', false, true, 'Rotación Semana 1 (Manteca 200g)'));
+    } else {
+      // Leche Polvo 400g, Dulce de Leche 250g/Repostero, Manteca 100g
+      const l400 = cremigalProds.find(p => helperMatch(p.name, ['LECHE EN POLVO', '400'])) || cremigalProds.find(p => helperMatch(p.name, ['LECHE EN POLVO']));
+      const d250 = cremigalProds.find(p => helperMatch(p.name, ['DULCE DE LECHE', '250'])) || cremigalProds.find(p => helperMatch(p.name, ['REPOSTERO']));
+      const m100 = cremigalProds.find(p => helperMatch(p.name, ['MANTECA', '100'])) || cremigalProds.find(p => helperMatch(p.name, ['MANTECA']));
+      if (l400) resultByGroup['CREMIGAL'].push(mapProduct(l400, 'CREMIGAL', false, true, 'Rotación Semana 2 (Polvo 400g)'));
+      if (d250) resultByGroup['CREMIGAL'].push(mapProduct(d250, 'CREMIGAL', false, true, 'Rotación Semana 2 (DDL 250g/Repostero)'));
+      if (m100) resultByGroup['CREMIGAL'].push(mapProduct(m100, 'CREMIGAL', false, true, 'Rotación Semana 2 (Manteca 100g)'));
+    }
+
+    // Básicos de Cremigal (Sardo, Pategrás, Leche UAT, Yogurt)
+    cremigalProds.filter(p => helperMatch(p.name, ['SARDO', 'PATEGRAS', 'LECHE UAT', 'YOGURT'])).slice(0, 5).forEach(p => {
+      resultByGroup['CREMIGAL'].push(mapProduct(p, 'CREMIGAL', true, false, 'Básico Fijo Cremigal'));
+    });
+
+    // ----------------------------------------------------
+    // 3. R.P.B (Baggio / Vida / Mocoretá)
+    // ----------------------------------------------------
+    const rpbProds = products.filter(p => helperMatch(p.name, ['BAGGIO', 'MOCORETA', 'RPB', 'VIDA']));
+    rpbProds.slice(0, 6).forEach(p => {
+      resultByGroup['R.P.B'].push(mapProduct(p, 'R.P.B', true, false, 'Fijo Obligatorio R.P.B'));
+    });
+
+    // ----------------------------------------------------
+    // 4. BEBIDAS
+    // ----------------------------------------------------
+    const bebidasProds = products.filter(p => helperMatch(p.name, ['FERNET', 'BRANCA', 'CAZALIS', 'CINZANO', 'GANCIA', 'SERNOVA', 'VODKA', 'GIN', 'CAMPARI', 'TERMA', 'VIÑA DE BALBO', 'SANTA JULIA', 'BIANCHI', 'ALAMBRADO', 'DON DAVID', 'PERDIZ', 'ZUCCARDI', 'LOPEZ', 'RURAL']));
+
+    // Fernet Branca Litro y 750ml (Fijos)
+    bebidasProds.filter(p => helperMatch(p.name, ['FERNET', 'BRANCA'])).forEach(p => {
+      const tag = p.name.includes('1') || p.name.includes('LT') ? 'Cada 6 un. $21200' : 'Cada 12 un. $16112';
+      resultByGroup['BEBIDAS'].push(mapProduct(p, 'BEBIDAS', true, false, 'Fernet Branca (Fijo)', tag));
+    });
+
+    // Aperitivos y Spirits (Rotación Semana 1 vs 2)
+    if (currentWeekNumber === 1) {
+      const cazalis = bebidasProds.find(p => helperMatch(p.name, ['CAZALIS', 'LEGER']));
+      const sernova = bebidasProds.find(p => helperMatch(p.name, ['SERNOVA', 'VODKA']));
+      if (cazalis) resultByGroup['BEBIDAS'].push(mapProduct(cazalis, 'BEBIDAS', false, true, 'Rotación Semana 1 (Cazalis)'));
+      if (sernova) resultByGroup['BEBIDAS'].push(mapProduct(sernova, 'BEBIDAS', false, true, 'Rotación Semana 1 (Sernova Vodka)'));
+    } else {
+      const cinzano = bebidasProds.find(p => helperMatch(p.name, ['CINZANO', 'ROSSO']));
+      const gancia = bebidasProds.find(p => helperMatch(p.name, ['GANCIA', 'GIN', 'CAMPARI']));
+      if (cinzano) resultByGroup['BEBIDAS'].push(mapProduct(cinzano, 'BEBIDAS', false, true, 'Rotación Semana 2 (Cinzano Rosso)'));
+      if (gancia) resultByGroup['BEBIDAS'].push(mapProduct(gancia, 'BEBIDAS', false, true, 'Rotación Semana 2 (Gancia/Gin)'));
+    }
+
+    // Vinos Bodegas (Las Perdices, Zuccardi, Bianchi, López, La Rural)
+    bebidasProds.filter(p => helperMatch(p.name, ['BALBO', 'JULIA', 'BIANCHI', 'ALAMBRADO', 'DON DAVID', 'PERDIZ', 'ZUCCARDI', 'LOPEZ', 'RURAL'])).slice(0, 6).forEach(p => {
+      resultByGroup['BEBIDAS'].push(mapProduct(p, 'BEBIDAS', true, false, 'Vino Seleccionado de Bodega'));
+    });
+
+    // ----------------------------------------------------
+    // 5. ALMACEN
+    // ----------------------------------------------------
+    const almacenProds = products.filter(p => !helperMatch(p.name, ['MELINCUE', 'CREMIGAL', 'BAGGIO', 'MOCORETA', 'BRANCA', 'FERNET']));
+
+    // Giacomo (Fijo)
+    almacenProds.filter(p => helperMatch(p.name, ['GIACOMO'])).slice(0, 2).forEach(p => {
+      resultByGroup['ALMACEN'].push(mapProduct(p, 'ALMACEN', true, false, 'Fijo Obligatorio (Capelettini Giacomo)'));
+    });
+
+    // Mayonesas Natura (Rotación)
+    if (currentWeekNumber === 1) {
+      almacenProds.filter(p => helperMatch(p.name, ['NATURA', 'MAYONESA']) && helperMatch(p.name, ['125', '500'])).forEach(p => {
+        resultByGroup['ALMACEN'].push(mapProduct(p, 'ALMACEN', false, true, 'Rotación Semana 1 (Mayo Natura 125g/500g)'));
+      });
+    } else {
+      almacenProds.filter(p => helperMatch(p.name, ['NATURA', 'MAYONESA']) && (helperMatch(p.name, ['250', 'KG', '1000']) || !p.name.includes('125'))).slice(0, 2).forEach(p => {
+        resultByGroup['ALMACEN'].push(mapProduct(p, 'ALMACEN', false, true, 'Rotación Semana 2 (Mayo Natura 250g/1kg)'));
+      });
+    }
+
+    // Aderezos, Azúcar, Yerbas, Papeles, Pastas
+    const aderezo = almacenProds.find(p => helperMatch(p.name, ['MOSTAZA', 'KETCHUP', 'SALSA GOLF']));
+    if (aderezo) resultByGroup['ALMACEN'].push(mapProduct(aderezo, 'ALMACEN', false, true, `Rotación Semana ${currentWeekNumber} (Aderezos)`));
+
+    // Yerbas (Andresito, Amanda, Playadito)
+    almacenProds.filter(p => helperMatch(p.name, ['ANDRESITO', 'AMANDA', 'PLAYADITO'])).slice(0, 3).forEach(p => {
+      resultByGroup['ALMACEN'].push(mapProduct(p, 'ALMACEN', false, true, `Rotación Semana ${currentWeekNumber} (Yerbas)`));
+    });
+
+    // Papeles y Pastas
+    almacenProds.filter(p => helperMatch(p.name, ['ROLLO', 'CAMPANITA', 'HIGIENOL', '308', 'RECORD', 'CUMANA', 'MAROLIO', 'ARLISTAN', 'VIRGINIA'])).slice(0, 8).forEach(p => {
+      resultByGroup['ALMACEN'].push(mapProduct(p, 'ALMACEN', false, false, 'Almacén de Alta Rotación'));
+    });
+
+    // ----------------------------------------------------
+    // 6. ARTICULOS POR CANTIDAD (Bultos / Cajas)
+    // ----------------------------------------------------
+    const bulkProds = products.filter(p => p.stock > 15 && (helperMatch(p.name, ['NATURA', 'ACEITE', '308', 'AZUCAR', 'AMANDA', 'FERNET']) || p.unitsPerBox > 1)).slice(0, 6);
+    bulkProds.forEach(p => {
+      let bulkTag = 'Llevando por caja descuento especial';
+      if (p.name.includes('MAYONESA') && p.name.includes('125')) bulkTag = 'Cada 4 cajas la unidad a $599';
+      else if (p.name.includes('MAYONESA') && p.name.includes('250')) bulkTag = 'Cada 3 cajas la unidad a $1369';
+      else if (p.name.includes('ACEITE') && p.name.includes('NATURA')) bulkTag = 'Cada 2 cajas la unidad a $3817';
+      else if (p.name.includes('308')) bulkTag = 'Cada 1 bolsón la unidad a $1099';
+      else if (p.name.includes('AMANDA')) bulkTag = 'Cada 1 pack la unidad a $2699';
+
+      resultByGroup['ARTICULOS POR CANTIDAD'].push(mapProduct(p, 'ARTICULOS POR CANTIDAD', false, false, 'Oferta por Cantidad / Bulto', bulkTag));
+    });
+
+    // Desduplicar ítems por id dentro de cada grupo
+    Object.keys(resultByGroup).forEach(grp => {
+      const seen = new Set<number>();
+      resultByGroup[grp] = resultByGroup[grp].filter(item => {
+        if (seen.has(item.id)) return false;
+        seen.add(item.id);
+        return true;
+      });
+    });
 
     res.json({
       status: 'success',
       data: {
+        detectedWeekNumber: currentWeekNumber,
+        weekLabel: `Semana ${currentWeekNumber}`,
         recommendationsByGroup: resultByGroup,
         totalSelected: Object.values(resultByGroup).flat().length
       }
@@ -479,4 +607,66 @@ export const getWeeklyOfferRecommendations = async (req: Request, res: Response)
     res.status(500).json({ error: 'Error generating weekly offer recommendations' });
   }
 };
+
+// Comparador Side-by-Side entre Oferta Anterior y Oferta Propuesta
+export const getCampaignComparison = async (req: Request, res: Response) => {
+  try {
+    const { baselineId, targetId } = req.query;
+
+    let baselineCampaign = null;
+    if (baselineId) {
+      baselineCampaign = await prisma.offerCampaign.findUnique({
+        where: { id: Number(baselineId) },
+        include: { items: { include: { product: true } } }
+      });
+    } else {
+      // Tomar la campaña de base 100 o la más reciente
+      baselineCampaign = await prisma.offerCampaign.findFirst({
+        orderBy: { createdAt: 'desc' },
+        include: { items: { include: { product: true } } }
+      });
+    }
+
+    let targetCampaign = null;
+    if (targetId) {
+      targetCampaign = await prisma.offerCampaign.findUnique({
+        where: { id: Number(targetId) },
+        include: { items: { include: { product: true } } }
+      });
+    }
+
+    const baselineItems = baselineCampaign?.items || [];
+    const targetItems = targetCampaign?.items || [];
+
+    const baselineProductIds = new Set(baselineItems.map(i => i.productId));
+    const targetProductIds = new Set(targetItems.map(i => i.productId));
+
+    const retained = targetItems.filter(i => baselineProductIds.has(i.productId));
+    const addedByRotation = targetItems.filter(i => !baselineProductIds.has(i.productId));
+    const removedByRotation = baselineItems.filter(i => !targetProductIds.has(i.productId));
+    const stockAlerts = targetItems.filter(i => (i.product?.stock || 0) <= 0);
+
+    res.json({
+      status: 'success',
+      data: {
+        baselineTitle: baselineCampaign?.title || 'Oferta Anterior (15-08)',
+        targetTitle: targetCampaign?.title || 'Nueva Oferta Propuesta',
+        retainedCount: retained.length,
+        addedCount: addedByRotation.length,
+        removedCount: removedByRotation.length,
+        stockAlertsCount: stockAlerts.length,
+        details: {
+          retained,
+          addedByRotation,
+          removedByRotation,
+          stockAlerts
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Error in getCampaignComparison:', error);
+    res.status(500).json({ error: 'Error comparing offer campaigns' });
+  }
+};
+
 

@@ -1449,13 +1449,21 @@ export const api = {
     return res;
   },
 
-  getWeeklyOfferRecommendations: async (params?: { numDuros?: number; numSemiduros?: number; numBlandos?: number; numFiambres?: number; numBebidas?: number; numAlmacen?: number }) => {
+  getWeeklyOfferRecommendations: async (params?: { week?: string; shuffle?: string; baselineCampaignId?: number }) => {
     const query = params ? '?' + new URLSearchParams(params as any).toString() : '';
     const res = await request(`/offers/recommendations${query}`);
     return res;
   },
 
-  addBulkCampaignItems: async (campaignId: number, items: { productId: number, offerPrice: number, specialTag: string | null }[]) => {
+  getCampaignComparison: async (baselineId?: number, targetId?: number) => {
+    const params = new URLSearchParams();
+    if (baselineId) params.append('baselineId', String(baselineId));
+    if (targetId) params.append('targetId', String(targetId));
+    const res = await request(`/offers/comparison?${params.toString()}`);
+    return res;
+  },
+
+  addBulkCampaignItems: async (campaignId: number, items: { productId: number, offerPrice: number, specialTag: string | null, campaignGroup?: string | null }[]) => {
     const res = await request(`/offers/${campaignId}/items/bulk`, {
       method: 'POST',
       body: JSON.stringify({ items })

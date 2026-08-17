@@ -9,7 +9,8 @@ import {
   removeCampaignItem,
   getCampaignSuggestions,
   addBulkCampaignItems,
-  getWeeklyOfferRecommendations
+  getWeeklyOfferRecommendations,
+  getCampaignComparison
 } from '../controllers/offersController';
 
 const router = Router();
@@ -19,6 +20,7 @@ router.post('/', createCampaign);
 router.get('/', getCampaigns);
 router.get('/suggestions', getCampaignSuggestions);
 router.get('/recommendations', getWeeklyOfferRecommendations);
+router.get('/comparison', getCampaignComparison);
 router.get('/:id', getCampaignById);
 router.put('/:id', updateCampaign);
 router.delete('/:id', deleteCampaign);
@@ -29,3 +31,4 @@ router.post('/:campaignId/items/bulk', addBulkCampaignItems);
 router.delete('/:campaignId/items/:itemId', removeCampaignItem);
 
 export default router;
+
