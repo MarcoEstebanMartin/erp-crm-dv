@@ -68,11 +68,13 @@ const archivosDir = path.resolve(__dirname, env.ARCHIVOS_PATH);
 const masterProductosFotosDir = path.join(archivosDir, 'fotos/Productos');
 
 import { appCache } from './utils/cache';
+import { startDbKeepAlive } from './utils/dbKeepAlive';
 
 (async () => {
   await ensureDirectoriesExist([uploadsDir, productsUploadsDir]);
   await syncMasterProductImages(masterProductosFotosDir, productsUploadsDir);
   appCache.invalidateProductCatalog();
+  startDbKeepAlive();
 })();
 
 // 4. Servidor de Archivos Estáticos (con fallback automático a carpeta maestra)
