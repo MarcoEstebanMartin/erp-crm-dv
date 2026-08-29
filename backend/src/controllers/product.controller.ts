@@ -455,3 +455,16 @@ export async function assignWmsLocation(req: AuthenticatedRequest, res: Response
   }
 }
 
+/**
+ * Deshacer cambios de precios y restaurar precios al estado previo (Undo).
+ */
+export async function revertPrices(req: AuthenticatedRequest, res: Response): Promise<void> {
+  const userId = req.user?.id;
+  try {
+    const result = await productService.revertPrices(userId);
+    res.status(200).json({ status: 'success', data: result });
+  } catch (error: any) {
+    res.status(500).json({ status: 'error', message: error.message || 'Error al revertir los precios.' });
+  }
+}
+

@@ -17,6 +17,7 @@ import {
   reconcileStockDrift,
   clearWmsLocation,
   assignWmsLocation,
+  revertPrices,
 } from '../controllers/product.controller';
 import {
   updateLot,
@@ -53,6 +54,7 @@ router.get('/:id/movements', authenticateJWT, getProductMovements);
 // Rutas protegidas para administración de catálogo (Solo ADMIN)
 router.post('/', authenticateJWT, requireRole([Role.ADMIN]), validateRequest(createProductSchema), createProduct);
 router.post('/import-prices', authenticateJWT, requireRole([Role.ADMIN]), validateRequest(importPricesSchema), importPrices);
+router.post('/revert-prices', authenticateJWT, requireRole([Role.ADMIN]), revertPrices);
 router.post('/bulk-update-prices', authenticateJWT, requireRole([Role.ADMIN]), validateRequest(bulkUpdatePricesSchema), bulkUpdatePrices);
 router.put('/:id', authenticateJWT, requireRole([Role.ADMIN]), validateRequest(updateProductSchema), updateProduct);
 

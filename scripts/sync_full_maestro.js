@@ -13,6 +13,42 @@ async function processInChunks(items, chunkSize, fn) {
 }
 
 async function main() {
+  const isUndoMode = process.argv.includes('--undo-prices');
+
+  if (isUndoMode) {
+    console.log('↩️ MODO REVERSIÓN DE PRECIOS (UNDO)');
+    console.log('==================================');
+    const productsWithHistory = await prisma.product.findMany({
+      where: {
+        previousCostPrice: { not: null },
+        previousListPrice: { not: null }
+      }
+    });
+
+    if (productsWithHistory.length === 0) {
+      console.log('⚠️ No hay historial de precios anteriores para restaurar.');
+      return;
+    }
+
+    let revertedCount = 0;
+    await processInChunks(productsWithHistory, 5, async (p) => {
+      await prisma.product.update({
+        where: { id: p.id },
+        data: {
+          costPrice: p.previousCostPrice,
+          listPrice: p.previousListPrice,
+          previousCostPrice: null,
+          previousListPrice: null,
+          lastPriceUpdateAt: new Date()
+        }
+      });
+      revertedCount++;
+    });
+
+    console.log(`✅ Se restauraron exitosamente ${revertedCount} productos a sus precios anteriores.`);
+    return;
+  }
+
   console.log('🚀 Sincronizador Maestro <-> Base de Datos PostgreSQL (Modo Ultra-Rápido & Parroquia)');
   console.log('=================================================================================');
 
@@ -106,6 +142,32 @@ if 'Proveedores' in wb.sheetnames:
             })
     data['suppliers'] = suppliers
 
+# 4. RUTAS
+if 'Rutas' in wb.sheetnames:
+    ws = wb['Rutas']
+    routes = []
+    rows = list(ws.iter_rows(values_only=True))
+    if len(rows) > 1:
+        for r in rows[1:]:
+            if not r or not r[0]: continue
+            localidad = str(r[0]).strip()
+            if localidad in ['LOCALIDAD', '']: continue
+            nombre_ruta = str(r[1]).strip() if len(r)>1 and r[1] else localidad
+            ciclo = str(r[2]).strip() if len(r)>2 and r[2] else 'AMBAS'
+            dia_venta = str(r[3]).strip() if len(r)>3 and r[3] else 'LUNES'
+
+            freq = 'SEMANAL'
+            if '1' in ciclo or 'A' in ciclo.upper(): freq = 'QUINCENAL_A'
+            elif '2' in ciclo or 'B' in ciclo.upper(): freq = 'QUINCENAL_B'
+
+            routes.append({
+                'name': nombre_ruta,
+                'city': localidad,
+                'dayOfWeek': dia_venta,
+                'frequency': freq
+            })
+    data['routes'] = routes
+
 print(json.dumps(data, ensure_ascii=False))
   `;
 
@@ -118,27 +180,39 @@ print(json.dumps(data, ensure_ascii=False))
 
     const maestroData = JSON.parse(pyOutput);
 
-    // 1. Sincronizar Productos
+    // 1. Sincronizar Productos (con respaldo de precios anteriores)
     if (maestroData.products) {
       console.log(`📦 Procesando ${maestroData.products.length} Productos...`);
       const existingProducts = await prisma.product.findMany();
       const skuMap = new Map(existingProducts.map(p => [p.sku.trim(), p]));
       const nameMap = new Map(existingProducts.map(p => [p.name.trim().toLowerCase(), p]));
 
-      let prodUpdated = 0, prodCreated = 0;
+      let prodUpdated = 0, prodCreated = 0, priceBackedUp = 0;
       await processInChunks(maestroData.products, 5, async (item) => {
         const existing = skuMap.get(item.sku) || nameMap.get(item.name.toLowerCase());
         if (existing) {
+          const costHasChanged = item.costPrice > 0 && Number(existing.costPrice) !== item.costPrice;
+          const listHasChanged = item.listPrice > 0 && Number(existing.listPrice) !== item.listPrice;
+
+          const updateData = {
+            name: item.name,
+            costPrice: item.costPrice > 0 ? item.costPrice : existing.costPrice,
+            listPrice: item.listPrice > 0 ? item.listPrice : existing.listPrice,
+            isPesable: item.isPesable,
+            unitsPerBox: item.unitsPerBox,
+            barcode: item.barcode || existing.barcode
+          };
+
+          if (costHasChanged || listHasChanged) {
+            updateData.previousCostPrice = existing.costPrice;
+            updateData.previousListPrice = existing.listPrice;
+            updateData.lastPriceUpdateAt = new Date();
+            priceBackedUp++;
+          }
+
           await prisma.product.update({
             where: { id: existing.id },
-            data: {
-              name: item.name,
-              costPrice: item.costPrice > 0 ? item.costPrice : existing.costPrice,
-              listPrice: item.listPrice > 0 ? item.listPrice : existing.listPrice,
-              isPesable: item.isPesable,
-              unitsPerBox: item.unitsPerBox,
-              barcode: item.barcode || existing.barcode
-            }
+            data: updateData
           });
           prodUpdated++;
         } else {
@@ -156,7 +230,7 @@ print(json.dumps(data, ensure_ascii=False))
           prodCreated++;
         }
       });
-      console.log(`   └─ ✅ Productos: ${prodUpdated} actualizados, ${prodCreated} creados.`);
+      console.log(`   └─ ✅ Productos: ${prodUpdated} actualizados (${priceBackedUp} con respaldo de precio anterior), ${prodCreated} creados.`);
     }
 
     // 2. Sincronizar Clientes
@@ -233,6 +307,38 @@ print(json.dumps(data, ensure_ascii=False))
         }
       });
       console.log(`   └─ ✅ Proveedores: ${suppUpdated} actualizados, ${suppCreated} creados.`);
+    }
+
+    // 4. Sincronizar Rutas con Frecuencia Quincenal
+    if (maestroData.routes) {
+      console.log(`🗺️ Procesando ${maestroData.routes.length} Rutas y Frecuencias Quincenales...`);
+      const existingRoutes = await prisma.saleRoute.findMany();
+      const routeNameMap = new Map(existingRoutes.map(r => [r.name.trim().toLowerCase(), r]));
+
+      let routeUpdated = 0, routeCreated = 0;
+      await processInChunks(maestroData.routes, 5, async (item) => {
+        const existing = routeNameMap.get(item.name.toLowerCase());
+        if (existing) {
+          await prisma.saleRoute.update({
+            where: { id: existing.id },
+            data: {
+              dayOfWeek: item.dayOfWeek || existing.dayOfWeek,
+              frequency: item.frequency || existing.frequency
+            }
+          });
+          routeUpdated++;
+        } else {
+          await prisma.saleRoute.create({
+            data: {
+              name: item.name,
+              dayOfWeek: item.dayOfWeek,
+              frequency: item.frequency
+            }
+          });
+          routeCreated++;
+        }
+      });
+      console.log(`   └─ ✅ Rutas: ${routeUpdated} actualizadas, ${routeCreated} creadas.`);
     }
 
     console.log('\n🎉 Sincronización completa finalizada exitosamente.');

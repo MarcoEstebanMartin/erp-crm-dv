@@ -6,7 +6,8 @@
     "dev:backend": "npm run dev --prefix backend",
     "dev:frontend": "npm run dev --prefix frontend",
     "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
-    "sync:maestro": "node scripts/sync_full_maestro.js"
+    "sync:maestro": "node scripts/sync_full_maestro.js",
+    "sync:undo-prices": "node scripts/sync_full_maestro.js --undo-prices"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"

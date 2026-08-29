@@ -912,10 +912,59 @@ export class ProductService {
       newValues: { locationCode: cleanLoc, quantity: qty },
     });
 
-    return {
-      message: `Producto asignado a la posición ${cleanLoc} correctamente.`,
-      result
-    };
+      return {
+        message: `Producto asignado a la posición ${cleanLoc} correctamente.`,
+        result
+      };
+    });
+  }
+
+  /**
+   * Revertir precios al estado previo (Undo de sincronización)
+   */
+  async revertPrices(userId?: number) {
+    const productsWithHistory = await prisma.product.findMany({
+      where: {
+        previousCostPrice: { not: null },
+        previousListPrice: { not: null }
+      }
+    });
+
+    if (productsWithHistory.length === 0) {
+      return { message: 'No hay precios anteriores para restaurar.', count: 0 };
+    }
+
+    let revertedCount = 0;
+    await prisma.$transaction(async (tx) => {
+      for (const p of productsWithHistory) {
+        if (p.previousCostPrice !== null && p.previousListPrice !== null) {
+          await tx.product.update({
+            where: { id: p.id },
+            data: {
+              costPrice: p.previousCostPrice,
+              listPrice: p.previousListPrice,
+              previousCostPrice: null,
+              previousListPrice: null,
+              lastPriceUpdateAt: new Date()
+            }
+          });
+          revertedCount++;
+        }
+      }
+    });
+
+    if (userId) {
+      await logAudit({
+        userId,
+        action: 'REVERT_PRICES_UNDO',
+        entityType: 'Product',
+        entityId: 0,
+        newValues: { revertedCount },
+      });
+    }
+
+    appCache.invalidateProductCatalog();
+    return { message: `Se restauraron ${revertedCount} productos a sus precios anteriores.`, count: revertedCount };
   }
 }
 
