@@ -1,5 +1,6 @@
 import prisma from '../utils/prisma';
 import { logAudit } from '../utils/audit';
+import { appCache } from '../utils/cache';
 
 export class ProductService {
   /**
@@ -912,11 +913,10 @@ export class ProductService {
       newValues: { locationCode: cleanLoc, quantity: qty },
     });
 
-      return {
-        message: `Producto asignado a la posición ${cleanLoc} correctamente.`,
-        result
-      };
-    });
+    return {
+      message: `Producto asignado a la posición ${cleanLoc} correctamente.`,
+      result
+    };
   }
 
   /**
