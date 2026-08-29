@@ -309,19 +309,36 @@ print(json.dumps(data, ensure_ascii=False))
       console.log(`   └─ ✅ Proveedores: ${suppUpdated} actualizados, ${suppCreated} creados.`);
     }
 
-    // 4. Sincronizar Rutas con Frecuencia Quincenal
+    // 4. Sincronizar Rutas con Frecuencia Quincenal y Nombres Estandarizados
     if (maestroData.routes) {
       console.log(`🗺️ Procesando ${maestroData.routes.length} Rutas y Frecuencias Quincenales...`);
       const existingRoutes = await prisma.saleRoute.findMany();
-      const routeNameMap = new Map(existingRoutes.map(r => [r.name.trim().toLowerCase(), r]));
+      
+      function cleanRouteName(name) {
+        if (!name) return '';
+        let norm = String(name).replace(/\s+/g, ' ').trim().toUpperCase();
+        if (norm.includes('BANDERALO') && (norm.includes('LARROUDE') || norm.includes('LARROUD'))) return 'BANDERALO Y LARROUDÉ';
+        if (norm.includes('VILLEGAS') && norm.includes('FABIAN')) return 'VILLEGAS FABIAN';
+        if (norm.includes('BUNGE') && norm.includes('CHARLONE')) return 'BUNGE Y CHARLONE';
+        if (norm.includes('BUNGE') && norm.includes('BUCHARDO')) return 'BUNGE Y BUCHARDO';
+        if (norm.includes('AMEGHINO') && norm.includes('BLAQUIER')) return 'AMEGHINO Y BLAQUIER';
+        if (norm.includes('AMERICA') || norm.includes('FORTIN')) return 'AMERICA Y FORTIN';
+        if (norm.includes('SAUCE') || norm.includes('SAUZE') || norm.includes('SANSINENA')) return 'SAUCE Y SANSINENA';
+        return norm;
+      }
+
+      const routeNameMap = new Map(existingRoutes.map(r => [cleanRouteName(r.name), r]));
 
       let routeUpdated = 0, routeCreated = 0;
       await processInChunks(maestroData.routes, 5, async (item) => {
-        const existing = routeNameMap.get(item.name.toLowerCase());
+        const stdName = cleanRouteName(item.name);
+        if (!stdName) return;
+        const existing = routeNameMap.get(stdName);
         if (existing) {
           await prisma.saleRoute.update({
             where: { id: existing.id },
             data: {
+              name: stdName,
               dayOfWeek: item.dayOfWeek || existing.dayOfWeek,
               frequency: item.frequency || existing.frequency
             }
@@ -330,7 +347,7 @@ print(json.dumps(data, ensure_ascii=False))
         } else {
           await prisma.saleRoute.create({
             data: {
-              name: item.name,
+              name: stdName,
               dayOfWeek: item.dayOfWeek,
               frequency: item.frequency
             }
