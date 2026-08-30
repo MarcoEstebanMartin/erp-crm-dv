@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Edit, Download, Upload } from 'lucide-react';
+import { Plus, Edit, Download, Upload, RotateCcw } from 'lucide-react';
 
 interface ProductsListProps {
   products: any[];
@@ -273,12 +273,15 @@ export default function ProductsList({ products, searchQuery, setSearchQuery, se
               <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>PESABLE</th>
               <th style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>PRECIO SIN IVA</th>
               <th style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>PRECIO FINAL</th>
+              {(catalogTab === 'inactive_products' || activeFilter === 'inactive') && (
+                <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>ACCIONES</th>
+              )}
             </tr>
           </thead>
           <tbody>
             {filteredProducts.length === 0 ? (
               <tr>
-                <td colSpan={5} style={{ textAlign: 'center', padding: '32px 0', color: 'var(--text-secondary)' }}>No se encontraron productos.</td>
+                <td colSpan={catalogTab === 'inactive_products' || activeFilter === 'inactive' ? 6 : 5} style={{ textAlign: 'center', padding: '32px 0', color: 'var(--text-secondary)' }}>No se encontraron productos.</td>
               </tr>
             ) : (
               filteredProducts
@@ -420,6 +423,11 @@ export default function ProductsList({ products, searchQuery, setSearchQuery, se
                               <span style={{ backgroundColor: 'var(--bg-muted)', padding: '2px 7px', borderRadius: '5px', border: '1px solid var(--border-color)', fontSize: '0.72rem', fontWeight: 500, color: 'var(--text-primary)' }}>
                                 {extractLabel(p.rubro)}
                               </span>
+                              {p.isActive === false && (
+                                <span style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#dc2626', padding: '2px 7px', borderRadius: '5px', border: '1px solid rgba(239, 68, 68, 0.25)', fontSize: '0.7rem', fontWeight: 600 }}>
+                                  Inactivo
+                                </span>
+                              )}
                               {p.minOrderQuantity && p.minOrderQuantity > 1 && (
                                 <span style={{ backgroundColor: 'rgba(227, 6, 19, 0.12)', color: '#e30613', padding: '2px 6px', borderRadius: '4px', fontWeight: 700, fontSize: '0.7rem' }}>
                                   Mín. {p.minOrderQuantity} u.
@@ -473,6 +481,37 @@ export default function ProductsList({ products, searchQuery, setSearchQuery, se
                           </div>
                         )}
                       </td>
+                      {(catalogTab === 'inactive_products' || activeFilter === 'inactive' || p.isActive === false) && (
+                        <td style={{ padding: '12px 16px', textAlign: 'center' }}>
+                          <button
+                            className="btn"
+                            style={{
+                              borderRadius: '8px',
+                              padding: '6px 12px',
+                              fontSize: '0.78rem',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              backgroundColor: 'rgba(34, 197, 94, 0.12)',
+                              color: '#15803d',
+                              border: '1px solid rgba(34, 197, 94, 0.3)',
+                              fontWeight: 600,
+                              cursor: 'pointer',
+                              transition: 'all 0.2s ease'
+                            }}
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              if (onUpdateProduct) {
+                                await onUpdateProduct({ ...p, isActive: true });
+                              }
+                            }}
+                            title="Reactivar este producto en el catálogo activo"
+                          >
+                            <RotateCcw size={14} />
+                            <span>Reactivar</span>
+                          </button>
+                        </td>
+                      )}
                     </tr>
                   );
                 })
