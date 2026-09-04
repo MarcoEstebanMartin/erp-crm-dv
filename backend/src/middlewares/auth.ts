@@ -3,15 +3,16 @@ import jwt, { TokenExpiredError, JsonWebTokenError } from 'jsonwebtoken';
 import { Role } from '@prisma/client';
 import { AuthenticatedRequest, UserPayload } from '../types';
 import { env } from '../config/env.config';
+import prisma from '../utils/prisma';
 
 /**
  * Middleware para autenticar requests mediante JWT en el header Authorization.
  */
-export function authenticateJWT(
+export async function authenticateJWT(
   req: AuthenticatedRequest,
   res: Response,
   next: NextFunction
-): void {
+): Promise<void> {
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -27,6 +28,23 @@ export function authenticateJWT(
   try {
     const decoded = jwt.verify(token, env.JWT_SECRET) as UserPayload;
     req.user = decoded;
+
+    if (decoded.id) {
+      const userDb = await prisma.user.findUnique({
+        where: { id: decoded.id },
+        select: { isActive: true, role: true },
+      });
+      if (!userDb || !userDb.isActive) {
+        res.status(401).json({
+          status: 'error',
+          message: 'Cuenta desactivada o inactiva.',
+          code: 'USER_INACTIVE',
+        });
+        return;
+      }
+      req.user.role = userDb.role;
+    }
+
     next();
   } catch (error) {
     if (error instanceof TokenExpiredError) {

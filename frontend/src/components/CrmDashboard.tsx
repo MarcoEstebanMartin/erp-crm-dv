@@ -954,7 +954,7 @@ export default function CrmDashboard({ initialTab = 'whatsapp', hideHeaderTabs =
                         onClick={handleParseOrderWithAI}
                         disabled={parsingAi}
                       >
-                        <Sparkles size={14} style={{ color: '#E30613' }} />
+                        <Sparkles size={14} style={{ color: '#6366F1' }} />
                         <span>{parsingAi ? 'Interpretando...' : '⚡ Borrador Pedido con IA'}</span>
                       </button>
                     </div>

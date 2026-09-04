@@ -209,14 +209,14 @@ export default function OffersCatalogGenerator({ campaignId, onBack }: OffersCat
             <button 
               className={`btn ${columnsCount === 2 ? 'btn-primary' : ''}`}
               onClick={() => setColumnsCount(2)}
-              style={{ borderRadius: 0, border: 'none', backgroundColor: columnsCount === 2 ? '#e30613' : 'transparent', color: columnsCount === 2 ? '#fff' : 'var(--text-primary)' }}
+              style={{ borderRadius: 0, border: 'none', backgroundColor: columnsCount === 2 ? '#111827' : 'transparent', color: columnsCount === 2 ? '#fff' : 'var(--text-primary)' }}
             >
               2 Columnas
             </button>
             <button 
               className={`btn ${columnsCount === 3 ? 'btn-primary' : ''}`}
               onClick={() => setColumnsCount(3)}
-              style={{ borderRadius: 0, border: 'none', backgroundColor: columnsCount === 3 ? '#e30613' : 'transparent', color: columnsCount === 3 ? '#fff' : 'var(--text-primary)' }}
+              style={{ borderRadius: 0, border: 'none', backgroundColor: columnsCount === 3 ? '#111827' : 'transparent', color: columnsCount === 3 ? '#fff' : 'var(--text-primary)' }}
             >
               3 Columnas
             </button>

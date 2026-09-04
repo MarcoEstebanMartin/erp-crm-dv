@@ -373,7 +373,7 @@ export default function SaleRoutesDashboard() {
                     onClick={() => setShowOptimizeModal(true)}
                     style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
                   >
-                    <Zap size={14} color="#e30613" />
+                    <Zap size={14} color="#F59E0B" />
                     <span>Optimizar por Mapa</span>
                   </button>
                   <button 

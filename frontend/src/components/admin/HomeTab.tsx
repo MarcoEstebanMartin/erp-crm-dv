@@ -805,7 +805,7 @@ export default function HomeTab({
             style={{
               background: 'none',
               border: 'none',
-              color: selectedDayTab === 'FULL' ? 'var(--color-corp-red, #E30613)' : '#6B7280',
+              color: selectedDayTab === 'FULL' ? '#111827' : '#6B7280',
               fontSize: '0.78rem',
               fontWeight: 500,
               cursor: 'pointer'
@@ -860,14 +860,14 @@ export default function HomeTab({
                   padding: '8px 10px',
                   borderRadius: '6px',
                   backgroundColor: isToday ? '#ffffff' : 'transparent',
-                  border: isToday ? '1px solid #FCA5A5' : '1px solid transparent'
+                  border: isToday ? '1px solid #D1D5DB' : '1px solid transparent'
                 }}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                  <span style={{ fontSize: '0.72rem', fontWeight: 700, color: isToday ? 'var(--color-corp-red, #E30613)' : '#374151' }}>
+                  <span style={{ fontSize: '0.72rem', fontWeight: 700, color: isToday ? '#111827' : '#374151' }}>
                     {day.substring(0, 3)}
                   </span>
-                  {isToday && <span style={{ fontSize: '0.62rem', fontWeight: 700, color: '#E30613' }}>HOY</span>}
+                  {isToday && <span style={{ fontSize: '0.62rem', fontWeight: 700, color: '#374151' }}>HOY</span>}
                 </div>
 
                 <div style={{ fontSize: '0.73rem', display: 'flex', flexDirection: 'column', gap: '2px' }}>
