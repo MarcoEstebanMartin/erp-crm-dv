@@ -134,7 +134,7 @@ export class OrderService {
 
       const maxUnpaidInvoices = Number(persona.maxUnpaidInvoices || 0);
       if (maxUnpaidInvoices > 0) {
-        const pendingInvoicesCount = await personaService.getPersonaPendingInvoicesCount(persona.id);
+        const pendingInvoicesCount = await personaService.getPersonaPendingInvoicesCount(persona.id, tx);
         
         if (pendingInvoicesCount >= maxUnpaidInvoices) {
           if (userRole !== Role.ADMIN) {

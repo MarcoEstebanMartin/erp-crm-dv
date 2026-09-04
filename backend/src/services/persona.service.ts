@@ -713,8 +713,8 @@ export class PersonaService {
   /**
    * Calcula la cantidad exacta de boletas impagas de un cliente aplicando FIFO global.
    */
-  async getPersonaPendingInvoicesCount(id: number) {
-    const client = await prisma.persona.findUnique({
+  async getPersonaPendingInvoicesCount(id: number, dbClient: any = prisma) {
+    const client = await dbClient.persona.findUnique({
       where: { id },
       include: {
         orders: {
@@ -737,21 +737,21 @@ export class PersonaService {
     if (!client) return 0;
     if (Number(client.outstandingBalance) <= 0) return 0;
 
-    const officialOrders = client.orders.filter(o => o.billingType === BillingType.OFFICIAL);
-    const internalOrders = client.orders.filter(o => o.billingType === BillingType.INTERNAL);
+    const officialOrders = client.orders.filter((o: any) => o.billingType === BillingType.OFFICIAL);
+    const internalOrders = client.orders.filter((o: any) => o.billingType === BillingType.INTERNAL);
 
-    const totalOfficialCredit = client.transactions.filter(t => t.billingType === BillingType.OFFICIAL).reduce((acc, t) => acc + Number(t.amount), 0) +
-                                client.creditNotes.filter(cn => cn.billingType === BillingType.OFFICIAL).reduce((acc, cn) => acc + Number(cn.totalAmount), 0);
+    const totalOfficialCredit = client.transactions.filter((t: any) => t.billingType === BillingType.OFFICIAL).reduce((acc: number, t: any) => acc + Number(t.amount), 0) +
+                                client.creditNotes.filter((cn: any) => cn.billingType === BillingType.OFFICIAL).reduce((acc: number, cn: any) => acc + Number(cn.totalAmount), 0);
 
-    const totalInternalCredit = client.transactions.filter(t => t.billingType === BillingType.INTERNAL).reduce((acc, t) => acc + Number(t.amount), 0) +
-                                client.creditNotes.filter(cn => cn.billingType === BillingType.INTERNAL).reduce((acc, cn) => acc + Number(cn.totalAmount), 0);
+    const totalInternalCredit = client.transactions.filter((t: any) => t.billingType === BillingType.INTERNAL).reduce((acc: number, t: any) => acc + Number(t.amount), 0) +
+                                client.creditNotes.filter((cn: any) => cn.billingType === BillingType.INTERNAL).reduce((acc: number, cn: any) => acc + Number(cn.totalAmount), 0);
 
-    const calculateFIFO = (orders: typeof client.orders, unallocatedCredit: number) => {
+    const calculateFIFO = (orders: any[], unallocatedCredit: number) => {
       let pool = unallocatedCredit;
       let pendingInvoicesCount = 0;
-      orders.forEach(order => {
-        const directPayments = order.transactions.reduce((acc, t) => acc + Number(t.amount), 0);
-        const directCreditNotes = order.creditNotes.reduce((acc, cn) => acc + Number(cn.totalAmount), 0);
+      orders.forEach((order: any) => {
+        const directPayments = (order.transactions || []).reduce((acc: number, t: any) => acc + Number(t.amount), 0);
+        const directCreditNotes = (order.creditNotes || []).reduce((acc: number, cn: any) => acc + Number(cn.totalAmount), 0);
         let debt = Math.max(0, Number(order.totalAmount) - directPayments - directCreditNotes);
 
         if (pool > 0) {

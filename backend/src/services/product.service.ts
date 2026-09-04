@@ -516,32 +516,36 @@ export class ProductService {
     const val = Number(value);
     let updatedCount = 0;
 
-    await prisma.$transaction(async (tx) => {
-      for (const p of products) {
-        const updateData: any = {};
-        const listsToUpdate = priceList === 'all' ? ['listPrice', 'listPriceB', 'listPriceC'] : [priceList];
+    const chunkSize = 50;
+    for (let i = 0; i < products.length; i += chunkSize) {
+      const chunk = products.slice(i, i + chunkSize);
+      await prisma.$transaction(async (tx) => {
+        for (const p of chunk) {
+          const updateData: any = {};
+          const listsToUpdate = priceList === 'all' ? ['listPrice', 'listPriceB', 'listPriceC'] : [priceList];
 
-        for (const listField of listsToUpdate) {
-          const cost = Number(p.costPrice);
-          const currentPrice = Number((p as any)[listField] || 0);
-          let newPrice = currentPrice;
+          for (const listField of listsToUpdate) {
+            const cost = Number(p.costPrice);
+            const currentPrice = Number((p as any)[listField] || 0);
+            let newPrice = currentPrice;
 
-          if (type === 'margin') {
-            newPrice = cost * (1 + val / 100);
-          } else if (type === 'percentage') {
-            const base = basis === 'cost' ? cost : currentPrice;
-            newPrice = base * (1 + val / 100);
-          } else if (type === 'fixed') {
-            newPrice = currentPrice + val;
+            if (type === 'margin') {
+              newPrice = cost * (1 + val / 100);
+            } else if (type === 'percentage') {
+              const base = basis === 'cost' ? cost : currentPrice;
+              newPrice = base * (1 + val / 100);
+            } else if (type === 'fixed') {
+              newPrice = currentPrice + val;
+            }
+
+            updateData[listField] = Math.max(0, Math.round(newPrice * 100) / 100);
           }
 
-          updateData[listField] = Math.max(0, Math.round(newPrice * 100) / 100);
+          await tx.product.update({ where: { id: p.id }, data: updateData });
+          updatedCount++;
         }
-
-        await tx.product.update({ where: { id: p.id }, data: updateData });
-        updatedCount++;
-      }
-    });
+      });
+    }
 
     if (userId) {
       await logAudit({

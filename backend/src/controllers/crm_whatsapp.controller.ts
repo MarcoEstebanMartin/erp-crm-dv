@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import crypto from 'crypto';
 import { PrismaClient } from '@prisma/client';
 import { whatsAppService, normalizeWaId } from '../services/whatsapp.service';
 import { AuthenticatedRequest } from '../types';
@@ -419,10 +420,25 @@ export async function verifyWebhook(req: Request, res: Response): Promise<void> 
 }
 
 /**
- * Webhook de Meta: Recepción POST
+ * Webhook de Meta: Recepción POST con verificación HMAC SHA256
  */
 export async function handleWebhook(req: Request, res: Response): Promise<void> {
   try {
+    const appSecret = process.env.WHATSAPP_APP_SECRET;
+    if (appSecret) {
+      const signature = req.headers['x-hub-signature-256'] as string;
+      if (!signature) {
+        res.status(401).send('Firma X-Hub-Signature-256 no provista.');
+        return;
+      }
+      const hmac = crypto.createHmac('sha256', appSecret);
+      const expectedSignature = 'sha256=' + hmac.update(JSON.stringify(req.body)).digest('hex');
+      if (!crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSignature))) {
+        res.status(403).send('Firma de webhook inválida.');
+        return;
+      }
+    }
+
     const body = req.body;
     if (body.object === 'whatsapp_business_account') {
       for (const entry of body.entry || []) {

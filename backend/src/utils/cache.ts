@@ -24,6 +24,13 @@ class InMemoryCache {
       return null;
     }
 
+    if (typeof item.value === 'object' && item.value !== null) {
+      try {
+        return structuredClone(item.value) as T;
+      } catch {
+        return JSON.parse(JSON.stringify(item.value)) as T;
+      }
+    }
     return item.value as T;
   }
 

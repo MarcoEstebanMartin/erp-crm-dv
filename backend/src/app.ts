@@ -85,7 +85,6 @@ import { startDbKeepAlive } from './utils/dbKeepAlive';
 app.use('/uploads/products', express.static(productsUploadsDir, { maxAge: 0, etag: true, lastModified: true }));
 app.use('/uploads/products', express.static(masterProductosFotosDir, { maxAge: 0, etag: true, lastModified: true }));
 app.use('/uploads', express.static(uploadsDir, { maxAge: 0, etag: true, lastModified: true }));
-app.use('/api/purchases/files', authenticateJWT, express.static(archivosDir));
 
 // 5. Montar Rutas del API
 app.use('/api/auth', authRoutes);

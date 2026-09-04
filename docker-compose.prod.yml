@@ -6,9 +6,9 @@ services:
     container_name: erp_crm_db
     restart: always
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: production_db_secure_password
-      POSTGRES_DB: erp_crm_production
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-production_db_secure_password}
+      POSTGRES_DB: ${POSTGRES_DB:-erp_crm_production}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
@@ -29,9 +29,9 @@ services:
       - "3000:3000"
     environment:
       - PORT=3000
-      - DATABASE_URL=postgresql://postgres:production_db_secure_password@db:5432/erp_crm_production?schema=public
-      - DIRECT_URL=postgresql://postgres:production_db_secure_password@db:5432/erp_crm_production?schema=public
-      - JWT_SECRET=production_super_secret_jwt_key_to_be_replaced
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-production_db_secure_password}@db:5432/${POSTGRES_DB:-erp_crm_production}?schema=public
+      - DIRECT_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-production_db_secure_password}@db:5432/${POSTGRES_DB:-erp_crm_production}?schema=public
+      - JWT_SECRET=${JWT_SECRET:-production_super_secret_jwt_key_to_be_replaced}
       - AFIP_CUIT=20123456789
       - AFIP_PRODUCTION=false
       - AFIP_CERT_PATH=./certs/homo.crt
