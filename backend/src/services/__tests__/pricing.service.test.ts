@@ -9,6 +9,7 @@ describe('PricingService Unit Tests (Motor de Precios y Reglas)', () => {
     cuit: '20123456789',
     address: null,
     city: null,
+    barrio: null,
     province: null,
     zipCode: null,
     phone: null,

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Wand2, X, Sparkles, PackageCheck, Sliders, RefreshCw, ArrowRightLeft, CheckCircle2, AlertTriangle, ShieldCheck, Tag } from 'lucide-react';
+import { Wand2, X, Sparkles, PackageCheck, RefreshCw, CheckCircle2, Info, Edit2, Replace, Search } from 'lucide-react';
 import { api } from '../../utils/api';
 
 interface RecommendedProduct {
@@ -24,18 +24,164 @@ interface WeeklyOfferWizardModalProps {
   onCampaignCreated: (campaignId: number) => void;
 }
 
+function getConciseReason(productName: string, group?: string, rawReason?: string): string {
+  if (rawReason && !rawReason.includes('Seleccionado automáticamente') && !rawReason.includes('regla de rubro') && !rawReason.includes('Producto Seleccionado')) {
+    return rawReason;
+  }
+  const p = (productName || '').toUpperCase();
+
+  // 1. Duros (REGG, REGGANITO, REGGIANITO, SARDO, SBRINZ, PEPATO, PROV, PROVOLONE, PROVOLETA, GOYA, etc.)
+  if (
+    p.includes('REGG') || p.includes('SARDO') || p.includes('SBRINZ') || 
+    p.includes('PEPATO') || p.includes('PROV') || p.includes('GOYA') || 
+    p.includes('PARMESANO') || p.includes('ROMANO') || p.includes('DURO')
+  ) {
+    return '2 Quesos Duros';
+  }
+
+  // 2. Semiduros (TYBO, GOUDA, CHEDDAR, FONT, FONTINA, HOLANDO, DANBO, BARRA, PATE, PATEGRAS, EDAM, etc.)
+  if (
+    p.includes('TYBO') || p.includes('GOUDA') || p.includes('CHEDDAR') || 
+    p.includes('FONT') || p.includes('HOLANDO') || p.includes('DANBO') || 
+    p.includes('BARRA') || p.includes('PATE') || p.includes('EDAM') || 
+    p.includes('FIAMBRE') || p.includes('SEMIDURO')
+  ) {
+    return '2 Quesos Semiduros';
+  }
+
+  // 3. Blandos & Especiales (AZUL, ROQUEFORT, CREMOSO, CREM, SALUT, MOZZA, BLANDO, FRESCO)
+  if (p.includes('AZUL') || p.includes('ROQUEFORT')) {
+    return 'Queso Azul Especial';
+  }
+  if (
+    p.includes('CREMOSO') || p.includes('CREM') || p.includes('SALUT') || 
+    p.includes('MOZZARELLA') || p.includes('MOZZA') || p.includes('BLANDO') || 
+    p.includes('FRESCO')
+  ) {
+    return '2 Quesos Blandos';
+  }
+
+  // 4. Rallados & Untables
+  if (p.includes('RALLADO') || p.includes('RALL')) {
+    return '1 Queso Rallado Obligatorio';
+  }
+  if (p.includes('UNTABLE') || p.includes('QUESO CREMA') || p.includes('CREMA')) {
+    return '1 Untable / Queso Crema Obligatorio';
+  }
+
+  // 5. Rotación Cremigal / Lácteos
+  if (p.includes('POLVO')) return 'Rotación Leche en Polvo';
+  if (p.includes('DULCE') || p.includes('DDL') || p.includes('REPOSTERO')) return 'Rotación Dulce de Leche';
+  if (p.includes('MANTECA')) return 'Rotación Manteca';
+  if (p.includes('LECHE') || p.includes('YOGURT')) return 'Básico Fijo Cremigal';
+
+  // 6. Bebidas & RPB
+  if (p.includes('BAGGIO') || p.includes('VIDA') || p.includes('MOCORETA') || p.includes('RPB')) return 'Jugo Baggio / Vida (Fijo)';
+  if (p.includes('FERNET') || p.includes('BRANCA')) return 'Fernet Branca (Fijo)';
+  if (
+    p.includes('VINO') || p.includes('BALBO') || p.includes('JULIA') || 
+    p.includes('BIANCHI') || p.includes('ALAMBRADO') || p.includes('PERDIZ') || 
+    p.includes('ZUCCARDI') || p.includes('LOPEZ') || p.includes('RURAL')
+  ) return 'Vino Seleccionado de Bodega';
+
+  // 7. Almacén
+  if (p.includes('GIACOMO') || p.includes('CAPELETTINI')) return 'Capelettini Giacomo (Fijo)';
+  if (p.includes('NATURA') || p.includes('MAYONESA') || p.includes('MAYO') || p.includes('MOSTAZA') || p.includes('KETCHUP')) return 'Rotación Mayonesa / Aderezos';
+  if (p.includes('AMANDA') || p.includes('ANDRESITO') || p.includes('PLAYADITO') || p.includes('YERBA')) return 'Rotación Yerba Mate';
+
+  // Fallbacks limpios por grupo
+  if (group === 'MELINCUE' || group === 'CREMIGAL') return 'Sugerido por parámetro de Quesería / Lácteos';
+  if (group === 'BEBIDAS' || group === 'R.P.B') return 'Sugerido por parámetro de Bebidas';
+  if (group === 'ALMACEN') return 'Sugerido por parámetro de Almacén';
+
+  return 'Sugerido por regla del catálogo';
+}
+
+function renderTypeBadge(productName: string) {
+  const p = (productName || '').toUpperCase();
+  
+  let label = '';
+  let bg = 'rgba(148, 163, 184, 0.12)';
+  let color = '#475569';
+  let border = 'rgba(148, 163, 184, 0.25)';
+
+  if (
+    p.includes('REGG') || p.includes('SARDO') || p.includes('SBRINZ') || 
+    p.includes('PEPATO') || p.includes('PROV') || p.includes('GOYA') || 
+    p.includes('PARMESANO') || p.includes('ROMANO') || p.includes('DURO')
+  ) {
+    label = 'DURO';
+    bg = 'rgba(59, 130, 246, 0.12)';
+    color = '#2563eb';
+    border = 'rgba(59, 130, 246, 0.25)';
+  } else if (
+    p.includes('TYBO') || p.includes('GOUDA') || p.includes('CHEDDAR') || 
+    p.includes('FONT') || p.includes('HOLANDO') || p.includes('DANBO') || 
+    p.includes('BARRA') || p.includes('PATE') || p.includes('EDAM') || 
+    p.includes('FIAMBRE') || p.includes('SEMIDURO')
+  ) {
+    label = 'SEMIDURO';
+    bg = 'rgba(139, 92, 246, 0.12)';
+    color = '#7c3aed';
+    border = 'rgba(139, 92, 246, 0.25)';
+  } else if (p.includes('AZUL') || p.includes('ROQUEFORT')) {
+    label = 'AZUL';
+    bg = 'rgba(14, 165, 233, 0.12)';
+    color = '#0284c7';
+    border = 'rgba(14, 165, 233, 0.25)';
+  } else if (
+    p.includes('CREMOSO') || p.includes('CREM') || p.includes('SALUT') || 
+    p.includes('MOZZARELLA') || p.includes('MOZZA') || p.includes('BLANDO') || 
+    p.includes('FRESCO')
+  ) {
+    label = 'BLANDO';
+    bg = 'rgba(16, 185, 129, 0.12)';
+    color = '#059669';
+    border = 'rgba(16, 185, 129, 0.25)';
+  } else if (p.includes('RALLADO') || p.includes('RALL')) {
+    label = 'RALLADO';
+    bg = 'rgba(245, 158, 11, 0.12)';
+    color = '#d97706';
+    border = 'rgba(245, 158, 11, 0.25)';
+  } else if (p.includes('UNTABLE') || p.includes('QUESO CREMA') || p.includes('CREMA')) {
+    label = 'UNTABLE';
+    bg = 'rgba(6, 182, 212, 0.12)';
+    color = '#0891b2';
+    border = 'rgba(6, 182, 212, 0.25)';
+  }
+
+  if (!label) return null;
+
+  return (
+    <span style={{
+      fontSize: '9px',
+      fontWeight: 'bold',
+      padding: '2px 6px',
+      borderRadius: '4px',
+      backgroundColor: bg,
+      color: color,
+      border: `1px solid ${border}`,
+      letterSpacing: '0.4px',
+      textTransform: 'uppercase',
+      flexShrink: 0
+    }}>
+      {label}
+    </span>
+  );
+}
+
 export default function WeeklyOfferWizardModal({ isOpen, onClose, onCampaignCreated }: WeeklyOfferWizardModalProps) {
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
-  const [viewMode, setViewMode] = useState<'proposal' | 'comparison'>('proposal');
   
   // Recommendations data
   const [recommendations, setRecommendations] = useState<Record<string, RecommendedProduct[]>>({});
   const [detectedWeekNumber, setDetectedWeekNumber] = useState<number>(1);
   const [selectedWeekParam, setSelectedWeekParam] = useState<'auto' | '1' | '2'>('auto');
 
-  // Comparison data
-  const [comparisonData, setComparisonData] = useState<any | null>(null);
+  // Baseline comparison data
+  const [baselineTitle, setBaselineTitle] = useState<string>('OFERTA ANTERIOR');
+  const [baselineItemsMap, setBaselineItemsMap] = useState<Record<number, { price: number; name: string; sku: string; tag?: string }>>({});
 
   // Custom campaign title
   const [title, setTitle] = useState('');
@@ -49,6 +195,15 @@ export default function WeeklyOfferWizardModal({ isOpen, onClose, onCampaignCrea
   // Custom edited tags: productId -> string
   const [customTags, setCustomTags] = useState<Record<number, string>>({});
 
+  // Active (VER) detail modal
+  const [activeVerModal, setActiveVerModal] = useState<RecommendedProduct | null>(null);
+
+  // Product replacement drawer
+  const [changingProductRow, setChangingProductRow] = useState<RecommendedProduct | null>(null);
+  const [replacementSearch, setReplacementSearch] = useState('');
+  const [categoryProducts, setCategoryProducts] = useState<any[]>([]);
+  const [loadingProducts, setLoadingProducts] = useState(false);
+
   useEffect(() => {
     if (isOpen) {
       const today = new Date();
@@ -57,24 +212,24 @@ export default function WeeklyOfferWizardModal({ isOpen, onClose, onCampaignCrea
       const titleDefault = `Ofertas Semanales ${today.getDate()} al ${nextWeek.getDate()} de ${today.toLocaleString('es-AR', { month: 'long' })}`;
       setTitle(titleDefault);
       
-      loadRecommendations('auto');
-      loadComparison();
+      loadData('auto');
     }
   }, [isOpen]);
 
-  const loadRecommendations = async (weekVal: 'auto' | '1' | '2' = 'auto', isShuffle: boolean = false) => {
+  const loadData = async (weekVal: 'auto' | '1' | '2' = 'auto', isShuffle: boolean = false) => {
     setLoading(true);
     try {
-      const res = await api.getWeeklyOfferRecommendations({
+      // 1. Cargar recomendaciones pre-armadas (Rotación + Stock vivo)
+      const recRes = await api.getWeeklyOfferRecommendations({
         week: weekVal,
         shuffle: isShuffle ? 'true' : 'false'
       } as any);
 
-      const payload = res?.recommendationsByGroup ? res : (res?.data || {});
-      if (payload && payload.recommendationsByGroup) {
-        const groups: Record<string, RecommendedProduct[]> = payload.recommendationsByGroup || {};
+      const recPayload = recRes?.recommendationsByGroup ? recRes : (recRes?.data || {});
+      if (recPayload && recPayload.recommendationsByGroup) {
+        const groups: Record<string, RecommendedProduct[]> = recPayload.recommendationsByGroup || {};
         setRecommendations(groups);
-        setDetectedWeekNumber(payload.detectedWeekNumber || 1);
+        setDetectedWeekNumber(recPayload.detectedWeekNumber || 1);
 
         const initialSelected: Record<number, boolean> = {};
         const initialPrices: Record<number, number> = {};
@@ -90,28 +245,39 @@ export default function WeeklyOfferWizardModal({ isOpen, onClose, onCampaignCrea
         setCustomPrices(initialPrices);
         setCustomTags(initialTags);
       }
+
+      // 2. Cargar campaña de la semana anterior (Baseline limpia)
+      const compRes = await api.getCampaignComparison();
+      const compPayload = compRes?.data || compRes || {};
+      if (compPayload) {
+        setBaselineTitle(compPayload.baselineTitle || 'OFERTA ANTERIOR VIGENTE');
+        
+        const bMap: Record<number, { price: number; name: string; sku: string; tag?: string }> = {};
+        const details = compPayload.details || {};
+        const baselineItems = [...(details.retained || []), ...(details.removedByRotation || [])];
+        
+        baselineItems.forEach((item: any) => {
+          const pid = item.productId || item.product?.id || item.id;
+          const price = Number(item.offerPrice || item.price || 0);
+          const name = item.product?.name || item.name || '';
+          const sku = item.product?.sku || item.sku || '';
+          if (pid) {
+            bMap[pid] = { price, name, sku, tag: item.specialTag || undefined };
+          }
+        });
+        
+        setBaselineItemsMap(bMap);
+      }
     } catch (error) {
-      console.error('Error loading offer recommendations:', error);
+      console.error('Error loading wizard offer data:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const loadComparison = async () => {
-    try {
-      const res = await api.getCampaignComparison();
-      const payload = res?.details ? res : (res?.data || {});
-      if (payload) {
-        setComparisonData(payload);
-      }
-    } catch (error) {
-      console.error('Error loading comparison:', error);
-    }
-  };
-
   const handleWeekChange = (weekVal: 'auto' | '1' | '2') => {
     setSelectedWeekParam(weekVal);
-    loadRecommendations(weekVal);
+    loadData(weekVal);
   };
 
   if (!isOpen) return null;
@@ -169,6 +335,56 @@ export default function WeeklyOfferWizardModal({ isOpen, onClose, onCampaignCrea
     }
   };
 
+  const formatCurrency = (val: number | null | undefined) => {
+    if (val === null || val === undefined || isNaN(val)) return '—';
+    return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(val);
+  };
+
+  const openReplacementModal = async (row: RecommendedProduct) => {
+    setChangingProductRow(row);
+    setLoadingProducts(true);
+    try {
+      const data = await api.getProducts(row.campaignGroup);
+      setCategoryProducts(data || []);
+    } catch (err) {
+      console.error('Error loading replacement products:', err);
+    } finally {
+      setLoadingProducts(false);
+    }
+  };
+
+  const handleReplaceProduct = (newProd: any) => {
+    if (!changingProductRow) return;
+    const group = changingProductRow.campaignGroup;
+
+    setRecommendations(prev => {
+      const copy = { ...prev };
+      if (copy[group]) {
+        copy[group] = copy[group].map(p => {
+          if (p.id === changingProductRow.id) {
+            return {
+              ...p,
+              id: newProd.id,
+              name: newProd.name,
+              sku: newProd.sku,
+              listPrice: newProd.listPrice,
+              suggestedPrice: newProd.listPrice,
+              reason: `Sustituido manualmente por el usuario (${newProd.name})`
+            };
+          }
+          return p;
+        });
+      }
+      return copy;
+    });
+
+    setSelectedMap(prev => ({ ...prev, [newProd.id]: true }));
+    setCustomPrices(prev => ({ ...prev, [newProd.id]: newProd.listPrice }));
+
+    setChangingProductRow(null);
+    setActiveVerModal(null);
+  };
+
   return (
     <div style={{
       position: 'fixed',
@@ -185,7 +401,7 @@ export default function WeeklyOfferWizardModal({ isOpen, onClose, onCampaignCrea
         backgroundColor: 'var(--bg-card, #ffffff)',
         borderRadius: '16px',
         width: '100%',
-        maxWidth: '1120px',
+        maxWidth: '1280px',
         maxHeight: '94vh',
         display: 'flex',
         flexDirection: 'column',
@@ -194,7 +410,7 @@ export default function WeeklyOfferWizardModal({ isOpen, onClose, onCampaignCrea
         overflow: 'hidden'
       }}>
         
-        {/* Header */}
+        {/* Modal Header */}
         <div style={{
           padding: '16px 24px',
           borderBottom: '1px solid var(--border-color, #e2e8f0)',
@@ -233,7 +449,7 @@ export default function WeeklyOfferWizardModal({ isOpen, onClose, onCampaignCrea
                 </span>
               </div>
               <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: 'var(--text-secondary, #64748b)' }}>
-                Matriz de rotación automática basada en la planilla maestra (Fijos + Alternancia Semana 1 / 2 + Stock Vivo).
+                Vista calcada de la planilla Excel con botones [OK] y (VER) para inspeccionar reglas y sustituir productos.
               </p>
             </div>
           </div>
@@ -246,7 +462,7 @@ export default function WeeklyOfferWizardModal({ isOpen, onClose, onCampaignCrea
           </button>
         </div>
 
-        {/* Top Control Bar: Mode Toggle & Selector */}
+        {/* Top Rotation Controls */}
         <div style={{
           padding: '10px 24px',
           backgroundColor: 'var(--bg-card, #ffffff)',
@@ -256,7 +472,6 @@ export default function WeeklyOfferWizardModal({ isOpen, onClose, onCampaignCrea
           alignItems: 'center',
           fontSize: '13px'
         }}>
-          {/* Week Selector Buttons */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span style={{ fontWeight: '600', color: 'var(--text-secondary)', fontSize: '12px' }}>Rotación:</span>
             <button
@@ -306,7 +521,7 @@ export default function WeeklyOfferWizardModal({ isOpen, onClose, onCampaignCrea
             </button>
 
             <button
-              onClick={() => loadRecommendations(selectedWeekParam, true)}
+              onClick={() => loadData(selectedWeekParam, true)}
               style={{
                 marginLeft: '12px',
                 backgroundColor: 'transparent',
@@ -325,45 +540,6 @@ export default function WeeklyOfferWizardModal({ isOpen, onClose, onCampaignCrea
               <RefreshCw size={13} /> Recalcular Stock
             </button>
           </div>
-
-          {/* View Mode Toggle: Proposal vs Side-by-Side Comparison */}
-          <div style={{ display: 'flex', backgroundColor: 'var(--bg-secondary)', padding: '3px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-            <button
-              onClick={() => setViewMode('proposal')}
-              style={{
-                padding: '5px 14px',
-                borderRadius: '6px',
-                border: 'none',
-                fontSize: '12px',
-                fontWeight: 'bold',
-                cursor: 'pointer',
-                backgroundColor: viewMode === 'proposal' ? 'var(--bg-card)' : 'transparent',
-                color: viewMode === 'proposal' ? '#8b5cf6' : 'var(--text-secondary)',
-                boxShadow: viewMode === 'proposal' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
-              }}
-            >
-              📋 Lista Pre-armada
-            </button>
-            <button
-              onClick={() => setViewMode('comparison')}
-              style={{
-                padding: '5px 14px',
-                borderRadius: '6px',
-                border: 'none',
-                fontSize: '12px',
-                fontWeight: 'bold',
-                cursor: 'pointer',
-                backgroundColor: viewMode === 'comparison' ? 'var(--bg-card)' : 'transparent',
-                color: viewMode === 'comparison' ? '#8b5cf6' : 'var(--text-secondary)',
-                boxShadow: viewMode === 'comparison' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '5px'
-              }}
-            >
-              <ArrowRightLeft size={14} /> Comparador Side-by-Side
-            </button>
-          </div>
         </div>
 
         {/* Campaign Title & Selection Summary */}
@@ -376,7 +552,7 @@ export default function WeeklyOfferWizardModal({ isOpen, onClose, onCampaignCrea
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Ej: Ofertas Semanales 15 de Agosto"
+              placeholder="Ej: Ofertas Semanales 31 de Agosto"
               style={{
                 width: '100%',
                 padding: '6px 12px',
@@ -396,100 +572,54 @@ export default function WeeklyOfferWizardModal({ isOpen, onClose, onCampaignCrea
           </div>
         </div>
 
-        {/* Main Content Area */}
+        {/* Clean Side-by-Side Dual Table (Exact Excel Template Layout) */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '16px 24px' }}>
           {loading ? (
             <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--text-secondary)' }}>
               <Sparkles className="animate-spin" size={32} style={{ marginBottom: '12px', color: '#8b5cf6', margin: '0 auto 12px auto' }} />
-              <div>Cargando matriz paramétrica y stock vivo del catálogo...</div>
-            </div>
-          ) : viewMode === 'comparison' ? (
-            /* SIDE BY SIDE COMPARISON VIEW */
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                
-                {/* Column 1: Baseline Previous Offer */}
-                <div style={{ border: '1px solid var(--border-color)', borderRadius: '10px', padding: '14px', backgroundColor: 'var(--bg-secondary)' }}>
-                  <div style={{ fontSize: '13px', fontWeight: 'bold', color: 'var(--text-secondary)', marginBottom: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span>⏮️ Baseline / Oferta Anterior (15-08)</span>
-                    <span style={{ fontSize: '11px', fontWeight: 'normal', backgroundColor: 'var(--bg-card)', padding: '2px 8px', borderRadius: '4px' }}>69 productos</span>
-                  </div>
-                  <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '0 0 12px 0' }}>
-                    Estructura tomada como referencia base de catálogo semanal.
-                  </p>
-                  
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '350px', overflowY: 'auto' }}>
-                    {comparisonData?.details?.removedByRotation?.map((item: any) => (
-                      <div key={item.id} style={{ fontSize: '12px', padding: '6px 10px', backgroundColor: 'rgba(239, 68, 68, 0.05)', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '6px', display: 'flex', justifyContent: 'space-between' }}>
-                        <span style={{ textDecoration: 'line-through', color: '#ef4444' }}>{item.product?.name || item.name}</span>
-                        <span style={{ fontSize: '10px', fontWeight: 'bold', color: '#ef4444' }}>ROTADO OUT</span>
-                      </div>
-                    ))}
-                    {comparisonData?.details?.retained?.map((item: any) => (
-                      <div key={item.id} style={{ fontSize: '12px', padding: '6px 10px', backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '6px', display: 'flex', justifyContent: 'space-between' }}>
-                        <span>{item.product?.name || item.name}</span>
-                        <span style={{ fontSize: '10px', fontWeight: 'bold', color: '#10b981' }}>SE MANTIENE</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Column 2: New Proposed Offer */}
-                <div style={{ border: '1px solid #8b5cf6', borderRadius: '10px', padding: '14px', backgroundColor: 'rgba(139, 92, 246, 0.03)' }}>
-                  <div style={{ fontSize: '13px', fontWeight: 'bold', color: '#8b5cf6', marginBottom: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span>✨ Nueva Oferta Pre-armada (Semana {detectedWeekNumber})</span>
-                    <span style={{ fontSize: '11px', fontWeight: 'bold', backgroundColor: '#8b5cf6', color: 'white', padding: '2px 8px', borderRadius: '4px' }}>
-                      {selectedCount} seleccionados
-                    </span>
-                  </div>
-                  <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: '0 0 12px 0' }}>
-                    Alternancia aplicada automáticamente con validación de stock.
-                  </p>
-
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '350px', overflowY: 'auto' }}>
-                    {Object.values(recommendations).flat().filter(p => selectedMap[p.id]).map(p => (
-                      <div key={p.id} style={{ fontSize: '12px', padding: '6px 10px', backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div>
-                          <div style={{ fontWeight: 'bold', color: 'var(--text-primary)' }}>{p.name}</div>
-                          <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>{p.reason}</div>
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <span style={{
-                            fontSize: '10px',
-                            fontWeight: 'bold',
-                            padding: '2px 6px',
-                            borderRadius: '4px',
-                            backgroundColor: p.isFixedAlways ? 'rgba(16, 185, 129, 0.12)' : 'rgba(59, 130, 246, 0.12)',
-                            color: p.isFixedAlways ? '#10b981' : '#3b82f6'
-                          }}>
-                            {p.isFixedAlways ? 'FIJO' : `ROTACIÓN SEM ${detectedWeekNumber}`}
-                          </span>
-                          <span style={{ fontWeight: 'bold', color: '#8b5cf6' }}>
-                            ${(customPrices[p.id] !== undefined ? customPrices[p.id] : p.suggestedPrice).toFixed(2)}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-              </div>
+              <div>Cargando matriz paramétrica y oferta previa del catálogo...</div>
             </div>
           ) : (
-            /* PREPROPOSED LIST VIEW (DEFAULT) */
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            <div style={{ border: '1px solid var(--border-color)', borderRadius: '12px', overflow: 'hidden', backgroundColor: 'var(--bg-card)', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
+              
+              {/* Dual Column Header (Excel Grey/Dark Banner Style) */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', backgroundColor: '#334155', color: 'white', borderBottom: '2px solid #0f172a' }}>
+                <div style={{ padding: '12px 18px', fontWeight: 'bold', fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.5px', borderRight: '1px solid #475569', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span>VIGENCIA: {baselineTitle}</span>
+                  <span style={{ fontSize: '11px', opacity: 0.8, fontWeight: 'normal' }}>Oferta Base Anterior</span>
+                </div>
+                <div style={{ padding: '12px 18px', fontWeight: 'bold', fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.5px', backgroundColor: '#1e1b4b', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span>VIGENCIA: {title || 'Propuesta de la Semana'}</span>
+                  <span style={{ fontSize: '11px', opacity: 0.8, fontWeight: 'normal' }}>Ofertas Nuevas Sugeridas</span>
+                </div>
+              </div>
+
+              {/* Render Groups (MELINCUE, CREMIGAL, R.P.B, BEBIDAS, ALMACEN, etc.) */}
               {Object.entries(recommendations).map(([category, items]) => {
                 if (!items || items.length === 0) return null;
+                
+                // Get clean baseline list for this category
+                const baselineEntries = Object.entries(baselineItemsMap)
+                  .map(([pid, info]) => ({ pid: Number(pid), ...info }));
+                
                 const categoryAllSelected = items.every(p => selectedMap[p.id]);
+
                 return (
-                  <div key={category} style={{ border: '1px solid var(--border-color)', borderRadius: '10px', overflow: 'hidden' }}>
-                    {/* Category Header */}
-                    <div style={{
-                      padding: '10px 14px',
-                      backgroundColor: 'var(--bg-secondary, #f8fafc)',
+                  <div key={category} style={{ borderBottom: '1px solid var(--border-color)' }}>
+                    
+                    {/* Category Banner Row (Excel Style) */}
+                    <div style={{ 
+                      backgroundColor: 'var(--bg-secondary, #cbd5e1)', 
+                      padding: '8px 18px', 
+                      fontWeight: 'bold', 
+                      fontSize: '13px', 
+                      color: '#0f172a', 
                       borderBottom: '1px solid var(--border-color)',
+                      borderTop: '1px solid var(--border-color)',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px',
                       display: 'flex',
-                      justifyContent: 'space-between',
+                      justify: 'space-between',
                       alignItems: 'center'
                     }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -499,143 +629,114 @@ export default function WeeklyOfferWizardModal({ isOpen, onClose, onCampaignCrea
                           onChange={() => toggleCategory(items)}
                           style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: '#8b5cf6' }}
                         />
-                        <span style={{ fontWeight: 'bold', fontSize: '13px', color: 'var(--text-primary)' }}>
-                          {category.toUpperCase()} ({items.length} sugeridos)
-                        </span>
+                        <span>{category}</span>
                       </div>
-                      <button
-                        onClick={() => toggleCategory(items)}
-                        style={{ background: 'none', border: 'none', color: '#8b5cf6', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}
-                      >
-                        {categoryAllSelected ? 'Desmarcar Grupo' : 'Seleccionar Grupo'}
-                      </button>
+                      <span style={{ fontSize: '11px', fontWeight: 'normal', color: '#475569' }}>
+                        {items.length} sugeridos
+                      </span>
                     </div>
 
-                    {/* Category Table */}
-                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
-                      <thead>
-                        <tr style={{ color: 'var(--text-secondary)', textAlign: 'left', fontSize: '11px', borderBottom: '1px solid var(--border-color)', backgroundColor: 'var(--bg-card)' }}>
-                          <th style={{ padding: '8px 12px', width: '36px' }}></th>
-                          <th style={{ padding: '8px 12px' }}>Producto</th>
-                          <th style={{ padding: '8px 12px' }}>Motivo / Regla</th>
-                          <th style={{ padding: '8px 12px', textAlign: 'right' }}>Stock Depósito</th>
-                          <th style={{ padding: '8px 12px', textAlign: 'right' }}>Precio Lista</th>
-                          <th style={{ padding: '8px 12px', textAlign: 'right', width: '110px' }}>Precio Oferta</th>
-                          <th style={{ padding: '8px 12px', textAlign: 'center', width: '140px' }}>Etiqueta / Promo</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {items.map(p => {
-                          const isSelected = !!selectedMap[p.id];
-                          return (
-                            <tr key={p.id} style={{
-                              borderBottom: '1px solid var(--border-color)',
-                              backgroundColor: isSelected ? 'rgba(139, 92, 246, 0.02)' : 'transparent',
-                              opacity: isSelected ? 1 : 0.5
-                            }}>
-                              <td style={{ padding: '8px 12px', textAlign: 'center' }}>
-                                <input 
-                                  type="checkbox"
-                                  checked={isSelected}
-                                  onChange={() => toggleSelect(p.id)}
-                                  style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: '#8b5cf6' }}
-                                />
-                              </td>
-                              <td style={{ padding: '8px 12px' }}>
-                                <div style={{ fontWeight: '600', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                  {p.name}
-                                  {p.isFixedAlways && (
-                                    <span style={{ fontSize: '9px', fontWeight: 'bold', backgroundColor: 'rgba(16, 185, 129, 0.12)', color: '#10b981', padding: '1px 5px', borderRadius: '4px' }}>
-                                      FIJO
-                                    </span>
-                                  )}
-                                  {p.isRotatedIn && (
-                                    <span style={{ fontSize: '9px', fontWeight: 'bold', backgroundColor: 'rgba(59, 130, 246, 0.12)', color: '#3b82f6', padding: '1px 5px', borderRadius: '4px' }}>
-                                      ROTACIÓN
-                                    </span>
-                                  )}
+                    {/* Side-by-Side Product Rows */}
+                    {items.map((p, idx) => {
+                      const isSelected = !!selectedMap[p.id];
+                      const baselineInfo = baselineItemsMap[p.id];
+                      const baselinePrice = baselineInfo ? baselineInfo.price : null;
+                      const offerPrice = customPrices[p.id] !== undefined ? customPrices[p.id] : p.suggestedPrice;
+
+                      return (
+                        <div 
+                          key={p.id}
+                          style={{ 
+                            display: 'grid', 
+                            gridTemplateColumns: '1fr 1fr',
+                            borderBottom: idx === items.length - 1 ? 'none' : '1px solid var(--border-color)',
+                            backgroundColor: idx % 2 === 0 ? 'transparent' : 'rgba(0, 0, 0, 0.015)',
+                            opacity: isSelected ? 1 : 0.5
+                          }}
+                        >
+                          {/* Left Column Cell: Previous Offer Product (Clean Intocada) */}
+                          <div style={{ 
+                            padding: '9px 18px', 
+                            display: 'flex', 
+                            justify: 'space-between', 
+                            alignItems: 'center', 
+                            borderRight: '1px solid var(--border-color)'
+                          }}>
+                            {baselinePrice !== null ? (
+                              <>
+                                <div style={{ flex: 1, paddingRight: '10px', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                  <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-primary)' }}>
+                                    {baselineInfo?.name || p.name}
+                                  </span>
+                                  {renderTypeBadge(baselineInfo?.name || p.name, category)}
                                 </div>
-                                <div style={{ fontSize: '11px', color: 'var(--text-secondary)', fontFamily: 'monospace' }}>SKU: {p.sku}</div>
-                              </td>
-                              <td style={{ padding: '8px 12px' }}>
-                                <span style={{
+                                <div style={{ fontWeight: 'bold', fontSize: '14px', color: 'var(--text-primary)' }}>
+                                  {formatCurrency(baselinePrice)}
+                                </div>
+                              </>
+                            ) : (
+                              <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>—</span>
+                            )}
+                          </div>
+
+                          {/* Right Column Cell: Proposed Offer Product */}
+                          <div style={{ 
+                            padding: '9px 18px', 
+                            display: 'flex', 
+                            justify: 'space-between', 
+                            alignItems: 'center',
+                            backgroundColor: isSelected ? 'rgba(139, 92, 246, 0.02)' : 'transparent'
+                          }}>
+                            <div style={{ flex: 1, paddingRight: '10px', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                              <input 
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={() => toggleSelect(p.id)}
+                                style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: '#8b5cf6', flexShrink: 0 }}
+                              />
+                              <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-primary)' }}>
+                                {p.name}
+                              </span>
+                              {renderTypeBadge(p.name, category)}
+                            </div>
+
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                              <span style={{ fontWeight: 'bold', fontSize: '14px', color: 'var(--text-primary)' }}>
+                                {formatCurrency(offerPrice)}
+                              </span>
+
+                              {/* (VER) Button */}
+                              <button
+                                onClick={() => setActiveVerModal(p)}
+                                style={{
+                                  background: 'none',
+                                  border: 'none',
+                                  color: '#3b82f6',
                                   fontSize: '11px',
-                                  fontWeight: '600',
-                                  padding: '2px 7px',
-                                  borderRadius: '6px',
-                                  backgroundColor: p.reason.includes('⚠️') ? 'rgba(239, 68, 68, 0.1)' : p.reason.includes('Rotación') ? 'rgba(59, 130, 246, 0.1)' : 'rgba(16, 185, 129, 0.1)',
-                                  color: p.reason.includes('⚠️') ? '#ef4444' : p.reason.includes('Rotación') ? '#3b82f6' : '#10b981'
-                                }}>
-                                  {p.reason}
-                                </span>
-                              </td>
-                              <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: '500' }}>
-                                <span style={{
-                                  color: p.stockStatus === 'OUT_OF_STOCK' ? '#ef4444' : p.stockStatus === 'LOW_STOCK' ? '#f59e0b' : 'var(--text-secondary)',
-                                  fontWeight: p.stockStatus !== 'OK' ? 'bold' : 'normal'
-                                }}>
-                                  {p.stock} un.
-                                </span>
-                              </td>
-                              <td style={{ padding: '8px 12px', textAlign: 'right', color: 'var(--text-muted)' }}>
-                                ${p.listPrice.toFixed(2)}
-                              </td>
-                              <td style={{ padding: '8px 12px', textAlign: 'right' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '3px' }}>
-                                  <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>$</span>
-                                  <input 
-                                    type="number"
-                                    step="0.01"
-                                    value={customPrices[p.id] !== undefined ? customPrices[p.id] : p.suggestedPrice}
-                                    onChange={(e) => {
-                                      const val = parseFloat(e.target.value);
-                                      setCustomPrices(prev => ({ ...prev, [p.id]: isNaN(val) ? 0 : val }));
-                                    }}
-                                    style={{
-                                      width: '85px',
-                                      padding: '4px 6px',
-                                      borderRadius: '6px',
-                                      border: '1px solid var(--border-color)',
-                                      textAlign: 'right',
-                                      fontWeight: 'bold',
-                                      fontSize: '12px',
-                                      backgroundColor: 'var(--bg-card)',
-                                      color: 'var(--text-primary)'
-                                    }}
-                                  />
-                                </div>
-                              </td>
-                              <td style={{ padding: '8px 12px', textAlign: 'center' }}>
-                                <input 
-                                  type="text"
-                                  value={customTags[p.id] || ''}
-                                  onChange={(e) => setCustomTags(prev => ({ ...prev, [p.id]: e.target.value }))}
-                                  placeholder="Ej: CADA 4 CAJAS $599"
-                                  style={{
-                                    width: '130px',
-                                    padding: '4px 6px',
-                                    borderRadius: '6px',
-                                    border: '1px solid var(--border-color)',
-                                    textAlign: 'center',
-                                    fontSize: '10px',
-                                    backgroundColor: 'var(--bg-card)',
-                                    color: 'var(--text-primary)'
-                                  }}
-                                />
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
+                                  fontWeight: 'bold',
+                                  cursor: 'pointer',
+                                  textDecoration: 'underline',
+                                  padding: '2px 4px'
+                                }}
+                              >
+                                (VER)
+                              </button>
+                            </div>
+                          </div>
+
+                        </div>
+                      );
+                    })}
+
                   </div>
                 );
               })}
+
             </div>
           )}
         </div>
 
-        {/* Footer */}
+        {/* Modal Footer Action Bar */}
         <div style={{
           padding: '12px 24px',
           borderTop: '1px solid var(--border-color, #e2e8f0)',
@@ -656,7 +757,7 @@ export default function WeeklyOfferWizardModal({ isOpen, onClose, onCampaignCrea
             onClick={handleCreateCampaign}
             disabled={selectedCount === 0 || !title.trim() || creating}
             style={{
-              padding: '9px 22px',
+              padding: '9px 24px',
               backgroundColor: selectedCount > 0 && title.trim() ? '#8b5cf6' : '#cbd5e1',
               color: 'white',
               border: 'none',
@@ -675,6 +776,198 @@ export default function WeeklyOfferWizardModal({ isOpen, onClose, onCampaignCrea
         </div>
 
       </div>
+
+      {/* (VER) Inspection & Replacement Popover Modal */}
+      {activeVerModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(15, 23, 42, 0.5)',
+          backdropFilter: 'blur(3px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1100,
+          padding: '20px'
+        }}>
+          <div style={{
+            backgroundColor: 'var(--bg-card, #ffffff)',
+            borderRadius: '14px',
+            width: '100%',
+            maxWidth: '520px',
+            padding: '24px',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
+            border: '1px solid var(--border-color)'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+              <div>
+                <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#8b5cf6', textTransform: 'uppercase' }}>
+                  Detalle Paramétrico & Edición
+                </span>
+                <h3 style={{ fontSize: '17px', fontWeight: 'bold', color: 'var(--text-primary)', margin: '4px 0 0 0' }}>
+                  {activeVerModal.name}
+                </h3>
+                <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>SKU: {activeVerModal.sku} | Rubro: {activeVerModal.campaignGroup}</span>
+              </div>
+              <button onClick={() => setActiveVerModal(null)} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Motivo Paramétrico */}
+            <div style={{ padding: '12px 14px', backgroundColor: 'rgba(59, 130, 246, 0.08)', border: '1px solid rgba(59, 130, 246, 0.2)', borderRadius: '8px', marginBottom: '20px' }}>
+              <div style={{ fontSize: '11px', fontWeight: 'bold', color: '#1d4ed8', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Info size={14} /> MOTIVO DE ELECCIÓN EN EL ARCHIVO MAESTRO:
+              </div>
+              <div style={{ fontSize: '14px', color: 'var(--text-primary)', fontWeight: 'bold' }}>
+                {getConciseReason(activeVerModal.name, activeVerModal.campaignGroup, activeVerModal.reason)}
+              </div>
+            </div>
+
+            {/* Price Edit Input */}
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: 'var(--text-secondary)', marginBottom: '6px' }}>
+                Precio de Oferta ($)
+              </label>
+              <input
+                type="number"
+                value={customPrices[activeVerModal.id] !== undefined ? customPrices[activeVerModal.id] : activeVerModal.suggestedPrice}
+                onChange={(e) => {
+                  const val = parseFloat(e.target.value);
+                  setCustomPrices(prev => ({ ...prev, [activeVerModal.id]: isNaN(val) ? 0 : val }));
+                }}
+                style={{
+                  width: '100%',
+                  padding: '9px 12px',
+                  borderRadius: '8px',
+                  border: '1px solid var(--border-color)',
+                  backgroundColor: 'var(--bg-secondary)',
+                  color: 'var(--text-primary)',
+                  fontWeight: 'bold',
+                  fontSize: '14px'
+                }}
+              />
+            </div>
+
+            {/* Replace Product Button */}
+            <div style={{ display: 'flex', gap: '10px', marginTop: '24px' }}>
+              <button
+                onClick={() => openReplacementModal(activeVerModal)}
+                style={{
+                  flex: 1,
+                  padding: '10px 14px',
+                  backgroundColor: 'var(--bg-secondary)',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: '8px',
+                  fontWeight: 'bold',
+                  fontSize: '13px',
+                  color: 'var(--text-primary)',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px'
+                }}
+              >
+                <Replace size={16} /> Cambiar por Otro Producto
+              </button>
+
+              <button
+                onClick={() => setActiveVerModal(null)}
+                className="btn-primary"
+                style={{ flex: 1, padding: '10px 14px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+              >
+                <CheckCircle2 size={16} /> Guardar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Product Replacement Modal */}
+      {changingProductRow && (
+        <div style={{
+          position: 'fixed',
+          top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(15, 23, 42, 0.65)',
+          backdropFilter: 'blur(4px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1200,
+          padding: '20px'
+        }}>
+          <div style={{
+            backgroundColor: 'var(--bg-card, #ffffff)',
+            borderRadius: '14px',
+            width: '100%',
+            maxWidth: '560px',
+            maxHeight: '80vh',
+            display: 'flex',
+            flexDirection: 'column',
+            padding: '20px',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.2)',
+            border: '1px solid var(--border-color)'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 'bold', color: 'var(--text-primary)' }}>
+                Sustituir {changingProductRow.name}
+              </h3>
+              <button onClick={() => setChangingProductRow(null)} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <div style={{ marginBottom: '14px', position: 'relative' }}>
+              <Search size={16} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+              <input
+                type="text"
+                value={replacementSearch}
+                onChange={(e) => setReplacementSearch(e.target.value)}
+                placeholder="Buscar reemplazo en el rubro..."
+                style={{
+                  width: '100%',
+                  padding: '7px 10px 7px 32px',
+                  borderRadius: '6px',
+                  border: '1px solid var(--border-color)',
+                  fontSize: '13px'
+                }}
+              />
+            </div>
+
+            <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              {loadingProducts ? (
+                <div style={{ textAlign: 'center', padding: '30px' }}>Cargando catálogo...</div>
+              ) : categoryProducts.filter(p => p.name.toLowerCase().includes(replacementSearch.toLowerCase())).map(p => (
+                <div
+                  key={p.id}
+                  onClick={() => handleReplaceProduct(p)}
+                  style={{
+                    padding: '10px 12px',
+                    borderRadius: '8px',
+                    border: '1px solid var(--border-color)',
+                    display: 'flex',
+                    justify: 'space-between',
+                    alignItems: 'center',
+                    cursor: 'pointer',
+                    backgroundColor: 'var(--bg-card)'
+                  }}
+                  className="hover:bg-gray-50"
+                >
+                  <div>
+                    <div style={{ fontWeight: 'bold', fontSize: '13px', color: 'var(--text-primary)' }}>{p.name}</div>
+                    <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>SKU: {p.sku} | Stock: {p.stock} un.</div>
+                  </div>
+                  <div style={{ fontWeight: 'bold', fontSize: '13px', color: '#8b5cf6' }}>
+                    ${p.listPrice}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

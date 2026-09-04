@@ -25,9 +25,15 @@ async function main() {
   await prisma.purchaseOrderItem.deleteMany({});
   await prisma.purchaseOrder.deleteMany({});
   await prisma.supplierInvoice.deleteMany({});
+  await prisma.saleRouteVisit.deleteMany({});
   await prisma.persona.deleteMany({});
+  await prisma.saleRoute.deleteMany({});
   await prisma.product.deleteMany({});
   await prisma.rubro.deleteMany({});
+  await prisma.expense.deleteMany({});
+  await prisma.salaryAdvance.deleteMany({});
+  await prisma.payroll.deleteMany({});
+  await prisma.employee.deleteMany({});
   await prisma.user.deleteMany({});
   await prisma.weeklyReport.deleteMany({});
   await prisma.perceptionType.deleteMany({});
@@ -97,7 +103,33 @@ async function main() {
   for (const emp of realEmployees) {
     await prisma.employee.create({ data: emp });
   }
-  console.log('🌱 13 Legajos de empleados reales cargados con éxito.');
+  // 2.c. Crear Rutas de Preventa Maestras (desde pestaña Rutas de Maestro.xlsx)
+  console.log('🌱 Creando Rutas de Preventa Maestras...');
+  const masterRoutesDefs = [
+    { name: 'BUNGE Y CHARLONE', sellerId: uDiego.id, dayOfWeek: 'LUNES' },
+    { name: 'BUNGE Y BUCHARDO', sellerId: uDiego.id, dayOfWeek: 'LUNES' },
+    { name: 'VILLEGAS FABIAN', sellerId: uFabian.id, dayOfWeek: 'MARTES' },
+    { name: 'VILLEGAS NORBERTO', sellerId: uNorberto.id, dayOfWeek: 'LUNES' },
+    { name: 'VILLEGAS DIEGO', sellerId: uDiego.id, dayOfWeek: 'VIERNES' },
+    { name: 'AMEGHINO Y BLAQUIER', sellerId: uDiego.id, dayOfWeek: 'MARTES' },
+    { name: 'CUENCA', sellerId: uDiego.id, dayOfWeek: 'MARTES' },
+    { name: 'TEJEDOR', sellerId: uDiego.id, dayOfWeek: 'MARTES' },
+    { name: 'ALVEAR', sellerId: uMariaJose.id, dayOfWeek: 'MIERCOLES' },
+    { name: 'SAUCE Y SANSINENA', sellerId: uDiego.id, dayOfWeek: 'JUEVES' },
+    { name: 'PIEDRITAS', sellerId: uDiego.id, dayOfWeek: 'JUEVES' },
+    { name: 'BANDERALO Y LARROUDÉ', sellerId: uDiego.id, dayOfWeek: 'LUNES' },
+    { name: 'AMERICA Y FORTIN', sellerId: uFabian.id, dayOfWeek: 'LUNES' },
+    { name: 'TODOS', sellerId: uOficina.id, dayOfWeek: null }
+  ];
+
+  const saleRouteMap = {};
+  for (const rDef of masterRoutesDefs) {
+    const sr = await prisma.saleRoute.create({
+      data: rDef
+    });
+    saleRouteMap[sr.name] = sr.id;
+  }
+  console.log('🌱 14 Rutas Maestras de Preventa creadas.');
 
   // Map of seller name in JSON -> Seller user ID in DB
   const sellerIdMap = {
@@ -118,14 +150,17 @@ async function main() {
     
     const personasToInsert = clientsList.map((c) => {
       const sellerId = c.sellerName ? sellerIdMap[c.sellerName] : null;
+      const saleRouteId = c.route ? (saleRouteMap[c.route] || null) : null;
       return {
         name: c.name,
         cuit: c.cuit,
         address: c.address,
         city: c.city,
+        barrio: c.barrio || null,
         phone: c.phone,
         email: c.email,
         route: c.route,
+        saleRouteId: saleRouteId,
         priceList: c.priceList,
         discount: c.discount,
         creditLimit: c.creditLimit,
@@ -204,53 +239,141 @@ async function main() {
     
     console.log(`📦 Cargando ${productsList.length} productos en la base de datos...`);
     
+    const seenSkus = new Set();
+    const seenBarcodes = new Set();
+    const productsToInsert = [];
+
     for (const prod of productsList) {
+      if (!prod.sku || seenSkus.has(prod.sku)) continue;
+      seenSkus.add(prod.sku);
+
+      let barcode = prod.barcode ? String(prod.barcode).trim() : null;
+      if (barcode && seenBarcodes.has(barcode)) barcode = null;
+      if (barcode) seenBarcodes.add(barcode);
+
       const categoryName = prod.category || "OTROS";
       const rubroId = rubroMap[categoryName] || rubroMap["OTROS"] || null;
 
-      const createdProduct = await prisma.product.create({
-        data: {
-          sku: prod.sku,
-          name: prod.name,
-          description: prod.description,
-          barcode: prod.barcode,
-          costPrice: prod.costPrice,
-          listPrice: prod.listPrice,
-          listPriceB: prod.listPriceB,
-          listPriceC: prod.listPriceC,
-          stock: prod.stock,
-          minStock: prod.minStock,
-          isPesable: prod.isPesable !== undefined ? Boolean(prod.isPesable) : false,
-          approximateWeight: prod.approximateWeight !== undefined ? prod.approximateWeight : null,
-          rubroId: rubroId
-        },
-      });
-
-      let lotId = null;
-      if (prod.stock > 0) {
-        const lot = await prisma.productLot.create({
-          data: {
-            productId: createdProduct.id,
-            lotNumber: 'S/L',
-            expirationDate: new Date('2036-12-31T00:00:00Z'),
-            stock: prod.stock
-          }
-        });
-        lotId = lot.id;
-      }
-
-      await prisma.stockMovement.create({
-        data: {
-          productId: createdProduct.id,
-          quantity: prod.stock,
-          type: 'IN',
-          reason: 'Carga de stock inicial (Semilla)',
-          userId: uAdmin.id,
-          productLotId: lotId
-        },
+      productsToInsert.push({
+        sku: prod.sku,
+        name: prod.name,
+        description: prod.description,
+        barcode: barcode,
+        costPrice: prod.costPrice,
+        listPrice: prod.listPrice,
+        listPriceB: prod.listPriceB,
+        listPriceC: prod.listPriceC,
+        stock: prod.stock,
+        minStock: prod.minStock,
+        isPesable: prod.isPesable !== undefined ? Boolean(prod.isPesable) : false,
+        approximateWeight: prod.approximateWeight !== undefined ? prod.approximateWeight : null,
+        rubroId: rubroId
       });
     }
+
+    await prisma.product.createMany({ data: productsToInsert });
+    
+    const dbProducts = await prisma.product.findMany({
+      select: { id: true, sku: true, stock: true }
+    });
+
+    const lotsToInsert = [];
+    dbProducts.forEach(p => {
+      if (p.stock > 0) {
+        lotsToInsert.push({
+          productId: p.id,
+          lotNumber: 'S/L',
+          expirationDate: new Date('2036-12-31T00:00:00Z'),
+          stock: p.stock
+        });
+      }
+    });
+
+    if (lotsToInsert.length > 0) {
+      await prisma.productLot.createMany({ data: lotsToInsert });
+    }
+
+    const movementsToInsert = dbProducts.map(p => ({
+      productId: p.id,
+      quantity: p.stock,
+      type: 'IN',
+      reason: 'Carga de stock inicial (Semilla)',
+      userId: uAdmin.id
+    }));
+
+    if (movementsToInsert.length > 0) {
+      await prisma.stockMovement.createMany({ data: movementsToInsert });
+    }
+
     console.log('📦 Productos y movimientos de stock iniciales creados.');
+
+    // 5.b. Auto-Restauración y Vinculación Transparente de Imágenes de Productos (Regla 6)
+    console.log('🛡️ Auto-Restaurando y vinculando imágenes desde carpeta maestra...');
+    const masterPath = path.join(__dirname, '../../ARCHIVOS/fotos/Productos');
+    const uploadsPath = path.join(__dirname, '../uploads/products');
+    if (!fs.existsSync(uploadsPath)) {
+      fs.mkdirSync(uploadsPath, { recursive: true });
+    }
+
+    if (fs.existsSync(masterPath)) {
+      const masterFiles = fs.readdirSync(masterPath);
+      masterFiles.forEach(f => {
+        const srcFile = path.join(masterPath, f);
+        const dstFile = path.join(uploadsPath, f);
+        if (!fs.existsSync(dstFile) || fs.statSync(srcFile).size !== fs.statSync(dstFile).size) {
+          fs.copyFileSync(srcFile, dstFile);
+        }
+      });
+    }
+
+    if (fs.existsSync(uploadsPath)) {
+      const files = fs.readdirSync(uploadsPath);
+      const fileMap = new Map();
+      files.forEach(f => {
+        const ext = path.extname(f).toLowerCase();
+        if (['.jpg', '.jpeg', '.png', '.webp'].includes(ext)) {
+          const base = path.basename(f, ext);
+          fileMap.set(base, f);
+          if (/^\d+$/.test(base)) {
+            const numStr = parseInt(base, 10).toString();
+            fileMap.set(numStr, f);
+            fileMap.set(numStr.padStart(4, '0'), f);
+          }
+        }
+      });
+
+      const allProducts = await prisma.product.findMany({ select: { id: true, sku: true, imageUrl: true } });
+      const imgUpdates = [];
+
+      for (const p of allProducts) {
+        const rawSku = p.sku.trim();
+        let matchedFile = fileMap.get(rawSku);
+
+        if (!matchedFile && /^\d+$/.test(rawSku)) {
+          matchedFile = fileMap.get(rawSku.padStart(4, '0')) || fileMap.get(parseInt(rawSku, 10).toString());
+        }
+
+        if (matchedFile) {
+          const expectedUrl = `/uploads/products/${matchedFile}`;
+          if (p.imageUrl !== expectedUrl) {
+            imgUpdates.push(
+              prisma.product.update({
+                where: { id: p.id },
+                data: { imageUrl: expectedUrl }
+              })
+            );
+          }
+        }
+      }
+
+      if (imgUpdates.length > 0) {
+        const batchSize = 40;
+        for (let i = 0; i < imgUpdates.length; i += batchSize) {
+          await Promise.all(imgUpdates.slice(i, i + batchSize));
+        }
+        console.log(`🖼️ Auto-vinculadas ${imgUpdates.length} imágenes de productos exitosamente.`);
+      }
+    }
   } else {
     console.log('⚠️ No se encontró products_data.json en prisma folder.');
   }

@@ -71,10 +71,14 @@ import { appCache } from './utils/cache';
 import { startDbKeepAlive } from './utils/dbKeepAlive';
 
 (async () => {
-  await ensureDirectoriesExist([uploadsDir, productsUploadsDir]);
-  await syncMasterProductImages(masterProductosFotosDir, productsUploadsDir);
-  appCache.invalidateProductCatalog();
-  startDbKeepAlive();
+  try {
+    await ensureDirectoriesExist([uploadsDir, productsUploadsDir]);
+    await syncMasterProductImages(masterProductosFotosDir, productsUploadsDir);
+    appCache.invalidateProductCatalog();
+    startDbKeepAlive();
+  } catch (err) {
+    console.error('⚠️ Error durante la inicialización de archivos/directorio en el inicio:', err);
+  }
 })();
 
 // 4. Servidor de Archivos Estáticos (con fallback automático a carpeta maestra)

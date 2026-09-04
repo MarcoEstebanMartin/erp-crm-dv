@@ -70,6 +70,7 @@ const ClientModal: React.FC<ClientModalProps> = ({
         cuit: data.cuit,
         address: data.address,
         city: data.city,
+        barrio: data.barrio,
         phone: data.phone,
         email: data.email,
         webPin: data.webPin !== undefined ? data.webPin : undefined,
@@ -374,7 +375,7 @@ const ClientModal: React.FC<ClientModalProps> = ({
                     />
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
                     <div className="form-group" style={{ marginBottom: 0 }}>
                       <label style={{ fontSize: '0.8rem', fontWeight: 600, marginBottom: '6px', display: 'block' }}>Localidad</label>
                       <input
@@ -386,28 +387,53 @@ const ClientModal: React.FC<ClientModalProps> = ({
                         style={{ width: '100%', height: '38px' }}
                       />
                     </div>
-                    
+
                     <div className="form-group" style={{ marginBottom: 0 }}>
-                      <label style={{ fontSize: '0.8rem', fontWeight: 600, marginBottom: '6px', display: 'block' }}>Zona de Reparto (Chofer)</label>
+                      <label style={{ fontSize: '0.8rem', fontWeight: 600, marginBottom: '6px', display: 'block' }}>Barrio (en Villegas)</label>
                       <input
                         type="text"
-                        list="route-suggestions"
+                        list="barrio-suggestions"
                         className="input"
                         placeholder="ej: CENTRO 1, TROCHA..."
-                        value={clientModal.data.route || ''}
-                        onChange={(e) => setClientModal({ ...clientModal, data: { ...clientModal.data, route: e.target.value } })}
+                        value={clientModal.data.barrio || ''}
+                        onChange={(e) => setClientModal({ ...clientModal, data: { ...clientModal.data, barrio: e.target.value } })}
                         style={{ width: '100%', height: '38px' }}
                       />
-                      <datalist id="route-suggestions">
-                        {(() => {
-                          const cleanCity = (clientModal.data.city || '').toUpperCase().trim();
-                          const isVillegas = cleanCity === 'GENERAL VILLEGAS' || cleanCity === 'GRAL VILLEGAS' || cleanCity === 'VILLEGAS' || cleanCity === '';
-                          const routes = isVillegas 
-                            ? ['FEDERAL', 'PARQUE', 'CENTRO 1', 'CENTRO 2', 'CENTRO 3', 'CENTRO 4', 'FONAVI', 'PROGRESO', 'TROCHA', 'CICLON', 'CRUCE']
-                            : ['EMILIO V. BUNGE Y BUCHARDO', 'EMILIO V. BUNGE Y CORONEL CHARLONE', 'BANDERALÓ Y LARROUDÉ', 'VILLA SAUZE Y SANSINENA', 'FLORENTINO AMEGHINO Y BLAQUIER', 'RIVADAVIA Y FORTÍN OLAVARRÍA', 'PIEDRITAS', 'TRES ALGARROBOS', 'CARLOS TEJEDOR', 'INTENDENTE ALVEAR', 'RUFINO'];
-                          return routes.map(r => <option key={r} value={r} />);
-                        })()}
+                      <datalist id="barrio-suggestions">
+                        {['CENTRO 1', 'CENTRO 2', 'CENTRO 3', 'CENTRO 4', 'TROCHA', 'FONAVI', 'PARQUE', 'FEDERAL', 'PROGRESO', 'CICLON', 'CRUCE'].map(b => (
+                          <option key={b} value={b} />
+                        ))}
                       </datalist>
+                    </div>
+                    
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label style={{ fontSize: '0.8rem', fontWeight: 600, marginBottom: '6px', display: 'block' }}>Ruta de Reparto</label>
+                      <select
+                        className="select"
+                        value={clientModal.data.route || ''}
+                        onChange={(e) => setClientModal({ ...clientModal, data: { ...clientModal.data, route: e.target.value } })}
+                        style={{ height: '38px', padding: '8px 12px', fontSize: '0.88rem', borderRadius: '6px', border: '1px solid var(--border-color)', boxSizing: 'border-box', width: '100%', backgroundColor: '#fff', color: 'var(--text-primary)' }}
+                      >
+                        <option value="">Sin Ruta</option>
+                        {[
+                          'BUNGE Y CHARLONE',
+                          'BUNGE Y BUCHARDO',
+                          'VILLEGAS FABIAN',
+                          'VILLEGAS NORBERTO',
+                          'VILLEGAS DIEGO',
+                          'AMEGHINO Y BLAQUIER',
+                          'CUENCA',
+                          'TEJEDOR',
+                          'ALVEAR',
+                          'SAUCE Y SANSINENA',
+                          'PIEDRITAS',
+                          'BANDERALO Y LARROUDÉ',
+                          'AMERICA Y FORTIN',
+                          'TODOS'
+                        ].map(r => (
+                          <option key={r} value={r}>{r}</option>
+                        ))}
+                      </select>
                     </div>
                   </div>
                 </div>

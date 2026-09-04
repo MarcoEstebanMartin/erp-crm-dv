@@ -35,5 +35,7 @@ Este archivo define las reglas de comportamiento, estética y calidad profesiona
 
 ## 6. Protección de Imágenes de Productos y Archivos Maestros
 - **Carpeta Maestra Inmutable (`ARCHIVOS/fotos/Productos`)**: La carpeta `ARCHIVOS/fotos/Productos/` es el repositorio maestro sagrado e inmutable de imágenes de catálogo. Jamás se deben eliminar ni sobrescribir archivos en ese directorio con scripts automatizados o reemplazos masivos.
+- **Inmutabilidad Absoluta de SKUs y Nombres de Foto**: El nombre de cada foto es estrictamente `[SKU].[ext]` (ej. `0052.jpg`). Los SKUs de los productos en el Excel Maestro y en la base de datos son PERMANENTES. Ningún script automatizado ni agente debe renombrar, desplazar numéricamente (`+1 / -1`) ni re-indexar archivos existentes en `ARCHIVOS/fotos/Productos/`. Los scripts de sincronización solo tienen permitido AGREGAR fotos de productos nuevos (`[NUEVO_SKU].[ext]`).
 - **Auto-Restauración Transparente**: El servidor backend (`app.ts`) y los scripts de vinculación sincronizarán y auto-restaurarán automáticamente las imágenes desde `ARCHIVOS/fotos/Productos/` hacia `backend/uploads/products/` en cada inicio del sistema, garantizando inmunidad ante borrados accidentales o desajustes de almacenamiento.
+
 

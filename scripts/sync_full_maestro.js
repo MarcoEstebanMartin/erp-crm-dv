@@ -52,12 +52,16 @@ async function main() {
   console.log('🚀 Sincronizador Maestro <-> Base de Datos PostgreSQL (Modo Ultra-Rápido & Parroquia)');
   console.log('=================================================================================');
 
-  const excelPath = path.resolve(__dirname, '../Maestro.xlsx');
+  const excelPath1 = path.resolve(__dirname, '../Maestro1.xlsx');
+  const excelPath0 = path.resolve(__dirname, '../Maestro.xlsx');
+  const excelPath = fs.existsSync(excelPath1) ? excelPath1 : excelPath0;
+
   if (!fs.existsSync(excelPath)) {
-    console.error('❌ Archivo Maestro.xlsx no encontrado.');
+    console.error('❌ Archivo Maestro1.xlsx / Maestro.xlsx no encontrado.');
     return;
   }
 
+  const tmpJsonPath = path.resolve(__dirname, 'dump_maestro_temp.json');
   const pyDumpScript = `
 import openpyxl, json
 
@@ -75,14 +79,31 @@ if 'Productos' in wb.sheetnames:
         for r in rows[1:]:
             if not r or not r[0] or not r[1]: continue
             sku = str(r[0]).strip().zfill(4)
-            name = str(r[1]).strip()
-            if name == 'PRODUCTO' or name == '': continue
-            costo = float(r[16]) if len(r)>16 and r[16] is not None and str(r[16]).replace('.','',1).isdigit() else 0.0
-            precio_final = float(r[19]) if len(r)>19 and r[19] is not None and str(r[19]).replace('.','',1).isdigit() else 0.0
-            pesable = str(r[11]).strip().upper() == 'SI' if len(r)>11 and r[11] else False
+            raw_name = str(r[1]).strip()
+            if raw_name == 'PRODUCTO' or raw_name == '': continue
+            
+            # Sanitize encoding
+            name = raw_name
+            
+            min_order = int(r[3]) if len(r)>3 and r[3] is not None and str(r[3]).isdigit() else 1
             units_box = int(r[4]) if len(r)>4 and r[4] is not None and str(r[4]).isdigit() else 1
-            rubro = str(r[13]).strip() if len(r)>13 and r[13] else 'ALMACEN'
-            barcode = str(r[20]).strip() if len(r)>20 and r[20] else None
+            picking_zone = str(r[5]).strip() if len(r)>5 and r[5] else None
+            min_stock = int(r[6]) if len(r)>6 and r[6] is not None and str(r[6]).isdigit() else 0
+            def_loc = str(r[7]).strip() if len(r)>7 and r[7] else None
+            
+            cat_comercial = str(r[9]).strip() if len(r)>9 and r[9] else None
+                
+            pesable = str(r[10]).strip().upper() == 'SI' if len(r)>10 and r[10] else False
+            rubro = str(r[12]).strip() if len(r)>12 and r[12] else 'ALMACÉN'
+            
+            subrubro = str(r[13]).strip() if len(r)>13 and r[13] else None
+            provider = str(r[14]).strip() if len(r)>14 and r[14] else None
+            
+            costo = float(r[15]) if len(r)>15 and r[15] is not None and str(r[15]).replace('.','',1).isdigit() else 0.0
+            profit_margin = float(r[16]) if len(r)>16 and r[16] is not None and str(r[16]).replace('.','',1).isdigit() else 35.0
+            precio_final = float(r[18]) if len(r)>18 and r[18] is not None and str(r[18]).replace('.','',1).isdigit() else 0.0
+            barcode = str(r[19]).strip() if len(r)>19 and r[19] else None
+            estado = str(r[20]).strip().upper() if len(r)>20 and r[20] else 'ACTIVO'
 
             prods.append({
                 'sku': sku,
@@ -91,14 +112,24 @@ if 'Productos' in wb.sheetnames:
                 'listPrice': precio_final,
                 'isPesable': pesable,
                 'unitsPerBox': units_box,
+                'minOrderQuantity': min_order,
+                'minStock': min_stock,
+                'pickingZone': picking_zone,
+                'defaultLocation': def_loc,
+                'commercialCategory': cat_comercial,
                 'rubro': rubro,
-                'barcode': barcode
+                'subrubro': subrubro,
+                'provider': provider,
+                'profitMargin': profit_margin,
+                'barcode': barcode,
+                'isActive': estado == 'ACTIVO'
             })
     data['products'] = prods
 
 # 2. CLIENTES
-if 'Clientes y Vendedores' in wb.sheetnames:
-    ws = wb['Clientes y Vendedores']
+client_sheet = 'Clientes' if 'Clientes' in wb.sheetnames else ('Clientes y Vendedores' if 'Clientes y Vendedores' in wb.sheetnames else None)
+if client_sheet:
+    ws = wb[client_sheet]
     clients = []
     rows = list(ws.iter_rows(values_only=True))
     if len(rows) > 1:
@@ -106,11 +137,12 @@ if 'Clientes y Vendedores' in wb.sheetnames:
             if not r or not r[1]: continue
             nombre = str(r[1]).strip()
             if nombre in ['NOMBRE Y APELLIDO', '']: continue
+            
             cuit = str(r[11]).strip().replace('-','').replace('.','') if len(r)>11 and r[11] else None
-            direccion = str(r[10]).strip() if len(r)>10 and r[10] else ''
-            localidad = str(r[7]).strip() if len(r)>7 and r[7] else ''
-            telefono = str(r[9]).strip() if len(r)>9 and r[9] else ''
-            email = str(r[15]).strip() if len(r)>15 and r[15] else ''
+            direccion = str(r[8]).strip() if len(r)>8 and r[8] else ''
+            localidad = str(r[5]).strip() if len(r)>5 and r[5] else ''
+            telefono = str(r[7]).strip() if len(r)>7 and r[7] else ''
+            email = str(r[13]).strip() if len(r)>13 and r[13] else ''
 
             clients.append({
                 'name': nombre,
@@ -168,69 +200,151 @@ if 'Rutas' in wb.sheetnames:
             })
     data['routes'] = routes
 
-print(json.dumps(data, ensure_ascii=False))
-  `;
+with open(r'${tmpJsonPath}', 'w', encoding='utf-8') as f:
+    json.dump(data, f, ensure_ascii=False)
+`;
 
   const tmpScript = path.resolve(__dirname, 'dump_maestro_temp.py');
   fs.writeFileSync(tmpScript, pyDumpScript, 'utf8');
 
   try {
-    const pyOutput = execSync(`python "${tmpScript}"`).toString();
+    execSync(`python "${tmpScript}"`);
+    const pyOutput = fs.readFileSync(tmpJsonPath, 'utf8');
     if (fs.existsSync(tmpScript)) fs.unlinkSync(tmpScript);
+    if (fs.existsSync(tmpJsonPath)) fs.unlinkSync(tmpJsonPath);
 
     const maestroData = JSON.parse(pyOutput);
 
-    // 1. Sincronizar Productos (con respaldo de precios anteriores)
+    // 1. Sincronizar Productos (con respaldo de precios anteriores y mapeo de Rubro/Categoría)
     if (maestroData.products) {
       console.log(`📦 Procesando ${maestroData.products.length} Productos...`);
       const existingProducts = await prisma.product.findMany();
       const skuMap = new Map(existingProducts.map(p => [p.sku.trim(), p]));
       const nameMap = new Map(existingProducts.map(p => [p.name.trim().toLowerCase(), p]));
 
+      // Cache Rubros
+      const existingRubros = await prisma.rubro.findMany();
+      const rubroNameMap = new Map(existingRubros.map(r => [r.name.trim().toLowerCase(), r]));
+
+      async function getOrCreateRubro(rubroName) {
+        if (!rubroName) return null;
+        const norm = rubroName.trim().toLowerCase();
+        if (rubroNameMap.has(norm)) return rubroNameMap.get(norm).id;
+
+        const uppercaseName = rubroName.trim().toUpperCase();
+        try {
+          const newRubro = await prisma.rubro.upsert({
+            where: { name: uppercaseName },
+            update: {},
+            create: { name: uppercaseName }
+          });
+          rubroNameMap.set(norm, newRubro);
+          return newRubro.id;
+        } catch (e) {
+          const found = await prisma.rubro.findFirst({ where: { name: uppercaseName } });
+          if (found) {
+            rubroNameMap.set(norm, found);
+            return found.id;
+          }
+          throw e;
+        }
+      }
+
+      // Cache Proveedores
+      const existingProviders = await prisma.persona.findMany({ where: { isProvider: true } });
+      const providerNameMap = new Map(existingProviders.map(p => [p.name.trim().toLowerCase(), p]));
+
+      async function getOrCreateProvider(providerName) {
+        if (!providerName) return null;
+        const norm = providerName.trim().toLowerCase();
+        if (providerNameMap.has(norm)) return providerNameMap.get(norm).id;
+
+        const uppercaseName = providerName.trim().toUpperCase();
+        const existing = await prisma.persona.findFirst({ where: { name: uppercaseName, isProvider: true } });
+        if (existing) {
+          providerNameMap.set(norm, existing);
+          return existing.id;
+        }
+        try {
+          const newProvider = await prisma.persona.create({
+            data: {
+              name: uppercaseName,
+              isProvider: true
+            }
+          });
+          providerNameMap.set(norm, newProvider);
+          return newProvider.id;
+        } catch (e) {
+          const found = await prisma.persona.findFirst({ where: { name: uppercaseName, isProvider: true } });
+          if (found) {
+            providerNameMap.set(norm, found);
+            return found.id;
+          }
+          throw e;
+        }
+      }
+
       let prodUpdated = 0, prodCreated = 0, priceBackedUp = 0;
       await processInChunks(maestroData.products, 5, async (item) => {
         const existing = skuMap.get(item.sku) || nameMap.get(item.name.toLowerCase());
+        const rubroId = await getOrCreateRubro(item.rubro);
+        const providerId = await getOrCreateProvider(item.provider);
+
+        const productData = {
+          sku: item.sku,
+          name: item.name,
+          description: null,
+          costPrice: item.costPrice > 0 ? item.costPrice : (existing ? existing.costPrice : 0),
+          listPrice: item.listPrice > 0 ? item.listPrice : (existing ? existing.listPrice : 0),
+          isPesable: item.isPesable,
+          unitsPerBox: item.unitsPerBox,
+          minOrderQuantity: item.minOrderQuantity,
+          minStock: item.minStock,
+          pickingZone: item.pickingZone,
+          defaultLocation: item.defaultLocation,
+          commercialCategory: item.commercialCategory,
+          rubroId: rubroId || (existing ? existing.rubroId : null),
+          providerId: providerId || (existing ? existing.providerId : null),
+          profitMargin: item.profitMargin,
+          isActive: item.isActive,
+          barcode: item.barcode || (existing ? existing.barcode : null)
+        };
+
         if (existing) {
           const costHasChanged = item.costPrice > 0 && Number(existing.costPrice) !== item.costPrice;
           const listHasChanged = item.listPrice > 0 && Number(existing.listPrice) !== item.listPrice;
 
-          const updateData = {
-            name: item.name,
-            costPrice: item.costPrice > 0 ? item.costPrice : existing.costPrice,
-            listPrice: item.listPrice > 0 ? item.listPrice : existing.listPrice,
-            isPesable: item.isPesable,
-            unitsPerBox: item.unitsPerBox,
-            barcode: item.barcode || existing.barcode
-          };
-
           if (costHasChanged || listHasChanged) {
-            updateData.previousCostPrice = existing.costPrice;
-            updateData.previousListPrice = existing.listPrice;
-            updateData.lastPriceUpdateAt = new Date();
+            productData.previousCostPrice = existing.costPrice;
+            productData.previousListPrice = existing.listPrice;
+            productData.lastPriceUpdateAt = new Date();
             priceBackedUp++;
           }
 
           await prisma.product.update({
             where: { id: existing.id },
-            data: updateData
+            data: productData
           });
           prodUpdated++;
         } else {
           await prisma.product.create({
-            data: {
-              sku: item.sku,
-              name: item.name,
-              costPrice: item.costPrice,
-              listPrice: item.listPrice,
-              isPesable: item.isPesable,
-              unitsPerBox: item.unitsPerBox,
-              barcode: item.barcode
-            }
+            data: productData
           });
           prodCreated++;
         }
       });
-      console.log(`   └─ ✅ Productos: ${prodUpdated} actualizados (${priceBackedUp} con respaldo de precio anterior), ${prodCreated} creados.`);
+
+      // Inactivar en DB cualquier producto cuyo SKU no pertenezca a Maestro1.xlsx
+      const maestroSkus = new Set(maestroData.products.map(p => p.sku));
+      const orphanedInactivations = await prisma.product.updateMany({
+        where: {
+          sku: { notIn: Array.from(maestroSkus) },
+          isActive: true
+        },
+        data: { isActive: false }
+      });
+
+      console.log(`   └─ ✅ Productos: ${prodUpdated} actualizados (${priceBackedUp} con respaldo de precio anterior), ${prodCreated} creados, ${orphanedInactivations.count} inactivados por no estar en Maestro1.`);
     }
 
     // 2. Sincronizar Clientes

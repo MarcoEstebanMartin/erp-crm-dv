@@ -14,6 +14,13 @@ const certsExist = fs.existsSync(certPath) && fs.existsSync(keyPath);
 const useMock = !certsExist && !isProduction;
 
 let afipClient: any = null;
+let afipLock = Promise.resolve();
+
+function withAfipLock<T>(task: () => Promise<T>): Promise<T> {
+  const res = afipLock.then(task, task);
+  afipLock = res.then(() => {}, () => {});
+  return res;
+}
 
 if (!useMock) {
   try {
@@ -63,25 +70,26 @@ export async function emitirFacturaAFIP({
   percepcionAmount,
   percepcionIvaAmount,
 }: InvoiceRequest): Promise<InvoiceResult> {
-  const puntoDeVenta = 1; // Punto de venta por defecto
-  const cbteTipo = invoiceType === 'A' ? 1 : 6; // 1: Factura A, 6: Factura B
+  return withAfipLock(async () => {
+    const puntoDeVenta = 1; // Punto de venta por defecto
+    const cbteTipo = invoiceType === 'A' ? 1 : 6; // 1: Factura A, 6: Factura B
 
-  // Si estamos usando Mock
-  if (useMock || !afipClient) {
-    const mockInvoiceNum = Math.floor(100000 + Math.random() * 900000);
-    const mockCae = '9999' + Math.floor(10000000 + Math.random() * 90000000) + '1';
-    const dueDate = new Date();
-    dueDate.setDate(dueDate.getDate() + 10); // Expira en 10 días
+    // Si estamos usando Mock
+    if (useMock || !afipClient) {
+      const mockInvoiceNum = Math.floor(100000 + Math.random() * 900000);
+      const mockCae = '9999' + Math.floor(10000000 + Math.random() * 90000000) + '1';
+      const dueDate = new Date();
+      dueDate.setDate(dueDate.getDate() + 10); // Expira en 10 días
 
-    console.log(`[MOCK AFIP] Creando Factura ${invoiceType} #${mockInvoiceNum} por total ARS ${total} (Percep IIBB: ${percepcionAmount || 0}, Percep IVA: ${percepcionIvaAmount || 0})`);
+      console.log(`[MOCK AFIP] Creando Factura ${invoiceType} #${mockInvoiceNum} por total ARS ${total} (Percep IIBB: ${percepcionAmount || 0}, Percep IVA: ${percepcionIvaAmount || 0})`);
 
-    return {
-      invoiceNumber: `00001-${mockInvoiceNum.toString().padStart(8, '0')}`,
-      cae: mockCae,
-      caeDueDate: dueDate,
-      puntoVenta: puntoDeVenta,
-    };
-  }
+      return {
+        invoiceNumber: `00001-${mockInvoiceNum.toString().padStart(8, '0')}`,
+        cae: mockCae,
+        caeDueDate: dueDate,
+        puntoVenta: puntoDeVenta,
+      };
+    }
 
   try {
     // 1. Obtener el último número de comprobante registrado en AFIP
@@ -197,6 +205,7 @@ export async function emitirFacturaAFIP({
     }
     throw new Error(`Error AFIP: ${error.message || error}`);
   }
+  });
 }
 
 /**

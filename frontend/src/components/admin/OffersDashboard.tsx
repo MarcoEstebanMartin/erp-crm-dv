@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { RefreshCw, Plus, Calendar, Tag, FileText, Trash2, Edit, Copy, Megaphone, Wand2 } from 'lucide-react';
+import { RefreshCw, Plus, Calendar, Tag, FileText, Trash2, Edit, Copy, Megaphone, Wand2, ArrowRightLeft } from 'lucide-react';
 import { API_BASE_URL } from '../../utils/api';
 import CampaignEditor from './CampaignEditor';
 import OffersCatalogGenerator from './OffersCatalogGenerator';
+import OffersSideBySideComparator from './OffersSideBySideComparator';
 import ConfirmModal from '../modals/ConfirmModal';
 import PromptModal from '../modals/PromptModal';
 import CampaignBroadcastModal from '../modals/CampaignBroadcastModal';
@@ -21,7 +22,7 @@ interface OfferCampaign {
 export default function OffersDashboard() {
   const [campaigns, setCampaigns] = useState<OfferCampaign[]>([]);
   const [loading, setLoading] = useState(true);
-  const [view, setView] = useState<'list' | 'editor' | 'pdf'>('list');
+  const [view, setView] = useState<'list' | 'editor' | 'pdf' | 'compare'>('list');
   const [selectedCampaignId, setSelectedCampaignId] = useState<number | null>(null);
   const [broadcastCampaignModal, setBroadcastCampaignModal] = useState<any | null>(null);
   const [wizardModalOpen, setWizardModalOpen] = useState(false);
@@ -216,6 +217,10 @@ export default function OffersDashboard() {
     return <OffersCatalogGenerator campaignId={selectedCampaignId} onBack={() => setView('list')} />;
   }
 
+  if (view === 'compare') {
+    return <OffersSideBySideComparator onBack={() => setView('list')} />;
+  }
+
   return (
     <div className="fade-in" style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
       {successMsg && (
@@ -233,13 +238,20 @@ export default function OffersDashboard() {
             Gestiona las listas semanales de ofertas y genera el catálogo PDF premium.
           </p>
         </div>
-        <div style={{ display: 'flex', gap: '15px' }}>
+        <div style={{ display: 'flex', gap: '12px' }}>
           <button 
             onClick={fetchCampaigns}
             className="btn-secondary"
             style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
           >
             <RefreshCw size={18} /> Actualizar
+          </button>
+          <button 
+            onClick={() => setView('compare')}
+            className="btn-secondary"
+            style={{ display: 'flex', alignItems: 'center', gap: '8px', border: '1px solid #8b5cf6', color: '#8b5cf6', backgroundColor: 'rgba(139, 92, 246, 0.05)', fontWeight: 'bold' }}
+          >
+            <ArrowRightLeft size={18} /> Comparar Side-by-Side
           </button>
           <button 
             onClick={() => setWizardModalOpen(true)}

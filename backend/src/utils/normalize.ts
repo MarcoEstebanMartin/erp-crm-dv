@@ -25,12 +25,56 @@ export const OFFICIAL_CITIES = [
   "CABA"
 ];
 
+export const OFFICIAL_MASTER_ROUTES = [
+  "BUNGE Y CHARLONE",
+  "BUNGE Y BUCHARDO",
+  "VILLEGAS FABIAN",
+  "VILLEGAS NORBERTO",
+  "VILLEGAS DIEGO",
+  "AMEGHINO Y BLAQUIER",
+  "CUENCA",
+  "TEJEDOR",
+  "ALVEAR",
+  "SAUCE Y SANSINENA",
+  "PIEDRITAS",
+  "BANDERALO Y LARROUDÉ",
+  "AMERICA Y FORTIN",
+  "TODOS"
+];
+
+export const VILLEGAS_BARRIOS = [
+  "CENTRO 1",
+  "CENTRO 2",
+  "CENTRO 3",
+  "CENTRO 4",
+  "TROCHA",
+  "FONAVI",
+  "PARQUE",
+  "FEDERAL",
+  "PROGRESO",
+  "CICLON",
+  "CRUCE"
+];
+
 export function removeAccents(str: string): string {
   return str
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .toUpperCase()
     .trim();
+}
+
+export function isVillegasBarrio(routeOrBarrio: string | null | undefined): boolean {
+  if (!routeOrBarrio) return false;
+  const norm = removeAccents(routeOrBarrio);
+  return VILLEGAS_BARRIOS.some(b => norm.includes(b));
+}
+
+export function standardizeBarrioName(barrio: string | null | undefined): string | null {
+  if (!barrio) return null;
+  const norm = removeAccents(barrio);
+  const found = VILLEGAS_BARRIOS.find(b => norm.includes(b));
+  return found || barrio.trim().toUpperCase();
 }
 
 export function standardizeCityName(city: string | null | undefined): string {
@@ -64,7 +108,6 @@ export function standardizeCityName(city: string | null | undefined): string {
   if (norm.includes('AMERICA') || norm.includes('RIVADAVIA')) return 'RIVADAVIA';
   if (norm.includes('CABA') || norm.includes('CAPITAL FEDERAL') || norm.includes('CIUDAD AUTONOMA')) return 'CABA';
 
-  // Si no coincide con ninguna oficial, devolvemos el string original limpio en mayúsculas
   return clean.toUpperCase();
 }
 
@@ -80,16 +123,24 @@ export function standardizeRouteName(route: string | null | undefined): string {
   if (!route) return '';
   const norm = removeAccents(route);
 
-  if (norm.includes('BANDERALO') && norm.includes('LARROUDE')) return 'BANDERALÓ Y LARROUDÉ';
-  if (norm.includes('BUNGE') && norm.includes('BUCHARDO')) return 'EMILIO V. BUNGE Y BUCHARDO';
-  if (norm.includes('BUNGE') && norm.includes('CHARLONE')) return 'EMILIO V. BUNGE Y CORONEL CHARLONE';
-  if (norm.includes('SAUCE') || norm.includes('SAUZE') && norm.includes('SANSINENA')) return 'VILLA SAUZE Y SANSINENA';
-  if (norm.includes('AMEGHINO') && norm.includes('BLAQUIER')) return 'FLORENTINO AMEGHINO Y BLAQUIER';
-  if (norm.includes('AMERICA') || norm.includes('RIVADAVIA') && norm.includes('FORTIN')) return 'RIVADAVIA Y FORTÍN OLAVARRÍA';
-  if (norm.includes('ALVEAR')) return 'INTENDENTE ALVEAR';
-  if (norm.includes('TRES ALGARROBOS')) return 'TRES ALGARROBOS';
+  if (norm.includes('BANDERALO') && norm.includes('LARROUDE')) return 'BANDERALO Y LARROUDÉ';
+  if (norm.includes('BUNGE') && norm.includes('BUCHARDO')) return 'BUNGE Y BUCHARDO';
+  if (norm.includes('BUNGE') && norm.includes('CHARLONE')) return 'BUNGE Y CHARLONE';
+  if (norm.includes('SAUCE') || norm.includes('SAUZE') || norm.includes('SANSINENA')) return 'SAUCE Y SANSINENA';
+  if (norm.includes('AMEGHINO') && norm.includes('BLAQUIER')) return 'AMEGHINO Y BLAQUIER';
+  if (norm.includes('AMERICA') || norm.includes('FORTIN')) return 'AMERICA Y FORTIN';
+  if (norm.includes('ALVEAR')) return 'ALVEAR';
+  if (norm.includes('CUENCA') || norm.includes('TRES ALGARROBOS')) return 'CUENCA';
   if (norm.includes('PIEDRITAS')) return 'PIEDRITAS';
-  if (norm.includes('CARLOS TEJEDOR')) return 'CARLOS TEJEDOR';
+  if (norm.includes('TEJEDOR')) return 'TEJEDOR';
+  if (norm.includes('VILLEGAS') && norm.includes('FABIAN')) return 'VILLEGAS FABIAN';
+  if (norm.includes('VILLEGAS') && norm.includes('NORBERTO')) return 'VILLEGAS NORBERTO';
+  if (norm.includes('VILLEGAS') && norm.includes('DIEGO')) return 'VILLEGAS DIEGO';
+
+  // Si no coincide con ninguna específica pero es una oficial
+  const officialFound = OFFICIAL_MASTER_ROUTES.find(r => removeAccents(r) === norm);
+  if (officialFound) return officialFound;
 
   return route.trim().toUpperCase();
 }
+

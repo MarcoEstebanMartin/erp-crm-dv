@@ -25,6 +25,7 @@ export class PersonaService {
         { name: { contains: search, mode: 'insensitive' } },
         { cuit: { contains: search, mode: 'insensitive' } },
         { city: { contains: search, mode: 'insensitive' } },
+        { barrio: { contains: search, mode: 'insensitive' } },
         { route: { contains: search, mode: 'insensitive' } },
         { address: { contains: search, mode: 'insensitive' } },
         { saleRoute: { name: { contains: search, mode: 'insensitive' } } }
@@ -129,6 +130,7 @@ export class PersonaService {
         cuit: data.cuit,
         address: data.address,
         city: data.city !== undefined && data.city !== null ? standardizeCityName(data.city) : data.city,
+        barrio: data.barrio !== undefined && data.barrio !== null ? String(data.barrio).trim() : null,
         province: data.province,
         zipCode: data.zipCode,
         phone: data.phone,
@@ -205,6 +207,7 @@ export class PersonaService {
         cuit: data.cuit !== undefined ? data.cuit : undefined,
         address: data.address !== undefined ? data.address : undefined,
         city: data.city !== undefined ? (data.city !== null ? standardizeCityName(data.city) : null) : undefined,
+        barrio: data.barrio !== undefined ? (data.barrio !== null ? String(data.barrio).trim() : null) : undefined,
         province: data.province !== undefined ? data.province : undefined,
         zipCode: data.zipCode !== undefined ? data.zipCode : undefined,
         phone: data.phone !== undefined ? data.phone : undefined,

@@ -19,6 +19,7 @@ export interface Persona {
   cuit?: string;
   address?: string;
   city?: string;
+  barrio?: string;
   province?: string;
   zipCode?: string;
   phone?: string;

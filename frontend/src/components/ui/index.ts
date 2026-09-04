@@ -15,3 +15,6 @@ export type { ModalProps } from './Modal';
 
 export { DataTable } from './DataTable';
 export type { DataTableProps, Column } from './DataTable';
+
+export { ErrorBoundary } from './ErrorBoundary';
+

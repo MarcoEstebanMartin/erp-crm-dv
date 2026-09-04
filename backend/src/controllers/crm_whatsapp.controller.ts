@@ -285,33 +285,37 @@ export async function approveOrderDraft(req: AuthenticatedRequest, res: Response
       return acc + (q * p);
     }, 0);
 
-    const newOrder = await prisma.order.create({
-      data: {
-        personaId,
-        sellerId: userId,
-        billingType: 'INTERNAL',
-        invoiceType: 'PRESUPUESTO',
-        status: 'PENDING',
-        totalAmount: calculatedTotal > 0 ? calculatedTotal : draft.totalEstimated,
-        items: {
-          create: items.map((item: any) => ({
-            productId: item.productId,
-            quantity: Number(item.quantity) || 1,
-            unitPrice: Number(item.unitPrice) || 0,
-            subtotal: Number(item.subtotal) || ((Number(item.quantity) || 1) * (Number(item.unitPrice) || 0))
-          }))
+    const { newOrder } = await prisma.$transaction(async (tx) => {
+      const orderCreated = await tx.order.create({
+        data: {
+          personaId,
+          sellerId: userId,
+          billingType: 'INTERNAL',
+          invoiceType: 'PRESUPUESTO',
+          status: 'PENDING',
+          totalAmount: calculatedTotal > 0 ? calculatedTotal : draft.totalEstimated,
+          items: {
+            create: items.map((item: any) => ({
+              productId: item.productId,
+              quantity: Number(item.quantity) || 1,
+              unitPrice: Number(item.unitPrice) || 0,
+              subtotal: Number(item.subtotal) || ((Number(item.quantity) || 1) * (Number(item.unitPrice) || 0))
+            }))
+          }
         }
-      }
-    });
+      });
 
-    await prisma.crmOrderDraft.update({
-      where: { id: draftId },
-      data: {
-        status: 'APPROVED',
-        orderId: newOrder.id,
-        itemsJson: JSON.stringify(items),
-        totalEstimated: calculatedTotal > 0 ? calculatedTotal : draft.totalEstimated
-      }
+      await tx.crmOrderDraft.update({
+        where: { id: draftId },
+        data: {
+          status: 'APPROVED',
+          orderId: orderCreated.id,
+          itemsJson: JSON.stringify(items),
+          totalEstimated: calculatedTotal > 0 ? calculatedTotal : draft.totalEstimated
+        }
+      });
+
+      return { newOrder: orderCreated };
     });
 
     res.status(200).json({

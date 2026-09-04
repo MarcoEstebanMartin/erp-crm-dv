@@ -7,6 +7,8 @@ import App from './App.tsx'
 import ReceiptView from './components/ReceiptView.tsx'
 import { ConfirmProvider } from './context/ConfirmContext.tsx'
 
+import { ErrorBoundary } from './components/ui/ErrorBoundary.tsx'
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -20,15 +22,17 @@ const queryClient = new QueryClient({
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <ConfirmProvider>
-        <BrowserRouter>
-          <Routes>
-            <Route path="/recibo/:id" element={<ReceiptView />} />
-            <Route path="*" element={<App />} />
-          </Routes>
-        </BrowserRouter>
-      </ConfirmProvider>
-    </QueryClientProvider>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <ConfirmProvider>
+          <BrowserRouter>
+            <Routes>
+              <Route path="/recibo/:id" element={<ReceiptView />} />
+              <Route path="*" element={<App />} />
+            </Routes>
+          </BrowserRouter>
+        </ConfirmProvider>
+      </QueryClientProvider>
+    </ErrorBoundary>
   </StrictMode>,
 )

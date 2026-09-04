@@ -317,25 +317,31 @@ export const addBulkCampaignItems = async (req: Request, res: Response) => {
   }
 };
 
-function classifyQuesoSubtype(productName: string): 'duro' | 'semiduro' | 'blando' {
+function classifyQuesoSubtype(productName: string): 'duro' | 'semiduro' | 'semiblando' | 'blando' | 'rallado' {
   const p = productName.toUpperCase();
+  if (p.includes('RALLADO') || p.includes('RALL')) {
+    return 'rallado';
+  }
   if (
-    p.includes('GOYA') || p.includes('SARDO') || p.includes('REGGIANITO') || 
-    p.includes('PROVOLONE') || p.includes('PROVOLETA') || p.includes('SBRINZ') || 
-    p.includes('RALLADO') || p.includes('PEPATO') || p.includes('PARMESANO') || 
-    p.includes('ROMANO') || p.includes('PRAMIGO') || p.includes('PARRAS')
+    p.includes('REGG') || p.includes('SARDO') || p.includes('SBRINZ') || 
+    p.includes('PEPATO') || p.includes('PROV') || p.includes('GOYA') || 
+    p.includes('PARMESANO') || p.includes('ROMANO')
   ) {
     return 'duro';
   }
   if (
-    p.includes('TYBO') || p.includes('GOUDA') || p.includes('CHEDDAR') || 
-    p.includes('FONTINA') || p.includes('HOLANDO') || p.includes('DANBO') || 
-    p.includes('BARRA') || p.includes('DANIELA') || p.includes('PATEGRAS') || 
-    p.includes('EDAM') || p.includes('BANQUETE')
+    p.includes('PATE') || p.includes('CHEDDAR') || p.includes('DANBO') || 
+    p.includes('GOUDA') || p.includes('EDAM') || p.includes('BANQUETE')
   ) {
     return 'semiduro';
   }
-  return 'blando'; // Cremoso, Por Salut, Mozzarella, Crema, Manteca, Yogur, etc.
+  if (
+    p.includes('FONT') || p.includes('TYBO') || p.includes('HOLANDO') || 
+    p.includes('BARRA') || p.includes('DANIELA')
+  ) {
+    return 'semiblando';
+  }
+  return 'blando'; // Cremoso, Por Salut, Mozzarella, Queso Azul, etc.
 }
 
 function shuffleArray<T>(array: T[]): T[] {
@@ -448,19 +454,19 @@ export const getWeeklyOfferRecommendations = async (req: Request, res: Response)
     // ----------------------------------------------------
     const melincueProds = products.filter(p => helperMatch(p.name, ['MELINCUE']));
     
-    // Fijos: Rallado 40g y 120g
-    melincueProds.filter(p => helperMatch(p.name, ['RALLADO'])).forEach(p => {
-      resultByGroup['MELINCUE'].push(mapProduct(p, 'MELINCUE', true, false, 'Fijo Obligatorio (Rallados)'));
-    });
-
-    // Duros (2), Semiduros (2), Blandos (2) por mayor stock
-    const duros = melincueProds.filter(p => classifyQuesoSubtype(p.name) === 'duro' && !helperMatch(p.name, ['RALLADO'])).sort((a,b) => b.stock - a.stock).slice(0, 2);
+    // 5 Categorías de 2 productos cada una según Matriz de Parámetros Melincué:
+    // 2 Duros, 2 Semiduros, 2 Semiblandos, 2 Blandos, 2 Rallados
+    const duros = melincueProds.filter(p => classifyQuesoSubtype(p.name) === 'duro').sort((a,b) => b.stock - a.stock).slice(0, 2);
     const semiduros = melincueProds.filter(p => classifyQuesoSubtype(p.name) === 'semiduro').sort((a,b) => b.stock - a.stock).slice(0, 2);
+    const semiblandos = melincueProds.filter(p => classifyQuesoSubtype(p.name) === 'semiblando').sort((a,b) => b.stock - a.stock).slice(0, 2);
     const blandos = melincueProds.filter(p => classifyQuesoSubtype(p.name) === 'blando').sort((a,b) => b.stock - a.stock).slice(0, 2);
+    const rallados = melincueProds.filter(p => classifyQuesoSubtype(p.name) === 'rallado').slice(0, 2);
 
-    duros.forEach(p => resultByGroup['MELINCUE'].push(mapProduct(p, 'MELINCUE', false, true, 'Queso Duro (Stock)')));
-    semiduros.forEach(p => resultByGroup['MELINCUE'].push(mapProduct(p, 'MELINCUE', false, true, 'Queso Semiduro (Stock)')));
-    blandos.forEach(p => resultByGroup['MELINCUE'].push(mapProduct(p, 'MELINCUE', false, true, 'Queso Blando/Fresco (Stock)')));
+    duros.forEach(p => resultByGroup['MELINCUE'].push(mapProduct(p, 'MELINCUE', false, true, '2 Quesos Duros')));
+    semiduros.forEach(p => resultByGroup['MELINCUE'].push(mapProduct(p, 'MELINCUE', false, true, '2 Quesos Semiduros')));
+    semiblandos.forEach(p => resultByGroup['MELINCUE'].push(mapProduct(p, 'MELINCUE', false, true, '2 Quesos Semiblandos')));
+    blandos.forEach(p => resultByGroup['MELINCUE'].push(mapProduct(p, 'MELINCUE', false, true, '2 Quesos Blandos')));
+    rallados.forEach(p => resultByGroup['MELINCUE'].push(mapProduct(p, 'MELINCUE', true, false, '2 Quesos Rallados')));
 
     // ----------------------------------------------------
     // 2. CREMIGAL
@@ -469,7 +475,7 @@ export const getWeeklyOfferRecommendations = async (req: Request, res: Response)
 
     // Fijos: Untables y Queso Crema
     cremigalProds.filter(p => helperMatch(p.name, ['UNTABLE', 'QUESO CREMA'])).slice(0, 3).forEach(p => {
-      resultByGroup['CREMIGAL'].push(mapProduct(p, 'CREMIGAL', true, false, 'Fijo Obligatorio (Untables/Q.Crema)'));
+      resultByGroup['CREMIGAL'].push(mapProduct(p, 'CREMIGAL', true, false, '1 Untable / Queso Crema Obligatorio'));
     });
 
     // Rotación Semana 1 vs Semana 2
@@ -478,17 +484,17 @@ export const getWeeklyOfferRecommendations = async (req: Request, res: Response)
       const l800 = cremigalProds.find(p => helperMatch(p.name, ['LECHE EN POLVO', '800']));
       const d400 = cremigalProds.find(p => helperMatch(p.name, ['DULCE DE LECHE', '400']));
       const m200 = cremigalProds.find(p => helperMatch(p.name, ['MANTECA', '200']));
-      if (l800) resultByGroup['CREMIGAL'].push(mapProduct(l800, 'CREMIGAL', false, true, 'Rotación Semana 1 (Polvo 800g)'));
-      if (d400) resultByGroup['CREMIGAL'].push(mapProduct(d400, 'CREMIGAL', false, true, 'Rotación Semana 1 (DDL 400g)'));
-      if (m200) resultByGroup['CREMIGAL'].push(mapProduct(m200, 'CREMIGAL', false, true, 'Rotación Semana 1 (Manteca 200g)'));
+      if (l800) resultByGroup['CREMIGAL'].push(mapProduct(l800, 'CREMIGAL', false, true, 'Rotación Semana 1'));
+      if (d400) resultByGroup['CREMIGAL'].push(mapProduct(d400, 'CREMIGAL', false, true, 'Rotación Semana 1'));
+      if (m200) resultByGroup['CREMIGAL'].push(mapProduct(m200, 'CREMIGAL', false, true, 'Rotación Semana 1'));
     } else {
       // Leche Polvo 400g, Dulce de Leche 250g/Repostero, Manteca 100g
       const l400 = cremigalProds.find(p => helperMatch(p.name, ['LECHE EN POLVO', '400'])) || cremigalProds.find(p => helperMatch(p.name, ['LECHE EN POLVO']));
       const d250 = cremigalProds.find(p => helperMatch(p.name, ['DULCE DE LECHE', '250'])) || cremigalProds.find(p => helperMatch(p.name, ['REPOSTERO']));
       const m100 = cremigalProds.find(p => helperMatch(p.name, ['MANTECA', '100'])) || cremigalProds.find(p => helperMatch(p.name, ['MANTECA']));
-      if (l400) resultByGroup['CREMIGAL'].push(mapProduct(l400, 'CREMIGAL', false, true, 'Rotación Semana 2 (Polvo 400g)'));
-      if (d250) resultByGroup['CREMIGAL'].push(mapProduct(d250, 'CREMIGAL', false, true, 'Rotación Semana 2 (DDL 250g/Repostero)'));
-      if (m100) resultByGroup['CREMIGAL'].push(mapProduct(m100, 'CREMIGAL', false, true, 'Rotación Semana 2 (Manteca 100g)'));
+      if (l400) resultByGroup['CREMIGAL'].push(mapProduct(l400, 'CREMIGAL', false, true, 'Rotación Semana 2'));
+      if (d250) resultByGroup['CREMIGAL'].push(mapProduct(d250, 'CREMIGAL', false, true, 'Rotación Semana 2'));
+      if (m100) resultByGroup['CREMIGAL'].push(mapProduct(m100, 'CREMIGAL', false, true, 'Rotación Semana 2'));
     }
 
     // Básicos de Cremigal (Sardo, Pategrás, Leche UAT, Yogurt)
@@ -501,7 +507,7 @@ export const getWeeklyOfferRecommendations = async (req: Request, res: Response)
     // ----------------------------------------------------
     const rpbProds = products.filter(p => helperMatch(p.name, ['BAGGIO', 'MOCORETA', 'RPB', 'VIDA']));
     rpbProds.slice(0, 6).forEach(p => {
-      resultByGroup['R.P.B'].push(mapProduct(p, 'R.P.B', true, false, 'Fijo Obligatorio R.P.B'));
+      resultByGroup['R.P.B'].push(mapProduct(p, 'R.P.B', true, false, 'Jugo Baggio / Vida (Fijo)'));
     });
 
     // ----------------------------------------------------
@@ -519,13 +525,13 @@ export const getWeeklyOfferRecommendations = async (req: Request, res: Response)
     if (currentWeekNumber === 1) {
       const cazalis = bebidasProds.find(p => helperMatch(p.name, ['CAZALIS', 'LEGER']));
       const sernova = bebidasProds.find(p => helperMatch(p.name, ['SERNOVA', 'VODKA']));
-      if (cazalis) resultByGroup['BEBIDAS'].push(mapProduct(cazalis, 'BEBIDAS', false, true, 'Rotación Semana 1 (Cazalis)'));
-      if (sernova) resultByGroup['BEBIDAS'].push(mapProduct(sernova, 'BEBIDAS', false, true, 'Rotación Semana 1 (Sernova Vodka)'));
+      if (cazalis) resultByGroup['BEBIDAS'].push(mapProduct(cazalis, 'BEBIDAS', false, true, 'Rotación Aperitivos (Semana 1)'));
+      if (sernova) resultByGroup['BEBIDAS'].push(mapProduct(sernova, 'BEBIDAS', false, true, 'Rotación Vodkas (Semana 1)'));
     } else {
       const cinzano = bebidasProds.find(p => helperMatch(p.name, ['CINZANO', 'ROSSO']));
       const gancia = bebidasProds.find(p => helperMatch(p.name, ['GANCIA', 'GIN', 'CAMPARI']));
-      if (cinzano) resultByGroup['BEBIDAS'].push(mapProduct(cinzano, 'BEBIDAS', false, true, 'Rotación Semana 2 (Cinzano Rosso)'));
-      if (gancia) resultByGroup['BEBIDAS'].push(mapProduct(gancia, 'BEBIDAS', false, true, 'Rotación Semana 2 (Gancia/Gin)'));
+      if (cinzano) resultByGroup['BEBIDAS'].push(mapProduct(cinzano, 'BEBIDAS', false, true, 'Rotación Aperitivos (Semana 2)'));
+      if (gancia) resultByGroup['BEBIDAS'].push(mapProduct(gancia, 'BEBIDAS', false, true, 'Rotación Aperitivos (Semana 2)'));
     }
 
     // Vinos Bodegas (Las Perdices, Zuccardi, Bianchi, López, La Rural)
@@ -540,27 +546,27 @@ export const getWeeklyOfferRecommendations = async (req: Request, res: Response)
 
     // Giacomo (Fijo)
     almacenProds.filter(p => helperMatch(p.name, ['GIACOMO'])).slice(0, 2).forEach(p => {
-      resultByGroup['ALMACEN'].push(mapProduct(p, 'ALMACEN', true, false, 'Fijo Obligatorio (Capelettini Giacomo)'));
+      resultByGroup['ALMACEN'].push(mapProduct(p, 'ALMACEN', true, false, 'Capelettini Giacomo (Fijo)'));
     });
 
     // Mayonesas Natura (Rotación)
     if (currentWeekNumber === 1) {
       almacenProds.filter(p => helperMatch(p.name, ['NATURA', 'MAYONESA']) && helperMatch(p.name, ['125', '500'])).forEach(p => {
-        resultByGroup['ALMACEN'].push(mapProduct(p, 'ALMACEN', false, true, 'Rotación Semana 1 (Mayo Natura 125g/500g)'));
+        resultByGroup['ALMACEN'].push(mapProduct(p, 'ALMACEN', false, true, 'Rotación Mayonesa Natura (Semana 1)'));
       });
     } else {
       almacenProds.filter(p => helperMatch(p.name, ['NATURA', 'MAYONESA']) && (helperMatch(p.name, ['250', 'KG', '1000']) || !p.name.includes('125'))).slice(0, 2).forEach(p => {
-        resultByGroup['ALMACEN'].push(mapProduct(p, 'ALMACEN', false, true, 'Rotación Semana 2 (Mayo Natura 250g/1kg)'));
+        resultByGroup['ALMACEN'].push(mapProduct(p, 'ALMACEN', false, true, 'Rotación Mayonesa Natura (Semana 2)'));
       });
     }
 
     // Aderezos, Azúcar, Yerbas, Papeles, Pastas
     const aderezo = almacenProds.find(p => helperMatch(p.name, ['MOSTAZA', 'KETCHUP', 'SALSA GOLF']));
-    if (aderezo) resultByGroup['ALMACEN'].push(mapProduct(aderezo, 'ALMACEN', false, true, `Rotación Semana ${currentWeekNumber} (Aderezos)`));
+    if (aderezo) resultByGroup['ALMACEN'].push(mapProduct(aderezo, 'ALMACEN', false, true, `Rotación Aderezos (Semana ${currentWeekNumber})`));
 
     // Yerbas (Andresito, Amanda, Playadito)
     almacenProds.filter(p => helperMatch(p.name, ['ANDRESITO', 'AMANDA', 'PLAYADITO'])).slice(0, 3).forEach(p => {
-      resultByGroup['ALMACEN'].push(mapProduct(p, 'ALMACEN', false, true, `Rotación Semana ${currentWeekNumber} (Yerbas)`));
+      resultByGroup['ALMACEN'].push(mapProduct(p, 'ALMACEN', false, true, `Rotación Yerba Mate (Semana ${currentWeekNumber})`));
     });
 
     // Papeles y Pastas
@@ -613,26 +619,43 @@ export const getCampaignComparison = async (req: Request, res: Response) => {
   try {
     const { baselineId, targetId } = req.query;
 
+    const allCampaigns = await prisma.offerCampaign.findMany({
+      orderBy: { createdAt: 'desc' },
+      select: { id: true, title: true, createdAt: true }
+    });
+
     let baselineCampaign = null;
+    let targetCampaign = null;
+
     if (baselineId) {
       baselineCampaign = await prisma.offerCampaign.findUnique({
         where: { id: Number(baselineId) },
         include: { items: { include: { product: true } } }
       });
     } else {
-      // Tomar la campaña de base 100 o la más reciente
-      baselineCampaign = await prisma.offerCampaign.findFirst({
-        orderBy: { createdAt: 'desc' },
-        include: { items: { include: { product: true } } }
-      });
+      // Si hay más de 1 campaña, la anteúltima es baseline; si hay 1, esa es la baseline
+      const bId = allCampaigns.length > 1 ? allCampaigns[1].id : (allCampaigns[0]?.id || null);
+      if (bId) {
+        baselineCampaign = await prisma.offerCampaign.findUnique({
+          where: { id: bId },
+          include: { items: { include: { product: true } } }
+        });
+      }
     }
 
-    let targetCampaign = null;
     if (targetId) {
       targetCampaign = await prisma.offerCampaign.findUnique({
         where: { id: Number(targetId) },
         include: { items: { include: { product: true } } }
       });
+    } else {
+      const tId = allCampaigns[0]?.id || null;
+      if (tId) {
+        targetCampaign = await prisma.offerCampaign.findUnique({
+          where: { id: tId },
+          include: { items: { include: { product: true } } }
+        });
+      }
     }
 
     const baselineItems = baselineCampaign?.items || [];
@@ -646,15 +669,121 @@ export const getCampaignComparison = async (req: Request, res: Response) => {
     const removedByRotation = baselineItems.filter(i => !targetProductIds.has(i.productId));
     const stockAlerts = targetItems.filter(i => (i.product?.stock || 0) <= 0);
 
+    // Mapa unificado de productos para matriz Side-by-Side por Marca / Rubro
+    const productMap = new Map<number, {
+      productId: number;
+      productName: string;
+      sku: string;
+      group: string;
+      baselinePrice: number | null;
+      baselineTag: string | null;
+      targetPrice: number | null;
+      targetTag: string | null;
+      priceDiff: number | null;
+      priceDiffPercent: number | null;
+      status: 'NEW' | 'REMOVED' | 'INCREASE' | 'DECREASE' | 'UNCHANGED';
+    }>();
+
+    const helperGroup = (item: any): string => {
+      if (item.campaignGroup) return item.campaignGroup.toUpperCase();
+      const pName = (item.product?.name || '').toUpperCase();
+      if (pName.includes('MELINCUE')) return 'MELINCUE';
+      if (pName.includes('CREMIGAL')) return 'CREMIGAL';
+      if (pName.includes('BAGGIO') || pName.includes('MOCORETA') || pName.includes('VIDA') || pName.includes('RPB')) return 'R.P.B';
+      if (pName.includes('FERNET') || pName.includes('BRANCA') || pName.includes('VINO') || pName.includes('BALBO') || pName.includes('BIANCHI') || pName.includes('SERNOVA') || pName.includes('CAZALIS') || pName.includes('CINZANO')) return 'BEBIDAS';
+      return 'ALMACEN';
+    };
+
+    // Agregar ítems de baseline
+    for (const bItem of baselineItems) {
+      const pid = bItem.productId;
+      const grp = helperGroup(bItem);
+      const bPrice = Number(bItem.offerPrice);
+      productMap.set(pid, {
+        productId: pid,
+        productName: bItem.product?.name || `Producto #${pid}`,
+        sku: bItem.product?.sku || '',
+        group: grp,
+        baselinePrice: bPrice,
+        baselineTag: bItem.specialTag || null,
+        targetPrice: null,
+        targetTag: null,
+        priceDiff: null,
+        priceDiffPercent: null,
+        status: 'REMOVED'
+      });
+    }
+
+    // Agregar/cruzar ítems de target
+    for (const tItem of targetItems) {
+      const pid = tItem.productId;
+      const grp = helperGroup(tItem);
+      const tPrice = Number(tItem.offerPrice);
+      const existing = productMap.get(pid);
+
+      if (existing) {
+        existing.targetPrice = tPrice;
+        existing.targetTag = tItem.specialTag || null;
+        const bPrice = existing.baselinePrice;
+        if (bPrice !== null) {
+          const diff = tPrice - bPrice;
+          existing.priceDiff = diff;
+          existing.priceDiffPercent = bPrice > 0 ? Number(((diff / bPrice) * 100).toFixed(1)) : 0;
+          if (diff > 0.01) existing.status = 'INCREASE';
+          else if (diff < -0.01) existing.status = 'DECREASE';
+          else existing.status = 'UNCHANGED';
+        }
+      } else {
+        productMap.set(pid, {
+          productId: pid,
+          productName: tItem.product?.name || `Producto #${pid}`,
+          sku: tItem.product?.sku || '',
+          group: grp,
+          baselinePrice: null,
+          baselineTag: null,
+          targetPrice: tPrice,
+          targetTag: tItem.specialTag || null,
+          priceDiff: null,
+          priceDiffPercent: null,
+          status: 'NEW'
+        });
+      }
+    }
+
+    // Agrupar la matriz por Marca/Rubro
+    const comparisonByGroup: Record<string, any[]> = {
+      'MELINCUE': [],
+      'CREMIGAL': [],
+      'R.P.B': [],
+      'BEBIDAS': [],
+      'ALMACEN': [],
+      'ARTICULOS POR CANTIDAD': [],
+      'OTROS': []
+    };
+
+    for (const row of productMap.values()) {
+      const gKey = comparisonByGroup[row.group] ? row.group : 'OTROS';
+      comparisonByGroup[gKey].push(row);
+    }
+
+    // Eliminar grupos vacíos
+    Object.keys(comparisonByGroup).forEach(k => {
+      if (comparisonByGroup[k].length === 0) delete comparisonByGroup[k];
+    });
+
     res.json({
       status: 'success',
       data: {
-        baselineTitle: baselineCampaign?.title || 'Oferta Anterior (15-08)',
-        targetTitle: targetCampaign?.title || 'Nueva Oferta Propuesta',
+        baselineId: baselineCampaign?.id || null,
+        baselineTitle: baselineCampaign?.title || 'Oferta Semana Anterior (15-08)',
+        targetId: targetCampaign?.id || null,
+        targetTitle: targetCampaign?.title || 'Ofertas Nuevas Esta Semana',
+        allCampaigns,
         retainedCount: retained.length,
         addedCount: addedByRotation.length,
         removedCount: removedByRotation.length,
         stockAlertsCount: stockAlerts.length,
+        comparisonByGroup,
         details: {
           retained,
           addedByRotation,

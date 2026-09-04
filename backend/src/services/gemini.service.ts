@@ -111,7 +111,7 @@ export class GeminiService {
 
     try {
       const result = await generateWithFallback([prompt, filePart], 'application/json');
-      const responseText = result.response.text();
+      const responseText = result.response.text().replace(/```json\s*/gi, '').replace(/```\s*/gi, '').trim();
       const jsonData = JSON.parse(responseText);
       return jsonData as ExtractedInvoiceData;
     } catch (error: any) {
@@ -201,7 +201,7 @@ export class GeminiService {
 
     try {
       const result = await generateWithFallback([prompt], 'application/json');
-      const responseText = result.response.text().trim();
+      const responseText = result.response.text().replace(/```json\s*/gi, '').replace(/```\s*/gi, '').trim();
       const parsed = JSON.parse(responseText);
       return Array.isArray(parsed.items) ? parsed.items : [];
     } catch (error: any) {

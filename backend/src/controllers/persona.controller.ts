@@ -91,6 +91,7 @@ export async function updatePersona(req: AuthenticatedRequest, res: Response): P
         ...req.body,
         address: req.body.address !== undefined ? req.body.address : undefined,
         city: req.body.city !== undefined ? req.body.city : undefined,
+        barrio: req.body.barrio !== undefined ? req.body.barrio : undefined,
         province: req.body.province !== undefined ? req.body.province : undefined,
         zipCode: req.body.zipCode !== undefined ? req.body.zipCode : undefined,
         phone: req.body.phone !== undefined ? req.body.phone : undefined,

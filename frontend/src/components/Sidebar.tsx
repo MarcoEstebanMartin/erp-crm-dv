@@ -67,29 +67,28 @@ export default function Sidebar({ username, role, activeTab, setActiveTab, onLog
     if (role === 'ADMIN') {
       return [
         { id: 'dashboard', label: 'Panel Principal', icon: <LayoutDashboard size={18} /> },
-        { id: 'crm', label: 'CRM & WhatsApp', icon: <MessageSquare size={18} /> },
         { id: 'fulfillment', label: 'Armado y Facturación', icon: <Warehouse size={18} /> },
-        { id: 'deposito', label: 'Mapa del Depósito', icon: <MapPin size={18} /> },
+        { id: 'products', label: 'Productos y Stock', icon: <Package size={18} /> },
+        { id: 'rendiciones', label: 'Finanzas y Reportes', icon: <DollarSign size={18} /> },
         { id: 'clients', label: 'Personas', icon: <Users size={18} /> },
         { id: 'logistica', label: 'Logística y Flota', icon: <Truck size={18} /> },
-        { id: 'products', label: 'Productos y Stock', icon: <Package size={18} /> },
         { id: 'compras', label: 'Proveedores', icon: <Receipt size={18} /> },
-        { id: 'rendiciones', label: 'Finanzas y Reportes', icon: <DollarSign size={18} /> },
         { id: 'config', label: 'General & Empresa', icon: <Building2 size={18} /> },
+        { id: 'crm', label: 'CRM & WhatsApp', icon: <MessageSquare size={18} /> },
       ];
     }
 
     if (role === 'FACTURACION') {
       return [
         { id: 'dashboard', label: 'Panel Principal', icon: <LayoutDashboard size={18} /> },
-        { id: 'crm', label: 'CRM & WhatsApp', icon: <MessageSquare size={18} /> },
         { id: 'fulfillment', label: 'Armado y Facturación', icon: <Warehouse size={18} /> },
-        { id: 'deposito', label: 'Mapa del Depósito', icon: <MapPin size={18} /> },
+        { id: 'products', label: 'Productos y Stock', icon: <Package size={18} /> },
+        { id: 'rendiciones', label: 'Finanzas y Reportes', icon: <DollarSign size={18} /> },
         { id: 'clients', label: 'Personas', icon: <Users size={18} /> },
         { id: 'logistica', label: 'Logística y Flota', icon: <Truck size={18} /> },
-        { id: 'products', label: 'Productos y Stock', icon: <Package size={18} /> },
         { id: 'compras', label: 'Proveedores', icon: <Receipt size={18} /> },
         { id: 'config', label: 'General & Empresa', icon: <Building2 size={18} /> },
+        { id: 'crm', label: 'CRM & WhatsApp', icon: <MessageSquare size={18} /> },
       ];
     }
 

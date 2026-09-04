@@ -90,16 +90,16 @@ function App() {
     api.logout();
     setUser(null);
     setActiveTab('');
-    navigate('/');
+    navigate('/login');
   };
 
-  // Interceptar ruta para recibos compartidos
+  // Intercept route for shared receipts
   if (location.pathname.startsWith('/recibo/')) {
     const receiptId = location.pathname.split('/recibo/')[1];
     return <ReceiptView receiptId={receiptId} />;
   }
 
-  // Interceptar ruta o modo para Tienda Online B2B / Portal Clientes
+  // Intercept route or mode for Online B2B Store / Client Portal
   if (isStoreMode || location.pathname.startsWith('/tienda') || location.search.includes('token=')) {
     return (
       <Suspense fallback={<LoadingSpinner />}>
@@ -111,13 +111,8 @@ function App() {
     );
   }
 
-  // Interceptar ruta para Login de Empleados ERP (/login)
-  if (location.pathname === '/login' && !user) {
-    return <Login onLoginSuccess={handleLoginSuccess} onOpenStore={() => { setIsStoreMode(true); navigate('/tienda'); }} />;
-  }
-
-  // Si no hay sesión de empleado activa y está en la raíz (/), mostrar la Web Institucional donvenancio.com.ar
-  if (!user && (location.pathname === '/' || location.pathname === '')) {
+  // Optional: Institutional Web landing page reserved at /web
+  if (!user && (location.pathname === '/web' || location.pathname.startsWith('/web/'))) {
     return (
       <Suspense fallback={<LoadingSpinner />}>
         <InstitutionalLanding
@@ -131,7 +126,7 @@ function App() {
     );
   }
 
-  // Si no está autenticado y busca otra ruta interna, renderizar Login ERP
+  // If user is not authenticated, render ERP Login screen for / or /login or any other route
   if (!user) {
     return <Login onLoginSuccess={handleLoginSuccess} onOpenStore={() => { setIsStoreMode(true); navigate('/tienda'); }} />;
   }

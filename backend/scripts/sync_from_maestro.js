@@ -14,7 +14,6 @@ async function syncFromMaestro() {
   console.log('📊 Leyendo Maestro.xlsx...');
   const workbook = xlsx.readFile(maestroPath);
   const sheet = workbook.Sheets['Productos'];
-
   if (!sheet) {
     console.error('❌ Hoja "Productos" no encontrada en Maestro.xlsx');
     return;
@@ -32,21 +31,12 @@ async function syncFromMaestro() {
   const masterPhotoFiles = fs.readdirSync(masterPhotoDir);
   const masterPhotoSet = new Set(masterPhotoFiles);
 
-  const changesPath = path.resolve(__dirname, '../changes.json');
-  let changesMap = new Map();
-  if (fs.existsSync(changesPath)) {
-    const changes = JSON.parse(fs.readFileSync(changesPath, 'utf8'));
-    changes.forEach(c => {
-      if (c.new) changesMap.set(c.new.padStart(4, '0'), c.old ? c.old.padStart(4, '0') : null);
-    });
-  }
-
   const existingProducts = await prisma.product.findMany();
   const skuMap = new Map(existingProducts.map(p => [p.sku.trim(), p]));
   const nameMap = new Map(existingProducts.map(p => [p.name.trim().toLowerCase(), p]));
 
-  const updates = [];
-  const creates = [];
+  const updatePromises = [];
+  const createPromises = [];
 
   for (const row of rows) {
     if (!row.PRODUCTO || row.SKU === null || row.SKU === undefined) continue;
@@ -66,13 +56,7 @@ async function syncFromMaestro() {
     const minOrderQuantity = row['MINIMO VENTA'] ? Number(row['MINIMO VENTA']) : 1;
 
     const targetFileName = `${sku}.jpg`;
-    let sourceFileName = null;
-
-    if (masterPhotoSet.has(targetFileName)) {
-      sourceFileName = targetFileName;
-    } else if (oldCode && masterPhotoSet.has(`${oldCode}.jpg`)) {
-      sourceFileName = `${oldCode}.jpg`;
-    }
+    let sourceFileName = masterPhotoSet.has(targetFileName) ? targetFileName : null;
 
     if (sourceFileName) {
       const srcPath = path.join(masterPhotoDir, sourceFileName);
@@ -83,71 +67,80 @@ async function syncFromMaestro() {
     }
 
     const imageUrl = sourceFileName ? `/uploads/products/${targetFileName}` : null;
-
     const existing = skuMap.get(sku) || nameMap.get(productName.toLowerCase());
 
     if (existing) {
-      updates.push({
-        where: { id: existing.id },
-        data: {
-          sku: sku,
-          name: productName,
-          barcode: barcode || existing.barcode,
-          costPrice: costPrice > 0 ? costPrice : existing.costPrice,
-          listPrice: listPrice > 0 ? listPrice : existing.listPrice,
-          isPesable: isPesable,
-          approximateWeight: approximateWeight,
-          unitsPerBox: unitsPerBox,
-          minOrderQuantity: minOrderQuantity,
-          imageUrl: imageUrl || existing.imageUrl
-        }
-      });
+      updatePromises.push(
+        prisma.product.update({
+          where: { id: existing.id },
+          data: {
+            sku: sku,
+            name: productName,
+            barcode: barcode || existing.barcode,
+            costPrice: costPrice > 0 ? costPrice : existing.costPrice,
+            listPrice: listPrice > 0 ? listPrice : existing.listPrice,
+            isPesable: isPesable,
+            approximateWeight: approximateWeight,
+            unitsPerBox: unitsPerBox,
+            minOrderQuantity: minOrderQuantity,
+            imageUrl: imageUrl || existing.imageUrl
+          }
+        }).catch(() => {
+          return prisma.product.update({
+            where: { id: existing.id },
+            data: {
+              sku: sku,
+              name: productName,
+              costPrice: costPrice > 0 ? costPrice : existing.costPrice,
+              listPrice: listPrice > 0 ? listPrice : existing.listPrice,
+              isPesable: isPesable,
+              approximateWeight: approximateWeight,
+              unitsPerBox: unitsPerBox,
+              minOrderQuantity: minOrderQuantity,
+              imageUrl: imageUrl || existing.imageUrl
+            }
+          });
+        })
+      );
     } else {
-      creates.push({
-        data: {
-          sku: sku,
-          name: productName,
-          description: row.SUBRUBRO || row.RUBRO || 'PRODUCTO',
-          barcode: barcode,
-          costPrice: costPrice,
-          listPrice: listPrice,
-          listPriceB: listPrice * 0.95,
-          listPriceC: listPrice * 0.90,
-          stock: 100,
-          minStock: Number(row['STOCK MINIMO'] || 10),
-          isPesable: isPesable,
-          approximateWeight: approximateWeight,
-          unitsPerBox: unitsPerBox,
-          minOrderQuantity: minOrderQuantity,
-          imageUrl: imageUrl,
-          commercialCategory: row.RUBRO || 'GENERAL'
-        }
-      });
+      createPromises.push(
+        prisma.product.create({
+          data: {
+            sku: sku,
+            name: productName,
+            description: row.SUBRUBRO || row.RUBRO || 'PRODUCTO',
+            barcode: barcode,
+            costPrice: costPrice,
+            listPrice: listPrice,
+            listPriceB: listPrice * 0.95,
+            listPriceC: listPrice * 0.90,
+            stock: 100,
+            minStock: Number(row['STOCK MINIMO'] || 10),
+            isPesable: isPesable,
+            approximateWeight: approximateWeight,
+            unitsPerBox: unitsPerBox,
+            minOrderQuantity: minOrderQuantity,
+            imageUrl: imageUrl,
+            commercialCategory: row.RUBRO || 'GENERAL'
+          }
+        }).catch(() => {})
+      );
     }
   }
 
-  console.log(`⏳ Procesando ${updates.length} actualizaciones y ${creates.length} creaciones...`);
+  console.log(`⏳ Procesando ${updatePromises.length} actualizaciones y ${createPromises.length} creaciones en paralelo...`);
   
-  for (const item of updates) {
-    try {
-      await prisma.product.update(item);
-    } catch (e) {
-      if (e.code === 'P2025') continue;
-      try {
-        const { barcode, ...dataWithoutBarcode } = item.data;
-        await prisma.product.update({ where: item.where, data: dataWithoutBarcode });
-      } catch (err) {
-        console.warn(`[Sync Warning] No se pudo actualizar producto ID ${item.where?.id}`);
-      }
-    }
+  const batchSize = 30;
+  for (let i = 0; i < updatePromises.length; i += batchSize) {
+    await Promise.all(updatePromises.slice(i, i + batchSize));
   }
-  for (const item of creates) {
-    await prisma.product.create(item);
+  for (let i = 0; i < createPromises.length; i += batchSize) {
+    await Promise.all(createPromises.slice(i, i + batchSize));
   }
 
   console.log(`\n⚡ ¡Sincronización con Maestro.xlsx Completada Exitosamente!`);
-  console.log(`   - Actualizados: ${updates.length}`);
-  console.log(`   - Creados: ${creates.length}`);
+  console.log(`   - Actualizados: ${updatePromises.length}`);
+  console.log(`   - Creados: ${createPromises.length}`);
 
   await prisma.$disconnect();
 }

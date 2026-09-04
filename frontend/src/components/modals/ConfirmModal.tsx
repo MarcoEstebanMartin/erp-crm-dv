@@ -28,7 +28,7 @@ export default function ConfirmModal({
 
   const getColors = () => {
     switch (type) {
-      case 'danger': return { icon: '#ef4444', bg: '#fee2e2', btn: '#ef4444', btnHover: '#dc2626' };
+      case 'danger': return { icon: '#E30613', bg: 'rgba(227, 6, 19, 0.1)', btn: '#E30613', btnHover: '#c20510' };
       case 'info': return { icon: '#3b82f6', bg: '#dbeafe', btn: '#3b82f6', btnHover: '#2563eb' };
       case 'success': return { icon: '#10b981', bg: '#d1fae5', btn: '#10b981', btnHover: '#059669' };
       case 'warning':
