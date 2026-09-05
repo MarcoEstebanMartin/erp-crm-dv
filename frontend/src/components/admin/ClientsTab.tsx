@@ -150,6 +150,117 @@ export default function ClientsTab({
     setSelectedRouteFilter('ALL');
   }, [personaRoleFilter]);
 
+  // Filtrado de clientes según búsqueda, localidad, ruta y estado activo/inactivo
+  const filteredClients = useMemo(() => {
+    return clients.filter((c: any) => {
+      if (personaRoleFilter === 'client') {
+        if (!showInactive && c.isActive === false) return false;
+        if (showInactive && c.isActive !== false) return false;
+      }
+
+      // Filtro de Localidad
+      if (selectedCityFilter !== 'ALL') {
+        const normCity = normalizeString(c.city);
+        const normSelectedFilter = normalizeString(selectedCityFilter);
+        if (selectedCityFilter === 'OTRAS') {
+          const isOfficial = OFFICIAL_CITIES.map(o => normalizeString(o)).includes(normCity);
+          if (c.city && isOfficial) return false;
+        } else {
+          if (normCity !== normSelectedFilter) return false;
+        }
+      }
+
+      // Filtro de Ruta coherente con visualización
+      if (personaRoleFilter === 'client' && selectedRouteFilter !== 'ALL') {
+        if (selectedRouteFilter === 'SIN_RUTA') {
+          if (c.saleRouteId || (c.route && c.route.trim() !== '')) return false;
+        } else {
+          const matchedRoute = availableSaleRoutes.find(r => String(r.id) === String(selectedRouteFilter));
+          const targetName = matchedRoute?.name?.trim().toUpperCase();
+          const clientRoute = (c.route || '').trim().toUpperCase();
+          const matchesId = Number(c.saleRouteId) === Number(selectedRouteFilter);
+          const matchesName = Boolean(targetName && clientRoute && (clientRoute === targetName || clientRoute.includes(targetName)));
+          if (!matchesId && !matchesName) return false;
+        }
+      }
+
+      return true;
+    });
+  }, [clients, personaRoleFilter, showInactive, selectedCityFilter, selectedRouteFilter, availableSaleRoutes]);
+
+  // Conteo de registros por Localidad (respetando estado activo/inactivo)
+  const cityCounts = useMemo(() => {
+    const counts: Record<string, number> = { ALL: 0, OTRAS: 0 };
+    const officialNormMap = new Map(OFFICIAL_CITIES.map(c => [normalizeString(c), c]));
+
+    const baseList = clients.filter((c: any) => {
+      if (personaRoleFilter === 'client') {
+        if (!showInactive && c.isActive === false) return false;
+        if (showInactive && c.isActive !== false) return false;
+      }
+      return true;
+    });
+
+    counts.ALL = baseList.length;
+
+    baseList.forEach((c: any) => {
+      const norm = normalizeString(c.city);
+      if (!norm) {
+        counts.OTRAS = (counts.OTRAS || 0) + 1;
+        return;
+      }
+      const officialCity = officialNormMap.get(norm);
+      if (officialCity) {
+        counts[officialCity] = (counts[officialCity] || 0) + 1;
+      } else {
+        counts.OTRAS = (counts.OTRAS || 0) + 1;
+      }
+    });
+
+    return counts;
+  }, [clients, personaRoleFilter, showInactive]);
+
+  // Conteo de registros por Ruta (respetando estado activo/inactivo)
+  const routeCounts = useMemo(() => {
+    const counts: Record<string | number, number> = { ALL: 0, SIN_RUTA: 0 };
+
+    const baseList = clients.filter((c: any) => {
+      if (personaRoleFilter === 'client') {
+        if (!showInactive && c.isActive === false) return false;
+        if (showInactive && c.isActive !== false) return false;
+      }
+      return true;
+    });
+
+    counts.ALL = baseList.length;
+
+    baseList.forEach((c: any) => {
+      if (!c.saleRouteId && (!c.route || c.route.trim() === '')) {
+        counts.SIN_RUTA = (counts.SIN_RUTA || 0) + 1;
+        return;
+      }
+      let matched = false;
+      for (const route of availableSaleRoutes) {
+        const targetName = route.name?.trim().toUpperCase();
+        const clientRoute = (c.route || '').trim().toUpperCase();
+        const matchesId = Number(c.saleRouteId) === Number(route.id);
+        const matchesName = Boolean(targetName && clientRoute && (clientRoute === targetName || clientRoute.includes(targetName)));
+        if (matchesId || matchesName) {
+          counts[route.id] = (counts[route.id] || 0) + 1;
+          matched = true;
+          break;
+        }
+      }
+      if (!matched) {
+        counts.SIN_RUTA = (counts.SIN_RUTA || 0) + 1;
+      }
+    });
+
+    return counts;
+  }, [clients, personaRoleFilter, showInactive, availableSaleRoutes]);
+
+  const isLocationFiltered = selectedCityFilter !== 'ALL' || selectedRouteFilter !== 'ALL' || searchQuery.trim() !== '';
+
   const getWhatsAppLink = (phone: string) => {
     const cleanPhone = phone.replace(/\D/g, '');
     if (!cleanPhone) return '';
@@ -578,13 +689,13 @@ export default function ClientsTab({
               className="select"
               value={selectedCityFilter}
               onChange={(e) => setSelectedCityFilter(e.target.value)}
-              style={{ minWidth: '180px', height: '38px' }}
+              style={{ minWidth: '190px', height: '38px' }}
             >
-              <option value="ALL">Todas las Localidades</option>
+              <option value="ALL">Todas las Localidades ({cityCounts.ALL || 0})</option>
               {OFFICIAL_CITIES.map((city) => (
-                <option key={city} value={city}>{city}</option>
+                <option key={city} value={city}>{city} ({cityCounts[city] || 0})</option>
               ))}
-              <option value="OTRAS">Otras</option>
+              <option value="OTRAS">Otras ({cityCounts.OTRAS || 0})</option>
             </select>
 
             {personaRoleFilter === 'client' && (
@@ -592,15 +703,52 @@ export default function ClientsTab({
                 className="select"
                 value={selectedRouteFilter}
                 onChange={(e) => setSelectedRouteFilter(e.target.value)}
-                style={{ minWidth: '180px', height: '38px' }}
+                style={{ minWidth: '190px', height: '38px' }}
               >
-                <option value="ALL">Todas las Rutas</option>
+                <option value="ALL">Todas las Rutas ({routeCounts.ALL || 0})</option>
                 {availableSaleRoutes.map((route) => (
-                  <option key={route.id} value={route.id}>{route.name}</option>
+                  <option key={route.id} value={route.id}>{route.name} ({routeCounts[route.id] || 0})</option>
                 ))}
-                <option value="SIN_RUTA">Sin Ruta</option>
+                <option value="SIN_RUTA">Sin Ruta ({routeCounts.SIN_RUTA || 0})</option>
               </select>
             )}
+
+            {/* Contador numérico destacado de registros */}
+            <div 
+              style={{ 
+                display: 'inline-flex', 
+                alignItems: 'center', 
+                gap: '8px', 
+                padding: '0 14px', 
+                height: '38px',
+                backgroundColor: isLocationFiltered ? 'rgba(227, 6, 19, 0.05)' : '#ffffff', 
+                border: isLocationFiltered ? '1px solid var(--color-corp-red, #e30613)' : '1px solid var(--border-color, #e5e5e7)', 
+                borderRadius: '6px', 
+                fontSize: '0.84rem',
+                whiteSpace: 'nowrap',
+                boxShadow: '0 1px 2px rgba(0,0,0,0.02)'
+              }}
+              title="Cantidad de registros según los filtros seleccionados"
+            >
+              <span style={{ color: 'var(--text-secondary, #5f6368)', fontWeight: 500 }}>
+                {isLocationFiltered ? 'Filtrados:' : 'Total:'}
+              </span>
+              <span style={{ 
+                fontWeight: 700, 
+                fontSize: '0.98rem', 
+                color: isLocationFiltered ? 'var(--color-corp-red, #e30613)' : 'var(--text-primary, #1d1d1f)' 
+              }}>
+                {filteredClients.length.toLocaleString('es-AR')}
+              </span>
+              <span style={{ color: 'var(--text-secondary, #5f6368)', fontSize: '0.78rem' }}>
+                {personaRoleFilter === 'client' ? 'clientes' : personaRoleFilter === 'seller' ? 'vendedores' : personaRoleFilter === 'provider' ? 'proveedores' : 'comisionistas'}
+                {isLocationFiltered && (
+                  <span style={{ opacity: 0.75, marginLeft: '4px' }}>
+                    (de {clients.length.toLocaleString('es-AR')})
+                  </span>
+                )}
+              </span>
+            </div>
 
             {personaRoleFilter === 'client' && (
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginLeft: 'auto', marginRight: '16px' }}>
@@ -660,53 +808,14 @@ export default function ClientsTab({
                 </tr>
               </thead>
               <tbody>
-                {(() => {
-                  const filteredClients = clients.filter((c: any) => {
-                    if (personaRoleFilter === 'client') {
-                      if (!showInactive && c.isActive === false) return false;
-                      if (showInactive && c.isActive !== false) return false;
-                    }
-
-                    // Filtro de Localidad
-                    if (selectedCityFilter !== 'ALL') {
-                      const normCity = normalizeString(c.city);
-                      const normSelectedFilter = normalizeString(selectedCityFilter);
-                      if (selectedCityFilter === 'OTRAS') {
-                        const isOfficial = OFFICIAL_CITIES.map(o => normalizeString(o)).includes(normCity);
-                        if (c.city && isOfficial) return false;
-                      } else {
-                        if (normCity !== normSelectedFilter) return false;
-                      }
-                    }
-
-                    // Filtro de Ruta coherente con visualización
-                    if (personaRoleFilter === 'client' && selectedRouteFilter !== 'ALL') {
-                      if (selectedRouteFilter === 'SIN_RUTA') {
-                        if (c.saleRouteId || (c.route && c.route.trim() !== '')) return false;
-                      } else {
-                        const matchedRoute = availableSaleRoutes.find(r => String(r.id) === String(selectedRouteFilter));
-                        const targetName = matchedRoute?.name?.trim().toUpperCase();
-                        const clientRoute = (c.route || '').trim().toUpperCase();
-                        const matchesId = Number(c.saleRouteId) === Number(selectedRouteFilter);
-                        const matchesName = Boolean(targetName && clientRoute && (clientRoute === targetName || clientRoute.includes(targetName)));
-                        if (!matchesId && !matchesName) return false;
-                      }
-                    }
-
-                    return true;
-                  });
-
-                  if (filteredClients.length === 0) {
-                    return (
-                      <tr>
-                        <td colSpan={personaRoleFilter === 'client' ? 6 : 5} style={{ textAlign: 'center', padding: '24px 0' }}>
-                          No se encontraron personas registradas.
-                        </td>
-                      </tr>
-                    );
-                  }
-
-                  return filteredClients.map((c) => {
+                {filteredClients.length === 0 ? (
+                  <tr>
+                    <td colSpan={personaRoleFilter === 'client' ? 7 : 6} style={{ textAlign: 'center', padding: '32px 0', color: 'var(--text-secondary)' }}>
+                      No se encontraron personas registradas con los filtros seleccionados.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredClients.map((c) => {
                     const balance = Number(c.outstandingBalance || 0);
                     let balanceText = '';
                     let balanceColor = 'var(--text-secondary)';
@@ -884,10 +993,43 @@ export default function ClientsTab({
                         </td>
                       </tr>
                     );
-                  });
-                })()}
+                  })
+                )}
               </tbody>
             </table>
+
+            {/* Pie de tabla informativo con conteo y restablecimiento rápido */}
+            <div style={{
+              padding: '12px 18px',
+              borderTop: '1px solid var(--border-color, #e5e5e7)',
+              fontSize: '0.84rem',
+              color: 'var(--text-secondary, #5f6368)',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              backgroundColor: '#fafafa'
+            }}>
+              <span>
+                Mostrando <strong>{filteredClients.length.toLocaleString('es-AR')}</strong> {personaRoleFilter === 'client' ? 'clientes' : 'registros'}
+                {isLocationFiltered && (
+                  <span> (de un total de {clients.length.toLocaleString('es-AR')})</span>
+                )}
+              </span>
+              {isLocationFiltered && (
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  style={{ padding: '4px 10px', fontSize: '0.78rem', color: 'var(--color-corp-red, #e30613)', fontWeight: 600 }}
+                  onClick={() => {
+                    setSelectedCityFilter('ALL');
+                    setSelectedRouteFilter('ALL');
+                    setSearchQuery('');
+                  }}
+                >
+                  Restablecer filtros
+                </button>
+              )}
+            </div>
           </div>
         </>
       )}
