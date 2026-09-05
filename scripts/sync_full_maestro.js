@@ -409,6 +409,8 @@ with open(r'${tmpJsonPath}', 'w', encoding='utf-8') as f:
         const sellerId = mapSellerNameToId(item.vendedor);
 
         const updateData = {
+          name: item.name,
+          cuit: item.cuit || existing?.cuit,
           address: item.address || existing?.address,
           city: item.city || existing?.city,
           province: item.province || existing?.province || 'BUENOS AIRES',
