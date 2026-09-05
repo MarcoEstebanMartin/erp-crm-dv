@@ -138,18 +138,35 @@ if client_sheet:
             nombre = str(r[1]).strip()
             if nombre in ['NOMBRE Y APELLIDO', '']: continue
             
-            cuit = str(r[11]).strip().replace('-','').replace('.','') if len(r)>11 and r[11] else None
-            direccion = str(r[8]).strip() if len(r)>8 and r[8] else ''
+            # Sanitizar cuentas internas que no son clientes
+            if nombre.upper() in ['AJUSTE DE STOCK', 'MOVIMIENTOS DE AJUSTE', 'RECAUDACION', 'DIFERENCIA DE CAJA', 'OFICINA', 'EJEMPLO NO USAR']:
+                continue
+
+            price_list = str(r[2]).strip() if len(r)>2 and r[2] is not None else 'A'
+            max_invoices = float(r[3]) if len(r)>3 and r[3] is not None and str(r[3]).replace('.','',1).isdigit() else 1.0
+            route_val = str(r[4]).strip() if len(r)>4 and r[4] else None
             localidad = str(r[5]).strip() if len(r)>5 and r[5] else ''
+            provincia = str(r[6]).strip() if len(r)>6 and r[6] else 'BUENOS AIRES'
             telefono = str(r[7]).strip() if len(r)>7 and r[7] else ''
+            direccion = str(r[8]).strip() if len(r)>8 and r[8] else ''
+            
+            raw_cuit = str(r[9]).strip().replace('-','').replace('.','') if len(r)>9 and r[9] else None
+            cuit = raw_cuit if raw_cuit and raw_cuit.isdigit() and len(raw_cuit) >= 10 else None
+            
+            vendedor = str(r[11]).strip() if len(r)>11 and r[11] else None
             email = str(r[13]).strip() if len(r)>13 and r[13] else ''
 
             clients.append({
                 'name': nombre,
                 'cuit': cuit,
+                'priceList': price_list,
+                'maxUnpaidInvoices': max_invoices,
+                'route': route_val,
                 'address': direccion,
                 'city': localidad,
+                'province': provincia,
                 'phone': telefono,
+                'vendedor': vendedor,
                 'email': email
             })
     data['clients'] = clients
@@ -354,32 +371,71 @@ with open(r'${tmpJsonPath}', 'w', encoding='utf-8') as f:
       const cuitMap = new Map(existingPersonas.filter(p => p.cuit).map(p => [p.cuit.trim(), p]));
       const personaNameMap = new Map(existingPersonas.map(p => [p.name.trim().toLowerCase(), p]));
 
+      // Mapeo de Rutas a IDs de SaleRoute
+      const allRoutes = await prisma.saleRoute.findMany();
+      const routeMap = new Map();
+      allRoutes.forEach(r => routeMap.set(r.name.trim().toUpperCase(), r.id));
+
+      const mapRouteToId = (rName) => {
+        if (!rName) return null;
+        const upper = rName.toUpperCase().trim();
+        if (routeMap.has(upper)) return routeMap.get(upper);
+        for (const [k, id] of routeMap.entries()) {
+          if (upper.includes(k) || k.includes(upper)) return id;
+        }
+        return null;
+      };
+
+      // Mapeo de Vendedores a IDs de User
+      const sellers = await prisma.user.findMany({ where: { role: 'VENDEDOR' } });
+      const sellerMap = new Map();
+      sellers.forEach(s => sellerMap.set(s.username.toLowerCase(), s.id));
+
+      const mapSellerNameToId = (v) => {
+        if (!v) return null;
+        const upper = v.toUpperCase().trim();
+        if (upper.includes('DIEGO') || upper.includes('LEJARZA')) return sellerMap.get('diego');
+        if (upper.includes('FABIAN') || upper.includes('MAYA')) return sellerMap.get('fabian');
+        if (upper.includes('NORBERTO')) return sellerMap.get('norberto');
+        if (upper.includes('MARIA') || upper.includes('VIDELA')) return sellerMap.get('maria_jose');
+        return null;
+      };
+
       let clientUpdated = 0, clientCreated = 0;
       await processInChunks(maestroData.clients, 5, async (item) => {
         if (!item.name) return;
         const existing = (item.cuit ? cuitMap.get(item.cuit) : null) || personaNameMap.get(item.name.toLowerCase());
+        const saleRouteId = mapRouteToId(item.route);
+        const sellerId = mapSellerNameToId(item.vendedor);
+
+        const updateData = {
+          address: item.address || existing?.address,
+          city: item.city || existing?.city,
+          province: item.province || existing?.province || 'BUENOS AIRES',
+          phone: item.phone || existing?.phone,
+          email: item.email || existing?.email,
+          route: item.route || existing?.route,
+          saleRouteId: saleRouteId || existing?.saleRouteId,
+          sellerId: sellerId !== null ? sellerId : existing?.sellerId,
+          priceList: item.priceList || existing?.priceList || 'A',
+          isClient: true
+        };
 
         if (existing) {
           await prisma.persona.update({
             where: { id: existing.id },
-            data: {
-              address: item.address || existing.address,
-              city: item.city || existing.city,
-              phone: item.phone || existing.phone,
-              email: item.email || existing.email
-            }
+            data: updateData
           });
           clientUpdated++;
         } else {
           await prisma.persona.create({
             data: {
-              isClient: true,
+              ...updateData,
               name: item.name,
               cuit: item.cuit,
-              address: item.address,
-              city: item.city,
-              phone: item.phone,
-              email: item.email
+              isClient: true,
+              isProvider: false,
+              isSeller: false
             }
           });
           clientCreated++;
@@ -388,7 +444,7 @@ with open(r'${tmpJsonPath}', 'w', encoding='utf-8') as f:
       console.log(`   └─ ✅ Clientes: ${clientUpdated} actualizados, ${clientCreated} creados.`);
     }
 
-    // 3. Sincronizar Proveedores
+    // 3. Sincronizar Proveedores (Garantizar isClient: false)
     if (maestroData.suppliers) {
       console.log(`🏭 Procesando ${maestroData.suppliers.length} Proveedores...`);
       const existingSuppliers = await prisma.persona.findMany({ where: { isProvider: true } });
@@ -404,7 +460,9 @@ with open(r'${tmpJsonPath}', 'w', encoding='utf-8') as f:
           await prisma.persona.update({
             where: { id: existing.id },
             data: {
-              address: item.address || existing.address
+              address: item.address || existing.address,
+              isClient: false,
+              isProvider: true
             }
           });
           suppUpdated++;
@@ -412,6 +470,7 @@ with open(r'${tmpJsonPath}', 'w', encoding='utf-8') as f:
           await prisma.persona.create({
             data: {
               isProvider: true,
+              isClient: false,
               name: item.name,
               cuit: item.cuit,
               address: item.address

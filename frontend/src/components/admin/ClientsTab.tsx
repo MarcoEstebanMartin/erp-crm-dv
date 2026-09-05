@@ -679,12 +679,17 @@ export default function ClientsTab({
                       }
                     }
 
-                    // Filtro de Ruta
+                    // Filtro de Ruta coherente con visualización
                     if (personaRoleFilter === 'client' && selectedRouteFilter !== 'ALL') {
                       if (selectedRouteFilter === 'SIN_RUTA') {
-                        if (c.saleRouteId) return false;
+                        if (c.saleRouteId || (c.route && c.route.trim() !== '')) return false;
                       } else {
-                        if (Number(c.saleRouteId) !== Number(selectedRouteFilter)) return false;
+                        const matchedRoute = availableSaleRoutes.find(r => String(r.id) === String(selectedRouteFilter));
+                        const targetName = matchedRoute?.name?.trim().toUpperCase();
+                        const clientRoute = (c.route || '').trim().toUpperCase();
+                        const matchesId = Number(c.saleRouteId) === Number(selectedRouteFilter);
+                        const matchesName = Boolean(targetName && clientRoute && (clientRoute === targetName || clientRoute.includes(targetName)));
+                        if (!matchesId && !matchesName) return false;
                       }
                     }
 
