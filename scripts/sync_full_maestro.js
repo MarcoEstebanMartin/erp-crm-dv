@@ -217,6 +217,33 @@ if 'Rutas' in wb.sheetnames:
             })
     data['routes'] = routes
 
+# 5. BANCOS
+if 'Bancos' in wb.sheetnames:
+    ws = wb['Bancos']
+    bancos = []
+    rows = list(ws.iter_rows(values_only=True))
+    if len(rows) > 1:
+        for r in rows[1:]:
+            if not r or not r[0]: continue
+            banco = str(r[0]).strip()
+            if banco in ['BANCO', '']: continue
+            cuenta_tipo = str(r[1]).strip() if len(r)>1 and r[1] else ''
+            nro_cuenta = str(r[2]).strip() if len(r)>2 and r[2] else ''
+            cbu_cvu = str(r[4]).strip() if len(r)>4 and r[4] else ''
+            alias = str(r[5]).strip() if len(r)>5 and r[5] else ''
+
+            nombre_completo = f"{banco} - {cuenta_tipo}" if cuenta_tipo else banco
+            detalles = []
+            if nro_cuenta and nro_cuenta != 'None': detalles.append(f"Nº: {nro_cuenta}")
+            if cbu_cvu and cbu_cvu != 'None': detalles.append(f"CBU/CVU: {cbu_cvu}")
+            if alias and alias != 'None': detalles.append(f"Alias: {alias}")
+
+            bancos.append({
+                'name': nombre_completo,
+                'accountNumber': ' | '.join(detalles)
+            })
+    data['bancos'] = bancos
+
 with open(r'${tmpJsonPath}', 'w', encoding='utf-8') as f:
     json.dump(data, f, ensure_ascii=False)
 `;
@@ -531,6 +558,31 @@ with open(r'${tmpJsonPath}', 'w', encoding='utf-8') as f:
         }
       });
       console.log(`   └─ ✅ Rutas: ${routeUpdated} actualizadas, ${routeCreated} creadas.`);
+    }
+
+    // 5. Sincronizar Cuentas Bancarias
+    if (maestroData.bancos && maestroData.bancos.length > 0) {
+      console.log(`🏦 Procesando ${maestroData.bancos.length} Cuentas Bancarias...`);
+      for (const b of maestroData.bancos) {
+        const existing = await prisma.bankAccount.findFirst({
+          where: { name: { equals: b.name, mode: 'insensitive' } }
+        });
+        if (existing) {
+          await prisma.bankAccount.update({
+            where: { id: existing.id },
+            data: { accountNumber: b.accountNumber }
+          });
+        } else {
+          await prisma.bankAccount.create({
+            data: {
+              name: b.name,
+              accountNumber: b.accountNumber,
+              balance: 0.00
+            }
+          });
+        }
+      }
+      console.log('   └─ ✅ Cuentas bancarias sincronizadas exitosamente.');
     }
 
     console.log('\n🎉 Sincronización completa finalizada exitosamente.');

@@ -434,23 +434,9 @@ export async function getTransactionById(req: AuthenticatedRequest, res: Respons
  */
 export async function getBankAccounts(req: AuthenticatedRequest, res: Response): Promise<void> {
   try {
-    let accounts = await prisma.bankAccount.findMany({
-      orderBy: { name: 'asc' },
+    const accounts = await prisma.bankAccount.findMany({
+      orderBy: { id: 'asc' },
     });
-
-    if (accounts.length === 0) {
-      await prisma.bankAccount.createMany({
-        data: [
-          { name: 'Mercado Pago Transferencias', accountNumber: '0000003100085432453321 (alias: donvenancio2024)', balance: 150000.00 },
-          { name: 'QR MP', accountNumber: 'QR-MP-DISTRIB', balance: 0.00 },
-          { name: 'Banco Provincia C.A', accountNumber: '520358/9', balance: 250000.00 },
-          { name: 'Banco Provincia C/C', accountNumber: '10300/6', balance: 500000.00 },
-        ],
-      });
-      accounts = await prisma.bankAccount.findMany({
-        orderBy: { name: 'asc' },
-      });
-    }
 
     res.status(200).json({
       status: 'success',
