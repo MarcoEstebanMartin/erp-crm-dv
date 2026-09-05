@@ -713,7 +713,7 @@ export default function ClientsTab({
               </select>
             )}
 
-            {/* Contador numérico destacado de registros */}
+            {/* Contador numérico sobrio y profesional */}
             <div 
               style={{ 
                 display: 'inline-flex', 
@@ -721,8 +721,8 @@ export default function ClientsTab({
                 gap: '8px', 
                 padding: '0 14px', 
                 height: '38px',
-                backgroundColor: isLocationFiltered ? 'rgba(227, 6, 19, 0.05)' : '#ffffff', 
-                border: isLocationFiltered ? '1px solid var(--color-corp-red, #e30613)' : '1px solid var(--border-color, #e5e5e7)', 
+                backgroundColor: isLocationFiltered ? '#f0fdf4' : '#f8fafc', 
+                border: isLocationFiltered ? '1px solid #bbf7d0' : '1px solid #e2e8f0', 
                 borderRadius: '6px', 
                 fontSize: '0.84rem',
                 whiteSpace: 'nowrap',
@@ -730,20 +730,29 @@ export default function ClientsTab({
               }}
               title="Cantidad de registros según los filtros seleccionados"
             >
-              <span style={{ color: 'var(--text-secondary, #5f6368)', fontWeight: 500 }}>
+              <span 
+                style={{ 
+                  width: '7px', 
+                  height: '7px', 
+                  borderRadius: '50%', 
+                  backgroundColor: isLocationFiltered ? '#16a34a' : '#94a3b8',
+                  display: 'inline-block' 
+                }} 
+              />
+              <span style={{ color: isLocationFiltered ? '#15803d' : '#64748b', fontWeight: 500 }}>
                 {isLocationFiltered ? 'Filtrados:' : 'Total:'}
               </span>
               <span style={{ 
                 fontWeight: 700, 
                 fontSize: '0.98rem', 
-                color: isLocationFiltered ? 'var(--color-corp-red, #e30613)' : 'var(--text-primary, #1d1d1f)' 
+                color: isLocationFiltered ? '#166534' : '#0f172a' 
               }}>
                 {filteredClients.length.toLocaleString('es-AR')}
               </span>
-              <span style={{ color: 'var(--text-secondary, #5f6368)', fontSize: '0.78rem' }}>
+              <span style={{ color: isLocationFiltered ? '#15803d' : '#64748b', fontSize: '0.78rem' }}>
                 {personaRoleFilter === 'client' ? 'clientes' : personaRoleFilter === 'seller' ? 'vendedores' : personaRoleFilter === 'provider' ? 'proveedores' : 'comisionistas'}
                 {isLocationFiltered && (
-                  <span style={{ opacity: 0.75, marginLeft: '4px' }}>
+                  <span style={{ opacity: 0.85, marginLeft: '4px', color: '#166534' }}>
                     (de {clients.length.toLocaleString('es-AR')})
                   </span>
                 )}
@@ -1019,7 +1028,7 @@ export default function ClientsTab({
                 <button
                   type="button"
                   className="btn btn-ghost"
-                  style={{ padding: '4px 10px', fontSize: '0.78rem', color: 'var(--color-corp-red, #e30613)', fontWeight: 600 }}
+                  style={{ padding: '4px 10px', fontSize: '0.78rem', color: '#166534', fontWeight: 600 }}
                   onClick={() => {
                     setSelectedCityFilter('ALL');
                     setSelectedRouteFilter('ALL');
