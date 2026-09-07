@@ -619,7 +619,7 @@ export default function WeeklyOfferWizardModal({ isOpen, onClose, onCampaignCrea
                       textTransform: 'uppercase',
                       letterSpacing: '0.5px',
                       display: 'flex',
-                      justify: 'space-between',
+                      justifyContent: 'space-between',
                       alignItems: 'center'
                     }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -658,7 +658,7 @@ export default function WeeklyOfferWizardModal({ isOpen, onClose, onCampaignCrea
                           <div style={{ 
                             padding: '9px 18px', 
                             display: 'flex', 
-                            justify: 'space-between', 
+                            justifyContent: 'space-between', 
                             alignItems: 'center', 
                             borderRight: '1px solid var(--border-color)'
                           }}>
@@ -668,7 +668,7 @@ export default function WeeklyOfferWizardModal({ isOpen, onClose, onCampaignCrea
                                   <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-primary)' }}>
                                     {baselineInfo?.name || p.name}
                                   </span>
-                                  {renderTypeBadge(baselineInfo?.name || p.name, category)}
+                                  {renderTypeBadge(baselineInfo?.name || p.name)}
                                 </div>
                                 <div style={{ fontWeight: 'bold', fontSize: '14px', color: 'var(--text-primary)' }}>
                                   {formatCurrency(baselinePrice)}
@@ -683,7 +683,7 @@ export default function WeeklyOfferWizardModal({ isOpen, onClose, onCampaignCrea
                           <div style={{ 
                             padding: '9px 18px', 
                             display: 'flex', 
-                            justify: 'space-between', 
+                            justifyContent: 'space-between', 
                             alignItems: 'center',
                             backgroundColor: isSelected ? 'rgba(139, 92, 246, 0.02)' : 'transparent'
                           }}>
@@ -697,7 +697,7 @@ export default function WeeklyOfferWizardModal({ isOpen, onClose, onCampaignCrea
                               <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-primary)' }}>
                                 {p.name}
                               </span>
-                              {renderTypeBadge(p.name, category)}
+                              {renderTypeBadge(p.name)}
                             </div>
 
                             <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
@@ -947,7 +947,7 @@ export default function WeeklyOfferWizardModal({ isOpen, onClose, onCampaignCrea
                     borderRadius: '8px',
                     border: '1px solid var(--border-color)',
                     display: 'flex',
-                    justify: 'space-between',
+                    justifyContent: 'space-between',
                     alignItems: 'center',
                     cursor: 'pointer',
                     backgroundColor: 'var(--bg-card)'

@@ -11,6 +11,7 @@ import DepositoPages from './pages/deposito/DepositoPages';
 
 const ClientPortal = lazy(() => import('./components/store/ClientPortal'));
 const InstitutionalLanding = lazy(() => import('./components/landing/InstitutionalLanding'));
+const StandaloneOffersManager = lazy(() => import('./components/offers/StandaloneOffersManager'));
 
 const LoadingSpinner = () => (
   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '50vh', gap: '12px' }}>
@@ -99,6 +100,15 @@ function App() {
     return <ReceiptView receiptId={receiptId} />;
   }
 
+  // Intercept route for standalone Weekly Offers tool
+  if (location.pathname.startsWith('/ofertas')) {
+    return (
+      <Suspense fallback={<LoadingSpinner />}>
+        <StandaloneOffersManager onBackToLogin={() => navigate('/login')} />
+      </Suspense>
+    );
+  }
+
   // Intercept route or mode for Online B2B Store / Client Portal
   if (isStoreMode || location.pathname.startsWith('/tienda') || location.search.includes('token=')) {
     return (
@@ -128,7 +138,13 @@ function App() {
 
   // If user is not authenticated, render ERP Login screen for / or /login or any other route
   if (!user) {
-    return <Login onLoginSuccess={handleLoginSuccess} onOpenStore={() => { setIsStoreMode(true); navigate('/tienda'); }} />;
+    return (
+      <Login 
+        onLoginSuccess={handleLoginSuccess} 
+        onOpenStore={() => { setIsStoreMode(true); navigate('/tienda'); }} 
+        onOpenOffers={() => navigate('/ofertas')}
+      />
+    );
   }
 
   return (

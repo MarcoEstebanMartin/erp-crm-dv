@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { api, testServerConnection } from '../utils/api';
-import { Shield, Eye, EyeOff } from 'lucide-react';
+import { Shield, Eye, EyeOff, Sparkles } from 'lucide-react';
 
 interface LoginProps {
   onLoginSuccess: () => void;
   onOpenStore?: () => void;
+  onOpenOffers?: () => void;
 }
 
-export default function Login({ onLoginSuccess, onOpenStore }: LoginProps) {
+export default function Login({ onLoginSuccess, onOpenStore, onOpenOffers }: LoginProps) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -154,6 +155,33 @@ export default function Login({ onLoginSuccess, onOpenStore }: LoginProps) {
           >
             {loading ? 'Accediendo...' : 'Iniciar sesión'}
           </button>
+
+          {onOpenOffers && (
+            <button
+              type="button"
+              onClick={onOpenOffers}
+              style={{
+                width: '100%',
+                padding: '11px',
+                marginTop: '10px',
+                borderRadius: 'var(--radius-sm, 6px)',
+                border: '1px solid var(--border-color, #E5E7EB)',
+                backgroundColor: '#FFFFFF',
+                color: 'var(--text-primary, #111827)',
+                fontSize: '0.85rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              <Sparkles size={16} color="#E30613" />
+              <span>Generador de Ofertas Semanales</span>
+            </button>
+          )}
         </form>
 
         <div style={{ marginTop: '24px', fontSize: '0.75rem', color: 'var(--text-secondary)', borderTop: '1px solid var(--border-color)', paddingTop: '16px' }}>

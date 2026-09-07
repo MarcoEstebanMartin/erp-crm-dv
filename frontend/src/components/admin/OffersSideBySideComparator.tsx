@@ -504,7 +504,7 @@ export default function OffersSideBySideComparator({ onBack, initialBaselineId, 
                   textTransform: 'uppercase',
                   letterSpacing: '0.5px',
                   display: 'flex',
-                  justify: 'space-between'
+                  justifyContent: 'space-between'
                 }}>
                   <span>{groupName}</span>
                   <span style={{ fontSize: '11px', fontWeight: 'normal', color: '#475569' }}>
@@ -532,7 +532,7 @@ export default function OffersSideBySideComparator({ onBack, initialBaselineId, 
                       <div style={{ 
                         padding: '9px 18px', 
                         display: 'flex', 
-                        justify: 'space-between', 
+                        justifyContent: 'space-between', 
                         alignItems: 'center', 
                         borderRight: '1px solid var(--border-color)'
                       }}>
@@ -549,7 +549,7 @@ export default function OffersSideBySideComparator({ onBack, initialBaselineId, 
                             </div>
                           </>
                         ) : (
-                          <span style={{ fontSize: '12px', color: 'var(--text-muted)', italic: 'true' }}>—</span>
+                          <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontStyle: 'italic' }}>—</span>
                         )}
                       </div>
 
@@ -557,7 +557,7 @@ export default function OffersSideBySideComparator({ onBack, initialBaselineId, 
                       <div style={{ 
                         padding: '9px 18px', 
                         display: 'flex', 
-                        justify: 'space-between', 
+                        justifyContent: 'space-between', 
                         alignItems: 'center',
                         backgroundColor: tRow ? 'rgba(139, 92, 246, 0.02)' : 'transparent'
                       }}>
@@ -779,7 +779,7 @@ export default function OffersSideBySideComparator({ onBack, initialBaselineId, 
                     borderRadius: '8px',
                     border: '1px solid var(--border-color)',
                     display: 'flex',
-                    justify: 'space-between',
+                    justifyContent: 'space-between',
                     alignItems: 'center',
                     cursor: 'pointer',
                     backgroundColor: 'var(--bg-card)'
