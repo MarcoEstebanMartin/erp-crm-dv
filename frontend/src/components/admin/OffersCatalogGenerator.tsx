@@ -4,29 +4,24 @@ import html2canvas from 'html2canvas';
 import { Download, RefreshCw, ArrowLeft, ArrowUp, ArrowDown } from 'lucide-react';
 import { API_BASE_URL } from '../../utils/api';
 
-interface OffersCatalogGeneratorProps {
-  campaignId: number;
-  onBack: () => void;
-}
-
-interface CampaignItem {
-  id: number;
+export interface CampaignItem {
+  id: number | string;
   offerPrice: number;
   specialTag: string | null;
   previousPrice?: number;
   campaignGroup?: string;
   product: {
-    id: number;
+    id: number | string;
     sku: string;
     name: string;
     listPrice: number;
-    imageUrl: string | null;
+    imageUrl?: string | null;
     rubro?: { name: string };
   };
 }
 
-interface Campaign {
-  id: number;
+export interface Campaign {
+  id: number | string;
   title: string;
   startDate: string;
   endDate: string | null;
@@ -34,8 +29,15 @@ interface Campaign {
   customRubroOrder?: string[];
 }
 
-export default function OffersCatalogGenerator({ campaignId, onBack }: OffersCatalogGeneratorProps) {
-  const [campaign, setCampaign] = useState<Campaign | null>(null);
+export interface OffersCatalogGeneratorProps {
+  campaignId?: number;
+  campaignData?: Campaign;
+  onBack: () => void;
+  onUpdateRubroOrder?: (newOrder: string[]) => void;
+}
+
+export default function OffersCatalogGenerator({ campaignId, campaignData, onBack, onUpdateRubroOrder }: OffersCatalogGeneratorProps) {
+  const [campaign, setCampaign] = useState<Campaign | null>(campaignData || null);
   const [loading, setLoading] = useState(true);
   const [columnsCount, setColumnsCount] = useState<2 | 3>(2);
   const [generating, setGenerating] = useState(false);
@@ -46,14 +48,20 @@ export default function OffersCatalogGenerator({ campaignId, onBack }: OffersCat
   const [customSubtitle, setCustomSubtitle] = useState('');
 
   useEffect(() => {
-    fetchCampaign();
-  }, [campaignId]);
+    if (campaignData) {
+      setCampaign(campaignData);
+      setLoading(false);
+    } else if (campaignId) {
+      fetchCampaign();
+    }
+  }, [campaignId, campaignData]);
 
   useEffect(() => {
     if (campaign && campaign.items.length > 0) {
-      setCustomTitle('OFERTAS SEMANALES');
+      setCustomTitle(campaign.title || 'OFERTAS SEMANALES');
       
-      const parts = campaign.startDate.split('T')[0].split('-');
+      const rawDate = campaign.startDate || new Date().toISOString().split('T')[0];
+      const parts = rawDate.split('T')[0].split('-');
       const year = parts[0];
       const month = parseInt(parts[1], 10) - 1;
       const day = parts[2];
@@ -92,24 +100,30 @@ export default function OffersCatalogGenerator({ campaignId, onBack }: OffersCat
     }
     
     setRubroOrder(newOrder);
+    if (onUpdateRubroOrder) {
+      onUpdateRubroOrder(newOrder);
+    }
 
-    try {
-      await fetch(`${API_BASE_URL}/offers/${campaignId}`, {
-        method: 'PUT',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
-        },
-        body: JSON.stringify({
-          customRubroOrder: newOrder
-        })
-      });
-    } catch (error) {
-      console.error('Error saving rubro order:', error);
+    if (campaignId) {
+      try {
+        await fetch(`${API_BASE_URL}/offers/${campaignId}`, {
+          method: 'PUT',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+          },
+          body: JSON.stringify({
+            customRubroOrder: newOrder
+          })
+        });
+      } catch (error) {
+        console.error('Error saving rubro order:', error);
+      }
     }
   };
 
   const fetchCampaign = async () => {
+    if (!campaignId) return;
     setLoading(true);
     try {
       const res = await fetch(`${API_BASE_URL}/offers/${campaignId}`, {
@@ -270,10 +284,13 @@ export default function OffersCatalogGenerator({ campaignId, onBack }: OffersCat
               {/* Header Único */}
               <div style={{ backgroundColor: '#cc000f', padding: '20px 40px', color: '#ffffff', display: 'flex', flexDirection: 'column', alignItems: 'center', boxShadow: '0 10px 20px rgba(204,0,15,0.15)' }}>
                 <img 
-                  src={`http://${window.location.hostname}:3000/api/purchases/files/logo.png?v=${cacheBuster}`}
+                  src="/logo.png"
                   crossOrigin="anonymous" 
                   alt="Logo" 
                   style={{ height: '110px', objectFit: 'contain', filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.3))' }}
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = '/logo-don-venancio.png';
+                  }}
                 />
                 
                 {/* Título Centrado y Fecha */}
@@ -391,9 +408,20 @@ export default function OffersCatalogGenerator({ campaignId, onBack }: OffersCat
                                   crossOrigin="anonymous"
                                   alt={item.product.name} 
                                   style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', mixBlendMode: 'multiply' }}
+                                  onError={(e) => {
+                                    (e.target as HTMLImageElement).src = `/uploads/products/${String(item.product.sku).padStart(4, '0')}.jpg`;
+                                  }}
                                 />
                               ) : (
-                                <div style={{ color: '#cbd5e1', fontSize: '14px', marginBottom: '40px' }}>Sin Imagen</div>
+                                <img 
+                                  src={`/uploads/products/${String(item.product.sku).padStart(4, '0')}.jpg`} 
+                                  crossOrigin="anonymous"
+                                  alt={item.product.name} 
+                                  style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', mixBlendMode: 'multiply' }}
+                                  onError={(e) => {
+                                    (e.target as HTMLElement).style.display = 'none';
+                                  }}
+                                />
                               )}
 
                               {/* Etiqueta de Precio */}
@@ -545,10 +573,13 @@ export default function OffersCatalogGenerator({ campaignId, onBack }: OffersCat
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
                   <img 
-                    src={`http://${window.location.hostname}:3000/api/purchases/files/logo.png?v=${cacheBuster}`} 
+                    src="/logo.png" 
                     crossOrigin="anonymous" 
                     alt="Logo Final" 
                     style={{ height: '32px', objectFit: 'contain', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.5))' }}
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = '/logo-don-venancio.png';
+                    }}
                   />
                 </div>
               </div>

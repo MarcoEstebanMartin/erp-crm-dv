@@ -23,6 +23,7 @@ import {
   ChevronDown
 } from 'lucide-react';
 import defaultProductsData from '../../utils/products_data.json';
+import OffersCatalogGenerator from '../admin/OffersCatalogGenerator';
 
 export interface CatalogProduct {
   id: number | string;
@@ -50,6 +51,7 @@ export interface WeeklyCampaign {
   startDate: string;
   endDate: string;
   notes?: string;
+  customRubroOrder?: string[];
   items: WeeklyOfferItem[];
 }
 
@@ -118,15 +120,40 @@ export default function StandaloneOffersManager({ onBackToLogin }: { onBackToLog
   }, [savedCampaigns, activeCampaignId]);
 
   // Estados de interfaz
+  const [view, setView] = useState<'editor' | 'catalog'>('editor');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('TODOS');
   const [isExcelModalOpen, setIsExcelModalOpen] = useState(false);
   const [isWhatsAppModalOpen, setIsWhatsAppModalOpen] = useState(false);
-  const [isFlyerModalOpen, setIsFlyerModalOpen] = useState(false);
   const [copiedSuccess, setCopiedSuccess] = useState(false);
   const [catalogUploadSuccessMsg, setCatalogUploadSuccessMsg] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const adaptedCampaignForCatalog = useMemo(() => {
+    return {
+      id: activeCampaign.id,
+      title: activeCampaign.title,
+      startDate: activeCampaign.startDate,
+      endDate: activeCampaign.endDate,
+      customRubroOrder: activeCampaign.customRubroOrder,
+      items: activeCampaign.items.map(it => ({
+        id: it.id,
+        offerPrice: it.offerPrice,
+        specialTag: it.specialTag || null,
+        previousPrice: it.listPrice,
+        campaignGroup: it.category,
+        product: {
+          id: it.sku,
+          sku: it.sku,
+          name: it.name,
+          listPrice: it.listPrice,
+          imageUrl: `/uploads/products/${String(it.sku).padStart(4, '0')}.jpg`,
+          rubro: { name: it.category }
+        }
+      }))
+    };
+  }, [activeCampaign]);
 
   // Guardar campañas en localStorage cuando cambian
   useEffect(() => {
@@ -460,6 +487,23 @@ export default function StandaloneOffersManager({ onBackToLogin }: { onBackToLog
     });
   };
 
+  if (view === 'catalog') {
+    return (
+      <div style={{ minHeight: '100vh', backgroundColor: '#F9FAFB' }}>
+        <OffersCatalogGenerator
+          campaignData={adaptedCampaignForCatalog}
+          onBack={() => setView('editor')}
+          onUpdateRubroOrder={(newOrder) => {
+            updateActiveCampaign(prev => ({
+              ...prev,
+              customRubroOrder: newOrder
+            }));
+          }}
+        />
+      </div>
+    );
+  }
+
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#F9FAFB', color: '#111827', fontFamily: 'var(--font-sans, system-ui, sans-serif)' }}>
       {/* Barra Superior Header */}
@@ -587,9 +631,15 @@ export default function StandaloneOffersManager({ onBackToLogin }: { onBackToLog
             <span>WhatsApp</span>
           </button>
 
-          {/* Botón Flyer / PDF */}
+          {/* Botón Catálogo PDF */}
           <button
-            onClick={() => setIsFlyerModalOpen(true)}
+            onClick={() => {
+              if (activeCampaign.items.length === 0) {
+                alert('Agregá al menos un producto a la oferta antes de generar el catálogo.');
+                return;
+              }
+              setView('catalog');
+            }}
             style={{
               display: 'inline-flex',
               alignItems: 'center',
@@ -597,15 +647,16 @@ export default function StandaloneOffersManager({ onBackToLogin }: { onBackToLog
               padding: '8px 14px',
               borderRadius: '6px',
               border: 'none',
-              backgroundColor: '#111827',
+              backgroundColor: '#cc000f',
               color: '#FFFFFF',
               fontSize: '13px',
               fontWeight: 600,
-              cursor: 'pointer'
+              cursor: 'pointer',
+              boxShadow: '0 2px 4px rgba(204, 0, 15, 0.2)'
             }}
           >
             <Printer size={15} />
-            <span>Flyer / Imprimir</span>
+            <span>Generar Catálogo PDF</span>
           </button>
         </div>
       </header>
@@ -1228,166 +1279,6 @@ export default function StandaloneOffersManager({ onBackToLogin }: { onBackToLog
                 >
                   Listo
                 </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL 3: Flyer / Impresión Visual */}
-      {isFlyerModalOpen && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.6)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 100,
-          backdropFilter: 'blur(3px)',
-          overflowY: 'auto',
-          padding: '20px'
-        }}>
-          <div style={{
-            backgroundColor: '#FFFFFF',
-            borderRadius: '12px',
-            width: '100%',
-            maxWidth: '850px',
-            maxHeight: '90vh',
-            display: 'flex',
-            flexDirection: 'column',
-            boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)',
-            overflow: 'hidden'
-          }}>
-            {/* Cabecera del modal */}
-            <div style={{ padding: '16px 24px', borderBottom: '1px solid #E5E7EB', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h3 style={{ fontSize: '16px', fontWeight: 700, margin: 0 }}>Vista Previa de Flyer / Impresión</h3>
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <button
-                  onClick={() => window.print()}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    padding: '8px 14px',
-                    borderRadius: '6px',
-                    border: 'none',
-                    backgroundColor: '#111827',
-                    color: '#FFFFFF',
-                    fontSize: '13px',
-                    fontWeight: 600,
-                    cursor: 'pointer'
-                  }}
-                >
-                  <Printer size={15} /> Imprimir / Guardar como PDF
-                </button>
-                <button
-                  onClick={() => setIsFlyerModalOpen(false)}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9CA3AF', fontSize: '18px' }}
-                >
-                  ✕
-                </button>
-              </div>
-            </div>
-
-            {/* Contenido imprimible */}
-            <div style={{ padding: '32px', overflowY: 'auto', backgroundColor: '#FFFFFF' }} className="print-area">
-              {/* Encabezado del Flyer */}
-              <div style={{
-                textAlign: 'center',
-                borderBottom: '2px solid #111827',
-                paddingBottom: '20px',
-                marginBottom: '24px'
-              }}>
-                <div style={{ fontSize: '12px', letterSpacing: '0.15em', fontWeight: 700, color: '#E30613', textTransform: 'uppercase' }}>
-                  DISTRIBUIDORA DV • VENTA MAYORISTA
-                </div>
-                <h1 style={{ fontSize: '28px', fontWeight: 800, letterSpacing: '-0.03em', margin: '4px 0 6px 0', color: '#111827' }}>
-                  {activeCampaign.title.toUpperCase()}
-                </h1>
-                <p style={{ fontSize: '13px', color: '#4B5563', margin: 0 }}>
-                  Vigencia del <strong>{activeCampaign.startDate}</strong> al <strong>{activeCampaign.endDate}</strong> o hasta agotar stock
-                </p>
-              </div>
-
-              {/* Grilla de productos en oferta */}
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))',
-                gap: '16px'
-              }}>
-                {activeCampaign.items.map(it => (
-                  <div
-                    key={it.id}
-                    style={{
-                      border: '1px solid #E5E7EB',
-                      borderRadius: '8px',
-                      padding: '16px',
-                      backgroundColor: '#FAFAFA',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      justifyContent: 'space-between',
-                      position: 'relative'
-                    }}
-                  >
-                    {it.specialTag && (
-                      <div style={{
-                        position: 'absolute',
-                        top: '10px',
-                        right: '10px',
-                        backgroundColor: '#E30613',
-                        color: '#FFFFFF',
-                        fontSize: '9px',
-                        fontWeight: 800,
-                        padding: '2px 6px',
-                        borderRadius: '4px',
-                        letterSpacing: '0.04em'
-                      }}>
-                        {it.specialTag}
-                      </div>
-                    )}
-
-                    <div>
-                      <span style={{ fontSize: '10px', color: '#6B7280', fontWeight: 600, letterSpacing: '0.05em' }}>
-                        {it.category}
-                      </span>
-                      <h4 style={{ fontSize: '14px', fontWeight: 700, color: '#111827', margin: '4px 0 12px 0', lineHeight: 1.3 }}>
-                        {it.name}
-                      </h4>
-                    </div>
-
-                    <div style={{ borderTop: '1px solid #E5E7EB', paddingTop: '10px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <span style={{ fontSize: '11px', color: '#6B7280', textDecoration: 'line-through' }}>
-                          ${it.listPrice.toLocaleString('es-AR')}
-                        </span>
-                        {it.discountPercent > 0 && (
-                          <span style={{ fontSize: '11px', fontWeight: 700, color: '#059669', backgroundColor: '#ECFDF5', padding: '1px 5px', borderRadius: '3px' }}>
-                            -{it.discountPercent}% OFF
-                          </span>
-                        )}
-                      </div>
-                      <div style={{ fontSize: '20px', fontWeight: 800, color: '#E30613', marginTop: '2px' }}>
-                        ${it.offerPrice.toLocaleString('es-AR')}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Pie de flyer */}
-              <div style={{
-                marginTop: '32px',
-                paddingTop: '16px',
-                borderTop: '1px solid #E5E7EB',
-                textAlign: 'center',
-                fontSize: '12px',
-                color: '#6B7280'
-              }}>
-                Precios sujetos a disponibilidad. Haga sus pedidos con anticipación.
               </div>
             </div>
           </div>
