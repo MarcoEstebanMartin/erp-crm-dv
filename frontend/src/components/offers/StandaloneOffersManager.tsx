@@ -769,8 +769,8 @@ export default function StandaloneOffersManager({ onBackToLogin }: { onBackToLog
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px', overflow: 'hidden', paddingRight: '8px' }}>
                     {/* Miniatura Foto de Producto */}
                     <div style={{
-                      width: '42px',
-                      height: '42px',
+                      width: '56px',
+                      height: '56px',
                       borderRadius: '6px',
                       backgroundColor: '#FFFFFF',
                       border: '1px solid #E5E7EB',
@@ -778,7 +778,8 @@ export default function StandaloneOffersManager({ onBackToLogin }: { onBackToLog
                       alignItems: 'center',
                       justifyContent: 'center',
                       flexShrink: 0,
-                      overflow: 'hidden'
+                      overflow: 'hidden',
+                      padding: '2px'
                     }}>
                       <img 
                         src={`/uploads/products/${p.sku}.jpg`}
@@ -943,15 +944,16 @@ export default function StandaloneOffersManager({ onBackToLogin }: { onBackToLog
                         {/* Miniatura Foto */}
                         <td style={{ padding: '8px 16px' }}>
                           <div style={{
-                            width: '40px',
-                            height: '40px',
-                            borderRadius: '4px',
+                            width: '56px',
+                            height: '56px',
+                            borderRadius: '6px',
                             backgroundColor: '#FFFFFF',
                             border: '1px solid #E5E7EB',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            overflow: 'hidden'
+                            overflow: 'hidden',
+                            padding: '2px'
                           }}>
                             <img 
                               src={`/uploads/products/${cleanSku}.jpg`}

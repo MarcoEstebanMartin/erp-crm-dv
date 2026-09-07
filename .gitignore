@@ -41,5 +41,6 @@ backend/certs/*.crt
 *.xlsx
 *.xls
 backups_auditoria/
+backend/backups/
 
-
+.vercel

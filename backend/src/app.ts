@@ -32,6 +32,8 @@ import storeRoutes from './routes/store.routes';
 import crmWhatsappRoutes from './routes/crm_whatsapp.routes';
 import weeklyScheduleRoutes from './routes/weeklySchedule.routes';
 import webChatRoutes from './routes/webChat.routes';
+import excelImporterRoutes from './routes/excel_importer.routes';
+
 
 const app: Application = express();
 
@@ -112,6 +114,8 @@ app.use('/api/hr', hrRoutes);
 app.use('/api/store', storeRoutes);
 app.use('/api/weekly-schedule', weeklyScheduleRoutes);
 app.use('/api/web-chat', webChatRoutes);
+app.use('/api/admin/excel', excelImporterRoutes);
+
 
 // 6. Endpoint de Healthcheck
 app.get('/api/health', (_req: Request, res: Response) => {

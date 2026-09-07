@@ -221,6 +221,8 @@ model Product {
 
   @@index([rubroId])
   @@index([providerId])
+  @@index([isActive])
+  @@index([name])
 }
 
 model Order {

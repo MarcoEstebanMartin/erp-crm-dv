@@ -330,7 +330,7 @@ export default function OffersCatalogGenerator({ campaignId, campaignData, onBac
                 padding: '20px 40px', 
                 display: 'grid', 
                 gridTemplateColumns: columnsCount === 2 ? '1fr 1fr' : '1fr 1fr 1fr', 
-                gap: '60px 40px',
+                gap: columnsCount === 2 ? '32px 24px' : '28px 18px',
                 alignContent: 'start',
                 paddingBottom: '80px',
                 position: 'relative'
@@ -398,10 +398,10 @@ export default function OffersCatalogGenerator({ campaignId, campaignData, onBac
                         const tagHeight = columnsCount === 2 ? 80 : 60;
 
                         return (
-                          <div key={item.id} style={{ display: 'flex', flexDirection: 'column', position: 'relative', minHeight: columnsCount === 2 ? '340px' : '240px' }}>
+                          <div key={item.id} style={{ display: 'flex', flexDirection: 'column', position: 'relative', minHeight: columnsCount === 2 ? '340px' : '260px' }}>
                             
                             {/* Contenedor Imagen */}
-                            <div style={{ flex: 1, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', padding: '10px 20px 0px 20px', position: 'relative', minHeight: columnsCount === 2 ? '200px' : '140px' }}>
+                            <div style={{ flex: 1, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', padding: '0px 10px 0px 10px', position: 'relative', minHeight: columnsCount === 2 ? '250px' : '180px' }}>
                               {(() => {
                                 const cleanSku = String(item.product.sku || '').padStart(4, '0');
                                 const imgSrc = item.product.imageUrl || `/uploads/products/${cleanSku}.jpg`;
@@ -411,10 +411,13 @@ export default function OffersCatalogGenerator({ campaignId, campaignData, onBac
                                     src={imgSrc} 
                                     alt={item.product.name} 
                                     style={{ 
-                                      height: columnsCount === 2 ? '190px' : '135px', 
+                                      maxHeight: columnsCount === 2 ? '250px' : '180px', 
                                       maxWidth: '100%', 
+                                      height: 'auto',
+                                      width: 'auto',
                                       objectFit: 'contain', 
-                                      mixBlendMode: 'multiply' 
+                                      mixBlendMode: 'multiply',
+                                      display: 'block'
                                     }}
                                     onError={(e) => {
                                       const target = e.target as HTMLImageElement;
@@ -532,7 +535,7 @@ export default function OffersCatalogGenerator({ campaignId, campaignData, onBac
                             </div>
 
                             {/* Título de Producto */}
-                            <div style={{ textAlign: 'center', marginTop: '10px' }}>
+                            <div style={{ textAlign: 'center', marginTop: '4px' }}>
                               <div style={{ 
                                 fontSize: columnsCount === 2 ? '22px' : '16px', 
                                 fontWeight: 800, 

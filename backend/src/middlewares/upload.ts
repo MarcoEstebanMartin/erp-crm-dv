@@ -43,3 +43,12 @@ export const uploadZipFile = multer({
     fileSize: 50 * 1024 * 1024, // Limite de 50MB
   },
 }).single('file');
+
+// Middleware para archivo Excel
+export const uploadExcelFile = multer({
+  storage,
+  limits: {
+    fileSize: 20 * 1024 * 1024, // 20MB limit
+  },
+}).single('file');
+

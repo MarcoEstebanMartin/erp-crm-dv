@@ -15,6 +15,8 @@
     "test:concurrency": "node scripts/stress_test_orders.js",
     "db:reset-movements": "node scripts/reset_movements.js",
     "db:backup-master": "node scripts/backup_master_data.js",
+    "db:backup-sql": "node scripts/backup_database_sql.js",
+    "db:health-check": "node scripts/db_health_check.js",
     "db:audit-balances": "node scripts/audit_balances.js",
     "db:audit-photos": "node scripts/audit_photos.js"
   },

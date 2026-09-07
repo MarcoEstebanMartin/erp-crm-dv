@@ -1,13 +1,19 @@
-# Tareas: Reporte de Deudores por Ruta y Sucursales
+﻿# Tablero Vivo de Tarea Activa (SDD)
 
-- [x] Modificar el esquema de base de datos (`schema.prisma`) para agregar el campo `route`
-- [x] Modificar el sembrador (`seed.js`) para importar las rutas de los clientes
-- [x] Ejecutar la migración de la base de datos y correr el sembrador
-- [x] Agregar validación del campo `route` en el validador del backend (`persona.validator.ts`)
-- [x] Modificar los métodos de creación y actualización en `persona.service.ts` para soportar `route`
-- [x] Implementar el cálculo FIFO de deudas por sucursal y reporte de deudores en `persona.service.ts`
-- [x] Exponer el nuevo controlador de reporte de deudores en `persona.controller.ts` y registrar su ruta
-- [x] Modificar el cliente API del frontend para agregar la llamada al reporte de deudores
-- [x] Integrar el campo `route` en el modal de registro y edición de clientes en `AdminDashboard.tsx`
-- [x] Diseñar e implementar la vista de reporte premium de deudores por ruta en `AdminDashboard.tsx` con filtros por ruta y avisos de múltiples boletas
-- [x] Validar la compilación de TypeScript de backend y frontend
+## Tarea Actual: Implementación del Sistema de Especificaciones (SDD)
+- [x] Crear arquitectura y protocolo multiagente en `.agents/ROLES.md`
+- [x] Crear especificación de arquitectura y contratos en `specs/ARCHITECTURE.md`
+- [x] Documentar invariantes y protocolo seguro de migraciones en `specs/DATABASE.md`
+- [x] Documentar especificación WMS y Depósito en `specs/modules/wms-deposito.md`
+- [x] Documentar especificación Facturación y AFIP en `specs/modules/facturacion-afip.md`
+- [x] Documentar especificación CRM y WhatsApp en `specs/modules/crm-whatsapp.md`
+- [x] Documentar especificación Clientes y Rutas en `specs/modules/clientes-rutas.md`
+- [x] Crear índice maestro en `specs/README.md`
+- [x] Actualizar directivas en `.agents/AGENTS.md`
+- [x] Validar que todo el sistema de especificaciones esté sincronizado y listo para operar
+
+---
+*Instrucciones para próximas tareas:*
+1. Reemplazar el título y los ítems de esta lista con los pasos y criterios de aceptación de la nueva tarea.
+2. Cada agente consultará la spec correspondiente en `specs/modules/` antes de ejecutar.
+3. Marcar los casilleros a medida que se verifiquen los cambios (`[x]`).
