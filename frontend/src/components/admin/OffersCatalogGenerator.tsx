@@ -402,27 +402,31 @@ export default function OffersCatalogGenerator({ campaignId, campaignData, onBac
                             
                             {/* Contenedor Imagen */}
                             <div style={{ flex: 1, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', padding: '10px 20px 0px 20px', position: 'relative', minHeight: columnsCount === 2 ? '200px' : '140px' }}>
-                              {item.product.imageUrl ? (
-                                <img 
-                                  src={item.product.imageUrl.startsWith('http') ? item.product.imageUrl : (item.product.imageUrl.startsWith('/') ? `${item.product.imageUrl}?v=1.3` : `/uploads/products/${item.product.imageUrl}?v=1.3`)} 
-                                  crossOrigin="anonymous"
-                                  alt={item.product.name} 
-                                  style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', mixBlendMode: 'multiply' }}
-                                  onError={(e) => {
-                                    (e.target as HTMLImageElement).src = `/uploads/products/${String(item.product.sku).padStart(4, '0')}.jpg`;
-                                  }}
-                                />
-                              ) : (
-                                <img 
-                                  src={`/uploads/products/${String(item.product.sku).padStart(4, '0')}.jpg`} 
-                                  crossOrigin="anonymous"
-                                  alt={item.product.name} 
-                                  style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', mixBlendMode: 'multiply' }}
-                                  onError={(e) => {
-                                    (e.target as HTMLElement).style.display = 'none';
-                                  }}
-                                />
-                              )}
+                              {(() => {
+                                const cleanSku = String(item.product.sku || '').padStart(4, '0');
+                                const imgSrc = item.product.imageUrl || `/uploads/products/${cleanSku}.jpg`;
+
+                                return (
+                                  <img 
+                                    src={imgSrc} 
+                                    alt={item.product.name} 
+                                    style={{ 
+                                      height: columnsCount === 2 ? '190px' : '135px', 
+                                      maxWidth: '100%', 
+                                      objectFit: 'contain', 
+                                      mixBlendMode: 'multiply' 
+                                    }}
+                                    onError={(e) => {
+                                      const target = e.target as HTMLImageElement;
+                                      if (!target.src.endsWith(`${cleanSku}.jpg`)) {
+                                        target.src = `/uploads/products/${cleanSku}.jpg`;
+                                      } else {
+                                        target.style.display = 'none';
+                                      }
+                                    }}
+                                  />
+                                );
+                              })()}
 
                               {/* Etiqueta de Precio */}
                               <div style={{ 

@@ -12,17 +12,12 @@ import {
   Check, 
   Copy, 
   Calendar, 
-  Tag, 
   ArrowLeft, 
-  Save, 
-  Download,
-  AlertCircle,
-  HelpCircle,
-  RefreshCw,
-  ExternalLink,
-  ChevronDown
+  FileText,
+  Image as ImageIcon
 } from 'lucide-react';
-import defaultProductsData from '../../utils/products_data.json';
+import maestroProductsData from '../../utils/maestro_products.json';
+import initialWeeklyOffers from '../../utils/initial_weekly_offers.json';
 import OffersCatalogGenerator from '../admin/OffersCatalogGenerator';
 
 export interface CatalogProduct {
@@ -31,6 +26,9 @@ export interface CatalogProduct {
   name: string;
   listPrice: number;
   category?: string;
+  rubro?: string;
+  hasPhoto?: boolean;
+  imageUrl?: string | null;
   description?: string;
 }
 
@@ -43,6 +41,7 @@ export interface WeeklyOfferItem {
   offerPrice: number;
   discountPercent: number;
   specialTag: string;
+  imageUrl?: string | null;
 }
 
 export interface WeeklyCampaign {
@@ -50,26 +49,59 @@ export interface WeeklyCampaign {
   title: string;
   startDate: string;
   endDate: string;
+  subtitle?: string;
   notes?: string;
   customRubroOrder?: string[];
   items: WeeklyOfferItem[];
 }
 
-const DEFAULT_TAGS = [
-  'SUPER OFERTA',
-  'LLEVANDO 3+',
-  'LLEVANDO BULTO',
-  'COMBO SEMANAL',
-  'HASTA AGOTAR STOCK',
-  'PRECIO BOMBA',
-  'DESTACADO'
-];
+function normalizeText(s: string) {
+  return (s || '')
+    .toUpperCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^A-Z0-9]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function findBestCatalogMatch(rawName: string, catalogList: CatalogProduct[]) {
+  const norm = normalizeText(rawName);
+  let best: CatalogProduct | null = null;
+  let maxScore = 0;
+
+  const wordsDesc = norm.split(' ').filter(w => w.length > 2 && !['PARA', 'CON', 'LOS', 'LAS', 'POR', 'KG', 'GRS', 'GR', 'ML', 'LT', 'LTS'].includes(w));
+
+  for (const p of catalogList) {
+    const pNorm = normalizeText(p.name);
+    if (pNorm === norm) return p;
+
+    const wordsP = new Set(pNorm.split(' ').filter(w => w.length > 2));
+    let score = 0;
+    for (const w of wordsDesc) {
+      if (wordsP.has(w)) score += 2;
+      else {
+        for (const pw of wordsP) {
+          if (pw.includes(w) || w.includes(pw)) {
+            score += 1;
+            break;
+          }
+        }
+      }
+    }
+    if (score > maxScore && score >= 2) {
+      maxScore = score;
+      best = p;
+    }
+  }
+  return best;
+}
 
 export default function StandaloneOffersManager({ onBackToLogin }: { onBackToLogin?: () => void }) {
-  // 1. Catálogo de productos (Cargado de LocalStorage o por defecto de products_data.json)
+  // 1. Catálogo maestro de productos (366 productos con fotos y precios de lista)
   const [catalog, setCatalog] = useState<CatalogProduct[]>(() => {
     try {
-      const saved = localStorage.getItem('dv_custom_catalog');
+      const saved = localStorage.getItem('dv_custom_catalog_v2');
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) return parsed;
@@ -77,20 +109,23 @@ export default function StandaloneOffersManager({ onBackToLogin }: { onBackToLog
     } catch (e) {
       console.warn('Error reading saved catalog:', e);
     }
-    return (defaultProductsData as any[]).map(p => ({
-      id: p.id || p.sku,
+    return (maestroProductsData as any[]).map(p => ({
+      id: p.sku,
       sku: String(p.sku).padStart(4, '0'),
       name: p.name,
       listPrice: Number(p.listPrice) || 0,
-      category: p.category || 'VARIOS',
-      description: p.description || ''
+      category: p.category || p.rubro || 'VARIOS',
+      rubro: p.rubro || 'VARIOS',
+      hasPhoto: !!p.hasPhoto,
+      imageUrl: p.imageUrl || `/uploads/products/${String(p.sku).padStart(4, '0')}.jpg`,
+      description: ''
     }));
   });
 
-  // 2. Campañas guardadas
+  // 2. Campañas guardadas (inicia directamente con la campaña de OFERTAS 07-09 con sus 66 productos)
   const [savedCampaigns, setSavedCampaigns] = useState<WeeklyCampaign[]>(() => {
     try {
-      const saved = localStorage.getItem('dv_saved_campaigns');
+      const saved = localStorage.getItem('dv_saved_campaigns_v3');
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) return parsed;
@@ -98,21 +133,10 @@ export default function StandaloneOffersManager({ onBackToLogin }: { onBackToLog
     } catch (e) {
       console.warn('Error reading saved campaigns:', e);
     }
-    const today = new Date();
-    const nextWeek = new Date();
-    nextWeek.setDate(today.getDate() + 7);
-
-    return [{
-      id: 'default-1',
-      title: 'Ofertas Semanales',
-      startDate: today.toISOString().split('T')[0],
-      endDate: nextWeek.toISOString().split('T')[0],
-      notes: 'Precios válidos para entrega inmediata hasta agotar stock.',
-      items: []
-    }];
+    return [initialWeeklyOffers as unknown as WeeklyCampaign];
   });
 
-  const [activeCampaignId, setActiveCampaignId] = useState<string>(() => savedCampaigns[0]?.id || 'default-1');
+  const [activeCampaignId, setActiveCampaignId] = useState<string>(() => savedCampaigns[0]?.id || 'semana-07-09');
 
   // Campaña activa actual
   const activeCampaign = useMemo(() => {
@@ -130,35 +154,41 @@ export default function StandaloneOffersManager({ onBackToLogin }: { onBackToLog
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
+  // Adaptación de campaña para el generador PDF oficial
   const adaptedCampaignForCatalog = useMemo(() => {
     return {
       id: activeCampaign.id,
-      title: activeCampaign.title,
-      startDate: activeCampaign.startDate,
-      endDate: activeCampaign.endDate,
+      title: activeCampaign.title || 'OFERTAS SEMANALES',
+      startDate: activeCampaign.startDate || new Date().toISOString().split('T')[0],
+      endDate: activeCampaign.endDate || null,
       customRubroOrder: activeCampaign.customRubroOrder,
-      items: activeCampaign.items.map(it => ({
-        id: it.id,
-        offerPrice: it.offerPrice,
-        specialTag: it.specialTag || null,
-        previousPrice: it.listPrice,
-        campaignGroup: it.category,
-        product: {
-          id: it.sku,
-          sku: it.sku,
-          name: it.name,
-          listPrice: it.listPrice,
-          imageUrl: `/uploads/products/${String(it.sku).padStart(4, '0')}.jpg`,
-          rubro: { name: it.category }
-        }
-      }))
+      items: activeCampaign.items.map(it => {
+        const cleanSku = String(it.sku || '').padStart(4, '0');
+        const photoUrl = it.imageUrl || `/uploads/products/${cleanSku}.jpg`;
+
+        return {
+          id: it.id,
+          offerPrice: it.offerPrice,
+          specialTag: it.specialTag || null,
+          previousPrice: it.listPrice,
+          campaignGroup: it.category,
+          product: {
+            id: cleanSku,
+            sku: cleanSku,
+            name: it.name,
+            listPrice: it.listPrice,
+            imageUrl: photoUrl,
+            rubro: { name: it.category }
+          }
+        };
+      })
     };
   }, [activeCampaign]);
 
   // Guardar campañas en localStorage cuando cambian
   useEffect(() => {
     try {
-      localStorage.setItem('dv_saved_campaigns', JSON.stringify(savedCampaigns));
+      localStorage.setItem('dv_saved_campaigns_v3', JSON.stringify(savedCampaigns));
     } catch (e) {
       console.warn('Error saving campaigns:', e);
     }
@@ -169,7 +199,7 @@ export default function StandaloneOffersManager({ onBackToLogin }: { onBackToLog
     setSavedCampaigns(prev => prev.map(c => c.id === activeCampaign.id ? updater(c) : c));
   };
 
-  // 3. Subir y procesar archivo Excel (.xlsx, .xls, .csv)
+  // 3. Lector Universal de Excel: lee OFERTAS-*.xlsx o Maestro1.xlsx
   const handleExcelUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -179,6 +209,34 @@ export default function StandaloneOffersManager({ onBackToLogin }: { onBackToLog
       try {
         const bstr = evt.target?.result;
         const wb = XLSX.read(bstr, { type: 'binary' });
+        
+        // Si tiene hoja "Productos", es un Maestro de catálogo
+        if (wb.SheetNames.includes('Productos')) {
+          const sheet = wb.Sheets['Productos'];
+          const rawProducts = XLSX.utils.sheet_to_json<any>(sheet);
+          const newProducts: CatalogProduct[] = rawProducts.map(p => {
+            const cleanSku = String(p.SKU || '').trim().padStart(4, '0');
+            return {
+              id: cleanSku,
+              sku: cleanSku,
+              name: String(p.PRODUCTO || '').trim(),
+              listPrice: Number(p['PRECIO FINAL']) || Number(p['PRECIO SIN IVA']) || 0,
+              category: String(p.SUBRUBRO || p.RUBRO || 'VARIOS').trim().toUpperCase(),
+              rubro: String(p.RUBRO || 'VARIOS').trim().toUpperCase(),
+              hasPhoto: true,
+              imageUrl: `/uploads/products/${cleanSku}.jpg`
+            };
+          });
+
+          setCatalog(newProducts);
+          localStorage.setItem('dv_custom_catalog_v2', JSON.stringify(newProducts));
+          setCatalogUploadSuccessMsg(`¡Éxito! Se actualizaron ${newProducts.length} productos maestros del catálogo.`);
+          setIsExcelModalOpen(false);
+          setTimeout(() => setCatalogUploadSuccessMsg(null), 5000);
+          return;
+        }
+
+        // Si es una planilla de ofertas semanales (como OFERTAS-07-09.xlsx)
         const wsName = wb.SheetNames[0];
         const ws = wb.Sheets[wsName];
         const rawData = XLSX.utils.sheet_to_json<any>(ws, { header: 1 });
@@ -188,58 +246,122 @@ export default function StandaloneOffersManager({ onBackToLogin }: { onBackToLog
           return;
         }
 
-        // Detectar encabezados
-        const headerRow: string[] = (rawData[0] || []).map((h: any) => String(h || '').trim().toUpperCase());
-        
-        let skuIdx = headerRow.findIndex(h => h.includes('SKU') || h.includes('COD') || h.includes('ART'));
-        let nameIdx = headerRow.findIndex(h => h.includes('NOM') || h.includes('DESC') || h.includes('DETALLE') || h.includes('PRODUCTO'));
-        let priceIdx = headerRow.findIndex(h => h.includes('LISTA') || h.includes('PRECIO') || h.includes('VENTA') || h.includes('COSTO'));
-        let catIdx = headerRow.findIndex(h => h.includes('RUBRO') || h.includes('CAT') || h.includes('GRUPO') || h.includes('FAMILIA'));
+        let currentRubro = 'MELINCUE';
+        const parsedItems: WeeklyOfferItem[] = [];
+        const detectedRubros: string[] = [];
+        let detectedSubtitle = '';
 
-        // Fallbacks inteligentes si los encabezados varían
-        if (skuIdx === -1) skuIdx = 0;
-        if (nameIdx === -1) nameIdx = 1;
-        if (priceIdx === -1) priceIdx = headerRow.length > 2 ? 2 : 1;
+        rawData.forEach((r: any[], idx: number) => {
+          if (!r || r.length === 0) return;
+          const colA = (r[0] || '').toString().trim();
+          const colB = (r[1] || '').toString().trim();
+          const colC = r[2];
 
-        const newProducts: CatalogProduct[] = [];
-
-        for (let i = 1; i < rawData.length; i++) {
-          const row = rawData[i];
-          if (!row || row.length === 0) continue;
-
-          const rawSku = row[skuIdx];
-          const rawName = row[nameIdx];
-          const rawPrice = row[priceIdx];
-          const rawCat = catIdx !== -1 ? row[catIdx] : 'GENERAL';
-
-          if (!rawName) continue;
-
-          let parsedPrice = 0;
-          if (typeof rawPrice === 'number') {
-            parsedPrice = rawPrice;
-          } else if (typeof rawPrice === 'string') {
-            parsedPrice = parseFloat(rawPrice.replace(/[^0-9,-]+/g, '').replace(',', '.')) || 0;
+          // Detección de Vigencia / Fecha
+          if (idx === 0 && colB.toUpperCase().includes('VIGENCIA')) {
+            detectedSubtitle = colB.trim();
+            return;
           }
 
-          const cleanSku = rawSku ? String(rawSku).trim() : `ITEM-${i}`;
+          // Detección de Rubro / Sección
+          if (r.length === 1 || (colB && colC === undefined && typeof colB === 'string' && isNaN(Number(colB.replace(/\s/g, ''))))) {
+            const possibleRubro = (colB || colA).trim();
+            if (possibleRubro.length > 2 && !possibleRubro.includes('CADA 1 CAJA') && !possibleRubro.includes('PRECIO POR CAJA')) {
+              currentRubro = possibleRubro.toUpperCase();
+              if (!detectedRubros.includes(currentRubro)) detectedRubros.push(currentRubro);
+              return;
+            }
+          }
 
-          newProducts.push({
-            id: cleanSku,
-            sku: cleanSku.padStart(4, '0'),
-            name: String(rawName).trim(),
-            listPrice: parsedPrice,
-            category: rawCat ? String(rawCat).trim().toUpperCase() : 'GENERAL'
-          });
-        }
+          // Subrubro en columna A
+          if (colA && ['CONSERVAS', 'PASTAS SECAS', 'ADEREZOS', 'VARIOS', 'FIAMBRES', 'YERBAS', 'PAPELES'].includes(colA.toUpperCase())) {
+            currentRubro = colA.toUpperCase();
+            if (!detectedRubros.includes(currentRubro)) detectedRubros.push(currentRubro);
+          }
 
-        if (newProducts.length > 0) {
-          setCatalog(newProducts);
-          localStorage.setItem('dv_custom_catalog', JSON.stringify(newProducts));
-          setCatalogUploadSuccessMsg(`¡Éxito! Se cargaron ${newProducts.length} productos desde tu archivo Excel.`);
+          let desc = '';
+          let price = 0;
+          if (typeof colC === 'number') {
+            desc = colB || colA;
+            price = colC;
+          } else if (typeof colB === 'number') {
+            desc = colA;
+            price = colB;
+          } else if (typeof colC === 'string') {
+            const parsed = parseFloat(colC.replace(/[^0-9,-]+/g, '').replace(',', '.'));
+            if (!isNaN(parsed) && parsed > 0) {
+              desc = colB || colA;
+              price = parsed;
+            }
+          }
+
+          if (desc && price > 0) {
+            let tag = '';
+            let cleanName = desc;
+
+            if (desc.includes('OFERTON')) {
+              tag = 'OFERTÓN';
+              cleanName = cleanName.replace(/OFERTON/gi, '').trim();
+            } else if (desc.includes('C/U $') || desc.includes('( C/U')) {
+              const matchTag = desc.match(/\(\s*C\/U\s*\$[0-9]+\s*\)/i);
+              if (matchTag) {
+                tag = matchTag[0];
+                cleanName = cleanName.replace(matchTag[0], '').trim();
+              }
+            } else if (desc.includes('CADA 6 BOTELLAS')) {
+              tag = '6+ x $21.499 C/U';
+            } else if (desc.includes('CADA 12 BOTELLAS')) {
+              tag = '12+ x $16.350 C/U';
+            } else if (desc.includes('CADA 1 CAJA')) {
+              tag = 'PRECIO POR CAJA';
+            } else if (desc.includes('CADA 2 CAJAS')) {
+              tag = 'LLEVANDO 2 CAJAS';
+            } else if (desc.includes('NO REFRIGERADA')) {
+              tag = 'NO REFRIGERADA';
+              cleanName = cleanName.replace(/NO REFRIGERADA/gi, '').trim();
+            }
+
+            const matched = findBestCatalogMatch(cleanName, catalog);
+            const sku = matched ? matched.sku : 'OFR-' + String(parsedItems.length + 1).padStart(3, '0');
+            const listPrice = matched && matched.listPrice > 0 ? matched.listPrice : Math.round(price * 1.15);
+            const discount = listPrice > price ? Math.round(((listPrice - price) / listPrice) * 100) : 0;
+            const finalPhoto = `/uploads/products/${sku}.jpg`;
+
+            parsedItems.push({
+              id: `item-${Date.now()}-${idx}`,
+              sku: sku,
+              name: matched ? matched.name : cleanName.replace(/\s+/g, ' ').trim(),
+              category: currentRubro,
+              listPrice: listPrice,
+              offerPrice: price,
+              discountPercent: discount,
+              specialTag: tag,
+              imageUrl: finalPhoto
+            });
+          }
+        });
+
+        if (parsedItems.length > 0) {
+          const campaignName = file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ').toUpperCase();
+          const today = new Date().toISOString().split('T')[0];
+
+          const newCampaign: WeeklyCampaign = {
+            id: `camp-${Date.now()}`,
+            title: campaignName.includes('OFERTAS') ? campaignName : `OFERTAS ${campaignName}`,
+            startDate: today,
+            endDate: today,
+            subtitle: detectedSubtitle || undefined,
+            customRubroOrder: detectedRubros,
+            items: parsedItems
+          };
+
+          setSavedCampaigns(prev => [newCampaign, ...prev]);
+          setActiveCampaignId(newCampaign.id);
+          setCatalogUploadSuccessMsg(`¡Éxito! Se cargaron ${parsedItems.length} ofertas semanales y ${detectedRubros.length} rubros desde tu archivo.`);
           setIsExcelModalOpen(false);
           setTimeout(() => setCatalogUploadSuccessMsg(null), 5000);
         } else {
-          alert('No se pudieron extraer productos del archivo.');
+          alert('No se pudieron extraer productos en oferta del archivo.');
         }
       } catch (err: any) {
         console.error('Error procesando Excel:', err);
@@ -248,24 +370,6 @@ export default function StandaloneOffersManager({ onBackToLogin }: { onBackToLog
     };
     reader.readAsBinaryString(file);
     e.target.value = '';
-  };
-
-  // Restaurar catálogo original
-  const handleResetToDefaultCatalog = () => {
-    if (confirm('¿Restaurar el catálogo original de DV Distribuidora?')) {
-      localStorage.removeItem('dv_custom_catalog');
-      const defaults = (defaultProductsData as any[]).map(p => ({
-        id: p.id || p.sku,
-        sku: String(p.sku).padStart(4, '0'),
-        name: p.name,
-        listPrice: Number(p.listPrice) || 0,
-        category: p.category || 'VARIOS',
-        description: p.description || ''
-      }));
-      setCatalog(defaults);
-      setCatalogUploadSuccessMsg('Se restauró el catálogo predeterminado de DV Distribuidora.');
-      setTimeout(() => setCatalogUploadSuccessMsg(null), 4000);
-    }
   };
 
   // 4. Agregar producto a la campaña activa
@@ -285,7 +389,8 @@ export default function StandaloneOffersManager({ onBackToLogin }: { onBackToLog
       listPrice: product.listPrice,
       offerPrice: defaultOfferPrice,
       discountPercent: defaultDiscount,
-      specialTag: ''
+      specialTag: '',
+      imageUrl: product.imageUrl || `/uploads/products/${product.sku}.jpg`
     };
 
     updateActiveCampaign(prev => ({
@@ -342,103 +447,16 @@ export default function StandaloneOffersManager({ onBackToLogin }: { onBackToLog
     }));
   };
 
-  // 5. Motor de sugerencias inteligentes (Reglas de la distribuidora)
-  const handleSuggestWeeklySelection = () => {
-    const selectedSkus = new Set(activeCampaign.items.map(it => it.sku));
-    const toAdd: WeeklyOfferItem[] = [];
-
-    const pickFirstMatching = (predicate: (p: CatalogProduct) => boolean, tag = '', discount = 12) => {
-      const match = catalog.find(p => !selectedSkus.has(p.sku) && predicate(p));
-      if (match) {
-        selectedSkus.add(match.sku);
-        const calculatedPrice = Math.round(match.listPrice * (1 - discount / 100));
-        toAdd.push({
-          id: `${match.sku}-${Date.now()}-${Math.random()}`,
-          sku: match.sku,
-          name: match.name,
-          category: match.category || 'VARIOS',
-          listPrice: match.listPrice,
-          offerPrice: calculatedPrice,
-          discountPercent: discount,
-          specialTag: tag
-        });
-      }
-    };
-
-    // 1. Queso Duro
-    pickFirstMatching(p => /SARDO|REGGIANITO|PROVOLONE|SBRINZ|GOYA/i.test(p.name), 'SUPER OFERTA', 15);
-    // 2. Queso Semiduro
-    pickFirstMatching(p => /TYBO|GOUDA|DANBO|HOLANDO|BARRA/i.test(p.name), 'LLEVANDO 3+', 12);
-    // 3. Queso Blando / Mozzarella
-    pickFirstMatching(p => /MOZZARELLA|CREMOSO|SALUT/i.test(p.name), 'COMBO SEMANAL', 10);
-    // 4. Lácteo Cremigal
-    pickFirstMatching(p => /CREMIGAL|DULCE|MANTECA|YOGURT/i.test(p.name), 'DESTACADO', 12);
-    // 5. Bebida
-    pickFirstMatching(p => /BAGGIO|VIDA|DR\.LEMON|FERNET|VINO/i.test(p.name), 'PRECIO BOMBA', 14);
-    // 6. Almacén
-    pickFirstMatching(p => /GIACOMO|AMANDA|NATURA|MAYONESA|YERBA/i.test(p.name), 'HASTA AGOTAR STOCK', 10);
-
-    if (toAdd.length > 0) {
-      updateActiveCampaign(prev => ({
-        ...prev,
-        items: [...prev.items, ...toAdd]
-      }));
-      setCatalogUploadSuccessMsg(`✨ Se agregaron ${toAdd.length} productos recomendados a la oferta.`);
-      setTimeout(() => setCatalogUploadSuccessMsg(null), 4000);
-    } else {
-      alert('Ya tienes los productos principales sugeridos en la campaña actual.');
-    }
-  };
-
-  // Crear nueva campaña semanal
-  const handleCreateNewWeek = () => {
-    const today = new Date();
-    const nextWeek = new Date();
-    nextWeek.setDate(today.getDate() + 7);
-
-    const title = prompt('Nombre o fecha de la nueva campaña:', `Semana del ${today.getDate()} al ${nextWeek.getDate()}`);
-    if (!title) return;
-
-    const newCampaign: WeeklyCampaign = {
-      id: `camp-${Date.now()}`,
-      title: title.trim(),
-      startDate: today.toISOString().split('T')[0],
-      endDate: nextWeek.toISOString().split('T')[0],
-      notes: 'Precios válidos para entrega inmediata hasta agotar stock.',
-      items: []
-    };
-
-    setSavedCampaigns(prev => [newCampaign, ...prev]);
-    setActiveCampaignId(newCampaign.id);
-  };
-
-  // Duplicar campaña actual
-  const handleDuplicateCurrentWeek = () => {
-    const newTitle = prompt('Nombre para la copia de la campaña:', `${activeCampaign.title} (Copia)`);
-    if (!newTitle) return;
-
-    const duplicated: WeeklyCampaign = {
-      ...activeCampaign,
-      id: `camp-${Date.now()}`,
-      title: newTitle.trim(),
-      items: activeCampaign.items.map(it => ({ ...it, id: `${it.sku}-${Date.now()}-${Math.random()}` }))
-    };
-
-    setSavedCampaigns(prev => [duplicated, ...prev]);
-    setActiveCampaignId(duplicated.id);
-  };
-
-  // 6. Filtrar catálogo para búsqueda
+  // 5. Filtrar catálogo para búsqueda
   const filteredCatalog = useMemo(() => {
     const q = searchQuery.toLowerCase().trim();
     return catalog.filter(p => {
       const matchQuery = !q || p.name.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q);
       const matchCat = selectedCategory === 'TODOS' || (p.category && p.category.toUpperCase() === selectedCategory);
       return matchQuery && matchCat;
-    }).slice(0, 50);
+    }).slice(0, 60);
   }, [catalog, searchQuery, selectedCategory]);
 
-  // Lista de categorías únicas
   const categories = useMemo(() => {
     const set = new Set<string>();
     catalog.forEach(p => {
@@ -447,7 +465,7 @@ export default function StandaloneOffersManager({ onBackToLogin }: { onBackToLog
     return ['TODOS', ...Array.from(set).sort()];
   }, [catalog]);
 
-  // 7. Generador de texto para WhatsApp
+  // 6. Generador de texto para WhatsApp
   const generateWhatsAppMessage = () => {
     let msg = `🔥 *OFERTAS DE LA SEMANA - DV DISTRIBUIDORA* 🔥\n`;
     msg += `📅 *Vigencia:* ${activeCampaign.startDate || 'Semana'} al ${activeCampaign.endDate || 'Fin de semana'}\n\n`;
@@ -487,9 +505,10 @@ export default function StandaloneOffersManager({ onBackToLogin }: { onBackToLog
     });
   };
 
+  // Si estamos en vista catálogo, mostramos el generador PDF oficial del ERP
   if (view === 'catalog') {
     return (
-      <div style={{ minHeight: '100vh', backgroundColor: '#F9FAFB' }}>
+      <div style={{ minHeight: '100vh', backgroundColor: '#F9FAFB', padding: '20px 0' }}>
         <OffersCatalogGenerator
           campaignData={adaptedCampaignForCatalog}
           onBack={() => setView('editor')}
@@ -544,7 +563,7 @@ export default function StandaloneOffersManager({ onBackToLogin }: { onBackToLog
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <h1 style={{ fontSize: '18px', fontWeight: 700, letterSpacing: '-0.02em', margin: 0 }}>
-                Ofertas Semanales
+                {activeCampaign.title || 'Ofertas Semanales'}
               </h1>
               <span style={{
                 fontSize: '11px',
@@ -555,11 +574,11 @@ export default function StandaloneOffersManager({ onBackToLogin }: { onBackToLog
                 borderRadius: '999px',
                 letterSpacing: '0.04em'
               }}>
-                MODO OFICINA
+                EDICIÓN ACTIVA
               </span>
             </div>
             <p style={{ fontSize: '12px', color: '#6B7280', margin: '2px 0 0 0' }}>
-              Catálogo activo: <strong>{catalog.length}</strong> productos disponibles
+              Ofertas cargadas: <strong>{activeCampaign.items.length}</strong> artículos | Catálogo maestro: <strong>{catalog.length}</strong>
             </p>
           </div>
         </div>
@@ -577,36 +596,14 @@ export default function StandaloneOffersManager({ onBackToLogin }: { onBackToLog
               borderRadius: '6px',
               border: '1px solid #E5E7EB',
               backgroundColor: '#FFFFFF',
-              color: '#374151',
-              fontSize: '13px',
-              fontWeight: 500,
-              cursor: 'pointer'
-            }}
-          >
-            <FileSpreadsheet size={16} color="#059669" />
-            <span>Cargar Excel</span>
-          </button>
-
-          {/* Botón Sugerir Inteligente */}
-          <button
-            onClick={handleSuggestWeeklySelection}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '8px 14px',
-              borderRadius: '6px',
-              border: '1px solid #E5E7EB',
-              backgroundColor: '#F3F4F6',
-              color: '#111827',
+              color: '#059669',
               fontSize: '13px',
               fontWeight: 600,
               cursor: 'pointer'
             }}
-            title="Aplica reglas automáticas de quesería, bebidas y almacén"
           >
-            <Sparkles size={15} color="#E30613" />
-            <span>Sugerir Ofertas</span>
+            <FileSpreadsheet size={16} color="#059669" />
+            <span>Cargar Excel Semanal</span>
           </button>
 
           {/* Botón WhatsApp */}
@@ -631,7 +628,7 @@ export default function StandaloneOffersManager({ onBackToLogin }: { onBackToLog
             <span>WhatsApp</span>
           </button>
 
-          {/* Botón Catálogo PDF */}
+          {/* Botón Generar Catálogo PDF */}
           <button
             onClick={() => {
               if (activeCampaign.items.length === 0) {
@@ -644,18 +641,18 @@ export default function StandaloneOffersManager({ onBackToLogin }: { onBackToLog
               display: 'inline-flex',
               alignItems: 'center',
               gap: '6px',
-              padding: '8px 14px',
+              padding: '8px 16px',
               borderRadius: '6px',
               border: 'none',
               backgroundColor: '#cc000f',
               color: '#FFFFFF',
               fontSize: '13px',
-              fontWeight: 600,
+              fontWeight: 700,
               cursor: 'pointer',
-              boxShadow: '0 2px 4px rgba(204, 0, 15, 0.2)'
+              boxShadow: '0 2px 6px rgba(204, 0, 15, 0.25)'
             }}
           >
-            <Printer size={15} />
+            <Printer size={16} />
             <span>Generar Catálogo PDF</span>
           </button>
         </div>
@@ -684,12 +681,12 @@ export default function StandaloneOffersManager({ onBackToLogin }: { onBackToLog
         margin: '0 auto',
         padding: '24px',
         display: 'grid',
-        gridTemplateColumns: '400px 1fr',
+        gridTemplateColumns: '420px 1fr',
         gap: '24px',
         alignItems: 'start'
       }}>
 
-        {/* COLUMNA IZQUIERDA: Buscador y Catálogo de Productos */}
+        {/* COLUMNA IZQUIERDA: Buscador y Catálogo de Productos con Miniaturas */}
         <div style={{
           backgroundColor: '#FFFFFF',
           borderRadius: '8px',
@@ -699,22 +696,11 @@ export default function StandaloneOffersManager({ onBackToLogin }: { onBackToLog
         }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
             <h2 style={{ fontSize: '14px', fontWeight: 700, margin: 0 }}>
-              Agregar Productos ({filteredCatalog.length})
+              Catálogo de Productos ({filteredCatalog.length})
             </h2>
-            <button
-              onClick={handleResetToDefaultCatalog}
-              style={{
-                fontSize: '11px',
-                color: '#6B7280',
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                textDecoration: 'underline'
-              }}
-              title="Restaurar productos base"
-            >
-              Restaurar Base
-            </button>
+            <span style={{ fontSize: '11px', color: '#6B7280' }}>
+              366 con fotos
+            </span>
           </div>
 
           {/* Buscador */}
@@ -780,18 +766,43 @@ export default function StandaloneOffersManager({ onBackToLogin }: { onBackToLog
                     transition: 'all 0.15s'
                   }}
                 >
-                  <div style={{ overflow: 'hidden', paddingRight: '8px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <span style={{ fontSize: '10px', fontFamily: 'monospace', color: '#6B7280', backgroundColor: '#E5E7EB', padding: '1px 4px', borderRadius: '3px' }}>
-                        {p.sku}
-                      </span>
-                      <span style={{ fontSize: '11px', color: '#9CA3AF' }}>{p.category}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', overflow: 'hidden', paddingRight: '8px' }}>
+                    {/* Miniatura Foto de Producto */}
+                    <div style={{
+                      width: '42px',
+                      height: '42px',
+                      borderRadius: '6px',
+                      backgroundColor: '#FFFFFF',
+                      border: '1px solid #E5E7EB',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0,
+                      overflow: 'hidden'
+                    }}>
+                      <img 
+                        src={`/uploads/products/${p.sku}.jpg`}
+                        alt={p.name}
+                        style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
+                        onError={(e) => {
+                          (e.target as HTMLElement).style.display = 'none';
+                        }}
+                      />
                     </div>
-                    <div style={{ fontSize: '13px', fontWeight: 600, color: '#111827', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginTop: '2px' }} title={p.name}>
-                      {p.name}
-                    </div>
-                    <div style={{ fontSize: '12px', color: '#4B5563', marginTop: '2px' }}>
-                      Lista: <strong>${p.listPrice.toLocaleString('es-AR')}</strong>
+
+                    <div style={{ overflow: 'hidden' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span style={{ fontSize: '10px', fontFamily: 'monospace', color: '#6B7280', backgroundColor: '#E5E7EB', padding: '1px 4px', borderRadius: '3px' }}>
+                          {p.sku}
+                        </span>
+                        <span style={{ fontSize: '10px', color: '#9CA3AF' }}>{p.category}</span>
+                      </div>
+                      <div style={{ fontSize: '12px', fontWeight: 600, color: '#111827', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginTop: '2px' }} title={p.name}>
+                        {p.name}
+                      </div>
+                      <div style={{ fontSize: '11px', color: '#4B5563', marginTop: '1px' }}>
+                        Lista: <strong>${p.listPrice.toLocaleString('es-AR')}</strong>
+                      </div>
                     </div>
                   </div>
 
@@ -819,18 +830,12 @@ export default function StandaloneOffersManager({ onBackToLogin }: { onBackToLog
                 </div>
               );
             })}
-
-            {filteredCatalog.length === 0 && (
-              <div style={{ textAlign: 'center', padding: '24px 8px', color: '#9CA3AF', fontSize: '13px' }}>
-                No se encontraron productos con ese criterio.
-              </div>
-            )}
           </div>
         </div>
 
-        {/* COLUMNA DERECHA: Editor de la Campaña de Ofertas Activa */}
+        {/* COLUMNA DERECHA: Editor de Ofertas Activas con Fotos */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          {/* Card de Configuración de Campaña */}
+          {/* Barra de Control de Campaña */}
           <div style={{
             backgroundColor: '#FFFFFF',
             borderRadius: '8px',
@@ -860,38 +865,6 @@ export default function StandaloneOffersManager({ onBackToLogin }: { onBackToLog
                   <option key={c.id} value={c.id}>{c.title} ({c.items.length} ofertas)</option>
                 ))}
               </select>
-
-              <button
-                onClick={handleCreateNewWeek}
-                style={{
-                  fontSize: '12px',
-                  fontWeight: 500,
-                  padding: '6px 10px',
-                  borderRadius: '6px',
-                  border: '1px solid #E5E7EB',
-                  backgroundColor: '#F9FAFB',
-                  color: '#374151',
-                  cursor: 'pointer'
-                }}
-              >
-                + Nueva Semana
-              </button>
-
-              <button
-                onClick={handleDuplicateCurrentWeek}
-                style={{
-                  fontSize: '12px',
-                  fontWeight: 500,
-                  padding: '6px 10px',
-                  borderRadius: '6px',
-                  border: '1px solid #E5E7EB',
-                  backgroundColor: '#F9FAFB',
-                  color: '#374151',
-                  cursor: 'pointer'
-                }}
-              >
-                Duplicar
-              </button>
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
@@ -904,22 +877,15 @@ export default function StandaloneOffersManager({ onBackToLogin }: { onBackToLog
                   onChange={(e) => updateActiveCampaign(prev => ({ ...prev, startDate: e.target.value }))}
                   style={{ padding: '4px 6px', fontSize: '12px', border: '1px solid #D1D5DB', borderRadius: '4px' }}
                 />
-                <span>al</span>
-                <input
-                  type="date"
-                  value={activeCampaign.endDate}
-                  onChange={(e) => updateActiveCampaign(prev => ({ ...prev, endDate: e.target.value }))}
-                  style={{ padding: '4px 6px', fontSize: '12px', border: '1px solid #D1D5DB', borderRadius: '4px' }}
-                />
               </div>
 
-              <div style={{ fontSize: '13px', fontWeight: 600, color: '#E30613', backgroundColor: 'rgba(227,6,19,0.06)', padding: '4px 10px', borderRadius: '4px' }}>
-                {activeCampaign.items.length} productos en oferta
+              <div style={{ fontSize: '13px', fontWeight: 700, color: '#E30613', backgroundColor: 'rgba(227,6,19,0.06)', padding: '4px 10px', borderRadius: '4px' }}>
+                {activeCampaign.items.length} artículos en oferta
               </div>
             </div>
           </div>
 
-          {/* Tabla de Productos en Oferta */}
+          {/* Tabla de Productos en Oferta con Fotos */}
           <div style={{
             backgroundColor: '#FFFFFF',
             borderRadius: '8px',
@@ -929,7 +895,7 @@ export default function StandaloneOffersManager({ onBackToLogin }: { onBackToLog
           }}>
             <div style={{ padding: '14px 20px', borderBottom: '1px solid #E5E7EB', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h2 style={{ fontSize: '14px', fontWeight: 700, margin: 0 }}>
-                Productos Seleccionados para esta Semana
+                Artículos en Oferta ({activeCampaign.items.length})
               </h2>
               {activeCampaign.items.length > 0 && (
                 <button
@@ -948,152 +914,152 @@ export default function StandaloneOffersManager({ onBackToLogin }: { onBackToLog
               )}
             </div>
 
-            {activeCampaign.items.length === 0 ? (
-              <div style={{ padding: '48px 20px', textAlign: 'center', color: '#6B7280' }}>
-                <Sparkles size={36} color="#D1D5DB" style={{ margin: '0 auto 12px' }} />
-                <h3 style={{ fontSize: '15px', fontWeight: 600, color: '#111827', marginBottom: '6px' }}>
-                  No hay productos en esta oferta todavía
-                </h3>
-                <p style={{ fontSize: '13px', maxWidth: '420px', margin: '0 auto 16px' }}>
-                  Podés buscar productos en la columna izquierda y agregarlos con el botón <strong>+</strong>, o hacer clic en <strong>Sugerir Ofertas</strong> para armar una propuesta automática.
-                </p>
-                <button
-                  onClick={handleSuggestWeeklySelection}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    padding: '8px 16px',
-                    borderRadius: '6px',
-                    border: 'none',
-                    backgroundColor: '#111827',
-                    color: '#FFFFFF',
-                    fontSize: '13px',
-                    fontWeight: 600,
-                    cursor: 'pointer'
-                  }}
-                >
-                  <Sparkles size={14} color="#E30613" />
-                  Sugerir Ofertas Automáticamente
-                </button>
-              </div>
-            ) : (
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
-                  <thead>
-                    <tr style={{ backgroundColor: '#F9FAFB', borderBottom: '1px solid #E5E7EB', textAlign: 'left', color: '#6B7280' }}>
-                      <th style={{ padding: '10px 16px', fontWeight: 600, width: '70px' }}>SKU</th>
-                      <th style={{ padding: '10px 16px', fontWeight: 600 }}>Producto</th>
-                      <th style={{ padding: '10px 16px', fontWeight: 600, width: '130px' }}>Precio Lista</th>
-                      <th style={{ padding: '10px 16px', fontWeight: 600, width: '140px' }}>Precio Oferta</th>
-                      <th style={{ padding: '10px 16px', fontWeight: 600, width: '100px' }}>Desc. %</th>
-                      <th style={{ padding: '10px 16px', fontWeight: 600, width: '200px' }}>Etiqueta / Condición</th>
-                      <th style={{ padding: '10px 16px', width: '50px' }}></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {activeCampaign.items.map((item, index) => {
-                      return (
-                        <tr
-                          key={item.id}
-                          style={{
-                            borderBottom: '1px solid #F3F4F6',
-                            backgroundColor: index % 2 === 0 ? '#FFFFFF' : '#FAFAFA'
-                          }}
-                        >
-                          <td style={{ padding: '12px 16px', fontFamily: 'monospace', color: '#6B7280', fontSize: '12px' }}>
-                            {item.sku}
-                          </td>
-                          <td style={{ padding: '12px 16px' }}>
-                            <div style={{ fontWeight: 600, color: '#111827' }}>{item.name}</div>
-                            <div style={{ fontSize: '11px', color: '#9CA3AF' }}>{item.category}</div>
-                          </td>
-                          <td style={{ padding: '12px 16px', color: '#6B7280' }}>
-                            <span style={{ textDecoration: 'line-through' }}>
-                              ${item.listPrice.toLocaleString('es-AR')}
-                            </span>
-                          </td>
-                          <td style={{ padding: '12px 16px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                              <span style={{ color: '#E30613', fontWeight: 700 }}>$</span>
-                              <input
-                                type="number"
-                                value={item.offerPrice}
-                                onChange={(e) => handleOfferPriceChange(item.id, Number(e.target.value))}
-                                style={{
-                                  width: '90px',
-                                  padding: '5px 8px',
-                                  borderRadius: '4px',
-                                  border: '1px solid #D1D5DB',
-                                  fontWeight: 700,
-                                  color: '#E30613',
-                                  fontSize: '13px'
-                                }}
-                              />
-                            </div>
-                          </td>
-                          <td style={{ padding: '12px 16px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                              <input
-                                type="number"
-                                value={item.discountPercent}
-                                onChange={(e) => handleDiscountPercentChange(item.id, Number(e.target.value))}
-                                style={{
-                                  width: '55px',
-                                  padding: '5px 8px',
-                                  borderRadius: '4px',
-                                  border: '1px solid #D1D5DB',
-                                  fontWeight: 600,
-                                  fontSize: '13px'
-                                }}
-                              />
-                              <span style={{ color: '#4B5563' }}>%</span>
-                            </div>
-                          </td>
-                          <td style={{ padding: '12px 16px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                              <input
-                                type="text"
-                                placeholder="ej: Llevando 3+"
-                                value={item.specialTag}
-                                onChange={(e) => handleTagChange(item.id, e.target.value)}
-                                style={{
-                                  width: '100%',
-                                  padding: '5px 8px',
-                                  borderRadius: '4px',
-                                  border: '1px solid #D1D5DB',
-                                  fontSize: '12px'
-                                }}
-                              />
-                            </div>
-                          </td>
-                          <td style={{ padding: '12px 16px', textAlign: 'right' }}>
-                            <button
-                              onClick={() => handleRemoveItem(item.id)}
-                              style={{
-                                background: 'none',
-                                border: 'none',
-                                color: '#9CA3AF',
-                                cursor: 'pointer',
-                                padding: '4px'
+            <div style={{ overflowX: 'auto', maxHeight: 'calc(100vh - 280px)', overflowY: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                <thead>
+                  <tr style={{ backgroundColor: '#F9FAFB', borderBottom: '1px solid #E5E7EB', textAlign: 'left', color: '#6B7280', position: 'sticky', top: 0, zIndex: 10 }}>
+                    <th style={{ padding: '10px 16px', fontWeight: 600, width: '60px' }}>Foto</th>
+                    <th style={{ padding: '10px 16px', fontWeight: 600, width: '70px' }}>SKU</th>
+                    <th style={{ padding: '10px 16px', fontWeight: 600 }}>Producto</th>
+                    <th style={{ padding: '10px 16px', fontWeight: 600, width: '130px' }}>Precio Lista</th>
+                    <th style={{ padding: '10px 16px', fontWeight: 600, width: '140px' }}>Precio Oferta</th>
+                    <th style={{ padding: '10px 16px', fontWeight: 600, width: '90px' }}>Desc. %</th>
+                    <th style={{ padding: '10px 16px', fontWeight: 600, width: '180px' }}>Etiqueta / Condición</th>
+                    <th style={{ padding: '10px 16px', width: '40px' }}></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {activeCampaign.items.map((item, index) => {
+                    const cleanSku = String(item.sku).padStart(4, '0');
+
+                    return (
+                      <tr
+                        key={item.id}
+                        style={{
+                          borderBottom: '1px solid #F3F4F6',
+                          backgroundColor: index % 2 === 0 ? '#FFFFFF' : '#FAFAFA'
+                        }}
+                      >
+                        {/* Miniatura Foto */}
+                        <td style={{ padding: '8px 16px' }}>
+                          <div style={{
+                            width: '40px',
+                            height: '40px',
+                            borderRadius: '4px',
+                            backgroundColor: '#FFFFFF',
+                            border: '1px solid #E5E7EB',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            overflow: 'hidden'
+                          }}>
+                            <img 
+                              src={`/uploads/products/${cleanSku}.jpg`}
+                              alt={item.name}
+                              style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
+                              onError={(e) => {
+                                (e.target as HTMLElement).style.display = 'none';
                               }}
-                              title="Quitar de la oferta"
-                            >
-                              <Trash2 size={16} />
-                            </button>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
+                            />
+                          </div>
+                        </td>
+
+                        <td style={{ padding: '12px 16px', fontFamily: 'monospace', color: '#6B7280', fontSize: '12px' }}>
+                          {cleanSku}
+                        </td>
+
+                        <td style={{ padding: '12px 16px' }}>
+                          <div style={{ fontWeight: 600, color: '#111827' }}>{item.name}</div>
+                          <div style={{ fontSize: '11px', color: '#9CA3AF' }}>Rubro: {item.category}</div>
+                        </td>
+
+                        <td style={{ padding: '12px 16px', color: '#6B7280' }}>
+                          <span style={{ textDecoration: 'line-through' }}>
+                            ${item.listPrice.toLocaleString('es-AR')}
+                          </span>
+                        </td>
+
+                        <td style={{ padding: '12px 16px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <span style={{ color: '#E30613', fontWeight: 700 }}>$</span>
+                            <input
+                              type="number"
+                              value={item.offerPrice}
+                              onChange={(e) => handleOfferPriceChange(item.id, Number(e.target.value))}
+                              style={{
+                                width: '90px',
+                                padding: '5px 8px',
+                                borderRadius: '4px',
+                                border: '1px solid #D1D5DB',
+                                fontWeight: 700,
+                                color: '#E30613',
+                                fontSize: '13px'
+                              }}
+                            />
+                          </div>
+                        </td>
+
+                        <td style={{ padding: '12px 16px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <input
+                              type="number"
+                              value={item.discountPercent}
+                              onChange={(e) => handleDiscountPercentChange(item.id, Number(e.target.value))}
+                              style={{
+                                width: '50px',
+                                padding: '5px 8px',
+                                borderRadius: '4px',
+                                border: '1px solid #D1D5DB',
+                                fontWeight: 600,
+                                fontSize: '13px'
+                              }}
+                            />
+                            <span style={{ color: '#4B5563' }}>%</span>
+                          </div>
+                        </td>
+
+                        <td style={{ padding: '12px 16px' }}>
+                          <input
+                            type="text"
+                            placeholder="ej: OFERTÓN"
+                            value={item.specialTag}
+                            onChange={(e) => handleTagChange(item.id, e.target.value)}
+                            style={{
+                              width: '100%',
+                              padding: '5px 8px',
+                              borderRadius: '4px',
+                              border: '1px solid #D1D5DB',
+                              fontSize: '12px'
+                            }}
+                          />
+                        </td>
+
+                        <td style={{ padding: '12px 16px', textAlign: 'right' }}>
+                          <button
+                            onClick={() => handleRemoveItem(item.id)}
+                            style={{
+                              background: 'none',
+                              border: 'none',
+                              color: '#9CA3AF',
+                              cursor: 'pointer',
+                              padding: '4px'
+                            }}
+                            title="Quitar de la oferta"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* MODAL 1: Subir / Actualizar Excel */}
+      {/* MODAL 1: Subir Archivo Excel */}
       {isExcelModalOpen && (
         <div style={{
           position: 'fixed',
@@ -1119,7 +1085,7 @@ export default function StandaloneOffersManager({ onBackToLogin }: { onBackToLog
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <FileSpreadsheet size={20} color="#059669" />
-                <h3 style={{ fontSize: '16px', fontWeight: 700, margin: 0 }}>Cargar Lista de Precios Excel</h3>
+                <h3 style={{ fontSize: '16px', fontWeight: 700, margin: 0 }}>Cargar Archivo Excel</h3>
               </div>
               <button
                 onClick={() => setIsExcelModalOpen(false)}
@@ -1130,7 +1096,7 @@ export default function StandaloneOffersManager({ onBackToLogin }: { onBackToLog
             </div>
 
             <p style={{ fontSize: '13px', color: '#4B5563', lineHeight: 1.5, marginBottom: '20px' }}>
-              Podés subir tu archivo maestro o lista de precios semanal (ej: <code>Maestro1.xlsx</code>). La aplicación detectará automáticamente el <strong>SKU</strong>, <strong>Descripción</strong>, <strong>Precio Lista</strong> y <strong>Rubro</strong> sin necesidad de tocar el servidor.
+              Podés subir tu archivo de <strong>Ofertas Semanales</strong> (ej: <code>OFERTAS-07-09.xlsx</code>) o el <strong>Catálogo Maestro</strong> (<code>Maestro1.xlsx</code>). El sistema detecta automáticamente el formato, los rubros, precios y empareja las fotos de catálogo.
             </p>
 
             <div
@@ -1216,10 +1182,6 @@ export default function StandaloneOffersManager({ onBackToLogin }: { onBackToLog
                 ✕
               </button>
             </div>
-
-            <p style={{ fontSize: '13px', color: '#4B5563', marginBottom: '12px' }}>
-              Mensaje formateado listo con negritas y precios tachados para copiar y pegar en grupos o chats directos:
-            </p>
 
             <textarea
               readOnly
