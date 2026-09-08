@@ -364,12 +364,38 @@ export async function updateOrderStatus(req: AuthenticatedRequest, res: Response
       return;
     }
 
-    if (status === OrderStatus.CANCELLED && order.status === OrderStatus.DELIVERED && order.billingType === BillingType.OFFICIAL) {
+    if (status === OrderStatus.DELIVERED) {
       res.status(400).json({
         status: 'error',
-        message: 'No se puede cancelar una factura oficial entregada directamente. Se debe emitir una Nota de Crédito para anularla.',
+        message: 'El estado ENTREGADO (DELIVERED) no se puede asignar manualmente. Debe procesarse a través del módulo de Facturación o de la Liquidación de Reparto en Logística para garantizar la consistencia contable y de stock.',
       });
       return;
+    }
+
+    if (status === OrderStatus.CANCELLED && order.status === OrderStatus.DELIVERED) {
+      if (order.billingType === BillingType.OFFICIAL) {
+        res.status(400).json({
+          status: 'error',
+          message: 'No se puede cancelar una factura oficial entregada directamente. Se debe emitir una Nota de Crédito para anularla.',
+        });
+        return;
+      }
+
+      // Para pedidos internos entregados, verificar si poseen cobros registrados en caja o banco
+      const existingPayment = await prisma.transaction.findFirst({
+        where: {
+          orderId: order.id,
+          type: TransactionType.INCOME
+        }
+      });
+
+      if (existingPayment) {
+        res.status(400).json({
+          status: 'error',
+          message: `No se puede cancelar el pedido #${order.id} porque posee cobros registrados en caja o cuenta bancaria. Debe anular o revertir el cobro en Finanzas/Cajas antes de cancelar el pedido.`,
+        });
+        return;
+      }
     }
 
     // Depósito solo puede pasar a PREPARING o PREPARED. No puede cancelar ni marcar como DELIVERED.
