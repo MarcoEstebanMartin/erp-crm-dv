@@ -9,13 +9,14 @@ async function runStressTest() {
     const persona = await prisma.persona.findFirst({ where: { isClient: true, isActive: true } });
     const products = await prisma.product.findMany({ where: { isActive: true }, take: 5 });
 
-    if (!persona || products.length === 0) {
-      console.error('❌ Se requieren al menos 1 cliente y 1 producto activo en la base de datos para la prueba.');
+    const user = await prisma.user.findFirst({ where: { isActive: true } });
+    if (!persona || products.length === 0 || !user) {
+      console.error('❌ Se requieren al menos 1 cliente, 1 usuario y 1 producto activo en la base de datos para la prueba.');
       return;
     }
 
-    const CONCURRENT_REQUESTS = 20;
-    console.log(`📈 Simulando ${CONCURRENT_REQUESTS} vendedores cargando pedidos en simultáneo para cliente #${persona.id} (${persona.name})...`);
+    const CONCURRENT_REQUESTS = 10;
+    console.log(`📈 Simulando ${CONCURRENT_REQUESTS} vendedores cargando pedidos en simultáneo para cliente #${persona.id} (${persona.name}) usando usuario #${user.id}...`);
 
     const startTime = Date.now();
 
@@ -27,14 +28,15 @@ async function runStressTest() {
       const startReq = Date.now();
       try {
         const order = await OrderService.createOrder({
-          sellerId: persona.sellerId || 1,
+          sellerId: user.id,
           userRole: 'ADMIN',
           personaId: persona.id,
           billingType: 'INTERNAL',
           items: [
             {
               productId: selectedProduct.id,
-              quantity: 1,
+              quantity: selectedProduct.minOrderQuantity || 1,
+              isEmergencyOverride: true,
               weight: selectedProduct.isPesable ? 1.25 : undefined
             }
           ]

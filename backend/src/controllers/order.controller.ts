@@ -6,6 +6,7 @@ import { emitirFacturaAFIP } from '../services/afip.service';
 import { logAudit } from '../utils/audit';
 import { OrderService } from '../services/order.service';
 import { PricingService } from '../services/pricing.service';
+import { roundCurrency } from '../utils/math';
 
 function getJurisdictionCode(provinceOrAddress?: string | null): string {
   if (!provinceOrAddress) return 'AR-B';
@@ -1360,17 +1361,14 @@ export async function updateOrder(req: AuthenticatedRequest, res: Response): Pro
       return;
     }
 
-    // Ejecutar transacciones: restaurar stock, validar nuevo stock, actualizar pedido
+    // Ejecutar transacciones: restaurar stock, validar nuevo stock, actualizar pedido y movimientos
     const result = await prisma.$transaction(async (tx) => {
-      // 1. Restaurar stock de los items viejos
+      // 1. Restaurar stock de los items viejos de manera atómica
       for (const oldItem of order.items) {
-        const product = await tx.product.findUnique({ where: { id: oldItem.productId } });
-        if (product) {
-          await tx.product.update({
-            where: { id: product.id },
-            data: { stock: product.stock + oldItem.quantity }
-          });
-        }
+        await tx.product.update({
+          where: { id: oldItem.productId },
+          data: { stock: { increment: oldItem.quantity } }
+        });
       }
 
       // Obtener persona
@@ -1379,43 +1377,52 @@ export async function updateOrder(req: AuthenticatedRequest, res: Response): Pro
         throw new Error(`Persona no encontrada.`);
       }
 
-      // 2. Validar y descontar nuevo stock, aplicando lista de precios y descuento
+      const productIds = items.map(i => i.productId);
+      const dbProducts = await tx.product.findMany({
+        where: { id: { in: productIds } },
+        include: { rubro: true }
+      });
+
+      const dbRules = await tx.discountRule.findMany({
+        where: {
+          OR: [
+            { personaId: persona.id },
+            { priceList: persona.priceList }
+          ]
+        }
+      });
+
+      // 2. Validar y descontar nuevo stock de forma atómica evitando race conditions
       let totalSum = 0;
       const orderItemsToCreate = [];
 
       for (const item of items) {
-        const product = await tx.product.findUnique({ where: { id: item.productId } });
+        const product = dbProducts.find(p => p.id === item.productId);
         if (!product) {
           throw new Error(`Producto ID ${item.productId} no encontrado.`);
         }
 
-        if (product.stock < item.quantity && process.env.IGNORE_STOCK_CHECK !== 'true') {
-          throw new Error(`Stock insuficiente para "${product.name}" (Disponible: ${product.stock}, Solicitado: ${item.quantity}).`);
+        const minQty = product.minOrderQuantity || 1;
+        if (item.quantity < minQty && !(item as any).isEmergencyOverride) {
+          throw new Error(
+            `El producto "${product.name}" exige un mínimo de ${minQty} unidades (solicitado: ${item.quantity}).`
+          );
         }
 
-        // Determinar precio según lista con fallback
-        let selectedPrice = Number(product.listPrice);
-        let itemDiscount = Number(persona.discount || 0);
+        // Calcular precio en memoria con PricingService
+        const pricing = PricingService.calculatePriceAndDiscountInMemory(
+          product,
+          persona,
+          dbRules,
+          order.billingType
+        );
+        const finalUnitPrice = pricing.finalPrice;
 
-        if (persona.priceList === 'B') {
-          selectedPrice = Number(product.listPriceB) > 0 ? Number(product.listPriceB) : Number(product.listPrice);
-          const isMelincue = product.description?.toUpperCase() === 'MELINCUE' || product.name?.toUpperCase().includes('MELINCUE');
-          if (isMelincue) {
-            itemDiscount = 3;
-          } else {
-            itemDiscount = 0;
-          }
-        } else if (persona.priceList === 'C') {
-          selectedPrice = Number(product.listPriceC) > 0 ? Number(product.listPriceC) : Number(product.listPrice);
-        }
-
-        // Aplicar descuento
-        const finalUnitPrice = Math.round(selectedPrice * (1 - itemDiscount / 100));
         const actualQuantityForPrice = product.isPesable 
           ? (item.weight ? Number(item.weight) : item.quantity * Number((product as any).approximateWeight || 1))
           : item.quantity;
-        const subtotal = Math.round(finalUnitPrice * actualQuantityForPrice);
-        totalSum += subtotal;
+        const subtotal = roundCurrency(finalUnitPrice * actualQuantityForPrice);
+        totalSum = roundCurrency(totalSum + subtotal);
 
         orderItemsToCreate.push({
           productId: product.id,
@@ -1425,11 +1432,27 @@ export async function updateOrder(req: AuthenticatedRequest, res: Response): Pro
           subtotal: subtotal
         });
 
-        // Descontar
-        await tx.product.update({
-          where: { id: product.id },
-          data: { stock: product.stock - item.quantity }
-        });
+        // Descontar atómicamente con chequeo de stock gte
+        if (process.env.IGNORE_STOCK_CHECK === 'true') {
+          await tx.product.update({
+            where: { id: product.id },
+            data: { stock: { decrement: item.quantity } }
+          });
+        } else {
+          const res = await tx.product.updateMany({
+            where: {
+              id: product.id,
+              stock: { gte: item.quantity }
+            },
+            data: {
+              stock: { decrement: item.quantity }
+            }
+          });
+
+          if (res.count === 0) {
+            throw new Error(`Stock insuficiente para "${product.name}" debido a una operación concurrente (Solicitado: ${item.quantity}).`);
+          }
+        }
       }
 
       // Validar límite de crédito
@@ -1442,18 +1465,6 @@ export async function updateOrder(req: AuthenticatedRequest, res: Response): Pro
           );
         }
       }
-
-      // Validar regla de "boleta contra boleta" (deben una y deben pagar la proxima)
-      // Se desactiva temporalmente para edición de pedidos PENDING ya cargados, de lo contrario un vendedor no podría corregir un pedido pendiente si el cliente tiene saldo de reparto.
-      /*
-      if (outstandingBalance > 0) {
-        if (userRole !== Role.ADMIN) {
-          throw new Error(
-            `Regla Boleta contra Boleta: El cliente posee una boleta pendiente ($${outstandingBalance.toLocaleString()}). Debe registrar el pago de la boleta anterior antes de modificar el pedido a crédito.`
-          );
-        }
-      }
-      */
 
       // 3. Eliminar items viejos y crear los nuevos
       await tx.orderItem.deleteMany({ where: { orderId: order.id } });
@@ -1470,6 +1481,26 @@ export async function updateOrder(req: AuthenticatedRequest, res: Response): Pro
           persona: true,
           items: { include: { product: true } }
         }
+      });
+
+      // 4. Sincronizar movimientos de stock para mantener la auditoría consistente
+      await tx.stockMovement.deleteMany({
+        where: {
+          orderId: order.id,
+          referenceId: `ORDER-${order.id}`
+        }
+      });
+
+      await tx.stockMovement.createMany({
+        data: orderItemsToCreate.map(item => ({
+          productId: item.productId,
+          quantity: -item.quantity,
+          type: MovementType.OUT,
+          orderId: order.id,
+          referenceId: `ORDER-${order.id}`,
+          userId: order.sellerId,
+          reason: `Venta - Reserva de Pedido #${order.id} (Modificado)`,
+        }))
       });
 
       return updatedOrder;
