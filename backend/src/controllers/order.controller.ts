@@ -1333,9 +1333,19 @@ export async function invoiceOrder(req: AuthenticatedRequest, res: Response): Pr
       });
     } catch (secondaryError: any) {
       console.error('❌ Error en el flujo secundario de facturación:', secondaryError.message);
+      try {
+        await prisma.order.update({
+          where: { id: order.id },
+          data: {
+            notes: (order.notes ? order.notes + ' | ' : '') + `[ALERTA AFIP] CAE ${finalCae} emitido pero falló registro financiero: ${secondaryError.message}. Conciliar manualmente.`
+          }
+        });
+      } catch (noteErr) {
+        console.error('No se pudo guardar la nota de alerta en el pedido:', noteErr);
+      }
       res.status(400).json({
         status: 'error',
-        message: `La factura oficial de AFIP fue emitida con éxito (Nro: ${finalInvoiceNumber}, CAE: ${finalCae}). Sin embargo, ocurrió un error al registrar las transacciones financieras o la porción interna: ${secondaryError.message}. Contacte a administración para conciliar la caja y cuenta corriente manualmente.`
+        message: `La factura oficial de AFIP fue emitida con éxito (Nro: ${finalInvoiceNumber}, CAE: ${finalCae}). Sin embargo, ocurrió un error al registrar las transacciones financieras o la porción interna: ${secondaryError.message}. El pedido fue marcado con una alerta contable para su conciliación manual.`
       });
     }
   } catch (error: any) {
@@ -1617,12 +1627,17 @@ export async function createDirectInvoice(req: AuthenticatedRequest, res: Respon
       return;
     }
 
-    // 2. Procesar ítems to check stock and calculate totalSum outside transaction
+    // 2. Cargar todos los productos y validar stock previo a AFIP
+    const productIds = items.map(item => item.productId);
+    const dbProducts = await prisma.product.findMany({
+      where: { id: { in: productIds } }
+    });
+
     let totalSum = 0;
     const orderItemsData: any[] = [];
 
     for (const item of items) {
-      const product = await prisma.product.findUnique({ where: { id: item.productId } });
+      const product = dbProducts.find(p => p.id === item.productId);
       if (!product) {
         res.status(404).json({ status: 'error', message: `Producto ID ${item.productId} no encontrado.` });
         return;
@@ -1814,13 +1829,25 @@ export async function createDirectInvoice(req: AuthenticatedRequest, res: Respon
       const result = await prisma.$transaction(async (tx) => {
         // Descontar del stock general de manera atómica para evitar race conditions
         for (const itemData of orderItemsData) {
-          const updated = await tx.product.update({
-            where: { id: itemData.productId },
-            data: { stock: { decrement: itemData.quantity } },
-          });
+          if (process.env.IGNORE_STOCK_CHECK === 'true') {
+            await tx.product.update({
+              where: { id: itemData.productId },
+              data: { stock: { decrement: itemData.quantity } },
+            });
+          } else {
+            const res = await tx.product.updateMany({
+              where: {
+                id: itemData.productId,
+                stock: { gte: itemData.quantity },
+              },
+              data: {
+                stock: { decrement: itemData.quantity },
+              },
+            });
 
-          if (updated.stock < 0 && process.env.IGNORE_STOCK_CHECK !== 'true') {
-            throw new Error(`Stock insuficiente para "${updated.name}" debido a una operación concurrente. Por favor reintente la venta.`);
+            if (res.count === 0) {
+              throw new Error(`Stock insuficiente para "${itemData.productName}" debido a una operación concurrente. Por favor reintente la venta.`);
+            }
           }
         }
 
@@ -2081,9 +2108,19 @@ export async function createDirectInvoice(req: AuthenticatedRequest, res: Respon
       });
     } catch (secondaryError: any) {
       console.error('❌ Error en el flujo secundario de facturación directa:', secondaryError.message);
+      try {
+        await prisma.order.update({
+          where: { id: order.id },
+          data: {
+            notes: (order.notes ? order.notes + ' | ' : '') + `[ALERTA AFIP] CAE ${finalCae} emitido pero falló imputación de stock/caja: ${secondaryError.message}. Conciliar manualmente.`
+          }
+        });
+      } catch (noteErr) {
+        console.error('No se pudo guardar la nota de alerta en la orden directa:', noteErr);
+      }
       res.status(400).json({
         status: 'error',
-        message: `La factura oficial fue emitida con éxito (Nro: ${finalInvoiceNumber}, CAE: ${finalCae}). Sin embargo, ocurrió un error al registrar las transacciones financieras o el stock de lotes: ${secondaryError.message}. Contacte a administración para conciliar la caja y cuenta corriente manualmente.`
+        message: `La factura oficial fue emitida con éxito (Nro: ${finalInvoiceNumber}, CAE: ${finalCae}). Sin embargo, ocurrió un error al registrar las transacciones financieras o el stock de lotes: ${secondaryError.message}. El comprobante fue registrado con una alerta contable para su conciliación manual.`
       });
     }
   } catch (error: any) {
