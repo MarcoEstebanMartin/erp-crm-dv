@@ -217,6 +217,7 @@ export async function receivePurchaseOrder(req: AuthenticatedRequest, res: Respo
             productId: item.productId,
             quantity: qty,
             type: 'IN',
+            purchaseOrderId: order.id,
             referenceId: `PO-${order.id}`,
             userId,
             reason: 'Recepción de Orden de Compra',

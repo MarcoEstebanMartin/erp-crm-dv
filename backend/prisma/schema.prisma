@@ -257,6 +257,7 @@ model Order {
   deliveryRoute   DeliveryRoute? @relation(fields: [deliveryRouteId], references: [id], onDelete: SetNull)
   creditNotes     CreditNote[]
   crmDraft        CrmOrderDraft?
+  stockMovements  StockMovement[]
 
   @@index([personaId])
   @@index([sellerId])
@@ -319,22 +320,33 @@ model OrderItemLot {
 }
 
 model StockMovement {
-  id           Int          @id @default(autoincrement())
-  productId    Int
-  product      Product      @relation(fields: [productId], references: [id])
-  quantity     Int // Positivo para entrada, negativo para salida
-  type         MovementType
-  referenceId  String? // ID del pedido u orden de compra
-  userId       Int
-  user         User         @relation(fields: [userId], references: [id])
-  reason       String?
-  productLotId Int?
-  productLot   ProductLot?  @relation(fields: [productLotId], references: [id])
-  createdAt    DateTime     @default(now())
+  id              Int          @id @default(autoincrement())
+  movementId      Int          @default(dbgenerated("nextval('movement_seq')"))
+  productId       Int
+  product         Product      @relation(fields: [productId], references: [id])
+  quantity        Int // Positivo para entrada, negativo para salida
+  type            MovementType
+  referenceId     String? // ID del pedido u orden de compra (retrocompatibilidad)
+  orderId         Int? // Relación formal con Pedido
+  order           Order?       @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  purchaseOrderId Int? // Relación formal con Orden de Compra
+  purchaseOrder   PurchaseOrder? @relation(fields: [purchaseOrderId], references: [id], onDelete: SetNull)
+  creditNoteId    Int? // Relación formal con Nota de Crédito / Devolución
+  creditNote      CreditNote?  @relation(fields: [creditNoteId], references: [id], onDelete: SetNull)
+  userId          Int
+  user            User         @relation(fields: [userId], references: [id])
+  reason          String?
+  productLotId    Int?
+  productLot      ProductLot?  @relation(fields: [productLotId], references: [id])
+  createdAt       DateTime     @default(now())
 
   @@index([productId])
   @@index([userId])
   @@index([productLotId])
+  @@index([orderId])
+  @@index([purchaseOrderId])
+  @@index([creditNoteId])
+  @@index([movementId])
   @@index([createdAt])
 }
 
@@ -548,6 +560,7 @@ model PurchaseOrder {
   updatedAt   DateTime @updatedAt
 
   items PurchaseOrderItem[]
+  stockMovements StockMovement[]
 
   @@index([personaId])
   @@index([status])
@@ -591,6 +604,7 @@ model CreditNote {
   updatedAt        DateTime         @updatedAt
 
   items CreditNoteItem[]
+  stockMovements StockMovement[]
 
   @@index([personaId])
   @@index([orderId])

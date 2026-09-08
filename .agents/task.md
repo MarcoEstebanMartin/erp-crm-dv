@@ -1,16 +1,13 @@
-﻿# Tablero Vivo de Tarea Activa (SDD)
+# Tablero Vivo de Tarea Activa (SDD)
 
-## Tarea Actual: Implementación del Sistema de Especificaciones (SDD)
-- [x] Crear arquitectura y protocolo multiagente en `.agents/ROLES.md`
-- [x] Crear especificación de arquitectura y contratos en `specs/ARCHITECTURE.md`
-- [x] Documentar invariantes y protocolo seguro de migraciones en `specs/DATABASE.md`
-- [x] Documentar especificación WMS y Depósito en `specs/modules/wms-deposito.md`
-- [x] Documentar especificación Facturación y AFIP en `specs/modules/facturacion-afip.md`
-- [x] Documentar especificación CRM y WhatsApp en `specs/modules/crm-whatsapp.md`
-- [x] Documentar especificación Clientes y Rutas en `specs/modules/clientes-rutas.md`
-- [x] Crear índice maestro en `specs/README.md`
-- [x] Actualizar directivas en `.agents/AGENTS.md`
-- [x] Validar que todo el sistema de especificaciones esté sincronizado y listo para operar
+## Tarea Actual: Modernización Estructural de Stock, Inventario y Movimientos
+- [x] Actualizar esquema Prisma (`StockMovement`, `Order`, `PurchaseOrder`, `CreditNote`) con FKs y `movementId`
+- [x] Generar migración segura con `--create-only`, limpiar `DROP SEQUENCE` y añadir backfill SQL
+- [x] Aplicar migración con `prisma migrate deploy` y regenerar cliente con `prisma generate`
+- [x] Actualizar servicios y controladores de backend (`order.service.ts`, `order.controller.ts`, `purchase.controller.ts`, `creditNote.controller.ts`, `product.service.ts`)
+- [x] Actualizar vista de movimientos de inventario en frontend (`StockDashboard.tsx`)
+- [x] Compilar backend y frontend sin errores
+- [x] Generar walkthrough de verificación
 
 ---
 *Instrucciones para próximas tareas:*

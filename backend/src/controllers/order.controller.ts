@@ -472,6 +472,7 @@ export async function updateOrderStatus(req: AuthenticatedRequest, res: Response
                 productId: item.productId,
                 quantity: diff,
                 type: MovementType.IN,
+                orderId: order.id,
                 referenceId: `PICK-SHORT-${order.id}`,
                 userId: userId,
                 reason: `Devolución por faltante en preparación de Pedido #${order.id}`,
@@ -536,7 +537,7 @@ export async function updateOrderStatus(req: AuthenticatedRequest, res: Response
             if (originalMov) {
               await tx.stockMovement.update({
                 where: { id: originalMov.id },
-                data: { productLotId: lot.id }
+                data: { productLotId: lot.id, orderId: order.id }
               });
             } else {
               await tx.stockMovement.create({
@@ -544,6 +545,7 @@ export async function updateOrderStatus(req: AuthenticatedRequest, res: Response
                   productId: item.productId,
                   quantity: -quantity,
                   type: MovementType.OUT,
+                  orderId: order.id,
                   referenceId: `ORDER-${order.id}`,
                   userId: order.sellerId,
                   reason: `Venta - Descuento físico de Lote #${lot.lotNumber} para Pedido #${order.id}`,
@@ -586,6 +588,7 @@ export async function updateOrderStatus(req: AuthenticatedRequest, res: Response
               productId: item.productId,
               quantity: item.quantity,
               type: MovementType.IN,
+              orderId: order.id,
               referenceId: `CANCEL-${order.id}`,
               userId: userId,
               reason: `Devolución por cancelación de pedido #${order.id}`,
@@ -1143,6 +1146,7 @@ export async function invoiceOrder(req: AuthenticatedRequest, res: Response): Pr
                     productId: item.productId,
                     quantity: -item.quantity,
                     type: MovementType.OUT,
+                    orderId: internalOrder.id,
                     referenceId: `ORDER-${internalOrder.id}`,
                     userId: order.sellerId,
                     reason: `Venta - Pedido Interno #${internalOrder.id} (Parte Interna de Pedido #${order.id})`,
@@ -1153,7 +1157,8 @@ export async function invoiceOrder(req: AuthenticatedRequest, res: Response): Pr
                 await tx.stockMovement.update({
                   where: { id: stockMov.id },
                   data: {
-                    quantity: stockMov.quantity + item.quantity
+                    quantity: stockMov.quantity + item.quantity,
+                    orderId: order.id
                   }
                 });
               }
@@ -1781,6 +1786,7 @@ export async function createDirectInvoice(req: AuthenticatedRequest, res: Respon
               productId: itemData.productId,
               quantity: -itemData.quantity,
               type: MovementType.OUT,
+              orderId: order.id,
               referenceId: `FAC-${order.id}`,
               userId: adminId,
               reason: `Venta directa comprobante ${finalInvoiceNumber || 'INT-' + order.id}`,
@@ -1863,7 +1869,7 @@ export async function createDirectInvoice(req: AuthenticatedRequest, res: Respon
             if (firstAssignedLot) {
               await tx.stockMovement.update({
                 where: { id: originalMov.id },
-                data: { productLotId: firstAssignedLot }
+                data: { productLotId: firstAssignedLot, orderId: order.id }
               });
             }
           }

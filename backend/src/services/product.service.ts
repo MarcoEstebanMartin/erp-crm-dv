@@ -570,7 +570,35 @@ export class ProductService {
         user: {
           select: { id: true, username: true, role: true }
         },
-        productLot: true
+        productLot: true,
+        order: {
+          select: {
+            id: true,
+            movementId: true,
+            invoiceNumber: true,
+            status: true,
+            persona: {
+              select: { id: true, name: true }
+            }
+          }
+        },
+        purchaseOrder: {
+          select: {
+            id: true,
+            status: true,
+            persona: {
+              select: { id: true, name: true }
+            }
+          }
+        },
+        creditNote: {
+          select: {
+            id: true,
+            movementId: true,
+            creditNoteNumber: true,
+            reason: true
+          }
+        }
       },
       orderBy: { createdAt: 'desc' }
     });
@@ -589,7 +617,35 @@ export class ProductService {
         user: {
           select: { id: true, username: true, role: true }
         },
-        productLot: true
+        productLot: true,
+        order: {
+          select: {
+            id: true,
+            movementId: true,
+            invoiceNumber: true,
+            status: true,
+            persona: {
+              select: { id: true, name: true }
+            }
+          }
+        },
+        purchaseOrder: {
+          select: {
+            id: true,
+            status: true,
+            persona: {
+              select: { id: true, name: true }
+            }
+          }
+        },
+        creditNote: {
+          select: {
+            id: true,
+            movementId: true,
+            creditNoteNumber: true,
+            reason: true
+          }
+        }
       },
       orderBy: { createdAt: 'desc' }
     });
