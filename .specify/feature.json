@@ -1,0 +1,9 @@
+{
+  "project": "ERP-CRM Distribuidora Victoria",
+  "methodology": "GitHub Spec Kit (Hybrid SDD)",
+  "constitution": ".specify/memory/constitution.md",
+  "ssot_directory": "specs/",
+  "active_task_board": ".agents/task.md",
+  "roles_protocol": ".agents/ROLES.md",
+  "active_feature": null
+}

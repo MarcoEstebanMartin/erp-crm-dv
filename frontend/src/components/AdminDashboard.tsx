@@ -17,8 +17,6 @@ import { useConfirm } from '../context/ConfirmContext';
 import type { Product, User, Persona, Order, Rubro, SaleRoute } from '../types';
 
 const PriceListModal = lazy(() => import('./PriceListModal'));
-const OffersDashboard = lazy(() => import('./admin/OffersDashboard'));
-const HrDashboard = lazy(() => import('./HrDashboard'));
 const OFFICIAL_CITIES = [
   "GENERAL VILLEGAS",
   "EMILIO V. BUNGE",

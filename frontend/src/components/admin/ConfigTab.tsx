@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../utils/api';
-import HrDashboard from '../HrDashboard';
 import AfipExportDashboard from '../../pages/AfipExportDashboard';
 import { 
   UserPlus, 
@@ -393,9 +392,8 @@ export default function ConfigTab({
       <div style={{ display: 'flex', gap: '8px', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px', marginBottom: '12px', overflowX: 'auto', paddingRight: '4px' }}>
         {[
           { id: 'general', label: 'General & Empresa', icon: <Building2 size={15} /> },
-          { id: 'arca', label: 'Cierre Fiscal (ARCA)', icon: <FileText size={15} /> },
-          { id: 'rrhh', label: 'Recursos Humanos', icon: <Briefcase size={15} /> },
           { id: 'personal', label: 'Empleados & Roles', icon: <Users size={15} /> },
+          { id: 'arca', label: 'Cierre Fiscal (ARCA)', icon: <FileText size={15} /> },
           { id: 'audit', label: 'Auditoría (Logs)', icon: <FileText size={15} /> },
           { id: 'percepciones', label: 'Impuestos & Percepciones', icon: <Receipt size={15} /> },
           { id: 'reconcile', label: 'Auditoría de Saldos', icon: <Scale size={15} /> },
@@ -430,11 +428,6 @@ export default function ConfigTab({
       {/* Sub-tab Cierre Fiscal (ARCA) */}
       {configTab === 'arca' && (
         <AfipExportDashboard />
-      )}
-
-      {/* Sub-tab Recursos Humanos */}
-      {configTab === 'rrhh' && (
-        <HrDashboard />
       )}
 
 
