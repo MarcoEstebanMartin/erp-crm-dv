@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import * as XLSX from 'xlsx';
+import { parseExcelFileInBrowser } from '../../utils/excelBrowserReader';
 import { 
   FileSpreadsheet, 
   Upload, 
@@ -199,52 +199,47 @@ export default function StandaloneOffersManager({ onBackToLogin }: { onBackToLog
     setSavedCampaigns(prev => prev.map(c => c.id === activeCampaign.id ? updater(c) : c));
   };
 
-  // 3. Lector Universal de Excel: lee OFERTAS-*.xlsx o Maestro1.xlsx
-  const handleExcelUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // 3. Lector Universal de Excel: lee OFERTAS-*.xlsx o Maestro1.xlsx (sobre ExcelJS seguro)
+  const handleExcelUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = (evt) => {
-      try {
-        const bstr = evt.target?.result;
-        const wb = XLSX.read(bstr, { type: 'binary' });
-        
-        // Si tiene hoja "Productos", es un Maestro de catálogo
-        if (wb.SheetNames.includes('Productos')) {
-          const sheet = wb.Sheets['Productos'];
-          const rawProducts = XLSX.utils.sheet_to_json<any>(sheet);
-          const newProducts: CatalogProduct[] = rawProducts.map(p => {
-            const cleanSku = String(p.SKU || '').trim().padStart(4, '0');
-            return {
-              id: cleanSku,
-              sku: cleanSku,
-              name: String(p.PRODUCTO || '').trim(),
-              listPrice: Number(p['PRECIO FINAL']) || Number(p['PRECIO SIN IVA']) || 0,
-              category: String(p.SUBRUBRO || p.RUBRO || 'VARIOS').trim().toUpperCase(),
-              rubro: String(p.RUBRO || 'VARIOS').trim().toUpperCase(),
-              hasPhoto: true,
-              imageUrl: `/uploads/products/${cleanSku}.jpg`
-            };
-          });
+    try {
+      const wb = await parseExcelFileInBrowser(file);
 
-          setCatalog(newProducts);
-          localStorage.setItem('dv_custom_catalog_v2', JSON.stringify(newProducts));
-          setCatalogUploadSuccessMsg(`¡Éxito! Se actualizaron ${newProducts.length} productos maestros del catálogo.`);
-          setIsExcelModalOpen(false);
-          setTimeout(() => setCatalogUploadSuccessMsg(null), 5000);
-          return;
-        }
+      // Si tiene hoja "Productos", es un Maestro de catálogo
+      if (wb.sheetNames.includes('Productos')) {
+        const rawProducts = wb.sheetToObjects('Productos');
+        const newProducts: CatalogProduct[] = rawProducts.map(p => {
+          const cleanSku = String(p.SKU || '').trim().padStart(4, '0');
+          return {
+            id: cleanSku,
+            sku: cleanSku,
+            name: String(p.PRODUCTO || '').trim(),
+            listPrice: Number(p['PRECIO FINAL']) || Number(p['PRECIO SIN IVA']) || 0,
+            category: String(p.SUBRUBRO || p.RUBRO || 'VARIOS').trim().toUpperCase(),
+            rubro: String(p.RUBRO || 'VARIOS').trim().toUpperCase(),
+            hasPhoto: true,
+            imageUrl: `/uploads/products/${cleanSku}.jpg`
+          };
+        });
 
-        // Si es una planilla de ofertas semanales (como OFERTAS-07-09.xlsx)
-        const wsName = wb.SheetNames[0];
-        const ws = wb.Sheets[wsName];
-        const rawData = XLSX.utils.sheet_to_json<any>(ws, { header: 1 });
+        setCatalog(newProducts);
+        localStorage.setItem('dv_custom_catalog_v2', JSON.stringify(newProducts));
+        setCatalogUploadSuccessMsg(`¡Éxito! Se actualizaron ${newProducts.length} productos maestros del catálogo.`);
+        setIsExcelModalOpen(false);
+        setTimeout(() => setCatalogUploadSuccessMsg(null), 5000);
+        return;
+      }
 
-        if (rawData.length < 2) {
-          alert('El archivo no parece tener datos suficientes.');
-          return;
-        }
+      // Si es una planilla de ofertas semanales (como OFERTAS-07-09.xlsx)
+      const wsName = wb.sheetNames[0];
+      const rawData = wsName ? wb.sheetToMatrix(wsName) : [];
+
+      if (rawData.length < 2) {
+        alert('El archivo no parece tener datos suficientes.');
+        return;
+      }
 
         let currentRubro = 'MELINCUE';
         const parsedItems: WeeklyOfferItem[] = [];
@@ -366,10 +361,9 @@ export default function StandaloneOffersManager({ onBackToLogin }: { onBackToLog
       } catch (err: any) {
         console.error('Error procesando Excel:', err);
         alert('Error al leer el archivo Excel: ' + err.message);
+      } finally {
+        e.target.value = '';
       }
-    };
-    reader.readAsBinaryString(file);
-    e.target.value = '';
   };
 
   // 4. Agregar producto a la campaña activa
@@ -1118,12 +1112,12 @@ export default function StandaloneOffersManager({ onBackToLogin }: { onBackToLog
                 Hacé clic aquí para elegir tu archivo Excel
               </div>
               <div style={{ fontSize: '12px', color: '#6B7280', marginTop: '4px' }}>
-                Soporta archivos .xlsx, .xls o .csv
+                Soporta archivos .xlsx
               </div>
               <input
                 ref={fileInputRef}
                 type="file"
-                accept=".xlsx, .xls, .csv"
+                accept=".xlsx"
                 onChange={handleExcelUpload}
                 style={{ display: 'none' }}
               />

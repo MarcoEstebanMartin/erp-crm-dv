@@ -1,9 +1,9 @@
 import { PaymentMethod } from '@prisma/client';
-import * as XLSX from 'xlsx';
 import prisma from '../../utils/prisma';
 import AppError from '../../utils/AppError';
 import { logAudit } from '../../utils/audit';
 import { roundToTwoDecimals } from '../../core/money';
+import { readExcelSheetObjects } from '../../utils/excel-reader.util';
 import { DEFAULT_EXPENSE_CATEGORIES } from './expense.service';
 
 function resolveCategoryId(name: string, catMap: Record<string, number>): number {
@@ -48,10 +48,7 @@ export async function importExpensesFromExcel(params: {
   userId: number;
   fileBuffer: Buffer;
 }): Promise<number> {
-  const workbook = XLSX.read(params.fileBuffer, { type: 'buffer' });
-  const sheetName = workbook.SheetNames[0];
-  const worksheet = workbook.Sheets[sheetName];
-  const rawData = XLSX.utils.sheet_to_json(worksheet, { defval: '' }) as Record<string, any>[];
+  const rawData = await readExcelSheetObjects(params.fileBuffer, { defval: '' });
 
   let dbCategories = await prisma.expenseCategory.findMany();
   if (dbCategories.length === 0) {

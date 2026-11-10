@@ -2,7 +2,7 @@ import multer from 'multer';
 import { Request } from 'express';
 
 // Filtro para validar tipos de archivos de imagen
-const imageFileFilter = (req: Request, file: Express.Multer.File, callback: multer.FileFilterCallback) => {
+const imageFileFilter = (_req: Request, file: Express.Multer.File, callback: multer.FileFilterCallback) => {
   const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/webp'];
   if (allowedMimeTypes.includes(file.mimetype)) {
     callback(null, true);
@@ -11,44 +11,62 @@ const imageFileFilter = (req: Request, file: Express.Multer.File, callback: mult
   }
 };
 
-// Filtro para validar archivos ZIP
-const zipFileFilter = (req: Request, file: Express.Multer.File, callback: multer.FileFilterCallback) => {
-  const allowedMimeTypes = ['application/zip', 'application/x-zip-compressed', 'application/octet-stream'];
+// Filtro para validar archivos ZIP (exige extensión .zip real Y MIME compatible)
+const zipFileFilter = (_req: Request, file: Express.Multer.File, callback: multer.FileFilterCallback) => {
+  const allowedMimeTypes = [
+    'application/zip',
+    'application/x-zip-compressed',
+    'application/octet-stream',
+  ];
   const isZipExtension = file.originalname.toLowerCase().endsWith('.zip');
-  
-  if (allowedMimeTypes.includes(file.mimetype) || isZipExtension) {
+
+  if (isZipExtension && allowedMimeTypes.includes(file.mimetype)) {
     callback(null, true);
   } else {
-    callback(new Error('Tipo de archivo no válido. Solo se permiten archivos comprimidos ZIP.'));
+    callback(new Error('Tipo de archivo no válido. Solo se permiten archivos comprimidos .zip.'));
   }
 };
 
-// Configuración de almacenamiento en memoria
+// Filtro para validar planillas seguras (.xlsx o .csv)
+const excelFileFilter = (_req: Request, file: Express.Multer.File, callback: multer.FileFilterCallback) => {
+  const lowerName = file.originalname.toLowerCase();
+  if (lowerName.endsWith('.xls')) {
+    callback(
+      new Error(
+        'El formato antiguo .xls está deshabilitado por seguridad. Guardá la planilla como .xlsx o .csv.',
+      ),
+    );
+    return;
+  }
+  if (lowerName.endsWith('.xlsx') || lowerName.endsWith('.csv')) {
+    callback(null, true);
+  } else {
+    callback(new Error('Formato no permitido. Solo se aceptan planillas .xlsx o .csv.'));
+  }
+};
+
 const storage = multer.memoryStorage();
 
-// Middleware para una sola imagen
 export const uploadSingleImage = multer({
   storage,
   fileFilter: imageFileFilter,
   limits: {
-    fileSize: 5 * 1024 * 1024, // Limite de 5MB
+    fileSize: 5 * 1024 * 1024, // 5 MB
   },
 }).single('image');
 
-// Middleware para archivo ZIP
 export const uploadZipFile = multer({
   storage,
   fileFilter: zipFileFilter,
   limits: {
-    fileSize: 50 * 1024 * 1024, // Limite de 50MB
+    fileSize: 50 * 1024 * 1024, // 50 MB
   },
 }).single('file');
 
-// Middleware para archivo Excel
 export const uploadExcelFile = multer({
   storage,
+  fileFilter: excelFileFilter,
   limits: {
-    fileSize: 20 * 1024 * 1024, // 20MB limit
+    fileSize: 15 * 1024 * 1024, // 15 MB
   },
 }).single('file');
-

@@ -110,8 +110,10 @@
   - [x] Crear `cookie-auth.util.ts` (`dv_staff_session` y `dv_store_session` con `HttpOnly`, `SameSite=lax`, `Path=/api`, `Secure` dinámico HTTPS/WiFi y guardia anti-CSRF cross-site) + endpoints `POST /api/auth/logout` y `POST /api/store/logout`
   - [x] Eliminar guardado de `auth_token` y `store_token` en `localStorage` en todo el Frontend, unificando `MobileCobros.tsx`, `ReceiptView.tsx`, `ExcelImportModal.tsx` (corrigiendo bug `getItem('token')`), `apiClient.ts`, `api.ts`, `usePortalAuth.ts` y `usePortalStore.ts` con `credentials: 'include'`
   - [x] Migrar `whatsapp.service.ts` de `axios` no declarado a `fetch` nativo con timeout y desinstalar `axios`, `jest`, `ts-jest` y `@types/jest` (**-307 paquetes** eliminados) + `22 suites / 90 tests` en verde (`cookie-auth.test.ts`)
-- [ ] **Paso S3: Erradicación de Vulnerabilidades en Planillas (`xlsx` -> `exceljs` Seguro)**
-  - [ ] Reemplazar `xlsx` (`0.18.5`) en Backend y Frontend por `exceljs` libre de alertas de seguridad (*Prototype Pollution / ReDoS*) y auditar `npm audit`
+- [x] **Paso S3: Erradicación de Vulnerabilidades en Planillas (`xlsx` -> `exceljs` Seguro)** ✅ COMPLETADO
+  - [x] Reemplazar `xlsx` (`0.18.5`) en Backend (`excel-reader.util.ts`, `expense-import.service.ts`) y Frontend (`excelBrowserReader.ts`, `StandaloneOffersManager.tsx`) por `exceljs` con escudos anti-Prototype-Pollution, bloqueo de `.xls` BIFF8 y límites anti-DoS (`15 MB`, `15.000` filas)
+  - [x] Modularizar `excel_validator.service.ts` (`430` -> `15` l. + `excel-parser.helpers.ts`, `excel-products-prices.validator.ts`, `excel-clients.validator.ts` todos `< 220` l.) y endurecer filtros en `upload.ts`
+  - [x] Ejecutar `npm audit fix` + `overrides` seguros dejando **`0` vulnerabilidades en Backend y `0` vulnerabilidades en Frontend** (`npm audit` 100% limpio + `23 suites / 93 tests` en verde)
 - [ ] **Paso S4: Escudo Anti-Doble Clic (`Idempotency-Key`) en Operaciones de Dinero y Stock**
   - [ ] Garantizar 0% de pedidos, facturas AFIP, gastos o cobros duplicados ante microcortes de señal 4G o doble clic en mostrador/ruta
 - [ ] **Paso S5: Modo Offline / PWA para Preventa en Ruta (`IndexedDB` + Sincronización Automática)**

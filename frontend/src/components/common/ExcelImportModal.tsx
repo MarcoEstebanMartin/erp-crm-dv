@@ -123,7 +123,7 @@ export const ExcelImportModal: React.FC<ExcelImportModalProps> = ({ isOpen, onCl
               <div className="flex gap-2">
                 <input
                   type="file"
-                  accept=".xlsx, .xls, .csv"
+                  accept=".xlsx, .csv"
                   onChange={handleFileChange}
                   className="flex-1 bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-1.5 text-sm text-zinc-400 file:mr-3 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-zinc-800 file:text-zinc-200 hover:file:bg-zinc-700"
                 />

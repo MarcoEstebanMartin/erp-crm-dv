@@ -908,7 +908,7 @@ export default function GastosDashboard() {
               >
                 <input 
                   type="file" 
-                  accept=".xlsx, .xls"
+                  accept=".xlsx, .csv"
                   onChange={handleFileChange}
                   style={{
                     position: 'absolute',
