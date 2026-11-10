@@ -9,6 +9,7 @@ import {
   getClientOrders,
 } from '../controllers/store.controller';
 import { authenticateStoreClientJWT } from '../middlewares/storeAuth.middleware';
+import { idempotencyGuard } from '../middlewares/idempotency.middleware';
 import { authRateLimiter, publicApiRateLimiter } from '../middlewares/rateLimiter.middleware';
 import { validateRequest } from '../middlewares/validateRequest';
 import {
@@ -37,6 +38,7 @@ router.post(
   '/orders',
   authenticateStoreClientJWT,
   validateRequest(createStoreOrderSchema),
+  idempotencyGuard,
   createStoreOrder,
 );
 

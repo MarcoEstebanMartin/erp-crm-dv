@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { API_BASE_URL } from '../../../utils/api';
+import { resolveRequestIdempotencyKey } from '../../../utils/idempotencyClient';
 import {
   type CartItem,
   type ClientProfile,
@@ -133,23 +134,25 @@ export function usePortalStore({ client, expireSession }: UsePortalStoreParams) 
 
     setIsSubmittingOrder(true);
     try {
+      const orderPayload = JSON.stringify({
+        personaId: client.id,
+        items: cart.map((item) => ({
+          productId: item.product.id,
+          quantity: item.quantity,
+          isEmergencyOverride: Boolean(
+            item.isEmergencyOverride || item.quantity < (item.product.minOrderQuantity || 1)
+          )
+        })),
+        notes: orderNotes
+      });
       const res = await fetch(`${API_BASE_URL}/store/orders`, {
         method: 'POST',
         credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
+          'Idempotency-Key': resolveRequestIdempotencyKey('POST', '/store/orders', orderPayload),
         },
-        body: JSON.stringify({
-          personaId: client.id,
-          items: cart.map((item) => ({
-            productId: item.product.id,
-            quantity: item.quantity,
-            isEmergencyOverride: Boolean(
-              item.isEmergencyOverride || item.quantity < (item.product.minOrderQuantity || 1)
-            )
-          })),
-          notes: orderNotes
-        })
+        body: orderPayload,
       });
 
       if (res.status === 401) {

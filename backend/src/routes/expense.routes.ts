@@ -1,6 +1,5 @@
 import { Router } from 'express';
 import { Role } from '@prisma/client';
-import multer from 'multer';
 import {
   getCategories,
   createCategory,
@@ -11,6 +10,8 @@ import {
   importExpenses,
 } from '../controllers/expense.controller';
 import { authenticateJWT, requireRole } from '../middlewares/auth';
+import { idempotencyGuard } from '../middlewares/idempotency.middleware';
+import { uploadExcelFile } from '../middlewares/upload';
 import { validateRequest } from '../middlewares/validateRequest';
 import {
   createBulkExpensesSchema,
@@ -19,7 +20,6 @@ import {
 } from '../validators/expense.validator';
 
 const router = Router();
-const upload = multer({ storage: multer.memoryStorage() });
 
 // Rutas de categorías de gastos
 router.get('/categories', authenticateJWT, getCategories);
@@ -28,6 +28,7 @@ router.post(
   authenticateJWT,
   requireRole([Role.ADMIN]),
   validateRequest(createCategorySchema),
+  idempotencyGuard,
   createCategory,
 );
 
@@ -38,6 +39,7 @@ router.post(
   authenticateJWT,
   requireRole([Role.ADMIN, Role.FACTURACION]),
   validateRequest(createExpenseSchema),
+  idempotencyGuard,
   createExpense,
 );
 router.post(
@@ -45,16 +47,17 @@ router.post(
   authenticateJWT,
   requireRole([Role.ADMIN, Role.FACTURACION]),
   validateRequest(createBulkExpensesSchema),
+  idempotencyGuard,
   createBulkExpenses,
 );
 router.delete('/:id', authenticateJWT, requireRole([Role.ADMIN]), deleteExpense);
 
-// Importación desde Excel
+// Importación segura desde Excel (.xlsx / .csv)
 router.post(
   '/import',
   authenticateJWT,
   requireRole([Role.ADMIN]),
-  upload.single('file'),
+  uploadExcelFile,
   importExpenses,
 );
 

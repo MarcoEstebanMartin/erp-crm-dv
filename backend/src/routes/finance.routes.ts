@@ -18,6 +18,7 @@ import {
   closeCentralDrawer,
 } from '../controllers/finance.controller';
 import { authenticateJWT, requireRole } from '../middlewares/auth';
+import { idempotencyGuard } from '../middlewares/idempotency.middleware';
 import { validateRequest } from '../middlewares/validateRequest';
 import {
   closeCentralDrawerSchema,
@@ -34,12 +35,12 @@ import {
 const router = Router();
 
 // Rutas generales de caja
-router.post('/drawers/open', authenticateJWT, validateRequest(openDrawerSchema), openDrawer);
-router.post('/drawers/close', authenticateJWT, validateRequest(closeDrawerSchema), closeDrawer);
+router.post('/drawers/open', authenticateJWT, validateRequest(openDrawerSchema), idempotencyGuard, openDrawer);
+router.post('/drawers/close', authenticateJWT, validateRequest(closeDrawerSchema), idempotencyGuard, closeDrawer);
 router.get('/drawers/active', authenticateJWT, getActiveDrawer);
 router.get('/drawers/active-all', authenticateJWT, getActiveDrawers);
 router.get('/drawers/history', authenticateJWT, getDrawersHistory);
-router.post('/drawers/close-joint', authenticateJWT, validateRequest(closeJointDrawersSchema), closeJointDrawers);
+router.post('/drawers/close-joint', authenticateJWT, validateRequest(closeJointDrawersSchema), idempotencyGuard, closeJointDrawers);
 
 // Operaciones de Caja Grande (Tesorería Central)
 router.post(
@@ -47,6 +48,7 @@ router.post(
   authenticateJWT,
   requireRole([Role.ADMIN]),
   validateRequest(closeCentralDrawerSchema),
+  idempotencyGuard,
   closeCentralDrawer,
 );
 
@@ -72,6 +74,7 @@ router.post(
   authenticateJWT,
   requireRole([Role.ADMIN, Role.FACTURACION]),
   validateRequest(transferFundsSchema),
+  idempotencyGuard,
   transferFunds,
 );
 router.put(
@@ -87,6 +90,7 @@ router.post(
   authenticateJWT,
   requireRole([Role.ADMIN, Role.FACTURACION]),
   validateRequest(createCentralExpenseSchema),
+  idempotencyGuard,
   createExpense,
 );
 

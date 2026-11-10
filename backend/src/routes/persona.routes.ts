@@ -15,6 +15,7 @@ import {
   deletePersona,
 } from '../controllers/persona.controller';
 import { authenticateJWT, requireRole } from '../middlewares/auth';
+import { idempotencyGuard } from '../middlewares/idempotency.middleware';
 import { Role } from '@prisma/client';
 import { validateRequest } from '../middlewares/validateRequest';
 import {
@@ -40,7 +41,7 @@ router.get('/:id/pending-invoices', authenticateJWT, getPersonaPendingInvoices);
 // Rutas de creación, edición y cobros (Solo ADMIN y VENDEDOR)
 router.post('/', authenticateJWT, requireRole([Role.ADMIN, Role.VENDEDOR]), validateRequest(createPersonaSchema), createPersona);
 router.put('/:id', authenticateJWT, requireRole([Role.ADMIN, Role.VENDEDOR]), validateRequest(updatePersonaSchema), updatePersona);
-router.post('/:id/payments', authenticateJWT, requireRole([Role.ADMIN, Role.VENDEDOR]), validateRequest(recordPersonaPaymentSchema), recordPersonaPayment);
+router.post('/:id/payments', authenticateJWT, requireRole([Role.ADMIN, Role.VENDEDOR]), validateRequest(recordPersonaPaymentSchema), idempotencyGuard, recordPersonaPayment);
 router.post('/:id/visit', authenticateJWT, requireRole([Role.ADMIN, Role.VENDEDOR]), validateRequest(recordVisitSchema), recordVisit);
 router.delete('/:id', authenticateJWT, requireRole([Role.ADMIN]), deletePersona);
 

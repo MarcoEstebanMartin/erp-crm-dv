@@ -9,6 +9,7 @@ import {
   confirmDocument,
 } from '../controllers/purchase.controller';
 import { authenticateJWT, requireRole } from '../middlewares/auth';
+import { idempotencyGuard } from '../middlewares/idempotency.middleware';
 import { validateRequest } from '../middlewares/validateRequest';
 import {
   confirmDocumentSchema,
@@ -28,11 +29,12 @@ const adminOrBilling = requireRole([Role.ADMIN, Role.FACTURACION]);
 const warehouseOrAdmin = requireRole([Role.ADMIN, Role.FACTURACION, Role.DEPOSITO]);
 
 router.get('/', warehouseOrAdmin, getPurchaseOrders);
-router.post('/', adminOrBilling, validateRequest(createPurchaseOrderSchema), createPurchaseOrder);
+router.post('/', adminOrBilling, validateRequest(createPurchaseOrderSchema), idempotencyGuard, createPurchaseOrder);
 router.post(
   '/:id/receive',
   warehouseOrAdmin,
   validateRequest(receivePurchaseOrderSchema),
+  idempotencyGuard,
   receivePurchaseOrder,
 );
 
@@ -42,6 +44,7 @@ router.post(
   '/confirm-document',
   adminOrBilling,
   validateRequest(confirmDocumentSchema),
+  idempotencyGuard,
   confirmDocument,
 );
 

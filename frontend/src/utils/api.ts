@@ -1,4 +1,8 @@
 import { BillingType, OrderStatus, PaymentMethod } from './types';
+import {
+  evictRequestIdempotencyKey,
+  resolveRequestIdempotencyKey,
+} from './idempotencyClient';
 
 // Usa ruta relativa para que funcione tanto en localhost, IP local y túneles externos (Ngrok/Localtunnel)
 export const API_BASE_URL = '/api';
@@ -12,14 +16,32 @@ function getHeaders() {
 
 async function request(path: string, options: RequestInit = {}) {
   const url = `${API_BASE_URL}${path}`;
+  const method = (options.method || 'GET').toUpperCase();
+  const serializedBody = typeof options.body === 'string' ? options.body : undefined;
+  const skipIdempotency = path.startsWith('/auth/');
+
+  const extraHeaders: Record<string, string> = {};
+  if (method === 'POST' && !skipIdempotency) {
+    extraHeaders['Idempotency-Key'] = resolveRequestIdempotencyKey(
+      method,
+      path,
+      serializedBody,
+    );
+  }
+
   const response = await fetch(url, {
     credentials: 'include',
     ...options,
     headers: {
       ...getHeaders(),
+      ...extraHeaders,
       ...options.headers
     }
   });
+
+  if (!response.ok && response.status >= 400 && response.status !== 409 && method === 'POST') {
+    evictRequestIdempotencyKey(method, path, serializedBody);
+  }
 
   if (response.status === 401) {
     localStorage.removeItem('auth_token');

@@ -114,8 +114,11 @@
   - [x] Reemplazar `xlsx` (`0.18.5`) en Backend (`excel-reader.util.ts`, `expense-import.service.ts`) y Frontend (`excelBrowserReader.ts`, `StandaloneOffersManager.tsx`) por `exceljs` con escudos anti-Prototype-Pollution, bloqueo de `.xls` BIFF8 y límites anti-DoS (`15 MB`, `15.000` filas)
   - [x] Modularizar `excel_validator.service.ts` (`430` -> `15` l. + `excel-parser.helpers.ts`, `excel-products-prices.validator.ts`, `excel-clients.validator.ts` todos `< 220` l.) y endurecer filtros en `upload.ts`
   - [x] Ejecutar `npm audit fix` + `overrides` seguros dejando **`0` vulnerabilidades en Backend y `0` vulnerabilidades en Frontend** (`npm audit` 100% limpio + `23 suites / 93 tests` en verde)
-- [ ] **Paso S4: Escudo Anti-Doble Clic (`Idempotency-Key`) en Operaciones de Dinero y Stock**
-  - [ ] Garantizar 0% de pedidos, facturas AFIP, gastos o cobros duplicados ante microcortes de señal 4G o doble clic en mostrador/ruta
+- [x] **Paso S4: Escudo Anti-Doble Clic (`Idempotency-Key`) en Operaciones de Dinero y Stock** ✅ COMPLETADO
+  - [x] Crear `idempotency.middleware.ts` (`162` l.) con soporte para `Idempotency-Key` explícita (`24h` TTL), huella automática SHA-256 anti-ráfaga (`3s`), bloqueo concurrente `409 IDEMPOTENT_IN_PROGRESS`, detección `422 IDEMPOTENCY_PAYLOAD_MISMATCH`, replay `X-Idempotency-Replayed: true` y liberación inmediata ante errores `4xx/5xx`
+  - [x] Proteger las 10 familias críticas de rutas de dinero y stock (`order`, `store`, `collection`, `finance`, `expense` + upgrade a `uploadExcelFile`, `billing`, `creditNote`, `persona`, `purchase` y `logistics`)
+  - [x] Crear `idempotencyClient.ts` (`64` l., compatible con WiFi local HTTP y HTTPS) e integrarlo en `apiClient.ts`, `api.ts` y `usePortalStore.ts`
+  - [x] Validar `tsc --noEmit` (Backend y Frontend), `vite build` y `24 suites / 97 tests` en verde (`idempotency-guard.test.ts`)
 - [ ] **Paso S5: Modo Offline / PWA para Preventa en Ruta (`IndexedDB` + Sincronización Automática)**
   - [ ] Permitir consultar catálogo y encolar pedidos sin señal en comercios, sincronizando automáticamente al recuperar conexión
 - [ ] **Paso S6: Cola Resiliente de Reintentos (AFIP / WhatsApp) + Backups Encriptados (`AES-256-GCM`)**

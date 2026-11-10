@@ -10,6 +10,7 @@ import {
   deleteReceipt,
 } from '../controllers/collection.controller';
 import { authenticateJWT, requireRole } from '../middlewares/auth';
+import { idempotencyGuard } from '../middlewares/idempotency.middleware';
 import { publicApiRateLimiter } from '../middlewares/rateLimiter.middleware';
 import { validateRequest } from '../middlewares/validateRequest';
 import {
@@ -25,6 +26,7 @@ router.post(
   '/register',
   authenticateJWT,
   validateRequest(registerCollectionSchema),
+  idempotencyGuard,
   registerCollection,
 );
 
@@ -57,6 +59,7 @@ router.post(
   authenticateJWT,
   requireRole([Role.ADMIN, Role.FACTURACION]),
   validateRequest(verifyRendicionSchema),
+  idempotencyGuard,
   verifyRendicion,
 );
 

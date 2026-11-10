@@ -9,6 +9,7 @@ import {
   createTaxWithholding,
 } from '../controllers/billing.controller';
 import { authenticateJWT, requireRole } from '../middlewares/auth';
+import { idempotencyGuard } from '../middlewares/idempotency.middleware';
 import { validateRequest } from '../middlewares/validateRequest';
 import {
   createSupplierInvoiceSchema,
@@ -26,6 +27,7 @@ router.post(
   '/purchases',
   requireRole([Role.ADMIN, Role.FACTURACION]),
   validateRequest(createSupplierInvoiceSchema),
+  idempotencyGuard,
   createSupplierInvoice,
 );
 router.delete(
@@ -40,6 +42,7 @@ router.post(
   '/tax-withholdings',
   requireRole([Role.ADMIN, Role.FACTURACION]),
   validateRequest(createTaxWithholdingSchema),
+  idempotencyGuard,
   createTaxWithholding,
 );
 

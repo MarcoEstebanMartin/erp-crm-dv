@@ -1,4 +1,8 @@
 import { API_BASE_URL } from '../utils/api';
+import {
+  evictRequestIdempotencyKey,
+  resolveRequestIdempotencyKey,
+} from '../utils/idempotencyClient';
 
 async function parseJsonResponse(response: Response) {
   const text = await response.text();
@@ -43,18 +47,33 @@ export const apiClient = {
     return data as T;
   },
 
-  async post<T = any, B = Record<string, unknown>>(endpoint: string, body?: B): Promise<T> {
+  async post<T = any, B = Record<string, unknown>>(
+    endpoint: string,
+    body?: B,
+    options?: { idempotencyKey?: string },
+  ): Promise<T> {
+    const serialized = body ? JSON.stringify(body) : undefined;
+    const idempotencyKey = resolveRequestIdempotencyKey(
+      'POST',
+      endpoint,
+      serialized,
+      options?.idempotencyKey,
+    );
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       method: 'POST',
       credentials: 'include',
       headers: {
         'Content-Type': 'application/json',
+        'Idempotency-Key': idempotencyKey,
       },
-      body: body ? JSON.stringify(body) : undefined,
+      body: serialized,
     });
     handleUnauthorizedIfStaffScreen(endpoint, response.status);
     const data = await parseJsonResponse(response);
     if (!response.ok) {
+      if (response.status >= 400 && response.status !== 409) {
+        evictRequestIdempotencyKey('POST', endpoint, serialized);
+      }
       throw new Error(extractApiError(data, 'Error en la petición POST'));
     }
     return data as T;
