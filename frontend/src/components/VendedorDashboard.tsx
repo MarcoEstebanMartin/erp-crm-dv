@@ -9,6 +9,7 @@ import { VendedorOrderTakeTab } from './vendedor/VendedorOrderTakeTab';
 import { VendedorRoutesTab } from './vendedor/VendedorRoutesTab';
 import { VendedorHistoryTab, VendedorCatalogReadOnlyTab } from './vendedor/VendedorCatalogHistoryTabs';
 import { VendedorStreetClientModal, VendedorNoSaleModal } from './vendedor/VendedorModals';
+import { VendedorOfflineBanner } from './vendedor/VendedorOfflineBanner';
 import { cleanCityName } from './vendedor/vendedorHelpers';
 import { useVendedorController } from './vendedor/useVendedorController';
 
@@ -52,6 +53,18 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
           <History size={16} /><span>Historial</span>
         </button>
       </div>
+
+      <VendedorOfflineBanner
+        isOnline={c.offlineSync.isOnline}
+        isSyncing={c.offlineSync.isSyncing}
+        usingCachedCatalog={c.offlineSync.usingCachedCatalog}
+        lastCatalogSyncAt={c.offlineSync.lastCatalogSyncAt}
+        queuedOrders={c.offlineSync.queuedOrders}
+        queuedVisits={c.offlineSync.queuedVisits}
+        onSyncNow={c.offlineSync.syncNow}
+        onDiscardOrder={c.offlineSync.removeQueuedOrder}
+        onRetryOrder={c.offlineSync.retryQueuedOrder}
+      />
 
       {c.errorMsg && (
         <div style={{ backgroundColor: 'var(--accent-bg-light)', color: 'var(--accent-color)', padding: '12px', borderRadius: 'var(--radius-sm)', fontSize: '0.85rem', marginBottom: '20px', border: '1px solid rgba(var(--color-corp-red-rgb), 0.15)' }}>

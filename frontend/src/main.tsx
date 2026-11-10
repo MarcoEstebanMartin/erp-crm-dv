@@ -8,6 +8,9 @@ import ReceiptView from './components/ReceiptView.tsx'
 import { ConfirmProvider } from './context/ConfirmContext.tsx'
 
 import { ErrorBoundary } from './components/ui/ErrorBoundary.tsx'
+import { registerPwaServiceWorker } from './utils/registerPwa.ts'
+
+registerPwaServiceWorker();
 
 const queryClient = new QueryClient({
   defaultOptions: {

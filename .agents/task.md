@@ -119,7 +119,10 @@
   - [x] Proteger las 10 familias críticas de rutas de dinero y stock (`order`, `store`, `collection`, `finance`, `expense` + upgrade a `uploadExcelFile`, `billing`, `creditNote`, `persona`, `purchase` y `logistics`)
   - [x] Crear `idempotencyClient.ts` (`64` l., compatible con WiFi local HTTP y HTTPS) e integrarlo en `apiClient.ts`, `api.ts` y `usePortalStore.ts`
   - [x] Validar `tsc --noEmit` (Backend y Frontend), `vite build` y `24 suites / 97 tests` en verde (`idempotency-guard.test.ts`)
-- [ ] **Paso S5: Modo Offline / PWA para Preventa en Ruta (`IndexedDB` + Sincronización Automática)**
-  - [ ] Permitir consultar catálogo y encolar pedidos sin señal en comercios, sincronizando automáticamente al recuperar conexión
+- [x] **Paso S5: Modo Offline / PWA para Preventa en Ruta (`IndexedDB` + Sincronización Automática)** ✅ COMPLETADO
+  - [x] Configurar PWA instalable (`manifest.webmanifest`, `index.html`, `sw.js` con *Network-First* en navegación, caché de imágenes con tope de `260` fotos y exclusión total de `/api/*`, más `registerPwa.ts`)
+  - [x] Construir base local `IndexedDB` (`offlineCatalogDb.ts` `151` l.) con snapshots de catálogo, clientes, rubros y rutas + buscador local sin tildes/mayúsculas (`filterCachedProducts`)
+  - [x] Construir cola persistente e idempotente (`offlineQueueStore.ts` `192` l. + `offlineSyncManager.ts` `147` l.) con migración transparente de `localStorage`, detección de "4G fantasma", candado *single-flight* y preservación de `Idempotency-Key` en Pedidos y Visitas (`saleRoute.routes.ts`)
+  - [x] Modularizar preventa (`vendedorCatalogFetcher.ts` `140` l., `useVendedorOfflineSync.ts` `169` l., `useVendedorController.ts` `232` l. y `VendedorOfflineBanner.tsx` `179` l.) y validar `tsc --noEmit` + `vite build` + `25 suites / 101 tests` en verde (`offline-preventa-sync.test.ts`)
 - [ ] **Paso S6: Cola Resiliente de Reintentos (AFIP / WhatsApp) + Backups Encriptados (`AES-256-GCM`)**
   - [ ] Reintentos automáticos con *exponential backoff* ante caídas de ARCA/AFIP o Meta API y respaldo nocturno cifrado

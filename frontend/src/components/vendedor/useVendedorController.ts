@@ -1,7 +1,12 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { api } from '../../utils/api';
 import { captureCurrentGpsSilently } from '../../utils/geoUtils';
+import { generateSafeIdempotencyKey } from '../../utils/idempotencyClient';
+import { loadCatalogSnapshot, saveCatalogSnapshot } from '../../utils/offlineCatalogDb';
+import { isLikelyNetworkError } from '../../utils/offlineSyncManager';
 import { cleanCityName, getTodayKey } from './vendedorHelpers';
+import { fetchVendedorTabState } from './vendedorCatalogFetcher';
+import { useVendedorOfflineSync } from './useVendedorOfflineSync';
 import type { StreetClientFormState } from './VendedorModals';
 import type { Persona, Product, Order, Rubro, SaleRoute } from '../../types';
 
@@ -40,95 +45,51 @@ export function useVendedorController(activeTab: string) {
   const [selectedRouteId, setSelectedRouteId] = useState<number | null>(null);
   const [todayVisits, setTodayVisits] = useState<any[]>([]);
 
-  const showToast = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
+  const showToast = useCallback((message: string, type: 'success' | 'error' | 'info' = 'success') => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 2500);
-  };
+  }, []);
+
+  const fetchRef = useRef<() => void>(() => undefined);
+  const offlineSync = useVendedorOfflineSync({
+    onSynced: () => fetchRef.current(),
+    showToast,
+  });
 
   const fetchData = useCallback(async () => {
     setErrorMsg(null);
     try {
-      if (activeTab === 'orders' || activeTab === 'history') {
-        const [clientData, prodData, orderData, rubroData] = await Promise.all([
-          api.getClients(),
-          api.getProducts(prodSearchQuery),
-          api.getOrders(),
-          api.getRubros(),
-        ]);
-        setClients(clientData.filter((c: any) => c.isActive !== false));
-        setProducts(prodData);
-        setOrders(orderData);
-        setRubros(rubroData);
-      } else if (activeTab === 'clients') {
-        const [routesData, visitsData] = await Promise.all([api.getSellerSaleRoutes(), api.getTodayVisits()]);
-        setVendedorRoutes(routesData.routes || []);
-        setTodayVisits(visitsData.visits || []);
+      const result = await fetchVendedorTabState({
+        activeTab,
+        prodSearchQuery,
+        searchQuery,
+        selectedRouteId,
+      });
 
-        let routeIdToLoad = selectedRouteId;
-        if (!routeIdToLoad && routesData.routes?.length > 0) {
-          const daysMap: Record<number, string> = { 0: 'DOMINGO', 1: 'LUNES', 2: 'MARTES', 3: 'MIERCOLES', 4: 'JUEVES', 5: 'VIERNES', 6: 'SABADO' };
-          const todayRoute = routesData.routes.find((r: any) => r.dayOfWeek === daysMap[new Date().getDay()]);
-          routeIdToLoad = todayRoute ? todayRoute.id : routesData.routes[0].id;
-          setSelectedRouteId(routeIdToLoad);
-        }
+      if (result.clients !== undefined) setClients(result.clients);
+      if (result.products !== undefined) setProducts(result.products);
+      if (result.orders !== undefined) setOrders(result.orders);
+      if (result.rubros !== undefined) setRubros(result.rubros);
+      if (result.vendedorRoutes !== undefined) setVendedorRoutes(result.vendedorRoutes);
+      if (result.todayVisits !== undefined) setTodayVisits(result.todayVisits);
+      if (result.resolvedRouteId && !selectedRouteId) setSelectedRouteId(result.resolvedRouteId);
+      if (result.lastCatalogSyncAt) offlineSync.setLastCatalogSyncAt(result.lastCatalogSyncAt);
 
-        if (routeIdToLoad) {
-          const routeDetail = await api.getSaleRouteById(routeIdToLoad);
-          setClients(routeDetail.route.clients || []);
-        } else {
-          setClients([]);
-        }
-      } else if (activeTab === 'products') {
-        const [prodData, rubroData] = await Promise.all([api.getProducts(searchQuery), api.getRubros()]);
-        setProducts(prodData);
-        setRubros(rubroData);
+      offlineSync.setUsingCachedCatalog(result.fromCache);
+      if (result.fromCache && !result.hasAnyCachedData) {
+        setErrorMsg('Sin conexión y sin copia local previa del catálogo.');
       }
     } catch (err: any) {
       setErrorMsg(err.message || 'Error al obtener datos.');
     }
-  }, [activeTab, prodSearchQuery, selectedRouteId, searchQuery]);
+  }, [activeTab, prodSearchQuery, selectedRouteId, searchQuery, offlineSync.setLastCatalogSyncAt, offlineSync.setUsingCachedCatalog]);
 
-  const syncOfflineData = useCallback(async () => {
-    if (!navigator.onLine) return;
-    const offlineOrders = JSON.parse(localStorage.getItem('offline_orders') || '[]');
-    if (offlineOrders.length > 0) {
-      let syncedCount = 0;
-      const remaining = [];
-      for (const order of offlineOrders) {
-        try {
-          await api.createOrder({ clientId: order.clientId, items: order.items, notes: order.notes });
-          if (order.routeId) {
-            try { await api.recordRouteVisit(order.routeId, { personaId: order.clientId, status: 'ORDERED', latitude: order.latitude ?? null, longitude: order.longitude ?? null }); } catch {}
-          }
-          syncedCount++;
-        } catch { remaining.push(order); }
-      }
-      localStorage.setItem('offline_orders', JSON.stringify(remaining));
-      if (syncedCount > 0) { showToast(`✅ Se enviaron ${syncedCount} pedido(s) guardados sin señal.`, 'success'); fetchData(); }
-    }
-
-    const offlineVisits = JSON.parse(localStorage.getItem('offline_route_visits') || '[]');
-    if (offlineVisits.length > 0) {
-      let syncedVisits = 0;
-      const remainingV = [];
-      for (const v of offlineVisits) {
-        try {
-          await api.recordRouteVisit(v.routeId, { personaId: v.personaId, status: v.status, noBuyReason: v.noBuyReason, notes: v.notes, latitude: v.latitude ?? null, longitude: v.longitude ?? null });
-          syncedVisits++;
-        } catch { remainingV.push(v); }
-      }
-      localStorage.setItem('offline_route_visits', JSON.stringify(remainingV));
-      if (syncedVisits > 0) showToast(`✅ Se sincronizaron ${syncedVisits} visita(s) offline.`, 'success');
-    }
-  }, [fetchData]);
+  fetchRef.current = fetchData;
 
   useEffect(() => {
     const stored = localStorage.getItem(getTodayKey());
     if (stored) { try { setSessionVisits(JSON.parse(stored)); } catch {} }
-    syncOfflineData();
-    window.addEventListener('online', syncOfflineData);
-    return () => window.removeEventListener('online', syncOfflineData);
-  }, [syncOfflineData]);
+  }, []);
 
   useEffect(() => { fetchData(); }, [fetchData]);
   useEffect(() => { setSuccessMsg(null); setErrorMsg(null); }, [activeTab]);
@@ -164,6 +125,12 @@ export function useVendedorController(activeTab: string) {
     else setErrorMsg(`Solo hay ${existing.product.stock} unidades en stock.`);
   };
 
+  const markLocalVisit = (clientId: number) => {
+    const updatedVisits = { ...sessionVisits, [clientId]: { status: 'VENTA' } };
+    setSessionVisits(updatedVisits);
+    localStorage.setItem(getTodayKey(), JSON.stringify(updatedVisits));
+  };
+
   const handleConfirmOrder = async () => {
     if (!selectedClient) return setErrorMsg('Debe seleccionar un cliente antes de confirmar.');
     if (cart.length === 0) return setErrorMsg('El carrito está vacío.');
@@ -173,46 +140,39 @@ export function useVendedorController(activeTab: string) {
       quantity: item.quantity,
       isEmergencyOverride: Boolean(item.isEmergencyOverride || item.quantity < (item.product.minOrderQuantity || 1)),
     }));
+    const effectiveRouteId = Number(selectedRouteId || (selectedClient as any).saleRouteId || 0) || null;
+    const orderIdempotencyKey = generateSafeIdempotencyKey();
 
     setLoading(true);
     const gps = await captureCurrentGpsSilently(3000);
 
-    if (!navigator.onLine) {
-      const offlineOrders = JSON.parse(localStorage.getItem('offline_orders') || '[]');
-      offlineOrders.push({ clientId: selectedClient.id, items, notes: orderNotes, clientName: selectedClient.name, routeId: selectedRouteId, latitude: gps?.lat ?? null, longitude: gps?.lng ?? null, timestamp: new Date().toISOString() });
-      localStorage.setItem('offline_orders', JSON.stringify(offlineOrders));
-      const updatedVisits = { ...sessionVisits, [selectedClient.id]: { status: 'VENTA' } };
-      setSessionVisits(updatedVisits);
-      localStorage.setItem(getTodayKey(), JSON.stringify(updatedVisits));
-      setSuccessMsg(`⚠️ Sin señal. El pedido de "${selectedClient.name}" se guardó localmente y se enviará al recuperar conexión.`);
-      setCart([]); setOrderNotes(''); setSelectedClient(null); setClientFilter(''); setLoading(false);
-      return;
-    }
+    const saveOrderToOfflineQueue = async () => {
+      await offlineSync.queueOrderOffline({
+        clientId: selectedClient.id, clientName: selectedClient.name, items, notes: orderNotes,
+        routeId: effectiveRouteId, latitude: gps?.lat ?? null, longitude: gps?.lng ?? null, idempotencyKey: orderIdempotencyKey,
+      });
+      markLocalVisit(selectedClient.id);
+      setSuccessMsg(`Modo Sin Señal: El pedido de "${selectedClient.name}" quedó protegido en la cola local y se enviará solo al recuperar red.`);
+      setCart([]); setOrderNotes(''); setSelectedClient(null); setClientFilter('');
+    };
+
+    if (!navigator.onLine) { await saveOrderToOfflineQueue(); setLoading(false); return; }
 
     try {
-      await api.createOrder({ clientId: selectedClient.id, items, notes: orderNotes });
-      const effectiveRouteId = selectedRouteId || (selectedClient as any).saleRouteId;
+      await api.createOrder({ clientId: selectedClient.id, items, notes: orderNotes }, { idempotencyKey: orderIdempotencyKey });
       if (effectiveRouteId) {
         try {
-          await api.recordRouteVisit(Number(effectiveRouteId), {
-            personaId: selectedClient.id,
-            status: 'ORDERED',
-            latitude: gps?.lat ?? null,
-            longitude: gps?.lng ?? null,
-          });
+          await api.recordRouteVisit(effectiveRouteId, { personaId: selectedClient.id, status: 'ORDERED', latitude: gps?.lat ?? null, longitude: gps?.lng ?? null }, { idempotencyKey: `${orderIdempotencyKey}-visit` });
         } catch {}
       }
-      const updatedVisits = { ...sessionVisits, [selectedClient.id]: { status: 'VENTA' } };
-      setSessionVisits(updatedVisits);
-      localStorage.setItem(getTodayKey(), JSON.stringify(updatedVisits));
-      setSuccessMsg(`✅ ¡Pedido cargado con éxito${gps ? ' + Check-in GPS registrado' : ''}! Se envió a depósito.`);
+      markLocalVisit(selectedClient.id);
+      setSuccessMsg(`¡Pedido cargado con éxito${gps ? ' + Check-in GPS registrado' : ''}! Se envió a depósito.`);
       setCart([]); setOrderNotes(''); setSelectedClient(null); setClientFilter('');
       fetchData();
     } catch (err: any) {
-      setErrorMsg(err.message || 'Error al procesar el pedido.');
-    } finally {
-      setLoading(false);
-    }
+      if (isLikelyNetworkError(err)) await saveOrderToOfflineQueue();
+      else setErrorMsg(err.message || 'Error al procesar el pedido.');
+    } finally { setLoading(false); }
   };
 
   const handleSelectRoute = async (routeId: number) => {
@@ -220,33 +180,47 @@ export function useVendedorController(activeTab: string) {
     setLoading(true);
     try {
       const routeDetail = await api.getSaleRouteById(routeId);
-      setClients(routeDetail.route.clients || []);
-    } catch (err: any) { setErrorMsg('Error al cargar la ruta: ' + err.message); } finally { setLoading(false); }
+      const routeClients = routeDetail.route.clients || [];
+      setClients(routeClients);
+      await saveCatalogSnapshot(`route_clients_${routeId}`, routeClients);
+    } catch (err: any) {
+      if (isLikelyNetworkError(err)) {
+        const snap = await loadCatalogSnapshot<Persona[]>(`route_clients_${routeId}`);
+        if (snap?.payload) setClients(snap.payload);
+      } else { setErrorMsg('Error al cargar la ruta: ' + err.message); }
+    } finally { setLoading(false); }
   };
 
   const handleRecordNoSale = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!noSaleModal || !selectedRouteId) return;
     setLoading(true);
+    const visitIdempotencyKey = generateSafeIdempotencyKey();
     const gps = await captureCurrentGpsSilently(3000);
 
-    if (!navigator.onLine) {
-      const pendingQueue = JSON.parse(localStorage.getItem('offline_route_visits') || '[]');
-      pendingQueue.push({ routeId: selectedRouteId, personaId: noSaleModal.clientId, status: 'NO_BUY', noBuyReason: noSaleModal.reason, notes: noSaleModal.notes, latitude: gps?.lat ?? null, longitude: gps?.lng ?? null, timestamp: new Date().toISOString() });
-      localStorage.setItem('offline_route_visits', JSON.stringify(pendingQueue));
-      setSuccessMsg('⚠️ Sin conexión. Visita guardada localmente.');
-      setNoSaleModal(null); setLoading(false);
-      return;
-    }
+    const enqueueVisit = async () => {
+      await offlineSync.queueVisitOffline({
+        routeId: selectedRouteId, personaId: noSaleModal.clientId, clientName: noSaleModal.clientName,
+        status: 'NO_BUY', noBuyReason: noSaleModal.reason, notes: noSaleModal.notes,
+        latitude: gps?.lat ?? null, longitude: gps?.lng ?? null, idempotencyKey: visitIdempotencyKey,
+      });
+      setSuccessMsg('Sin conexión. Visita guardada en cola local.');
+      setNoSaleModal(null);
+    };
+
+    if (!navigator.onLine) { await enqueueVisit(); setLoading(false); return; }
 
     try {
-      await api.recordRouteVisit(selectedRouteId, { personaId: noSaleModal.clientId, status: 'NO_BUY', noBuyReason: noSaleModal.reason, notes: noSaleModal.notes, latitude: gps?.lat ?? null, longitude: gps?.lng ?? null });
+      await api.recordRouteVisit(selectedRouteId, { personaId: noSaleModal.clientId, status: 'NO_BUY', noBuyReason: noSaleModal.reason, notes: noSaleModal.notes, latitude: gps?.lat ?? null, longitude: gps?.lng ?? null }, { idempotencyKey: visitIdempotencyKey });
       const [visitsData, routeDetail] = await Promise.all([api.getTodayVisits(), api.getSaleRouteById(selectedRouteId)]);
       setTodayVisits(visitsData.visits || []);
       setClients(routeDetail.route.clients || []);
-      setSuccessMsg('✅ Visita y Check-in GPS registrados con éxito.');
+      setSuccessMsg('Visita y Check-in GPS registrados con éxito.');
       setNoSaleModal(null);
-    } catch (err: any) { setErrorMsg(err.message || 'Error al registrar visita.'); } finally { setLoading(false); }
+    } catch (err: any) {
+      if (isLikelyNetworkError(err)) await enqueueVisit();
+      else setErrorMsg(err.message || 'Error al registrar visita.');
+    } finally { setLoading(false); }
   };
 
   const handleCreateClient = async (e: React.FormEvent) => {
@@ -284,7 +258,7 @@ export function useVendedorController(activeTab: string) {
     orderDetailsModal, setOrderDetailsModal, resumenClientModal, setResumenClientModal, isPriceListModalOpen, setIsPriceListModalOpen,
     editOrderModal, setEditOrderModal, searchQuery, setSearchQuery, prodSearchQuery, setProdSearchQuery,
     errorMsg, setErrorMsg, successMsg, setSuccessMsg, loading, setLoading, toast, selectedCityFilters, setSelectedCityFilters,
-    noSaleModal, setNoSaleModal, vendedorRoutes, selectedRouteId, todayVisits, uniqueCities,
+    noSaleModal, setNoSaleModal, vendedorRoutes, selectedRouteId, todayVisits, uniqueCities, offlineSync,
     fetchData, addToCart, updateCartQty, handleConfirmOrder, handleSelectRoute, handleRecordNoSale, handleCreateClient, handleOpenEditOrder,
   };
 }

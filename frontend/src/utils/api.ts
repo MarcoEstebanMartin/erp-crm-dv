@@ -20,8 +20,11 @@ async function request(path: string, options: RequestInit = {}) {
   const serializedBody = typeof options.body === 'string' ? options.body : undefined;
   const skipIdempotency = path.startsWith('/auth/');
 
+  const incomingHeaders = (options.headers as Record<string, string> | undefined) || {};
+  const explicitIdemKey = incomingHeaders['Idempotency-Key'];
+
   const extraHeaders: Record<string, string> = {};
-  if (method === 'POST' && !skipIdempotency) {
+  if (method === 'POST' && !skipIdempotency && !explicitIdemKey) {
     extraHeaders['Idempotency-Key'] = resolveRequestIdempotencyKey(
       method,
       path,
@@ -35,11 +38,17 @@ async function request(path: string, options: RequestInit = {}) {
     headers: {
       ...getHeaders(),
       ...extraHeaders,
-      ...options.headers
+      ...incomingHeaders
     }
   });
 
-  if (!response.ok && response.status >= 400 && response.status !== 409 && method === 'POST') {
+  if (
+    !response.ok &&
+    response.status >= 400 &&
+    response.status !== 409 &&
+    method === 'POST' &&
+    !explicitIdemKey
+  ) {
     evictRequestIdempotencyKey(method, path, serializedBody);
   }
 
@@ -415,10 +424,14 @@ export const api = {
     return res.transaction;
   },
 
-  createOrder: async (orderData: { clientId: number, salesChannel?: string, items: { productId: number, quantity: number, isEmergencyOverride?: boolean }[], notes?: string }) => {    
+  createOrder: async (
+    orderData: { clientId: number, salesChannel?: string, items: { productId: number, quantity: number, isEmergencyOverride?: boolean }[], notes?: string },
+    options?: { idempotencyKey?: string }
+  ) => {
     const { clientId, ...rest } = orderData;
     const res = await request('/orders', {
       method: 'POST',
+      headers: options?.idempotencyKey ? { 'Idempotency-Key': options.idempotencyKey } : undefined,
       body: JSON.stringify({ personaId: clientId, ...rest })
     });
     return res.order;
@@ -1315,9 +1328,14 @@ export const api = {
     });
   },
 
-  recordRouteVisit: async (id: number, visitData: { personaId: number; status: 'ORDERED' | 'NO_BUY'; noBuyReason?: string | null; notes?: string | null; latitude?: number | null; longitude?: number | null }) => {
+  recordRouteVisit: async (
+    id: number,
+    visitData: { personaId: number; status: 'ORDERED' | 'NO_BUY'; noBuyReason?: string | null; notes?: string | null; latitude?: number | null; longitude?: number | null },
+    options?: { idempotencyKey?: string }
+  ) => {
     return await request(`/sale-routes/${id}/visit`, {
       method: 'POST',
+      headers: options?.idempotencyKey ? { 'Idempotency-Key': options.idempotencyKey } : undefined,
       body: JSON.stringify(visitData)
     });
   },
