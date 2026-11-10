@@ -5,15 +5,12 @@ import { personaService } from '../services/persona.service';
 import fs from 'fs';
 import path from 'path';
 
-/**
- * Obtener reporte consolidado financiero (Solo ADMIN).
- */
 export async function getFinancialReports(req: AuthenticatedRequest, res: Response): Promise<void> {
   const { year, month } = req.query;
   try {
     const report = await adminService.getFinancialReports(
       year ? Number(year) : undefined,
-      month ? Number(month) : undefined
+      month ? Number(month) : undefined,
     );
     res.status(200).json({ status: 'success', data: { report } });
   } catch (error: any) {
@@ -22,15 +19,12 @@ export async function getFinancialReports(req: AuthenticatedRequest, res: Respon
   }
 }
 
-/**
- * Obtener reporte por Canales de Venta y estadísticas de Mostrador/Depósito (Solo ADMIN).
- */
 export async function getSalesChannelStats(req: AuthenticatedRequest, res: Response): Promise<void> {
   const { year, month } = req.query;
   try {
     const report = await adminService.getSalesChannelStats(
       year ? Number(year) : undefined,
-      month ? Number(month) : undefined
+      month ? Number(month) : undefined,
     );
     res.status(200).json({ status: 'success', data: report });
   } catch (error: any) {
@@ -39,9 +33,6 @@ export async function getSalesChannelStats(req: AuthenticatedRequest, res: Respo
   }
 }
 
-/**
- * Obtener logs de auditoría (Solo ADMIN).
- */
 export async function getAuditLogs(req: AuthenticatedRequest, res: Response): Promise<void> {
   const { page = 1, limit = 50 } = req.query;
   try {
@@ -52,9 +43,6 @@ export async function getAuditLogs(req: AuthenticatedRequest, res: Response): Pr
   }
 }
 
-/**
- * Obtener listado de usuarios (Solo ADMIN).
- */
 export async function getUsers(req: AuthenticatedRequest, res: Response): Promise<void> {
   try {
     const users = await adminService.getUsers();
@@ -64,76 +52,49 @@ export async function getUsers(req: AuthenticatedRequest, res: Response): Promis
   }
 }
 
-/**
- * Crear un nuevo usuario (Solo ADMIN).
- */
 export async function createUser(req: AuthenticatedRequest, res: Response): Promise<void> {
-  const adminId = req.user?.id;
   try {
-    const user = await adminService.createUser(req.body, adminId);
+    const user = await adminService.createUser(req.body, req.user?.id);
     res.status(201).json({ status: 'success', data: { user } });
   } catch (error: any) {
     res.status(400).json({ status: 'error', message: error.message || 'Error al crear el usuario.' });
   }
 }
 
-/**
- * Habilitar/Deshabilitar usuario (Solo ADMIN).
- */
 export async function toggleUserStatus(req: AuthenticatedRequest, res: Response): Promise<void> {
-  const { id } = req.params;
-  const adminId = req.user?.id;
   try {
-    const user = await adminService.toggleUserStatus(Number(id), adminId);
+    const user = await adminService.toggleUserStatus(Number(req.params.id), req.user?.id);
     res.status(200).json({ status: 'success', data: { user } });
   } catch (error: any) {
-    if (error.message === 'Usuario no encontrado.') {
-      res.status(404).json({ status: 'error', message: error.message });
-      return;
-    }
-    res.status(400).json({ status: 'error', message: error.message || 'Error al modificar el estado del usuario.' });
+    const status = error.message === 'Usuario no encontrado.' ? 404 : 400;
+    res.status(status).json({ status: 'error', message: error.message || 'Error al modificar el estado del usuario.' });
   }
 }
 
-/**
- * Actualizar rol o contraseña de un usuario (Solo ADMIN).
- */
 export async function updateUser(req: AuthenticatedRequest, res: Response): Promise<void> {
-  const { id } = req.params;
-  const adminId = req.user?.id;
   try {
-    const user = await adminService.updateUser(Number(id), req.body, adminId);
+    const user = await adminService.updateUser(Number(req.params.id), req.body, req.user?.id);
     res.status(200).json({ status: 'success', data: { user } });
   } catch (error: any) {
     res.status(400).json({ status: 'error', message: error.message || 'Error al actualizar usuario.' });
   }
 }
 
-/**
- * Eliminar un usuario (Solo ADMIN).
- */
 export async function deleteUser(req: AuthenticatedRequest, res: Response): Promise<void> {
-  const username = String(req.params.username);
-  const adminId = req.user?.id;
   try {
-    const result = await adminService.deleteUser(username, adminId);
+    const result = await adminService.deleteUser(String(req.params.username), req.user?.id);
     res.status(200).json({ status: 'success', data: result });
   } catch (error: any) {
     res.status(400).json({ status: 'error', message: error.message || 'Error al eliminar usuario.' });
   }
 }
 
-
-/**
- * Actualizar configuracion global del sistema (Solo ADMIN).
- */
 export async function updateConfig(req: AuthenticatedRequest, res: Response): Promise<void> {
   const { ignoreStockCheck } = req.body;
   try {
     const envPath = path.resolve(process.cwd(), '.env');
     if (fs.existsSync(envPath)) {
       let envContent = fs.readFileSync(envPath, 'utf8');
-      
       if (ignoreStockCheck !== undefined) {
         const val = ignoreStockCheck ? 'true' : 'false';
         if (envContent.includes('IGNORE_STOCK_CHECK=')) {
@@ -143,93 +104,64 @@ export async function updateConfig(req: AuthenticatedRequest, res: Response): Pr
         }
         process.env.IGNORE_STOCK_CHECK = val;
       }
-      
       fs.writeFileSync(envPath, envContent);
     }
-    
     res.status(200).json({ status: 'success', data: { ignoreStockCheck } });
   } catch (error: any) {
     res.status(500).json({ status: 'error', message: 'Error al actualizar configuración.' });
   }
 }
 
-/**
- * Obtener reportes por zonas.
- */
 export async function getZoneReports(req: AuthenticatedRequest, res: Response): Promise<void> {
   const { sellerId, city, cities, startDate, endDate } = req.query;
-  
   try {
-    let citiesList: string[] | undefined = undefined;
-    if (cities) {
-      citiesList = String(cities).split(',').map(c => c.trim()).filter(Boolean);
-    }
+    const citiesList = cities
+      ? String(cities)
+          .split(',')
+          .map((c) => c.trim())
+          .filter(Boolean)
+      : undefined;
 
-    const filters = {
+    const result = await adminService.getZoneReports({
       sellerId: sellerId ? Number(sellerId) : undefined,
       city: city ? String(city) : undefined,
       cities: citiesList,
       startDate: startDate ? String(startDate) : undefined,
-      endDate: endDate ? String(endDate) : undefined
-    };
-    
-    const result = await adminService.getZoneReports(filters);
+      endDate: endDate ? String(endDate) : undefined,
+    });
     res.status(200).json({ status: 'success', data: result });
   } catch (error: any) {
     res.status(500).json({ status: 'error', message: 'Error al obtener reportes por zona.' });
   }
 }
 
-/**
- * Obtener listado de reportes semanales consolidado.
- */
 export async function getWeeklyReports(req: AuthenticatedRequest, res: Response): Promise<void> {
   try {
     const reports = await adminService.getWeeklyReports();
     res.status(200).json({ status: 'success', data: reports });
   } catch (error: any) {
-    console.error('Error al obtener reportes semanales:', error);
     res.status(500).json({ status: 'error', message: 'Error al obtener reportes semanales.' });
   }
 }
 
-/**
- * Guardar o actualizar reporte semanal.
- */
 export async function saveWeeklyReport(req: AuthenticatedRequest, res: Response): Promise<void> {
-  const { weekStart, purchases, sales, credit, buffer } = req.body;
   try {
-    const report = await adminService.saveWeeklyReport({
-      weekStart,
-      purchases,
-      sales,
-      credit,
-      buffer
-    });
+    const report = await adminService.saveWeeklyReport(req.body);
     res.status(200).json({ status: 'success', data: report });
   } catch (error: any) {
-    console.error('Error al guardar reporte semanal:', error);
     res.status(500).json({ status: 'error', message: 'Error al guardar el reporte semanal.' });
   }
 }
 
-/**
- * Eliminar un reporte semanal.
- */
 export async function deleteWeeklyReport(req: AuthenticatedRequest, res: Response): Promise<void> {
-  const { weekStart } = req.params;
   try {
-    await adminService.deleteWeeklyReport(String(weekStart));
+    await adminService.deleteWeeklyReport(String(req.params.weekStart));
     res.status(200).json({ status: 'success', message: 'Reporte semanal eliminado correctamente.' });
   } catch (error: any) {
-    console.error('Error al eliminar reporte semanal:', error);
     res.status(500).json({ status: 'error', message: 'Error al eliminar el reporte semanal.' });
   }
 }
 
-/**
- * Obtener el crédito sugerido para una semana específica en base a la anterior.
- */
 export async function getSuggestedCredit(req: AuthenticatedRequest, res: Response): Promise<void> {
   const { weekStart } = req.query;
   if (!weekStart) {
@@ -240,14 +172,10 @@ export async function getSuggestedCredit(req: AuthenticatedRequest, res: Respons
     const suggested = await adminService.getSuggestedCreditForWeek(String(weekStart));
     res.status(200).json({ status: 'success', data: { suggested } });
   } catch (error: any) {
-    console.error('Error al calcular crédito sugerido:', error);
     res.status(500).json({ status: 'error', message: 'Error al calcular crédito sugerido.' });
   }
 }
 
-/**
- * Obtener las ventas calculadas automáticamente desde el ERP para una semana específica.
- */
 export async function getAutofillSales(req: AuthenticatedRequest, res: Response): Promise<void> {
   const { weekStart } = req.query;
   if (!weekStart) {
@@ -258,27 +186,19 @@ export async function getAutofillSales(req: AuthenticatedRequest, res: Response)
     const sales = await adminService.getAutofillSalesForWeek(String(weekStart));
     res.status(200).json({ status: 'success', data: sales });
   } catch (error: any) {
-    console.error('Error al autocompletar ventas:', error);
     res.status(500).json({ status: 'error', message: 'Error al autocompletar ventas.' });
   }
 }
 
-/**
- * Obtener reporte de auditoría de saldos inconsistentes (Solo ADMIN).
- */
 export async function checkBalancesReport(req: AuthenticatedRequest, res: Response): Promise<void> {
   try {
     const mismatches = await personaService.checkAllBalances();
     res.status(200).json({ status: 'success', data: { mismatches } });
   } catch (error: any) {
-    console.error('Error en auditoría de saldos:', error);
     res.status(500).json({ status: 'error', message: 'Error al procesar la auditoría de saldos.' });
   }
 }
 
-/**
- * Conciliar saldos contables (Solo ADMIN).
- */
 export async function syncBalances(req: AuthenticatedRequest, res: Response): Promise<void> {
   const { personaId } = req.body;
   try {
@@ -290,27 +210,19 @@ export async function syncBalances(req: AuthenticatedRequest, res: Response): Pr
       res.status(200).json({ status: 'success', data: { count: reconciled.length, reconciled } });
     }
   } catch (error: any) {
-    console.error('Error al conciliar saldos:', error);
     res.status(500).json({ status: 'error', message: error.message || 'Error al conciliar saldos.' });
   }
 }
 
-/**
- * Obtener logs de auditoría de un documento específico (Factura, Nota de Crédito, Recibo).
- */
 export async function getDocumentAuditLogs(req: AuthenticatedRequest, res: Response): Promise<void> {
-  const { entityType, entityId } = req.params;
   try {
-    const logs = await adminService.getDocumentAuditLogs(String(entityType), Number(entityId));
+    const logs = await adminService.getDocumentAuditLogs(String(req.params.entityType), Number(req.params.entityId));
     res.status(200).json({ status: 'success', data: { logs } });
   } catch (error: any) {
     res.status(500).json({ status: 'error', message: 'Error al obtener la auditoría del documento.' });
   }
 }
 
-/**
- * Obtener reporte de rentabilidad por clientes y productos.
- */
 export async function getProfitabilityReport(req: AuthenticatedRequest, res: Response): Promise<void> {
   const { startDate, endDate, sellerId, city, rubroId, billingType } = req.query;
   try {
@@ -324,31 +236,23 @@ export async function getProfitabilityReport(req: AuthenticatedRequest, res: Res
     });
     res.status(200).json({ status: 'success', data: report });
   } catch (error: any) {
-    console.error('Error al generar reporte de rentabilidad:', error);
     res.status(500).json({ status: 'error', message: 'Error al generar el reporte de rentabilidad.' });
   }
 }
 
-/**
- * Obtener datos para el Reporte Ejecutivo en PDF (Solo ADMIN).
- */
 export async function getExecutivePdfReport(req: AuthenticatedRequest, res: Response): Promise<void> {
   const { startDate, endDate } = req.query;
   try {
     const reportData = await adminService.getExecutivePdfReportData(
       startDate ? String(startDate) : undefined,
-      endDate ? String(endDate) : undefined
+      endDate ? String(endDate) : undefined,
     );
     res.status(200).json({ status: 'success', data: reportData });
   } catch (error: any) {
-    console.error('Error al generar reporte ejecutivo PDF:', error);
     res.status(500).json({ status: 'error', message: 'Error al generar el reporte ejecutivo PDF.' });
   }
 }
 
-/**
- * Obtener datos para el Reporte de Desempeño por Vendedor (Solo ADMIN).
- */
 export async function getSellerMeetingPdfReport(req: AuthenticatedRequest, res: Response): Promise<void> {
   const { sellerId } = req.params;
   const { startDate, endDate } = req.query;
@@ -360,14 +264,10 @@ export async function getSellerMeetingPdfReport(req: AuthenticatedRequest, res: 
     const reportData = await adminService.getSellerMeetingPdfReportData(
       Number(sellerId),
       startDate ? String(startDate) : undefined,
-      endDate ? String(endDate) : undefined
+      endDate ? String(endDate) : undefined,
     );
     res.status(200).json({ status: 'success', data: reportData });
   } catch (error: any) {
-    console.error('Error al generar reporte de reunión con vendedor:', error);
     res.status(500).json({ status: 'error', message: 'Error al generar el reporte para la reunión.' });
   }
 }
-
-
-

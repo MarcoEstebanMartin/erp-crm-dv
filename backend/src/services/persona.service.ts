@@ -1,66 +1,57 @@
 import prisma from '../utils/prisma';
 import { logAudit } from '../utils/audit';
-import { Role, PaymentMethod, TransactionType, BillingType, OrderStatus } from '@prisma/client';
-import { standardizeCityName, standardizeRouteName, getOfficialCityOrOther, OFFICIAL_CITIES } from '../utils/normalize';
-
+import { Role } from '@prisma/client';
+import { standardizeCityName, standardizeRouteName } from '../utils/normalize';
+import { matchesPhoneticQuery } from '../core/search';
+import { personaPaymentSubService } from './personas/persona-payment.service';
+import { personaLedgerSubService } from './personas/persona-ledger.service';
+import { personaDebtorsSubService } from './personas/persona-debtors.service';
+import { personaSellersSubService } from './personas/persona-sellers.service';
 
 export class PersonaService {
   /**
-   * Obtener listado de personas con filtros.
+   * Obtener listado de personas con filtros y Buscador Fonético Argentino.
    */
   async getPersonas(userId: number, userRole: string, search?: string, role?: string) {
     const whereClause: any = {};
-
-    if (userRole === Role.VENDEDOR) {
-      whereClause.sellerId = userId;
-    }
-
+    if (userRole === Role.VENDEDOR) whereClause.sellerId = userId;
     if (role === 'client') whereClause.isClient = true;
     else if (role === 'provider') whereClause.isProvider = true;
     else if (role === 'seller') whereClause.isSeller = true;
     else if (role === 'commission') whereClause.isCommissionAgent = true;
 
-    if (search) {
-      whereClause.OR = [
-        { name: { contains: search, mode: 'insensitive' } },
-        { cuit: { contains: search, mode: 'insensitive' } },
-        { city: { contains: search, mode: 'insensitive' } },
-        { barrio: { contains: search, mode: 'insensitive' } },
-        { route: { contains: search, mode: 'insensitive' } },
-        { address: { contains: search, mode: 'insensitive' } },
-        { saleRoute: { name: { contains: search, mode: 'insensitive' } } }
-      ];
-    }
-
-    const personas = await prisma.persona.findMany({
+    let personas = await prisma.persona.findMany({
       where: whereClause,
       include: {
-        seller: {
-          select: { id: true, username: true },
-        },
+        seller: { select: { id: true, username: true } },
         saleRoute: {
-          select: { 
-            id: true, 
-            name: true, 
+          select: {
+            id: true,
+            name: true,
             dayOfWeek: true,
-            seller: {
-              select: { id: true, username: true }
-            }
+            seller: { select: { id: true, username: true } },
           },
         },
       },
       orderBy: { name: 'asc' },
     });
 
+    if (search && search.trim()) {
+      const q = search.trim();
+      personas = personas.filter((p) => {
+        const target = `${p.name} ${p.cuit || ''} ${p.city || ''} ${p.barrio || ''} ${p.route || ''} ${p.address || ''} ${p.saleRoute?.name || ''}`;
+        return matchesPhoneticQuery(target, q);
+      });
+    }
+
     if (role === 'client') {
       try {
         const report = await this.getDebtorsReport(userId, userRole);
         const debtorMap = new Map();
         report.debtors.forEach((d: any) => debtorMap.set(d.id, d.pendingInvoicesCount));
-        
         return personas.map((p) => ({
           ...p,
-          pendingInvoicesCount: debtorMap.get(p.id) || 0
+          pendingInvoicesCount: debtorMap.get(p.id) || 0,
         }));
       } catch (err) {
         console.error('Error fetching debtors report inside getPersonas:', err);
@@ -71,31 +62,23 @@ export class PersonaService {
     return personas;
   }
 
-  /**
-   * Obtener una persona por ID.
-   */
   async getPersonaById(id: number, userId: number, userRole: string) {
     const persona = await prisma.persona.findUnique({
       where: { id },
       include: {
-        seller: {
-          select: { id: true, username: true },
-        },
+        seller: { select: { id: true, username: true } },
         saleRoute: {
-          select: { 
-            id: true, 
-            name: true, 
+          select: {
+            id: true,
+            name: true,
             dayOfWeek: true,
-            seller: {
-              select: { id: true, username: true }
-            }
+            seller: { select: { id: true, username: true } },
           },
         },
       },
     });
 
     if (!persona) throw new Error('Persona no encontrada.');
-
     if (userRole === Role.VENDEDOR && persona.isClient && persona.sellerId !== userId) {
       throw new Error('Acceso denegado.');
     }
@@ -103,25 +86,32 @@ export class PersonaService {
     return persona;
   }
 
-  /**
-   * Crear nueva persona.
-   */
+  private async resolveDefaultOficinaSeller(route?: string | null, saleRouteId?: number | null) {
+    const cleanRoute = (route || '').toUpperCase().trim();
+    let isOficina = cleanRoute === 'OFICINA';
+    if (!isOficina && saleRouteId) {
+      const sr = await prisma.saleRoute.findUnique({
+        where: { id: saleRouteId },
+        select: { name: true },
+      });
+      if (sr && sr.name.toUpperCase().includes('OFICINA')) isOficina = true;
+    }
+    if (isOficina) {
+      const oficinaUser = await prisma.user.findFirst({ where: { username: 'OFICINA' } });
+      return oficinaUser ? oficinaUser.id : null;
+    }
+    return null;
+  }
+
   async createPersona(data: any, userId: number, userRole: string) {
     let finalSellerId = data.sellerId ? Number(data.sellerId) : null;
     if (userRole === Role.VENDEDOR) {
       finalSellerId = userId;
     } else if (!finalSellerId) {
-      const cleanRoute = (data.route || '').toUpperCase().trim();
-      const saleRouteId = data.saleRouteId ? Number(data.saleRouteId) : null;
-      let isOficina = cleanRoute === 'OFICINA';
-      if (!isOficina && saleRouteId) {
-        const sr = await prisma.saleRoute.findUnique({ where: { id: saleRouteId }, select: { name: true } });
-        if (sr && sr.name.toUpperCase().includes('OFICINA')) isOficina = true;
-      }
-      if (isOficina) {
-        const oficinaUser = await prisma.user.findFirst({ where: { username: 'OFICINA' } });
-        if (oficinaUser) finalSellerId = oficinaUser.id;
-      }
+      finalSellerId = await this.resolveDefaultOficinaSeller(
+        data.route,
+        data.saleRouteId ? Number(data.saleRouteId) : null,
+      );
     }
 
     const persona = await prisma.persona.create({
@@ -129,49 +119,39 @@ export class PersonaService {
         name: data.name,
         cuit: data.cuit,
         address: data.address,
-        city: data.city !== undefined && data.city !== null ? standardizeCityName(data.city) : data.city,
-        barrio: data.barrio !== undefined && data.barrio !== null ? String(data.barrio).trim() : null,
+        city: data.city != null ? standardizeCityName(data.city) : data.city,
+        barrio: data.barrio != null ? String(data.barrio).trim() : null,
         province: data.province,
         zipCode: data.zipCode,
         phone: data.phone,
         email: data.email,
         rubro: data.rubro || null,
-        route: data.route !== undefined && data.route !== null ? standardizeRouteName(data.route) : data.route,
+        route: data.route != null ? standardizeRouteName(data.route) : data.route,
         isClient: data.isClient !== undefined ? Boolean(data.isClient) : true,
         isProvider: data.isProvider !== undefined ? Boolean(data.isProvider) : false,
         isSeller: data.isSeller !== undefined ? Boolean(data.isSeller) : false,
         isCommissionAgent: data.isCommissionAgent !== undefined ? Boolean(data.isCommissionAgent) : false,
         isActive: data.isActive !== undefined ? Boolean(data.isActive) : true,
-        creditLimit: data.creditLimit !== undefined ? Number(data.creditLimit) : 0.00,
-        maxUnpaidInvoices: data.maxUnpaidInvoices !== undefined ? Number(data.maxUnpaidInvoices) : 0.00,
+        creditLimit: data.creditLimit !== undefined ? Number(data.creditLimit) : 0.0,
+        maxUnpaidInvoices: data.maxUnpaidInvoices !== undefined ? Number(data.maxUnpaidInvoices) : 0.0,
         priceList: data.priceList || 'A',
-        discount: data.discount !== undefined ? Number(data.discount) : 0.00,
+        discount: data.discount !== undefined ? Number(data.discount) : 0.0,
         paymentTermDays: data.paymentTermDays !== undefined ? Number(data.paymentTermDays) : 30,
         contacts: data.contacts !== undefined ? data.contacts : null,
         seller: finalSellerId ? { connect: { id: finalSellerId } } : undefined,
         saleRoute: data.saleRouteId ? { connect: { id: Number(data.saleRouteId) } } : undefined,
-        routeSequence: data.routeSequence !== undefined ? (data.routeSequence !== null ? Number(data.routeSequence) : null) : null,
-        latitude: data.latitude !== undefined ? (data.latitude !== null ? Number(data.latitude) : null) : null,
-        longitude: data.longitude !== undefined ? (data.longitude !== null ? Number(data.longitude) : null) : null,
-        webPin: data.webPin !== undefined && data.webPin !== null ? String(data.webPin).trim() : null,
+        routeSequence: data.routeSequence != null ? Number(data.routeSequence) : null,
+        latitude: data.latitude != null ? Number(data.latitude) : null,
+        longitude: data.longitude != null ? Number(data.longitude) : null,
+        webPin: data.webPin != null ? String(data.webPin).trim() : null,
         birthDate: data.birthDate ? new Date(data.birthDate) : null,
       },
     });
 
-    await logAudit({
-      userId,
-      action: 'CREATE_PERSONA',
-      entityType: 'Persona',
-      entityId: persona.id,
-      newValues: persona,
-    });
-
+    await logAudit({ userId, action: 'CREATE_PERSONA', entityType: 'Persona', entityId: persona.id, newValues: persona });
     return persona;
   }
 
-  /**
-   * Actualizar persona.
-   */
   async updatePersona(id: number, data: any, userId: number, userRole: string) {
     const original = await prisma.persona.findUnique({ where: { id } });
     if (!original) throw new Error('Persona no encontrada.');
@@ -188,31 +168,22 @@ export class PersonaService {
     if (userRole !== Role.VENDEDOR && !finalSellerId) {
       const targetRoute = data.route !== undefined ? (data.route ? standardizeRouteName(data.route) : null) : original.route;
       const targetSaleRouteId = data.saleRouteId !== undefined ? (data.saleRouteId ? Number(data.saleRouteId) : null) : original.saleRouteId;
-      const cleanRoute = (targetRoute || '').toUpperCase().trim();
-      let isOficina = cleanRoute === 'OFICINA';
-      if (!isOficina && targetSaleRouteId) {
-        const sr = await prisma.saleRoute.findUnique({ where: { id: targetSaleRouteId }, select: { name: true } });
-        if (sr && sr.name.toUpperCase().includes('OFICINA')) isOficina = true;
-      }
-      if (isOficina) {
-        const oficinaUser = await prisma.user.findFirst({ where: { username: 'OFICINA' } });
-        if (oficinaUser) finalSellerId = oficinaUser.id;
-      }
+      finalSellerId = await this.resolveDefaultOficinaSeller(targetRoute, targetSaleRouteId);
     }
 
     const updated = await prisma.persona.update({
       where: { id },
       data: {
-        name: data.name !== undefined ? data.name : undefined,
-        cuit: data.cuit !== undefined ? data.cuit : undefined,
-        address: data.address !== undefined ? data.address : undefined,
+        name: data.name,
+        cuit: data.cuit,
+        address: data.address,
         city: data.city !== undefined ? (data.city !== null ? standardizeCityName(data.city) : null) : undefined,
         barrio: data.barrio !== undefined ? (data.barrio !== null ? String(data.barrio).trim() : null) : undefined,
-        province: data.province !== undefined ? data.province : undefined,
-        zipCode: data.zipCode !== undefined ? data.zipCode : undefined,
-        phone: data.phone !== undefined ? data.phone : undefined,
-        email: data.email !== undefined ? data.email : undefined,
-        rubro: data.rubro !== undefined ? data.rubro : undefined,
+        province: data.province,
+        zipCode: data.zipCode,
+        phone: data.phone,
+        email: data.email,
+        rubro: data.rubro,
         route: data.route !== undefined ? (data.route !== null ? standardizeRouteName(data.route) : null) : undefined,
         isClient: data.isClient !== undefined ? Boolean(data.isClient) : undefined,
         isProvider: data.isProvider !== undefined ? Boolean(data.isProvider) : undefined,
@@ -221,10 +192,10 @@ export class PersonaService {
         isActive: data.isActive !== undefined ? Boolean(data.isActive) : undefined,
         creditLimit: data.creditLimit !== undefined ? Number(data.creditLimit) : undefined,
         maxUnpaidInvoices: data.maxUnpaidInvoices !== undefined ? Number(data.maxUnpaidInvoices) : undefined,
-        priceList: data.priceList !== undefined ? data.priceList : undefined,
+        priceList: data.priceList,
         discount: data.discount !== undefined ? Number(data.discount) : undefined,
         paymentTermDays: data.paymentTermDays !== undefined ? Number(data.paymentTermDays) : undefined,
-        contacts: data.contacts !== undefined ? data.contacts : undefined,
+        contacts: data.contacts,
         seller: finalSellerId !== undefined ? (finalSellerId ? { connect: { id: finalSellerId } } : { disconnect: true }) : undefined,
         saleRoute: data.saleRouteId !== undefined ? (data.saleRouteId ? { connect: { id: Number(data.saleRouteId) } } : { disconnect: true }) : undefined,
         routeSequence: data.routeSequence !== undefined ? (data.routeSequence ? Number(data.routeSequence) : null) : undefined,
@@ -235,724 +206,13 @@ export class PersonaService {
       },
     });
 
-    await logAudit({
-      userId,
-      action: 'UPDATE_PERSONA',
-      entityType: 'Persona',
-      entityId: updated.id,
-      oldValues: original,
-      newValues: updated,
-    });
-
+    await logAudit({ userId, action: 'UPDATE_PERSONA', entityType: 'Persona', entityId: updated.id, oldValues: original, newValues: updated });
     return updated;
   }
 
-  /**
-   * Registrar pago/cobro.
-   */
-  async recordPersonaPayment(id: number, data: any, userId: number, userRole: string) {
-    const { description, branch, type, supplierInvoiceId, orderId, bankAccountId: reqBankAccountId } = data;
-    const selectedBranch = branch || 'X';
-
-    const persona = await prisma.persona.findUnique({ where: { id } });
-    if (!persona) throw new Error('Persona no encontrada.');
-
-    if (userRole === Role.VENDEDOR && persona.isClient && persona.sellerId !== userId) {
-      throw new Error('Acceso denegado.');
-    }
-
-    const isSupplier = persona.isProvider && !persona.isClient;
-    const resolvedType = (type === 'OUTCOME' || type === 'INCOME') ? (type as TransactionType) : (isSupplier ? TransactionType.OUTCOME : TransactionType.INCOME);
-
-    // Preparar lista de ítems de pago desglosados (Múltiples formas de pago)
-    const rawPayments = (Array.isArray(data.payments) && data.payments.length > 0)
-      ? data.payments
-      : [{
-          amount: data.amount,
-          paymentMethod: data.paymentMethod,
-          bankAccountId: reqBankAccountId,
-          description: data.description
-        }];
-
-    const paymentItems = rawPayments.map((p: any) => ({
-      amount: Number(Number(p.amount).toFixed(2)),
-      paymentMethod: p.paymentMethod as PaymentMethod,
-      bankAccountId: p.bankAccountId ? Number(p.bankAccountId) : (reqBankAccountId ? Number(reqBankAccountId) : null),
-      description: p.description || description
-    }));
-
-    const totalPaymentAmount = Number(paymentItems.reduce((acc: number, p: any) => acc + p.amount, 0).toFixed(2));
-    if (totalPaymentAmount <= 0) {
-      throw new Error('El monto total a pagar debe ser mayor a 0.');
-    }
-
-    // Control de duplicados (Idempotencia) para cobro individual de clientes
-    if (resolvedType === TransactionType.INCOME && paymentItems.length === 1) {
-      const fifteenSecondsAgo = new Date(Date.now() - 15000);
-      const duplicateTx = await prisma.transaction.findFirst({
-        where: {
-          personaId: persona.id,
-          amount: paymentItems[0].amount,
-          paymentMethod: paymentItems[0].paymentMethod,
-          type: TransactionType.INCOME,
-          createdAt: {
-            gte: fifteenSecondsAgo
-          }
-        }
-      });
-      if (duplicateTx) {
-        throw new Error('Ya se registró un cobro idéntico para este cliente hace instantes. Por favor, verifica el historial.');
-      }
-    }
-
-    const result = await prisma.$transaction(async (tx) => {
-      let invoiceNumberToLog = '';
-      if (supplierInvoiceId) {
-        const supplierInvoice = await tx.supplierInvoice.findUnique({ where: { id: Number(supplierInvoiceId) } });
-        if (!supplierInvoice) throw new Error('Factura de proveedor no encontrada.');
-        if (supplierInvoice.personaId !== persona.id) throw new Error('El comprobante no pertenece a este proveedor.');
-
-        const currentPaid = Number(supplierInvoice.paidAmount || 0);
-        const newPaid = currentPaid + totalPaymentAmount;
-        const newStatus = newPaid >= Number(supplierInvoice.totalAmount) ? 'PAID' : 'PARTIALLY_PAID';
-
-        await tx.supplierInvoice.update({
-          where: { id: supplierInvoice.id },
-          data: { paidAmount: newPaid, status: newStatus },
-        });
-        invoiceNumberToLog = supplierInvoice.invoiceNumber;
-      }
-
-      // Buscar número de factura si se especificó orderId para la descripción
-      let orderNumberDesc = '';
-      if (orderId) {
-        const targetOrder = await tx.order.findUnique({ where: { id: Number(orderId) } });
-        if (targetOrder) {
-          orderNumberDesc = targetOrder.invoiceNumber || `INT-${targetOrder.id.toString().padStart(5, '0')}`;
-        }
-      }
-
-      const createdTransactions = [];
-
-      for (const item of paymentItems) {
-        let cashDrawerId: number | null = null;
-        if (item.paymentMethod === PaymentMethod.CASH) {
-          let activeDrawer = await tx.cashDrawer.findFirst({
-            where: { userId, status: 'OPEN' },
-          });
-
-          if (!activeDrawer) {
-            activeDrawer = await tx.cashDrawer.findFirst({
-              where: { status: 'OPEN' }
-            });
-          }
-
-          if (!activeDrawer) {
-            const user = await tx.user.findUnique({ where: { id: userId } });
-            if (user && (user.role === Role.ADMIN || user.role === Role.FACTURACION)) {
-              cashDrawerId = null;
-            } else {
-              throw new Error(`Debés tener una Caja Abierta antes de registrar cobros/pagos en efectivo.`);
-            }
-          } else {
-            cashDrawerId = activeDrawer.id;
-          }
-        }
-
-        let bankAccountId: number | null = null;
-        if (item.paymentMethod === PaymentMethod.BANK_TRANSFER || item.paymentMethod === PaymentMethod.CHECK) {
-          const selectedBankId = item.bankAccountId ? Number(item.bankAccountId) : (await tx.bankAccount.findFirst())?.id;
-          if (!selectedBankId) throw new Error('No hay ninguna cuenta bancaria registrada en el sistema.');
-          const targetBankId: number = Number(selectedBankId);
-          bankAccountId = targetBankId;
-
-          await tx.bankAccount.update({
-            where: { id: targetBankId },
-            data: {
-              balance: { increment: resolvedType === TransactionType.INCOME ? item.amount : -item.amount },
-            },
-          });
-        }
-
-        const transaction = await tx.transaction.create({
-          data: {
-            personaId: persona.id,
-            userId,
-            billingType: selectedBranch === 'A' ? BillingType.OFFICIAL : BillingType.INTERNAL,
-            type: resolvedType,
-            paymentMethod: item.paymentMethod,
-            amount: item.amount,
-            description: item.description || (supplierInvoiceId 
-              ? `Pago de Factura Nro ${invoiceNumberToLog}`
-              : (orderId 
-                ? `Cobro de Factura ${orderNumberDesc}`
-                : `${resolvedType === TransactionType.OUTCOME ? 'Pago' : 'Cobro'} en cuenta corriente de ${persona.name}`)),
-            cashDrawerId,
-            bankAccountId,
-            supplierInvoiceId: supplierInvoiceId ? Number(supplierInvoiceId) : null,
-            orderId: orderId ? Number(orderId) : null,
-            verified: true, // Autoverificado
-          },
-        });
-        createdTransactions.push(transaction);
-      }
-
-      // Guardar retenciones si corresponden
-      let retencionesTotal = 0;
-      if (data.retenciones && Array.isArray(data.retenciones)) {
-        for (const ret of data.retenciones) {
-          retencionesTotal += Number(ret.amount);
-          await tx.taxWithholding.create({
-            data: {
-              type: 'RETENCION_SUFRIDA',
-              taxType: ret.taxType, // "GANANCIAS" | "IIBB"
-              personaId: persona.id,
-              number: ret.number,
-              date: new Date(),
-              amount: Number(ret.amount),
-              jurisdiction: ret.taxType === 'IIBB' ? 'AR-B' : null,
-            }
-          });
-        }
-      }
-
-      // El total que cancela la cuenta corriente es el monto cobrado/pagado + retenciones
-      const totalCredit = totalPaymentAmount + retencionesTotal;
-
-      const updatedPersona = await tx.persona.update({
-        where: { id: persona.id },
-        data: {
-          outstandingBalance: {
-            decrement: resolvedType === TransactionType.INCOME ? totalCredit : -totalCredit,
-          },
-        },
-      });
-
-      return { transaction: createdTransactions[0], transactions: createdTransactions, updatedPersona };
-    });
-
-    await logAudit({
-      userId,
-      action: 'RECORD_PERSONA_PAYMENT',
-      entityType: 'Persona',
-      entityId: persona.id,
-      newValues: {
-        transactionCount: result.transactions.length,
-        totalAmount: totalPaymentAmount,
-        type: resolvedType,
-        newOutstandingBalance: result.updatedPersona.outstandingBalance.toString(),
-      },
-    });
-
-    return result;
-  }
-
-  /**
-   * Obtener libro diario.
-   */
-  async getPersonaLedger(id: number, userId: number, userRole: string) {
-    const persona = await prisma.persona.findUnique({ 
-      where: { id },
-      include: { seller: { select: { id: true, username: true } } }
-    });
-    if (!persona) throw new Error('Persona no encontrada.');
-
-    if (userRole === Role.VENDEDOR && persona.isClient && persona.sellerId !== userId) {
-      throw new Error('Acceso denegado.');
-    }
-
-    const orders = await prisma.order.findMany({
-      where: { personaId: persona.id, status: 'DELIVERED' },
-      orderBy: { createdAt: 'asc' },
-    });
-
-    const transactions = await prisma.transaction.findMany({
-      where: { 
-        personaId: persona.id,
-        OR: [
-          { type: TransactionType.OUTCOME },
-          { type: TransactionType.INCOME, verified: true }
-        ]
-      },
-      orderBy: { createdAt: 'asc' },
-    });
-
-    const supplierInvoices = await prisma.supplierInvoice.findMany({
-      where: { personaId: persona.id },
-      orderBy: { issueDate: 'asc' },
-    });
-
-    const creditNotes = await prisma.creditNote.findMany({
-      where: { personaId: persona.id },
-      orderBy: { createdAt: 'asc' },
-    });
-
-    const withholdings = await prisma.taxWithholding.findMany({
-      where: { 
-        personaId: persona.id, 
-        type: { in: ['RETENCION_SUFRIDA', 'RETENCION_PRACTICADA'] } 
-      },
-      orderBy: { date: 'asc' },
-    });
-
-    const ledgerItems: any[] = [];
-
-    orders.forEach((o) => {
-      ledgerItems.push({
-        id: `order-${o.id}`,
-        movementId: o.movementId,
-        date: o.createdAt,
-        type: 'DEBIT',
-        reference: `Pedido #${o.id}`,
-        description: `Factura ${o.invoiceNumber || 'INT-' + o.id.toString().padStart(5, '0')}`,
-        amount: Number(o.totalAmount),
-      });
-    });
-
-    transactions.forEach((t) => {
-      const ledgerType = t.type === TransactionType.INCOME ? 'CREDIT' : 'DEBIT';
-      ledgerItems.push({
-        id: `transaction-${t.id}`,
-        movementId: t.movementId,
-        date: t.createdAt,
-        type: ledgerType,
-        reference: `Recibo #${t.id}`,
-        description: t.type === TransactionType.INCOME
-          ? `Recibo N° ${t.receiptNumber || 'INT-' + t.id.toString().padStart(5, '0')}`
-          : `Pago N° ${t.receiptNumber || 'INT-' + t.id.toString().padStart(5, '0')}`,
-        amount: Number(t.amount),
-      });
-    });
-
-    supplierInvoices.forEach((si) => {
-      ledgerItems.push({
-        id: `supplier-invoice-${si.id}`,
-        movementId: si.movementId,
-        date: si.issueDate,
-        type: 'CREDIT',
-        reference: `Factura Nro ${si.invoiceNumber}`,
-        description: `Compra - Factura ${si.invoiceType.replace('_', ' ')}`,
-        amount: Number(si.totalAmount),
-      });
-    });
-
-    creditNotes.forEach((cn) => {
-      ledgerItems.push({
-        id: `credit-note-${cn.id}`,
-        movementId: cn.movementId,
-        date: cn.createdAt,
-        type: 'CREDIT',
-        reference: `Nota de Crédito #${cn.id}`,
-        description: `${cn.creditNoteType.replace(/_/g, ' ')} ${cn.creditNoteNumber || 'INT-' + cn.id.toString().padStart(5, '0')} (${cn.reason})`,
-        amount: Number(cn.totalAmount),
-      });
-    });
-
-    withholdings.forEach((w) => {
-      const type = w.type === 'RETENCION_PRACTICADA' ? 'DEBIT' : 'CREDIT';
-      ledgerItems.push({
-        id: `withholding-${w.id}`,
-        movementId: w.movementId,
-        date: w.date,
-        type: type,
-        reference: `${w.type === 'RETENCION_PRACTICADA' ? 'Retención Practicada' : 'Retención Sufrida'} Cert. Nro ${w.number}`,
-        description: `${w.type === 'RETENCION_PRACTICADA' ? 'Retención Emitida' : 'Retención Recibida'} - ${w.taxType === 'IIBB' ? 'IIBB' : 'Ganancias'}`,
-        amount: Number(w.amount),
-        metadata: {
-          taxType: w.taxType,
-          number: w.number,
-          amount: Number(w.amount),
-          date: w.date,
-          jurisdiction: w.jurisdiction
-        }
-      });
-    });
-
-    ledgerItems.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-
-    let runningBalance = 0;
-    const ledger = ledgerItems.map((item) => {
-      if (item.type === 'DEBIT') {
-        runningBalance += item.amount;
-      } else {
-        runningBalance -= item.amount;
-      }
-      return { ...item, balance: runningBalance };
-    });
-
-    return { persona, ledger };
-  }
-
-  /**
-   * Auditoría de saldos: compara outstandingBalance con el resultado del Ledger para todas las personas.
-   */
-  async checkAllBalances() {
-    const personas = await prisma.persona.findMany({
-      where: { isActive: true }
-    });
-
-    const mismatches = [];
-
-    for (const p of personas) {
-      // Usar getPersonaLedger con el rol ADMIN para evitar denegación de acceso en preventistas
-      const ledgerData = await this.getPersonaLedger(p.id, 0, 'ADMIN');
-      
-      // El saldo teórico es el balance de la última línea del Ledger, o 0 si no hay movimientos.
-      const theoretical = ledgerData.ledger.length > 0 
-        ? ledgerData.ledger[ledgerData.ledger.length - 1].balance 
-        : 0;
-        
-      const actual = Number(p.outstandingBalance || 0);
-      const diff = actual - theoretical;
-
-      // Reportar si la diferencia absoluta es mayor a 0.05 (tolerancia de centavos por redondeos)
-      if (Math.abs(diff) > 0.05) {
-        mismatches.push({
-          id: p.id,
-          name: p.name,
-          isClient: p.isClient,
-          isProvider: p.isProvider,
-          actual: Math.round(actual * 100) / 100,
-          theoretical: Math.round(theoretical * 100) / 100,
-          diff: Math.round(diff * 100) / 100
-        });
-      }
-    }
-
-    return mismatches;
-  }
-
-  /**
-   * Conciliar el saldo de una persona específica basándose en su Ledger.
-   */
-  async reconcileBalance(personaId: number) {
-    const persona = await prisma.persona.findUnique({ where: { id: personaId } });
-    if (!persona) throw new Error('Persona no encontrada.');
-
-    const ledgerData = await this.getPersonaLedger(persona.id, 0, 'ADMIN');
-    const theoretical = ledgerData.ledger.length > 0 
-      ? ledgerData.ledger[ledgerData.ledger.length - 1].balance 
-      : 0;
-
-    const roundedTheoretical = Math.round(theoretical * 100) / 100;
-
-    const updated = await prisma.persona.update({
-      where: { id: persona.id },
-      data: { outstandingBalance: roundedTheoretical }
-    });
-
-    return { persona: updated, theoretical: roundedTheoretical };
-  }
-
-  /**
-   * Conciliar masivamente todas las personas con descuadre contable.
-   */
-  async reconcileAllBalances() {
-    const mismatches = await this.checkAllBalances();
-    const results = [];
-
-    for (const m of mismatches) {
-      const res = await this.reconcileBalance(m.id);
-      results.push(res.persona);
-    }
-
-    return results;
-  }
-
-  /**
-   * Obtener facturas pendientes de un cliente.
-   */
-  async getPersonaPendingInvoices(id: number, userId: number, userRole: string) {
-    const persona = await prisma.persona.findUnique({ where: { id } });
-    if (!persona) throw new Error('Persona no encontrada.');
-
-    if (userRole === Role.VENDEDOR && persona.isClient && persona.sellerId !== userId) {
-      throw new Error('Acceso denegado.');
-    }
-
-    // Obtener todas las facturas (órdenes con status DELIVERED)
-    const orders = await prisma.order.findMany({
-      where: {
-        personaId: persona.id,
-        status: OrderStatus.DELIVERED
-      },
-      include: {
-        transactions: {
-          where: {
-            type: TransactionType.INCOME
-          }
-        },
-        creditNotes: true
-      },
-      orderBy: {
-        createdAt: 'asc'
-      }
-    });
-
-    const pendingInvoices = orders.map(order => {
-      const paidAmount = order.transactions.reduce((acc, tx) => acc + Number(tx.amount), 0);
-      const creditNotesAmount = order.creditNotes.reduce((acc, cn) => acc + Number(cn.totalAmount), 0);
-      const pendingAmount = Number(order.totalAmount) - paidAmount - creditNotesAmount;
-
-      return {
-        id: order.id,
-        invoiceNumber: order.invoiceNumber || `INT-${order.id.toString().padStart(5, '0')}`,
-        billingType: order.billingType,
-        invoiceType: order.invoiceType,
-        totalAmount: Number(order.totalAmount),
-        paidAmount,
-        creditNotesAmount,
-        pendingAmount,
-        createdAt: order.createdAt
-      };
-    }).filter(inv => inv.pendingAmount > 0);
-
-    return pendingInvoices;
-  }
-
-  /**
-   * Calcula la cantidad exacta de boletas impagas de un cliente aplicando FIFO global.
-   */
-  async getPersonaPendingInvoicesCount(id: number, dbClient: any = prisma) {
-    const client = await dbClient.persona.findUnique({
-      where: { id },
-      include: {
-        orders: {
-          where: { status: OrderStatus.DELIVERED },
-          include: {
-            transactions: { where: { type: TransactionType.INCOME } },
-            creditNotes: true
-          },
-          orderBy: { createdAt: 'asc' }
-        },
-        transactions: {
-          where: { type: TransactionType.INCOME, orderId: null }
-        },
-        creditNotes: {
-          where: { orderId: null }
-        }
-      }
-    });
-
-    if (!client) return 0;
-    if (Number(client.outstandingBalance) <= 0) return 0;
-
-    const officialOrders = client.orders.filter((o: any) => o.billingType === BillingType.OFFICIAL);
-    const internalOrders = client.orders.filter((o: any) => o.billingType === BillingType.INTERNAL);
-
-    const totalOfficialCredit = client.transactions.filter((t: any) => t.billingType === BillingType.OFFICIAL).reduce((acc: number, t: any) => acc + Number(t.amount), 0) +
-                                client.creditNotes.filter((cn: any) => cn.billingType === BillingType.OFFICIAL).reduce((acc: number, cn: any) => acc + Number(cn.totalAmount), 0);
-
-    const totalInternalCredit = client.transactions.filter((t: any) => t.billingType === BillingType.INTERNAL).reduce((acc: number, t: any) => acc + Number(t.amount), 0) +
-                                client.creditNotes.filter((cn: any) => cn.billingType === BillingType.INTERNAL).reduce((acc: number, cn: any) => acc + Number(cn.totalAmount), 0);
-
-    const calculateFIFO = (orders: any[], unallocatedCredit: number) => {
-      let pool = unallocatedCredit;
-      let pendingInvoicesCount = 0;
-      orders.forEach((order: any) => {
-        const directPayments = (order.transactions || []).reduce((acc: number, t: any) => acc + Number(t.amount), 0);
-        const directCreditNotes = (order.creditNotes || []).reduce((acc: number, cn: any) => acc + Number(cn.totalAmount), 0);
-        let debt = Math.max(0, Number(order.totalAmount) - directPayments - directCreditNotes);
-
-        if (pool > 0) {
-          if (debt <= pool) {
-            pool -= debt;
-            debt = 0;
-          } else {
-            debt -= pool;
-            pool = 0;
-          }
-        }
-        if (debt > 0.5) pendingInvoicesCount++;
-      });
-      return pendingInvoicesCount;
-    };
-
-    return calculateFIFO(officialOrders, totalOfficialCredit) + calculateFIFO(internalOrders, totalInternalCredit);
-  }
-
-  /**
-   * Obtener reporte consolidado de deudores con saldo por sucursales y advertencias.
-   */
-  async getDebtorsReport(userId: number, userRole: string) {
-    const whereClause: any = {
-      isClient: true,
-      outstandingBalance: { gt: 0 }
-    };
-
-    if (userRole === Role.VENDEDOR) {
-      whereClause.sellerId = userId;
-    }
-
-    const clients = await prisma.persona.findMany({
-      where: whereClause,
-      include: {
-        seller: { select: { id: true, username: true } },
-        orders: {
-          where: { status: OrderStatus.DELIVERED },
-          include: {
-            transactions: {
-              where: { type: TransactionType.INCOME }
-            },
-            creditNotes: true
-          },
-          orderBy: { createdAt: 'asc' }
-        },
-        transactions: {
-          where: {
-            type: TransactionType.INCOME,
-            orderId: null // Pagos generales a cuenta corriente
-          }
-        },
-        creditNotes: {
-          where: {
-            orderId: null // Notas de crédito generales a cuenta corriente
-          }
-        }
-      },
-      orderBy: { name: 'asc' }
-    });
-
-    const debtors = clients.map(client => {
-      // 1. Agrupar órdenes por sucursal
-      const officialOrders = client.orders.filter(o => o.billingType === BillingType.OFFICIAL);
-      const internalOrders = client.orders.filter(o => o.billingType === BillingType.INTERNAL);
-
-      // 2. Sumar créditos generales por sucursal
-      const officialIncomes = client.transactions.filter(t => t.billingType === BillingType.OFFICIAL);
-      const internalIncomes = client.transactions.filter(t => t.billingType === BillingType.INTERNAL);
-
-      const officialCreditNotes = client.creditNotes.filter(cn => cn.billingType === BillingType.OFFICIAL);
-      const internalCreditNotes = client.creditNotes.filter(cn => cn.billingType === BillingType.INTERNAL);
-
-      const totalOfficialCredit = officialIncomes.reduce((acc, t) => acc + Number(t.amount), 0) +
-                                  officialCreditNotes.reduce((acc, cn) => acc + Number(cn.totalAmount), 0);
-
-      const totalInternalCredit = internalIncomes.reduce((acc, t) => acc + Number(t.amount), 0) +
-                                  internalCreditNotes.reduce((acc, cn) => acc + Number(cn.totalAmount), 0);
-
-      // Helper para calcular saldo pendiente de órdenes por sucursal usando FIFO
-      const calculateFIFO = (orders: typeof client.orders, unallocatedCredit: number) => {
-        let pool = unallocatedCredit;
-        let pendingInvoicesCount = 0;
-        let remainingDebt = 0;
-
-        const detailedOrders = orders.map(order => {
-          const directPayments = order.transactions.reduce((acc, t) => acc + Number(t.amount), 0);
-          const directCreditNotes = order.creditNotes.reduce((acc, cn) => acc + Number(cn.totalAmount), 0);
-          
-          let debt = Math.max(0, Number(order.totalAmount) - directPayments - directCreditNotes);
-
-          if (pool > 0) {
-            if (debt <= pool) {
-              pool -= debt;
-              debt = 0;
-            } else {
-              debt -= pool;
-              pool = 0;
-            }
-          }
-
-          if (debt > 0.5) {
-            pendingInvoicesCount++;
-            remainingDebt += debt;
-          }
-
-          return {
-            id: order.id,
-            invoiceNumber: order.invoiceNumber || `INT-${order.id.toString().padStart(5, '0')}`,
-            totalAmount: Number(order.totalAmount),
-            pendingAmount: debt,
-            createdAt: order.createdAt
-          };
-        });
-
-        return { remainingDebt, pendingInvoicesCount, detailedOrders };
-      };
-
-      const officialResult = calculateFIFO(officialOrders, totalOfficialCredit);
-      const internalResult = calculateFIFO(internalOrders, totalInternalCredit);
-
-      let debtA = officialResult.remainingDebt;
-      let debtX = internalResult.remainingDebt;
-      const totalCalculated = debtA + debtX;
-      const dbOutstanding = Number(client.outstandingBalance);
-
-      // 3. Ajuste de seguridad para coincidir con la cuenta corriente de la base de datos
-      if (dbOutstanding > 0) {
-        if (totalCalculated > 0) {
-          const ratioA = debtA / totalCalculated;
-          debtA = Math.round(ratioA * dbOutstanding);
-          debtX = dbOutstanding - debtA;
-        } else {
-          // Si no hay órdenes entregadas pero tiene deuda en cuenta corriente, asignar a la sucursal X por defecto
-          debtX = dbOutstanding;
-          debtA = 0;
-        }
-      } else {
-        debtA = 0;
-        debtX = 0;
-      }
-
-      return {
-        id: client.id,
-        name: client.name,
-        cuit: client.cuit,
-        address: client.address,
-        city: resolveCity(client.city, client.address, client.route),
-        province: client.province,
-        zipCode: client.zipCode,
-        phone: client.phone,
-        email: client.email,
-        route: client.route || 'Sin Ruta',
-        outstandingBalance: dbOutstanding,
-        debtA: Math.max(0, debtA),
-        debtX: Math.max(0, debtX),
-        pendingInvoicesCount: officialResult.pendingInvoicesCount + internalResult.pendingInvoicesCount,
-        hasMultiplePendingInvoices: (officialResult.pendingInvoicesCount + internalResult.pendingInvoicesCount) > 1,
-        sellerId: client.sellerId,
-        sellerName: client.seller?.username || 'Sin Preventista'
-      };
-    });
-
-    const availableRoutes = [...new Set(debtors.map(d => d.route).filter(r => r && r !== 'Sin Ruta'))].sort();
-    const availableCities = [...OFFICIAL_CITIES, 'OTRAS'].sort();
-
-    // Obtener preventistas
-    const sellers = await prisma.user.findMany({
-      where: { role: 'VENDEDOR' },
-      select: { id: true, username: true }
-    });
-
-    return { debtors, availableRoutes, availableCities, availableSellers: sellers };
-  }
-
-  /**
-   * Obtener todos los vendedores activos de la base de datos.
-   */
-  async getSellers() {
-    return prisma.user.findMany({
-      where: {
-        role: Role.VENDEDOR,
-        isActive: true,
-      },
-      select: {
-        id: true,
-        username: true,
-      },
-      orderBy: {
-        username: 'asc',
-      },
-    });
-  }
-
-  /**
-   * Registrar una visita fallida (No Venta) para un cliente.
-   */
   async recordVisit(id: number, reason: string, notes: string | null | undefined, userId: number, userRole: string) {
     const persona = await prisma.persona.findUnique({ where: { id } });
     if (!persona) throw new Error('Persona no encontrada.');
-
     if (userRole === Role.VENDEDOR && persona.isClient && persona.sellerId !== userId) {
       throw new Error('Acceso denegado.');
     }
@@ -962,289 +222,55 @@ export class PersonaService {
       action: 'CLIENT_VISIT_FAIL',
       entityType: 'Persona',
       entityId: persona.id,
-      newValues: {
-        status: 'NO_COMPRO',
-        reason,
-        notes: notes || null,
-        date: new Date()
-      }
+      newValues: { status: 'NO_COMPRO', reason, notes: notes || null, date: new Date() },
     });
 
     return { status: 'success', message: 'Visita registrada con éxito.' };
   }
 
-  /**
-   * Eliminar persona (solo si no tiene movimientos).
-   */
   async deletePersona(id: number, userId: number, userRole: string) {
-    if (userRole !== Role.ADMIN) {
-      throw new Error('Solo los administradores pueden eliminar personas.');
-    }
+    if (userRole !== Role.ADMIN) throw new Error('Solo los administradores pueden eliminar personas.');
     const persona = await prisma.persona.findUnique({
       where: { id },
       include: {
         transactions: { select: { id: true } },
         orders: { select: { id: true } },
         supplierInvoices: { select: { id: true } },
-        creditNotes: { select: { id: true } }
-      }
+        creditNotes: { select: { id: true } },
+      },
     });
-
     if (!persona) throw new Error('Persona no encontrada.');
-
-    if (persona.transactions.length > 0 || persona.orders.length > 0 || persona.supplierInvoices.length > 0 || persona.creditNotes.length > 0) {
+    if (
+      persona.transactions.length > 0 ||
+      persona.orders.length > 0 ||
+      persona.supplierInvoices.length > 0 ||
+      persona.creditNotes.length > 0
+    ) {
       throw new Error('No se puede eliminar la persona porque tiene movimientos registrados (Órdenes, Transacciones, Notas de Crédito o Facturas).');
     }
 
-    const deleted = await prisma.persona.delete({
-      where: { id }
-    });
-
-    await logAudit({
-      userId,
-      action: 'DELETE_PERSONA',
-      entityType: 'Persona',
-      entityId: deleted.id,
-      oldValues: persona,
-    });
-
+    const deleted = await prisma.persona.delete({ where: { id } });
+    await logAudit({ userId, action: 'DELETE_PERSONA', entityType: 'Persona', entityId: deleted.id, oldValues: persona });
     return deleted;
   }
 
-  /**
-   * Obtener perfil detallado y estadísticas completas de un vendedor.
-   */
-  async getSellerProfileStats(sellerIdParam: number) {
-    // 1. Buscar si la ID enviada corresponde a una Persona (isSeller = true o rol vendedor) o a un User.
-    let sellerPersona = await prisma.persona.findUnique({
-      where: { id: sellerIdParam },
-      include: {
-        seller: { select: { id: true, username: true } },
-        saleRoute: { select: { id: true, name: true, dayOfWeek: true } }
-      }
-    });
-
-    let sellerUser = await prisma.user.findUnique({
-      where: { id: sellerIdParam },
-      select: { id: true, username: true, role: true, isActive: true }
-    });
-
-    // Si la persona encontrada tiene un sellerId vinculado, cargamos el usuario correspondiente
-    if (sellerPersona && sellerPersona.sellerId && !sellerUser) {
-      sellerUser = await prisma.user.findUnique({
-        where: { id: sellerPersona.sellerId },
-        select: { id: true, username: true, role: true, isActive: true }
-      });
-    }
-
-    // Si el usuario existe pero no la persona, buscamos si hay una Persona creada para este usuario por nombre
-    if (!sellerPersona && sellerUser) {
-      sellerPersona = await prisma.persona.findFirst({
-        where: {
-          OR: [
-            { isSeller: true, name: { contains: sellerUser.username, mode: 'insensitive' } },
-            { sellerId: sellerUser.id }
-          ]
-        },
-        include: {
-          seller: { select: { id: true, username: true } },
-          saleRoute: { select: { id: true, name: true, dayOfWeek: true } }
-        }
-      });
-    }
-
-    const name = sellerPersona?.name || sellerUser?.username || `Vendedor #${sellerIdParam}`;
-    const phone = sellerPersona?.phone || '';
-    const email = sellerPersona?.email || '';
-    const city = sellerPersona?.city || 'General Villegas';
-    const cuit = sellerPersona?.cuit || '';
-    const address = sellerPersona?.address || '';
-
-    // IDs de referencia para consultas de base de datos
-    const userIds = sellerUser ? [sellerUser.id] : [];
-    const allIds = [...new Set([...userIds, sellerIdParam])];
-
-    // 2. Clientes asignados al vendedor
-    const assignedClients = await prisma.persona.findMany({
-      where: {
-        isClient: true,
-        OR: [
-          { sellerId: { in: allIds } },
-          ...(sellerUser ? [{ seller: { username: { equals: sellerUser.username, mode: 'insensitive' as const } } }] : []),
-          { seller: { id: sellerIdParam } }
-        ]
-      },
-      select: {
-        id: true,
-        name: true,
-        tradeName: true,
-        city: true,
-        address: true,
-        phone: true,
-        route: true,
-        cuit: true,
-        outstandingBalance: true,
-        saleRoute: { select: { name: true, dayOfWeek: true } }
-      },
-      orderBy: { name: 'asc' }
-    });
-
-    const clientIds = assignedClients.map(c => c.id);
-
-    // 3. Rutas de preventa asignadas
-    const assignedRoutes = await prisma.saleRoute.findMany({
-      where: {
-        OR: [
-          { sellerId: { in: allIds } },
-          ...(sellerUser ? [{ seller: { username: { equals: sellerUser.username, mode: 'insensitive' as const } } }] : [])
-        ]
-      },
-      include: {
-        clients: {
-          select: { id: true }
-        }
-      }
-    });
-
-    // 4. Órdenes / Pedidos del vendedor
-    const now = new Date();
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    const startOf6MonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1);
-
-    const orders = await prisma.order.findMany({
-      where: {
-        status: { not: 'CANCELLED' },
-        createdAt: { gte: startOf6MonthsAgo },
-        OR: [
-          { sellerId: { in: allIds } },
-          ...(clientIds.length > 0 ? [{ personaId: { in: clientIds } }] : [])
-        ]
-      },
-      select: {
-        id: true,
-        totalAmount: true,
-        createdAt: true,
-        personaId: true,
-        persona: { select: { id: true, name: true, city: true } }
-      },
-      orderBy: { createdAt: 'desc' }
-    });
-
-    // Filtros del mes actual
-    const currentMonthOrders = orders.filter(o => new Date(o.createdAt) >= startOfMonth);
-    const totalSalesMonth = currentMonthOrders.reduce((sum, o) => sum + Number(o.totalAmount || 0), 0);
-    const totalOrdersMonth = currentMonthOrders.length;
-    const averageTicket = totalOrdersMonth > 0 ? Math.round(totalSalesMonth / totalOrdersMonth) : 0;
-
-    // Clientes activos en los últimos 30 días
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    const activeClientIds = new Set(orders.filter(o => new Date(o.createdAt) >= thirtyDaysAgo).map(o => o.personaId));
-    const activeClientsCount = activeClientIds.size;
-    const coveragePercentage = assignedClients.length > 0 ? Math.round((activeClientsCount / assignedClients.length) * 100) : 0;
-
-    // Evolución de ventas mensual (últimos 6 meses)
-    const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-    const salesEvolutionMap = new Map<string, { period: string; sales: number; orders: number }>();
-
-    for (let i = 5; i >= 0; i--) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const key = `${monthNames[d.getMonth()]} ${d.getFullYear()}`;
-      salesEvolutionMap.set(key, { period: key, sales: 0, orders: 0 });
-    }
-
-    orders.forEach(o => {
-      const d = new Date(o.createdAt);
-      const key = `${monthNames[d.getMonth()]} ${d.getFullYear()}`;
-      if (salesEvolutionMap.has(key)) {
-        const item = salesEvolutionMap.get(key)!;
-        item.sales += Number(o.totalAmount || 0);
-        item.orders += 1;
-      }
-    });
-
-    const salesEvolution = Array.from(salesEvolutionMap.values());
-
-    // Top 5 Clientes por Volumen de Compra
-    const clientSalesMap = new Map<number, { id: number; name: string; city: string; totalSpent: number; ordersCount: number }>();
-
-    orders.forEach(o => {
-      if (!o.persona) return;
-      const existing = clientSalesMap.get(o.persona.id) || {
-        id: o.persona.id,
-        name: o.persona.name,
-        city: o.persona.city || 'S/D',
-        totalSpent: 0,
-        ordersCount: 0
-      };
-      existing.totalSpent += Number(o.totalAmount || 0);
-      existing.ordersCount += 1;
-      clientSalesMap.set(o.persona.id, existing);
-    });
-
-    const topClients = Array.from(clientSalesMap.values())
-      .sort((a, b) => b.totalSpent - a.totalSpent)
-      .slice(0, 5);
-
-    return {
-      seller: {
-        id: sellerIdParam,
-        personaId: sellerPersona?.id || null,
-        userId: sellerUser?.id || null,
-        name,
-        cuit,
-        phone,
-        email,
-        city,
-        address,
-        userAccount: sellerUser?.username || null,
-        isActive: sellerUser?.isActive ?? true
-      },
-      metrics: {
-        assignedClientsCount: assignedClients.length,
-        activeClientsCount,
-        coveragePercentage,
-        totalSalesMonth: Math.round(totalSalesMonth),
-        totalOrdersMonth,
-        averageTicket
-      },
-      salesEvolution,
-      topClients,
-      routes: assignedRoutes.map(r => ({
-        id: r.id,
-        name: r.name,
-        dayOfWeek: r.dayOfWeek,
-        clientsCount: r.clients.length
-      })),
-      clients: assignedClients
-    };
-  }
-}
-
-function resolveCity(
-  city: string | null | undefined,
-  address: string | null | undefined,
-  route: string | null | undefined
-): string {
-  // 1. Intentar con el campo 'city'
-  if (city) {
-    const norm = getOfficialCityOrOther(city);
-    if (norm !== 'OTRAS') return norm;
-  }
-
-  // 2. Intentar con el campo 'address'
-  if (address) {
-    const norm = getOfficialCityOrOther(address);
-    if (norm !== 'OTRAS') return norm;
-  }
-
-  // 3. Intentar con el campo 'route'
-  if (route) {
-    const norm = getOfficialCityOrOther(route);
-    if (norm !== 'OTRAS') return norm;
-  }
-
-  return 'OTRAS';
+  // Delegación a Submódulos Especializados (< 250–300 líneas cada uno)
+  recordPersonaPayment = (id: number, data: any, userId: number, userRole: string) =>
+    personaPaymentSubService.recordPersonaPayment(id, data, userId, userRole);
+  getPersonaLedger = (id: number, userId: number, userRole: string) =>
+    personaLedgerSubService.getPersonaLedger(id, userId, userRole);
+  checkAllBalances = () => personaLedgerSubService.checkAllBalances();
+  reconcileBalance = (personaId: number) => personaLedgerSubService.reconcileBalance(personaId);
+  reconcileAllBalances = () => personaLedgerSubService.reconcileAllBalances();
+  getPersonaPendingInvoices = (id: number, userId: number, userRole: string) =>
+    personaLedgerSubService.getPersonaPendingInvoices(id, userId, userRole);
+  getPersonaPendingInvoicesCount = (id: number, dbClient?: any) =>
+    personaDebtorsSubService.getPersonaPendingInvoicesCount(id, dbClient);
+  getDebtorsReport = (userId: number, userRole: string) =>
+    personaDebtorsSubService.getDebtorsReport(userId, userRole);
+  getSellers = () => personaSellersSubService.getSellers();
+  getSellerProfileStats = (sellerIdParam: number) =>
+    personaSellersSubService.getSellerProfileStats(sellerIdParam);
 }
 
 export const personaService = new PersonaService();

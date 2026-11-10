@@ -1,17 +1,16 @@
-import { describe, it, expect, jest, beforeEach } from '@jest/globals';
-import { Role, BillingType, OrderStatus } from '@prisma/client';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { Role, OrderStatus } from '@prisma/client';
 
-// Mock de prisma
-jest.mock('../../utils/prisma', () => ({
+vi.mock('../../utils/prisma', () => ({
   __esModule: true,
   default: {
     persona: {
-      findUnique: jest.fn(),
+      findUnique: vi.fn(),
     },
     order: {
-      findFirst: jest.fn(),
+      findFirst: vi.fn(),
     },
-    $transaction: jest.fn(),
+    $transaction: vi.fn(),
   },
 }));
 
@@ -20,7 +19,7 @@ import { OrderService } from '../order.service';
 
 describe('OrderService Business Rules & Invariants Tests', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   const mockPersona = {
@@ -53,11 +52,11 @@ describe('OrderService Business Rules & Invariants Tests', () => {
 
     await expect(
       OrderService.createOrder({
-        sellerId: 99, // Distinto al sellerId 10 de mockPersona
+        sellerId: 99,
         userRole: Role.VENDEDOR,
         personaId: 100,
         items: [{ productId: 50, quantity: 10 }],
-      })
+      }),
     ).rejects.toThrow('No podés cargar un pedido para un cliente asignado a otro vendedor.');
   });
 
@@ -67,10 +66,10 @@ describe('OrderService Business Rules & Invariants Tests', () => {
 
     const mockTx = {
       product: {
-        findMany: jest.fn<any>().mockResolvedValue([mockProduct]),
+        findMany: vi.fn().mockResolvedValue([mockProduct]),
       },
       discountRule: {
-        findMany: jest.fn<any>().mockResolvedValue([]),
+        findMany: vi.fn().mockResolvedValue([]),
       },
     };
 
@@ -81,8 +80,8 @@ describe('OrderService Business Rules & Invariants Tests', () => {
         sellerId: 10,
         userRole: Role.VENDEDOR,
         personaId: 100,
-        items: [{ productId: 50, quantity: 5, isEmergencyOverride: false }], // minOrderQuantity es 10
-      })
+        items: [{ productId: 50, quantity: 5, isEmergencyOverride: false }],
+      }),
     ).rejects.toThrow('exige un mínimo de 10 unidades');
   });
 
@@ -93,15 +92,15 @@ describe('OrderService Business Rules & Invariants Tests', () => {
     const mockProductLowStock = {
       ...mockProduct,
       minOrderQuantity: 1,
-      stock: 3, // Stock 3, solicitado 5
+      stock: 3,
     };
 
     const mockTx = {
       product: {
-        findMany: jest.fn<any>().mockResolvedValue([mockProductLowStock]),
+        findMany: vi.fn().mockResolvedValue([mockProductLowStock]),
       },
       discountRule: {
-        findMany: jest.fn<any>().mockResolvedValue([]),
+        findMany: vi.fn().mockResolvedValue([]),
       },
     };
 
@@ -113,7 +112,7 @@ describe('OrderService Business Rules & Invariants Tests', () => {
         userRole: Role.VENDEDOR,
         personaId: 100,
         items: [{ productId: 50, quantity: 5 }],
-      })
+      }),
     ).rejects.toThrow('Stock insuficiente para "Queso Barra x Kg" (Disponible: 3, Solicitado: 5)');
   });
 
@@ -124,22 +123,22 @@ describe('OrderService Business Rules & Invariants Tests', () => {
     const mockProductSufficientMemory = {
       ...mockProduct,
       minOrderQuantity: 1,
-      stock: 10, // En memoria parece haber 10
+      stock: 10,
     };
 
     const mockTx = {
       product: {
-        findMany: jest.fn<any>().mockResolvedValue([mockProductSufficientMemory]),
-        updateMany: jest.fn<any>().mockResolvedValue({ count: 0 }), // Pero en la BD otra tx se lo llevó
+        findMany: vi.fn().mockResolvedValue([mockProductSufficientMemory]),
+        updateMany: vi.fn().mockResolvedValue({ count: 0 }),
       },
       discountRule: {
-        findMany: jest.fn<any>().mockResolvedValue([]),
+        findMany: vi.fn().mockResolvedValue([]),
       },
       order: {
-        create: jest.fn<any>().mockResolvedValue({ id: 1 }),
+        create: vi.fn().mockResolvedValue({ id: 1 }),
       },
       orderItem: {
-        createMany: jest.fn<any>().mockResolvedValue({ count: 1 }),
+        createMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     };
 
@@ -151,7 +150,7 @@ describe('OrderService Business Rules & Invariants Tests', () => {
         userRole: Role.VENDEDOR,
         personaId: 100,
         items: [{ productId: 50, quantity: 5 }],
-      })
+      }),
     ).rejects.toThrow('debido a una operación concurrente');
   });
 
@@ -167,20 +166,20 @@ describe('OrderService Business Rules & Invariants Tests', () => {
 
     const mockTx = {
       product: {
-        findMany: jest.fn<any>().mockResolvedValue([mockProductNormal]),
-        updateMany: jest.fn<any>().mockResolvedValue({ count: 1 }),
+        findMany: vi.fn().mockResolvedValue([mockProductNormal]),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
       discountRule: {
-        findMany: jest.fn<any>().mockResolvedValue([]),
+        findMany: vi.fn().mockResolvedValue([]),
       },
       order: {
-        create: jest.fn<any>().mockResolvedValue({ id: 77, status: OrderStatus.PENDING }),
+        create: vi.fn().mockResolvedValue({ id: 77, status: OrderStatus.PENDING }),
       },
       orderItem: {
-        createMany: jest.fn<any>().mockResolvedValue({ count: 1 }),
+        createMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
       stockMovement: {
-        createMany: jest.fn<any>().mockResolvedValue({ count: 1 }),
+        createMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     };
 
@@ -190,7 +189,7 @@ describe('OrderService Business Rules & Invariants Tests', () => {
       sellerId: 10,
       userRole: Role.VENDEDOR,
       personaId: 100,
-      items: [{ productId: 50, quantity: 3, isEmergencyOverride: true }], // Solicita 3 teniendo min 10
+      items: [{ productId: 50, quantity: 3, isEmergencyOverride: true }],
     });
 
     expect(result.id).toBe(77);
@@ -198,7 +197,7 @@ describe('OrderService Business Rules & Invariants Tests', () => {
       expect.objectContaining({
         where: { id: 50, stock: { gte: 3 } },
         data: { stock: { decrement: 3 } },
-      })
+      }),
     );
   });
 });

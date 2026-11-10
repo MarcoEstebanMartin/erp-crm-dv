@@ -399,7 +399,7 @@ export const api = {
     return res.transaction;
   },
 
-  createOrder: async (orderData: { clientId: number, items: { productId: number, quantity: number }[], notes?: string }) => {    
+  createOrder: async (orderData: { clientId: number, salesChannel?: string, items: { productId: number, quantity: number, isEmergencyOverride?: boolean }[], notes?: string }) => {    
     const { clientId, ...rest } = orderData;
     const res = await request('/orders', {
       method: 'POST',

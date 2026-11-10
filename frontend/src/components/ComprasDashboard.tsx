@@ -1,2523 +1,274 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { api } from '../utils/api';
-import { 
-  Plus, 
-  X, 
-  Truck,
-  Eye,
-  Search,
-  UserPlus,
-  Edit,
-  Trash2,
-  DollarSign,
-  CreditCard,
-  Check
-} from 'lucide-react';
 import { PurchaseScannerModal } from './PurchaseScannerModal';
 import { useConfirm } from '../context/ConfirmContext';
+import { ComprasOrdenesRecepcionesTabs } from './compras/ComprasOrdenesRecepcionesTabs';
+import { ComprasFacturasTab, ComprasProveedoresTab } from './compras/ComprasFacturasProveedoresTabs';
+import { ComprasCreateReceiveModals } from './compras/ComprasCreateReceiveModals';
+import { ComprasSupplierInvoiceAndPayModals } from './compras/ComprasSupplierInvoiceAndPayModals';
+import { ComprasProviderModals } from './compras/ComprasProviderModals';
 
 export default function ComprasDashboard() {
   const currentUser = api.getCurrentUser();
   const isAdmin = currentUser?.role === 'ADMIN';
   const confirm = useConfirm();
 
-  // Subpestañas del módulo unificado
   const [activeSubTab, setActiveSubTab] = useState<'ordenes' | 'recepciones' | 'facturas' | 'proveedores'>('ordenes');
-
-  // Listas generales de datos
   const [purchaseOrders, setPurchaseOrders] = useState<any[]>([]);
   const [providers, setProviders] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
   const [supplierInvoices, setSupplierInvoices] = useState<any[]>([]);
 
-  // Filtros
   const [supplierQuery, setSupplierQuery] = useState('');
   const [supplierStartDate, setSupplierStartDate] = useState('');
   const [supplierEndDate, setSupplierEndDate] = useState('');
   const [branchFilter, setBranchFilter] = useState<'ALL' | 'OFFICIAL' | 'INTERNAL'>('ALL');
   const [providerSearch, setProviderSearch] = useState('');
 
-  // Modales de Órdenes
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showReceiveModal, setShowReceiveModal] = useState<any | null>(null);
   const [viewDetailsModal, setViewDetailsModal] = useState<any | null>(null);
   const [scannerFile, setScannerFile] = useState<File | null>(null);
   const [showScannerModal, setShowScannerModal] = useState(false);
 
-  // Formulario Crear Orden de Compra
   const [selectedProviderId, setSelectedProviderId] = useState('');
   const [cart, setCart] = useState<{ productId: number; name: string; sku: string; quantity: number; costPrice: number }[]>([]);
-  const [searchProductQuery, setSearchProductQuery] = useState('');
-  const [selectedProductToAdd, setSelectedProductToAdd] = useState<any | null>(null);
-  const [quantityToAdd, setQuantityToAdd] = useState('10');
-  const [costPriceToAdd, setCostPriceToAdd] = useState('');
-
-  // Formulario Recibir Orden de Compra
   const [invoiceNumber, setInvoiceNumber] = useState('');
-  const [lotAssignments, setLotAssignments] = useState<{ [key: number]: { lotNumber: string; expirationDate: string } }>({});
+  const [lotAssignments, setLotAssignments] = useState<Record<number, { lotNumber: string; expirationDate: string }>>({});
 
-  // Modal para Cargar Factura Manual de Proveedor
   const [showSupplierModal, setShowSupplierModal] = useState(false);
   const [supplierForm, setSupplierForm] = useState({
-    personaId: '',
-    invoiceNumber: '',
-    invoiceType: 'FACTURA_A',
+    personaId: '', invoiceNumber: '', invoiceType: 'FACTURA_A',
     issueDate: new Date().toISOString().split('T')[0],
     dueDate: new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString().split('T')[0],
-    netAmount: '',
-    taxAmount: '',
-    percepcionAmount: '',
-    percepcionPampa: '',
-    percepcionBsAs: '',
-    percepcionIva: '',
-    percepcionIva5329: '',
-    impuestosInternos: '',
-    totalAmount: '',
-    billingType: 'OFFICIAL'
+    netAmount: '', taxAmount: '', percepcionAmount: '', percepcionPampa: '', percepcionBsAs: '',
+    percepcionIva: '', percepcionIva5329: '', impuestosInternos: '', totalAmount: '', billingType: 'OFFICIAL',
   });
 
-  // Modal para Crear/Editar Proveedor
   const [providerModal, setProviderModal] = useState<{ open: boolean; mode: 'create' | 'edit'; data: any } | null>(null);
-
-  // Modal para Ver Resumen de Cuenta del Proveedor
   const [accountSummaryModal, setAccountSummaryModal] = useState<any | null>(null);
   const [ledgerData, setLedgerData] = useState<any[]>([]);
 
-  // Modal para Cargar Pago de Factura de Proveedor
   const [payInvoiceModal, setPayInvoiceModal] = useState<{ open: boolean; invoice: any | null }>({ open: false, invoice: null });
-  const [paymentForm, setPaymentForm] = useState({
-    amount: '',
-    paymentMethod: 'CASH',
-    bankAccountId: '',
-    branch: 'A',
-    description: ''
-  });
-  const [paymentItems, setPaymentItems] = useState<Array<{ amount: string; paymentMethod: string; bankAccountId: string }>>([
-    { amount: '', paymentMethod: 'CASH', bankAccountId: '' }
-  ]);
+  const [paymentForm, setPaymentForm] = useState({ amount: '', paymentMethod: 'CASH', bankAccountId: '', branch: 'A', description: '' });
+  const [paymentItems, setPaymentItems] = useState<Array<{ amount: string; paymentMethod: string; bankAccountId: string }>>([{ amount: '', paymentMethod: 'CASH', bankAccountId: '' }]);
   const [bankAccounts, setBankAccounts] = useState<any[]>([]);
 
-
-  // Feedback states
-  const [_loading, setLoading] = useState(false);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const loadData = async () => {
+    try {
+      const [orders, personas, allProducts, invoices] = await Promise.all([
+        api.getPurchaseOrders(),
+        api.getPersonas('provider', ''),
+        api.getProducts(''),
+        api.getSupplierInvoices({ startDate: supplierStartDate, endDate: supplierEndDate, query: supplierQuery }),
+      ]);
+      setPurchaseOrders(orders);
+      setProviders(personas.filter((p: any) => p.isActive !== false));
+      setProducts(allProducts);
+      setSupplierInvoices(invoices);
+    } catch { setErrorMsg('Error al cargar datos del módulo de compras.'); }
+  };
+
+  useEffect(() => { loadData(); }, [supplierStartDate, supplierEndDate, supplierQuery]);
+  useEffect(() => { setSuccessMsg(null); setErrorMsg(null); }, [activeSubTab]);
+
+  const filteredInvoices = supplierInvoices.filter((inv) => branchFilter === 'ALL' || inv.billingType === branchFilter);
+  const filteredProviders = useMemo(() => {
+    if (!providerSearch) return providers;
+    const q = providerSearch.toLowerCase();
+    return providers.filter((p) => p.name.toLowerCase().includes(q) || (p.cuit && p.cuit.includes(q)));
+  }, [providerSearch, providers]);
+
+  const supplierMetrics = useMemo(() => {
+    let totalDeuda = 0, vencidasCount = 0, totalVencidas = 0, proximasCount = 0, totalProximas = 0;
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const in7Days = new Date(); in7Days.setDate(today.getDate() + 7); in7Days.setHours(23, 59, 59, 999);
+    filteredInvoices.forEach((inv) => {
+      if (inv.status === 'PAID') return;
+      const pending = Number(inv.totalAmount || 0) - Number(inv.paidAmount || 0);
+      totalDeuda += pending;
+      if (inv.dueDate) {
+        const due = new Date(inv.dueDate);
+        if (due < today) { vencidasCount++; totalVencidas += pending; }
+        else if (due >= today && due <= in7Days) { proximasCount++; totalProximas += pending; }
+      }
+    });
+    return { totalDeuda, vencidasCount, totalVencidas, proximasCount, totalProximas };
+  }, [filteredInvoices]);
+
+  const autoCalculatedTotal = useMemo(() => {
+    const sum = (Number(supplierForm.netAmount) || 0) + (Number(supplierForm.taxAmount) || 0) + (Number(supplierForm.percepcionPampa) || 0) + (Number(supplierForm.percepcionBsAs) || 0) + (Number(supplierForm.percepcionIva) || 0) + (Number(supplierForm.percepcionIva5329) || 0) + (Number(supplierForm.impuestosInternos) || 0);
+    return sum.toFixed(2);
+  }, [supplierForm.netAmount, supplierForm.taxAmount, supplierForm.percepcionPampa, supplierForm.percepcionBsAs, supplierForm.percepcionIva, supplierForm.percepcionIva5329, supplierForm.impuestosInternos]);
+
+  useEffect(() => {
+    setSupplierForm((prev) => (prev.totalAmount === autoCalculatedTotal ? prev : { ...prev, totalAmount: autoCalculatedTotal }));
+  }, [autoCalculatedTotal]);
 
   const handleOpenPayInvoice = async (inv: any) => {
     const pendingAmount = Number(inv.totalAmount || 0) - Number(inv.paidAmount || 0);
     const initialAmt = pendingAmount > 0 ? pendingAmount.toFixed(2) : Number(inv.totalAmount || 0).toFixed(2);
-    setPaymentForm({
-      amount: initialAmt,
-      paymentMethod: 'CASH',
-      bankAccountId: '',
-      branch: inv.billingType === 'OFFICIAL' ? 'A' : 'X',
-      description: `Pago Factura ${inv.invoiceNumber}`
-    });
-    setPaymentItems([
-      { amount: initialAmt, paymentMethod: 'CASH', bankAccountId: '' }
-    ]);
+    setPaymentForm({ amount: initialAmt, paymentMethod: 'CASH', bankAccountId: '', branch: inv.billingType === 'OFFICIAL' ? 'A' : 'X', description: `Pago Factura ${inv.invoiceNumber}` });
+    setPaymentItems([{ amount: initialAmt, paymentMethod: 'CASH', bankAccountId: '' }]);
     setPayInvoiceModal({ open: true, invoice: inv });
-
-    try {
-      const banks = await api.getBankAccounts();
-      setBankAccounts(banks || []);
-    } catch (err) {
-      console.error('Error al cargar cuentas bancarias:', err);
-    }
+    try { setBankAccounts((await api.getBankAccounts()) || []); } catch {}
   };
 
   const handlePayInvoiceSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setErrorMsg(null);
-    setSuccessMsg(null);
-
     const inv = payInvoiceModal.invoice;
     if (!inv) return;
-
-    // Validar items
-    const validItems: Array<{ amount: number; paymentMethod: string; bankAccountId: number | null }> = [];
-    for (let i = 0; i < paymentItems.length; i++) {
-      const item = paymentItems[i];
-      const amt = Number(item.amount);
-      if (!amt || amt <= 0) {
-        setErrorMsg(`Por favor ingrese un monto válido mayor a 0 en el ítem de pago #${i + 1}.`);
-        return;
-      }
-      if ((item.paymentMethod === 'BANK_TRANSFER' || item.paymentMethod === 'CHECK') && !item.bankAccountId && bankAccounts.length > 0) {
-        setErrorMsg(`Debe seleccionar la cuenta bancaria para el pago en ${item.paymentMethod === 'CHECK' ? 'Cheque' : 'Transferencia'} (Ítem #${i + 1}).`);
-        return;
-      }
-      validItems.push({
-        amount: amt,
-        paymentMethod: item.paymentMethod,
-        bankAccountId: item.bankAccountId ? Number(item.bankAccountId) : null
-      });
-    }
-
-    const totalPay = validItems.reduce((sum, item) => sum + item.amount, 0);
+    const validItems = paymentItems.map((i) => ({ amount: Number(i.amount), paymentMethod: i.paymentMethod, bankAccountId: i.bankAccountId ? Number(i.bankAccountId) : null }));
+    if (validItems.some((i) => !i.amount || i.amount <= 0)) return setErrorMsg('Ingrese montos válidos mayores a 0.');
 
     try {
-      setLoading(true);
       if (validItems.length > 1) {
-        await api.registerPayment(inv.personaId, {
-          payments: validItems,
-          description: paymentForm.description,
-          branch: paymentForm.branch,
-          supplierInvoiceId: inv.id
-        });
+        await api.registerPayment(inv.personaId, { payments: validItems, description: paymentForm.description, branch: paymentForm.branch, supplierInvoiceId: inv.id });
       } else {
-        await api.registerPayment(inv.personaId, {
-          amount: validItems[0].amount,
-          paymentMethod: validItems[0].paymentMethod,
-          bankAccountId: validItems[0].bankAccountId,
-          description: paymentForm.description,
-          branch: paymentForm.branch,
-          supplierInvoiceId: inv.id
-        });
+        await api.registerPayment(inv.personaId, { amount: validItems[0].amount, paymentMethod: validItems[0].paymentMethod, bankAccountId: validItems[0].bankAccountId, description: paymentForm.description, branch: paymentForm.branch, supplierInvoiceId: inv.id });
       }
-
-      setSuccessMsg(`✅ Pago de $${totalPay.toLocaleString('es-AR')} registrado con éxito (${validItems.length} forma(s) de pago) para la factura ${inv.invoiceNumber}.`);
+      setSuccessMsg(`✅ Pago registrado para factura ${inv.invoiceNumber}.`);
       setPayInvoiceModal({ open: false, invoice: null });
       loadData();
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Error al registrar el pago de la factura.');
-    } finally {
-      setLoading(false);
-    }
+    } catch (err: any) { setErrorMsg(err.message || 'Error al registrar pago.'); }
   };
 
-  const loadData = async () => {
-    setLoading(true);
-    try {
-      const orders = await api.getPurchaseOrders();
-      setPurchaseOrders(orders);
-
-      const personas = await api.getPersonas('provider', '');
-      setProviders(personas.filter((p: any) => p.isActive !== false));
-
-      const allProducts = await api.getProducts('');
-      setProducts(allProducts);
-
-      const invoices = await api.getSupplierInvoices({
-        startDate: supplierStartDate,
-        endDate: supplierEndDate,
-        query: supplierQuery
-      });
-      setSupplierInvoices(invoices);
-    } catch (err: any) {
-      setErrorMsg('Error al cargar datos del módulo de compras.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadData();
-  }, [supplierStartDate, supplierEndDate, supplierQuery]);
-
-  // Limpiar alertas al cambiar de pestaña
-  useEffect(() => {
-    setSuccessMsg(null);
-    setErrorMsg(null);
-  }, [activeSubTab]);
-
-  const filteredInvoices = supplierInvoices.filter(inv => {
-    if (branchFilter === 'ALL') return true;
-    return inv.billingType === branchFilter;
-  });
-
-  // --- MÉTRIAS DE COMPRAS Y DEUDAS ---
-  const supplierMetrics = useMemo(() => {
-    let totalDeuda = 0;
-    let vencidasCount = 0;
-    let totalVencidas = 0;
-    let proximasCount = 0;
-    let totalProximas = 0;
-
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const in7Days = new Date();
-    in7Days.setDate(today.getDate() + 7);
-    in7Days.setHours(23, 59, 59, 999);
-
-    filteredInvoices.forEach((inv) => {
-      if (inv.status === 'PAID') return;
-
-      const total = Number(inv.totalAmount || 0);
-      const paid = Number(inv.paidAmount || 0);
-      const pending = total - paid;
-      totalDeuda += pending;
-
-      if (inv.dueDate) {
-        const due = new Date(inv.dueDate);
-        if (due < today) {
-          vencidasCount++;
-          totalVencidas += pending;
-        } else if (due >= today && due <= in7Days) {
-          proximasCount++;
-          totalProximas += pending;
-        }
-      }
-    });
-
-    return { totalDeuda, vencidasCount, totalVencidas, proximasCount, totalProximas };
-  }, [filteredInvoices]);
-
-  // --- CARRITO ORDEN DE COMPRA ---
-  const handleSelectProduct = (prod: any) => {
-    setSelectedProductToAdd(prod);
-    setCostPriceToAdd(String(prod.costPrice));
-  };
-
-  const handleAddToCart = () => {
-    if (!selectedProductToAdd || !quantityToAdd || !costPriceToAdd) return;
-    
-    const qty = Number(quantityToAdd);
-    const cost = Number(costPriceToAdd);
-
-    if (qty <= 0 || cost <= 0) {
-      alert('Cantidad y costo deben ser mayores a 0.');
-      return;
-    }
-
-    const existingIdx = cart.findIndex(i => i.productId === selectedProductToAdd.id);
-    if (existingIdx !== -1) {
-      const updated = [...cart];
-      updated[existingIdx].quantity += qty;
-      updated[existingIdx].costPrice = cost;
-      setCart(updated);
-    } else {
-      setCart(prev => [...prev, {
-        productId: selectedProductToAdd.id,
-        name: selectedProductToAdd.name,
-        sku: selectedProductToAdd.sku,
-        quantity: qty,
-        costPrice: cost
-      }]);
-    }
-
-    setSelectedProductToAdd(null);
-    setQuantityToAdd('10');
-    setCostPriceToAdd('');
-    setSearchProductQuery('');
-  };
-
-  const handleRemoveFromCart = (productId: number) => {
-    setCart(prev => prev.filter(i => i.productId !== productId));
-  };
-
-  const cartTotal = useMemo(() => {
-    return cart.reduce((acc, item) => acc + (item.quantity * item.costPrice), 0);
-  }, [cart]);
-
-  // Filtrar productos
-  const filteredProductsForAdd = useMemo(() => {
-    if (!searchProductQuery) return [];
-    const q = searchProductQuery.toLowerCase();
-    return products.filter(p => p.name.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q));
-  }, [searchProductQuery, products]);
-
-  // Filtrar proveedores en tabla
-  const filteredProviders = useMemo(() => {
-    if (!providerSearch) return providers;
-    const q = providerSearch.toLowerCase();
-    return providers.filter(p => p.name.toLowerCase().includes(q) || (p.cuit && p.cuit.includes(q)));
-  }, [providerSearch, providers]);
-
-  // --- GUARDAR ORDEN DE COMPRA ---
   const handleCreateOrderSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setErrorMsg(null);
-    setSuccessMsg(null);
-
-    if (!selectedProviderId) {
-      setErrorMsg('Debe seleccionar un proveedor.');
-      return;
-    }
-    if (cart.length === 0) {
-      setErrorMsg('El carrito está vacío.');
-      return;
-    }
-
+    if (!selectedProviderId || cart.length === 0) return setErrorMsg('Seleccione proveedor y agregue artículos.');
     try {
-      setLoading(true);
-      await api.createPurchaseOrder({
-        personaId: Number(selectedProviderId),
-        items: cart.map(item => ({
-          productId: item.productId,
-          quantity: item.quantity,
-          costPrice: item.costPrice
-        }))
-      });
-
-      setSuccessMsg('✨ Orden de compra creada con éxito en estado Pendiente.');
-      setShowCreateModal(false);
-      setSelectedProviderId('');
-      setCart([]);
-      loadData();
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Error al guardar la orden de compra.');
-    } finally {
-      setLoading(false);
-    }
+      await api.createPurchaseOrder({ personaId: Number(selectedProviderId), items: cart.map((i) => ({ productId: i.productId, quantity: i.quantity, costPrice: i.costPrice })) });
+      setSuccessMsg('✨ Orden de compra creada con éxito.');
+      setShowCreateModal(false); setSelectedProviderId(''); setCart([]); loadData();
+    } catch (err: any) { setErrorMsg(err.message || 'Error al guardar orden de compra.'); }
   };
 
-  // --- RECEPCION DE OC ---
   const handleOpenReceiveModal = (order: any) => {
     setInvoiceNumber('');
-    const initialAssignments: typeof lotAssignments = {};
-    order.items.forEach((item: any) => {
-      initialAssignments[item.productId] = {
-        lotNumber: `LOTE-PO-${order.id}`,
-        expirationDate: new Date(Date.now() + 180 * 24 * 3600 * 1000).toISOString().split('T')[0]
-      };
-    });
-    setLotAssignments(initialAssignments);
+    const initial: Record<number, { lotNumber: string; expirationDate: string }> = {};
+    order.items.forEach((item: any) => { initial[item.productId] = { lotNumber: `LOTE-PO-${order.id}`, expirationDate: new Date(Date.now() + 180 * 24 * 3600 * 1000).toISOString().split('T')[0] }; });
+    setLotAssignments(initial);
     setShowReceiveModal(order);
-  };
-
-  const handleLotAssignmentChange = (productId: number, field: 'lotNumber' | 'expirationDate', value: string) => {
-    setLotAssignments(prev => ({
-      ...prev,
-      [productId]: {
-        ...prev[productId],
-        [field]: value
-      }
-    }));
   };
 
   const handleReceiveOrderSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setErrorMsg(null);
-    setSuccessMsg(null);
-
     if (!showReceiveModal) return;
-
     try {
-      setLoading(true);
-      await api.receivePurchaseOrder(showReceiveModal.id, {
-        invoiceNumber,
-        lotAssignments
-      });
-
-      setSuccessMsg(`✨ Orden de compra #${showReceiveModal.id} recibida con éxito. Stock ingresado al depósito.`);
-      setShowReceiveModal(null);
-      loadData();
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Error al procesar la recepción de mercadería.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // --- FACTURA PROVEEDOR MANUAL ---
-  const autoCalculatedTotal = useMemo(() => {
-    const net = Number(supplierForm.netAmount) || 0;
-    const tax = Number(supplierForm.taxAmount) || 0;
-    const pampa = Number(supplierForm.percepcionPampa) || 0;
-    const bsas = Number(supplierForm.percepcionBsAs) || 0;
-    const iva = Number(supplierForm.percepcionIva) || 0;
-    const iva5329 = Number(supplierForm.percepcionIva5329) || 0;
-    const internos = Number(supplierForm.impuestosInternos) || 0;
-    return (net + tax + pampa + bsas + iva + iva5329 + internos).toFixed(2);
-  }, [
-    supplierForm.netAmount,
-    supplierForm.taxAmount,
-    supplierForm.percepcionPampa,
-    supplierForm.percepcionBsAs,
-    supplierForm.percepcionIva,
-    supplierForm.percepcionIva5329,
-    supplierForm.impuestosInternos
-  ]);
-
-  useEffect(() => {
-    setSupplierForm(prev => {
-      if (prev.totalAmount === autoCalculatedTotal) return prev;
-      return { ...prev, totalAmount: autoCalculatedTotal };
-    });
-  }, [autoCalculatedTotal]);
-
-  const handleNetChange = (val: string) => {
-    const net = Number(val) || 0;
-    const tax = (net * 0.21).toFixed(2);
-    setSupplierForm(prev => ({
-      ...prev,
-      netAmount: val,
-      taxAmount: tax,
-    }));
+      await api.receivePurchaseOrder(showReceiveModal.id, { invoiceNumber, lotAssignments });
+      setSuccessMsg(`✨ Orden de compra #${showReceiveModal.id} recibida e ingresada al depósito.`);
+      setShowReceiveModal(null); loadData();
+    } catch (err: any) { setErrorMsg(err.message || 'Error al procesar recepción.'); }
   };
 
   const handleCreateSupplierInvoiceSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setErrorMsg(null);
-    setSuccessMsg(null);
-
-    const { personaId, invoiceNumber, invoiceType, issueDate, dueDate, netAmount, taxAmount, percepcionPampa, percepcionBsAs, percepcionIva, impuestosInternos, totalAmount, billingType } = supplierForm;
-
-    if (!personaId || !invoiceNumber || !invoiceType || !issueDate || !netAmount || !taxAmount || !totalAmount) {
-      setErrorMsg('Por favor complete todos los campos obligatorios.');
-      return;
-    }
-
-    const pampaVal = Number(percepcionPampa || 0);
-    const bsasVal = Number(percepcionBsAs || 0);
-    const ivaVal = Number(percepcionIva || 0);
-    const internosVal = Number(impuestosInternos || 0);
-
-    const expectedTotal = Number(netAmount) + Number(taxAmount) + pampaVal + bsasVal + ivaVal + internosVal;
-    if (Math.abs(Number(totalAmount) - expectedTotal) > 1.00) {
-      if (!await confirm(`⚠️ El total ($${totalAmount}) no coincide con Neto + IVA + Percepciones + Imp. Internos ($${expectedTotal.toFixed(2)}). ¿Desea guardar de todas formas?`, { type: 'warning' })) {
-        return;
-      }
-    }
-
+    const f = supplierForm;
+    if (!f.personaId || !f.invoiceNumber || !f.netAmount || !f.totalAmount) return setErrorMsg('Complete los campos obligatorios.');
     try {
-      setLoading(true);
       await api.createSupplierInvoice({
-        personaId: Number(personaId),
-        invoiceNumber,
-        invoiceType,
-        issueDate: new Date(issueDate).toISOString(),
-        dueDate: dueDate ? new Date(dueDate).toISOString() : new Date(new Date(issueDate).getTime() + 30 * 24 * 3600 * 1000).toISOString(),
-        netAmount: Number(netAmount),
-        taxAmount: Number(taxAmount),
-        percepcionAmount: pampaVal + bsasVal, // Guardamos la suma en el campo IIBB
-        percepcionPampa: pampaVal,
-        percepcionBsAs: bsasVal,
-        percepcionIva: ivaVal,
-        impuestosInternos: internosVal,
-        totalAmount: Number(totalAmount),
-        billingType: billingType || 'OFFICIAL'
+        personaId: Number(f.personaId), invoiceNumber: f.invoiceNumber, invoiceType: f.invoiceType,
+        issueDate: new Date(f.issueDate).toISOString(), dueDate: new Date(f.dueDate).toISOString(),
+        netAmount: Number(f.netAmount), taxAmount: Number(f.taxAmount || 0),
+        percepcionAmount: Number(f.percepcionPampa || 0) + Number(f.percepcionBsAs || 0),
+        percepcionPampa: Number(f.percepcionPampa || 0), percepcionBsAs: Number(f.percepcionBsAs || 0),
+        percepcionIva: Number(f.percepcionIva || 0), impuestosInternos: Number(f.impuestosInternos || 0),
+        totalAmount: Number(f.totalAmount), billingType: f.billingType || 'OFFICIAL',
       });
-
-      setSuccessMsg('✅ Factura de compra registrada con éxito en la cuenta corriente del proveedor.');
-      setShowSupplierModal(false);
-      setSupplierForm({
-        personaId: '',
-        invoiceNumber: '',
-        invoiceType: 'FACTURA_A',
-        issueDate: new Date().toISOString().split('T')[0],
-        dueDate: new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString().split('T')[0],
-        netAmount: '',
-        taxAmount: '',
-        percepcionAmount: '',
-        percepcionPampa: '',
-        percepcionBsAs: '',
-        percepcionIva: '',
-        percepcionIva5329: '',
-        impuestosInternos: '',
-        totalAmount: '',
-        billingType: 'OFFICIAL'
-      });
-      loadData();
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Error al guardar la factura de compra.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleDeleteInvoice = async (id: number, invoiceNumber: string) => {
-    if (!await confirm(`⚠️ ¿Está seguro que desea eliminar/anular la factura Nro ${invoiceNumber}? \n\nEsta acción es irreversible y revertirá la deuda en la cuenta corriente del proveedor, además de borrar las percepciones de AFIP vinculadas.`, { type: 'danger' })) {
-      return;
-    }
-    try {
-      setLoading(true);
-      setErrorMsg(null);
-      setSuccessMsg(null);
-      await api.deleteSupplierInvoice(id);
-      setSuccessMsg('✅ Factura de compra eliminada con éxito y cuenta corriente del proveedor recalculada.');
-      loadData();
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Error al eliminar la factura de compra.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // --- CRUD PROVEEDORES ---
-  const handleOpenCreateProvider = () => {
-    setProviderModal({
-      open: true,
-      mode: 'create',
-      data: {
-        id: 0,
-        name: '',
-        cuit: '',
-        address: '',
-        city: '',
-        phone: '',
-        email: '',
-        creditLimit: 0,
-        priceList: 'A',
-        discount: 0,
-        paymentTermDays: 30,
-        rubro: '',
-        contacts: []
-      }
-    });
-  };
-
-  const handleOpenEditProvider = (p: any) => {
-    setProviderModal({
-      open: true,
-      mode: 'edit',
-      data: { 
-        ...p,
-        rubro: p.rubro || '',
-        contacts: Array.isArray(p.contacts) ? p.contacts : []
-      }
-    });
+      setSuccessMsg('✅ Factura de compra registrada con éxito.');
+      setShowSupplierModal(false); loadData();
+    } catch (err: any) { setErrorMsg(err.message || 'Error al guardar factura.'); }
   };
 
   const handleProviderSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!providerModal) return;
-    const { mode, data } = providerModal;
-
-    if (!data.name) {
-      setErrorMsg('El nombre/razón social es obligatorio.');
-      return;
-    }
-
+    if (!providerModal?.data.name) return setErrorMsg('El nombre es obligatorio.');
     try {
-      setLoading(true);
-      if (mode === 'create') {
-        await api.createPersona({
-          ...data,
-          isClient: false,
-          isProvider: true,
-          isSeller: false,
-          isCommissionAgent: false
-        });
-      } else {
-        await api.updatePersona(data.id, {
-          ...data,
-          isClient: false,
-          isProvider: true,
-          isSeller: false,
-          isCommissionAgent: false
-        });
-      }
-      setProviderModal(null);
-      setSuccessMsg('✨ Proveedor guardado correctamente.');
-      loadData();
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Error al guardar el proveedor.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleDeleteProvider = async (id: number, name: string) => {
-    if (!await confirm(`⚠️ ¿Está seguro que desea eliminar al proveedor ${name}?\n\nEsta acción no se puede deshacer y solo será posible si el proveedor no tiene órdenes de compra, facturas ni transacciones vinculadas.`, { type: 'danger' })) {
-      return;
-    }
-    try {
-      setLoading(true);
-      setErrorMsg(null);
-      setSuccessMsg(null);
-      await api.deletePersona(id);
-      setSuccessMsg('✅ Proveedor eliminado con éxito.');
-      loadData();
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Error al eliminar el proveedor.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleOpenAccountSummary = async (p: any) => {
-    try {
-      setLoading(true);
-      setErrorMsg(null);
-      const res = await api.getPersonaLedger(p.id);
-      setAccountSummaryModal(p);
-      setLedgerData(res.ledger);
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Error al obtener el resumen de cuenta.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // WhatsApp helper
-  const getWhatsAppLink = (phone: any) => {
-    if (!phone) return '';
-    const cleanPhone = String(phone).replace(/\D/g, '');
-    return `https://wa.me/${cleanPhone}`;
+      const payload = { ...providerModal.data, isClient: false, isProvider: true, isSeller: false, isCommissionAgent: false };
+      if (providerModal.mode === 'create') await api.createPersona(payload);
+      else await api.updatePersona(providerModal.data.id, payload);
+      setProviderModal(null); setSuccessMsg('✨ Proveedor guardado.'); loadData();
+    } catch (err: any) { setErrorMsg(err.message || 'Error al guardar proveedor.'); }
   };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-      
-      {/* Alertas de Feedback */}
-      {successMsg && (
-        <div style={{
-          backgroundColor: 'var(--color-success-bg)',
-          borderLeft: '4px solid var(--color-success)',
-          color: 'var(--text-primary)',
-          padding: '12px 16px',
-          borderRadius: '8px',
-          fontSize: '0.88rem',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center'
-        }}>
-          <span>{successMsg}</span>
-          <button className="btn btn-ghost" style={{ padding: '2px' }} onClick={() => setSuccessMsg(null)}>✖</button>
-        </div>
-      )}
+      {successMsg && <div className="alert alert-success" onClick={() => setSuccessMsg(null)}>{successMsg}</div>}
+      {errorMsg && <div className="alert alert-danger" onClick={() => setErrorMsg(null)}>{errorMsg}</div>}
 
-      {errorMsg && (
-        <div style={{
-          backgroundColor: '#FFF2F2',
-          borderLeft: '4px solid var(--color-danger)',
-          color: 'var(--text-primary)',
-          padding: '12px 16px',
-          borderRadius: '8px',
-          fontSize: '0.88rem',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center'
-        }}>
-          <span>{errorMsg}</span>
-          <button className="btn btn-ghost" style={{ padding: '2px' }} onClick={() => setErrorMsg(null)}>✖</button>
-        </div>
-      )}
-
-      {/* Navegación Horizontal de Subpestañas */}
-      <div style={{
-        display: 'flex',
-        gap: '4px',
-        backgroundColor: '#EAEAEA',
-        padding: '4px',
-        borderRadius: '8px',
-        width: 'fit-content'
-      }}>
+      <div style={{ display: 'flex', gap: '4px', backgroundColor: '#EAEAEA', padding: '4px', borderRadius: '8px', width: 'fit-content', flexWrap: 'wrap' }}>
         {[
           { id: 'ordenes', label: '📋 Órdenes de Compra' },
           { id: 'recepciones', label: '📦 Recepción e Ingresos' },
           { id: 'facturas', label: '📥 Facturas de Compra' },
-          { id: 'proveedores', label: '👥 Fichero de Proveedores' }
-        ].map((tab) => {
-          const isActive = activeSubTab === tab.id;
-          return (
-            <button
-              key={tab.id}
-              className="btn"
-              onClick={() => setActiveSubTab(tab.id as any)}
-              style={{
-                padding: '6px 14px',
-                fontSize: '0.82rem',
-                fontWeight: 600,
-                backgroundColor: isActive ? '#FFFFFF' : 'transparent',
-                color: isActive ? '#1C1C1E' : '#5E5E62',
-                border: 'none',
-                boxShadow: isActive ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
-                borderRadius: '6px',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease'
-              }}
-            >
-              {tab.label}
-            </button>
-          );
-        })}
+          { id: 'proveedores', label: '👥 Fichero de Proveedores' },
+        ].map((tab) => (
+          <button key={tab.id} className="btn" onClick={() => setActiveSubTab(tab.id as any)} style={{ padding: '6px 14px', fontSize: '0.82rem', fontWeight: 600, backgroundColor: activeSubTab === tab.id ? '#FFFFFF' : 'transparent', color: activeSubTab === tab.id ? '#1C1C1E' : '#5E5E62', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>
+            {tab.label}
+          </button>
+        ))}
       </div>
 
-      {/* ====================================================================
-          SUB-TAB 1: ÓRDENES DE COMPRA
-          ==================================================================== */}
-      {activeSubTab === 'ordenes' && (
-        <div className="card">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-            <div>
-              <h3 className="card-title" style={{ margin: '0' }}>📋 Órdenes de Compra a Proveedores</h3>
-              <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Control de abastecimiento impositivo y comercial con actualización automática de costos.</p>
-            </div>
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <label className="btn" style={{ backgroundColor: 'var(--color-corp-red)', color: 'white', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', padding: '0 16px', borderRadius: '8px', height: '38px' }}>
-                <span style={{ fontWeight: 600, fontSize: '0.85rem' }}>📸 Escanear Factura (IA)</span>
-                <input 
-                  type="file" 
-                  accept="image/*,application/pdf" 
-                  style={{ display: 'none' }}
-                  onChange={(e) => {
-                    if (e.target.files && e.target.files[0]) {
-                      setScannerFile(e.target.files[0]);
-                      setShowScannerModal(true);
-                    }
-                    e.target.value = '';
-                  }}
-                />
-              </label>
-              <button className="btn btn-primary" onClick={() => setShowCreateModal(true)} style={{ height: '38px' }}>
-                <Plus size={16} />
-                Nueva Orden de Compra
-              </button>
-            </div>
-          </div>
-
-          <div className="table-container">
-            <table>
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Fecha Emisión</th>
-                  <th>Proveedor</th>
-                  <th>Monto Total</th>
-                  <th>Estado</th>
-                  <th>Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {purchaseOrders.length === 0 ? (
-                  <tr><td colSpan={6} style={{ textAlign: 'center' }}>No hay órdenes de compra registradas.</td></tr>
-                ) : (
-                  purchaseOrders.map(order => (
-                    <tr key={order.id}>
-                      <td style={{ fontWeight: 600 }}>#{order.id}</td>
-                      <td>{new Date(order.createdAt).toLocaleDateString('es-AR')}</td>
-                      <td>
-                        <div style={{ fontWeight: 500 }}>{order.persona?.name}</div>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>CUIT: {order.persona?.cuit}</div>
-                      </td>
-                      <td style={{ fontWeight: 700 }}>
-                        ${Number(order.totalAmount).toLocaleString('es-AR', { minimumFractionDigits: 0 })}
-                      </td>
-                      <td>
-                        <span style={{
-                          fontSize: '0.75rem',
-                          fontWeight: 600,
-                          padding: '3px 8px',
-                          borderRadius: '12px',
-                          backgroundColor: order.status === 'RECEIVED' ? 'var(--color-success-bg)' : 'var(--color-warning-bg)',
-                          color: order.status === 'RECEIVED' ? 'var(--color-success)' : 'var(--color-warning)'
-                        }}>
-                          {order.status === 'PENDING' ? 'Pendiente' : 'Recibida'}
-                        </span>
-                      </td>
-                      <td>
-                        <div style={{ display: 'flex', gap: '6px' }}>
-                          <button 
-                            className="btn btn-secondary" 
-                            style={{ padding: '4px 8px', fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '4px' }}
-                            onClick={() => setViewDetailsModal(order)}
-                          >
-                            <Eye size={12} />
-                            Detalles
-                          </button>
-                          {order.status === 'PENDING' && (
-                            <button 
-                              className="btn btn-primary"
-                              style={{ padding: '4px 8px', fontSize: '0.78rem', backgroundColor: 'var(--color-success)', borderColor: 'var(--color-success)', display: 'flex', alignItems: 'center', gap: '4px' }}
-                              onClick={() => handleOpenReceiveModal(order)}
-                            >
-                              <Truck size={12} />
-                              Recibir Mercadería
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
+      {(activeSubTab === 'ordenes' || activeSubTab === 'recepciones') && (
+        <ComprasOrdenesRecepcionesTabs
+          activeSubTab={activeSubTab} purchaseOrders={purchaseOrders}
+          onOpenCreateModal={() => setShowCreateModal(true)} onOpenReceiveModal={handleOpenReceiveModal}
+          onViewDetailsModal={setViewDetailsModal} onSelectScannerFile={(file) => { setScannerFile(file); setShowScannerModal(true); }}
+        />
       )}
 
-      {/* ====================================================================
-          SUB-TAB 2: RECEPCIONES E INGRESOS FÍSICOS DE STOCK
-          ==================================================================== */}
-      {activeSubTab === 'recepciones' && (
-        <div className="card">
-          <div style={{ marginBottom: '16px' }}>
-            <h3 className="card-title" style={{ margin: '0' }}>📦 Auditoría de Ingreso de Mercadería</h3>
-            <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Historial detallado de mercancía física recibida con trazabilidad de lotes y fechas de vencimiento.</p>
-          </div>
-
-          <div className="table-container">
-            <table>
-              <thead>
-                <tr>
-                  <th>OC ID</th>
-                  <th>Fecha de Recepción</th>
-                  <th>Proveedor</th>
-                  <th>Artículos Recibidos</th>
-                  <th>Lotes Asignados</th>
-                  <th>Estado Físico</th>
-                </tr>
-              </thead>
-              <tbody>
-                {purchaseOrders.filter(o => o.status === 'RECEIVED').length === 0 ? (
-                  <tr><td colSpan={6} style={{ textAlign: 'center' }}>No hay ingresos de mercadería registrados.</td></tr>
-                ) : (
-                  purchaseOrders.filter(o => o.status === 'RECEIVED').map(order => (
-                    <tr key={order.id}>
-                      <td style={{ fontWeight: 600 }}>#{order.id}</td>
-                      <td>{new Date(order.updatedAt || order.createdAt).toLocaleDateString('es-AR')}</td>
-                      <td>
-                        <div style={{ fontWeight: 600 }}>{order.persona?.name}</div>
-                        <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>CUIT: {order.persona?.cuit}</div>
-                      </td>
-                      <td>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                          {order.items?.map((item: any) => (
-                            <span key={item.id} style={{ fontSize: '0.78rem' }}>
-                              • {item.product?.name}: <strong style={{ color: 'var(--text-primary)' }}>{item.quantity} u.</strong>
-                            </span>
-                          ))}
-                        </div>
-                      </td>
-                      <td>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                          {order.items?.map((item: any) => (
-                            <span key={item.id} style={{ fontSize: '0.74rem', color: 'var(--text-secondary)' }}>
-                              Lote PO-{order.id} (Vto: {item.expirationDate ? new Date(item.expirationDate).toLocaleDateString('es-AR', { timeZone: 'UTC' }) : '6 meses'})
-                            </span>
-                          ))}
-                        </div>
-                      </td>
-                      <td>
-                        <span style={{
-                          fontSize: '0.72rem',
-                          fontWeight: 600,
-                          padding: '2px 6px',
-                          borderRadius: '4px',
-                          backgroundColor: 'var(--color-success-bg)',
-                          color: 'var(--color-success)'
-                        }}>
-                          Ingresado a Depósito
-                        </span>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {/* ====================================================================
-          SUB-TAB 3: FACTURAS DE COMPRA
-          ==================================================================== */}
       {activeSubTab === 'facturas' && (
-        <div>
-          {/* Tarjetas de Métricas de Deuda Proveedores */}
-          {isAdmin && (
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-              gap: '16px',
-              marginBottom: '20px'
-            }}>
-              <div className="card" style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Deuda Pendiente Total</span>
-                <span style={{ fontSize: '1.4rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                  ${supplierMetrics.totalDeuda.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-                </span>
-                <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>Monto amortizable con proveedores</span>
-              </div>
-
-              <div className="card" style={{ padding: '16px', borderLeft: '4px solid var(--color-danger)', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <span style={{ fontSize: '0.78rem', color: 'var(--color-danger)', fontWeight: 600 }}>⚠️ Facturas Vencidas</span>
-                <span style={{ fontSize: '1.4rem', fontWeight: 700, color: 'var(--color-danger)' }}>
-                  ${supplierMetrics.totalVencidas.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-                </span>
-                <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>
-                  {supplierMetrics.vencidasCount} {supplierMetrics.vencidasCount === 1 ? 'comprobante vencido' : 'comprobantes vencidos'}
-                </span>
-              </div>
-
-              <div className="card" style={{ padding: '16px', borderLeft: '4px solid var(--color-warning)', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <span style={{ fontSize: '0.78rem', color: '#B78103', fontWeight: 600 }}>⏳ Próximos Vencimientos (7d)</span>
-                <span style={{ fontSize: '1.4rem', fontWeight: 700, color: '#B78103' }}>
-                  ${supplierMetrics.totalProximas.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-                </span>
-                <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>
-                  {supplierMetrics.proximasCount} {supplierMetrics.proximasCount === 1 ? 'comprobante por vencer' : 'comprobantes por vencer'}
-                </span>
-              </div>
-            </div>
-          )}
-
-          <div className="card">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <div>
-                <h3 className="card-title" style={{ margin: '0' }}>📥 Comprobantes y Facturas de Compra</h3>
-                <p style={{ fontSize: '0.8rem', marginTop: '2px' }}>Historial impositivo y contable de compras vinculadas al IVA Crédito Fiscal.</p>
-              </div>
-              <div style={{ display: 'flex', gap: '10px' }}>
-                <div style={{ display: 'flex', gap: '6px' }}>
-                  <input 
-                    type="text" 
-                    placeholder="Buscar factura o proveedor..." 
-                    className="input" 
-                    style={{ fontSize: '0.8rem', padding: '6px 12px' }}
-                    value={supplierQuery}
-                    onChange={(e) => setSupplierQuery(e.target.value)}
-                  />
-                  <input 
-                    type="date" 
-                    className="input" 
-                    style={{ fontSize: '0.8rem', padding: '6px 12px' }}
-                    value={supplierStartDate}
-                    onChange={(e) => setSupplierStartDate(e.target.value)}
-                  />
-                  <input 
-                    type="date" 
-                    className="input" 
-                    style={{ fontSize: '0.8rem', padding: '6px 12px' }}
-                    value={supplierEndDate}
-                    onChange={(e) => setSupplierEndDate(e.target.value)}
-                  />
-                  <select
-                    className="input"
-                    style={{ fontSize: '0.8rem', padding: '6px 12px', minWidth: '185px', backgroundColor: '#fff', color: 'var(--text-primary)' }}
-                    value={branchFilter}
-                    onChange={(e) => setBranchFilter(e.target.value as any)}
-                  >
-                    <option value="ALL">🏢 Todas las Sucursales</option>
-                    <option value="OFFICIAL">Sucursal A</option>
-                    <option value="INTERNAL">Sucursal X</option>
-                  </select>
-                </div>
-                <button className="btn btn-primary" onClick={() => setShowSupplierModal(true)}>
-                  <Plus size={16} />
-                  Cargar Factura Manual
-                </button>
-              </div>
-            </div>
-
-            <div className="table-container">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Fecha Emisión</th>
-                    <th>Fecha Vto.</th>
-                    <th>Tipo</th>
-                    <th>Sucursal</th>
-                    <th>Nro Comprobante</th>
-                    <th>Proveedor</th>
-                    <th>Neto Gravado</th>
-                    <th>IVA</th>
-                    <th>Total Factura</th>
-                    <th>Pagado</th>
-                    <th>Estado</th>
-                    <th style={{ textAlign: 'center' }}>Acciones</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredInvoices.length === 0 ? (
-                    <tr><td colSpan={12} style={{ textAlign: 'center' }}>No se encontraron comprobantes de compra.</td></tr>
-                  ) : (
-                    filteredInvoices.map((inv) => {
-                      const isOverdue = inv.dueDate && new Date(inv.dueDate) < new Date() && inv.status !== 'PAID';
-                      return (
-                        <tr key={inv.id} style={isOverdue ? { backgroundColor: '#FFF5F5' } : undefined}>
-                          <td>{new Date(inv.issueDate).toLocaleDateString('es-AR', { timeZone: 'UTC' })}</td>
-                          <td>{inv.dueDate ? new Date(inv.dueDate).toLocaleDateString('es-AR', { timeZone: 'UTC' }) : 'S/D'}</td>
-                          <td style={{ fontWeight: 600 }}>{inv.invoiceType?.replace('_', ' ')}</td>
-                          <td>
-                            <span style={{
-                              fontSize: '0.72rem',
-                              fontWeight: 600,
-                              padding: '2px 6px',
-                              borderRadius: '4px',
-                              backgroundColor: inv.billingType === 'OFFICIAL' ? '#E8F5E9' : '#ECEFF1',
-                              color: inv.billingType === 'OFFICIAL' ? '#2E7D32' : '#37474F'
-                            }}>
-                              {inv.billingType === 'OFFICIAL' ? 'Suc. A (Ofi)' : 'Suc. X (Int)'}
-                            </span>
-                          </td>
-                          <td style={{ fontFamily: 'monospace' }}>{inv.invoiceNumber}</td>
-                          <td>
-                            <div style={{ fontWeight: 600 }}>{inv.persona?.name}</div>
-                            <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>CUIT: {inv.persona?.cuit}</div>
-                          </td>
-                          <td>${Number(inv.netAmount || 0).toLocaleString('es-AR')}</td>
-                          <td>${Number(inv.taxAmount || 0).toLocaleString('es-AR')}</td>
-                          <td style={{ fontWeight: 700 }}>${Number(inv.totalAmount || 0).toLocaleString('es-AR')}</td>
-                          <td>${Number(inv.paidAmount || 0).toLocaleString('es-AR')}</td>
-                          <td>
-                            <span style={{
-                              fontSize: '0.72rem',
-                              fontWeight: 600,
-                              padding: '2px 6px',
-                              borderRadius: '4px',
-                              backgroundColor: inv.status === 'PAID' ? 'var(--color-success-bg)' : isOverdue ? '#FFF0F0' : 'var(--color-warning-bg)',
-                              color: inv.status === 'PAID' ? 'var(--color-success)' : isOverdue ? 'var(--color-danger)' : 'var(--color-warning)'
-                            }}>
-                              {inv.status === 'PAID' ? 'Saldada' : isOverdue ? 'Vencida' : 'Pendiente'}
-                            </span>
-                          </td>
-                          <td style={{ textAlign: 'center' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
-                              {inv.status === 'PAID' ? (
-                                <span style={{
-                                  fontSize: '0.72rem',
-                                  fontWeight: 600,
-                                  padding: '3px 8px',
-                                  borderRadius: '6px',
-                                  backgroundColor: 'var(--color-success-bg)',
-                                  color: 'var(--color-success)',
-                                  border: '1px solid rgba(16, 185, 129, 0.2)',
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: '3px'
-                                }}>
-                                  <Check size={12} /> Saldada
-                                </span>
-                              ) : (
-                                <button
-                                  onClick={() => handleOpenPayInvoice(inv)}
-                                  className="btn"
-                                  style={{
-                                    padding: '4px 10px',
-                                    fontSize: '0.76rem',
-                                    fontWeight: 600,
-                                    backgroundColor: 'var(--color-success)',
-                                    color: '#FFFFFF',
-                                    border: 'none',
-                                    borderRadius: '6px',
-                                    cursor: 'pointer',
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    gap: '4px',
-                                    boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
-                                    transition: 'all 0.15s ease'
-                                  }}
-                                  onMouseEnter={(e) => e.currentTarget.style.opacity = '0.9'}
-                                  onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
-                                  title="Registrar pago a esta factura"
-                                >
-                                  <DollarSign size={13} />
-                                  Cargar Pago
-                                </button>
-                              )}
-                              <button
-                                onClick={() => handleDeleteInvoice(inv.id, inv.invoiceNumber)}
-                                className="btn-icon"
-                                style={{ 
-                                  background: 'none', 
-                                  border: 'none', 
-                                  padding: '4px', 
-                                  cursor: 'pointer', 
-                                  color: 'var(--color-danger)',
-                                  transition: 'color 0.2s',
-                                  borderRadius: '4px'
-                                }}
-                                title="Anular/Eliminar Factura"
-                              >
-                                <Trash2 size={15} />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
+        <ComprasFacturasTab
+          isAdmin={isAdmin} supplierMetrics={supplierMetrics} filteredInvoices={filteredInvoices}
+          supplierQuery={supplierQuery} setSupplierQuery={setSupplierQuery}
+          supplierStartDate={supplierStartDate} setSupplierStartDate={setSupplierStartDate}
+          supplierEndDate={supplierEndDate} setSupplierEndDate={setSupplierEndDate}
+          branchFilter={branchFilter} setBranchFilter={setBranchFilter}
+          onOpenSupplierModal={() => setShowSupplierModal(true)} onOpenPayInvoice={handleOpenPayInvoice}
+          onDeleteInvoice={async (id, num) => { if (await confirm(`¿Anular factura ${num}?`, { type: 'danger' })) { await api.deleteSupplierInvoice(id); loadData(); } }}
+        />
       )}
 
-      {/* ====================================================================
-          SUB-TAB 4: FICHERO DE PROVEEDORES
-          ==================================================================== */}
       {activeSubTab === 'proveedores' && (
-        <div className="card">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-            <div>
-              <h3 className="card-title" style={{ margin: '0' }}>👥 Fichero de Proveedores</h3>
-              <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Administración de cuentas corrientes, datos de facturación y contacto directo de proveedores.</p>
-            </div>
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', backgroundColor: '#fff', border: '1px solid var(--border-color)', borderRadius: '6px', padding: '4px 10px', gap: '6px' }}>
-                <Search size={14} className="text-muted" />
-                <input 
-                  type="text" 
-                  placeholder="Buscar CUIT o nombre..." 
-                  value={providerSearch}
-                  onChange={(e) => setProviderSearch(e.target.value)}
-                  style={{ border: 'none', outline: 'none', fontSize: '0.8rem', width: '180px' }}
-                />
-              </div>
-              <button className="btn btn-primary" onClick={handleOpenCreateProvider}>
-                <UserPlus size={16} />
-                Registrar Proveedor
-              </button>
-            </div>
-          </div>
-
-          <div className="table-container">
-            <table>
-              <thead>
-                <tr>
-                  <th>Proveedor / Razón Social</th>
-                  <th>Rubro / Marcas Provistas</th>
-                  <th>Contactos y Vendedores</th>
-                  <th style={{ width: '100px' }}>Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredProviders.length === 0 ? (
-                  <tr><td colSpan={4} style={{ textAlign: 'center' }}>No se encontraron proveedores.</td></tr>
-                ) : (
-                  filteredProviders.map(p => (
-                    <tr key={p.id}>
-                      <td>
-                        <div style={{ fontWeight: 600, fontSize: '0.88rem', color: 'var(--text-primary)' }}>{p.name}</div>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
-                          📍 {p.address ? `${p.address} (${p.city || 'S/D'})` : 'Sin Dirección'}
-                        </div>
-                        <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '2px', fontFamily: 'monospace' }}>
-                          {p.cuit ? `CUIT: ${p.cuit}` : 'Sin CUIT'}{p.email ? ` | ✉️ ${p.email}` : ''}
-                        </div>
-                      </td>
-                      <td>
-                        {p.rubro ? (
-                          <span style={{ 
-                            backgroundColor: 'rgba(227, 6, 19, 0.05)', 
-                            color: 'var(--color-corp-red)', 
-                            padding: '4px 8px', 
-                            borderRadius: '6px', 
-                            fontSize: '0.78rem',
-                            fontWeight: 500,
-                            border: '1px solid rgba(227, 6, 19, 0.1)',
-                            display: 'inline-block'
-                          }}>
-                            {p.rubro}
-                          </span>
-                        ) : (
-                          <span style={{ color: 'var(--text-muted)', fontSize: '0.78rem', fontStyle: 'italic' }}>Sin especificar</span>
-                        )}
-                      </td>
-                      <td>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                          {Array.isArray(p.contacts) && p.contacts.length > 0 ? (
-                            p.contacts.map((c: any, idx: number) => (
-                              <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: '1px', padding: '4px 8px', backgroundColor: '#fcfcfc', border: '1px solid var(--border-color)', borderRadius: '6px' }}>
-                                <div style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-primary)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                  <span>{c.name}</span>
-                                  {c.role && <span style={{ fontSize: '0.68rem', fontWeight: 400, color: 'var(--text-muted)', backgroundColor: 'var(--bg-app)', padding: '1px 4px', borderRadius: '4px' }}>{c.role}</span>}
-                                </div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.74rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
-                                  {c.phone && (
-                                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
-                                      📞 {c.phone}
-                                      <a href={getWhatsAppLink(c.phone)} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignSelf: 'center' }}>
-                                        <svg viewBox="0 0 24 24" width="12" height="12" fill="#25D366">
-                                          <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.513 2.262 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.724-1.455L0 24zm6.59-4.846c1.6.95 3.188 1.449 4.825 1.451 5.436 0 9.86-4.37 9.863-9.755.002-2.61-1.01-5.063-2.85-6.908-1.839-1.844-4.286-2.86-6.903-2.861-5.441 0-9.863 4.37-9.866 9.756-.001 1.748.469 3.456 1.36 5.01L1.932 20.17l4.715-1.016zM17.47 15.3c-.3-.15-1.775-.875-2.05-1.05-.275-.1-.475-.15-.675.15-.2.3-.775 1.05-.95 1.25-.175.2-.35.225-.65.075-.3-.15-1.263-.465-2.403-1.485-.888-.795-1.487-1.77-1.663-2.07-.176-.3-.019-.462.13-.61.135-.133.3-.35.45-.525.15-.175.2-.3.3-.5.1-.2.05-.375-.025-.525-.075-.15-.675-1.625-.925-2.225-.244-.589-.491-.51-.675-.52-.175-.01-.375-.01-.575-.01-.2 0-.525.075-.8 1.05-.275.975-1.05 2.1-1.275 2.55-.225.45-.05.875.1 1.05.887 1.02 2.222 1.944 3.9 2.52.27.093.536.14.79.165.37.037.706.024.97-.015.295-.044.875-.36 1 .71.125.35.125.65.063.8-.062.15-.325.29-1 .15z"/>
-                                        </svg>
-                                      </a>
-                                    </span>
-                                  )}
-                                  {c.email && <span>✉️ {c.email}</span>}
-                                </div>
-                              </div>
-                            ))
-                          ) : p.phone || p.email ? (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                              {p.phone && (
-                                <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                                  📞 {p.phone}
-                                  <a href={getWhatsAppLink(p.phone)} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignSelf: 'center' }}>
-                                    <svg viewBox="0 0 24 24" width="12" height="12" fill="#25D366">
-                                      <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.513 2.262 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.724-1.455L0 24zm6.59-4.846c1.6.95 3.188 1.449 4.825 1.451 5.436 0 9.86-4.37 9.863-9.755.002-2.61-1.01-5.063-2.85-6.908-1.839-1.844-4.286-2.86-6.903-2.861-5.441 0-9.863 4.37-9.866 9.756-.001 1.748.469 3.456 1.36 5.01L1.932 20.17l4.715-1.016zM17.47 15.3c-.3-.15-1.775-.875-2.05-1.05-.275-.1-.475-.15-.675.15-.2.3-.775 1.05-.95 1.25-.175.2-.35.225-.65.075-.3-.15-1.263-.465-2.403-1.485-.888-.795-1.487-1.77-1.663-2.07-.176-.3-.019-.462.13-.61.135-.133.3-.35.45-.525.15-.175.2-.3.3-.5.1-.2.05-.375-.025-.525-.075-.15-.675-1.625-.925-2.225-.244-.589-.491-.51-.675-.52-.175-.01-.375-.01-.575-.01-.2 0-.525.075-.8 1.05-.275.975-1.05 2.1-1.275 2.55-.225.45-.05.875.1 1.05.887 1.02 2.222 1.944 3.9 2.52.27.093.536.14.79.165.37.037.706.024.97-.015.295-.044.875-.36 1 .71.125.35.125.65.063.8-.062.15-.325.29-1 .15z"/>
-                                    </svg>
-                                  </a>
-                                </span>
-                              )}
-                              {p.email && <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>✉️ {p.email}</span>}
-                            </div>
-                          ) : (
-                            <span style={{ color: 'var(--text-muted)', fontSize: '0.78rem', fontStyle: 'italic' }}>Sin datos de contacto</span>
-                          )}
-                        </div>
-                      </td>
-                      <td>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                          <button 
-                            className="btn btn-secondary" 
-                            style={{ padding: '4px 8px', fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '4px', width: '100%', justifyContent: 'center' }}
-                            onClick={() => handleOpenAccountSummary(p)}
-                          >
-                            <Eye size={12} />
-                            Resumen
-                          </button>
-                          <button 
-                            className="btn btn-secondary" 
-                            style={{ padding: '4px 8px', fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '4px', width: '100%', justifyContent: 'center' }}
-                            onClick={() => handleOpenEditProvider(p)}
-                          >
-                            <Edit size={12} />
-                            Editar
-                          </button>
-                          {isAdmin && (
-                            <button 
-                              className="btn btn-secondary" 
-                              style={{ padding: '4px 8px', fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '4px', width: '100%', justifyContent: 'center', color: 'var(--color-danger)', borderColor: 'var(--color-danger)' }}
-                              onClick={() => handleDeleteProvider(p.id, p.name)}
-                            >
-                              <Trash2 size={12} />
-                              Eliminar
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <ComprasProveedoresTab
+          isAdmin={isAdmin} filteredProviders={filteredProviders} providerSearch={providerSearch} setProviderSearch={setProviderSearch}
+          onOpenCreateProvider={() => setProviderModal({ open: true, mode: 'create', data: { id: 0, name: '', cuit: '', address: '', city: '', phone: '', email: '', paymentTermDays: 30, rubro: '', contacts: [] } })}
+          onOpenAccountSummary={async (p) => { const res = await api.getPersonaLedger(p.id); setAccountSummaryModal(p); setLedgerData(res.ledger || []); }}
+          onOpenEditProvider={(p) => setProviderModal({ open: true, mode: 'edit', data: { ...p, rubro: p.rubro || '', contacts: Array.isArray(p.contacts) ? p.contacts : [] } })}
+          onDeleteProvider={async (id, name) => { if (await confirm(`¿Eliminar proveedor ${name}?`, { type: 'danger' })) { await api.deletePersona(id); loadData(); } }}
+        />
       )}
 
-      {/* ====================================================================
-          MODAL: CREAR ORDEN DE COMPRA
-          ==================================================================== */}
-      {showCreateModal && (
-        <div className="modal-overlay">
-          <div className="modal-content" style={{ maxWidth: '750px' }}>
-            <div className="modal-header">
-              <h3>Registrar Orden de Compra</h3>
-              <button className="btn btn-ghost" style={{ padding: '4px' }} onClick={() => setShowCreateModal(false)}><X size={18} /></button>
-            </div>
-            
-            <form onSubmit={handleCreateOrderSubmit}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', alignItems: 'start' }}>
-                
-                {/* Panel Izquierdo: Selección Proveedor y Búsqueda */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  <div className="form-group">
-                    <label>Proveedor (Obligatorio)</label>
-                    <select
-                      className="select"
-                      value={selectedProviderId}
-                      onChange={(e) => setSelectedProviderId(e.target.value)}
-                      required
-                    >
-                      <option value="">Seleccione proveedor...</option>
-                      {providers.map(p => (
-                        <option key={p.id} value={p.id}>{p.name} (CUIT: {p.cuit})</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="form-group" style={{ position: 'relative' }}>
-                    <label>Buscar Producto a Comprar</label>
-                    <input
-                      type="text"
-                      className="input"
-                      placeholder="Escriba SKU o Nombre..."
-                      value={searchProductQuery}
-                      onChange={(e) => setSearchProductQuery(e.target.value)}
-                    />
-                    
-                    {filteredProductsForAdd.length > 0 && (
-                      <div style={{
-                        position: 'absolute',
-                        left: 0,
-                        right: 0,
-                        top: '65px',
-                        backgroundColor: '#fff',
-                        border: '1px solid var(--border-color)',
-                        borderRadius: '6px',
-                        maxHeight: '150px',
-                        overflowY: 'auto',
-                        zIndex: 100
-                      }}>
-                        {filteredProductsForAdd.map(p => (
-                          <div 
-                            key={p.id}
-                            style={{ padding: '8px 12px', cursor: 'pointer', borderBottom: '1px solid #f0f0f0', fontSize: '0.8rem' }}
-                            onClick={() => handleSelectProduct(p)}
-                          >
-                            <strong>{p.sku}</strong> - {p.name} (Costo actual: ${p.costPrice})
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  {selectedProductToAdd && (
-                    <div style={{ backgroundColor: '#F8F8FA', padding: '12px', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
-                      <div style={{ fontSize: '0.82rem', fontWeight: 600, marginBottom: '8px' }}>
-                        Añadir: {selectedProductToAdd.name} ({selectedProductToAdd.sku})
-                      </div>
-                      
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                        <div className="form-group">
-                          <label>Cantidad</label>
-                          <input 
-                            type="number" 
-                            className="input" 
-                            value={quantityToAdd} 
-                            onChange={(e) => setQuantityToAdd(e.target.value)} 
-                          />
-                        </div>
-                        <div className="form-group">
-                          <label>Costo Unitario ($)</label>
-                          <input 
-                            type="number" 
-                            step="0.01"
-                            className="input" 
-                            value={costPriceToAdd} 
-                            onChange={(e) => setCostPriceToAdd(e.target.value)} 
-                          />
-                        </div>
-                      </div>
-
-                      <button 
-                        type="button" 
-                        className="btn btn-secondary" 
-                        style={{ width: '100%', marginTop: '10px', fontSize: '0.8rem' }}
-                        onClick={handleAddToCart}
-                      >
-                        Añadir al Carrito de Compra
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-                {/* Panel Derecho: Carrito de Compra */}
-                <div>
-                  <label style={{ fontWeight: 600, fontSize: '0.85rem', display: 'block', marginBottom: '8px' }}>
-                    Artículos en la Orden
-                  </label>
-                  <div style={{
-                    border: '1px solid var(--border-color)',
-                    borderRadius: '8px',
-                    padding: '8px',
-                    minHeight: '220px',
-                    maxHeight: '260px',
-                    overflowY: 'auto'
-                  }}>
-                    {cart.length === 0 ? (
-                      <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textAlign: 'center', padding: '40px 0' }}>
-                        No hay artículos agregados todavía.
-                      </div>
-                    ) : (
-                      cart.map(item => (
-                        <div 
-                          key={item.productId}
-                          style={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            padding: '8px 10px',
-                            borderBottom: '1px solid #f0f0f0',
-                            fontSize: '0.8rem'
-                          }}
-                        >
-                          <div style={{ flex: 1 }}>
-                            <div style={{ fontWeight: 600 }}>{item.name}</div>
-                            <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>Cant: {item.quantity} u. @ ${item.costPrice}</div>
-                          </div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <span style={{ fontWeight: 700 }}>${(item.quantity * item.costPrice).toLocaleString()}</span>
-                            <button 
-                              type="button" 
-                              className="btn btn-ghost" 
-                              style={{ padding: '2px', color: 'var(--color-danger)' }}
-                              onClick={() => handleRemoveFromCart(item.productId)}
-                            >
-                              ✖
-                            </button>
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                  
-                  {cart.length > 0 && (
-                    <div style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      marginTop: '12px',
-                      padding: '8px',
-                      backgroundColor: '#F8F8FA',
-                      borderRadius: '6px',
-                      fontWeight: 700,
-                      fontSize: '0.95rem'
-                    }}>
-                      <span>Monto Neto Total:</span>
-                      <span style={{ color: 'var(--accent-color)' }}>${cartTotal.toLocaleString('es-AR', { minimumFractionDigits: 0 })}</span>
-                    </div>
-                  )}
-                </div>
-
-              </div>
-
-              <div className="modal-footer" style={{ marginTop: '20px' }}>
-                <button type="button" className="btn btn-secondary" onClick={() => setShowCreateModal(false)}>Cancelar</button>
-                <button 
-                  type="submit" 
-                  className="btn btn-primary"
-                  style={{ backgroundColor: 'var(--color-success)', borderColor: 'var(--color-success)' }}
-                  disabled={cart.length === 0}
-                >
-                  Registrar Orden de Compra
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* ====================================================================
-          MODAL: RECEPCION DE MERCADERIA (CREACION DE LOTES Y COSTEO)
-          ==================================================================== */}
-      {showReceiveModal && (
-        <div className="modal-overlay">
-          <div className="modal-content" style={{ maxWidth: '600px' }}>
-            <div className="modal-header">
-              <h3>Recibir Órden de Compra #{showReceiveModal.id}</h3>
-              <button className="btn btn-ghost" style={{ padding: '4px' }} onClick={() => setShowReceiveModal(null)}><X size={18} /></button>
-            </div>
-            
-            <form onSubmit={handleReceiveOrderSubmit}>
-              <div className="form-group">
-                <label>Número de Factura del Proveedor (Comprobante de Compra)</label>
-                <input 
-                  type="text" 
-                  className="input" 
-                  placeholder="ej: 0005-00045612" 
-                  value={invoiceNumber}
-                  onChange={(e) => setInvoiceNumber(e.target.value)}
-                  required
-                />
-              </div>
-
-              <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginBottom: '12px', backgroundColor: '#F8F8FA', padding: '10px', borderRadius: '6px' }}>
-                <strong>⚠️ Información Impositiva:</strong> Se autogenerará una Factura de Compra A en la cuenta corriente del proveedor por el total neto (${showReceiveModal.totalAmount}) + IVA 21%.
-              </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                <label style={{ fontWeight: 600, fontSize: '0.85rem' }}>Asignación de Lotes en Depósito:</label>
-                {showReceiveModal.items.map((item: any) => (
-                  <div 
-                    key={item.productId}
-                    style={{
-                      border: '1px solid var(--border-color)',
-                      borderRadius: '6px',
-                      padding: '12px',
-                      backgroundColor: '#fff',
-                      fontSize: '0.8rem'
-                    }}
-                  >
-                    <div style={{ fontWeight: 600, marginBottom: '8px' }}>
-                      {item.product?.name || `Producto ID #${item.productId}`} (Cantidad: {item.quantity} u.)
-                    </div>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                      <div className="form-group">
-                        <label>Nro Lote a Crear / Buscar</label>
-                        <input 
-                          type="text" 
-                          className="input" 
-                          value={lotAssignments[item.productId]?.lotNumber || ''} 
-                          onChange={(e) => handleLotAssignmentChange(item.productId, 'lotNumber', e.target.value)}
-                          required
-                        />
-                      </div>
-                      <div className="form-group">
-                        <label>Fecha Vencimiento Lote</label>
-                        <input 
-                          type="date" 
-                          className="input" 
-                          value={lotAssignments[item.productId]?.expirationDate || ''} 
-                          onChange={(e) => handleLotAssignmentChange(item.productId, 'expirationDate', e.target.value)}
-                          required
-                        />
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div className="modal-footer" style={{ marginTop: '20px' }}>
-                <button type="button" className="btn btn-secondary" onClick={() => setShowReceiveModal(null)}>Cancelar</button>
-                <button type="submit" className="btn btn-primary" style={{ backgroundColor: 'var(--color-success)', borderColor: 'var(--color-success)' }}>
-                  Confirmar Recepción
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* ====================================================================
-          MODAL: DETALLES DE ORDEN DE COMPRA
-          ==================================================================== */}
-      {viewDetailsModal && (
-        <div className="modal-overlay">
-          <div className="modal-content" style={{ maxWidth: '550px' }}>
-            <div className="modal-header">
-              <h3>Detalles de Orden de Compra #{viewDetailsModal.id}</h3>
-              <button className="btn btn-ghost" style={{ padding: '4px' }} onClick={() => setViewDetailsModal(null)}><X size={18} /></button>
-            </div>
-            
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', fontSize: '0.85rem' }}>
-              <div>
-                <strong>Proveedor:</strong> {viewDetailsModal.persona?.name} (CUIT: {viewDetailsModal.persona?.cuit})
-              </div>
-              <div>
-                <strong>Fecha Emisión:</strong> {new Date(viewDetailsModal.createdAt).toLocaleDateString('es-AR')}
-              </div>
-              <div>
-                <strong>Estado:</strong> 
-                <span className="badge" style={{ 
-                  marginLeft: '6px', 
-                  backgroundColor: viewDetailsModal.status === 'RECEIVED' ? 'var(--color-success-bg)' : 'var(--color-warning-bg)',
-                  color: viewDetailsModal.status === 'RECEIVED' ? 'var(--color-success)' : 'var(--color-warning)'
-                }}>
-                  {viewDetailsModal.status === 'PENDING' ? 'Pendiente' : 'Recibida'}
-                </span>
-              </div>
-
-              <div className="table-container" style={{ borderRadius: '6px' }}>
-                <table style={{ fontSize: '0.8rem' }}>
-                  <thead>
-                    <tr>
-                      <th>Artículo</th>
-                      <th style={{ textAlign: 'right' }}>Cant</th>
-                      <th style={{ textAlign: 'right' }}>Costo</th>
-                      <th style={{ textAlign: 'right' }}>Subtotal</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {viewDetailsModal.items?.map((item: any) => (
-                      <tr key={item.id}>
-                        <td>{item.product?.name || `Producto ID #${item.productId}`}</td>
-                        <td style={{ textAlign: 'right' }}>{item.quantity} u.</td>
-                        <td style={{ textAlign: 'right' }}>${Number(item.costPrice).toLocaleString('es-AR', { minimumFractionDigits: 0 })}</td>
-                        <td style={{ textAlign: 'right' }}>${Number(item.subtotal).toLocaleString('es-AR', { minimumFractionDigits: 0 })}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px', backgroundColor: '#F8F8FA', borderRadius: '6px', fontWeight: 700, fontSize: '0.95rem' }}>
-                <span>Total de Compra (Neto):</span>
-                <span>${Number(viewDetailsModal.totalAmount).toLocaleString('es-AR', { minimumFractionDigits: 0 })}</span>
-              </div>
-            </div>
-
-            <div className="modal-footer" style={{ marginTop: '20px' }}>
-              <button className="btn btn-secondary" onClick={() => setViewDetailsModal(null)}>Cerrar</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ====================================================================
-          MODAL: INGRESO MANUAL DE FACTURA DE PROVEEDOR
-          ==================================================================== */}
-      {showSupplierModal && (
-        <div className="modal-overlay">
-          <div className="modal-content" style={{ maxWidth: '500px' }}>
-            <div className="modal-header">
-              <h3>Ingresar Factura de Proveedor</h3>
-              <button className="btn btn-ghost" style={{ padding: '4px' }} onClick={() => setShowSupplierModal(false)}><X size={18} /></button>
-            </div>
-            <form onSubmit={handleCreateSupplierInvoiceSubmit}>
-              <div className="form-group">
-                <label>Proveedor (Obligatorio)</label>
-                <select
-                  className="select"
-                  value={supplierForm.personaId}
-                  onChange={(e) => setSupplierForm(prev => ({ ...prev, personaId: e.target.value }))}
-                  required
-                >
-                  <option value="">Seleccione un proveedor...</option>
-                  {providers.map(p => (
-                    <option key={p.id} value={p.id}>{p.name} (CUIT: {p.cuit})</option>
-                  ))}
-                </select>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '12px' }}>
-                <div className="form-group">
-                  <label>Tipo Factura</label>
-                  <select
-                    className="select"
-                    value={supplierForm.invoiceType}
-                    onChange={(e) => setSupplierForm(prev => ({ ...prev, invoiceType: e.target.value }))}
-                  >
-                    <option value="FACTURA_A">Factura A</option>
-                    <option value="FACTURA_B">Factura B</option>
-                    <option value="FACTURA_C">Factura C</option>
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label>Número Comprobante</label>
-                  <input
-                    type="text"
-                    className="input"
-                    placeholder="ej: 0001-00012345"
-                    value={supplierForm.invoiceNumber}
-                    onChange={(e) => setSupplierForm(prev => ({ ...prev, invoiceNumber: e.target.value }))}
-                    required
-                  />
-                </div>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
-                <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label>Fecha de Emisión</label>
-                  <input
-                    type="date"
-                    className="input"
-                    value={supplierForm.issueDate}
-                    onChange={(e) => setSupplierForm(prev => ({ 
-                      ...prev, 
-                      issueDate: e.target.value,
-                      dueDate: new Date(new Date(e.target.value).getTime() + 30 * 24 * 3600 * 1000).toISOString().split('T')[0]
-                    }))}
-                    required
-                  />
-                </div>
-                <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label>Fecha de Vencimiento</label>
-                  <input
-                    type="date"
-                    className="input"
-                    value={supplierForm.dueDate}
-                    onChange={(e) => setSupplierForm(prev => ({ ...prev, dueDate: e.target.value }))}
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="form-group" style={{ marginBottom: '12px' }}>
-                <label>Destino (Sucursal)</label>
-                <select
-                  className="select"
-                  value={supplierForm.billingType}
-                  onChange={(e) => setSupplierForm(prev => ({ ...prev, billingType: e.target.value }))}
-                >
-                  <option value="OFFICIAL">Sucursal A</option>
-                  <option value="INTERNAL">Sucursal X</option>
-                </select>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <div className="form-group">
-                  <label>Costo Neto Gravado ($)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    className="input"
-                    placeholder="0.00"
-                    value={supplierForm.netAmount}
-                    onChange={(e) => handleNetChange(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="form-group">
-                  <label>IVA Crédito Fiscal ($)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    className="input"
-                    placeholder="0.00"
-                    value={supplierForm.taxAmount}
-                    onChange={(e) => setSupplierForm(prev => ({ ...prev, taxAmount: e.target.value }))}
-                    required
-                  />
-                </div>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <div className="form-group">
-                  <label>IIBB La Pampa ($)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    className="input"
-                    placeholder="0.00"
-                    onFocus={(e) => e.target.select()}
-                    value={supplierForm.percepcionPampa}
-                    onChange={(e) => setSupplierForm(prev => ({ ...prev, percepcionPampa: e.target.value }))}
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Percepcion IIBB Bs As ($)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    className="input"
-                    placeholder="0.00"
-                    onFocus={(e) => e.target.select()}
-                    value={supplierForm.percepcionBsAs}
-                    onChange={(e) => setSupplierForm(prev => ({ ...prev, percepcionBsAs: e.target.value }))}
-                  />
-                </div>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <div className="form-group">
-                  <label>Percepción IVA RG 3337 ($)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    className="input"
-                    placeholder="0.00"
-                    onFocus={(e) => e.target.select()}
-                    value={supplierForm.percepcionIva}
-                    onChange={(e) => setSupplierForm(prev => ({ ...prev, percepcionIva: e.target.value }))}
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Percepción IVA RG 5329 ($)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    className="input"
-                    placeholder="0.00"
-                    onFocus={(e) => e.target.select()}
-                    value={supplierForm.percepcionIva5329}
-                    onChange={(e) => setSupplierForm(prev => ({ ...prev, percepcionIva5329: e.target.value }))}
-                  />
-                </div>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <div className="form-group">
-                  <label>Impuestos Internos ($)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    className="input"
-                    placeholder="0.00"
-                    onFocus={(e) => e.target.select()}
-                    value={supplierForm.impuestosInternos}
-                    onChange={(e) => setSupplierForm(prev => ({ ...prev, impuestosInternos: e.target.value }))}
-                  />
-                </div>
-              </div>
-
-              <div className="form-group">
-                <label>Total Factura ($)</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  className="input"
-                  placeholder={autoCalculatedTotal}
-                  onFocus={(e) => e.target.select()}
-                  value={supplierForm.totalAmount}
-                  onChange={(e) => setSupplierForm(prev => ({ ...prev, totalAmount: e.target.value }))}
-                  required
-                />
-                <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
-                  Suma Neto+IVA+Perc+Imp.Int: <span style={{ fontWeight: 600 }}>${autoCalculatedTotal}</span>
-                </div>
-              </div>
-
-              <div className="modal-footer" style={{ marginTop: '20px' }}>
-                <button type="button" className="btn btn-secondary" onClick={() => setShowSupplierModal(false)}>Cancelar</button>
-                <button type="submit" className="btn btn-primary" style={{ backgroundColor: 'var(--color-success)', borderColor: 'var(--color-success)' }}>Registrar Compra</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* ====================================================================
-          MODAL: REGISTRAR / EDITAR PROVEEDOR
-          ==================================================================== */}
-      {providerModal && (
-        <div className="modal-overlay">
-          <div className="modal-content" style={{ maxWidth: '600px' }}>
-            <div className="modal-header">
-              <h3>{providerModal.mode === 'create' ? 'Registrar Nuevo Proveedor' : 'Editar Proveedor'}</h3>
-              <button className="btn btn-ghost" style={{ padding: '4px' }} onClick={() => setProviderModal(null)}><X size={18} /></button>
-            </div>
-            
-            <form onSubmit={handleProviderSubmit}>
-              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '12px' }}>
-                <div className="form-group">
-                  <label>Razón Social / Nombre Comercial (Obligatorio)</label>
-                  <input 
-                    type="text" 
-                    className="input" 
-                    placeholder="ej: Distribuidora Alimentos S.A." 
-                    value={providerModal.data.name || ''} 
-                    onChange={(e) => setProviderModal(prev => prev ? { ...prev, data: { ...prev.data, name: e.target.value } } : null)}
-                    required
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Rubro / Marcas que Provee</label>
-                  <input 
-                    type="text" 
-                    className="input" 
-                    placeholder="ej: Aceites Natura" 
-                    value={providerModal.data.rubro || ''} 
-                    onChange={(e) => setProviderModal(prev => prev ? { ...prev, data: { ...prev.data, rubro: e.target.value } } : null)}
-                  />
-                </div>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <div className="form-group">
-                  <label>CUIT (Sin guiones)</label>
-                  <input 
-                    type="text" 
-                    className="input" 
-                    placeholder="ej: 30712345678" 
-                    value={providerModal.data.cuit || ''} 
-                    onChange={(e) => setProviderModal(prev => prev ? { ...prev, data: { ...prev.data, cuit: e.target.value } } : null)}
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Teléfono Principal</label>
-                  <input 
-                    type="text" 
-                    className="input" 
-                    placeholder="ej: 1150607080" 
-                    value={providerModal.data.phone || ''} 
-                    onChange={(e) => setProviderModal(prev => prev ? { ...prev, data: { ...prev.data, phone: e.target.value } } : null)}
-                  />
-                </div>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '12px' }}>
-                <div className="form-group">
-                  <label>Correo Electrónico Principal</label>
-                  <input 
-                    type="email" 
-                    className="input" 
-                    placeholder="ej: administracion@proveedor.com" 
-                    value={providerModal.data.email || ''} 
-                    onChange={(e) => setProviderModal(prev => prev ? { ...prev, data: { ...prev.data, email: e.target.value } } : null)}
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Plazo Pago (Días)</label>
-                  <input 
-                    type="number" 
-                    className="input" 
-                    placeholder="ej: 30" 
-                    value={providerModal.data.paymentTermDays ?? 30} 
-                    onChange={(e) => setProviderModal(prev => prev ? { ...prev, data: { ...prev.data, paymentTermDays: Number(e.target.value) } } : null)}
-                    min={0}
-                  />
-                </div>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '12px' }}>
-                <div className="form-group">
-                  <label>Dirección Comercial</label>
-                  <input 
-                    type="text" 
-                    className="input" 
-                    placeholder="ej: Av. Rivadavia 1234" 
-                    value={providerModal.data.address || ''} 
-                    onChange={(e) => setProviderModal(prev => prev ? { ...prev, data: { ...prev.data, address: e.target.value } } : null)}
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Localidad / Ciudad</label>
-                  <input 
-                    type="text" 
-                    className="input" 
-                    placeholder="ej: CABA" 
-                    value={providerModal.data.city || ''} 
-                    onChange={(e) => setProviderModal(prev => prev ? { ...prev, data: { ...prev.data, city: e.target.value } } : null)}
-                  />
-                </div>
-              </div>
-
-              {/* Subformulario y Gestión de Contactos Adicionales */}
-              <div style={{ marginTop: '20px', borderTop: '1px solid var(--border-color)', paddingTop: '16px' }}>
-                <h4 style={{ margin: '0 0 10px 0', fontSize: '0.88rem', fontWeight: 600, color: 'var(--text-secondary)' }}>👥 Contactos Adicionales (Vendedores, Cobros, etc.)</h4>
-                
-                {/* Lista de contactos */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '12px' }}>
-                  {(!providerModal.data.contacts || providerModal.data.contacts.length === 0) ? (
-                    <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontStyle: 'italic', padding: '8px', textAlign: 'center', border: '1px dashed var(--border-color)', borderRadius: '6px' }}>
-                      No hay contactos adicionales cargados.
-                    </div>
-                  ) : (
-                    providerModal.data.contacts.map((c: any, idx: number) => (
-                      <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 12px', backgroundColor: 'var(--bg-app)', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
-                        <div style={{ fontSize: '0.78rem', color: 'var(--text-primary)' }}>
-                          <strong>{c.name}</strong> {c.role ? `(${c.role})` : ''} {c.phone ? ` - 📞 ${c.phone}` : ''} {c.email ? ` - ✉️ ${c.email}` : ''}
-                        </div>
-                        <button 
-                          type="button" 
-                          className="btn btn-ghost text-danger" 
-                          style={{ padding: '2px 6px', fontSize: '0.8rem', cursor: 'pointer' }}
-                          onClick={() => {
-                            const newContacts = [...providerModal.data.contacts];
-                            newContacts.splice(idx, 1);
-                            setProviderModal({
-                              ...providerModal,
-                              data: { ...providerModal.data, contacts: newContacts }
-                            });
-                          }}
-                        >
-                          ✕
-                        </button>
-                      </div>
-                    ))
-                  )}
-                </div>
-
-                {/* Agregar contacto */}
-                <div style={{ padding: '12px', border: '1px solid var(--border-color)', borderRadius: '8px', backgroundColor: '#fafafa' }}>
-                  <h5 style={{ margin: '0 0 8px 0', fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-primary)' }}>Agregar Contacto</h5>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
-                    <input 
-                      type="text" 
-                      id="new-contact-name"
-                      placeholder="Nombre (ej: Juan Pérez)" 
-                      className="input" 
-                      style={{ fontSize: '0.78rem', padding: '4px 8px', height: '30px' }}
-                    />
-                    <input 
-                      type="text" 
-                      id="new-contact-role"
-                      placeholder="Rol (ej: Vendedor, Pagos)" 
-                      className="input" 
-                      style={{ fontSize: '0.78rem', padding: '4px 8px', height: '30px' }}
-                    />
-                  </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
-                    <input 
-                      type="text" 
-                      id="new-contact-phone"
-                      placeholder="Teléfono" 
-                      className="input" 
-                      style={{ fontSize: '0.78rem', padding: '4px 8px', height: '30px' }}
-                    />
-                    <input 
-                      type="email" 
-                      id="new-contact-email"
-                      placeholder="Email" 
-                      className="input" 
-                      style={{ fontSize: '0.78rem', padding: '4px 8px', height: '30px' }}
-                    />
-                  </div>
-                  <button
-                    type="button"
-                    className="btn btn-secondary"
-                    style={{ padding: '4px 10px', fontSize: '0.76rem', height: '28px', display: 'block', marginLeft: 'auto', border: '1px solid var(--border-color)', backgroundColor: '#fff', cursor: 'pointer' }}
-                    onClick={() => {
-                      const nameInput = document.getElementById('new-contact-name') as HTMLInputElement;
-                      const roleInput = document.getElementById('new-contact-role') as HTMLInputElement;
-                      const phoneInput = document.getElementById('new-contact-phone') as HTMLInputElement;
-                      const emailInput = document.getElementById('new-contact-email') as HTMLInputElement;
-
-                      if (!nameInput || !nameInput.value.trim()) {
-                        alert('El nombre del contacto es obligatorio.');
-                        return;
-                      }
-
-                      const newC = {
-                        name: nameInput.value.trim(),
-                        role: roleInput.value.trim(),
-                        phone: phoneInput.value.trim(),
-                        email: emailInput.value.trim()
-                      };
-
-                      const currentContacts = providerModal.data.contacts || [];
-                      setProviderModal({
-                        ...providerModal,
-                        data: {
-                          ...providerModal.data,
-                          contacts: [...currentContacts, newC]
-                        }
-                      });
-
-                      // Limpiar inputs
-                      nameInput.value = '';
-                      roleInput.value = '';
-                      phoneInput.value = '';
-                      emailInput.value = '';
-                    }}
-                  >
-                    + Añadir a la lista
-                  </button>
-                </div>
-              </div>
-
-              <div className="modal-footer" style={{ marginTop: '20px' }}>
-                <button type="button" className="btn btn-secondary" onClick={() => setProviderModal(null)}>Cancelar</button>
-                <button type="submit" className="btn btn-primary" style={{ backgroundColor: 'var(--color-success)', borderColor: 'var(--color-success)' }}>
-                  Guardar Proveedor
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Escáner de Facturas (IA) */}
-      <PurchaseScannerModal
-        isOpen={showScannerModal}
-        onClose={() => setShowScannerModal(false)}
-        file={scannerFile}
-        onSuccess={() => {
-          setSuccessMsg('✨ Documento procesado correctamente e inyectado en el stock y las facturas.');
-          loadData();
-        }}
+      <ComprasCreateReceiveModals
+        showCreateModal={showCreateModal} setShowCreateModal={setShowCreateModal} providers={providers} products={products}
+        selectedProviderId={selectedProviderId} setSelectedProviderId={setSelectedProviderId} cart={cart} setCart={setCart} onCreateSubmit={handleCreateOrderSubmit}
+        showReceiveModal={showReceiveModal} setShowReceiveModal={setShowReceiveModal} invoiceNumber={invoiceNumber} setInvoiceNumber={setInvoiceNumber}
+        lotAssignments={lotAssignments} onLotAssignmentChange={(pid, f, v) => setLotAssignments((prev) => ({ ...prev, [pid]: { ...prev[pid], [f]: v } }))}
+        onReceiveSubmit={handleReceiveOrderSubmit} viewDetailsModal={viewDetailsModal} setViewDetailsModal={setViewDetailsModal}
       />
 
-      {/* ====================================================================
-          MODAL: RESUMEN DE CUENTA PROVEEDOR
-          ==================================================================== */}
-      {accountSummaryModal && (
-        <div className="modal-overlay">
-          <div className="modal-content" style={{ maxWidth: '800px' }}>
-            <div className="modal-header">
-              <h3>Resumen de Cuenta: {accountSummaryModal.name}</h3>
-              <button className="btn btn-ghost" style={{ padding: '4px' }} onClick={() => setAccountSummaryModal(null)}><X size={18} /></button>
-            </div>
-            
-            <div style={{ marginBottom: '16px', display: 'flex', gap: '16px' }}>
-              <div style={{ flex: 1, backgroundColor: '#F8F8FA', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-                <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>Deuda Pendiente</div>
-                <div style={{ fontSize: '1.4rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                  ${Number(accountSummaryModal.outstandingBalance || 0).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
-                </div>
-              </div>
-            </div>
+      <ComprasSupplierInvoiceAndPayModals
+        showSupplierModal={showSupplierModal} setShowSupplierModal={setShowSupplierModal} providers={providers}
+        supplierForm={supplierForm} setSupplierForm={setSupplierForm} autoCalculatedTotal={autoCalculatedTotal}
+        onNetChange={(val) => setSupplierForm((prev) => ({ ...prev, netAmount: val, taxAmount: ((Number(val) || 0) * 0.21).toFixed(2) }))}
+        onSupplierInvoiceSubmit={handleCreateSupplierInvoiceSubmit}
+        payInvoiceModal={payInvoiceModal} setPayInvoiceModal={setPayInvoiceModal}
+        paymentForm={paymentForm} setPaymentForm={setPaymentForm} paymentItems={paymentItems} setPaymentItems={setPaymentItems}
+        bankAccounts={bankAccounts} onPayInvoiceSubmit={handlePayInvoiceSubmit}
+      />
 
-            <div className="table-container" style={{ maxHeight: '400px', overflowY: 'auto' }}>
-              <table>
-                <thead>
-                  <tr>
-                    <th>Fecha</th>
-                    <th>Tipo</th>
-                    <th>Referencia</th>
-                    <th>Descripción</th>
-                    <th style={{ textAlign: 'right' }}>Debe</th>
-                    <th style={{ textAlign: 'right' }}>Haber</th>
-                    <th style={{ textAlign: 'right' }}>Saldo</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {ledgerData.length === 0 ? (
-                    <tr><td colSpan={7} style={{ textAlign: 'center' }}>No hay movimientos registrados.</td></tr>
-                  ) : (
-                    ledgerData.map((item, index) => (
-                      <tr key={index}>
-                        <td>{new Date(item.date).toLocaleDateString('es-AR')}</td>
-                        <td>
-                          <span style={{
-                            fontSize: '0.72rem',
-                            fontWeight: 600,
-                            padding: '2px 6px',
-                            borderRadius: '4px',
-                            backgroundColor: item.type === 'DEBIT' ? '#FFF0F0' : '#E8F5E9',
-                            color: item.type === 'DEBIT' ? 'var(--color-danger)' : '#2E7D32'
-                          }}>
-                            {item.type === 'DEBIT' ? 'Cargo' : 'Crédito'}
-                          </span>
-                        </td>
-                        <td style={{ fontSize: '0.8rem', fontWeight: 500 }}>{item.reference}</td>
-                        <td style={{ fontSize: '0.8rem' }}>{item.description}</td>
-                        <td style={{ textAlign: 'right', fontWeight: 600, color: 'var(--color-danger)' }}>
-                          {item.type === 'DEBIT' ? `$${Number(item.amount).toLocaleString('es-AR', { minimumFractionDigits: 2 })}` : ''}
-                        </td>
-                        <td style={{ textAlign: 'right', fontWeight: 600, color: '#2E7D32' }}>
-                          {item.type === 'CREDIT' ? `$${Number(item.amount).toLocaleString('es-AR', { minimumFractionDigits: 2 })}` : ''}
-                        </td>
-                        <td style={{ textAlign: 'right', fontWeight: 700 }}>
-                          ${Number(item.balance).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
+      <ComprasProviderModals
+        providerModal={providerModal} setProviderModal={setProviderModal} onProviderSubmit={handleProviderSubmit}
+        accountSummaryModal={accountSummaryModal} setAccountSummaryModal={setAccountSummaryModal} ledgerData={ledgerData}
+      />
 
-            <div className="modal-footer" style={{ marginTop: '20px' }}>
-              <button className="btn btn-secondary" onClick={() => setAccountSummaryModal(null)}>Cerrar</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ====================================================================
-          MODAL: CARGAR PAGO DE FACTURA PROVEEDOR
-          ==================================================================== */}
-      {payInvoiceModal.open && payInvoiceModal.invoice && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.5)',
-          backdropFilter: 'blur(4px)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000,
-          padding: '20px',
-          animation: 'fadeIn 0.15s ease-out'
-        }}>
-          <div style={{
-            backgroundColor: '#FFFFFF',
-            borderRadius: '14px',
-            border: '1px solid var(--border-color)',
-            width: '100%',
-            maxWidth: '520px',
-            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
-            overflow: 'hidden',
-            display: 'flex',
-            flexDirection: 'column'
-          }}>
-            {/* Modal Header */}
-            <div style={{
-              padding: '16px 20px',
-              borderBottom: '1px solid var(--border-color)',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              backgroundColor: 'var(--accent-bg-light)'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <CreditCard size={18} style={{ color: 'var(--color-success)' }} />
-                <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-                  Registrar Pago de Factura
-                </h3>
-              </div>
-              <button
-                onClick={() => setPayInvoiceModal({ open: false, invoice: null })}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            {/* Modal Form */}
-            <form onSubmit={handlePayInvoiceSubmit} style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              {/* Summary Box */}
-              <div style={{
-                backgroundColor: 'var(--bg-app)',
-                border: '1px solid var(--border-color)',
-                borderRadius: '10px',
-                padding: '14px 16px',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '8px'
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
-                  <span style={{ color: 'var(--text-secondary)' }}>Proveedor:</span>
-                  <strong style={{ color: 'var(--text-primary)' }}>{payInvoiceModal.invoice.persona?.name}</strong>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
-                  <span style={{ color: 'var(--text-secondary)' }}>Comprobante:</span>
-                  <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>{payInvoiceModal.invoice.invoiceNumber}</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', paddingTop: '6px', borderTop: '1px dashed var(--border-color)' }}>
-                  <span style={{ color: 'var(--text-secondary)' }}>Total Factura:</span>
-                  <span>${Number(payInvoiceModal.invoice.totalAmount || 0).toLocaleString('es-AR')}</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
-                  <span style={{ color: 'var(--text-secondary)' }}>Abonado previo:</span>
-                  <span>${Number(payInvoiceModal.invoice.paidAmount || 0).toLocaleString('es-AR')}</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.92rem', fontWeight: 700, color: 'var(--color-danger)', paddingTop: '4px' }}>
-                  <span>Saldo Pendiente:</span>
-                  <span>${(Number(payInvoiceModal.invoice.totalAmount || 0) - Number(payInvoiceModal.invoice.paidAmount || 0)).toLocaleString('es-AR')}</span>
-                </div>
-              </div>
-
-              {/* Sucursal Imputación */}
-              <div>
-                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px', textTransform: 'uppercase' }}>
-                  Sucursal Imputación *
-                </label>
-                <select
-                  value={paymentForm.branch}
-                  onChange={(e) => setPaymentForm({ ...paymentForm, branch: e.target.value })}
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    fontSize: '0.85rem',
-                    borderRadius: '8px',
-                    border: '1px solid var(--border-color)',
-                    backgroundColor: '#FFFFFF',
-                    color: 'var(--text-primary)'
-                  }}
-                >
-                  <option value="A">Sucursal A (Oficial)</option>
-                  <option value="X">Sucursal X (Interna)</option>
-                </select>
-              </div>
-
-              {/* Formas de Pago (Pago Dividido) */}
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                  <label style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>
-                    Formas de Pago / Desglose *
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const pendingAmount = (Number(payInvoiceModal.invoice?.totalAmount || 0) - Number(payInvoiceModal.invoice?.paidAmount || 0));
-                      const currentSum = paymentItems.reduce((acc, item) => acc + (Number(item.amount) || 0), 0);
-                      const rem = Math.max(0, pendingAmount - currentSum);
-                      setPaymentItems([
-                        ...paymentItems,
-                        { amount: rem > 0 ? rem.toFixed(2) : '0.00', paymentMethod: 'BANK_TRANSFER', bankAccountId: bankAccounts[0]?.id ? String(bankAccounts[0].id) : '' }
-                      ]);
-                    }}
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      color: 'var(--color-success, #10b981)',
-                      fontSize: '0.78rem',
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '4px'
-                    }}
-                  >
-                    + Agregar otra forma de pago
-                  </button>
-                </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  {paymentItems.map((item, idx) => (
-                    <div key={idx} style={{
-                      backgroundColor: 'var(--bg-app)',
-                      border: '1px solid var(--border-color)',
-                      borderRadius: '8px',
-                      padding: '10px 12px',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '8px'
-                    }}>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: '10px', alignItems: 'center' }}>
-                        <div>
-                          <label style={{ display: 'block', fontSize: '0.7rem', color: 'var(--text-secondary)', marginBottom: '3px' }}>
-                            Monto (${idx + 1})
-                          </label>
-                          <input
-                            type="number"
-                            step="0.01"
-                            required
-                            value={item.amount}
-                            onChange={(e) => {
-                              const newItems = [...paymentItems];
-                              newItems[idx].amount = e.target.value;
-                              setPaymentItems(newItems);
-                            }}
-                            style={{
-                              width: '100%',
-                              padding: '6px 8px',
-                              fontSize: '0.95rem',
-                              fontWeight: 700,
-                              borderRadius: '6px',
-                              border: '1px solid var(--border-color)',
-                              color: 'var(--color-success)'
-                            }}
-                          />
-                        </div>
-
-                        <div>
-                          <label style={{ display: 'block', fontSize: '0.7rem', color: 'var(--text-secondary)', marginBottom: '3px' }}>
-                            Forma de Pago
-                          </label>
-                          <select
-                            value={item.paymentMethod}
-                            onChange={(e) => {
-                              const newItems = [...paymentItems];
-                              newItems[idx].paymentMethod = e.target.value;
-                              setPaymentItems(newItems);
-                            }}
-                            style={{
-                              width: '100%',
-                              padding: '6px 8px',
-                              fontSize: '0.82rem',
-                              borderRadius: '6px',
-                              border: '1px solid var(--border-color)',
-                              backgroundColor: '#FFFFFF',
-                              color: 'var(--text-primary)'
-                            }}
-                          >
-                            <option value="CASH">💵 Efectivo (Caja)</option>
-                            <option value="BANK_TRANSFER">🏦 Transferencia Bancaria</option>
-                            <option value="CHECK">📜 Cheque</option>
-                          </select>
-                        </div>
-
-                        {paymentItems.length > 1 && (
-                          <div style={{ paddingTop: '16px' }}>
-                            <button
-                              type="button"
-                              onClick={() => setPaymentItems(paymentItems.filter((_, i) => i !== idx))}
-                              style={{
-                                background: 'none',
-                                border: 'none',
-                                color: 'var(--color-danger)',
-                                cursor: 'pointer',
-                                padding: '4px'
-                              }}
-                              title="Eliminar forma de pago"
-                            >
-                              <Trash2 size={16} />
-                            </button>
-                          </div>
-                        )}
-                      </div>
-
-                      {(item.paymentMethod === 'BANK_TRANSFER' || item.paymentMethod === 'CHECK') && (
-                        <div>
-                          <label style={{ display: 'block', fontSize: '0.7rem', color: 'var(--text-secondary)', marginBottom: '3px' }}>
-                            Cuenta Bancaria Origen *
-                          </label>
-                          <select
-                            value={item.bankAccountId}
-                            onChange={(e) => {
-                              const newItems = [...paymentItems];
-                              newItems[idx].bankAccountId = e.target.value;
-                              setPaymentItems(newItems);
-                            }}
-                            style={{
-                              width: '100%',
-                              padding: '6px 8px',
-                              fontSize: '0.82rem',
-                              borderRadius: '6px',
-                              border: '1px solid var(--border-color)',
-                              backgroundColor: '#FFFFFF',
-                              color: 'var(--text-primary)'
-                            }}
-                          >
-                            <option value="">Seleccione cuenta bancaria...</option>
-                            {bankAccounts.map((b: any) => (
-                              <option key={b.id} value={b.id}>
-                                {b.bankName} - {b.accountType || 'Cta'} N° {b.accountNumber || b.id} (Saldo: ${Number(b.balance || 0).toLocaleString('es-AR')})
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-
-                {/* Summary bar desglosado */}
-                {(() => {
-                  const totalPending = (Number(payInvoiceModal.invoice?.totalAmount || 0) - Number(payInvoiceModal.invoice?.paidAmount || 0));
-                  const totalDesglosado = paymentItems.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
-                  const diff = totalPending - totalDesglosado;
-
-                  return (
-                    <div style={{
-                      marginTop: '10px',
-                      padding: '8px 12px',
-                      borderRadius: '6px',
-                      backgroundColor: Math.abs(diff) < 0.01 ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
-                      border: `1px solid ${Math.abs(diff) < 0.01 ? '#10b981' : '#ef4444'}`,
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      fontSize: '0.82rem',
-                      fontWeight: 600,
-                      color: Math.abs(diff) < 0.01 ? '#047857' : '#b91c1c'
-                    }}>
-                      <span>Total desglosado: ${totalDesglosado.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
-                      {Math.abs(diff) >= 0.01 ? (
-                        <span>({diff > 0 ? `Faltan $${diff.toLocaleString('es-AR', { minimumFractionDigits: 2 })}` : `Exceso de $${Math.abs(diff).toLocaleString('es-AR', { minimumFractionDigits: 2 })}`})</span>
-                      ) : (
-                        <span>✓ Cubierto exacto</span>
-                      )}
-                    </div>
-                  );
-                })()}
-              </div>
-
-              {/* Observaciones / Referencia */}
-              <div>
-                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px', textTransform: 'uppercase' }}>
-                  Detalle / Referencia
-                </label>
-                <input
-                  type="text"
-                  placeholder="Ej: Pago parcial / Transferencia 8492"
-                  value={paymentForm.description}
-                  onChange={(e) => setPaymentForm({ ...paymentForm, description: e.target.value })}
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    fontSize: '0.85rem',
-                    borderRadius: '8px',
-                    border: '1px solid var(--border-color)',
-                    color: 'var(--text-primary)'
-                  }}
-                />
-              </div>
-
-              {/* Footer Actions */}
-              <div style={{
-                display: 'flex',
-                justifyContent: 'flex-end',
-                gap: '10px',
-                paddingTop: '12px',
-                borderTop: '1px solid var(--border-color)',
-                marginTop: '6px'
-              }}>
-                <button
-                  type="button"
-                  onClick={() => setPayInvoiceModal({ open: false, invoice: null })}
-                  style={{
-                    padding: '8px 16px',
-                    borderRadius: '8px',
-                    border: '1px solid var(--border-color)',
-                    backgroundColor: '#FFFFFF',
-                    color: 'var(--text-secondary)',
-                    fontSize: '0.82rem',
-                    fontWeight: 500,
-                    cursor: 'pointer'
-                  }}
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  style={{
-                    padding: '8px 18px',
-                    borderRadius: '8px',
-                    border: 'none',
-                    backgroundColor: 'var(--color-success)',
-                    color: '#FFFFFF',
-                    fontSize: '0.82rem',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    boxShadow: '0 2px 4px rgba(16, 185, 129, 0.2)'
-                  }}
-                >
-                  <Check size={16} />
-                  Confirmar Pago
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <PurchaseScannerModal
+        isOpen={showScannerModal} onClose={() => setShowScannerModal(false)} file={scannerFile}
+        onSuccess={() => { setSuccessMsg('✨ Documento procesado con éxito.'); loadData(); }}
+      />
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { describe, it, expect } from '@jest/globals';
+import { describe, it, expect } from 'vitest';
 import { roundCurrency, roundPrecision } from '../math';
 
 describe('Math Utility Unit Tests (Redondeo Financiero)', () => {

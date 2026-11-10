@@ -2,11 +2,17 @@ import prisma from '../utils/prisma';
 import { Role, BillingType, InvoiceType, OrderStatus, MovementType, SalesChannel } from '@prisma/client';
 import { PricingService } from './pricing.service';
 import { PersonaService } from './persona.service';
-import { roundCurrency } from '../utils/math';
+import {
+  calculateOrderLine,
+  roundToThreeDecimalsWeight,
+  sumIntegerAmounts,
+  toDecimal,
+} from '../core/money';
+import { OrderScaleService } from './orders/order-scale.service';
 
 const personaService = new PersonaService();
 
-interface CreateOrderDto {
+export interface CreateOrderDto {
   sellerId: number;
   userRole: string;
   personaId: number;
@@ -19,7 +25,9 @@ interface CreateOrderDto {
 
 export class OrderService {
   /**
-   * Crea un pedido, verifica el límite de crédito y descuenta stock preventivamente.
+   * Crea un pedido con Decimal.js (Pesos Enteros en Origen), congela Snapshots históricos
+   * (unitCostSnapshot, listPriceSnapshot, discountPctSnapshot), verifica límite de crédito
+   * y descuenta stock preventivamente.
    */
   static async createOrder(data: CreateOrderDto) {
     const { sellerId, userRole, personaId, billingType, salesChannel, notes, items } = data;
@@ -47,44 +55,36 @@ export class OrderService {
     });
 
     if (existingRecentOrder && existingRecentOrder.items.length === items.length) {
-      const isExactDuplicate = items.every(newItem =>
+      const isExactDuplicate = items.every((newItem) =>
         existingRecentOrder.items.some(
-          existingItem =>
+          (existingItem) =>
             existingItem.productId === newItem.productId &&
-            existingItem.quantity === newItem.quantity
-        )
+            existingItem.quantity === newItem.quantity,
+        ),
       );
       if (isExactDuplicate) {
-        console.log(`⚠️ Pedido duplicado detectado por reconexión móvil para cliente ${personaId} (Vendedor #${sellerId}). Devolviendo pedido existente #${existingRecentOrder.id}.`);
         return existingRecentOrder;
       }
     }
 
     return await prisma.$transaction(async (tx) => {
-      const productIds = items.map(item => item.productId);
-      
-      // 1. Cargar todos los productos involucrados en la transacción en una sola consulta
+      const productIds = items.map((item) => item.productId);
       const dbProducts = await tx.product.findMany({
         where: { id: { in: productIds } },
-        include: { rubro: true }
+        include: { rubro: true },
       });
 
-      // 2. Cargar todas las reglas aplicables en la transacción en una sola consulta
       const dbRules = await tx.discountRule.findMany({
         where: {
-          OR: [
-            { personaId: persona.id },
-            { priceList: persona.priceList }
-          ]
-        }
+          OR: [{ personaId: persona.id }, { priceList: persona.priceList }],
+        },
       });
 
-      let totalSum = 0;
-      const orderItemsToCreate = [];
-      const stockUpdates = [];
+      const orderItemsToCreate: any[] = [];
+      const stockUpdates: { productId: number; newStock: number; quantityDecreased: number }[] = [];
 
       for (const item of items) {
-        const product = dbProducts.find(p => p.id === item.productId);
+        const product = dbProducts.find((p) => p.id === item.productId);
         if (!product) {
           throw new Error(`Producto ID ${item.productId} no encontrado.`);
         }
@@ -92,37 +92,46 @@ export class OrderService {
         const minQty = product.minOrderQuantity || 1;
         if (item.quantity < minQty && !item.isEmergencyOverride) {
           throw new Error(
-            `El producto "${product.name}" exige un mínimo de ${minQty} unidades (solicitado: ${item.quantity}). Active la excepción por emergencia si requiere facturar menor cantidad.`
+            `El producto "${product.name}" exige un mínimo de ${minQty} unidades (solicitado: ${item.quantity}). Active la excepción por emergencia si requiere facturar menor cantidad.`,
           );
         }
 
         if (product.stock < item.quantity && process.env.IGNORE_STOCK_CHECK !== 'true') {
           throw new Error(
-            `Stock insuficiente para "${product.name}" (Disponible: ${product.stock}, Solicitado: ${item.quantity}).`
+            `Stock insuficiente para "${product.name}" (Disponible: ${product.stock}, Solicitado: ${item.quantity}).`,
           );
         }
 
-        // Calcular precio en memoria usando el nuevo método libre de queries N+1
         const pricing = PricingService.calculatePriceAndDiscountInMemory(
           product,
           persona,
           dbRules,
-          billingType
+          billingType,
         );
-        const finalUnitPrice = pricing.finalPrice;
-        
-        const actualQuantityForPrice = product.isPesable 
-          ? (item.weight ? Number(item.weight) : item.quantity * Number((product as any).approximateWeight || 1))
-          : item.quantity;
-        const subtotal = roundCurrency(finalUnitPrice * actualQuantityForPrice);
-        totalSum = roundCurrency(totalSum + subtotal);
+
+        const approxKg = Number((product as any).approximateWeight || 1) || 1;
+        const billableQtyDec = product.isPesable
+          ? item.weight
+            ? roundToThreeDecimalsWeight(item.weight)
+            : roundToThreeDecimalsWeight(toDecimal(item.quantity).times(approxKg))
+          : toDecimal(item.quantity);
+
+        const lineCalc = calculateOrderLine({
+          unitCost: Number((product as any).costPrice || 0),
+          unitPriceList: pricing.basePrice,
+          billableQty: billableQtyDec,
+          discountPct: pricing.discount,
+        });
 
         orderItemsToCreate.push({
           productId: product.id,
           quantity: item.quantity,
-          weight: item.weight || null,
-          unitPrice: finalUnitPrice,
-          subtotal: subtotal,
+          weight: item.weight ? roundToThreeDecimalsWeight(item.weight).toNumber() : null,
+          unitPrice: pricing.finalPrice,
+          subtotal: lineCalc.lineSubtotal.toNumber(),
+          unitCostSnapshot: lineCalc.unitCostSnapshot.toNumber(),
+          listPriceSnapshot: lineCalc.listPriceSnapshot.toNumber(),
+          discountPctSnapshot: lineCalc.discountPctSnapshot.toNumber(),
         });
 
         stockUpdates.push({
@@ -132,20 +141,21 @@ export class OrderService {
         });
       }
 
+      const totalSum = sumIntegerAmounts(orderItemsToCreate.map((i) => i.subtotal)).toNumber();
+
       const maxUnpaidInvoices = Number(persona.maxUnpaidInvoices || 0);
       if (maxUnpaidInvoices > 0) {
-        const pendingInvoicesCount = await personaService.getPersonaPendingInvoicesCount(persona.id, tx);
-        
-        if (pendingInvoicesCount >= maxUnpaidInvoices) {
-          if (userRole !== Role.ADMIN) {
-            throw new Error(
-              `Límite de cuenta corriente excedido. El cliente debe ${pendingInvoicesCount} boletas, y su límite máximo permitido es de ${maxUnpaidInvoices}.`
-            );
-          }
+        const pendingInvoicesCount = await personaService.getPersonaPendingInvoicesCount(
+          persona.id,
+          tx,
+        );
+        if (pendingInvoicesCount >= maxUnpaidInvoices && userRole !== Role.ADMIN) {
+          throw new Error(
+            `Límite de cuenta corriente excedido. El cliente debe ${pendingInvoicesCount} boletas, y su límite máximo permitido es de ${maxUnpaidInvoices}.`,
+          );
         }
       }
 
-      // 3. Crear el pedido
       const order = await tx.order.create({
         data: {
           personaId,
@@ -159,25 +169,26 @@ export class OrderService {
         },
       });
 
-      // 4. Inserción masiva de ítems del pedido (optimizada en una sola llamada)
       await tx.orderItem.createMany({
-        data: orderItemsToCreate.map(oItem => ({
+        data: orderItemsToCreate.map((oItem) => ({
           orderId: order.id,
           productId: oItem.productId,
           quantity: oItem.quantity,
           weight: oItem.weight,
           unitPrice: oItem.unitPrice,
           subtotal: oItem.subtotal,
-        }))
+          unitCostSnapshot: oItem.unitCostSnapshot,
+          listPriceSnapshot: oItem.listPriceSnapshot,
+          discountPctSnapshot: oItem.discountPctSnapshot,
+        })),
       });
 
-      // 5. Actualizar stock general de manera atómica para evitar race conditions
       for (const stockUp of stockUpdates) {
         const qtyToDecrement = Math.abs(stockUp.quantityDecreased);
         if (process.env.IGNORE_STOCK_CHECK === 'true') {
           await tx.product.update({
             where: { id: stockUp.productId },
-            data: { stock: { decrement: qtyToDecrement } }
+            data: { stock: { decrement: qtyToDecrement } },
           });
         } else {
           const res = await tx.product.updateMany({
@@ -191,15 +202,16 @@ export class OrderService {
           });
 
           if (res.count === 0) {
-            const prod = dbProducts.find(p => p.id === stockUp.productId);
-            throw new Error(`Stock insuficiente para "${prod?.name || 'Producto'}" debido a una operación concurrente. Por favor reintente la carga del pedido.`);
+            const prod = dbProducts.find((p) => p.id === stockUp.productId);
+            throw new Error(
+              `Stock insuficiente para "${prod?.name || 'Producto'}" debido a una operación concurrente. Por favor reintente la carga del pedido.`,
+            );
           }
         }
       }
 
-      // 6. Inserción masiva de movimientos de stock (optimizada en una sola llamada)
       await tx.stockMovement.createMany({
-        data: stockUpdates.map(stockUp => ({
+        data: stockUpdates.map((stockUp) => ({
           productId: stockUp.productId,
           quantity: stockUp.quantityDecreased,
           type: MovementType.OUT,
@@ -207,139 +219,24 @@ export class OrderService {
           referenceId: `ORDER-${order.id}`,
           userId: sellerId,
           reason: `Venta - Reserva de Pedido #${order.id}`,
-        }))
+        })),
       });
 
       return order;
     });
   }
 
-  /**
-   * Actualiza los pesos exactos de los productos pesables antes de facturar
-   * y recalcula los subtotales y el total del pedido.
-   */
-  static async updateOrderWeights(orderId: number, itemWeights: { orderItemId: number; weight: number }[]) {
-    return await prisma.$transaction(async (tx) => {
-      const order = await tx.order.findUnique({
-        where: { id: orderId },
-        include: { items: { include: { product: true } } },
-      });
-
-      if (!order) throw new Error('Pedido no encontrado.');
-      if (!([OrderStatus.PENDING, OrderStatus.PREPARING, OrderStatus.PREPARED] as OrderStatus[]).includes(order.status as OrderStatus)) {
-        throw new Error('Solo se pueden ajustar pesos en pedidos PENDIENTES, EN PREPARACIÓN o PREPARADOS antes de facturar.');
-      }
-
-      let newTotal = 0;
-
-      for (const item of order.items) {
-        let subtotal = Number(item.subtotal);
-        const weightUpdate = itemWeights.find((w) => w.orderItemId === item.id);
-
-        if (item.product.isPesable && weightUpdate && weightUpdate.weight > 0) {
-          subtotal = roundCurrency(Number(item.unitPrice) * weightUpdate.weight);
-          await tx.orderItem.update({
-            where: { id: item.id },
-            data: { weight: weightUpdate.weight, subtotal },
-          });
-        }
-
-        newTotal = roundCurrency(newTotal + subtotal);
-      }
-
-      const updatedOrder = await tx.order.update({
-        where: { id: orderId },
-        data: { totalAmount: newTotal },
-        include: { items: { include: { product: true } }, persona: true },
-      });
-
-      return updatedOrder;
-    });
+  static async updateOrderWeights(
+    orderId: number,
+    itemWeights: { orderItemId: number; weight: number }[],
+  ) {
+    return OrderScaleService.updateOrderWeights(orderId, itemWeights);
   }
 
-  /**
-   * Confirma el armado (Picking rápido): Actualiza pesos y/o pone en 0 cantidades (faltantes)
-   * y pasa el pedido a PREPARED.
-   */
-  static async confirmArmado(orderId: number, itemUpdates: { orderItemId: number; quantity?: number; weight?: number }[]) {
-    return await prisma.$transaction(async (tx) => {
-      const order = await tx.order.findUnique({
-        where: { id: orderId },
-        include: { items: { include: { product: true } } },
-      });
-
-      if (!order) throw new Error('Pedido no encontrado.');
-      if (!([OrderStatus.PENDING, OrderStatus.PREPARING, OrderStatus.PREPARED] as OrderStatus[]).includes(order.status as OrderStatus)) {
-        throw new Error('El pedido debe estar pendiente, en preparación o preparado para confirmar el armado.');
-      }
-
-      let newTotal = 0;
-
-      for (const item of order.items) {
-        let currentQuantity = item.quantity;
-        let subtotal = Number(item.subtotal);
-        let weightUpdate = item.weight ? Number(item.weight) : null;
-        const update = itemUpdates.find((u) => u.orderItemId === item.id);
-
-        if (update) {
-          if (update.quantity !== undefined) {
-            currentQuantity = update.quantity;
-          }
-          if (update.weight !== undefined) {
-            weightUpdate = update.weight;
-          }
-
-          if (currentQuantity === 0) {
-            subtotal = 0;
-            weightUpdate = 0;
-          } else {
-            if (item.product.isPesable && weightUpdate !== null && weightUpdate > 0) {
-              subtotal = roundCurrency(Number(item.unitPrice) * weightUpdate);
-            } else {
-              subtotal = roundCurrency(Number(item.unitPrice) * currentQuantity);
-            }
-          }
-
-          // Ajustar stock general si hay cambios en la cantidad
-          const diff = item.quantity - currentQuantity;
-          if (diff !== 0) {
-            await tx.product.update({
-              where: { id: item.productId },
-              data: { stock: { increment: diff } },
-            });
-
-            await tx.stockMovement.create({
-              data: {
-                productId: item.productId,
-                quantity: diff,
-                type: diff > 0 ? MovementType.IN : MovementType.OUT,
-                orderId: order.id,
-                referenceId: `ADJUST-ARMADO-${order.id}`,
-                userId: order.sellerId,
-                reason: `Ajuste en armado de Pedido #${order.id} (${diff > 0 ? 'Devolución de faltante' : 'Descuento adicional'})`,
-              },
-            });
-          }
-
-          await tx.orderItem.update({
-            where: { id: item.id },
-            data: { quantity: currentQuantity, weight: weightUpdate, subtotal },
-          });
-        }
-
-        newTotal = roundCurrency(newTotal + subtotal);
-      }
-
-      const updatedOrder = await tx.order.update({
-        where: { id: orderId },
-        data: { 
-          totalAmount: roundCurrency(newTotal),
-          status: OrderStatus.PREPARED
-        },
-        include: { items: { include: { product: true } }, persona: true },
-      });
-
-      return updatedOrder;
-    });
+  static async confirmArmado(
+    orderId: number,
+    itemUpdates: { orderItemId: number; quantity?: number; weight?: number }[],
+  ) {
+    return OrderScaleService.confirmArmado(orderId, itemUpdates);
   }
 }

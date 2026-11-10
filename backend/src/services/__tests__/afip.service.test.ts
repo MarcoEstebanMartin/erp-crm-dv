@@ -1,4 +1,4 @@
-import { describe, it, expect } from '@jest/globals';
+import { describe, it, expect } from 'vitest';
 import { emitirFacturaAFIP } from '../afip.service';
 
 describe('AFIP Service Invariants Unit Tests (Igualdad Impositiva)', () => {
