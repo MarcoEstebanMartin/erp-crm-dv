@@ -1,47 +1,50 @@
 import { Router } from 'express';
-import { 
-  getVehicles, 
-  createVehicle, 
-  updateVehicle, 
-  deleteVehicle, 
-  createMaintenance, 
-  createExpiry, 
+import { Role } from '@prisma/client';
+import {
+  getVehicles,
+  createVehicle,
+  updateVehicle,
+  deleteVehicle,
+  createMaintenance,
+  createExpiry,
   updateExpiry,
-  deleteMaintenance, 
-  deleteExpiry 
+  deleteMaintenance,
+  deleteExpiry,
 } from '../controllers/fleet.controller';
 import {
   getFuelLogs,
   createFuelLog,
   deleteFuelLog,
-  getFuelAnalytics
+  getFuelAnalytics,
 } from '../controllers/fuel.controller';
-import { authenticateJWT } from '../middlewares/auth';
+import { authenticateJWT, requireRole } from '../middlewares/auth';
 
 const router = Router();
 
-// Todas las rutas de la flota requieren token activo
 router.use(authenticateJWT);
 
-// Rutas generales de vehículos
-router.get('/', getVehicles);
-router.post('/', createVehicle);
-router.put('/:id', updateVehicle);
-router.delete('/:id', deleteVehicle);
+const canOperateFleet = requireRole([Role.ADMIN, Role.FACTURACION, Role.DEPOSITO]);
+const canAdminFleet = requireRole([Role.ADMIN, Role.FACTURACION]);
 
-// Rutas para cargas de combustible y analíticas de rendimiento
+// Vehículos
+router.get('/', getVehicles);
+router.post('/', canAdminFleet, createVehicle);
+router.put('/:id', canAdminFleet, updateVehicle);
+router.delete('/:id', canAdminFleet, deleteVehicle);
+
+// Combustible
 router.get('/fuel', getFuelLogs);
 router.get('/fuel/analytics', getFuelAnalytics);
-router.post('/fuel', createFuelLog);
-router.delete('/fuel/:id', deleteFuelLog);
+router.post('/fuel', canOperateFleet, createFuelLog);
+router.delete('/fuel/:id', canAdminFleet, deleteFuelLog);
 
-// Rutas para mantenimientos y gastos de flota
-router.post('/:id/maintenances', createMaintenance);
-router.delete('/maintenances/:id', deleteMaintenance);
+// Mantenimientos
+router.post('/:id/maintenances', canOperateFleet, createMaintenance);
+router.delete('/maintenances/:id', canAdminFleet, deleteMaintenance);
 
-// Rutas para vencimientos de documentación
-router.post('/:id/expirations', createExpiry);
-router.put('/expirations/:id', updateExpiry);
-router.delete('/expirations/:id', deleteExpiry);
+// Vencimientos de documentación
+router.post('/:id/expirations', canOperateFleet, createExpiry);
+router.put('/expirations/:id', canOperateFleet, updateExpiry);
+router.delete('/expirations/:id', canAdminFleet, deleteExpiry);
 
 export default router;

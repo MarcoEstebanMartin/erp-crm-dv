@@ -26,20 +26,21 @@ router.get('/webhook', verifyWebhook);
 router.post('/webhook', handleWebhook);
 
 // 2. Rutas Internas de Gestión CRM (Protegidas con Autenticación JWT y Roles de Sistema)
-const adminOnly = [authenticateJWT, requireRole([Role.ADMIN, Role.FACTURACION, Role.VENDEDOR, Role.DEPOSITO])];
+const crmOperational = [authenticateJWT, requireRole([Role.ADMIN, Role.FACTURACION, Role.VENDEDOR, Role.DEPOSITO])];
+const crmAdminOnly = [authenticateJWT, requireRole([Role.ADMIN, Role.FACTURACION])];
 
-router.get('/conversations', adminOnly, getConversations);
-router.get('/conversations/:id/messages', adminOnly, getMessagesByConversation);
-router.post('/send-message', adminOnly, sendMessage);
-router.post('/simulate-incoming', adminOnly, simulateIncomingMessage);
-router.put('/conversations/:id/auto-reply', adminOnly, toggleAutoReply);
-router.put('/conversations/:id/stage', adminOnly, updateStage);
-router.put('/conversations/:id/link-persona', adminOnly, linkPersonaToConversation);
-router.put('/conversations/:id/assign', adminOnly, assignConversation);
-router.delete('/conversations/:id', adminOnly, deleteConversation);
-router.post('/orders/:orderId/notify-delivery', adminOnly, sendDeliveryNotification);
-router.post('/conversations/:id/parse-order', adminOnly, parseOrderDraft);
-router.post('/drafts/:draftId/approve', adminOnly, approveOrderDraft);
-router.post('/campaigns/broadcast', adminOnly, broadcastCampaign);
+router.get('/conversations', crmOperational, getConversations);
+router.get('/conversations/:id/messages', crmOperational, getMessagesByConversation);
+router.post('/send-message', crmOperational, sendMessage);
+router.post('/simulate-incoming', crmAdminOnly, simulateIncomingMessage);
+router.put('/conversations/:id/auto-reply', crmOperational, toggleAutoReply);
+router.put('/conversations/:id/stage', crmOperational, updateStage);
+router.put('/conversations/:id/link-persona', crmOperational, linkPersonaToConversation);
+router.put('/conversations/:id/assign', crmAdminOnly, assignConversation);
+router.delete('/conversations/:id', crmAdminOnly, deleteConversation);
+router.post('/orders/:orderId/notify-delivery', crmOperational, sendDeliveryNotification);
+router.post('/conversations/:id/parse-order', crmOperational, parseOrderDraft);
+router.post('/drafts/:draftId/approve', crmOperational, approveOrderDraft);
+router.post('/campaigns/broadcast', crmAdminOnly, broadcastCampaign);
 
 export default router;

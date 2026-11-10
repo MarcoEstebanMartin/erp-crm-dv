@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { Role } from '@prisma/client';
 import {
   createCampaign,
   getCampaigns,
@@ -10,25 +11,32 @@ import {
   getCampaignSuggestions,
   addBulkCampaignItems,
   getWeeklyOfferRecommendations,
-  getCampaignComparison
+  getCampaignComparison,
 } from '../controllers/offersController';
+import { authenticateJWT, requireRole } from '../middlewares/auth';
 
 const router = Router();
 
-// Rutas de campañas
-router.post('/', createCampaign);
-router.get('/', getCampaigns);
-router.get('/suggestions', getCampaignSuggestions);
-router.get('/recommendations', getWeeklyOfferRecommendations);
-router.get('/comparison', getCampaignComparison);
-router.get('/:id', getCampaignById);
-router.put('/:id', updateCampaign);
-router.delete('/:id', deleteCampaign);
+// Todas las rutas internas de ofertas exigen sesión activa
+router.use(authenticateJWT);
 
-// Rutas de items (productos dentro de la campaña)
-router.post('/:campaignId/items', addOrUpdateCampaignItem);
-router.post('/:campaignId/items/bulk', addBulkCampaignItems);
-router.delete('/:campaignId/items/:itemId', removeCampaignItem);
+const canManageOffers = requireRole([Role.ADMIN, Role.FACTURACION]);
+
+// Lectura de campañas (personal autenticado)
+router.get('/', getCampaigns);
+router.get('/suggestions', canManageOffers, getCampaignSuggestions);
+router.get('/recommendations', canManageOffers, getWeeklyOfferRecommendations);
+router.get('/comparison', canManageOffers, getCampaignComparison);
+router.get('/:id', getCampaignById);
+
+// Creación, modificación y baja de campañas (exclusivo ADMIN y FACTURACION)
+router.post('/', canManageOffers, createCampaign);
+router.put('/:id', canManageOffers, updateCampaign);
+router.delete('/:id', canManageOffers, deleteCampaign);
+
+// Administración de artículos dentro de la campaña
+router.post('/:campaignId/items', canManageOffers, addOrUpdateCampaignItem);
+router.post('/:campaignId/items/bulk', canManageOffers, addBulkCampaignItems);
+router.delete('/:campaignId/items/:itemId', canManageOffers, removeCampaignItem);
 
 export default router;
-

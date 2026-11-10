@@ -1,20 +1,32 @@
 import { Router } from 'express';
 import multer from 'multer';
-import { getPurchaseOrders, createPurchaseOrder, receivePurchaseOrder, uploadDocument, confirmDocument } from '../controllers/purchase.controller';
-import { authenticateJWT } from '../middlewares/auth';
+import { Role } from '@prisma/client';
+import {
+  getPurchaseOrders,
+  createPurchaseOrder,
+  receivePurchaseOrder,
+  uploadDocument,
+  confirmDocument,
+} from '../controllers/purchase.controller';
+import { authenticateJWT, requireRole } from '../middlewares/auth';
 
 const router = Router();
-const upload = multer({ storage: multer.memoryStorage() });
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 15 * 1024 * 1024 },
+});
 
-// Todas las rutas requieren token activo
 router.use(authenticateJWT);
 
-router.get('/', getPurchaseOrders);
-router.post('/', createPurchaseOrder);
-router.post('/:id/receive', receivePurchaseOrder);
+const adminOrBilling = requireRole([Role.ADMIN, Role.FACTURACION]);
+const warehouseOrAdmin = requireRole([Role.ADMIN, Role.FACTURACION, Role.DEPOSITO]);
 
-// IA OCR endpoints
-router.post('/upload-document', upload.single('file'), uploadDocument);
-router.post('/confirm-document', confirmDocument);
+router.get('/', warehouseOrAdmin, getPurchaseOrders);
+router.post('/', adminOrBilling, createPurchaseOrder);
+router.post('/:id/receive', warehouseOrAdmin, receivePurchaseOrder);
+
+// IA OCR de facturas de proveedores
+router.post('/upload-document', adminOrBilling, upload.single('file'), uploadDocument);
+router.post('/confirm-document', adminOrBilling, confirmDocument);
 
 export default router;

@@ -5,28 +5,37 @@ import {
   getStoreCatalog,
   getClientAccount,
   createStoreOrder,
-  getClientOrders
+  getClientOrders,
 } from '../controllers/store.controller';
+import { authenticateStoreClientJWT } from '../middlewares/storeAuth.middleware';
+import { authRateLimiter, publicApiRateLimiter } from '../middlewares/rateLimiter.middleware';
+import { validateRequest } from '../middlewares/validateRequest';
+import {
+  createStoreOrderSchema,
+  storeCatalogQuerySchema,
+  storeLoginSchema,
+} from '../validators/store.validator';
 
 const router = Router();
 
-// Autenticación / Búsqueda de Cliente
-router.post('/login', loginClient);
+// Autenticación / Búsqueda de Cliente (con protección contra fuerza bruta de PIN)
+router.post('/login', authRateLimiter, validateRequest(storeLoginSchema), loginClient);
 
 // Autenticación Mágica sin Contraseña desde WhatsApp
-router.get('/magic-login', magicLoginClient);
-router.post('/magic-login', magicLoginClient);
+router.get('/magic-login', authRateLimiter, magicLoginClient);
+router.post('/magic-login', authRateLimiter, magicLoginClient);
 
-// Catálogo interactivo de productos y ofertas
-router.get('/catalog', getStoreCatalog);
+// Catálogo interactivo de productos y ofertas (público con límite de peticiones)
+router.get('/catalog', publicApiRateLimiter, validateRequest(storeCatalogQuerySchema), getStoreCatalog);
 
-// Resumen de Cuenta Corriente del cliente
-router.get('/account/:personaId', getClientAccount);
-
-// Envío de Pedido desde la Tienda Online
-router.post('/orders', createStoreOrder);
-
-// Historial de pedidos del cliente
-router.get('/orders/:personaId', getClientOrders);
+// Rutas privadas del cliente: protegidas por JWT de tienda y blindaje anti-IDOR
+router.get('/account/:personaId', authenticateStoreClientJWT, getClientAccount);
+router.get('/orders/:personaId', authenticateStoreClientJWT, getClientOrders);
+router.post(
+  '/orders',
+  authenticateStoreClientJWT,
+  validateRequest(createStoreOrderSchema),
+  createStoreOrder,
+);
 
 export default router;

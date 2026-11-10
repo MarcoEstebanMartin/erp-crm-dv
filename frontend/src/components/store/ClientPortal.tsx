@@ -302,12 +302,27 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({ onBackToStaffLogin }
   };
 
   const fetchAccountData = async (personaId: number) => {
+    const storeToken = localStorage.getItem('store_token');
+    if (!storeToken) {
+      handleLogoutClient();
+      setLoginError('Tu sesión en la tienda expiró. Por favor ingresá nuevamente tu PIN.');
+      return;
+    }
+
     setIsLoadingAccount(true);
     try {
+      const authHeaders = { Authorization: `Bearer ${storeToken}` };
       const [accRes, ordRes] = await Promise.all([
-        fetch(`${API_BASE_URL}/store/account/${personaId}`),
-        fetch(`${API_BASE_URL}/store/orders/${personaId}`)
+        fetch(`${API_BASE_URL}/store/account/${personaId}`, { headers: authHeaders }),
+        fetch(`${API_BASE_URL}/store/orders/${personaId}`, { headers: authHeaders })
       ]);
+
+      if (accRes.status === 401 || ordRes.status === 401) {
+        handleLogoutClient();
+        setLoginError('Tu sesión en la tienda expiró. Por favor ingresá nuevamente tu PIN.');
+        return;
+      }
+
       const accJson = await accRes.json();
       const ordJson = await ordRes.json();
 
@@ -389,32 +404,49 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({ onBackToStaffLogin }
     }
   };
 
-  const cartTotalNeto = useMemo(() => {
-    return cart.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
+  // Los precios de catálogo (Lista 4 / Oferta) ya son precios finales en pesos enteros (IVA incluido)
+  const cartTotalFinal = useMemo(() => {
+    return cart.reduce((sum, item) => sum + Math.round(item.unitPrice * item.quantity), 0);
   }, [cart]);
 
-  const cartTotalIva = cartTotalNeto * 0.21;
-  const cartTotalFinal = cartTotalNeto + cartTotalIva;
+  const cartTotalNeto = Math.round((cartTotalFinal / 1.21) * 100) / 100;
+  const cartTotalIva = Math.round((cartTotalFinal - cartTotalNeto) * 100) / 100;
   const cartTotalItemsCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
   const handleSubmitOrder = async () => {
     if (!client || cart.length === 0) return;
+    const storeToken = localStorage.getItem('store_token');
+    if (!storeToken) {
+      handleLogoutClient();
+      setLoginError('Tu sesión en la tienda expiró. Por favor ingresá nuevamente tu PIN.');
+      return;
+    }
+
     setIsSubmittingOrder(true);
     try {
       const res = await fetch(`${API_BASE_URL}/store/orders`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${storeToken}`
+        },
         body: JSON.stringify({
           personaId: client.id,
           items: cart.map((item) => ({
             productId: item.product.id,
             quantity: item.quantity,
-            unitPrice: item.unitPrice,
             isEmergencyOverride: Boolean((item as any).isEmergencyOverride || (item.quantity < ((item.product as any).minOrderQuantity || 1)))
           })),
           notes: orderNotes
         })
       });
+
+      if (res.status === 401) {
+        handleLogoutClient();
+        setLoginError('Tu sesión en la tienda expiró. Por favor ingresá nuevamente tu PIN.');
+        return;
+      }
+
       const json = await res.json();
       if (json.status === 'success') {
         setOrderSuccessMessage('¡Tu pedido fue recibido con éxito! Un vendedor procesará tu orden.');

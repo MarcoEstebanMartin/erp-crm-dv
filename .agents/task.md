@@ -24,16 +24,16 @@
 - [x] Verificar compilación limpia (`tsc --noEmit` Backend/Frontend) y `vitest run` (`43/43` tests)
 - [x] Guardar commit limpio de resguardo en Git con todo el trabajo modular consolidado
 
-### Paso 6: Blindaje Total de Seguridad (Rutas Internas, RBAC y Tienda Mayorista) ⏳ PENDIENTE (Siguiente paso)
-- [ ] Proteger endpoints abiertos sin autenticación: `iva.routes.ts` (`ADMIN`, `FACTURACION`) y `offers.ts` (lectura autenticada, escritura `ADMIN`)
-- [ ] Cerrar vulnerabilidad IDOR y manipulación de precios en `store.routes.ts` y `store.controller.ts`:
-  - Eliminar `JWT_SECRET` hardcodeado y usar `env.JWT_SECRET`
-  - Crear middleware `authenticateStoreClientJWT` para que un cliente solo vea su propia cuenta y pedidos
-  - Calcular precios en `createStoreOrder` 100% desde base de datos con `Decimal.js` (prohibido confiar en `unitPrice` del cliente), agregar rate-limit al login de tienda y hashear `webPin` con compatibilidad hacia atrás
-- [ ] Completar `requireRole` en `purchase.routes.ts`, `fleet.routes.ts`, `logistics.routes.ts` y `excel_importer.routes.ts`
-- [ ] Agregar tests unitarios/seguridad en Vitest y validar compilación
+### Paso 6: Blindaje Total de Seguridad (Rutas Internas, RBAC y Tienda Mayorista) ✅ COMPLETADO
+- [x] Proteger endpoints abiertos sin autenticación: `iva.routes.ts` (`ADMIN`, `FACTURACION`) y `offers.ts` (lectura autenticada, escritura `ADMIN`/`FACTURACION`)
+- [x] Cerrar vulnerabilidad IDOR, secreto hardcodeado y manipulación de precios en `store.routes.ts` y `store.controller.ts` (dividido de 772 a 121 líneas en `store-auth.service.ts`, `store-magic.service.ts`, `store-catalog.service.ts` y `store-order.service.ts`):
+  - Eliminado `JWT_SECRET` hardcodeado usando `env.JWT_SECRET`
+  - Creado middleware `authenticateStoreClientJWT` anti-IDOR y esquemas `Zod` (`store.validator.ts`)
+  - Cálculo de precios 100% en servidor con `Decimal.js` + `Snapshots` + reserva atómica de stock y `StockMovement` + corrección de doble IVA en carrito web + hash `bcrypt` de `webPin` con migración transparente
+- [x] Completar `requireRole` en `purchase.routes.ts`, `fleet.routes.ts`, `logistics.routes.ts`, `excel_importer.routes.ts` y `crm_whatsapp.routes.ts`
+- [x] Agregar suite `store-security.test.ts` en Vitest (`12 suites / 48 tests` en verde) y validar compilación `tsc --noEmit` en Backend y Frontend
 
-### Paso 7: Cirugía Financiera Parte 1 — Cajas, Bancos, Gastos y Cobranzas (`Decimal.js` + Transacciones ACID) ⏳ PENDIENTE
+### Paso 7: Cirugía Financiera Parte 1 — Cajas, Bancos, Gastos y Cobranzas (`Decimal.js` + Transacciones ACID) ⏳ PENDIENTE (Siguiente paso)
 - [ ] Desarmar `finance.controller.ts` (832 líneas), `collection.controller.ts` (620 líneas) y `expense.controller.ts` (576 líneas) en validadores `Zod`, servicios `< 250` líneas y controladores delgados
 - [ ] Corregir bug contable en cierre de caja (`closeDrawer`) para que todo recibo impacte Caja y Cuenta Corriente dentro de una única transacción `prisma.$transaction` con `Decimal.js`
 - [ ] Cubrir invariantes de arqueo, rendición e imputación con tests en `Vitest`
