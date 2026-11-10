@@ -18,6 +18,15 @@ import {
   getFuelAnalytics,
 } from '../controllers/fuel.controller';
 import { authenticateJWT, requireRole } from '../middlewares/auth';
+import { validateRequest } from '../middlewares/validateRequest';
+import {
+  createExpirySchema,
+  createMaintenanceSchema,
+  createVehicleSchema,
+  fleetIdParamSchema,
+  updateExpirySchema,
+  updateVehicleSchema,
+} from '../validators/fleet.validator';
 
 const router = Router();
 
@@ -28,9 +37,9 @@ const canAdminFleet = requireRole([Role.ADMIN, Role.FACTURACION]);
 
 // Vehículos
 router.get('/', getVehicles);
-router.post('/', canAdminFleet, createVehicle);
-router.put('/:id', canAdminFleet, updateVehicle);
-router.delete('/:id', canAdminFleet, deleteVehicle);
+router.post('/', canAdminFleet, validateRequest(createVehicleSchema), createVehicle);
+router.put('/:id', canAdminFleet, validateRequest(updateVehicleSchema), updateVehicle);
+router.delete('/:id', canAdminFleet, validateRequest(fleetIdParamSchema), deleteVehicle);
 
 // Combustible
 router.get('/fuel', getFuelLogs);
@@ -39,12 +48,37 @@ router.post('/fuel', canOperateFleet, createFuelLog);
 router.delete('/fuel/:id', canAdminFleet, deleteFuelLog);
 
 // Mantenimientos
-router.post('/:id/maintenances', canOperateFleet, createMaintenance);
-router.delete('/maintenances/:id', canAdminFleet, deleteMaintenance);
+router.post(
+  '/:id/maintenances',
+  canOperateFleet,
+  validateRequest(createMaintenanceSchema),
+  createMaintenance,
+);
+router.delete(
+  '/maintenances/:id',
+  canAdminFleet,
+  validateRequest(fleetIdParamSchema),
+  deleteMaintenance,
+);
 
 // Vencimientos de documentación
-router.post('/:id/expirations', canOperateFleet, createExpiry);
-router.put('/expirations/:id', canOperateFleet, updateExpiry);
-router.delete('/expirations/:id', canAdminFleet, deleteExpiry);
+router.post(
+  '/:id/expirations',
+  canOperateFleet,
+  validateRequest(createExpirySchema),
+  createExpiry,
+);
+router.put(
+  '/expirations/:id',
+  canOperateFleet,
+  validateRequest(updateExpirySchema),
+  updateExpiry,
+);
+router.delete(
+  '/expirations/:id',
+  canAdminFleet,
+  validateRequest(fleetIdParamSchema),
+  deleteExpiry,
+);
 
 export default router;

@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { Role } from '@prisma/client';
 import {
   getEmployees,
   getEmployeeById,
@@ -14,36 +15,48 @@ import {
   createVacation,
   updateVacationStatus,
   getDocuments,
-  createDocument
+  createDocument,
 } from '../controllers/hr.controller';
 import { authenticateJWT, requireRole } from '../middlewares/auth';
-import { Role } from '@prisma/client';
+import { validateRequest } from '../middlewares/validate.middleware';
+import {
+  employeeIdParamSchema,
+  createEmployeeSchema,
+  updateEmployeeSchema,
+  createAdvanceSchema,
+  calculatePayrollQuerySchema,
+  createPayrollSchema,
+  createVacationSchema,
+  updateVacationStatusSchema,
+  createDocumentSchema,
+} from '../validators/hr.validator';
 
 const router = Router();
+const canManageHr = requireRole([Role.ADMIN, Role.FACTURACION]);
 
 // Empleados
-router.get('/employees', authenticateJWT, requireRole([Role.ADMIN, Role.FACTURACION]), getEmployees);
-router.get('/employees/:id', authenticateJWT, requireRole([Role.ADMIN, Role.FACTURACION]), getEmployeeById);
-router.post('/employees', authenticateJWT, requireRole([Role.ADMIN, Role.FACTURACION]), createEmployee);
-router.put('/employees/:id', authenticateJWT, requireRole([Role.ADMIN, Role.FACTURACION]), updateEmployee);
-router.delete('/employees/:id', authenticateJWT, requireRole([Role.ADMIN]), deleteEmployee);
+router.get('/employees', authenticateJWT, canManageHr, getEmployees);
+router.get('/employees/:id', authenticateJWT, canManageHr, validateRequest(employeeIdParamSchema), getEmployeeById);
+router.post('/employees', authenticateJWT, canManageHr, validateRequest(createEmployeeSchema), createEmployee);
+router.put('/employees/:id', authenticateJWT, canManageHr, validateRequest(updateEmployeeSchema), updateEmployee);
+router.delete('/employees/:id', authenticateJWT, requireRole([Role.ADMIN]), validateRequest(employeeIdParamSchema), deleteEmployee);
 
 // Adelantos
-router.get('/advances', authenticateJWT, requireRole([Role.ADMIN, Role.FACTURACION]), getAdvances);
-router.post('/advances', authenticateJWT, requireRole([Role.ADMIN, Role.FACTURACION]), createAdvance);
+router.get('/advances', authenticateJWT, canManageHr, getAdvances);
+router.post('/advances', authenticateJWT, canManageHr, validateRequest(createAdvanceSchema), createAdvance);
 
 // Liquidaciones de Sueldo (Payroll)
-router.get('/payrolls', authenticateJWT, requireRole([Role.ADMIN, Role.FACTURACION]), getPayrolls);
-router.get('/payrolls/calculate', authenticateJWT, requireRole([Role.ADMIN, Role.FACTURACION]), calculatePayroll);
-router.post('/payrolls', authenticateJWT, requireRole([Role.ADMIN, Role.FACTURACION]), createPayroll);
+router.get('/payrolls', authenticateJWT, canManageHr, getPayrolls);
+router.get('/payrolls/calculate', authenticateJWT, canManageHr, validateRequest(calculatePayrollQuerySchema), calculatePayroll);
+router.post('/payrolls', authenticateJWT, canManageHr, validateRequest(createPayrollSchema), createPayroll);
 
 // Vacaciones y Licencias
-router.get('/vacations', authenticateJWT, requireRole([Role.ADMIN, Role.FACTURACION]), getVacations);
-router.post('/vacations', authenticateJWT, requireRole([Role.ADMIN, Role.FACTURACION]), createVacation);
-router.put('/vacations/:id/status', authenticateJWT, requireRole([Role.ADMIN, Role.FACTURACION]), updateVacationStatus);
+router.get('/vacations', authenticateJWT, canManageHr, getVacations);
+router.post('/vacations', authenticateJWT, canManageHr, validateRequest(createVacationSchema), createVacation);
+router.put('/vacations/:id/status', authenticateJWT, canManageHr, validateRequest(updateVacationStatusSchema), updateVacationStatus);
 
 // Documentos y Vencimientos
-router.get('/documents', authenticateJWT, requireRole([Role.ADMIN, Role.FACTURACION]), getDocuments);
-router.post('/documents', authenticateJWT, requireRole([Role.ADMIN, Role.FACTURACION]), createDocument);
+router.get('/documents', authenticateJWT, canManageHr, getDocuments);
+router.post('/documents', authenticateJWT, canManageHr, validateRequest(createDocumentSchema), createDocument);
 
 export default router;

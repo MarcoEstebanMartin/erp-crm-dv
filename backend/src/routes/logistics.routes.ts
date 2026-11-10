@@ -12,6 +12,15 @@ import {
   getRouteGpsHistory,
 } from '../controllers/logistics.controller';
 import { authenticateJWT, requireRole } from '../middlewares/auth';
+import { validateRequest } from '../middlewares/validateRequest';
+import {
+  createDeliveryRouteSchema,
+  recordRouteGpsPingSchema,
+  routeIdParamSchema,
+  settleDeliveryRouteSchema,
+  transferRouteCustodySchema,
+  updateRouteStatusSchema,
+} from '../validators/logistics.validator';
 
 const router = Router();
 
@@ -22,12 +31,22 @@ const canSettleOrDeleteRoutes = requireRole([Role.ADMIN, Role.FACTURACION]);
 
 router.get('/resources', getLogisticsResources);
 router.get('/', getDeliveryRoutes);
-router.post('/', canManageRoutes, createDeliveryRoute);
-router.patch('/:id/status', updateRouteStatus);
-router.post('/:id/custody', transferRouteCustody);
-router.post('/:id/settle', canSettleOrDeleteRoutes, settleDeliveryRoute);
-router.post('/:id/gps', recordRouteGpsPing);
-router.get('/:id/gps-history', getRouteGpsHistory);
-router.delete('/:id', canSettleOrDeleteRoutes, deleteDeliveryRoute);
+router.post('/', canManageRoutes, validateRequest(createDeliveryRouteSchema), createDeliveryRoute);
+router.patch('/:id/status', validateRequest(updateRouteStatusSchema), updateRouteStatus);
+router.post('/:id/custody', validateRequest(transferRouteCustodySchema), transferRouteCustody);
+router.post(
+  '/:id/settle',
+  canSettleOrDeleteRoutes,
+  validateRequest(settleDeliveryRouteSchema),
+  settleDeliveryRoute,
+);
+router.post('/:id/gps', validateRequest(recordRouteGpsPingSchema), recordRouteGpsPing);
+router.get('/:id/gps-history', validateRequest(routeIdParamSchema), getRouteGpsHistory);
+router.delete(
+  '/:id',
+  canSettleOrDeleteRoutes,
+  validateRequest(routeIdParamSchema),
+  deleteDeliveryRoute,
+);
 
 export default router;

@@ -65,6 +65,24 @@
 - [x] Migrar `persona-ledger.service.ts` a lecturas físicas directas desde `AccountLedger` (eliminando problema N+1 en `checkAllBalances` y filtrando solo Notas de Crédito `APPROVED` en pendientes)
 - [x] Ejecutar backfill histórico idempotente (`ledger-backfill.service.ts`) sobre las **1.879 personas** reales en PostgreSQL con **100,00% de paridad (`0` discrepancias)** y validar `tsc --noEmit` + `18 suites / 73 tests` en `Vitest`
 
-### Paso 10: Limpieza Final de Controladores Restantes y Pantallas Secundarias ⏳ PENDIENTE (Siguiente paso)
-- [ ] Modularizar controladores restantes (`hr`, `logistics`, `offers`, `fleet`) en servicios `< 250` líneas
-- [ ] Dividir vistas secundarias grandes del Frontend (`StockDashboard.tsx`, `RendicionesDashboard.tsx`, `SalesBillingTab.tsx`, `ClientPortal.tsx`)
+### Paso 10: Blindaje RLS en Supabase y Limpieza Final de Controladores y Pantallas ✅ COMPLETADO
+- [x] **Candado RLS en Supabase (`erp-desarrollo`)**: Aplicada migración `20261110163000_enable_rls_prisma_tables` habilitando Row Level Security en las 48 tablas de Prisma (`0` alertas críticas en Supabase Security Advisor; PostgREST público bloqueado por defecto y Prisma operativo al 100%)
+- [x] **Modularización Backend (`< 260` líneas por archivo, `Decimal.js`, `Zod` + sanitización de `passwordHash`/`webPin`)**:
+  - `logistics.controller.ts` (`795` -> `155` l.) + `logistics.validator.ts` + `delivery-route.service.ts`, `route-settlement.service.ts` (preservando `AccountLedger` al 100%) y `route-custody-gps.service.ts`
+  - `fleet.controller.ts` (`512` -> `122` l.) + `fleet.validator.ts` + `vehicle.service.ts`, `vehicle-maintenance.service.ts` y `vehicle-expiry.service.ts`
+  - `hr.controller.ts` (`794` -> `173` l.) + `hr.validator.ts` + `employee.service.ts`, `salary-advance.service.ts`, `payroll.service.ts` (cerrada filtración de `user.passwordHash` en `calculatePayroll` y comisiones/sueldos en `Decimal.js`) y `hr-leave-doc.service.ts`
+  - `offersController.ts` (`801` -> `128` l.) + `offers.validator.ts` + `offer-campaign.service.ts`, `offer-item.service.ts`, `offer-recommendations.service.ts` y `offer-analytics.service.ts`
+- [x] **Modularización Frontend (`80/80` archivos auditados `< 260` líneas máx., `0` errores TypeScript + build de producción Vite limpio)**:
+  - `StockDashboard.tsx` (`1.877` -> `243` l.) + `14` submódulos en `frontend/src/components/stock/*`
+  - `RendicionesDashboard.tsx` (`1.717` -> `183` l.) + `13` submódulos en `frontend/src/components/rendiciones/*`
+  - `SalesBillingTab.tsx` (`1.520` -> `60` l.) + `12` submódulos en `frontend/src/components/billing/sales/*`
+  - `ClientPortal.tsx` (`1.984` -> `160` l.) + `15` submódulos en `frontend/src/components/store/portal/*`
+- [x] **Suite Completa de Calidad**: `20` suites / `83` tests en verde (`Vitest`), `tsc --noEmit` en Backend y Frontend con `0` errores
+
+---
+
+## Siguiente Etapa: Integración Segura con Proyecto en Producción (`don-venancio`)
+> **REGLA CRÍTICA DE DATOS REALES**: El proyecto actualmente en producción tiene las **fotos y los precios actualizados al día**, mientras que el padrón de productos en `erp-desarrollo` puede tener precios/fotos desactualizados.
+> **Dirección obligatoria de sincronización inicial**: **Producción -> ERP** (importar precios vigentes y fotos desde producción hacia el ERP; **PROHIBIDO** pisar producción con precios viejos del ERP).
+
+- [ ] **Fase 11**: Auditar el proyecto actual en producción (Catálogo, Ofertas, Chatbot), sincronizar precios y fotos vigentes hacia `ERP-CRM DV` y diseñar la conexión unificada sin caída de servicio.
