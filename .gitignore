@@ -37,6 +37,7 @@ backend/certs/*.crt
 
 # Backups, Binarios y Archivos Temporales de Oficina
 *.bak*
+*.dvbackup.enc
 *.pdf
 *.xlsx
 *.xls

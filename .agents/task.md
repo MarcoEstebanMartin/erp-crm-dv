@@ -124,5 +124,8 @@
   - [x] Construir base local `IndexedDB` (`offlineCatalogDb.ts` `151` l.) con snapshots de catálogo, clientes, rubros y rutas + buscador local sin tildes/mayúsculas (`filterCachedProducts`)
   - [x] Construir cola persistente e idempotente (`offlineQueueStore.ts` `192` l. + `offlineSyncManager.ts` `147` l.) con migración transparente de `localStorage`, detección de "4G fantasma", candado *single-flight* y preservación de `Idempotency-Key` en Pedidos y Visitas (`saleRoute.routes.ts`)
   - [x] Modularizar preventa (`vendedorCatalogFetcher.ts` `140` l., `useVendedorOfflineSync.ts` `169` l., `useVendedorController.ts` `232` l. y `VendedorOfflineBanner.tsx` `179` l.) y validar `tsc --noEmit` + `vite build` + `25 suites / 101 tests` en verde (`offline-preventa-sync.test.ts`)
-- [ ] **Paso S6: Cola Resiliente de Reintentos (AFIP / WhatsApp) + Backups Encriptados (`AES-256-GCM`)**
-  - [ ] Reintentos automáticos con *exponential backoff* ante caídas de ARCA/AFIP o Meta API y respaldo nocturno cifrado
+- [x] **Paso S6: Cola Resiliente de Reintentos (AFIP / WhatsApp) + Backups Encriptados (`AES-256-GCM`)** ✅ COMPLETADO
+  - [x] Crear `resilient-retry-queue.util.ts` (`194` l.) con `executeWithResilientRetry` y `ResilientAsyncQueue` deduplicada (*exponential backoff* + *jitter* + concurrencia controlada)
+  - [x] Crear `external-integrations-retry.service.ts` (`165` l.) + modularizar `order-billing.service.ts` (`295` l. + `order-cae-deferred.helper.ts` `134` l.) y `whatsapp.service.ts` (`247` l. + `whatsapp-order-parser.service.ts` `186` l.), habilitando contingencia automática `PRE-A`/`PRE-B` con obtención diferida de CAE en segundo plano y reintentos reales en Meta Cloud API
+  - [x] Crear motor criptográfico `encrypted-backup.util.ts` (`132` l., `AES-256-GCM` + `scrypt` + `Gzip` nivel 9 + rotación automática) + `database-backup.service.ts` (`197` l.) + CLI `npm run db:backup-encrypted` (`encrypted_backup_cli.ts` `42` l.) y programador nocturno opcional
+  - [x] Validar `tsc --noEmit` (Backend y Frontend), `npm audit` (`0` vulnerabilidades) y **`26 suites / 105 tests` en verde** (`resilience-and-backup.test.ts`)

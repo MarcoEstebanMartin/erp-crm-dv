@@ -1,6 +1,5 @@
 import prisma from '../../utils/prisma';
 import { Role, BillingType, InvoiceType, OrderStatus, PaymentMethod } from '@prisma/client';
-import { emitirFacturaAFIP } from '../afip.service';
 import { logAudit } from '../../utils/audit';
 import { roundToIntegerPeso, sumIntegerAmounts } from '../../core/money';
 import {
@@ -12,6 +11,11 @@ import {
   prepareInvoiceSplitItems,
   reassignSplitStockMovements,
 } from './order-billing.helpers';
+import {
+  executeDeferredCaeRequest,
+  resolveAfipCaeOrContingency,
+} from './order-cae-deferred.helper';
+import { enqueueDeferredAfipCaeRetry } from '../resilience/external-integrations-retry.service';
 
 export interface InvoiceOrderDto {
   orderId: number;
@@ -27,7 +31,7 @@ export interface InvoiceOrderDto {
 export class OrderBillingService {
   /**
    * Factura y cobra un pedido armado (PREPARED), soportando Split Billing,
-   * emisión AFIP/ARCA o Pre-Factura diferida, congelamiento de Snapshots y Ledger.
+   * emisión AFIP/ARCA o contingencia diferida automática, Snapshots y Ledger.
    */
   static async invoiceOrder(data: InvoiceOrderDto) {
     const {
@@ -43,10 +47,7 @@ export class OrderBillingService {
 
     const order = await prisma.order.findUnique({
       where: { id: orderId },
-      include: {
-        persona: true,
-        items: { include: { product: true } },
-      },
+      include: { persona: true, items: { include: { product: true } } },
     });
 
     if (!order) {
@@ -69,16 +70,12 @@ export class OrderBillingService {
     }
 
     const productIds = order.items.map((item) => item.productId);
-    const dbProducts = await prisma.product.findMany({
-      where: { id: { in: productIds } },
-      include: { rubro: true },
-    });
-
-    const dbRules = await prisma.discountRule.findMany({
-      where: {
-        OR: [{ personaId: order.personaId }, { priceList: order.persona.priceList }],
-      },
-    });
+    const [dbProducts, dbRules] = await Promise.all([
+      prisma.product.findMany({ where: { id: { in: productIds } }, include: { rubro: true } }),
+      prisma.discountRule.findMany({
+        where: { OR: [{ personaId: order.personaId }, { priceList: order.persona.priceList }] },
+      }),
+    ]);
 
     const rubroIds = Array.from(
       new Set(order.items.map((i) => i.product.rubroId).filter((id) => id !== null)),
@@ -96,15 +93,12 @@ export class OrderBillingService {
       billingType,
     });
 
-    let splitApplied = false;
-    let internalOrderTotal = 0;
-    if (hasSplit && internoItemsData.length > 0) {
-      splitApplied = true;
-      internalOrderTotal = sumIntegerAmounts(internoItemsData.map((i) => i.subtotal)).toNumber();
-    }
+    const splitApplied = hasSplit && internoItemsData.length > 0;
+    const internalOrderTotal = splitApplied
+      ? sumIntegerAmounts(internoItemsData.map((i) => i.subtotal)).toNumber()
+      : 0;
     let officialOrderTotal = sumIntegerAmounts(oficialItemsData.map((i) => i.subtotal)).toNumber();
 
-    // Validar Caja / Banco previo a AFIP
     let activeDrawerId: number | undefined;
     let selectedBankId: number | undefined;
 
@@ -137,34 +131,25 @@ export class OrderBillingService {
     const taxInfo = await computeInvoiceTaxBreakdown(officialOrderTotal, billingType, order.persona);
     officialOrderTotal = taxInfo.finalTotal;
 
-    let finalInvoiceNumber: string | null = null;
-    let finalCae: string | null = null;
-    let finalCaeDueDate: Date | null = null;
-
-    if (billingType === BillingType.OFFICIAL) {
-      if (deferCae) {
-        finalInvoiceNumber = `PRE-${taxInfo.finalInvoiceType === InvoiceType.FACTURA_A ? 'A' : 'B'}-${order.id.toString().padStart(6, '0')}`;
-      } else {
-        const afipRes = await emitirFacturaAFIP({
-          clientCuit: taxInfo.cuitLimpio,
-          clientDocType: taxInfo.docType,
-          invoiceType: taxInfo.finalInvoiceType === InvoiceType.FACTURA_A ? 'A' : 'B',
-          total: officialOrderTotal,
-          neto: taxInfo.isFacturaAOfficial ? taxInfo.net : undefined,
-          iva: taxInfo.isFacturaAOfficial ? taxInfo.tax : undefined,
-          percepcionAmount: taxInfo.isFacturaAOfficial ? taxInfo.percepIIBB : undefined,
-          percepcionIvaAmount: taxInfo.isFacturaAOfficial ? taxInfo.percepIVA : undefined,
-        }).catch((err: any) => {
-          throw new Error(`Error AFIP al facturar pedido: ${err.message}`);
-        });
-
-        finalInvoiceNumber = afipRes.invoiceNumber;
-        finalCae = afipRes.cae;
-        finalCaeDueDate = afipRes.caeDueDate;
-      }
-    } else {
-      finalInvoiceNumber = `INT-${order.id.toString().padStart(5, '0')}`;
-    }
+    const {
+      finalInvoiceNumber,
+      finalCae,
+      finalCaeDueDate,
+      shouldEnqueueDeferredCae,
+    } = await resolveAfipCaeOrContingency({
+      orderId: order.id,
+      billingType,
+      deferCae,
+      finalInvoiceType: taxInfo.finalInvoiceType,
+      cuitLimpio: taxInfo.cuitLimpio,
+      docType: taxInfo.docType,
+      officialOrderTotal,
+      isFacturaAOfficial: taxInfo.isFacturaAOfficial,
+      net: taxInfo.net,
+      tax: taxInfo.tax,
+      percepIIBB: taxInfo.percepIIBB,
+      percepIVA: taxInfo.percepIVA,
+    });
 
     const updatedOrderPre = await prisma.order.update({
       where: { id: order.id },
@@ -188,7 +173,7 @@ export class OrderBillingService {
       const result = await prisma.$transaction(async (tx) => {
         let internalOrderId: number | null = null;
 
-        if (hasSplit && internoItemsData.length > 0) {
+        if (splitApplied) {
           const internalOrder = await tx.order.create({
             data: {
               personaId: order.personaId,
@@ -232,13 +217,7 @@ export class OrderBillingService {
             bankAccountId: selectedBankId,
           });
 
-          await reassignSplitStockMovements(
-            tx,
-            order.id,
-            internalOrder.id,
-            order.sellerId,
-            internoItemsData,
-          );
+          await reassignSplitStockMovements(tx, order.id, internalOrder.id, order.sellerId, internoItemsData);
         }
 
         for (const item of oficialItemsData) {
@@ -310,11 +289,18 @@ export class OrderBillingService {
         },
       });
 
+      if (shouldEnqueueDeferredCae) {
+        enqueueDeferredAfipCaeRetry(order.id, () =>
+          OrderBillingService.requestCaeForOrder(order.id),
+        );
+      }
+
       return {
         order: updatedOrderPre,
         split: result.split,
         internalOrderId: result.internalOrderId,
         internalOrderTotal: result.internalOrderTotal,
+        caeQueuedInBackground: shouldEnqueueDeferredCae,
       };
     } catch (secondaryError: any) {
       await prisma.order
@@ -334,60 +320,7 @@ export class OrderBillingService {
     }
   }
 
-  /**
-   * Solicita CAE a AFIP/ARCA para un pedido pre-facturado (flujo diferido IDUO).
-   */
   static async requestCaeForOrder(orderId: number) {
-    const order = await prisma.order.findUnique({
-      where: { id: orderId },
-      include: { persona: true },
-    });
-
-    if (!order) {
-      const err: any = new Error('Pedido no encontrado.');
-      err.statusCode = 404;
-      throw err;
-    }
-
-    if (order.cae) {
-      throw new Error(`Este pedido ya posee CAE asignado (CAE: ${order.cae}).`);
-    }
-
-    if (order.billingType !== BillingType.OFFICIAL) {
-      throw new Error(
-        'Solo se puede solicitar CAE para comprobantes de Sucursal A (Oficial).',
-      );
-    }
-
-    const cuitLimpio = (order.persona.cuit || '').replace(/\D/g, '');
-    const isFacturaA = order.invoiceType === InvoiceType.FACTURA_A;
-    const docType = cuitLimpio.length === 11 ? 80 : 96;
-
-    const afipRes = await emitirFacturaAFIP({
-      clientCuit: cuitLimpio || '20000000001',
-      clientDocType: docType,
-      invoiceType: isFacturaA ? 'A' : 'B',
-      total: Number(order.totalAmount),
-      neto: Number(order.netAmount || 0),
-      iva: Number(order.taxAmount || 0),
-      percepcionAmount: Number(order.percepcionAmount || 0),
-      percepcionIvaAmount: Number(order.percepcionIvaAmount || 0),
-    });
-
-    const updated = await prisma.order.update({
-      where: { id: order.id },
-      data: {
-        invoiceNumber: afipRes.invoiceNumber,
-        cae: afipRes.cae,
-        caeDueDate: afipRes.caeDueDate ? new Date(afipRes.caeDueDate) : null,
-      },
-      include: { items: { include: { product: true } }, persona: true },
-    });
-
-    return {
-      updated,
-      invoiceNumber: afipRes.invoiceNumber,
-      cae: afipRes.cae,
-    };
+    return executeDeferredCaeRequest(orderId);
   }
 }
