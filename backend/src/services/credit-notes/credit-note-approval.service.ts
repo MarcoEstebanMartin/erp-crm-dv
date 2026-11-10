@@ -1,4 +1,9 @@
-import { BillingType, CreditNoteStatus } from '@prisma/client';
+import {
+  BillingType,
+  CreditNoteStatus,
+  LedgerEntryType,
+  LedgerSourceType,
+} from '@prisma/client';
 import prisma from '../../utils/prisma';
 import AppError from '../../utils/AppError';
 import { logAudit } from '../../utils/audit';
@@ -10,6 +15,7 @@ import {
   resolveCreditNoteAfipDocMeta,
   restoreReturnedStockAndLots,
 } from './credit-note-stock.helper';
+import { recordLedgerMovement } from '../ledger/account-ledger.service';
 
 export const creditNoteApprovalService = {
   async approveCreditNote(params: { id: number; adminId: number }) {
@@ -80,9 +86,17 @@ export const creditNoteApprovalService = {
         });
       }
 
-      await tx.persona.update({
-        where: { id: creditNote.personaId },
-        data: { outstandingBalance: { decrement: totalAmount } },
+      await recordLedgerMovement(tx, {
+        personaId: creditNote.personaId,
+        entryType: LedgerEntryType.CREDIT,
+        sourceType: LedgerSourceType.CREDIT_NOTE,
+        billingType: creditNote.billingType,
+        amount: totalAmount,
+        creditNoteId: creditNote.id,
+        orderId: creditNote.orderId,
+        userId: params.adminId,
+        reference: `Nota de Crédito #${creditNote.id}`,
+        description: `${creditNote.creditNoteType.replace(/_/g, ' ')} ${creditNoteNumber} (${creditNote.reason})`,
       });
 
       return approved;

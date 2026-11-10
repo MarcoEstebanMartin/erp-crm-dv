@@ -225,6 +225,8 @@ export class OrderBillingService {
             billingType: BillingType.INTERNAL,
             paymentMethod,
             amount: internalOrderTotal,
+            invoiceTotal: internalOrderTotal,
+            invoiceNumber: `INT-${order.id.toString().padStart(5, '0')}-X`,
             description: `Cobro en caja de pedido interno #${internalOrder.id} (Parte Interna de Pedido Original #${order.id})`,
             cashDrawerId: activeDrawerId,
             bankAccountId: selectedBankId,
@@ -281,6 +283,8 @@ export class OrderBillingService {
           billingType,
           paymentMethod,
           amount: officialOrderTotal,
+          invoiceTotal: officialOrderTotal,
+          invoiceNumber: finalInvoiceNumber,
           description: paymentDescription
             ? `Cobro en caja de pedido #${order.id} - ${paymentDescription}`
             : `Cobro en caja de pedido #${order.id} (Parte Oficial)`,

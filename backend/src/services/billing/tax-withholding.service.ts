@@ -1,6 +1,8 @@
+import { BillingType, LedgerEntryType, LedgerSourceType } from '@prisma/client';
 import prisma from '../../utils/prisma';
 import { logAudit } from '../../utils/audit';
 import { roundToTwoDecimals } from '../../core/money';
+import { recordLedgerMovement } from '../ledger/account-ledger.service';
 
 export const taxWithholdingService = {
   async getTaxWithholdings(query: {
@@ -54,15 +56,26 @@ export const taxWithholdingService = {
         },
       });
 
-      if (params.type === 'RETENCION_SUFRIDA') {
-        await tx.persona.update({
-          where: { id: personaIdNum },
-          data: { outstandingBalance: { decrement: exactAmount } },
-        });
-      } else if (params.type === 'RETENCION_PRACTICADA') {
-        await tx.persona.update({
-          where: { id: personaIdNum },
-          data: { outstandingBalance: { increment: exactAmount } },
+      if (params.type === 'RETENCION_SUFRIDA' || params.type === 'RETENCION_PRACTICADA') {
+        const isPracticada = params.type === 'RETENCION_PRACTICADA';
+        await recordLedgerMovement(tx, {
+          personaId: personaIdNum,
+          entryType: isPracticada ? LedgerEntryType.DEBIT : LedgerEntryType.CREDIT,
+          sourceType: LedgerSourceType.TAX_WITHHOLDING,
+          billingType: BillingType.OFFICIAL,
+          amount: exactAmount,
+          taxWithholdingId: record.id,
+          userId: params.userId ?? null,
+          occurredAt: record.date,
+          reference: `${isPracticada ? 'Retención Practicada' : 'Retención Sufrida'} Cert. Nro ${record.number}`,
+          description: `${isPracticada ? 'Retención Emitida' : 'Retención Recibida'} - ${record.taxType === 'IIBB' ? 'IIBB' : 'Ganancias'}`,
+          metadata: {
+            taxType: record.taxType,
+            number: record.number,
+            amount: exactAmount,
+            date: record.date.toISOString(),
+            jurisdiction: record.jurisdiction,
+          },
         });
       }
 

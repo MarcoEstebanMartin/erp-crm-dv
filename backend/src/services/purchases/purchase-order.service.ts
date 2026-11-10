@@ -1,9 +1,10 @@
-import { BillingType } from '@prisma/client';
+import { BillingType, LedgerEntryType, LedgerSourceType } from '@prisma/client';
 import prisma from '../../utils/prisma';
 import AppError from '../../utils/AppError';
 import { logAudit } from '../../utils/audit';
 import { calculateAfipBreakdown, roundToTwoDecimals } from '../../core/money';
 import { calculatePurchaseOrderTotals } from '../../engines/credit-purchase.engine';
+import { recordLedgerMovement } from '../ledger/account-ledger.service';
 
 export const purchaseOrderService = {
   async getPurchaseOrders(query: { startDate?: string; endDate?: string; status?: string }) {
@@ -150,7 +151,10 @@ export const purchaseOrderService = {
       const total = breakdown.totalAmount.toNumber();
       const nroInvoice = params.invoiceNumber || `COMP-${order.id.toString().padStart(5, '0')}`;
 
-      await tx.supplierInvoice.create({
+      const resolvedBillingType =
+        params.billingType === BillingType.INTERNAL ? BillingType.INTERNAL : BillingType.OFFICIAL;
+
+      const createdInv = await tx.supplierInvoice.create({
         data: {
           personaId: order.personaId,
           invoiceNumber: nroInvoice,
@@ -163,16 +167,21 @@ export const purchaseOrderService = {
           taxAmount: breakdown.ivaAmount.toNumber(),
           percepcionAmount: 0,
           totalAmount: total,
-          billingType:
-            params.billingType === BillingType.INTERNAL
-              ? BillingType.INTERNAL
-              : BillingType.OFFICIAL,
+          billingType: resolvedBillingType,
         },
       });
 
-      await tx.persona.update({
-        where: { id: order.personaId },
-        data: { outstandingBalance: { decrement: total } },
+      await recordLedgerMovement(tx, {
+        personaId: order.personaId,
+        entryType: LedgerEntryType.CREDIT,
+        sourceType: LedgerSourceType.SUPPLIER_INVOICE,
+        billingType: resolvedBillingType,
+        amount: total,
+        supplierInvoiceId: createdInv.id,
+        purchaseOrderId: order.id,
+        userId: params.userId,
+        reference: `Factura Nro ${nroInvoice}`,
+        description: `Compra - Recepción OC #${order.id} (${nroInvoice})`,
       });
 
       return updatedOrder;

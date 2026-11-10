@@ -1,4 +1,10 @@
-import { BillingType, CreditNoteStatus, Role } from '@prisma/client';
+import {
+  BillingType,
+  CreditNoteStatus,
+  LedgerEntryType,
+  LedgerSourceType,
+  Role,
+} from '@prisma/client';
 import prisma from '../../utils/prisma';
 import AppError from '../../utils/AppError';
 import { logAudit } from '../../utils/audit';
@@ -11,6 +17,7 @@ import {
   resolveCreditNoteAfipDocMeta,
   restoreReturnedStockAndLots,
 } from './credit-note-stock.helper';
+import { recordLedgerMovement } from '../ledger/account-ledger.service';
 
 export const CREDIT_NOTE_DETAIL_INCLUDE = {
   persona: true,
@@ -190,9 +197,17 @@ export const creditNoteService = {
           });
         }
 
-        await tx.persona.update({
-          where: { id: persona.id },
-          data: { outstandingBalance: { decrement: totals.totalAmount } },
+        await recordLedgerMovement(tx, {
+          personaId: persona.id,
+          entryType: LedgerEntryType.CREDIT,
+          sourceType: LedgerSourceType.CREDIT_NOTE,
+          billingType: finalBillingType,
+          amount: totals.totalAmount,
+          creditNoteId: note.id,
+          orderId: resolvedOrderId,
+          userId: params.userId,
+          reference: `Nota de Crédito #${note.id}`,
+          description: `${creditNoteType.replace(/_/g, ' ')} ${note.creditNoteNumber || 'INT-' + note.id.toString().padStart(5, '0')} (${params.reason})`,
         });
       }
 

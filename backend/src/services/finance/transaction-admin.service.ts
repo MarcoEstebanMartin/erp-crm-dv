@@ -1,9 +1,16 @@
-import { BillingType, PaymentMethod, TransactionType } from '@prisma/client';
+import {
+  BillingType,
+  LedgerEntryType,
+  LedgerSourceType,
+  PaymentMethod,
+  TransactionType,
+} from '@prisma/client';
 import prisma from '../../utils/prisma';
 import AppError from '../../utils/AppError';
 import { logAudit } from '../../utils/audit';
 import { roundToIntegerPeso } from '../../core/money';
 import { calculateVerificationDeltas } from '../../engines/drawer-arqueo.engine';
+import { recordLedgerMovement } from '../ledger/account-ledger.service';
 
 export const transactionAdminService = {
   async getTransactions(query: {
@@ -93,9 +100,17 @@ export const transactionAdminService = {
       });
 
       if (transaction.personaId && deltas.personaDecrementDelta !== 0) {
-        await tx.persona.update({
-          where: { id: transaction.personaId },
-          data: { outstandingBalance: { decrement: deltas.personaDecrementDelta } },
+        const isCredit = deltas.personaDecrementDelta > 0;
+        await recordLedgerMovement(tx, {
+          personaId: transaction.personaId,
+          entryType: isCredit ? LedgerEntryType.CREDIT : LedgerEntryType.DEBIT,
+          sourceType: LedgerSourceType.RECONCILIATION_ADJUSTMENT,
+          billingType: transaction.billingType,
+          amount: Math.abs(deltas.personaDecrementDelta),
+          transactionId: transaction.id,
+          orderId: transaction.orderId,
+          reference: `Ajuste Recibo #${transaction.id}`,
+          description: `Ajuste de conciliación en movimiento #${transaction.id}`,
         });
       }
 

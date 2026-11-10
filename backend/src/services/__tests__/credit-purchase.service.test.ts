@@ -68,7 +68,8 @@ describe('Servicios de Notas de Crédito, Compras y Facturas de Proveedor (ACID 
         }),
       },
       stockMovement: { create: vi.fn().mockResolvedValue({}) },
-      persona: { update: vi.fn().mockResolvedValue({}) },
+      persona: { update: vi.fn().mockResolvedValue({ outstandingBalance: '14000.00' }) },
+      accountLedger: { create: vi.fn().mockResolvedValue({ id: 1 }) },
     };
 
     const txSpy = vi.spyOn(prisma, '$transaction').mockImplementation(async (cb: any) => cb(mockTx));
@@ -89,6 +90,18 @@ describe('Servicios de Notas de Crédito, Compras y Facturas de Proveedor (ACID 
       where: { id: 20 },
       data: { outstandingBalance: { decrement: 6000 } },
     });
+    expect(mockTx.accountLedger.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          personaId: 20,
+          entryType: 'CREDIT',
+          sourceType: 'CREDIT_NOTE',
+          amount: 6000,
+          balanceAfter: 14000,
+          creditNoteId: 70,
+        }),
+      }),
+    );
   });
 
   it('createPurchaseOrder envía únicamente columnas válidas de PurchaseOrderItem y preserva decimales de costo', async () => {
@@ -145,7 +158,8 @@ describe('Servicios de Notas de Crédito, Compras y Facturas de Proveedor (ACID 
     } as any);
 
     const mockTx: any = {
-      persona: { update: vi.fn().mockResolvedValue({}) },
+      persona: { update: vi.fn().mockResolvedValue({ outstandingBalance: '0.00' }) },
+      accountLedger: { create: vi.fn().mockResolvedValue({ id: 2 }) },
       stockMovement: {
         findMany: vi.fn().mockResolvedValue([
           { id: 800, productId: 3, quantity: 10, productLotId: 77 },
@@ -168,6 +182,17 @@ describe('Servicios de Notas de Crédito, Compras y Facturas de Proveedor (ACID 
       where: { id: 8 },
       data: { outstandingBalance: { increment: 24200 } },
     });
+    expect(mockTx.accountLedger.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          personaId: 8,
+          entryType: 'DEBIT',
+          sourceType: 'SUPPLIER_INVOICE_REVERSAL',
+          amount: 24200,
+          balanceAfter: 0,
+        }),
+      }),
+    );
     expect(mockTx.productLot.update).toHaveBeenCalledWith({
       where: { id: 77 },
       data: { stock: { decrement: 10 } },

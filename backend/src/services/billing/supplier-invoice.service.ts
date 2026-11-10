@@ -1,10 +1,11 @@
-import { BillingType } from '@prisma/client';
+import { BillingType, LedgerEntryType, LedgerSourceType } from '@prisma/client';
 import prisma from '../../utils/prisma';
 import AppError from '../../utils/AppError';
 import { logAudit } from '../../utils/audit';
 import { roundToTwoDecimals } from '../../core/money';
 import { calculateSupplierInvoiceBreakdown } from '../../engines/credit-purchase.engine';
 import { recordSupplierInvoicePerceptions } from './supplier-tax.helper';
+import { recordLedgerMovement } from '../ledger/account-ledger.service';
 
 export const supplierInvoiceService = {
   async getSalesInvoices(query: { startDate?: string; endDate?: string; query?: string }) {
@@ -139,9 +140,17 @@ export const supplierInvoiceService = {
         },
       });
 
-      await tx.persona.update({
-        where: { id: providerId },
-        data: { outstandingBalance: { decrement: breakdown.totalAmount } },
+      await recordLedgerMovement(tx, {
+        personaId: providerId,
+        entryType: LedgerEntryType.CREDIT,
+        sourceType: LedgerSourceType.SUPPLIER_INVOICE,
+        billingType: inv.billingType,
+        amount: breakdown.totalAmount,
+        supplierInvoiceId: inv.id,
+        userId: params.userId ?? null,
+        occurredAt: issueDt,
+        reference: `Factura Nro ${cleanInvoiceNumber}`,
+        description: `Compra - Factura ${params.invoiceType.replace('_', ' ')}`,
       });
 
       await recordSupplierInvoicePerceptions(tx, {
@@ -196,9 +205,15 @@ export const supplierInvoiceService = {
     const amountToRestore = roundToTwoDecimals(invoice.totalAmount.toString()).toNumber();
 
     await prisma.$transaction(async (tx) => {
-      await tx.persona.update({
-        where: { id: invoice.personaId },
-        data: { outstandingBalance: { increment: amountToRestore } },
+      await recordLedgerMovement(tx, {
+        personaId: invoice.personaId,
+        entryType: LedgerEntryType.DEBIT,
+        sourceType: LedgerSourceType.SUPPLIER_INVOICE_REVERSAL,
+        billingType: invoice.billingType,
+        amount: amountToRestore,
+        userId: params.userId ?? null,
+        reference: `Anulación Factura Nro ${invoice.invoiceNumber}`,
+        description: `Reversión por eliminación de Factura ${invoice.invoiceNumber}`,
       });
 
       const refId = `INV-${invoice.id}`;

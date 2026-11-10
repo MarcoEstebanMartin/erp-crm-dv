@@ -1,9 +1,16 @@
-import { BillingType, PaymentMethod, TransactionType } from '@prisma/client';
+import {
+  BillingType,
+  LedgerEntryType,
+  LedgerSourceType,
+  PaymentMethod,
+  TransactionType,
+} from '@prisma/client';
 import prisma from '../../utils/prisma';
 import AppError from '../../utils/AppError';
 import { logAudit } from '../../utils/audit';
 import { roundToTwoDecimals } from '../../core/money';
 import { calculateDrawerClosingBalance } from '../../engines/drawer-arqueo.engine';
+import { recordLedgerMovement } from '../ledger/account-ledger.service';
 
 export interface IncomingDrawerReceipt {
   clientId: number;
@@ -131,9 +138,16 @@ export const cashDrawerService = {
           const receiptNumber = `REC-${createdTx.movementId.toString().padStart(5, '0')}`;
           await tx.transaction.update({ where: { id: createdTx.id }, data: { receiptNumber } });
 
-          await tx.persona.update({
-            where: { id: clientId },
-            data: { outstandingBalance: { decrement: receiptAmt } },
+          await recordLedgerMovement(tx, {
+            personaId: clientId,
+            entryType: LedgerEntryType.CREDIT,
+            sourceType: LedgerSourceType.COLLECTION_RECEIPT,
+            billingType: billing,
+            amount: receiptAmt,
+            transactionId: createdTx.id,
+            userId: params.userId,
+            reference: `Recibo #${createdTx.id}`,
+            description: `Recibo N° ${receiptNumber} - Arqueo de Caja${checkSuffix}`,
           });
 
           if (method === PaymentMethod.BANK_TRANSFER && bankAccountId) {

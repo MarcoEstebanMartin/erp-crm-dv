@@ -37,8 +37,11 @@ describe('Servicios Financieros, Cobranzas y Gastos (Integridad Atómica y Segur
         findUnique: vi.fn().mockResolvedValue({ id: 42, name: 'Despensa San Martín' }),
         update: vi.fn().mockImplementation((args) => {
           personaUpdates.push(args);
-          return Promise.resolve({});
+          return Promise.resolve({ id: 42, outstandingBalance: '0.00' });
         }),
+      },
+      accountLedger: {
+        create: vi.fn().mockResolvedValue({ id: 501 }),
       },
       transaction: {
         create: vi.fn().mockImplementation(({ data }) => {
@@ -79,6 +82,18 @@ describe('Servicios Financieros, Cobranzas y Gastos (Integridad Atómica y Segur
         data: { outstandingBalance: { decrement: 12500 } },
       },
     ]);
+    expect(mockTx.accountLedger.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          personaId: 42,
+          entryType: 'CREDIT',
+          sourceType: 'COLLECTION_RECEIPT',
+          amount: 12500,
+          balanceAfter: 0,
+          transactionId: 901,
+        }),
+      }),
+    );
     // 5000 apertura + 12500 recibo efectivo = 17500 teórico
     expect(closed.closingBalance).toBe(17500);
     expect(closed.realBalance).toBe(17500);

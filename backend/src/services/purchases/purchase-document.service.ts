@@ -1,4 +1,4 @@
-import { BillingType } from '@prisma/client';
+import { BillingType, LedgerEntryType, LedgerSourceType } from '@prisma/client';
 import prisma from '../../utils/prisma';
 import AppError from '../../utils/AppError';
 import { geminiService } from '../gemini.service';
@@ -6,6 +6,7 @@ import { roundToTwoDecimals } from '../../core/money';
 import { calculateSupplierInvoiceBreakdown } from '../../engines/credit-purchase.engine';
 import { recordSupplierInvoicePerceptions } from '../billing/supplier-tax.helper';
 import { findMatchedProduct } from './purchase-matcher.helper';
+import { recordLedgerMovement } from '../ledger/account-ledger.service';
 
 const COMPANY_CUIT_CLEAN = '20163165059';
 
@@ -258,9 +259,22 @@ export const purchaseDocumentService = {
         });
       }
 
-      await tx.persona.update({
-        where: { id: providerIdNum },
-        data: { outstandingBalance: { decrement: breakdown.totalAmount } },
+      const resolvedBilling =
+        params.billingType === BillingType.OFFICIAL ? BillingType.OFFICIAL : BillingType.INTERNAL;
+      const isInvoiceDoc = params.documentType === 'FACTURA';
+      const docNumLabel = params.documentNumber?.trim() || `#${createdId}`;
+
+      await recordLedgerMovement(tx, {
+        personaId: providerIdNum,
+        entryType: LedgerEntryType.CREDIT,
+        sourceType: LedgerSourceType.SUPPLIER_INVOICE,
+        billingType: resolvedBilling,
+        amount: breakdown.totalAmount,
+        supplierInvoiceId: isInvoiceDoc ? createdId : null,
+        purchaseOrderId: !isInvoiceDoc ? createdId : null,
+        userId: params.userId,
+        reference: `${isInvoiceDoc ? 'Factura Nro' : 'Remito Nro'} ${docNumLabel}`,
+        description: `Compra - ${isInvoiceDoc ? 'Factura' : 'Remito'} ${docNumLabel}`,
       });
 
       return { createdId, refId };

@@ -2,8 +2,18 @@ import { Response } from 'express';
 import prisma from '../utils/prisma';
 import { AuthenticatedRequest } from '../types';
 import { logAudit } from '../utils/audit';
-import { BillingType, InvoiceType, OrderStatus, TransactionType, PaymentMethod, Role } from '@prisma/client';
+import {
+  BillingType,
+  InvoiceType,
+  OrderStatus,
+  TransactionType,
+  PaymentMethod,
+  Role,
+  LedgerEntryType,
+  LedgerSourceType,
+} from '@prisma/client';
 import { emitirFacturaAFIP } from '../services/afip.service';
+import { recordLedgerMovement } from '../services/ledger/account-ledger.service';
 
 /**
  * Obtener hojas de ruta de reparto
@@ -307,10 +317,17 @@ export async function settleDeliveryRoute(req: AuthenticatedRequest, res: Respon
             }
           });
 
-          // Incrementamos Cuenta Corriente del cliente (siempre que pase de PREPARED a DELIVERED para registrar el débito)
-          await tx.persona.update({
-            where: { id: order.personaId },
-            data: { outstandingBalance: { increment: totalAmount } }
+          // Incrementamos Cuenta Corriente del cliente mediante asiento auditable en AccountLedger
+          await recordLedgerMovement(tx, {
+            personaId: order.personaId,
+            entryType: LedgerEntryType.DEBIT,
+            sourceType: LedgerSourceType.ORDER_INVOICE,
+            billingType: order.billingType,
+            amount: totalAmount,
+            orderId: order.id,
+            userId,
+            reference: `Pedido #${order.id}`,
+            description: `Factura ${order.invoiceNumber || 'INT-' + order.id.toString().padStart(5, '0')} (Reparto Ruta #${route.id})`,
           });
         }
 
@@ -368,8 +385,8 @@ export async function settleDeliveryRoute(req: AuthenticatedRequest, res: Respon
             txDescription = `Rendición Reparto - Cheque N° ${set.checkNumber || 'S/N'} (Emisor: ${set.checkIssuer || 'Desconocido'}) - Chofer: ${route.driverName} - Ruta #${route.id}`;
           }
 
-          // Crear transacción financiera (verified: false, pendiente de rendición)
-          await tx.transaction.create({
+          // Crear transacción financiera (verified: false, pendiente de rendición) y acreditar cobro en AccountLedger
+          const createdRouteTx = await tx.transaction.create({
             data: {
               orderId: order.id,
               personaId: order.personaId,
@@ -382,6 +399,25 @@ export async function settleDeliveryRoute(req: AuthenticatedRequest, res: Respon
               cashDrawerId,
               bankAccountId
             }
+          });
+
+          const routeReceiptNumber = `REC-${createdRouteTx.movementId.toString().padStart(5, '0')}`;
+          await tx.transaction.update({
+            where: { id: createdRouteTx.id },
+            data: { receiptNumber: routeReceiptNumber }
+          });
+
+          await recordLedgerMovement(tx, {
+            personaId: order.personaId,
+            entryType: LedgerEntryType.CREDIT,
+            sourceType: LedgerSourceType.COLLECTION_RECEIPT,
+            billingType: order.billingType,
+            amount: totalAmount,
+            orderId: order.id,
+            transactionId: createdRouteTx.id,
+            userId,
+            reference: `Recibo #${createdRouteTx.id}`,
+            description: `Recibo N° ${routeReceiptNumber} - ${txDescription}`,
           });
         }
       }

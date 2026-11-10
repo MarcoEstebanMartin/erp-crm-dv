@@ -1,7 +1,8 @@
-import { Role, TransactionType } from '@prisma/client';
+import { LedgerEntryType, LedgerSourceType, Role, TransactionType } from '@prisma/client';
 import prisma from '../../utils/prisma';
 import AppError from '../../utils/AppError';
 import { roundToTwoDecimals } from '../../core/money';
+import { recordLedgerMovement } from '../ledger/account-ledger.service';
 
 export const receiptService = {
   /**
@@ -66,9 +67,16 @@ export const receiptService = {
 
     await prisma.$transaction(async (prismaTx) => {
       if (txRecord.personaId) {
-        await prismaTx.persona.update({
-          where: { id: txRecord.personaId },
-          data: { outstandingBalance: { increment: amountToRestore } },
+        await recordLedgerMovement(prismaTx, {
+          personaId: txRecord.personaId,
+          entryType: LedgerEntryType.DEBIT,
+          sourceType: LedgerSourceType.RECEIPT_REVERSAL,
+          billingType: txRecord.billingType,
+          amount: amountToRestore,
+          orderId: txRecord.orderId,
+          userId: params.adminId,
+          reference: `Anulación Recibo #${txRecord.id}`,
+          description: `Reversión por anulación de Recibo N° ${txRecord.receiptNumber || 'INT-' + txRecord.id.toString().padStart(5, '0')}`,
         });
       }
 

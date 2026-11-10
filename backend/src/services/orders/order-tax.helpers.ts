@@ -1,10 +1,11 @@
 import prisma from '../../utils/prisma';
-import { InvoiceType, BillingType } from '@prisma/client';
+import { InvoiceType, BillingType, LedgerEntryType, LedgerSourceType } from '@prisma/client';
 import {
   roundToIntegerPeso,
   roundToTwoDecimals,
   toDecimal,
 } from '../../core/money';
+import { recordLedgerMovement } from '../ledger/account-ledger.service';
 
 export function getJurisdictionCode(provinceOrAddress?: string | null): string {
   if (!provinceOrAddress) return 'AR-B';
@@ -109,6 +110,8 @@ export async function settleOrderFinancials(
     billingType: BillingType;
     paymentMethod?: any;
     amount: number;
+    invoiceTotal?: number;
+    invoiceNumber?: string | null;
     description: string;
     cashDrawerId?: number;
     bankAccountId?: number;
@@ -121,10 +124,27 @@ export async function settleOrderFinancials(
     billingType,
     paymentMethod,
     amount,
+    invoiceTotal,
+    invoiceNumber,
     description,
     cashDrawerId,
     bankAccountId,
   } = params;
+
+  const totalOrderAmount = invoiceTotal !== undefined ? invoiceTotal : amount;
+  const formattedInv = invoiceNumber || `INT-${orderId.toString().padStart(5, '0')}`;
+
+  await recordLedgerMovement(tx, {
+    personaId,
+    entryType: LedgerEntryType.DEBIT,
+    sourceType: LedgerSourceType.ORDER_INVOICE,
+    billingType,
+    amount: totalOrderAmount,
+    orderId,
+    userId: adminId,
+    reference: `Pedido #${orderId}`,
+    description: `Factura ${formattedInv}`,
+  });
 
   if (paymentMethod) {
     if (paymentMethod === 'BANK_TRANSFER' && bankAccountId) {
@@ -134,7 +154,7 @@ export async function settleOrderFinancials(
       });
     }
 
-    await tx.transaction.create({
+    const createdTx = await tx.transaction.create({
       data: {
         orderId,
         personaId,
@@ -149,10 +169,18 @@ export async function settleOrderFinancials(
         verified: true,
       },
     });
-  } else {
-    await tx.persona.update({
-      where: { id: personaId },
-      data: { outstandingBalance: { increment: amount } },
+
+    await recordLedgerMovement(tx, {
+      personaId,
+      entryType: LedgerEntryType.CREDIT,
+      sourceType: LedgerSourceType.COLLECTION_RECEIPT,
+      billingType,
+      amount,
+      orderId,
+      transactionId: createdTx.id,
+      userId: adminId,
+      reference: `Recibo #${createdTx.id}`,
+      description: description || `Cobro inmediato Factura ${formattedInv}`,
     });
   }
 }
@@ -201,6 +229,8 @@ export async function resolveAndSettleOrderPayment(
       adminId,
       billingType,
       amount: totalSum,
+      invoiceTotal: totalSum,
+      invoiceNumber,
       description: '',
     });
     return;
@@ -249,6 +279,8 @@ export async function resolveAndSettleOrderPayment(
     billingType,
     paymentMethod,
     amount: txAmount,
+    invoiceTotal: totalSum,
+    invoiceNumber,
     description: txDescription,
     cashDrawerId,
     bankAccountId: bankAccountIdVal,

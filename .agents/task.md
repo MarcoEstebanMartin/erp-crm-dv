@@ -55,11 +55,16 @@
   - Cerrada exposición de `seller.passwordHash` en `getSalesInvoices`
 - [x] Cubrir invariantes con nuevas suites `credit-purchase.engine.test.ts` y `credit-purchase.service.test.ts` (`16 suites / 64 tests` en verde)
 
-### Paso 9: Libro Mayor Físico Inmutable (`AccountLedger`) en PostgreSQL ⏳ PENDIENTE (Siguiente paso)
-- [ ] Especificar y crear migración segura (`--create-only` cuidando `movement_seq`) para la tabla `AccountLedger`
-- [ ] Hacer que toda venta entregada, recibo, nota de crédito, factura de proveedor y retención inserte su asiento inmutable (`DEBIT` / `CREDIT`) en la misma transacción
-- [ ] Migrar consultas de resumen de cuenta y saldos a `AccountLedger` con script de verificación de paridad 100%
+### Paso 9: Libro Mayor Físico Inmutable (`AccountLedger`) en PostgreSQL ✅ COMPLETADO
+- [x] Especificar y aplicar migración aditiva segura (`20261110154500_add_account_ledger`, preservando `movement_seq`) para la tabla física `AccountLedger` e índices compuestos `(personaId, occurredAt, id)`
+- [x] Crear motor matemático puro `account-ledger.engine.ts` (`Decimal.js`) y servicio atómico único `account-ledger.service.ts` (`recordLedgerMovement`)
+- [x] Conectar el 100% de las mutaciones de cuenta corriente al Libro Mayor dentro de la misma `prisma.$transaction`:
+  - Pedidos y facturación en mostrador/reparto (`order-tax.helpers.ts`, `order-billing.service.ts`, `order-status.service.ts`, `logistics.controller.ts` — corrigiendo deuda fantasma en cobros de chofer y cheques parciales)
+  - Cobranzas, arqueos de caja, anulaciones de recibos y conciliaciones (`collection.service.ts`, `receipt.service.ts`, `cash-drawer.service.ts`, `transaction-admin.service.ts`, `persona-payment.service.ts`)
+  - Notas de Crédito aprobadas, órdenes/documentos de compra, facturas de proveedor y retenciones (`credit-note.service.ts`, `credit-note-approval.service.ts`, `purchase-order.service.ts`, `purchase-document.service.ts`, `supplier-invoice.service.ts`, `tax-withholding.service.ts`)
+- [x] Migrar `persona-ledger.service.ts` a lecturas físicas directas desde `AccountLedger` (eliminando problema N+1 en `checkAllBalances` y filtrando solo Notas de Crédito `APPROVED` en pendientes)
+- [x] Ejecutar backfill histórico idempotente (`ledger-backfill.service.ts`) sobre las **1.879 personas** reales en PostgreSQL con **100,00% de paridad (`0` discrepancias)** y validar `tsc --noEmit` + `18 suites / 73 tests` en `Vitest`
 
-### Paso 10: Limpieza Final de Controladores Restantes y Pantallas Secundarias ⏳ PENDIENTE
-- [ ] Modularizar controladores restantes (`hr`, `logistics`, `offers`, `store`, `fleet`) en servicios `< 250` líneas
+### Paso 10: Limpieza Final de Controladores Restantes y Pantallas Secundarias ⏳ PENDIENTE (Siguiente paso)
+- [ ] Modularizar controladores restantes (`hr`, `logistics`, `offers`, `fleet`) en servicios `< 250` líneas
 - [ ] Dividir vistas secundarias grandes del Frontend (`StockDashboard.tsx`, `RendicionesDashboard.tsx`, `SalesBillingTab.tsx`, `ClientPortal.tsx`)

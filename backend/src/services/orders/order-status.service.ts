@@ -1,5 +1,13 @@
 import prisma from '../../utils/prisma';
-import { Role, BillingType, OrderStatus, MovementType, TransactionType } from '@prisma/client';
+import {
+  Role,
+  BillingType,
+  OrderStatus,
+  MovementType,
+  TransactionType,
+  LedgerEntryType,
+  LedgerSourceType,
+} from '@prisma/client';
 import { logAudit } from '../../utils/audit';
 import {
   roundToIntegerPeso,
@@ -7,6 +15,7 @@ import {
   sumIntegerAmounts,
   toDecimal,
 } from '../../core/money';
+import { recordLedgerMovement } from '../ledger/account-ledger.service';
 
 export interface UpdateOrderStatusDto {
   orderId: number;
@@ -303,13 +312,16 @@ export class OrderStatusService {
         }
 
         if (order.status === OrderStatus.DELIVERED) {
-          await tx.persona.update({
-            where: { id: order.personaId },
-            data: {
-              outstandingBalance: {
-                decrement: roundToIntegerPeso(order.totalAmount).toNumber(),
-              },
-            },
+          await recordLedgerMovement(tx, {
+            personaId: order.personaId,
+            entryType: LedgerEntryType.CREDIT,
+            sourceType: LedgerSourceType.ORDER_CANCELLATION,
+            billingType: order.billingType,
+            amount: roundToIntegerPeso(order.totalAmount).toNumber(),
+            orderId: order.id,
+            userId,
+            reference: `Anulación Pedido #${order.id}`,
+            description: `Reversión por cancelación de Pedido #${order.id} (${order.invoiceNumber || 'INT-' + order.id.toString().padStart(5, '0')})`,
           });
         }
       }

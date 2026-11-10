@@ -1,8 +1,16 @@
-import { BillingType, PaymentMethod, Role, TransactionType } from '@prisma/client';
+import {
+  BillingType,
+  LedgerEntryType,
+  LedgerSourceType,
+  PaymentMethod,
+  Role,
+  TransactionType,
+} from '@prisma/client';
 import prisma from '../../utils/prisma';
 import AppError from '../../utils/AppError';
 import { personaService } from '../persona.service';
 import { roundToTwoDecimals, toDecimal } from '../../core/money';
+import { recordLedgerMovement } from '../ledger/account-ledger.service';
 
 export const collectionService = {
   async getPendingCollections(userId: number, userRole?: Role) {
@@ -167,9 +175,17 @@ export const collectionService = {
       });
 
       const formattedReceiptNumber = `REC-${newTx.movementId.toString().padStart(5, '0')}`;
-      await tx.persona.update({
-        where: { id: client.id },
-        data: { outstandingBalance: { decrement: roundedAmount } },
+      await recordLedgerMovement(tx, {
+        personaId: client.id,
+        entryType: LedgerEntryType.CREDIT,
+        sourceType: LedgerSourceType.COLLECTION_RECEIPT,
+        billingType: finalBillingType,
+        amount: roundedAmount,
+        orderId: params.orderId ? Number(params.orderId) : null,
+        transactionId: newTx.id,
+        userId: params.userId,
+        reference: `Recibo #${newTx.id}`,
+        description: `Recibo N° ${formattedReceiptNumber}${newTx.description ? ' - ' + newTx.description : ''}`,
       });
 
       return tx.transaction.update({

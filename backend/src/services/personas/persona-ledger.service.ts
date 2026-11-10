@@ -1,14 +1,18 @@
 import prisma from '../../utils/prisma';
-import { Role, TransactionType, OrderStatus } from '@prisma/client';
 import {
-  roundToIntegerPeso,
-  roundToTwoDecimals,
-  toDecimal,
-} from '../../core/money';
+  CreditNoteStatus,
+  LedgerEntryType,
+  OrderStatus,
+  Role,
+  TransactionType,
+} from '@prisma/client';
+import { roundToTwoDecimals, toDecimal } from '../../core/money';
+import { computeRunningBalances } from '../../engines/account-ledger.engine';
+import { mapLedgerEntryToViewItem } from '../ledger/account-ledger.service';
 
 export class PersonaLedgerSubService {
   /**
-   * Obtiene el Libro Mayor (AccountLedger) de cuenta corriente de una persona con Decimal.js.
+   * Obtiene el Libro Mayor Físico (AccountLedger) de cuenta corriente de una persona con Decimal.js.
    */
   async getPersonaLedger(id: number, userId: number, userRole: string) {
     const persona = await prisma.persona.findUnique({
@@ -21,150 +25,68 @@ export class PersonaLedgerSubService {
       throw new Error('Acceso denegado.');
     }
 
-    const [orders, transactions, supplierInvoices, creditNotes, withholdings] = await Promise.all([
-      prisma.order.findMany({
-        where: { personaId: persona.id, status: 'DELIVERED' },
-        orderBy: { createdAt: 'asc' },
-      }),
-      prisma.transaction.findMany({
-        where: {
-          personaId: persona.id,
-          OR: [{ type: TransactionType.OUTCOME }, { type: TransactionType.INCOME, verified: true }],
-        },
-        orderBy: { createdAt: 'asc' },
-      }),
-      prisma.supplierInvoice.findMany({
-        where: { personaId: persona.id },
-        orderBy: { issueDate: 'asc' },
-      }),
-      prisma.creditNote.findMany({
-        where: { personaId: persona.id },
-        orderBy: { createdAt: 'asc' },
-      }),
-      prisma.taxWithholding.findMany({
-        where: {
-          personaId: persona.id,
-          type: { in: ['RETENCION_SUFRIDA', 'RETENCION_PRACTICADA'] },
-        },
-        orderBy: { date: 'asc' },
-      }),
-    ]);
-
-    const ledgerItems: any[] = [];
-
-    orders.forEach((o) => {
-      ledgerItems.push({
-        id: `order-${o.id}`,
-        movementId: o.movementId,
-        date: o.createdAt,
-        type: 'DEBIT',
-        reference: `Pedido #${o.id}`,
-        description: `Factura ${o.invoiceNumber || 'INT-' + o.id.toString().padStart(5, '0')}`,
-        amount: roundToTwoDecimals(o.totalAmount).toNumber(),
-      });
+    const rawEntries = await prisma.accountLedger.findMany({
+      where: { personaId: persona.id },
+      orderBy: [{ occurredAt: 'asc' }, { id: 'asc' }],
     });
 
-    transactions.forEach((t) => {
-      const ledgerType = t.type === TransactionType.INCOME ? 'CREDIT' : 'DEBIT';
-      ledgerItems.push({
-        id: `transaction-${t.id}`,
-        movementId: t.movementId,
-        date: t.createdAt,
-        type: ledgerType,
-        reference: `Recibo #${t.id}`,
-        description:
-          t.type === TransactionType.INCOME
-            ? `Recibo N° ${t.receiptNumber || 'INT-' + t.id.toString().padStart(5, '0')}`
-            : `Pago N° ${t.receiptNumber || 'INT-' + t.id.toString().padStart(5, '0')}`,
-        amount: roundToTwoDecimals(t.amount).toNumber(),
-      });
-    });
+    const { items } = computeRunningBalances(
+      rawEntries.map((entry) => ({
+        raw: entry,
+        entryType: entry.entryType,
+        amount: entry.amount.toString(),
+      })),
+    );
 
-    supplierInvoices.forEach((si) => {
-      ledgerItems.push({
-        id: `supplier-invoice-${si.id}`,
-        movementId: si.movementId,
-        date: si.issueDate,
-        type: 'CREDIT',
-        reference: `Factura Nro ${si.invoiceNumber}`,
-        description: `Compra - Factura ${si.invoiceType.replace('_', ' ')}`,
-        amount: roundToTwoDecimals(si.totalAmount).toNumber(),
-      });
-    });
-
-    creditNotes.forEach((cn) => {
-      ledgerItems.push({
-        id: `credit-note-${cn.id}`,
-        movementId: cn.movementId,
-        date: cn.createdAt,
-        type: 'CREDIT',
-        reference: `Nota de Crédito #${cn.id}`,
-        description: `${cn.creditNoteType.replace(/_/g, ' ')} ${cn.creditNoteNumber || 'INT-' + cn.id.toString().padStart(5, '0')} (${cn.reason})`,
-        amount: roundToTwoDecimals(cn.totalAmount).toNumber(),
-      });
-    });
-
-    withholdings.forEach((w) => {
-      const type = w.type === 'RETENCION_PRACTICADA' ? 'DEBIT' : 'CREDIT';
-      const amt = roundToTwoDecimals(w.amount).toNumber();
-      ledgerItems.push({
-        id: `withholding-${w.id}`,
-        movementId: w.movementId,
-        date: w.date,
-        type,
-        reference: `${w.type === 'RETENCION_PRACTICADA' ? 'Retención Practicada' : 'Retención Sufrida'} Cert. Nro ${w.number}`,
-        description: `${w.type === 'RETENCION_PRACTICADA' ? 'Retención Emitida' : 'Retención Recibida'} - ${w.taxType === 'IIBB' ? 'IIBB' : 'Ganancias'}`,
-        amount: amt,
-        metadata: {
-          taxType: w.taxType,
-          number: w.number,
-          amount: amt,
-          date: w.date,
-          jurisdiction: w.jurisdiction,
-        },
-      });
-    });
-
-    ledgerItems.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-
-    let runningBalanceDec = toDecimal(0);
-    const ledger = ledgerItems.map((item) => {
-      if (item.type === 'DEBIT') {
-        runningBalanceDec = runningBalanceDec.plus(toDecimal(item.amount));
-      } else {
-        runningBalanceDec = runningBalanceDec.minus(toDecimal(item.amount));
-      }
-      return { ...item, balance: roundToTwoDecimals(runningBalanceDec).toNumber() };
+    const seenUiIds = new Set<string>();
+    const ledger = items.map((calc) => {
+      const view = mapLedgerEntryToViewItem(calc.entry.raw, seenUiIds);
+      return {
+        ...view,
+        amount: calc.normalizedAmount,
+        balance: calc.runningBalance,
+      };
     });
 
     return { persona, ledger };
   }
 
   /**
-   * Auditoría de saldos: compara outstandingBalance con el resultado del Ledger para todas las personas activas.
+   * Auditoría masiva de saldos en 2 consultas SQL (sin N+1):
+   * Compara `Persona.outstandingBalance` contra `SUM(DEBIT) - SUM(CREDIT)` físico en `AccountLedger`.
    */
   async checkAllBalances() {
-    const personas = await prisma.persona.findMany({ where: { isActive: true } });
+    const [personas, grouped] = await Promise.all([
+      prisma.persona.findMany({ where: { isActive: true } }),
+      prisma.accountLedger.groupBy({
+        by: ['personaId', 'entryType'],
+        _sum: { amount: true },
+      }),
+    ]);
+
+    const netByPersona = new Map<number, ReturnType<typeof toDecimal>>();
+    for (const row of grouped) {
+      const prev = netByPersona.get(row.personaId) || toDecimal(0);
+      const sumAmt = toDecimal(row._sum.amount?.toString() || 0);
+      const next =
+        row.entryType === LedgerEntryType.DEBIT ? prev.plus(sumAmt) : prev.minus(sumAmt);
+      netByPersona.set(row.personaId, next);
+    }
+
     const mismatches = [];
-
     for (const p of personas) {
-      const ledgerData = await this.getPersonaLedger(p.id, 0, 'ADMIN');
-      const theoretical =
-        ledgerData.ledger.length > 0
-          ? ledgerData.ledger[ledgerData.ledger.length - 1].balance
-          : 0;
-
+      const theoretical = roundToTwoDecimals(netByPersona.get(p.id) || 0).toNumber();
       const actual = roundToTwoDecimals(p.outstandingBalance || 0).toNumber();
       const diff = roundToTwoDecimals(toDecimal(actual).minus(theoretical)).toNumber();
 
-      if (Math.abs(diff) > 0.05) {
+      if (Math.abs(diff) >= 0.01) {
         mismatches.push({
           id: p.id,
           name: p.name,
           isClient: p.isClient,
           isProvider: p.isProvider,
           actual,
-          theoretical: roundToTwoDecimals(theoretical).toNumber(),
+          theoretical,
           diff,
         });
       }
@@ -174,26 +96,31 @@ export class PersonaLedgerSubService {
   }
 
   /**
-   * Concilia el saldo de una persona específica basándose en su Ledger.
+   * Alinea `Persona.outstandingBalance` exactamente con el saldo auditable de `AccountLedger`.
    */
   async reconcileBalance(personaId: number) {
     const persona = await prisma.persona.findUnique({ where: { id: personaId } });
     if (!persona) throw new Error('Persona no encontrada.');
 
-    const ledgerData = await this.getPersonaLedger(persona.id, 0, 'ADMIN');
-    const theoretical =
-      ledgerData.ledger.length > 0
-        ? ledgerData.ledger[ledgerData.ledger.length - 1].balance
-        : 0;
-
-    const roundedTheoretical = roundToIntegerPeso(theoretical).toNumber();
-
-    const updated = await prisma.persona.update({
-      where: { id: persona.id },
-      data: { outstandingBalance: roundedTheoretical },
+    const grouped = await prisma.accountLedger.groupBy({
+      by: ['entryType'],
+      where: { personaId: persona.id },
+      _sum: { amount: true },
     });
 
-    return { persona: updated, theoretical: roundedTheoretical };
+    let netDec = toDecimal(0);
+    for (const row of grouped) {
+      const sumAmt = toDecimal(row._sum.amount?.toString() || 0);
+      netDec = row.entryType === LedgerEntryType.DEBIT ? netDec.plus(sumAmt) : netDec.minus(sumAmt);
+    }
+
+    const exactTheoretical = roundToTwoDecimals(netDec).toNumber();
+    const updated = await prisma.persona.update({
+      where: { id: persona.id },
+      data: { outstandingBalance: exactTheoretical },
+    });
+
+    return { persona: updated, theoretical: exactTheoretical };
   }
 
   async reconcileAllBalances() {
@@ -209,7 +136,7 @@ export class PersonaLedgerSubService {
   }
 
   /**
-   * Obtiene las facturas pendientes de cobro de un cliente.
+   * Obtiene las facturas pendientes de cobro de un cliente (considerando solo Notas de Crédito APPROVED).
    */
   async getPersonaPendingInvoices(id: number, userId: number, userRole: string) {
     const persona = await prisma.persona.findUnique({ where: { id } });
@@ -223,7 +150,7 @@ export class PersonaLedgerSubService {
       where: { personaId: persona.id, status: OrderStatus.DELIVERED },
       include: {
         transactions: { where: { type: TransactionType.INCOME } },
-        creditNotes: true,
+        creditNotes: { where: { status: CreditNoteStatus.APPROVED } },
       },
       orderBy: { createdAt: 'asc' },
     });

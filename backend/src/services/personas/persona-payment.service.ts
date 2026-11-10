@@ -1,11 +1,18 @@
 import prisma from '../../utils/prisma';
 import { logAudit } from '../../utils/audit';
-import { Role, PaymentMethod, TransactionType, BillingType } from '@prisma/client';
 import {
-  roundToIntegerPeso,
+  Role,
+  PaymentMethod,
+  TransactionType,
+  BillingType,
+  LedgerEntryType,
+  LedgerSourceType,
+} from '@prisma/client';
+import {
   roundToTwoDecimals,
   toDecimal,
 } from '../../core/money';
+import { recordLedgerMovement } from '../ledger/account-ledger.service';
 
 export class PersonaPaymentSubService {
   /**
@@ -125,6 +132,7 @@ export class PersonaPaymentSubService {
       }
 
       const createdTransactions = [];
+      let latestPersona: any = null;
 
       for (const item of paymentItems) {
         let cashDrawerId: number | null = null;
@@ -171,21 +179,25 @@ export class PersonaPaymentSubService {
           });
         }
 
+        const txBillingType =
+          selectedBranch === 'A' ? BillingType.OFFICIAL : BillingType.INTERNAL;
+        const txDescription =
+          item.description ||
+          (supplierInvoiceId
+            ? `Pago de Factura Nro ${invoiceNumberToLog}`
+            : orderId
+              ? `Cobro de Factura ${orderNumberDesc}`
+              : `${resolvedType === TransactionType.OUTCOME ? 'Pago' : 'Cobro'} en cuenta corriente de ${persona.name}`);
+
         const transaction = await tx.transaction.create({
           data: {
             personaId: persona.id,
             userId,
-            billingType: selectedBranch === 'A' ? BillingType.OFFICIAL : BillingType.INTERNAL,
+            billingType: txBillingType,
             type: resolvedType,
             paymentMethod: item.paymentMethod,
             amount: item.amount,
-            description:
-              item.description ||
-              (supplierInvoiceId
-                ? `Pago de Factura Nro ${invoiceNumberToLog}`
-                : orderId
-                  ? `Cobro de Factura ${orderNumberDesc}`
-                  : `${resolvedType === TransactionType.OUTCOME ? 'Pago' : 'Cobro'} en cuenta corriente de ${persona.name}`),
+            description: txDescription,
             cashDrawerId,
             bankAccountId,
             supplierInvoiceId: supplierInvoiceId ? Number(supplierInvoiceId) : null,
@@ -194,14 +206,33 @@ export class PersonaPaymentSubService {
           },
         });
         createdTransactions.push(transaction);
+
+        const isIncome = resolvedType === TransactionType.INCOME;
+        const ledgerRes = await recordLedgerMovement(tx, {
+          personaId: persona.id,
+          entryType: isIncome ? LedgerEntryType.CREDIT : LedgerEntryType.DEBIT,
+          sourceType: isIncome
+            ? LedgerSourceType.COLLECTION_RECEIPT
+            : LedgerSourceType.SUPPLIER_PAYMENT,
+          billingType: txBillingType,
+          amount: item.amount,
+          orderId: orderId ? Number(orderId) : null,
+          supplierInvoiceId: supplierInvoiceId ? Number(supplierInvoiceId) : null,
+          transactionId: transaction.id,
+          userId,
+          reference: `${isIncome ? 'Recibo' : 'Pago'} #${transaction.id}`,
+          description: txDescription,
+        });
+        if (ledgerRes?.updatedPersona) {
+          latestPersona = ledgerRes.updatedPersona;
+        }
       }
 
-      let retencionesDec = toDecimal(0);
       if (data.retenciones && Array.isArray(data.retenciones)) {
         for (const ret of data.retenciones) {
           const retAmt = roundToTwoDecimals(ret.amount || 0);
-          retencionesDec = retencionesDec.plus(retAmt);
-          await tx.taxWithholding.create({
+          if (retAmt.lte(0)) continue;
+          const createdRet = await tx.taxWithholding.create({
             data: {
               type: 'RETENCION_SUFRIDA',
               taxType: ret.taxType,
@@ -212,19 +243,34 @@ export class PersonaPaymentSubService {
               jurisdiction: ret.taxType === 'IIBB' ? 'AR-B' : null,
             },
           });
+
+          const retLedgerRes = await recordLedgerMovement(tx, {
+            personaId: persona.id,
+            entryType: LedgerEntryType.CREDIT,
+            sourceType: LedgerSourceType.TAX_WITHHOLDING,
+            billingType: BillingType.OFFICIAL,
+            amount: retAmt.toNumber(),
+            taxWithholdingId: createdRet.id,
+            userId,
+            occurredAt: createdRet.date,
+            reference: `Retención Sufrida Cert. Nro ${ret.number}`,
+            description: `Retención Recibida - ${ret.taxType === 'IIBB' ? 'IIBB' : 'Ganancias'}`,
+            metadata: {
+              taxType: ret.taxType,
+              number: ret.number,
+              amount: retAmt.toNumber(),
+              date: createdRet.date.toISOString(),
+              jurisdiction: createdRet.jurisdiction,
+            },
+          });
+          if (retLedgerRes?.updatedPersona) {
+            latestPersona = retLedgerRes.updatedPersona;
+          }
         }
       }
 
-      const totalCredit = roundToIntegerPeso(totalPaymentDec.plus(retencionesDec)).toNumber();
-
-      const updatedPersona = await tx.persona.update({
-        where: { id: persona.id },
-        data: {
-          outstandingBalance: {
-            decrement: resolvedType === TransactionType.INCOME ? totalCredit : -totalCredit,
-          },
-        },
-      });
+      const updatedPersona =
+        latestPersona || (await tx.persona.findUniqueOrThrow({ where: { id: persona.id } }));
 
       return {
         transaction: createdTransactions[0],
