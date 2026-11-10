@@ -2,6 +2,7 @@ import prisma from '../../utils/prisma';
 import bcrypt from 'bcryptjs';
 import { Role } from '@prisma/client';
 import { logAudit } from '../../utils/audit';
+import { sessionCache } from '../../utils/session-cache.util';
 
 export class AdminUsersSubService {
   /**
@@ -134,6 +135,7 @@ export class AdminUsersSubService {
       data: { isActive: !user.isActive },
       select: { id: true, username: true, isActive: true },
     });
+    sessionCache.invalidateStaffSession(user.id);
 
     if (adminId) {
       await logAudit({
@@ -191,6 +193,7 @@ export class AdminUsersSubService {
         createdAt: true,
       },
     });
+    sessionCache.invalidateStaffSession(id);
 
     if (adminId) {
       await logAudit({
@@ -222,6 +225,7 @@ export class AdminUsersSubService {
     }
 
     await prisma.user.delete({ where: { id: user.id } });
+    sessionCache.invalidateStaffSession(user.id);
 
     if (adminId) {
       await logAudit({

@@ -3,6 +3,7 @@ import jwt, { JsonWebTokenError, TokenExpiredError } from 'jsonwebtoken';
 import { Role } from '@prisma/client';
 import { env } from '../config/env.config';
 import prisma from '../utils/prisma';
+import { sessionCache } from '../utils/session-cache.util';
 
 export interface StoreClientSession {
   personaId: number;
@@ -63,18 +64,32 @@ export async function authenticateStoreClientJWT(
 
     // Caso 1: Token de Cliente de Tienda Online
     if (decoded.personaId && (decoded.role === 'CLIENTE' || decoded.role === 'CLIENT')) {
-      const clientDb = await prisma.persona.findUnique({
-        where: { id: Number(decoded.personaId) },
-        select: { id: true, isActive: true, isClient: true, priceList: true },
-      });
+      const personaId = Number(decoded.personaId);
+      let activeClient = sessionCache.getStoreClientSession(personaId);
 
-      if (!clientDb || !clientDb.isActive || !clientDb.isClient) {
-        res.status(401).json({
-          status: 'error',
-          message: 'La cuenta de cliente se encuentra inactiva o deshabilitada.',
-          code: 'CLIENT_INACTIVE',
+      if (!activeClient) {
+        const clientDb = await prisma.persona.findUnique({
+          where: { id: personaId },
+          select: { id: true, isActive: true, isClient: true, priceList: true },
         });
-        return;
+
+        if (!clientDb || !clientDb.isActive || !clientDb.isClient) {
+          sessionCache.invalidateStoreClientSession(personaId);
+          res.status(401).json({
+            status: 'error',
+            message: 'La cuenta de cliente se encuentra inactiva o deshabilitada.',
+            code: 'CLIENT_INACTIVE',
+          });
+          return;
+        }
+
+        activeClient = {
+          id: clientDb.id,
+          isActive: true,
+          isClient: true,
+          priceList: clientDb.priceList || 'A',
+        };
+        sessionCache.setStoreClientSession(personaId, activeClient);
       }
 
       const requestedPersonaId =
@@ -82,9 +97,9 @@ export async function authenticateStoreClientJWT(
           ? Number(req.params.personaId)
           : req.body?.personaId !== undefined
             ? Number(req.body.personaId)
-            : clientDb.id;
+            : activeClient.id;
 
-      if (requestedPersonaId !== clientDb.id) {
+      if (requestedPersonaId !== activeClient.id) {
         res.status(403).json({
           status: 'error',
           message: 'Acceso denegado. No tenés permiso para consultar u operar la cuenta de otro cliente.',
@@ -94,8 +109,8 @@ export async function authenticateStoreClientJWT(
       }
 
       req.storeClient = {
-        personaId: clientDb.id,
-        priceList: clientDb.priceList || 'A',
+        personaId: activeClient.id,
+        priceList: activeClient.priceList,
       };
       next();
       return;
@@ -103,17 +118,26 @@ export async function authenticateStoreClientJWT(
 
     // Caso 2: Personal interno autorizado (ADMIN o FACTURACION)
     if (decoded.id) {
-      const staffDb = await prisma.user.findUnique({
-        where: { id: Number(decoded.id) },
-        select: { id: true, isActive: true, role: true },
-      });
+      const staffId = Number(decoded.id);
+      let activeStaff = sessionCache.getStaffSession(staffId);
+
+      if (!activeStaff) {
+        const staffDb = await prisma.user.findUnique({
+          where: { id: staffId },
+          select: { id: true, isActive: true, role: true },
+        });
+
+        if (staffDb && staffDb.isActive) {
+          activeStaff = { id: staffDb.id, role: staffDb.role, isActive: true };
+          sessionCache.setStaffSession(staffId, activeStaff);
+        }
+      }
 
       if (
-        staffDb &&
-        staffDb.isActive &&
-        (staffDb.role === Role.ADMIN || staffDb.role === Role.FACTURACION)
+        activeStaff &&
+        (activeStaff.role === Role.ADMIN || activeStaff.role === Role.FACTURACION)
       ) {
-        req.staffUser = { id: staffDb.id, role: staffDb.role };
+        req.staffUser = { id: activeStaff.id, role: activeStaff.role };
         next();
         return;
       }

@@ -4,6 +4,7 @@ import { Role } from '@prisma/client';
 import { AuthenticatedRequest, UserPayload } from '../types';
 import { env } from '../config/env.config';
 import prisma from '../utils/prisma';
+import { sessionCache } from '../utils/session-cache.util';
 
 /**
  * Middleware para autenticar requests mediante JWT en el header Authorization.
@@ -30,19 +31,32 @@ export async function authenticateJWT(
     req.user = decoded;
 
     if (decoded.id) {
-      const userDb = await prisma.user.findUnique({
-        where: { id: decoded.id },
-        select: { isActive: true, role: true },
-      });
-      if (!userDb || !userDb.isActive) {
-        res.status(401).json({
-          status: 'error',
-          message: 'Cuenta desactivada o inactiva.',
-          code: 'USER_INACTIVE',
+      const userId = Number(decoded.id);
+      const cachedStaff = sessionCache.getStaffSession(userId);
+
+      if (cachedStaff) {
+        req.user.role = cachedStaff.role;
+      } else {
+        const userDb = await prisma.user.findUnique({
+          where: { id: userId },
+          select: { isActive: true, role: true },
         });
-        return;
+        if (!userDb || !userDb.isActive) {
+          sessionCache.invalidateStaffSession(userId);
+          res.status(401).json({
+            status: 'error',
+            message: 'Cuenta desactivada o inactiva.',
+            code: 'USER_INACTIVE',
+          });
+          return;
+        }
+        sessionCache.setStaffSession(userId, {
+          id: userId,
+          role: userDb.role,
+          isActive: true,
+        });
+        req.user.role = userDb.role;
       }
-      req.user.role = userDb.role;
     }
 
     next();

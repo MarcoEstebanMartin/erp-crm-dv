@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import jwt from 'jsonwebtoken';
 import { env } from '../../config/env.config';
 import prisma from '../../utils/prisma';
+import { sessionCache } from '../../utils/session-cache.util';
 import { authenticateStoreClientJWT } from '../../middlewares/storeAuth.middleware';
 import {
   hashClientPin,
@@ -15,6 +16,7 @@ import { resolveServerSideStorePricing } from '../store/store-order.service';
 describe('Seguridad de Tienda Mayorista (PIN Hashing, Anti-IDOR y Precios en Servidor)', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+    sessionCache.clear();
   });
 
   it('Encripta el PIN con bcrypt y migra transparentemente PINes legados en texto plano', async () => {

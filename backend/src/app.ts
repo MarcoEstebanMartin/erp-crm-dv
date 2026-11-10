@@ -4,6 +4,7 @@ import path from 'path';
 import { env } from './config/env.config';
 import { ensureDirectoriesExist, syncMasterProductImages } from './utils/fileSync.util';
 import { errorHandler } from './middlewares/errorHandler.middleware';
+import { securityHeadersMiddleware } from './middlewares/securityHeaders.middleware';
 import { authenticateJWT } from './middlewares/auth';
 
 // Importación de Rutas
@@ -37,17 +38,19 @@ import excelImporterRoutes from './routes/excel_importer.routes';
 
 const app: Application = express();
 
-// 1. Headers de Seguridad Nativos & CORS
-app.use((_req: Request, res: Response, next: NextFunction) => {
-  res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.setHeader('X-Frame-Options', 'DENY');
-  res.setHeader('X-XSS-Protection', '1; mode=block');
-  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
-  next();
-});
+// 1. Configuración de Perímetro HTTP, Proxy Confiable, Headers de Seguridad y CORS
+app.disable('x-powered-by');
+app.set('trust proxy', env.TRUST_PROXY);
+app.use(securityHeadersMiddleware);
 
-app.use(cors({ origin: env.CORS_ORIGIN }));
-app.use(express.json());
+app.use(
+  cors({
+    origin: env.CORS_ORIGIN,
+    credentials: env.CORS_ORIGIN !== '*',
+  }),
+);
+app.use(express.json({ limit: env.JSON_BODY_LIMIT }));
+app.use(express.urlencoded({ extended: true, limit: env.JSON_BODY_LIMIT }));
 
 // 2. Middleware de Rendimiento (X-Response-Time Seguro)
 app.use((_req: Request, res: Response, next: NextFunction) => {

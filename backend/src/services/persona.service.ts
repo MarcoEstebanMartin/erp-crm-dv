@@ -7,6 +7,7 @@ import { personaPaymentSubService } from './personas/persona-payment.service';
 import { personaLedgerSubService } from './personas/persona-ledger.service';
 import { personaDebtorsSubService } from './personas/persona-debtors.service';
 import { personaSellersSubService } from './personas/persona-sellers.service';
+import { sessionCache } from '../utils/session-cache.util';
 
 export class PersonaService {
   /**
@@ -207,6 +208,7 @@ export class PersonaService {
     });
 
     await logAudit({ userId, action: 'UPDATE_PERSONA', entityType: 'Persona', entityId: updated.id, oldValues: original, newValues: updated });
+    sessionCache.invalidateStoreClientSession(updated.id);
     return updated;
   }
 
@@ -250,6 +252,7 @@ export class PersonaService {
     }
 
     const deleted = await prisma.persona.delete({ where: { id } });
+    sessionCache.invalidateStoreClientSession(deleted.id);
     await logAudit({ userId, action: 'DELETE_PERSONA', entityType: 'Persona', entityId: deleted.id, oldValues: persona });
     return deleted;
   }

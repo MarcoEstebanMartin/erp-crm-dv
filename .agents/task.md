@@ -90,7 +90,31 @@
 - [x] **Paso 1.2**: Alinear el email global de Git en esta PC a `estebanmartin06@gmail.com` y subir `ERP-CRM DV` a un repositorio **Privado** en GitHub (`MarcoEstebanMartin/erp-crm-dv`) para respaldo y descarga en cualquier otra PC.
 - [x] **Paso 1.3**: Migrar el 100% del ERP (`52` tablas, `3.756` registros, secuencias `movement_seq`, `AccountLedger` con paridad exacta al centavo `ARS -2.620.465,55` y candados RLS) hacia `erp-dv` (`rtdoeoyeoomzqzagmpzn`, región **Brasil `sa-east-1`**) dentro de la cuenta única **`MarcoEstebanMartin` (`estebanmartin06@gmail.com`)**, donde también convive `CHATBOT-DV`. Validado `prisma migrate status`, pooler `6543`, `tsc --noEmit` y `20 suites / 83 tests` en verde.
 
-### Fases Siguientes Planificadas
+### Fases Siguientes Planificadas (Integración Ecosistema)
 - [ ] **Fase 2**: Banco único de fotos en Cloudflare R2 (`media.donvenancio.com.ar`) + despliegue de `ERP-CRM DV` en la nube (`sistema.donvenancio.com.ar`).
 - [ ] **Fase 3**: Sincronización inicial segura **Producción -> ERP** (precios y 465 fotos vigentes sin pisar producción) y puente unificado de catálogo/stock/pedidos sobre una única base en Brasil.
 - [ ] **Fase 4**: Conexión de Agentes de IA (`agencia-bots`) sobre la API validada del ERP + `pgvector`.
+
+---
+
+## Plan Activo: Blindaje Ultraseguro y Eficiencia Operativa del Stack (Paso a Paso)
+
+- [x] **Paso S1: Perímetro HTTP, Anti-Spoofing, Docker Seguro y Caché de Sesión en Memoria** ✅ COMPLETADO
+  - [x] Endurecer `env.config.ts` (`TRUST_PROXY='loopback'` por defecto, `JSON_BODY_LIMIT='1mb'`, bloqueo fatal de `CORS_ORIGIN='*'` en `production`)
+  - [x] Crear `securityHeaders.middleware.ts` (`CSP` estricto en `/api/*`, `HSTS` en producción, `Permissions-Policy`, ocultar `x-powered-by`) y limitar payloads en `app.ts`
+  - [x] Blindar `rateLimiter.middleware.ts` contra falsificación de `X-Forwarded-For` usando `req.ip` validado, tope `MAX_RATE_LIMIT_KEYS` y cabeceras `Retry-After`
+  - [x] Crear `session-cache.util.ts` (`45s` TTL) conectado a `authenticateJWT` y `authenticateStoreClientJWT` con invalidación en `0ms` al desactivar/editar en `admin-users.service.ts` y `persona.service.ts`
+  - [x] Cerrar puerto `5432` al exterior, exigir secretos reales sin defaults inseguros y aislar red `internal_net` en `docker-compose.prod.yml`
+  - [x] Validar `tsc --noEmit` (Backend y Frontend) + `21 suites / 87 tests` en verde (`security-perimeter.test.ts`)
+- [ ] **Paso S2: Cookies `HttpOnly` Anti-XSS + Unificación de Cliente HTTP + Limpieza de `axios` y `jest`**
+  - [ ] Emitir sesión por Cookie `HttpOnly` + `SameSite=Lax` + `Secure` (con `POST /api/auth/logout`) manteniendo soporte dual sin cortar sesiones activas
+  - [ ] Migrar `MobileCobros.tsx`, `ReceiptView.tsx`, `ExcelImportModal.tsx` y `whatsapp.service.ts` a `fetch` / `apiClient` unificado con `credentials: 'include'`
+  - [ ] Eliminar dependencias duplicadas/huérfanas (`axios`, `jest`, `ts-jest`, `@types/jest`)
+- [ ] **Paso S3: Erradicación de Vulnerabilidades en Planillas (`xlsx` -> `exceljs` Seguro)**
+  - [ ] Reemplazar `xlsx` (`0.18.5`) en Backend y Frontend por `exceljs` libre de alertas de seguridad (*Prototype Pollution / ReDoS*) y auditar `npm audit`
+- [ ] **Paso S4: Escudo Anti-Doble Clic (`Idempotency-Key`) en Operaciones de Dinero y Stock**
+  - [ ] Garantizar 0% de pedidos, facturas AFIP, gastos o cobros duplicados ante microcortes de señal 4G o doble clic en mostrador/ruta
+- [ ] **Paso S5: Modo Offline / PWA para Preventa en Ruta (`IndexedDB` + Sincronización Automática)**
+  - [ ] Permitir consultar catálogo y encolar pedidos sin señal en comercios, sincronizando automáticamente al recuperar conexión
+- [ ] **Paso S6: Cola Resiliente de Reintentos (AFIP / WhatsApp) + Backups Encriptados (`AES-256-GCM`)**
+  - [ ] Reintentos automáticos con *exponential backoff* ante caídas de ARCA/AFIP o Meta API y respaldo nocturno cifrado
