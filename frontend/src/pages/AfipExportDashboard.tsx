@@ -40,9 +40,7 @@ export default function AfipExportDashboard() {
     try {
       setFetchingMetrics(true);
       const res = await fetch(`${API_BASE_URL}/iva/export?month=${month}&year=${year}`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
-        }
+        credentials: 'include',
       });
       if (!res.ok) throw new Error('Error al obtener datos fiscales');
       const { data } = await res.json();
@@ -84,9 +82,7 @@ export default function AfipExportDashboard() {
       await new Promise(r => setTimeout(r, 100));
 
       const res = await fetch(`${API_BASE_URL}/iva/export?month=${month}&year=${year}`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
-        }
+        credentials: 'include',
       });
       if (!res.ok) throw new Error('Error al generar los archivos AFIP');
       const { data } = await res.json();
@@ -135,9 +131,7 @@ export default function AfipExportDashboard() {
       await new Promise(r => setTimeout(r, 150));
 
       const res = await fetch(`${API_BASE_URL}/iva/export?month=${month}&year=${year}`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
-        }
+        credentials: 'include',
       });
       if (!res.ok) throw new Error('Error al obtener datos para PDF');
       const { data } = await res.json();

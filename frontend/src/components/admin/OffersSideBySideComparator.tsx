@@ -237,7 +237,7 @@ export default function OffersSideBySideComparator({ onBack, initialBaselineId, 
       if (params.toString()) query = `?${params.toString()}`;
 
       const res = await fetch(`${API_BASE_URL}/offers/comparison${query}`, {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` }
+        credentials: 'include',
       });
 
       if (res.ok) {

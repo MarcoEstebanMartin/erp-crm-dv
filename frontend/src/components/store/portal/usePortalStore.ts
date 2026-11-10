@@ -55,18 +55,11 @@ export function usePortalStore({ client, expireSession }: UsePortalStoreParams) 
   };
 
   const fetchAccountData = async (personaId: number) => {
-    const storeToken = localStorage.getItem('store_token');
-    if (!storeToken) {
-      expireSession();
-      return;
-    }
-
     setIsLoadingAccount(true);
     try {
-      const authHeaders = { Authorization: `Bearer ${storeToken}` };
       const [accRes, ordRes] = await Promise.all([
-        fetch(`${API_BASE_URL}/store/account/${personaId}`, { headers: authHeaders }),
-        fetch(`${API_BASE_URL}/store/orders/${personaId}`, { headers: authHeaders })
+        fetch(`${API_BASE_URL}/store/account/${personaId}`, { credentials: 'include' }),
+        fetch(`${API_BASE_URL}/store/orders/${personaId}`, { credentials: 'include' })
       ]);
 
       if (accRes.status === 401 || ordRes.status === 401) {
@@ -137,19 +130,14 @@ export function usePortalStore({ client, expireSession }: UsePortalStoreParams) 
 
   const handleSubmitOrder = async () => {
     if (!client || cart.length === 0) return;
-    const storeToken = localStorage.getItem('store_token');
-    if (!storeToken) {
-      expireSession();
-      return;
-    }
 
     setIsSubmittingOrder(true);
     try {
       const res = await fetch(`${API_BASE_URL}/store/orders`, {
         method: 'POST',
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${storeToken}`
         },
         body: JSON.stringify({
           personaId: client.id,

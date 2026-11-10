@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { CheckCircle, Download, FileText } from 'lucide-react';
-import axios from 'axios';
-import { API_BASE_URL } from '../utils/api';
+import { apiClient } from '../api/apiClient';
 
 interface ReceiptViewProps {
   receiptId?: string;
@@ -18,8 +17,8 @@ const ReceiptView: React.FC<ReceiptViewProps> = ({ receiptId }) => {
   useEffect(() => {
     const fetchReceipt = async () => {
       try {
-        const res = await axios.get(`${API_BASE_URL}/collections/receipt/${activeId}`);
-        setReceipt(res.data);
+        const data = await apiClient.get(`/collections/receipt/${activeId}`);
+        setReceipt(data);
       } catch (err) {
         setError('El comprobante no existe o no pudo ser cargado.');
       } finally {

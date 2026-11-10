@@ -38,7 +38,7 @@ export default function OffersDashboard() {
     setLoading(true);
     try {
       const res = await fetch(`${API_BASE_URL}/offers`, {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` }
+        credentials: 'include',
       });
       if (res.ok) {
         const data = await res.json();
@@ -56,9 +56,9 @@ export default function OffersDashboard() {
     try {
       const res = await fetch(`${API_BASE_URL}/offers`, {
         method: 'POST',
+        credentials: 'include',
         headers: { 
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
         },
         body: JSON.stringify({ title })
       });
@@ -97,7 +97,7 @@ export default function OffersDashboard() {
     try {
       const res = await fetch(`${API_BASE_URL}/offers/${id}`, {
         method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` }
+        credentials: 'include',
       });
       if (res.ok) {
         fetchCampaigns();
@@ -124,16 +124,16 @@ export default function OffersDashboard() {
     setPromptModal(prev => ({ ...prev, isOpen: false }));
     try {
       const res = await fetch(`${API_BASE_URL}/offers/${campaign.id}`, {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` }
+        credentials: 'include',
       });
       if (!res.ok) throw new Error('Error fetching original campaign');
       const originalCampaign = await res.json();
       
       const createRes = await fetch(`${API_BASE_URL}/offers`, {
         method: 'POST',
+        credentials: 'include',
         headers: { 
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
         },
         body: JSON.stringify({ title: newTitle, isActive: false })
       });
@@ -152,9 +152,9 @@ export default function OffersDashboard() {
         
         await fetch(`${API_BASE_URL}/offers/${newCampaign.id}/items/bulk`, {
           method: 'POST',
+          credentials: 'include',
           headers: { 
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
           },
           body: JSON.stringify({ items: itemsToAdd })
         });
@@ -162,9 +162,9 @@ export default function OffersDashboard() {
         if (originalCampaign.customRubroOrder) {
           await fetch(`${API_BASE_URL}/offers/${newCampaign.id}`, {
             method: 'PUT',
+            credentials: 'include',
             headers: { 
               'Content-Type': 'application/json',
-              'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
             },
             body: JSON.stringify({ customRubroOrder: originalCampaign.customRubroOrder })
           });

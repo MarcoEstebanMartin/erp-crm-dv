@@ -39,7 +39,8 @@ export function usePortalAuth({
     setIsLoggingIn(true);
     try {
       const res = await fetch(
-        `${API_BASE_URL}/store/magic-login?token=${encodeURIComponent(token)}${draftId ? `&draftId=${draftId}` : ''}`
+        `${API_BASE_URL}/store/magic-login?token=${encodeURIComponent(token)}${draftId ? `&draftId=${draftId}` : ''}`,
+        { credentials: 'include' }
       );
       const json = await res.json();
 
@@ -47,9 +48,7 @@ export function usePortalAuth({
         const loggedClient = json.data.client;
         setClient(loggedClient);
         localStorage.setItem('store_client_session', JSON.stringify(loggedClient));
-        if (json.data?.token) {
-          localStorage.setItem('store_token', json.data.token);
-        }
+        localStorage.removeItem('store_token');
 
         if (targetTab === 'account') {
           onTargetTab('account');
@@ -111,7 +110,7 @@ export function usePortalAuth({
     if (token) {
       setClient(selected);
       localStorage.setItem('store_client_session', JSON.stringify(selected));
-      localStorage.setItem('store_token', token);
+      localStorage.removeItem('store_token');
     } else {
       setPendingClient(selected);
       setPinMessage(
@@ -139,6 +138,7 @@ export function usePortalAuth({
     try {
       const res = await fetch(`${API_BASE_URL}/store/login`, {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ search: term.trim() })
       });
@@ -184,6 +184,7 @@ export function usePortalAuth({
     try {
       const res = await fetch(`${API_BASE_URL}/store/login`, {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           clientId: pendingClient.id,
@@ -204,6 +205,10 @@ export function usePortalAuth({
   };
 
   const handleLogoutClient = () => {
+    fetch(`${API_BASE_URL}/store/logout`, {
+      method: 'POST',
+      credentials: 'include',
+    }).catch(() => {});
     setClient(null);
     setPendingClient(null);
     setPinInput('');

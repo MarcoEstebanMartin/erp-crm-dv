@@ -108,9 +108,9 @@ export default function OffersCatalogGenerator({ campaignId, campaignData, onBac
       try {
         await fetch(`${API_BASE_URL}/offers/${campaignId}`, {
           method: 'PUT',
+          credentials: 'include',
           headers: { 
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
           },
           body: JSON.stringify({
             customRubroOrder: newOrder
@@ -127,7 +127,7 @@ export default function OffersCatalogGenerator({ campaignId, campaignData, onBac
     setLoading(true);
     try {
       const res = await fetch(`${API_BASE_URL}/offers/${campaignId}`, {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` }
+        credentials: 'include',
       });
       if (res.ok) {
         const data = await res.json();

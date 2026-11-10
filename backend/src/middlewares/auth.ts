@@ -5,26 +5,40 @@ import { AuthenticatedRequest, UserPayload } from '../types';
 import { env } from '../config/env.config';
 import prisma from '../utils/prisma';
 import { sessionCache } from '../utils/session-cache.util';
+import {
+  clearStaffSessionCookie,
+  extractStaffToken,
+  isCrossSiteCookieMutationBlocked,
+} from '../utils/cookie-auth.util';
 
 /**
- * Middleware para autenticar requests mediante JWT en el header Authorization.
+ * Middleware para autenticar requests mediante Cookie HttpOnly segura (o Bearer para clientes API).
  */
 export async function authenticateJWT(
   req: AuthenticatedRequest,
   res: Response,
   next: NextFunction
 ): Promise<void> {
-  const authHeader = req.headers.authorization;
+  const extracted = extractStaffToken(req);
 
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+  if (!extracted) {
     res.status(401).json({
       status: 'error',
-      message: 'Acceso denegado. Token no provisto o con formato inválido.',
+      message: 'Acceso denegado. Sesión no iniciada o token no provisto.',
     });
     return;
   }
 
-  const token = authHeader.split(' ')[1];
+  if (isCrossSiteCookieMutationBlocked(req, extracted.source)) {
+    res.status(403).json({
+      status: 'error',
+      message: 'Solicitud cross-site bloqueada por protección CSRF.',
+      code: 'CSRF_BLOCKED',
+    });
+    return;
+  }
+
+  const token = extracted.token;
 
   try {
     const decoded = jwt.verify(token, env.JWT_SECRET) as UserPayload;
@@ -43,6 +57,7 @@ export async function authenticateJWT(
         });
         if (!userDb || !userDb.isActive) {
           sessionCache.invalidateStaffSession(userId);
+          clearStaffSessionCookie(req, res);
           res.status(401).json({
             status: 'error',
             message: 'Cuenta desactivada o inactiva.',

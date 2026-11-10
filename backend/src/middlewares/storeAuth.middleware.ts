@@ -4,6 +4,11 @@ import { Role } from '@prisma/client';
 import { env } from '../config/env.config';
 import prisma from '../utils/prisma';
 import { sessionCache } from '../utils/session-cache.util';
+import {
+  clearStoreSessionCookie,
+  extractStoreToken,
+  isCrossSiteCookieMutationBlocked,
+} from '../utils/cookie-auth.util';
 
 export interface StoreClientSession {
   personaId: number;
@@ -36,9 +41,9 @@ export async function authenticateStoreClientJWT(
   res: Response,
   next: NextFunction,
 ): Promise<void> {
-  const authHeader = req.headers.authorization;
+  const extracted = extractStoreToken(req);
 
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+  if (!extracted) {
     res.status(401).json({
       status: 'error',
       message: 'Sesión de tienda requerida. Por favor ingresá nuevamente con tu PIN.',
@@ -47,7 +52,16 @@ export async function authenticateStoreClientJWT(
     return;
   }
 
-  const token = authHeader.split(' ')[1];
+  if (isCrossSiteCookieMutationBlocked(req, extracted.source)) {
+    res.status(403).json({
+      status: 'error',
+      message: 'Solicitud cross-site bloqueada por protección CSRF.',
+      code: 'CSRF_BLOCKED',
+    });
+    return;
+  }
+
+  const token = extracted.token;
 
   try {
     const decoded = jwt.verify(token, env.JWT_SECRET) as RawTokenPayload;
@@ -75,6 +89,7 @@ export async function authenticateStoreClientJWT(
 
         if (!clientDb || !clientDb.isActive || !clientDb.isClient) {
           sessionCache.invalidateStoreClientSession(personaId);
+          clearStoreSessionCookie(req, res);
           res.status(401).json({
             status: 'error',
             message: 'La cuenta de cliente se encuentra inactiva o deshabilitada.',

@@ -1,15 +1,27 @@
 import { Request, Response } from 'express';
+import jwt from 'jsonwebtoken';
 import { StoreAuthenticatedRequest } from '../middlewares/storeAuth.middleware';
 import { StoreAuthService, generateMagicToken } from '../services/store/store-auth.service';
 import { StoreMagicLoginService } from '../services/store/store-magic.service';
 import { StoreCatalogService } from '../services/store/store-catalog.service';
 import { StoreOrderService } from '../services/store/store-order.service';
+import { env } from '../config/env.config';
+import { sessionCache } from '../utils/session-cache.util';
+import {
+  clearStoreSessionCookie,
+  extractStoreToken,
+  setStoreSessionCookie,
+} from '../utils/cookie-auth.util';
 
 export { generateMagicToken };
 
 export async function loginClient(req: Request, res: Response): Promise<void> {
   try {
     const result = await StoreAuthService.authenticateClient(req.body || {});
+    const sessionToken = (result.payload as any)?.data?.token;
+    if (result.httpStatus === 200 && typeof sessionToken === 'string' && sessionToken) {
+      setStoreSessionCookie(req, res, sessionToken);
+    }
     res.status(result.httpStatus).json(result.payload);
   } catch (error) {
     console.error('⚠️ Error en loginClient:', error);
@@ -28,6 +40,10 @@ export async function magicLoginClient(req: Request, res: Response): Promise<voi
       req.body?.magicToken) as string | undefined;
     const draftId = req.query.draftId || req.body?.draftId;
     const result = await StoreMagicLoginService.exchangeMagicToken(rawToken, draftId);
+    const sessionToken = (result.payload as any)?.data?.token;
+    if (result.httpStatus === 200 && typeof sessionToken === 'string' && sessionToken) {
+      setStoreSessionCookie(req, res, sessionToken);
+    }
     res.status(result.httpStatus).json(result.payload);
   } catch (error) {
     console.error('⚠️ Error en magicLoginClient:', error);
@@ -36,6 +52,25 @@ export async function magicLoginClient(req: Request, res: Response): Promise<voi
       message: 'Error interno al autenticar por enlace directo.',
     });
   }
+}
+
+export async function logoutStoreClient(req: Request, res: Response): Promise<void> {
+  const extracted = extractStoreToken(req);
+  if (extracted) {
+    try {
+      const decoded = jwt.verify(extracted.token, env.JWT_SECRET) as { personaId?: number };
+      if (decoded?.personaId) {
+        sessionCache.invalidateStoreClientSession(Number(decoded.personaId));
+      }
+    } catch {
+      // Token expirado o inválido; limpiamos cookie igualmente
+    }
+  }
+  clearStoreSessionCookie(req, res);
+  res.status(200).json({
+    status: 'success',
+    message: 'Sesión de tienda cerrada correctamente.',
+  });
 }
 
 export async function getStoreCatalog(req: Request, res: Response): Promise<void> {

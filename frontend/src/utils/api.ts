@@ -3,18 +3,17 @@ import { BillingType, OrderStatus, PaymentMethod } from './types';
 // Usa ruta relativa para que funcione tanto en localhost, IP local y túneles externos (Ngrok/Localtunnel)
 export const API_BASE_URL = '/api';
 
-// Verificar si estamos en modo simulación
+// La sesión viaja protegida por Cookie HttpOnly (inmune a robo XSS en localStorage)
 function getHeaders() {
-  const token = localStorage.getItem('auth_token');
   return {
     'Content-Type': 'application/json',
-    'Authorization': `Bearer ${token}`
   };
 }
 
 async function request(path: string, options: RequestInit = {}) {
   const url = `${API_BASE_URL}${path}`;
   const response = await fetch(url, {
+    credentials: 'include',
     ...options,
     headers: {
       ...getHeaders(),
@@ -80,10 +79,8 @@ export const api = {
     if (!res) {
       throw new Error('Respuesta inválida del servidor');
     }
-    const token = res.token || res.accessToken;
-    if (token) {
-      localStorage.setItem('auth_token', token);
-    }
+    // Purgar cualquier token legado en localStorage; la sesión reside en Cookie HttpOnly
+    localStorage.removeItem('auth_token');
     if (res.user) {
       localStorage.setItem('auth_user', JSON.stringify(res.user));
     }
@@ -94,6 +91,10 @@ export const api = {
   },
 
   logout: () => {
+    fetch(`${API_BASE_URL}/auth/logout`, {
+      method: 'POST',
+      credentials: 'include',
+    }).catch(() => {});
     localStorage.removeItem('auth_token');
     localStorage.removeItem('auth_user');
     localStorage.removeItem('auth_config');
@@ -105,18 +106,17 @@ export const api = {
   },
 
   getMe: async () => {
-    
-    const token = localStorage.getItem('auth_token');
-    if (!token) return null;
     try {
       const res = await request('/auth/me');
-      if (res.data?.user) {
-        localStorage.setItem('auth_user', JSON.stringify(res.data.user));
+      const resolvedUser = res?.user || res?.data?.user || null;
+      const resolvedConfig = res?.config || res?.data?.config || null;
+      if (resolvedUser) {
+        localStorage.setItem('auth_user', JSON.stringify(resolvedUser));
       }
-      if (res.data?.config) {
-        localStorage.setItem('auth_config', JSON.stringify(res.data.config));
+      if (resolvedConfig) {
+        localStorage.setItem('auth_config', JSON.stringify(resolvedConfig));
       }
-      return res.data?.user;
+      return resolvedUser;
     } catch (e) {
       return null;
     }
@@ -170,12 +170,9 @@ export const api = {
     const formData = new FormData();
     formData.append('image', file);
     
-    const token = localStorage.getItem('auth_token');
     const response = await fetch(`${API_BASE_URL}/products/${productId}/image`, {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`
-      },
+      credentials: 'include',
       body: formData
     });
     
@@ -190,12 +187,9 @@ export const api = {
     const formData = new FormData();
     formData.append('file', file);
     
-    const token = localStorage.getItem('auth_token');
     const response = await fetch(`${API_BASE_URL}/products/import-images-zip`, {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`
-      },
+      credentials: 'include',
       body: formData
     });
     
@@ -437,9 +431,9 @@ export const api = {
 
     const res = await fetch(`${API_BASE_URL}/orders/${id}/weights`, {
       method: 'PUT',
+      credentials: 'include',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
       },
       body: JSON.stringify({ items }),
     });
@@ -765,13 +759,10 @@ export const api = {
     const formData = new FormData();
     formData.append('file', file);
     
-    const token = localStorage.getItem('auth_token');
     const response = await fetch(`${API_BASE_URL}/expenses/import`, {
       method: 'POST',
+      credentials: 'include',
       body: formData,
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
     });
     
     const json = await response.json();
@@ -1099,15 +1090,9 @@ export const api = {
     const formData = new FormData();
     formData.append('file', file);
 
-    const token = localStorage.getItem('auth_token');
-    const headers = new Headers();
-    if (token) {
-      headers.append('Authorization', `Bearer ${token}`);
-    }
-
     const response = await fetch(`${API_BASE_URL}/purchases/upload-document`, {
       method: 'POST',
-      headers,
+      credentials: 'include',
       body: formData
     });
 

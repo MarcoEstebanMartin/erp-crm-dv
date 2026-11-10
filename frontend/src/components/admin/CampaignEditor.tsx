@@ -88,7 +88,7 @@ export default function CampaignEditor({ campaignId, onBack }: CampaignEditorPro
     setLoading(true);
     try {
       const res = await fetch(`${API_BASE_URL}/offers/${campaignId}`, {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` }
+        credentials: 'include',
       });
       if (res.ok) {
         const data = await res.json();
@@ -154,15 +154,15 @@ export default function CampaignEditor({ campaignId, onBack }: CampaignEditorPro
       if (swapTarget) {
         await fetch(`${API_BASE_URL}/offers/${campaignId}/items/${swapTarget.id}`, {
           method: 'DELETE',
-          headers: { 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` }
+          credentials: 'include',
         });
       }
 
       const res = await fetch(`${API_BASE_URL}/offers/${campaignId}/items`, {
         method: 'POST',
+        credentials: 'include',
         headers: { 
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
         },
         body: JSON.stringify({
           productId: selectedProduct.id,
@@ -272,7 +272,7 @@ export default function CampaignEditor({ campaignId, onBack }: CampaignEditorPro
     try {
       const res = await fetch(`${API_BASE_URL}/offers/${campaignId}/items/${itemId}`, {
         method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` }
+        credentials: 'include',
       });
       if (res.ok) {
         fetchCampaign();
@@ -332,9 +332,9 @@ export default function CampaignEditor({ campaignId, onBack }: CampaignEditorPro
     try {
       await fetch(`${API_BASE_URL}/offers/${campaignId}`, {
         method: 'PUT',
+        credentials: 'include',
         headers: { 
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
         },
         body: JSON.stringify({
           customRubroOrder: currentOrder
@@ -357,9 +357,9 @@ export default function CampaignEditor({ campaignId, onBack }: CampaignEditorPro
 
       await fetch(`${API_BASE_URL}/offers/${campaignId}/items`, {
         method: 'POST',
+        credentials: 'include',
         headers: { 
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
         },
         body: JSON.stringify({
           productId: item.productId,
@@ -383,9 +383,9 @@ export default function CampaignEditor({ campaignId, onBack }: CampaignEditorPro
     try {
       await fetch(`${API_BASE_URL}/offers/${campaignId}`, {
         method: 'PUT',
+        credentials: 'include',
         headers: { 
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
         },
         body: JSON.stringify({
           customRubroOrder: campaign.customRubroOrder
@@ -444,9 +444,9 @@ export default function CampaignEditor({ campaignId, onBack }: CampaignEditorPro
                   try {
                     await fetch(`${API_BASE_URL}/offers/${campaignId}`, {
                       method: 'PUT',
+                      credentials: 'include',
                       headers: { 
                         'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
                       },
                       body: JSON.stringify({ title: newTitle })
                     });
@@ -601,7 +601,7 @@ export default function CampaignEditor({ campaignId, onBack }: CampaignEditorPro
                                       await Promise.all(campaign.items.map(item => 
                                         fetch(`${API_BASE_URL}/offers/${campaignId}/items/${item.id}`, {
                                           method: 'DELETE',
-                                          headers: { 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` }
+                                          credentials: 'include',
                                         })
                                       ));
                                       fetchCampaign();

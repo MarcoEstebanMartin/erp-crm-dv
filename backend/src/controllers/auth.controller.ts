@@ -4,6 +4,12 @@ import jwt from 'jsonwebtoken';
 import prisma from '../utils/prisma';
 import { AuthenticatedRequest, UserPermissions } from '../types';
 import { env } from '../config/env.config';
+import { sessionCache } from '../utils/session-cache.util';
+import {
+  clearStaffSessionCookie,
+  extractStaffToken,
+  setStaffSessionCookie,
+} from '../utils/cookie-auth.util';
 
 export function getDefaultPermissions(role: string): UserPermissions {
   if (role === 'ADMIN' || role === 'FACTURACION') {
@@ -64,6 +70,8 @@ export async function login(req: Request, res: Response): Promise<void> {
       env.JWT_SECRET,
       { expiresIn: '30d' }
     );
+
+    setStaffSessionCookie(req, res, token);
 
     res.status(200).json({
       status: 'success',
@@ -143,4 +151,23 @@ export async function getMe(req: AuthenticatedRequest, res: Response): Promise<v
       message: 'Error al obtener datos del usuario.',
     });
   }
+}
+
+export async function logout(req: Request, res: Response): Promise<void> {
+  const extracted = extractStaffToken(req);
+  if (extracted) {
+    try {
+      const decoded = jwt.verify(extracted.token, env.JWT_SECRET) as { id?: number };
+      if (decoded?.id) {
+        sessionCache.invalidateStaffSession(Number(decoded.id));
+      }
+    } catch {
+      // Token ya expirado o inválido; igualmente limpiamos la cookie
+    }
+  }
+  clearStaffSessionCookie(req, res);
+  res.status(200).json({
+    status: 'success',
+    message: 'Sesión cerrada correctamente.',
+  });
 }

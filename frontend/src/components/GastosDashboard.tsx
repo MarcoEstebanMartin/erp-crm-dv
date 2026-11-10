@@ -98,9 +98,8 @@ export default function GastosDashboard() {
       
       // Intentamos cargar vehículos usando la ruta configurada en la API
       try {
-        const token = localStorage.getItem('auth_token');
         const res = await fetch(`${API_BASE_URL}/fleet/vehicles`, {
-          headers: { 'Authorization': `Bearer ${token}` }
+          credentials: 'include',
         });
         const text = await res.text();
         const json = text && text.trim() ? JSON.parse(text) : {};

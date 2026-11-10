@@ -2,6 +2,7 @@ import { Router } from 'express';
 import {
   loginClient,
   magicLoginClient,
+  logoutStoreClient,
   getStoreCatalog,
   getClientAccount,
   createStoreOrder,
@@ -24,6 +25,7 @@ router.post('/login', authRateLimiter, validateRequest(storeLoginSchema), loginC
 // Autenticación Mágica sin Contraseña desde WhatsApp
 router.get('/magic-login', authRateLimiter, magicLoginClient);
 router.post('/magic-login', authRateLimiter, magicLoginClient);
+router.post('/logout', logoutStoreClient);
 
 // Catálogo interactivo de productos y ofertas (público con límite de peticiones)
 router.get('/catalog', publicApiRateLimiter, validateRequest(storeCatalogQuerySchema), getStoreCatalog);

@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { CreditCard, DollarSign, FileText, CheckCircle, ChevronLeft, RefreshCw, Loader2, Landmark, Banknote, ScrollText } from 'lucide-react';
-import axios from 'axios';
-import { API_BASE_URL } from '../utils/api';
+import { apiClient } from '../api/apiClient';
 import { useConfirm } from '../context/ConfirmContext';
 
 interface Persona {
@@ -79,14 +78,12 @@ const MobileCobros: React.FC<MobileCobrosProps> = ({
 
   const fetchPending = async () => {
     try {
-      const res = await axios.get(`${API_BASE_URL}/collections/pending`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('auth_token')}` }
-      });
-      if (Array.isArray(res.data)) {
-        setPersonas(res.data);
+      const data = await apiClient.get<Persona[]>('/collections/pending');
+      if (Array.isArray(data)) {
+        setPersonas(data);
       } else {
         setPersonas([]);
-        console.error('Expected array of personas, got:', res.data);
+        console.error('Expected array of personas, got:', data);
       }
     } catch (error) {
       console.error('Error fetching pending balances', error);
@@ -95,11 +92,9 @@ const MobileCobros: React.FC<MobileCobrosProps> = ({
 
   const fetchPendingInvoices = async (personaId: number) => {
     try {
-      const res = await axios.get(`${API_BASE_URL}/personas/${personaId}/pending-invoices`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('auth_token')}` }
-      });
-      if (res.data?.status === 'success' && Array.isArray(res.data?.data?.invoices)) {
-        setPendingInvoices(res.data.data.invoices);
+      const res = await apiClient.get<any>(`/personas/${personaId}/pending-invoices`);
+      if (res?.status === 'success' && Array.isArray(res?.data?.invoices)) {
+        setPendingInvoices(res.data.invoices);
       }
     } catch (error) {
       console.error('Error fetching pending invoices', error);
@@ -143,7 +138,7 @@ const MobileCobros: React.FC<MobileCobrosProps> = ({
         ? (isEcheq ? `E-CHEQ #${checkNumber.trim()}` : checkNumber.trim()) 
         : undefined;
 
-      const res = await axios.post(`${API_BASE_URL}/collections/register`, {
+      const res = await apiClient.post<any>('/collections/register', {
         personaId: selectedPersona.id,
         amount: parsedAmount,
         paymentMethod,
@@ -151,15 +146,13 @@ const MobileCobros: React.FC<MobileCobrosProps> = ({
         orderId: selectedInvoiceId,
         isCreditOnAccount,
         checkNumber: finalCheckStr
-      }, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('auth_token')}` }
       });
       
-      setSuccessReceipt(res.data.transaction);
+      setSuccessReceipt(res.transaction);
       fetchPending();
     } catch (error: any) {
       console.error('Error registering collection', error);
-      const errMsg = error.response?.data?.error || 'Hubo un error al registrar el cobro';
+      const errMsg = error?.message || 'Hubo un error al registrar el cobro';
       alert(errMsg);
     } finally {
       setLoading(false);

@@ -106,10 +106,10 @@
   - [x] Crear `session-cache.util.ts` (`45s` TTL) conectado a `authenticateJWT` y `authenticateStoreClientJWT` con invalidación en `0ms` al desactivar/editar en `admin-users.service.ts` y `persona.service.ts`
   - [x] Cerrar puerto `5432` al exterior, exigir secretos reales sin defaults inseguros y aislar red `internal_net` en `docker-compose.prod.yml`
   - [x] Validar `tsc --noEmit` (Backend y Frontend) + `21 suites / 87 tests` en verde (`security-perimeter.test.ts`)
-- [ ] **Paso S2: Cookies `HttpOnly` Anti-XSS + Unificación de Cliente HTTP + Limpieza de `axios` y `jest`**
-  - [ ] Emitir sesión por Cookie `HttpOnly` + `SameSite=Lax` + `Secure` (con `POST /api/auth/logout`) manteniendo soporte dual sin cortar sesiones activas
-  - [ ] Migrar `MobileCobros.tsx`, `ReceiptView.tsx`, `ExcelImportModal.tsx` y `whatsapp.service.ts` a `fetch` / `apiClient` unificado con `credentials: 'include'`
-  - [ ] Eliminar dependencias duplicadas/huérfanas (`axios`, `jest`, `ts-jest`, `@types/jest`)
+- [x] **Paso S2: Cookies `HttpOnly` Anti-XSS + Unificación de Cliente HTTP + Limpieza de `axios` y `jest`** ✅ COMPLETADO
+  - [x] Crear `cookie-auth.util.ts` (`dv_staff_session` y `dv_store_session` con `HttpOnly`, `SameSite=lax`, `Path=/api`, `Secure` dinámico HTTPS/WiFi y guardia anti-CSRF cross-site) + endpoints `POST /api/auth/logout` y `POST /api/store/logout`
+  - [x] Eliminar guardado de `auth_token` y `store_token` en `localStorage` en todo el Frontend, unificando `MobileCobros.tsx`, `ReceiptView.tsx`, `ExcelImportModal.tsx` (corrigiendo bug `getItem('token')`), `apiClient.ts`, `api.ts`, `usePortalAuth.ts` y `usePortalStore.ts` con `credentials: 'include'`
+  - [x] Migrar `whatsapp.service.ts` de `axios` no declarado a `fetch` nativo con timeout y desinstalar `axios`, `jest`, `ts-jest` y `@types/jest` (**-307 paquetes** eliminados) + `22 suites / 90 tests` en verde (`cookie-auth.test.ts`)
 - [ ] **Paso S3: Erradicación de Vulnerabilidades en Planillas (`xlsx` -> `exceljs` Seguro)**
   - [ ] Reemplazar `xlsx` (`0.18.5`) en Backend y Frontend por `exceljs` libre de alertas de seguridad (*Prototype Pollution / ReDoS*) y auditar `npm audit`
 - [ ] **Paso S4: Escudo Anti-Doble Clic (`Idempotency-Key`) en Operaciones de Dinero y Stock**

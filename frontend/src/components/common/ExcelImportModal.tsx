@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { FileSpreadsheet, Upload, CheckCircle2, AlertTriangle, XCircle, ArrowRight, Loader2, X, RefreshCw } from 'lucide-react';
-import axios from 'axios';
+import { apiClient } from '../../api/apiClient';
 
 interface ExcelImportModalProps {
   isOpen: boolean;
@@ -41,19 +41,12 @@ export const ExcelImportModal: React.FC<ExcelImportModalProps> = ({ isOpen, onCl
     formData.append('domain', domain);
 
     try {
-      const token = localStorage.getItem('token');
-      const res = await axios.post('/api/admin/excel/preview', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-          Authorization: `Bearer ${token}`
-        }
-      });
-
-      if (res.data.success) {
-        setReport(res.data.report);
+      const data = await apiClient.postFormData<any>('/admin/excel/preview', formData);
+      if (data.success) {
+        setReport(data.report);
       }
     } catch (err: any) {
-      setErrorMessage(err.response?.data?.error || err.message || 'Error al analizar la planilla Excel');
+      setErrorMessage(err.message || 'Error al analizar la planilla Excel');
     } finally {
       setLoadingPreview(false);
     }
@@ -65,20 +58,17 @@ export const ExcelImportModal: React.FC<ExcelImportModalProps> = ({ isOpen, onCl
     setErrorMessage(null);
 
     try {
-      const token = localStorage.getItem('token');
-      const res = await axios.post('/api/admin/excel/commit', {
+      const data = await apiClient.post<any>('/admin/excel/commit', {
         domain,
         rows: report.rows
-      }, {
-        headers: { Authorization: `Bearer ${token}` }
       });
 
-      if (res.data.success) {
-        setCommitMessage(res.data.message);
+      if (data.success) {
+        setCommitMessage(data.message);
         if (onSuccess) onSuccess();
       }
     } catch (err: any) {
-      setErrorMessage(err.response?.data?.error || err.message || 'Error al importar los datos en la base de datos.');
+      setErrorMessage(err.message || 'Error al importar los datos en la base de datos.');
     } finally {
       setLoadingCommit(false);
     }

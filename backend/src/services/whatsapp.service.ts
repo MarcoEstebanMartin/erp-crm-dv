@@ -1,5 +1,4 @@
 import { PrismaClient } from '@prisma/client';
-import axios from 'axios';
 import { geminiService } from './gemini.service';
 import { aiChatbotService } from './aiChatbot.service';
 import { generateMagicToken } from '../controllers/store.controller';
@@ -115,18 +114,26 @@ export class WhatsAppService {
           requestData.text = { body: payload.text };
         }
 
-        const response = await axios.post(url, requestData, {
+        const response = await fetch(url, {
+          method: 'POST',
           headers: {
             Authorization: `Bearer ${this.token}`,
             'Content-Type': 'application/json'
-          }
+          },
+          body: JSON.stringify(requestData),
+          signal: AbortSignal.timeout(15000)
         });
 
-        if (response.data?.messages?.[0]?.id) {
-          wamid = response.data.messages[0].id;
+        const responseData: any = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(JSON.stringify(responseData));
+        }
+
+        if (responseData?.messages?.[0]?.id) {
+          wamid = responseData.messages[0].id;
         }
       } catch (error: any) {
-        const metaErr = error?.response?.data || error?.message;
+        const metaErr = error?.message;
         console.error('⚠️ Expiración o error en Meta Cloud API (Activando fallback local de mensajes):', metaErr);
         wamid = `local_${Date.now()}_${Math.random().toString(36).substring(7)}`;
         status = 'SENT';
