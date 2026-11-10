@@ -85,4 +85,12 @@
 > **REGLA CRÍTICA DE DATOS REALES**: El proyecto actualmente en producción tiene las **fotos y los precios actualizados al día**, mientras que el padrón de productos en `erp-desarrollo` puede tener precios/fotos desactualizados.
 > **Dirección obligatoria de sincronización inicial**: **Producción -> ERP** (importar precios vigentes y fotos desde producción hacia el ERP; **PROHIBIDO** pisar producción con precios viejos del ERP).
 
-- [ ] **Fase 11**: Auditar el proyecto actual en producción (Catálogo, Ofertas, Chatbot), sincronizar precios y fotos vigentes hacia `ERP-CRM DV` y diseñar la conexión unificada sin caída de servicio.
+### Fase 1: Orden de Casa, GitHub Único y Cuentas Unificadas (`estebanmartin06@gmail.com`)
+- [x] **Paso 1.1**: Separar `OFERTAS-DV` como carpeta hermana en `C:\Users\Usuario\Desktop\OFERTAS-DV` dejando ambos repositorios Git limpios y sin anidamiento.
+- [x] **Paso 1.2**: Alinear el email global de Git en esta PC a `estebanmartin06@gmail.com` y subir `ERP-CRM DV` a un repositorio **Privado** en GitHub (`MarcoEstebanMartin/erp-crm-dv`) para respaldo y descarga en cualquier otra PC.
+- [ ] **Paso 1.3**: Migrar la base activa de `OFERTAS-DV` (`sdamxjajnxvykgwyqczo` en EE.UU.) hacia la cuenta única de Supabase de `estebanmartin06@gmail.com` en **Brasil (`sa-east-1`)**, actualizar `DATABASE_URL` en Railway y dar de baja Render + la cuenta secundaria `martinmarcoesteban@gmail.com`.
+
+### Fases Siguientes Planificadas
+- [ ] **Fase 2**: Banco único de fotos en Cloudflare R2 (`media.donvenancio.com.ar`) + despliegue de `ERP-CRM DV` en la nube (`sistema.donvenancio.com.ar`).
+- [ ] **Fase 3**: Sincronización inicial segura **Producción -> ERP** (precios y 465 fotos vigentes sin pisar producción) y puente unificado de catálogo/stock/pedidos sobre una única base en Brasil.
+- [ ] **Fase 4**: Conexión de Agentes de IA (`agencia-bots`) sobre la API validada del ERP + `pgvector`.
