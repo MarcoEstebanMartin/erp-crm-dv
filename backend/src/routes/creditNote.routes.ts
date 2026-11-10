@@ -1,22 +1,43 @@
 import { Router } from 'express';
-import { getCreditNotes, createCreditNote, getCreditNoteById, approveCreditNote, rejectCreditNote } from '../controllers/creditNote.controller';
-import { authenticateJWT, requireRole } from '../middlewares/auth';
 import { Role } from '@prisma/client';
+import {
+  getCreditNotes,
+  createCreditNote,
+  getCreditNoteById,
+  approveCreditNote,
+  rejectCreditNote,
+} from '../controllers/creditNote.controller';
+import { authenticateJWT, requireRole } from '../middlewares/auth';
+import { validateRequest } from '../middlewares/validateRequest';
+import {
+  createCreditNoteSchema,
+  creditNoteIdParamSchema,
+} from '../validators/creditNote.validator';
 
 const router = Router();
 
-// Todas las rutas de Notas de Crédito requieren autenticación JWT
 router.use(authenticateJWT);
 
-// Ruta para obtener una Nota de Crédito por ID (Accesible por cualquier usuario autenticado)
-router.get('/:id', getCreditNoteById);
+router.get('/:id', validateRequest(creditNoteIdParamSchema), getCreditNoteById);
+router.post(
+  '/:id/approve',
+  requireRole([Role.ADMIN]),
+  validateRequest(creditNoteIdParamSchema),
+  approveCreditNote,
+);
+router.post(
+  '/:id/reject',
+  requireRole([Role.ADMIN]),
+  validateRequest(creditNoteIdParamSchema),
+  rejectCreditNote,
+);
 
-// Rutas de administración de Notas de Crédito (Solo ADMIN)
-router.post('/:id/approve', requireRole([Role.ADMIN]), approveCreditNote);
-router.post('/:id/reject', requireRole([Role.ADMIN]), rejectCreditNote);
-
-// Rutas accesibles por ADMIN y personal de FACTURACION
 router.get('/', requireRole([Role.ADMIN, Role.FACTURACION]), getCreditNotes);
-router.post('/', requireRole([Role.ADMIN, Role.FACTURACION]), createCreditNote);
+router.post(
+  '/',
+  requireRole([Role.ADMIN, Role.FACTURACION]),
+  validateRequest(createCreditNoteSchema),
+  createCreditNote,
+);
 
 export default router;

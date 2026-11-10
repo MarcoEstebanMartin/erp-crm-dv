@@ -44,12 +44,18 @@
   - `createExpense`: persistencia del `cashDrawerId` resuelto automáticamente cuando se omite en el request
 - [x] Cubrir invariantes de arqueo, conciliación bancaria, rendición, recibos y gastos en `Vitest` (`14 suites / 57 tests` en verde)
 
-### Paso 8: Cirugía Financiera Parte 2 — Notas de Crédito, Compras y Facturación Impositiva ⏳ PENDIENTE (Siguiente paso)
-- [ ] Desarmar `creditNote.controller.ts` (733 líneas), `purchase.controller.ts` (755 líneas) y `billing.controller.ts` (467 líneas) en capas `< 250` líneas con `Zod` y `Decimal.js`
-- [ ] Reemplazar numeración frágil (`count + 1`) de Notas de Crédito internas por secuencia segura basada en `movementId`
-- [ ] Asegurar atomicidad en recepción de mercadería (`StockMovement` + costo + lotes) y anulación/aprobación de Notas de Crédito
+### Paso 8: Cirugía Financiera Parte 2 — Notas de Crédito, Compras y Facturación Impositiva ✅ COMPLETADO
+- [x] Crear motor matemático puro `credit-purchase.engine.ts` (`Decimal.js`) y validadores `Zod` (`creditNote.validator.ts`, `purchase.validator.ts`, `billing.validator.ts`)
+- [x] Desarmar `creditNote.controller.ts` (de 816 a 99 líneas), `purchase.controller.ts` (de 833 a 105 líneas) y `billing.controller.ts` (de 523 a 116 líneas) en 9 servicios cohesivos `< 270` líneas
+- [x] Corregir bugs operativos, contables y de seguridad:
+  - Reemplazada numeración frágil `count + 1` de Notas de Crédito internas por secuencia atómica `NCI-${movementId}` basada en `movement_seq`
+  - Unificada la emisión interna y de aprobación en una única `prisma.$transaction` atómica y extraída la restauración proporcional de lotes en `credit-note-stock.helper.ts`
+  - Eliminado el campo inexistente `productIdRef` que rompía `createPurchaseOrder` en Prisma y preservados los 2 decimales de costos de proveedor
+  - Vinculado `productLotId` en `StockMovement` al confirmar facturas/remitos por OCR (`confirmExtractedDocument`) para reversión determinística de lotes al anular en `deleteSupplierInvoice`
+  - Cerrada exposición de `seller.passwordHash` en `getSalesInvoices`
+- [x] Cubrir invariantes con nuevas suites `credit-purchase.engine.test.ts` y `credit-purchase.service.test.ts` (`16 suites / 64 tests` en verde)
 
-### Paso 9: Libro Mayor Físico Inmutable (`AccountLedger`) en PostgreSQL ⏳ PENDIENTE
+### Paso 9: Libro Mayor Físico Inmutable (`AccountLedger`) en PostgreSQL ⏳ PENDIENTE (Siguiente paso)
 - [ ] Especificar y crear migración segura (`--create-only` cuidando `movement_seq`) para la tabla `AccountLedger`
 - [ ] Hacer que toda venta entregada, recibo, nota de crédito, factura de proveedor y retención inserte su asiento inmutable (`DEBIT` / `CREDIT`) en la misma transacción
 - [ ] Migrar consultas de resumen de cuenta y saldos a `AccountLedger` con script de verificación de paridad 100%

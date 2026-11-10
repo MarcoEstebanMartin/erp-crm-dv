@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { Role } from '@prisma/client';
 import {
   getSalesInvoices,
   getSupplierInvoices,
@@ -8,20 +9,38 @@ import {
   createTaxWithholding,
 } from '../controllers/billing.controller';
 import { authenticateJWT, requireRole } from '../middlewares/auth';
-import { Role } from '@prisma/client';
+import { validateRequest } from '../middlewares/validateRequest';
+import {
+  createSupplierInvoiceSchema,
+  createTaxWithholdingSchema,
+  supplierInvoiceIdParamSchema,
+} from '../validators/billing.validator';
 
 const router = Router();
 
-// Todas las rutas de facturación requieren autenticación JWT
 router.use(authenticateJWT);
 
-// Rutas impositivas accesibles por ADMIN y personal de FACTURACION
 router.get('/sales', requireRole([Role.ADMIN, Role.FACTURACION]), getSalesInvoices);
 router.get('/purchases', requireRole([Role.ADMIN, Role.FACTURACION]), getSupplierInvoices);
-router.post('/purchases', requireRole([Role.ADMIN, Role.FACTURACION]), createSupplierInvoice);
-router.delete('/purchases/:id', requireRole([Role.ADMIN, Role.FACTURACION]), deleteSupplierInvoice);
+router.post(
+  '/purchases',
+  requireRole([Role.ADMIN, Role.FACTURACION]),
+  validateRequest(createSupplierInvoiceSchema),
+  createSupplierInvoice,
+);
+router.delete(
+  '/purchases/:id',
+  requireRole([Role.ADMIN, Role.FACTURACION]),
+  validateRequest(supplierInvoiceIdParamSchema),
+  deleteSupplierInvoice,
+);
 
 router.get('/tax-withholdings', requireRole([Role.ADMIN, Role.FACTURACION]), getTaxWithholdings);
-router.post('/tax-withholdings', requireRole([Role.ADMIN, Role.FACTURACION]), createTaxWithholding);
+router.post(
+  '/tax-withholdings',
+  requireRole([Role.ADMIN, Role.FACTURACION]),
+  validateRequest(createTaxWithholdingSchema),
+  createTaxWithholding,
+);
 
 export default router;
