@@ -33,12 +33,18 @@
 - [x] Completar `requireRole` en `purchase.routes.ts`, `fleet.routes.ts`, `logistics.routes.ts`, `excel_importer.routes.ts` y `crm_whatsapp.routes.ts`
 - [x] Agregar suite `store-security.test.ts` en Vitest (`12 suites / 48 tests` en verde) y validar compilación `tsc --noEmit` en Backend y Frontend
 
-### Paso 7: Cirugía Financiera Parte 1 — Cajas, Bancos, Gastos y Cobranzas (`Decimal.js` + Transacciones ACID) ⏳ PENDIENTE (Siguiente paso)
-- [ ] Desarmar `finance.controller.ts` (832 líneas), `collection.controller.ts` (620 líneas) y `expense.controller.ts` (576 líneas) en validadores `Zod`, servicios `< 250` líneas y controladores delgados
-- [ ] Corregir bug contable en cierre de caja (`closeDrawer`) para que todo recibo impacte Caja y Cuenta Corriente dentro de una única transacción `prisma.$transaction` con `Decimal.js`
-- [ ] Cubrir invariantes de arqueo, rendición e imputación con tests en `Vitest`
+### Paso 7: Cirugía Financiera Parte 1 — Cajas, Bancos, Gastos y Cobranzas (`Decimal.js` + Transacciones ACID) ✅ COMPLETADO
+- [x] Crear motor matemático puro `drawer-arqueo.engine.ts` (`Decimal.js`) y validadores `Zod` (`finance.validator.ts`, `collection.validator.ts`, `expense.validator.ts`)
+- [x] Desarmar `finance.controller.ts` (de 953 a 227 líneas), `collection.controller.ts` (de 704 a 124 líneas) y `expense.controller.ts` (de 656 a 135 líneas) en 10 servicios cohesivos `< 250–300` líneas
+- [x] Corregir bugs contables y de seguridad:
+  - `closeDrawer`: imputación atómica en `prisma.$transaction`, normalización `'A'`/`'X'` -> `OFFICIAL`/`INTERNAL`, generación de `REC-XXXXX`, descuento en `Persona.outstandingBalance` y arqueo exacto de efectivo + cheques físicos
+  - `verifyTransaction` y `transferFunds`: invariante exacta de acreditación bancaria sin doble conteo ni transferencias coladas en rendiciones pendientes
+  - `getReceipt`: sanitización de campos públicos (eliminada exposición de `user.passwordHash` y `persona.webPin`) + `publicApiRateLimiter`
+  - `verifyRendicion`: unificación de creación de caja cerrada y verificación de cobros en una única `prisma.$transaction` interactiva
+  - `createExpense`: persistencia del `cashDrawerId` resuelto automáticamente cuando se omite en el request
+- [x] Cubrir invariantes de arqueo, conciliación bancaria, rendición, recibos y gastos en `Vitest` (`14 suites / 57 tests` en verde)
 
-### Paso 8: Cirugía Financiera Parte 2 — Notas de Crédito, Compras y Facturación Impositiva ⏳ PENDIENTE
+### Paso 8: Cirugía Financiera Parte 2 — Notas de Crédito, Compras y Facturación Impositiva ⏳ PENDIENTE (Siguiente paso)
 - [ ] Desarmar `creditNote.controller.ts` (733 líneas), `purchase.controller.ts` (755 líneas) y `billing.controller.ts` (467 líneas) en capas `< 250` líneas con `Zod` y `Decimal.js`
 - [ ] Reemplazar numeración frágil (`count + 1`) de Notas de Crédito internas por secuencia segura basada en `movementId`
 - [ ] Asegurar atomicidad en recepción de mercadería (`StockMovement` + costo + lotes) y anulación/aprobación de Notas de Crédito

@@ -1,704 +1,124 @@
 import { Response } from 'express';
+import { BillingType, PaymentMethod, Role } from '@prisma/client';
 import { AuthenticatedRequest } from '../types';
-import { TransactionType, PaymentMethod, BillingType, Role } from '@prisma/client';
-import prisma from '../utils/prisma';
-import { personaService } from '../services/persona.service';
+import AppError from '../utils/AppError';
+import { collectionService } from '../services/collections/collection.service';
+import { receiptService } from '../services/collections/receipt.service';
+import { rendicionService } from '../services/collections/rendicion.service';
+
+function handleCollectionError(res: Response, error: unknown, fallbackMessage: string) {
+  if (error instanceof AppError) {
+    return res.status(error.statusCode).json({ error: error.message });
+  }
+  console.error(fallbackMessage, error);
+  return res.status(500).json({ error: fallbackMessage });
+}
 
 export const getPendingCollections = async (req: AuthenticatedRequest, res: Response) => {
+  if (!req.user?.id) return res.status(401).json({ error: 'No autorizado' });
   try {
-    const userId = req.user?.id;
-    const userRole = req.user?.role;
-    if (!userId) {
-      return res.status(401).json({ error: 'No autorizado' });
-    }
-
-    const whereClause: any = {
-      outstandingBalance: { gt: 0 },
-      isActive: true
-    };
-
-    if (userRole === Role.VENDEDOR) {
-      whereClause.sellerId = userId;
-    }
-
-    const personas = await prisma.persona.findMany({
-      where: whereClause,
-      select: {
-        id: true,
-        name: true,
-        address: true,
-        city: true,
-        outstandingBalance: true,
-        phone: true,
-      }
-    });
-
-    res.json(personas);
+    const personas = await collectionService.getPendingCollections(req.user.id, req.user.role);
+    return res.json(personas);
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Error al obtener saldos pendientes' });
+    return handleCollectionError(res, error, 'Error al obtener saldos pendientes');
   }
 };
 
-export const getCollectionsSummary = async (req: AuthenticatedRequest, res: Response) => {
+export const getCollectionsSummary = async (_req: AuthenticatedRequest, res: Response) => {
   try {
-    // 1. Cuentas por cobrar a clientes (outstandingBalance > 0)
-    const outstandingAggregate = await prisma.persona.aggregate({
-      where: {
-        isClient: true,
-        isActive: true,
-        outstandingBalance: { gt: 0 }
-      },
-      _sum: {
-        outstandingBalance: true
-      },
-      _count: {
-        id: true
-      }
-    });
-
-    const totalOutstandingBalance = Number(outstandingAggregate._sum.outstandingBalance || 0);
-    const pendingClientsCount = outstandingAggregate._count.id || 0;
-
-    // 2. Cajas y rendiciones pendientes (Ingresos sin verificar)
-    const pendingTransactions = await prisma.transaction.findMany({
-      where: {
-        type: TransactionType.INCOME,
-        verified: false
-      },
-      select: {
-        amount: true,
-        userId: true,
-        order: {
-          select: {
-            deliveryRouteId: true
-          }
-        }
-      }
-    });
-
-    let pendingRendicionesAmount = 0;
-    const sellersSet = new Set<number>();
-    const driversSet = new Set<number>();
-
-    for (const tx of pendingTransactions) {
-      pendingRendicionesAmount += Number(tx.amount || 0);
-      if (tx.order?.deliveryRouteId) {
-        driversSet.add(tx.order.deliveryRouteId);
-      } else if (tx.userId) {
-        sellersSet.add(tx.userId);
-      }
-    }
-
-    const pendingSellersCount = sellersSet.size;
-    const pendingDriversCount = driversSet.size;
-    const pendingRendicionesCount = pendingSellersCount + pendingDriversCount;
-
-    res.json({
-      totalOutstandingBalance,
-      pendingClientsCount,
-      pendingRendicionesAmount,
-      pendingRendicionesCount,
-      pendingSellersCount,
-      pendingDriversCount
-    });
+    const summary = await collectionService.getCollectionsSummary();
+    return res.json(summary);
   } catch (error) {
-    console.error('Error al obtener resumen de cobranzas:', error);
-    res.status(500).json({ error: 'Error al obtener resumen de cobranzas' });
+    return handleCollectionError(res, error, 'Error al obtener resumen de cobranzas');
   }
 };
-
 
 export const registerCollection = async (req: AuthenticatedRequest, res: Response) => {
+  if (!req.user?.id) return res.status(401).json({ error: 'No autorizado' });
   try {
-    const userId = req.user?.id;
-    const userRole = req.user?.role;
-    if (!userId) {
-      return res.status(401).json({ error: 'No autorizado' });
-    }
-
-    const { personaId, amount, paymentMethod, billingType, description, orderId, isCreditOnAccount, bankAccountId, checkNumber } = req.body;
-
-    if (!personaId || !amount || !paymentMethod || !billingType) {
-      return res.status(400).json({ error: 'Faltan datos requeridos' });
-    }
-
-    // Regla de imputación a factura: si no se especifica orderId ni isCreditOnAccount, verificar si el cliente posee facturas impagas
-    if (!orderId && !isCreditOnAccount) {
-      const pendingInvoices = await personaService.getPersonaPendingInvoices(Number(personaId), userId, userRole || '');
-      if (pendingInvoices && pendingInvoices.length > 0) {
-        return res.status(400).json({ 
-          error: 'El cliente posee facturas pendientes. Selecciona una factura a la cual imputar el pago o marca la casilla "Dejar dinero a favor".' 
-        });
-      }
-    }
-
-    // Verificar que el cliente exista y pertenezca al vendedor (si el rol es VENDEDOR)
-    const client = await prisma.persona.findUnique({ where: { id: Number(personaId) } });
-    if (!client) {
-      return res.status(404).json({ error: 'Cliente no encontrado' });
-    }
-    if (userRole === Role.VENDEDOR && client.isClient && client.sellerId !== userId) {
-      return res.status(403).json({ error: 'Acceso denegado. No podés registrar cobros para clientes de otros vendedores.' });
-    }
-
-    const roundedAmount = Number(Number(amount).toFixed(2));
-
-    // Control de duplicados (Idempotencia)
-    const fifteenSecondsAgo = new Date(Date.now() - 15000);
-    const duplicateTx = await prisma.transaction.findFirst({
-      where: {
-        personaId,
-        amount: roundedAmount,
-        paymentMethod: paymentMethod as PaymentMethod,
-        type: TransactionType.INCOME,
-        createdAt: {
-          gte: fifteenSecondsAgo
-        }
-      }
+    const hostOrigin = `${req.protocol}://${req.get('host')}`;
+    const transaction = await collectionService.registerCollection({
+      userId: req.user.id,
+      userRole: req.user.role,
+      personaId: Number(req.body.personaId),
+      amount: Number(req.body.amount),
+      paymentMethod: req.body.paymentMethod as PaymentMethod,
+      billingType: req.body.billingType as BillingType,
+      description: req.body.description,
+      orderId: req.body.orderId ? Number(req.body.orderId) : null,
+      isCreditOnAccount: req.body.isCreditOnAccount,
+      bankAccountId: req.body.bankAccountId ? Number(req.body.bankAccountId) : null,
+      checkNumber: req.body.checkNumber,
+      hostOrigin,
     });
-    if (duplicateTx) {
-      return res.status(400).json({ error: 'Ya se registró un cobro idéntico para este cliente hace instantes.' });
-    }
-
-    // Buscar número de factura si se especificó orderId para la descripción
-    let orderNumberDesc = '';
-    let finalBillingType = billingType;
-    if (orderId) {
-      const targetOrder = await prisma.order.findUnique({ where: { id: Number(orderId) } });
-      if (targetOrder) {
-        orderNumberDesc = targetOrder.invoiceNumber || `INT-${targetOrder.id.toString().padStart(5, '0')}`;
-        // Forzar que el recibo herede la sucursal de la factura origen
-        finalBillingType = targetOrder.billingType;
-      }
-    }
-
-    const checkInfoStr = checkNumber ? ` (Cheque N° ${checkNumber})` : '';
-
-    // Ejecutar creación de transacción y actualización de saldo de forma atómica
-    const transaction = await prisma.$transaction(async (tx) => {
-      // Crear transacción inicial sin receiptNumber (se generará a partir del movementId autoincremental de la base de datos)
-      const newTx = await tx.transaction.create({
-        data: {
-          userId,
-          personaId,
-          billingType: finalBillingType as BillingType,
-          type: TransactionType.INCOME,
-          paymentMethod: paymentMethod as PaymentMethod,
-          amount: roundedAmount,
-          description: description 
-            ? `${description}${checkInfoStr}` 
-            : (orderId 
-                ? `Cobro Factura ${orderNumberDesc}${checkInfoStr}` 
-                : `Cobro a cliente ${client.name}${checkInfoStr}`),
-          receiptNumber: null, // Se asigna abajo
-          verified: false, // Pendiente de rendición
-          orderId: orderId ? Number(orderId) : null,
-          bankAccountId: bankAccountId ? Number(bankAccountId) : null
-        }
-      });
-
-      const formattedReceiptNumber = `REC-${newTx.movementId.toString().padStart(5, '0')}`;
-
-      // Decrementar el saldo pendiente del cliente de forma inmediata al registrar el cobro
-      await tx.persona.update({
-        where: { id: Number(personaId) },
-        data: {
-          outstandingBalance: { decrement: roundedAmount }
-        }
-      });
-
-      const updatedTx = await tx.transaction.update({
-        where: { id: newTx.id },
-        data: { receiptNumber: formattedReceiptNumber },
-        include: {
-          persona: true
-        }
-      });
-
-      return updatedTx;
-    });
-
-    // Simulación del envío de WhatsApp inmediato por el ERP al registrar el cobro
-    if (transaction.persona?.phone) {
-      const cleanPhone = transaction.persona.phone.replace(/\D/g, '');
-      const clientName = transaction.persona.name;
-      const receiptLink = `${req.protocol}://${req.get('host')}/recibo/${transaction.id}`;
-      console.log(`[WhatsApp ERP Auto-Send] Registro inicial de cobro. Enviando comprobante provisional a ${clientName} (+${cleanPhone}). Mensaje: "Hola ${clientName}! Registramos tu pago por $${transaction.amount}. Comprobante digital provisional: ${receiptLink} (Estado: Pendiente de rendición en administración)"`);
-    } else {
-      console.log(`[WhatsApp ERP Auto-Send] No se pudo enviar notificación de cobro provisional a ${transaction.persona?.name || 'Cliente'} (ID: ${transaction.personaId}) porque no posee teléfono registrado.`);
-    }
-
-    // Audit Log
-    await prisma.auditLog.create({
-      data: {
-        userId,
-        action: 'CREATE_COLLECTION',
-        entityType: 'Transaction',
-        entityId: transaction.id,
-        newValues: JSON.parse(JSON.stringify(transaction))
-      }
-    });
-
-    res.status(201).json({ message: 'Cobro registrado exitosamente', transaction });
+    return res.status(201).json({ message: 'Cobro registrado exitosamente', transaction });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Error al registrar cobro' });
+    return handleCollectionError(res, error, 'Error al registrar cobro');
   }
 };
 
 export const getReceipt = async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const { id } = req.params;
-    
-    const transaction = await prisma.transaction.findUnique({
-      where: { id: parseInt(id as string) },
-      include: {
-        persona: true,
-        user: true,
-      }
-    });
-
-    if (!transaction || transaction.type !== TransactionType.INCOME) {
-      return res.status(404).json({ error: 'Recibo no encontrado' });
-    }
-
-    res.json(transaction);
+    const transaction = await receiptService.getReceipt(parseInt(req.params.id as string, 10));
+    return res.json(transaction);
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Error al obtener recibo' });
+    return handleCollectionError(res, error, 'Error al obtener recibo');
   }
 };
 
-// ADMINISTRACIÓN: Ver las rendiciones pendientes por Vendedor y por Repartidor (Chofer)
-export const getPendingRendiciones = async (req: AuthenticatedRequest, res: Response) => {
+export const getPendingRendiciones = async (_req: AuthenticatedRequest, res: Response) => {
   try {
-    // Buscar todas las transacciones de ingreso (Cobros) que no estén verificadas
-    const pendingTransactions = await prisma.transaction.findMany({
-      where: {
-        type: TransactionType.INCOME,
-        verified: false
-      },
-      include: {
-        user: { select: { id: true, username: true, role: true } },
-        persona: { 
-          select: { 
-            id: true, 
-            name: true,
-            city: true,
-            route: true,
-            saleRoute: { select: { id: true, name: true } }
-          } 
-        },
-        order: {
-          include: {
-            deliveryRoute: true
-          }
-        }
-      }
-    });
-
-    const sellersGroup: any = {};
-    const routesGroup: any = {};
-
-    for (const tx of pendingTransactions) {
-      const route = tx.order?.deliveryRoute;
-      const amount = Number(tx.amount);
-      const isOfficial = tx.billingType === BillingType.OFFICIAL;
-      const method = tx.paymentMethod;
-
-      if (route) {
-        if (!routesGroup[route.id]) {
-          routesGroup[route.id] = {
-            routeId: route.id,
-            driverName: route.driverName,
-            vehiclePlate: route.vehiclePlate,
-            totalToCollect: 0,
-            totalBranchA: 0,
-            totalBranchX: 0,
-            totalCash: 0,
-            totalChecks: 0,
-            totalTransfers: 0,
-            transactions: []
-          };
-        }
-        const g = routesGroup[route.id];
-        g.totalToCollect += amount;
-        if (isOfficial) g.totalBranchA += amount;
-        else g.totalBranchX += amount;
-
-        if (method === PaymentMethod.CASH) g.totalCash += amount;
-        else if (method === PaymentMethod.CHECK) g.totalChecks += amount;
-        else if (method === PaymentMethod.BANK_TRANSFER) g.totalTransfers += amount;
-
-        g.transactions.push(tx);
-      } else {
-        const userId = tx.userId;
-        if (!sellersGroup[userId]) {
-          sellersGroup[userId] = {
-            user: tx.user,
-            totalToCollect: 0,
-            totalBranchA: 0,
-            totalBranchX: 0,
-            totalCash: 0,
-            totalChecks: 0,
-            totalTransfers: 0,
-            transactions: []
-          };
-        }
-        const g = sellersGroup[userId];
-        g.totalToCollect += amount;
-        if (isOfficial) g.totalBranchA += amount;
-        else g.totalBranchX += amount;
-
-        if (method === PaymentMethod.CASH) g.totalCash += amount;
-        else if (method === PaymentMethod.CHECK) g.totalChecks += amount;
-        else if (method === PaymentMethod.BANK_TRANSFER) g.totalTransfers += amount;
-
-        g.transactions.push(tx);
-      }
-    }
-
-    res.json({
-      status: 'success',
-      data: {
-        sellers: Object.values(sellersGroup),
-        routes: Object.values(routesGroup)
-      }
-    });
+    const data = await rendicionService.getPendingRendiciones();
+    return res.json({ status: 'success', data });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Error al obtener rendiciones pendientes' });
+    return handleCollectionError(res, error, 'Error al obtener rendiciones pendientes');
   }
 };
 
-// ADMINISTRACIÓN: Verificar y cerrar rendición mediante arqueo de caja
 export const verifyRendicion = async (req: AuthenticatedRequest, res: Response) => {
+  if (!req.user?.id) return res.status(401).json({ error: 'No autorizado' });
   try {
-    const adminId = req.user?.id;
-    const { sellerId, routeId, realCash, realChecks, destinationDrawerId, routeNote, notes } = req.body;
-
-    if (!adminId) {
-      return res.status(401).json({ error: 'No autorizado' });
-    }
-
-    if (!sellerId && !routeId) {
-      return res.status(400).json({ error: 'Debe especificar sellerId o routeId' });
-    }
-
-    const inputCash = Number(realCash || 0);
-    const inputChecks = Number(realChecks || 0);
-
-    if (isNaN(inputCash) || inputCash < 0 || isNaN(inputChecks) || inputChecks < 0) {
-      return res.status(400).json({ error: 'Montos reales ingresados inválidos' });
-    }
-
-    let txs: any[] = [];
-    let branchName = '';
-    const drawerType = sellerId ? 'VENDEDOR' : 'REPARTIDOR';
-
-    if (sellerId) {
-      const sellerUser = await prisma.user.findUnique({
-        where: { id: Number(sellerId) }
-      });
-      if (!sellerUser) {
-        return res.status(404).json({ error: 'Vendedor no encontrado' });
-      }
-      branchName = `VENDEDOR: ${(sellerUser.username).toUpperCase()}`;
-
-      // Buscar transacciones asociadas a este vendedor que NO pertenezcan a una hoja de reparto
-      const allSellerTxs = await prisma.transaction.findMany({
-        where: {
-          userId: Number(sellerId),
-          type: TransactionType.INCOME,
-          verified: false
-        },
-        include: {
-          order: true,
-          persona: true
-        }
-      });
-      txs = allSellerTxs.filter(t => !t.order || t.order.deliveryRouteId === null);
-
-    } else if (routeId) {
-      const route = await prisma.deliveryRoute.findUnique({
-        where: { id: Number(routeId) }
-      });
-      if (!route) {
-        return res.status(404).json({ error: 'Hoja de ruta no encontrada' });
-      }
-      branchName = `REPARTIDOR: ${route.driverName} (Ruta #${routeId})`;
-
-      // Buscar transacciones asociadas a esta hoja de reparto
-      txs = await prisma.transaction.findMany({
-        where: {
-          type: TransactionType.INCOME,
-          verified: false,
-          order: {
-            deliveryRouteId: Number(routeId)
-          }
-        },
-        include: {
-          persona: true
-        }
-      });
-    }
-
-    if (txs.length === 0) {
-      return res.status(400).json({ error: 'No hay transacciones pendientes para verificar' });
-    }
-
-    // Calcular el saldo teórico esperado
-    let expectedCash = 0;
-    let expectedChecks = 0;
-
-    for (const t of txs) {
-      const amt = Number(t.amount);
-      if (t.paymentMethod === PaymentMethod.CASH) {
-        expectedCash += amt;
-      } else if (t.paymentMethod === PaymentMethod.CHECK) {
-        expectedChecks += amt;
-      }
-    }
-
-    const theoreticalClosing = expectedCash + expectedChecks;
-    const realTotal = inputCash + inputChecks;
-
-    const declaredChecks = req.body.declaredChecks;
-    let extraNotes = notes ? String(notes).trim() : '';
-    if (declaredChecks && Array.isArray(declaredChecks) && declaredChecks.length > 0) {
-      const checksFormatted = declaredChecks.map((c: any) => `N° ${c.number || 'S/N'} (${c.bank || 'Banco'}) $${c.amount}`).join('; ');
-      extraNotes += (extraNotes ? ' | ' : '') + `Cheques: ${checksFormatted}`;
-    }
-
-    // Crear la caja cerrada asociada a esta rendición
-    const drawer = await prisma.cashDrawer.create({
-      data: {
-        userId: adminId,
-        branch: branchName,
-        drawerType,
-        routeNote: routeNote ? String(routeNote).trim() : null,
-        notes: extraNotes || null,
-        openingBalance: 0.00,
-        closingBalance: theoreticalClosing,
-        realBalance: realTotal,
-        status: 'CLOSED',
-        openedAt: txs.reduce((min, t) => t.createdAt < min ? t.createdAt : min, txs[0].createdAt),
-        closedAt: new Date()
-      }
+    const hostOrigin = `${req.protocol}://${req.get('host')}`;
+    const data = await rendicionService.verifyRendicion({
+      adminId: req.user.id,
+      sellerId: req.body.sellerId ? Number(req.body.sellerId) : null,
+      routeId: req.body.routeId ? Number(req.body.routeId) : null,
+      realCash: req.body.realCash !== undefined ? Number(req.body.realCash) : 0,
+      realChecks: req.body.realChecks !== undefined ? Number(req.body.realChecks) : 0,
+      destinationDrawerId: req.body.destinationDrawerId
+        ? Number(req.body.destinationDrawerId)
+        : null,
+      routeNote: req.body.routeNote,
+      notes: req.body.notes,
+      declaredChecks: req.body.declaredChecks,
+      hostOrigin,
     });
-
-    // Marcar transacciones como verificadas, asociarlas a la caja y actualizar saldo bancario si es transferencia
-    const defaultBank = await prisma.bankAccount.findFirst();
-    const operations: any[] = [];
-
-    // ÚNICAMENTE si se especificó explícitamente una caja de destino abierta y hay efectivo recibido, se genera transferencia
-    const targetDrawerId = destinationDrawerId ? Number(destinationDrawerId) : null;
-
-    if (targetDrawerId && inputCash > 0) {
-      operations.push(
-        prisma.transaction.create({
-          data: {
-            userId: adminId,
-            cashDrawerId: targetDrawerId,
-            billingType: BillingType.INTERNAL, // Interna por transferencia
-            type: TransactionType.INCOME,
-            paymentMethod: PaymentMethod.CASH,
-            amount: inputCash,
-            description: `Ingreso Rendición de Fondos - ${branchName}`,
-            verified: true
-          }
-        })
-      );
-    }
-
-    for (const t of txs) {
-      if (t.paymentMethod === PaymentMethod.BANK_TRANSFER || t.paymentMethod === PaymentMethod.CHECK) {
-        const selectedBankId = t.bankAccountId || defaultBank?.id;
-        
-        operations.push(
-          prisma.transaction.update({
-            where: { id: t.id },
-            data: {
-              verified: true,
-              cashDrawerId: drawer.id,
-              bankAccountId: selectedBankId
-            }
-          })
-        );
-
-        if (selectedBankId) {
-          operations.push(
-            prisma.bankAccount.update({
-              where: { id: selectedBankId },
-              data: {
-                balance: { increment: t.amount }
-              }
-            })
-          );
-        }
-      } else {
-        operations.push(
-          prisma.transaction.update({
-            where: { id: t.id },
-            data: {
-              verified: true,
-              cashDrawerId: drawer.id
-            }
-          })
-        );
-      }
-    }
-
-    await prisma.$transaction(operations);
-
-    // Mapear recibos verificados para la respuesta y simular WhatsApp del ERP
-    const verifiedReceipts = txs.map(t => {
-      const formattedReceiptNumber = t.receiptNumber || `REC-${t.movementId.toString().padStart(5, '0')}`;
-      const receiptLink = `${req.protocol}://${req.get('host')}/recibo/${t.id}`;
-      
-      if (t.persona?.phone) {
-        const cleanPhone = t.persona.phone.replace(/\D/g, '');
-        console.log(`[WhatsApp ERP Auto-Send] Acreditación de Fondos. Enviando recibo verificado a ${t.persona.name} (+${cleanPhone}). Mensaje: "Hola ${t.persona.name}! Tu pago por $${t.amount} ha sido verificado y acreditado formalmente en tu cuenta corriente. Comprobante digital: ${receiptLink} (Estado: Verificado)"`);
-      } else {
-        console.log(`[WhatsApp ERP Auto-Send] No se pudo enviar notificación de acreditación a ${t.persona?.name || 'Cliente'} (ID: ${t.personaId}) porque no posee teléfono registrado.`);
-      }
-
-      return {
-        id: t.id,
-        receiptNumber: formattedReceiptNumber,
-        amount: Number(t.amount),
-        paymentMethod: t.paymentMethod,
-        clientName: t.persona?.name || 'Cliente Desconocido',
-        clientPhone: t.persona?.phone || null,
-        billingType: t.billingType
-      };
-    });
-
-    // Guardar Audit Log
-    await prisma.auditLog.create({
-      data: {
-        userId: adminId,
-        action: 'CLOSE_OPERATIVE_DRAWER_RENDICION',
-        entityType: 'CashDrawer',
-        entityId: drawer.id,
-        newValues: {
-          branch: branchName,
-          expectedCash,
-          expectedChecks,
-          realCash: inputCash,
-          realChecks: inputChecks,
-          transactionsCount: txs.length
-        }
-      }
-    });
-
-    res.json({
-      status: 'success',
-      data: {
-        message: 'Rendición y arqueo completados con éxito. Fondos transferidos a la Caja Grande.',
-        drawer,
-        difference: realTotal - theoreticalClosing,
-        verifiedReceipts
-      }
-    });
-
+    return res.json({ status: 'success', data });
   } catch (error) {
-    console.error('Error al verificar rendición:', error);
-    res.status(500).json({ error: 'Error interno del servidor al procesar la rendición.' });
+    return handleCollectionError(
+      res,
+      error,
+      'Error interno del servidor al procesar la rendición.',
+    );
   }
 };
 
 export const deleteReceipt = async (req: AuthenticatedRequest, res: Response) => {
+  if (!req.user?.id) return res.status(401).json({ error: 'No autorizado' });
+  if (req.user.role !== Role.ADMIN && req.user.role !== Role.FACTURACION) {
+    return res.status(403).json({ error: 'No tienes permisos para eliminar o anular recibos' });
+  }
   try {
-    const adminId = req.user?.id;
-    const userRole = req.user?.role;
-    const { id } = req.params;
-
-    if (!adminId) {
-      return res.status(401).json({ error: 'No autorizado' });
-    }
-
-    if (userRole !== Role.ADMIN && userRole !== Role.FACTURACION) {
-      return res.status(403).json({ error: 'No tienes permisos para eliminar o anular recibos' });
-    }
-
-    const txId = Number(id);
-    if (isNaN(txId)) {
-      return res.status(400).json({ error: 'ID de recibo inválido' });
-    }
-
-    const tx = await prisma.transaction.findUnique({
-      where: { id: txId },
-      include: { persona: true }
+    const { receiptLabel, amountToRestore } = await receiptService.deleteReceipt({
+      adminId: req.user.id,
+      userRole: req.user.role,
+      receiptId: Number(req.params.id),
     });
-
-    if (!tx || tx.type !== TransactionType.INCOME) {
-      return res.status(404).json({ error: 'Recibo no encontrado' });
-    }
-
-    if (tx.verified && userRole !== Role.ADMIN) {
-      return res.status(400).json({ 
-        error: 'Este recibo ya fue verificado en una rendición. Solo un Administrador puede anularlo para corregir saldos de caja.' 
-      });
-    }
-
-    const amountToRestore = Number(tx.amount);
-
-    await prisma.$transaction(async (prismaTx) => {
-      // 1. Restablecer e incrementar el saldo pendiente del cliente (devuelve la deuda)
-      if (tx.personaId) {
-        await prismaTx.persona.update({
-          where: { id: tx.personaId },
-          data: {
-            outstandingBalance: { increment: amountToRestore }
-          }
-        });
-      }
-
-      // 2. Si estaba verificado y afectó banco, ajustar saldo bancario
-      if (tx.verified && tx.bankAccountId) {
-        await prismaTx.bankAccount.update({
-          where: { id: tx.bankAccountId },
-          data: {
-            balance: { decrement: amountToRestore }
-          }
-        });
-      }
-
-      // 3. Eliminar la transacción de la base de datos
-      await prismaTx.transaction.delete({
-        where: { id: tx.id }
-      });
-
-      // 4. Crear registro de auditoría
-      await prismaTx.auditLog.create({
-        data: {
-          userId: adminId,
-          action: 'DELETE_COLLECTION_RECEIPT',
-          entityType: 'Transaction',
-          entityId: tx.id,
-          oldValues: {
-            receiptNumber: tx.receiptNumber,
-            amount: amountToRestore,
-            personaId: tx.personaId,
-            personaName: tx.persona?.name,
-            paymentMethod: tx.paymentMethod,
-            billingType: tx.billingType,
-            verified: tx.verified
-          }
-        }
-      });
+    return res.json({
+      status: 'success',
+      message: `Recibo ${receiptLabel} eliminado correctamente. Se restableció $${amountToRestore.toLocaleString()} al saldo pendiente del cliente.`,
     });
-
-    res.json({ 
-      status: 'success', 
-      message: `Recibo ${tx.receiptNumber || 'N° ' + tx.id} eliminado correctamente. Se restableció $${amountToRestore.toLocaleString()} al saldo pendiente del cliente.` 
-    });
-
   } catch (error) {
-    console.error('Error al eliminar recibo:', error);
-    res.status(500).json({ error: 'Error interno del servidor al eliminar el recibo' });
+    return handleCollectionError(res, error, 'Error interno del servidor al eliminar el recibo');
   }
 };
-
