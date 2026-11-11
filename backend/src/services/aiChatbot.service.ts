@@ -1,9 +1,8 @@
-import { PrismaClient } from '@prisma/client';
+import prisma from '../utils/prisma';
 import { GoogleGenerativeAI, Part } from '@google/generative-ai';
 import dotenv from 'dotenv';
 dotenv.config();
 
-const prisma = new PrismaClient();
 const apiKey = process.env.GEMINI_API_KEY || '';
 const genAI = new GoogleGenerativeAI(apiKey);
 

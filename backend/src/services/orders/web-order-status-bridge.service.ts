@@ -65,6 +65,10 @@ export async function pushWebOrderStatusNow(
     throw new Error(`Estado o ID de pedido web inválido: ${cleanId} -> ${payload.targetStatus}`);
   }
 
+  if (!customClient && !env.ALLOW_PRODUCTION_CATALOG_WRITE) {
+    return { updated: false, reason: 'NOT_CONFIGURED' };
+  }
+
   const client = customClient || getSharedProductionDbClient();
   if (!client) {
     return { updated: false, reason: 'NOT_CONFIGURED' };
@@ -117,6 +121,7 @@ const outboundStatusQueue = new ResilientAsyncQueue(1);
 
 export function enqueueWebOrderStatusSyncByCode(payload: WebOrderStatusPushPayload): boolean {
   if (isAutomatedTestRuntime()) return false;
+  if (!env.ALLOW_PRODUCTION_CATALOG_WRITE) return false;
   if (!(env.PRODUCTION_CATALOG_DATABASE_URL || '').trim()) return false;
 
   const cleanId = payload.webOrderId.trim().toUpperCase();

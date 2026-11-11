@@ -1,0 +1,32 @@
+# Dependencias y artefactos locales
+**/node_modules
+**/dist
+**/build
+.git
+.gitignore
+
+# Secretos y certificados locales (se inyectan por variables en Railway)
+**/.env
+**/.env.*
+!**/.env.example
+backend/certs/*.key
+backend/certs/*.crt
+
+# Respaldos, cachés y archivos pesados fuera del runtime
+backups_auditoria
+backend/backups
+backend/uploads/*
+!backend/uploads/.gitkeep
+ARCHIVOS
+docs
+specs
+.agents
+.specify
+*.sql
+*.dump
+*.enc
+*.bak*
+*.zip
+*.pdf
+*.xlsx
+*.xls

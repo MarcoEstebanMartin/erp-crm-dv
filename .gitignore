@@ -47,5 +47,3 @@ backups_auditoria/
 backend/backups/
 backend/uploads/*
 !backend/uploads/.gitkeep
-
-.vercel

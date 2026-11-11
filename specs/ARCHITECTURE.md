@@ -9,29 +9,24 @@ Este documento define la arquitectura técnica general, topología de servicios,
 El sistema opera bajo un esquema Full-Stack TypeScript desacoplado, diseñado para alta velocidad local y conectividad externa controlada:
 
 ```text
-[ Dispositivos Móviles / Preventistas / Depósito ] (WiFi Local)
-                     │
+[ Dispositivos Móviles / Preventistas / Depósito / Mostrador ]
+                     │ (HTTPS Mismo Origen / PWA)
                      ▼
-       ┌───────────────────────────────┐
-       │   Frontend (React 19 + Vite)  │  Puerto: 5173 (0.0.0.0)
-       └──────────────┬────────────────┘
-                      │ (REST / JSON)
-                      ▼
-       ┌───────────────────────────────┐  Ngrok Tunnel
-       │   Backend (Express + Node.js) │ ◄────────────── [ WhatsApp Cloud API / Webhook ]
-       └──────────────┬────────────────┘  Puerto: 3000 (0.0.0.0)
-                      │ (Prisma ORM)
-                      ▼
-       ┌───────────────────────────────┐
-       │   PostgreSQL 16 (ACID DB)     │  Puerto: 5432
-       └───────────────────────────────┘
+       ┌────────────────────────────────────────┐  HTTPS Directo 24/7
+       │  Servicio Unificado en Railway         │ ◄────────────── [ WhatsApp Cloud API / Webhook ]
+       │  (Express API + React 19 SPA Estático) │
+       └───────────────────┬────────────────────┘
+                           │ (Prisma ORM / TLS)
+                           ▼
+       ┌────────────────────────────────────────┐
+       │  Supabase PostgreSQL 16 (sa-east-1)    │
+       └────────────────────────────────────────┘
 ```
 
 ### Puertos y Entornos
-- **Frontend**: Puerto `5173` (Escuchando en `0.0.0.0` para acceso en red LAN).
-- **Backend API**: Puerto `3000` (Escuchando en `0.0.0.0`).
-- **Base de Datos**: PostgreSQL 16 en puerto `5432`.
-- **Túnel Externo (Ngrok)**: Expone el puerto `3000` en `https://numerally-diaristic-maryrose.ngrok-free.dev` para recibir Webhooks de Meta (WhatsApp) y permitir facturación AFIP.
+- **Producción (Railway)**: Servicio unificado en puerto `3000` detrás del proxy HTTPS de Railway (`TRUST_PROXY=1`), sirviendo la SPA compilada (`frontend/dist`), `/uploads` con caché autocurada desde SQL y `/api/*` bajo un único origen (cookies `HttpOnly` `SameSite=Lax` nativas).
+- **Desarrollo Local (`npm run dev`)**: Vite en puerto `5174` con proxy local hacia Express en puerto `3001`.
+- **Base de Datos**: PostgreSQL 16 gestionado en Supabase (`sa-east-1`).
 
 ---
 
@@ -85,5 +80,5 @@ Para evitar discrepancias entre frontend y backend, todas las respuestas HTTP de
 ## 4. Conectividad en Red Local y Móvil
 
 1. **Binding en 0.0.0.0**: Tanto Vite como Express deben arrancar en `0.0.0.0` para permitir que celulares o tablets conectados al WiFi de la distribuidora operen el sistema.
-2. **CORS Configurado**: El backend permite peticiones desde `localhost:5173`, desde la IP local activa (detectable con `ipconfig`) y desde el dominio estático de Ngrok.
+2. **CORS y Cookies `HttpOnly` de Mismo Origen**: En producción (Railway), Frontend y Backend comparten el mismo dominio HTTPS (`CORS_ORIGIN` explícito). En desarrollo local se permite `localhost` e IP LAN WiFi.
 3. **PWA / Responsive**: Las vistas operativas (Preventa y Depósito) deben estar preparadas para interacción táctil rápida en pantallas móviles.

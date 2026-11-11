@@ -1,6 +1,6 @@
 ﻿# Especificación de Módulo: CRM y WhatsApp Cloud API
 
-Este documento define la arquitectura de mensajería bidireccional, integración con Meta WhatsApp Cloud API, túnel Ngrok y atención de clientes.
+Este documento define la arquitectura de mensajería bidireccional, integración con Meta WhatsApp Cloud API en Railway y atención de clientes.
 
 ---
 
@@ -11,9 +11,9 @@ Este documento define la arquitectura de mensajería bidireccional, integración
          │ (Mensaje de texto / pedido / comprobante)
          ▼
 [ Servidores Meta (Cloud API) ]
-         │ (Webhook POST HTTP)
+         │ (Webhook POST HTTPS directo 24/7)
          ▼
-[ Túnel Estático Ngrok: https://numerally-diaristic-maryrose.ngrok-free.dev ]
+[ Servicio Unificado en Railway (HTTPS) ]
          │
          ▼
 [ Backend Express: /api/crm/whatsapp/webhook ]

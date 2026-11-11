@@ -155,3 +155,14 @@
   - [x] Crear `web-order-lifecycle.engine.ts` (`130` l., corte automático de pruebas `DV-1004`/`DV-1005`, preservación inmutable de `webOrderId` al cerrar bultos físicos y mapeo de estados) + `web-order-status-bridge.service.ts` (`137` l., cola `ResilientAsyncQueue` hacia `chatbot-dv.orders` y `order_status_history`)
   - [x] Crear poller *single-flight* `web-order-poller.service.ts` (`125` l., cada `30s` con pre-chequeo rápido de cabeceras y cancelación automática de pedidos `PENDING` anulados en web) + controlador `web-order-sync.controller.ts` (`50` l.) + rutas `/api/orders/sync-web` + botón **"Sincronizar Web"** e insignia `Web · DV-XXXX` en `OrdersTab.tsx` (`271` l.)
   - [x] Modularizar `order-status.service.ts` (`171` l. + `order-lot-picking.helper.ts` `163` l.) y `order-billing.service.ts` (`220` l. + `order-invoice-tx.helper.ts` `139` l.), conectando `order-scale.service.ts` (`145` l.) y `route-settlement.service.ts` (`229` l.) al retorno de estados + validar `30 suites / 123 tests` en verde (`web-order-poller-status.test.ts`)
+
+---
+
+## Plan Activo: Consolidación del Stack Unificado (`GitHub + Supabase + Railway`) y Limpieza de Obsoletos
+
+- [x] **Paso R1: Purga de Plataformas Descartadas (`Vercel`/`PM2`/`Nginx`/`Ngrok`) y Unificación SPA + API para Railway** ✅ COMPLETADO
+  - [x] Eliminar configuraciones obsoletas (`frontend/vercel.json`, `backend/ecosystem.config.js`, `docs/nginx.conf`, `frontend/nginx.conf`, `frontend/Dockerfile`, `backend/Dockerfile`, `docker-compose.prod.yml`, `frontend/README.md` y `.vercel`)
+  - [x] Quitar del índice de Git las `34` fotos viejas `backend/uploads/products/*.jpg` (`git rm --cached`, conservando el 100% de las fotos en disco) y purgar paquetes huérfanos en la raíz (`npm prune` + `npm audit fix` -> **`0` vulnerabilidades en raíz, backend y frontend**)
+  - [x] Crear `spa-static.middleware.ts` (`75` l., entrega unificada de `frontend/dist` + caché inmutable en `/assets` + `no-cache` en PWA + `404 JSON` en `/api/*`), `product-image-cache.middleware.ts` (`122` l., autocuración `READ ONLY` desde `chatbot-dv.product_images`) y `Dockerfile` + `.dockerignore` únicos de producción en la raíz (`node:24-slim`, usuario no-root)
+  - [x] Alinear `env.config.ts` para detección segura de entorno Railway (`TRUST_PROXY=1` y origen propio HTTPS) y actualizar documentación (`AGENTS.md`, `TECH_STACK.md`, `ARCHITECTURE.md`, `crm-whatsapp.md`, `.env.example`)
+- [x] **Paso R2: Commit Limpio y Respaldo en GitHub (`MarcoEstebanMartin/erp-crm-dv`)** ✅ COMPLETADO (Despliegue en Railway reservado para cuando finalicen las pruebas locales de Frontend/ERP)

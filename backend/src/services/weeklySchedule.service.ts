@@ -1,6 +1,4 @@
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import prisma from '../utils/prisma';
 
 export const DEFAULT_WEEKLY_SCHEDULE = [
   // SEMANA 1

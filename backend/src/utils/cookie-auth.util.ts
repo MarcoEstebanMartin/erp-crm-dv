@@ -37,7 +37,7 @@ export function parseCookies(cookieHeader?: string): Record<string, string> {
 }
 
 /**
- * Detecta si la conexión es HTTPS (directa o detrás de Nginx/Cloudflare/Ngrok) o modo producción.
+ * Detecta si la conexión es HTTPS (directa o detrás de Railway/Cloudflare) o modo producción.
  * Permite operar por HTTP en red WiFi local de desarrollo sin rechazar la cookie en celulares.
  */
 export function isSecureRequest(req: Request): boolean {

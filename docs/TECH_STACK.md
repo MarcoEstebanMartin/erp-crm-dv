@@ -67,10 +67,10 @@ librerías, herramientas externas y arquitecturas que dan vida a este software.
 --------------------------------------------------------------------------------
 • Mensajería y CRM: WhatsApp Cloud API (Meta Developers)
   - Permite enviar y recibir mensajes directamente desde el ERP.
-• Túnel de Acceso Público y Webhooks: Ngrok
-  - Expone el servidor local a internet mediante un dominio estático
-    (numerally-diaristic-maryrose.ngrok-free.dev) para recibir los eventos y
-    mensajes de WhatsApp en tiempo real.
+• Infraestructura de Producción Unificada: Railway (HTTPS 24/7)
+  - Un único contenedor Node.js 24 sirve tanto el Frontend SPA compilado como la
+    API Express bajo un mismo dominio HTTPS seguro, recibiendo directamente los
+    Webhooks de Meta (WhatsApp) sin depender de túneles locales ni PCs encendidas.
 • Acceso en Red Local (Celulares / Tablets de Preventa y Depósito):
   - Configurado en 0.0.0.0 para que cualquier dispositivo conectado a la misma
     red WiFi pueda usar el sistema desde su navegador con la IP local.

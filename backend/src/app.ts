@@ -5,7 +5,8 @@ import { env } from './config/env.config';
 import { ensureDirectoriesExist } from './utils/fileSync.util';
 import { errorHandler } from './middlewares/errorHandler.middleware';
 import { securityHeadersMiddleware } from './middlewares/securityHeaders.middleware';
-import { authenticateJWT } from './middlewares/auth';
+import { mountSpaFrontend } from './middlewares/spa-static.middleware';
+import { createProductImageCacheFallback } from './middlewares/product-image-cache.middleware';
 
 // Importación de Rutas
 import authRoutes from './routes/auth.routes';
@@ -83,8 +84,9 @@ import { startDbKeepAlive } from './utils/dbKeepAlive';
   }
 })();
 
-// 4. Servidor de Archivos Estáticos (Caché local activa sincronizada desde SQL)
+// 4. Servidor de Archivos Estáticos (Caché local activa con autocuración READ ONLY desde SQL)
 app.use('/uploads/products', express.static(productsUploadsDir, { maxAge: 0, etag: true, lastModified: true }));
+app.use('/uploads/products', createProductImageCacheFallback(productsUploadsDir));
 app.use('/uploads', express.static(uploadsDir, { maxAge: 0, etag: true, lastModified: true }));
 
 // 5. Montar Rutas del API
@@ -125,7 +127,10 @@ app.get('/api/health', (_req: Request, res: Response) => {
   });
 });
 
-// 7. Manejador Global de Errores
+// 7. Frontend SPA Unificado (en producción) y 404 JSON para subrutas /api inexistentes
+mountSpaFrontend(app);
+
+// 8. Manejador Global de Errores
 app.use(errorHandler);
 
 export default app;

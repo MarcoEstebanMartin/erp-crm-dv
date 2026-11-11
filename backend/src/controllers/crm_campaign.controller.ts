@@ -1,9 +1,7 @@
 import { Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import prisma from '../utils/prisma';
 import { whatsAppService } from '../services/whatsapp.service';
 import { AuthenticatedRequest } from '../types';
-
-const prisma = new PrismaClient();
 
 /**
  * Disparar Difusión Masiva de Campaña de Ofertas por WhatsApp

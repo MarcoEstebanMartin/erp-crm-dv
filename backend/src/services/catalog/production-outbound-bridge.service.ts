@@ -47,12 +47,14 @@ export class ProductionOutboundBridgeService {
 
   isAutoBridgeActive(): boolean {
     if (process.env.VITEST || env.NODE_ENV === 'test') return false;
+    if (!env.ALLOW_PRODUCTION_CATALOG_WRITE) return false;
     return Boolean(env.PRODUCTION_CATALOG_DATABASE_URL?.trim());
   }
 
   getBridgeStats() {
     return {
       configured: Boolean(env.PRODUCTION_CATALOG_DATABASE_URL?.trim()),
+      writeEnabled: env.ALLOW_PRODUCTION_CATALOG_WRITE,
       autoActive: this.isAutoBridgeActive(),
       queue: this.queue.getStats(),
     };
@@ -114,6 +116,9 @@ export class ProductionOutboundBridgeService {
     productIds: number[],
     options?: { productionDbUrl?: string },
   ): Promise<{ syncedCount: number; statePatched: boolean }> {
+    if (!env.ALLOW_PRODUCTION_CATALOG_WRITE && !options?.productionDbUrl) {
+      return { syncedCount: 0, statePatched: false };
+    }
     const uniqueIds = Array.from(new Set(productIds.filter((id) => id > 0)));
     if (uniqueIds.length === 0) return { syncedCount: 0, statePatched: false };
 
@@ -229,6 +234,9 @@ export class ProductionOutboundBridgeService {
     input: PushProductImageInput,
     options?: { productionDbUrl?: string },
   ): Promise<{ uploaded: boolean; statePatched: boolean }> {
+    if (!env.ALLOW_PRODUCTION_CATALOG_WRITE && !options?.productionDbUrl) {
+      return { uploaded: false, statePatched: false };
+    }
     const prodDb = this.getProdClient(options?.productionDbUrl);
     if (!prodDb) return { uploaded: false, statePatched: false };
     const ownsTempClient = Boolean(

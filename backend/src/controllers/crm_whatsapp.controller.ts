@@ -1,10 +1,8 @@
 import { Request, Response } from 'express';
 import crypto from 'crypto';
-import { PrismaClient } from '@prisma/client';
+import prisma from '../utils/prisma';
 import { whatsAppService, normalizeWaId } from '../services/whatsapp.service';
 import { AuthenticatedRequest } from '../types';
-
-const prisma = new PrismaClient();
 
 /**
  * Obtener lista de conversaciones CRM

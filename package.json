@@ -1,11 +1,16 @@
 {
   "name": "erp-crm-dv-root",
   "version": "1.0.0",
-  "description": "Configuración raíz para ejecutar frontend y backend simultáneamente",
+  "description": "ERP-CRM Distribuidora Victoria — Stack Unificado (Express + React + Supabase + Railway)",
   "scripts": {
     "dev:backend": "npm run dev --prefix backend",
     "dev:frontend": "npm run dev --prefix frontend",
-    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\""
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "build:frontend": "npm run build --prefix frontend",
+    "build:backend": "npm run build --prefix backend",
+    "build": "npm run build:frontend && npm run build:backend",
+    "start": "npm run start --prefix backend",
+    "test": "npm run test --prefix backend"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"

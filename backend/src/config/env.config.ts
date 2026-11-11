@@ -13,11 +13,13 @@ export interface EnvConfig {
   IGNORE_STOCK_CHECK: boolean;
   AFIP_PRODUCTION: boolean;
   PRODUCTION_CATALOG_DATABASE_URL?: string;
+  ALLOW_PRODUCTION_CATALOG_WRITE: boolean;
+  WHATSAPP_ENABLED: boolean;
 }
 
 export function parseTrustProxy(rawValue?: string): TrustProxySetting {
   if (!rawValue || rawValue.trim() === '') {
-    // Por defecto solo confía en proxies locales (Nginx local, Vite Proxy, Ngrok),
+    // Por defecto solo confía en proxies locales (Vite Proxy / loopback),
     // impidiendo que atacantes externos o en red falsifiquen X-Forwarded-For directo.
     return 'loopback';
   }
@@ -42,7 +44,10 @@ export function validateEnvConfig(sourceEnv: NodeJS.ProcessEnv = process.env): E
   const nodeEnv =
     (sourceEnv.NODE_ENV as 'development' | 'production' | 'test') || 'development';
 
-  const rawCors = (sourceEnv.CORS_ORIGIN || sourceEnv.FRONTEND_URL || '').trim();
+  const railwayDomainOrigin = sourceEnv.RAILWAY_PUBLIC_DOMAIN?.trim()
+    ? `https://${sourceEnv.RAILWAY_PUBLIC_DOMAIN.trim()}`
+    : '';
+  const rawCors = (sourceEnv.CORS_ORIGIN || sourceEnv.FRONTEND_URL || railwayDomainOrigin).trim();
   let corsOrigin: string | string[] | boolean;
 
   if (nodeEnv === 'production') {
@@ -55,7 +60,7 @@ export function validateEnvConfig(sourceEnv: NodeJS.ProcessEnv = process.env): E
       ? rawCors.split(',').map((s) => s.trim()).filter(Boolean)
       : rawCors || '*';
   } else {
-    // En desarrollo y tests permitimos localhost, IP WiFi de celulares y túneles Ngrok
+    // En desarrollo y tests permitimos localhost e IP WiFi de celulares en LAN
     if (!rawCors || rawCors === '*') {
       corsOrigin = true;
     } else {
@@ -65,16 +70,24 @@ export function validateEnvConfig(sourceEnv: NodeJS.ProcessEnv = process.env): E
     }
   }
 
+  const resolvedTrustProxy =
+    (!sourceEnv.TRUST_PROXY || sourceEnv.TRUST_PROXY.trim() === '') &&
+    Boolean(sourceEnv.RAILWAY_ENVIRONMENT)
+      ? 1
+      : parseTrustProxy(sourceEnv.TRUST_PROXY);
+
   return {
     PORT: parseInt(sourceEnv.PORT || '3000', 10),
     NODE_ENV: nodeEnv,
     JWT_SECRET,
     CORS_ORIGIN: corsOrigin,
-    TRUST_PROXY: parseTrustProxy(sourceEnv.TRUST_PROXY),
+    TRUST_PROXY: resolvedTrustProxy,
     JSON_BODY_LIMIT: (sourceEnv.JSON_BODY_LIMIT || '1mb').trim(),
     IGNORE_STOCK_CHECK: sourceEnv.IGNORE_STOCK_CHECK === 'true',
     AFIP_PRODUCTION: sourceEnv.AFIP_PRODUCTION === 'true',
     PRODUCTION_CATALOG_DATABASE_URL: sourceEnv.PRODUCTION_CATALOG_DATABASE_URL?.trim() || undefined,
+    ALLOW_PRODUCTION_CATALOG_WRITE: sourceEnv.ALLOW_PRODUCTION_CATALOG_WRITE === 'true',
+    WHATSAPP_ENABLED: sourceEnv.WHATSAPP_ENABLED === 'true',
   };
 }
 

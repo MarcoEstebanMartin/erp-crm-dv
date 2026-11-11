@@ -93,8 +93,9 @@ export class WhatsAppService {
     let wamid: string | null = null;
     let status: 'SENT' | 'FAILED' = 'SENT';
     let retryDispatchInput: Parameters<typeof dispatchWhatsAppCloudRequest>[0] | null = null;
+    const isWhatsAppLiveEnabled = process.env.WHATSAPP_ENABLED === 'true';
 
-    if (this.token && this.phoneNumberId) {
+    if (isWhatsAppLiveEnabled && this.token && this.phoneNumberId) {
       const dispatchInput = {
         apiVersion: this.apiVersion,
         phoneNumberId: this.phoneNumberId,

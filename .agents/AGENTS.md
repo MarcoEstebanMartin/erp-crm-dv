@@ -38,12 +38,12 @@ Este archivo define las reglas innegociables de comportamiento, arquitectura mod
 - **Flujo Seguro con Objetos Nativos (`--create-only`)**: Toda migración nueva debe generarse SIEMPRE usando `npx prisma migrate dev --name <nombre> --create-only`, limpiar cualquier `DROP SEQUENCE movement_seq` del SQL generado y aplicarla con `npx prisma migrate deploy`.
 - **Evitar Colisiones en Seeds**: En scripts de semilla, nunca definir valores manuales para campos autogenerados como `movementId`.
 
-## 6. Comandos Rápidos y Automatización
-- **Comando "abri" / "abrir" / "abre todo"**:
+## 6. Comandos Rápidos y Stack Oficial (GitHub + Supabase + Railway)
+- **Stack Único de Producción**: Código en **GitHub**, datos e imágenes maestras en **Supabase** (`sa-east-1`) y despliegue unificado 24/7 (Frontend SPA + Backend API bajo el mismo origen HTTPS, sin `ngrok` ni plataformas extra) en **Railway**.
+- **Comando "abri" / "abrir" / "abre todo" (Desarrollo Local)**:
   1. Ejecutar `ipconfig` para obtener la IPv4 local activa.
-  2. Iniciar `npm run dev` en la raíz en segundo plano.
-  3. Iniciar `ngrok http 3000 --url=numerally-diaristic-maryrose.ngrok-free.dev` en segundo plano.
-  4. Mostrar resumen con estado de servidores, IP local para celular, Webhook de WhatsApp y credenciales.
+  2. Iniciar `npm run dev` en la raíz en segundo plano (`Vite` + `Express`).
+  3. Mostrar resumen con estado de servidores locales, IP WiFi para pruebas móviles y URL de producción en Railway.
 
 ## 7. Banco Único de Imágenes de Productos (SQL + Caché Limpia)
 - **Fuente Única de Verdad en SQL (`chatbot-dv.product_images`)**: El banco oficial de fotos de productos vive en PostgreSQL (`chatbot-dv.product_images`) sincronizado con la caché local activa `backend/uploads/products/` (regenerable con `npm run db:sync-from-production`). Prohibido mantener carpetas paralelas duplicadas o acumular fotos huérfanas viejas en disco.

@@ -139,7 +139,10 @@ export async function commitSingleWebOrderAtomically(params: {
     }
 
     const channelLabel = source === 'whatsapp_bot' ? 'Chatbot WhatsApp' : 'Tienda Web';
-    const methodLabel = wo.delivery_method === 'retiro' ? 'Retiro en Local' : 'Reparto';
+    const methodLabel =
+      wo.delivery_method === 'retiro' || wo.delivery_method === 'retiro_local'
+        ? 'Retiro en Local'
+        : 'Reparto';
     const noteParts = [
       `[${channelLabel} #${webOrderId} | ${methodLabel}${wo.delivery_address ? `: ${wo.delivery_address.trim()}` : ''}]`,
     ];

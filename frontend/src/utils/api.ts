@@ -4,7 +4,7 @@ import {
   resolveRequestIdempotencyKey,
 } from './idempotencyClient';
 
-// Usa ruta relativa para que funcione tanto en localhost, IP local y túneles externos (Ngrok/Localtunnel)
+// Usa ruta relativa para unificar origen en producción (Railway) y proxy local en desarrollo (Vite/LAN)
 export const API_BASE_URL = '/api';
 
 // La sesión viaja protegida por Cookie HttpOnly (inmune a robo XSS en localStorage)
