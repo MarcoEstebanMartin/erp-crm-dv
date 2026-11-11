@@ -202,15 +202,14 @@ export const ClientIdentityRolesCard: React.FC<ClientIdentityRolesCardProps> = (
         </div>
 
         <div className="form-group" style={{ marginBottom: 0 }}>
-          <label style={LABEL_STYLE}>Estado Operativo</label>
           <label
             style={{
-              display: 'flex',
+              display: 'inline-flex',
               alignItems: 'center',
-              gap: '10px',
-              fontSize: '0.9rem',
+              gap: '8px',
+              fontSize: '0.88rem',
               cursor: 'pointer',
-              padding: '11px 14px',
+              padding: '10px 14px',
               border: '1px solid var(--border-color)',
               borderRadius: 'var(--radius-sm)',
               backgroundColor: data.isActive !== false ? 'rgba(16, 185, 129, 0.06)' : '#ffffff',
@@ -224,7 +223,7 @@ export const ClientIdentityRolesCard: React.FC<ClientIdentityRolesCardProps> = (
               onChange={(e) => onChangeData({ isActive: e.target.checked })}
             />
             <span style={{ fontWeight: data.isActive !== false ? 600 : 400 }}>
-              Persona Activa (Habilitada para facturación, pedidos y reparto)
+              Activo
             </span>
           </label>
         </div>
