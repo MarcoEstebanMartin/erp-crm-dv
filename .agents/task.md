@@ -203,4 +203,6 @@
   - [x] Migrar acumuladores de `admin-channels.service.ts` y `admin-executive.service.ts` a `Decimal.js` + unificar visualización en pesos enteros limpios en Remito X, CRM, Finanzas, Cobranzas Móvil y Conciliación + alinear regla SQL de fotos en `constitution.md` + suite `integer-peso-harmony.test.ts`.
 - [x] **Paso M2: Modernización del Motor IA Interno (`gemini.service.ts` y `aiChatbot.service.ts`) al SDK oficial `@google/genai` con Structured Outputs (`response_format` JSON Schema)** ✅ COMPLETADO
   - [x] Reemplazar `@google/generative-ai` (deprecado) por `@google/genai` (`^3.2.0`) usando `client.interactions.create` con `store: false`, `gemini-3.8-flash` -> `gemini-3.5-flash-lite` (y `gemini-3.5-transcribe` para notas de voz), JSON Schema estricto + validación `Zod` en `ai-schemas.validator.ts` + suite `genai-modernization.test.ts`.
-- [ ] **Paso M3: Candado Automático de Calidad en GitHub Actions (`.github/workflows/ci.yml`) + Optimización de Velocidad en `Vitest`**.
+- [x] **Paso M3: Candado Automático de Calidad en GitHub Actions (`.github/workflows/ci.yml`) + Optimización de Velocidad en `Vitest` + Suite Base Frontend** ✅ COMPLETADO
+  - [x] Crear `.github/workflows/ci.yml` sobre Node 24 validando `prisma generate`, `tsc --noEmit` (Backend/Frontend), `vitest run` (Backend/Frontend) y `npm run build` completo en cada push/PR.
+  - [x] Configurar `backend/vitest.config.mts` y `frontend/vitest.config.ts` acelerando la ejecución local y agregando `frontend/src/utils/__tests__/frontend-core.test.ts`.

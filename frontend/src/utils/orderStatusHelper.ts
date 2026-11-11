@@ -14,10 +14,6 @@ export function getOrderStatusInfo(order: any): OrderStatusInfo {
   if (order.status === 'PREPARING') {
     return { label: 'En Picking', badgeClass: 'preparing', color: '#F59E0B' };
   }
-  if (order.status === 'PREPARED' && !order.invoiceNumber) {
-    return { label: 'Armado', badgeClass: 'prepared', color: '#4F46E5' };
-  }
-  
   if (order.deliveryRoute) {
     if (order.deliveryRoute.status === 'IN_TRANSIT') {
       return { label: 'En Viaje', badgeClass: 'in-transit', color: '#8B5CF6' };
@@ -25,6 +21,10 @@ export function getOrderStatusInfo(order: any): OrderStatusInfo {
     if (order.deliveryRoute.status === 'COMPLETED') {
       return { label: 'Entregado', badgeClass: 'delivered', color: 'var(--color-success)' };
     }
+  }
+
+  if (order.status === 'PREPARED' && !order.invoiceNumber) {
+    return { label: 'Armado', badgeClass: 'prepared', color: '#4F46E5' };
   }
 
   if (order.invoiceNumber) {

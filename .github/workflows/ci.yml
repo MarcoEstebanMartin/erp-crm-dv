@@ -1,0 +1,69 @@
+name: ERP-CRM DV Quality Gate (CI)
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify-erp:
+    name: TypeScript + Prisma + Vitest + Production Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    env:
+      NODE_ENV: test
+      JWT_SECRET: ci-test-jwt-secret-min-32-characters-long-safe
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/erp_ci_dummy?schema=public
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 24 (matches Railway Dockerfile)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: |
+            package-lock.json
+            backend/package-lock.json
+            frontend/package-lock.json
+
+      - name: Install Backend dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: Install Frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Generate Prisma Client
+        working-directory: backend
+        run: npx prisma generate
+
+      - name: Backend TypeScript Strict Check (tsc --noEmit)
+        working-directory: backend
+        run: npx tsc --noEmit
+
+      - name: Backend Unit & Accounting Invariant Tests (Vitest)
+        working-directory: backend
+        run: npm test
+
+      - name: Frontend TypeScript Strict Check (tsc --noEmit)
+        working-directory: frontend
+        run: npx tsc --noEmit
+
+      - name: Frontend Unit Tests (Vitest)
+        working-directory: frontend
+        run: npm test
+
+      - name: Production Build Verification (Frontend SPA + Backend API)
+        run: |
+          npm run build --prefix frontend
+          npm run build --prefix backend
