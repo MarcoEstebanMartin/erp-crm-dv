@@ -143,3 +143,13 @@
 - [x] **Paso U3: Puente Vivo Permanente (`ERP -> Producción`) y Banco Único de Imágenes** ✅ COMPLETADO
   - [x] Crear motor de salida `catalog-bridge.engine.ts` (`187` l., formato `$9.112`, normalización SKU y parche atómico de `metadata.catalog_active_state` incluyendo combos) y servicio resiliente `production-outbound-bridge.service.ts` (`272` l., cola FIFO `ResilientAsyncQueue` con reintentos exponenciales)
   - [x] Conectar las **8 vías de mutación** del ERP (`createProduct`, `updateProduct`, `importPrices`, `bulkUpdatePrices`, `revertPrices`, `uploadSingleProductImage`, `importProductImagesFromZip` y `commitExcel`) hacia `chatbot-dv` (`products`, `price_history`, `product_images` bytea y `metadata.catalog_active_state`) + endpoints `ADMIN` `/api/products/bridge/*` (`28 suites / 114 tests` en verde)
+
+---
+
+## Plan Activo: Puente Unificado de Pedidos Web y WhatsApp (`chatbot-dv <-> erp-dv`)
+
+- [x] **Paso P1: Motor Matemático de Traducción (Pesables, Combos y Teléfonos AR) + Servicio Atómico de Ingreso + Auditoría en Seco (`Dry-Run`)** ✅ COMPLETADO
+  - [x] Crear `web-order-sync.engine.ts` (`282` l., `Decimal.js`, desglose `$/kg` para balanza en pesables, expansión de `COMBOS` a SKUs físicos reales y normalización telefónica Argentina) + `web-order-commit.helper.ts` (`197` l.) + `production-order-sync.service.ts` (`207` l.) con candado `pg_advisory_xact_lock` e idempotencia estricta por `webOrderId`
+  - [x] Validar `tsc --noEmit` (Backend y Frontend) + suite `web-order-sync.test.ts` (`29 suites / 118 tests` en verde) + ejecutar `--dry-run` sobre `DV-1004` (`$54.128` exactos) y `DV-1005` (`$42.017` exactos)
+- [ ] **Paso P2: Recepción Automática en Vivo (`Poller` cada `30s` + Botón Manual) y Retorno Bidireccional de Estados (`ERP -> Web`)**
+  - [ ] Activar sincronizador automático *single-flight* en segundo plano + endpoint manual `POST /api/orders/sync-web` y reflejar cambios de estado del ERP (`PREPARING`, `PREPARED`, `DELIVERED`, `CANCELLED`) en `chatbot-dv.orders` y `order_status_history`

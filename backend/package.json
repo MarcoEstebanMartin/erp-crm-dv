@@ -18,6 +18,7 @@
     "db:backup-sql": "node scripts/backup_database_sql.js",
     "db:backup-encrypted": "ts-node scripts/encrypted_backup_cli.ts",
     "db:sync-from-production": "ts-node scripts/sync_from_production.ts",
+    "db:sync-web-orders": "ts-node scripts/sync_web_orders.ts",
     "db:health-check": "node scripts/db_health_check.js",
     "db:audit-balances": "node scripts/audit_balances.js",
     "db:audit-photos": "node scripts/audit_photos.js"
