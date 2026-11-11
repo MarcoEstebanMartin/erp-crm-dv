@@ -214,5 +214,7 @@
 - [x] **Paso V1: Carga diferida de fotos (`lazy` + `async`), renderizado progresivo (`IntersectionObserver`) y memorización `O(N)` en `ProductsList.tsx`** ✅ COMPLETADO
   - [x] Extraer lógica pura de filtrado sin tildes, opciones en 1 pasada y ordenamiento SKU `O(N)` en `productsListHelpers.ts` (`188` l.) + suite `products-list-helpers.test.ts`.
   - [x] Incorporar `useMemo`, renderizado progresivo por bloques (`50` iniciales + `60` automáticos al hacer scroll + botón `"Mostrar todos"`) y `loading="lazy" decoding="async"` en miniaturas de `ProductsList.tsx` (`329` l.), eliminando la descarga simultánea de ~61 MB de fotos al abrir Productos.
-- [ ] **Paso V2: Transición instantánea desde memoria y carga paralela no bloqueante en `useAdminController.ts`**
+- [x] **Paso V2: Transición instantánea desde memoria y carga paralela no bloqueante en `useAdminController.ts`** ✅ COMPLETADO
+  - [x] Crear política determinística de frescura `adminFetchPolicy.ts` (`30` l., reutilización en `< 20s` al cambiar de pestaña y refresco inmediato `force: true` en el 100% de las mutaciones) + suite `admin-fetch-policy.test.ts`.
+  - [x] Desacoplar `HomeTab` en `useAdminController.ts` (`280` l.) para pintar pedidos sin bloquear por reportes/catálogo, unificar `getProducts` + `getRubros` + `getPersonas('provider')` en paralelo (`Promise.all`) y preservar inactivos en `handleOpenEditOrder`.
 - [ ] **Paso V3: Caché HTTP inteligente de imágenes de productos en `app.ts` y `product-image-cache.middleware.ts`**

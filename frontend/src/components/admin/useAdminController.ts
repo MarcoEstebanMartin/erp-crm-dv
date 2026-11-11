@@ -1,6 +1,12 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { api } from '../../utils/api';
 import { getOrderStatusInfo } from '../../utils/orderStatusHelper';
+import {
+  CATALOG_META_FRESHNESS_TTL_MS,
+  CLIENTS_FRESHNESS_TTL_MS,
+  PRODUCTS_FRESHNESS_TTL_MS,
+  shouldFetchAdminResource,
+} from '../../utils/adminFetchPolicy';
 import type { Product, User, Persona, Order, Rubro, SaleRoute } from '../../types';
 
 export function useAdminController(activeTab: string) {
@@ -13,6 +19,17 @@ export function useAdminController(activeTab: string) {
   const [financialReport, setFinancialReport] = useState<any | null>(null);
   const [rubrosList, setRubrosList] = useState<Rubro[]>([]);
   const [providersList, setProvidersList] = useState<Persona[]>([]);
+
+  const freshnessRef = useRef({
+    productsAt: 0,
+    hasProducts: false,
+    clientsAt: 0,
+    hasClients: false,
+    rubrosAt: 0,
+    hasRubros: false,
+    providersAt: 0,
+    hasProviders: false,
+  });
 
   const [productModal, setProductModal] = useState({
     open: false, mode: 'create',
@@ -51,49 +68,107 @@ export function useAdminController(activeTab: string) {
     if (activeTab === 'reportes' || activeTab === 'reports') setCajasSubTab('reportes');
   }, [activeTab]);
 
-  const fetchData = useCallback(async () => {
+  const loadProductsIfNeeded = useCallback(async (force: boolean) => {
+    if (
+      !shouldFetchAdminResource({
+        lastFetchedAt: freshnessRef.current.productsAt,
+        hasData: freshnessRef.current.hasProducts,
+        ttlMs: PRODUCTS_FRESHNESS_TTL_MS,
+        force,
+      })
+    ) {
+      return;
+    }
+    const allProducts = await api.getProducts('', true);
+    setProducts(allProducts);
+    freshnessRef.current.productsAt = Date.now();
+    freshnessRef.current.hasProducts = Array.isArray(allProducts) && allProducts.length > 0;
+  }, []);
+
+  const loadClientsIfNeeded = useCallback(async (force: boolean) => {
+    if (
+      !shouldFetchAdminResource({
+        lastFetchedAt: freshnessRef.current.clientsAt,
+        hasData: freshnessRef.current.hasClients,
+        ttlMs: CLIENTS_FRESHNESS_TTL_MS,
+        force,
+      })
+    ) {
+      return;
+    }
+    const allClients = await api.getPersonas('client');
+    setClients(allClients);
+    freshnessRef.current.clientsAt = Date.now();
+    freshnessRef.current.hasClients = Array.isArray(allClients) && allClients.length > 0;
+  }, []);
+
+  const runTabFetch = useCallback(async (force: boolean) => {
     setErrorMsg(null);
     try {
       if (activeTab === 'dashboard') {
-        const [stats, allOrders, allClients, allProducts] = await Promise.all([
-          api.getFinancialReports(),
-          api.getOrders(),
-          api.getPersonas('client'),
-          api.getProducts('', true),
-        ]);
-        setFinancialReport(stats);
-        setOrders(allOrders);
-        setClients(allClients);
-        setProducts(allProducts);
-      } else if (activeTab === 'reportes' || activeTab === 'reports') {
-        const [stats, dataUsers, allOrders, allProducts, allClients] = await Promise.all([
+        // Prioriza pintar pedidos del Panel General de inmediato y precalienta catálogo/clientes en paralelo sin bloquear
+        const ordersPromise = api.getOrders().then((allOrders) => setOrders(allOrders));
+        void Promise.all([loadClientsIfNeeded(force), loadProductsIfNeeded(force)]).catch((e) =>
+          console.error('Error al precalentar catálogo/clientes:', e),
+        );
+        await ordersPromise;
+      } else if (
+        activeTab === 'reportes' ||
+        activeTab === 'reports' ||
+        (activeTab === 'rendiciones' && cajasSubTab === 'reportes')
+      ) {
+        const [stats, dataUsers, allOrders] = await Promise.all([
           api.getFinancialReports(),
           api.getUsers(),
           api.getOrders(),
-          api.getProducts(''),
-          api.getPersonas('client'),
+          loadProductsIfNeeded(force),
+          loadClientsIfNeeded(force),
         ]);
         setFinancialReport(stats);
         setUsers(dataUsers);
         setOrders(allOrders);
-        setProducts(allProducts);
-        setClients(allClients);
       } else if (activeTab === 'products' || activeTab === 'catalog' || activeTab === 'stock') {
-        const data = await api.getProducts('', true);
-        setProducts(data);
-        try {
-          const [rList, pList] = await Promise.all([api.getRubros(), api.getPersonas('provider')]);
-          setRubrosList(rList || []);
-          setProvidersList(pList || []);
-        } catch (e) { console.error('Error al cargar rubros o proveedores:', e); }
+        const needRubros = shouldFetchAdminResource({
+          lastFetchedAt: freshnessRef.current.rubrosAt,
+          hasData: freshnessRef.current.hasRubros,
+          ttlMs: CATALOG_META_FRESHNESS_TTL_MS,
+          force,
+        });
+        const needProviders = shouldFetchAdminResource({
+          lastFetchedAt: freshnessRef.current.providersAt,
+          hasData: freshnessRef.current.hasProviders,
+          ttlMs: CATALOG_META_FRESHNESS_TTL_MS,
+          force,
+        });
+
+        await Promise.all([
+          loadProductsIfNeeded(force),
+          needRubros
+            ? api.getRubros().then((rList) => {
+                setRubrosList(rList || []);
+                freshnessRef.current.rubrosAt = Date.now();
+                freshnessRef.current.hasRubros = true;
+              }).catch((e) => console.error('Error al cargar rubros:', e))
+            : Promise.resolve(),
+          needProviders
+            ? api.getPersonas('provider').then((pList) => {
+                setProvidersList(pList || []);
+                freshnessRef.current.providersAt = Date.now();
+                freshnessRef.current.hasProviders = true;
+              }).catch((e) => console.error('Error al cargar proveedores:', e))
+            : Promise.resolve(),
+        ]);
       } else if (activeTab === 'users' || activeTab === 'personal') {
         setUsers(await api.getUsers());
       } else if (activeTab === 'clients') {
         try {
-          const [sellers, routesRes, data] = await Promise.all([api.getSellersList(), api.getSaleRoutes(), api.getPersonas('client')]);
+          const [sellers, routesRes] = await Promise.all([
+            api.getSellersList(),
+            api.getSaleRoutes(),
+            loadClientsIfNeeded(force),
+          ]);
           setAvailableSellers(sellers || []);
           setAvailableSaleRoutes(routesRes.routes || []);
-          setClients(data);
         } catch (e) { console.error('Error al cargar datos de preventa:', e); }
       } else if (activeTab === 'orders') {
         const data = await api.getOrders();
@@ -107,9 +182,18 @@ export function useAdminController(activeTab: string) {
     } catch (err: any) {
       setErrorMsg(err.message || 'Error de conexión');
     }
-  }, [activeTab, orderStatusFilter]);
+  }, [activeTab, cajasSubTab, orderStatusFilter, loadClientsIfNeeded, loadProductsIfNeeded]);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  // Refresco explícito tras mutaciones (SIEMPRE consulta datos frescos del servidor)
+  const fetchData = useCallback(async () => {
+    await runTabFetch(true);
+  }, [runTabFetch]);
+
+  // Navegación entre pestañas (usa memoria fresca para cambio en 0ms)
+  useEffect(() => {
+    void runTabFetch(false);
+  }, [runTabFetch]);
+
   useEffect(() => { setSuccessMsg(null); setErrorMsg(null); }, [activeTab]);
 
   useEffect(() => {
@@ -141,7 +225,7 @@ export function useAdminController(activeTab: string) {
   const handleUploadImage = async (productId: number, file: File) => {
     try {
       await api.uploadProductImage(productId, file);
-      fetchData();
+      await fetchData();
     } catch (error: any) { alert(error.message || 'Error al subir la imagen'); }
   };
 
@@ -164,15 +248,15 @@ export function useAdminController(activeTab: string) {
         unitsPerBox: Number(updatedProduct.unitsPerBox || 1),
         approximateWeight: updatedProduct.approximateWeight ? Number(updatedProduct.approximateWeight) : 0,
       });
-      fetchData();
+      setProducts((prev) => prev.map((item) => (item.id === updatedProduct.id ? { ...item, ...updatedProduct } : item)));
+      await fetchData();
       setSuccessMsg('Producto actualizado correctamente.');
     } catch (err: any) { setErrorMsg(err.message || 'Error al actualizar producto.'); }
   };
 
   const handleOpenEditOrder = async (order: any) => {
     try {
-      const prods = await api.getProducts();
-      setProducts(prods);
+      await loadProductsIfNeeded(false);
       const items = order.items.map((i: any) => ({
         id: i.id, productId: i.productId, name: i.product?.name || 'Artículo', sku: i.product?.sku || '',
         quantity: i.quantity, weight: i.weight, isPesable: i.product?.isPesable, approximateWeight: i.product?.approximateWeight,
