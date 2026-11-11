@@ -28,8 +28,9 @@ Este archivo define las reglas innegociables de comportamiento, arquitectura mod
 - **Micro-animaciones y Optimización de Clics**: Transiciones suaves y diseño pensado para que las acciones comunes (buscar con buscador fonético, cambiar de pestaña, pesar en balanza, facturar o cobrar) se realicen en la menor cantidad de pasos posible.
 - **Sin Datos de Relleno**: Prohibido usar placeholders temporales; poblar siempre con datos reales de la distribuidora.
 
-## 4. Seguridad del Código y Git
-- **Commits Incrementales**: Hacer commits con mensajes claros y descriptivos al finalizar cada tarea exitosa y validada.
+## 4. Seguridad del Código y Git (Sincronización Continua Multi-PC)
+- **Sincronización al Iniciar Sesión**: Antes de editar cualquier archivo en una nueva jornada, ejecutar `git status -sb` y `git pull --ff-only origin main` para asegurar que la PC actual tenga el último código de GitHub sin pisar cambios de otra máquina.
+- **Commits + Push Automáticos por Tarea**: Al finalizar y validar cada tarea exitosa (`tsc --noEmit` + `vitest run`), hacer `git commit` descriptivo **seguido de `git push origin main`** para que GitHub esté siempre al día como respaldo vivo.
 - **Copias de Seguridad (Backups)**: Antes de refactorizar o dividir archivos grandes, resguardar copia de seguridad y verificar compilación + tests.
 - **Verificación de Reversiones**: Nunca utilizar `git checkout` o `git restore` sobre código de trabajo sin antes revisar `git status`.
 
@@ -40,10 +41,15 @@ Este archivo define las reglas innegociables de comportamiento, arquitectura mod
 
 ## 6. Comandos Rápidos y Stack Oficial (GitHub + Supabase + Railway)
 - **Stack Único de Producción**: Código en **GitHub**, datos e imágenes maestras en **Supabase** (`sa-east-1`) y despliegue unificado 24/7 (Frontend SPA + Backend API bajo el mismo origen HTTPS, sin `ngrok` ni plataformas extra) en **Railway**.
-- **Comando "abri" / "abrir" / "abre todo" (Desarrollo Local)**:
-  1. Ejecutar `ipconfig` para obtener la IPv4 local activa.
-  2. Iniciar `npm run dev` en la raíz en segundo plano (`Vite` + `Express`).
-  3. Mostrar resumen con estado de servidores locales, IP WiFi para pruebas móviles y URL de producción en Railway.
+- **Comando "abri" / "abrir" / "abre todo" (Inicio Seguro de Jornada)**:
+  1. Ejecutar `git status -sb` y `git pull --ff-only origin main` para bajar automáticamente cualquier avance hecho desde otra PC.
+  2. Ejecutar `ipconfig` para obtener la IPv4 local activa.
+  3. Iniciar `npm run dev` en la raíz en segundo plano (`Vite` + `Express`).
+  4. Mostrar resumen con estado de GitHub (`al día`), servidores locales e IP WiFi para pruebas móviles.
+- **Comando "cerra" / "cerrar" / "guarda todo" (Cierre Seguro de Jornada)**:
+  1. Verificar compilación y tests (`tsc --noEmit` + `vitest run`) si hay cambios pendientes.
+  2. Revisar `git status` (garantizando cero archivos `.env` expuestos), ejecutar `git add -A`, `git commit` descriptivo y `git push origin main`.
+  3. Confirmar que el árbol quedó 100% limpio (`main...origin/main`) listo para abrirse desde cualquier otra PC.
 
 ## 7. Banco Único de Imágenes de Productos (SQL + Caché Limpia)
 - **Fuente Única de Verdad en SQL (`chatbot-dv.product_images`)**: El banco oficial de fotos de productos vive en PostgreSQL (`chatbot-dv.product_images`) sincronizado con la caché local activa `backend/uploads/products/` (regenerable con `npm run db:sync-from-production`). Prohibido mantener carpetas paralelas duplicadas o acumular fotos huérfanas viejas en disco.
