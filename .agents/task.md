@@ -195,7 +195,7 @@
 
 ---
 
-## Plan Activo: Modernización Integral Post-Gemini 3.8 (Paso a Paso)
+## Etapa Cerrada: Modernización Integral Post-Gemini 3.8 ✅ COMPLETADA
 
 - [x] **Paso M1: Armonía de Pesos Enteros + Doble Capa ARCA/Cuenta Corriente + Motor `Decimal.js` en Rubros y Reportes** ✅ COMPLETADO
   - [x] Extraer motor y servicio `rubro.service.ts` + `rubro.validator.ts` eliminando `Float`/`Math.round` en `rubro.controller.ts` (precios A/B/C siempre en pesos enteros exactos).
