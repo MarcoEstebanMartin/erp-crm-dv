@@ -206,3 +206,13 @@
 - [x] **Paso M3: Candado Automático de Calidad en GitHub Actions (`.github/workflows/ci.yml`) + Optimización de Velocidad en `Vitest` + Suite Base Frontend** ✅ COMPLETADO
   - [x] Crear `.github/workflows/ci.yml` sobre Node 24 validando `prisma generate`, `tsc --noEmit` (Backend/Frontend), `vitest run` (Backend/Frontend) y `npm run build` completo en cada push/PR.
   - [x] Configurar `backend/vitest.config.mts` y `frontend/vitest.config.ts` acelerando la ejecución local y agregando `frontend/src/utils/__tests__/frontend-core.test.ts`.
+
+---
+
+## Plan Activo: Velocidad Instantánea en Catálogo de Productos (`Panel General -> Productos < 50 ms`)
+
+- [x] **Paso V1: Carga diferida de fotos (`lazy` + `async`), renderizado progresivo (`IntersectionObserver`) y memorización `O(N)` en `ProductsList.tsx`** ✅ COMPLETADO
+  - [x] Extraer lógica pura de filtrado sin tildes, opciones en 1 pasada y ordenamiento SKU `O(N)` en `productsListHelpers.ts` (`188` l.) + suite `products-list-helpers.test.ts`.
+  - [x] Incorporar `useMemo`, renderizado progresivo por bloques (`50` iniciales + `60` automáticos al hacer scroll + botón `"Mostrar todos"`) y `loading="lazy" decoding="async"` en miniaturas de `ProductsList.tsx` (`329` l.), eliminando la descarga simultánea de ~61 MB de fotos al abrir Productos.
+- [ ] **Paso V2: Transición instantánea desde memoria y carga paralela no bloqueante en `useAdminController.ts`**
+- [ ] **Paso V3: Caché HTTP inteligente de imágenes de productos en `app.ts` y `product-image-cache.middleware.ts`**

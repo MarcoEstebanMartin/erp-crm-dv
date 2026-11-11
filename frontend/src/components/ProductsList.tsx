@@ -1,7 +1,17 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Plus, Upload, RotateCcw, Calculator } from 'lucide-react';
 import SupplierCostCalculatorModal from './modals/SupplierCostCalculatorModal';
 import ProductPhotoLightboxModal from './modals/ProductPhotoLightboxModal';
+import {
+  INITIAL_PRODUCTS_BATCH,
+  PRODUCTS_BATCH_STEP,
+  extractProductFilterOptions,
+  extractProductLabel,
+  filterAndSortProducts,
+  getProductCategoryInfo,
+  resolveProductImageUrl,
+  sanitizeProductArray,
+} from '../utils/productsListHelpers';
 
 interface ProductsListProps {
   products: any[];
@@ -14,42 +24,79 @@ interface ProductsListProps {
   catalogTab?: 'products' | 'inactive_products';
 }
 
-const CATEGORY_EMOJIS: Record<string, string> = {
-  Melincué: '🧀', Cremigal: '🥛', Sancor: '🧈', Fiambres: '🥓', Refrigerados: '❄️',
-  Conservas: '🥫', Pescadería: '🐟', Pescaderia: '🐟', 'Pastas Secas': '🍝',
-  'Aceites y Vinagres': '🫒', Aderezos: '🌻', 'Aderezos y Aceites': '🌻',
-  Almacén: '🛒', Almacen: '🛒', Yerbas: '🌿', Bebidas: '🥤',
-  Aperitivos: '🍸', Fernet: '🥃', 'Vinos Tintos': '🍷', 'Vinos Blancos': '🥂',
-  'Espumantes y Sidras': '🍾', 'Bebidas Alcohólicas Espirituosas': '🥃',
-  'Bebidas Alcoholicas': '🍺', 'Bebidas Alcohólicas': '🍺', Vinos: '🍷',
-  'Estucheria y Regalerìa': '🎁', 'Estuchería y Regalería': '🎁',
-  Papeles: '🧻', Limpieza: '🧼', 'No comestibles': '📦', Varios: '🏷️',
-};
-
-export default function ProductsList({ products, searchQuery, setSearchQuery, setProductModal, onUpdateProduct, onUploadImage, catalogTab }: ProductsListProps) {
+export default function ProductsList({
+  products,
+  searchQuery,
+  setSearchQuery,
+  setProductModal,
+  onUpdateProduct,
+  onUploadImage,
+  catalogTab,
+}: ProductsListProps) {
   const [selectedRubro, setSelectedRubro] = useState<string>('');
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [selectedSubrubro, setSelectedSubrubro] = useState<string>('');
   const [activeFilter, setActiveFilter] = useState<string>('all');
+  const [visibleCount, setVisibleCount] = useState<number>(INITIAL_PRODUCTS_BATCH);
   const [editingCell, setEditingCell] = useState<{ id: number; field: string } | null>(null);
   const [editValue, setEditValue] = useState<string>('');
-  const [previewModal, setPreviewModal] = useState<{ open: boolean; imageUrl: string; name: string; sku: string; productId: number; categoryName: string; categoryIcon: string } | null>(null);
+  const [previewModal, setPreviewModal] = useState<{
+    open: boolean;
+    imageUrl: string;
+    name: string;
+    sku: string;
+    productId: number;
+    categoryName: string;
+    categoryIcon: string;
+  } | null>(null);
   const [calculatorProduct, setCalculatorProduct] = useState<any | null>(null);
+  const loadMoreSentinelRef = useRef<HTMLDivElement | null>(null);
 
-  const extractLabel = (val: any): string => {
-    if (!val) return '';
-    if (typeof val === 'string') return val.trim();
-    if (typeof val === 'object') return String(val.name || val.nombre || '').trim();
-    return '';
-  };
+  const safeProducts = useMemo(() => sanitizeProductArray(products), [products]);
 
-  const getCategoryInfo = (p: any) => {
-    const catName = p.commercialCategory || extractLabel(p.rubro) || 'Varios';
-    let icon = CATEGORY_EMOJIS[catName];
-    const upper = catName.toUpperCase();
-    if (!icon) icon = upper.includes('QUESO') || upper.includes('REMOTTI') ? '🧀' : upper.includes('FIAMBRE') || upper.includes('SODECAR') ? '🥓' : upper.includes('BEBIDA') ? '🥤' : '🏷️';
-    return { name: catName, icon };
-  };
+  const { availableCategories, availableRubros, availableSubrubros } = useMemo(
+    () => extractProductFilterOptions(safeProducts, selectedRubro),
+    [safeProducts, selectedRubro],
+  );
+
+  const filteredProducts = useMemo(
+    () =>
+      filterAndSortProducts(safeProducts, {
+        selectedCategory,
+        selectedRubro,
+        selectedSubrubro,
+        catalogTab,
+        activeFilter,
+        searchQuery,
+      }),
+    [safeProducts, selectedCategory, selectedRubro, selectedSubrubro, catalogTab, activeFilter, searchQuery],
+  );
+
+  useEffect(() => {
+    setVisibleCount(INITIAL_PRODUCTS_BATCH);
+  }, [selectedCategory, selectedRubro, selectedSubrubro, catalogTab, activeFilter, searchQuery]);
+
+  const hasMoreRows = visibleCount < filteredProducts.length;
+  const visibleProducts = useMemo(
+    () => filteredProducts.slice(0, visibleCount),
+    [filteredProducts, visibleCount],
+  );
+
+  useEffect(() => {
+    const node = loadMoreSentinelRef.current;
+    if (!node || !hasMoreRows || typeof IntersectionObserver === 'undefined') return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          setVisibleCount((prev) => Math.min(prev + PRODUCTS_BATCH_STEP, filteredProducts.length));
+        }
+      },
+      { rootMargin: '320px 0px' },
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [hasMoreRows, filteredProducts.length]);
 
   const handleEditStart = (id: number, field: string, value: number) => {
     setEditingCell({ id, field });
@@ -62,7 +109,12 @@ export default function ProductsList({ products, searchQuery, setSearchQuery, se
     if (isNaN(numValue)) return setEditingCell(null);
 
     const updatedProduct = { ...p };
-    const margin = p.profitMargin !== null && p.profitMargin !== undefined ? Number(p.profitMargin) : p.rubro?.profitMargin ? Number(p.rubro.profitMargin) : 1.25;
+    const margin =
+      p.profitMargin !== null && p.profitMargin !== undefined
+        ? Number(p.profitMargin)
+        : p.rubro?.profitMargin
+          ? Number(p.rubro.profitMargin)
+          : 1.25;
 
     if (field === 'costPrice') {
       updatedProduct.costPrice = numValue;
@@ -89,39 +141,8 @@ export default function ProductsList({ products, searchQuery, setSearchQuery, se
     setEditingCell(null);
   };
 
-  const safeProducts = Array.isArray(products) ? products.filter((p) => p && typeof p === 'object') : [];
-  const filteredProducts = safeProducts
-    .filter((p: any) => !selectedCategory || getCategoryInfo(p).name.toLowerCase() === selectedCategory.toLowerCase())
-    .filter((p: any) => !selectedRubro || extractLabel(p.rubro) === selectedRubro)
-    .filter((p: any) => !selectedSubrubro || extractLabel(p.description) === selectedSubrubro)
-    .filter((p: any) => {
-      if (catalogTab === 'products') return p.isActive !== false;
-      if (catalogTab === 'inactive_products') return p.isActive === false;
-      if (activeFilter === 'active') return p.isActive !== false;
-      if (activeFilter === 'inactive') return p.isActive === false;
-      return true;
-    })
-    .filter((p: any) => {
-      if (!searchQuery) return true;
-      const q = searchQuery.toLowerCase().trim();
-      return (p.name || '').toLowerCase().includes(q) || (p.sku || '').toLowerCase().includes(q) || (p.barcode || '').toLowerCase().includes(q);
-    })
-    .sort((a: any, b: any) => {
-      const strA = String(a.sku || '').trim();
-      const strB = String(b.sku || '').trim();
-      const matchA = strA.match(/\d+/);
-      const matchB = strB.match(/\d+/);
-      if (matchA && matchB) {
-        const diff = parseInt(matchA[0], 10) - parseInt(matchB[0], 10);
-        if (diff !== 0) return diff;
-      }
-      return strA.localeCompare(strB, undefined, { numeric: true, sensitivity: 'base' });
-    });
-
-  const availableCategories = Array.from(new Set(safeProducts.map((p: any) => getCategoryInfo(p).name).filter(Boolean))).sort();
-
   return (
-    <div style={{ animation: 'fadeIn 0.3s ease-out' }}>
+    <div style={{ animation: 'fadeIn 0.2s ease-out' }}>
       <div className="actions-bar" style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap', marginBottom: '20px', backgroundColor: 'var(--bg-card)', padding: '16px', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
         <div className="search-input-wrapper" style={{ flex: 1, minWidth: '220px' }}>
           <input type="text" className="input" placeholder="Buscar SKU, nombre o código de barra..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} style={{ borderRadius: '8px', padding: '10px 14px' }} />
@@ -130,14 +151,14 @@ export default function ProductsList({ products, searchQuery, setSearchQuery, se
         <select className="select" style={{ minWidth: '170px', borderRadius: '8px' }} value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)}>
           <option value="">Todas las Categorías</option>
           {availableCategories.map((catName) => (
-            <option key={catName} value={catName}>{getCategoryInfo({ commercialCategory: catName }).icon} {catName}</option>
+            <option key={catName} value={catName}>{getProductCategoryInfo({ commercialCategory: catName }).icon} {catName}</option>
           ))}
         </select>
 
         <select className="select" style={{ minWidth: '160px', borderRadius: '8px' }} value={selectedRubro} onChange={(e) => { setSelectedRubro(e.target.value); setSelectedSubrubro(''); }}>
           <option value="">Todos los Rubros</option>
-          {Array.from(new Set(safeProducts.map((p: any) => extractLabel(p.rubro)).filter(Boolean))).sort().map((r) => (
-            <option key={String(r)} value={String(r)}>{String(r)}</option>
+          {availableRubros.map((r) => (
+            <option key={r} value={r}>{r}</option>
           ))}
         </select>
 
@@ -152,8 +173,8 @@ export default function ProductsList({ products, searchQuery, setSearchQuery, se
         {selectedRubro && (
           <select className="select" style={{ minWidth: '160px', borderRadius: '8px' }} value={selectedSubrubro} onChange={(e) => setSelectedSubrubro(e.target.value)}>
             <option value="">Todos los Subrubros</option>
-            {Array.from(new Set(products.filter((p: any) => extractLabel(p.rubro) === selectedRubro).map((p: any) => extractLabel(p.description)).filter(Boolean))).sort().map((s) => (
-              <option key={String(s)} value={String(s)}>{String(s)}</option>
+            {availableSubrubros.map((s) => (
+              <option key={s} value={s}>{s}</option>
             ))}
           </select>
         )}
@@ -176,13 +197,13 @@ export default function ProductsList({ products, searchQuery, setSearchQuery, se
             </tr>
           </thead>
           <tbody>
-            {filteredProducts.length === 0 ? (
+            {visibleProducts.length === 0 ? (
               <tr><td colSpan={6} style={{ textAlign: 'center', padding: '32px 0', color: 'var(--text-secondary)' }}>No se encontraron productos.</td></tr>
             ) : (
-              filteredProducts.map((p) => {
+              visibleProducts.map((p) => {
                 const precioFinal = Number(p.listPrice) || 0;
                 const precioSinIva = precioFinal / 1.21;
-                const catDetails = getCategoryInfo(p);
+                const catDetails = getProductCategoryInfo(p);
 
                 const handleOpenEdit = () => setProductModal({
                   open: true, mode: 'edit',
@@ -206,7 +227,7 @@ export default function ProductsList({ products, searchQuery, setSearchQuery, se
                           onClick={(e) => {
                             e.stopPropagation();
                             if (p.imageUrl) {
-                              const fullUrl = p.imageUrl.startsWith('http') ? p.imageUrl : p.imageUrl.startsWith('/') ? `${p.imageUrl}?v=2.0` : `/uploads/products/${p.imageUrl}?v=2.0`;
+                              const fullUrl = resolveProductImageUrl(p.imageUrl, '3.5');
                               setPreviewModal({ open: true, imageUrl: fullUrl, name: p.name, sku: p.sku, productId: p.id, categoryName: catDetails.name, categoryIcon: catDetails.icon });
                             } else if (onUploadImage) {
                               const input = document.createElement('input');
@@ -217,7 +238,7 @@ export default function ProductsList({ products, searchQuery, setSearchQuery, se
                           }}
                         >
                           {p.imageUrl ? (
-                            <img src={p.imageUrl.startsWith('http') ? p.imageUrl : p.imageUrl.startsWith('/') ? `${p.imageUrl}?v=3.5` : `/uploads/products/${p.imageUrl}?v=3.5`} alt={p.name} style={{ width: '40px', height: '40px', minWidth: '40px', objectFit: 'contain', borderRadius: '6px', border: '1px solid var(--border-color)', backgroundColor: '#fff', padding: '2px' }} />
+                            <img src={resolveProductImageUrl(p.imageUrl, '3.5')} alt={p.name} width={40} height={40} loading="lazy" decoding="async" style={{ width: '40px', height: '40px', minWidth: '40px', objectFit: 'contain', borderRadius: '6px', border: '1px solid var(--border-color)', backgroundColor: '#fff', padding: '2px' }} />
                           ) : (
                             <div style={{ width: '40px', height: '40px', minWidth: '40px', borderRadius: '6px', border: '1px dashed var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'var(--bg-muted)', color: 'var(--text-muted)', fontSize: '0.65rem', fontWeight: 600 }}>S/F</div>
                           )}
@@ -233,7 +254,7 @@ export default function ProductsList({ products, searchQuery, setSearchQuery, se
                         <div>
                           <div style={{ fontWeight: 600, color: 'var(--text-primary)', cursor: 'pointer' }} onClick={handleOpenEdit}>{p.name}</div>
                           <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                            <span style={{ backgroundColor: 'var(--bg-muted)', padding: '2px 7px', borderRadius: '5px', border: '1px solid var(--border-color)', fontSize: '0.72rem', fontWeight: 500, color: 'var(--text-primary)' }}>{extractLabel(p.rubro)}</span>
+                            <span style={{ backgroundColor: 'var(--bg-muted)', padding: '2px 7px', borderRadius: '5px', border: '1px solid var(--border-color)', fontSize: '0.72rem', fontWeight: 500, color: 'var(--text-primary)' }}>{extractProductLabel(p.rubro)}</span>
                             {p.isActive === false && <span style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#dc2626', padding: '2px 7px', borderRadius: '5px', fontSize: '0.7rem', fontWeight: 600 }}>Inactivo</span>}
                             {p.minOrderQuantity && p.minOrderQuantity > 1 && <span style={{ backgroundColor: 'rgba(227, 6, 19, 0.12)', color: '#e30613', padding: '2px 6px', borderRadius: '4px', fontWeight: 700, fontSize: '0.7rem' }}>Mín. {p.minOrderQuantity} u.</span>}
                             {p.description && <span>{p.description}</span>}
@@ -289,6 +310,17 @@ export default function ProductsList({ products, searchQuery, setSearchQuery, se
           </tbody>
         </table>
       </div>
+
+      {filteredProducts.length > 0 && (
+        <div ref={loadMoreSentinelRef} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 4px 4px', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+          <span>Mostrando <strong>{visibleProducts.length}</strong> de <strong>{filteredProducts.length}</strong> productos</span>
+          {hasMoreRows && (
+            <button type="button" className="btn btn-secondary" style={{ fontSize: '0.76rem', padding: '5px 12px', borderRadius: '6px' }} onClick={() => setVisibleCount(filteredProducts.length)}>
+              Mostrar todos ({filteredProducts.length})
+            </button>
+          )}
+        </div>
+      )}
 
       <ProductPhotoLightboxModal previewModal={previewModal} onClose={() => setPreviewModal(null)} onUploadImage={onUploadImage} />
       <SupplierCostCalculatorModal product={calculatorProduct} onClose={() => setCalculatorProduct(null)} onSaveProduct={async (updated) => { if (onUpdateProduct) await onUpdateProduct(updated); }} />
