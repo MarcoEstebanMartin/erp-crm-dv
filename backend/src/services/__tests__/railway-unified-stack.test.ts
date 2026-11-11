@@ -6,6 +6,10 @@ import express from 'express';
 import { describe, it, expect, afterEach } from 'vitest';
 import { validateEnvConfig } from '../../config/env.config';
 import { mountSpaFrontend } from '../../middlewares/spa-static.middleware';
+import {
+  applyProductImageStaticHeaders,
+  resolveProductImageCacheHeader,
+} from '../../middlewares/product-image-cache.middleware';
 
 describe('Stack Unificado Railway (Frontend SPA + Backend API + Seguridad de Entorno)', () => {
   const tempDirs: string[] = [];
@@ -153,6 +157,52 @@ describe('Stack Unificado Railway (Frontend SPA + Backend API + Seguridad de Ent
       expect(await uploadRes.text()).toBe('UPLOAD_NOT_FOUND');
     } finally {
       process.env.NODE_ENV = prevNodeEnv;
+      server.close();
+    }
+  });
+
+  it('Cachea fotos versionadas de productos por 7 días en navegador (0ms) y fotos legadas por 1 hora con revalidación', async () => {
+    expect(resolveProductImageCacheHeader('0001_1794259632.png')).toBe(
+      'public, max-age=604800, stale-while-revalidate=86400',
+    );
+    expect(resolveProductImageCacheHeader('0001.jpg')).toBe(
+      'public, max-age=3600, stale-while-revalidate=86400',
+    );
+
+    const tmpProductsDir = fs.mkdtempSync(path.join(os.tmpdir(), 'dv-prod-img-'));
+    tempDirs.push(tmpProductsDir);
+    fs.writeFileSync(path.join(tmpProductsDir, '0012_1794264933.png'), Buffer.from([137, 80, 78, 71]));
+    fs.writeFileSync(path.join(tmpProductsDir, '0099.jpg'), Buffer.from([255, 216, 255]));
+
+    const imgApp = express();
+    imgApp.use(
+      '/uploads/products',
+      express.static(tmpProductsDir, {
+        etag: true,
+        lastModified: true,
+        setHeaders: applyProductImageStaticHeaders,
+      }),
+    );
+
+    const server = imgApp.listen(0);
+    try {
+      const addr = server.address();
+      const port = typeof addr === 'object' && addr ? addr.port : 0;
+      const base = `http://127.0.0.1:${port}`;
+
+      const versionedRes = await fetch(`${base}/uploads/products/0012_1794264933.png`);
+      expect(versionedRes.status).toBe(200);
+      expect(versionedRes.headers.get('cache-control')).toBe(
+        'public, max-age=604800, stale-while-revalidate=86400',
+      );
+      expect(versionedRes.headers.get('etag')).toBeTruthy();
+
+      const legacyRes = await fetch(`${base}/uploads/products/0099.jpg`);
+      expect(legacyRes.status).toBe(200);
+      expect(legacyRes.headers.get('cache-control')).toBe(
+        'public, max-age=3600, stale-while-revalidate=86400',
+      );
+    } finally {
       server.close();
     }
   });

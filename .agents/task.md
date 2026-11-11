@@ -217,4 +217,5 @@
 - [x] **Paso V2: Transición instantánea desde memoria y carga paralela no bloqueante en `useAdminController.ts`** ✅ COMPLETADO
   - [x] Crear política determinística de frescura `adminFetchPolicy.ts` (`30` l., reutilización en `< 20s` al cambiar de pestaña y refresco inmediato `force: true` en el 100% de las mutaciones) + suite `admin-fetch-policy.test.ts`.
   - [x] Desacoplar `HomeTab` en `useAdminController.ts` (`280` l.) para pintar pedidos sin bloquear por reportes/catálogo, unificar `getProducts` + `getRubros` + `getPersonas('provider')` en paralelo (`Promise.all`) y preservar inactivos en `handleOpenEditOrder`.
-- [ ] **Paso V3: Caché HTTP inteligente de imágenes de productos en `app.ts` y `product-image-cache.middleware.ts`**
+- [x] **Paso V3: Caché HTTP inteligente de imágenes de productos en `app.ts` y `product-image-cache.middleware.ts`** ✅ COMPLETADO
+  - [x] Implementar `resolveProductImageCacheHeader` y `applyProductImageStaticHeaders` en `product-image-cache.middleware.ts` (`147` l.) y `app.ts` (`168` l.): fotos versionadas (`SKU_epoch.png`) se sirven desde caché de navegador en `0 ms` por `7 días` (`max-age=604800, stale-while-revalidate=86400`, sin riesgo de foto vieja porque cada subida genera nombre nuevo) y fotos legadas por `1 hora` + test de integración HTTP en `railway-unified-stack.test.ts`.

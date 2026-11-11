@@ -6,7 +6,10 @@ import { ensureDirectoriesExist } from './utils/fileSync.util';
 import { errorHandler } from './middlewares/errorHandler.middleware';
 import { securityHeadersMiddleware } from './middlewares/securityHeaders.middleware';
 import { mountSpaFrontend } from './middlewares/spa-static.middleware';
-import { createProductImageCacheFallback } from './middlewares/product-image-cache.middleware';
+import {
+  applyProductImageStaticHeaders,
+  createProductImageCacheFallback,
+} from './middlewares/product-image-cache.middleware';
 import { extractStaffToken } from './utils/cookie-auth.util';
 
 // Importación de Rutas
@@ -95,7 +98,14 @@ import { startDbKeepAlive } from './utils/dbKeepAlive';
 })();
 
 // 4. Servidor de Archivos Estáticos (Caché local activa con autocuración READ ONLY desde SQL)
-app.use('/uploads/products', express.static(productsUploadsDir, { maxAge: 0, etag: true, lastModified: true }));
+app.use(
+  '/uploads/products',
+  express.static(productsUploadsDir, {
+    etag: true,
+    lastModified: true,
+    setHeaders: applyProductImageStaticHeaders,
+  }),
+);
 app.use('/uploads/products', createProductImageCacheFallback(productsUploadsDir));
 app.use('/uploads', express.static(uploadsDir, { maxAge: 0, etag: true, lastModified: true }));
 

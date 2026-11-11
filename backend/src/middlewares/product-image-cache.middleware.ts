@@ -5,6 +5,25 @@ import { Request, Response, NextFunction, RequestHandler } from 'express';
 import { env } from '../config/env.config';
 
 const SAFE_IMAGE_FILENAME_RE = /^([a-zA-Z0-9_-]+)\.(jpg|jpeg|png|webp)$/i;
+const VERSIONED_IMAGE_FILENAME_RE = /^.+_[a-zA-Z0-9]{6,}\.(jpg|jpeg|png|webp)$/i;
+
+/**
+ * Política inteligente de caché HTTP para fotos de productos:
+ * - Archivos versionados (`SKU_epoch.png` / `SKU_hash.png`): cambian de URL al actualizar la foto,
+ *   por lo que el navegador puede servirlos desde memoria en 0ms durante 7 días sin riesgo de foto vieja.
+ * - Archivos legados sin sufijo de versión (`SKU.jpg`): caché corto de 1 hora + revalidación silenciosa.
+ */
+export function resolveProductImageCacheHeader(filenameOrPath: string): string {
+  const base = path.basename(filenameOrPath || '');
+  if (VERSIONED_IMAGE_FILENAME_RE.test(base)) {
+    return 'public, max-age=604800, stale-while-revalidate=86400';
+  }
+  return 'public, max-age=3600, stale-while-revalidate=86400';
+}
+
+export function applyProductImageStaticHeaders(res: Response, filePath: string): void {
+  res.setHeader('Cache-Control', resolveProductImageCacheHeader(filePath));
+}
 
 interface RawImageRow {
   mime_type: string | null;
@@ -119,7 +138,7 @@ export function createProductImageCacheFallback(
 
       res.setHeader('Content-Type', resolved.mimeType);
       res.setHeader('Content-Length', String(resolved.buffer.length));
-      res.setHeader('Cache-Control', 'public, max-age=86400');
+      res.setHeader('Cache-Control', resolveProductImageCacheHeader(rawName));
       res.status(200).end(method === 'HEAD' ? undefined : resolved.buffer);
     } catch {
       next();
