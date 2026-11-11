@@ -16,13 +16,16 @@
 
 ---
 
-## Artículo II: Arquitectura Anti-Espagueti (Límite de 250–300 Líneas y 4 Capas)
-1. **Límite Estricto de 250–300 Líneas por Archivo**: Ningún archivo nuevo o refactorizado (`.ts` o `.tsx`) puede superar las **250–300 líneas**. Esto elimina la "amnesia de contexto" de la IA y los efectos secundarios al editar.
+## Artículo II: Arquitectura Anti-Espagueti (Cohesión, Semáforo 250–450 Líneas y 4 Capas)
+1. **Cohesión por Responsabilidad y Semáforo de Tamaño (Sin Cortes Artificiales)**:
+   - **Zona Ideal (`150–300` líneas)**: Tamaño objetivo para mantener velocidad de edición y radio de impacto cero.
+   - **Zona Permitida por Cohesión (`300–450` líneas)**: Permitida cuando una transacción contable (`prisma.$transaction`) o componente forma una sola unidad cohesiva; queda prohibido partir flujos atómicos artificialmente generando "espagueti fragmentado".
+   - **Límite Duro (`> 450` líneas)**: Requiere refactorizar extrayendo responsabilidades secundarias (excepto `*.test.ts`, tipos generados y seeds).
 2. **Separación en 4 Capas Especializadas**:
    - **Capa 1 — Motor Matemático (`src/core/*.ts` y `src/engines/*.engine.ts`)**: Solo cuentas puras con `Decimal.js`, sin acoplamiento a UI ni base de datos, 100% probado con `Vitest`.
-   - **Capa 2 — Contratos (`*.schema.ts`)**: Validación estricta de entradas y salidas con `Zod`.
-   - **Capa 3 — Controladores Delgados (`*.controller.ts` < 100 líneas) y Servicios (`*.service.ts` < 250 líneas)**: Los controladores jamás hacen cuentas ni consultas directas a Prisma; solo delegan al servicio y motor.
-   - **Capa 4 — Pestañas y Modales Aislados (`*Tab.tsx` / `*Modal.tsx` < 250–300 líneas)**: Cada vista y ventana emergente vive en su propio archivo independiente.
+   - **Capa 2 — Contratos (`*.schema.ts` / `*.validator.ts`)**: Validación estricta de entradas y salidas con `Zod`.
+   - **Capa 3 — Controladores Delgados (`*.controller.ts` < 120 líneas) y Servicios (`*.service.ts`, objetivo `< 300` / máx. `450` por cohesión)**: Los controladores jamás hacen cuentas ni consultas directas a Prisma; solo delegan al servicio y motor.
+   - **Capa 4 — Pestañas y Modales Aislados (`*Tab.tsx` / `*Modal.tsx`, objetivo `< 300` / máx. `450` por cohesión)**: Cada vista y ventana emergente vive en su propio archivo independiente.
 
 ---
 

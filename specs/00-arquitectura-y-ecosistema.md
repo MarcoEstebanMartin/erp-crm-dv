@@ -5,7 +5,7 @@
 Su diseño prioriza tres pilares innegociables:
 1. **Exactitud financiera y de stock al 100%** (cero centavos fantasma, snapshots históricos inmutables y trazabilidad auditable).
 2. **Seguridad operativa y control de accesos estricto** por rol (`ADMIN`, `FACTURACION`, `VENDEDOR`, `DEPOSITO`) y aislamiento para clientes web.
-3. **Arquitectura modular anti-espagueti** (archivos `< 250–300` líneas divididos en 4 capas claras).
+3. **Arquitectura modular anti-espagueti** (4 capas claras con objetivo de `250–300` líneas y techo flexible de `450` líneas por cohesión, prohibiendo fragmentar transacciones atómicas).
 
 ---
 
@@ -44,7 +44,7 @@ flowchart TB
 
 ## 3. Separación Estricta en 4 Capas
 
-Ningún archivo nuevo o refactorizado supera las **250–300 líneas**, respetando las responsabilidades de cada capa:
+Los archivos nuevos o refactorizados apuntan a una **zona ideal de `150–300` líneas** con un **techo flexible de hasta `450` líneas cuando conforman una única unidad cohesiva** (evitando partir transacciones atómicas a la fuerza), respetando estrictamente las 4 capas:
 
 1. **Capa 1 — Núcleo y Motores Matemáticos (`backend/src/core/*.ts` y `backend/src/engines/*.engine.ts`)**:
    - Funciones puras con `Decimal.js` (`precision: 20`, `ROUND_HALF_UP`).

@@ -7,13 +7,16 @@ Este archivo define las reglas innegociables de comportamiento, arquitectura mod
 - **Un paso a la vez**: Prohibido avanzar al paso siguiente sin que el paso actual esté explicado, probado (`tsc --noEmit` + `vitest run`) y validado por el usuario.
 - **Garantizar 0% de errores en dinero y stock**: La exactitud financiera y operativa es la prioridad #1 absoluta.
 
-## 1. Arquitectura Anti-Espagueti (Regla de las 250–300 Líneas y 4 Capas)
-- **Límite Estricto de 250–300 Líneas por Archivo**: Ningún archivo nuevo o refactorizado (`.ts` o `.tsx`) debe superar las **250–300 líneas**. Si un servicio o pantalla crece más allá de ese límite, se divide obligatoriamente en submódulos cohesivos.
+## 1. Arquitectura Anti-Espagueti (Cohesión por Responsabilidad, Semáforo de Líneas y 4 Capas)
+- **Cohesión Primero, Prohibido el "Espagueti Fragmentado"**: El criterio principal para dividir un archivo es **1 sola responsabilidad clara**, nunca cortar una función o transacción atómica (`prisma.$transaction`) por la mitad solo para cumplir un número arbitrario de líneas:
+  - **Zona Ideal (`150–300` líneas)**: Tamaño objetivo natural para controladores, schemas, motores, pestañas y modales.
+  - **Zona Permitida por Cohesión (`300–450` líneas)**: Válida cuando un servicio contable o vista compleja conforma una única unidad lógica indivisible y partirla dificultaría su lectura o seguridad.
+  - **Techo Rojo Duro (`> 450` líneas)**: Señal obligatoria de que se mezclaron dos responsabilidades distintas; extraer subcomponente, hook o submódulo cohesivo. *(Excepción libre: suites de tests `*.test.ts`, tipos generados y seeds).*
 - **Separación Estricta en 4 Capas que no se pisan entre sí**:
   1. **Motor Matemático (`*.engine.ts`)**: Solo hace cuentas puras con `Decimal.js`. No sabe qué es un botón ni consulta la base de datos. 100% cubierto por tests en `Vitest`.
-  2. **Validador de Contratos (`*.schema.ts`)**: Valida con `Zod` que no entren datos rotos o vacíos.
-  3. **Controlador Delgado (`*.controller.ts` < 100 líneas) y Servicios (`*.service.ts` < 250 líneas)**: El controlador tiene prohibido hacer cuentas matemáticas; solo valida y delega al servicio/motor.
-  4. **Pantallas divididas por Pestañas y Modales (`*Tab.tsx` / `*Modal.tsx` < 250–300 líneas)**: Cada pestaña o ventana emergente vive en su propio archivo aislado para que tocar un modal jamás afecte al resto de la pantalla.
+  2. **Validador de Contratos (`*.schema.ts` / `*.validator.ts`)**: Valida con `Zod` que no entren datos rotos o vacíos.
+  3. **Controlador Delgado (`*.controller.ts`, ideal `< 120` líneas) y Servicios (`*.service.ts`, objetivo `< 300` / máx. `450` por cohesión)**: El controlador tiene prohibido hacer cuentas matemáticas o consultas directas a Prisma; solo valida y delega al servicio/motor.
+  4. **Pantallas divididas por Pestañas y Modales (`*Tab.tsx` / `*Modal.tsx`, objetivo `< 300` / máx. `450` por cohesión)**: Cada pestaña o ventana emergente vive en su propio archivo aislado para que tocar un modal jamás afecte al resto de la pantalla.
 
 ## 2. Rigor Financiero y Contable de Grado Bancario
 - **Motor Matemático con `Decimal.js` (`src/core/money.ts`)**: Prohibido usar `Float`, `Number()` o `Math.round()` nativo de JavaScript para dinero o pesajes. Configuración obligatoria: `Decimal.set({ precision: 20, rounding: Decimal.ROUND_HALF_UP })`.
