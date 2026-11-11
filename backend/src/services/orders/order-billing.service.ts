@@ -1,21 +1,16 @@
 import prisma from '../../utils/prisma';
-import { Role, BillingType, InvoiceType, OrderStatus, PaymentMethod } from '@prisma/client';
+import { Role, BillingType, OrderStatus, PaymentMethod } from '@prisma/client';
 import { logAudit } from '../../utils/audit';
 import { roundToIntegerPeso, sumIntegerAmounts } from '../../core/money';
-import {
-  computeInvoiceTaxBreakdown,
-  recordInvoicePerceptions,
-  settleOrderFinancials,
-} from './order-tax.helpers';
-import {
-  prepareInvoiceSplitItems,
-  reassignSplitStockMovements,
-} from './order-billing.helpers';
+import { computeInvoiceTaxBreakdown } from './order-tax.helpers';
+import { prepareInvoiceSplitItems } from './order-billing.helpers';
 import {
   executeDeferredCaeRequest,
   resolveAfipCaeOrContingency,
 } from './order-cae-deferred.helper';
+import { executeInvoiceOrderSettlementTx } from './order-invoice-tx.helper';
 import { enqueueDeferredAfipCaeRetry } from '../resilience/external-integrations-retry.service';
+import { notifyWebOrderStatusForErpOrder } from './web-order-status-bridge.service';
 
 export interface InvoiceOrderDto {
   orderId: number;
@@ -170,109 +165,25 @@ export class OrderBillingService {
     });
 
     try {
-      const result = await prisma.$transaction(async (tx) => {
-        let internalOrderId: number | null = null;
-
-        if (splitApplied) {
-          const internalOrder = await tx.order.create({
-            data: {
-              personaId: order.personaId,
-              sellerId: order.sellerId,
-              billingType: BillingType.INTERNAL,
-              invoiceType: InvoiceType.PRESUPUESTO,
-              invoiceNumber: `INT-${order.id.toString().padStart(5, '0')}-X`,
-              totalAmount: internalOrderTotal,
-              status: OrderStatus.DELIVERED,
-            },
-          });
-          internalOrderId = internalOrder.id;
-
-          for (const item of internoItemsData) {
-            await tx.orderItem.create({
-              data: {
-                orderId: internalOrder.id,
-                productId: item.productId,
-                quantity: item.quantity,
-                weight: item.weight,
-                unitPrice: item.unitPrice,
-                subtotal: item.subtotal,
-                unitCostSnapshot: item.unitCostSnapshot,
-                listPriceSnapshot: item.listPriceSnapshot,
-                discountPctSnapshot: item.discountPctSnapshot,
-              },
-            });
-          }
-
-          await settleOrderFinancials(tx, {
-            orderId: internalOrder.id,
-            personaId: order.personaId,
-            adminId,
-            billingType: BillingType.INTERNAL,
-            paymentMethod,
-            amount: internalOrderTotal,
-            invoiceTotal: internalOrderTotal,
-            invoiceNumber: `INT-${order.id.toString().padStart(5, '0')}-X`,
-            description: `Cobro en caja de pedido interno #${internalOrder.id} (Parte Interna de Pedido Original #${order.id})`,
-            cashDrawerId: activeDrawerId,
-            bankAccountId: selectedBankId,
-          });
-
-          await reassignSplitStockMovements(tx, order.id, internalOrder.id, order.sellerId, internoItemsData);
-        }
-
-        for (const item of oficialItemsData) {
-          if (item.orderItemId) {
-            await tx.orderItem.update({
-              where: { id: item.orderItemId },
-              data: {
-                quantity: item.quantity,
-                weight: item.weight,
-                unitPrice: item.unitPrice,
-                subtotal: item.subtotal,
-                unitCostSnapshot: item.unitCostSnapshot,
-                listPriceSnapshot: item.listPriceSnapshot,
-                discountPctSnapshot: item.discountPctSnapshot,
-              },
-            });
-          }
-        }
-
-        if (hasSplit) {
-          const oficialItemsIds = oficialItemsData
-            .map((o) => o.orderItemId)
-            .filter((id) => id !== undefined);
-          await tx.orderItem.deleteMany({
-            where: { orderId: order.id, id: { notIn: oficialItemsIds } },
-          });
-        }
-
-        await recordInvoicePerceptions(tx, {
-          personaId: order.personaId,
-          invoiceNumber: finalInvoiceNumber || `FAC-${order.id}`,
-          percepIIBB: taxInfo.percepIIBB,
-          percepIVA: taxInfo.percepIVA,
-          isFacturaAOfficial: true,
-          provinceOrAddress: order.persona.province || order.persona.address,
-        });
-
-        await settleOrderFinancials(tx, {
-          orderId: order.id,
-          personaId: order.personaId,
+      const result = await prisma.$transaction((tx) =>
+        executeInvoiceOrderSettlementTx(tx, {
+          order,
           adminId,
           billingType,
           paymentMethod,
-          amount: officialOrderTotal,
-          invoiceTotal: officialOrderTotal,
-          invoiceNumber: finalInvoiceNumber,
-          description: paymentDescription
-            ? `Cobro en caja de pedido #${order.id} - ${paymentDescription}`
-            : `Cobro en caja de pedido #${order.id} (Parte Oficial)`,
-          cashDrawerId: activeDrawerId,
-          bankAccountId: selectedBankId,
-        });
-
-        return { split: splitApplied, internalOrderId, internalOrderTotal };
-      });
+          paymentDescription,
+          splitApplied,
+          hasSplit,
+          internoItemsData,
+          oficialItemsData,
+          internalOrderTotal,
+          officialOrderTotal,
+          finalInvoiceNumber,
+          taxInfo,
+          activeDrawerId,
+          selectedBankId,
+        }),
+      );
 
       await logAudit({
         userId: adminId,
@@ -294,6 +205,12 @@ export class OrderBillingService {
           OrderBillingService.requestCaeForOrder(order.id),
         );
       }
+
+      notifyWebOrderStatusForErpOrder(
+        order,
+        OrderStatus.DELIVERED,
+        finalInvoiceNumber ? `Comprobante ${finalInvoiceNumber}` : undefined,
+      );
 
       return {
         order: updatedOrderPre,

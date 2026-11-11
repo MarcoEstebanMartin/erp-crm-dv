@@ -8,6 +8,7 @@ import { logAudit } from '../../utils/audit';
 import { roundToIntegerPeso } from '../../core/money';
 import { emitirFacturaAFIP } from '../afip.service';
 import { recordLedgerMovement } from '../ledger/account-ledger.service';
+import { notifyWebOrderStatusForErpOrder } from '../orders/web-order-status-bridge.service';
 
 export interface RouteOrderSettlementItem {
   orderId: number;
@@ -225,6 +226,17 @@ export const routeSettlementService = {
         data: { status: 'COMPLETED' },
       });
     });
+
+    for (const order of route.orders) {
+      const set = input.settlements.find((s) => Number(s.orderId) === order.id);
+      if (set && order.status === OrderStatus.PREPARED) {
+        notifyWebOrderStatusForErpOrder(
+          order,
+          OrderStatus.DELIVERED,
+          `Entregado en Reparto Ruta #${route.id}`,
+        );
+      }
+    }
 
     await logAudit({
       userId: input.userId,

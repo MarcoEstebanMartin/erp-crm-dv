@@ -1,4 +1,4 @@
-import { PrismaClient, SalesChannel } from '@prisma/client';
+import { OrderStatus, Role, SalesChannel } from '@prisma/client';
 import prisma from '../../utils/prisma';
 import { env } from '../../config/env.config';
 import { getTiendaOnlineUser } from '../store/store-auth.service';
@@ -11,12 +11,22 @@ import {
   type WebIncomingOrderItem,
 } from '../../engines/web-order-sync.engine';
 import {
+  extractWebOrderIdFromOrder,
+  resolveIgnoredWebOrderIds,
+} from '../../engines/web-order-lifecycle.engine';
+import {
   commitSingleWebOrderAtomically,
-  type RawWebOrderRow,
+  fetchProductionOrderHeaders,
+  fetchProductionOrdersBatch,
   type SyncWebOrdersOptions,
   type WebOrderPreviewEntry,
   type WebOrderSyncReport,
 } from './web-order-commit.helper';
+import {
+  getSharedProductionDbClient,
+  notifyWebOrderStatusForErpOrder,
+} from './web-order-status-bridge.service';
+import { OrderStatusService } from './order-status.service';
 
 export type {
   SyncWebOrdersOptions,
@@ -27,71 +37,119 @@ export type {
 export class ProductionOrderSyncService {
   async syncIncomingOrders(options: SyncWebOrdersOptions = {}): Promise<WebOrderSyncReport> {
     const dryRun = Boolean(options.dryRun);
-    const prodDbUrl = (options.productionDbUrl || env.PRODUCTION_CATALOG_DATABASE_URL || '').trim();
-    if (!prodDbUrl) {
+    const defaultUrl = (env.PRODUCTION_CATALOG_DATABASE_URL || '').trim();
+    const customUrl = options.productionDbUrl?.trim();
+    const isCustomClient = Boolean(customUrl && customUrl !== defaultUrl);
+    const prodDb = getSharedProductionDbClient(customUrl);
+
+    if (!prodDb) {
       throw new Error(
         'PRODUCTION_CATALOG_DATABASE_URL no está configurada para leer pedidos de Producción.',
       );
     }
 
-    const prodDb = new PrismaClient({ datasources: { db: { url: prodDbUrl } } });
-
     try {
-      const { webOrders, rawCatalogState } = await prodDb.$transaction(async (tx) => {
-        await tx.$executeRawUnsafe('SET LOCAL transaction_read_only = on');
-        const rows = await tx.$queryRawUnsafe<RawWebOrderRow[]>(`
-          SELECT
-            o.id,
-            o.customer_phone,
-            o.customer_name,
-            o.delivery_address,
-            o.delivery_method,
-            o.notes,
-            o.total_amount,
-            o.status,
-            o.source,
-            o.created_at,
-            COALESCE(
-              (SELECT json_agg(oi ORDER BY oi.id ASC) FROM public.order_items oi WHERE oi.order_id = o.id),
-              '[]'::json
-            ) AS items_json
-          FROM public.orders o
-          ORDER BY o.created_at ASC, o.id ASC
-        `);
-
-        const metaRows = await tx.$queryRawUnsafe<Array<{ value: string | null }>>(
-          `SELECT value FROM public.metadata WHERE key = 'catalog_active_state' LIMIT 1`,
-        );
-        return { webOrders: rows, rawCatalogState: metaRows[0]?.value || null };
-      });
-
       const onlySet = options.onlyOrderIds?.length
         ? new Set(options.onlyOrderIds.map((s) => s.trim().toUpperCase()))
         : null;
-      const skipSet = new Set((options.skipOrderIds || []).map((s) => s.trim().toUpperCase()));
+      const ignoreSet = resolveIgnoredWebOrderIds({
+        skipOrderIds: options.skipOrderIds,
+        onlyOrderIds: options.onlyOrderIds,
+        includeHistoricalTests: options.includeHistoricalTests,
+        envIgnoreRaw: process.env.WEB_ORDER_SYNC_IGNORE_IDS,
+      });
 
-      const filteredWebOrders = webOrders.filter((wo) => {
-        const cleanId = String(wo.id || '').trim().toUpperCase();
+      const [webHeaders, existingWebErpOrders] = await Promise.all([
+        fetchProductionOrderHeaders(prodDb),
+        prisma.order.findMany({
+          where: { salesChannel: SalesChannel.TIENDA_WEB },
+          select: { id: true, status: true, bultosDetails: true, notes: true },
+        }),
+      ]);
+
+      const importedByWebCode = new Map<string, { id: number; status: OrderStatus }>();
+      for (const eo of existingWebErpOrders) {
+        const code = extractWebOrderIdFromOrder(eo);
+        if (code) importedByWebCode.set(code, { id: eo.id, status: eo.status });
+      }
+
+      let ignoredTestOrdersCount = 0;
+      const candidateHeaders = webHeaders.filter((wh) => {
+        const cleanId = String(wh.id || '').trim().toUpperCase();
         if (onlySet && !onlySet.has(cleanId)) return false;
-        if (skipSet.has(cleanId)) return false;
-        if (options.sinceCreatedAt && wo.created_at) {
-          const dt = new Date(wo.created_at);
+        if (ignoreSet.has(cleanId)) {
+          ignoredTestOrdersCount++;
+          return false;
+        }
+        if (options.sinceCreatedAt && wh.created_at) {
+          const dt = new Date(wh.created_at);
           if (!Number.isNaN(dt.getTime()) && dt < options.sinceCreatedAt) return false;
         }
         return true;
       });
 
-      const [erpProducts, existingClients, existingWebErpOrders] = await Promise.all([
-        prisma.product.findMany(),
-        prisma.persona.findMany({
-          where: { isClient: true },
-          select: { id: true, name: true, phone: true },
-        }),
-        prisma.order.findMany({
-          where: { salesChannel: SalesChannel.TIENDA_WEB },
-          select: { id: true, bultosDetails: true },
-        }),
-      ]);
+      if (!dryRun) {
+        let alreadyImportedCount = 0;
+        let skippedCancelledCount = 0;
+        let hasActionable = false;
+
+        for (const wh of candidateHeaders) {
+          const code = String(wh.id || '').trim().toUpperCase();
+          const webSt = String(wh.status || 'nuevo').trim().toLowerCase();
+          const existing = importedByWebCode.get(code);
+          if (existing) {
+            if (webSt === 'cancelado' && existing.status === OrderStatus.PENDING) {
+              hasActionable = true;
+            } else {
+              alreadyImportedCount++;
+            }
+          } else if (webSt === 'cancelado') {
+            skippedCancelledCount++;
+          } else {
+            hasActionable = true;
+          }
+        }
+
+        if (!hasActionable) {
+          return {
+            dryRun: false,
+            scannedWebOrders: candidateHeaders.length,
+            importedCount: 0,
+            alreadyImportedCount,
+            skippedCancelledCount,
+            cancelledInErpCount: 0,
+            newClientsCreatedCount: 0,
+            ignoredTestOrdersCount,
+            previews: [],
+          };
+        }
+      }
+
+      const upperIds = candidateHeaders.map((h) => String(h.id || '').trim().toUpperCase());
+      if (upperIds.length === 0) {
+        return {
+          dryRun,
+          scannedWebOrders: 0,
+          importedCount: 0,
+          alreadyImportedCount: 0,
+          skippedCancelledCount: 0,
+          cancelledInErpCount: 0,
+          newClientsCreatedCount: 0,
+          ignoredTestOrdersCount,
+          previews: [],
+        };
+      }
+
+      const [{ webOrders, rawCatalogState }, erpProducts, existingClients, tiendaUser] =
+        await Promise.all([
+          fetchProductionOrdersBatch(prodDb, upperIds),
+          prisma.product.findMany(),
+          prisma.persona.findMany({
+            where: { isClient: true },
+            select: { id: true, name: true, phone: true },
+          }),
+          dryRun ? Promise.resolve(null) : getTiendaOnlineUser(),
+        ]);
 
       const erpBySku = new Map<string, ErpProductForWebOrder>();
       for (const p of erpProducts) erpBySku.set(normalizeWebSku(p.sku), p);
@@ -104,30 +162,21 @@ export class ProductionOrderSyncService {
         }
       }
 
-      const importedIdByWebCode = new Map<string, number>();
-      for (const eo of existingWebErpOrders) {
-        const details = eo.bultosDetails as Record<string, any> | null;
-        const code = details?.webOrderId ? String(details.webOrderId).trim().toUpperCase() : '';
-        if (code) importedIdByWebCode.set(code, eo.id);
-      }
-
       const combosMap = parseCatalogCombosMap(rawCatalogState);
-      const tiendaUser = dryRun ? null : await getTiendaOnlineUser();
-
       const previews: WebOrderPreviewEntry[] = [];
       let importedCount = 0;
       let alreadyImportedCount = 0;
       let skippedCancelledCount = 0;
+      let cancelledInErpCount = 0;
       let newClientsCreatedCount = 0;
 
-      for (const wo of filteredWebOrders) {
+      for (const wo of webOrders) {
         const webOrderId = String(wo.id || '').trim().toUpperCase();
         const webStatus = String(wo.status || 'nuevo').trim().toLowerCase();
         const source = String(wo.source || 'tienda_web').trim();
         const phoneRaw = String(wo.customer_phone || '').trim();
         const phone10 = extractComparableArPhoneDigits(phoneRaw);
         const matchedClient = phone10.length >= 8 ? clientByPhone10.get(phone10) || null : null;
-
         const rawItems: WebIncomingOrderItem[] = Array.isArray(wo.items_json)
           ? wo.items_json
           : typeof wo.items_json === 'string'
@@ -150,14 +199,23 @@ export class ProductionOrderSyncService {
           stockWarnings: translated.stockWarnings,
         };
 
-        if (importedIdByWebCode.has(webOrderId)) {
-          alreadyImportedCount++;
-          previews.push({
-            ...basePreview,
-            willCreateNewClient: false,
-            action: 'ALREADY_IMPORTED',
-            importedErpOrderId: importedIdByWebCode.get(webOrderId),
-          });
+        const existingErp = importedByWebCode.get(webOrderId);
+        if (existingErp) {
+          if (webStatus === 'cancelado' && existingErp.status === OrderStatus.PENDING) {
+            if (!dryRun && tiendaUser) {
+              await OrderStatusService.updateOrderStatus({
+                orderId: existingErp.id,
+                userId: tiendaUser.id,
+                userRole: Role.ADMIN,
+                status: OrderStatus.CANCELLED,
+              });
+            }
+            cancelledInErpCount++;
+            previews.push({ ...basePreview, willCreateNewClient: false, action: 'CANCELLED_IN_ERP', importedErpOrderId: existingErp.id });
+          } else {
+            alreadyImportedCount++;
+            previews.push({ ...basePreview, willCreateNewClient: false, action: 'ALREADY_IMPORTED', importedErpOrderId: existingErp.id });
+          }
           continue;
         }
 
@@ -168,12 +226,7 @@ export class ProductionOrderSyncService {
         }
 
         if (translated.lines.length === 0) {
-          previews.push({
-            ...basePreview,
-            erpCalculatedTotal: 0,
-            willCreateNewClient: false,
-            action: 'SKIPPED_EMPTY',
-          });
+          previews.push({ ...basePreview, erpCalculatedTotal: 0, willCreateNewClient: false, action: 'SKIPPED_EMPTY' });
           continue;
         }
 
@@ -202,6 +255,9 @@ export class ProductionOrderSyncService {
             newClientsCreatedCount++;
             clientByPhone10.set(phone10, { id: res.personaId, name: res.personaName });
           }
+          if (webStatus === 'nuevo') {
+            notifyWebOrderStatusForErpOrder({ id: res.orderId, bultosDetails: { webOrderId } }, OrderStatus.PENDING);
+          }
         }
 
         previews.push({
@@ -216,15 +272,17 @@ export class ProductionOrderSyncService {
 
       return {
         dryRun,
-        scannedWebOrders: filteredWebOrders.length,
+        scannedWebOrders: webOrders.length,
         importedCount,
         alreadyImportedCount,
         skippedCancelledCount,
+        cancelledInErpCount,
         newClientsCreatedCount,
+        ignoredTestOrdersCount,
         previews,
       };
     } finally {
-      await prodDb.$disconnect();
+      if (isCustomClient) await prodDb.$disconnect();
     }
   }
 }

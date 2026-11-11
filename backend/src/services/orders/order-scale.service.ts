@@ -6,6 +6,7 @@ import {
   sumIntegerAmounts,
   toDecimal,
 } from '../../core/money';
+import { notifyWebOrderStatusForErpOrder } from './web-order-status-bridge.service';
 
 export class OrderScaleService {
   /**
@@ -141,8 +142,9 @@ export class OrderScaleService {
       }
 
       const newTotal = sumIntegerAmounts(subtotals).toNumber();
+      const prevTotal = roundToIntegerPeso(order.totalAmount).toNumber();
 
-      return await tx.order.update({
+      const updated = await tx.order.update({
         where: { id: orderId },
         data: {
           totalAmount: newTotal,
@@ -150,6 +152,16 @@ export class OrderScaleService {
         },
         include: { items: { include: { product: true } }, persona: true },
       });
+
+      const scaleNote =
+        newTotal !== prevTotal
+          ? `Total final ajustado por balanza/armado: $${newTotal.toLocaleString('es-AR')}`
+          : undefined;
+
+      return { updated, scaleNote };
+    }).then(({ updated, scaleNote }) => {
+      notifyWebOrderStatusForErpOrder(updated, OrderStatus.PREPARED, scaleNote);
+      return updated;
     });
   }
 }

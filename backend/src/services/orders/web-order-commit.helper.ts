@@ -3,6 +3,7 @@ import {
   InvoiceType,
   MovementType,
   OrderStatus,
+  PrismaClient,
   SalesChannel,
 } from '@prisma/client';
 import prisma from '../../utils/prisma';
@@ -32,6 +33,7 @@ export interface SyncWebOrdersOptions {
   onlyOrderIds?: string[];
   skipOrderIds?: string[];
   sinceCreatedAt?: Date;
+  includeHistoricalTests?: boolean;
 }
 
 export interface WebOrderPreviewEntry {
@@ -48,7 +50,12 @@ export interface WebOrderPreviewEntry {
   linesCount: number;
   unmappedNotes: string[];
   stockWarnings: string[];
-  action: 'IMPORT' | 'ALREADY_IMPORTED' | 'SKIPPED_CANCELLED' | 'SKIPPED_EMPTY';
+  action:
+    | 'IMPORT'
+    | 'ALREADY_IMPORTED'
+    | 'SKIPPED_CANCELLED'
+    | 'SKIPPED_EMPTY'
+    | 'CANCELLED_IN_ERP';
   importedErpOrderId?: number;
 }
 
@@ -58,7 +65,9 @@ export interface WebOrderSyncReport {
   importedCount: number;
   alreadyImportedCount: number;
   skippedCancelledCount: number;
+  cancelledInErpCount: number;
   newClientsCreatedCount: number;
+  ignoredTestOrdersCount: number;
   previews: WebOrderPreviewEntry[];
 }
 
@@ -209,5 +218,42 @@ export async function commitSingleWebOrderAtomically(params: {
       personaName,
       createdNewClient,
     };
+  });
+}
+
+export interface WebOrderHeaderRow {
+  id: string;
+  status: string | null;
+  created_at: Date | string | null;
+}
+
+export async function fetchProductionOrderHeaders(prodDb: PrismaClient): Promise<WebOrderHeaderRow[]> {
+  return await prodDb.$transaction(async (tx) => {
+    await tx.$executeRawUnsafe('SET LOCAL transaction_read_only = on');
+    return await tx.$queryRawUnsafe<WebOrderHeaderRow[]>(
+      `SELECT id, status, created_at FROM public.orders ORDER BY created_at ASC, id ASC`,
+    );
+  });
+}
+
+export async function fetchProductionOrdersBatch(
+  prodDb: PrismaClient,
+  upperOrderIds: string[],
+): Promise<{ webOrders: RawWebOrderRow[]; rawCatalogState: string | null }> {
+  return await prodDb.$transaction(async (tx) => {
+    await tx.$executeRawUnsafe('SET LOCAL transaction_read_only = on');
+    const rows = await tx.$queryRawUnsafe<RawWebOrderRow[]>(
+      `SELECT o.id, o.customer_phone, o.customer_name, o.delivery_address, o.delivery_method,
+              o.notes, o.total_amount, o.status, o.source, o.created_at,
+              COALESCE((SELECT json_agg(oi ORDER BY oi.id ASC) FROM public.order_items oi WHERE oi.order_id = o.id), '[]'::json) AS items_json
+       FROM public.orders o
+       WHERE UPPER(o.id) = ANY($1::text[])
+       ORDER BY o.created_at ASC, o.id ASC`,
+      upperOrderIds,
+    );
+    const metaRows = await tx.$queryRawUnsafe<Array<{ value: string | null }>>(
+      `SELECT value FROM public.metadata WHERE key = 'catalog_active_state' LIMIT 1`,
+    );
+    return { webOrders: rows, rawCatalogState: metaRows[0]?.value || null };
   });
 }

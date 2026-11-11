@@ -5,9 +5,11 @@ dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
 import prisma from '../src/utils/prisma';
 import { productionOrderSyncService } from '../src/services/orders/production-order-sync.service';
+import { getSharedProductionDbClient } from '../src/services/orders/web-order-status-bridge.service';
 
 async function main(): Promise<void> {
   const dryRun = process.argv.includes('--dry-run');
+  const includeHistoricalTests = process.argv.includes('--include-tests');
   const sinceArg = process.argv.find((a) => a.startsWith('--since='));
   const sinceCreatedAt = sinceArg ? new Date(sinceArg.slice('--since='.length)) : undefined;
 
@@ -21,6 +23,7 @@ async function main(): Promise<void> {
     const report = await productionOrderSyncService.syncIncomingOrders({
       dryRun,
       sinceCreatedAt,
+      includeHistoricalTests,
     });
     console.log('\n✅ Reporte de Sincronización de Pedidos Web/WhatsApp:');
     console.log(JSON.stringify(report, null, 2));
@@ -28,7 +31,10 @@ async function main(): Promise<void> {
     console.error('❌ Error sincronizando pedidos web:', err?.message || err);
     process.exitCode = 1;
   } finally {
-    await prisma.$disconnect();
+    await Promise.allSettled([
+      prisma.$disconnect(),
+      getSharedProductionDbClient()?.$disconnect() ?? Promise.resolve(),
+    ]);
   }
 }
 

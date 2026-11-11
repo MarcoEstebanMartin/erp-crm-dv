@@ -11,6 +11,10 @@ import {
   confirmArmado,
   requestCaeForOrder,
 } from '../controllers/order.controller';
+import {
+  getWebOrderSyncStatusHandler,
+  triggerWebOrderSyncHandler,
+} from '../controllers/web-order-sync.controller';
 import { authenticateJWT, requireRole } from '../middlewares/auth';
 import { idempotencyGuard } from '../middlewares/idempotency.middleware';
 import { Role } from '@prisma/client';
@@ -26,6 +30,21 @@ import {
 } from '../validators/order.validator';
 
 const router = Router();
+
+// Puente unificado Web/WhatsApp (chatbot-dv -> erp-dv) — debe declararse antes de '/:id'
+router.get(
+  '/sync-web/status',
+  authenticateJWT,
+  requireRole([Role.ADMIN, Role.FACTURACION, Role.VENDEDOR, Role.DEPOSITO]),
+  getWebOrderSyncStatusHandler,
+);
+router.post(
+  '/sync-web',
+  authenticateJWT,
+  requireRole([Role.ADMIN, Role.FACTURACION, Role.VENDEDOR, Role.DEPOSITO]),
+  idempotencyGuard,
+  triggerWebOrderSyncHandler,
+);
 
 // Rutas accesibles por cualquier usuario autenticado para ver su flujo
 router.get('/', authenticateJWT, getOrders);

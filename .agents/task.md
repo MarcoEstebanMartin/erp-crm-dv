@@ -92,7 +92,7 @@
 
 ### Fases Siguientes Planificadas (Integración Ecosistema)
 - [ ] **Fase 2**: Banco único de fotos en Cloudflare R2 (`media.donvenancio.com.ar`) + despliegue de `ERP-CRM DV` en la nube (`sistema.donvenancio.com.ar`).
-- [ ] **Fase 3**: Sincronización inicial segura **Producción -> ERP** (precios y 465 fotos vigentes sin pisar producción) y puente unificado de catálogo/stock/pedidos sobre una única base en Brasil.
+- [x] **Fase 3**: Sincronización inicial segura **Producción -> ERP** (precios y fotos vigentes sin pisar producción) y puente unificado en vivo de catálogo, stock y pedidos Web/WhatsApp (`chatbot-dv <-> erp-dv`) sobre Brasil `sa-east-1` ✅ COMPLETADA.
 - [ ] **Fase 4**: Conexión de Agentes de IA (`agencia-bots`) sobre la API validada del ERP + `pgvector`.
 
 ---
@@ -151,5 +151,7 @@
 - [x] **Paso P1: Motor Matemático de Traducción (Pesables, Combos y Teléfonos AR) + Servicio Atómico de Ingreso + Auditoría en Seco (`Dry-Run`)** ✅ COMPLETADO
   - [x] Crear `web-order-sync.engine.ts` (`282` l., `Decimal.js`, desglose `$/kg` para balanza en pesables, expansión de `COMBOS` a SKUs físicos reales y normalización telefónica Argentina) + `web-order-commit.helper.ts` (`197` l.) + `production-order-sync.service.ts` (`207` l.) con candado `pg_advisory_xact_lock` e idempotencia estricta por `webOrderId`
   - [x] Validar `tsc --noEmit` (Backend y Frontend) + suite `web-order-sync.test.ts` (`29 suites / 118 tests` en verde) + ejecutar `--dry-run` sobre `DV-1004` (`$54.128` exactos) y `DV-1005` (`$42.017` exactos)
-- [ ] **Paso P2: Recepción Automática en Vivo (`Poller` cada `30s` + Botón Manual) y Retorno Bidireccional de Estados (`ERP -> Web`)**
-  - [ ] Activar sincronizador automático *single-flight* en segundo plano + endpoint manual `POST /api/orders/sync-web` y reflejar cambios de estado del ERP (`PREPARING`, `PREPARED`, `DELIVERED`, `CANCELLED`) en `chatbot-dv.orders` y `order_status_history`
+- [x] **Paso P2: Recepción Automática en Vivo (`Poller` cada `30s` + Botón Manual) y Retorno Bidireccional de Estados (`ERP -> Web`)** ✅ COMPLETADO
+  - [x] Crear `web-order-lifecycle.engine.ts` (`130` l., corte automático de pruebas `DV-1004`/`DV-1005`, preservación inmutable de `webOrderId` al cerrar bultos físicos y mapeo de estados) + `web-order-status-bridge.service.ts` (`137` l., cola `ResilientAsyncQueue` hacia `chatbot-dv.orders` y `order_status_history`)
+  - [x] Crear poller *single-flight* `web-order-poller.service.ts` (`125` l., cada `30s` con pre-chequeo rápido de cabeceras y cancelación automática de pedidos `PENDING` anulados en web) + controlador `web-order-sync.controller.ts` (`50` l.) + rutas `/api/orders/sync-web` + botón **"Sincronizar Web"** e insignia `Web · DV-XXXX` en `OrdersTab.tsx` (`271` l.)
+  - [x] Modularizar `order-status.service.ts` (`171` l. + `order-lot-picking.helper.ts` `163` l.) y `order-billing.service.ts` (`220` l. + `order-invoice-tx.helper.ts` `139` l.), conectando `order-scale.service.ts` (`145` l.) y `route-settlement.service.ts` (`229` l.) al retorno de estados + validar `30 suites / 123 tests` en verde (`web-order-poller-status.test.ts`)

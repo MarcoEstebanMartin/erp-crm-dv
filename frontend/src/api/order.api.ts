@@ -5,7 +5,7 @@ export const orderApi = {
     const query = params ? '?' + new URLSearchParams(params).toString() : '';
     return apiClient.get(`/orders${query}`);
   },
-  
+
   getOrderById: (id: string | number) => {
     return apiClient.get(`/orders/${id}`);
   },
@@ -20,5 +20,13 @@ export const orderApi = {
 
   invoiceOrder: (id: string | number, data: any) => {
     return apiClient.post(`/orders/${id}/invoice`, data);
-  }
+  },
+
+  syncWebOrders: () => {
+    return apiClient.post<{ status: string; data: any }>('/orders/sync-web', {});
+  },
+
+  getWebSyncStatus: () => {
+    return apiClient.get<{ status: string; data: any }>('/orders/sync-web/status');
+  },
 };

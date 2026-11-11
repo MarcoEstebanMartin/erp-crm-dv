@@ -9,13 +9,11 @@ import {
   LedgerSourceType,
 } from '@prisma/client';
 import { logAudit } from '../../utils/audit';
-import {
-  roundToIntegerPeso,
-  roundToThreeDecimalsWeight,
-  sumIntegerAmounts,
-  toDecimal,
-} from '../../core/money';
+import { roundToIntegerPeso } from '../../core/money';
 import { recordLedgerMovement } from '../ledger/account-ledger.service';
+import { mergeOrderBultosPreservingWebMetadata } from '../../engines/web-order-lifecycle.engine';
+import { processOrderPreparedLotAssignments } from './order-lot-picking.helper';
+import { notifyWebOrderStatusForErpOrder } from './web-order-status-bridge.service';
 
 export interface UpdateOrderStatusDto {
   orderId: number;
@@ -24,7 +22,7 @@ export interface UpdateOrderStatusDto {
   status: OrderStatus;
   lotAssignments?: Record<number, { lotId: number; quantity: number }[]>;
   bultosCount?: number;
-  bultosDetails?: string;
+  bultosDetails?: any;
 }
 
 export class OrderStatusService {
@@ -32,6 +30,7 @@ export class OrderStatusService {
    * Cambia el estado de un pedido en logística (Depósito / Admin).
    * - PREPARED: Asigna lotes FIFO o manuales, ajusta faltantes y recalcula total en pesos enteros.
    * - CANCELLED: Reversa atómicamente stock general, stock de lotes y saldo de cuenta corriente.
+   * - Refleja automáticamente el estado hacia chatbot-dv si el pedido ingresó por Web/WhatsApp.
    */
   static async updateOrderStatus(data: UpdateOrderStatusDto) {
     const { orderId, userId, userRole, status, lotAssignments, bultosCount, bultosDetails } = data;
@@ -87,176 +86,24 @@ export class OrderStatusService {
       }
     }
 
+    const initialTotal = roundToIntegerPeso(order.totalAmount).toNumber();
+
     const updated = await prisma.$transaction(async (tx) => {
-      let finalTotalAmount = roundToIntegerPeso(order.totalAmount).toNumber();
+      let finalTotalAmount = initialTotal;
 
-      // 1. Si pasa a PREPARED, validar y procesar lotes
       if (status === OrderStatus.PREPARED) {
-        if (!lotAssignments) {
-          throw new Error('Las asignaciones de lote son requeridas para marcar el pedido como Armado.');
-        }
-
-        const items = await tx.orderItem.findMany({
-          where: { orderId: order.id },
-          include: { product: true },
+        finalTotalAmount = await processOrderPreparedLotAssignments(tx, {
+          orderId: order.id,
+          sellerId: order.sellerId,
+          userId,
+          lotAssignments,
         });
-
-        const updatedSubtotals: number[] = [];
-
-        for (const item of items) {
-          const userAssignments = lotAssignments[item.id] || [];
-          const totalUserAssigned = userAssignments.reduce(
-            (sum: number, a: any) => sum + Number(a.quantity),
-            0,
-          );
-
-          if (totalUserAssigned > item.quantity) {
-            throw new Error(
-              `Asignación inválida para "${item.product.name}". Cantidad asignada (${totalUserAssigned}) supera la cantidad pedida (${item.quantity}).`,
-            );
-          }
-
-          const finalAssignments: { lotId: number; quantity: number }[] = [];
-          for (const uAs of userAssignments) {
-            const q = Number(uAs.quantity);
-            if (q > 0) {
-              finalAssignments.push({ lotId: Number(uAs.lotId), quantity: q });
-            }
-          }
-
-          let remainingToAssign = item.quantity - totalUserAssigned;
-          if (remainingToAssign > 0) {
-            const activeLots = await tx.productLot.findMany({
-              where: {
-                productId: item.productId,
-                stock: { gt: 0 },
-                id: { notIn: finalAssignments.map((fa) => fa.lotId) },
-              },
-              orderBy: { expirationDate: 'asc' },
-            });
-
-            for (const lot of activeLots) {
-              if (remainingToAssign <= 0) break;
-              const allocatedQty = Math.min(lot.stock, remainingToAssign);
-              if (allocatedQty > 0) {
-                finalAssignments.push({ lotId: lot.id, quantity: allocatedQty });
-                remainingToAssign -= allocatedQty;
-              }
-            }
-
-            if (remainingToAssign > 0 && process.env.IGNORE_STOCK_CHECK === 'true') {
-              let slLot = await tx.productLot.findFirst({
-                where: { productId: item.productId, lotNumber: 'S/L' },
-              });
-              if (!slLot) {
-                slLot = await tx.productLot.create({
-                  data: {
-                    productId: item.productId,
-                    lotNumber: 'S/L',
-                    expirationDate: new Date('2036-12-31T00:00:00Z'),
-                    stock: 0,
-                    location: 'S/U',
-                  },
-                });
-              }
-              finalAssignments.push({ lotId: slLot.id, quantity: remainingToAssign });
-              remainingToAssign = 0;
-            }
-          }
-
-          const totalAssigned = finalAssignments.reduce((sum, a) => sum + a.quantity, 0);
-          const diff = item.quantity - totalAssigned;
-          if (diff > 0) {
-            await tx.product.update({
-              where: { id: item.productId },
-              data: { stock: { increment: diff } },
-            });
-
-            await tx.stockMovement.create({
-              data: {
-                productId: item.productId,
-                quantity: diff,
-                type: MovementType.IN,
-                orderId: order.id,
-                referenceId: `PICK-SHORT-${order.id}`,
-                userId,
-                reason: `Devolución por faltante en preparación de Pedido #${order.id}`,
-              },
-            });
-          }
-
-          let newSubtotal = roundToIntegerPeso(item.subtotal).toNumber();
-          let newWeight = item.weight ? roundToThreeDecimalsWeight(item.weight).toNumber() : null;
-          if (totalAssigned === 0) {
-            newSubtotal = 0;
-            newWeight = 0;
-          } else if (item.product.isPesable && newWeight !== null && newWeight > 0) {
-            newSubtotal = roundToIntegerPeso(toDecimal(item.unitPrice).times(newWeight)).toNumber();
-          } else {
-            newSubtotal = roundToIntegerPeso(toDecimal(item.unitPrice).times(totalAssigned)).toNumber();
-          }
-
-          await tx.orderItem.update({
-            where: { id: item.id },
-            data: {
-              quantity: totalAssigned,
-              subtotal: newSubtotal,
-              weight: newWeight,
-            },
-          });
-
-          updatedSubtotals.push(newSubtotal);
-
-          for (const assignment of finalAssignments) {
-            const { lotId, quantity } = assignment;
-            const lot = await tx.productLot.findUnique({ where: { id: lotId } });
-            if (!lot) continue;
-
-            await tx.productLot.update({
-              where: { id: lot.id },
-              data: { stock: { decrement: quantity } },
-            });
-
-            await tx.orderItemLot.create({
-              data: {
-                orderItemId: item.id,
-                productLotId: lot.id,
-                quantity,
-              },
-            });
-
-            const originalMov = await tx.stockMovement.findFirst({
-              where: {
-                productId: item.productId,
-                referenceId: `ORDER-${order.id}`,
-                productLotId: null,
-              },
-            });
-
-            if (originalMov) {
-              await tx.stockMovement.update({
-                where: { id: originalMov.id },
-                data: { productLotId: lot.id, orderId: order.id },
-              });
-            } else {
-              await tx.stockMovement.create({
-                data: {
-                  productId: item.productId,
-                  quantity: -quantity,
-                  type: MovementType.OUT,
-                  orderId: order.id,
-                  referenceId: `ORDER-${order.id}`,
-                  userId: order.sellerId,
-                  reason: `Venta - Descuento físico de Lote #${lot.lotNumber} para Pedido #${order.id}`,
-                  productLotId: lot.id,
-                },
-              });
-            }
-          }
-        }
-
-        finalTotalAmount = sumIntegerAmounts(updatedSubtotals).toNumber();
       }
+
+      const safeBultosDetails = mergeOrderBultosPreservingWebMetadata(
+        order.bultosDetails,
+        bultosDetails,
+      );
 
       const uOrder = await tx.order.update({
         where: { id: order.id },
@@ -264,11 +111,10 @@ export class OrderStatusService {
           status: status as OrderStatus,
           totalAmount: finalTotalAmount,
           bultosCount: bultosCount !== undefined ? Number(bultosCount) : undefined,
-          bultosDetails: bultosDetails !== undefined ? bultosDetails : undefined,
+          bultosDetails: safeBultosDetails !== undefined ? (safeBultosDetails as any) : undefined,
         },
       });
 
-      // 2. Si se cancela, reversar atómicamente stock general, lotes y cuenta corriente
       if (status === OrderStatus.CANCELLED && order.status !== OrderStatus.CANCELLED) {
         const items = await tx.orderItem.findMany({
           where: { orderId: order.id },
@@ -317,7 +163,7 @@ export class OrderStatusService {
             entryType: LedgerEntryType.CREDIT,
             sourceType: LedgerSourceType.ORDER_CANCELLATION,
             billingType: order.billingType,
-            amount: roundToIntegerPeso(order.totalAmount).toNumber(),
+            amount: initialTotal,
             orderId: order.id,
             userId,
             reference: `Anulación Pedido #${order.id}`,
@@ -337,6 +183,14 @@ export class OrderStatusService {
       oldValues: { status: order.status },
       newValues: { status: updated.status },
     });
+
+    const finalTotalNum = roundToIntegerPeso(updated.totalAmount).toNumber();
+    const scaleNote =
+      status === OrderStatus.PREPARED && finalTotalNum !== initialTotal
+        ? `Total final ajustado por pesaje/armado: $${finalTotalNum.toLocaleString('es-AR')}`
+        : undefined;
+
+    notifyWebOrderStatusForErpOrder(updated, updated.status, scaleNote);
 
     return updated;
   }
