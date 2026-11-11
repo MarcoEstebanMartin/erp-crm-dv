@@ -13,6 +13,7 @@ export interface EnvConfig {
   ARCHIVOS_PATH: string;
   IGNORE_STOCK_CHECK: boolean;
   AFIP_PRODUCTION: boolean;
+  PRODUCTION_CATALOG_DATABASE_URL?: string;
 }
 
 export function parseTrustProxy(rawValue?: string): TrustProxySetting {
@@ -75,6 +76,7 @@ export function validateEnvConfig(sourceEnv: NodeJS.ProcessEnv = process.env): E
     ARCHIVOS_PATH: sourceEnv.ARCHIVOS_PATH || '../../ARCHIVOS',
     IGNORE_STOCK_CHECK: sourceEnv.IGNORE_STOCK_CHECK === 'true',
     AFIP_PRODUCTION: sourceEnv.AFIP_PRODUCTION === 'true',
+    PRODUCTION_CATALOG_DATABASE_URL: sourceEnv.PRODUCTION_CATALOG_DATABASE_URL?.trim() || undefined,
   };
 }
 

@@ -129,3 +129,16 @@
   - [x] Crear `external-integrations-retry.service.ts` (`165` l.) + modularizar `order-billing.service.ts` (`295` l. + `order-cae-deferred.helper.ts` `134` l.) y `whatsapp.service.ts` (`247` l. + `whatsapp-order-parser.service.ts` `186` l.), habilitando contingencia automática `PRE-A`/`PRE-B` con obtención diferida de CAE en segundo plano y reintentos reales en Meta Cloud API
   - [x] Crear motor criptográfico `encrypted-backup.util.ts` (`132` l., `AES-256-GCM` + `scrypt` + `Gzip` nivel 9 + rotación automática) + `database-backup.service.ts` (`197` l.) + CLI `npm run db:backup-encrypted` (`encrypted_backup_cli.ts` `42` l.) y programador nocturno opcional
   - [x] Validar `tsc --noEmit` (Backend y Frontend), `npm audit` (`0` vulnerabilidades) y **`26 suites / 105 tests` en verde** (`resilience-and-backup.test.ts`)
+
+---
+
+## Plan Activo: Unión de Catálogo, Precios e Imágenes (`Producción chatbot-dv -> ERP erp-dv`)
+
+- [x] **Paso U1: Resguardo Cifrado Previo + Auditoría Exacta en Seco (`Dry-Run`)** ✅ COMPLETADO
+  - [x] Generar backup cifrado previo de `erp-dv` (`backup_ERP_2026-11-11T00-02-13.dvbackup.enc`, `-92,2%` `AES-256-GCM`)
+  - [x] Auditar SKU por SKU `chatbot-dv` (`442` total / `331` activos / `437` fotos `bytea`) vs `erp-dv` (`424` total / `398` activos / `365` fotos): detectados **`80` precios a actualizar**, **`50` productos `S/F` que ganan foto**, **`120` productos con foto `.png` nueva editada manualmente** (`170` fotos en total) y **`8` productos activos en web pero apagados en ERP**
+- [x] **Paso U2: Nivelación Inicial 100% Unidireccional (`Producción -> ERP`) de las 437 Fotos y Precios Vigentes** ✅ COMPLETADO
+  - [x] Crear motor matemático/determinístico `catalog-sync.engine.ts` (`Decimal.js`, pesos enteros en origen, preservación de proporciones Lista B/C y nombres anti-colisión) + servicio `production-catalog-sync.service.ts` con transacción `READ ONLY` sobre `chatbot-dv` (`0` escrituras sobre Producción) y CLI `npm run db:sync-from-production`
+  - [x] Descargar y verificar por MD5 las **`382` fotos HD** hacia `backend/uploads/products/`, sumar únicamente los **`69` SKUs faltantes** en `ARCHIVOS/fotos/Productos` (`0` archivos existentes modificados/borrados), actualizar los **`80` precios** y espejar los **`331` productos activos** de `donvenancio.com.ar` (`0` productos activos sin foto `S/F`, `27 suites / 110 tests` en verde)
+- [ ] **Paso U3: Puente Vivo Permanente (`ERP -> Producción`) y Banco Único de Imágenes**
+  - [ ] Conectar cambios de precio, estado y foto del ERP hacia `chatbot-dv` para que nunca más vuelvan a desfasarse
