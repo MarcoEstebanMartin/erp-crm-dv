@@ -127,6 +127,12 @@ export default function BillingDashboard({ activeTab: _activeTab, setActiveTab: 
   };
 
   useEffect(() => {
+    if (_activeTab === 'billing' && localStorage.getItem('preselected_billing_client')) {
+      setActiveSubTab('ventas');
+    }
+  }, [_activeTab]);
+
+  useEffect(() => {
     loadData();
   }, [activeSubTab, startDate, endDate, query, statusFilter]);
 

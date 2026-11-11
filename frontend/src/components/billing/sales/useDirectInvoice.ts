@@ -79,15 +79,48 @@ export function useDirectInvoice({
   }, [directInvoiceForm.personaId, personas]);
 
   useEffect(() => {
-    if (showDirectInvoiceModal) {
-      if (bankAccounts.length > 0) {
-        setDirectInvoiceForm((prev) => ({ ...prev, bankAccountId: bankAccounts[0].id.toString() }));
-      }
-      if (activeDrawers.length > 0) {
-        setDirectInvoiceForm((prev) => ({ ...prev, cashDrawerId: activeDrawers[0].id.toString() }));
+    const preselected = localStorage.getItem('preselected_billing_client');
+    if (!preselected) return;
+
+    if (preselected === 'direct') {
+      localStorage.removeItem('preselected_billing_client');
+      setShowDirectInvoiceModal(true);
+      return;
+    }
+
+    setShowDirectInvoiceModal(true);
+    if (clientsOnly.length > 0) {
+      const targetClient = clientsOnly.find((c: any) => String(c.id) === preselected);
+      localStorage.removeItem('preselected_billing_client');
+      if (targetClient) {
+        setDirectInvoiceForm((prev) => ({ ...prev, personaId: String(targetClient.id) }));
+        setClientSearchQuery(targetClient.name);
+        setShowClientDropdown(false);
+        setDirectCart([]);
+        setTimeout(() => productSearchInputRef.current?.focus(), 60);
       }
     }
-  }, [showDirectInvoiceModal, bankAccounts, activeDrawers]);
+  }, [clientsOnly]);
+
+  useEffect(() => {
+    if (showDirectInvoiceModal) {
+      if (bankAccounts.length > 0) {
+        setDirectInvoiceForm((prev) => ({
+          ...prev,
+          bankAccountId: prev.bankAccountId || bankAccounts[0].id.toString()
+        }));
+      }
+      if (activeDrawers.length > 0) {
+        setDirectInvoiceForm((prev) => ({
+          ...prev,
+          cashDrawerId: prev.cashDrawerId || activeDrawers[0].id.toString()
+        }));
+      }
+      if (!directInvoiceForm.personaId) {
+        setTimeout(() => clientSearchInputRef.current?.focus(), 60);
+      }
+    }
+  }, [showDirectInvoiceModal, bankAccounts, activeDrawers, directInvoiceForm.personaId]);
 
   const directBillingTotals = useMemo(
     () =>
