@@ -45,8 +45,8 @@ Este archivo define las reglas innegociables de comportamiento, arquitectura mod
   3. Iniciar `ngrok http 3000 --url=numerally-diaristic-maryrose.ngrok-free.dev` en segundo plano.
   4. Mostrar resumen con estado de servidores, IP local para celular, Webhook de WhatsApp y credenciales.
 
-## 7. Protección de Imágenes de Productos y Archivos Maestros
-- **Carpeta Maestra Inmutable (`ARCHIVOS/fotos/Productos`)**: Sagrada e inmutable (`[SKU].[ext]`). Jamás borrar, sobrescribir ni desplazar numéricamente archivos existentes.
+## 7. Banco Único de Imágenes de Productos (SQL + Caché Limpia)
+- **Fuente Única de Verdad en SQL (`chatbot-dv.product_images`)**: El banco oficial de fotos de productos vive en PostgreSQL (`chatbot-dv.product_images`) sincronizado con la caché local activa `backend/uploads/products/` (regenerable con `npm run db:sync-from-production`). Prohibido mantener carpetas paralelas duplicadas o acumular fotos huérfanas viejas en disco.
 
 ## 8. Metodología Spec-Driven Development (SDD - GitHub Spec Kit)
 - **Constitución y Plantillas (`.specify/`)**: Gobernada por `.specify/memory/constitution.md` y las especificaciones en `specs/`.

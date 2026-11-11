@@ -8,7 +8,6 @@ import { logAudit } from '../../utils/audit';
 import { env } from '../../config/env.config';
 import {
   computeErpProductSyncPatch,
-  resolveMasterArchiveExtension,
   resolveSyncedImageFilename,
   type ProductionCatalogRow,
 } from '../../engines/catalog-sync.engine';
@@ -34,7 +33,6 @@ export interface ProductionCatalogSyncOptions {
   userId?: number;
   productionDbUrl?: string;
   uploadsDir?: string;
-  masterPhotosDir?: string;
 }
 
 export interface ProductionCatalogSyncReport {
@@ -50,18 +48,19 @@ export interface ProductionCatalogSyncReport {
   namesUpdatedCount: number;
   downloadedImagesCount: number;
   reusedImagesOnDiskCount: number;
-  newMasterArchiveFilesCount: number;
+  prunedStaleUploadsCount: number;
 }
 
-export function writeImageSafelyProtectingMaster(
+/**
+ * Escribe de forma atómica la imagen activa en `uploads/products` y purga versiones viejas
+ * del mismo SKU para que jamás queden fotos huérfanas repetidas en disco.
+ */
+export function writeProductUploadAtomically(
   sku: string,
   resolvedUploadFilename: string,
-  masterExt: string,
   imageBuffer: Buffer,
   uploadsDir: string,
-  masterPhotosDir: string | null,
-  existingMasterStems: Set<string>,
-): { wroteNewMaster: boolean } {
+): { prunedCount: number } {
   if (!fs.existsSync(uploadsDir)) {
     fs.mkdirSync(uploadsDir, { recursive: true });
   }
@@ -71,24 +70,19 @@ export function writeImageSafelyProtectingMaster(
   fs.writeFileSync(tmpPath, imageBuffer);
   fs.renameSync(tmpPath, uploadTarget);
 
-  let wroteNewMaster = false;
   const cleanSku = sku.trim();
-  if (
-    masterPhotosDir &&
-    fs.existsSync(masterPhotosDir) &&
-    !existingMasterStems.has(cleanSku)
-  ) {
-    const masterCandidate = path.join(masterPhotosDir, `${cleanSku}${masterExt}`);
-    if (!fs.existsSync(masterCandidate)) {
-      const masterTmp = `${masterCandidate}.tmp_${process.pid}`;
-      fs.writeFileSync(masterTmp, imageBuffer);
-      fs.renameSync(masterTmp, masterCandidate);
-      existingMasterStems.add(cleanSku);
-      wroteNewMaster = true;
+  let prunedCount = 0;
+  for (const file of fs.readdirSync(uploadsDir)) {
+    if (file === resolvedUploadFilename || file.includes('.tmp_')) continue;
+    if (file.startsWith(`${cleanSku}.`) || file.startsWith(`${cleanSku}_`)) {
+      try {
+        fs.unlinkSync(path.join(uploadsDir, file));
+        prunedCount++;
+      } catch {}
     }
   }
 
-  return { wroteNewMaster };
+  return { prunedCount };
 }
 
 export class ProductionCatalogSyncService {
@@ -105,10 +99,6 @@ export class ProductionCatalogSyncService {
 
     const uploadsDir =
       options.uploadsDir || path.resolve(__dirname, '../../../uploads/products');
-    const masterPhotosDir =
-      options.masterPhotosDir !== undefined
-        ? options.masterPhotosDir
-        : path.resolve(__dirname, '../../../../ARCHIVOS/fotos/Productos');
 
     const prodDb = new PrismaClient({ datasources: { db: { url: prodDbUrl } } });
 
@@ -141,12 +131,6 @@ export class ProductionCatalogSyncService {
         prodBySku.set(row.sku.trim(), row);
       }
 
-      const existingMasterStems = new Set<string>(
-        fs.existsSync(masterPhotosDir)
-          ? fs.readdirSync(masterPhotosDir).map((f) => path.basename(f, path.extname(f)).trim())
-          : [],
-      );
-
       const resolvedUrlBySku = new Map<string, string>();
       const skusNeedingDownload: string[] = [];
       let reusedImagesOnDiskCount = 0;
@@ -171,10 +155,7 @@ export class ProductionCatalogSyncService {
           crypto.createHash('md5').update(fs.readFileSync(localUploadPath)).digest('hex') ===
             prod.img_md5;
 
-        const needsMasterBackfill =
-          fs.existsSync(masterPhotosDir) && !existingMasterStems.has(cleanSku);
-
-        if (alreadyValidOnDisk && !needsMasterBackfill) {
+        if (alreadyValidOnDisk) {
           reusedImagesOnDiskCount++;
         } else {
           skusNeedingDownload.push(cleanSku);
@@ -182,7 +163,7 @@ export class ProductionCatalogSyncService {
       }
 
       let downloadedImagesCount = 0;
-      let newMasterArchiveFilesCount = 0;
+      let prunedStaleUploadsCount = 0;
 
       if (!dryRun && skusNeedingDownload.length > 0) {
         const batchSize = 25;
@@ -219,18 +200,14 @@ export class ProductionCatalogSyncService {
               bin.mime_type,
               bin.md5_hex,
             );
-            const masterExt = resolveMasterArchiveExtension(bin.filename, bin.mime_type);
-            const { wroteNewMaster } = writeImageSafelyProtectingMaster(
+            const { prunedCount } = writeProductUploadAtomically(
               bin.sku,
               resolvedFile,
-              masterExt,
               buf,
               uploadsDir,
-              masterPhotosDir,
-              existingMasterStems,
             );
             downloadedImagesCount++;
-            if (wroteNewMaster) newMasterArchiveFilesCount++;
+            prunedStaleUploadsCount += prunedCount;
           }
         }
       }
@@ -302,7 +279,7 @@ export class ProductionCatalogSyncService {
         namesUpdatedCount,
         downloadedImagesCount: dryRun ? skusNeedingDownload.length : downloadedImagesCount,
         reusedImagesOnDiskCount,
-        newMasterArchiveFilesCount,
+        prunedStaleUploadsCount,
       };
     } finally {
       await prodDb.$disconnect();

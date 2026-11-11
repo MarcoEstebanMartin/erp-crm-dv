@@ -44,7 +44,6 @@ backend/certs/*.crt
 *.zip
 *.exe
 backups_auditoria/
-ARCHIVOS/archivo_historico_excel/
 backend/backups/
 backend/uploads/*
 !backend/uploads/.gitkeep

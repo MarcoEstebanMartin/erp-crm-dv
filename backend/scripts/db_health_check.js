@@ -33,31 +33,23 @@ async function runHealthCheck() {
       warningCount++;
     }
 
-    // 2. Auditoría de Productos e Imágenes Maestras
-    console.log('\n2️⃣ Verificando sincronización de imágenes de productos (Regla 6)...');
-    const activeProducts = await prisma.product.findMany({ where: { isActive: true }, select: { sku: true, name: true } });
-    const masterDir = path.resolve(__dirname, '../../ARCHIVOS/fotos/Productos');
+    // 2. Auditoría de Productos e Imágenes Activas
+    console.log('\n2️⃣ Verificando caché activa de imágenes de productos (uploads/products)...');
+    const activeProducts = await prisma.product.findMany({ where: { isActive: true }, select: { sku: true, name: true, imageUrl: true } });
+    const uploadsDir = path.resolve(__dirname, '../uploads/products');
     
     let missingPhotosCount = 0;
-    if (fs.existsSync(masterDir)) {
-      const files = fs.readdirSync(masterDir);
-      const photoSkus = new Set(files.map(f => path.basename(f, path.extname(f)).trim()));
-
-      activeProducts.forEach(p => {
-        if (!photoSkus.has(p.sku)) {
-          missingPhotosCount++;
-        }
-      });
-
-      if (missingPhotosCount > 0) {
-        console.log(`  🟡 ${missingPhotosCount} de ${activeProducts.length} productos activos no tienen foto en ARCHIVOS/fotos/Productos/.`);
-        warningCount++;
-      } else {
-        console.log(`  🟢 100% de los productos activos (${activeProducts.length}) poseen foto maestra asignada.`);
+    activeProducts.forEach(p => {
+      if (!p.imageUrl || !fs.existsSync(path.join(uploadsDir, path.basename(p.imageUrl)))) {
+        missingPhotosCount++;
       }
-    } else {
-      console.log('  🟡 Carpeta maestra ARCHIVOS/fotos/Productos/ no encontrada.');
+    });
+
+    if (missingPhotosCount > 0) {
+      console.log(`  🟡 ${missingPhotosCount} de ${activeProducts.length} productos activos no tienen imagen local (correr npm run db:sync-from-production).`);
       warningCount++;
+    } else {
+      console.log(`  🟢 100% de los productos activos (${activeProducts.length}) poseen foto HD válida.`);
     }
 
     // 3. Auditoría de Cuentas Corrientes y Saldos

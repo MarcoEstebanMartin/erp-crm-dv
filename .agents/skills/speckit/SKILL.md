@@ -31,7 +31,7 @@ Cuando el usuario solicite trabajar con Spec Kit o invoque cualquiera de estas f
 
 ### 1. Fase `constitution` (`/speckit.constitution`)
 - **Objetivo**: Consultar o actualizar los principios rectores en `.specify/memory/constitution.md`.
-- **Acción**: Verifica que toda decisión respete la estética Stripe/Linear/Notion, el flujo seguro de Prisma (`--create-only` sin borrar `movement_seq`), el uso de `Decimal` para montos y la inmutabilidad de `ARCHIVOS/fotos/Productos/`.
+- **Acción**: Verifica que toda decisión respete la estética Stripe/Linear/Notion, el flujo seguro de Prisma (`--create-only` sin borrar `movement_seq`), el uso de `Decimal` para montos y el banco único SQL de imágenes (`chatbot-dv.product_images`).
 
 ### 2. Fase `specify` (`/speckit.specify <descripción>`)
 - **Objetivo**: Definir **qué** se construye y **por qué** antes de pensar en código.

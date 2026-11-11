@@ -10,7 +10,7 @@ import {
   resolveMasterArchiveExtension,
   resolveSyncedImageFilename,
 } from '../../engines/catalog-sync.engine';
-import { writeImageSafelyProtectingMaster } from '../catalog/production-catalog-sync.service';
+import { writeProductUploadAtomically } from '../catalog/production-catalog-sync.service';
 
 describe('Paso U2 — Motor y Servicio de Sincronización Producción -> ERP', () => {
   it('redondea precios de Producción al peso entero en origen y preserva proporciones Lista B/C', () => {
@@ -108,50 +108,27 @@ describe('Paso U2 — Motor y Servicio de Sincronización Producción -> ERP', (
     expect(resolveMasterArchiveExtension(null, 'image/png')).toBe('.png');
   });
 
-  it('protege la carpeta sagrada ARCHIVOS/fotos/Productos sin sobrescribir archivos existentes', () => {
+  it('escribe atómicamente en uploads/products y purga versiones viejas del mismo SKU sin dejar huérfanos', () => {
     const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'dv-u2-test-'));
     const uploadsDir = path.join(tmpRoot, 'uploads');
-    const masterDir = path.join(tmpRoot, 'master');
     fs.mkdirSync(uploadsDir, { recursive: true });
-    fs.mkdirSync(masterDir, { recursive: true });
 
     try {
-      // Caso 1: SKU 0031 YA existe como 0031.jpg en carpeta maestra -> jamás debe tocarse ni agregar 0031.png
-      const sacredOriginal = Buffer.from('SACRED_MASTER_0031_JPG');
-      fs.writeFileSync(path.join(masterDir, '0031.jpg'), sacredOriginal);
-      const existingMasterStems = new Set(['0031']);
+      fs.writeFileSync(path.join(uploadsDir, '0031.jpg'), Buffer.from('OLD_JULY_0031_JPG'));
+      fs.writeFileSync(path.join(uploadsDir, '0021.jpg'), Buffer.from('OTHER_SKU_0021'));
 
       const newHdPng = Buffer.from('NEW_HD_PNG_FROM_PRODUCTION_0031');
-      const resExisting = writeImageSafelyProtectingMaster(
+      const res = writeProductUploadAtomically(
         '0031',
         '0031_1794344664.png',
-        '.png',
         newHdPng,
         uploadsDir,
-        masterDir,
-        existingMasterStems,
       );
 
-      expect(resExisting.wroteNewMaster).toBe(false);
-      expect(fs.readFileSync(path.join(masterDir, '0031.jpg')).equals(sacredOriginal)).toBe(true);
-      expect(fs.existsSync(path.join(masterDir, '0031.png'))).toBe(false);
+      expect(res.prunedCount).toBe(1);
+      expect(fs.existsSync(path.join(uploadsDir, '0031.jpg'))).toBe(false);
       expect(fs.readFileSync(path.join(uploadsDir, '0031_1794344664.png')).equals(newHdPng)).toBe(true);
-
-      // Caso 2: SKU 0021 NO existe en carpeta maestra -> agrega 0021.png nuevo limpiamente
-      const new0021Buf = Buffer.from('NEW_HD_PNG_0021');
-      const resMissing = writeImageSafelyProtectingMaster(
-        '0021',
-        '0021_1794342783.png',
-        '.png',
-        new0021Buf,
-        uploadsDir,
-        masterDir,
-        existingMasterStems,
-      );
-
-      expect(resMissing.wroteNewMaster).toBe(true);
-      expect(fs.readFileSync(path.join(masterDir, '0021.png')).equals(new0021Buf)).toBe(true);
-      expect(fs.readFileSync(path.join(uploadsDir, '0021_1794342783.png')).equals(new0021Buf)).toBe(true);
+      expect(fs.existsSync(path.join(uploadsDir, '0021.jpg'))).toBe(true);
     } finally {
       fs.rmSync(tmpRoot, { recursive: true, force: true });
     }

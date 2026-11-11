@@ -2,7 +2,7 @@ import express, { Application, Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import path from 'path';
 import { env } from './config/env.config';
-import { ensureDirectoriesExist, syncMasterProductImages } from './utils/fileSync.util';
+import { ensureDirectoriesExist } from './utils/fileSync.util';
 import { errorHandler } from './middlewares/errorHandler.middleware';
 import { securityHeadersMiddleware } from './middlewares/securityHeaders.middleware';
 import { authenticateJWT } from './middlewares/auth';
@@ -66,11 +66,9 @@ app.use((_req: Request, res: Response, next: NextFunction) => {
   next();
 });
 
-// 3. Inicialización Asincrónica de Directorios y Archivos Maestros
+// 3. Inicialización Asincrónica de Directorios de Uploads y Keep-Alive SQL
 const uploadsDir = path.join(__dirname, '../uploads');
 const productsUploadsDir = path.join(uploadsDir, 'products');
-const archivosDir = path.resolve(__dirname, env.ARCHIVOS_PATH);
-const masterProductosFotosDir = path.join(archivosDir, 'fotos/Productos');
 
 import { appCache } from './utils/cache';
 import { startDbKeepAlive } from './utils/dbKeepAlive';
@@ -78,7 +76,6 @@ import { startDbKeepAlive } from './utils/dbKeepAlive';
 (async () => {
   try {
     await ensureDirectoriesExist([uploadsDir, productsUploadsDir]);
-    await syncMasterProductImages(masterProductosFotosDir, productsUploadsDir);
     appCache.invalidateProductCatalog();
     startDbKeepAlive();
   } catch (err) {
@@ -86,9 +83,8 @@ import { startDbKeepAlive } from './utils/dbKeepAlive';
   }
 })();
 
-// 4. Servidor de Archivos Estáticos (con fallback automático a carpeta maestra)
+// 4. Servidor de Archivos Estáticos (Caché local activa sincronizada desde SQL)
 app.use('/uploads/products', express.static(productsUploadsDir, { maxAge: 0, etag: true, lastModified: true }));
-app.use('/uploads/products', express.static(masterProductosFotosDir, { maxAge: 0, etag: true, lastModified: true }));
 app.use('/uploads', express.static(uploadsDir, { maxAge: 0, etag: true, lastModified: true }));
 
 // 5. Montar Rutas del API

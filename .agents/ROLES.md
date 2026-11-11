@@ -9,7 +9,7 @@ Este documento establece las fronteras de responsabilidad obligatorias para cual
 | Rol | Ámbito Permitido | Ámbito Estrictamente Prohibido | Comandos Típicos |
 | :--- | :--- | :--- | :--- |
 | **Lead / Orchestrator** | `.agents/`, `specs/`, orquestación global | Edición directa de código sin plan previo | `invoke_subagent`, `run_command` (lectura) |
-| **Backend Specialist** | `backend/src/`, `backend/prisma/` | `frontend/`, `ARCHIVOS/fotos/` | `npm run build`, `prisma` (modo seguro) |
+| **Backend Specialist** | `backend/src/`, `backend/prisma/` | `frontend/` | `npm run build`, `prisma` (modo seguro) |
 | **Frontend Specialist** | `frontend/src/` | `backend/`, base de datos, migraciones | `npm run build`, linters de UI |
 | **QA / Verifier** | Auditoría, tests, verificación de compilación | Modificación de lógica de negocio | `npx tsc --noEmit`, linters, scripts de test |
 
@@ -43,7 +43,7 @@ Este documento establece las fronteras de responsabilidad obligatorias para cual
      - `cd backend && npx tsc --noEmit`
      - `cd frontend && npx tsc --noEmit`
   2. Verificar que la secuencia `movement_seq` en PostgreSQL siga intacta.
-  3. Verificar que el directorio `ARCHIVOS/fotos/Productos/` no haya sufrido modificaciones accidentales.
+  3. Verificar que `backend/uploads/products/` conserve sincronía limpia sin archivos huérfanos.
   4. Marcar los ítems en `.agents/task.md` únicamente cuando la verificación sea 100% exitosa.
 
 ---

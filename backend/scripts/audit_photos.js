@@ -4,50 +4,43 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
 async function auditPhotos() {
-  console.log('🔍 AUDITORÍA AUTOMÁTICA DE INTEGRIDAD DE IMÁGENES');
+  console.log('🔍 AUDITORÍA AUTOMÁTICA DE INTEGRIDAD DE IMÁGENES ACTIVAS');
 
-  const masterDir = path.resolve(__dirname, '../../ARCHIVOS/fotos/Productos');
   const uploadDir = path.resolve(__dirname, '../uploads/products');
-
-  const masterFiles = new Set(fs.existsSync(masterDir) ? fs.readdirSync(masterDir) : []);
-  const products = await prisma.product.findMany();
+  const products = await prisma.product.findMany({ where: { isActive: true } });
 
   let okCount = 0;
   let missingCount = 0;
   let corruptCount = 0;
 
   for (const p of products) {
-    if (!p.sku) continue;
-    const cleanSku = p.sku.trim();
-    const padSku = cleanSku.padStart(4, '0');
-    const fileName = `${padSku}.jpg`;
+    if (!p.imageUrl) {
+      missingCount++;
+      console.log(`❌ Sin imageUrl en BD: SKU ${p.sku} (${p.name})`);
+      continue;
+    }
 
-    const masterPath = path.join(masterDir, fileName);
+    const fileName = path.basename(p.imageUrl);
     const uploadPath = path.join(uploadDir, fileName);
 
-    const inMaster = masterFiles.has(fileName);
-    const inUpload = fs.existsSync(uploadPath);
-
-    if (inMaster && inUpload) {
-      const size = fs.statSync(masterPath).size;
-      if (size > 5000) {
+    if (fs.existsSync(uploadPath)) {
+      const size = fs.statSync(uploadPath).size;
+      if (size > 1000) {
         okCount++;
       } else {
         corruptCount++;
-        console.log(`⚠️ Foto corrupta o miniatura sospechosa (<5KB): SKU ${padSku} (${p.name}) | Tamaño: ${size} bytes`);
+        console.log(`⚠️ Foto sospechosa (<1KB): SKU ${p.sku} (${p.name}) | Tamaño: ${size} bytes`);
       }
-    } else if (inMaster || inUpload) {
-      okCount++;
     } else {
       missingCount++;
-      console.log(`❌ Foto faltante: SKU ${padSku} (${p.name}) | Master: ${inMaster} | Upload: ${inUpload}`);
+      console.log(`❌ Archivo faltante en uploads/products: SKU ${p.sku} (${fileName}) — correr npm run db:sync-from-production`);
     }
   }
 
-  console.log('\n--- RESUMEN AUDITORÍA ---');
-  console.log(`✅ Productos con foto 100% válida (>5KB): ${okCount}`);
-  console.log(`⚠️ Productos con foto sospechosa (<5KB): ${corruptCount}`);
-  console.log(`❌ Productos sin foto en carpeta maestra: ${missingCount}`);
+  console.log('\n--- RESUMEN AUDITORÍA DE PRODUCTOS ACTIVOS ---');
+  console.log(`✅ Productos activos con foto válida en caché local: ${okCount}`);
+  console.log(`⚠️ Productos con foto sospechosa (<1KB): ${corruptCount}`);
+  console.log(`❌ Productos activos sin foto: ${missingCount}`);
 
   await prisma.$disconnect();
 }

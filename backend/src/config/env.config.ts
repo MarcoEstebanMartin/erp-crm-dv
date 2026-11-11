@@ -10,7 +10,6 @@ export interface EnvConfig {
   CORS_ORIGIN: string | string[] | boolean;
   TRUST_PROXY: TrustProxySetting;
   JSON_BODY_LIMIT: string;
-  ARCHIVOS_PATH: string;
   IGNORE_STOCK_CHECK: boolean;
   AFIP_PRODUCTION: boolean;
   PRODUCTION_CATALOG_DATABASE_URL?: string;
@@ -73,7 +72,6 @@ export function validateEnvConfig(sourceEnv: NodeJS.ProcessEnv = process.env): E
     CORS_ORIGIN: corsOrigin,
     TRUST_PROXY: parseTrustProxy(sourceEnv.TRUST_PROXY),
     JSON_BODY_LIMIT: (sourceEnv.JSON_BODY_LIMIT || '1mb').trim(),
-    ARCHIVOS_PATH: sourceEnv.ARCHIVOS_PATH || '../../ARCHIVOS',
     IGNORE_STOCK_CHECK: sourceEnv.IGNORE_STOCK_CHECK === 'true',
     AFIP_PRODUCTION: sourceEnv.AFIP_PRODUCTION === 'true',
     PRODUCTION_CATALOG_DATABASE_URL: sourceEnv.PRODUCTION_CATALOG_DATABASE_URL?.trim() || undefined,
