@@ -29,7 +29,12 @@ const router = Router();
 
 // Rutas accesibles por cualquier usuario autenticado (Vendedor, Depósito, Admin)
 router.get('/', authenticateJWT, getPersonas);
-router.get('/debtors-report', authenticateJWT, getDebtorsReport);
+router.get(
+  '/debtors-report',
+  authenticateJWT,
+  requireRole([Role.ADMIN, Role.FACTURACION, Role.VENDEDOR]),
+  getDebtorsReport,
+);
 router.get('/sellers', authenticateJWT, getSellers);
 router.get('/sellers/:id/profile', authenticateJWT, getSellerProfileStats);
 router.get('/afip/:cuit', authenticateJWT, getAfipData);

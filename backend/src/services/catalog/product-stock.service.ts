@@ -7,7 +7,10 @@ export class ProductStockSubService {
    */
   async adjustStock(id: number, data: any, userId: number) {
     const { quantityChange, reason, lotNumber, expirationDate, location, lotId: inputLotId } = data;
-    const change = Number(quantityChange);
+    const change = Math.trunc(Number(quantityChange));
+    if (!Number.isFinite(change) || change === 0) {
+      throw new Error('El ajuste de stock debe ser un número entero distinto de cero.');
+    }
     const cleanLoc =
       location && typeof location === 'string' && location.trim()
         ? location.trim().toUpperCase()
@@ -16,6 +19,9 @@ export class ProductStockSubService {
     const result = await prisma.$transaction(async (tx) => {
       const product = await tx.product.findUnique({ where: { id } });
       if (!product) throw new Error('Producto no encontrado.');
+      if (change < 0 && product.stock <= 0) {
+        throw new Error('El producto ya tiene stock en 0; no hay unidades para descontar.');
+      }
 
       let lot: any = null;
       if (inputLotId) {
@@ -99,12 +105,15 @@ export class ProductStockSubService {
       const actualChange = change < 0 ? -effectiveSubQty : change;
 
       const updatedProductStock = Math.max(0, product.stock + actualChange);
+      const realAppliedProductDelta = updatedProductStock - product.stock;
       const updatedLotStock =
         change < 0 ? Math.max(0, lot.stock - effectiveSubQty) : lot.stock + change;
 
+      let lotDeleted = false;
       if (updatedLotStock <= 0) {
         try {
           await tx.productLot.delete({ where: { id: lot.id } });
+          lotDeleted = true;
         } catch {
           await tx.productLot.update({
             where: { id: lot.id },
@@ -135,14 +144,15 @@ export class ProductStockSubService {
         },
       });
 
+      const recordedQty = realAppliedProductDelta !== 0 ? realAppliedProductDelta : actualChange;
       const movement = await tx.stockMovement.create({
         data: {
           productId: product.id,
-          quantity: change,
-          type: change > 0 ? 'IN' : 'OUT',
+          quantity: recordedQty,
+          type: recordedQty > 0 ? 'IN' : 'OUT',
           reason: reason || 'Ajuste de stock manual',
           userId,
-          productLotId: updatedLotStock <= 0 ? null : lot ? lot.id : null,
+          productLotId: lotDeleted ? null : lot ? lot.id : null,
         },
       });
 

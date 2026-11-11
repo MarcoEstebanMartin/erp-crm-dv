@@ -12,9 +12,8 @@ import {
   linkPersonaToConversation,
   assignConversation,
   deleteConversation,
-  verifyWebhook,
-  handleWebhook
 } from '../controllers/crm_whatsapp.controller';
+import { verifyWebhook, handleWebhook } from '../controllers/crm_whatsapp_webhook.controller';
 import { broadcastCampaign } from '../controllers/crm_campaign.controller';
 import { authenticateJWT, requireRole } from '../middlewares/auth';
 import { Role } from '@prisma/client';

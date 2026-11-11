@@ -45,12 +45,15 @@ export const adjustStockSchema = z.object({
     id: z.string().regex(/^\d+$/, 'El ID debe ser un número'),
   }),
   body: z.object({
-    quantityChange: z.number().refine(val => val !== 0, 'El cambio de stock no puede ser cero'),
+    quantityChange: z
+      .number()
+      .int('El ajuste de stock debe ser un número entero')
+      .refine((val) => val !== 0, 'El cambio de stock no puede ser cero'),
     reason: z.string().optional(),
     lotNumber: z.string().optional(),
     expirationDate: z.string().optional(),
     location: z.string().optional().nullable(),
-    lotId: z.number().optional().nullable(),
+    lotId: z.number().int().positive().optional().nullable(),
   }),
 });
 

@@ -178,3 +178,13 @@
 - [x] **Acceso Directo 3 (`Generar Lista de Precios PDF` + Espejo Directo `chatbot-dv`)**:
   - [x] Conectar `PriceListModal.tsx` (`188` l.), `priceListHelpers.ts` (`191` l.) y `PriceListTableRenderer.tsx` (`109` l.) al endpoint en vivo `GET /api/products/price-list-catalog` (`price-list-live.service.ts` `144` l.), leyendo directamente desde `chatbot-dv` (`vnklxnvahkmazoymiqlk`) los **331 productos en stock (`active = 1`)**, sus **precios al día** y las **21 categorías exactas** (`Melincué`, `Cremigal`, `Sancor`, `Fiambres`, ..., `Limpieza`) en el mismo orden de `metadata.catalog_active_state`, eliminando la mezcla vieja bajo `REMOTTI`/`VARIOS` y simplificando el botón a ícono de impresora + **PDF**.
   - [x] Ampliar `catalog-sync.engine.ts` (`297` l.) y `production-catalog-sync.service.ts` (`274` l. + `product-upload-writer.helper.ts` `37` l.) para espejar también `commercialCategory`, `rubroId`, `subrubro` y SKUs faltantes desde `chatbot-dv -> erp-dv` + suite `price-list-grouping.test.ts` ✅ COMPLETADO.
+
+---
+
+## Plan Activo: Blindaje Quirúrgico por Auditoría Cruzada (Sin Tocar Flujos Sanos)
+
+- [x] **Paso A1: Exactitud de Ajustes de Stock y Blindaje Anti-Fugas (Costos, Chatbot IA, Webhook Meta y RBAC)** ✅ COMPLETADO
+  - [x] **Stock y Conciliación (`product-stock.service.ts`, `product-reconciliation.service.ts`, `product.validator.ts`)**: Exigir enteros `.int()` en ajustes, grabar en `StockMovement.quantity` el delta real aplicado (evitando movimientos inflados al vaciar lotes parciales y preservando `productLotId` en lotes con FK histórica) y evitar stock negativo en lote `S/L` ante desvíos negativos sin tocar la fórmula sana de `Product.stock`.
+  - [x] **Protección de Costos y Márgenes (`product-sanitizer.util.ts` + `product.controller.ts`)**: Ocultar `costPrice`, `profitMargin`, datos fiscales del proveedor y costos de `stockValuation` para roles fuera de `ADMIN`/`FACTURACION` sin afectar el caché ni las pantallas operativas.
+  - [x] **Blindaje Chatbot Web/WA y Webhook Meta (`aiChatbot.service.ts` + `crm_whatsapp_webhook.controller.ts` + `app.ts`)**: Inyectar al prompt solo el precio de la lista activa y disponibilidad booleana (cerrando fuga de Lista B/C y stock exacto por Prompt Injection) y verificar HMAC-SHA256 sobre `rawBody` en modo *fail-closed* en producción.
+  - [x] **Cierre de IDOR y Tesorería (`persona.controller.ts`, `persona.routes.ts`, `finance.controller.ts`, `finance.routes.ts`)**: Bloquear lectura cruzada de perfiles de otros vendedores (`403`), ocultar saldos bancarios a roles operativos manteniendo datos de imputación y exigir `ADMIN`/`FACTURACION` en historial/cierre conjunto de cajas y transacciones ajenas + suite `audit-hardening.test.ts`.

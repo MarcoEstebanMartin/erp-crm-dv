@@ -62,9 +62,10 @@ export function getFirstName(fullName?: string | null): string {
 
 export class AiChatbotService {
   /**
-   * Obtener catálogo formateado y optimizado para la IA en tiempo real desde la BD
+   * Obtener catálogo formateado para la IA exponiendo ÚNICAMENTE el precio de la lista
+   * correspondiente al interlocutor y disponibilidad booleana (sin filtrar Lista B/C ni stock exacto).
    */
-  private async getFormattedCatalog() {
+  public async getFormattedCatalog(priceListType: 'LISTA_A' | 'LISTA_B' | 'LISTA_C' = 'LISTA_A') {
     const products = await prisma.product.findMany({
       where: { isActive: true },
       select: {
@@ -82,18 +83,25 @@ export class AiChatbotService {
       take: 300 // Límite razonable para ventana de contexto
     });
 
-    return products.map(p => ({
-      id: p.id,
-      sku: p.sku,
-      name: p.name,
-      cat: p.commercialCategory || 'General',
-      precioA: p.listPrice,
-      precioB: p.listPriceB || p.listPrice,
-      precioC: p.listPriceC || p.listPrice,
-      unidCaja: p.unitsPerBox || 1,
-      stock: p.stock,
-      unid: p.isPesable ? 'KG' : 'UN'
-    }));
+    return products.map((p) => {
+      const resolvedPrice =
+        priceListType === 'LISTA_C'
+          ? p.listPriceC || p.listPrice
+          : priceListType === 'LISTA_B'
+            ? p.listPriceB || p.listPrice
+            : p.listPrice;
+
+      return {
+        id: p.id,
+        sku: p.sku,
+        name: p.name,
+        cat: p.commercialCategory || 'General',
+        precio: resolvedPrice,
+        unidCaja: p.unitsPerBox || 1,
+        disponible: p.stock > 0,
+        unid: p.isPesable ? 'KG' : 'UN'
+      };
+    });
   }
 
   /**
@@ -129,7 +137,7 @@ export class AiChatbotService {
       };
     }
 
-    const catalog = await this.getFormattedCatalog();
+    const catalog = await this.getFormattedCatalog(priceListType);
 
     const systemPrompt = `
 Eres **Ben**, el asistente de inteligencia artificial de **DV Distribuidora** (distribuidora mayorista de alimentos y bebidas en Argentina).
@@ -154,7 +162,7 @@ REGLAS STRICTAS DE SALUDO, USO DEL NOMBRE Y DESPEDIDA:
    - En el mensaje de cierre/despedida al dejar registrado un pedido o al concluir una consulta, **SÍ incluye un agradecimiento cordial mencionando únicamente su primer nombre** (ej: "¡Muchas gracias por tu compra, ${firstName}! Que tengas un excelente día.", "¡Muchas gracias, ${firstName}! Quedo a tu disposición para lo que necesites.").
 
 DATOS DE LA EMPRESA Y CATÁLOGO REAL:
-- Lista de precios aplicable: ${priceListType} (Usa los valores correspondientes de precioA, precioB o precioC del catálogo).
+- Precio vigente aplicable en campo 'precio' (disponibilidad en campo booleano 'disponible').
 - Canal de atención: ${channel}.
 
 CATÁLOGO DE PRODUCTOS DISPONIBLES EN TIEMPO REAL:

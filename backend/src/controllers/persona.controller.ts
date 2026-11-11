@@ -226,13 +226,20 @@ export async function getSellerProfileStats(
   req: AuthenticatedRequest,
   res: Response,
 ): Promise<void> {
-  if (!req.user?.id) {
+  if (!req.user?.id || !req.user?.role) {
     res.status(401).json({ status: 'error', message: 'No autorizado.' });
     return;
   }
 
+  const targetSellerId = Number(req.params.id);
+  const isAdminOrBilling = req.user.role === 'ADMIN' || req.user.role === 'FACTURACION';
+  if (!isAdminOrBilling && req.user.id !== targetSellerId) {
+    res.status(403).json({ status: 'error', message: 'Acceso denegado al perfil de otro vendedor.' });
+    return;
+  }
+
   try {
-    const profileData = await personaService.getSellerProfileStats(Number(req.params.id));
+    const profileData = await personaService.getSellerProfileStats(targetSellerId);
     res.status(200).json({ status: 'success', data: profileData });
   } catch (error: any) {
     res

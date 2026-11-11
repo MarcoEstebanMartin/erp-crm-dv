@@ -50,7 +50,16 @@ app.use(
     credentials: env.CORS_ORIGIN !== '*',
   }),
 );
-app.use(express.json({ limit: env.JSON_BODY_LIMIT }));
+app.use(
+  express.json({
+    limit: env.JSON_BODY_LIMIT,
+    verify: (req: any, _res, buf) => {
+      if (req.originalUrl && req.originalUrl.startsWith('/api/crm/whatsapp/webhook')) {
+        req.rawBody = Buffer.from(buf);
+      }
+    },
+  }),
+);
 app.use(express.urlencoded({ extended: true, limit: env.JSON_BODY_LIMIT }));
 
 // 2. Middleware de Rendimiento (X-Response-Time Seguro)

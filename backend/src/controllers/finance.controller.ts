@@ -148,16 +148,25 @@ export async function getTransactionById(req: AuthenticatedRequest, res: Respons
   }
   try {
     const transaction = await transactionAdminService.getTransactionById(Number(req.params.id));
+    const isAdminOrBilling = req.user.role === 'ADMIN' || req.user.role === 'FACTURACION';
+    if (!isAdminOrBilling && transaction && (transaction as any).userId !== req.user.id) {
+      res.status(403).json({ status: 'error', message: 'Acceso denegado a esta transacción.' });
+      return;
+    }
     res.status(200).json({ status: 'success', data: { transaction } });
   } catch (error) {
     handleFinanceError(res, error, 'Error al obtener la transacción.');
   }
 }
 
-export async function getBankAccounts(_req: AuthenticatedRequest, res: Response): Promise<void> {
+export async function getBankAccounts(req: AuthenticatedRequest, res: Response): Promise<void> {
   try {
     const accounts = await bankAccountService.getBankAccounts();
-    res.status(200).json({ status: 'success', data: { accounts } });
+    const isAdminOrBilling = req.user?.role === 'ADMIN' || req.user?.role === 'FACTURACION';
+    const safeAccounts = isAdminOrBilling
+      ? accounts
+      : accounts.map((acc: any) => ({ ...acc, balance: 0 }));
+    res.status(200).json({ status: 'success', data: { accounts: safeAccounts } });
   } catch (error) {
     handleFinanceError(res, error, 'Error al obtener las cuentas bancarias.');
   }

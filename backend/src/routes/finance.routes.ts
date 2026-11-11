@@ -39,8 +39,20 @@ router.post('/drawers/open', authenticateJWT, validateRequest(openDrawerSchema),
 router.post('/drawers/close', authenticateJWT, validateRequest(closeDrawerSchema), idempotencyGuard, closeDrawer);
 router.get('/drawers/active', authenticateJWT, getActiveDrawer);
 router.get('/drawers/active-all', authenticateJWT, getActiveDrawers);
-router.get('/drawers/history', authenticateJWT, getDrawersHistory);
-router.post('/drawers/close-joint', authenticateJWT, validateRequest(closeJointDrawersSchema), idempotencyGuard, closeJointDrawers);
+router.get(
+  '/drawers/history',
+  authenticateJWT,
+  requireRole([Role.ADMIN, Role.FACTURACION]),
+  getDrawersHistory,
+);
+router.post(
+  '/drawers/close-joint',
+  authenticateJWT,
+  requireRole([Role.ADMIN, Role.FACTURACION]),
+  validateRequest(closeJointDrawersSchema),
+  idempotencyGuard,
+  closeJointDrawers,
+);
 
 // Operaciones de Caja Grande (Tesorería Central)
 router.post(

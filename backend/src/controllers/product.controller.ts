@@ -2,6 +2,10 @@ import { Response } from 'express';
 import { AuthenticatedRequest } from '../types';
 import { productService } from '../services/product.service';
 import { appCache } from '../utils/cache';
+import {
+  sanitizeProductForRole,
+  sanitizeProductListForRole,
+} from '../utils/product-sanitizer.util';
 
 export async function getProducts(req: AuthenticatedRequest, res: Response): Promise<void> {
   const { search, all } = req.query;
@@ -9,16 +13,22 @@ export async function getProducts(req: AuthenticatedRequest, res: Response): Pro
   const includeInactive = userRole === 'ADMIN' && all === 'true';
   const cacheKey = `products_${search || ''}_${includeInactive}`;
 
-  const cached = appCache.get<any>(cacheKey);
+  const cached = appCache.get<any[]>(cacheKey);
   if (cached) {
-    res.status(200).json({ status: 'success', data: { products: cached } });
+    res.status(200).json({
+      status: 'success',
+      data: { products: sanitizeProductListForRole(cached, userRole) },
+    });
     return;
   }
 
   try {
     const products = await productService.getProducts(search as string, includeInactive);
     appCache.set(cacheKey, products, 60);
-    res.status(200).json({ status: 'success', data: { products } });
+    res.status(200).json({
+      status: 'success',
+      data: { products: sanitizeProductListForRole(products, userRole) },
+    });
   } catch {
     res.status(500).json({ status: 'error', message: 'Error al obtener los productos.' });
   }
@@ -31,7 +41,10 @@ export async function getProductById(req: AuthenticatedRequest, res: Response): 
       res.status(404).json({ status: 'error', message: 'Producto no encontrado.' });
       return;
     }
-    res.status(200).json({ status: 'success', data: { product } });
+    res.status(200).json({
+      status: 'success',
+      data: { product: sanitizeProductForRole(product, req.user?.role) },
+    });
   } catch {
     res.status(500).json({ status: 'error', message: 'Error al obtener el producto.' });
   }
@@ -83,7 +96,10 @@ export async function getProductByBarcode(req: AuthenticatedRequest, res: Respon
       res.status(404).json({ status: 'error', message: 'Producto no encontrado por código de barras.' });
       return;
     }
-    res.status(200).json({ status: 'success', data: { product } });
+    res.status(200).json({
+      status: 'success',
+      data: { product: sanitizeProductForRole(product, req.user?.role) },
+    });
   } catch {
     res
       .status(500)

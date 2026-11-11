@@ -51,39 +51,79 @@ export class ProductReconciliationSubService {
     const reconciledList = await prisma.$transaction(async (tx) => {
       const list = [];
       for (const item of driftProducts) {
-        let defaultLot = await tx.productLot.findUnique({
-          where: { productId_lotNumber: { productId: item.id, lotNumber: 'S/L' } },
-        });
-        if (!defaultLot) {
-          defaultLot = await tx.productLot.create({
+        if (item.discrepancia > 0) {
+          let defaultLot = await tx.productLot.findUnique({
+            where: { productId_lotNumber: { productId: item.id, lotNumber: 'S/L' } },
+          });
+          if (!defaultLot) {
+            defaultLot = await tx.productLot.create({
+              data: {
+                productId: item.id,
+                lotNumber: 'S/L',
+                expirationDate: new Date('2036-12-31T00:00:00Z'),
+                stock: 0,
+                location: 'S/U',
+              },
+            });
+          }
+          const newLotStock = defaultLot.stock + item.discrepancia;
+          await tx.productLot.update({ where: { id: defaultLot.id }, data: { stock: newLotStock } });
+          await tx.stockMovement.create({
             data: {
               productId: item.id,
-              lotNumber: 'S/L',
-              expirationDate: new Date('2036-12-31T00:00:00Z'),
-              stock: 0,
-              location: 'S/U',
+              quantity: item.discrepancia,
+              type: 'ADJUSTMENT',
+              reason: `Conciliación automática de inventario (Desvío corregido: +${item.discrepancia} u.)`,
+              userId,
+              productLotId: defaultLot.id,
             },
           });
+          list.push({
+            sku: item.sku,
+            name: item.name,
+            discrepancia: item.discrepancia,
+            loteModificado: 'S/L',
+            nuevoStockLote: newLotStock,
+          });
+        } else {
+          // Desvío negativo (exceso en lotes frente a stock comercial + reservas):
+          // descuenta primero de S/L y luego de lotes con stock positivo sin dejar stocks negativos.
+          let remainingToDeduct = Math.abs(item.discrepancia);
+          const candidateLots = await tx.productLot.findMany({
+            where: { productId: item.id, stock: { gt: 0 } },
+            orderBy: [{ expirationDate: 'desc' }, { stock: 'desc' }],
+          });
+          const orderedLots = [
+            ...candidateLots.filter((l) => l.lotNumber === 'S/L'),
+            ...candidateLots.filter((l) => l.lotNumber !== 'S/L'),
+          ];
+
+          for (const lot of orderedLots) {
+            if (remainingToDeduct <= 0) break;
+            const take = Math.min(lot.stock, remainingToDeduct);
+            if (take <= 0) continue;
+            const newLotStock = lot.stock - take;
+            await tx.productLot.update({ where: { id: lot.id }, data: { stock: newLotStock } });
+            await tx.stockMovement.create({
+              data: {
+                productId: item.id,
+                quantity: -take,
+                type: 'ADJUSTMENT',
+                reason: `Conciliación automática de inventario (Exceso en lote ${lot.lotNumber}: -${take} u.)`,
+                userId,
+                productLotId: lot.id,
+              },
+            });
+            remainingToDeduct -= take;
+            list.push({
+              sku: item.sku,
+              name: item.name,
+              discrepancia: -take,
+              loteModificado: lot.lotNumber,
+              nuevoStockLote: newLotStock,
+            });
+          }
         }
-        const newLotStock = defaultLot.stock + item.discrepancia;
-        await tx.productLot.update({ where: { id: defaultLot.id }, data: { stock: newLotStock } });
-        await tx.stockMovement.create({
-          data: {
-            productId: item.id,
-            quantity: item.discrepancia,
-            type: 'ADJUSTMENT',
-            reason: `Conciliación automática de inventario (Desvío corregido: ${item.discrepancia} u.)`,
-            userId,
-            productLotId: defaultLot.id,
-          },
-        });
-        list.push({
-          sku: item.sku,
-          name: item.name,
-          discrepancia: item.discrepancia,
-          loteModificado: 'S/L',
-          nuevoStockLote: newLotStock,
-        });
       }
       return list;
     });
