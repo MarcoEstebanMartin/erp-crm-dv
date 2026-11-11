@@ -196,8 +196,8 @@ export default function PriceListModal({ isOpen, onClose }: PriceListModalProps)
 
           <div style={{ padding: '14px 20px', borderTop: '1px solid var(--border-color)', display: 'flex', justifyContent: 'flex-end', gap: '10px', backgroundColor: 'var(--bg-light)' }}>
             <button type="button" className="btn btn-secondary" onClick={onClose} style={{ padding: '8px 16px', fontSize: '0.85rem' }}>Cancelar</button>
-            <button type="button" className="btn btn-primary" disabled={loading || products.length === 0} onClick={() => setTimeout(() => window.print(), 150)} style={{ padding: '8px 18px', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <Printer size={15} /><span>Imprimir / Guardar PDF</span>
+            <button type="button" className="btn btn-primary" disabled={loading || products.length === 0} onClick={() => setTimeout(() => window.print(), 150)} style={{ padding: '8px 16px', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Printer size={15} /><span>PDF</span>
             </button>
           </div>
         </div>
