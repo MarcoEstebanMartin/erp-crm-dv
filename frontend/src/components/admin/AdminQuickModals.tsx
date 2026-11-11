@@ -104,20 +104,25 @@ export const AdminQuickClientSearchModal: React.FC<AdminQuickClientSearchModalPr
 
   return (
     <div className="modal-overlay" style={{ zIndex: 1100 }}>
-      <div className="modal-content" style={{ maxWidth: '500px', width: '90%' }}>
-        <div className="modal-header">
-          <h3>
-            {clientSearchModal.action === 'ledger' && '📋 Consultar Cuenta Corriente'}
-            {clientSearchModal.action === 'payment' && '💵 Cargar Recibo / Registrar Pago'}
-            {clientSearchModal.action === 'order' && '🛒 Iniciar Nuevo Pedido'}
+      <div className="modal-content" style={{ maxWidth: '680px', width: '94vw', padding: '24px 26px', borderRadius: '12px' }}>
+        <div className="modal-header" style={{ paddingBottom: '12px', marginBottom: '14px', borderBottom: '1px solid var(--border-color)' }}>
+          <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700 }}>
+            {clientSearchModal.action === 'ledger' && 'Cuenta Corriente'}
+            {clientSearchModal.action === 'payment' && 'Cargar Recibo'}
+            {clientSearchModal.action === 'order' && 'Seleccionar Cliente'}
           </h3>
           <button className="btn btn-ghost" style={{ padding: '4px' }} onClick={onClose}>✕</button>
         </div>
-        <div className="form-group" style={{ marginTop: '10px' }}>
-          <label>Buscar Cliente (por Nombre o CUIT)</label>
-          <input type="text" className="input" autoFocus placeholder="Escriba para buscar..." value={quickClientQuery} onChange={(e) => setQuickClientQuery(e.target.value)} />
-        </div>
-        <div style={{ maxHeight: '300px', overflowY: 'auto', border: '1px solid var(--border-color)', borderRadius: '6px', marginTop: '12px', backgroundColor: '#ffffff' }}>
+        <input
+          type="text"
+          className="input"
+          autoFocus
+          placeholder="Buscar cliente por nombre o CUIT..."
+          value={quickClientQuery}
+          onChange={(e) => setQuickClientQuery(e.target.value)}
+          style={{ height: '42px', fontSize: '0.92rem' }}
+        />
+        <div style={{ maxHeight: '54vh', overflowY: 'auto', border: '1px solid var(--border-color)', borderRadius: '8px', marginTop: '12px', backgroundColor: '#ffffff' }}>
           {filteredQuickClients.length === 0 ? (
             <div style={{ padding: '16px', color: 'var(--text-secondary)', textAlign: 'center', fontSize: '0.85rem' }}>No se encontraron clientes.</div>
           ) : (
