@@ -36,6 +36,7 @@ export function useAdminController(activeTab: string) {
 
   const [isPriceListModalOpen, setIsPriceListModalOpen] = useState(false);
   const [isQuickSearchModalOpen, setIsQuickSearchModalOpen] = useState(false);
+  const [isDirectInvoiceModalOpen, setIsDirectInvoiceModalOpen] = useState(false);
   const [clientSearchModal, setClientSearchModal] = useState<{ open: boolean; action: 'ledger' | 'payment' | 'order' } | null>(null);
   const [quickClientQuery, setQuickClientQuery] = useState('');
   const [createOrderModal, setCreateOrderModal] = useState<{ open: boolean; client: any; cart: { product: any; quantity: number; isEmergencyOverride?: boolean }[]; salesChannel?: string; notes: string } | null>(null);
@@ -111,6 +112,17 @@ export function useAdminController(activeTab: string) {
   useEffect(() => { fetchData(); }, [fetchData]);
   useEffect(() => { setSuccessMsg(null); setErrorMsg(null); }, [activeTab]);
 
+  useEffect(() => {
+    if (!clientModal.open) return;
+    if (availableSellers.length > 0 || availableSaleRoutes.length > 0) return;
+    Promise.all([api.getSellersList(), api.getSaleRoutes()])
+      .then(([sellers, routesRes]) => {
+        setAvailableSellers(sellers || []);
+        setAvailableSaleRoutes(routesRes?.routes || []);
+      })
+      .catch((e) => console.error('Error al cargar vendedores/rutas:', e));
+  }, [clientModal.open, availableSellers.length, availableSaleRoutes.length]);
+
   const handleViewClientProfile = async (client: any) => {
     setErrorMsg(null);
     try {
@@ -176,7 +188,7 @@ export function useAdminController(activeTab: string) {
     clientsVersion, setClientsVersion, showResumenModal, setShowResumenModal, orderDetailsModal, setOrderDetailsModal,
     editOrderModal, setEditOrderModal, clientProfileModal, setClientProfileModal, sellerProfileModal, setSellerProfileModal,
     paymentModal, setPaymentModal, fastInvoiceOrder, setFastInvoiceOrder, isPriceListModalOpen, setIsPriceListModalOpen,
-    isQuickSearchModalOpen, setIsQuickSearchModalOpen, clientSearchModal, setClientSearchModal, quickClientQuery, setQuickClientQuery,
+    isQuickSearchModalOpen, setIsQuickSearchModalOpen, isDirectInvoiceModalOpen, setIsDirectInvoiceModalOpen, clientSearchModal, setClientSearchModal, quickClientQuery, setQuickClientQuery,
     createOrderModal, setCreateOrderModal, summaryCardModal, setSummaryCardModal, orderStatusFilter, setOrderStatusFilter,
     cajasSubTab, setCajasSubTab, errorMsg, setErrorMsg, successMsg, setSuccessMsg,
     fetchData, handleViewClientProfile, handleRefreshClientProfile, handleUploadImage, handleUpdateProductInline, handleOpenEditOrder,

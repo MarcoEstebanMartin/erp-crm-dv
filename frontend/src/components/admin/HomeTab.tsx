@@ -30,6 +30,7 @@ interface HomeTabProps {
   setQuickClientQuery: (query: string) => void;
   setIsPriceListModalOpen: (open: boolean) => void;
   setIsQuickSearchModalOpen: (open: boolean) => void;
+  setIsDirectInvoiceModalOpen: (open: boolean) => void;
 }
 
 export default function HomeTab({
@@ -40,7 +41,8 @@ export default function HomeTab({
   setClientSearchModal,
   setQuickClientQuery,
   setIsPriceListModalOpen,
-  setIsQuickSearchModalOpen
+  setIsQuickSearchModalOpen,
+  setIsDirectInvoiceModalOpen
 }: HomeTabProps) {
   
   // Computed metrics from orders list (3 Master Operational Pillars)
@@ -579,8 +581,7 @@ export default function HomeTab({
               desc: 'Comprobante de venta',
               icon: <Receipt size={18} style={{ color: 'var(--text-secondary)' }} />,
               onClick: () => {
-                localStorage.setItem('preselected_billing_client', 'direct');
-                setActiveTab('billing');
+                setIsDirectInvoiceModalOpen(true);
               }
             },
             {
@@ -588,7 +589,6 @@ export default function HomeTab({
               desc: 'Registrar nueva persona',
               icon: <UserPlus size={18} style={{ color: 'var(--text-secondary)' }} />,
               onClick: () => {
-                setActiveTab('clients');
                 setClientModal({ 
                   open: true, 
                   mode: 'create', 

@@ -156,6 +156,35 @@ export function InvoicePreviewModal({ invoice, onClose }: InvoicePreviewModalPro
           </button>
         </div>
       </div>
+
+      <style>{`
+        @media print {
+          body * { visibility: hidden !important; }
+          .print-modal,
+          .print-content-box,
+          #print-area,
+          #print-area * {
+            visibility: visible !important;
+          }
+          .print-modal {
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: 100% !important;
+            background: #ffffff !important;
+            padding: 0 !important;
+            margin: 0 !important;
+          }
+          .print-content-box {
+            max-width: 100% !important;
+            width: 100% !important;
+            padding: 0 !important;
+            border: none !important;
+            box-shadow: none !important;
+          }
+          .no-print, .no-print * { display: none !important; }
+        }
+      `}</style>
     </div>
   );
 }

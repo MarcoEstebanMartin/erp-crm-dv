@@ -16,9 +16,12 @@ interface UseDirectInvoiceParams {
   products: any[];
   bankAccounts: any[];
   activeDrawers: any[];
+  ivaPerceptionAliquotOverride?: number;
   loadData: () => void;
   setErrorMsg: (msg: string | null) => void;
   setSuccessMsg: (msg: string | null) => void;
+  onInvoiceCreated?: (invoice: any) => void;
+  onModalClosed?: () => void;
 }
 
 export function useDirectInvoice({
@@ -26,16 +29,19 @@ export function useDirectInvoice({
   products,
   bankAccounts,
   activeDrawers,
+  ivaPerceptionAliquotOverride,
   loadData,
   setErrorMsg,
-  setSuccessMsg
+  setSuccessMsg,
+  onInvoiceCreated,
+  onModalClosed
 }: UseDirectInvoiceParams) {
   const [showDirectInvoiceModal, setShowDirectInvoiceModal] = useState(false);
   const [directInvoiceForm, setDirectInvoiceForm] = useState<DirectInvoiceFormState>(INITIAL_DIRECT_INVOICE_FORM);
   const [directCart, setDirectCart] = useState<DirectCartItem[]>([]);
   const [selectedDirectProduct, setSelectedDirectProduct] = useState('');
   const [directProductQty, setDirectProductQty] = useState('1');
-  const [ivaPerceptionAliquot] = useState(3.0);
+  const ivaPerceptionAliquot = ivaPerceptionAliquotOverride ?? 3.0;
   const [modalError, setModalError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
@@ -209,6 +215,7 @@ export function useDirectInvoice({
     setDirectInvoiceForm(INITIAL_DIRECT_INVOICE_FORM);
     setClientSearchQuery('');
     setProductSearchQuery('');
+    onModalClosed?.();
   };
 
   const handleCancelFooter = () => {
@@ -217,6 +224,7 @@ export function useDirectInvoice({
     setClientSearchQuery('');
     setProductSearchQuery('');
     setModalError(null);
+    onModalClosed?.();
   };
 
   const handleCreateDirectInvoiceSubmit = async (e: React.FormEvent) => {
@@ -243,6 +251,9 @@ export function useDirectInvoice({
       setClientSearchQuery('');
       setProductSearchQuery('');
       loadData();
+      if (res) {
+        onInvoiceCreated?.({ ...res, paymentMethod: payload.paymentMethod });
+      }
     } catch (err: any) {
       console.error('Error al emitir factura directa:', err);
       const msg = err.message || 'Error al emitir factura directa.';

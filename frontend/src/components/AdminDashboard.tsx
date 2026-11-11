@@ -19,6 +19,7 @@ import { AdminOrderDetailsModal } from './admin/AdminOrderDetailsModal';
 import { AdminPaymentModal } from './admin/AdminPaymentModal';
 import { AdminUserCreateModal, AdminQuickClientSearchModal } from './admin/AdminQuickModals';
 import { AdminCreateQuickOrderModal } from './admin/AdminCreateQuickOrderModal';
+import { AdminDirectInvoiceQuickModal } from './admin/AdminDirectInvoiceQuickModal';
 import { useAdminController } from './admin/useAdminController';
 
 const PriceListModal = lazy(() => import('./PriceListModal'));
@@ -72,6 +73,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
           setQuickClientQuery={c.setQuickClientQuery}
           setIsPriceListModalOpen={c.setIsPriceListModalOpen}
           setIsQuickSearchModalOpen={c.setIsQuickSearchModalOpen}
+          setIsDirectInvoiceModalOpen={c.setIsDirectInvoiceModalOpen}
         />
       )}
 
@@ -233,6 +235,16 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
       <AdminCreateQuickOrderModal
         createOrderModal={c.createOrderModal}
         setCreateOrderModal={c.setCreateOrderModal}
+        products={c.products}
+        onSuccess={c.fetchData}
+        setErrorMsg={c.setErrorMsg}
+        setSuccessMsg={c.setSuccessMsg}
+      />
+
+      <AdminDirectInvoiceQuickModal
+        isOpen={c.isDirectInvoiceModalOpen}
+        onClose={() => c.setIsDirectInvoiceModalOpen(false)}
+        clients={c.clients}
         products={c.products}
         onSuccess={c.fetchData}
         setErrorMsg={c.setErrorMsg}

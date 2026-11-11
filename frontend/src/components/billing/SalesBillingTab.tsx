@@ -29,7 +29,8 @@ export default function SalesBillingTab({
     activeDrawers,
     loadData,
     setErrorMsg,
-    setSuccessMsg
+    setSuccessMsg,
+    onInvoiceCreated: (inv) => setViewInvoiceModal(inv)
   });
 
   return (
