@@ -1,4 +1,5 @@
 import fs from 'fs';
+import http from 'http';
 import os from 'os';
 import path from 'path';
 import express from 'express';
@@ -91,6 +92,67 @@ describe('Stack Unificado Railway (Frontend SPA + Backend API + Seguridad de Ent
       expect(missingUploadRes.status).toBe(404);
       expect(await missingUploadRes.text()).toBe('UPLOAD_NOT_FOUND');
     } finally {
+      server.close();
+    }
+  });
+
+  it('En development jamás sirve frontend/dist viejo y redirige (302) navegaciones GET al puerto 5174 preservando host y ruta', async () => {
+    const prevNodeEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = 'development';
+
+    const devApp = express();
+    mountSpaFrontend(devApp);
+    devApp.use((_req, res) => {
+      res.status(404).send('UPLOAD_NOT_FOUND');
+    });
+
+    const server = devApp.listen(0);
+    try {
+      const addr = server.address();
+      const port = typeof addr === 'object' && addr ? addr.port : 0;
+      const base = `http://127.0.0.1:${port}`;
+
+      // 1. Navegación local redirige a Vite (:5174) con el mismo host y query string
+      const redirectRes = await fetch(`${base}/ventas/preventa?tab=activos`, {
+        redirect: 'manual',
+      });
+      expect(redirectRes.status).toBe(302);
+      expect(redirectRes.headers.get('location')).toBe(
+        'http://127.0.0.1:5174/ventas/preventa?tab=activos',
+      );
+      expect(redirectRes.headers.get('cache-control')).toContain('no-store');
+
+      // 2. Navegación desde IP WiFi LAN conserva la IP LAN hacia :5174 (apto celulares)
+      const lanHeaders = await new Promise<{ statusCode?: number; location?: string }>(
+        (resolve, reject) => {
+          const req = http.get(
+            {
+              hostname: '127.0.0.1',
+              port,
+              path: '/clientes',
+              headers: { Host: '192.168.68.101:3001' },
+            },
+            (res) => {
+              res.resume();
+              resolve({ statusCode: res.statusCode, location: res.headers.location });
+            },
+          );
+          req.on('error', reject);
+        },
+      );
+      expect(lanHeaders.statusCode).toBe(302);
+      expect(lanHeaders.location).toBe('http://192.168.68.101:5174/clientes');
+
+      // 3. /api y /uploads en :3001 nunca redirigen a :5174
+      const api404Res = await fetch(`${base}/api/no-existe`, { redirect: 'manual' });
+      expect(api404Res.status).toBe(404);
+      const uploadRes = await fetch(`${base}/uploads/products/no-existe.jpg`, {
+        redirect: 'manual',
+      });
+      expect(uploadRes.status).toBe(404);
+      expect(await uploadRes.text()).toBe('UPLOAD_NOT_FOUND');
+    } finally {
+      process.env.NODE_ENV = prevNodeEnv;
       server.close();
     }
   });
