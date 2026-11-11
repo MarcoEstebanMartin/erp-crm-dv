@@ -639,7 +639,7 @@ export default function CrmDashboard({ initialTab = 'whatsapp', hideHeaderTabs =
                         )}
                         {hasDebt && (
                           <span style={{ backgroundColor: '#FEE2E2', color: 'var(--color-corp-red)', fontSize: '0.62rem', padding: '1px 6px', borderRadius: '4px', fontWeight: 700 }}>
-                            Deuda: ${Number(conv.persona.outstandingBalance).toLocaleString('es-AR')}
+                            Deuda: ${Math.round(Number(conv.persona.outstandingBalance)).toLocaleString('es-AR')}
                           </span>
                         )}
                         {conv.assignedUser && (
@@ -925,7 +925,7 @@ export default function CrmDashboard({ initialTab = 'whatsapp', hideHeaderTabs =
                     <div style={{ backgroundColor: '#FFFFFF', padding: '12px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
                       <span style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: 600 }}>Saldo Cta Cte:</span>
                       <div style={{ fontSize: '1.2rem', fontWeight: 800, color: Number(selectedConversation.persona.outstandingBalance) > 0 ? 'var(--color-corp-red)' : '#10B981', marginTop: '2px' }}>
-                        ${Number(selectedConversation.persona.outstandingBalance || 0).toLocaleString('es-AR')}
+                        ${Math.round(Number(selectedConversation.persona.outstandingBalance || 0)).toLocaleString('es-AR')}
                       </div>
                     </div>
 

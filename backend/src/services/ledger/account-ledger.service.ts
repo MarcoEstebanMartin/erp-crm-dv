@@ -1,5 +1,16 @@
 import { BillingType, LedgerEntryType, LedgerSourceType, Prisma } from '@prisma/client';
-import { roundToTwoDecimals } from '../../core/money';
+import { roundToIntegerPeso, roundToTwoDecimals } from '../../core/money';
+
+/**
+ * Fuentes comerciales de clientes donde el comprobante se contabiliza en Cuenta Corriente
+ * en Pesos Enteros exactos (0 centavos fantasma), mientras que el registro fiscal (`Order` / `CreditNote`)
+ * preserva los 2 decimales legales exigidos por ARCA/AFIP.
+ */
+const CLIENT_INTEGER_LEDGER_SOURCES = new Set<LedgerSourceType>([
+  LedgerSourceType.ORDER_INVOICE,
+  LedgerSourceType.ORDER_CANCELLATION,
+  LedgerSourceType.CREDIT_NOTE,
+]);
 
 export interface RecordLedgerMovementParams {
   personaId: number;
@@ -32,7 +43,9 @@ export async function recordLedgerMovement(
   tx: Prisma.TransactionClient | any,
   params: RecordLedgerMovementParams,
 ) {
-  const normalizedAmount = roundToTwoDecimals(params.amount).toNumber();
+  const normalizedAmount = CLIENT_INTEGER_LEDGER_SOURCES.has(params.sourceType)
+    ? roundToIntegerPeso(params.amount).toNumber()
+    : roundToTwoDecimals(params.amount).toNumber();
   if (normalizedAmount <= 0) {
     return null;
   }

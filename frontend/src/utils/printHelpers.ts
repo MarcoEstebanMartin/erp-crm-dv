@@ -463,7 +463,7 @@ export const printRemitoX = (order: any) => {
               <div class="sale-block">
                 <div class="block-label">Condición Comercial</div>
                 <div class="info-row"><span><strong>Forma de Pago:</strong> ${order.paymentMethod || 'CUENTA CORRIENTE'}</span></div>
-                <div class="info-row"><span><strong>Saldo Anterior:</strong> $ ${Math.round(clientBalance).toLocaleString('es-AR')},00</span></div>
+                <div class="info-row"><span><strong>Saldo Anterior:</strong> $ ${Math.round(clientBalance).toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span></div>
               </div>
             </div>
 
@@ -480,15 +480,17 @@ export const printRemitoX = (order: any) => {
                 <tbody>
                   ${items.length > 0 ? items.map((it: any) => {
                     const cant = Number(it.quantity || 0);
-                    const price = Number(it.unitPrice ?? it.price ?? 0);
-                    const subtotal = Number(it.subtotal ?? (cant * price));
+                    const weightKg = Number(it.weight || 0);
+                    const price = Math.round(Number(it.unitPrice ?? it.price ?? 0));
+                    const subtotal = Math.round(Number(it.subtotal ?? ((weightKg > 0 ? weightKg : cant) * price)));
                     const name = it.product?.name || it.name || 'Producto';
+                    const cantDisplay = weightKg > 0 ? `${weightKg.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 3 })} kg` : `${cant}`;
                     return `
                       <tr>
-                        <td class="text-center mono font-bold">${cant.toFixed(2)}</td>
+                        <td class="text-center mono font-bold">${cantDisplay}</td>
                         <td><strong>${name}</strong></td>
-                        <td class="text-right mono">$ ${price.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                        <td class="text-right mono font-bold">$ ${subtotal.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                        <td class="text-right mono">$ ${price.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td>
+                        <td class="text-right mono font-bold">$ ${subtotal.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td>
                       </tr>
                     `;
                   }).join('') : `
@@ -505,7 +507,7 @@ export const printRemitoX = (order: any) => {
             <div class="bultos-badge">${bultosLabel}</div>
             <div class="total-box">
               <span>TOTAL:</span>
-              <span class="total-amount">$ ${totalAmount.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+              <span class="total-amount">$ ${Math.round(totalAmount).toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span>
             </div>
           </div>
         </div>

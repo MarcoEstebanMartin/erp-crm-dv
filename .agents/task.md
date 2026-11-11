@@ -192,3 +192,14 @@
   - [x] **Apagado por defecto de Tienda/WebChat embebidos en Producción (`env.config.ts` + `app.ts` + `store-auth.service.ts`)**: `ENABLE_EMBEDDED_STORE=false` por defecto en producción (permitiendo inspección autenticada de staff), eliminación de búsqueda libre por nombre en login de tienda y bloqueo de alta no verificada de primer PIN (`PIN_NOT_INITIALIZED`).
   - [x] **Cronograma y Sanitización de Errores (`weeklySchedule.routes.ts`, `weeklySchedule.validator.ts`, `errorHandler.middleware.ts`)**: Aplicado `requireRole([ADMIN, FACTURACION, VENDEDOR])` + `Zod` en `POST /toggle-week` y ocultamiento selectivo de errores técnicos de Prisma/SQL en `500` de producción sin tapar mensajes legibles de negocio.
   - [x] **Backup Integral + Visitas Offline (`Dockerfile`, `database-backup.service.ts`, `offlineQueueStore.ts`, `offlineSyncManager.ts`)**: Instalado `postgresql-client` (`pg_dump`) en imagen Docker `runner`, incorporadas las 21 entidades maestras/operativas al snapshot cifrado `AES-256-GCM` y preservadas como `REJECTED` las visitas offline tras 3 rechazos `4xx` + suite `audit-phase2-hardening.test.ts`.
+
+---
+
+## Plan Activo: Modernización Integral Post-Gemini 3.8 (Paso a Paso)
+
+- [x] **Paso M1: Armonía de Pesos Enteros + Doble Capa ARCA/Cuenta Corriente + Motor `Decimal.js` en Rubros y Reportes** ✅ COMPLETADO
+  - [x] Extraer motor y servicio `rubro.service.ts` + `rubro.validator.ts` eliminando `Float`/`Math.round` en `rubro.controller.ts` (precios A/B/C siempre en pesos enteros exactos).
+  - [x] Doble capa limpia en `account-ledger.service.ts` y `order-tax.helpers.ts`: comprobantes de clientes (`ORDER_INVOICE`, `ORDER_CANCELLATION`, `CREDIT_NOTE` y cobros inmediatos) impactan Cuenta Corriente y Caja en Pesos Enteros (`$0` centavos colgando), conservando los 2 decimales exactos en `Order` y ARCA/AFIP.
+  - [x] Migrar acumuladores de `admin-channels.service.ts` y `admin-executive.service.ts` a `Decimal.js` + unificar visualización en pesos enteros limpios en Remito X, CRM, Finanzas, Cobranzas Móvil y Conciliación + alinear regla SQL de fotos en `constitution.md` + suite `integer-peso-harmony.test.ts`.
+- [ ] **Paso M2: Modernización del Motor IA Interno (`gemini.service.ts` y `aiChatbot.service.ts`) al SDK oficial `@google/genai` con Structured Outputs (`responseSchema`)**.
+- [ ] **Paso M3: Candado Automático de Calidad en GitHub Actions (`.github/workflows/ci.yml`) + Optimización de Velocidad en `Vitest`**.

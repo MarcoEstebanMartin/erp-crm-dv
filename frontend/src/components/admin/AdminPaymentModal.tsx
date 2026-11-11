@@ -120,19 +120,19 @@ export const AdminPaymentModal: React.FC<AdminPaymentModalProps> = ({
                   const val = e.target.value;
                   if (val === '') {
                     setPaymentSelectedInvoiceId(null);
-                    setPaymentAmount(clientProfileModal?.client?.id === paymentModal.clientId ? String(clientProfileModal.client.outstandingBalance) : '');
+                    setPaymentAmount(clientProfileModal?.client?.id === paymentModal.clientId ? String(Math.round(Number(clientProfileModal.client.outstandingBalance))) : '');
                   } else {
                     const invId = Number(val);
                     setPaymentSelectedInvoiceId(invId);
                     const inv = paymentPendingInvoices.find((i) => i.id === invId);
-                    if (inv) setPaymentAmount(String(inv.pendingAmount));
+                    if (inv) setPaymentAmount(String(Math.round(Number(inv.pendingAmount))));
                   }
                 }}
               >
                 <option value="">Entrega a cuenta general (sin factura específica)</option>
                 {paymentPendingInvoices.map((inv) => (
                   <option key={inv.id} value={inv.id}>
-                    {inv.invoiceNumber} (Pendiente: ${inv.pendingAmount.toLocaleString()})
+                    {inv.invoiceNumber} (Pendiente: ${Math.round(Number(inv.pendingAmount)).toLocaleString('es-AR')})
                   </option>
                 ))}
               </select>

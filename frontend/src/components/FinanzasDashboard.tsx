@@ -253,7 +253,7 @@ export default function FinanzasDashboard() {
                   </div>
                   <div style={{ fontSize: '0.76rem', color: 'var(--text-secondary)', fontFamily: 'monospace' }}>{b.accountNumber || 'Sin Nro Cuenta'}</div>
                 </div>
-                <div style={{ fontWeight: 700, fontSize: '1.05rem', color: '#10b981', fontFamily: 'monospace' }}>${Number(b.balance).toLocaleString('es-AR', { minimumFractionDigits: 2 })}</div>
+                <div style={{ fontWeight: 700, fontSize: '1.05rem', color: '#10b981', fontFamily: 'monospace' }}>${Math.round(Number(b.balance)).toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</div>
               </div>
             ))}
           </div>

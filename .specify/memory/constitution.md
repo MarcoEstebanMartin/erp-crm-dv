@@ -46,7 +46,7 @@
    - Toda migración nueva se crea con `npx prisma migrate dev --name <nombre> --create-only`.
    - Antes de aplicarla, se abre `migration.sql`, se **elimina cualquier `DROP SEQUENCE movement_seq`** y se asegura `CREATE SEQUENCE IF NOT EXISTS movement_seq`.
    - Se aplica con `npx prisma migrate deploy` y `npx prisma generate`.
-3. **Repositorio Maestro de Fotos (`ARCHIVOS/fotos/Productos/`)**: Es sagrado e inmutable (`[SKU].[ext]`).
+3. **Banco Único SQL de Fotos de Productos (`chatbot-dv.product_images`)**: El repositorio oficial de fotos vive en PostgreSQL (`chatbot-dv.product_images`) sincronizado con la caché local activa `backend/uploads/products/` (prohibido mantener carpetas paralelas duplicadas o fotos huérfanas).
 
 ---
 

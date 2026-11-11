@@ -138,7 +138,7 @@ export const AdminQuickClientSearchModal: React.FC<AdminQuickClientSearchModalPr
                 </div>
                 <div style={{ textAlign: 'right' }}>
                   <div style={{ fontSize: '0.85rem', fontWeight: 600, color: Number(c.outstandingBalance || 0) > 0 ? 'var(--color-danger)' : Number(c.outstandingBalance || 0) < 0 ? 'var(--color-success)' : 'var(--text-primary)' }}>
-                    {Number(c.outstandingBalance || 0) < 0 ? `$${Math.abs(Number(c.outstandingBalance)).toLocaleString()} (A Favor)` : `$${Number(c.outstandingBalance || 0).toLocaleString()}`}
+                    {Number(c.outstandingBalance || 0) < 0 ? `$${Math.abs(Math.round(Number(c.outstandingBalance))).toLocaleString('es-AR')} (A Favor)` : `$${Math.round(Number(c.outstandingBalance || 0)).toLocaleString('es-AR')}`}
                   </div>
                   <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>Saldo CC</div>
                 </div>

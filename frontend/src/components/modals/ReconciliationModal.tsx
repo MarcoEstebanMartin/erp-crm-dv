@@ -241,7 +241,7 @@ export const ReconciliationModal: React.FC<ReconciliationModalProps> = ({
                         >
                           <div style={{ fontWeight: 600, fontSize: '0.82rem' }}>{c.name}</div>
                           <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
-                            CUIT: {c.cuit || 'S/D'} | Saldo CC: ${Number(c.outstandingBalance || 0).toLocaleString()}
+                            CUIT: {c.cuit || 'S/D'} | Saldo CC: ${Math.round(Number(c.outstandingBalance || 0)).toLocaleString('es-AR')}
                           </div>
                         </div>
                       ))}
@@ -325,7 +325,7 @@ export const ReconciliationModal: React.FC<ReconciliationModalProps> = ({
                 }}>
                   <span>Cliente: <strong>{reconSelectedClient.name}</strong> (CUIT: {reconSelectedClient.cuit || 'S/D'})</span>
                   <span style={{ color: Number(reconSelectedClient.outstandingBalance) > 0 ? 'var(--accent-color)' : 'var(--color-success)' }}>
-                    Saldo CC: <strong>${Number(reconSelectedClient.outstandingBalance).toLocaleString()}</strong>
+                    Saldo CC: <strong>${Math.round(Number(reconSelectedClient.outstandingBalance)).toLocaleString('es-AR')}</strong>
                   </span>
                 </div>
               )}

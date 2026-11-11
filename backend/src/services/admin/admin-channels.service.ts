@@ -1,6 +1,6 @@
 import prisma from '../../utils/prisma';
 import { OrderStatus } from '@prisma/client';
-import { roundToIntegerPeso } from '../../core/money';
+import { roundToIntegerPeso, roundToThreeDecimalsWeight, toDecimal } from '../../core/money';
 import { resolveOrderItemHistoricalCost } from './admin-report.helpers';
 
 export class AdminChannelsSubService {
@@ -97,16 +97,33 @@ export class AdminChannelsSubService {
             };
           }
           topMostradorProductsMap[pId].unitsSold += item.quantity;
-          topMostradorProductsMap[pId].weightSold += item.weight ? Number(item.weight) : 0;
-          topMostradorProductsMap[pId].totalRevenue += Number(item.subtotal || 0);
+          topMostradorProductsMap[pId].weightSold = roundToThreeDecimalsWeight(
+            toDecimal(topMostradorProductsMap[pId].weightSold).plus(
+              item.weight ? item.weight.toString() : 0,
+            ),
+          ).toNumber();
+          topMostradorProductsMap[pId].totalRevenue = roundToIntegerPeso(
+            toDecimal(topMostradorProductsMap[pId].totalRevenue).plus(
+              item.subtotal ? item.subtotal.toString() : 0,
+            ),
+          ).toNumber();
         }
       }
 
-      channelSummaryMap[channelKey].sales += orderTotal;
-      channelSummaryMap[channelKey].cost += orderCost;
-      channelSummaryMap[channelKey].profit += orderTotal - orderCost;
+      const orderCostInt = roundToIntegerPeso(orderCost).toNumber();
+      channelSummaryMap[channelKey].sales = roundToIntegerPeso(
+        toDecimal(channelSummaryMap[channelKey].sales).plus(orderTotal),
+      ).toNumber();
+      channelSummaryMap[channelKey].cost = roundToIntegerPeso(
+        toDecimal(channelSummaryMap[channelKey].cost).plus(orderCostInt),
+      ).toNumber();
+      channelSummaryMap[channelKey].profit = roundToIntegerPeso(
+        toDecimal(channelSummaryMap[channelKey].sales).minus(channelSummaryMap[channelKey].cost),
+      ).toNumber();
       channelSummaryMap[channelKey].ordersCount += 1;
-      totalRevenueOverall += orderTotal;
+      totalRevenueOverall = roundToIntegerPeso(
+        toDecimal(totalRevenueOverall).plus(orderTotal),
+      ).toNumber();
 
       if (channelKey === 'MOSTRADOR') {
         const cId = order.personaId;
@@ -120,17 +137,23 @@ export class AdminChannelsSubService {
           };
         }
         topMostradorClientsMap[cId].ordersCount += 1;
-        topMostradorClientsMap[cId].totalAmount += orderTotal;
+        topMostradorClientsMap[cId].totalAmount = roundToIntegerPeso(
+          toDecimal(topMostradorClientsMap[cId].totalAmount).plus(orderTotal),
+        ).toNumber();
 
         if (order.transactions && order.transactions.length > 0) {
           for (const tx of order.transactions) {
             const method = tx.paymentMethod || 'OTHER';
-            mostradorPaymentMethods[method] =
-              (mostradorPaymentMethods[method] || 0) + Number(tx.amount || 0);
+            mostradorPaymentMethods[method] = roundToIntegerPeso(
+              toDecimal(mostradorPaymentMethods[method] || 0).plus(
+                tx.amount ? tx.amount.toString() : 0,
+              ),
+            ).toNumber();
           }
         } else {
-          mostradorPaymentMethods['CTA_CORRIENTE'] =
-            (mostradorPaymentMethods['CTA_CORRIENTE'] || 0) + orderTotal;
+          mostradorPaymentMethods['CTA_CORRIENTE'] = roundToIntegerPeso(
+            toDecimal(mostradorPaymentMethods['CTA_CORRIENTE'] || 0).plus(orderTotal),
+          ).toNumber();
         }
       }
     }
@@ -143,31 +166,40 @@ export class AdminChannelsSubService {
       .sort((a, b) => b.totalAmount - a.totalAmount)
       .slice(0, 10);
 
+    const mostradorSales = channelSummaryMap['MOSTRADOR']?.sales || 0;
+    const mostradorOrders = channelSummaryMap['MOSTRADOR']?.ordersCount || 0;
+
     return {
       period: { year, month },
       channels: Object.entries(channelSummaryMap).map(([channel, data]) => ({
         channel,
-        sales: Math.round(data.sales),
-        cost: Math.round(data.cost),
-        profit: Math.round(data.profit),
+        sales: roundToIntegerPeso(data.sales).toNumber(),
+        cost: roundToIntegerPeso(data.cost).toNumber(),
+        profit: roundToIntegerPeso(data.profit).toNumber(),
         ordersCount: data.ordersCount,
-        averageTicket: data.ordersCount > 0 ? Math.round(data.sales / data.ordersCount) : 0,
+        averageTicket:
+          data.ordersCount > 0
+            ? roundToIntegerPeso(toDecimal(data.sales).dividedBy(data.ordersCount)).toNumber()
+            : 0,
         percentage:
-          totalRevenueOverall > 0 ? Math.round((data.sales / totalRevenueOverall) * 100) : 0,
+          totalRevenueOverall > 0
+            ? roundToIntegerPeso(
+                toDecimal(data.sales).dividedBy(totalRevenueOverall).times(100),
+              ).toNumber()
+            : 0,
       })),
       mostrador: {
-        totalSales: Math.round(channelSummaryMap['MOSTRADOR']?.sales || 0),
-        totalOrders: channelSummaryMap['MOSTRADOR']?.ordersCount || 0,
-        averageTicket: channelSummaryMap['MOSTRADOR']?.ordersCount
-          ? Math.round(
-              channelSummaryMap['MOSTRADOR'].sales / channelSummaryMap['MOSTRADOR'].ordersCount,
-            )
-          : 0,
+        totalSales: roundToIntegerPeso(mostradorSales).toNumber(),
+        totalOrders: mostradorOrders,
+        averageTicket:
+          mostradorOrders > 0
+            ? roundToIntegerPeso(toDecimal(mostradorSales).dividedBy(mostradorOrders)).toNumber()
+            : 0,
         topProducts,
         topClients,
         paymentMethods: Object.entries(mostradorPaymentMethods).map(([method, amount]) => ({
           method,
-          amount: Math.round(amount),
+          amount: roundToIntegerPeso(amount).toNumber(),
         })),
       },
     };

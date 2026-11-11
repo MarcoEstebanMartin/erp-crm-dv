@@ -371,7 +371,7 @@ const MobileCobros: React.FC<MobileCobrosProps> = ({
               </div>
               <button
                 type="button"
-                onClick={() => setAmount(selectedPersona.outstandingBalance.toString())}
+                onClick={() => setAmount(Math.round(selectedPersona.outstandingBalance).toString())}
                 style={{
                   fontSize: '0.75rem',
                   backgroundColor: '#FFFFFF',
@@ -408,14 +408,14 @@ const MobileCobros: React.FC<MobileCobrosProps> = ({
                   const val = e.target.value;
                   if (val === '') {
                     setSelectedInvoiceId(null);
-                    setAmount(selectedPersona.outstandingBalance.toString());
+                    setAmount(Math.round(selectedPersona.outstandingBalance).toString());
                   } else {
                     const invId = Number(val);
                     setSelectedInvoiceId(invId);
                     setIsCreditOnAccount(false);
                     const inv = pendingInvoices.find(i => i.id === invId);
                     if (inv) {
-                      setAmount(inv.pendingAmount.toString());
+                      setAmount(Math.round(inv.pendingAmount).toString());
                       if (inv.billingType) {
                         setBillingType(inv.billingType);
                       }
@@ -922,7 +922,7 @@ const MobileCobros: React.FC<MobileCobrosProps> = ({
               key={p.id} 
               onClick={() => {
                 setSelectedPersona(p);
-                setAmount(p.outstandingBalance > 0 ? p.outstandingBalance.toString() : '');
+                setAmount(p.outstandingBalance > 0 ? Math.round(p.outstandingBalance).toString() : '');
               }}
               style={{
                 backgroundColor: '#FFFFFF',

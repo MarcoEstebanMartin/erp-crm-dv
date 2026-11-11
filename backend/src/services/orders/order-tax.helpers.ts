@@ -131,7 +131,10 @@ export async function settleOrderFinancials(
     bankAccountId,
   } = params;
 
-  const totalOrderAmount = invoiceTotal !== undefined ? invoiceTotal : amount;
+  const totalOrderAmount = roundToIntegerPeso(
+    invoiceTotal !== undefined ? invoiceTotal : amount,
+  ).toNumber();
+  const settledPaymentAmount = roundToIntegerPeso(amount).toNumber();
   const formattedInv = invoiceNumber || `INT-${orderId.toString().padStart(5, '0')}`;
 
   await recordLedgerMovement(tx, {
@@ -150,7 +153,7 @@ export async function settleOrderFinancials(
     if (paymentMethod === 'BANK_TRANSFER' && bankAccountId) {
       await tx.bankAccount.update({
         where: { id: bankAccountId },
-        data: { balance: { increment: amount } },
+        data: { balance: { increment: settledPaymentAmount } },
       });
     }
 
@@ -162,7 +165,7 @@ export async function settleOrderFinancials(
         billingType,
         type: 'INCOME',
         paymentMethod,
-        amount,
+        amount: settledPaymentAmount,
         description,
         cashDrawerId,
         bankAccountId,
@@ -175,7 +178,7 @@ export async function settleOrderFinancials(
       entryType: LedgerEntryType.CREDIT,
       sourceType: LedgerSourceType.COLLECTION_RECEIPT,
       billingType,
-      amount,
+      amount: settledPaymentAmount,
       orderId,
       transactionId: createdTx.id,
       userId: adminId,

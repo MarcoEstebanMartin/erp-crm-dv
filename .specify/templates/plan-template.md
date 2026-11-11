@@ -10,7 +10,7 @@
 - [ ] **Estética y UX**: ¿Respeta diseño minimalista, bordes `1px` y uso exclusivo de `#E30613` para CTAs/peligro?
 - [ ] **Rigor Financiero**: ¿Usa `Decimal(12,2)` para todo valor monetario?
 - [ ] **Seguridad de Base de Datos**: Si hay cambios en Prisma, ¿está planificado el flujo `--create-only` protegiendo `movement_seq`?
-- [ ] **Inmunidad de Maestros**: ¿Garantiza que `ARCHIVOS/fotos/Productos/` no sufre borrados ni renombrados?
+- [ ] **Banco Único de Fotos**: ¿Respeta `chatbot-dv.product_images` en SQL y la caché limpia `backend/uploads/products/` sin crear carpetas duplicadas?
 - [ ] **Fronteras de Roles**: ¿Están claramente separadas las tareas de Backend (`backend/src/`) y Frontend (`frontend/src/`)?
 
 ---
