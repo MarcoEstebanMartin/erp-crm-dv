@@ -15,6 +15,7 @@ export interface EnvConfig {
   PRODUCTION_CATALOG_DATABASE_URL?: string;
   ALLOW_PRODUCTION_CATALOG_WRITE: boolean;
   WHATSAPP_ENABLED: boolean;
+  ENABLE_EMBEDDED_STORE: boolean;
 }
 
 export function parseTrustProxy(rawValue?: string): TrustProxySetting {
@@ -76,6 +77,11 @@ export function validateEnvConfig(sourceEnv: NodeJS.ProcessEnv = process.env): E
       ? 1
       : parseTrustProxy(sourceEnv.TRUST_PROXY);
 
+  const enableEmbeddedStore =
+    nodeEnv === 'production'
+      ? sourceEnv.ENABLE_EMBEDDED_STORE === 'true'
+      : sourceEnv.ENABLE_EMBEDDED_STORE !== 'false';
+
   return {
     PORT: parseInt(sourceEnv.PORT || '3000', 10),
     NODE_ENV: nodeEnv,
@@ -88,6 +94,7 @@ export function validateEnvConfig(sourceEnv: NodeJS.ProcessEnv = process.env): E
     PRODUCTION_CATALOG_DATABASE_URL: sourceEnv.PRODUCTION_CATALOG_DATABASE_URL?.trim() || undefined,
     ALLOW_PRODUCTION_CATALOG_WRITE: sourceEnv.ALLOW_PRODUCTION_CATALOG_WRITE === 'true',
     WHATSAPP_ENABLED: sourceEnv.WHATSAPP_ENABLED === 'true',
+    ENABLE_EMBEDDED_STORE: enableEmbeddedStore,
   };
 }
 

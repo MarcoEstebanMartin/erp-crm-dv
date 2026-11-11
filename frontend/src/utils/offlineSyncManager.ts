@@ -106,40 +106,48 @@ export async function flushOfflineQueues(
 
     if (!networkBroken) {
       for (const visit of visits) {
-      try {
-        await executor.sendVisit(
-          visit.routeId,
-          {
-            personaId: visit.personaId,
-            status: visit.status,
-            noBuyReason: visit.noBuyReason,
-            notes: visit.notes,
-            latitude: visit.latitude,
-            longitude: visit.longitude,
-          },
-          visit.idempotencyKey,
-        );
-        await idbDeleteRecord('offline_visits', visit.id);
-        syncedVisits++;
-      } catch (err: any) {
-        if (isLikelyNetworkError(err)) {
-          await idbPutRecord<QueuedOfflineVisit>('offline_visits', {
-            ...visit,
-            attempts: visit.attempts + 1,
-            lastError: 'Pendiente de señal',
-          });
-          break;
-        } else if (visit.attempts + 1 >= 3) {
+        if (visit.syncState === 'REJECTED') continue;
+        try {
+          await executor.sendVisit(
+            visit.routeId,
+            {
+              personaId: visit.personaId,
+              status: visit.status,
+              noBuyReason: visit.noBuyReason,
+              notes: visit.notes,
+              latitude: visit.latitude,
+              longitude: visit.longitude,
+            },
+            visit.idempotencyKey,
+          );
           await idbDeleteRecord('offline_visits', visit.id);
-        } else {
-          await idbPutRecord<QueuedOfflineVisit>('offline_visits', {
-            ...visit,
-            attempts: visit.attempts + 1,
-            lastError: err?.message || 'Error de validación',
-          });
+          syncedVisits++;
+        } catch (err: any) {
+          const visitErrorMsg = err?.message || 'Error de validación en visita';
+          if (isLikelyNetworkError(err)) {
+            await idbPutRecord<QueuedOfflineVisit>('offline_visits', {
+              ...visit,
+              attempts: visit.attempts + 1,
+              lastError: 'Pendiente de señal',
+            });
+            break;
+          } else if (visit.attempts + 1 >= 3) {
+            // Conserva registro con estado REJECTED para revisión manual sin borrar trazabilidad
+            await idbPutRecord<QueuedOfflineVisit>('offline_visits', {
+              ...visit,
+              attempts: visit.attempts + 1,
+              syncState: 'REJECTED',
+              lastError: visitErrorMsg,
+            });
+          } else {
+            await idbPutRecord<QueuedOfflineVisit>('offline_visits', {
+              ...visit,
+              attempts: visit.attempts + 1,
+              lastError: visitErrorMsg,
+            });
+          }
         }
       }
-    }
     }
 
     const remaining = await getOfflineQueueSnapshot();

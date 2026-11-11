@@ -8,6 +8,8 @@ import {
   seedDefaultSchedule
 } from '../controllers/weeklySchedule.controller';
 import { authenticateJWT, requireRole } from '../middlewares/auth';
+import { validateRequest } from '../middlewares/validateRequest';
+import { toggleWeekSchema } from '../validators/weeklySchedule.validator';
 import { Role } from '@prisma/client';
 
 const router = Router();
@@ -19,7 +21,12 @@ router.use(authenticateJWT);
 router.get('/', getWeeklySchedule);
 
 // Cambiar la semana activa (ADMIN, FACTURACION, VENDEDOR)
-router.post('/toggle-week', setCurrentWeek);
+router.post(
+  '/toggle-week',
+  requireRole([Role.ADMIN, Role.FACTURACION, Role.VENDEDOR]),
+  validateRequest(toggleWeekSchema),
+  setCurrentWeek,
+);
 
 // Administrar cronograma (ADMIN, FACTURACION)
 router.post('/', requireRole([Role.ADMIN, Role.FACTURACION]), createScheduleEntry);

@@ -34,6 +34,7 @@ export interface QueuedOfflineVisit {
   personaId: number;
   clientName?: string;
   status: 'ORDERED' | 'NO_BUY';
+  syncState?: 'PENDING' | 'REJECTED';
   noBuyReason?: string | null;
   notes?: string | null;
   latitude: number | null;
@@ -117,6 +118,7 @@ export async function enqueueOfflineVisit(input: {
     personaId: input.personaId,
     clientName: input.clientName,
     status: input.status,
+    syncState: 'PENDING',
     noBuyReason: input.noBuyReason ?? null,
     notes: input.notes ?? null,
     latitude: input.latitude,

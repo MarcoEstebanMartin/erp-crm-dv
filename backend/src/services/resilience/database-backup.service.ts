@@ -57,12 +57,16 @@ export async function runEncryptedDatabaseBackup(
   }
 
   const [
+    users,
+    rubros,
+    discountRules,
     products,
     productLots,
     stockMovements,
     personas,
     accountLedger,
     orders,
+    purchaseOrders,
     transactions,
     bankAccounts,
     cashDrawers,
@@ -70,14 +74,21 @@ export async function runEncryptedDatabaseBackup(
     supplierInvoices,
     creditNotes,
     saleRoutes,
+    employees,
+    payrolls,
+    crmConversations,
     auditLogs,
   ] = await Promise.all([
+    prisma.user.findMany(),
+    prisma.rubro.findMany(),
+    prisma.discountRule.findMany(),
     prisma.product.findMany(),
     prisma.productLot.findMany(),
     prisma.stockMovement.findMany({ orderBy: { id: 'asc' } }),
     prisma.persona.findMany(),
     prisma.accountLedger.findMany({ orderBy: { id: 'asc' } }),
     prisma.order.findMany({ include: { items: true } }),
+    prisma.purchaseOrder.findMany({ include: { items: true } }),
     prisma.transaction.findMany(),
     prisma.bankAccount.findMany(),
     prisma.cashDrawer.findMany(),
@@ -85,18 +96,30 @@ export async function runEncryptedDatabaseBackup(
     prisma.supplierInvoice.findMany(),
     prisma.creditNote.findMany({ include: { items: true } }),
     prisma.saleRoute.findMany(),
+    prisma.employee.findMany(),
+    prisma.payroll.findMany(),
+    prisma.crmConversation.findMany({ include: { messages: true } }),
     prisma.auditLog.findMany({ take: 1_000, orderBy: { createdAt: 'desc' } }),
   ]);
 
   const pgDumpSql = tryCapturePgDumpSql(process.env.DATABASE_URL);
+  if (!pgDumpSql) {
+    console.warn(
+      '⚠️ [Backup] pg_dump no disponible en PATH o sin conexión directa; se resguardó snapshot JSON estructurado completo.',
+    );
+  }
 
   const counts = {
+    users: users.length,
+    rubros: rubros.length,
+    discountRules: discountRules.length,
     products: products.length,
     productLots: productLots.length,
     stockMovements: stockMovements.length,
     personas: personas.length,
     accountLedger: accountLedger.length,
     orders: orders.length,
+    purchaseOrders: purchaseOrders.length,
     transactions: transactions.length,
     bankAccounts: bankAccounts.length,
     cashDrawers: cashDrawers.length,
@@ -104,24 +127,31 @@ export async function runEncryptedDatabaseBackup(
     supplierInvoices: supplierInvoices.length,
     creditNotes: creditNotes.length,
     saleRoutes: saleRoutes.length,
+    employees: employees.length,
+    payrolls: payrolls.length,
+    crmConversations: crmConversations.length,
     auditLogs: auditLogs.length,
   };
 
   const payloadJson = JSON.stringify({
     meta: {
-      schemaVersion: '2.0-aes256gcm',
+      schemaVersion: '2.1-aes256gcm',
       createdAt: new Date().toISOString(),
       includedPgDumpSql: Boolean(pgDumpSql),
       counts,
     },
     pgDumpSql,
     data: {
+      users,
+      rubros,
+      discountRules,
       products,
       productLots,
       stockMovements,
       personas,
       accountLedger,
       orders,
+      purchaseOrders,
       transactions,
       bankAccounts,
       cashDrawers,
@@ -129,6 +159,9 @@ export async function runEncryptedDatabaseBackup(
       supplierInvoices,
       creditNotes,
       saleRoutes,
+      employees,
+      payrolls,
+      crmConversations,
       auditLogs,
     },
   });
@@ -164,6 +197,7 @@ export async function runEncryptedDatabaseBackup(
             sha256Hex: encrypted.sha256Hex,
             plainBytes: encrypted.plainBytes,
             encryptedBytes: encrypted.encryptedBytes,
+            includedPgDumpSql: Boolean(pgDumpSql),
             prunedCount: prunedFiles.length,
             counts,
           },

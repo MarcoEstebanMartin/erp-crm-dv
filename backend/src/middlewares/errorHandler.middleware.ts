@@ -3,6 +3,30 @@ import { ZodError } from 'zod';
 import AppError from '../utils/AppError';
 import { env } from '../config/env.config';
 
+export function isInternalTechnicalError(err: any): boolean {
+  if (!err) return true;
+  const name = String(err.name || '');
+  if (name.includes('Prisma') || name === 'TypeError' || name === 'ReferenceError' || name === 'SyntaxError') {
+    return true;
+  }
+  if (typeof err.code === 'string' && /^(P\d{4}|ECONN|ETIMEDOUT|ENOTFOUND|23\d{3}|42\d{3})/.test(err.code)) {
+    return true;
+  }
+  const msg = String(err.message || '');
+  return /prisma|postgres|invocation|database|econnrefused|relation\s+"|column\s+"|syntax error at/i.test(
+    msg,
+  );
+}
+
+export function sanitizeServerErrorMessage(err: any, nodeEnv: string = env.NODE_ENV): string {
+  const rawMessage = typeof err?.message === 'string' ? err.message.trim() : '';
+  if (!rawMessage) return 'Error interno del servidor';
+  if (nodeEnv === 'production' && isInternalTechnicalError(err)) {
+    return 'Error interno del servidor al procesar la operación.';
+  }
+  return rawMessage;
+}
+
 export function errorHandler(
   err: Error | AppError | ZodError | any,
   _req: Request,
@@ -48,7 +72,7 @@ export function errorHandler(
 
   return res.status(500).json({
     status: 'error',
-    message: err?.message || 'Error interno del servidor',
+    message: sanitizeServerErrorMessage(err, env.NODE_ENV),
     error: env.NODE_ENV === 'development' ? err : undefined,
   });
 }

@@ -125,50 +125,38 @@ export class StoreAuthService {
         client = found;
       }
     } else {
-      const clients = await prisma.persona.findMany({
+      const cleanDigits = queryTerm.replace(/\D/g, '');
+      if (cleanDigits.length < 7 || cleanDigits.length > 11) {
+        return {
+          httpStatus: 400,
+          payload: {
+            status: 'error',
+            message: 'Ingresá tu CUIT o DNI registrado (sin nombres parciales) para acceder.',
+          },
+        };
+      }
+
+      const candidates = await prisma.persona.findMany({
         where: {
           isClient: true,
           isActive: true,
-          OR: [
-            { cuit: { contains: queryTerm } },
-            { name: { contains: queryTerm, mode: 'insensitive' } },
-            ...(isNaN(Number(queryTerm)) ? [] : [{ id: Number(queryTerm) }]),
-          ],
+          cuit: { not: null },
         },
         select: clientSelect,
-        take: 10,
-        orderBy: { name: 'asc' },
       });
 
-      if (clients.length === 0) {
+      client =
+        candidates.find((c) => (c.cuit || '').replace(/\D/g, '') === cleanDigits) || null;
+
+      if (!client) {
         return {
           httpStatus: 404,
           payload: {
             status: 'error',
-            message: 'No se encontró ningún cliente activo con el CUIT o nombre ingresado.',
+            message: 'No se encontró ningún cliente activo con el CUIT/DNI ingresado.',
           },
         };
       }
-
-      if (clients.length > 1 && !providedPin) {
-        return {
-          httpStatus: 200,
-          payload: {
-            status: 'success',
-            data: {
-              clients: clients.map((c) => ({
-                id: c.id,
-                name: c.name,
-                cuit: c.cuit,
-                city: c.city,
-                hasPin: Boolean(c.webPin),
-              })),
-            },
-          },
-        };
-      }
-
-      client = clients[0];
     }
 
     if (!client) {
@@ -207,33 +195,16 @@ export class StoreAuthService {
         });
       }
     } else {
-      if (!providedPin) {
-        return {
-          httpStatus: 200,
-          payload: {
-            status: 'requires_pin',
-            message: 'Es tu primer ingreso. Creá un PIN secreto de 4 a 6 dígitos para proteger tu cuenta.',
-            hasPin: false,
-            client: { id: client.id, name: client.name, cuit: client.cuit },
-          },
-        };
-      }
-
-      if (!/^\d{4,6}$/.test(providedPin)) {
-        return {
-          httpStatus: 400,
-          payload: {
-            status: 'error',
-            message: 'El PIN debe ser numérico y tener entre 4 y 6 dígitos.',
-          },
-        };
-      }
-
-      const hashedPin = await hashClientPin(providedPin);
-      await prisma.persona.update({
-        where: { id: client.id },
-        data: { webPin: hashedPin },
-      });
+      // Bloqueo anti-secuestro de cuenta: prohibido fijar el primer PIN sin verificación previa
+      return {
+        httpStatus: 403,
+        payload: {
+          status: 'error',
+          code: 'PIN_NOT_INITIALIZED',
+          message:
+            'Tu cuenta aún no tiene PIN habilitado. Ingresá desde el enlace enviado por WhatsApp o solicitá tu PIN inicial a administración.',
+        },
+      };
     }
 
     const token = signStoreClientSessionToken(client);

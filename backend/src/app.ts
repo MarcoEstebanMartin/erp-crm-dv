@@ -7,6 +7,7 @@ import { errorHandler } from './middlewares/errorHandler.middleware';
 import { securityHeadersMiddleware } from './middlewares/securityHeaders.middleware';
 import { mountSpaFrontend } from './middlewares/spa-static.middleware';
 import { createProductImageCacheFallback } from './middlewares/product-image-cache.middleware';
+import { extractStaffToken } from './utils/cookie-auth.util';
 
 // Importación de Rutas
 import authRoutes from './routes/auth.routes';
@@ -121,9 +122,21 @@ app.use('/api/fleet', fleetRoutes);
 app.use('/api/expenses', expenseRoutes);
 app.use('/api/offers', offerRoutes);
 app.use('/api/hr', hrRoutes);
-app.use('/api/store', storeRoutes);
+const guardEmbeddedPublicStore = (req: Request, res: Response, next: NextFunction): void => {
+  if (env.ENABLE_EMBEDDED_STORE || extractStaffToken(req)) {
+    next();
+    return;
+  }
+  res.status(403).json({
+    status: 'error',
+    code: 'EMBEDDED_STORE_DISABLED',
+    message: 'La tienda online pública opera exclusivamente en https://www.donvenancio.com.ar.',
+  });
+};
+
+app.use('/api/store', guardEmbeddedPublicStore, storeRoutes);
 app.use('/api/weekly-schedule', weeklyScheduleRoutes);
-app.use('/api/web-chat', webChatRoutes);
+app.use('/api/web-chat', guardEmbeddedPublicStore, webChatRoutes);
 app.use('/api/admin/excel', excelImporterRoutes);
 
 

@@ -28,9 +28,9 @@ RUN npx prisma generate
 RUN npm run build
 RUN npm prune --omit=dev
 
-# Etapa 3: Runtime Liviano y Endurecido (Usuario no-root)
+# Etapa 3: Runtime Liviano y Endurecido (Usuario no-root + pg_dump para backups SQL completos)
 FROM node:24-slim AS runner
-RUN apt-get update -y && apt-get install -y --no-install-recommends openssl ca-certificates && rm -rf /var/lib/apt/lists/*
+RUN apt-get update -y && apt-get install -y --no-install-recommends openssl ca-certificates postgresql-client && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app/backend
 ENV NODE_ENV=production
