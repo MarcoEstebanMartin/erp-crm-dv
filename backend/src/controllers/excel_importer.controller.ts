@@ -2,7 +2,10 @@ import { Request, Response } from 'express';
 import fs from 'fs';
 import path from 'path';
 import prisma from '../utils/prisma';
+import { appCache } from '../utils/cache';
+import { roundToIntegerPeso, roundToTwoDecimals } from '../core/money';
 import { validateProductsExcel, validatePricesExcel, validateClientsExcel, ValidationReport } from '../services/excel_validator.service';
+import { productionOutboundBridgeService } from '../services/catalog/production-outbound-bridge.service';
 
 /**
  * Controller de Pre-Inspección ("Dry-Run") de planillas Excel.
@@ -59,6 +62,7 @@ export async function commitExcel(req: Request, res: Response) {
 
     let createdCount = 0;
     let updatedCount = 0;
+    const touchedProductSkus: string[] = [];
 
     await prisma.$transaction(async (tx) => {
       if (domain === 'PRODUCTS') {
@@ -82,32 +86,36 @@ export async function commitExcel(req: Request, res: Response) {
         for (const row of validRowsToCommit) {
           const { sku, name, rubro, costPrice, listPrice, unitsPerBox } = row.data;
           const rubroId = rubro ? rubroMap.get(rubro.toLowerCase()) : null;
+          const cleanCost = roundToTwoDecimals(costPrice || 0).toNumber();
+          const cleanPrice = roundToIntegerPeso(listPrice || 0).toNumber();
 
           if (row.action === 'CREATE') {
             await tx.product.create({
               data: {
                 sku,
                 name,
-                costPrice,
-                listPrice,
+                costPrice: cleanCost,
+                listPrice: cleanPrice,
                 unitsPerBox: unitsPerBox || 1,
                 rubroId: rubroId || null,
                 isActive: true
               }
             });
+            touchedProductSkus.push(sku);
             createdCount++;
           } else if (row.action === 'UPDATE') {
             await tx.product.update({
               where: { sku },
               data: {
                 name,
-                costPrice,
-                listPrice,
+                costPrice: cleanCost,
+                listPrice: cleanPrice,
                 unitsPerBox: unitsPerBox || 1,
                 ...(rubroId ? { rubroId } : {}),
                 lastPriceUpdateAt: new Date()
               }
             });
+            touchedProductSkus.push(sku);
             updatedCount++;
           }
         }
@@ -117,13 +125,14 @@ export async function commitExcel(req: Request, res: Response) {
           await tx.product.update({
             where: { sku },
             data: {
-              costPrice,
-              listPrice,
-              ...(listPriceB ? { listPriceB } : {}),
-              ...(listPriceC ? { listPriceC } : {}),
+              costPrice: roundToTwoDecimals(costPrice || 0).toNumber(),
+              listPrice: roundToIntegerPeso(listPrice || 0).toNumber(),
+              ...(listPriceB ? { listPriceB: roundToIntegerPeso(listPriceB).toNumber() } : {}),
+              ...(listPriceC ? { listPriceC: roundToIntegerPeso(listPriceC).toNumber() } : {}),
               lastPriceUpdateAt: new Date()
             }
           });
+          touchedProductSkus.push(sku);
           updatedCount++;
         }
       } else if (domain === 'CLIENTS') {
@@ -188,6 +197,11 @@ export async function commitExcel(req: Request, res: Response) {
       }
     } catch (e) {
       // Ignorar fallo en sync de fotos no crítico
+    }
+
+    if (touchedProductSkus.length > 0) {
+      appCache.invalidateProductCatalog();
+      productionOutboundBridgeService.enqueueBatchProductsSyncBySkus(touchedProductSkus);
     }
 
     return res.json({

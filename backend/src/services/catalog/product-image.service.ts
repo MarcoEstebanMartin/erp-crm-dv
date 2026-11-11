@@ -4,10 +4,27 @@ import AdmZip from 'adm-zip';
 import prisma from '../../utils/prisma';
 import { logAudit } from '../../utils/audit';
 import { appCache } from '../../utils/cache';
+import { resolveMasterArchiveExtension } from '../../engines/catalog-sync.engine';
+import { writeImageSafelyProtectingMaster } from './production-catalog-sync.service';
+import { productionOutboundBridgeService } from './production-outbound-bridge.service';
+
+function resolveMimeTypeFromExt(ext: string, fallbackMime?: string): string {
+  if (fallbackMime && fallbackMime.startsWith('image/')) return fallbackMime;
+  if (ext === '.png') return 'image/png';
+  if (ext === '.webp') return 'image/webp';
+  return 'image/jpeg';
+}
+
+function getMasterPhotosDirectory(): string {
+  return process.env.ARCHIVOS_PATH
+    ? path.join(process.env.ARCHIVOS_PATH, 'fotos/Productos')
+    : path.join(__dirname, '../../../../ARCHIVOS/fotos/Productos');
+}
 
 export class ProductImageSubService {
   /**
-   * Subir imagen de un producto individual respetando ARCHIVOS/fotos/Productos/.
+   * Subir imagen de un producto individual protegiendo ARCHIVOS/fotos/Productos/
+   * y replicando automáticamente al Banco Único en `chatbot-dv.product_images`.
    */
   async uploadSingleProductImage(
     productId: number,
@@ -17,11 +34,9 @@ export class ProductImageSubService {
     const product = await prisma.product.findUnique({ where: { id: productId } });
     if (!product) throw new Error('Producto no encontrado.');
 
-    const ext = path.extname(file.originalname).toLowerCase() || '.png';
+    const ext = resolveMasterArchiveExtension(file.originalname, file.mimetype);
     const uploadDir = path.join(__dirname, '../../../uploads/products');
-    const masterDir = process.env.ARCHIVOS_PATH
-      ? path.join(process.env.ARCHIVOS_PATH, 'fotos/Productos')
-      : path.join(__dirname, '../../../../ARCHIVOS/fotos/Productos');
+    const masterDir = getMasterPhotosDirectory();
 
     if (fs.existsSync(uploadDir)) {
       const existingFiles = fs
@@ -36,17 +51,23 @@ export class ProductImageSubService {
       fs.mkdirSync(uploadDir, { recursive: true });
     }
 
-    const filename = `${product.sku}_${Date.now()}${ext}`;
-    fs.writeFileSync(path.join(uploadDir, filename), file.buffer);
+    const existingMasterStems = new Set<string>(
+      fs.existsSync(masterDir)
+        ? fs.readdirSync(masterDir).map((f) => path.basename(f, path.extname(f)).trim())
+        : [],
+    );
 
-    if (fs.existsSync(masterDir)) {
-      const masterPath = path.join(masterDir, `${product.sku}${ext}`);
-      if (!fs.existsSync(masterPath)) {
-        try {
-          fs.writeFileSync(masterPath, file.buffer);
-        } catch {}
-      }
-    }
+    const cleanSku = product.sku.trim();
+    const filename = `${cleanSku}_${Math.floor(Date.now() / 1000)}${ext}`;
+    writeImageSafelyProtectingMaster(
+      cleanSku,
+      filename,
+      ext,
+      file.buffer,
+      uploadDir,
+      masterDir,
+      existingMasterStems,
+    );
 
     const imageUrl = `/uploads/products/${filename}`;
     const updatedProduct = await prisma.product.update({
@@ -66,11 +87,19 @@ export class ProductImageSubService {
     }
 
     appCache.invalidateProductCatalog();
+    productionOutboundBridgeService.enqueueProductImageSync({
+      productId: updatedProduct.id,
+      sku: cleanSku,
+      filename,
+      imageBuffer: file.buffer,
+      mimeType: resolveMimeTypeFromExt(ext, file.mimetype),
+    });
+
     return updatedProduct;
   }
 
   /**
-   * Importar imágenes en lote desde archivo ZIP.
+   * Importar imágenes en lote desde archivo ZIP replicando al Banco Único de Producción.
    */
   async importProductImagesFromZip(fileBuffer: Buffer, userId?: number) {
     const zip = new AdmZip(fileBuffer);
@@ -90,10 +119,16 @@ export class ProductImageSubService {
     }
 
     const uploadDir = path.join(__dirname, '../../../uploads/products');
+    const masterDir = getMasterPhotosDirectory();
     if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
 
+    const existingMasterStems = new Set<string>(
+      fs.existsSync(masterDir)
+        ? fs.readdirSync(masterDir).map((f) => path.basename(f, path.extname(f)).trim())
+        : [],
+    );
+
     const allProducts = await prisma.product.findMany({
-      where: { isActive: true },
       select: { id: true, sku: true, name: true, imageUrl: true },
     });
 
@@ -104,18 +139,19 @@ export class ProductImageSubService {
         .replace(/[\u0300-\u036f]/g, '')
         .replace(/[^a-z0-9]/g, '');
 
+    const epochSec = Math.floor(Date.now() / 1000);
     let totalProcessed = 0;
     let totalSkipped = 0;
     const skippedFiles: string[] = [];
 
     for (const entry of validEntries) {
-      const fileExt = path.extname(entry.name).toLowerCase();
-      const rawName = path.basename(entry.name, fileExt).trim();
+      const rawExt = path.extname(entry.name).toLowerCase();
+      const rawName = path.basename(entry.name, rawExt).trim();
       const paddedRawSku = /^\d+$/.test(rawName) ? rawName.padStart(4, '0') : rawName;
       const normalizedRaw = normalizeStr(rawName);
 
       const product =
-        allProducts.find((p) => p.sku === rawName || p.sku === paddedRawSku) ||
+        allProducts.find((p) => p.sku.trim() === rawName || p.sku.trim() === paddedRawSku) ||
         allProducts.find(
           (p) =>
             p.name.trim().toLowerCase() === rawName.toLowerCase() ||
@@ -123,10 +159,32 @@ export class ProductImageSubService {
         );
 
       if (product) {
-        const filename = `${product.sku}${fileExt}`;
-        fs.writeFileSync(path.join(uploadDir, filename), entry.getData());
+        const cleanSku = product.sku.trim();
+        const ext = resolveMasterArchiveExtension(entry.name, null);
+        const filename = `${cleanSku}_${epochSec}${ext}`;
+        const imgBuf = entry.getData();
+
+        writeImageSafelyProtectingMaster(
+          cleanSku,
+          filename,
+          ext,
+          imgBuf,
+          uploadDir,
+          masterDir,
+          existingMasterStems,
+        );
+
         const imageUrl = `/uploads/products/${filename}`;
         await prisma.product.update({ where: { id: product.id }, data: { imageUrl } });
+
+        productionOutboundBridgeService.enqueueProductImageSync({
+          productId: product.id,
+          sku: cleanSku,
+          filename,
+          imageBuffer: imgBuf,
+          mimeType: resolveMimeTypeFromExt(ext),
+        });
+
         if (userId) {
           await logAudit({
             userId,

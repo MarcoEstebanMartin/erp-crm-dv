@@ -12,11 +12,9 @@ import {
   calculateNetSupplierCost,
   type SupplierCostCalculationInput,
 } from '../../engines/pricing.engine';
+import { productionOutboundBridgeService } from './production-outbound-bridge.service';
 
 export class ProductPricingSubService {
-  /**
-   * Mini-Calculadora de Factura de Proveedor (Spec 01 / PricingEngine).
-   */
   calculateSupplierCost(input: SupplierCostCalculationInput) {
     const res = calculateNetSupplierCost(input);
     return {
@@ -29,7 +27,7 @@ export class ProductPricingSubService {
   }
 
   /**
-   * Importar precios masivamente aplicando Decimal.js y Política de Pesos Enteros en Origen.
+   * Importar precios masivamente aplicando Decimal.js, Pesos Enteros en Origen y Puente Vivo Web.
    */
   async importPrices(rows: any[], userId?: number) {
     const updatedItems: any[] = [];
@@ -71,7 +69,7 @@ export class ProductPricingSubService {
             if (targetProfitMargin === undefined) {
               targetProfitMargin =
                 finalCost > 0
-                  ? Math.min(999.99, calculateRealMarginPct(finalCost, updateData.listPrice).toNumber())
+                  ? Math.max(-999.99, Math.min(999.99, calculateRealMarginPct(finalCost, updateData.listPrice).toNumber()))
                   : null;
             }
           } else if (costPrice !== undefined) {
@@ -140,7 +138,7 @@ export class ProductPricingSubService {
             profitMargin !== undefined && profitMargin
               ? roundToTwoDecimals(profitMargin).toNumber()
               : cost > 0
-                ? Math.min(999.99, calculateRealMarginPct(cost, finalPrice).toNumber())
+                ? Math.max(-999.99, Math.min(999.99, calculateRealMarginPct(cost, finalPrice).toNumber()))
                 : null;
 
           const created = await tx.product.create({
@@ -176,11 +174,14 @@ export class ProductPricingSubService {
       });
     }
 
+    const syncedIds = [...updatedItems.map((p) => p.id), ...createdItems.map((p) => p.id)];
+    productionOutboundBridgeService.enqueueBatchProductsSyncByIds(syncedIds);
+
     return { updatedItems, createdItems, failedItems };
   }
 
   /**
-   * Actualizar precios masivamente por Rubro y/o Proveedor usando Decimal.js y Pesos Enteros.
+   * Actualizar precios masivamente por Rubro y/o Proveedor replicando Lista A a Producción.
    */
   async bulkUpdatePrices(data: any, userId?: number) {
     const { rubroId, providerId, type, basis, value, priceList } = data;
@@ -193,6 +194,7 @@ export class ProductPricingSubService {
 
     const valDec = toDecimal(value || 0);
     let updatedCount = 0;
+    const touchedIds: number[] = [];
 
     const chunkSize = 50;
     for (let i = 0; i < products.length; i += chunkSize) {
@@ -230,6 +232,7 @@ export class ProductPricingSubService {
           }
 
           await tx.product.update({ where: { id: p.id }, data: updateData });
+          touchedIds.push(p.id);
           updatedCount++;
         }
       });
@@ -246,15 +249,18 @@ export class ProductPricingSubService {
     }
 
     appCache.invalidateProductCatalog();
+    if (priceList === 'all' || priceList === 'listPrice') {
+      productionOutboundBridgeService.enqueueBatchProductsSyncByIds(touchedIds);
+    }
     return { updatedCount };
   }
 
   /**
-   * Revertir precios al estado previo (Undo de sincronización).
+   * Revertir precios al estado previo (Undo) sincronizando también hacia Producción.
    */
   async revertPrices(userId?: number) {
     const productsWithHistory = await prisma.product.findMany({
-      where: { previousCostPrice: { not: null }, previousListPrice: { not: null } },
+      where: { previousListPrice: { not: null } },
     });
 
     if (productsWithHistory.length === 0) {
@@ -262,19 +268,21 @@ export class ProductPricingSubService {
     }
 
     let revertedCount = 0;
+    const revertedIds: number[] = [];
     await prisma.$transaction(async (tx) => {
       for (const p of productsWithHistory) {
-        if (p.previousCostPrice !== null && p.previousListPrice !== null) {
+        if (p.previousListPrice !== null) {
           await tx.product.update({
             where: { id: p.id },
             data: {
-              costPrice: p.previousCostPrice,
+              ...(p.previousCostPrice !== null ? { costPrice: p.previousCostPrice } : {}),
               listPrice: p.previousListPrice,
               previousCostPrice: null,
               previousListPrice: null,
               lastPriceUpdateAt: new Date(),
             },
           });
+          revertedIds.push(p.id);
           revertedCount++;
         }
       }
@@ -291,6 +299,7 @@ export class ProductPricingSubService {
     }
 
     appCache.invalidateProductCatalog();
+    productionOutboundBridgeService.enqueueBatchProductsSyncByIds(revertedIds);
     return {
       message: `Se restauraron ${revertedCount} productos a sus precios anteriores.`,
       count: revertedCount,

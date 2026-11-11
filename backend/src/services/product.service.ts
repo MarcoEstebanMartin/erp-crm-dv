@@ -9,6 +9,7 @@ import { productStockSubService } from './catalog/product-stock.service';
 import { productReconciliationSubService } from './catalog/product-reconciliation.service';
 import { productWmsSubService } from './catalog/product-wms.service';
 import { productImageSubService } from './catalog/product-image.service';
+import { productionOutboundBridgeService } from './catalog/production-outbound-bridge.service';
 
 export class ProductService {
   /**
@@ -135,6 +136,7 @@ export class ProductService {
         newValues: product,
       });
     }
+    productionOutboundBridgeService.enqueueProductSyncById(product.id);
     return product;
   }
 
@@ -197,6 +199,7 @@ export class ProductService {
         newValues: updated,
       });
     }
+    productionOutboundBridgeService.enqueueProductSyncById(updated.id);
     return updated;
   }
 

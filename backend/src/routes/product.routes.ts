@@ -24,7 +24,12 @@ import {
   deleteLot,
   transferLotStock,
 } from '../controllers/lot.controller';
+import {
+  getCatalogBridgeStatus,
+  pullCatalogFromProduction,
+} from '../controllers/catalog-sync.controller';
 import { authenticateJWT, requireRole } from '../middlewares/auth';
+import { idempotencyGuard } from '../middlewares/idempotency.middleware';
 import { Role } from '@prisma/client';
 import { validateRequest } from '../middlewares/validateRequest';
 import { 
@@ -48,6 +53,16 @@ router.get('/', authenticateJWT, getProducts);
 router.get('/stock/movements', authenticateJWT, getGlobalStockMovements);
 router.get('/stock/expiring-lots', authenticateJWT, getExpiringLots);
 router.get('/barcode/:barcode', authenticateJWT, getProductByBarcode);
+// Puente Unificado de Catálogo e Imágenes ERP <-> donvenancio.com.ar (Solo ADMIN)
+router.get('/bridge/status', authenticateJWT, requireRole([Role.ADMIN]), getCatalogBridgeStatus);
+router.post(
+  '/bridge/pull-from-production',
+  authenticateJWT,
+  requireRole([Role.ADMIN]),
+  idempotencyGuard,
+  pullCatalogFromProduction,
+);
+
 router.get('/:id', authenticateJWT, getProductById);
 router.get('/:id/movements', authenticateJWT, getProductMovements);
 
