@@ -1,5 +1,3 @@
-export type PriceListGroupBy = 'category' | 'rubro';
-
 export interface PriceListProduct {
   id: number;
   sku: string;
@@ -32,91 +30,60 @@ export interface CategoryGroup {
   totalCount: number;
 }
 
-export const CATEGORY_MAP: Record<string, { category: string; subcategory?: string; brand?: string }> = {
-  MELINCUE: { category: 'REMOTTI', subcategory: 'MELINCUÉ' },
-  CHOCOLATADAS: { category: 'LÁCTEOS', subcategory: 'CHOCOLATADAS' },
-  'LECHES EN POLVO': { category: 'LÁCTEOS', subcategory: 'LECHES EN POLVO' },
-  'LECHES LIQUIDAS': { category: 'LÁCTEOS', subcategory: 'LECHES LÍQUIDAS' },
-  YOGURT: { category: 'LÁCTEOS', subcategory: 'YOGURT' },
-  CREMAS: { category: 'LÁCTEOS', subcategory: 'CREMAS' },
-  'DULCES DE LECHE': { category: 'LÁCTEOS', subcategory: 'DULCES DE LECHE' },
-  MANTECAS: { category: 'LÁCTEOS', subcategory: 'MANTECAS' },
-  MIEL: { category: 'ALMACÉN', subcategory: 'MIEL' },
-  QUESOS: { category: 'REFRIGERADOS', subcategory: 'QUESOS' },
-  'QUESOS UNTABLES': { category: 'REFRIGERADOS', subcategory: 'QUESOS UNTABLES' },
-  'ACEITES Y VINAGRES': { category: 'ADEREZOS Y ACEITES', subcategory: 'ACEITES Y VINAGRES' },
-  ADEREZOS: { category: 'ADEREZOS Y ACEITES', subcategory: 'ADEREZOS' },
-  HIGIENICOS: { category: 'PAPELES', subcategory: 'HIGIÉNICOS' },
-  'ROLLOS DE COCINA': { category: 'PAPELES', subcategory: 'ROLLOS DE COCINA' },
-};
-
 const CANONICAL_DISPLAY_NAMES: Record<string, string> = {
-  REFRIGERADOS: 'REFRIGERADOS',
+  MELINCUE: 'MELINCUÉ',
+  CREMIGAL: 'CREMIGAL',
+  SANCOR: 'SANCOR',
   FIAMBRES: 'FIAMBRES',
-  'ADEREZOS Y ACEITES': 'ADEREZOS Y ACEITES',
   CONSERVAS: 'CONSERVAS',
   PESCADERIA: 'PESCADERÍA',
   'PASTAS SECAS': 'PASTAS SECAS',
+  'ACEITES Y VINAGRES': 'ACEITES Y VINAGRES',
+  ADEREZOS: 'ADEREZOS',
   ALMACEN: 'ALMACÉN',
   YERBAS: 'YERBAS',
   BEBIDAS: 'BEBIDAS',
-  'BEBIDAS ALCOHOLICAS': 'BEBIDAS ALCOHÓLICAS',
-  VINOS: 'VINOS',
-  PAPELES: 'PAPELES',
+  APERITIVOS: 'APERITIVOS',
+  FERNET: 'FERNET',
+  'VINOS TINTOS': 'VINOS TINTOS',
+  'VINOS BLANCOS': 'VINOS BLANCOS',
+  'ESPUMANTES Y SIDRAS': 'ESPUMANTES Y SIDRAS',
+  'BEBIDAS ALCOHOLICAS ESPIRITUOSAS': 'BEBIDAS ALCOHÓLICAS ESPIRITUOSAS',
   'ESTUCHERIA Y REGALERIA': 'ESTUCHERÍA Y REGALERÍA',
+  PAPELES: 'PAPELES',
+  LIMPIEZA: 'LIMPIEZA',
+  REFRIGERADOS: 'REFRIGERADOS',
+  'ADEREZOS Y ACEITES': 'ADEREZOS Y ACEITES',
+  'BEBIDAS ALCOHOLICAS': 'BEBIDAS ALCOHÓLICAS',
   'NO COMESTIBLES': 'NO COMESTIBLES',
-  REMOTTI: 'REMOTTI',
-  LACTEOS: 'LÁCTEOS',
-  LECHES: 'LECHES',
-  'SANCOR Y CREMIGAL': 'SANCOR Y CREMIGAL',
-  'QUESOS RALLADOS': 'QUESOS RALLADOS',
-  SODECAR: 'SODECAR',
-  'A.G.D Y NIZA': 'A.G.D Y NIZA',
-  ARROZ: 'ARROZ',
-  AZUCAR: 'AZÚCAR',
-  EDULCORANTES: 'EDULCORANTES',
-  CAFE: 'CAFÉ',
-  REGALERIA: 'REGALERÍA',
   VARIOS: 'VARIOS',
 };
 
-export const COMMERCIAL_CATEGORY_PRIORITY = [
-  'REFRIGERADOS',
+/**
+ * Orden exacto de las 21 categorías oficiales del catálogo de Producción (`chatbot-dv`).
+ */
+export const DEFAULT_PRODUCTION_CATEGORY_ORDER = [
+  'MELINCUE',
+  'CREMIGAL',
+  'SANCOR',
   'FIAMBRES',
-  'ADEREZOS Y ACEITES',
   'CONSERVAS',
   'PESCADERIA',
   'PASTAS SECAS',
+  'ACEITES Y VINAGRES',
+  'ADEREZOS',
   'ALMACEN',
   'YERBAS',
   'BEBIDAS',
-  'BEBIDAS ALCOHOLICAS',
-  'VINOS',
-  'PAPELES',
+  'APERITIVOS',
+  'FERNET',
+  'VINOS TINTOS',
+  'VINOS BLANCOS',
+  'ESPUMANTES Y SIDRAS',
+  'BEBIDAS ALCOHOLICAS ESPIRITUOSAS',
   'ESTUCHERIA Y REGALERIA',
-  'NO COMESTIBLES',
-];
-
-export const RUBRO_PRIORITY = [
-  'REMOTTI',
-  'LACTEOS',
-  'LECHES',
-  'SANCOR Y CREMIGAL',
-  'QUESOS RALLADOS',
-  'SODECAR',
-  'A.G.D Y NIZA',
-  'CONSERVAS',
-  'PESCADERIA',
-  'PASTAS SECAS',
-  'ARROZ',
-  'AZUCAR',
-  'EDULCORANTES',
-  'CAFE',
-  'YERBAS',
-  'BEBIDAS',
   'PAPELES',
-  'REGALERIA',
-  'NO COMESTIBLES',
+  'LIMPIEZA',
 ];
 
 export const cleanCategoryName = (name: string) => name.replace(/^\d+(\.\d+)?\s*-\s*/, '').trim();
@@ -139,16 +106,21 @@ const compareEs = (a: string, b: string) =>
   a.localeCompare(b, 'es', { sensitivity: 'base', numeric: true });
 
 export const isQuesoRemotti = (prod: PriceListProduct) => {
-  const haystack = normalizeGroupKey(
-    `${prod.name || ''} ${extractRubroName(prod.rubro)} ${prod.commercialCategory || ''} ${prod.description || ''}`,
+  const catKey = normalizeGroupKey(prod.commercialCategory || '');
+  const nameKey = normalizeGroupKey(prod.name || '');
+  const rubroKey = normalizeGroupKey(extractRubroName(prod.rubro));
+  return (
+    catKey === 'MELINCUE' ||
+    nameKey.includes('MELINCUE') ||
+    nameKey.includes('REMOTTI') ||
+    rubroKey === 'REMOTTI'
   );
-  return haystack.includes('REMOTTI') || haystack.includes('MELINCUE');
 };
 
 export const isQueso = (prod: PriceListProduct) => {
   if (isQuesoRemotti(prod)) return true;
   const haystack = normalizeGroupKey(
-    `${prod.name || ''} ${extractRubroName(prod.rubro)} ${prod.commercialCategory || ''} ${prod.description || ''}`,
+    `${prod.name || ''} ${prod.description || ''} ${prod.commercialCategory || ''}`,
   );
   return haystack.includes('QUESO');
 };
@@ -165,102 +137,62 @@ export const getFontScaleConfig = (fontScale: 'small' | 'medium' | 'large') => {
 
 export const groupPriceListProducts = (
   products: PriceListProduct[],
-  groupBy: PriceListGroupBy = 'category',
+  customCategoryOrder?: string[],
 ): CategoryGroup[] => {
   const groups = new Map<string, CategoryGroup>();
-  const priorityList = groupBy === 'rubro' ? RUBRO_PRIORITY : COMMERCIAL_CATEGORY_PRIORITY;
+  const priorityKeys: string[] = [];
+  const pushPriority = (raw: string) => {
+    const k = normalizeGroupKey(raw);
+    if (k && !priorityKeys.includes(k)) priorityKeys.push(k);
+  };
+
+  if (Array.isArray(customCategoryOrder)) {
+    customCategoryOrder.forEach(pushPriority);
+  }
+  DEFAULT_PRODUCTION_CATEGORY_ORDER.forEach(pushPriority);
 
   const activeProducts = (products || []).filter((p) => p && p.isActive !== false);
 
   activeProducts.forEach((prod) => {
-    const commercialRaw = (prod.commercialCategory || '').trim();
-    const rubroRaw = extractRubroName(prod.rubro);
-    const descRaw = (prod.description || '').trim();
-    const legacyMapping = descRaw ? CATEGORY_MAP[normalizeGroupKey(descRaw)] || CATEGORY_MAP[descRaw] : undefined;
-
-    let rawHeader = '';
-    let subKey: string | undefined;
-    let brandKey: string | undefined;
-
-    if (groupBy === 'category') {
-      if (commercialRaw) rawHeader = commercialRaw;
-      else if (rubroRaw) rawHeader = rubroRaw;
-      else if (legacyMapping) {
-        rawHeader = legacyMapping.category;
-        subKey = legacyMapping.subcategory;
-        brandKey = legacyMapping.brand;
-      } else if (descRaw) rawHeader = descRaw;
-    } else {
-      if (rubroRaw) rawHeader = rubroRaw;
-      else if (legacyMapping) {
-        rawHeader = legacyMapping.category;
-        subKey = legacyMapping.subcategory;
-        brandKey = legacyMapping.brand;
-      } else if (commercialRaw) rawHeader = commercialRaw;
-      else if (descRaw) rawHeader = descRaw;
-    }
-
+    const rawHeader =
+      (prod.commercialCategory || '').trim() ||
+      extractRubroName(prod.rubro) ||
+      'VARIOS';
     const normKey = normalizeGroupKey(rawHeader) || 'VARIOS';
-    const displayName = CANONICAL_DISPLAY_NAMES[normKey] || cleanCategoryName(rawHeader).toUpperCase() || 'VARIOS';
+    const displayName =
+      CANONICAL_DISPLAY_NAMES[normKey] || cleanCategoryName(rawHeader).toUpperCase() || 'VARIOS';
 
     let catGroup = groups.get(normKey);
     if (!catGroup) {
-      catGroup = { key: normKey, name: displayName, directProducts: [], subcategories: {}, sortedSubcategories: [], totalCount: 0 };
+      catGroup = {
+        key: normKey,
+        name: displayName,
+        directProducts: [],
+        subcategories: {},
+        sortedSubcategories: [],
+        totalCount: 0,
+      };
       groups.set(normKey, catGroup);
     }
     catGroup.totalCount += 1;
-
-    if (subKey) {
-      if (!catGroup.subcategories[subKey]) {
-        catGroup.subcategories[subKey] = { name: subKey, products: [], brands: {} };
-      }
-      const subGroup = catGroup.subcategories[subKey];
-      if (brandKey) {
-        if (!subGroup.brands[brandKey]) subGroup.brands[brandKey] = [];
-        subGroup.brands[brandKey].push(prod);
-      } else {
-        subGroup.products.push(prod);
-      }
-    } else {
-      catGroup.directProducts.push(prod);
-    }
+    catGroup.directProducts.push(prod);
   });
 
   const sortedGroups = Array.from(groups.values()).sort((a, b) => {
     if (a.key === 'VARIOS' && b.key !== 'VARIOS') return 1;
     if (b.key === 'VARIOS' && a.key !== 'VARIOS') return -1;
-    const rankA = priorityList.indexOf(a.key);
-    const rankB = priorityList.indexOf(b.key);
+    const rankA = priorityKeys.indexOf(a.key);
+    const rankB = priorityKeys.indexOf(b.key);
     if (rankA !== -1 && rankB !== -1) return rankA - rankB;
     if (rankA !== -1) return -1;
     if (rankB !== -1) return 1;
     return compareEs(a.name, b.name);
   });
 
-  return sortedGroups.map((catGroup) => {
-    const sortedSubcategories = Object.keys(catGroup.subcategories)
-      .sort(compareEs)
-      .map((subKey) => {
-        const subGroup = catGroup.subcategories[subKey];
-        const sortedBrands = Object.keys(subGroup.brands)
-          .sort(compareEs)
-          .map((bKey) => ({
-            name: bKey,
-            products: [...subGroup.brands[bKey]].sort((x, y) => compareEs(x.name, y.name)),
-          }));
-        return {
-          ...subGroup,
-          products: [...subGroup.products].sort((x, y) => compareEs(x.name, y.name)),
-          sortedBrands,
-        };
-      });
-
-    return {
-      ...catGroup,
-      directProducts: [...catGroup.directProducts].sort((x, y) => compareEs(x.name, y.name)),
-      sortedSubcategories,
-    };
-  });
+  return sortedGroups.map((catGroup) => ({
+    ...catGroup,
+    directProducts: [...catGroup.directProducts].sort((x, y) => compareEs(x.name, y.name)),
+  }));
 };
 
 export const roundIntegerPeso = (value: number): number => {

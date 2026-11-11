@@ -1,71 +1,107 @@
 import path from 'path';
 import { pathToFileURL } from 'url';
 import { beforeAll, describe, expect, it } from 'vitest';
+import {
+  computeErpProductSyncPatch,
+  extractCategoryOrderFromCatalogState,
+  normalizeRubroCanonicalName,
+} from '../../engines/catalog-sync.engine';
 
 let helpers: any;
 
-describe('Lista de Precios PDF — Agrupación por Categorías Comerciales y Rubros', () => {
+describe('Lista de Precios PDF — Espejo Exacto de Categorías Oficiales chatbot-dv', () => {
   beforeAll(async () => {
     const modalsDir = path.resolve(__dirname, '../../../../frontend/src/components/modals');
     helpers = await import(pathToFileURL(path.join(modalsDir, 'priceListHelpers.ts')).href);
   });
 
   const sampleCatalog = [
-    { id: 1, sku: '0552', name: '1882 FERNET X 1 LT', description: null, commercialCategory: 'Bebidas Alcohólicas', rubro: { name: 'BEBIDAS' }, listPrice: 12240, isActive: true },
-    { id: 2, sku: '0553', name: 'ALAMBRADO MALBEC X 750 ML', description: null, commercialCategory: 'Bebidas Alcoholicas', rubro: { name: 'BEBIDAS' }, listPrice: 6691, isActive: true },
-    { id: 3, sku: '0210', name: '308 AVE MARIA SEMOLA X 500 GR', description: null, commercialCategory: 'Pastas Secas', rubro: { name: 'PASTAS SECAS' }, listPrice: 864, isActive: true },
-    { id: 4, sku: '0005', name: 'MELINCUÉ CREMOSO HORMA X KG', description: null, commercialCategory: 'Refrigerados', rubro: { name: 'REMOTTI' }, listPrice: 7500, isActive: true },
-    { id: 5, sku: '0020', name: 'SANCOR MANTECA X 200 GR', description: null, commercialCategory: 'Refrigerados', rubro: { name: 'LÁCTEOS' }, listPrice: 2800, isActive: true },
-    { id: 6, sku: '0110', name: 'SODECAR JAMON COCIDO X KG', description: null, commercialCategory: 'Fiambres', rubro: { name: 'SODECAR' }, listPrice: 9900, isActive: true },
-    { id: 7, sku: '0780', name: 'AMANDA TERMO TERMOLAR X 1 LT', description: null, commercialCategory: 'No comestibles', rubro: { name: 'NO COMESTIBLES' }, listPrice: 23129, isActive: true },
-    { id: 8, sku: '0990', name: 'ITEM SIN CLASIFICAR', description: null, commercialCategory: null, rubro: null, listPrice: 1000, isActive: true },
-    { id: 9, sku: '0999', name: 'PRODUCTO INACTIVO BORRADO', description: null, commercialCategory: 'Refrigerados', rubro: { name: 'REMOTTI' }, listPrice: 5000, isActive: false },
+    { id: 1, sku: '0792', name: 'CIF DETERGENTE BIO ACTIVE LIMA X 500 CC', description: null, commercialCategory: 'Limpieza', rubro: { name: 'LIMPIEZA' }, listPrice: 3801, isActive: true },
+    { id: 2, sku: '0795', name: 'BAGGIO VIDA AGUA SAB. POMELO 6X1500C', description: null, commercialCategory: 'Bebidas', rubro: { name: 'BEBIDAS' }, listPrice: 1190, isActive: true },
+    { id: 3, sku: '0072', name: 'CREMIGAL SARDO QUESO X KG', description: 'QUESOS', commercialCategory: 'Cremigal', rubro: { name: 'SANCOR Y CREMIGAL' }, listPrice: 15999, isActive: true },
+    { id: 4, sku: '0062', name: 'CREMIGAL MOZZARELLA CILINDRO X KG', description: 'QUESOS', commercialCategory: 'Cremigal', rubro: { name: 'SANCOR Y CREMIGAL' }, listPrice: 10360, isActive: true },
+    { id: 5, sku: '0001', name: 'MELINCUÉ BARRA TYBO X KG', description: 'MELINCUÉ', commercialCategory: 'Melincué', rubro: { name: 'REMOTTI' }, listPrice: 11156, isActive: true },
+    { id: 6, sku: '0002', name: 'MELINCUÉ CHEDDAR X KG', description: 'MELINCUÉ', commercialCategory: 'Melincué', rubro: { name: 'REMOTTI' }, listPrice: 14063, isActive: true },
+    { id: 7, sku: '0802', name: 'SANCOR QUESO DANBO X KG', description: 'QUESOS', commercialCategory: 'Sancor', rubro: { name: 'SANCOR' }, listPrice: 14014, isActive: true },
+    { id: 8, sku: '0999', name: 'PRODUCTO PAUSADO SIN STOCK', description: null, commercialCategory: 'Melincué', rubro: { name: 'REMOTTI' }, listPrice: 5000, isActive: false },
   ];
 
-  it('ordena por Categorías Comerciales en orden comercial lógico y unifica variantes con/sin tilde', () => {
-    const grouped = helpers.groupPriceListProducts(sampleCatalog, 'category');
+  it('separa Melincué, Cremigal, Sancor, Bebidas y Limpieza sin mezclar productos y excluye sin stock', () => {
+    const grouped = helpers.groupPriceListProducts(sampleCatalog);
     expect(grouped.map((g: any) => g.name)).toEqual([
-      'REFRIGERADOS',
-      'FIAMBRES',
-      'PASTAS SECAS',
-      'BEBIDAS ALCOHÓLICAS',
-      'NO COMESTIBLES',
-      'VARIOS',
-    ]);
-
-    // Excluye inactivos y ordena alfabéticamente dentro de cada categoría
-    const refrigerados = grouped.find((g: any) => g.key === 'REFRIGERADOS');
-    expect(refrigerados.directProducts.map((p: any) => p.name)).toEqual([
-      'MELINCUÉ CREMOSO HORMA X KG',
-      'SANCOR MANTECA X 200 GR',
-    ]);
-
-    const bebidasAlc = grouped.find((g: any) => g.key === 'BEBIDAS ALCOHOLICAS');
-    expect(bebidasAlc.totalCount).toBe(2);
-    expect(bebidasAlc.directProducts.map((p: any) => p.name)).toEqual([
-      '1882 FERNET X 1 LT',
-      'ALAMBRADO MALBEC X 750 ML',
-    ]);
-  });
-
-  it('alterna limpiamente a agrupación por Rubros manteniendo orden lógico', () => {
-    const groupedByRubro = helpers.groupPriceListProducts(sampleCatalog, 'rubro');
-    expect(groupedByRubro.map((g: any) => g.name)).toEqual([
-      'REMOTTI',
-      'LÁCTEOS',
-      'SODECAR',
-      'PASTAS SECAS',
+      'MELINCUÉ',
+      'CREMIGAL',
+      'SANCOR',
       'BEBIDAS',
-      'NO COMESTIBLES',
-      'VARIOS',
+      'LIMPIEZA',
     ]);
+
+    const melincueGroup = grouped.find((g: any) => g.key === 'MELINCUE');
+    expect(melincueGroup.directProducts.map((p: any) => p.sku)).toEqual(['0001', '0002']);
   });
 
-  it('detecta MELINCUÉ con tilde en tarifas especiales y redondea pesos enteros ROUND_HALF_UP', () => {
-    const melincue = sampleCatalog[3];
-    expect(helpers.isQuesoRemotti(melincue)).toBe(true);
-    expect(helpers.isQueso(melincue)).toBe(true);
-    expect(helpers.roundIntegerPeso(100.5)).toBe(101);
-    expect(helpers.roundIntegerPeso(100.49)).toBe(100);
+  it('respeta el orden dinámico Subir/Bajar leído de metadata.catalog_active_state en chatbot-dv', () => {
+    const mockState = JSON.stringify({
+      catalogItems: [
+        { category: 'COMBOS 💣', is_combo: true },
+        { sku: '0802', category: 'Sancor' },
+        { sku: '0001', category: 'Melincué' },
+        { sku: '0072', category: 'Cremigal' },
+      ],
+    });
+    const order = extractCategoryOrderFromCatalogState(mockState);
+    expect(order).toEqual(['Sancor', 'Melincué', 'Cremigal']);
+
+    const grouped = helpers.groupPriceListProducts(sampleCatalog, order);
+    expect(grouped.slice(0, 3).map((g: any) => g.name)).toEqual(['SANCOR', 'MELINCUÉ', 'CREMIGAL']);
+  });
+
+  it('sincroniza categoría, rubro y subrubro desde chatbot-dv y distingue quesos Melincué vs Cremigal', () => {
+    expect(normalizeRubroCanonicalName('Melincué')).toBe('REMOTTI');
+    expect(normalizeRubroCanonicalName('Conservas')).toBe('CONSERVAS');
+
+    const patch = computeErpProductSyncPatch(
+      {
+        id: 1,
+        sku: '0001',
+        name: 'MELINCUÉ BARRA TYBO X KG',
+        costPrice: 8000,
+        listPrice: 11156,
+        listPriceB: 11156,
+        listPriceC: 11156,
+        profitMargin: 39.45,
+        imageUrl: '/uploads/products/0001.png',
+        isActive: true,
+        isPesable: true,
+        minOrderQuantity: 1,
+        approximateWeight: 4,
+        commercialCategory: 'Refrigerados',
+        description: null,
+        rubroId: 121,
+      },
+      {
+        sku: '0001',
+        name: 'MELINCUÉ BARRA TYBO X KG',
+        price: 11156,
+        active: 1,
+        category: 'Melincué',
+        rubro: 'REMOTTI',
+        subrubro: 'MELINCUÉ',
+      },
+      '/uploads/products/0001.png',
+      new Date(),
+      97,
+    );
+
+    expect(patch.categoryChanged).toBe(true);
+    expect(patch.rubroChanged).toBe(true);
+    expect(patch.updateData.commercialCategory).toBe('Melincué');
+    expect(patch.updateData.rubroId).toBe(97);
+    expect(patch.updateData.description).toBe('MELINCUÉ');
+
+    // Mozzarella Cremigal no dice "QUESO" en name pero sí en subrubro/description ("QUESOS")
+    expect(helpers.isQueso(sampleCatalog[3])).toBe(true);
+    expect(helpers.isQuesoRemotti(sampleCatalog[3])).toBe(false);
+    expect(helpers.isQuesoRemotti(sampleCatalog[4])).toBe(true);
   });
 });

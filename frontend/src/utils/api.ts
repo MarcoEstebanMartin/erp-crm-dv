@@ -181,6 +181,10 @@ export const api = {
     return res.products;
   },
 
+  getPriceListCatalog: async () => {
+    return await request('/products/price-list-catalog');
+  },
+
   createProduct: async (productData: any) => {    
     const res = await request('/products', {
       method: 'POST',

@@ -3,13 +3,11 @@ import {
   cleanCategoryName,
   formatPriceListArs,
   type CategoryGroup,
-  type PriceListGroupBy,
   type PriceListProduct,
 } from './priceListHelpers';
 
 interface PriceListTableRendererProps {
   groupedData: CategoryGroup[];
-  groupBy: PriceListGroupBy;
   targetType: 'client' | 'staff';
   listDate: string;
   fontScaleConfig: any;
@@ -19,7 +17,6 @@ interface PriceListTableRendererProps {
 
 export const PriceListTableRenderer: React.FC<PriceListTableRendererProps> = ({
   groupedData,
-  groupBy,
   targetType,
   listDate,
   fontScaleConfig,
@@ -28,7 +25,6 @@ export const PriceListTableRenderer: React.FC<PriceListTableRendererProps> = ({
 }) => {
   const tableClass = isPrintMode ? 'price-list-print-table' : 'price-list-view-table';
   const colSpan = targetType === 'staff' ? 3 : 2;
-  const subtitleMode = groupBy === 'rubro' ? 'ORDENADO POR RUBROS' : 'ORDENADO POR CATEGORÍAS COMERCIALES';
 
   return (
     <div>
@@ -38,16 +34,12 @@ export const PriceListTableRenderer: React.FC<PriceListTableRendererProps> = ({
           .price-list-view-table td { padding: ${fontScaleConfig.viewPadding}; font-size: ${fontScaleConfig.viewSize}; border-bottom: 1px solid #e5e5e7; color: #000; }
           .price-list-view-table tr.category-spacer td { border-bottom: none; padding: 5px 0; background: transparent; }
           .price-list-view-table td.category-header { background-color: #ededf2; font-weight: 800; font-size: ${fontScaleConfig.viewHeaderSize}; border-top: 1px solid #d1d1d6; border-bottom: 1.5px solid #1c1c1e; padding: 7px 8px 5px 8px; text-transform: uppercase; letter-spacing: 0.03em; color: #111; }
-          .price-list-view-table td.subcategory-header { background-color: #f5f5f7; font-weight: 700; font-size: ${fontScaleConfig.viewSubheaderSize}; border-bottom: 1px solid #c7c7cc; padding: 5px 8px 3px 8px; text-transform: uppercase; letter-spacing: 0.01em; }
-          .price-list-view-table td.brand-header { font-weight: 700; font-size: ${fontScaleConfig.viewBrandSize}; color: #3a3a3c; font-style: italic; border-bottom: 1px dashed #e5e5e7; padding: 4px 6px 4px 12px; }
           @media print {
             .price-list-print-table { width: 100% !important; border-collapse: collapse !important; font-family: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif !important; }
             .price-list-print-table tr { page-break-inside: avoid !important; }
             .price-list-print-table td { padding: ${fontScaleConfig.printPadding} !important; font-size: ${fontScaleConfig.printSize} !important; border-bottom: 1px solid #e5e5e7 !important; color: #000000 !important; }
             .price-list-print-table tr.category-spacer td { border-bottom: none !important; padding: 4px 0 !important; background: transparent !important; }
             .price-list-print-table td.category-header { background-color: #e8e8ed !important; font-weight: 900 !important; font-size: ${fontScaleConfig.printHeaderSize} !important; border-top: 1px solid #bbb !important; border-bottom: 1.5px solid #000 !important; padding: 6px 8px 4px 8px !important; text-transform: uppercase !important; letter-spacing: 0.03em !important; print-color-adjust: exact !important; -webkit-print-color-adjust: exact !important; }
-            .price-list-print-table td.subcategory-header { background-color: #f2f2f7 !important; font-weight: 800 !important; font-size: ${fontScaleConfig.printSubheaderSize} !important; border-bottom: 1px solid #bbb !important; padding: 4px 8px 3px 8px !important; text-transform: uppercase !important; letter-spacing: 0.01em !important; print-color-adjust: exact !important; -webkit-print-color-adjust: exact !important; }
-            .price-list-print-table td.brand-header { font-weight: 800 !important; font-size: ${fontScaleConfig.printBrandSize} !important; color: #111 !important; font-style: italic !important; border-bottom: 1px dashed #ccc !important; padding: 4px 6px 3px 12px !important; }
           }
         `}</style>
       )}
@@ -58,7 +50,7 @@ export const PriceListTableRenderer: React.FC<PriceListTableRendererProps> = ({
             LISTA GENERAL DON VENANCIO
           </h1>
           <p style={{ fontSize: isPrintMode ? '0.78rem' : '0.73rem', fontWeight: isPrintMode ? 700 : 600, color: isPrintMode ? '#333' : '#555', margin: '3px 0 0 0', letterSpacing: '0.02em' }}>
-            {targetType === 'client' ? `TODOS LOS PRODUCTOS PRECIO FINAL · ${subtitleMode}` : `PRECIOS CON Y SIN IVA · ${subtitleMode}`}
+            {targetType === 'client' ? 'TODOS LOS PRODUCTOS PRECIO FINAL' : 'PRECIOS CON Y SIN IVA'}
           </p>
         </div>
         <div style={{ fontSize: isPrintMode ? '0.95rem' : '0.85rem', fontWeight: isPrintMode ? 800 : 700, color: '#000' }}>{listDate}</div>
@@ -99,48 +91,13 @@ export const PriceListTableRenderer: React.FC<PriceListTableRendererProps> = ({
                 {cat.directProducts.map((p) => {
                   const finalPrice = getProductPrice(p);
                   return (
-                    <tr key={p.id}>
+                    <tr key={p.sku || p.id}>
                       <td>{p.name}</td>
                       {targetType === 'staff' && <td style={{ width: '92px', textAlign: 'right', fontFamily: 'monospace', color: '#555' }}>{formatPriceListArs(finalPrice / 1.21)}</td>}
                       <td style={{ width: '96px', textAlign: 'right', fontWeight: 700, fontFamily: 'monospace' }}>{formatPriceListArs(finalPrice)}</td>
                     </tr>
                   );
                 })}
-
-                {cat.sortedSubcategories.map((sub) => (
-                  <Fragment key={sub.name}>
-                    <tr style={isPrintMode ? { pageBreakInside: 'avoid', pageBreakAfter: 'avoid' } : undefined}>
-                      <td colSpan={colSpan} className="subcategory-header">{sub.name}</td>
-                    </tr>
-                    {sub.products.map((p) => {
-                      const finalPrice = getProductPrice(p);
-                      return (
-                        <tr key={p.id}>
-                          <td>{p.name}</td>
-                          {targetType === 'staff' && <td style={{ width: '92px', textAlign: 'right', fontFamily: 'monospace', color: '#555' }}>{formatPriceListArs(finalPrice / 1.21)}</td>}
-                          <td style={{ width: '96px', textAlign: 'right', fontWeight: 700, fontFamily: 'monospace' }}>{formatPriceListArs(finalPrice)}</td>
-                        </tr>
-                      );
-                    })}
-                    {sub.sortedBrands.map((b) => (
-                      <Fragment key={b.name}>
-                        <tr style={isPrintMode ? { pageBreakInside: 'avoid', pageBreakAfter: 'avoid' } : undefined}>
-                          <td colSpan={colSpan} className="brand-header">{b.name}</td>
-                        </tr>
-                        {b.products.map((p) => {
-                          const finalPrice = getProductPrice(p);
-                          return (
-                            <tr key={p.id}>
-                              <td>{p.name}</td>
-                              {targetType === 'staff' && <td style={{ width: '92px', textAlign: 'right', fontFamily: 'monospace', color: '#555' }}>{formatPriceListArs(finalPrice / 1.21)}</td>}
-                              <td style={{ width: '96px', textAlign: 'right', fontWeight: 700, fontFamily: 'monospace' }}>{formatPriceListArs(finalPrice)}</td>
-                            </tr>
-                          );
-                        })}
-                      </Fragment>
-                    ))}
-                  </Fragment>
-                ))}
               </Fragment>
             );
           })}

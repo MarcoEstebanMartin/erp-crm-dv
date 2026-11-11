@@ -26,6 +26,7 @@ import {
 } from '../controllers/lot.controller';
 import {
   getCatalogBridgeStatus,
+  getLivePriceList,
   pullCatalogFromProduction,
 } from '../controllers/catalog-sync.controller';
 import { authenticateJWT, requireRole } from '../middlewares/auth';
@@ -50,6 +51,7 @@ const router = Router();
 
 // Rutas accesibles por cualquier usuario autenticado (Vendedor, Depósito, Admin)
 router.get('/', authenticateJWT, getProducts);
+router.get('/price-list-catalog', authenticateJWT, getLivePriceList);
 router.get('/stock/movements', authenticateJWT, getGlobalStockMovements);
 router.get('/stock/expiring-lots', authenticateJWT, getExpiringLots);
 router.get('/barcode/:barcode', authenticateJWT, getProductByBarcode);

@@ -15,10 +15,15 @@ interface ProductsListProps {
 }
 
 const CATEGORY_EMOJIS: Record<string, string> = {
-  Fiambres: '🥓', Refrigerados: '❄️', Bebidas: '🥤', 'Bebidas Alcoholicas': '🍺', 'Bebidas Alcohólicas': '🍺',
-  Vinos: '🍷', 'Aderezos y Aceites': '🌻', 'Pastas Secas': '🍝', Almacén: '🛒', Almacen: '🛒',
-  Yerbas: '🌿', Conservas: '🥫', Pescadería: '🐟', Pescaderia: '🐟', Papeles: '🧻',
-  'No comestibles': '📦', 'Estucheria y Regalerìa': '🎁', 'Estuchería y Regalería': '🎁', Varios: '🏷️',
+  Melincué: '🧀', Cremigal: '🥛', Sancor: '🧈', Fiambres: '🥓', Refrigerados: '❄️',
+  Conservas: '🥫', Pescadería: '🐟', Pescaderia: '🐟', 'Pastas Secas': '🍝',
+  'Aceites y Vinagres': '🫒', Aderezos: '🌻', 'Aderezos y Aceites': '🌻',
+  Almacén: '🛒', Almacen: '🛒', Yerbas: '🌿', Bebidas: '🥤',
+  Aperitivos: '🍸', Fernet: '🥃', 'Vinos Tintos': '🍷', 'Vinos Blancos': '🥂',
+  'Espumantes y Sidras': '🍾', 'Bebidas Alcohólicas Espirituosas': '🥃',
+  'Bebidas Alcoholicas': '🍺', 'Bebidas Alcohólicas': '🍺', Vinos: '🍷',
+  'Estucheria y Regalerìa': '🎁', 'Estuchería y Regalería': '🎁',
+  Papeles: '🧻', Limpieza: '🧼', 'No comestibles': '📦', Varios: '🏷️',
 };
 
 export default function ProductsList({ products, searchQuery, setSearchQuery, setProductModal, onUpdateProduct, onUploadImage, catalogTab }: ProductsListProps) {

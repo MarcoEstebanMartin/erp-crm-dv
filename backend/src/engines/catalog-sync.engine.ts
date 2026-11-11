@@ -4,7 +4,6 @@ import {
   roundToIntegerPeso,
   roundToThreeDecimalsWeight,
   roundToTwoDecimals,
-  toDecimal,
 } from '../core/money';
 import { calculateRealMarginPct } from './pricing.engine';
 
@@ -13,6 +12,9 @@ export interface ProductionCatalogRow {
   name: string;
   price: number | string | null;
   active: number;
+  category?: string | null;
+  rubro?: string | null;
+  subrubro?: string | null;
   min_qty?: string | number | null;
   peso_promedio?: number | string | null;
   photo_file?: string | null;
@@ -33,6 +35,9 @@ export interface ErpCatalogProductSnapshot {
   isPesable: boolean;
   minOrderQuantity: number;
   approximateWeight: Decimal | number | string | null;
+  commercialCategory?: string | null;
+  description?: string | null;
+  rubroId?: number | null;
 }
 
 export interface ErpProductSyncPatchResult {
@@ -41,15 +46,91 @@ export interface ErpProductSyncPatchResult {
   imageChanged: boolean;
   activeChanged: boolean;
   nameChanged: boolean;
+  categoryChanged: boolean;
+  rubroChanged: boolean;
   metaChanged: boolean;
   updateData: Record<string, unknown>;
 }
 
 const ALLOWED_IMAGE_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.webp']);
 
+const CANONICAL_RUBRO_MAP: Record<string, string> = {
+  REMOTTI: 'REMOTTI',
+  MELINCUE: 'REMOTTI',
+  LECHES: 'LECHES',
+  LACTEOS: 'LÁCTEOS',
+  YOGURT: 'YOGURT',
+  'SANCOR Y CREMIGAL': 'SANCOR Y CREMIGAL',
+  SANCOR: 'SANCOR',
+  'QUESOS RALLADOS': 'QUESOS RALLADOS',
+  SODECAR: 'SODECAR',
+  CONSERVAS: 'CONSERVAS',
+  'A.G.D Y NIZA': 'A.G.D Y NIZA',
+  CAFE: 'CAFÉ',
+  ARROZ: 'ARROZ',
+  YERBAS: 'YERBAS',
+  AZUCAR: 'AZÚCAR',
+  SAL: 'SAL',
+  EDULCORANTES: 'EDULCORANTES',
+  PESCADERIA: 'PESCADERÍA',
+  'PASTAS SECAS': 'PASTAS SECAS',
+  PAPELES: 'PAPELES',
+  REGALERIA: 'REGALERÍA',
+  BEBIDAS: 'BEBIDAS',
+  'NO COMESTIBLES': 'NO COMESTIBLES',
+  LIMPIEZA: 'LIMPIEZA',
+};
+
+export function normalizeRubroLookupKey(raw: string): string {
+  return String(raw || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, ' ')
+    .toUpperCase()
+    .trim();
+}
+
+export function normalizeRubroCanonicalName(rawRubro?: string | null): string | null {
+  if (!rawRubro) return null;
+  const trimmed = rawRubro.trim();
+  if (!trimmed || trimmed.includes('\uFFFD')) return null;
+  const lookup = normalizeRubroLookupKey(trimmed);
+  if (!lookup) return null;
+  return CANONICAL_RUBRO_MAP[lookup] || trimmed.toUpperCase();
+}
+
 /**
- * Resuelve la extensión segura de imagen a partir del nombre original o MIME type.
+ * Extrae el orden exacto de categorías definido con Subir/Bajar en `metadata.catalog_active_state`
+ * de `chatbot-dv`, ignorando banners y bloques especiales de `COMBOS`.
  */
+export function extractCategoryOrderFromCatalogState(rawStateJson?: string | null): string[] {
+  if (!rawStateJson || !rawStateJson.trim()) return [];
+  try {
+    const parsed = JSON.parse(rawStateJson);
+    const items: any[] = Array.isArray(parsed?.catalogItems)
+      ? parsed.catalogItems
+      : Array.isArray(parsed?.items)
+        ? parsed.items
+        : [];
+    const seen = new Set<string>();
+    const ordered: string[] = [];
+    for (const item of items) {
+      if (!item || typeof item !== 'object' || item.is_combo || item.type === 'combo') continue;
+      const cat = String(item.category || '').trim();
+      if (!cat) continue;
+      const key = normalizeRubroLookupKey(cat);
+      if (key.startsWith('COMBO')) continue;
+      if (!seen.has(key)) {
+        seen.add(key);
+        ordered.push(cat);
+      }
+    }
+    return ordered;
+  } catch {
+    return [];
+  }
+}
+
 export function resolveMasterArchiveExtension(
   rawFilename?: string | null,
   mimeType?: string | null,
@@ -64,12 +145,6 @@ export function resolveMasterArchiveExtension(
   return '.jpg';
 }
 
-/**
- * Genera un nombre de archivo inmutable y libre de colisiones para `backend/uploads/products/`.
- * - Si Producción ya versionó el archivo con sufijo (`0031_1794344664.png`), lo preserva sanitizado.
- * - Si es plano (`0029.jpg`), agrega `_dv_<md5_8>` (`0029_dv_8a9f12b4.jpg`) para evitar que
- *   `syncMasterProductImages` o el directorio estático de Vite pisen la foto HD de Producción.
- */
 export function resolveSyncedImageFilename(
   sku: string,
   rawFilename: string | null | undefined,
@@ -90,9 +165,6 @@ export function resolveSyncedImageFilename(
   return `${cleanSku}_dv_${shortHash}${ext}`;
 }
 
-/**
- * Preserva la relación exacta de Lista B o Lista C respecto a Lista A redondeando al peso entero.
- */
 export function computeProportionalTierPrice(
   newListPriceA: Decimal,
   oldListPriceA: Decimal,
@@ -104,9 +176,6 @@ export function computeProportionalTierPrice(
   return roundToIntegerPeso(newListPriceA.times(ratio));
 }
 
-/**
- * Calcula el margen real acotado a [-999.99, 999.99] para no desbordar `NUMERIC(5, 2)` en PostgreSQL.
- */
 export function computeClampedMarginPct(
   costPrice: Decimal,
   listPriceA: Decimal,
@@ -117,14 +186,12 @@ export function computeClampedMarginPct(
   return roundToTwoDecimals(clamped).toNumber();
 }
 
-/**
- * Calcula de forma determinística el parche a aplicar en `erp-dv` para nivelarlo con `chatbot-dv`.
- */
 export function computeErpProductSyncPatch(
   erp: ErpCatalogProductSnapshot,
   prodRow: ProductionCatalogRow | undefined,
   resolvedImageUrl: string | null,
   syncTimestamp: Date = new Date(),
+  resolvedRubroId?: number | null,
 ): ErpProductSyncPatchResult {
   if (!prodRow) {
     if (!erp.isActive) {
@@ -134,6 +201,8 @@ export function computeErpProductSyncPatch(
         imageChanged: false,
         activeChanged: false,
         nameChanged: false,
+        categoryChanged: false,
+        rubroChanged: false,
         metaChanged: false,
         updateData: {},
       };
@@ -144,6 +213,8 @@ export function computeErpProductSyncPatch(
       imageChanged: false,
       activeChanged: true,
       nameChanged: false,
+      categoryChanged: false,
+      rubroChanged: false,
       metaChanged: false,
       updateData: { isActive: false },
     };
@@ -184,19 +255,39 @@ export function computeErpProductSyncPatch(
   const imageChanged = Boolean(resolvedImageUrl && resolvedImageUrl !== erp.imageUrl);
   if (imageChanged) updateData.imageUrl = resolvedImageUrl;
 
+  const cleanCategory = (prodRow.category || '').trim();
+  const categoryChanged = Boolean(cleanCategory && cleanCategory !== (erp.commercialCategory || '').trim());
+  if (categoryChanged) updateData.commercialCategory = cleanCategory;
+
+  const rubroChanged = Boolean(
+    resolvedRubroId !== undefined &&
+      resolvedRubroId !== null &&
+      erp.rubroId !== undefined &&
+      erp.rubroId !== resolvedRubroId,
+  );
+  if (rubroChanged) updateData.rubroId = resolvedRubroId;
+
   let metaChanged = false;
+  const cleanSubrubro = (prodRow.subrubro || '').trim();
+  if (cleanSubrubro && cleanSubrubro !== (erp.description || '').trim()) {
+    updateData.description = cleanSubrubro;
+    metaChanged = true;
+  }
+
   const parsedMinQty = parseInt(String(prodRow.min_qty ?? '').trim(), 10);
   if (Number.isInteger(parsedMinQty) && parsedMinQty >= 1 && parsedMinQty !== erp.minOrderQuantity) {
     updateData.minOrderQuantity = parsedMinQty;
     metaChanged = true;
   }
 
-  const rawWeight = prodRow.peso_promedio !== null && prodRow.peso_promedio !== undefined
-    ? Number(prodRow.peso_promedio)
-    : 0;
+  const rawWeight =
+    prodRow.peso_promedio !== null && prodRow.peso_promedio !== undefined
+      ? Number(prodRow.peso_promedio)
+      : 0;
   if (Number.isFinite(rawWeight) && rawWeight > 0) {
     const nextWeight = roundToThreeDecimalsWeight(prodRow.peso_promedio!);
-    const currWeight = erp.approximateWeight !== null ? roundToThreeDecimalsWeight(erp.approximateWeight) : null;
+    const currWeight =
+      erp.approximateWeight !== null ? roundToThreeDecimalsWeight(erp.approximateWeight) : null;
     if (!currWeight || !nextWeight.eq(currWeight)) {
       updateData.approximateWeight = nextWeight.toNumber();
       metaChanged = true;
@@ -207,13 +298,23 @@ export function computeErpProductSyncPatch(
     }
   }
 
-  const hasChanges = priceChanged || imageChanged || activeChanged || nameChanged || metaChanged;
+  const hasChanges =
+    priceChanged ||
+    imageChanged ||
+    activeChanged ||
+    nameChanged ||
+    categoryChanged ||
+    rubroChanged ||
+    metaChanged;
+
   return {
     hasChanges,
     priceChanged,
     imageChanged,
     activeChanged,
     nameChanged,
+    categoryChanged,
+    rubroChanged,
     metaChanged,
     updateData,
   };
