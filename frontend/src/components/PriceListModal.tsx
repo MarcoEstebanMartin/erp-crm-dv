@@ -6,6 +6,8 @@ import {
   groupPriceListProducts,
   isQueso,
   isQuesoRemotti,
+  roundIntegerPeso,
+  type PriceListGroupBy,
   type PriceListProduct,
 } from './modals/priceListHelpers';
 import { PriceListTableRenderer } from './modals/PriceListTableRenderer';
@@ -20,6 +22,7 @@ export default function PriceListModal({ isOpen, onClose }: PriceListModalProps)
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [groupBy, setGroupBy] = useState<PriceListGroupBy>('category');
   const [priceListType, setPriceListType] = useState<'A' | 'B' | 'C'>('A');
   const [targetType, setTargetType] = useState<'client' | 'staff'>('client');
   const [fontScale, setFontScale] = useState<'small' | 'medium' | 'large'>('medium');
@@ -49,12 +52,16 @@ export default function PriceListModal({ isOpen, onClose }: PriceListModalProps)
     }
   }, [isOpen]);
 
-  const groupedData = useMemo(() => groupPriceListProducts(products), [products]);
+  const groupedData = useMemo(() => groupPriceListProducts(products, groupBy), [products, groupBy]);
+  const totalVisibleProducts = useMemo(
+    () => groupedData.reduce((acc, g) => acc + g.totalCount, 0),
+    [groupedData],
+  );
 
   const getProductPrice = (prod: PriceListProduct) => {
-    const basePrice = Number(prod.listPrice) || 0;
-    if (priceListType === 'B') return isQueso(prod) ? basePrice * 0.97 : basePrice;
-    if (priceListType === 'C') return isQuesoRemotti(prod) ? basePrice * 0.95 : basePrice;
+    const basePrice = roundIntegerPeso(Number(prod.listPrice) || 0);
+    if (priceListType === 'B') return isQueso(prod) ? roundIntegerPeso(basePrice * 0.97) : basePrice;
+    if (priceListType === 'C') return isQuesoRemotti(prod) ? roundIntegerPeso(basePrice * 0.95) : basePrice;
     return basePrice;
   };
 
@@ -79,8 +86,30 @@ export default function PriceListModal({ isOpen, onClose }: PriceListModalProps)
             </button>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '230px 1fr', flex: 1, overflow: 'hidden' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '240px 1fr', flex: 1, overflow: 'hidden' }}>
             <div style={{ padding: '16px', borderRight: '1px solid var(--border-color)', backgroundColor: 'var(--bg-light)', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div>
+                <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Agrupar por</label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px', backgroundColor: 'var(--border-color)', padding: '2px', borderRadius: '6px' }}>
+                  {([
+                    { id: 'category', label: 'Categorías' },
+                    { id: 'rubro', label: 'Rubros' },
+                  ] as const).map((opt) => (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      onClick={() => setGroupBy(opt.id)}
+                      style={{
+                        padding: '6px 4px', fontSize: '0.78rem', fontWeight: groupBy === opt.id ? 600 : 500, border: 'none', borderRadius: '4px',
+                        backgroundColor: groupBy === opt.id ? 'var(--bg-card)' : 'transparent', color: groupBy === opt.id ? 'var(--text-primary)' : 'var(--text-secondary)', cursor: 'pointer',
+                      }}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <div>
                 <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Destinatario</label>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px', backgroundColor: 'var(--border-color)', padding: '2px', borderRadius: '6px' }}>
@@ -141,6 +170,15 @@ export default function PriceListModal({ isOpen, onClose }: PriceListModalProps)
                   <option value="large">Grande (11pt)</option>
                 </select>
               </div>
+
+              {!loading && totalVisibleProducts > 0 && (
+                <div style={{ marginTop: 'auto', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-card)', fontSize: '0.75rem', color: 'var(--text-secondary)', lineHeight: 1.45 }}>
+                  <div style={{ fontWeight: 700, color: 'var(--text-primary)', marginBottom: '2px' }}>
+                    {groupedData.length} {groupBy === 'category' ? 'categorías comerciales' : 'rubros'}
+                  </div>
+                  <div>{totalVisibleProducts} productos activos incluidos</div>
+                </div>
+              )}
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', backgroundColor: '#4e5256', padding: '16px 20px' }}>
@@ -150,7 +188,7 @@ export default function PriceListModal({ isOpen, onClose }: PriceListModalProps)
                 ) : error ? (
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'red', fontSize: '0.88rem' }}>{error}</div>
                 ) : (
-                  <PriceListTableRenderer groupedData={groupedData} targetType={targetType} listDate={listDate} fontScaleConfig={fontScaleConfig} getProductPrice={getProductPrice} isPrintMode={false} />
+                  <PriceListTableRenderer groupedData={groupedData} groupBy={groupBy} targetType={targetType} listDate={listDate} fontScaleConfig={fontScaleConfig} getProductPrice={getProductPrice} isPrintMode={false} />
                 )}
               </div>
             </div>
@@ -166,7 +204,7 @@ export default function PriceListModal({ isOpen, onClose }: PriceListModalProps)
       </div>
 
       <div className="print-only" style={{ color: '#000', backgroundColor: '#fff', width: '100%', fontFamily: 'system-ui, sans-serif' }}>
-        <PriceListTableRenderer groupedData={groupedData} targetType={targetType} listDate={listDate} fontScaleConfig={fontScaleConfig} getProductPrice={getProductPrice} isPrintMode={true} />
+        <PriceListTableRenderer groupedData={groupedData} groupBy={groupBy} targetType={targetType} listDate={listDate} fontScaleConfig={fontScaleConfig} getProductPrice={getProductPrice} isPrintMode={true} />
       </div>
     </>
   );
