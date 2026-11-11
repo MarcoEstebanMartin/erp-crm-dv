@@ -328,90 +328,10 @@ export async function emitirNotaCreditoAFIP({
   }
 }
 
-function calculateCuil(dniStr: string, genderPrefix: '20' | '27' = '20'): string {
-  const cleanDni = dniStr.replace(/\D/g, '').padStart(8, '0');
-  let prefix: string = genderPrefix;
-  const xy = prefix + cleanDni;
-  const multipliers = [5, 4, 3, 2, 7, 6, 5, 4, 3, 2];
-  
-  let sum = 0;
-  for (let i = 0; i < 10; i++) {
-    sum += parseInt(xy[i], 10) * multipliers[i];
-  }
-  
-  const mod = sum % 11;
-  let z = 0;
-  if (mod === 0) {
-    z = 0;
-  } else if (mod === 1) {
-    prefix = '23';
-    z = genderPrefix === '20' ? 9 : 4;
-  } else {
-    z = 11 - mod;
-  }
-  
-  return `${prefix}${cleanDni}${z}`;
-}
-
 /**
- * Consulta los datos de un contribuyente en AFIP por su CUIT o DNI.
+ * Consulta real de datos fiscales/identidad por CUIT o DNI (ARCA Padrón A13 + BCRA + Padrón Local, sin datos falsos).
  */
-export async function getPersonDetailsAFIP(cuit: string): Promise<any> {
-  let cleanInput = cuit.replace(/\D/g, '');
-  if (cleanInput.length >= 7 && cleanInput.length <= 8) {
-    cleanInput = calculateCuil(cleanInput, '20');
-  }
-
-  const numericCuit = Number(cleanInput);
-
-  if (useMock || !afipClient) {
-    console.log(`[MOCK AFIP] Consultando datos para CUIT ${numericCuit}`);
-    return {
-      cuit: numericCuit,
-      name: 'Empresa de Prueba S.A.',
-      address: 'Avenida Falsa 123',
-      location: 'Ciudad Autónoma de Buenos Aires',
-      isClient: true,
-      isProvider: false,
-    };
-  }
-
-  try {
-    // Para consultar el padrón de AFIP se suele usar RegisterScopeThirteen o RegisterScopeFive.
-    // afip.js implementa RegisterScopeThirteen.
-    const details = await afipClient.RegisterScopeThirteen.getTaxpayerDetails(numericCuit);
-    
-    // Parsear respuesta (ejemplo basado en la estructura típica de AFIP A13)
-    const data = details?.datosGenerales || {};
-    const addressData = details?.datosGenerales?.domicilioFiscal || {};
-    
-    let fullName = data.razonSocial || '';
-    if (!fullName && data.nombre && data.apellido) {
-      fullName = `${data.nombre} ${data.apellido}`;
-    }
-
-    return {
-      cuit: numericCuit,
-      name: fullName,
-      address: addressData.direccion || '',
-      location: addressData.localidad || addressData.descripcionProvincia || '',
-      isClient: true,
-      isProvider: false,
-      rawData: details
-    };
-  } catch (error: any) {
-    console.error(`❌ Error consultando CUIT ${numericCuit} en AFIP (Probablemente faltan certificados reales):`, error.message || error);
-    
-    // Fallback a Mock si falla la conexión real a AFIP
-    console.log(`[MOCK FALLBACK] Retornando datos simulados para no bloquear el flujo.`);
-    return {
-      cuit: numericCuit,
-      name: 'Empresa Generada (AFIP Inactivo)',
-      address: 'Avenida Falsa 123',
-      location: 'Buenos Aires',
-      isClient: true,
-      isProvider: false,
-      fallback: true
-    };
-  }
+export async function getPersonDetailsAFIP(cuitOrDni: string) {
+  const { lookupTaxpayerByCuitOrDni } = await import('./arca-padron.service');
+  return lookupTaxpayerByCuitOrDni(cuitOrDni);
 }

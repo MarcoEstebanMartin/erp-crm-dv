@@ -21,7 +21,8 @@
     "db:sync-web-orders": "ts-node scripts/sync_web_orders.ts",
     "db:health-check": "node scripts/db_health_check.js",
     "db:audit-balances": "node scripts/audit_balances.js",
-    "db:audit-photos": "node scripts/audit_photos.js"
+    "db:audit-photos": "node scripts/audit_photos.js",
+    "arca:generar-csr": "ts-node -T scripts/generate_arca_csr.ts"
   },
   "prisma": {
     "seed": "node prisma/seed.js"

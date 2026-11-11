@@ -32,6 +32,8 @@ desktop.ini
 # Nunca subir claves privadas o certificados de producción a Git.
 backend/certs/*.key
 backend/certs/*.crt
+backend/certs/*.csr
+backend/certs/*.pem
 !backend/certs/.gitkeep
 
 # Backups, Binarios y Archivos Temporales de Oficina

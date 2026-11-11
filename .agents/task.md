@@ -166,3 +166,12 @@
   - [x] Crear `spa-static.middleware.ts` (`75` l., entrega unificada de `frontend/dist` + caché inmutable en `/assets` + `no-cache` en PWA + `404 JSON` en `/api/*`), `product-image-cache.middleware.ts` (`122` l., autocuración `READ ONLY` desde `chatbot-dv.product_images`) y `Dockerfile` + `.dockerignore` únicos de producción en la raíz (`node:24-slim`, usuario no-root)
   - [x] Alinear `env.config.ts` para detección segura de entorno Railway (`TRUST_PROXY=1` y origen propio HTTPS) y actualizar documentación (`AGENTS.md`, `TECH_STACK.md`, `ARCHITECTURE.md`, `crm-whatsapp.md`, `.env.example`)
 - [x] **Paso R2: Commit Limpio y Respaldo en GitHub (`MarcoEstebanMartin/erp-crm-dv`)** ✅ COMPLETADO (Despliegue en Railway reservado para cuando finalicen las pruebas locales de Frontend/ERP)
+
+---
+
+## Plan Activo: Pulido Operativo de Panel Principal y Accesos Directos (Paso a Paso)
+
+- [x] **Acceso Directo 1 (`Facturar Directo`)**: Abrir directamente la consola **"Emitir Factura de Venta Directa"** (`DirectInvoiceModal`) con foco automático en el buscador de cliente al tocar el acceso directo desde `HomeTab.tsx` (`00cc04b`) ✅ COMPLETADO.
+- [x] **Acceso Directo 2 (`Agregar / Editar Cliente` + Buscador `⚡ ARCA` en Vivo)**:
+  - [x] Ampliar y modularizar `ClientModal.tsx` (`555` -> `169` l., `maxWidth: 1320px`) en `useClientModalController.ts` (`212` l.), `ClientIdentityRolesCard.tsx` (`234` l.) y `ClientLocationCommercialCard.tsx` (`230` l.), sin textos ni etiquetas abreviadas y con detección instantánea de CUIT duplicado (`Abrir ficha existente`).
+  - [x] Construir motor puro Módulo-11 `arca-cuit.engine.ts` (`152` l.), firmador CMS/PKCS#7 nativo `arca-wsaa-cms.util.ts` (`255` l.), generador CSR `arca-csr.util.ts` (`67` l.) y servicio directo `arca-padron.service.ts` (`270` l.) conectado a **ARCA Padrón Alcance 13** en solo lectura (`~370 ms`, trayendo Razón Social, CUIT de 11 dígitos, Domicilio Fiscal y Localidad + CP con solo ingresar DNI o CUIT, eliminando mocks `Avenida Falsa 123`) ✅ COMPLETADO.

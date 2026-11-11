@@ -138,17 +138,34 @@ export async function getAfipData(req: AuthenticatedRequest, res: Response): Pro
     res.status(401).json({ status: 'error', message: 'No autorizado.' });
     return;
   }
-  if (!cuit || cuit.trim().length < 8) {
-    res.status(400).json({ status: 'error', message: 'CUIT/DNI inválido.' });
+  const cleanDigits = (cuit || '').replace(/\D/g, '');
+  if (cleanDigits.length < 7 || cleanDigits.length > 11) {
+    res.status(400).json({
+      status: 'error',
+      message: 'Ingresá un DNI válido (7 u 8 dígitos) o un CUIT completo (11 dígitos).',
+    });
     return;
   }
 
   try {
-    const { getPersonDetailsAFIP } = await import('../services/afip.service');
-    const data = await getPersonDetailsAFIP(cuit);
-    res.status(200).json({ status: 'success', data });
+    const { lookupTaxpayerByCuitOrDni, ArcaValidationError } = await import(
+      '../services/arca-padron.service'
+    );
+    try {
+      const data = await lookupTaxpayerByCuitOrDni(cleanDigits);
+      res.status(200).json({ status: 'success', data });
+    } catch (innerErr: any) {
+      if (innerErr instanceof ArcaValidationError) {
+        res.status(innerErr.statusCode).json({ status: 'error', message: innerErr.message });
+        return;
+      }
+      throw innerErr;
+    }
   } catch (error: any) {
-    res.status(500).json({ status: 'error', message: 'Error al consultar datos en AFIP.' });
+    res.status(500).json({
+      status: 'error',
+      message: error?.message || 'Error al consultar el padrón fiscal.',
+    });
   }
 }
 
