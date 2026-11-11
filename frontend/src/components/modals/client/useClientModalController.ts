@@ -124,12 +124,9 @@ export function useClientModalController({
         });
       } else {
         const hasAddress = Boolean(afipData.address);
-        const taxBadge = afipData.taxStatus ? ` · ${afipData.taxStatus}` : '';
         setModalBanner({
           tone: 'success',
-          text: hasAddress
-            ? `✅ Datos completos de ARCA: ${afipData.name} (CUIT ${afipData.cuit}${taxBadge}) — ${afipData.address}, ${afipData.location}.`
-            : `✅ Nombre y CUIT verificados: ${afipData.name} (${afipData.cuit}). Completá dirección y localidad (para traer domicilio fiscal automático falta certificado certs/arca.crt).`,
+          text: `✓ ${afipData.name}`,
         });
         if (!hasAddress) {
           setTimeout(() => addressInputRef.current?.focus(), 60);
