@@ -1,9 +1,17 @@
-import { GoogleGenerativeAI, Part } from '@google/generative-ai';
-import dotenv from 'dotenv';
-dotenv.config();
-
-const apiKey = process.env.GEMINI_API_KEY || '';
-const genAI = new GoogleGenerativeAI(apiKey);
+import type { GoogleGenAI } from '@google/genai';
+import {
+  DEFAULT_GEMINI_TRANSCRIBE_MODEL,
+  buildInlineMediaContent,
+  isGeminiApiKeyConfigured,
+  runGeminiInteraction,
+} from './ai/genai-client.helper';
+import {
+  INVOICE_EXTRACTION_JSON_SCHEMA,
+  PARSED_ORDER_ITEMS_JSON_SCHEMA,
+  extractedInvoiceValidator,
+  parseStructuredJsonText,
+  parsedOrderItemsValidator,
+} from '../validators/ai-schemas.validator';
 
 export interface ExtractedInvoiceData {
   supplierName: string;
@@ -22,190 +30,151 @@ export interface ExtractedInvoiceData {
   }>;
   netAmount: number;
   taxAmount: number;
-  percepcionAmount: number; // Suma total de percepciones (compatible con lógica previa si fuera necesario)
-  percepcionIIBBAmount: number; // Específico de Ingresos Brutos
-  percepcionIvaAmount: number; // Específico de IVA RG 3337
-  percepcionIva5329Amount: number; // Específico de IVA RG 5329
-  percepcionJurisdiction: string | null; // Provincia de la percepción IIBB (ej: "Buenos Aires", "CABA", etc.)
+  percepcionAmount: number;
+  percepcionIIBBAmount: number;
+  percepcionIvaAmount: number;
+  percepcionIva5329Amount: number;
+  percepcionJurisdiction: string | null;
   totalAmount: number;
 }
 
-async function generateWithFallback(
-  promptParts: Array<string | Part>,
-  responseMimeType?: string
-) {
-  const primaryModel = process.env.GEMINI_MODEL || 'gemini-3.6-flash';
-  const candidateModels = [
-    primaryModel,
-    'gemini-3.6-flash',
-    'gemini-2.0-flash',
-    'gemini-2.5-flash',
-    'gemini-1.5-flash'
-  ];
-
-  const uniqueModels = Array.from(new Set(candidateModels));
-  let lastError: any = null;
-
-  for (const modelName of uniqueModels) {
-    try {
-      const modelConfig: any = { model: modelName };
-      if (responseMimeType) {
-        modelConfig.generationConfig = { responseMimeType };
-      }
-      const model = genAI.getGenerativeModel(modelConfig);
-      const result = await model.generateContent(promptParts);
-      return result;
-    } catch (err: any) {
-      lastError = err;
-      console.warn(`[GeminiService] Modelo ${modelName} no disponible: ${err.message || err}. Probando siguiente modelo...`);
-    }
-  }
-  throw lastError;
-}
+const INVOICE_SYSTEM_INSTRUCTION = `
+Eres un contador auditor experto en facturación y remitos mayoristas de Argentina (AFIP/ARCA).
+Extrae con precisión quirúrgica los datos del comprobante adjunto (imagen o PDF):
+- supplierName: Razón social del emisor/proveedor (ej: SODECAR S.A.).
+- cuit: CUIT del emisor/proveedor sin inventar dígitos (o null si no figura).
+- receiverCuit: CUIT del receptor/comprador (o null si no figura).
+- receiverName: Razón social o nombre del receptor/comprador (o null si no figura).
+- documentType: "FACTURA_A", "FACTURA_B", "FACTURA_C" o "REMITO".
+- documentNumber: Número en formato XXXX-XXXXXXXX.
+- issueDate: Fecha de emisión en formato YYYY-MM-DD.
+- items: Lista de renglones con code (código de artículo del proveedor o null), description, quantity (priorizar kilogramos si el precio unitario está expresado por kg), unitPrice y subtotal.
+- netAmount, taxAmount (IVA), percepcionAmount (suma total de percepciones), percepcionIIBBAmount, percepcionIvaAmount (RG 3337), percepcionIva5329Amount (RG 5329), percepcionJurisdiction (provincia de IIBB o null) y totalAmount.
+Si algún importe impositivo no existe en el documento (ej. en un remito), devuélvelo como 0.
+`.trim();
 
 export class GeminiService {
+  constructor(private readonly clientOverride?: GoogleGenAI) {}
+
   /**
-   * Procesa un archivo (imagen o pdf) y extrae los datos de la factura/remito.
+   * Procesa una imagen o PDF de factura/remito de proveedor mediante Interactions API (`@google/genai`)
+   * con Structured Outputs (`INVOICE_EXTRACTION_JSON_SCHEMA`) + validación estricta Zod (`Decimal` 2 dec).
    */
   async extractInvoiceData(mimeType: string, base64Data: string): Promise<ExtractedInvoiceData> {
-    if (!apiKey || apiKey === 'tu-api-key-aqui') {
+    if (!this.clientOverride && !isGeminiApiKeyConfigured()) {
       throw new Error('GEMINI_API_KEY no está configurada o es inválida.');
     }
 
-    const filePart: Part = {
-      inlineData: {
-        data: base64Data,
-        mimeType
-      }
-    };
-
-    const prompt = `
-      Eres un experto en extracción de datos de facturas y remitos comerciales de Argentina.
-      Analiza este documento y extrae la siguiente información en formato JSON strictly:
-      - supplierName: Razón social del emisor (proveedor, ej: SODECAR S.A.).
-      - cuit: CUIT del emisor/proveedor (si existe).
-      - receiverCuit: CUIT del receptor (comprador, ej: 20163165059 o similar).
-      - receiverName: Razón social o Nombre del receptor (comprador, ej: MARTIN PABLO DAVID).
-      - documentType: Tipo de documento ("FACTURA_A", "FACTURA_B", "FACTURA_C", "REMITO").
-      - documentNumber: Número del comprobante (formato XXXX-XXXXXXXX).
-      - issueDate: Fecha de emisión en formato YYYY-MM-DD.
-      - items: Arreglo de objetos con:
-        - code: Código o número de artículo del emisor/proveedor (si existe, ej: "0109000000" o "7667/1").
-        - description: Descripción del producto (ej: PERNIL DE CERDO 1/2K, F.DTO.PALETA CBR, BONDIOLA ENTERA, etc.).
-        - quantity: Cantidad de unidades o kilogramos (número). Si hay columnas de Kilogramos y Unidades, priorizar el peso/kilos si el precio unitario corresponde a kilos, o la cantidad vendida.
-        - unitPrice: Precio unitario neto o bruto (número).
-        - subtotal: Subtotal del ítem (número).
-      - netAmount: Importe neto gravado (número).
-      - taxAmount: Importe de IVA (número).
-      - percepcionAmount: Importe total acumulado de todas las percepciones (número).
-      - percepcionIIBBAmount: Importe específico de la percepción de Ingresos Brutos (IIBB) sufrida (número).
-      - percepcionIvaAmount: Importe específico de la percepción de IVA Régimen General RG 3337 (número).
-      - percepcionIva5329Amount: Importe específico de la percepción de IVA Alimentos Canasta Básica RG 5329 (número).
-      - percepcionJurisdiction: Jurisdicción o provincia asociada a la percepción de IIBB (ej: "Buenos Aires", "CABA", "Santa Fe", "Misiones", etc.), si se indica expresamente; si no, null.
-      - totalAmount: Importe total (número).
-
-      Asegúrate de que todos los valores numéricos sean números y no cadenas.
-      Si un valor no está presente en el documento (por ejemplo, impuestos en un remito), devuélvelo como 0.
-      Si el CUIT no está, devuélvelo como null.
-    `;
+    const mediaBlock = buildInlineMediaContent(mimeType, base64Data);
 
     try {
-      const result = await generateWithFallback([prompt, filePart], 'application/json');
-      const responseText = result.response.text().replace(/```json\s*/gi, '').replace(/```\s*/gi, '').trim();
-      const jsonData = JSON.parse(responseText);
-      return jsonData as ExtractedInvoiceData;
+      const responseText = await runGeminiInteraction({
+        client: this.clientOverride,
+        systemInstruction: INVOICE_SYSTEM_INSTRUCTION,
+        input: [
+          {
+            type: 'text',
+            text: 'Extrae todos los campos fiscales y renglones de este comprobante comercial argentino.',
+          },
+          mediaBlock,
+        ],
+        jsonSchema: INVOICE_EXTRACTION_JSON_SCHEMA,
+      });
+
+      const rawJson = parseStructuredJsonText(responseText);
+      return extractedInvoiceValidator.parse(rawJson);
     } catch (error: any) {
-      console.error('Error al procesar el documento con Gemini:', error);
-      throw new Error('Fallo en el procesamiento de OCR con IA: ' + error.message);
+      console.error('[GeminiService] Error al procesar el documento con Gemini:', error);
+      throw new Error('Fallo en el procesamiento de OCR con IA: ' + (error?.message || error));
     }
   }
 
   /**
-   * Procesa un archivo de audio (nota de voz de WhatsApp) y transfiere la voz a texto comercial.
+   * Procesa una nota de voz de WhatsApp y transcribe textualmente el pedido comercial.
    */
-  async transcribeAudioOrder(mimeType: string, base64Audio: string): Promise<{ rawText: string }> {
-    if (!apiKey || apiKey === 'tu-api-key-aqui') {
+  async transcribeAudioOrder(
+    mimeType: string,
+    base64Audio: string,
+  ): Promise<{ rawText: string }> {
+    if (!this.clientOverride && !isGeminiApiKeyConfigured()) {
       return { rawText: 'Nota de voz recibida. Transcripción IA disponible con GEMINI_API_KEY.' };
     }
 
-    const audioPart: Part = {
-      inlineData: {
-        data: base64Audio,
-        mimeType
-      }
-    };
-
-    const prompt = `
-      Eres un asistente experto en toma de pedidos comerciales de alimentos y bebidas en Argentina.
-      Escucha esta nota de voz y transcribe textualmente los productos, cantidades y marcas solicitados.
-    `;
+    const audioBlock = buildInlineMediaContent(mimeType || 'audio/ogg', base64Audio);
 
     try {
-      const result = await generateWithFallback([prompt, audioPart]);
-      const rawText = result.response.text().trim();
-      return { rawText };
+      const rawText = await runGeminiInteraction({
+        client: this.clientOverride,
+        preferredModels: [DEFAULT_GEMINI_TRANSCRIBE_MODEL],
+        systemInstruction:
+          'Eres un asistente experto en toma de pedidos comerciales mayoristas de alimentos y bebidas en Argentina.',
+        input: [
+          {
+            type: 'text',
+            text: 'Escucha esta nota de voz y transcribe textualmente los productos, cantidades y marcas solicitados.',
+          },
+          audioBlock,
+        ],
+      });
+
+      return { rawText: rawText.trim() };
     } catch (error: any) {
-      console.error('Error procesando nota de voz con Gemini:', error);
+      console.error('[GeminiService] Error procesando nota de voz con Gemini:', error);
       return { rawText: 'Nota de voz recibida por WhatsApp.' };
     }
   }
 
   /**
-   * Interpreta un texto de pedido de WhatsApp utilizando Gemini AI y empareja con el catálogo del ERP.
+   * Interpreta un texto de pedido de WhatsApp y lo vincula estrictamente contra IDs reales del catálogo.
    */
-  async parseOrderMessage(rawText: string, catalog: Array<{ id: number; sku: string; name: string; listPrice: number; costPrice: number; unitsPerBox: number; commercialCategory?: string | null }>): Promise<Array<{ productId: number; quantity: number; note?: string }>> {
-    if (!apiKey || apiKey === 'tu-api-key-aqui') {
+  async parseOrderMessage(
+    rawText: string,
+    catalog: Array<{
+      id: number;
+      sku: string;
+      name: string;
+      listPrice: number;
+      costPrice: number;
+      unitsPerBox: number;
+      commercialCategory?: string | null;
+    }>,
+  ): Promise<Array<{ productId: number; quantity: number; note?: string }>> {
+    if (!this.clientOverride && !isGeminiApiKeyConfigured()) {
       throw new Error('GEMINI_API_KEY no configurada');
     }
 
-    const catalogFormatted = catalog.map(p => ({
+    const validProductIds = new Set(catalog.map((p) => p.id));
+    const catalogFormatted = catalog.map((p) => ({
       id: p.id,
       sku: p.sku,
       name: p.name,
       unitsPerBox: p.unitsPerBox || 1,
-      category: p.commercialCategory || ''
+      category: p.commercialCategory || '',
     }));
 
-    const prompt = `
-      Eres el asistente inteligente de toma de pedidos mayoristas de DV Distribuidora (alimentos y bebidas en Argentina).
-      Tu tarea es interpretar el texto/conversación del cliente en WhatsApp y emparejar CADA producto solicitado con el CATÁLOGO DE PRODUCTOS de la empresa.
+    const systemInstruction = `
+Eres el asistente de toma de pedidos mayoristas de DV Distribuidora (alimentos y bebidas en Argentina).
+Empareja ÚNICAMENTE productos explícitamente solicitados por el cliente contra el CATÁLOGO provisto:
+1. Si el cliente solo saluda, indica medio de pago o consulta sin pedir productos, devuelve {"items": []}. ¡Jamás inventes productos!
+2. Selecciona como máximo 1 producto del catálogo por cada ítem pedido.
+3. Si pide "caja", "cajón" o "pack", multiplica la cantidad por 'unitsPerBox' del producto (o 12 si es bebida y unitsPerBox es 1).
+4. Palabras de empaque o pago ("caja", "efectivo", "transferencia", "gracias") NO son productos.
+`.trim();
 
-      TEXTO DE LA CONVERSACIÓN DEL CLIENTE:
-      "${rawText}"
-
-      CATÁLOGO DE PRODUCTOS DISPONIBLES:
-      ${JSON.stringify(catalogFormatted)}
-
-      REGLAS STRICTAS DE MATCHING:
-      1. Identifica únicamente los productos que el cliente solicita explícitamente comprar en la conversación.
-      2. ATENCIÓN AL CONTEXTO CONVERSACIONAL: Si el texto contiene mensajes de pago o logística (ej: "Pago contrareembolso", "Efectivo", "Enviamelo mañana", "Paso por el depósito"), busca si previamente en el texto se solicitaron productos. 
-      3. SI NO SE SOLICITAN PRODUCTOS EN EL TEXTO: Si el cliente solo está saludando, indicando la forma de pago o haciendo consultas sin pedir ningún producto específico del catálogo, devuelve estrictamente un arreglo de ítems VACÍO: {"items": []}. ¡JAMÁS inventes ni asignes productos aleatorios si el cliente no pidió nada!
-      4. Para cada ítem solicitado, selecciona SOLAMENTE UN producto del catálogo que sea la mejor coincidencia. NO agregues productos duplicados o variantes adicionales.
-      5. EXTRAER CANTIDAD:
-         - Extrae la cantidad numérica exacta especificada (ej: "10 cremosos" -> 10, "2 tybo" -> 2).
-         - Si el cliente especifica empaque como "caja", "cajon", "pack" (ej: "1 caja de fernet"), calcula la cantidad total multiplicando la cantidad de cajas por 'unitsPerBox' del producto (o si es 1, asume 12 unidades por caja si es bebida).
-         - Si no se indica número, la cantidad es 1.
-      6. FALSOS POSITIVOS Y PALABRAS DE CONTENEDOR O PAGO:
-         - Palabras como "caja", "cajon", "pack", "botella", "lata", "kilo", "pago", "contrareembolso", "efectivo", "transferencia", "gracias" NO son nombres de productos.
-      7. Devuelve un JSON strictly con la siguiente estructura:
-         {
-           "items": [
-             {
-               "productId": 123,
-               "quantity": 10,
-               "note": "10 u."
-             }
-           ]
-         }
-    `;
+    const userInput = `TEXTO DE LA CONVERSACIÓN DEL CLIENTE:\n"${rawText}"\n\nCATÁLOGO DISPONIBLE:\n${JSON.stringify(catalogFormatted)}`;
 
     try {
-      const result = await generateWithFallback([prompt], 'application/json');
-      const responseText = result.response.text().replace(/```json\s*/gi, '').replace(/```\s*/gi, '').trim();
-      const parsed = JSON.parse(responseText);
-      return Array.isArray(parsed.items) ? parsed.items : [];
+      const responseText = await runGeminiInteraction({
+        client: this.clientOverride,
+        systemInstruction,
+        input: userInput,
+        jsonSchema: PARSED_ORDER_ITEMS_JSON_SCHEMA,
+      });
+
+      const parsed = parsedOrderItemsValidator.parse(parseStructuredJsonText(responseText));
+      return parsed.items.filter((item) => validProductIds.has(item.productId));
     } catch (error: any) {
-      console.error('Error al procesar pedido con Gemini:', error);
+      console.error('[GeminiService] Error al procesar pedido con Gemini:', error);
       return [];
     }
   }

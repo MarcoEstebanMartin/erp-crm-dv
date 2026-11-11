@@ -1,10 +1,17 @@
+import type { GoogleGenAI } from '@google/genai';
 import prisma from '../utils/prisma';
-import { GoogleGenerativeAI, Part } from '@google/generative-ai';
-import dotenv from 'dotenv';
-dotenv.config();
-
-const apiKey = process.env.GEMINI_API_KEY || '';
-const genAI = new GoogleGenerativeAI(apiKey);
+import { roundToIntegerPeso } from '../core/money';
+import {
+  type InteractionContentItem,
+  buildInlineMediaContent,
+  isGeminiApiKeyConfigured,
+  runGeminiInteraction,
+} from './ai/genai-client.helper';
+import {
+  CHATBOT_RESPONSE_JSON_SCHEMA,
+  chatbotResponseValidator,
+  parseStructuredJsonText,
+} from '../validators/ai-schemas.validator';
 
 export interface ChatMessageContext {
   role: 'user' | 'model';
@@ -13,7 +20,12 @@ export interface ChatMessageContext {
 
 export interface ChatbotResponse {
   text: string;
-  intent: 'CATALOG_INQUIRY' | 'ORDER_DRAFT' | 'RECEIPT_OCR' | 'TRANSFER_TO_HUMAN' | 'GENERAL_TALK';
+  intent:
+    | 'CATALOG_INQUIRY'
+    | 'ORDER_DRAFT'
+    | 'RECEIPT_OCR'
+    | 'TRANSFER_TO_HUMAN'
+    | 'GENERAL_TALK';
   draftOrderItems?: Array<{
     productId: number;
     productName: string;
@@ -26,33 +38,6 @@ export interface ChatbotResponse {
   transferToHuman?: boolean;
 }
 
-async function callGeminiFallback(promptParts: Array<string | Part>, responseMimeType?: string) {
-  const candidateModels = [
-    process.env.GEMINI_MODEL || 'gemini-3.6-flash',
-    'gemini-3.6-flash',
-    'gemini-2.0-flash',
-    'gemini-2.5-flash',
-    'gemini-1.5-flash'
-  ];
-  const uniqueModels = Array.from(new Set(candidateModels));
-  let lastError: any = null;
-
-  for (const modelName of uniqueModels) {
-    try {
-      const modelConfig: any = { model: modelName };
-      if (responseMimeType) {
-        modelConfig.generationConfig = { responseMimeType };
-      }
-      const model = genAI.getGenerativeModel(modelConfig);
-      return await model.generateContent(promptParts);
-    } catch (err: any) {
-      lastError = err;
-      console.warn(`[AiChatbotService] Modelo ${modelName} no disponible: ${err.message || err}. Probando siguiente...`);
-    }
-  }
-  throw lastError;
-}
-
 export function getFirstName(fullName?: string | null): string {
   if (!fullName) return 'Cliente';
   const firstWord = fullName.trim().split(/\s+/)[0];
@@ -61,8 +46,10 @@ export function getFirstName(fullName?: string | null): string {
 }
 
 export class AiChatbotService {
+  constructor(private readonly clientOverride?: GoogleGenAI) {}
+
   /**
-   * Obtener catálogo formateado para la IA exponiendo ÚNICAMENTE el precio de la lista
+   * Obtener catálogo formateado para la IA exponiendo ÚNICAMENTE el precio entero de la lista
    * correspondiente al interlocutor y disponibilidad booleana (sin filtrar Lista B/C ni stock exacto).
    */
   public async getFormattedCatalog(priceListType: 'LISTA_A' | 'LISTA_B' | 'LISTA_C' = 'LISTA_A') {
@@ -78,13 +65,13 @@ export class AiChatbotService {
         listPriceC: true,
         unitsPerBox: true,
         stock: true,
-        isPesable: true
+        isPesable: true,
       },
-      take: 300 // Límite razonable para ventana de contexto
+      take: 300,
     });
 
     return products.map((p) => {
-      const resolvedPrice =
+      const resolvedRawPrice =
         priceListType === 'LISTA_C'
           ? p.listPriceC || p.listPrice
           : priceListType === 'LISTA_B'
@@ -96,16 +83,17 @@ export class AiChatbotService {
         sku: p.sku,
         name: p.name,
         cat: p.commercialCategory || 'General',
-        precio: resolvedPrice,
+        precio: roundToIntegerPeso(resolvedRawPrice ? resolvedRawPrice.toString() : 0).toNumber(),
         unidCaja: p.unitsPerBox || 1,
         disponible: p.stock > 0,
-        unid: p.isPesable ? 'KG' : 'UN'
+        unid: p.isPesable ? 'KG' : 'UN',
       };
     });
   }
 
   /**
-   * Procesar mensaje entrante del usuario (Web o WhatsApp) con contexto conversacional
+   * Procesa mensaje entrante del usuario (Web o WhatsApp) con Interactions API (`@google/genai`)
+   * y Structured Outputs (`CHATBOT_RESPONSE_JSON_SCHEMA`).
    */
   async processUserMessage(params: {
     messageText: string;
@@ -123,144 +111,104 @@ export class AiChatbotService {
       mediaMimeType,
       channel,
       customerName = 'Cliente',
-      priceListType = 'LISTA_A'
+      priceListType = 'LISTA_A',
     } = params;
 
     const firstName = getFirstName(customerName);
     const requiredWelcomeHeader = `Hola ${firstName} 👋! Soy Ben, tu asistente de inteligencia artificial. Contame con el mayor detalle posible que necesitas, asi puedo darte una mejor respuesta. Estoy aca para ayudarte.`;
 
-    // Si no hay API KEY, fallback cordial
-    if (!apiKey || apiKey === 'tu-api-key-aqui') {
+    if (!this.clientOverride && !isGeminiApiKeyConfigured()) {
       return {
         text: requiredWelcomeHeader,
-        intent: 'GENERAL_TALK'
+        intent: 'GENERAL_TALK',
       };
     }
 
     const catalog = await this.getFormattedCatalog(priceListType);
 
-    const systemPrompt = `
+    const systemInstruction = `
 Eres **Ben**, el asistente de inteligencia artificial de **DV Distribuidora** (distribuidora mayorista de alimentos y bebidas en Argentina).
 
 PERSONALIDAD Y TONO:
-- Eres **amable, atento, profesional y resolutivo**.
-- Hablas en español de Argentina con calidez humana.
-- NUNCA respondas con frases robóticas ni con exclamaciones sobreactuadas. Conversa de manera natural, fluida y atenta.
+- Eres amable, atento, profesional y resolutivo en español de Argentina, sin frases robóticas.
+- El cliente actual se llama "${firstName}". Usa ÚNICAMENTE su primer nombre cuando corresponda:
+  1. En el PRIMER mensaje de la conversación, comienza con: "${requiredWelcomeHeader}"
+  2. En respuestas intermedias, NO repitas su nombre ni el saludo inicial.
+  3. Al despedirte o cerrar un pedido, agradece mencionando su primer nombre ("${firstName}").
 
-REGLAS STRICTAS DE SALUDO, USO DEL NOMBRE Y DESPEDIDA:
-- El cliente actual se llama: "${firstName}" (Nombre completo: "${customerName}"). Usa ÚNICAMENTE su primer nombre: "${firstName}".
-
-1. SALUDO INICIAL (ÚNICAMENTE EN EL PRIMER MENSAJE DE LA CONVERSACIÓN / PRIMER CONTACTO):
-   - Si no hay historial de conversación previo o si el cliente está iniciando la interacción (ej: "Hola", "Buenas", etc.), DEBES incluir la siguiente estructura exacta de bienvenida:
-     "${requiredWelcomeHeader}"
-   - Si en su primer mensaje el cliente ya te pide un producto o hace una pregunta (ej: "Hola, mandame 2 cajas de fernet"), usa esa frase inicial y a continuación responde su pedido/consulta.
-
-2. RESPUESTAS INTERMEDIAS (DURANTE LA CONVERSACIÓN):
-   - En las respuestas intermedias (confirmaciones de ítem, precios, forma de pago, stock o aclaraciones), **NO repitas el nombre del cliente ("${firstName}") ni vuelvas a dar el saludo inicial**. Responde directamente, de forma clara y amable sin usar su nombre en cada mensaje.
-
-3. DESPEDIDA Y AGRADECIMIENTO (AL FINALIZAR UN PEDIDO O ATENCIÓN):
-   - En el mensaje de cierre/despedida al dejar registrado un pedido o al concluir una consulta, **SÍ incluye un agradecimiento cordial mencionando únicamente su primer nombre** (ej: "¡Muchas gracias por tu compra, ${firstName}! Que tengas un excelente día.", "¡Muchas gracias, ${firstName}! Quedo a tu disposición para lo que necesites.").
-
-DATOS DE LA EMPRESA Y CATÁLOGO REAL:
-- Precio vigente aplicable en campo 'precio' (disponibilidad en campo booleano 'disponible').
-- Canal de atención: ${channel}.
-
-CATÁLOGO DE PRODUCTOS DISPONIBLES EN TIEMPO REAL:
+DATOS DEL CATÁLOGO EN TIEMPO REAL (Canal: ${channel}):
+- El campo 'precio' ya está en pesos enteros finales y 'disponible' indica si hay stock.
 ${JSON.stringify(catalog)}
 
-REGLAS DE RESPUESTA E INTENCIONES:
-1. CONSULTA DE CATÁLOGO / PRECIOS:
-   - Responde amablemente dando los precios de tu catálogo.
-   - Si no hay stock suficiente, ofrece alternativas del catálogo con tono empático.
-2. ARMADO DE PEDIDOS / CARRITO:
-   - Si el cliente te pide productos (ej: "Mándame 2 cajones de fernet y 5 cremosos"), identifica los productos correspondientes en el catálogo.
-   - Ten en cuenta unidades por caja ('unidCaja') si el cliente habla de "cajas", "packs" o "cajones".
-   - Calcula el subtotal por producto y el precio total.
-3. IMÁGENES / COMPROBANTES DE PAGO O NOTAS MANUSCRITAS:
-   - Si se adjunta una foto, analiza el documento:
-     - Si es un comprobante de transferencia bancaria, confirma la recepción amablemente y extrae monto y número de transacción.
-     - Si es una foto de una lista escrita a mano, lee los ítems y búscalos en el catálogo.
-4. DERIVACIÓN A ASESOR HUMANO:
-   - Si el cliente pide hablar con una persona, solicita un descuento especial fuera de lista o tiene un reclamo delicado:
-     - Responde con empatía indicando que transfieres la conversación al equipo comercial humano.
-     - En el JSON de salida marca "transferToHuman": true.
+REGLAS DE INTENCIÓN:
+1. CATALOG_INQUIRY: Consultas de precios o disponibilidad (ofrece alternativas si disponible=false).
+2. ORDER_DRAFT: Si pide productos, identifícalos en el catálogo respetando 'unidCaja' cuando pida cajas/packs y calcula unitPrice y subtotal en pesos enteros.
+3. RECEIPT_OCR: Si adjunta comprobante de transferencia o lista manuscrita, interprétalo con precisión.
+4. TRANSFER_TO_HUMAN: Si pide hablar con una persona, solicita descuento especial fuera de lista o plantea un reclamo, marca transferToHuman=true.
+`.trim();
 
-FORMATO DE SALIDA DE TU RESPUESTA:
-Debes responder NÚNICAMENTE con un objeto JSON válido con la siguiente estructura:
-{
-  "text": "Tu mensaje conversacional amable en texto plano listo para enviar al usuario",
-  "intent": "CATALOG_INQUIRY | ORDER_DRAFT | RECEIPT_OCR | TRANSFER_TO_HUMAN | GENERAL_TALK",
-  "draftOrderItems": [
-    {
-      "productId": 123,
-      "productName": "Nombre exacto del catálogo",
-      "sku": "SKU",
-      "quantity": 2,
-      "unitPrice": 15000,
-      "subtotal": 30000
-    }
-  ],
-  "transferToHuman": false
-}
-`;
+    const inputItems: InteractionContentItem[] = [];
 
-    // Preparar partes del prompt para Gemini
-    const promptParts: Array<string | Part> = [systemPrompt];
-
-    // Incluir historial de chat para contexto
     if (history.length > 0) {
-      const formattedHistory = history.map(h => `${h.role === 'user' ? 'Cliente' : 'Ben (IA)'}: ${h.content}`).join('\n');
-      promptParts.push(`HISTORIAL RECIENTE DE CONVERSACIÓN:\n${formattedHistory}`);
-    }
-
-    // Agregar el mensaje actual
-    promptParts.push(`MENSAJE ACTUAL DE CLIENTE (${firstName}): "${messageText || (mediaBase64 ? 'Adjunto de imagen/documento' : '')}"`);
-
-    // Agregar media si existe
-    if (mediaBase64 && mediaMimeType) {
-      promptParts.push({
-        inlineData: {
-          data: mediaBase64,
-          mimeType: mediaMimeType
-        }
+      const formattedHistory = history
+        .map((h) => `${h.role === 'user' ? 'Cliente' : 'Ben (IA)'}: ${h.content}`)
+        .join('\n');
+      inputItems.push({
+        type: 'text',
+        text: `HISTORIAL RECIENTE DE CONVERSACIÓN:\n${formattedHistory}`,
       });
     }
 
-    try {
-      const result = await callGeminiFallback(promptParts, 'application/json');
-      const responseText = result.response.text().trim();
-      const parsed: ChatbotResponse = JSON.parse(responseText);
+    inputItems.push({
+      type: 'text',
+      text: `MENSAJE ACTUAL DE CLIENTE (${firstName}): "${
+        messageText || (mediaBase64 ? 'Adjunto de imagen/documento' : '')
+      }"`,
+    });
 
-      const hasPreviousBotReply = history.some(h => h.role === 'model');
+    if (mediaBase64 && mediaMimeType) {
+      inputItems.push(buildInlineMediaContent(mediaMimeType, mediaBase64));
+    }
+
+    try {
+      const responseText = await runGeminiInteraction({
+        client: this.clientOverride,
+        systemInstruction,
+        input: inputItems,
+        jsonSchema: CHATBOT_RESPONSE_JSON_SCHEMA,
+      });
+
+      const parsed = chatbotResponseValidator.parse(parseStructuredJsonText(responseText));
+      const hasPreviousBotReply = history.some((h) => h.role === 'model');
       let finalText = parsed.text || '¡Con mucho gusto te ayudo! ¿Qué productos necesitas?';
 
       if (!hasPreviousBotReply) {
-        // Primera respuesta del bot en la conversación: DEBE ser o comenzar con el saludo oficial exacto
         if (!finalText.includes('Soy Ben, tu asistente de inteligencia artificial')) {
           const cleanContent = finalText.replace(/^¡?Hola[^!\n]*![ \t]*/i, '').trim();
-          finalText = cleanContent ? `${requiredWelcomeHeader}\n\n${cleanContent}` : requiredWelcomeHeader;
+          finalText = cleanContent
+            ? `${requiredWelcomeHeader}\n\n${cleanContent}`
+            : requiredWelcomeHeader;
         }
       } else {
-        // Respuestas intermedias: Limpiar saludos redundantes que repitan Hola o el nombre en cada mensaje
         finalText = finalText.replace(/^¡?Hola(\s+[\w\s]+)?![ \t]*/i, '').trim();
       }
 
       return {
         text: finalText,
-        intent: parsed.intent || 'GENERAL_TALK',
-        draftOrderItems: parsed.draftOrderItems || [],
-        transferToHuman: Boolean(parsed.transferToHuman)
+        intent: parsed.intent,
+        draftOrderItems: parsed.draftOrderItems,
+        transferToHuman: parsed.transferToHuman,
       };
     } catch (error: any) {
       console.error('[AiChatbotService] Error procesando mensaje con Gemini:', error);
-      const hasPreviousBotReply = history.some(h => h.role === 'model');
+      const hasPreviousBotReply = history.some((h) => h.role === 'model');
 
       return {
         text: !hasPreviousBotReply
           ? requiredWelcomeHeader
           : `¡Muchas gracias por tu mensaje, ${firstName}! 👋 Un asesor de nuestro equipo comercial te responderá a la brevedad.`,
         intent: 'GENERAL_TALK',
-        transferToHuman: true
+        transferToHuman: true,
       };
     }
   }
