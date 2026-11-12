@@ -166,7 +166,7 @@ export async function assignFifoLotsToOrderItem(
 
   if (remainingToAssign > 0 && process.env.IGNORE_STOCK_CHECK === 'true') {
     let slLot = await tx.productLot.findFirst({
-      where: { productId, lotNumber: 'S/L' },
+      where: { productId, lotNumber: 'S/L', location: 'S/U' },
     });
 
     if (!slLot) {

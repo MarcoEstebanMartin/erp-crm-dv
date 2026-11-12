@@ -81,7 +81,7 @@ export async function restoreReturnedStockAndLots(
     if (!assignedLotId || remainingToReturn > 0) {
       const qtyToIncrement = remainingToReturn > 0 ? remainingToReturn : qty;
       let defaultLot = await tx.productLot.findFirst({
-        where: { productId, lotNumber: 'S/L' },
+        where: { productId, lotNumber: 'S/L', location: 'S/U' },
       });
 
       if (!defaultLot) {

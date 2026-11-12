@@ -227,6 +227,10 @@ describe('Paso 1 — Blindaje de Stock Concurrente, Inventario Rápido Atómico 
             stock: 10,
             location: 'S/U',
           }),
+          // El ajuste individual resuelve el lote físico (productId, lotNumber, location) sobre la lista del producto
+          findMany: vi.fn().mockResolvedValue([
+            { id: 500, productId: 10, lotNumber: 'S/L', stock: 10, location: 'S/U', expirationDate: '2036-12-31' },
+          ]),
           findFirst: vi.fn().mockResolvedValue(null),
           update: vi.fn().mockResolvedValue({ id: 500 }),
         },

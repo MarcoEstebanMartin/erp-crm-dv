@@ -2,7 +2,7 @@ import { MovementType, Prisma } from '@prisma/client';
 import prisma from '../../utils/prisma';
 import { logAudit } from '../../utils/audit';
 import { lockProductsForUpdate } from '../../utils/db-locks.util';
-import { normalizeWmsLocationCode } from '../../engines/stock.engine';
+import { normalizeWmsLocationCode, resolveAdjustmentLot } from '../../engines/stock.engine';
 
 export interface StockAdjustmentItemInput {
   productId: number;
@@ -21,6 +21,8 @@ export interface StockMovementsFilterOptions {
   startDate?: string;
   endDate?: string;
 }
+
+const SENTINEL_EXPIRATION = '2036-12-31T00:00:00Z';
 
 const MOVEMENT_RELATIONS_INCLUDE = {
   user: { select: { id: true, username: true, role: true } },
@@ -41,6 +43,15 @@ const MOVEMENT_RELATIONS_INCLUDE = {
     select: { id: true, movementId: true, creditNoteNumber: true, reason: true },
   },
 } as const;
+
+/** Vencimiento del lote a crear: el indicado por el usuario, el heredado del mismo lote en otro rack o el centinela. */
+function resolveCreationExpiration(rawDate: unknown, inherited: Date | null): Date {
+  if (typeof rawDate === 'string' && rawDate.trim()) {
+    const parsed = new Date(rawDate);
+    if (!isNaN(parsed.getTime())) return parsed;
+  }
+  return inherited || new Date(SENTINEL_EXPIRATION);
+}
 
 export class ProductStockSubService {
   private async applySingleAdjustmentInTx(
@@ -72,67 +83,34 @@ export class ProductStockSubService {
       }
     }
 
-    let rawLotNum =
-      lotNumber && typeof lotNumber === 'string' && lotNumber.trim() ? lotNumber.trim() : '';
-
-    if (!lot) {
-      if (!rawLotNum || rawLotNum.toUpperCase() === 'S/L') {
-        rawLotNum = cleanLoc !== 'S/U' ? `S/L-${cleanLoc}` : 'S/L';
-      }
-      lot = await tx.productLot.findUnique({
-        where: { productId_lotNumber: { productId: product.id, lotNumber: rawLotNum } },
+    // Identidad física única (productId, lotNumber, location): jamás se fabrican sufijos @SLOT / S/L-SLOT.
+    const needsLookup =
+      !lot || (change > 0 && cleanLoc !== 'S/U' && normalizeWmsLocationCode(lot.location) !== cleanLoc);
+    let createLotNumber = 'S/L';
+    let inheritedExp: Date | null = null;
+    if (needsLookup) {
+      const productLots = await tx.productLot.findMany({
+        where: { productId: product.id },
+        orderBy: [{ expirationDate: 'asc' }, { id: 'asc' }],
       });
-    }
-
-    if (
-      lot &&
-      lot.location &&
-      cleanLoc !== 'S/U' &&
-      normalizeWmsLocationCode(lot.location) !== cleanLoc &&
-      change > 0
-    ) {
-      const locLotNum = `${rawLotNum}@${cleanLoc}`;
-      const existingLocLot = await tx.productLot.findUnique({
-        where: { productId_lotNumber: { productId: product.id, lotNumber: locLotNum } },
+      const resolution = resolveAdjustmentLot({
+        lots: productLots,
+        preselectedLot: lot,
+        lotNumber,
+        location: cleanLoc,
+        change,
       });
-      if (existingLocLot) {
-        lot = existingLocLot;
-      } else {
-        lot = null;
-        rawLotNum = locLotNum;
-      }
-    }
-
-    if (!lot && cleanLoc !== 'S/U' && typeof (tx.productLot as any).findFirst === 'function') {
-      lot = await tx.productLot.findFirst({
-        where: {
-          productId: product.id,
-          OR: [{ location: cleanLoc }, { location: { startsWith: `${cleanLoc}-` } }],
-        },
-        orderBy: { expirationDate: 'asc' },
-      });
-    }
-
-    if (!lot && change < 0 && typeof (tx.productLot as any).findFirst === 'function') {
-      lot = await tx.productLot.findFirst({
-        where: { productId: product.id, stock: { gt: 0 } },
-        orderBy: { expirationDate: 'asc' },
-      });
-    }
-
-    const finalTargetLotNum = rawLotNum || (cleanLoc !== 'S/U' ? `S/L-${cleanLoc}` : 'S/L');
-    let finalExpDate = new Date('2036-12-31T00:00:00Z');
-    if (expirationDate && typeof expirationDate === 'string' && expirationDate.trim()) {
-      const parsedDate = new Date(expirationDate);
-      if (!isNaN(parsedDate.getTime())) finalExpDate = parsedDate;
+      lot = resolution.lotId ? productLots.find((l) => l.id === resolution.lotId) || null : null;
+      createLotNumber = resolution.createLotNumber;
+      inheritedExp = resolution.createExpiration;
     }
 
     if (!lot) {
       lot = await tx.productLot.create({
         data: {
           productId: product.id,
-          lotNumber: finalTargetLotNum,
-          expirationDate: finalExpDate,
+          lotNumber: createLotNumber,
+          expirationDate: resolveCreationExpiration(expirationDate, inheritedExp),
           stock: change > 0 ? 0 : Math.abs(change),
           location: cleanLoc,
         },
@@ -151,26 +129,12 @@ export class ProductStockSubService {
     const updatedLotStock =
       change < 0 ? Math.max(0, lot.stock - effectiveSubQty) : lot.stock + change;
 
-    let lotDeleted = false;
-    if (updatedLotStock <= 0) {
-      try {
-        await tx.productLot.delete({ where: { id: lot.id } });
-        lotDeleted = true;
-      } catch {
-        await tx.productLot.update({
-          where: { id: lot.id },
-          data: { stock: 0, location: 'S/U' },
-        });
-      }
-    } else {
-      await tx.productLot.update({
-        where: { id: lot.id },
-        data: {
-          stock: updatedLotStock,
-          location: cleanLoc !== 'S/U' ? cleanLoc : lot.location,
-        },
-      });
-    }
+    // El lote vaciado conserva su fila y ubicación (stock 0) para preservar el historial del Kardex.
+    // No se intenta DELETE: un error de FK abortaría la transacción completa en PostgreSQL.
+    await tx.productLot.update({
+      where: { id: lot.id },
+      data: { stock: updatedLotStock },
+    });
 
     const normalizedDefault = normalizeWmsLocationCode(product.defaultLocation);
     const clearDefaultLoc =
@@ -194,7 +158,7 @@ export class ProductStockSubService {
         type: recordedQty > 0 ? 'IN' : 'OUT',
         reason: reason || 'Ajuste de stock manual',
         userId,
-        productLotId: lotDeleted ? null : lot ? lot.id : null,
+        productLotId: lot.id,
       },
     });
 
@@ -270,7 +234,7 @@ export class ProductStockSubService {
           tx.product.findMany({ where: { id: { in: uniqueProductIds } } }),
           tx.productLot.findMany({
             where: { productId: { in: uniqueProductIds } },
-            orderBy: { expirationDate: 'asc' },
+            orderBy: [{ expirationDate: 'asc' }, { id: 'asc' }],
           }),
         ]);
 
@@ -300,39 +264,22 @@ export class ProductStockSubService {
           }
 
           const prodLots = lotsMap.get(product.id) || [];
-          let lot: any = item.lotId ? prodLots.find((l) => l.id === Number(item.lotId)) : null;
-
-          let rawLotNum = item.lotNumber?.trim() || '';
-          if (!lot) {
-            if (!rawLotNum || rawLotNum.toUpperCase() === 'S/L') {
-              rawLotNum = cleanLoc !== 'S/U' ? `S/L-${cleanLoc}` : 'S/L';
-            }
-            lot = prodLots.find((l) => l.lotNumber === rawLotNum) || null;
-          }
-
-          if (lot && cleanLoc !== 'S/U' && normalizeWmsLocationCode(lot.location) !== cleanLoc && change > 0) {
-            const locLotNum = `${rawLotNum}@${cleanLoc}`;
-            lot = prodLots.find((l) => l.lotNumber === locLotNum) || null;
-            if (!lot) rawLotNum = locLotNum;
-          }
-
-          if (!lot && change < 0) {
-            lot = prodLots.find((l) => l.stock > 0) || null;
-          }
-
-          const finalTargetLotNum = rawLotNum || (cleanLoc !== 'S/U' ? `S/L-${cleanLoc}` : 'S/L');
-          const finalExpDate = item.expirationDate?.trim()
-            ? new Date(item.expirationDate)
-            : new Date('2036-12-31T00:00:00Z');
+          const preselected = item.lotId ? prodLots.find((l) => l.id === Number(item.lotId)) || null : null;
+          const resolution = resolveAdjustmentLot({
+            lots: prodLots,
+            preselectedLot: preselected,
+            lotNumber: item.lotNumber,
+            location: cleanLoc,
+            change,
+          });
+          let lot: any = resolution.lotId ? prodLots.find((l) => l.id === resolution.lotId) || null : null;
 
           if (!lot) {
             lot = await tx.productLot.create({
               data: {
                 productId: product.id,
-                lotNumber: finalTargetLotNum,
-                expirationDate: isNaN(finalExpDate.getTime())
-                  ? new Date('2036-12-31T00:00:00Z')
-                  : finalExpDate,
+                lotNumber: resolution.createLotNumber,
+                expirationDate: resolveCreationExpiration(item.expirationDate, resolution.createExpiration),
                 stock: change > 0 ? change : 0,
                 location: cleanLoc,
               },
@@ -344,10 +291,7 @@ export class ProductStockSubService {
             const updatedLotStock = change < 0 ? Math.max(0, lot.stock - subQty) : lot.stock + change;
             await tx.productLot.update({
               where: { id: lot.id },
-              data: {
-                stock: updatedLotStock,
-                location: cleanLoc !== 'S/U' ? cleanLoc : lot.location,
-              },
+              data: { stock: updatedLotStock },
             });
             lot.stock = updatedLotStock;
           }

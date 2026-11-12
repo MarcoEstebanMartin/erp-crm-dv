@@ -2,6 +2,7 @@ import React from 'react';
 import type { Product } from '../../types';
 import type { DepositSlot } from './depositomapaData';
 import { computeProductWmsBreakdown } from './wmsStockBreakdown';
+import { extractCleanLotNumber, formatCleanExpirationDate } from '../stock/lotLabel';
 
 interface Slot3DLoadStockFormProps {
   slot: DepositSlot;
@@ -140,14 +141,14 @@ export const Slot3DLoadStockForm: React.FC<Slot3DLoadStockFormProps> = ({
               const id = e.target.value ? Number(e.target.value) : '';
               setSourceLotId(id);
               const found = activeLots.find((l) => l.id === id);
-              setLotNumber(found ? found.lotNumber : '');
+              setLotNumber(found ? extractCleanLotNumber(found.lotNumber) : '');
             }}
             style={{ height: '35px', fontSize: '0.8rem', borderRadius: '8px', border: '1px solid #E2E8F0' }}
           >
-            <option value="">⚡ Automático FEFO (prioriza Sin Ubicar S/U)</option>
+            <option value="">Automático FEFO (prioriza Sin Ubicar S/U)</option>
             {activeLots.map((l) => (
               <option key={l.id} value={l.id}>
-                Lote {l.lotNumber} ({l.location || 'S/U'}) — {l.stock} u. | Venc: {new Date(l.expirationDate).toLocaleDateString('es-AR')}
+                Lote {extractCleanLotNumber(l.lotNumber)} ({l.location || 'S/U'}) — {l.stock} u. | Venc: {formatCleanExpirationDate(l.expirationDate)}
               </option>
             ))}
           </select>

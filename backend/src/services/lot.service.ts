@@ -1,61 +1,139 @@
+import { Prisma } from '@prisma/client';
 import prisma from '../utils/prisma';
 import { logAudit } from '../utils/audit';
 import { lockProductsForUpdate } from '../utils/db-locks.util';
-import { normalizeWmsLocationCode, parseWmsLocationScope } from '../engines/stock.engine';
+import {
+  extractBaseLotNumber,
+  normalizeWmsLocationCode,
+  parseWmsLocationScope,
+} from '../engines/stock.engine';
 import { validateSlotAllowsStockAssignment } from '../engines/warehouse-layout.engine';
 
+/** Rechaza ubicaciones WMS bloqueadas o no habilitadas para mercadería (S/U siempre es válida). */
+async function assertSlotAcceptsStock(tx: Prisma.TransactionClient, location: string) {
+  if (location === 'S/U' || typeof (tx as any).warehouseCell?.findUnique !== 'function') return;
+  const locScope = parseWmsLocationScope(location);
+  const customCell = await tx.warehouseCell.findUnique({ where: { code: locScope.baseSlotCode } });
+  const slotCheck = validateSlotAllowsStockAssignment(customCell, location);
+  if (!slotCheck.allowed) {
+    throw new Error(slotCheck.reason || 'El slot destino no admite mercadería.');
+  }
+}
+
+/** Asientos simétricos OUT/IN (Δ Product.stock = 0) para que todo traslado físico quede en el Kardex. */
+async function recordInternalTransfer(
+  tx: Prisma.TransactionClient,
+  params: { productId: number; qty: number; fromLotId: number; toLotId: number; reasonOut: string; reasonIn: string; userId: number },
+) {
+  await tx.stockMovement.create({
+    data: {
+      productId: params.productId,
+      quantity: -params.qty,
+      type: 'OUT',
+      reason: params.reasonOut,
+      userId: params.userId,
+      productLotId: params.fromLotId,
+    },
+  });
+  await tx.stockMovement.create({
+    data: {
+      productId: params.productId,
+      quantity: params.qty,
+      type: 'IN',
+      reason: params.reasonIn,
+      userId: params.userId,
+      productLotId: params.toLotId,
+    },
+  });
+}
+
 export class LotService {
-  /**
-   * Modificar datos de un lote (Código, Fecha de Vencimiento, Ubicación).
-   */
+  /** Edita código/vencimiento/ubicación bajo `FOR UPDATE`; si la terna (productId, lotNumber, location) ya existe, FUSIONA atómicamente. */
   async updateLot(lotId: number, data: any, userId: number) {
     const { lotNumber, expirationDate, location } = data;
 
     const result = await prisma.$transaction(async (tx) => {
+      const peek = await tx.productLot.findUnique({ where: { id: lotId } });
+      if (!peek) throw new Error('Lote no encontrado.');
+      await lockProductsForUpdate(tx, [peek.productId]);
+
       const lot = await tx.productLot.findUnique({ where: { id: lotId } });
       if (!lot) throw new Error('Lote no encontrado.');
 
-      await lockProductsForUpdate(tx, [lot.productId]);
+      const prevLocation = normalizeWmsLocationCode(lot.location);
+      const nextLotNumber = extractBaseLotNumber(
+        typeof lotNumber === 'string' && lotNumber.trim() ? lotNumber : lot.lotNumber,
+      );
+      const nextLocation = location !== undefined ? normalizeWmsLocationCode(location) : prevLocation;
+      const nextExp = expirationDate ? new Date(expirationDate) : undefined;
+      if (nextExp && isNaN(nextExp.getTime())) throw new Error('Fecha de vencimiento inválida.');
 
-      if (lotNumber && lotNumber.trim() !== lot.lotNumber) {
-        const trimmedNewLot = lotNumber.trim();
-        const existingWithSameName = await tx.productLot.findFirst({
-          where: {
+      if (nextLocation !== prevLocation) await assertSlotAcceptsStock(tx, nextLocation);
+
+      const collision = await tx.productLot.findUnique({
+        where: {
+          productId_lotNumber_location: {
             productId: lot.productId,
-            lotNumber: trimmedNewLot,
+            lotNumber: nextLotNumber,
+            location: nextLocation,
           },
-        });
-        if (existingWithSameName) {
-          throw new Error(
-            `Ya existe un lote con el código "${trimmedNewLot}" para este producto.`,
-          );
-        }
-      }
+        },
+      });
 
-      const normalizedLoc =
-        location !== undefined ? normalizeWmsLocationCode(location) : undefined;
-
-      if (normalizedLoc && normalizedLoc !== 'S/U' && typeof (tx as any).warehouseCell?.findUnique === 'function') {
-        const locScope = parseWmsLocationScope(normalizedLoc);
-        const customCell = await tx.warehouseCell.findUnique({
-          where: { code: locScope.baseSlotCode },
+      if (collision && collision.id !== lot.id) {
+        const qty = Math.max(0, lot.stock);
+        const merged = await tx.productLot.update({
+          where: { id: collision.id },
+          data: { stock: { increment: qty }, ...(nextExp ? { expirationDate: nextExp } : {}) },
         });
-        const slotCheck = validateSlotAllowsStockAssignment(customCell, normalizedLoc);
-        if (!slotCheck.allowed) {
-          throw new Error(slotCheck.reason || 'El slot destino no admite mercadería.');
+
+        if (qty > 0) {
+          await tx.productLot.update({ where: { id: lot.id }, data: { stock: 0 } });
+          await recordInternalTransfer(tx, {
+            productId: lot.productId,
+            qty,
+            fromLotId: lot.id,
+            toLotId: collision.id,
+            reasonOut: `Traslado interno WMS desde ${prevLocation} hacia ${nextLocation} (fusión de lote)`,
+            reasonIn: `Fusión de lote en ${nextLocation} (origen ${prevLocation})`,
+            userId,
+          });
+        } else {
+          // Lote vacío sin historial: se elimina limpiamente (sin riesgo de FK que aborte la transacción).
+          const [movRefs, pickRefs] = await Promise.all([
+            tx.stockMovement.count({ where: { productLotId: lot.id } }),
+            tx.orderItemLot.count({ where: { productLotId: lot.id } }),
+          ]);
+          if (movRefs + pickRefs === 0) {
+            await tx.productLot.delete({ where: { id: lot.id } });
+          }
         }
+
+        return { original: lot, updated: merged, mergedIntoLotId: collision.id as number | null };
       }
 
       const updated = await tx.productLot.update({
         where: { id: lotId },
         data: {
-          lotNumber: lotNumber ? lotNumber.trim() : undefined,
-          expirationDate: expirationDate ? new Date(expirationDate) : undefined,
-          location: normalizedLoc,
+          lotNumber: nextLotNumber,
+          location: nextLocation,
+          ...(nextExp ? { expirationDate: nextExp } : {}),
         },
       });
 
-      return { original: lot, updated };
+      if (nextLocation !== prevLocation && lot.stock > 0) {
+        await recordInternalTransfer(tx, {
+          productId: lot.productId,
+          qty: lot.stock,
+          fromLotId: lot.id,
+          toLotId: lot.id,
+          reasonOut: `Traslado interno WMS desde ${prevLocation} hacia ${nextLocation}`,
+          reasonIn: `Ubicación interna WMS en ${nextLocation} (origen ${prevLocation})`,
+          userId,
+        });
+      }
+
+      return { original: lot, updated, mergedIntoLotId: null as number | null };
     });
 
     await logAudit({
@@ -72,6 +150,7 @@ export class LotService {
         lotNumber: result.updated.lotNumber,
         expirationDate: result.updated.expirationDate,
         location: result.updated.location,
+        mergedIntoLotId: result.mergedIntoLotId,
       },
     });
 
@@ -139,7 +218,7 @@ export class LotService {
         );
       }
 
-      const trimmedToLot = String(toLotNumber).trim();
+      const cleanToLot = extractBaseLotNumber(String(toLotNumber ?? ''));
       const targetLocation =
         toLocation !== undefined
           ? normalizeWmsLocationCode(toLocation)
@@ -147,20 +226,28 @@ export class LotService {
 
       let toLot = await tx.productLot.findUnique({
         where: {
-          productId_lotNumber: { productId, lotNumber: trimmedToLot },
+          productId_lotNumber_location: { productId, lotNumber: cleanToLot, location: targetLocation },
         },
       });
+      // Sin ubicación explícita, el lote destino elegido de la lista puede estar en otro rack.
+      if (!toLot && toLocation === undefined) {
+        toLot = await tx.productLot.findFirst({
+          where: { productId, lotNumber: cleanToLot },
+          orderBy: { id: 'asc' },
+        });
+      }
 
       if (!toLot) {
         if (!toExpirationDate) {
           throw new Error(
-            `La fecha de vencimiento es requerida para crear el lote de destino "${trimmedToLot}".`,
+            `La fecha de vencimiento es requerida para crear el lote de destino "${cleanToLot}".`,
           );
         }
+        await assertSlotAcceptsStock(tx, targetLocation);
         toLot = await tx.productLot.create({
           data: {
             productId,
-            lotNumber: trimmedToLot,
+            lotNumber: cleanToLot,
             expirationDate: new Date(toExpirationDate),
             stock: 0,
             location: targetLocation,
@@ -179,32 +266,17 @@ export class LotService {
 
       const updatedTo = await tx.productLot.update({
         where: { id: toLot.id },
-        data: {
-          stock: { increment: qty },
-          ...(toLocation !== undefined ? { location: targetLocation } : {}),
-        },
+        data: { stock: { increment: qty } },
       });
 
-      await tx.stockMovement.create({
-        data: {
-          productId,
-          quantity: -qty,
-          type: 'OUT',
-          reason: `Transferencia hacia lote ${updatedTo.lotNumber}`,
-          userId,
-          productLotId: fromLot.id,
-        },
-      });
-
-      await tx.stockMovement.create({
-        data: {
-          productId,
-          quantity: qty,
-          type: 'IN',
-          reason: `Transferencia desde lote ${fromLot.lotNumber}`,
-          userId,
-          productLotId: toLot.id,
-        },
+      await recordInternalTransfer(tx, {
+        productId,
+        qty,
+        fromLotId: fromLot.id,
+        toLotId: toLot.id,
+        reasonOut: `Transferencia hacia lote ${updatedTo.lotNumber} (${normalizeWmsLocationCode(updatedTo.location)})`,
+        reasonIn: `Transferencia desde lote ${fromLot.lotNumber} (${normalizeWmsLocationCode(fromLot.location)})`,
+        userId,
       });
 
       return { fromLot: updatedFrom, toLot: updatedTo };

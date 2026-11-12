@@ -1,6 +1,7 @@
 import React from 'react';
 import type { Product } from '../../types';
 import { LOCATION_MAP } from './depositoHelpers';
+import { extractCleanLotNumber, formatCleanExpirationDate } from '../stock/lotLabel';
 
 export interface StockAdjustModalState {
   open: boolean;
@@ -108,8 +109,8 @@ export const DepositoStockAdjustModal: React.FC<DepositoStockAdjustModalProps> =
               <option value="">Sin lote (Stock Genérico / General)</option>
               {(stockModal.product?.lots || []).map((lot: any) => (
                 <option key={lot.id} value={lot.lotNumber}>
-                  Lote: {lot.lotNumber} (Stock: {lot.stock} u. - Vence:{' '}
-                  {new Date(lot.expirationDate).toLocaleDateString('es-AR', { timeZone: 'UTC' })})
+                  Lote: {extractCleanLotNumber(lot.lotNumber)} ({lot.location || 'S/U'} · Stock: {lot.stock} u. ·{' '}
+                  {formatCleanExpirationDate(lot.expirationDate)})
                 </option>
               ))}
               {Number(stockModal.quantityChange) > 0 && (

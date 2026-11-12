@@ -1,6 +1,11 @@
 import React from 'react';
 import { Play, Eye, RefreshCw } from 'lucide-react';
 import type { Order, ProductLot } from '../../types';
+import {
+  extractCleanLotNumber,
+  formatCleanExpirationDate,
+  isSentinelExpiration,
+} from '../stock/lotLabel';
 
 interface PickingOrdersQueueTabProps {
   expiringLots: ProductLot[];
@@ -33,13 +38,13 @@ export const PickingOrdersQueueTab: React.FC<PickingOrdersQueueTabProps> = ({
 }) => {
   return (
     <div>
-      {expiringLots.length > 0 && (
+      {expiringLots.filter((lot) => !isSentinelExpiration(lot.expirationDate)).length > 0 && (
         <div className="card" style={{ backgroundColor: '#FFF2F2', border: '1px solid #FFD1D1', borderRadius: '8px', padding: '16px', marginBottom: '20px' }}>
           <h4 style={{ margin: '0 0 8px 0', color: '#C0392B', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            ⚠️ Lotes Próximos a Vencer (Menos de 30 días)
+            Lotes Próximos a Vencer (Menos de 30 días)
           </h4>
           <div style={{ maxHeight: '160px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {expiringLots.map((lot) => {
+            {expiringLots.filter((lot) => !isSentinelExpiration(lot.expirationDate)).map((lot) => {
               const daysLeft = Math.ceil((new Date(lot.expirationDate).getTime() - new Date().getTime()) / (1000 * 3600 * 24));
               const isExpired = daysLeft <= 0;
               return (
@@ -47,7 +52,7 @@ export const PickingOrdersQueueTab: React.FC<PickingOrdersQueueTabProps> = ({
                   <div>
                     <strong>{lot.product?.name}</strong> <span style={{ color: 'var(--text-secondary)' }}>(SKU: {lot.product?.sku})</span>
                     <div style={{ fontSize: '0.75rem', marginTop: '2px' }}>
-                      Lote: <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>{lot.lotNumber}</span> | Vence: {new Date(lot.expirationDate).toLocaleDateString('es-AR')}
+                      Lote: <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>{extractCleanLotNumber(lot.lotNumber)}</span> | Vence: {formatCleanExpirationDate(lot.expirationDate)}
                     </div>
                   </div>
                   <div style={{ textAlign: 'right' }}>

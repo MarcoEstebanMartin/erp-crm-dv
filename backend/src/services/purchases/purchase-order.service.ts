@@ -4,6 +4,7 @@ import AppError from '../../utils/AppError';
 import { logAudit } from '../../utils/audit';
 import { calculateAfipBreakdown, roundToTwoDecimals } from '../../core/money';
 import { calculatePurchaseOrderTotals } from '../../engines/credit-purchase.engine';
+import { extractBaseLotNumber, normalizeWmsLocationCode } from '../../engines/stock.engine';
 import { recordLedgerMovement } from '../ledger/account-ledger.service';
 
 export const purchaseOrderService = {
@@ -103,23 +104,22 @@ export const purchaseOrderService = {
         }
 
         const assignment = params.lotAssignments ? params.lotAssignments[item.productId] : null;
-        const lotNumber = assignment?.lotNumber ? String(assignment.lotNumber) : 'S/L';
+        const lotNumber = extractBaseLotNumber(assignment?.lotNumber ? String(assignment.lotNumber) : 'S/L');
         const expirationDate = assignment?.expirationDate
           ? new Date(assignment.expirationDate)
           : new Date('2036-12-31T00:00:00Z');
-        const location = assignment?.location ? String(assignment.location) : 'S/U';
+        const location = normalizeWmsLocationCode(assignment?.location ? String(assignment.location) : 'S/U');
 
         let lot = await tx.productLot.findUnique({
-          where: { productId_lotNumber: { productId: item.productId, lotNumber } },
+          where: {
+            productId_lotNumber_location: { productId: item.productId, lotNumber, location },
+          },
         });
 
         if (lot) {
           lot = await tx.productLot.update({
             where: { id: lot.id },
-            data: {
-              stock: { increment: qty },
-              location: location !== 'S/U' ? location : lot.location,
-            },
+            data: { stock: { increment: qty } },
           });
         } else {
           lot = await tx.productLot.create({

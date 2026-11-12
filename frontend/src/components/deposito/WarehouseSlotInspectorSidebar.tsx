@@ -3,6 +3,11 @@ import { Layers, Lock } from 'lucide-react';
 import type { Product, ProductLot } from '../../types';
 import { SECTORS_INFO } from './depositomapaData';
 import { extractBaseSlotFromLocation, type MergedDepositSlot } from './warehouseLayoutMerger';
+import {
+  extractCleanLotNumber,
+  formatCleanExpirationDate,
+  isSentinelExpiration,
+} from '../stock/lotLabel';
 
 interface WarehouseSlotInspectorSidebarProps {
   selectedSlot: MergedDepositSlot | null;
@@ -32,7 +37,7 @@ export const WarehouseSlotInspectorSidebar: React.FC<WarehouseSlotInspectorSideb
             id: 0,
             productId: p.id,
             lotNumber: 'S/L',
-            expirationDate: new Date().toISOString(),
+            expirationDate: '2036-12-31T00:00:00.000Z',
             stock: p.stock,
             location: selectedSlot.code,
             createdAt: new Date().toISOString(),
@@ -125,20 +130,27 @@ export const WarehouseSlotInspectorSidebar: React.FC<WarehouseSlotInspectorSideb
                 <span className="badge badge-success" style={{ fontSize: '0.7rem' }}>🟢 OCUPADO</span>
               </div>
 
-              {matchingProducts.map(({ product, lot }, idx) => (
-                <div key={idx} style={{ border: '1px solid var(--border-color)', borderRadius: '6px', padding: '8px 10px', backgroundColor: '#fafafa', fontSize: '0.8rem' }}>
-                  <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>
-                    [{product.sku}] {product.name}
+              {matchingProducts.map(({ product, lot }, idx) => {
+                const cleanLot = extractCleanLotNumber(lot.lotNumber);
+                const hasRealExp = !isSentinelExpiration(lot.expirationDate);
+                return (
+                  <div key={idx} style={{ border: '1px solid var(--border-color)', borderRadius: '6px', padding: '8px 10px', backgroundColor: '#fafafa', fontSize: '0.8rem' }}>
+                    <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>
+                      [{product.sku}] {product.name}
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)', marginTop: '2px', fontSize: '0.75rem' }}>
+                      <span>
+                        Lote: {cleanLot}
+                        {hasRealExp ? ` · Venc: ${formatCleanExpirationDate(lot.expirationDate)}` : ''}
+                      </span>
+                      <strong style={{ color: 'var(--color-primary)' }}>{lot.stock} u.</strong>
+                    </div>
+                    <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '2px' }}>
+                      Ubicación exacta: {lot.location || selectedSlot.code}
+                    </div>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)', marginTop: '2px', fontSize: '0.75rem' }}>
-                    <span>Lote: {lot.lotNumber}</span>
-                    <strong style={{ color: 'var(--color-primary)' }}>{lot.stock} u.</strong>
-                  </div>
-                  <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '2px' }}>
-                    Ubicación exacta: {lot.location || selectedSlot.code}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
 

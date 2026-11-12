@@ -5,6 +5,7 @@ import {
   sumIntegerAmounts,
   toDecimal,
 } from '../../core/money';
+import { extractBaseLotNumber, normalizeWmsLocationCode } from '../../engines/stock.engine';
 
 export async function processOrderPreparedLotAssignments(
   tx: Prisma.TransactionClient,
@@ -58,6 +59,14 @@ export async function processOrderPreparedLotAssignments(
         },
         orderBy: { expirationDate: 'asc' },
       });
+      // FEFO determinístico: ante empate de vencimiento (ej. varios 'S/L'), primero Sin Ubicar y luego id ASC.
+      activeLots.sort(
+        (a, b) =>
+          new Date(a.expirationDate).getTime() - new Date(b.expirationDate).getTime() ||
+          Number(normalizeWmsLocationCode(a.location) !== 'S/U') -
+            Number(normalizeWmsLocationCode(b.location) !== 'S/U') ||
+          a.id - b.id,
+      );
 
       for (const lot of activeLots) {
         if (remainingToAssign <= 0) break;
@@ -70,7 +79,7 @@ export async function processOrderPreparedLotAssignments(
 
       if (remainingToAssign > 0 && process.env.IGNORE_STOCK_CHECK === 'true') {
         let slLot = await tx.productLot.findFirst({
-          where: { productId: item.productId, lotNumber: 'S/L' },
+          where: { productId: item.productId, lotNumber: 'S/L', location: 'S/U' },
         });
         if (!slLot) {
           slLot = await tx.productLot.create({
@@ -171,7 +180,9 @@ export async function processOrderPreparedLotAssignments(
             orderId,
             referenceId: `ORDER-${orderId}`,
             userId: sellerId,
-            reason: `Venta - Descuento físico de Lote #${lot.lotNumber} para Pedido #${orderId}`,
+            reason: `Venta - Descuento físico de Lote #${extractBaseLotNumber(lot.lotNumber)}${
+              normalizeWmsLocationCode(lot.location) !== 'S/U' ? ` (${lot.location})` : ''
+            } para Pedido #${orderId}`,
             productLotId: lot.id,
           },
         });

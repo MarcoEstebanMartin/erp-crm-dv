@@ -202,22 +202,25 @@ export function doesLotMatchWmsScope(
 }
 
 /**
- * Extrae el código de lote comercial limpio removiendo sufijos técnicos de posición (@SLOT o S/L-SLOT).
+ * Extrae el código de lote comercial limpio (normalizador defensivo de datos legados
+ * que pudieran conservar sufijos técnicos de posición @SLOT o S/L-SLOT).
  */
 export function extractBaseLotNumber(rawLotNumber?: string | null): string {
   if (!rawLotNumber || typeof rawLotNumber !== 'string') return 'S/L';
   const trimmed = rawLotNumber.trim();
   if (!trimmed) return 'S/L';
   const withoutAt = trimmed.split('@')[0].trim();
-  if (/^S\/L-D\d+-R\d{2}-C\d{2}/i.test(withoutAt)) {
+  if (!withoutAt || /^S\/L(?:-.*)?$/i.test(withoutAt)) {
     return 'S/L';
   }
-  return withoutAt || 'S/L';
+  return withoutAt;
 }
 
 /**
- * Resuelve el número de lote único para una ubicación destino evitando choques de clave única
- * cuando un mismo lote físico se reparte en múltiples racks del depósito.
+ * Resuelve el lote destino de una ubicación WMS.
+ * La identidad física de un lote es la terna única (productId, lotNumber, location):
+ * un mismo lote de fábrica repartido en varios racks conserva SIEMPRE su código limpio
+ * (jamás se fabrican sufijos @SLOT). Si ya existe ese lote en esa ubicación, se reutiliza (fusión).
  */
 export function resolveTargetLotNumberForLocation(
   requestedLotNumber: string | undefined | null,
@@ -236,22 +239,75 @@ export function resolveTargetLotNumberForLocation(
     return { targetLotNumber: sameLocAndBase.lotNumber, existingTargetLotId: sameLocAndBase.id };
   }
 
-  const baseTakenElsewhere = existingLots.some(
-    (l) => l.lotNumber.trim().toUpperCase() === baseLot.toUpperCase(),
+  return { targetLotNumber: baseLot, existingTargetLotId: null };
+}
+
+export interface AdjustmentLotResolution {
+  /** Lote existente sobre el que aplicar el ajuste (null = crear uno nuevo). */
+  lotId: number | null;
+  /** Código limpio con el que crear el lote si `lotId` es null. */
+  createLotNumber: string;
+  /** Vencimiento heredado del mismo lote en otro rack (null = usar el indicado o el centinela). */
+  createExpiration: Date | null;
+}
+
+/**
+ * Decide sobre qué lote físico (productId, lotNumber, location) se aplica un ajuste de stock,
+ * sin fabricar jamás sufijos técnicos. Prioridades:
+ * 1. Lote preseleccionado (lotId); si suma en otro rack, usa/crea su gemelo en ese rack.
+ * 2. Coincidencia exacta (código limpio + ubicación).
+ * 3. Solo para restas: mismo código en cualquier rack → cualquier lote en la ubicación → FEFO general.
+ */
+export function resolveAdjustmentLot(params: {
+  lots: WmsLotSnapshot[];
+  preselectedLot?: WmsLotSnapshot | null;
+  lotNumber?: string | null;
+  location?: string | null;
+  change: number;
+}): AdjustmentLotResolution {
+  const cleanLoc = normalizeWmsLocationCode(params.location);
+  const requested = extractBaseLotNumber(params.lotNumber);
+  const toDate = (d: Date | string) => (d instanceof Date ? d : new Date(d));
+  const sorted = [...params.lots].sort(
+    (a, b) => toDate(a.expirationDate).getTime() - toDate(b.expirationDate).getTime() || a.id - b.id,
   );
-  if (!baseTakenElsewhere) {
-    return { targetLotNumber: baseLot, existingTargetLotId: null };
+  const sameCode = (l: WmsLotSnapshot, code: string) =>
+    extractBaseLotNumber(l.lotNumber).toUpperCase() === code.toUpperCase();
+  const sameKey = (l: WmsLotSnapshot, code: string, loc: string) =>
+    sameCode(l, code) && normalizeWmsLocationCode(l.location) === loc;
+
+  const pre = params.preselectedLot || null;
+  if (pre) {
+    const isPositiveIntoOtherRack =
+      params.change > 0 && cleanLoc !== 'S/U' && normalizeWmsLocationCode(pre.location) !== cleanLoc;
+    if (!isPositiveIntoOtherRack) {
+      return { lotId: pre.id, createLotNumber: extractBaseLotNumber(pre.lotNumber), createExpiration: null };
+    }
+    const base = extractBaseLotNumber(pre.lotNumber);
+    const twin = sorted.find((l) => sameKey(l, base, cleanLoc));
+    return twin
+      ? { lotId: twin.id, createLotNumber: base, createExpiration: null }
+      : { lotId: null, createLotNumber: base, createExpiration: toDate(pre.expirationDate) };
   }
 
-  const scopedCandidate = cleanTargetLoc === 'S/U' ? `${baseLot}@SU` : `${baseLot}@${cleanTargetLoc}`;
-  const exactScopedMatch = existingLots.find(
-    (l) => l.lotNumber.trim().toUpperCase() === scopedCandidate.toUpperCase(),
-  );
-  if (exactScopedMatch) {
-    return { targetLotNumber: exactScopedMatch.lotNumber, existingTargetLotId: exactScopedMatch.id };
+  let lot = sorted.find((l) => sameKey(l, requested, cleanLoc)) || null;
+  if (!lot && params.change < 0) {
+    lot =
+      sorted.find((l) => l.stock > 0 && sameCode(l, requested) && requested !== 'S/L') ||
+      (cleanLoc !== 'S/U' ? sorted.find((l) => l.stock > 0 && doesLotMatchWmsScope(l.location, cleanLoc)) : undefined) ||
+      sorted.find((l) => l.stock > 0) ||
+      null;
+  }
+  if (lot) {
+    return { lotId: lot.id, createLotNumber: requested, createExpiration: null };
   }
 
-  return { targetLotNumber: scopedCandidate, existingTargetLotId: null };
+  const sibling = requested !== 'S/L' ? sorted.find((l) => sameCode(l, requested)) : undefined;
+  return {
+    lotId: null,
+    createLotNumber: requested,
+    createExpiration: sibling ? toDate(sibling.expirationDate) : null,
+  };
 }
 
 /**

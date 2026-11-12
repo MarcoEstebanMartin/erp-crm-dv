@@ -5,6 +5,7 @@ import {
   evaluateLotFefoStatus,
   extractBaseLotNumber,
   planWmsSafeRelocation,
+  resolveAdjustmentLot,
   resolveTargetLotNumberForLocation,
   verifyStockLedgerInvariant,
 } from './stock.engine';
@@ -80,15 +81,63 @@ describe('StockEngine - Valorización Financiera Exacta, FEFO y WMS Seguro', () 
     expect(doesLotMatchWmsScope('XD1-R01-C04', 'D1-R01-C04')).toBe(false);
   });
 
-  it('Resuelve sufijos limpios al dividir un mismo lote en múltiples slots sin encadenar @', () => {
+  it('Partir un lote en múltiples racks conserva SIEMPRE el código limpio (clave única productId+lotNumber+location)', () => {
+    // Normalizador defensivo de datos legados
     expect(extractBaseLotNumber('L-2026@D1-R01-C04-A')).toBe('L-2026');
     expect(extractBaseLotNumber('S/L-D1-R01-C04-A')).toBe('S/L');
+    expect(extractBaseLotNumber('S/L@D1-R01-C04-C')).toBe('S/L');
+    expect(extractBaseLotNumber('')).toBe('S/L');
 
-    const res = resolveTargetLotNumberForLocation('L-2026@D1-R01-C04-A', 'D1-R01-C08-B', [
+    // Lote de fábrica ya presente en otro rack: el nuevo rack recibe el MISMO código, sin '@'
+    const res = resolveTargetLotNumberForLocation('L-2026', 'D1-R01-C08-B', [
       { id: 10, lotNumber: 'L-2026', location: 'D1-R01-C04-A' },
     ]);
-    expect(res.targetLotNumber).toBe('L-2026@D1-R01-C08-B');
+    expect(res.targetLotNumber).toBe('L-2026');
     expect(res.existingTargetLotId).toBeNull();
+
+    // Genérico 'S/L' que ya existe en S/U: ubicar parte en un rack genera otro 'S/L' (no 'S/L@...')
+    const generic = resolveTargetLotNumberForLocation('S/L', 'D1-R01-C04-C', [
+      { id: 868, lotNumber: 'S/L', location: 'S/U' },
+    ]);
+    expect(generic.targetLotNumber).toBe('S/L');
+    expect(generic.targetLotNumber).not.toContain('@');
+
+    // Si ya existe el mismo lote en el rack destino, se reutiliza (fusión)
+    const merge = resolveTargetLotNumberForLocation('S/L', 'S/U', [
+      { id: 868, lotNumber: 'S/L', location: 'S/U' },
+      { id: 1115, lotNumber: 'S/L', location: 'D1-R01-C04-C' },
+    ]);
+    expect(merge).toEqual({ targetLotNumber: 'S/L', existingTargetLotId: 868 });
+  });
+
+  it('resolveAdjustmentLot elige el lote físico correcto sin fabricar sufijos', () => {
+    const lots = [
+      { id: 868, lotNumber: 'S/L', stock: 80, location: 'S/U', expirationDate: '2036-12-31' },
+      { id: 1115, lotNumber: 'S/L', stock: 20, location: 'D1-R01-C04-C', expirationDate: '2036-12-31' },
+      { id: 900, lotNumber: 'L-2409', stock: 5, location: 'D1-R01-C08-A', expirationDate: '2027-03-15' },
+    ];
+
+    // Ajuste genérico sin rack → lote 'S/L' de S/U
+    expect(resolveAdjustmentLot({ lots, change: 10 }).lotId).toBe(868);
+    // Ajuste genérico en un rack → lote 'S/L' de ese rack
+    expect(resolveAdjustmentLot({ lots, location: 'D1-R01-C04-C', change: 3 }).lotId).toBe(1115);
+    // Suma en un rack nuevo → crea 'S/L' limpio
+    expect(resolveAdjustmentLot({ lots, location: 'D1-R01-C09-B', change: 4 })).toEqual({
+      lotId: null,
+      createLotNumber: 'S/L',
+      createExpiration: null,
+    });
+    // Suma de un lote de fábrica en S/U → crea gemelo heredando el vencimiento real
+    const twin = resolveAdjustmentLot({ lots, lotNumber: 'L-2409', change: 6 });
+    expect(twin.lotId).toBeNull();
+    expect(twin.createLotNumber).toBe('L-2409');
+    expect(twin.createExpiration?.toISOString().slice(0, 10)).toBe('2027-03-15');
+    // Resta de un lote de fábrica sin rack → lo busca donde esté
+    expect(resolveAdjustmentLot({ lots, lotNumber: 'L-2409', change: -2 }).lotId).toBe(900);
+    // Lote preseleccionado que suma en otro rack → crea su gemelo con el mismo código
+    const pre = resolveAdjustmentLot({ lots, preselectedLot: lots[2], location: 'D1-R01-C04-C', change: 1 });
+    expect(pre.lotId).toBeNull();
+    expect(pre.createLotNumber).toBe('L-2409');
   });
 
   it('Planifica reubicación segura priorizando S/U por FEFO y bloquea excesos sobre el stock físico', () => {

@@ -1,6 +1,10 @@
 import prisma from '../../utils/prisma';
 import { logAudit } from '../../utils/audit';
 import { lockProductsForUpdate } from '../../utils/db-locks.util';
+import { extractBaseLotNumber, normalizeWmsLocationCode } from '../../engines/stock.engine';
+
+const isGenericLot = (l: { lotNumber: string }) => extractBaseLotNumber(l.lotNumber) === 'S/L';
+const isUnassigned = (l: { location?: string | null }) => normalizeWmsLocationCode(l.location) === 'S/U';
 
 export class ProductReconciliationSubService {
   async reconcileStockAudit() {
@@ -79,7 +83,7 @@ export class ProductReconciliationSubService {
             const prodLots = lotsByProduct.get(item.id) || [];
 
             if (item.discrepancia > 0) {
-              let defaultLot = prodLots.find((l) => l.lotNumber === 'S/L');
+              let defaultLot = prodLots.find((l) => isGenericLot(l) && isUnassigned(l));
               if (!defaultLot) {
                 defaultLot = await tx.productLot.create({
                   data: {
@@ -120,9 +124,11 @@ export class ProductReconciliationSubService {
             } else {
               let remainingToDeduct = Math.abs(item.discrepancia);
               const candidateLots = prodLots.filter((l) => l.stock > 0);
+              // Prioridad de descuento: genérico S/L sin ubicar → genérico S/L en rack → lotes de fábrica
               const orderedLots = [
-                ...candidateLots.filter((l) => l.lotNumber === 'S/L'),
-                ...candidateLots.filter((l) => l.lotNumber !== 'S/L'),
+                ...candidateLots.filter((l) => isGenericLot(l) && isUnassigned(l)),
+                ...candidateLots.filter((l) => isGenericLot(l) && !isUnassigned(l)),
+                ...candidateLots.filter((l) => !isGenericLot(l)),
               ];
 
               for (const lot of orderedLots) {

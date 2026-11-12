@@ -3,6 +3,11 @@ import { Printer, RefreshCw } from 'lucide-react';
 import type { ProductLot } from '../../types';
 import { renderLocationTag } from './depositoHelpers';
 import type { StockAdjustModalState } from './DepositoStockAdjustModal';
+import {
+  extractCleanLotNumber,
+  formatCleanExpirationDate,
+  isSentinelExpiration,
+} from '../stock/lotLabel';
 
 interface DepositoLotsExpirationTabProps {
   expiringLots: ProductLot[];
@@ -19,6 +24,8 @@ export const DepositoLotsExpirationTab: React.FC<DepositoLotsExpirationTabProps>
   setStockModal,
   onPrintLabels,
 }) => {
+  const realExpiringLots = expiringLots.filter((lot) => !isSentinelExpiration(lot.expirationDate));
+
   const allLotsList: { product: any; lot: any }[] = [];
   allProducts.forEach((prod) => {
     (prod.lots || []).forEach((lot: any) => {
@@ -26,13 +33,16 @@ export const DepositoLotsExpirationTab: React.FC<DepositoLotsExpirationTabProps>
     });
   });
 
-  allLotsList.sort(
-    (a, b) => new Date(a.lot.expirationDate).getTime() - new Date(b.lot.expirationDate).getTime(),
-  );
+  allLotsList.sort((a, b) => {
+    const aSent = isSentinelExpiration(a.lot.expirationDate);
+    const bSent = isSentinelExpiration(b.lot.expirationDate);
+    if (aSent !== bSent) return aSent ? 1 : -1;
+    return new Date(a.lot.expirationDate).getTime() - new Date(b.lot.expirationDate).getTime();
+  });
 
   return (
     <div>
-      {expiringLots.length > 0 && (
+      {realExpiringLots.length > 0 && (
         <div
           className="card"
           style={{
@@ -52,7 +62,7 @@ export const DepositoLotsExpirationTab: React.FC<DepositoLotsExpirationTabProps>
               gap: '8px',
             }}
           >
-            ⚠️ Alerta: Lotes Vencidos o Próximos a Vencer (Menos de 30 días)
+            Alerta: Lotes Vencidos o Próximos a Vencer (Menos de 30 días)
           </h4>
           <div
             style={{
@@ -63,10 +73,9 @@ export const DepositoLotsExpirationTab: React.FC<DepositoLotsExpirationTabProps>
               gap: '8px',
             }}
           >
-            {expiringLots.map((lot) => {
+            {realExpiringLots.map((lot) => {
               const daysLeft = Math.ceil(
-                (new Date(lot.expirationDate).getTime() - new Date().getTime()) /
-                  (1000 * 3600 * 24),
+                (new Date(lot.expirationDate).getTime() - new Date().getTime()) / (1000 * 3600 * 24),
               );
               const isExpired = daysLeft <= 0;
               return (
@@ -89,9 +98,9 @@ export const DepositoLotsExpirationTab: React.FC<DepositoLotsExpirationTabProps>
                     <div style={{ fontSize: '0.75rem', marginTop: '2px' }}>
                       Lote:{' '}
                       <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>
-                        {lot.lotNumber}
+                        {extractCleanLotNumber(lot.lotNumber)}
                       </span>{' '}
-                      | Vence: {new Date(lot.expirationDate).toLocaleDateString('es-AR')}
+                      | Vence: {formatCleanExpirationDate(lot.expirationDate)}
                     </div>
                   </div>
                   <div style={{ textAlign: 'right' }}>
@@ -108,9 +117,7 @@ export const DepositoLotsExpirationTab: React.FC<DepositoLotsExpirationTabProps>
                     >
                       {isExpired ? 'VENCIDO' : `Vence en ${daysLeft} días`}
                     </span>
-                    <span style={{ fontWeight: 600, marginLeft: '12px' }}>
-                      Stock: {lot.stock} u.
-                    </span>
+                    <span style={{ fontWeight: 600, marginLeft: '12px' }}>Stock: {lot.stock} u.</span>
                   </div>
                 </div>
               );
@@ -138,6 +145,7 @@ export const DepositoLotsExpirationTab: React.FC<DepositoLotsExpirationTabProps>
           </div>
           <div style={{ display: 'flex', gap: '8px' }}>
             <button
+              type="button"
               className="btn btn-secondary"
               onClick={() => {
                 const activeLots: any[] = [];
@@ -148,7 +156,7 @@ export const DepositoLotsExpirationTab: React.FC<DepositoLotsExpirationTabProps>
                         isLotLabel: true,
                         productName: prod.name,
                         sku: prod.sku,
-                        lotNumber: lot.lotNumber,
+                        lotNumber: extractCleanLotNumber(lot.lotNumber),
                         expirationDate: lot.expirationDate,
                         location: lot.location,
                       });
@@ -165,7 +173,7 @@ export const DepositoLotsExpirationTab: React.FC<DepositoLotsExpirationTabProps>
               <Printer size={16} />
               <span>Imprimir Todas las Etiquetas</span>
             </button>
-            <button className="btn btn-secondary" onClick={onRefresh}>
+            <button type="button" className="btn btn-secondary" onClick={onRefresh}>
               <RefreshCw size={16} />
             </button>
           </div>
@@ -195,20 +203,22 @@ export const DepositoLotsExpirationTab: React.FC<DepositoLotsExpirationTabProps>
               ) : (
                 allLotsList.map((entry, idx) => {
                   const { product, lot } = entry;
-                  const daysLeft = Math.ceil(
-                    (new Date(lot.expirationDate).getTime() - new Date().getTime()) /
-                      (1000 * 3600 * 24),
-                  );
+                  const sentinel = isSentinelExpiration(lot.expirationDate);
+                  const daysLeft = sentinel
+                    ? 9999
+                    : Math.ceil(
+                        (new Date(lot.expirationDate).getTime() - new Date().getTime()) / (1000 * 3600 * 24),
+                      );
 
                   let badgeColor = 'expiry-normal';
-                  let statusText = 'Saludable';
-                  if (daysLeft <= 0) {
+                  let statusText = sentinel ? 'Sin vencimiento' : 'Saludable';
+                  if (!sentinel && daysLeft <= 0) {
                     badgeColor = 'expiry-critical';
                     statusText = 'Vencido';
-                  } else if (daysLeft <= 30) {
+                  } else if (!sentinel && daysLeft <= 30) {
                     badgeColor = 'expiry-critical';
                     statusText = `Vence en ${daysLeft} d.`;
-                  } else if (daysLeft <= 60) {
+                  } else if (!sentinel && daysLeft <= 60) {
                     badgeColor = 'expiry-warning';
                     statusText = `Vence en ${daysLeft} d.`;
                   }
@@ -217,23 +227,16 @@ export const DepositoLotsExpirationTab: React.FC<DepositoLotsExpirationTabProps>
                     <tr key={idx}>
                       <td style={{ fontFamily: 'monospace', fontWeight: 600 }}>{product.sku}</td>
                       <td style={{ fontWeight: 500 }}>{product.name}</td>
-                      <td style={{ fontFamily: 'monospace', fontWeight: 700 }}>{lot.lotNumber}</td>
-                      <td>
-                        {new Date(lot.expirationDate).toLocaleDateString('es-AR', {
-                          timeZone: 'UTC',
-                        })}
+                      <td style={{ fontFamily: 'monospace', fontWeight: 700 }}>
+                        {extractCleanLotNumber(lot.lotNumber)}
+                      </td>
+                      <td style={{ color: sentinel ? 'var(--text-muted)' : 'inherit' }}>
+                        {formatCleanExpirationDate(lot.expirationDate)}
                       </td>
                       <td>
-                        <span
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '6px',
-                            fontWeight: 500,
-                          }}
-                        >
-                          <span className={`expiry-dot ${badgeColor}`} />
-                          {statusText}
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: 500 }}>
+                          {!sentinel && <span className={`expiry-dot ${badgeColor}`} />}
+                          <span style={{ color: sentinel ? 'var(--text-muted)' : 'inherit' }}>{statusText}</span>
                         </span>
                       </td>
                       <td>{renderLocationTag(lot.location)}</td>
@@ -241,6 +244,7 @@ export const DepositoLotsExpirationTab: React.FC<DepositoLotsExpirationTabProps>
                       <td>
                         <div style={{ display: 'flex', gap: '6px' }}>
                           <button
+                            type="button"
                             className="btn btn-secondary"
                             style={{ padding: '4px 8px', fontSize: '0.75rem' }}
                             onClick={() =>
@@ -259,6 +263,7 @@ export const DepositoLotsExpirationTab: React.FC<DepositoLotsExpirationTabProps>
                             Ajustar
                           </button>
                           <button
+                            type="button"
                             className="btn btn-secondary"
                             style={{ padding: '4px 8px', fontSize: '0.75rem' }}
                             onClick={() =>
@@ -267,7 +272,7 @@ export const DepositoLotsExpirationTab: React.FC<DepositoLotsExpirationTabProps>
                                   isLotLabel: true,
                                   productName: product.name,
                                   sku: product.sku,
-                                  lotNumber: lot.lotNumber,
+                                  lotNumber: extractCleanLotNumber(lot.lotNumber),
                                   expirationDate: lot.expirationDate,
                                   location: lot.location,
                                 },

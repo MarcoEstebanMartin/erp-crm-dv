@@ -96,9 +96,11 @@ export class ProductWmsSubService {
           const nextProductStock = Math.max(0, product.stock - subQty);
           const appliedDelta = nextProductStock - product.stock;
 
+          // El lote vaciado conserva su ubicación (stock 0): moverlo a 'S/U' podría colisionar
+          // con la clave única (productId, lotNumber, location) del lote genérico ya existente.
           await tx.productLot.update({
             where: { id: freshLot.id },
-            data: { location: 'S/U', stock: 0 },
+            data: { stock: 0 },
           });
 
           if (subQty > 0) {
@@ -153,19 +155,18 @@ export class ProductWmsSubService {
             },
           });
 
-          try {
-            await tx.productLot.delete({ where: { id: freshLot.id } });
-          } catch {
-            await tx.productLot.update({ where: { id: freshLot.id }, data: { stock: 0, location: 'S/U' } });
-          }
+          // Fusión: el lote de origen queda en stock 0 en su posición (con historial en Kardex).
+          // No se intenta DELETE: un error de FK dentro de la transacción de PostgreSQL la abortaría entera.
+          await tx.productLot.update({ where: { id: freshLot.id }, data: { stock: 0 } });
           movedUnits += qtyToMove;
-        } else {
+        } else if (!targetResolution.existingTargetLotId) {
           await tx.productLot.update({
             where: { id: freshLot.id },
             data: { location: 'S/U', lotNumber: targetResolution.targetLotNumber },
           });
           movedUnits += Math.max(0, freshLot.stock);
         }
+        // Lote vacío con gemelo ya existente en S/U: no requiere cambios (evita colisión de clave única).
       }
 
       let clearedProductsCount = 0;
@@ -374,12 +375,10 @@ export class ProductWmsSubService {
           });
 
       for (const step of plan.steps) {
+        // El lote de origen conserva su ubicación aunque quede en 0 (evita colisión de clave única).
         await tx.productLot.update({
           where: { id: step.lotId },
-          data: {
-            stock: step.remainingInSource,
-            ...(step.remainingInSource === 0 ? { location: 'S/U' } : {}),
-          },
+          data: { stock: step.remainingInSource },
         });
         await tx.stockMovement.create({
           data: {

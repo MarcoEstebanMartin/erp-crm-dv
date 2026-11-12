@@ -7,6 +7,7 @@ import { useConfirm } from '../../context/ConfirmContext';
 import { Slot3DRackIsometricView } from './Slot3DRackIsometricView';
 import { Slot3DLoadStockForm } from './Slot3DLoadStockForm';
 import { extractSlotLevels, type MergedDepositSlot } from './warehouseLayoutMerger';
+import { extractCleanLotNumber, formatCleanExpirationDate } from '../stock/lotLabel';
 
 type RackLevel = 'A' | 'B' | 'C' | 'D' | 'E' | 'F';
 
@@ -72,7 +73,7 @@ export const Slot3DInspectorModal: React.FC<Slot3DInspectorModalProps> = ({
       } else if (p.stock > 0 && (p.defaultLocation === levelCode || (level === 'A' && p.defaultLocation === slot.code))) {
         levelItems.push({
           product: p,
-          lot: { id: 0, productId: p.id, lotNumber: 'S/L', expirationDate: new Date().toISOString(), stock: p.stock, location: levelCode, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+          lot: { id: 0, productId: p.id, lotNumber: 'S/L', expirationDate: '2036-12-31T00:00:00.000Z', stock: p.stock, location: levelCode, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
         });
       }
     });
@@ -118,7 +119,7 @@ export const Slot3DInspectorModal: React.FC<Slot3DInspectorModalProps> = ({
     try {
       setLoading(true); setErrorMsg(null);
       await api.updateLot(lot.id, { location: newLocation });
-      setSuccessMsg(`✅ Lote ${lot.lotNumber} reubicado al Nivel ${newLevel}.`);
+      setSuccessMsg(`Lote ${extractCleanLotNumber(lot.lotNumber)} reubicado al Nivel ${newLevel}.`);
       onStockUpdated();
       setTimeout(() => setSuccessMsg(null), 3000);
     } catch (err: any) { setErrorMsg(err.message || 'Error al reubicar el lote.'); } finally { setLoading(false); }
@@ -255,8 +256,8 @@ export const Slot3DInspectorModal: React.FC<Slot3DInspectorModalProps> = ({
                           <span className="badge badge-success" style={{ fontSize: '0.75rem', fontWeight: 700 }}>{lot.stock} u.</span>
                         </div>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', fontSize: '0.78rem', backgroundColor: '#f8fafc', padding: '8px', borderRadius: '6px', marginBottom: '8px' }}>
-                          <div>Lote: <strong>{lot.lotNumber}</strong></div>
-                          <div>Venc: <strong>{lot.expirationDate ? new Date(lot.expirationDate).toLocaleDateString('es-AR') : 'S/F'}</strong></div>
+                          <div>Lote: <strong>{extractCleanLotNumber(lot.lotNumber)}</strong></div>
+                          <div>Venc: <strong>{formatCleanExpirationDate(lot.expirationDate)}</strong></div>
                         </div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '6px', paddingTop: '6px', borderTop: '1px solid #f1f5f9' }}>
                           {!isSlotBlocked && lot.id > 0 && (

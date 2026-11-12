@@ -211,7 +211,13 @@ export const purchaseDocumentService = {
         });
 
         let lot = await tx.productLot.findUnique({
-          where: { productId_lotNumber: { productId: productIdNum, lotNumber: defaultLotNumber } },
+          where: {
+            productId_lotNumber_location: {
+              productId: productIdNum,
+              lotNumber: defaultLotNumber,
+              location: 'S/U',
+            },
+          },
         });
         lot = lot
           ? await tx.productLot.update({

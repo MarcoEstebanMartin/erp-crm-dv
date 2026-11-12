@@ -309,7 +309,7 @@ model ProductLot {
   orderItemLots  OrderItemLot[]
   stockMovements StockMovement[]
 
-  @@unique([productId, lotNumber])
+  @@unique([productId, lotNumber, location])
   @@index([expirationDate])
   @@index([productId, expirationDate])
 }

@@ -1,6 +1,12 @@
 import React from 'react';
 import { Check, AlertTriangle } from 'lucide-react';
 import { sortItemsByOptimalRoute, detectWeightAnomaly } from './depositoHelpers';
+import {
+  extractCleanLotNumber,
+  formatCleanExpirationDate,
+  isGenericUntrackedLot,
+  isSentinelExpiration,
+} from '../stock/lotLabel';
 
 interface PickingActiveOrderViewProps {
   selectedOrder: any;
@@ -165,19 +171,27 @@ export const PickingActiveOrderView: React.FC<PickingActiveOrderViewProps> = ({
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                           {productLots.map((lot: any) => {
                             const qty = itemAssignments[lot.id] || 0;
-                            const isConfirmed = !lot.location || lot.location === 'S/U' || confirmedLocations[lot.id];
+                            const hasShelf = Boolean(lot.location && lot.location !== 'S/U');
+                            const isConfirmed = !hasShelf || confirmedLocations[lot.id];
+                            const isGeneric = isGenericUntrackedLot(lot);
+                            const cleanLot = extractCleanLotNumber(lot.lotNumber);
+                            const hasRealExp = !isSentinelExpiration(lot.expirationDate);
                             return (
-                              <div key={lot.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem' }}>
-                                <span style={{ display: 'inline-flex', alignItems: 'center', flexWrap: 'wrap', gap: '4px' }}>
-                                  <strong>Lote: {lot.lotNumber}</strong> (Físico: {lot.stock} u.)
-                                  <span style={{ color: 'var(--text-secondary)' }}>[Vence: {new Date(lot.expirationDate).toLocaleDateString('es-AR', { timeZone: 'UTC' })}]</span>
-                                  {lot.location && lot.location !== 'S/U' && (
-                                    <span style={{ display: 'inline-flex', alignItems: 'center', padding: '2px 6px', backgroundColor: isConfirmed ? '#e6f4ea' : '#fef7e0', border: isConfirmed ? '1px solid #137333' : '1px solid #b06000', borderRadius: '4px', fontWeight: 600, fontSize: '0.72rem', color: isConfirmed ? '#137333' : '#b06000', marginLeft: '6px' }}>
+                              <div key={lot.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem', gap: '8px' }}>
+                                <span style={{ display: 'inline-flex', alignItems: 'center', flexWrap: 'wrap', gap: '6px' }}>
+                                  {!isGeneric && <strong>Lote: {cleanLot}</strong>}
+                                  {isGeneric && !hasShelf && <strong>Sin ubicar (S/U)</strong>}
+                                  {hasShelf && (
+                                    <span style={{ display: 'inline-flex', alignItems: 'center', padding: '2px 6px', backgroundColor: isConfirmed ? '#e6f4ea' : '#fef7e0', border: isConfirmed ? '1px solid #137333' : '1px solid #b06000', borderRadius: '4px', fontWeight: 600, fontSize: '0.72rem', color: isConfirmed ? '#137333' : '#b06000' }}>
                                       Estante: {lot.location}
-                                      <button type="button" onClick={() => setConfirmedLocations((prev) => ({ ...prev, [lot.id]: !prev[lot.id] }))} style={{ marginLeft: '6px', background: 'none', border: 'none', color: isConfirmed ? '#137333' : '#b06000', cursor: 'pointer', padding: 0, fontWeight: 700, fontSize: '0.7rem' }}>
+                                      <button type="button" onClick={() => setConfirmedLocations((prev) => ({ ...prev, [lot.id]: !prev[lot.id] }))} style={{ marginLeft: '6px', background: 'none', border: 'none', boxShadow: 'none', color: isConfirmed ? '#137333' : '#b06000', cursor: 'pointer', padding: 0, fontWeight: 700, fontSize: '0.7rem' }}>
                                         {isConfirmed ? '✓' : 'Confirmar'}
                                       </button>
                                     </span>
+                                  )}
+                                  <span style={{ color: 'var(--text-secondary)' }}>(Físico: {lot.stock} u.)</span>
+                                  {hasRealExp && (
+                                    <span style={{ color: 'var(--text-secondary)' }}>[Vence: {formatCleanExpirationDate(lot.expirationDate)}]</span>
                                   )}
                                 </span>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>

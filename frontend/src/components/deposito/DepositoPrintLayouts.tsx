@@ -1,6 +1,7 @@
 import React from 'react';
 import type { Order } from '../../types';
 import { getProductLocation } from './depositoHelpers';
+import { extractCleanLotNumber, formatCleanExpirationDate } from '../stock/lotLabel';
 
 interface DepositoPrintLayoutsProps {
   labelsToPrint: any[];
@@ -63,11 +64,11 @@ export const DepositoPrintLayouts: React.FC<DepositoPrintLayoutsProps> = ({
                     <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '8px', marginBottom: '8px' }}>
                       <div>
                         <strong>LOTE:</strong>
-                        <div style={{ fontWeight: 'bold', fontSize: '13px', fontFamily: 'monospace', color: '#000' }}>{label.lotNumber}</div>
+                        <div style={{ fontWeight: 'bold', fontSize: '13px', fontFamily: 'monospace', color: '#000' }}>{extractCleanLotNumber(label.lotNumber)}</div>
                       </div>
                       <div>
                         <strong>EXPIRA / VENCE:</strong>
-                        <div style={{ fontWeight: 'bold' }}>{new Date(label.expirationDate).toLocaleDateString('es-AR', { timeZone: 'UTC' })}</div>
+                        <div style={{ fontWeight: 'bold' }}>{formatCleanExpirationDate(label.expirationDate)}</div>
                       </div>
                     </div>
                   </div>
@@ -76,7 +77,7 @@ export const DepositoPrintLayouts: React.FC<DepositoPrintLayoutsProps> = ({
                       ||||| | || ||||| | |||
                     </div>
                     <span style={{ fontSize: '9px', color: '#666' }}>
-                      {label.sku}-{label.lotNumber}
+                      {label.sku}-{extractCleanLotNumber(label.lotNumber)}
                     </span>
                   </div>
                 </div>
