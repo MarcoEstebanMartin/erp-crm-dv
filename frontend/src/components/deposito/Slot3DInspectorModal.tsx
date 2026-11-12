@@ -14,12 +14,13 @@ interface Slot3DInspectorModalProps {
   isOpen: boolean;
   onClose: () => void;
   slot: MergedDepositSlot | null;
+  initialLevel?: RackLevel | null;
   products: Product[];
   onStockUpdated: () => void;
 }
 
 export const Slot3DInspectorModal: React.FC<Slot3DInspectorModalProps> = ({
-  isOpen, onClose, slot, products, onStockUpdated,
+  isOpen, onClose, slot, initialLevel, products, onStockUpdated,
 }) => {
   if (!isOpen || !slot) return null;
 
@@ -38,6 +39,7 @@ export const Slot3DInspectorModal: React.FC<Slot3DInspectorModalProps> = ({
 
   const [selectedProductId, setSelectedProductId] = useState<number | ''>('');
   const [productSearch, setProductSearch] = useState('');
+  const [sourceLotId, setSourceLotId] = useState<number | ''>('');
   const [lotNumber, setLotNumber] = useState('');
   const [isNewLot, setIsNewLot] = useState(false);
   const [expirationDate, setExpirationDate] = useState('');
@@ -47,8 +49,12 @@ export const Slot3DInspectorModal: React.FC<Slot3DInspectorModalProps> = ({
 
   useEffect(() => { setLocalProducts(products || []); }, [products]);
   useEffect(() => {
+    if (initialLevel && supportedLevels.includes(initialLevel)) {
+      setActiveLevel(initialLevel);
+      return;
+    }
     if (!supportedLevels.includes(activeLevel)) setActiveLevel(supportedLevels[0] || 'A');
-  }, [slot.code, slot.nivel]);
+  }, [slot.code, slot.nivel, initialLevel]);
 
   const filteredProducts = (localProducts || [])
     .filter((p) => p.name.toLowerCase().includes(productSearch.toLowerCase()) || p.sku.toLowerCase().includes(productSearch.toLowerCase()) || (p.barcode && p.barcode.includes(productSearch)))
@@ -83,14 +89,25 @@ export const Slot3DInspectorModal: React.FC<Slot3DInspectorModalProps> = ({
 
   const handleLoadStock = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedProductId) return setErrorMsg('Seleccioná un producto de la lista.');
+    if (!selectedProductId || !selectedProduct) return setErrorMsg('Seleccioná un producto de la lista.');
     if (!quantity || Number(quantity) <= 0) return setErrorMsg('Ingresá una cantidad entera mayor a 0.');
+    if (Number(quantity) > selectedProduct.stock) {
+      return setErrorMsg(`No podés ubicar ${quantity} u. porque el stock total disponible de ${selectedProduct.name} es de ${selectedProduct.stock} u.`);
+    }
     const targetLocation = `${slot.code}-${activeLevel}`;
     try {
       setLoading(true); setErrorMsg(null);
-      await api.assignWmsLocation({ productId: Number(selectedProductId), locationCode: targetLocation, quantity: Number(quantity), lotNumber: lotNumber.trim() || undefined, expirationDate: expirationDate || undefined, reason });
+      await api.assignWmsLocation({
+        productId: Number(selectedProductId),
+        locationCode: targetLocation,
+        quantity: Math.trunc(Number(quantity)),
+        sourceLotId: sourceLotId ? Number(sourceLotId) : undefined,
+        lotNumber: lotNumber.trim() || undefined,
+        expirationDate: expirationDate || undefined,
+        reason,
+      });
       setSuccessMsg(`⚡ Mercadería ubicada en ${targetLocation} (stock comercial conservado sin descalces).`);
-      setShowLoadForm(false); setSelectedProductId(''); setQuantity(''); setLotNumber('');
+      setShowLoadForm(false); setSelectedProductId(''); setSourceLotId(''); setQuantity(''); setLotNumber('');
       onStockUpdated();
       setTimeout(() => setSuccessMsg(null), 4000);
     } catch (err: any) { setErrorMsg(err.message || 'Error al ubicar la mercadería en el slot.'); } finally { setLoading(false); }
@@ -197,6 +214,7 @@ export const Slot3DInspectorModal: React.FC<Slot3DInspectorModalProps> = ({
               <Slot3DLoadStockForm
                 slot={slot} activeLevel={activeLevel} products={products} filteredProducts={filteredProducts} selectedProduct={selectedProduct}
                 selectedProductId={selectedProductId} setSelectedProductId={setSelectedProductId} productSearch={productSearch} setProductSearch={setProductSearch}
+                sourceLotId={sourceLotId} setSourceLotId={setSourceLotId}
                 lotNumber={lotNumber} setLotNumber={setLotNumber} isNewLot={isNewLot} setIsNewLot={setIsNewLot} expirationDate={expirationDate} setExpirationDate={setExpirationDate}
                 quantity={quantity} setQuantity={setQuantity} reason={reason} setReason={setReason} loading={loading} onSubmit={handleLoadStock} onCancel={() => setShowLoadForm(false)}
               />

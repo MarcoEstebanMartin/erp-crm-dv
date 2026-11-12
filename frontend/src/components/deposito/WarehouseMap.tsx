@@ -17,9 +17,16 @@ import { api } from '../../utils/api';
 interface WarehouseMapProps {
   products: Product[];
   onStockUpdated: () => void;
+  focusLocationCode?: string | null;
+  onClearFocus?: () => void;
 }
 
-export const WarehouseMap: React.FC<WarehouseMapProps> = ({ products, onStockUpdated }) => {
+export const WarehouseMap: React.FC<WarehouseMapProps> = ({
+  products,
+  onStockUpdated,
+  focusLocationCode,
+  onClearFocus,
+}) => {
   const isAdmin = api.getCurrentUser()?.role === 'ADMIN';
   const [selectedWarehouse, setSelectedWarehouse] = useState<'ALL' | 'D1' | 'D2' | 'D3'>('D1');
   const [selectedSector, setSelectedSector] = useState<string>('ALL');
@@ -29,6 +36,7 @@ export const WarehouseMap: React.FC<WarehouseMapProps> = ({ products, onStockUpd
   const [customCells, setCustomCells] = useState<WarehouseCellOverride[]>([]);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [is3DModalOpen, setIs3DModalOpen] = useState(false);
+  const [focusedLevel, setFocusedLevel] = useState<'A' | 'B' | 'C' | 'D' | 'E' | 'F' | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   const loadCustomCells = useCallback(async () => {
@@ -43,6 +51,22 @@ export const WarehouseMap: React.FC<WarehouseMapProps> = ({ products, onStockUpd
   useEffect(() => {
     loadCustomCells();
   }, [loadCustomCells]);
+
+  useEffect(() => {
+    if (!focusLocationCode) return;
+    const baseCode = extractBaseSlotFromLocation(focusLocationCode);
+    if (!baseCode) return;
+    const upper = focusLocationCode.trim().toUpperCase();
+    const parts = upper.split('-');
+    const lvl = parts[3] && /^[A-F]$/.test(parts[3]) ? (parts[3] as 'A' | 'B' | 'C' | 'D' | 'E' | 'F') : 'A';
+    if (baseCode.startsWith('D2-')) setSelectedWarehouse('D2');
+    else if (baseCode.startsWith('D3-')) setSelectedWarehouse('D3');
+    else setSelectedWarehouse('D1');
+    setSelectedSector('ALL');
+    setIsEditMode(false);
+    setSelectedSlotCode(baseCode);
+    setFocusedLevel(lvl);
+  }, [focusLocationCode]);
 
   const { mergedMatrix, mergedSlots, originalCellByCode, activeSlotsCount } = useMemo(
     () => mergeWarehouseLayout(customCells),
@@ -194,6 +218,24 @@ export const WarehouseMap: React.FC<WarehouseMapProps> = ({ products, onStockUpd
         </div>
       </div>
 
+      {focusLocationCode && selectedSlot && (
+        <div style={{ padding: '10px 16px', backgroundColor: '#eff6ff', border: '1.5px solid #3b82f6', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+          <span style={{ fontSize: '0.82rem', color: '#1e3a8a', fontWeight: 700 }}>
+            🎯 Mostrando ubicación <strong>{focusLocationCode}</strong> seleccionada desde la tabla de Stock.
+          </span>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button type="button" className="btn btn-primary btn-sm" style={{ fontSize: '0.76rem', fontWeight: 700, padding: '4px 12px', borderRadius: '6px' }} onClick={() => setIs3DModalOpen(true)}>
+              📦 Abrir Estantería 3D (Nivel {focusedLevel || 'A'})
+            </button>
+            {onClearFocus && (
+              <button type="button" className="btn btn-secondary btn-sm" style={{ fontSize: '0.76rem', padding: '4px 10px', borderRadius: '6px' }} onClick={onClearFocus}>
+                ✕ Cerrar aviso
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       <div style={{ padding: '10px 16px', backgroundColor: '#ffffff', border: '1px solid var(--border-color)', borderRadius: '8px', display: 'flex', gap: '8px', fontSize: '0.78rem', flexWrap: 'wrap', alignItems: 'center' }}>
         <span style={{ fontWeight: 700, color: 'var(--text-primary)', marginRight: '4px' }}>Filtrar Cámara / Sector:</span>
         {Object.entries(SECTORS_INFO).filter(([key]) => key !== 'GENERAL').map(([key, info]) => {
@@ -295,7 +337,7 @@ export const WarehouseMap: React.FC<WarehouseMapProps> = ({ products, onStockUpd
       </div>
 
       {selectedSlot && (
-        <Slot3DInspectorModal isOpen={is3DModalOpen} onClose={() => setIs3DModalOpen(false)} slot={selectedSlot} products={products} onStockUpdated={onStockUpdated} />
+        <Slot3DInspectorModal isOpen={is3DModalOpen} onClose={() => setIs3DModalOpen(false)} slot={selectedSlot} initialLevel={focusedLevel} products={products} onStockUpdated={onStockUpdated} />
       )}
     </div>
   );

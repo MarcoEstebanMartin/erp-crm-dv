@@ -1,7 +1,7 @@
 import React from 'react';
-import { RefreshCw } from 'lucide-react';
+import { MapPin, RefreshCw } from 'lucide-react';
 import type { Product } from '../../types';
-import { getProductLocation, renderLocationTag } from './depositoHelpers';
+import { computeProductWmsBreakdown } from './wmsStockBreakdown';
 
 interface DepositoStockListTabProps {
   products: Product[];
@@ -9,6 +9,7 @@ interface DepositoStockListTabProps {
   setSearchQuery: (q: string) => void;
   onRefresh: () => void;
   onOpenStockModal: (product: Product) => void;
+  onJumpToMapLocation?: (locationCode: string) => void;
 }
 
 export const DepositoStockListTab: React.FC<DepositoStockListTabProps> = ({
@@ -17,6 +18,7 @@ export const DepositoStockListTab: React.FC<DepositoStockListTabProps> = ({
   setSearchQuery,
   onRefresh,
   onOpenStockModal,
+  onJumpToMapLocation,
 }) => {
   return (
     <div>
@@ -60,12 +62,53 @@ export const DepositoStockListTab: React.FC<DepositoStockListTabProps> = ({
               products.map((p) => {
                 const isLow = p.stock <= p.minStock;
                 const activeLots = (p.lots || []).filter((l: any) => l.stock > 0);
-                const mainLocation = getProductLocation(p);
+                const wms = computeProductWmsBreakdown(p);
                 return (
                   <tr key={p.id}>
                     <td style={{ fontFamily: 'monospace', fontWeight: 600 }}>{p.sku}</td>
                     <td style={{ fontWeight: 500 }}>{p.name}</td>
-                    <td>{renderLocationTag(mainLocation)}</td>
+                    <td>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                        {wms.slotEntries.map((entry) => (
+                          <button
+                            key={entry.location}
+                            type="button"
+                            onClick={() => onJumpToMapLocation && onJumpToMapLocation(entry.location)}
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '3px',
+                              fontSize: '0.72rem',
+                              fontWeight: 700,
+                              fontFamily: 'monospace',
+                              padding: '3px 8px',
+                              borderRadius: '4px',
+                              backgroundColor: '#dcfce7',
+                              color: '#15803d',
+                              border: '1px solid #86efac',
+                              cursor: onJumpToMapLocation ? 'pointer' : 'default',
+                            }}
+                            title="Hacé clic para ver este Slot en el Mapa 3D"
+                          >
+                            <MapPin size={12} /> {entry.location} ({entry.units} u.) ↗
+                          </button>
+                        ))}
+                        {wms.unassignedUnits > 0 && (
+                          <span
+                            className="badge"
+                            style={{
+                              fontSize: '0.72rem',
+                              backgroundColor: '#f1f5f9',
+                              color: '#475569',
+                              border: '1px solid #cbd5e1',
+                              fontWeight: 600,
+                            }}
+                          >
+                            📦 S/U: {wms.unassignedUnits} u.
+                          </span>
+                        )}
+                      </div>
+                    </td>
                     <td>
                       {activeLots.length === 0 ? (
                         <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>

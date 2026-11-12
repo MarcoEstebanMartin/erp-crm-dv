@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { ClipboardList, Calendar, ShoppingCart, Map, Warehouse } from 'lucide-react';
 import { useConfirm } from '../context/ConfirmContext';
 import { WarehouseMap } from './deposito/WarehouseMap';
@@ -20,6 +21,7 @@ interface DepositoDashboardProps {
 export default function DepositoDashboard({ activeTab }: DepositoDashboardProps) {
   const confirm = useConfirm();
   const c = useDepositoController(activeTab, confirm);
+  const [focusedMapLocation, setFocusedMapLocation] = useState<string | null>(null);
 
   const isOrderFullyAssigned =
     (c.selectedOrder?.items.every((item: any) => {
@@ -146,7 +148,12 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
       )}
 
       {c.subTab === 'wms-map' && !c.selectedOrder && !c.showConsolidatedView && (
-        <WarehouseMap products={c.products} onStockUpdated={c.fetchData} />
+        <WarehouseMap
+          products={c.products}
+          onStockUpdated={c.fetchData}
+          focusLocationCode={focusedMapLocation}
+          onClearFocus={() => setFocusedMapLocation(null)}
+        />
       )}
 
       {c.subTab === 'stock-list' && !c.selectedOrder && !c.showConsolidatedView && (
@@ -156,6 +163,10 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
           setSearchQuery={c.setSearchQuery}
           onRefresh={c.fetchData}
           onOpenStockModal={(p) => c.setStockModal({ open: true, product: p, quantityChange: 0, reason: '', lotNumber: '', isNewLot: false, expirationDate: '', location: '' })}
+          onJumpToMapLocation={(loc) => {
+            setFocusedMapLocation(loc);
+            c.setSubTab('wms-map');
+          }}
         />
       )}
 

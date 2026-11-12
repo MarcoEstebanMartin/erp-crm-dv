@@ -66,6 +66,15 @@ export default function StockKpiCards({
             {stats.totalUnits.toLocaleString('es-AR')}{' '}
             <span style={{ fontSize: '0.9rem', fontWeight: 500, color: 'var(--text-secondary)' }}>u.</span>
           </span>
+          <div style={{ display: 'flex', gap: '8px', fontSize: '11px', marginTop: '4px', flexWrap: 'wrap' }}>
+            <span style={{ color: 'var(--color-success)', fontWeight: 600 }} title="Unidades asignadas a un estante del Mapa WMS">
+              🟢 {stats.locatedUnits.toLocaleString('es-AR')} en Mapa
+            </span>
+            <span style={{ color: 'var(--text-muted)' }}>•</span>
+            <span style={{ color: 'var(--text-secondary)', fontWeight: 600 }} title="Unidades contabilizadas pendientes de ubicar en estantería (S/U)">
+              📦 {stats.unassignedUnits.toLocaleString('es-AR')} S/U
+            </span>
+          </div>
         </div>
       </div>
 

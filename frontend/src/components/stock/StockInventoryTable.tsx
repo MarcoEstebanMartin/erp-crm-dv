@@ -9,6 +9,7 @@ interface StockInventoryTableProps {
   onViewHistory: (product: any) => void;
   onOpenLotManager: (product: any) => void;
   onOpenAdjustModal: (product: any) => void;
+  onJumpToMapLocation?: (locationCode: string) => void;
 }
 
 export default function StockInventoryTable({
@@ -19,7 +20,8 @@ export default function StockInventoryTable({
   onPendingAdjustmentChange,
   onViewHistory,
   onOpenLotManager,
-  onOpenAdjustModal
+  onOpenAdjustModal,
+  onJumpToMapLocation
 }: StockInventoryTableProps) {
   return (
     <div
@@ -37,7 +39,7 @@ export default function StockInventoryTable({
           <tr>
             <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>SKU</th>
             <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>PRODUCTO</th>
-            <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>LOTES EN GÓNDOLA</th>
+            <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>LOTES Y UBICACIÓN WMS</th>
             <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 600, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>FÍSICO</th>
             <th style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 600, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>COSTO UNIT.</th>
             <th style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 600, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>VALOR COSTO</th>
@@ -64,6 +66,7 @@ export default function StockInventoryTable({
                 onViewHistory={onViewHistory}
                 onOpenLotManager={onOpenLotManager}
                 onOpenAdjustModal={onOpenAdjustModal}
+                onJumpToMapLocation={onJumpToMapLocation}
               />
             ))
           )}

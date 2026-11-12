@@ -29,6 +29,7 @@ export default function ProductsTab({
 }: ProductsTabProps) {
   const [catalogTab, setCatalogTab] = useState<'products' | 'inactive_products' | 'stock' | 'map'>(initialCatalogTab);
   const [searchQuery, setSearchQuery] = useState('');
+  const [focusedMapLocation, setFocusedMapLocation] = useState<string | null>(null);
 
   return (
     <div className="card">
@@ -80,8 +81,24 @@ export default function ProductsTab({
         />
       )}
 
-      {catalogTab === 'stock' && <StockDashboard products={products} onRefresh={async () => fetchData()} />}
-      {catalogTab === 'map' && <WarehouseMap products={products} onStockUpdated={async () => fetchData()} />}
+      {catalogTab === 'stock' && (
+        <StockDashboard
+          products={products}
+          onRefresh={async () => fetchData()}
+          onJumpToMapLocation={(loc) => {
+            setFocusedMapLocation(loc);
+            setCatalogTab('map');
+          }}
+        />
+      )}
+      {catalogTab === 'map' && (
+        <WarehouseMap
+          products={products}
+          onStockUpdated={async () => fetchData()}
+          focusLocationCode={focusedMapLocation}
+          onClearFocus={() => setFocusedMapLocation(null)}
+        />
+      )}
     </div>
   );
 }

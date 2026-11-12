@@ -1,5 +1,6 @@
-import { History, Layers } from 'lucide-react';
+import { History, Layers, MapPin } from 'lucide-react';
 import { extractRubroLabel, getDisplayedStock } from './types';
+import { computeProductWmsBreakdown } from '../deposito/wmsStockBreakdown';
 
 interface StockInventoryRowProps {
   product: any;
@@ -10,6 +11,7 @@ interface StockInventoryRowProps {
   onViewHistory: (product: any) => void;
   onOpenLotManager: (product: any) => void;
   onOpenAdjustModal: (product: any) => void;
+  onJumpToMapLocation?: (locationCode: string) => void;
 }
 
 export default function StockInventoryRow({
@@ -20,9 +22,11 @@ export default function StockInventoryRow({
   onPendingAdjustmentChange,
   onViewHistory,
   onOpenLotManager,
-  onOpenAdjustModal
+  onOpenAdjustModal,
+  onJumpToMapLocation
 }: StockInventoryRowProps) {
   const displayedStock = getDisplayedStock(p, pendingAdjustments);
+  const wms = computeProductWmsBreakdown(p, pendingAdjustments);
   const isOutOfStock = displayedStock <= 0;
   const isLowStock = !isOutOfStock && displayedStock <= p.minStock;
   const cost = Number(p.costPrice) || 0;
@@ -40,12 +44,10 @@ export default function StockInventoryRow({
       style={{ borderBottom: '1px solid var(--border-color)', transition: 'background-color 0.2s' }}
       className="hover-bg-muted"
     >
-      {/* SKU */}
       <td style={{ padding: '12px 16px', fontFamily: 'monospace', fontWeight: 600, fontSize: '0.88rem', color: 'var(--text-primary)' }}>
         {p.sku}
       </td>
 
-      {/* Producto */}
       <td style={{ padding: '12px 16px' }}>
         <div style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.9rem' }}>{p.name}</div>
         <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -90,47 +92,100 @@ export default function StockInventoryRow({
         )}
       </td>
 
-      {/* Lotes activos */}
-      <td style={{ padding: '12px 16px', maxWidth: '280px' }}>
-        {activeLots.length === 0 ? (
-          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>Sin lotes activos</span>
-        ) : (
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-            {activeLots.map((l: any) => {
-              const pending = pendingAdjustments[`lot-${l.id}`];
-              const st = pending !== undefined ? pending : l.stock;
-              const isLExp = new Date(l.expirationDate) <= new Date();
-              const thirtyDays = new Date();
-              thirtyDays.setDate(thirtyDays.getDate() + 30);
-              const isLWarn = !isLExp && new Date(l.expirationDate) <= thirtyDays;
+      {/* Lotes y Estado de Ubicación WMS */}
+      <td style={{ padding: '12px 16px', maxWidth: '320px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          {activeLots.length === 0 ? (
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>Sin lotes activos</span>
+          ) : (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+              {activeLots.map((l: any) => {
+                const pending = pendingAdjustments[`lot-${l.id}`];
+                const st = pending !== undefined ? pending : l.stock;
+                const isLExp = new Date(l.expirationDate) <= new Date();
+                const thirtyDays = new Date();
+                thirtyDays.setDate(thirtyDays.getDate() + 30);
+                const isLWarn = !isLExp && new Date(l.expirationDate) <= thirtyDays;
 
-              let badgeBg = 'var(--bg-app)';
-              let badgeColor = 'var(--text-primary)';
-              let badgeBorder = 'var(--border-color)';
+                let badgeBg = 'var(--bg-app)';
+                let badgeColor = 'var(--text-primary)';
+                let badgeBorder = 'var(--border-color)';
 
-              if (isLExp) {
-                badgeBg = 'var(--color-danger-bg)';
-                badgeColor = 'var(--color-danger)';
-                badgeBorder = 'rgba(239, 68, 68, 0.2)';
-              } else if (isLWarn) {
-                badgeBg = 'var(--color-warning-bg)';
-                badgeColor = 'var(--color-warning)';
-                badgeBorder = 'rgba(245, 158, 11, 0.2)';
-              }
+                if (isLExp) {
+                  badgeBg = 'var(--color-danger-bg)';
+                  badgeColor = 'var(--color-danger)';
+                  badgeBorder = 'rgba(239, 68, 68, 0.2)';
+                } else if (isLWarn) {
+                  badgeBg = 'var(--color-warning-bg)';
+                  badgeColor = 'var(--color-warning)';
+                  badgeBorder = 'rgba(245, 158, 11, 0.2)';
+                }
 
-              return (
-                <span
-                  key={l.id}
-                  className="badge"
-                  style={{ fontSize: '0.7rem', padding: '2px 6px', backgroundColor: badgeBg, color: badgeColor, border: `1px solid ${badgeBorder}`, borderRadius: '4px' }}
-                  title={`Vence: ${new Date(l.expirationDate).toLocaleDateString('es-AR', { timeZone: 'UTC' })}`}
+                return (
+                  <span
+                    key={l.id}
+                    className="badge"
+                    style={{ fontSize: '0.7rem', padding: '2px 6px', backgroundColor: badgeBg, color: badgeColor, border: `1px solid ${badgeBorder}`, borderRadius: '4px' }}
+                    title={`Vence: ${new Date(l.expirationDate).toLocaleDateString('es-AR', { timeZone: 'UTC' })}`}
+                  >
+                    {l.lotNumber} ({st} u.)
+                  </span>
+                );
+              })}
+            </div>
+          )}
+
+          {displayedStock > 0 && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', alignItems: 'center' }}>
+              {wms.slotEntries.map((entry) => (
+                <button
+                  key={entry.location}
+                  type="button"
+                  onClick={() => onJumpToMapLocation && onJumpToMapLocation(entry.location)}
+                  disabled={!onJumpToMapLocation}
+                  title={onJumpToMapLocation ? `Hacé clic para ver ${entry.location} en el Mapa Interactivo` : entry.location}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '3px',
+                    fontSize: '0.68rem',
+                    fontWeight: 700,
+                    fontFamily: 'monospace',
+                    padding: '2px 7px',
+                    borderRadius: '4px',
+                    backgroundColor: '#dcfce7',
+                    color: '#15803d',
+                    border: '1px solid #86efac',
+                    cursor: onJumpToMapLocation ? 'pointer' : 'default'
+                  }}
                 >
-                  {l.lotNumber} ({st} u.)
+                  <MapPin size={11} />
+                  <span>{entry.location} ({entry.units} u.) {onJumpToMapLocation ? '↗' : ''}</span>
+                </button>
+              ))}
+
+              {wms.unassignedUnits > 0 && (
+                <span
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    fontSize: '0.68rem',
+                    fontWeight: 600,
+                    padding: '2px 7px',
+                    borderRadius: '4px',
+                    backgroundColor: '#f1f5f9',
+                    color: '#475569',
+                    border: '1px solid #cbd5e1'
+                  }}
+                  title="Mercadería contabilizada lista para vender o ubicar opcionalmente en un slot del Mapa"
+                >
+                  📦 S/U: {wms.unassignedUnits} u.
                 </span>
-              );
-            })}
-          </div>
-        )}
+              )}
+            </div>
+          )}
+        </div>
       </td>
 
       {/* Stock Físico */}
@@ -161,13 +216,7 @@ export default function StockInventoryRow({
           </div>
         ) : (
           <>
-            <span
-              style={{
-                fontWeight: 700,
-                fontSize: '0.92rem',
-                color: isOutOfStock ? 'var(--color-danger)' : isLowStock ? 'var(--color-warning)' : 'var(--text-primary)'
-              }}
-            >
+            <span style={{ fontWeight: 700, fontSize: '0.92rem', color: isOutOfStock ? 'var(--color-danger)' : isLowStock ? 'var(--color-warning)' : 'var(--text-primary)' }}>
               {displayedStock} u.
             </span>
             {isOutOfStock && <div style={{ fontSize: '0.68rem', color: 'var(--color-danger)', fontWeight: 600, marginTop: '2px' }}>SIN STOCK</div>}
@@ -176,22 +225,18 @@ export default function StockInventoryRow({
         )}
       </td>
 
-      {/* Costo Unitario */}
       <td style={{ padding: '12px 16px', textAlign: 'right', color: 'var(--text-secondary)', fontSize: '0.88rem' }}>
         ${cost.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
       </td>
 
-      {/* Costo Total */}
       <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 600, color: 'var(--text-secondary)', fontSize: '0.88rem' }}>
         ${stockValCost.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
       </td>
 
-      {/* Valor Venta */}
       <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.88rem' }}>
         ${stockValRetail.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
       </td>
 
-      {/* Acciones */}
       <td style={{ padding: '12px 16px', textAlign: 'center' }}>
         <div style={{ display: 'inline-flex', gap: '6px' }}>
           <button

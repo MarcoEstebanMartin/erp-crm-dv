@@ -1,9 +1,12 @@
+import { computeProductWmsBreakdown } from '../deposito/wmsStockBreakdown';
+
 export interface StockDashboardProps {
   products: any[];
   onRefresh: () => Promise<void>;
+  onJumpToMapLocation?: (locationCode: string) => void;
 }
 
-export type StockFilterType = 'all' | 'low' | 'out' | 'expiring';
+export type StockFilterType = 'all' | 'low' | 'out' | 'expiring' | 'located' | 'unassigned';
 
 export interface AdjustModalState {
   open: boolean;
@@ -30,6 +33,8 @@ export interface TransferLotData {
 
 export interface StockValuationStats {
   totalUnits: number;
+  locatedUnits: number;
+  unassignedUnits: number;
   totalCost: number;
   totalRetailVal: number;
   lowStockCount: number;
@@ -82,11 +87,14 @@ export const computeStockStats = (
   return filteredProducts.reduce<StockValuationStats>(
     (acc, p) => {
       const stockQty = getDisplayedStock(p, pendingAdjustments);
+      const wms = computeProductWmsBreakdown(p, pendingAdjustments);
       const cost = Number(p.costPrice) || 0;
       const listPrice = Number(p.listPrice) || 0;
       const minStock = Number(p.minStock) || 0;
 
       acc.totalUnits += stockQty;
+      acc.locatedUnits += wms.locatedUnits;
+      acc.unassignedUnits += wms.unassignedUnits;
       acc.totalCost += stockQty * cost;
       acc.totalRetailVal += stockQty * listPrice;
 
@@ -102,6 +110,8 @@ export const computeStockStats = (
     },
     {
       totalUnits: 0,
+      locatedUnits: 0,
+      unassignedUnits: 0,
       totalCost: 0,
       totalRetailVal: 0,
       lowStockCount: 0,

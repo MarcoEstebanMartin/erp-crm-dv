@@ -6,6 +6,7 @@ import {
   extractRubroLabel,
   computeStockStats
 } from './stock/types';
+import { computeProductWmsBreakdown } from './deposito/wmsStockBreakdown';
 import { useStockMovements } from './stock/useStockMovements';
 import { useStockAdjustments } from './stock/useStockAdjustments';
 import { useLotManager } from './stock/useLotManager';
@@ -20,7 +21,7 @@ import QuickInventoryFloatingBar from './stock/QuickInventoryFloatingBar';
 
 export type { StockDashboardProps };
 
-export default function StockDashboard({ products, onRefresh }: StockDashboardProps) {
+export default function StockDashboard({ products, onRefresh, onJumpToMapLocation }: StockDashboardProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedRubro, setSelectedRubro] = useState('');
   const [stockFilter, setStockFilter] = useState<StockFilterType>('all');
@@ -56,6 +57,10 @@ export default function StockDashboard({ products, onRefresh }: StockDashboardPr
       matchesStock = p.stock > 0 && p.stock <= p.minStock;
     } else if (stockFilter === 'out') {
       matchesStock = p.stock <= 0;
+    } else if (stockFilter === 'located') {
+      matchesStock = computeProductWmsBreakdown(p, adjustments.pendingAdjustments).locatedUnits > 0;
+    } else if (stockFilter === 'unassigned') {
+      matchesStock = computeProductWmsBreakdown(p, adjustments.pendingAdjustments).unassignedUnits > 0;
     } else if (stockFilter === 'expiring') {
       const thirtyDaysFromNow = new Date();
       thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
@@ -165,6 +170,7 @@ export default function StockDashboard({ products, onRefresh }: StockDashboardPr
         onViewHistory={movements.fetchProductHistory}
         onOpenLotManager={lotManager.openLotManager}
         onOpenAdjustModal={adjustments.openAdjustModal}
+        onJumpToMapLocation={onJumpToMapLocation}
       />
 
       <GlobalMovementsPanel
