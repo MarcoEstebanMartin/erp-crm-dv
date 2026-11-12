@@ -11,6 +11,8 @@ interface StockInventoryTableProps {
   onOpenLotManager: (product: any) => void;
   onOpenAdjustModal: (product: any) => void;
   onJumpToMapLocation?: (locationCode: string) => void;
+  canViewCosts?: boolean;
+  canMutateStock?: boolean;
 }
 
 const TH_BASE_STYLE: React.CSSProperties = {
@@ -32,8 +34,12 @@ export default function StockInventoryTable({
   onViewHistory,
   onOpenLotManager,
   onOpenAdjustModal,
-  onJumpToMapLocation
+  onJumpToMapLocation,
+  canViewCosts = true,
+  canMutateStock = true
 }: StockInventoryTableProps) {
+  const columnCount = canViewCosts ? 8 : 6;
+
   return (
     <div
       className="table-container"
@@ -51,8 +57,8 @@ export default function StockInventoryTable({
             <th style={{ ...TH_BASE_STYLE, textAlign: 'left' }}>PRODUCTO</th>
             <th style={{ ...TH_BASE_STYLE, textAlign: 'left' }}>UBICACIÓN WMS / LOTES</th>
             <th style={{ ...TH_BASE_STYLE, textAlign: 'center' }}>FÍSICO</th>
-            <th style={{ ...TH_BASE_STYLE, textAlign: 'right' }}>COSTO UNIT.</th>
-            <th style={{ ...TH_BASE_STYLE, textAlign: 'right' }}>VALOR COSTO</th>
+            {canViewCosts && <th style={{ ...TH_BASE_STYLE, textAlign: 'right' }}>COSTO UNIT.</th>}
+            {canViewCosts && <th style={{ ...TH_BASE_STYLE, textAlign: 'right' }}>VALOR COSTO</th>}
             <th style={{ ...TH_BASE_STYLE, textAlign: 'right' }}>VALOR VENTA</th>
             <th style={{ ...TH_BASE_STYLE, textAlign: 'center' }}>ACCIONES</th>
           </tr>
@@ -60,7 +66,7 @@ export default function StockInventoryTable({
         <tbody>
           {filteredProducts.length === 0 ? (
             <tr>
-              <td colSpan={8} style={{ textAlign: 'center', padding: '48px 0', color: 'var(--text-muted)', fontSize: '0.88rem' }}>
+              <td colSpan={columnCount} style={{ textAlign: 'center', padding: '48px 0', color: 'var(--text-muted)', fontSize: '0.88rem' }}>
                 No se encontraron productos con los filtros aplicados.
               </td>
             </tr>
@@ -77,6 +83,8 @@ export default function StockInventoryTable({
                 onOpenLotManager={onOpenLotManager}
                 onOpenAdjustModal={onOpenAdjustModal}
                 onJumpToMapLocation={onJumpToMapLocation}
+                canViewCosts={canViewCosts}
+                canMutateStock={canMutateStock}
               />
             ))
           )}

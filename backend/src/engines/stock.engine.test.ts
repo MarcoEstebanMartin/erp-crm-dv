@@ -59,6 +59,36 @@ describe('StockEngine - Valorización Financiera Exacta, FEFO y WMS Seguro', () 
     });
     expect(out.stockHealth).toBe('OUT');
 
+    const low = calculateProductStockValuation({
+      physicalUnits: 4,
+      isWeighable: false,
+      approxWeightKg: 0,
+      costPrice: 1000,
+      priceList4: 1300,
+      minStockAlert: 5,
+    });
+    expect(low.stockHealth).toBe('LOW');
+
+    const exactThreshold = calculateProductStockValuation({
+      physicalUnits: 5,
+      isWeighable: false,
+      approxWeightKg: 0,
+      costPrice: 1000,
+      priceList4: 1300,
+      minStockAlert: 5,
+    });
+    expect(exactThreshold.stockHealth).toBe('OK');
+
+    const disabledAlert = calculateProductStockValuation({
+      physicalUnits: 1,
+      isWeighable: false,
+      approxWeightKg: 0,
+      costPrice: 1000,
+      priceList4: 1300,
+      minStockAlert: 0,
+    });
+    expect(disabledAlert.stockHealth).toBe('OK');
+
     const refDate = new Date('2026-11-07T00:00:00Z');
     expect(evaluateLotFefoStatus('2026-11-01', refDate)).toBe('EXPIRED');
     expect(evaluateLotFefoStatus('2026-11-20', refDate)).toBe('EXPIRING_SOON');

@@ -102,6 +102,36 @@ export function useLotManager({
     }
   };
 
+  const handleVacateLot = async (lotId: number, lotNumber: string, currentStock: number) => {
+    if (!lotManagerModal.product || currentStock <= 0) return;
+    if (
+      !(await confirm(
+        `¿Estás seguro de que deseas vaciar las ${currentStock} u. del lote "${lotNumber}" dejándolo en 0 u.?`,
+        { type: 'danger' }
+      ))
+    )
+      return;
+
+    setLoadingAdjust(true);
+    setErrorMessage(null);
+    setSuccessMessage(null);
+
+    try {
+      await api.adjustStock(lotManagerModal.product.id, {
+        lotId,
+        lotNumber,
+        mode: 'VACATE_LOT',
+        reason: `Vaciamiento controlado de lote ${lotNumber}`
+      });
+      setSuccessMessage(`Lote "${lotNumber}" vaciado a 0 u. con éxito.`);
+      await onRefresh();
+    } catch (err: any) {
+      setErrorMessage(err.message || 'Error al vaciar el lote.');
+    } finally {
+      setLoadingAdjust(false);
+    }
+  };
+
   const handleDeleteLot = async (lotId: number, lotNumber: string) => {
     if (
       !(await confirm(
@@ -172,6 +202,7 @@ export function useLotManager({
     transferData,
     setTransferData,
     handleUpdateLotSubmit,
+    handleVacateLot,
     handleDeleteLot,
     handleTransferSubmit
   };

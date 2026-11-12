@@ -79,31 +79,93 @@ export const apiClient = {
     return data as T;
   },
 
-  async put<T = any, B = Record<string, unknown>>(endpoint: string, body?: B): Promise<T> {
+  async put<T = any, B = Record<string, unknown>>(
+    endpoint: string,
+    body?: B,
+    options?: { idempotencyKey?: string },
+  ): Promise<T> {
+    const serialized = body ? JSON.stringify(body) : undefined;
+    const idempotencyKey = resolveRequestIdempotencyKey(
+      'PUT',
+      endpoint,
+      serialized,
+      options?.idempotencyKey,
+    );
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       method: 'PUT',
       credentials: 'include',
       headers: {
         'Content-Type': 'application/json',
+        'Idempotency-Key': idempotencyKey,
       },
-      body: body ? JSON.stringify(body) : undefined,
+      body: serialized,
     });
     handleUnauthorizedIfStaffScreen(endpoint, response.status);
     const data = await parseJsonResponse(response);
     if (!response.ok) {
+      if (response.status >= 400 && response.status !== 409) {
+        evictRequestIdempotencyKey('PUT', endpoint, serialized);
+      }
       throw new Error(extractApiError(data, 'Error en la petición PUT'));
     }
     return data as T;
   },
 
-  async delete<T = any>(endpoint: string): Promise<T> {
+  async patch<T = any, B = Record<string, unknown>>(
+    endpoint: string,
+    body?: B,
+    options?: { idempotencyKey?: string },
+  ): Promise<T> {
+    const serialized = body ? JSON.stringify(body) : undefined;
+    const idempotencyKey = resolveRequestIdempotencyKey(
+      'PATCH',
+      endpoint,
+      serialized,
+      options?.idempotencyKey,
+    );
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-      method: 'DELETE',
+      method: 'PATCH',
       credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+        'Idempotency-Key': idempotencyKey,
+      },
+      body: serialized,
     });
     handleUnauthorizedIfStaffScreen(endpoint, response.status);
     const data = await parseJsonResponse(response);
     if (!response.ok) {
+      if (response.status >= 400 && response.status !== 409) {
+        evictRequestIdempotencyKey('PATCH', endpoint, serialized);
+      }
+      throw new Error(extractApiError(data, 'Error en la petición PATCH'));
+    }
+    return data as T;
+  },
+
+  async delete<T = any>(
+    endpoint: string,
+    options?: { idempotencyKey?: string },
+  ): Promise<T> {
+    const idempotencyKey = resolveRequestIdempotencyKey(
+      'DELETE',
+      endpoint,
+      undefined,
+      options?.idempotencyKey,
+    );
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      method: 'DELETE',
+      credentials: 'include',
+      headers: {
+        'Idempotency-Key': idempotencyKey,
+      },
+    });
+    handleUnauthorizedIfStaffScreen(endpoint, response.status);
+    const data = await parseJsonResponse(response);
+    if (!response.ok) {
+      if (response.status >= 400 && response.status !== 409) {
+        evictRequestIdempotencyKey('DELETE', endpoint);
+      }
       throw new Error(extractApiError(data, 'Error en la petición DELETE'));
     }
     return data as T;

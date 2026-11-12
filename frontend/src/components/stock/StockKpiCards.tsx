@@ -1,10 +1,12 @@
 import { Package, Coins, TrendingUp, Database } from 'lucide-react';
 import type { StockValuationStats } from './types';
+import { computeExactLatentMargin } from '../../utils/exactStockMath';
 
 interface StockKpiCardsProps {
   stats: StockValuationStats;
   filteredCount: number;
   totalCount: number;
+  canViewCosts?: boolean;
 }
 
 const cardStyle = {
@@ -61,13 +63,20 @@ export default function StockKpiCards({
   stats,
   filteredCount,
   totalCount,
+  canViewCosts = true,
 }: StockKpiCardsProps) {
-  const latentProfit = stats.totalRetailVal - stats.totalCost;
-  const latentProfitMargin =
-    stats.totalCost > 0 ? (latentProfit / stats.totalCost) * 100 : 0;
-  const profitPositive = latentProfit >= 0;
-  const marginSign = latentProfitMargin >= 0 ? '+' : '';
-  const profitSign = profitPositive ? '+' : '-';
+  const margin = computeExactLatentMargin(stats.totalCost, stats.totalRetailVal);
+  const absProfitStr = Math.abs(margin.latentProfit).toLocaleString('es-AR', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  });
+  const absPctStr = Math.abs(margin.latentMarginPctInt).toString();
+  const marginColor =
+    margin.sign === '+'
+      ? 'var(--color-success)'
+      : margin.sign === '-'
+      ? 'var(--color-danger)'
+      : 'var(--text-secondary)';
 
   return (
     <div
@@ -101,23 +110,25 @@ export default function StockKpiCards({
         </div>
       </div>
 
-      {/* 2. Valorización (Costo) */}
-      <div className="card" style={cardStyle}>
-        <div style={iconBoxStyle}>
-          <Coins size={18} />
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-          <span style={labelStyle}>Valorización (Costo)</span>
-          <span style={valueStyle}>
-            ${stats.totalCost.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-          </span>
-          <div style={{ ...subRowStyle, color: 'var(--text-secondary)' }}>
-            <span>Capital en mercadería</span>
+      {/* 2. Valorización (Costo) — solo roles autorizados */}
+      {canViewCosts && (
+        <div className="card" style={cardStyle}>
+          <div style={iconBoxStyle}>
+            <Coins size={18} />
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+            <span style={labelStyle}>Valorización (Costo)</span>
+            <span style={valueStyle}>
+              ${stats.totalCost.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+            </span>
+            <div style={{ ...subRowStyle, color: 'var(--text-secondary)' }}>
+              <span>Capital en mercadería</span>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
-      {/* 3. Valorización (Venta) + Margen Latente Integrado */}
+      {/* 3. Valorización (Venta) */}
       <div className="card" style={cardStyle}>
         <div style={iconBoxStyle}>
           <TrendingUp size={18} />
@@ -127,17 +138,18 @@ export default function StockKpiCards({
           <span style={valueStyle}>
             ${stats.totalRetailVal.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
           </span>
-          <div style={subRowStyle}>
-            <span style={{ color: 'var(--text-secondary)' }}>Margen:</span>
-            <span
-              style={{
-                color: profitPositive ? 'var(--color-success)' : 'var(--color-danger)',
-                fontWeight: 600,
-              }}
-            >
-              {profitSign}${Math.abs(latentProfit).toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} ({marginSign}{latentProfitMargin.toFixed(0)}%)
-            </span>
-          </div>
+          {canViewCosts ? (
+            <div style={subRowStyle}>
+              <span style={{ color: 'var(--text-secondary)' }}>Margen latente:</span>
+              <span style={{ color: marginColor, fontWeight: 600 }}>
+                {margin.sign}${absProfitStr} ({margin.sign}{absPctStr}%)
+              </span>
+            </div>
+          ) : (
+            <div style={{ ...subRowStyle, color: 'var(--text-secondary)' }}>
+              <span>Valor a precio de lista</span>
+            </div>
+          )}
         </div>
       </div>
 

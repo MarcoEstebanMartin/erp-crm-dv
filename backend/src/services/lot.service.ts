@@ -141,55 +141,46 @@ export class LotService {
       action: 'UPDATE_LOT',
       entityType: 'ProductLot',
       entityId: lotId,
-      oldValues: {
-        lotNumber: result.original.lotNumber,
-        expirationDate: result.original.expirationDate,
-        location: result.original.location,
-      },
-      newValues: {
-        lotNumber: result.updated.lotNumber,
-        expirationDate: result.updated.expirationDate,
-        location: result.updated.location,
-        mergedIntoLotId: result.mergedIntoLotId,
-      },
+      oldValues: { lotNumber: result.original.lotNumber, expirationDate: result.original.expirationDate, location: result.original.location },
+      newValues: { lotNumber: result.updated.lotNumber, expirationDate: result.updated.expirationDate, location: result.updated.location, mergedIntoLotId: result.mergedIntoLotId },
     });
 
     return result.updated;
   }
 
-  /**
-   * Eliminar un lote físico si tiene stock 0 y no tiene transacciones asociadas.
-   */
+  /** Eliminar un lote físico bajo `FOR UPDATE` solo si tiene stock 0 y cero historial en Kardex/picking. */
   async deleteLot(lotId: number, userId: number) {
-    const lot = await prisma.productLot.findUnique({ where: { id: lotId } });
-    if (!lot) throw new Error('Lote no encontrado.');
+    const deleted = await prisma.$transaction(async (tx) => {
+      const peek = await tx.productLot.findUnique({ where: { id: lotId } });
+      if (!peek) throw new Error('Lote no encontrado.');
+      await lockProductsForUpdate(tx, [peek.productId]);
 
-    if (lot.stock !== 0) {
-      throw new Error(
-        `No se puede eliminar el lote "${lot.lotNumber}" porque tiene stock disponible (${lot.stock} u.).`,
-      );
-    }
-
-    try {
-      await prisma.productLot.delete({ where: { id: lotId } });
-    } catch (error: any) {
-      if (error.code === 'P2003') {
-        throw new Error(
-          `No se puede eliminar el lote "${lot.lotNumber}" físicamente porque tiene un historial de ventas o movimientos de stock asociado.`,
-        );
+      const lot = await tx.productLot.findUnique({ where: { id: lotId } });
+      if (!lot) throw new Error('Lote no encontrado.');
+      if (lot.stock !== 0) {
+        throw new Error(`No se puede eliminar el lote "${lot.lotNumber}" porque tiene stock disponible (${lot.stock} u.).`);
       }
-      throw error;
-    }
+
+      const [movRefs, pickRefs] = await Promise.all([
+        typeof (tx.stockMovement as any)?.count === 'function' ? tx.stockMovement.count({ where: { productLotId: lotId } }) : 0,
+        typeof (tx.orderItemLot as any)?.count === 'function' ? tx.orderItemLot.count({ where: { productLotId: lotId } }) : 0,
+      ]);
+      if (movRefs + pickRefs > 0) {
+        throw new Error(`No se puede eliminar el lote "${lot.lotNumber}" físicamente porque tiene un historial de ventas o movimientos de stock asociado.`);
+      }
+
+      await tx.productLot.delete({ where: { id: lotId } });
+      return lot;
+    });
 
     await logAudit({
       userId,
       action: 'DELETE_LOT',
       entityType: 'ProductLot',
       entityId: lotId,
-      oldValues: { lotNumber: lot.lotNumber, productId: lot.productId },
+      oldValues: { lotNumber: deleted.lotNumber, productId: deleted.productId, location: deleted.location },
       newValues: {},
     });
-
     return true;
   }
 

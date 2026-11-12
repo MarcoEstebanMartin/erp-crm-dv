@@ -23,8 +23,11 @@ async function request(path: string, options: RequestInit = {}) {
   const incomingHeaders = (options.headers as Record<string, string> | undefined) || {};
   const explicitIdemKey = incomingHeaders['Idempotency-Key'];
 
+  const isMutatingMethod =
+    method === 'POST' || method === 'PUT' || method === 'PATCH' || method === 'DELETE';
+
   const extraHeaders: Record<string, string> = {};
-  if (method === 'POST' && !skipIdempotency && !explicitIdemKey) {
+  if (isMutatingMethod && !skipIdempotency && !explicitIdemKey) {
     extraHeaders['Idempotency-Key'] = resolveRequestIdempotencyKey(
       method,
       path,
@@ -46,7 +49,7 @@ async function request(path: string, options: RequestInit = {}) {
     !response.ok &&
     response.status >= 400 &&
     response.status !== 409 &&
-    method === 'POST' &&
+    isMutatingMethod &&
     !explicitIdemKey
   ) {
     evictRequestIdempotencyKey(method, path, serializedBody);
@@ -237,7 +240,19 @@ export const api = {
 
   adjustStock: async (
     id: number,
-    quantityChange: number | { quantityChange: number; reason?: string; lotNumber?: string; isNewLot?: boolean; expirationDate?: string; location?: string; lotId?: number },
+    quantityChange:
+      | number
+      | {
+          quantityChange?: number;
+          targetStock?: number;
+          mode?: 'DELTA' | 'VACATE_LOT';
+          reason?: string;
+          lotNumber?: string;
+          isNewLot?: boolean;
+          expirationDate?: string;
+          location?: string | null;
+          lotId?: number | null;
+        },
     reason?: string,
     lotNumber?: string,
     expirationDate?: string,
@@ -260,7 +275,9 @@ export const api = {
   adjustStockBatch: async (
     items: Array<{
       productId: number;
-      quantityChange: number;
+      quantityChange?: number;
+      targetStock?: number;
+      mode?: 'DELTA' | 'VACATE_LOT';
       reason?: string;
       lotNumber?: string;
       expirationDate?: string;

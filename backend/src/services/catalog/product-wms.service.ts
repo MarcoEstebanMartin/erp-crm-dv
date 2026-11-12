@@ -5,10 +5,10 @@ import {
   doesLotMatchWmsScope,
   extractBaseLotNumber,
   parseWmsLocationScope,
-  planWmsSafeRelocation,
   resolveTargetLotNumberForLocation,
 } from '../../engines/stock.engine';
 import { validateSlotAllowsStockAssignment } from '../../engines/warehouse-layout.engine';
+import { executeWmsAssignmentInTx } from './product-wms-tx.helper';
 
 export interface ClearWmsLocationInput {
   locationCode: string;
@@ -96,12 +96,7 @@ export class ProductWmsSubService {
           const nextProductStock = Math.max(0, product.stock - subQty);
           const appliedDelta = nextProductStock - product.stock;
 
-          // El lote vaciado conserva su ubicación (stock 0): moverlo a 'S/U' podría colisionar
-          // con la clave única (productId, lotNumber, location) del lote genérico ya existente.
-          await tx.productLot.update({
-            where: { id: freshLot.id },
-            data: { stock: 0 },
-          });
+          await tx.productLot.update({ where: { id: freshLot.id }, data: { stock: 0 } });
 
           if (subQty > 0) {
             await tx.product.update({ where: { id: product.id }, data: { stock: nextProductStock } });
@@ -155,8 +150,6 @@ export class ProductWmsSubService {
             },
           });
 
-          // Fusión: el lote de origen queda en stock 0 en su posición (con historial en Kardex).
-          // No se intenta DELETE: un error de FK dentro de la transacción de PostgreSQL la abortaría entera.
           await tx.productLot.update({ where: { id: freshLot.id }, data: { stock: 0 } });
           movedUnits += qtyToMove;
         } else if (!targetResolution.existingTargetLotId) {
@@ -166,7 +159,6 @@ export class ProductWmsSubService {
           });
           movedUnits += Math.max(0, freshLot.stock);
         }
-        // Lote vacío con gemelo ya existente en S/U: no requiere cambios (evita colisión de clave única).
       }
 
       let clearedProductsCount = 0;
@@ -233,9 +225,7 @@ export class ProductWmsSubService {
 
     const result = await prisma.$transaction(async (tx) => {
       if (typeof (tx as any).warehouseCell?.findUnique === 'function') {
-        const customCell = await tx.warehouseCell.findUnique({
-          where: { code: scope.baseSlotCode },
-        });
+        const customCell = await tx.warehouseCell.findUnique({ where: { code: scope.baseSlotCode } });
         const slotCheck = validateSlotAllowsStockAssignment(customCell, scope.cleanCode);
         if (!slotCheck.allowed) {
           throw new Error(slotCheck.reason || 'El slot seleccionado no admite mercadería.');
@@ -252,179 +242,20 @@ export class ProductWmsSubService {
         orderBy: { expirationDate: 'asc' },
       });
 
-      if (mode === 'STOCK_IN') {
-        const requestedLot = data.lotNumber?.trim() || 'S/L';
-        const targetRes = resolveTargetLotNumberForLocation(requestedLot, scope.cleanCode, existingLots);
-
-        const targetLot = targetRes.existingTargetLotId
-          ? await tx.productLot.update({
-              where: { id: targetRes.existingTargetLotId },
-              data: { stock: { increment: qty }, location: scope.cleanCode },
-            })
-          : await tx.productLot.create({
-              data: {
-                productId: product.id,
-                lotNumber: targetRes.targetLotNumber,
-                expirationDate: expDate,
-                stock: qty,
-                location: scope.cleanCode,
-              },
-            });
-
-        const updatedProduct = await tx.product.update({
-          where: { id: product.id },
-          data: { stock: { increment: qty }, defaultLocation: scope.cleanCode },
-        });
-
-        await tx.stockMovement.create({
-          data: {
-            productId: product.id,
-            quantity: qty,
-            type: 'IN',
-            reason: data.reason || `Ingreso directo en posición WMS ${scope.cleanCode}`,
-            userId,
-            productLotId: targetLot.id,
-          },
-        });
-
-        return { product: updatedProduct, lot: targetLot, mode };
-      }
-
-      let reservedQty = 0;
-      if (typeof (tx as any).orderItem?.aggregate === 'function') {
-        const resAgg = await tx.orderItem.aggregate({
-          where: { productId: product.id, order: { status: { in: ['PENDING', 'PREPARING'] } } },
-          _sum: { quantity: true },
-        });
-        reservedQty = resAgg._sum.quantity || 0;
-      }
-
-      const sumLots = existingLots.reduce((acc, l) => acc + l.stock, 0);
-      const untrackedGap = Math.max(0, product.stock + reservedQty - sumLots);
-
-      const plan = planWmsSafeRelocation({
-        targetLocation: scope.cleanCode,
-        quantity: qty,
-        lots: existingLots,
-        untrackedCommercialGap: untrackedGap,
+      return executeWmsAssignmentInTx({
+        tx,
+        product,
+        existingLots,
+        scope,
+        qty,
+        expDate,
+        lotNumber: data.lotNumber,
         sourceLotId: data.sourceLotId,
-        preferredLotNumber: data.lotNumber,
+        expirationDateRaw: data.expirationDate,
+        reason: data.reason,
+        mode,
+        userId,
       });
-
-      if (untrackedGap > 0) {
-        const remainderForUnassigned = untrackedGap - plan.fromUntrackedGap;
-        if (remainderForUnassigned > 0) {
-          const suRes = resolveTargetLotNumberForLocation('S/L', 'S/U', existingLots);
-          if (suRes.existingTargetLotId) {
-            await tx.productLot.update({
-              where: { id: suRes.existingTargetLotId },
-              data: { stock: { increment: remainderForUnassigned }, location: 'S/U' },
-            });
-          } else {
-            const createdSu = await tx.productLot.create({
-              data: {
-                productId: product.id,
-                lotNumber: suRes.targetLotNumber,
-                expirationDate: new Date('2036-12-31T00:00:00Z'),
-                stock: remainderForUnassigned,
-                location: 'S/U',
-              },
-            });
-            existingLots.push(createdSu);
-          }
-        }
-      }
-
-      if (plan.fromUntrackedGap === 0 && plan.steps.length === 1 && plan.steps[0].remainingInSource === 0) {
-        const singleStep = plan.steps[0];
-        const otherLots = existingLots.filter((l) => l.id !== singleStep.lotId);
-        const targetRes = resolveTargetLotNumberForLocation(
-          data.lotNumber?.trim() || singleStep.lotNumber,
-          scope.cleanCode,
-          otherLots,
-        );
-
-        if (!targetRes.existingTargetLotId) {
-          const movedLot = await tx.productLot.update({
-            where: { id: singleStep.lotId },
-            data: { location: scope.cleanCode, lotNumber: targetRes.targetLotNumber },
-          });
-          const updatedProduct = await tx.product.update({
-            where: { id: product.id },
-            data: { defaultLocation: scope.cleanCode },
-          });
-          return { product: updatedProduct, lot: movedLot, mode };
-        }
-      }
-
-      const preferredBaseLot =
-        data.lotNumber?.trim() || (plan.steps[0] ? extractBaseLotNumber(plan.steps[0].lotNumber) : 'S/L');
-      const resolvedExpDate = data.expirationDate?.trim() ? expDate : plan.steps[0]?.expirationDate || expDate;
-      const targetRes = resolveTargetLotNumberForLocation(preferredBaseLot, scope.cleanCode, existingLots);
-
-      let targetLot = targetRes.existingTargetLotId
-        ? await tx.productLot.findUniqueOrThrow({ where: { id: targetRes.existingTargetLotId } })
-        : await tx.productLot.create({
-            data: {
-              productId: product.id,
-              lotNumber: targetRes.targetLotNumber,
-              expirationDate: resolvedExpDate,
-              stock: 0,
-              location: scope.cleanCode,
-            },
-          });
-
-      for (const step of plan.steps) {
-        // El lote de origen conserva su ubicación aunque quede en 0 (evita colisión de clave única).
-        await tx.productLot.update({
-          where: { id: step.lotId },
-          data: { stock: step.remainingInSource },
-        });
-        await tx.stockMovement.create({
-          data: {
-            productId: product.id,
-            quantity: -step.takeQty,
-            type: 'OUT',
-            reason: `Traslado interno WMS desde ${step.fromLocation} hacia ${scope.cleanCode}`,
-            userId,
-            productLotId: step.lotId,
-          },
-        });
-        await tx.stockMovement.create({
-          data: {
-            productId: product.id,
-            quantity: step.takeQty,
-            type: 'IN',
-            reason: `Ubicación interna WMS en ${scope.cleanCode} (origen ${step.fromLocation})`,
-            userId,
-            productLotId: targetLot.id,
-          },
-        });
-      }
-
-      if (plan.fromUntrackedGap > 0) {
-        await tx.stockMovement.create({
-          data: {
-            productId: product.id,
-            quantity: plan.fromUntrackedGap,
-            type: 'ADJUSTMENT',
-            reason: `Normalización de lote inicial ubicado en ${scope.cleanCode}`,
-            userId,
-            productLotId: targetLot.id,
-          },
-        });
-      }
-
-      targetLot = await tx.productLot.update({
-        where: { id: targetLot.id },
-        data: { stock: { increment: qty }, location: scope.cleanCode },
-      });
-      const updatedProduct = await tx.product.update({
-        where: { id: product.id },
-        data: { defaultLocation: scope.cleanCode },
-      });
-
-      return { product: updatedProduct, lot: targetLot, mode };
     });
 
     await logAudit({

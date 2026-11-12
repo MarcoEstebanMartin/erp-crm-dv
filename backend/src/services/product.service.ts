@@ -11,6 +11,32 @@ import { productWmsSubService } from './catalog/product-wms.service';
 import { productImageSubService } from './catalog/product-image.service';
 import { productionOutboundBridgeService } from './catalog/production-outbound-bridge.service';
 
+function enrichWithStockValuation<
+  T extends {
+    stock: number;
+    lots?: Array<{ stock: number }>;
+    isPesable: boolean;
+    approximateWeight: any;
+    costPrice: any;
+    listPrice: any;
+    minStock: any;
+  },
+>(p: T) {
+  const lotsSum = p.lots?.reduce((acc, l) => acc + Math.max(0, l.stock), 0) ?? 0;
+  const physicalUnits = p.lots && p.lots.length > 0 ? lotsSum : Math.max(0, p.stock);
+  return {
+    ...p,
+    stockValuation: calculateProductStockValuation({
+      physicalUnits,
+      isWeighable: p.isPesable,
+      approxWeightKg: Number(p.approximateWeight || 0),
+      costPrice: Number(p.costPrice || 0),
+      priceList4: Number(p.listPrice || 0),
+      minStockAlert: Number(p.minStock || 0),
+    }),
+  };
+}
+
 export class ProductService {
   /**
    * Obtener todos los productos con Buscador Fonético Argentino (b/v, s/z/c, y/i, sin tildes).
@@ -27,17 +53,7 @@ export class ProductService {
       orderBy: { sku: 'asc' },
     });
 
-    const enriched = products.map((p) => ({
-      ...p,
-      stockValuation: calculateProductStockValuation({
-        physicalUnits: p.stock,
-        isWeighable: p.isPesable,
-        approxWeightKg: Number(p.approximateWeight || 0),
-        costPrice: Number(p.costPrice || 0),
-        priceList4: Number(p.listPrice || 0),
-        minStockAlert: Number(p.minStock || 0),
-      }),
-    }));
+    const enriched = products.map((p) => enrichWithStockValuation(p));
 
     if (!search || !search.trim()) return enriched;
     const q = search.trim();
@@ -49,17 +65,19 @@ export class ProductService {
   }
 
   async getProductById(id: number) {
-    return prisma.product.findUnique({
+    const product = await prisma.product.findUnique({
       where: { id },
       include: { lots: { orderBy: { expirationDate: 'asc' } }, rubro: true, provider: true },
     });
+    return product ? enrichWithStockValuation(product) : null;
   }
 
   async getProductByBarcode(barcode: string) {
-    return prisma.product.findUnique({
+    const product = await prisma.product.findUnique({
       where: { barcode: barcode.trim() },
       include: { lots: { orderBy: { expirationDate: 'asc' } }, rubro: true, provider: true },
     });
+    return product ? enrichWithStockValuation(product) : null;
   }
 
   async createProduct(data: any, userId?: number) {

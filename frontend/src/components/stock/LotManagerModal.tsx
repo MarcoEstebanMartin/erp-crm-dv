@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Edit2, Trash2, ArrowLeftRight } from 'lucide-react';
+import { X, Edit2, Trash2, ArrowLeftRight, PackageMinus } from 'lucide-react';
 import type { TransferLotData } from './types';
 import LotTransferForm from './LotTransferForm';
 import {
@@ -12,6 +12,7 @@ interface LotManagerModalProps {
   open: boolean;
   product: any | null;
   loading: boolean;
+  canMutateStock?: boolean;
   editingLot: any | null;
   editLotNumber: string;
   editExpirationDate: string;
@@ -22,6 +23,7 @@ interface LotManagerModalProps {
   onStartEditingLot: (lot: any) => void;
   onCancelEditingLot: () => void;
   onUpdateLotSubmit: (e: React.FormEvent) => void;
+  onVacateLot: (lotId: number, lotNumber: string, currentStock: number) => void;
   onDeleteLot: (lotId: number, lotNumber: string) => void;
   showTransferPanel: boolean;
   onToggleTransferPanel: () => void;
@@ -32,95 +34,50 @@ interface LotManagerModalProps {
   onClose: () => void;
 }
 
+const TH_LOT_STYLE: React.CSSProperties = {
+  padding: '10px 12px', fontWeight: 600, fontSize: '0.75rem', letterSpacing: '0.04em', color: 'var(--text-secondary)'
+};
+
 export default function LotManagerModal({
-  open,
-  product,
-  loading,
-  editingLot,
-  editLotNumber,
-  editExpirationDate,
-  editLocation,
-  onEditLotNumberChange,
-  onEditExpirationDateChange,
-  onEditLocationChange,
-  onStartEditingLot,
-  onCancelEditingLot,
-  onUpdateLotSubmit,
-  onDeleteLot,
-  showTransferPanel,
-  onToggleTransferPanel,
-  onBackFromTransfer,
-  transferData,
-  onTransferDataChange,
-  onTransferSubmit,
-  onClose
+  open, product, loading, canMutateStock = true, editingLot, editLotNumber, editExpirationDate, editLocation,
+  onEditLotNumberChange, onEditExpirationDateChange, onEditLocationChange, onStartEditingLot, onCancelEditingLot,
+  onUpdateLotSubmit, onVacateLot, onDeleteLot, showTransferPanel, onToggleTransferPanel, onBackFromTransfer,
+  transferData, onTransferDataChange, onTransferSubmit, onClose
 }: LotManagerModalProps) {
   if (!open || !product) return null;
-
   const lots = product.lots || [];
 
   return (
     <div className="modal-overlay">
       <div className="modal-content" style={{ borderRadius: '12px', padding: '24px', maxWidth: '650px', width: '90%' }}>
         <div className="modal-header" style={{ marginBottom: '20px' }}>
-          <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700 }}>Gestionar Lotes</h3>
-          <button
-            type="button"
-            className="btn btn-ghost"
-            style={{ padding: '4px', borderRadius: '6px', border: 'none', cursor: 'pointer' }}
-            onClick={onClose}
-          >
+          <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700 }}>
+            {canMutateStock ? 'Gestionar Lotes' : 'Consulta de Lotes'}
+          </h3>
+          <button type="button" className="btn btn-ghost" style={{ padding: '4px', borderRadius: '6px', border: 'none', cursor: 'pointer' }} onClick={onClose}>
             <X size={16} />
           </button>
         </div>
 
-        <div
-          style={{
-            backgroundColor: 'var(--bg-app)',
-            padding: '12px 14px',
-            borderRadius: '8px',
-            fontSize: '0.84rem',
-            marginBottom: '20px',
-            border: '1px solid var(--border-color)',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            gap: '12px'
-          }}
-        >
+        <div style={{ backgroundColor: 'var(--bg-app)', padding: '12px 14px', borderRadius: '8px', fontSize: '0.84rem', marginBottom: '20px', border: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}>
           <div>
-            <div style={{ marginBottom: '2px' }}>
-              <strong>Artículo:</strong> {product.name}
-            </div>
-            <div style={{ color: 'var(--text-secondary)', fontFamily: 'monospace', fontSize: '0.8rem' }}>
-              SKU: {product.sku}
-            </div>
+            <div style={{ marginBottom: '2px' }}><strong>Artículo:</strong> {product.name}</div>
+            <div style={{ color: 'var(--text-secondary)', fontFamily: 'monospace', fontSize: '0.8rem' }}>SKU: {product.sku}</div>
           </div>
-          <button
-            type="button"
-            className="btn"
-            style={{
-              borderRadius: '6px',
-              fontSize: '0.78rem',
-              padding: '6px 12px',
-              backgroundColor: showTransferPanel ? 'var(--bg-muted)' : 'var(--text-primary)',
-              color: showTransferPanel ? 'var(--text-primary)' : 'var(--bg-app)',
-              border: '1px solid var(--border-color)',
-              cursor: 'pointer',
-              fontWeight: 600,
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              whiteSpace: 'nowrap'
-            }}
-            onClick={onToggleTransferPanel}
-          >
-            <ArrowLeftRight size={13} />
-            <span>{showTransferPanel ? 'Ver Lista de Lotes' : 'Transferir Stock'}</span>
-          </button>
+          {canMutateStock && (
+            <button
+              type="button"
+              className="btn"
+              style={{ borderRadius: '6px', fontSize: '0.78rem', padding: '6px 12px', backgroundColor: showTransferPanel ? 'var(--bg-muted)' : 'var(--text-primary)', color: showTransferPanel ? 'var(--text-primary)' : 'var(--bg-app)', border: '1px solid var(--border-color)', cursor: 'pointer', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}
+              onClick={onToggleTransferPanel}
+            >
+              <ArrowLeftRight size={13} />
+              <span>{showTransferPanel ? 'Ver Lista de Lotes' : 'Transferir Stock'}</span>
+            </button>
+          )}
         </div>
 
-        {showTransferPanel ? (
+        {canMutateStock && showTransferPanel ? (
           <LotTransferForm
             lots={lots}
             transferData={transferData}
@@ -129,10 +86,9 @@ export default function LotManagerModal({
             onBack={onBackFromTransfer}
             onSubmit={onTransferSubmit}
           />
-        ) : editingLot ? (
+        ) : canMutateStock && editingLot ? (
           <form onSubmit={onUpdateLotSubmit} style={{ animation: 'slideDown 0.2s ease-out' }}>
             <h4 style={{ margin: '0 0 16px 0', fontSize: '0.9rem', fontWeight: 600 }}>Editar Propiedades del Lote</h4>
-
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
               <div className="form-group" style={{ marginBottom: 0 }}>
                 <label>Código de Lote</label>
@@ -145,7 +101,6 @@ export default function LotManagerModal({
                   style={{ borderRadius: '8px', width: '100%' }}
                 />
               </div>
-
               <div className="form-group" style={{ marginBottom: 0 }}>
                 <label>Ubicación Física</label>
                 <input
@@ -171,7 +126,6 @@ export default function LotManagerModal({
                   style={{ borderRadius: '8px', width: '100%' }}
                 />
               </div>
-
               <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'flex-start', paddingBottom: '4px' }}>
                 <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                   Los cambios afectarán únicamente a las propiedades del lote sin alterar su cantidad física.
@@ -195,17 +149,17 @@ export default function LotManagerModal({
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
                 <thead style={{ backgroundColor: 'var(--bg-muted)', position: 'sticky', top: 0, zIndex: 1 }}>
                   <tr style={{ borderBottom: '1px solid var(--border-color)' }}>
-                    <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 600, fontSize: '0.75rem', letterSpacing: '0.04em', color: 'var(--text-secondary)' }}>LOTE</th>
-                    <th style={{ padding: '10px 12px', textAlign: 'center', fontWeight: 600, fontSize: '0.75rem', letterSpacing: '0.04em', color: 'var(--text-secondary)' }}>STOCK</th>
-                    <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 600, fontSize: '0.75rem', letterSpacing: '0.04em', color: 'var(--text-secondary)' }}>VENCIMIENTO</th>
-                    <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 600, fontSize: '0.75rem', letterSpacing: '0.04em', color: 'var(--text-secondary)' }}>UBICACIÓN</th>
-                    <th style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 600, fontSize: '0.75rem', letterSpacing: '0.04em', color: 'var(--text-secondary)' }}>ACCIONES</th>
+                    <th style={{ ...TH_LOT_STYLE, textAlign: 'left' }}>LOTE</th>
+                    <th style={{ ...TH_LOT_STYLE, textAlign: 'center' }}>STOCK</th>
+                    <th style={{ ...TH_LOT_STYLE, textAlign: 'left' }}>VENCIMIENTO</th>
+                    <th style={{ ...TH_LOT_STYLE, textAlign: 'left' }}>UBICACIÓN</th>
+                    {canMutateStock && <th style={{ ...TH_LOT_STYLE, textAlign: 'right' }}>ACCIONES</th>}
                   </tr>
                 </thead>
                 <tbody>
                   {lots.length === 0 ? (
                     <tr>
-                      <td colSpan={5} style={{ padding: '20px', textAlign: 'center', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                      <td colSpan={canMutateStock ? 5 : 4} style={{ padding: '20px', textAlign: 'center', color: 'var(--text-muted)', fontStyle: 'italic' }}>
                         Sin lotes registrados
                       </td>
                     </tr>
@@ -231,30 +185,42 @@ export default function LotManagerModal({
                           <td style={{ padding: '10px 12px', fontFamily: 'monospace', fontSize: '0.78rem', whiteSpace: 'nowrap' }}>
                             {lot.location || 'S/U'}
                           </td>
-                          <td style={{ padding: '10px 12px', textAlign: 'right', whiteSpace: 'nowrap' }}>
-                            <div style={{ display: 'inline-flex', gap: '4px', justifyContent: 'flex-end' }}>
-                              <button
-                                type="button"
-                                className="btn btn-ghost"
-                                style={{ padding: '4px', color: 'var(--text-secondary)' }}
-                                onClick={() => onStartEditingLot(lot)}
-                                title="Editar propiedades del lote"
-                              >
-                                <Edit2 size={14} />
-                              </button>
-                              {lot.stock === 0 && (
+                          {canMutateStock && (
+                            <td style={{ padding: '10px 12px', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                              <div style={{ display: 'inline-flex', gap: '4px', justifyContent: 'flex-end' }}>
                                 <button
                                   type="button"
                                   className="btn btn-ghost"
-                                  style={{ padding: '4px', color: 'var(--color-corp-red)' }}
-                                  onClick={() => onDeleteLot(lot.id, cleanLot)}
-                                  title="Eliminar lote vacío"
+                                  style={{ padding: '4px', color: 'var(--text-secondary)' }}
+                                  onClick={() => onStartEditingLot(lot)}
+                                  title="Editar propiedades del lote"
                                 >
-                                  <Trash2 size={14} />
+                                  <Edit2 size={14} />
                                 </button>
-                              )}
-                            </div>
-                          </td>
+                                {lot.stock > 0 ? (
+                                  <button
+                                    type="button"
+                                    className="btn btn-ghost"
+                                    style={{ padding: '4px', color: 'var(--color-corp-red)' }}
+                                    onClick={() => onVacateLot(lot.id, cleanLot, lot.stock)}
+                                    title="Vaciar stock del lote a 0 u."
+                                  >
+                                    <PackageMinus size={14} />
+                                  </button>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    className="btn btn-ghost"
+                                    style={{ padding: '4px', color: 'var(--color-corp-red)' }}
+                                    onClick={() => onDeleteLot(lot.id, cleanLot)}
+                                    title="Eliminar lote vacío"
+                                  >
+                                    <Trash2 size={14} />
+                                  </button>
+                                )}
+                              </div>
+                            </td>
+                          )}
                         </tr>
                       );
                     })

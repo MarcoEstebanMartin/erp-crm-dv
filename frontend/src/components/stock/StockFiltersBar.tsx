@@ -15,6 +15,7 @@ interface StockFiltersBarProps {
   onShowEmptyLotsChange: (val: boolean) => void;
   showGlobalMovements: boolean;
   onToggleGlobalMovements: () => void;
+  canMutateStock?: boolean;
 }
 
 const FILTER_OPTIONS: { id: StockFilterType; label: string; activeColor: string }[] = [
@@ -40,6 +41,7 @@ export default function StockFiltersBar({
   onShowEmptyLotsChange,
   showGlobalMovements,
   onToggleGlobalMovements,
+  canMutateStock = true,
 }: StockFiltersBarProps) {
   return (
     <div
@@ -122,25 +124,27 @@ export default function StockFiltersBar({
         </select>
 
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap', marginLeft: 'auto' }}>
-          <button
-            className={`btn ${isQuickInventoryMode ? 'btn-primary' : 'btn-secondary'}`}
-            type="button"
-            style={{
-              height: '38px',
-              borderRadius: '6px',
-              padding: '0 14px',
-              fontSize: '0.82rem',
-              fontWeight: 600,
-              whiteSpace: 'nowrap',
-            }}
-            onClick={onToggleQuickInventory}
-            title="Modificar múltiples stocks en 1 sola transacción atómica"
-          >
-            {isQuickInventoryMode ? <X size={15} /> : <ClipboardList size={15} />}
-            <span>{isQuickInventoryMode ? 'Cancelar Inventario' : 'Inventario Rápido'}</span>
-          </button>
+          {canMutateStock && (
+            <button
+              className={`btn ${isQuickInventoryMode ? 'btn-primary' : 'btn-secondary'}`}
+              type="button"
+              style={{
+                height: '38px',
+                borderRadius: '6px',
+                padding: '0 14px',
+                fontSize: '0.82rem',
+                fontWeight: 600,
+                whiteSpace: 'nowrap',
+              }}
+              onClick={onToggleQuickInventory}
+              title="Modificar múltiples stocks en 1 sola transacción atómica"
+            >
+              {isQuickInventoryMode ? <X size={15} /> : <ClipboardList size={15} />}
+              <span>{isQuickInventoryMode ? 'Cancelar Inventario' : 'Inventario Rápido'}</span>
+            </button>
+          )}
 
-          {isQuickInventoryMode && (
+          {canMutateStock && isQuickInventoryMode && (
             <label
               style={{
                 display: 'inline-flex',

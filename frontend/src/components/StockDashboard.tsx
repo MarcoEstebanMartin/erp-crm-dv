@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { X } from 'lucide-react';
+import { api } from '../utils/api';
 import {
   type StockDashboardProps,
   type StockFilterType,
@@ -22,10 +23,19 @@ import QuickInventoryFloatingBar from './stock/QuickInventoryFloatingBar';
 
 export type { StockDashboardProps };
 
-export default function StockDashboard({ products, onRefresh, onJumpToMapLocation }: StockDashboardProps) {
+export default function StockDashboard({
+  products,
+  onRefresh,
+  onJumpToMapLocation,
+  userRole
+}: StockDashboardProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedRubro, setSelectedRubro] = useState('');
   const [stockFilter, setStockFilter] = useState<StockFilterType>('all');
+
+  const role = userRole ?? api.getCurrentUser()?.role ?? '';
+  const canViewCosts = role === 'ADMIN' || role === 'FACTURACION';
+  const canMutateStock = role === 'ADMIN' || role === 'DEPOSITO';
 
   const activeProducts = useMemo(
     () => (Array.isArray(products) ? products.filter((p) => p && p.isActive !== false) : []),
@@ -83,7 +93,7 @@ export default function StockDashboard({ products, onRefresh, onJumpToMapLocatio
     return matchesSearch && matchesRubro && matchesStock;
   });
 
-  const stats = computeStockStats(filteredProducts, adjustments.pendingAdjustments);
+  const stats = computeStockStats(filteredProducts, adjustments.pendingAdjustments, canViewCosts);
   const rubrosList = Array.from(new Set(activeProducts.map(extractRubroLabel).filter(Boolean))).sort();
 
   return (
@@ -146,6 +156,7 @@ export default function StockDashboard({ products, onRefresh, onJumpToMapLocatio
         stats={stats}
         filteredCount={filteredProducts.length}
         totalCount={activeProducts.length}
+        canViewCosts={canViewCosts}
       />
 
       <StockFiltersBar
@@ -167,6 +178,7 @@ export default function StockDashboard({ products, onRefresh, onJumpToMapLocatio
         onShowEmptyLotsChange={adjustments.setShowEmptyLots}
         showGlobalMovements={movements.showGlobalMovements}
         onToggleGlobalMovements={() => movements.setShowGlobalMovements(!movements.showGlobalMovements)}
+        canMutateStock={canMutateStock}
       />
 
       <StockInventoryTable
@@ -181,6 +193,8 @@ export default function StockDashboard({ products, onRefresh, onJumpToMapLocatio
         onOpenLotManager={lotManager.openLotManager}
         onOpenAdjustModal={adjustments.openAdjustModal}
         onJumpToMapLocation={onJumpToMapLocation}
+        canViewCosts={canViewCosts}
+        canMutateStock={canMutateStock}
       />
 
       <GlobalMovementsPanel
@@ -198,18 +212,21 @@ export default function StockDashboard({ products, onRefresh, onJumpToMapLocatio
         onClose={movements.closeHistoryPanel}
       />
 
-      <StockAdjustModal
-        modal={adjustments.adjustModal}
-        loading={adjustments.loadingAdjust}
-        onChange={adjustments.setAdjustModal}
-        onClose={adjustments.closeAdjustModal}
-        onSubmit={adjustments.handleAdjustSubmit}
-      />
+      {canMutateStock && (
+        <StockAdjustModal
+          modal={adjustments.adjustModal}
+          loading={adjustments.loadingAdjust}
+          onChange={adjustments.setAdjustModal}
+          onClose={adjustments.closeAdjustModal}
+          onSubmit={adjustments.handleAdjustSubmit}
+        />
+      )}
 
       <LotManagerModal
         open={lotManager.lotManagerModal.open}
         product={lotManager.lotManagerModal.product}
         loading={adjustments.loadingAdjust}
+        canMutateStock={canMutateStock}
         editingLot={lotManager.editingLot}
         editLotNumber={lotManager.editLotNumber}
         editExpirationDate={lotManager.editExpirationDate}
@@ -220,6 +237,7 @@ export default function StockDashboard({ products, onRefresh, onJumpToMapLocatio
         onStartEditingLot={lotManager.startEditingLot}
         onCancelEditingLot={() => lotManager.setEditingLot(null)}
         onUpdateLotSubmit={lotManager.handleUpdateLotSubmit}
+        onVacateLot={lotManager.handleVacateLot}
         onDeleteLot={lotManager.handleDeleteLot}
         showTransferPanel={lotManager.showTransferPanel}
         onToggleTransferPanel={lotManager.toggleTransferPanel}
@@ -230,12 +248,14 @@ export default function StockDashboard({ products, onRefresh, onJumpToMapLocatio
         onClose={lotManager.closeLotManager}
       />
 
-      <QuickInventoryFloatingBar
-        pendingCount={Object.keys(adjustments.pendingAdjustments).length}
-        loading={adjustments.loadingAdjust}
-        onDiscard={() => adjustments.setPendingAdjustments({})}
-        onSave={adjustments.handleSaveQuickInventory}
-      />
+      {canMutateStock && (
+        <QuickInventoryFloatingBar
+          pendingCount={Object.keys(adjustments.pendingAdjustments).length}
+          loading={adjustments.loadingAdjust}
+          onDiscard={() => adjustments.setPendingAdjustments({})}
+          onSave={adjustments.handleSaveQuickInventory}
+        />
+      )}
 
       <style>{`
         @keyframes slideLeft {

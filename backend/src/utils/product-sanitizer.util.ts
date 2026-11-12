@@ -31,9 +31,9 @@ export function sanitizeProductForRole<T extends Record<string, any>>(
       ? {
           stockValuation: {
             ...product.stockValuation,
-            unitCost: 0,
-            totalValueCost: 0,
-            estimatedProfit: 0,
+            stockValueCost: 0,
+            latentProfit: 0,
+            latentMarginPct: 0,
           },
         }
       : {}),

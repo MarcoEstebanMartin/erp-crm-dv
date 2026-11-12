@@ -65,8 +65,18 @@ const router = Router();
 // Rutas accesibles por cualquier usuario autenticado (Vendedor, Depósito, Admin)
 router.get('/', authenticateJWT, getProducts);
 router.get('/price-list-catalog', authenticateJWT, getLivePriceList);
-router.get('/stock/movements', authenticateJWT, getGlobalStockMovements);
-router.get('/stock/expiring-lots', authenticateJWT, getExpiringLots);
+router.get(
+  '/stock/movements',
+  authenticateJWT,
+  requireRole([Role.ADMIN, Role.FACTURACION, Role.DEPOSITO]),
+  getGlobalStockMovements,
+);
+router.get(
+  '/stock/expiring-lots',
+  authenticateJWT,
+  requireRole([Role.ADMIN, Role.FACTURACION, Role.DEPOSITO]),
+  getExpiringLots,
+);
 router.get('/barcode/:barcode', authenticateJWT, getProductByBarcode);
 
 // Configuración editable y segura del Plano WMS (Lectura: Staff autenticado | Edición: Solo ADMIN)
@@ -99,13 +109,32 @@ router.post(
 );
 
 router.get('/:id', authenticateJWT, getProductById);
-router.get('/:id/movements', authenticateJWT, getProductMovements);
+router.get(
+  '/:id/movements',
+  authenticateJWT,
+  requireRole([Role.ADMIN, Role.FACTURACION, Role.DEPOSITO]),
+  getProductMovements,
+);
 
 // Rutas protegidas para administración de catálogo (Solo ADMIN)
 router.post('/', authenticateJWT, requireRole([Role.ADMIN]), validateRequest(createProductSchema), createProduct);
-router.post('/import-prices', authenticateJWT, requireRole([Role.ADMIN]), validateRequest(importPricesSchema), importPrices);
-router.post('/revert-prices', authenticateJWT, requireRole([Role.ADMIN]), revertPrices);
-router.post('/bulk-update-prices', authenticateJWT, requireRole([Role.ADMIN]), validateRequest(bulkUpdatePricesSchema), bulkUpdatePrices);
+router.post(
+  '/import-prices',
+  authenticateJWT,
+  requireRole([Role.ADMIN]),
+  idempotencyGuard,
+  validateRequest(importPricesSchema),
+  importPrices,
+);
+router.post('/revert-prices', authenticateJWT, requireRole([Role.ADMIN]), idempotencyGuard, revertPrices);
+router.post(
+  '/bulk-update-prices',
+  authenticateJWT,
+  requireRole([Role.ADMIN]),
+  idempotencyGuard,
+  validateRequest(bulkUpdatePricesSchema),
+  bulkUpdatePrices,
+);
 router.put('/:id', authenticateJWT, requireRole([Role.ADMIN]), validateRequest(updateProductSchema), updateProduct);
 
 // Rutas para imágenes de productos (Solo ADMIN)
@@ -131,8 +160,22 @@ router.post(
 );
 
 // Administración de Lotes (ADMIN y DEPOSITO)
-router.put('/lots/:lotId', authenticateJWT, requireRole([Role.ADMIN, Role.DEPOSITO]), validateRequest(updateLotSchema), updateLot);
-router.delete('/lots/:lotId', authenticateJWT, requireRole([Role.ADMIN]), validateRequest(deleteLotSchema), deleteLot);
+router.put(
+  '/lots/:lotId',
+  authenticateJWT,
+  requireRole([Role.ADMIN, Role.DEPOSITO]),
+  idempotencyGuard,
+  validateRequest(updateLotSchema),
+  updateLot,
+);
+router.delete(
+  '/lots/:lotId',
+  authenticateJWT,
+  requireRole([Role.ADMIN]),
+  idempotencyGuard,
+  validateRequest(deleteLotSchema),
+  deleteLot,
+);
 router.post(
   '/:productId/lots/transfer',
   authenticateJWT,

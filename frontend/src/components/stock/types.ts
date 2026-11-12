@@ -1,9 +1,11 @@
 import { computeProductWmsBreakdown } from '../deposito/wmsStockBreakdown';
+import { resolveProductRowValuation } from '../../utils/exactStockMath';
 
 export interface StockDashboardProps {
   products: any[];
   onRefresh: () => Promise<void>;
   onJumpToMapLocation?: (locationCode: string) => void;
+  userRole?: string;
 }
 
 export type StockFilterType = 'all' | 'low' | 'out' | 'expiring' | 'located' | 'unassigned';
@@ -80,23 +82,35 @@ export const getDisplayedStock = (
   return pending !== undefined ? pending : p.stock;
 };
 
+export const hasProductPendingAdjustment = (
+  p: any,
+  pendingAdjustments: Record<string, number>
+): boolean => {
+  if (pendingAdjustments[`prod-${p.id}`] !== undefined) return true;
+  return (p.lots || []).some((lot: any) => pendingAdjustments[`lot-${lot.id}`] !== undefined);
+};
+
 export const computeStockStats = (
   filteredProducts: any[],
-  pendingAdjustments: Record<string, number>
+  pendingAdjustments: Record<string, number>,
+  canViewCosts = true
 ): StockValuationStats => {
-  return filteredProducts.reduce<StockValuationStats>(
+  let totalCostBig = 0n;
+  let totalRetailBig = 0n;
+
+  const stats = filteredProducts.reduce<StockValuationStats>(
     (acc, p) => {
       const stockQty = getDisplayedStock(p, pendingAdjustments);
       const wms = computeProductWmsBreakdown(p, pendingAdjustments);
-      const cost = Number(p.costPrice) || 0;
-      const listPrice = Number(p.listPrice) || 0;
+      const hasPendingEdit = hasProductPendingAdjustment(p, pendingAdjustments);
+      const rowVal = resolveProductRowValuation(p, stockQty, { hasPendingEdit, canViewCosts });
       const minStock = Number(p.minStock) || 0;
 
       acc.totalUnits += stockQty;
       acc.locatedUnits += wms.locatedUnits;
       acc.unassignedUnits += wms.unassignedUnits;
-      acc.totalCost += stockQty * cost;
-      acc.totalRetailVal += stockQty * listPrice;
+      totalCostBig += BigInt(rowVal.stockValueCost);
+      totalRetailBig += BigInt(rowVal.stockValueSale);
 
       if (stockQty <= 0) {
         acc.outOfStockCount += 1;
@@ -119,4 +133,8 @@ export const computeStockStats = (
       goodStockCount: 0
     }
   );
+
+  stats.totalCost = Number(totalCostBig);
+  stats.totalRetailVal = Number(totalRetailBig);
+  return stats;
 };

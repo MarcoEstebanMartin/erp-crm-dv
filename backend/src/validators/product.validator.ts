@@ -43,35 +43,74 @@ export const adjustStockSchema = z.object({
   params: z.object({
     id: z.string().regex(/^\d+$/, 'El ID debe ser un número'),
   }),
-  body: z.object({
-    quantityChange: z
-      .number()
-      .int('El ajuste de stock debe ser un número entero')
-      .refine((val) => val !== 0, 'El cambio de stock no puede ser cero'),
-    reason: z.string().optional(),
-    lotNumber: z.string().optional(),
-    expirationDate: z.string().optional(),
-    location: z.string().optional().nullable(),
-    lotId: z.number().int().positive().optional().nullable(),
-  }),
+  body: z
+    .object({
+      quantityChange: z
+        .number()
+        .int('El ajuste de stock debe ser un número entero')
+        .optional(),
+      targetStock: z
+        .number()
+        .int('El stock objetivo debe ser un número entero')
+        .min(0, 'El stock objetivo no puede ser negativo')
+        .optional(),
+      mode: z.enum(['DELTA', 'VACATE_LOT']).optional(),
+      reason: z.string().optional(),
+      lotNumber: z.string().optional(),
+      expirationDate: z.string().optional(),
+      location: z.string().optional().nullable(),
+      lotId: z.number().int().positive().optional().nullable(),
+    })
+    .refine(
+      (data) => {
+        if (data.mode === 'VACATE_LOT') {
+          return Boolean(data.lotId || (data.lotNumber && data.lotNumber.trim()));
+        }
+        if (data.targetStock !== undefined) {
+          return true;
+        }
+        return data.quantityChange !== undefined && data.quantityChange !== 0;
+      },
+      {
+        message:
+          'Debe indicar un cambio de stock distinto de cero, targetStock (>= 0) o mode="VACATE_LOT" con lote.',
+      },
+    ),
 });
 
 export const adjustStockBatchSchema = z.object({
   body: z.object({
     items: z
       .array(
-        z.object({
-          productId: z.number().int().positive('El ID del producto es requerido'),
-          quantityChange: z
-            .number()
-            .int('Cada ajuste de stock debe ser un número entero')
-            .refine((val) => val !== 0, 'El cambio de stock no puede ser cero'),
-          reason: z.string().optional(),
-          lotNumber: z.string().optional(),
-          expirationDate: z.string().optional(),
-          location: z.string().optional().nullable(),
-          lotId: z.number().int().positive().optional().nullable(),
-        }),
+        z
+          .object({
+            productId: z.number().int().positive('El ID del producto es requerido'),
+            quantityChange: z
+              .number()
+              .int('Cada ajuste de stock debe ser un número entero')
+              .optional(),
+            targetStock: z
+              .number()
+              .int('El stock objetivo debe ser un número entero')
+              .min(0, 'El stock objetivo no puede ser negativo')
+              .optional(),
+            mode: z.enum(['DELTA', 'VACATE_LOT']).optional(),
+            reason: z.string().optional(),
+            lotNumber: z.string().optional(),
+            expirationDate: z.string().optional(),
+            location: z.string().optional().nullable(),
+            lotId: z.number().int().positive().optional().nullable(),
+          })
+          .refine(
+            (item) =>
+              item.targetStock !== undefined ||
+              (item.mode === 'VACATE_LOT' && Boolean(item.lotId || item.lotNumber?.trim())) ||
+              (item.quantityChange !== undefined && item.quantityChange !== 0),
+            {
+              message:
+                'Cada ajuste debe indicar targetStock (>= 0) o un quantityChange entero distinto de cero.',
+            },
+          ),
       )
       .min(1, 'Debe enviar al menos un ajuste de stock')
       .max(250, 'Máximo 250 ajustes por bloque transaccional'),

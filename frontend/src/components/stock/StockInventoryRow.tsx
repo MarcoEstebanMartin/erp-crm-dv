@@ -1,6 +1,7 @@
 import { History, Layers, MapPin } from 'lucide-react';
-import { extractRubroLabel, getDisplayedStock } from './types';
+import { extractRubroLabel, getDisplayedStock, hasProductPendingAdjustment } from './types';
 import { computeProductWmsBreakdown } from '../deposito/wmsStockBreakdown';
+import { resolveProductRowValuation } from '../../utils/exactStockMath';
 import {
   extractCleanLotNumber,
   formatCleanExpirationDate,
@@ -18,6 +19,8 @@ interface StockInventoryRowProps {
   onOpenLotManager: (product: any) => void;
   onOpenAdjustModal: (product: any) => void;
   onJumpToMapLocation?: (locationCode: string) => void;
+  canViewCosts?: boolean;
+  canMutateStock?: boolean;
 }
 
 const NUMERIC_CELL_STYLE: React.CSSProperties = {
@@ -35,7 +38,9 @@ export default function StockInventoryRow({
   onViewHistory,
   onOpenLotManager,
   onOpenAdjustModal,
-  onJumpToMapLocation
+  onJumpToMapLocation,
+  canViewCosts = true,
+  canMutateStock = true
 }: StockInventoryRowProps) {
   const displayedStock = getDisplayedStock(p, pendingAdjustments);
   const wms = computeProductWmsBreakdown(p, pendingAdjustments);
@@ -43,9 +48,8 @@ export default function StockInventoryRow({
   const minStock = p.minStock ?? 0;
   const isLowStock = !isOutOfStock && minStock > 0 && displayedStock < minStock;
   const cost = Number(p.costPrice) || 0;
-  const listPrice = Number(p.listPrice) || 0;
-  const stockValCost = displayedStock * cost;
-  const stockValRetail = displayedStock * listPrice;
+  const hasPendingEdit = hasProductPendingAdjustment(p, pendingAdjustments);
+  const valuation = resolveProductRowValuation(p, displayedStock, { hasPendingEdit, canViewCosts });
 
   const activeLots = (p.lots || []).filter((l: any) => {
     const pending = pendingAdjustments[`lot-${l.id}`];
@@ -71,7 +75,7 @@ export default function StockInventoryRow({
           {p.description && <span>• {p.description}</span>}
         </div>
 
-        {isQuickInventoryMode && p.lots && p.lots.length > 1 && (
+        {canMutateStock && isQuickInventoryMode && p.lots && p.lots.length > 1 && (
           <div style={{ marginTop: '8px', padding: '10px', backgroundColor: 'var(--bg-app)', borderRadius: '6px', fontSize: '0.76rem', border: '1px solid var(--border-color)' }}>
             <div style={{ fontWeight: 600, marginBottom: '6px', color: 'var(--text-secondary)' }}>
               Conteo por posición / lote:
@@ -185,7 +189,7 @@ export default function StockInventoryRow({
       </td>
 
       <td style={{ ...NUMERIC_CELL_STYLE, textAlign: 'center' }}>
-        {isQuickInventoryMode && (!p.lots || p.lots.length <= 1) ? (
+        {canMutateStock && isQuickInventoryMode && (!p.lots || p.lots.length <= 1) ? (
           <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
             <input
               type="number"
@@ -217,18 +221,27 @@ export default function StockInventoryRow({
             {isLowStock && <div style={{ fontSize: '0.68rem', color: 'var(--color-warning)', fontWeight: 600, marginTop: '2px' }}>BAJO MÍN ({minStock})</div>}
           </>
         )}
+        {valuation.isWeighable && (
+          <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 500, marginTop: '2px' }}>
+            ~{valuation.estimatedTotalKg.toLocaleString('es-AR', { maximumFractionDigits: 3 })} kg
+          </div>
+        )}
       </td>
 
-      <td style={{ ...NUMERIC_CELL_STYLE, textAlign: 'right', color: 'var(--text-secondary)', fontSize: '0.86rem' }}>
-        ${cost.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-      </td>
+      {canViewCosts && (
+        <td style={{ ...NUMERIC_CELL_STYLE, textAlign: 'right', color: 'var(--text-secondary)', fontSize: '0.86rem' }}>
+          ${cost.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+        </td>
+      )}
 
-      <td style={{ ...NUMERIC_CELL_STYLE, textAlign: 'right', fontWeight: 600, color: 'var(--text-secondary)', fontSize: '0.86rem' }}>
-        ${stockValCost.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-      </td>
+      {canViewCosts && (
+        <td style={{ ...NUMERIC_CELL_STYLE, textAlign: 'right', fontWeight: 600, color: 'var(--text-secondary)', fontSize: '0.86rem' }}>
+          ${valuation.stockValueCost.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+        </td>
+      )}
 
       <td style={{ ...NUMERIC_CELL_STYLE, textAlign: 'right', fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.86rem' }}>
-        ${stockValRetail.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+        ${valuation.stockValueSale.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
       </td>
 
       <td style={{ padding: '12px 16px', textAlign: 'center', whiteSpace: 'nowrap' }}>
@@ -247,20 +260,22 @@ export default function StockInventoryRow({
             className="btn btn-secondary"
             style={{ padding: '0 10px', fontSize: '0.76rem', height: '28px', borderRadius: '6px', display: 'inline-flex', alignItems: 'center', gap: '4px', whiteSpace: 'nowrap' }}
             onClick={() => onOpenLotManager(p)}
-            title="Gestionar Lotes (Editar, Eliminar, Transferir)"
+            title={canMutateStock ? 'Gestionar Lotes (Editar, Vaciar, Eliminar, Transferir)' : 'Consultar Lotes y Vencimientos'}
           >
             <Layers size={13} />
             <span>Lotes</span>
           </button>
-          <button
-            type="button"
-            className="btn btn-secondary"
-            style={{ padding: '0 10px', fontSize: '0.76rem', height: '28px', borderRadius: '6px', display: 'inline-flex', alignItems: 'center', whiteSpace: 'nowrap' }}
-            onClick={() => onOpenAdjustModal(p)}
-            title="Ajustar Stock"
-          >
-            Ajustar
-          </button>
+          {canMutateStock && (
+            <button
+              type="button"
+              className="btn btn-secondary"
+              style={{ padding: '0 10px', fontSize: '0.76rem', height: '28px', borderRadius: '6px', display: 'inline-flex', alignItems: 'center', whiteSpace: 'nowrap' }}
+              onClick={() => onOpenAdjustModal(p)}
+              title="Ajustar Stock"
+            >
+              Ajustar
+            </button>
+          )}
         </div>
       </td>
     </tr>

@@ -73,9 +73,8 @@ function App() {
 
   const getDefaultRouteForRole = (role: string) => {
     if (role === 'ADMIN' || role === 'FACTURACION') return '/admin/dashboard';
-    if (role === 'VENDEDOR') return '/vendedor/orders';
     if (role === 'DEPOSITO') return '/deposito/picking';
-    return '/';
+    return '/vendedor/orders';
   };
 
   const handleLoginSuccess = () => {
@@ -150,8 +149,17 @@ function App() {
         <section style={{ animation: 'fadeIn 0.4s cubic-bezier(0.25, 1, 0.5, 1)', paddingTop: user.role === 'VENDEDOR' ? '8px' : '0' }}>
           <Suspense fallback={<LoadingSpinner />}>
             <Routes>
-              {/* Rutas de Administración */}
-              <Route path="/admin/:tab?" element={<AdminPages setActiveTab={setActiveTab} />} />
+              {/* Rutas de Administración (restringido a ADMIN y FACTURACION) */}
+              <Route
+                path="/admin/:tab?"
+                element={
+                  user.role === 'ADMIN' || user.role === 'FACTURACION' ? (
+                    <AdminPages setActiveTab={setActiveTab} />
+                  ) : (
+                    <Navigate to={getDefaultRouteForRole(user.role)} replace />
+                  )
+                }
+              />
 
               {/* Rutas de Vendedores */}
               <Route path="/vendedor/:tab?" element={<VendedorPages setActiveTab={setActiveTab} />} />

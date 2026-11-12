@@ -116,10 +116,14 @@ describe('Blindaje Quirúrgico — Auditoría Cruzada de Stock, Costos, Chatbot,
         profitMargin: 33.32,
         provider: { id: 8, name: 'Lácteos Sur', cuit: '30112233445', phone: '112233' },
         stockValuation: {
-          unitCost: 4200.5,
-          totalValueCost: 420050,
-          totalValueSale: 560000,
-          estimatedProfit: 139950,
+          physicalUnits: 100,
+          estimatedTotalKg: 0,
+          effectiveMultiplier: 1,
+          stockValueCost: 420050,
+          stockValueSale: 560000,
+          latentProfit: 139950,
+          latentMarginPct: 33.32,
+          stockHealth: 'OK',
         },
       },
     ];
@@ -127,14 +131,16 @@ describe('Blindaje Quirúrgico — Auditoría Cruzada de Stock, Costos, Chatbot,
     const sellerView = sanitizeProductListForRole(rawCatalog, Role.VENDEDOR);
     expect(sellerView[0].costPrice).toBe(0);
     expect(sellerView[0].profitMargin).toBeNull();
-    expect(sellerView[0].stockValuation.totalValueCost).toBe(0);
-    expect(sellerView[0].stockValuation.estimatedProfit).toBe(0);
+    expect(sellerView[0].stockValuation.stockValueCost).toBe(0);
+    expect(sellerView[0].stockValuation.latentProfit).toBe(0);
+    expect(sellerView[0].stockValuation.latentMarginPct).toBe(0);
+    expect(sellerView[0].stockValuation.stockValueSale).toBe(560000);
     expect((sellerView[0].provider as any).cuit).toBeUndefined();
 
     const adminView = sanitizeProductListForRole(rawCatalog, Role.ADMIN);
     expect(adminView[0].costPrice).toBe(4200.5);
     expect(adminView[0].profitMargin).toBe(33.32);
-    expect(adminView[0].stockValuation.totalValueCost).toBe(420050);
+    expect(adminView[0].stockValuation.stockValueCost).toBe(420050);
   });
 
   it('Chatbot público solo recibe el precio de su lista y booleano disponible (sin Lista B/C ni stock exacto)', async () => {

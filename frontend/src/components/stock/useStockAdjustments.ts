@@ -70,6 +70,7 @@ export function useStockAdjustments({
 
     const adjustmentsToMake: Array<{
       productId: number;
+      targetStock: number;
       quantityChange: number;
       reason: string;
       lotId?: number;
@@ -79,15 +80,17 @@ export function useStockAdjustments({
     }> = [];
 
     for (const [key, val] of Object.entries(pendingAdjustments)) {
+      const targetQty = Math.max(0, Math.trunc(val));
       if (key.startsWith('lot-')) {
         const lotId = Number(key.replace('lot-', ''));
         for (const p of products) {
           const lot = (p.lots || []).find((l: any) => l.id === lotId);
           if (lot) {
-            const diff = Math.trunc(val) - lot.stock;
+            const diff = targetQty - lot.stock;
             if (diff !== 0) {
               adjustmentsToMake.push({
                 productId: p.id,
+                targetStock: targetQty,
                 quantityChange: diff,
                 reason: 'Ajuste rápido de inventario (Lote)',
                 lotId: lot.id,
@@ -102,10 +105,11 @@ export function useStockAdjustments({
         const productId = Number(key.replace('prod-', ''));
         const p = products.find((prod) => prod.id === productId);
         if (p) {
-          const diff = Math.trunc(val) - p.stock;
+          const diff = targetQty - p.stock;
           if (diff !== 0) {
             adjustmentsToMake.push({
               productId: p.id,
+              targetStock: targetQty,
               quantityChange: diff,
               reason: 'Ajuste rápido de inventario (Stock inicial)',
               lotNumber: 'S/L',
@@ -127,6 +131,7 @@ export function useStockAdjustments({
       await api.adjustStockBatch(
         adjustmentsToMake.map((adj) => ({
           productId: adj.productId,
+          targetStock: adj.targetStock,
           quantityChange: adj.quantityChange,
           reason: adj.reason,
           lotId: adj.lotId,

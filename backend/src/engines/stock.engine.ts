@@ -89,7 +89,7 @@ export function calculateProductStockValuation(input: StockValuationInput): Stoc
   let stockHealth: 'OK' | 'LOW' | 'OUT' = 'OK';
   if (units <= 0) {
     stockHealth = 'OUT';
-  } else if (units <= Math.max(2, input.minStockAlert)) {
+  } else if (input.minStockAlert > 0 && units < input.minStockAlert) {
     stockHealth = 'LOW';
   }
 
@@ -308,6 +308,46 @@ export function resolveAdjustmentLot(params: {
     createLotNumber: requested,
     createExpiration: sibling ? toDate(sibling.expirationDate) : null,
   };
+}
+
+/**
+ * Ordena lotes con stock positivo para descuentos de inventario:
+ * prioriza el lote objetivo (si existe), luego mercadería Sin Ubicar ('S/U') y luego FEFO.
+ */
+export function orderPositiveLotsForDeduction<T extends WmsLotSnapshot>(
+  lots: T[],
+  primaryLotId: number | null,
+): T[] {
+  const toTime = (d: Date | string) => (d instanceof Date ? d.getTime() : new Date(d || '2036-12-31T00:00:00Z').getTime());
+  return lots
+    .filter((l) => l.stock > 0)
+    .sort((a, b) => {
+      if (primaryLotId !== null && (a.id === primaryLotId || b.id === primaryLotId)) {
+        return a.id === primaryLotId ? -1 : 1;
+      }
+      const aSu = normalizeWmsLocationCode(a.location) === 'S/U';
+      const bSu = normalizeWmsLocationCode(b.location) === 'S/U';
+      if (aSu !== bSu) return aSu ? -1 : 1;
+      return toTime(a.expirationDate) - toTime(b.expirationDate) || a.id - b.id;
+    });
+}
+
+/** Localiza el lote físico exacto a vaciar cuando se invoca `mode: 'VACATE_LOT'`. */
+export function findLotForExplicitVacate<T extends WmsLotSnapshot>(
+  lots: T[],
+  preselected: T | null,
+  lotNumber?: string | null,
+  cleanLoc?: string,
+): T | null {
+  if (preselected) return preselected;
+  if (!lotNumber) return null;
+  const targetCode = extractBaseLotNumber(lotNumber).toUpperCase();
+  const sameCode = (l: T) => extractBaseLotNumber(l.lotNumber).toUpperCase() === targetCode;
+  if (cleanLoc && cleanLoc !== 'S/U') {
+    const inRack = lots.find((l) => sameCode(l) && normalizeWmsLocationCode(l.location) === cleanLoc);
+    if (inRack) return inRack;
+  }
+  return lots.find(sameCode) || null;
 }
 
 /**

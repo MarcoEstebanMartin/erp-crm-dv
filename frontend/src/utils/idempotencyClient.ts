@@ -26,6 +26,8 @@ export function generateSafeIdempotencyKey(): string {
   return `idem-${Date.now()}-${Math.random().toString(36).slice(2, 12)}`;
 }
 
+export const createIdempotencyKey = generateSafeIdempotencyKey;
+
 /**
  * Devuelve una clave Idempotency-Key estable durante una ventana corta de 3 segundos
  * para el mismo endpoint + payload (atrapa dobles clics y microcortes 4G),
