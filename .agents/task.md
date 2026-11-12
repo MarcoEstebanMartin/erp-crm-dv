@@ -237,3 +237,17 @@
   - [x] Crear motor puro `wmsStockBreakdown.ts` (`computeProductWmsBreakdown`, garantizando `locatedUnits + unassignedUnits === totalUnits`) + KPI global `🟢 en Mapa / 📦 S/U` en `StockKpiCards.tsx` y filtros rápidos `🟢 En Mapa` / `📦 Sin Ubicar (S/U)` en `StockFiltersBar.tsx`.
   - [x] Conectar salto directo de 1 clic (`onJumpToMapLocation` -> `focusLocationCode`) desde `StockInventoryRow.tsx` (`ProductsTab.tsx`) y `DepositoStockListTab.tsx` (`DepositoDashboard.tsx`) hacia `WarehouseMap.tsx` y el nivel exacto en `Slot3DInspectorModal.tsx`.
   - [x] Blindar `Slot3DLoadStockForm.tsx` mostrando en vivo el saldo `Sin Ubicar (S/U)` del producto, botón de autocompletado de 1 clic, selector de lote origen (`sourceLotId` / FEFO automático) y tope contra ubicaciones mayores al stock físico real + suite `wmsStockBreakdown.test.ts` (`44 suites / 184 tests` en verde).
+
+---
+
+## Plan Activo: Perfección, Minimalismo y Blindaje en Productos y Stock
+
+- [x] **Paso 1: UI Minimalista y Verdad Operativa en `Productos y Stock`** ✅ COMPLETADO
+  - [x] `ProductsTab.tsx` (`118` l.) + `AdminDashboard.tsx` (`253` l.) + `ProductsList.tsx` (`328` l.): eliminados botones duplicados `Consulta Rápida (Ctrl+Q)` / `Imprimir Lista 4 Oficial` y props muertas (`onOpenPriceListModal`, `onOpenQuickSearchModal`, `onOpenImportZip`); pestañas accesibles `role="tab"` sin emojis; `activeProducts` (`isActive !== false`) hacia `StockDashboard` y `WarehouseMap`.
+  - [x] `StockDashboard.tsx` (`259` l.) + `stock/types.ts` (`122` l.) + `StockInventoryRow.tsx` (`268` l.): stock bajo unificado a `minStock > 0 && stock < minStock` en los 3 puntos (adiós falso `BAJO MÍN (100)` con `100 u.`) y exclusión de inactivos en KPIs.
+  - [x] `StockKpiCards.tsx` (`177` l.), `StockFiltersBar.tsx` (`234` l.), `QuickInventoryFloatingBar.tsx` (`88` l.), `StockInventoryTable.tsx` (`87` l.): 4 KPIs sobrios con signo de margen correcto, filtros en 1 línea, cero emojis.
+  - [x] Nuevo helper puro `stock/lotLabel.ts` (`50` l.) aplicado en `StockInventoryRow.tsx`, `LotManagerModal.tsx` (`275` l.) y `StockAdjustModal.tsx` (`175` l.): oculta sufijos técnicos `@SLOT` / `S/L-SLOT` y centinela `2036-12-31` sin alterar `lot.id` ni payloads API.
+  - [x] Etiquetas limpias también en `LotTransferForm.tsx` (`150` l.), `ProductKardexDrawer.tsx` (`170` l.) y `GlobalMovementsPanel.tsx` (`127` l.): cero `lotNumber` crudo (`S/L@...`) visible en toda la pestaña Stock (Lotes, Transferencia, Kárdex y Auditoría Global).
+  - [x] Verificación: `tsc --noEmit` Frontend/Backend ✅, `vitest run` Frontend (`6 suites / 19 tests`, incl. nueva `stockMinimalism.test.ts`) ✅, `vitest run` Backend (`39 suites / 170 tests`) ✅, `npm run build:frontend` ✅.
+- [ ] **Paso 2: Modelo de Lotes Limpio en DB y WMS (`@@unique([productId, lotNumber, location])`)**: migración segura `--create-only`, saneamiento de `S/L@D1-R01-C04-C` -> `S/L`, fusión automática al mover de piso en 3D y limpieza de vistas de Depósito/Picking.
+- [ ] **Paso 3: Blindaje Contable Decimal.js, RBAC e Inventario Rápido Atómico**: valorización exacta desde motor `Decimal.js` (incluyendo pesables), ocultamiento de costos/márgenes para roles sin permiso, conteo atómico anti-descalce bajo `FOR UPDATE`, reemplazo de palabras mágicas por flag explícito, `deleteLot` transaccional + `idempotencyGuard`.

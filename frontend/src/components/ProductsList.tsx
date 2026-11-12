@@ -19,7 +19,6 @@ interface ProductsListProps {
   setSearchQuery: (val: string) => void;
   setProductModal: (modal: any) => void;
   onUpdateProduct?: (product: any) => Promise<void>;
-  onOpenImportZip?: () => void;
   onUploadImage?: (productId: number, file: File) => Promise<void>;
   catalogTab?: 'products' | 'inactive_products';
 }

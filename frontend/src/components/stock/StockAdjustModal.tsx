@@ -1,6 +1,11 @@
 import React from 'react';
 import { X } from 'lucide-react';
 import type { AdjustModalState } from './types';
+import {
+  extractCleanLotNumber,
+  formatCleanExpirationDate,
+  isSentinelExpiration
+} from './lotLabel';
 
 interface StockAdjustModalProps {
   modal: AdjustModalState;
@@ -21,13 +26,13 @@ export default function StockAdjustModal({
 
   return (
     <div className="modal-overlay">
-      <div className="modal-content" style={{ borderRadius: '16px', padding: '24px', maxWidth: '450px' }}>
+      <div className="modal-content" style={{ borderRadius: '12px', padding: '24px', maxWidth: '450px' }}>
         <div className="modal-header" style={{ marginBottom: '20px' }}>
-          <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700 }}>Ajustar Stock Físico</h3>
+          <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700 }}>Ajustar Stock Físico</h3>
           <button
             type="button"
             className="btn btn-ghost"
-            style={{ padding: '4px', borderRadius: '50%', border: 'none', cursor: 'pointer' }}
+            style={{ padding: '4px', borderRadius: '6px', border: 'none', cursor: 'pointer' }}
             onClick={onClose}
           >
             <X size={16} />
@@ -38,9 +43,9 @@ export default function StockAdjustModal({
           <div
             style={{
               backgroundColor: 'var(--bg-app)',
-              padding: '14px',
+              padding: '12px 14px',
               borderRadius: '8px',
-              fontSize: '0.85rem',
+              fontSize: '0.84rem',
               marginBottom: '16px',
               border: '1px solid var(--border-color)'
             }}
@@ -48,16 +53,15 @@ export default function StockAdjustModal({
             <div style={{ marginBottom: '4px' }}>
               <strong>Artículo:</strong> {modal.product.name}
             </div>
-            <div style={{ marginBottom: '4px' }}>
-              <strong>SKU:</strong> {modal.product.sku}
+            <div style={{ marginBottom: '4px', fontFamily: 'monospace', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+              SKU: {modal.product.sku}
             </div>
-            <div>
+            <div style={{ fontVariantNumeric: 'tabular-nums' }}>
               <strong>Stock actual en depósito:</strong>{' '}
               <span style={{ fontWeight: 700 }}>{modal.product.stock} u.</span>
             </div>
           </div>
 
-          {/* Cantidad a Ajustar */}
           <div className="form-group">
             <label>Cantidad a Sumar o Restar</label>
             <input
@@ -74,7 +78,6 @@ export default function StockAdjustModal({
             </span>
           </div>
 
-          {/* Lote */}
           <div className="form-group">
             <label>Lote del Producto</label>
             <select
@@ -91,19 +94,25 @@ export default function StockAdjustModal({
               style={{ borderRadius: '8px' }}
             >
               <option value="">Sin lote (Stock Genérico / General)</option>
-              {(modal.product.lots || []).map((lot: any) => (
-                <option key={lot.id} value={lot.lotNumber}>
-                  Lote: {lot.lotNumber} (Stock: {lot.stock} u. - Vence:{' '}
-                  {new Date(lot.expirationDate).toLocaleDateString('es-AR', { timeZone: 'UTC' })})
-                </option>
-              ))}
+              {(modal.product.lots || []).map((lot: any) => {
+                const cleanLot = extractCleanLotNumber(lot.lotNumber);
+                const locLabel = lot.location && lot.location !== 'S/U' ? ` · ${lot.location}` : '';
+                const expLabel = isSentinelExpiration(lot.expirationDate)
+                  ? 'Sin vencimiento'
+                  : `Vence: ${formatCleanExpirationDate(lot.expirationDate)}`;
+                return (
+                  <option key={lot.id} value={lot.lotNumber}>
+                    Lote: {cleanLot}
+                    {locLabel} ({lot.stock} u. · {expLabel})
+                  </option>
+                );
+              })}
               {Number(modal.quantityChange) > 0 && (
                 <option value="__new__">+ Registrar nuevo lote...</option>
               )}
             </select>
           </div>
 
-          {/* Registro de Nuevo Lote */}
           {modal.isNewLot && (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px', animation: 'fadeIn 0.2s ease-out' }}>
               <div className="form-group" style={{ marginBottom: 0 }}>
@@ -132,7 +141,6 @@ export default function StockAdjustModal({
             </div>
           )}
 
-          {/* Motivo */}
           <div className="form-group">
             <label>Detalle / Motivo del Ajuste</label>
             <select

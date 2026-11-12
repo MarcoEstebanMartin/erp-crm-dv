@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { X } from 'lucide-react';
 import {
   type StockDashboardProps,
   type StockFilterType,
   extractRubroLabel,
+  getDisplayedStock,
   computeStockStats
 } from './stock/types';
 import { computeProductWmsBreakdown } from './deposito/wmsStockBreakdown';
@@ -26,23 +27,28 @@ export default function StockDashboard({ products, onRefresh, onJumpToMapLocatio
   const [selectedRubro, setSelectedRubro] = useState('');
   const [stockFilter, setStockFilter] = useState<StockFilterType>('all');
 
+  const activeProducts = useMemo(
+    () => (Array.isArray(products) ? products.filter((p) => p && p.isActive !== false) : []),
+    [products]
+  );
+
   const movements = useStockMovements();
 
   const adjustments = useStockAdjustments({
-    products,
+    products: activeProducts,
     onRefresh,
     onAfterAdjust: movements.refreshAfterAdjust
   });
 
   const lotManager = useLotManager({
-    products,
+    products: activeProducts,
     onRefresh,
     setLoadingAdjust: adjustments.setLoadingAdjust,
     setErrorMessage: adjustments.setErrorMessage,
     setSuccessMessage: adjustments.setSuccessMessage
   });
 
-  const filteredProducts = products.filter((p) => {
+  const filteredProducts = activeProducts.filter((p) => {
     const searchLower = searchQuery.toLowerCase().trim();
     const matchesSearch =
       !searchLower ||
@@ -52,11 +58,14 @@ export default function StockDashboard({ products, onRefresh, onJumpToMapLocatio
 
     const matchesRubro = !selectedRubro || extractRubroLabel(p) === selectedRubro;
 
+    const displayedStock = getDisplayedStock(p, adjustments.pendingAdjustments);
+    const minStock = Number(p.minStock ?? 0);
+
     let matchesStock = true;
     if (stockFilter === 'low') {
-      matchesStock = p.stock > 0 && p.stock <= p.minStock;
+      matchesStock = displayedStock > 0 && minStock > 0 && displayedStock < minStock;
     } else if (stockFilter === 'out') {
-      matchesStock = p.stock <= 0;
+      matchesStock = displayedStock <= 0;
     } else if (stockFilter === 'located') {
       matchesStock = computeProductWmsBreakdown(p, adjustments.pendingAdjustments).locatedUnits > 0;
     } else if (stockFilter === 'unassigned') {
@@ -75,11 +84,10 @@ export default function StockDashboard({ products, onRefresh, onJumpToMapLocatio
   });
 
   const stats = computeStockStats(filteredProducts, adjustments.pendingAdjustments);
-  const rubrosList = Array.from(new Set(products.map(extractRubroLabel).filter(Boolean))).sort();
+  const rubrosList = Array.from(new Set(activeProducts.map(extractRubroLabel).filter(Boolean))).sort();
 
   return (
-    <div style={{ animation: 'fadeIn 0.3s ease-out' }}>
-      {/* Mensajes de Alerta */}
+    <div style={{ animation: 'fadeIn 0.2s ease-out' }}>
       {adjustments.successMessage && (
         <div
           style={{
@@ -98,8 +106,9 @@ export default function StockDashboard({ products, onRefresh, onJumpToMapLocatio
         >
           <span>{adjustments.successMessage}</span>
           <button
+            type="button"
             onClick={() => adjustments.setSuccessMessage(null)}
-            style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', padding: 0 }}
+            style={{ background: 'none', border: 'none', boxShadow: 'none', color: 'inherit', cursor: 'pointer', padding: 0 }}
           >
             <X size={16} />
           </button>
@@ -124,8 +133,9 @@ export default function StockDashboard({ products, onRefresh, onJumpToMapLocatio
         >
           <span>{adjustments.errorMessage}</span>
           <button
+            type="button"
             onClick={() => adjustments.setErrorMessage(null)}
-            style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', padding: 0 }}
+            style={{ background: 'none', border: 'none', boxShadow: 'none', color: 'inherit', cursor: 'pointer', padding: 0 }}
           >
             <X size={16} />
           </button>
@@ -135,7 +145,7 @@ export default function StockDashboard({ products, onRefresh, onJumpToMapLocatio
       <StockKpiCards
         stats={stats}
         filteredCount={filteredProducts.length}
-        totalCount={products.length}
+        totalCount={activeProducts.length}
       />
 
       <StockFiltersBar

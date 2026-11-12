@@ -1,6 +1,12 @@
 import { History, Layers, MapPin } from 'lucide-react';
 import { extractRubroLabel, getDisplayedStock } from './types';
 import { computeProductWmsBreakdown } from '../deposito/wmsStockBreakdown';
+import {
+  extractCleanLotNumber,
+  formatCleanExpirationDate,
+  isGenericUntrackedLot,
+  isSentinelExpiration
+} from './lotLabel';
 
 interface StockInventoryRowProps {
   product: any;
@@ -13,6 +19,12 @@ interface StockInventoryRowProps {
   onOpenAdjustModal: (product: any) => void;
   onJumpToMapLocation?: (locationCode: string) => void;
 }
+
+const NUMERIC_CELL_STYLE: React.CSSProperties = {
+  padding: '12px 16px',
+  fontVariantNumeric: 'tabular-nums',
+  whiteSpace: 'nowrap'
+};
 
 export default function StockInventoryRow({
   product: p,
@@ -28,57 +40,59 @@ export default function StockInventoryRow({
   const displayedStock = getDisplayedStock(p, pendingAdjustments);
   const wms = computeProductWmsBreakdown(p, pendingAdjustments);
   const isOutOfStock = displayedStock <= 0;
-  const isLowStock = !isOutOfStock && displayedStock <= p.minStock;
+  const minStock = p.minStock ?? 0;
+  const isLowStock = !isOutOfStock && minStock > 0 && displayedStock < minStock;
   const cost = Number(p.costPrice) || 0;
   const listPrice = Number(p.listPrice) || 0;
   const stockValCost = displayedStock * cost;
   const stockValRetail = displayedStock * listPrice;
+
   const activeLots = (p.lots || []).filter((l: any) => {
     const pending = pendingAdjustments[`lot-${l.id}`];
-    const st = pending !== undefined ? pending : l.stock;
-    return st > 0;
+    return (pending !== undefined ? pending : l.stock) > 0;
   });
+  const trackedLots = activeLots.filter((l: any) => !isGenericUntrackedLot(l));
 
   return (
     <tr
-      style={{ borderBottom: '1px solid var(--border-color)', transition: 'background-color 0.2s' }}
+      style={{ borderBottom: '1px solid var(--border-color)', transition: 'background-color 0.15s' }}
       className="hover-bg-muted"
     >
-      <td style={{ padding: '12px 16px', fontFamily: 'monospace', fontWeight: 600, fontSize: '0.88rem', color: 'var(--text-primary)' }}>
+      <td style={{ ...NUMERIC_CELL_STYLE, fontFamily: 'monospace', fontWeight: 600, fontSize: '0.84rem', color: 'var(--text-primary)' }}>
         {p.sku}
       </td>
 
       <td style={{ padding: '12px 16px' }}>
-        <div style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.9rem' }}>{p.name}</div>
+        <div style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.88rem' }}>{p.name}</div>
         <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-          <span style={{ backgroundColor: 'var(--bg-app)', padding: '2px 6px', borderRadius: '4px', color: 'var(--text-secondary)', fontWeight: 500 }}>
+          <span style={{ backgroundColor: 'var(--bg-app)', padding: '1px 6px', borderRadius: '4px', color: 'var(--text-secondary)', fontWeight: 500, border: '1px solid var(--border-color)' }}>
             {extractRubroLabel(p)}
           </span>
           {p.description && <span>• {p.description}</span>}
         </div>
 
         {isQuickInventoryMode && p.lots && p.lots.length > 1 && (
-          <div style={{ marginTop: '8px', padding: '10px', backgroundColor: '#F3F4F6', borderRadius: '6px', fontSize: '0.78rem', border: '1px dashed #D1D5DB' }}>
-            <div style={{ fontWeight: 700, marginBottom: '6px', color: 'var(--text-secondary)' }}>
-              Ajuste de Lotes Coexistentes:
+          <div style={{ marginTop: '8px', padding: '10px', backgroundColor: 'var(--bg-app)', borderRadius: '6px', fontSize: '0.76rem', border: '1px solid var(--border-color)' }}>
+            <div style={{ fontWeight: 600, marginBottom: '6px', color: 'var(--text-secondary)' }}>
+              Conteo por posición / lote:
             </div>
             {p.lots
               .filter((lot: any) => showEmptyLots || lot.stock > 0 || pendingAdjustments[`lot-${lot.id}`] !== undefined)
               .map((lot: any) => {
                 const val = pendingAdjustments[`lot-${lot.id}`] !== undefined ? pendingAdjustments[`lot-${lot.id}`] : lot.stock;
+                const cleanLot = extractCleanLotNumber(lot.lotNumber);
+                const locTag = lot.location && lot.location !== 'S/U' ? ` · ${lot.location}` : '';
                 return (
                   <div key={lot.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px', gap: '10px' }}>
                     <span>
-                      Lote <strong>{lot.lotNumber}</strong>{' '}
-                      <span style={{ color: 'var(--text-muted)' }}>
-                        (Vence: {new Date(lot.expirationDate).toLocaleDateString('es-AR', { timeZone: 'UTC' })})
-                      </span>
+                      <strong>{cleanLot}{locTag}</strong>{' '}
+                      <span style={{ color: 'var(--text-muted)' }}>({formatCleanExpirationDate(lot.expirationDate)})</span>
                     </span>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                       <input
                         type="number"
                         className="input"
-                        style={{ width: '70px', padding: '2px 4px', height: '24px', fontSize: '0.78rem', textAlign: 'center' }}
+                        style={{ width: '70px', padding: '2px 4px', height: '24px', fontSize: '0.78rem', textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}
                         value={val}
                         onChange={(e) => onPendingAdjustmentChange(`lot-${lot.id}`, Number(e.target.value))}
                         min={0}
@@ -92,50 +106,39 @@ export default function StockInventoryRow({
         )}
       </td>
 
-      {/* Lotes y Estado de Ubicación WMS */}
       <td style={{ padding: '12px 16px', maxWidth: '320px' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          {activeLots.length === 0 ? (
-            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>Sin lotes activos</span>
-          ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+          {trackedLots.length > 0 && (
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-              {activeLots.map((l: any) => {
+              {trackedLots.map((l: any) => {
                 const pending = pendingAdjustments[`lot-${l.id}`];
                 const st = pending !== undefined ? pending : l.stock;
-                const isLExp = new Date(l.expirationDate) <= new Date();
+                const hasRealExp = !isSentinelExpiration(l.expirationDate);
+                const expDate = hasRealExp ? new Date(l.expirationDate) : null;
+                const isLExp = Boolean(expDate && expDate <= new Date());
                 const thirtyDays = new Date();
                 thirtyDays.setDate(thirtyDays.getDate() + 30);
-                const isLWarn = !isLExp && new Date(l.expirationDate) <= thirtyDays;
+                const isLWarn = Boolean(expDate && !isLExp && expDate <= thirtyDays);
 
-                let badgeBg = 'var(--bg-app)';
-                let badgeColor = 'var(--text-primary)';
-                let badgeBorder = 'var(--border-color)';
-
-                if (isLExp) {
-                  badgeBg = 'var(--color-danger-bg)';
-                  badgeColor = 'var(--color-danger)';
-                  badgeBorder = 'rgba(239, 68, 68, 0.2)';
-                } else if (isLWarn) {
-                  badgeBg = 'var(--color-warning-bg)';
-                  badgeColor = 'var(--color-warning)';
-                  badgeBorder = 'rgba(245, 158, 11, 0.2)';
-                }
+                const badgeBg = isLExp ? 'var(--color-danger-bg)' : isLWarn ? 'var(--color-warning-bg)' : 'var(--bg-app)';
+                const badgeColor = isLExp ? 'var(--color-danger)' : isLWarn ? 'var(--color-warning)' : 'var(--text-primary)';
+                const badgeBorder = isLExp ? 'rgba(239, 68, 68, 0.25)' : isLWarn ? 'rgba(245, 158, 11, 0.25)' : 'var(--border-color)';
 
                 return (
                   <span
                     key={l.id}
                     className="badge"
-                    style={{ fontSize: '0.7rem', padding: '2px 6px', backgroundColor: badgeBg, color: badgeColor, border: `1px solid ${badgeBorder}`, borderRadius: '4px' }}
-                    title={`Vence: ${new Date(l.expirationDate).toLocaleDateString('es-AR', { timeZone: 'UTC' })}`}
+                    style={{ fontSize: '0.7rem', padding: '2px 7px', backgroundColor: badgeBg, color: badgeColor, border: `1px solid ${badgeBorder}`, borderRadius: '4px', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}
+                    title={hasRealExp ? `Vence: ${formatCleanExpirationDate(l.expirationDate)}` : undefined}
                   >
-                    {l.lotNumber} ({st} u.)
+                    {extractCleanLotNumber(l.lotNumber)} · {st} u.
                   </span>
                 );
               })}
             </div>
           )}
 
-          {displayedStock > 0 && (
+          {displayedStock > 0 ? (
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', alignItems: 'center' }}>
               {wms.slotEntries.map((entry) => (
                 <button
@@ -143,59 +146,51 @@ export default function StockInventoryRow({
                   type="button"
                   onClick={() => onJumpToMapLocation && onJumpToMapLocation(entry.location)}
                   disabled={!onJumpToMapLocation}
-                  title={onJumpToMapLocation ? `Hacé clic para ver ${entry.location} en el Mapa Interactivo` : entry.location}
+                  title={onJumpToMapLocation ? `Ver ${entry.location} en Mapa de Depósito` : entry.location}
                   style={{
                     display: 'inline-flex',
                     alignItems: 'center',
-                    gap: '3px',
-                    fontSize: '0.68rem',
-                    fontWeight: 700,
+                    gap: '4px',
+                    fontSize: '0.7rem',
+                    fontWeight: 600,
                     fontFamily: 'monospace',
+                    fontVariantNumeric: 'tabular-nums',
+                    whiteSpace: 'nowrap',
                     padding: '2px 7px',
                     borderRadius: '4px',
-                    backgroundColor: '#dcfce7',
+                    backgroundColor: '#f0fdf4',
                     color: '#15803d',
-                    border: '1px solid #86efac',
+                    border: '1px solid #bbf7d0',
                     cursor: onJumpToMapLocation ? 'pointer' : 'default'
                   }}
                 >
-                  <MapPin size={11} />
-                  <span>{entry.location} ({entry.units} u.) {onJumpToMapLocation ? '↗' : ''}</span>
+                  <MapPin size={12} />
+                  <span>{entry.location} · {entry.units} u.{onJumpToMapLocation ? ' ↗' : ''}</span>
                 </button>
               ))}
 
               {wms.unassignedUnits > 0 && (
                 <span
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                    fontSize: '0.68rem',
-                    fontWeight: 600,
-                    padding: '2px 7px',
-                    borderRadius: '4px',
-                    backgroundColor: '#f1f5f9',
-                    color: '#475569',
-                    border: '1px solid #cbd5e1'
-                  }}
-                  title="Mercadería contabilizada lista para vender o ubicar opcionalmente en un slot del Mapa"
+                  style={{ display: 'inline-flex', alignItems: 'center', fontSize: '0.7rem', fontWeight: 500, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', padding: '2px 7px', borderRadius: '4px', backgroundColor: 'var(--bg-app)', color: 'var(--text-secondary)', border: '1px solid var(--border-color)' }}
+                  title="Mercadería disponible pendiente de asignar a un estante físico"
                 >
-                  📦 S/U: {wms.unassignedUnits} u.
+                  Sin ubicar · {wms.unassignedUnits} u.
                 </span>
               )}
             </div>
+          ) : (
+            trackedLots.length === 0 && <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>—</span>
           )}
         </div>
       </td>
 
-      {/* Stock Físico */}
-      <td style={{ padding: '12px 16px', textAlign: 'center' }}>
+      <td style={{ ...NUMERIC_CELL_STYLE, textAlign: 'center' }}>
         {isQuickInventoryMode && (!p.lots || p.lots.length <= 1) ? (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
+          <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
             <input
               type="number"
               className="input"
-              style={{ width: '80px', padding: '4px 8px', fontSize: '0.88rem', height: '32px', textAlign: 'center', border: '1px solid var(--accent-color)', borderRadius: '6px' }}
+              style={{ width: '76px', padding: '4px 8px', fontSize: '0.86rem', height: '30px', textAlign: 'center', border: '1px solid var(--border-color)', borderRadius: '6px', fontVariantNumeric: 'tabular-nums' }}
               value={
                 p.lots && p.lots.length === 1
                   ? pendingAdjustments[`lot-${p.lots[0].id}`] !== undefined
@@ -206,50 +201,51 @@ export default function StockInventoryRow({
                   : p.stock
               }
               onChange={(e) => {
-                const val = Number(e.target.value);
                 const key = p.lots && p.lots.length === 1 ? `lot-${p.lots[0].id}` : `prod-${p.id}`;
-                onPendingAdjustmentChange(key, val);
+                onPendingAdjustmentChange(key, Number(e.target.value));
               }}
               min={0}
             />
-            <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>u.</span>
+            <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>u.</span>
           </div>
         ) : (
           <>
-            <span style={{ fontWeight: 700, fontSize: '0.92rem', color: isOutOfStock ? 'var(--color-danger)' : isLowStock ? 'var(--color-warning)' : 'var(--text-primary)' }}>
+            <span style={{ fontWeight: 700, fontSize: '0.88rem', color: isOutOfStock ? 'var(--color-corp-red)' : isLowStock ? 'var(--color-warning)' : 'var(--text-primary)' }}>
               {displayedStock} u.
             </span>
-            {isOutOfStock && <div style={{ fontSize: '0.68rem', color: 'var(--color-danger)', fontWeight: 600, marginTop: '2px' }}>SIN STOCK</div>}
-            {isLowStock && <div style={{ fontSize: '0.68rem', color: 'var(--color-warning)', fontWeight: 600, marginTop: '2px' }}>BAJO MÍN ({p.minStock})</div>}
+            {isOutOfStock && <div style={{ fontSize: '0.68rem', color: 'var(--color-corp-red)', fontWeight: 600, marginTop: '2px' }}>SIN STOCK</div>}
+            {isLowStock && <div style={{ fontSize: '0.68rem', color: 'var(--color-warning)', fontWeight: 600, marginTop: '2px' }}>BAJO MÍN ({minStock})</div>}
           </>
         )}
       </td>
 
-      <td style={{ padding: '12px 16px', textAlign: 'right', color: 'var(--text-secondary)', fontSize: '0.88rem' }}>
+      <td style={{ ...NUMERIC_CELL_STYLE, textAlign: 'right', color: 'var(--text-secondary)', fontSize: '0.86rem' }}>
         ${cost.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
       </td>
 
-      <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 600, color: 'var(--text-secondary)', fontSize: '0.88rem' }}>
+      <td style={{ ...NUMERIC_CELL_STYLE, textAlign: 'right', fontWeight: 600, color: 'var(--text-secondary)', fontSize: '0.86rem' }}>
         ${stockValCost.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
       </td>
 
-      <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.88rem' }}>
+      <td style={{ ...NUMERIC_CELL_STYLE, textAlign: 'right', fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.86rem' }}>
         ${stockValRetail.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
       </td>
 
-      <td style={{ padding: '12px 16px', textAlign: 'center' }}>
-        <div style={{ display: 'inline-flex', gap: '6px' }}>
+      <td style={{ padding: '12px 16px', textAlign: 'center', whiteSpace: 'nowrap' }}>
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', flexWrap: 'nowrap' }}>
           <button
+            type="button"
             className="btn btn-ghost"
-            style={{ padding: '6px', borderRadius: '6px', color: 'var(--text-secondary)' }}
+            style={{ width: '28px', height: '28px', padding: 0, borderRadius: '6px', border: '1px solid var(--border-color)', color: 'var(--text-secondary)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
             onClick={() => onViewHistory(p)}
             title="Ver Kárdex / Movimientos"
           >
-            <History size={15} />
+            <History size={14} />
           </button>
           <button
+            type="button"
             className="btn btn-secondary"
-            style={{ padding: '4px 10px', fontSize: '0.78rem', height: '28px', borderRadius: '6px', display: 'flex', alignItems: 'center', gap: '4px' }}
+            style={{ padding: '0 10px', fontSize: '0.76rem', height: '28px', borderRadius: '6px', display: 'inline-flex', alignItems: 'center', gap: '4px', whiteSpace: 'nowrap' }}
             onClick={() => onOpenLotManager(p)}
             title="Gestionar Lotes (Editar, Eliminar, Transferir)"
           >
@@ -257,8 +253,9 @@ export default function StockInventoryRow({
             <span>Lotes</span>
           </button>
           <button
+            type="button"
             className="btn btn-secondary"
-            style={{ padding: '4px 10px', fontSize: '0.78rem', height: '28px', borderRadius: '6px' }}
+            style={{ padding: '0 10px', fontSize: '0.76rem', height: '28px', borderRadius: '6px', display: 'inline-flex', alignItems: 'center', whiteSpace: 'nowrap' }}
             onClick={() => onOpenAdjustModal(p)}
             title="Ajustar Stock"
           >

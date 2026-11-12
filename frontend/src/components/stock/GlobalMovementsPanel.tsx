@@ -1,4 +1,5 @@
 import { Layers, X } from 'lucide-react';
+import { extractCleanLotNumber } from './lotLabel';
 
 interface GlobalMovementsPanelProps {
   open: boolean;
@@ -86,7 +87,7 @@ export default function GlobalMovementsPanel({
                       </span>
                     </td>
                     <td style={{ padding: '10px 12px', color: 'var(--text-secondary)' }}>
-                      {m.productLot ? m.productLot.lotNumber : 'General'}
+                      {m.productLot ? extractCleanLotNumber(m.productLot.lotNumber) : 'General'}
                     </td>
                     <td style={{ padding: '10px 12px' }}>
                       {m.order ? (

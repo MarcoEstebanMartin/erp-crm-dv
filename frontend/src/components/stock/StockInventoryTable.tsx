@@ -1,3 +1,4 @@
+import React from 'react';
 import StockInventoryRow from './StockInventoryRow';
 
 interface StockInventoryTableProps {
@@ -11,6 +12,16 @@ interface StockInventoryTableProps {
   onOpenAdjustModal: (product: any) => void;
   onJumpToMapLocation?: (locationCode: string) => void;
 }
+
+const TH_BASE_STYLE: React.CSSProperties = {
+  padding: '10px 16px',
+  fontWeight: 600,
+  fontSize: '0.75rem',
+  letterSpacing: '0.04em',
+  textTransform: 'uppercase',
+  color: 'var(--text-secondary)',
+  whiteSpace: 'nowrap'
+};
 
 export default function StockInventoryTable({
   filteredProducts,
@@ -27,30 +38,29 @@ export default function StockInventoryTable({
     <div
       className="table-container"
       style={{
-        borderRadius: '12px',
-        overflow: 'hidden',
+        borderRadius: '10px',
+        overflowX: 'auto',
         border: '1px solid var(--border-color)',
-        boxShadow: '0 4px 12px rgba(0,0,0,0.03)',
         marginBottom: '24px'
       }}
     >
       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-        <thead style={{ backgroundColor: 'var(--bg-muted)' }}>
+        <thead style={{ backgroundColor: 'var(--bg-muted)', borderBottom: '1px solid var(--border-color)' }}>
           <tr>
-            <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>SKU</th>
-            <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>PRODUCTO</th>
-            <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>LOTES Y UBICACIÓN WMS</th>
-            <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 600, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>FÍSICO</th>
-            <th style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 600, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>COSTO UNIT.</th>
-            <th style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 600, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>VALOR COSTO</th>
-            <th style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 600, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>VALOR VENTA</th>
-            <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 600, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>ACCIONES</th>
+            <th style={{ ...TH_BASE_STYLE, textAlign: 'left' }}>SKU</th>
+            <th style={{ ...TH_BASE_STYLE, textAlign: 'left' }}>PRODUCTO</th>
+            <th style={{ ...TH_BASE_STYLE, textAlign: 'left' }}>UBICACIÓN WMS / LOTES</th>
+            <th style={{ ...TH_BASE_STYLE, textAlign: 'center' }}>FÍSICO</th>
+            <th style={{ ...TH_BASE_STYLE, textAlign: 'right' }}>COSTO UNIT.</th>
+            <th style={{ ...TH_BASE_STYLE, textAlign: 'right' }}>VALOR COSTO</th>
+            <th style={{ ...TH_BASE_STYLE, textAlign: 'right' }}>VALOR VENTA</th>
+            <th style={{ ...TH_BASE_STYLE, textAlign: 'center' }}>ACCIONES</th>
           </tr>
         </thead>
         <tbody>
           {filteredProducts.length === 0 ? (
             <tr>
-              <td colSpan={8} style={{ textAlign: 'center', padding: '48px 0', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+              <td colSpan={8} style={{ textAlign: 'center', padding: '48px 0', color: 'var(--text-muted)', fontSize: '0.88rem' }}>
                 No se encontraron productos con los filtros aplicados.
               </td>
             </tr>

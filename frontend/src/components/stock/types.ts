@@ -100,7 +100,7 @@ export const computeStockStats = (
 
       if (stockQty <= 0) {
         acc.outOfStockCount += 1;
-      } else if (stockQty <= minStock) {
+      } else if (minStock > 0 && stockQty < minStock) {
         acc.lowStockCount += 1;
       } else {
         acc.goodStockCount += 1;

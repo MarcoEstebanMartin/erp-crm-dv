@@ -84,8 +84,6 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
           setProductModal={c.setProductModal}
           handleUpdateProductInline={c.handleUpdateProductInline}
           onUploadImage={c.handleUploadImage}
-          onOpenPriceListModal={() => c.setIsPriceListModalOpen(true)}
-          onOpenQuickSearchModal={() => c.setIsQuickSearchModalOpen(true)}
           initialCatalogTab={activeTab === 'stock' ? 'stock' : 'products'}
         />
       )}

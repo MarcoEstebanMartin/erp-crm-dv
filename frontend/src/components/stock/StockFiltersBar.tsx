@@ -1,4 +1,4 @@
-import { Search, History } from 'lucide-react';
+import { Search, History, ClipboardList, X } from 'lucide-react';
 import type { StockFilterType } from './types';
 
 interface StockFiltersBarProps {
@@ -19,8 +19,8 @@ interface StockFiltersBarProps {
 
 const FILTER_OPTIONS: { id: StockFilterType; label: string; activeColor: string }[] = [
   { id: 'all', label: 'Todos', activeColor: 'var(--text-primary)' },
-  { id: 'located', label: '🟢 En Mapa', activeColor: 'var(--color-success)' },
-  { id: 'unassigned', label: '📦 Sin Ubicar (S/U)', activeColor: '#475569' },
+  { id: 'located', label: 'En Mapa', activeColor: 'var(--color-success)' },
+  { id: 'unassigned', label: 'Sin Ubicar (S/U)', activeColor: 'var(--text-primary)' },
   { id: 'low', label: 'Stock Bajo', activeColor: 'var(--color-warning)' },
   { id: 'out', label: 'Agotados', activeColor: 'var(--color-danger)' },
   { id: 'expiring', label: 'Vencimientos', activeColor: 'var(--color-info)' },
@@ -39,146 +39,196 @@ export default function StockFiltersBar({
   showEmptyLots,
   onShowEmptyLotsChange,
   showGlobalMovements,
-  onToggleGlobalMovements
+  onToggleGlobalMovements,
 }: StockFiltersBarProps) {
   return (
     <div
-      className="actions-bar"
       style={{
         display: 'flex',
-        gap: '12px',
-        alignItems: 'center',
-        flexWrap: 'wrap',
-        marginBottom: '20px',
+        flexDirection: 'column',
+        gap: '10px',
+        marginBottom: '16px',
         backgroundColor: 'var(--bg-card)',
-        padding: '16px',
-        borderRadius: '12px',
+        padding: '14px 16px',
+        borderRadius: 'var(--radius-md)',
         border: '1px solid var(--border-color)',
-        boxShadow: 'var(--shadow-sm)'
+        boxShadow: 'var(--shadow-sm)',
       }}
     >
-      <div className="search-input-wrapper" style={{ flex: 1, minWidth: '240px', position: 'relative' }}>
-        <Search
-          size={18}
-          style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }}
-        />
-        <input
-          type="text"
-          className="input"
-          placeholder="Buscar SKU, nombre del producto o código..."
-          value={searchQuery}
-          onChange={(e) => onSearchChange(e.target.value)}
-          style={{ borderRadius: '8px', padding: '10px 14px 10px 42px' }}
-        />
-      </div>
-
-      <select
-        className="select"
-        style={{ minWidth: '175px', borderRadius: '8px' }}
-        value={selectedRubro}
-        onChange={(e) => onRubroChange(e.target.value)}
-      >
-        <option value="">Todos los Rubros</option>
-        {rubrosList.map((r) => (
-          <option key={String(r)} value={String(r)}>
-            {String(r)}
-          </option>
-        ))}
-      </select>
-
+      {/* Fila 1: Buscador elástico + Rubro compacto + Acciones derechas */}
       <div
         style={{
           display: 'flex',
-          flexWrap: 'wrap',
-          border: '1px solid var(--border-color)',
-          borderRadius: '8px',
-          overflow: 'hidden',
-          backgroundColor: 'var(--bg-app)',
-          padding: '2px'
-        }}
-      >
-        {FILTER_OPTIONS.map((opt) => {
-          const active = stockFilter === opt.id;
-          return (
-            <button
-              key={opt.id}
-              type="button"
-              style={{
-                padding: '6px 11px',
-                fontSize: '0.78rem',
-                borderRadius: '6px',
-                border: 'none',
-                backgroundColor: active ? 'var(--bg-card)' : 'transparent',
-                color: active ? opt.activeColor : 'var(--text-secondary)',
-                fontWeight: active ? 600 : 400,
-                boxShadow: active ? 'var(--shadow-sm)' : 'none',
-                cursor: 'pointer'
-              }}
-              onClick={() => onStockFilterChange(opt.id)}
-            >
-              {opt.label}
-            </button>
-          );
-        })}
-      </div>
-
-      <button
-        className="btn"
-        type="button"
-        style={{
-          borderRadius: '8px',
-          padding: '10px 14px',
-          backgroundColor: isQuickInventoryMode ? '#FEF3C7' : 'var(--bg-app)',
-          color: isQuickInventoryMode ? '#B45309' : 'var(--text-primary)',
-          border: isQuickInventoryMode ? '1px solid #F59E0B' : '1px solid var(--border-color)',
-          display: 'flex',
+          gap: '10px',
           alignItems: 'center',
-          gap: '6px',
-          fontWeight: 600,
-          cursor: 'pointer'
+          flexWrap: 'wrap',
         }}
-        onClick={onToggleQuickInventory}
-        title="Modificar múltiples stocks en 1 sola transacción atómica"
       >
-        <span>{isQuickInventoryMode ? '🚫 Cancelar Inventario' : '📝 Modo Inventario Rápido'}</span>
-      </button>
-
-      {isQuickInventoryMode && (
-        <label
+        <div
           style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            fontSize: '0.8rem',
-            color: 'var(--text-secondary)',
-            cursor: 'pointer',
-            padding: '0 12px',
-            height: '38px',
-            backgroundColor: 'var(--bg-muted)',
-            borderRadius: '8px',
-            border: '1px solid var(--border-color)',
-            userSelect: 'none'
+            flex: '1 1 280px',
+            maxWidth: 'none',
+            minWidth: '220px',
+            position: 'relative',
           }}
         >
-          <input
-            type="checkbox"
-            checked={showEmptyLots}
-            onChange={(e) => onShowEmptyLotsChange(e.target.checked)}
-            style={{ cursor: 'pointer' }}
+          <Search
+            size={16}
+            style={{
+              position: 'absolute',
+              left: '12px',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              color: 'var(--text-muted)',
+              pointerEvents: 'none',
+            }}
           />
-          <span>Ver lotes vacíos (0 u.)</span>
-        </label>
-      )}
+          <input
+            type="text"
+            className="input"
+            placeholder="Buscar SKU, nombre del producto o código de barras..."
+            value={searchQuery}
+            onChange={(e) => onSearchChange(e.target.value)}
+            style={{
+              height: '38px',
+              borderRadius: '6px',
+              padding: '8px 12px 8px 36px',
+              fontSize: '0.85rem',
+            }}
+          />
+        </div>
 
-      <button
-        className="btn btn-secondary"
-        style={{ borderRadius: '8px', padding: '10px 14px' }}
-        onClick={onToggleGlobalMovements}
-        title="Ver Auditoría Global de Movimientos"
-      >
-        <History size={16} />
-        <span>{showGlobalMovements ? 'Ocultar Auditoría' : 'Auditoría Global'}</span>
-      </button>
+        <select
+          className="select"
+          style={{
+            width: 'auto',
+            minWidth: '190px',
+            maxWidth: '260px',
+            flex: '0 0 auto',
+            height: '38px',
+            borderRadius: '6px',
+            fontSize: '0.85rem',
+            padding: '0 12px',
+          }}
+          value={selectedRubro}
+          onChange={(e) => onRubroChange(e.target.value)}
+        >
+          <option value="">Todos los Rubros</option>
+          {rubrosList.map((r) => (
+            <option key={String(r)} value={String(r)}>
+              {String(r)}
+            </option>
+          ))}
+        </select>
+
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap', marginLeft: 'auto' }}>
+          <button
+            className={`btn ${isQuickInventoryMode ? 'btn-primary' : 'btn-secondary'}`}
+            type="button"
+            style={{
+              height: '38px',
+              borderRadius: '6px',
+              padding: '0 14px',
+              fontSize: '0.82rem',
+              fontWeight: 600,
+              whiteSpace: 'nowrap',
+            }}
+            onClick={onToggleQuickInventory}
+            title="Modificar múltiples stocks en 1 sola transacción atómica"
+          >
+            {isQuickInventoryMode ? <X size={15} /> : <ClipboardList size={15} />}
+            <span>{isQuickInventoryMode ? 'Cancelar Inventario' : 'Inventario Rápido'}</span>
+          </button>
+
+          {isQuickInventoryMode && (
+            <label
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                fontSize: '0.78rem',
+                color: 'var(--text-secondary)',
+                cursor: 'pointer',
+                padding: '0 10px',
+                height: '38px',
+                backgroundColor: 'var(--bg-app)',
+                borderRadius: '6px',
+                border: '1px solid var(--border-color)',
+                userSelect: 'none',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={showEmptyLots}
+                onChange={(e) => onShowEmptyLotsChange(e.target.checked)}
+                style={{ cursor: 'pointer' }}
+              />
+              <span>Ver lotes vacíos (0 u.)</span>
+            </label>
+          )}
+
+          <button
+            type="button"
+            className="btn btn-secondary"
+            style={{
+              height: '38px',
+              borderRadius: '6px',
+              padding: '0 14px',
+              fontSize: '0.82rem',
+              fontWeight: 500,
+              whiteSpace: 'nowrap',
+            }}
+            onClick={onToggleGlobalMovements}
+            title="Ver Auditoría Global de Movimientos"
+          >
+            <History size={15} />
+            <span>{showGlobalMovements ? 'Ocultar Auditoría' : 'Auditoría Global'}</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Fila 2: Segmented control minimalista */}
+      <div style={{ display: 'flex', alignItems: 'center' }}>
+        <div
+          role="group"
+          aria-label="Filtro de estado de stock"
+          style={{
+            display: 'inline-flex',
+            flexWrap: 'wrap',
+            gap: '2px',
+            border: '1px solid var(--border-color)',
+            borderRadius: '6px',
+            backgroundColor: 'var(--bg-app)',
+            padding: '2px',
+          }}
+        >
+          {FILTER_OPTIONS.map((opt) => {
+            const active = stockFilter === opt.id;
+            return (
+              <button
+                key={opt.id}
+                type="button"
+                style={{
+                  padding: '5px 11px',
+                  fontSize: '0.76rem',
+                  borderRadius: '4px',
+                  border: 'none',
+                  backgroundColor: active ? 'var(--bg-card)' : 'transparent',
+                  color: active ? opt.activeColor : 'var(--text-secondary)',
+                  fontWeight: active ? 600 : 500,
+                  boxShadow: active ? 'var(--shadow-sm)' : 'none',
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                }}
+                onClick={() => onStockFilterChange(opt.id)}
+              >
+                {opt.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 }

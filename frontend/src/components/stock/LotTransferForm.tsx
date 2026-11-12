@@ -1,5 +1,6 @@
 import React from 'react';
 import type { TransferLotData } from './types';
+import { extractCleanLotNumber } from './lotLabel';
 
 interface LotTransferFormProps {
   lots: any[];
@@ -38,11 +39,15 @@ export default function LotTransferForm({
             <option value="">Seleccione origen...</option>
             {lots
               .filter((l: any) => l.stock > 0)
-              .map((l: any) => (
-                <option key={l.id} value={l.id}>
-                  Lote: {l.lotNumber} ({l.stock} u. disponibles)
-                </option>
-              ))}
+              .map((l: any) => {
+                const cleanLot = extractCleanLotNumber(l.lotNumber);
+                const locLabel = l.location && l.location !== 'S/U' ? ` · ${l.location}` : '';
+                return (
+                  <option key={l.id} value={l.id}>
+                    Lote: {cleanLot}{locLabel} ({l.stock} u. disponibles)
+                  </option>
+                );
+              })}
           </select>
         </div>
 
@@ -87,11 +92,15 @@ export default function LotTransferForm({
             <option value="">Seleccione destino...</option>
             {lots
               .filter((l: any) => l.id !== transferData.fromLotId)
-              .map((l: any) => (
-                <option key={l.id} value={l.lotNumber}>
-                  Lote: {l.lotNumber} (Stock: {l.stock} u.)
-                </option>
-              ))}
+              .map((l: any) => {
+                const cleanLot = extractCleanLotNumber(l.lotNumber);
+                const locLabel = l.location && l.location !== 'S/U' ? ` · ${l.location}` : '';
+                return (
+                  <option key={l.id} value={l.lotNumber}>
+                    Lote: {cleanLot}{locLabel} (Stock: {l.stock} u.)
+                  </option>
+                );
+              })}
             <option value="__new__">+ Crear nuevo lote...</option>
           </select>
         </div>

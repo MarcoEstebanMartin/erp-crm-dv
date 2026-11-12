@@ -1,4 +1,5 @@
 import { X } from 'lucide-react';
+import { extractCleanLotNumber } from './lotLabel';
 
 interface ProductKardexDrawerProps {
   open: boolean;
@@ -151,7 +152,7 @@ export default function ProductKardexDrawer({
                     )}
                     {m.productLot && (
                       <div>
-                        <strong>Lote:</strong> {m.productLot.lotNumber}
+                        <strong>Lote:</strong> {extractCleanLotNumber(m.productLot.lotNumber)}
                       </div>
                     )}
                     <div style={{ color: 'var(--text-muted)', fontSize: '0.7rem', marginTop: '2px' }}>
