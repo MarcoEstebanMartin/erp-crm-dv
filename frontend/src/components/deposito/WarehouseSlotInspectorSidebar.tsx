@@ -1,11 +1,11 @@
 import React from 'react';
-import { Layers } from 'lucide-react';
+import { Layers, Lock } from 'lucide-react';
 import type { Product, ProductLot } from '../../types';
-import type { DepositSlot } from './depositomapaData';
 import { SECTORS_INFO } from './depositomapaData';
+import { extractBaseSlotFromLocation, type MergedDepositSlot } from './warehouseLayoutMerger';
 
 interface WarehouseSlotInspectorSidebarProps {
-  selectedSlot: DepositSlot | null;
+  selectedSlot: MergedDepositSlot | null;
   products: Product[];
   onOpen3DModal: () => void;
 }
@@ -21,15 +21,11 @@ export const WarehouseSlotInspectorSidebar: React.FC<WarehouseSlotInspectorSideb
     (products || []).forEach((p) => {
       if (p.lots && p.lots.length > 0) {
         p.lots.forEach((l) => {
-          if (l.stock > 0 && l.location && l.location.startsWith(selectedSlot.code)) {
+          if (l.stock > 0 && extractBaseSlotFromLocation(l.location) === selectedSlot.code) {
             matchingProducts.push({ product: p, lot: l });
           }
         });
-      } else if (
-        p.stock > 0 &&
-        p.defaultLocation &&
-        p.defaultLocation.startsWith(selectedSlot.code)
-      ) {
+      } else if (p.stock > 0 && extractBaseSlotFromLocation(p.defaultLocation) === selectedSlot.code) {
         matchingProducts.push({
           product: p,
           lot: {
@@ -87,71 +83,54 @@ export const WarehouseSlotInspectorSidebar: React.FC<WarehouseSlotInspectorSideb
               marginBottom: '12px',
             }}
           >
-            <div style={{ fontWeight: 800, fontSize: '1.08rem', color: 'var(--text-primary)', marginBottom: '2px' }}>
-              Slot {selectedSlot.code}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2px' }}>
+              <div style={{ fontWeight: 800, fontSize: '1.08rem', color: 'var(--text-primary)' }}>
+                Slot {selectedSlot.code}
+              </div>
+              {selectedSlot.isBlocked && (
+                <span className="badge" style={{ backgroundColor: '#fee2e2', color: '#dc2626', fontSize: '0.68rem', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                  <Lock size={11} /> Bloqueado
+                </span>
+              )}
             </div>
             <div style={{ fontSize: '0.84rem', fontWeight: 700, color: '#2563eb', marginBottom: '4px' }}>
               {selectedSlot.deposito} • {SECTORS_INFO[selectedSlot.chamber]?.label || 'General'}
             </div>
+            {selectedSlot.customLabel && (
+              <div style={{ fontSize: '0.76rem', fontWeight: 700, color: '#0f172a', backgroundColor: '#e2e8f0', display: 'inline-block', padding: '2px 7px', borderRadius: '4px', marginBottom: '4px' }}>
+                🏷️ {selectedSlot.customLabel}
+              </div>
+            )}
             <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
-              Fila {selectedSlot.row}, Columna {selectedSlot.col}. Configuración:{' '}
-              <strong>{selectedSlot.nivel}</strong>.
+              Fila {selectedSlot.row}, Columna {selectedSlot.col}. Pisos: <strong>{selectedSlot.nivel}</strong>.
             </div>
           </div>
 
           {matchingProducts.length === 0 ? (
             <div style={{ padding: '20px 10px', textAlign: 'center', color: 'var(--text-secondary)' }}>
-              <div style={{ fontSize: '2.2rem', marginBottom: '6px' }}>⚪</div>
+              <div style={{ fontSize: '2.2rem', marginBottom: '6px' }}>{selectedSlot.isBlocked ? '🔒' : '⚪'}</div>
               <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-primary)' }}>
-                Slot Vacío / Disponible
+                {selectedSlot.isBlocked ? 'Slot Bloqueado (Mantenimiento)' : 'Slot Vacío / Disponible'}
               </div>
               <p style={{ fontSize: '0.78rem', marginTop: '4px' }}>
-                No hay mercadería asignada en ninguno de sus pisos.
+                {selectedSlot.isBlocked
+                  ? 'No admite nuevas cargas hasta que un Administrador levante el bloqueo.'
+                  : 'No hay mercadería asignada en ninguno de sus pisos.'}
               </p>
             </div>
           ) : (
-            <div
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '8px',
-                marginBottom: '14px',
-                maxHeight: '220px',
-                overflowY: 'auto',
-              }}
-            >
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '14px', maxHeight: '220px', overflowY: 'auto' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '0.76rem', fontWeight: 700, color: 'var(--text-secondary)' }}>
-                  MERCADERÍA EN STOCK
-                </span>
-                <span className="badge badge-success" style={{ fontSize: '0.7rem' }}>
-                  🟢 OCUPADO
-                </span>
+                <span style={{ fontSize: '0.76rem', fontWeight: 700, color: 'var(--text-secondary)' }}>MERCADERÍA UBICADA</span>
+                <span className="badge badge-success" style={{ fontSize: '0.7rem' }}>🟢 OCUPADO</span>
               </div>
 
               {matchingProducts.map(({ product, lot }, idx) => (
-                <div
-                  key={idx}
-                  style={{
-                    border: '1px solid var(--border-color)',
-                    borderRadius: '6px',
-                    padding: '8px 10px',
-                    backgroundColor: '#fafafa',
-                    fontSize: '0.8rem',
-                  }}
-                >
+                <div key={idx} style={{ border: '1px solid var(--border-color)', borderRadius: '6px', padding: '8px 10px', backgroundColor: '#fafafa', fontSize: '0.8rem' }}>
                   <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>
                     [{product.sku}] {product.name}
                   </div>
-                  <div
-                    style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      color: 'var(--text-secondary)',
-                      marginTop: '2px',
-                      fontSize: '0.75rem',
-                    }}
-                  >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)', marginTop: '2px', fontSize: '0.75rem' }}>
                     <span>Lote: {lot.lotNumber}</span>
                     <strong style={{ color: 'var(--color-primary)' }}>{lot.stock} u.</strong>
                   </div>
@@ -181,7 +160,7 @@ export const WarehouseSlotInspectorSidebar: React.FC<WarehouseSlotInspectorSideb
             onClick={onOpen3DModal}
           >
             <Layers size={18} />
-            <span>Inspeccionar / Cargar en 3D (3 Pisos)</span>
+            <span>Inspeccionar / Reubicar en 3D</span>
           </button>
         </div>
       ) : (
@@ -191,7 +170,7 @@ export const WarehouseSlotInspectorSidebar: React.FC<WarehouseSlotInspectorSideb
             Seleccioná un Slot del Mapa
           </div>
           <p style={{ fontSize: '0.78rem', marginTop: '4px' }}>
-            Hacé clic en cualquier celda para inspeccionar sus 3 pisos en vista tridimensional.
+            Hacé clic en cualquier estantería para inspeccionar sus pisos en vista tridimensional.
           </p>
         </div>
       )}

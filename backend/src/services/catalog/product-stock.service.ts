@@ -240,25 +240,156 @@ export class ProductStockSubService {
     }
 
     const orderedItems = [...items].sort((a, b) => a.productId - b.productId);
-    const applied = await prisma.$transaction(async (tx) => {
-      await lockProductsForUpdate(
-        tx,
-        orderedItems.map((i) => i.productId),
-      );
+    const applied = await prisma.$transaction(
+      async (tx) => {
+        const uniqueProductIds = Array.from(new Set(orderedItems.map((i) => i.productId)));
+        await lockProductsForUpdate(tx, uniqueProductIds);
 
-      const results = [];
-      for (const item of orderedItems) {
-        const res = await this.applySingleAdjustmentInTx(tx, item.productId, item, userId);
-        results.push({
-          productId: item.productId,
-          previousStock: res.originalProduct.stock,
-          newStock: res.updatedProduct.stock,
-          movementId: res.movement.id,
-          appliedDelta: res.movement.quantity,
-        });
-      }
-      return results;
-    });
+        // Si el cliente Prisma completo está disponible (producción/desarrollo), precargamos en 2 consultas para evitar N+1
+        const canBulkPreload =
+          typeof (tx.product as any).findMany === 'function' &&
+          typeof (tx.productLot as any).findMany === 'function' &&
+          typeof (tx.stockMovement as any).createMany === 'function';
+
+        if (!canBulkPreload) {
+          const results = [];
+          for (const item of orderedItems) {
+            const res = await this.applySingleAdjustmentInTx(tx, item.productId, item, userId);
+            results.push({
+              productId: item.productId,
+              previousStock: res.originalProduct.stock,
+              newStock: res.updatedProduct.stock,
+              movementId: res.movement.id,
+              appliedDelta: res.movement.quantity,
+            });
+          }
+          return results;
+        }
+
+        const [productsList, lotsList] = await Promise.all([
+          tx.product.findMany({ where: { id: { in: uniqueProductIds } } }),
+          tx.productLot.findMany({
+            where: { productId: { in: uniqueProductIds } },
+            orderBy: { expirationDate: 'asc' },
+          }),
+        ]);
+
+        const productMap = new Map<number, any>(productsList.map((p) => [p.id, { ...p }]));
+        const lotsMap = new Map<number, any[]>();
+        for (const lot of lotsList) {
+          const arr = lotsMap.get(lot.productId) || [];
+          arr.push({ ...lot });
+          lotsMap.set(lot.productId, arr);
+        }
+
+        const results = [];
+        const movementsToCreate: any[] = [];
+
+        for (const item of orderedItems) {
+          const change = Math.trunc(Number(item.quantityChange));
+          if (!Number.isFinite(change) || change === 0) {
+            throw new Error('El ajuste de stock debe ser un número entero distinto de cero.');
+          }
+          const cleanLoc = normalizeWmsLocationCode(item.location);
+          const product = productMap.get(item.productId);
+          if (!product) throw new Error(`Producto #${item.productId} no encontrado.`);
+          if (change < 0 && product.stock <= 0) {
+            throw new Error(
+              `El producto "${product.name || product.id}" ya tiene stock en 0; no hay unidades para descontar.`,
+            );
+          }
+
+          const prodLots = lotsMap.get(product.id) || [];
+          let lot: any = item.lotId ? prodLots.find((l) => l.id === Number(item.lotId)) : null;
+
+          let rawLotNum = item.lotNumber?.trim() || '';
+          if (!lot) {
+            if (!rawLotNum || rawLotNum.toUpperCase() === 'S/L') {
+              rawLotNum = cleanLoc !== 'S/U' ? `S/L-${cleanLoc}` : 'S/L';
+            }
+            lot = prodLots.find((l) => l.lotNumber === rawLotNum) || null;
+          }
+
+          if (lot && cleanLoc !== 'S/U' && normalizeWmsLocationCode(lot.location) !== cleanLoc && change > 0) {
+            const locLotNum = `${rawLotNum}@${cleanLoc}`;
+            lot = prodLots.find((l) => l.lotNumber === locLotNum) || null;
+            if (!lot) rawLotNum = locLotNum;
+          }
+
+          if (!lot && change < 0) {
+            lot = prodLots.find((l) => l.stock > 0) || null;
+          }
+
+          const finalTargetLotNum = rawLotNum || (cleanLoc !== 'S/U' ? `S/L-${cleanLoc}` : 'S/L');
+          const finalExpDate = item.expirationDate?.trim()
+            ? new Date(item.expirationDate)
+            : new Date('2036-12-31T00:00:00Z');
+
+          if (!lot) {
+            lot = await tx.productLot.create({
+              data: {
+                productId: product.id,
+                lotNumber: finalTargetLotNum,
+                expirationDate: isNaN(finalExpDate.getTime())
+                  ? new Date('2036-12-31T00:00:00Z')
+                  : finalExpDate,
+                stock: change > 0 ? change : 0,
+                location: cleanLoc,
+              },
+            });
+            prodLots.push(lot);
+            lotsMap.set(product.id, prodLots);
+          } else {
+            const subQty = change < 0 ? Math.min(lot.stock, Math.abs(change)) : 0;
+            const updatedLotStock = change < 0 ? Math.max(0, lot.stock - subQty) : lot.stock + change;
+            await tx.productLot.update({
+              where: { id: lot.id },
+              data: {
+                stock: updatedLotStock,
+                location: cleanLoc !== 'S/U' ? cleanLoc : lot.location,
+              },
+            });
+            lot.stock = updatedLotStock;
+          }
+
+          const prevStock = product.stock;
+          const actualChange = change < 0 ? -Math.min(prevStock, Math.abs(change)) : change;
+          const nextStock = Math.max(0, prevStock + actualChange);
+          const appliedDelta = nextStock - prevStock;
+
+          await tx.product.update({
+            where: { id: product.id },
+            data: { stock: nextStock },
+          });
+          product.stock = nextStock;
+
+          const recordedQty = appliedDelta !== 0 ? appliedDelta : actualChange;
+          movementsToCreate.push({
+            productId: product.id,
+            quantity: recordedQty,
+            type: recordedQty > 0 ? 'IN' : 'OUT',
+            reason: item.reason || 'Ajuste rápido de inventario',
+            userId,
+            productLotId: lot.id,
+          });
+
+          results.push({
+            productId: product.id,
+            previousStock: prevStock,
+            newStock: nextStock,
+            movementId: 0,
+            appliedDelta: recordedQty,
+          });
+        }
+
+        if (movementsToCreate.length > 0) {
+          await tx.stockMovement.createMany({ data: movementsToCreate });
+        }
+
+        return results;
+      },
+      { maxWait: 10000, timeout: 30000 },
+    );
 
     await logAudit({
       userId,

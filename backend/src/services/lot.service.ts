@@ -1,7 +1,8 @@
 import prisma from '../utils/prisma';
 import { logAudit } from '../utils/audit';
 import { lockProductsForUpdate } from '../utils/db-locks.util';
-import { normalizeWmsLocationCode } from '../engines/stock.engine';
+import { normalizeWmsLocationCode, parseWmsLocationScope } from '../engines/stock.engine';
+import { validateSlotAllowsStockAssignment } from '../engines/warehouse-layout.engine';
 
 export class LotService {
   /**
@@ -33,6 +34,17 @@ export class LotService {
 
       const normalizedLoc =
         location !== undefined ? normalizeWmsLocationCode(location) : undefined;
+
+      if (normalizedLoc && normalizedLoc !== 'S/U' && typeof (tx as any).warehouseCell?.findUnique === 'function') {
+        const locScope = parseWmsLocationScope(normalizedLoc);
+        const customCell = await tx.warehouseCell.findUnique({
+          where: { code: locScope.baseSlotCode },
+        });
+        const slotCheck = validateSlotAllowsStockAssignment(customCell, normalizedLoc);
+        if (!slotCheck.allowed) {
+          throw new Error(slotCheck.reason || 'El slot destino no admite mercadería.');
+        }
+      }
 
       const updated = await tx.productLot.update({
         where: { id: lotId },

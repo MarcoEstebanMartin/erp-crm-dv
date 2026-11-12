@@ -1,17 +1,19 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import type { Product, ProductLot } from '../../types';
-import type { DepositSlot } from './depositomapaData';
 import { SECTORS_INFO } from './depositomapaData';
-import { X, AlertCircle, ShieldCheck } from 'lucide-react';
+import { X, AlertCircle, ShieldCheck, Lock } from 'lucide-react';
 import { api } from '../../utils/api';
 import { useConfirm } from '../../context/ConfirmContext';
 import { Slot3DRackIsometricView } from './Slot3DRackIsometricView';
 import { Slot3DLoadStockForm } from './Slot3DLoadStockForm';
+import { extractSlotLevels, type MergedDepositSlot } from './warehouseLayoutMerger';
+
+type RackLevel = 'A' | 'B' | 'C' | 'D' | 'E' | 'F';
 
 interface Slot3DInspectorModalProps {
   isOpen: boolean;
   onClose: () => void;
-  slot: DepositSlot | null;
+  slot: MergedDepositSlot | null;
   products: Product[];
   onStockUpdated: () => void;
 }
@@ -23,10 +25,12 @@ export const Slot3DInspectorModal: React.FC<Slot3DInspectorModalProps> = ({
 
   const confirm = useConfirm();
   const chamberInfo = SECTORS_INFO[slot.chamber] || SECTORS_INFO.GENERAL;
-  const supportsLevelB = slot.nivel.includes('B');
-  const supportsLevelC = slot.nivel.includes('C');
+  const supportedLevels = extractSlotLevels(slot.nivel);
+  const supportsLevelB = supportedLevels.includes('B');
+  const supportsLevelC = supportedLevels.includes('C');
+  const isSlotBlocked = Boolean(slot.isBlocked);
 
-  const [activeLevel, setActiveLevel] = useState<'A' | 'B' | 'C'>('A');
+  const [activeLevel, setActiveLevel] = useState<RackLevel>('A');
   const [showLoadForm, setShowLoadForm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -38,17 +42,20 @@ export const Slot3DInspectorModal: React.FC<Slot3DInspectorModalProps> = ({
   const [isNewLot, setIsNewLot] = useState(false);
   const [expirationDate, setExpirationDate] = useState('');
   const [quantity, setQuantity] = useState<number | ''>('');
-  const [reason, setReason] = useState('Carga directa en mapa de depósito');
+  const [reason, setReason] = useState('Ubicación interna en mapa de depósito');
   const [localProducts, setLocalProducts] = useState<Product[]>(products || []);
 
-  React.useEffect(() => { setLocalProducts(products || []); }, [products]);
+  useEffect(() => { setLocalProducts(products || []); }, [products]);
+  useEffect(() => {
+    if (!supportedLevels.includes(activeLevel)) setActiveLevel(supportedLevels[0] || 'A');
+  }, [slot.code, slot.nivel]);
 
   const filteredProducts = (localProducts || [])
     .filter((p) => p.name.toLowerCase().includes(productSearch.toLowerCase()) || p.sku.toLowerCase().includes(productSearch.toLowerCase()) || (p.barcode && p.barcode.includes(productSearch)))
     .slice(0, 8);
   const selectedProduct = (localProducts || []).find((p) => p.id === Number(selectedProductId));
 
-  const getItemsForLevel = (level: 'A' | 'B' | 'C') => {
+  const getItemsForLevel = (level: RackLevel) => {
     const levelCode = `${slot.code}-${level}`;
     const levelItems: { product: Product; lot: ProductLot }[] = [];
     (localProducts || []).forEach((p) => {
@@ -69,24 +76,27 @@ export const Slot3DInspectorModal: React.FC<Slot3DInspectorModalProps> = ({
   const itemsLevelA = getItemsForLevel('A');
   const itemsLevelB = getItemsForLevel('B');
   const itemsLevelC = getItemsForLevel('C');
-  const totalStockInSlot = itemsLevelA.reduce((s, i) => s + i.lot.stock, 0) + itemsLevelB.reduce((s, i) => s + i.lot.stock, 0) + itemsLevelC.reduce((s, i) => s + i.lot.stock, 0);
+  const totalStockInSlot = supportedLevels.reduce(
+    (acc, lvl) => acc + getItemsForLevel(lvl).reduce((s, i) => s + i.lot.stock, 0),
+    0,
+  );
 
   const handleLoadStock = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedProductId) return setErrorMsg('Seleccioná un producto de la lista.');
-    if (!quantity || Number(quantity) <= 0) return setErrorMsg('Ingresá una cantidad mayor a 0.');
+    if (!quantity || Number(quantity) <= 0) return setErrorMsg('Ingresá una cantidad entera mayor a 0.');
     const targetLocation = `${slot.code}-${activeLevel}`;
     try {
       setLoading(true); setErrorMsg(null);
-      await api.assignWmsLocation({ productId: Number(selectedProductId), locationCode: targetLocation, quantity: Number(quantity), lotNumber: lotNumber.trim() || undefined, expirationDate: expirationDate || undefined });
-      setSuccessMsg(`⚡ ¡Mercadería asignada a la posición ${targetLocation} con éxito!`);
+      await api.assignWmsLocation({ productId: Number(selectedProductId), locationCode: targetLocation, quantity: Number(quantity), lotNumber: lotNumber.trim() || undefined, expirationDate: expirationDate || undefined, reason });
+      setSuccessMsg(`⚡ Mercadería ubicada en ${targetLocation} (stock comercial conservado sin descalces).`);
       setShowLoadForm(false); setSelectedProductId(''); setQuantity(''); setLotNumber('');
       onStockUpdated();
       setTimeout(() => setSuccessMsg(null), 4000);
-    } catch (err: any) { setErrorMsg(err.message || 'Error al guardar la mercadería en el slot.'); } finally { setLoading(false); }
+    } catch (err: any) { setErrorMsg(err.message || 'Error al ubicar la mercadería en el slot.'); } finally { setLoading(false); }
   };
 
-  const handleMoveLot = async (lot: ProductLot, newLevel: 'A' | 'B' | 'C') => {
+  const handleMoveLot = async (lot: ProductLot, newLevel: RackLevel) => {
     const newLocation = `${slot.code}-${newLevel}`;
     try {
       setLoading(true); setErrorMsg(null);
@@ -103,12 +113,7 @@ export const Slot3DInspectorModal: React.FC<Slot3DInspectorModalProps> = ({
     const currentLevelCode = lot.location && lot.location !== 'S/U' ? lot.location : `${slot.code}-${activeLevel}`;
     try {
       setLoading(true); setErrorMsg(null);
-      await api.clearWmsLocation({
-        locationCode: currentLevelCode,
-        productId: product.id,
-        lotId: lot.id > 0 ? lot.id : undefined,
-        mode: 'UNASSIGN',
-      });
+      await api.clearWmsLocation({ locationCode: currentLevelCode, productId: product.id, lotId: lot.id > 0 ? lot.id : undefined, mode: 'UNASSIGN' });
       setLocalProducts((prev) => prev.map((p) => p.id !== product.id ? p : {
         ...p,
         defaultLocation: p.defaultLocation && p.defaultLocation.toUpperCase().startsWith(slot.code.toUpperCase()) ? null : p.defaultLocation,
@@ -121,7 +126,7 @@ export const Slot3DInspectorModal: React.FC<Slot3DInspectorModalProps> = ({
   };
 
   const handleVacateEntireSlot = async () => {
-    const isConfirmed = await confirm({ title: 'Liberar Slot Completo a Sin Ubicar (S/U)', message: `¿Confirmás liberar todos los pisos (A, B, C) del slot ${slot.code}? Toda la mercadería pasará a Sin Ubicar (S/U) sin perder ni una sola unidad de stock.`, type: 'danger', confirmText: 'Sí, Liberar Slot Completo', cancelText: 'Cancelar' });
+    const isConfirmed = await confirm({ title: 'Liberar Slot Completo a Sin Ubicar (S/U)', message: `¿Confirmás liberar todos los pisos del slot ${slot.code}? Toda la mercadería pasará a Sin Ubicar (S/U) sin perder ni una sola unidad de stock.`, type: 'danger', confirmText: 'Sí, Liberar Slot Completo', cancelText: 'Cancelar' });
     if (!isConfirmed) return;
     try {
       setLoading(true); setErrorMsg(null);
@@ -133,6 +138,7 @@ export const Slot3DInspectorModal: React.FC<Slot3DInspectorModalProps> = ({
   };
 
   const currentItems = getItemsForLevel(activeLevel);
+  const rack3DLevel: 'A' | 'B' | 'C' = activeLevel === 'B' || activeLevel === 'C' ? activeLevel : 'A';
 
   return (
     <div className="wms-modal-backdrop" onClick={onClose}>
@@ -143,14 +149,15 @@ export const Slot3DInspectorModal: React.FC<Slot3DInspectorModalProps> = ({
               {chamberInfo.icon}
             </div>
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                 <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)' }}>Slot {slot.code}</h3>
                 <span className="badge badge-success" style={{ fontSize: '0.72rem', padding: '3px 8px' }}>
-                  {totalStockInSlot > 0 ? `🟢 ${totalStockInSlot} u. en Stock` : '⚪ Vacío / Libre'}
+                  {totalStockInSlot > 0 ? `🟢 ${totalStockInSlot} u. Ubicadas` : '⚪ Vacío / Libre'}
                 </span>
+                {slot.customLabel && <span className="badge badge-secondary" style={{ fontSize: '0.7rem' }}>🏷️ {slot.customLabel}</span>}
               </div>
               <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                {slot.deposito} • {chamberInfo.label} • Nivel Físico: <strong>{slot.nivel}</strong>
+                {slot.deposito} • {chamberInfo.label} • Pisos Habilitados: <strong>{slot.nivel}</strong>
               </p>
             </div>
           </div>
@@ -158,29 +165,35 @@ export const Slot3DInspectorModal: React.FC<Slot3DInspectorModalProps> = ({
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             {totalStockInSlot > 0 && (
               <button type="button" className="btn btn-sm" style={{ backgroundColor: '#fee2e2', color: '#dc2626', border: '1px solid #fca5a5', fontWeight: 700, fontSize: '0.78rem', padding: '6px 12px', borderRadius: '6px' }} onClick={handleVacateEntireSlot} disabled={loading}>
-                🧹 Vaciar Slot Completo
+                🧹 Liberar Slot a S/U
               </button>
             )}
             <button type="button" className="wms-close-btn" onClick={onClose} aria-label="Cerrar modal"><X size={20} /></button>
           </div>
         </div>
 
+        {isSlotBlocked && (
+          <div className="alert alert-danger" style={{ margin: '12px 18px 0 18px', padding: '9px 14px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Lock size={15} />
+            <span>Este slot está bloqueado temporalmente por mantenimiento. Podés liberar su mercadería a S/U, pero no admite nuevas cargas.</span>
+          </div>
+        )}
         {errorMsg && <div className="alert alert-danger" style={{ margin: '12px 18px 0 18px', padding: '10px 14px', fontSize: '0.82rem', display: 'flex', alignItems: 'center', gap: '8px' }}><AlertCircle size={16} /><span>{errorMsg}</span></div>}
         {successMsg && <div className="alert alert-success" style={{ margin: '12px 18px 0 18px', padding: '10px 14px', fontSize: '0.82rem' }}>{successMsg}</div>}
 
         <div className="wms-modal-body">
-          <Slot3DRackIsometricView activeLevel={activeLevel} setActiveLevel={setActiveLevel} supportsLevelB={supportsLevelB} supportsLevelC={supportsLevelC} itemsLevelA={itemsLevelA} itemsLevelB={itemsLevelB} itemsLevelC={itemsLevelC} />
+          <Slot3DRackIsometricView activeLevel={rack3DLevel} setActiveLevel={(lvl) => { setActiveLevel(lvl); setShowLoadForm(false); }} supportsLevelB={supportsLevelB} supportsLevelC={supportsLevelC} itemsLevelA={itemsLevelA} itemsLevelB={itemsLevelB} itemsLevelC={itemsLevelC} />
 
           <div className="wms-shelf-detail-container">
-            <div style={{ display: 'flex', borderBottom: '1px solid var(--border-color)', marginBottom: '14px', gap: '6px', alignItems: 'center' }}>
-              {(['A', ...(supportsLevelB ? ['B'] : []), ...(supportsLevelC ? ['C'] : [])] as ('A' | 'B' | 'C')[]).map((lvl) => (
-                <button key={lvl} type="button" className={`btn btn-sm ${activeLevel === lvl ? 'btn-primary' : 'btn-ghost'}`} onClick={() => { setActiveLevel(lvl); setShowLoadForm(false); }} style={{ fontSize: '0.8rem', padding: '6px 14px', fontWeight: 700, borderRadius: '6px' }}>
-                  Piso {lvl === 'A' ? '1 (Nivel A)' : lvl === 'B' ? '2 (Nivel B)' : '3 (Nivel C)'}
+            <div style={{ display: 'flex', borderBottom: '1px solid var(--border-color)', marginBottom: '14px', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
+              {supportedLevels.map((lvl, idx) => (
+                <button key={lvl} type="button" className={`btn btn-sm ${activeLevel === lvl ? 'btn-primary' : 'btn-ghost'}`} onClick={() => { setActiveLevel(lvl); setShowLoadForm(false); }} style={{ fontSize: '0.78rem', padding: '6px 12px', fontWeight: 700, borderRadius: '6px' }}>
+                  Piso {idx + 1} (Nivel {lvl})
                 </button>
               ))}
             </div>
 
-            {showLoadForm ? (
+            {showLoadForm && !isSlotBlocked ? (
               <Slot3DLoadStockForm
                 slot={slot} activeLevel={activeLevel} products={products} filteredProducts={filteredProducts} selectedProduct={selectedProduct}
                 selectedProductId={selectedProductId} setSelectedProductId={setSelectedProductId} productSearch={productSearch} setProductSearch={setProductSearch}
@@ -190,12 +203,12 @@ export const Slot3DInspectorModal: React.FC<Slot3DInspectorModalProps> = ({
             ) : (
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                  <span style={{ fontSize: '0.84rem', fontWeight: 700, color: 'var(--text-primary)' }}>Mercadería en Piso {activeLevel}</span>
+                  <span style={{ fontSize: '0.84rem', fontWeight: 700, color: 'var(--text-primary)' }}>Mercadería en Nivel {activeLevel}</span>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span className="badge badge-secondary" style={{ fontSize: '0.72rem' }}>{currentItems.length} producto(s)</span>
-                    {currentItems.length > 0 && (
+                    <span className="badge badge-secondary" style={{ fontSize: '0.72rem' }}>{currentItems.length} lote(s)</span>
+                    {currentItems.length > 0 && !isSlotBlocked && (
                       <button type="button" className="btn btn-sm btn-primary" style={{ fontSize: '0.76rem', padding: '4px 10px', borderRadius: '6px', fontWeight: 700 }} onClick={() => setShowLoadForm(true)}>
-                        ➕ Agregar Mercadería
+                        ➕ Ubicar Mercadería
                       </button>
                     )}
                   </div>
@@ -203,10 +216,14 @@ export const Slot3DInspectorModal: React.FC<Slot3DInspectorModalProps> = ({
 
                 {currentItems.length === 0 ? (
                   <div style={{ padding: '30px 10px', textAlign: 'center', backgroundColor: '#fafafa', border: '1px dashed var(--border-color)', borderRadius: '8px' }}>
-                    <div style={{ fontSize: '2.2rem', marginBottom: '6px' }}>⚪</div>
-                    <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-primary)' }}>Piso Vacío (Disponible)</div>
-                    <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', margin: '4px 0 14px 0' }}>No hay productos registrados en esta altura de la estantería.</p>
-                    <button type="button" className="btn btn-primary" style={{ fontSize: '0.82rem', padding: '7px 14px', fontWeight: 600 }} onClick={() => setShowLoadForm(true)}>➕ Cargar Mercadería Aquí</button>
+                    <div style={{ fontSize: '2.2rem', marginBottom: '6px' }}>{isSlotBlocked ? '🔒' : '⚪'}</div>
+                    <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-primary)' }}>Piso Vacío</div>
+                    <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', margin: '4px 0 14px 0' }}>No hay unidades ubicadas en el Nivel {activeLevel} de esta estantería.</p>
+                    {!isSlotBlocked && (
+                      <button type="button" className="btn btn-primary" style={{ fontSize: '0.82rem', padding: '7px 14px', fontWeight: 600 }} onClick={() => setShowLoadForm(true)}>
+                        ➕ Ubicar Mercadería Existente Aquí
+                      </button>
+                    )}
                   </div>
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '300px', overflowY: 'auto' }}>
@@ -224,14 +241,18 @@ export const Slot3DInspectorModal: React.FC<Slot3DInspectorModalProps> = ({
                           <div>Venc: <strong>{lot.expirationDate ? new Date(lot.expirationDate).toLocaleDateString('es-AR') : 'S/F'}</strong></div>
                         </div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '6px', paddingTop: '6px', borderTop: '1px solid #f1f5f9' }}>
-                          <div style={{ display: 'flex', gap: '4px', fontSize: '0.74rem', alignItems: 'center' }}>
-                            <span style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>Mover a:</span>
-                            {activeLevel !== 'A' && <button type="button" className="btn btn-ghost btn-sm" onClick={() => handleMoveLot(lot, 'A')} style={{ fontSize: '0.72rem', padding: '2px 6px' }}>Piso 1 (A)</button>}
-                            {supportsLevelB && activeLevel !== 'B' && <button type="button" className="btn btn-ghost btn-sm" onClick={() => handleMoveLot(lot, 'B')} style={{ fontSize: '0.72rem', padding: '2px 6px' }}>Piso 2 (B)</button>}
-                            {supportsLevelC && activeLevel !== 'C' && <button type="button" className="btn btn-ghost btn-sm" onClick={() => handleMoveLot(lot, 'C')} style={{ fontSize: '0.72rem', padding: '2px 6px' }}>Piso 3 (C)</button>}
-                          </div>
-                          <button type="button" className="btn btn-outline btn-sm" onClick={() => handleVacatePosition(product, lot)} style={{ fontSize: '0.76rem', padding: '4px 10px', borderRadius: '6px', color: '#e30613', borderColor: '#fca5a5', fontWeight: 700 }}>
-                            🗑️ Vaciar Posición
+                          {!isSlotBlocked && lot.id > 0 && (
+                            <div style={{ display: 'flex', gap: '4px', fontSize: '0.74rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                              <span style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>Mover a:</span>
+                              {supportedLevels.filter((lvl) => lvl !== activeLevel).map((lvl) => (
+                                <button key={lvl} type="button" className="btn btn-ghost btn-sm" onClick={() => handleMoveLot(lot, lvl)} style={{ fontSize: '0.72rem', padding: '2px 6px' }}>
+                                  Nivel {lvl}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                          <button type="button" className="btn btn-outline btn-sm" onClick={() => handleVacatePosition(product, lot)} style={{ fontSize: '0.76rem', padding: '4px 10px', borderRadius: '6px', color: '#e30613', borderColor: '#fca5a5', fontWeight: 700, marginLeft: 'auto' }}>
+                            ↩️ Liberar a S/U
                           </button>
                         </div>
                       </div>
@@ -245,7 +266,7 @@ export const Slot3DInspectorModal: React.FC<Slot3DInspectorModalProps> = ({
 
         <div className="wms-modal-footer">
           <div style={{ fontSize: '0.76rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <ShieldCheck size={14} color="#22c55e" /><span>Auditoría de Movimientos y Stock 100% Sincronizado</span>
+            <ShieldCheck size={14} color="#22c55e" /><span>Regla Contable Δ Stock = 0: Reubicar o liberar nunca altera el stock comercial</span>
           </div>
           <button type="button" className="btn btn-secondary" onClick={onClose} style={{ fontSize: '0.82rem', padding: '6px 14px' }}>Cerrar Inspector</button>
         </div>

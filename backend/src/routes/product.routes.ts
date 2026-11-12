@@ -30,6 +30,11 @@ import {
   getLivePriceList,
   pullCatalogFromProduction,
 } from '../controllers/catalog-sync.controller';
+import {
+  getWarehouseCells,
+  upsertWarehouseCell,
+  resetWarehouseCell,
+} from '../controllers/warehouse-layout.controller';
 import { authenticateJWT, requireRole } from '../middlewares/auth';
 import { idempotencyGuard } from '../middlewares/idempotency.middleware';
 import { Role } from '@prisma/client';
@@ -49,6 +54,10 @@ import {
   deleteLotSchema,
   transferLotStockSchema,
 } from '../validators/lot.validator';
+import {
+  upsertWarehouseCellSchema,
+  resetWarehouseCellSchema,
+} from '../validators/warehouse-layout.validator';
 import { uploadSingleImage, uploadZipFile } from '../middlewares/upload';
 
 const router = Router();
@@ -59,6 +68,25 @@ router.get('/price-list-catalog', authenticateJWT, getLivePriceList);
 router.get('/stock/movements', authenticateJWT, getGlobalStockMovements);
 router.get('/stock/expiring-lots', authenticateJWT, getExpiringLots);
 router.get('/barcode/:barcode', authenticateJWT, getProductByBarcode);
+
+// Configuración editable y segura del Plano WMS (Lectura: Staff autenticado | Edición: Solo ADMIN)
+router.get('/wms/cells', authenticateJWT, getWarehouseCells);
+router.put(
+  '/wms/cells',
+  authenticateJWT,
+  requireRole([Role.ADMIN]),
+  idempotencyGuard,
+  validateRequest(upsertWarehouseCellSchema),
+  upsertWarehouseCell,
+);
+router.delete(
+  '/wms/cells/:code',
+  authenticateJWT,
+  requireRole([Role.ADMIN]),
+  idempotencyGuard,
+  validateRequest(resetWarehouseCellSchema),
+  resetWarehouseCell,
+);
 
 // Puente Unificado de Catálogo e Imágenes ERP <-> donvenancio.com.ar (Solo ADMIN)
 router.get('/bridge/status', authenticateJWT, requireRole([Role.ADMIN]), getCatalogBridgeStatus);

@@ -308,6 +308,40 @@ export const api = {
     });
   },
 
+  getWarehouseCells: async () => {
+    const res = await request('/products/wms/cells');
+    return res?.cells || [];
+  },
+
+  upsertWarehouseCell: async (data: {
+    depId: 'D1' | 'D2' | 'D3';
+    row: number;
+    col: number;
+    isStorage: boolean;
+    levels?: string;
+    chamber?: string;
+    label?: string | null;
+    fill?: string | null;
+    isBlocked?: boolean;
+    maxUnits?: number | null;
+  }) => {
+    const res = await request('/products/wms/cells', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+    return res?.cell || res;
+  },
+
+  resetWarehouseCell: async (
+    code: string,
+    fallbackBlueprint?: { isStorage: boolean; levels: string }
+  ) => {
+    return request(`/products/wms/cells/${encodeURIComponent(code)}`, {
+      method: 'DELETE',
+      body: JSON.stringify(fallbackBlueprint ? { fallbackBlueprint } : {}),
+    });
+  },
+
 
   updateLot: async (lotId: number, lotData: { lotNumber?: string; expirationDate?: string; location?: string }) => {
     const res = await request(`/products/lots/${lotId}`, {

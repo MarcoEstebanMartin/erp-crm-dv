@@ -4,7 +4,7 @@ import type { DepositSlot } from './depositomapaData';
 
 interface Slot3DLoadStockFormProps {
   slot: DepositSlot;
-  activeLevel: 'A' | 'B' | 'C';
+  activeLevel: 'A' | 'B' | 'C' | 'D' | 'E' | 'F';
   products: Product[];
   filteredProducts: Product[];
   selectedProduct: Product | undefined;
@@ -42,7 +42,7 @@ export const Slot3DLoadStockForm: React.FC<Slot3DLoadStockFormProps> = ({
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #E2E8F0', paddingBottom: '10px' }}>
         <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800, color: '#0F172A', display: 'flex', alignItems: 'center', gap: '6px' }}>
-          📥 Cargar Mercadería en Piso {activeLevel === 'A' ? '1 (Nivel A)' : activeLevel === 'B' ? '2 (Nivel B)' : '3 (Nivel C)'}
+          📥 Ubicar Mercadería en Nivel {activeLevel}
         </h4>
         <span className="badge" style={{ backgroundColor: '#E2E8F0', color: '#475569', fontSize: '0.72rem', fontWeight: 700 }}>
           Slot {slot.code}-{activeLevel}

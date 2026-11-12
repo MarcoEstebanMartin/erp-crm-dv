@@ -78,6 +78,7 @@ export async function runEncryptedDatabaseBackup(
     payrolls,
     crmConversations,
     auditLogs,
+    warehouseCells,
   ] = await Promise.all([
     prisma.user.findMany(),
     prisma.rubro.findMany(),
@@ -100,6 +101,9 @@ export async function runEncryptedDatabaseBackup(
     prisma.payroll.findMany(),
     prisma.crmConversation.findMany({ include: { messages: true } }),
     prisma.auditLog.findMany({ take: 1_000, orderBy: { createdAt: 'desc' } }),
+    typeof (prisma as any).warehouseCell?.findMany === 'function'
+      ? prisma.warehouseCell.findMany()
+      : Promise.resolve([]),
   ]);
 
   const pgDumpSql = tryCapturePgDumpSql(process.env.DATABASE_URL);
@@ -131,6 +135,7 @@ export async function runEncryptedDatabaseBackup(
     payrolls: payrolls.length,
     crmConversations: crmConversations.length,
     auditLogs: auditLogs.length,
+    warehouseCells: warehouseCells.length,
   };
 
   const payloadJson = JSON.stringify({
@@ -163,6 +168,7 @@ export async function runEncryptedDatabaseBackup(
       payrolls,
       crmConversations,
       auditLogs,
+      warehouseCells,
     },
   });
 

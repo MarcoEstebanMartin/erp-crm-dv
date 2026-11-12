@@ -91,6 +91,7 @@ model User {
   crmConversations CrmConversation[] @relation("CrmAssignedUser")
   weeklySchedules  WeeklySchedule[]
   accountLedgerEntries AccountLedger[]
+  warehouseCellsUpdated WarehouseCell[]
 }
 
 model Persona {
@@ -1283,6 +1284,35 @@ model AccountLedger {
   @@index([taxWithholdingId])
   @@index([movementId])
 }
+
+// ==========================================
+// PLANO CONFIGURABLE DE DEPÓSITO (SLOTS WMS)
+// ==========================================
+
+model WarehouseCell {
+  id          Int      @id @default(autoincrement())
+  code        String   @unique
+  depId       String
+  row         Int
+  col         Int
+  isStorage   Boolean  @default(true)
+  levels      String   @default("A")
+  chamber     String   @default("GENERAL")
+  label       String?
+  fill        String?
+  isBlocked   Boolean  @default(false)
+  maxUnits    Int?
+  updatedById Int?
+  updatedBy   User?    @relation(fields: [updatedById], references: [id], onDelete: SetNull)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([depId, row, col])
+  @@index([depId])
+  @@index([isStorage])
+  @@index([chamber])
+}
+
 
 
 
