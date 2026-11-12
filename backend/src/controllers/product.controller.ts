@@ -1,4 +1,5 @@
 import { Response } from 'express';
+import { MovementType } from '@prisma/client';
 import { AuthenticatedRequest } from '../types';
 import { productService } from '../services/product.service';
 import { appCache } from '../utils/cache';
@@ -89,6 +90,24 @@ export async function adjustStock(req: AuthenticatedRequest, res: Response): Pro
   }
 }
 
+export async function adjustStockBatch(req: AuthenticatedRequest, res: Response): Promise<void> {
+  const userId = req.user?.id;
+  if (!userId) {
+    res.status(401).json({ status: 'error', message: 'No autenticado.' });
+    return;
+  }
+  try {
+    const result = await productService.adjustStockBatch(req.body.items, userId);
+    appCache.invalidateProductCatalog();
+    res.status(200).json({ status: 'success', data: result });
+  } catch (error: any) {
+    res.status(400).json({
+      status: 'error',
+      message: error.message || 'Error al procesar el bloque de ajustes de inventario.',
+    });
+  }
+}
+
 export async function getProductByBarcode(req: AuthenticatedRequest, res: Response): Promise<void> {
   try {
     const product = await productService.getProductByBarcode(req.params.barcode as string);
@@ -122,6 +141,7 @@ export async function importPrices(req: AuthenticatedRequest, res: Response): Pr
 export async function bulkUpdatePrices(req: AuthenticatedRequest, res: Response): Promise<void> {
   try {
     const result = await productService.bulkUpdatePrices(req.body, req.user?.id);
+    appCache.invalidateProductCatalog();
     if (result.updatedCount === 0) {
       res
         .status(200)
@@ -142,7 +162,14 @@ export async function bulkUpdatePrices(req: AuthenticatedRequest, res: Response)
 
 export async function getProductMovements(req: AuthenticatedRequest, res: Response): Promise<void> {
   try {
-    const movements = await productService.getProductMovements(Number(req.params.id));
+    const { limit, beforeId, type, startDate, endDate } = req.query;
+    const movements = await productService.getProductMovements(Number(req.params.id), {
+      limit: limit ? Number(limit) : undefined,
+      beforeId: beforeId ? Number(beforeId) : undefined,
+      type: type ? (String(type) as MovementType) : undefined,
+      startDate: startDate ? String(startDate) : undefined,
+      endDate: endDate ? String(endDate) : undefined,
+    });
     res.status(200).json({ status: 'success', data: { movements } });
   } catch {
     res
@@ -152,11 +179,16 @@ export async function getProductMovements(req: AuthenticatedRequest, res: Respon
 }
 
 export async function getGlobalStockMovements(
-  _req: AuthenticatedRequest,
+  req: AuthenticatedRequest,
   res: Response,
 ): Promise<void> {
   try {
-    const movements = await productService.getGlobalStockMovements();
+    const { limit, beforeId, type } = req.query;
+    const movements = await productService.getGlobalStockMovements({
+      limit: limit ? Number(limit) : undefined,
+      beforeId: beforeId ? Number(beforeId) : undefined,
+      type: type ? (String(type) as MovementType) : undefined,
+    });
     res.status(200).json({ status: 'success', data: { movements } });
   } catch {
     res
@@ -187,6 +219,7 @@ export async function uploadProductImage(req: AuthenticatedRequest, res: Respons
       req.file,
       req.user?.id,
     );
+    appCache.invalidateProductCatalog();
     res.status(200).json({ status: 'success', data: { product: updatedProduct } });
   } catch (error: any) {
     const status = error.message === 'Producto no encontrado.' ? 404 : 500;
@@ -211,6 +244,7 @@ export async function importProductsZip(req: AuthenticatedRequest, res: Response
       return;
     }
     const data = await productService.importProductImagesFromZip(req.file.buffer, req.user?.id);
+    appCache.invalidateProductCatalog();
     res.status(200).json({ status: 'success', data });
   } catch (error: any) {
     res.status(400).json({
@@ -240,6 +274,7 @@ export async function reconcileStockDrift(req: AuthenticatedRequest, res: Respon
   }
   try {
     const result = await productService.executeStockReconciliation(userId);
+    appCache.invalidateProductCatalog();
     res.status(200).json({ status: 'success', data: result });
   } catch (error: any) {
     res.status(500).json({
@@ -250,22 +285,43 @@ export async function reconcileStockDrift(req: AuthenticatedRequest, res: Respon
 }
 
 export async function clearWmsLocation(req: AuthenticatedRequest, res: Response): Promise<void> {
-  const userId = req.user?.id || 1;
+  const userId = req.user?.id;
+  if (!userId) {
+    res.status(401).json({ status: 'error', message: 'No autenticado.' });
+    return;
+  }
   try {
-    const result = await productService.clearWmsLocation(req.body.locationCode, userId);
+    const result = await productService.clearWmsLocation(
+      { ...req.body, userRole: req.user?.role },
+      userId,
+    );
     appCache.invalidateProductCatalog();
     res.status(200).json({ status: 'success', data: result });
   } catch (error: any) {
     res
       .status(400)
-      .json({ status: 'error', message: error.message || 'Error al vaciar la ubicación WMS.' });
+      .json({ status: 'error', message: error.message || 'Error al liberar la ubicación WMS.' });
   }
 }
 
 export async function assignWmsLocation(req: AuthenticatedRequest, res: Response): Promise<void> {
-  const userId = req.user?.id || 1;
+  const userId = req.user?.id;
+  if (!userId) {
+    res.status(401).json({ status: 'error', message: 'No autenticado.' });
+    return;
+  }
+  if (req.body?.mode === 'STOCK_IN' && req.user?.role === 'FACTURACION') {
+    res.status(403).json({
+      status: 'error',
+      message: 'Solo Administración o Depósito pueden ingresar stock físico nuevo.',
+    });
+    return;
+  }
   try {
-    const result = await productService.assignWmsLocation(req.body, userId);
+    const result = await productService.assignWmsLocation(
+      { ...req.body, userRole: req.user?.role },
+      userId,
+    );
     appCache.invalidateProductCatalog();
     res.status(200).json({ status: 'success', data: result });
   } catch (error: any) {
@@ -278,6 +334,7 @@ export async function assignWmsLocation(req: AuthenticatedRequest, res: Response
 export async function revertPrices(req: AuthenticatedRequest, res: Response): Promise<void> {
   try {
     const result = await productService.revertPrices(req.user?.id);
+    appCache.invalidateProductCatalog();
     res.status(200).json({ status: 'success', data: result });
   } catch (error: any) {
     res

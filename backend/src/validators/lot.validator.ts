@@ -18,8 +18,12 @@ export const transferLotStockSchema = z.object({
   body: z.object({
     fromLotId: z.number().int().positive('El lote de origen es requerido'),
     toLotNumber: z.string().min(1, 'El código de lote de destino es requerido'),
-    toExpirationDate: z.string().optional(), // Obligatorio si el lote de destino no existe y se debe crear
-    quantity: z.number().positive('La cantidad a transferir debe ser mayor a cero'),
+    toExpirationDate: z.string().optional(),
+    toLocation: z.string().optional(),
+    quantity: z
+      .number()
+      .int('La cantidad a transferir debe ser un número entero')
+      .positive('La cantidad a transferir debe ser mayor a cero'),
   }),
 });
 

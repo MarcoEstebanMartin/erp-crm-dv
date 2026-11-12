@@ -98,33 +98,38 @@ export const Slot3DInspectorModal: React.FC<Slot3DInspectorModalProps> = ({
   };
 
   const handleVacatePosition = async (product: Product, lot: ProductLot) => {
-    const isConfirmed = await confirm({ title: 'Vaciar y Liberar Posición', message: `¿Confirmás vaciar y liberar la posición del producto [${product.sku}] ${product.name}?`, type: 'danger', confirmText: 'Sí, Vaciar Posición', cancelText: 'Cancelar' });
+    const isConfirmed = await confirm({ title: 'Liberar Posición a Sin Ubicar (S/U)', message: `¿Confirmás retirar del estante [${product.sku}] ${product.name}? El stock total se conserva intacto como Sin Ubicar (S/U).`, type: 'danger', confirmText: 'Sí, Liberar Posición', cancelText: 'Cancelar' });
     if (!isConfirmed) return;
     const currentLevelCode = lot.location && lot.location !== 'S/U' ? lot.location : `${slot.code}-${activeLevel}`;
     try {
       setLoading(true); setErrorMsg(null);
-      await api.clearWmsLocation(currentLevelCode);
+      await api.clearWmsLocation({
+        locationCode: currentLevelCode,
+        productId: product.id,
+        lotId: lot.id > 0 ? lot.id : undefined,
+        mode: 'UNASSIGN',
+      });
       setLocalProducts((prev) => prev.map((p) => p.id !== product.id ? p : {
         ...p,
         defaultLocation: p.defaultLocation && p.defaultLocation.toUpperCase().startsWith(slot.code.toUpperCase()) ? null : p.defaultLocation,
-        lots: (p.lots || []).map((l) => l.id === lot.id || l.location === currentLevelCode ? { ...l, stock: 0, location: 'S/U' } : l),
+        lots: (p.lots || []).map((l) => l.id === lot.id ? { ...l, location: 'S/U' } : l),
       }));
-      setSuccessMsg(`⚡ Posición ${currentLevelCode} liberada con éxito.`);
+      setSuccessMsg(`⚡ Posición ${currentLevelCode} liberada (stock resguardado en S/U).`);
       onStockUpdated();
       setTimeout(() => setSuccessMsg(null), 3000);
-    } catch (err: any) { setErrorMsg(err.message || 'Error al vaciar la posición del slot.'); } finally { setLoading(false); }
+    } catch (err: any) { setErrorMsg(err.message || 'Error al liberar la posición del slot.'); } finally { setLoading(false); }
   };
 
   const handleVacateEntireSlot = async () => {
-    const isConfirmed = await confirm({ title: 'Vaciar Slot Completo', message: `¿Confirmás VACIAR COMPLETAMENTE el slot ${slot.code} (todos sus pisos A, B, C)?`, type: 'danger', confirmText: 'Sí, Vaciar Slot Completo', cancelText: 'Cancelar' });
+    const isConfirmed = await confirm({ title: 'Liberar Slot Completo a Sin Ubicar (S/U)', message: `¿Confirmás liberar todos los pisos (A, B, C) del slot ${slot.code}? Toda la mercadería pasará a Sin Ubicar (S/U) sin perder ni una sola unidad de stock.`, type: 'danger', confirmText: 'Sí, Liberar Slot Completo', cancelText: 'Cancelar' });
     if (!isConfirmed) return;
     try {
       setLoading(true); setErrorMsg(null);
-      await api.clearWmsLocation(slot.code);
-      setSuccessMsg(`🧹 Slot ${slot.code} vaciado por completo.`);
+      await api.clearWmsLocation({ locationCode: slot.code, mode: 'UNASSIGN' });
+      setSuccessMsg(`🧹 Slot ${slot.code} liberado por completo (unidades resguardadas en S/U).`);
       onStockUpdated();
       setTimeout(() => setSuccessMsg(null), 3000);
-    } catch (err: any) { setErrorMsg(err.message || 'Error al vaciar el slot completo.'); } finally { setLoading(false); }
+    } catch (err: any) { setErrorMsg(err.message || 'Error al liberar el slot completo.'); } finally { setLoading(false); }
   };
 
   const currentItems = getItemsForLevel(activeLevel);

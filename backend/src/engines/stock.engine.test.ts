@@ -1,11 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import {
   calculateProductStockValuation,
+  doesLotMatchWmsScope,
   evaluateLotFefoStatus,
+  extractBaseLotNumber,
+  planWmsSafeRelocation,
+  resolveTargetLotNumberForLocation,
   verifyStockLedgerInvariant,
 } from './stock.engine';
 
-describe('StockEngine - Valorización Financiera Exacta y FEFO (002-stock-ledger)', () => {
+describe('StockEngine - Valorización Financiera Exacta, FEFO y WMS Seguro', () => {
   it('Valoriza correctamente hormas pesables (0001 Barra Tybo Melincué: 10 hormas x 4.2 kg)', () => {
     const res = calculateProductStockValuation({
       physicalUnits: 10,
@@ -66,5 +70,67 @@ describe('StockEngine - Valorización Financiera Exacta y FEFO (002-stock-ledger
     expect(check.isValid).toBe(true);
     expect(check.lotSum).toBe(20);
     expect(check.ledgerSum).toBe(20);
+  });
+
+  it('Valida alcance exacto de Slots WMS sin falsos positivos por substring (anti-contains)', () => {
+    expect(doesLotMatchWmsScope('D1-R01-C04-A', 'D1-R01-C04')).toBe(true);
+    expect(doesLotMatchWmsScope('D1-R01-C04', 'D1-R01-C04')).toBe(true);
+    expect(doesLotMatchWmsScope('D1-R01-C04-B', 'D1-R01-C04-A')).toBe(false);
+    expect(doesLotMatchWmsScope('D1-R01-C040', 'D1-R01-C04')).toBe(false);
+    expect(doesLotMatchWmsScope('XD1-R01-C04', 'D1-R01-C04')).toBe(false);
+  });
+
+  it('Resuelve sufijos limpios al dividir un mismo lote en múltiples slots sin encadenar @', () => {
+    expect(extractBaseLotNumber('L-2026@D1-R01-C04-A')).toBe('L-2026');
+    expect(extractBaseLotNumber('S/L-D1-R01-C04-A')).toBe('S/L');
+
+    const res = resolveTargetLotNumberForLocation('L-2026@D1-R01-C04-A', 'D1-R01-C08-B', [
+      { id: 10, lotNumber: 'L-2026', location: 'D1-R01-C04-A' },
+    ]);
+    expect(res.targetLotNumber).toBe('L-2026@D1-R01-C08-B');
+    expect(res.existingTargetLotId).toBeNull();
+  });
+
+  it('Planifica reubicación segura priorizando S/U por FEFO y bloquea excesos sobre el stock físico', () => {
+    const plan = planWmsSafeRelocation({
+      targetLocation: 'D1-R01-C07-A',
+      quantity: 25,
+      lots: [
+        {
+          id: 1,
+          lotNumber: 'L-UBICADO',
+          stock: 30,
+          location: 'D1-R01-C01-A',
+          expirationDate: '2026-11-20',
+        },
+        {
+          id: 2,
+          lotNumber: 'L-SU-PROX',
+          stock: 15,
+          location: 'S/U',
+          expirationDate: '2026-12-01',
+        },
+        {
+          id: 3,
+          lotNumber: 'L-SU-LEJANO',
+          stock: 20,
+          location: 'S/U',
+          expirationDate: '2027-04-01',
+        },
+      ],
+    });
+
+    expect(plan.fromUntrackedGap).toBe(0);
+    expect(plan.steps).toHaveLength(2);
+    expect(plan.steps[0]).toMatchObject({ lotId: 2, takeQty: 15, remainingInSource: 0 });
+    expect(plan.steps[1]).toMatchObject({ lotId: 3, takeQty: 10, remainingInSource: 10 });
+
+    expect(() =>
+      planWmsSafeRelocation({
+        targetLocation: 'D1-R01-C07-A',
+        quantity: 80,
+        lots: [{ id: 2, lotNumber: 'L-SU', stock: 15, location: 'S/U', expirationDate: '2026-12-01' }],
+      }),
+    ).toThrow(/No hay suficientes unidades físicas/);
   });
 });

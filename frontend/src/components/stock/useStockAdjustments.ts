@@ -72,6 +72,7 @@ export function useStockAdjustments({
       productId: number;
       quantityChange: number;
       reason: string;
+      lotId?: number;
       lotNumber?: string;
       expirationDate?: string;
       productName: string;
@@ -83,12 +84,13 @@ export function useStockAdjustments({
         for (const p of products) {
           const lot = (p.lots || []).find((l: any) => l.id === lotId);
           if (lot) {
-            const diff = val - lot.stock;
+            const diff = Math.trunc(val) - lot.stock;
             if (diff !== 0) {
               adjustmentsToMake.push({
                 productId: p.id,
                 quantityChange: diff,
                 reason: 'Ajuste rápido de inventario (Lote)',
+                lotId: lot.id,
                 lotNumber: lot.lotNumber,
                 productName: p.name
               });
@@ -100,7 +102,7 @@ export function useStockAdjustments({
         const productId = Number(key.replace('prod-', ''));
         const p = products.find((prod) => prod.id === productId);
         if (p) {
-          const diff = val - p.stock;
+          const diff = Math.trunc(val) - p.stock;
           if (diff !== 0) {
             adjustmentsToMake.push({
               productId: p.id,
@@ -122,17 +124,18 @@ export function useStockAdjustments({
     }
 
     try {
-      for (const adj of adjustmentsToMake) {
-        await api.adjustStock(
-          adj.productId,
-          adj.quantityChange,
-          adj.reason,
-          adj.lotNumber,
-          adj.expirationDate
-        );
-      }
+      await api.adjustStockBatch(
+        adjustmentsToMake.map((adj) => ({
+          productId: adj.productId,
+          quantityChange: adj.quantityChange,
+          reason: adj.reason,
+          lotId: adj.lotId,
+          lotNumber: adj.lotNumber,
+          expirationDate: adj.expirationDate
+        }))
+      );
 
-      setSuccessMessage(`Se aplicaron con éxito ${adjustmentsToMake.length} ajustes de inventario.`);
+      setSuccessMessage(`Se aplicaron con éxito ${adjustmentsToMake.length} ajustes de inventario en una sola transacción.`);
       setPendingAdjustments({});
       setIsQuickInventoryMode(false);
       await onRefresh();

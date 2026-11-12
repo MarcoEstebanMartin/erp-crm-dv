@@ -203,18 +203,19 @@ export class ProductService {
     return updated;
   }
 
-  // Delegación a Submódulos Especializados (< 250 líneas cada uno)
+  // Delegación a Submódulos Especializados (< 300 líneas cada uno)
   calculateSupplierCost = (input: SupplierCostCalculationInput) => productPricingSubService.calculateSupplierCost(input);
   importPrices = (rows: any[], userId?: number) => productPricingSubService.importPrices(rows, userId);
   bulkUpdatePrices = (data: any, userId?: number) => productPricingSubService.bulkUpdatePrices(data, userId);
   revertPrices = (userId?: number) => productPricingSubService.revertPrices(userId);
   adjustStock = (id: number, data: any, userId: number) => productStockSubService.adjustStock(id, data, userId);
-  getProductMovements = (productId: number) => productStockSubService.getProductMovements(productId);
-  getGlobalStockMovements = () => productStockSubService.getGlobalStockMovements();
+  adjustStockBatch = (items: any[], userId: number) => productStockSubService.adjustStockBatch(items, userId);
+  getProductMovements = (productId: number, options?: any) => productStockSubService.getProductMovements(productId, options);
+  getGlobalStockMovements = (options?: any) => productStockSubService.getGlobalStockMovements(options);
   getExpiringLots = () => productStockSubService.getExpiringLots();
   reconcileStockAudit = () => productReconciliationSubService.reconcileStockAudit();
   executeStockReconciliation = (userId: number) => productReconciliationSubService.executeStockReconciliation(userId);
-  clearWmsLocation = (locationCode: string, userId: number) => productWmsSubService.clearWmsLocation(locationCode, userId);
+  clearWmsLocation = (input: any, userId: number) => productWmsSubService.clearWmsLocation(input, userId);
   assignWmsLocation = (data: any, userId: number) => productWmsSubService.assignWmsLocation(data, userId);
   uploadSingleProductImage = (productId: number, file: Express.Multer.File, userId?: number) => productImageSubService.uploadSingleProductImage(productId, file, userId);
   importProductImagesFromZip = (fileBuffer: Buffer, userId?: number) => productImageSubService.importProductImagesFromZip(fileBuffer, userId);

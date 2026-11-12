@@ -219,3 +219,14 @@
   - [x] Desacoplar `HomeTab` en `useAdminController.ts` (`280` l.) para pintar pedidos sin bloquear por reportes/catálogo, unificar `getProducts` + `getRubros` + `getPersonas('provider')` en paralelo (`Promise.all`) y preservar inactivos en `handleOpenEditOrder`.
 - [x] **Paso V3: Caché HTTP inteligente de imágenes de productos en `app.ts` y `product-image-cache.middleware.ts`** ✅ COMPLETADO
   - [x] Implementar `resolveProductImageCacheHeader` y `applyProductImageStaticHeaders` en `product-image-cache.middleware.ts` (`147` l.) y `app.ts` (`168` l.): fotos versionadas (`SKU_epoch.png`) se sirven desde caché de navegador en `0 ms` por `7 días` (`max-age=604800, stale-while-revalidate=86400`, sin riesgo de foto vieja porque cada subida genera nombre nuevo) y fotos legadas por `1 hora` + test de integración HTTP en `railway-unified-stack.test.ts`.
+
+---
+
+## Plan Activo: Blindaje Contable de Stock y Mapa WMS Anti-Error (`Productos y Stock`)
+
+- [x] **Paso W1: Motor Atómico de Stock Concurrente, Inventario Rápido en 1 Transacción y Mapa WMS con Regla `Δ Stock = 0` (`RELOCATE` / `UNASSIGN`)** ✅ COMPLETADO
+  - [x] Crear `db-locks.util.ts` (`lockProductsForUpdate` con orden ascendente anti-deadlock y `SELECT ... FOR UPDATE`) y ampliar `stock.engine.ts` con alcance exacto anti-`contains` (`doesLotMatchWmsScope`), resolución limpia de sufijos `@SLOT` y planificador puro `planWmsSafeRelocation`.
+  - [x] Blindar `product-wms.service.ts`: `assignWmsLocation` opera por defecto en modo `RELOCATE` (`Δ Product.stock = 0`, cero invención de stock) y `STOCK_IN` explícito suma simétricamente en Lote + `Product.stock`; `clearWmsLocation` opera por defecto en modo `UNASSIGN` devolviendo unidades a `'S/U'` sin destruir stock comercial.
+  - [x] Crear endpoint transaccional `POST /api/products/adjust-stock-batch` conectado a `useStockAdjustments.ts`, paginar Kardex (`getProductMovements` / `getGlobalStockMovements`), agregar `idempotencyGuard` + `Zod` + invalidación de caché en `lot.controller.ts` y `product.controller.ts` + suite `wms-stock-hardening.test.ts`.
+- [ ] **Paso W2: Slots de Depósito Editables en Base de Datos (`WarehouseSlot`) con Modo Configuración Seguro (`ADMIN`)**
+- [ ] **Paso W3: Conexión Visual Simple y Anti-Error entre Tabla de Stock (`S/U` vs `Ubicado`) e Inspector 3D del Mapa**

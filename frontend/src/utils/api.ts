@@ -257,14 +257,51 @@ export const api = {
     return res?.updatedProduct || res?.product || res;
   },
 
-  clearWmsLocation: async (locationCode: string) => {
-    return request('/products/wms/clear-location', {
+  adjustStockBatch: async (
+    items: Array<{
+      productId: number;
+      quantityChange: number;
+      reason?: string;
+      lotNumber?: string;
+      expirationDate?: string;
+      location?: string | null;
+      lotId?: number | null;
+    }>
+  ) => {
+    return request('/products/adjust-stock-batch', {
       method: 'POST',
-      body: JSON.stringify({ locationCode })
+      body: JSON.stringify({ items })
     });
   },
 
-  assignWmsLocation: async (data: { productId: number; locationCode: string; quantity: number; lotNumber?: string; expirationDate?: string }) => {
+  clearWmsLocation: async (
+    input:
+      | string
+      | {
+          locationCode: string;
+          productId?: number | null;
+          lotId?: number | null;
+          mode?: 'UNASSIGN' | 'WRITE_OFF';
+          reason?: string;
+        }
+  ) => {
+    const payload = typeof input === 'string' ? { locationCode: input } : input;
+    return request('/products/wms/clear-location', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  },
+
+  assignWmsLocation: async (data: {
+    productId: number;
+    locationCode: string;
+    quantity: number;
+    lotNumber?: string;
+    sourceLotId?: number | null;
+    expirationDate?: string;
+    reason?: string;
+    mode?: 'RELOCATE' | 'STOCK_IN';
+  }) => {
     return request('/products/wms/assign-location', {
       method: 'POST',
       body: JSON.stringify(data)
