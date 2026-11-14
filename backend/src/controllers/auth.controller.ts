@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { Role } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import prisma from '../utils/prisma';
@@ -15,6 +16,7 @@ import {
   extractStaffToken,
   setStaffSessionCookie,
 } from '../utils/cookie-auth.util';
+import { logAudit } from '../utils/audit';
 
 export async function login(req: Request, res: Response): Promise<void> {
   const { username, password } = req.body;
@@ -44,6 +46,18 @@ export async function login(req: Request, res: Response): Promise<void> {
     });
 
     if (!user || !user.isActive || isSystemUsername(user.username)) {
+      if (user && !isSystemUsername(user.username)) {
+        void logAudit({
+          userId: user.id,
+          action: 'LOGIN_FAILED',
+          entityType: 'User',
+          entityId: user.id,
+          status: 'WARNING',
+          errorMessage: 'Intento de ingreso con cuenta desactivada',
+          ipAddress: req.ip || null,
+          newValues: { username: user.username },
+        });
+      }
       res.status(401).json({
         status: 'error',
         message: 'Credenciales inválidas.',
@@ -53,6 +67,16 @@ export async function login(req: Request, res: Response): Promise<void> {
 
     const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
     if (!isPasswordValid) {
+      void logAudit({
+        userId: user.id,
+        action: 'LOGIN_FAILED',
+        entityType: 'User',
+        entityId: user.id,
+        status: 'WARNING',
+        errorMessage: 'Contraseña incorrecta',
+        ipAddress: req.ip || null,
+        newValues: { username: user.username },
+      });
       res.status(401).json({
         status: 'error',
         message: 'Credenciales inválidas.',
@@ -80,6 +104,15 @@ export async function login(req: Request, res: Response): Promise<void> {
       pwdVer,
     });
     setStaffSessionCookie(req, res, token);
+    void logAudit({
+      userId: user.id,
+      action: 'LOGIN',
+      entityType: 'User',
+      entityId: user.id,
+      status: 'SUCCESS',
+      ipAddress: req.ip || null,
+      newValues: { username: user.username, role: user.role },
+    });
     const systemConfig = await getSystemConfigSnapshot();
 
     res.status(200).json({
@@ -167,4 +200,99 @@ export async function logout(req: Request, res: Response): Promise<void> {
     status: 'success',
     message: 'Sesión cerrada correctamente.',
   });
+}
+
+export async function changeOwnPassword(req: AuthenticatedRequest, res: Response): Promise<void> {
+  if (!req.user) {
+    res.status(401).json({ status: 'error', message: 'No autenticado.' });
+    return;
+  }
+  if (req.user.role !== Role.ADMIN) {
+    res.status(403).json({
+      status: 'error',
+      message: 'Solo los administradores pueden cambiar su propia contraseña.',
+    });
+    return;
+  }
+
+  const { currentPassword, newPassword } = req.body as {
+    currentPassword: string;
+    newPassword: string;
+  };
+  const cleanNewPassword = String(newPassword || '').trim();
+
+  if (cleanNewPassword.length < 6) {
+    res.status(400).json({
+      status: 'error',
+      message: 'La nueva contraseña debe tener al menos 6 caracteres.',
+    });
+    return;
+  }
+
+  try {
+    const user = await prisma.user.findUnique({ where: { id: req.user.id } });
+    if (!user || !user.isActive || isSystemUsername(user.username)) {
+      res.status(404).json({
+        status: 'error',
+        message: 'Usuario no encontrado o inactivo.',
+      });
+      return;
+    }
+
+    const matches = await bcrypt.compare(String(currentPassword || ''), user.passwordHash);
+    if (!matches) {
+      res.status(401).json({
+        status: 'error',
+        message: 'La contraseña actual es incorrecta.',
+      });
+      return;
+    }
+
+    const passwordHash = await bcrypt.hash(cleanNewPassword, 10);
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { passwordHash },
+    });
+
+    const pwdVer = computePasswordVersion(passwordHash);
+    const token = jwt.sign(
+      {
+        id: user.id,
+        username: user.username,
+        role: user.role,
+        pwdVer,
+      },
+      env.JWT_SECRET,
+      { expiresIn: '30d' },
+    );
+
+    sessionCache.setStaffSession(user.id, {
+      id: user.id,
+      role: user.role,
+      isActive: true,
+      pwdVer,
+    });
+    setStaffSessionCookie(req, res, token);
+
+    void logAudit({
+      userId: user.id,
+      action: 'CHANGE_OWN_PASSWORD',
+      entityType: 'User',
+      entityId: user.id,
+      status: 'SUCCESS',
+      ipAddress: req.ip || null,
+      newValues: { username: user.username },
+    });
+
+    res.status(200).json({
+      status: 'success',
+      message: 'Contraseña actualizada correctamente. Las sesiones en otros dispositivos fueron cerradas.',
+    });
+  } catch (error: unknown) {
+    console.error('Error al cambiar contraseña propia:', error);
+    res.status(500).json({
+      status: 'error',
+      message: 'Error interno al actualizar la contraseña.',
+    });
+  }
 }

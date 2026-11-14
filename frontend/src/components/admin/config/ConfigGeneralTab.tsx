@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Pencil } from 'lucide-react';
+import { Key, Pencil } from 'lucide-react';
 import { api } from '../../../utils/api';
 import { type CompanyProfile, formatCompanyPhone, getCompanyProfile } from '../../../utils/companyProfile';
+import ChangeOwnPasswordModal from '../../modals/ChangeOwnPasswordModal';
 
 interface ConfigGeneralTabProps {
   setErrorMsg: (msg: string | null) => void;
@@ -63,12 +64,14 @@ const s = {
 };
 
 export default function ConfigGeneralTab({ setErrorMsg, setSuccessMsg }: ConfigGeneralTabProps) {
+  const currentUser = api.getCurrentUser();
   const [company, setCompany] = useState<CompanyProfile>(() => getCompanyProfile());
   const [draft, setDraft] = useState<CompanyProfile>(() => getCompanyProfile());
   const [isEditing, setIsEditing] = useState(false);
   const [savingCompany, setSavingCompany] = useState(false);
   const [ignoreStock, setIgnoreStock] = useState<boolean>(() => Boolean(api.getServerConfig()?.ignoreStock));
   const [savingStock, setSavingStock] = useState(false);
+  const [changePwdOpen, setChangePwdOpen] = useState(false);
   const isEditingRef = useRef(false);
   isEditingRef.current = isEditing;
 
@@ -290,6 +293,32 @@ export default function ConfigGeneralTab({ setErrorMsg, setSuccessMsg }: ConfigG
           </button>
         </div>
       </section>
+
+      <section style={s.card}>
+        <div style={{ ...s.sectionTag, marginBottom: '12px' }}>Seguridad de la Cuenta</div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap' }}>
+          <div>
+            <div style={{ fontSize: '0.9rem', fontWeight: 600, color: '#111827' }}>
+              Contraseña de acceso{currentUser?.username ? ` (${currentUser.username})` : ''}
+            </div>
+            <div style={{ fontSize: '0.81rem', color: '#6B7280', marginTop: '2px' }}>
+              Actualizá tu clave personal. Las sesiones abiertas en otros dispositivos se cerrarán automáticamente.
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setChangePwdOpen(true)}
+            className="btn btn-secondary"
+            style={{ padding: '6px 12px', fontSize: '0.8rem', fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}
+          >
+            <Key size={13} />
+            Cambiar clave
+          </button>
+        </div>
+      </section>
+
+      <ChangeOwnPasswordModal open={changePwdOpen} onClose={() => setChangePwdOpen(false)} />
     </div>
   );
 }

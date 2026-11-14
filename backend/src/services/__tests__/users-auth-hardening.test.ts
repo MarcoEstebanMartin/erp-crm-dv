@@ -5,7 +5,7 @@ import { Role } from '@prisma/client';
 import prisma from '../../utils/prisma';
 import { env } from '../../config/env.config';
 import { authenticateJWT } from '../../middlewares/auth';
-import { login, getMe } from '../../controllers/auth.controller';
+import { login, getMe, changeOwnPassword } from '../../controllers/auth.controller';
 import { adminUsersSubService } from '../admin/admin-users.service';
 import {
   computePasswordVersion,
@@ -340,5 +340,116 @@ describe('Blindaje de Usuarios, Roles y Sesiones — Paso 1', () => {
     const res = await adminUsersSubService.deleteUser('prueba_sin_uso', 1);
     expect(res).toEqual({ success: true, username: 'prueba_sin_uso' });
     expect(deleteSpy).toHaveBeenCalledWith({ where: { id: 91 } });
+  });
+
+  it('Registra auditoría de LOGIN / LOGIN_FAILED y expone lastLoginAt en getUsers', async () => {
+    const passwordHash = await bcrypt.hash('claveValida99', 4);
+    vi.spyOn(prisma.user, 'findFirst').mockResolvedValue({
+      id: 22,
+      username: 'dario',
+      passwordHash,
+      role: Role.FACTURACION,
+      isActive: true,
+    } as any);
+    const auditCreateSpy = vi.spyOn(prisma.auditLog, 'create').mockResolvedValue({ id: 901 } as any);
+
+    // Intento fallido -> LOGIN_FAILED
+    const badRes: any = { status: vi.fn().mockReturnThis(), json: vi.fn(), cookie: vi.fn() };
+    await login({ body: { username: 'dario', password: 'incorrecta' }, secure: false, headers: {}, ip: '192.168.1.50' } as any, badRes);
+    expect(badRes.status).toHaveBeenCalledWith(401);
+    expect(auditCreateSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          userId: 22,
+          action: 'LOGIN_FAILED',
+          status: 'WARNING',
+        }),
+      }),
+    );
+
+    // Intento exitoso -> LOGIN
+    auditCreateSpy.mockClear();
+    const okRes: any = { status: vi.fn().mockReturnThis(), json: vi.fn(), cookie: vi.fn() };
+    await login({ body: { username: 'dario', password: 'claveValida99' }, secure: false, headers: {}, ip: '192.168.1.50' } as any, okRes);
+    expect(okRes.status).toHaveBeenCalledWith(200);
+    expect(auditCreateSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          userId: 22,
+          action: 'LOGIN',
+          status: 'SUCCESS',
+        }),
+      }),
+    );
+
+    // getUsers incluye lastLoginAt
+    const lastDate = new Date('2026-11-14T15:00:00.000Z');
+    vi.spyOn(prisma.user, 'findMany').mockResolvedValue([
+      { id: 22, username: 'dario', role: Role.FACTURACION, isActive: true, createdAt: lastDate },
+      { id: 23, username: 'nuevo', role: Role.DEPOSITO, isActive: true, createdAt: lastDate },
+    ] as any);
+    vi.spyOn(prisma.auditLog, 'groupBy').mockResolvedValue([
+      { userId: 22, _max: { createdAt: lastDate } },
+    ] as any);
+
+    const users = await adminUsersSubService.getUsers();
+    expect(users.find((u) => u.id === 22)?.lastLoginAt).toEqual(lastDate);
+    expect(users.find((u) => u.id === 23)?.lastLoginAt).toBeNull();
+  });
+
+  it('Restringe cambio de contraseña propia a ADMIN, verifica clave actual, mantiene sesión viva y revoca pwdVer anterior', async () => {
+    const oldHash = await bcrypt.hash('claveActual123', 4);
+    const oldPwdVer = computePasswordVersion(oldHash);
+
+    const findUniqueSpy = vi.spyOn(prisma.user, 'findUnique').mockResolvedValue({
+      id: 1,
+      username: 'esteban',
+      passwordHash: oldHash,
+      role: Role.ADMIN,
+      isActive: true,
+    } as any);
+    const updateSpy = vi.spyOn(prisma.user, 'update').mockResolvedValue({ id: 1 } as any);
+    const auditCreateSpy = vi.spyOn(prisma.auditLog, 'create').mockResolvedValue({ id: 902 } as any);
+
+    // Rol no administrador -> 403 sin tocar base de datos
+    const nonAdminRes: any = { status: vi.fn().mockReturnThis(), json: vi.fn(), cookie: vi.fn() };
+    await changeOwnPassword(
+      { user: { id: 30, username: 'agustin', role: Role.FACTURACION }, body: { currentPassword: 'claveActual123', newPassword: 'nuevaClave99' }, secure: false, headers: {} } as any,
+      nonAdminRes,
+    );
+    expect(nonAdminRes.status).toHaveBeenCalledWith(403);
+    expect(findUniqueSpy).not.toHaveBeenCalled();
+    expect(updateSpy).not.toHaveBeenCalled();
+
+    // Contraseña actual incorrecta (ADMIN) -> 401
+    const wrongRes: any = { status: vi.fn().mockReturnThis(), json: vi.fn(), cookie: vi.fn() };
+    await changeOwnPassword(
+      { user: { id: 1, username: 'esteban', role: Role.ADMIN }, body: { currentPassword: 'mal', newPassword: 'nuevaClave99' }, secure: false, headers: {} } as any,
+      wrongRes,
+    );
+    expect(wrongRes.status).toHaveBeenCalledWith(401);
+    expect(updateSpy).not.toHaveBeenCalled();
+
+    // Cambio válido (ADMIN) -> actualiza hash, cookie, sessionCache y registra CHANGE_OWN_PASSWORD
+    const okRes: any = { status: vi.fn().mockReturnThis(), json: vi.fn(), cookie: vi.fn() };
+    await changeOwnPassword(
+      { user: { id: 1, username: 'esteban', role: Role.ADMIN }, body: { currentPassword: 'claveActual123', newPassword: 'nuevaClave99' }, secure: false, headers: {}, ip: '127.0.0.1' } as any,
+      okRes,
+    );
+
+    expect(okRes.status).toHaveBeenCalledWith(200);
+    expect(updateSpy).toHaveBeenCalledTimes(1);
+    const cached = sessionCache.getStaffSession(1);
+    expect(cached?.pwdVer).toBeDefined();
+    expect(cached?.pwdVer).not.toBe(oldPwdVer);
+    expect(auditCreateSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          userId: 1,
+          action: 'CHANGE_OWN_PASSWORD',
+          status: 'SUCCESS',
+        }),
+      }),
+    );
   });
 });

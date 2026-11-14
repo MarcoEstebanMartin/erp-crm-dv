@@ -95,13 +95,33 @@ export class AdminUsersSubService {
   }
 
   /**
-   * Obtener listado de usuarios.
+   * Obtener listado de usuarios con fecha de último acceso registrado.
    */
   async getUsers() {
-    return prisma.user.findMany({
+    const users = await prisma.user.findMany({
       select: USER_PUBLIC_SELECT,
       orderBy: { username: 'asc' },
     });
+
+    const loginLogs =
+      typeof prisma.auditLog?.groupBy === 'function'
+        ? await prisma.auditLog
+            .groupBy({
+              by: ['userId'],
+              where: { action: 'LOGIN', status: 'SUCCESS' },
+              _max: { createdAt: true },
+            })
+            .catch(() => [])
+        : [];
+
+    const lastLoginByUserId = new Map<number, Date | null>(
+      loginLogs.map((entry) => [entry.userId, entry._max.createdAt ?? null]),
+    );
+
+    return users.map((user) => ({
+      ...user,
+      lastLoginAt: lastLoginByUserId.get(user.id) ?? null,
+    }));
   }
 
   /**

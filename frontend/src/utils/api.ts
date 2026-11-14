@@ -139,6 +139,13 @@ export const api = {
     localStorage.removeItem('auth_config');
   },
 
+  changeOwnPassword: async (currentPassword: string, newPassword: string) => {
+    return await request('/auth/change-password', {
+      method: 'POST',
+      body: JSON.stringify({ currentPassword, newPassword }),
+    });
+  },
+
   getCurrentUser: () => {
     const userStr = localStorage.getItem('auth_user');
     return userStr ? JSON.parse(userStr) : null;
