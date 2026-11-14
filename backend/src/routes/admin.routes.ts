@@ -41,8 +41,13 @@ import {
 
 const router = Router();
 
-// Ruta de auditoría de documento (para cualquier usuario autenticado)
-router.get('/audit-logs/document/:entityType/:entityId', authenticateJWT, getDocumentAuditLogs);
+// Ruta de auditoría de documento (ADMIN y FACTURACION)
+router.get(
+  '/audit-logs/document/:entityType/:entityId',
+  authenticateJWT,
+  requireRole([Role.ADMIN, Role.FACTURACION]),
+  getDocumentAuditLogs,
+);
 
 // Todas las rutas siguientes requieren autenticación y rol ADMINISTRADOR
 router.use(authenticateJWT);

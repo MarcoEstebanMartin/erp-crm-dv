@@ -9,6 +9,7 @@ import { FinanzasExpenseModal, FinanzasDrawerInspectModal, FinanzasCentralCloseA
 
 export default function FinanzasDashboard() {
   const confirm = useConfirm();
+  const isAdmin = api.getCurrentUser()?.role === 'ADMIN';
   const [loading, setLoading] = useState(true);
   const [drawers, setDrawers] = useState<any[]>([]);
   const [transactions, setTransactions] = useState<any[]>([]);
@@ -162,9 +163,11 @@ export default function FinanzasDashboard() {
             <div style={{ fontSize: '2.2rem', fontWeight: 'bold', color: '#10b981', fontFamily: 'monospace' }}>${Math.round(cajaGrandeBalance).toLocaleString('es-AR')}</div>
           </div>
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-            <button type="button" className="btn btn-secondary" style={{ backgroundColor: '#334155', borderColor: '#475569', color: 'white', display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '10px 14px' }} onClick={() => { setModalError(null); setCentralCloseRealBalance('0'); setCentralCloseModalOpen(true); }}>
-              <Lock size={15} /> Cerrar Caja Grande
-            </button>
+            {isAdmin && (
+              <button type="button" className="btn btn-secondary" style={{ backgroundColor: '#334155', borderColor: '#475569', color: 'white', display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '10px 14px' }} onClick={() => { setModalError(null); setCentralCloseRealBalance('0'); setCentralCloseModalOpen(true); }}>
+                <Lock size={15} /> Cerrar Caja Grande
+              </button>
+            )}
             <button type="button" className="btn btn-secondary" style={{ backgroundColor: '#334155', borderColor: '#475569', color: 'white', display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '10px 14px' }} onClick={() => setReconModalOpen(true)}>
               <CheckSquare size={15} /> Conciliación Bancaria
             </button>

@@ -64,7 +64,9 @@ export function useAdminController(activeTab: string) {
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   useEffect(() => {
-    if (activeTab === 'reportes' || activeTab === 'reports') setCajasSubTab('reportes');
+    if ((activeTab === 'reportes' || activeTab === 'reports') && api.getCurrentUser()?.role === 'ADMIN') {
+      setCajasSubTab('reportes');
+    }
   }, [activeTab]);
 
   const loadProductsIfNeeded = useCallback(async (force: boolean) => {
@@ -116,6 +118,7 @@ export function useAdminController(activeTab: string) {
         activeTab === 'reports' ||
         (activeTab === 'rendiciones' && cajasSubTab === 'reportes')
       ) {
+        if (api.getCurrentUser()?.role !== 'ADMIN') return;
         const [stats, dataUsers, allOrders] = await Promise.all([
           api.getFinancialReports(),
           api.getUsers(),

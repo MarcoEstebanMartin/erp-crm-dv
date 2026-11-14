@@ -43,10 +43,10 @@ router.get('/:id/ledger', authenticateJWT, getPersonaLedger);
 router.get('/:id/pending-invoices', authenticateJWT, getPersonaPendingInvoices);
 
 
-// Rutas de creación, edición y cobros (Solo ADMIN y VENDEDOR)
-router.post('/', authenticateJWT, requireRole([Role.ADMIN, Role.VENDEDOR]), validateRequest(createPersonaSchema), createPersona);
-router.put('/:id', authenticateJWT, requireRole([Role.ADMIN, Role.VENDEDOR]), validateRequest(updatePersonaSchema), updatePersona);
-router.post('/:id/payments', authenticateJWT, requireRole([Role.ADMIN, Role.VENDEDOR]), validateRequest(recordPersonaPaymentSchema), idempotencyGuard, recordPersonaPayment);
+// Rutas de creación, edición y cobros (ADMIN, FACTURACION y VENDEDOR)
+router.post('/', authenticateJWT, requireRole([Role.ADMIN, Role.FACTURACION, Role.VENDEDOR]), validateRequest(createPersonaSchema), createPersona);
+router.put('/:id', authenticateJWT, requireRole([Role.ADMIN, Role.FACTURACION, Role.VENDEDOR]), validateRequest(updatePersonaSchema), updatePersona);
+router.post('/:id/payments', authenticateJWT, requireRole([Role.ADMIN, Role.FACTURACION, Role.VENDEDOR]), validateRequest(recordPersonaPaymentSchema), idempotencyGuard, recordPersonaPayment);
 router.post('/:id/visit', authenticateJWT, requireRole([Role.ADMIN, Role.VENDEDOR]), validateRequest(recordVisitSchema), recordVisit);
 router.delete('/:id', authenticateJWT, requireRole([Role.ADMIN]), deletePersona);
 

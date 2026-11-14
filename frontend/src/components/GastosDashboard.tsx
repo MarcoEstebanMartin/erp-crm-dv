@@ -27,6 +27,7 @@ interface Expense {
 
 export default function GastosDashboard() {
   const confirm = useConfirm();
+  const isAdmin = api.getCurrentUser()?.role === 'ADMIN';
   // Datos principales
   const [gastos, setGastos] = useState<any[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
@@ -418,14 +419,16 @@ export default function GastosDashboard() {
             <span>Copiar Mes Anterior</span>
           </button>
 
-          <button 
-            className="btn btn-secondary" 
-            onClick={() => setIsImportModalOpen(true)}
-            style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px' }}
-          >
-            <FileSpreadsheet size={16} />
-            <span>Importar Excel</span>
-          </button>
+          {isAdmin && (
+            <button 
+              className="btn btn-secondary" 
+              onClick={() => setIsImportModalOpen(true)}
+              style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px' }}
+            >
+              <FileSpreadsheet size={16} />
+              <span>Importar Excel</span>
+            </button>
+          )}
           
           <button 
             className="btn" 
@@ -660,8 +663,9 @@ export default function GastosDashboard() {
                         {getMethodLabel(e.paymentMethod)}
                       </td>
                       <td style={{ padding: '8px', textAlign: 'center' }}>
-                        <button 
-                          onClick={() => handleDeleteExpense(e.id)}
+                        {isAdmin && (
+                          <button 
+                            onClick={() => handleDeleteExpense(e.id)}
                           style={{
                             background: 'none',
                             border: 'none',
@@ -680,6 +684,7 @@ export default function GastosDashboard() {
                         >
                           <Trash2 size={14} />
                         </button>
+                        )}
                       </td>
                     </tr>
                   ))}

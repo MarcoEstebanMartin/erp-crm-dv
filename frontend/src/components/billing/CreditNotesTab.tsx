@@ -49,6 +49,7 @@ export default function CreditNotesTab({
   viewCreditNoteModal,
   setViewCreditNoteModal
 }: CreditNotesTabProps) {
+  const isAdmin = api.getCurrentUser()?.role === 'ADMIN';
   const confirm = useConfirm();
   const [cnProductSearchQuery, setCnProductSearchQuery] = useState('');
   const [showCNClientDropdown, setShowCNClientDropdown] = useState(false);
@@ -359,7 +360,7 @@ export default function CreditNotesTab({
                         >
                           Ver Detalle
                         </button>
-                        {note.status === 'PENDING_APPROVAL' && (
+                        {note.status === 'PENDING_APPROVAL' && isAdmin && (
                           <>
                             <button 
                               className="btn btn-secondary" 

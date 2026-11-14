@@ -20,11 +20,17 @@ import {
 
 const router = Router();
 
-// --- RUTAS MÓVILES (Vendedores / Repartidores) ---
-router.get('/pending', authenticateJWT, getPendingCollections);
+// --- RUTAS MÓVILES / COBRANZAS (Vendedores, Facturación y Admin) ---
+router.get(
+  '/pending',
+  authenticateJWT,
+  requireRole([Role.ADMIN, Role.FACTURACION, Role.VENDEDOR]),
+  getPendingCollections,
+);
 router.post(
   '/register',
   authenticateJWT,
+  requireRole([Role.ADMIN, Role.FACTURACION, Role.VENDEDOR]),
   validateRequest(registerCollectionSchema),
   idempotencyGuard,
   registerCollection,

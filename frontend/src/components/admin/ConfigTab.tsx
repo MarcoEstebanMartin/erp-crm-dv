@@ -38,13 +38,15 @@ export default function ConfigTab({
   initialTab = 'general'
 }: ConfigTabProps) {
   const confirm = useConfirm();
-  // Tab navigation state
-  const [configTab, setConfigTab] = useState<string>(
-    initialTab === 'rrhh' ? 'personal' : initialTab,
-  );
-
   // Employee Management
   const currentUser = api.getCurrentUser();
+  const isAdmin = currentUser?.role === 'ADMIN';
+
+  // Tab navigation state (FACTURACION solo accede a ARCA y Reglas de Precios)
+  const [configTab, setConfigTab] = useState<string>(() => {
+    if (!isAdmin) return 'arca';
+    return initialTab === 'rrhh' ? 'personal' : initialTab;
+  });
   const [users, setUsers] = useState<any[]>([]);
   const [userModal, setUserModal] = useState<{ open: boolean; isEdit?: boolean; id?: number; username: string; password?: string; role: string }>({
     open: false,
@@ -115,18 +117,18 @@ export default function ConfigTab({
     }
   }, [configTab]);
 
-  // Fetch Employees
+  // Fetch Employees (solo ADMIN)
   useEffect(() => {
-    if (configTab === 'personal') {
+    if (isAdmin && configTab === 'personal') {
       api.getUsers()
         .then(setUsers)
         .catch(() => setUsers([]));
     }
-  }, [configTab]);
+  }, [configTab, isAdmin]);
 
-  // Fetch Audit Logs
+  // Fetch Audit Logs (solo ADMIN)
   useEffect(() => {
-    if (configTab === 'audit') {
+    if (isAdmin && configTab === 'audit') {
       api.getAuditLogs(auditPage, 30)
         .then((res: any) => {
           setAuditLogs(res.logs || []);
@@ -134,18 +136,18 @@ export default function ConfigTab({
         })
         .catch(() => setAuditLogs([]));
     }
-  }, [configTab, auditPage]);
+  }, [configTab, auditPage, isAdmin]);
 
-  // Fetch Perceptions
+  // Fetch Perceptions (solo ADMIN)
   useEffect(() => {
-    if (configTab === 'percepciones') {
+    if (isAdmin && configTab === 'percepciones') {
       api.getPerceptions()
         .then((res: any) => {
           setPerceptions(res.perceptions || []);
         })
         .catch(() => setPerceptions([]));
     }
-  }, [configTab]);
+  }, [configTab, isAdmin]);
 
   // Employee handlers
   const handleUserSubmit = async (e: React.FormEvent) => {
@@ -363,14 +365,16 @@ export default function ConfigTab({
       {/* Sub-tab Navigation */}
       <div style={{ display: 'flex', gap: '8px', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px', marginBottom: '12px', overflowX: 'auto', paddingRight: '4px' }}>
         {[
-          { id: 'general', label: 'General & Empresa', icon: <Building2 size={15} /> },
-          { id: 'personal', label: 'Empleados & Roles', icon: <Users size={15} /> },
-          { id: 'arca', label: 'Cierre Fiscal (ARCA)', icon: <FileText size={15} /> },
-          { id: 'audit', label: 'Auditoría (Logs)', icon: <FileText size={15} /> },
-          { id: 'percepciones', label: 'Impuestos & Percepciones', icon: <Receipt size={15} /> },
-          { id: 'reconcile', label: 'Auditoría de Saldos', icon: <Scale size={15} /> },
-          { id: 'prices', label: 'Reglas de Precios', icon: <Tag size={15} /> }
-        ].map(tab => (
+          { id: 'general', label: 'General & Empresa', icon: <Building2 size={15} />, adminOnly: true },
+          { id: 'personal', label: 'Empleados & Roles', icon: <Users size={15} />, adminOnly: true },
+          { id: 'arca', label: 'Cierre Fiscal (ARCA)', icon: <FileText size={15} />, adminOnly: false },
+          { id: 'audit', label: 'Auditoría (Logs)', icon: <FileText size={15} />, adminOnly: true },
+          { id: 'percepciones', label: 'Impuestos & Percepciones', icon: <Receipt size={15} />, adminOnly: true },
+          { id: 'reconcile', label: 'Auditoría de Saldos', icon: <Scale size={15} />, adminOnly: true },
+          { id: 'prices', label: 'Reglas de Precios', icon: <Tag size={15} />, adminOnly: false }
+        ]
+          .filter(tab => isAdmin || !tab.adminOnly)
+          .map(tab => (
           <button 
             key={tab.id}
             type="button"

@@ -116,29 +116,29 @@ router.get(
   getProductMovements,
 );
 
-// Rutas protegidas para administración de catálogo (Solo ADMIN)
-router.post('/', authenticateJWT, requireRole([Role.ADMIN]), validateRequest(createProductSchema), createProduct);
+// Rutas protegidas para administración de catálogo y listas de precio (ADMIN y FACTURACION)
+router.post('/', authenticateJWT, requireRole([Role.ADMIN, Role.FACTURACION]), validateRequest(createProductSchema), createProduct);
 router.post(
   '/import-prices',
   authenticateJWT,
-  requireRole([Role.ADMIN]),
+  requireRole([Role.ADMIN, Role.FACTURACION]),
   idempotencyGuard,
   validateRequest(importPricesSchema),
   importPrices,
 );
-router.post('/revert-prices', authenticateJWT, requireRole([Role.ADMIN]), idempotencyGuard, revertPrices);
+router.post('/revert-prices', authenticateJWT, requireRole([Role.ADMIN, Role.FACTURACION]), idempotencyGuard, revertPrices);
 router.post(
   '/bulk-update-prices',
   authenticateJWT,
-  requireRole([Role.ADMIN]),
+  requireRole([Role.ADMIN, Role.FACTURACION]),
   idempotencyGuard,
   validateRequest(bulkUpdatePricesSchema),
   bulkUpdatePrices,
 );
-router.put('/:id', authenticateJWT, requireRole([Role.ADMIN]), validateRequest(updateProductSchema), updateProduct);
+router.put('/:id', authenticateJWT, requireRole([Role.ADMIN, Role.FACTURACION]), validateRequest(updateProductSchema), updateProduct);
 
-// Rutas para imágenes de productos (Solo ADMIN)
-router.post('/:id/image', authenticateJWT, requireRole([Role.ADMIN]), uploadSingleImage, uploadProductImage);
+// Rutas para imágenes de productos (ADMIN y FACTURACION para subida individual; ZIP masivo solo ADMIN)
+router.post('/:id/image', authenticateJWT, requireRole([Role.ADMIN, Role.FACTURACION]), uploadSingleImage, uploadProductImage);
 router.post('/import-images-zip', authenticateJWT, requireRole([Role.ADMIN]), uploadZipFile, importProductsZip);
 
 // Ajuste de stock individual y masivo atómico (ADMIN y DEPOSITO + Idempotency-Key)

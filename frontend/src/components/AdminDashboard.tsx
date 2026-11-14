@@ -1,5 +1,6 @@
 import { lazy, Suspense } from 'react';
 import { ShoppingCart, Receipt, DollarSign, FileText, TrendingUp, Warehouse } from 'lucide-react';
+import { api } from '../utils/api';
 import HomeTab from './admin/HomeTab';
 import ClientsTab from './admin/ClientsTab';
 import OrdersTab from './admin/OrdersTab';
@@ -49,6 +50,7 @@ interface AdminDashboardProps {
 
 export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboardProps) {
   const c = useAdminController(activeTab);
+  const isAdmin = api.getCurrentUser()?.role === 'ADMIN';
 
   return (
     <div style={{ width: '100%' }}>
@@ -143,11 +145,13 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           <div style={{ display: 'flex', gap: '8px', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px', marginBottom: '12px', overflowX: 'auto' }}>
             {[
-              { id: 'general', label: 'Finanzas General', icon: <DollarSign size={15} /> },
-              { id: 'rendiciones', label: 'Rendiciones y Arqueos', icon: <Receipt size={15} /> },
-              { id: 'gastos', label: 'Control de Gastos', icon: <DollarSign size={15} /> },
-              { id: 'reportes', label: 'Reportes y Analíticas', icon: <TrendingUp size={15} /> },
-            ].map((tab) => (
+              { id: 'general', label: 'Finanzas General', icon: <DollarSign size={15} />, adminOnly: false },
+              { id: 'rendiciones', label: 'Rendiciones y Arqueos', icon: <Receipt size={15} />, adminOnly: false },
+              { id: 'gastos', label: 'Control de Gastos', icon: <DollarSign size={15} />, adminOnly: false },
+              { id: 'reportes', label: 'Reportes y Analíticas', icon: <TrendingUp size={15} />, adminOnly: true },
+            ]
+              .filter((tab) => isAdmin || !tab.adminOnly)
+              .map((tab) => (
               <button
                 key={tab.id} type="button" className="btn"
                 style={{
@@ -164,7 +168,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
           </div>
 
           <Suspense fallback={<LoadingDashboard />}>
-            {c.cajasSubTab === 'general' ? <FinanzasDashboard /> : c.cajasSubTab === 'rendiciones' ? <RendicionesDashboard /> : c.cajasSubTab === 'gastos' ? <GastosDashboard /> : <UnifiedReportsDashboard orders={c.orders} users={c.users} clients={c.clients} products={c.products} financialReport={c.financialReport} />}
+            {c.cajasSubTab === 'general' ? <FinanzasDashboard /> : c.cajasSubTab === 'rendiciones' ? <RendicionesDashboard /> : c.cajasSubTab === 'gastos' ? <GastosDashboard /> : isAdmin ? <UnifiedReportsDashboard orders={c.orders} users={c.users} clients={c.clients} products={c.products} financialReport={c.financialReport} /> : <FinanzasDashboard />}
           </Suspense>
         </div>
       )}

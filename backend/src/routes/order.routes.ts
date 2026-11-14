@@ -53,14 +53,14 @@ router.get('/:id', authenticateJWT, getOrderById);
 // Crear, facturar y cobrar un pedido directo (ADMIN y FACTURACION)
 router.post('/direct', authenticateJWT, requireRole([Role.ADMIN, Role.FACTURACION]), validateRequest(createDirectInvoiceSchema), idempotencyGuard, createDirectInvoice);
 
-// Carga de pedidos (Solo ADMIN y VENDEDOR)
-router.post('/', authenticateJWT, requireRole([Role.ADMIN, Role.VENDEDOR]), validateRequest(createOrderSchema), idempotencyGuard, createOrder);
+// Carga de pedidos (ADMIN, FACTURACION y VENDEDOR)
+router.post('/', authenticateJWT, requireRole([Role.ADMIN, Role.FACTURACION, Role.VENDEDOR]), validateRequest(createOrderSchema), idempotencyGuard, createOrder);
 
-// Editar pedido PENDING (Solo ADMIN y VENDEDOR)
-router.put('/:id', authenticateJWT, requireRole([Role.ADMIN, Role.VENDEDOR]), validateRequest(updateOrderSchema), updateOrder);
+// Editar pedido PENDING (ADMIN, FACTURACION y VENDEDOR)
+router.put('/:id', authenticateJWT, requireRole([Role.ADMIN, Role.FACTURACION, Role.VENDEDOR]), validateRequest(updateOrderSchema), updateOrder);
 
-// Actualización de estado del pedido (Picking - ADMIN y DEPOSITO)
-router.put('/:id/status', authenticateJWT, requireRole([Role.ADMIN, Role.DEPOSITO]), validateRequest(updateOrderStatusSchema), updateOrderStatus);
+// Actualización de estado del pedido (Picking - ADMIN, FACTURACION y DEPOSITO)
+router.put('/:id/status', authenticateJWT, requireRole([Role.ADMIN, Role.FACTURACION, Role.DEPOSITO]), validateRequest(updateOrderStatusSchema), updateOrderStatus);
 
 // Facturar y cobrar pedido preparado (ADMIN y FACTURACION)
 router.post('/:id/invoice', authenticateJWT, requireRole([Role.ADMIN, Role.FACTURACION]), validateRequest(invoiceOrderSchema), idempotencyGuard, invoiceOrder);
