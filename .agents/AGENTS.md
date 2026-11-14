@@ -30,6 +30,7 @@ Este archivo define las reglas innegociables de comportamiento, arquitectura mod
 - **Uso del Color**: Paleta de tonos grises y oscuros minimalistas. El color corporativo rojo `#E30613` se reserva exclusivamente para CTAs críticos, indicadores de peligro o alertas específicas.
 - **Micro-animaciones y Optimización de Clics**: Transiciones suaves y diseño pensado para que las acciones comunes (buscar con buscador fonético, cambiar de pestaña, pesar en balanza, facturar o cobrar) se realicen en la menor cantidad de pasos posible.
 - **Sin Datos de Relleno**: Prohibido usar placeholders temporales; poblar siempre con datos reales de la distribuidora.
+- **Estándares Web Modernos (`modern-web-guidance`)**: Al iniciar cualquier tarea de interfaz web (HTML, CSS, modales/diálogos, tablas, formularios, accesibilidad o lógica cliente en `frontend/`), consultar primero `npx -y modern-web-guidance@latest search "<query>"` (y `retrieve "<id>"` cuando aplique) para usar primitivas nativas actuales del navegador antes de escribir soluciones manuales, informando su uso al cierre en `### Modern Web Guidance`.
 
 ## 4. Seguridad del Código y Git (Sincronización Continua Multi-PC)
 - **Sincronización al Iniciar Sesión**: Antes de editar cualquier archivo en una nueva jornada, ejecutar `git status -sb` y `git pull --ff-only origin main` para asegurar que la PC actual tenga el último código de GitHub sin pisar cambios de otra máquina.
