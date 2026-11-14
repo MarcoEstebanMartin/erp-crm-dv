@@ -1,12 +1,14 @@
 import React from 'react';
 import { type CartItem, formatMoney } from './portal.types';
 import { portalCartStyles as styles } from './portalCart.styles';
+import type { FrontendCartPromoEvalResult } from '../../../utils/weeklyPromoCartEvaluator';
 
 interface PortalCartDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   clientName: string;
   cart: CartItem[];
+  promoEval?: FrontendCartPromoEvalResult;
   onUpdateQty: (productId: number, qty: number) => void;
   orderNotes: string;
   setOrderNotes: (notes: string) => void;
@@ -22,6 +24,7 @@ export const PortalCartDrawer: React.FC<PortalCartDrawerProps> = ({
   onClose,
   clientName,
   cart,
+  promoEval,
   onUpdateQty,
   orderNotes,
   setOrderNotes,
@@ -50,27 +53,65 @@ export const PortalCartDrawer: React.FC<PortalCartDrawerProps> = ({
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {cart.map((item) => (
-                <div key={item.product.id} style={styles.cartItemRow}>
+              {cart.map((item) => {
+                const evalLine = promoEval?.byProductId?.[item.product.id];
+                const displayUnitPrice = evalLine ? evalLine.effectiveUnitPrice : item.unitPrice;
+                const displaySubtotal = evalLine ? evalLine.lineSubtotal : item.unitPrice * item.quantity;
+                return (
+                  <div key={item.product.id} style={styles.cartItemRow}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: 600, fontSize: '14px', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                        <span>{item.product.name}</span>
+                        {evalLine?.promoApplied && (
+                          <span style={{ fontSize: '11px', fontWeight: 700, backgroundColor: '#ECFDF5', color: '#065F46', border: '1px solid #A7F3D0', borderRadius: '4px', padding: '1px 6px' }}>
+                            {evalLine.appliedPromoName || 'Oferta'}
+                          </span>
+                        )}
+                      </div>
+                      <div style={{ fontSize: '12px', color: '#64748b' }}>
+                        {evalLine?.promoApplied && item.unitPrice > displayUnitPrice && (
+                          <span style={{ textDecoration: 'line-through', marginRight: '6px' }}>{formatMoney(item.unitPrice)}</span>
+                        )}
+                        {formatMoney(displayUnitPrice)} c/u
+                      </div>
+                    </div>
+
+                    <div style={styles.qtyControllerSmall}>
+                      <button onClick={() => onUpdateQty(item.product.id, item.quantity - 1)} style={styles.btnQtySmall}>
+                        -
+                      </button>
+                      <span style={{ fontSize: '13px', fontWeight: 600, color: '#0f172a', width: '28px', textAlign: 'center' }}>
+                        {item.quantity}
+                      </span>
+                      <button onClick={() => onUpdateQty(item.product.id, item.quantity + 1)} style={styles.btnQtySmall}>
+                        +
+                      </button>
+                    </div>
+
+                    <div style={{ minWidth: '80px', textAlign: 'right', fontWeight: 700, color: '#0f172a' }}>
+                      {formatMoney(displaySubtotal)}
+                    </div>
+                  </div>
+                );
+              })}
+
+              {promoEval?.bonusLines?.map((bonus) => (
+                <div
+                  key={`bonus-${bonus.productId}`}
+                  style={{
+                    ...styles.cartItemRow,
+                    backgroundColor: '#ECFDF5',
+                    borderColor: '#A7F3D0',
+                  }}
+                >
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 600, fontSize: '14px', color: '#0f172a' }}>{item.product.name}</div>
-                    <div style={{ fontSize: '12px', color: '#64748b' }}>{formatMoney(item.unitPrice)} c/u</div>
+                    <div style={{ fontWeight: 600, fontSize: '13px', color: '#065F46' }}>
+                      + {bonus.quantity} u. sin cargo · {bonus.productName}
+                    </div>
+                    <div style={{ fontSize: '11px', color: '#047857' }}>{bonus.promoName}</div>
                   </div>
-
-                  <div style={styles.qtyControllerSmall}>
-                    <button onClick={() => onUpdateQty(item.product.id, item.quantity - 1)} style={styles.btnQtySmall}>
-                      -
-                    </button>
-                    <span style={{ fontSize: '13px', fontWeight: 600, color: '#0f172a', width: '28px', textAlign: 'center' }}>
-                      {item.quantity}
-                    </span>
-                    <button onClick={() => onUpdateQty(item.product.id, item.quantity + 1)} style={styles.btnQtySmall}>
-                      +
-                    </button>
-                  </div>
-
-                  <div style={{ minWidth: '80px', textAlign: 'right', fontWeight: 700, color: '#0f172a' }}>
-                    {formatMoney(item.unitPrice * item.quantity)}
+                  <div style={{ minWidth: '80px', textAlign: 'right', fontWeight: 700, color: '#065F46' }}>
+                    {formatMoney(0)}
                   </div>
                 </div>
               ))}

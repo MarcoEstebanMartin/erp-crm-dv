@@ -1,12 +1,18 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Trash2, ShoppingCart, UserPlus, Package } from 'lucide-react';
 import { cleanCityName, getWhatsAppLink, getVendedorItemPrice, sortVendedorCatalog } from './vendedorHelpers';
+import {
+  evaluateFrontendCartPromos,
+  getProductPromoBadge,
+} from '../../utils/weeklyPromoCartEvaluator';
 import type { Persona, Product, Rubro } from '../../types';
+import type { WeeklyPromo } from '../admin/config/weeklyPromo.helpers';
 
 interface VendedorOrderTakeTabProps {
   clients: Persona[];
   products: Product[];
   rubros: Rubro[];
+  weeklyPromos?: WeeklyPromo[];
   selectedClient: Persona | null;
   setSelectedClient: (c: Persona | null) => void;
   clientFilter: string;
@@ -30,7 +36,7 @@ interface VendedorOrderTakeTabProps {
 }
 
 export const VendedorOrderTakeTab: React.FC<VendedorOrderTakeTabProps> = ({
-  clients, products, rubros, selectedClient, setSelectedClient, clientFilter, setClientFilter,
+  clients, products, rubros, weeklyPromos = [], selectedClient, setSelectedClient, clientFilter, setClientFilter,
   selectedCityFilters, setSelectedCityFilters, uniqueCities, prodSearchQuery, setProdSearchQuery,
   filterRubroId, setFilterRubroId, cart, setCart, orderNotes, setOrderNotes, loading,
   onAddToCart, onUpdateCartQty, onConfirmOrder, onOpenNewClientModal,
@@ -54,11 +60,22 @@ export const VendedorOrderTakeTab: React.FC<VendedorOrderTakeTabProps> = ({
     filterRubroId,
   );
 
-  const cartTotal = cart.reduce((acc, curr) => {
-    const price = getVendedorItemPrice(curr.product, selectedClient);
-    const qtyOrWeight = curr.product.isPesable ? curr.quantity * (curr.product.approximateWeight || 1) : curr.quantity;
-    return acc + Math.round(price * qtyOrWeight);
-  }, 0);
+  const promoEval = useMemo(
+    () =>
+      evaluateFrontendCartPromos({
+        items: cart.map((curr) => ({
+          productId: curr.product.id,
+          productName: curr.product.name,
+          quantity: curr.quantity,
+          isPesable: Boolean(curr.product.isPesable),
+          approximateWeight: curr.product.approximateWeight,
+          baseUnitPrice: getVendedorItemPrice(curr.product, selectedClient),
+        })),
+        promos: weeklyPromos,
+      }),
+    [cart, selectedClient, weeklyPromos],
+  );
+  const cartTotal = promoEval.totalAmount;
 
   return (
     <div>
@@ -166,6 +183,7 @@ export const VendedorOrderTakeTab: React.FC<VendedorOrderTakeTabProps> = ({
                 const hasCustomPrice = selectedClient && ((selectedClient.priceList === 'B' && (isMelincue || Number(p.listPriceB || 0) > 0)) || (selectedClient.priceList === 'C' && Number(p.listPriceC || 0) > 0) || Number(selectedClient.discount || 0) > 0);
                 const imgSrc = p.imageUrl ? (p.imageUrl.startsWith('http') ? p.imageUrl : p.imageUrl.startsWith('/') ? `${p.imageUrl}?v=2.0` : `/uploads/products/${p.imageUrl}?v=2.0`) : null;
                 const cartItem = cart.find((item) => item.product.id === p.id);
+                const promoBadge = getProductPromoBadge(p.id, weeklyPromos, Boolean(p.isPesable));
 
                 return (
                   <div
@@ -175,6 +193,11 @@ export const VendedorOrderTakeTab: React.FC<VendedorOrderTakeTabProps> = ({
                   >
                     <div style={{ position: 'relative', height: '135px', width: '100%', backgroundColor: '#f8fafc', borderRadius: '6px', overflow: 'hidden', marginBottom: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <span style={{ position: 'absolute', top: '4px', left: '4px', backgroundColor: 'rgba(15, 23, 42, 0.75)', color: '#ffffff', fontFamily: 'monospace', fontSize: '0.68rem', fontWeight: 700, padding: '2px 6px', borderRadius: '4px', zIndex: 3 }}>#{p.sku || p.id}</span>
+                      {promoBadge && p.stock > 0 && (
+                        <span style={{ position: 'absolute', top: '4px', right: '4px', backgroundColor: '#ECFDF5', color: '#065F46', border: '1px solid #A7F3D0', fontSize: '0.62rem', fontWeight: 700, padding: '2px 6px', borderRadius: '4px', zIndex: 3, maxWidth: '70%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {promoBadge}
+                        </span>
+                      )}
                       {imgSrc ? (
                         <img src={imgSrc} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'contain', padding: '4px' }} loading="lazy" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
                       ) : (
@@ -224,39 +247,72 @@ export const VendedorOrderTakeTab: React.FC<VendedorOrderTakeTabProps> = ({
                 <ShoppingCart size={24} /><p style={{ fontSize: '0.8rem' }}>El carrito está vacío.</p>
               </div>
             ) : (
-              cart.map((item) => {
-                const itemPrice = getVendedorItemPrice(item.product, selectedClient);
-                return (
-                  <div key={item.product.id} className="list-item" style={{ padding: '8px 10px', display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border-color)' }}>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: '0.85rem', fontWeight: 500 }}>
-                        {item.product.name}
-                        {item.product.isPesable && <span style={{ fontSize: '0.72rem', color: 'var(--color-danger)', marginLeft: '6px', fontWeight: 600 }}>({(item.quantity * (item.product.approximateWeight || 1)).toLocaleString()} Kg aprox.)</span>}
-                      </div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                        {item.product.isPesable
-                          ? `Subtotal: $${Math.round(itemPrice * item.quantity * (item.product.approximateWeight || 1)).toLocaleString()} ($${itemPrice.toLocaleString()} / Kg)`
-                          : `Subtotal: $${(itemPrice * item.quantity).toLocaleString()} ($${itemPrice.toLocaleString()} c/u)`}
-                      </div>
-                      {item.quantity < (item.product.minOrderQuantity || 1) && (
-                        <div style={{ marginTop: '3px', fontSize: '0.7rem', color: '#e30613', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <span style={{ fontWeight: 700 }}>⚠️ Mín: {item.product.minOrderQuantity} u.</span>
-                          <label style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', cursor: 'pointer', fontWeight: 600 }}>
-                            <input type="checkbox" checked={Boolean(item.isEmergencyOverride)} onChange={(e) => setCart(cart.map((c) => (c.product.id === item.product.id ? { ...c, isEmergencyOverride: e.target.checked } : c)))} />
-                            Excepción Emergencia
-                          </label>
+              <>
+                {cart.map((item) => {
+                  const basePrice = getVendedorItemPrice(item.product, selectedClient);
+                  const evaluatedLine = promoEval.byProductId[item.product.id];
+                  const itemPrice = evaluatedLine ? evaluatedLine.effectiveUnitPrice : basePrice;
+                  const lineSubtotal = evaluatedLine ? evaluatedLine.lineSubtotal : Math.round(itemPrice * (item.product.isPesable ? item.quantity * (item.product.approximateWeight || 1) : item.quantity));
+                  return (
+                    <div key={item.product.id} className="list-item" style={{ padding: '8px 10px', display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border-color)' }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: '0.85rem', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                          <span>{item.product.name}</span>
+                          {item.product.isPesable && <span style={{ fontSize: '0.72rem', color: 'var(--color-danger)', fontWeight: 600 }}>({(item.quantity * (item.product.approximateWeight || 1)).toLocaleString()} Kg aprox.)</span>}
+                          {evaluatedLine?.promoApplied && (
+                            <span style={{ fontSize: '0.65rem', fontWeight: 700, backgroundColor: '#ECFDF5', color: '#065F46', border: '1px solid #A7F3D0', borderRadius: '4px', padding: '1px 5px' }}>
+                              {evaluatedLine.appliedPromoName || 'Oferta'}
+                            </span>
+                          )}
                         </div>
-                      )}
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                          {evaluatedLine?.promoApplied && basePrice > itemPrice && (
+                            <span style={{ textDecoration: 'line-through', marginRight: '6px', opacity: 0.7 }}>${basePrice.toLocaleString('es-AR')}</span>
+                          )}
+                          {item.product.isPesable
+                            ? `Subtotal: $${lineSubtotal.toLocaleString('es-AR')} ($${itemPrice.toLocaleString('es-AR')} / Kg)`
+                            : `Subtotal: $${lineSubtotal.toLocaleString('es-AR')} ($${itemPrice.toLocaleString('es-AR')} c/u)`}
+                        </div>
+                        {item.quantity < (item.product.minOrderQuantity || 1) && (
+                          <div style={{ marginTop: '3px', fontSize: '0.7rem', color: '#e30613', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span style={{ fontWeight: 700 }}>⚠️ Mín: {item.product.minOrderQuantity} u.</span>
+                            <label style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', cursor: 'pointer', fontWeight: 600 }}>
+                              <input type="checkbox" checked={Boolean(item.isEmergencyOverride)} onChange={(e) => setCart(cart.map((c) => (c.product.id === item.product.id ? { ...c, isEmergencyOverride: e.target.checked } : c)))} />
+                              Excepción Emergencia
+                            </label>
+                          </div>
+                        )}
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <button className="btn btn-secondary" style={{ padding: '2px 6px' }} onClick={() => onUpdateCartQty(item.product.id, -1)}>-</button>
+                        <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>{item.quantity}</span>
+                        <button className="btn btn-secondary" style={{ padding: '2px 6px' }} onClick={() => onUpdateCartQty(item.product.id, 1)}>+</button>
+                        <button className="btn btn-ghost text-danger" style={{ padding: '4px' }} onClick={() => onUpdateCartQty(item.product.id, -item.quantity)}><Trash2 size={14} /></button>
+                      </div>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <button className="btn btn-secondary" style={{ padding: '2px 6px' }} onClick={() => onUpdateCartQty(item.product.id, -1)}>-</button>
-                      <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>{item.quantity}</span>
-                      <button className="btn btn-secondary" style={{ padding: '2px 6px' }} onClick={() => onUpdateCartQty(item.product.id, 1)}>+</button>
-                      <button className="btn btn-ghost text-danger" style={{ padding: '4px' }} onClick={() => onUpdateCartQty(item.product.id, -item.quantity)}><Trash2 size={14} /></button>
+                  );
+                })}
+                {promoEval.bonusLines.map((bonus) => {
+                  const cartProd = cart.find((c) => c.product.id === bonus.productId)?.product;
+                  const reqStock = promoEval.stockRequiredByProduct[bonus.productId] || 0;
+                  const lowBonusStock = cartProd && Number(cartProd.stock || 0) < reqStock;
+                  return (
+                    <div key={`bonus-${bonus.productId}`} className="list-item" style={{ padding: '7px 10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', backgroundColor: '#F0FDF4' }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: '0.82rem', fontWeight: 600, color: '#065F46' }}>
+                          + {bonus.quantity} u. sin cargo · {bonus.productName}
+                        </div>
+                        <div style={{ fontSize: '0.72rem', color: lowBonusStock ? '#E30613' : '#047857', fontWeight: lowBonusStock ? 700 : 500 }}>
+                          {lowBonusStock
+                            ? `Stock insuficiente para incluir bonificación (Disponible: ${cartProd.stock}, Req: ${reqStock})`
+                            : bonus.promoName}
+                        </div>
+                      </div>
+                      <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#065F46' }}>$0</span>
                     </div>
-                  </div>
-                );
-              })
+                  );
+                })}
+              </>
             )}
           </div>
 

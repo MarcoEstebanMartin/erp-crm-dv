@@ -10,6 +10,8 @@ import {
   calculateDirectBillingTotals,
   computeClientUnitPrice
 } from './salesBilling.helpers';
+import { evaluateFrontendCartPromos } from '../../../utils/weeklyPromoCartEvaluator';
+import type { WeeklyPromo } from '../../admin/config/weeklyPromo.helpers';
 
 interface UseDirectInvoiceParams {
   personas: any[];
@@ -39,6 +41,7 @@ export function useDirectInvoice({
   const [showDirectInvoiceModal, setShowDirectInvoiceModal] = useState(false);
   const [directInvoiceForm, setDirectInvoiceForm] = useState<DirectInvoiceFormState>(INITIAL_DIRECT_INVOICE_FORM);
   const [directCart, setDirectCart] = useState<DirectCartItem[]>([]);
+  const [weeklyPromos, setWeeklyPromos] = useState<WeeklyPromo[]>([]);
   const [selectedDirectProduct, setSelectedDirectProduct] = useState('');
   const [directProductQty, setDirectProductQty] = useState('1');
   const ivaPerceptionAliquot = ivaPerceptionAliquotOverride ?? 3.0;
@@ -109,24 +112,61 @@ export function useDirectInvoice({
   }, [clientsOnly]);
 
   useEffect(() => {
-    if (showDirectInvoiceModal) {
-      if (bankAccounts.length > 0) {
-        setDirectInvoiceForm((prev) => ({
-          ...prev,
-          bankAccountId: prev.bankAccountId || bankAccounts[0].id.toString()
-        }));
-      }
-      if (activeDrawers.length > 0) {
-        setDirectInvoiceForm((prev) => ({
-          ...prev,
-          cashDrawerId: prev.cashDrawerId || activeDrawers[0].id.toString()
-        }));
-      }
-      if (!directInvoiceForm.personaId) {
-        setTimeout(() => clientSearchInputRef.current?.focus(), 60);
-      }
+    if (!showDirectInvoiceModal) return;
+    let cancelled = false;
+    api
+      .getActiveWeeklyPromos()
+      .then((res) => {
+        if (!cancelled) setWeeklyPromos(Array.isArray(res) ? res : []);
+      })
+      .catch(() => {});
+
+    if (bankAccounts.length > 0) {
+      setDirectInvoiceForm((prev) => ({
+        ...prev,
+        bankAccountId: prev.bankAccountId || bankAccounts[0].id.toString()
+      }));
     }
+    if (activeDrawers.length > 0) {
+      setDirectInvoiceForm((prev) => ({
+        ...prev,
+        cashDrawerId: prev.cashDrawerId || activeDrawers[0].id.toString()
+      }));
+    }
+    if (!directInvoiceForm.personaId) {
+      setTimeout(() => clientSearchInputRef.current?.focus(), 60);
+    }
+    return () => {
+      cancelled = true;
+    };
   }, [showDirectInvoiceModal, bankAccounts, activeDrawers, directInvoiceForm.personaId]);
+
+  const promoEval = useMemo(
+    () =>
+      evaluateFrontendCartPromos({
+        items: directCart.map((item) => ({
+          productId: item.product.id,
+          productName: item.product.name,
+          quantity: Number(item.quantity || 0),
+          weight: item.weight,
+          isPesable: Boolean(item.product.isPesable),
+          approximateWeight: item.product.approximateWeight,
+          baseUnitPrice: item.unitPrice
+        })),
+        promos: weeklyPromos
+      }),
+    [directCart, weeklyPromos]
+  );
+
+  const effectiveDirectSubtotalSum = useMemo(
+    () =>
+      directCart.reduce((acc, item) => {
+        const evalLine = promoEval.byProductId[item.product.id];
+        if (evalLine?.promoApplied) return acc + evalLine.lineSubtotal;
+        return acc + Number(item.subtotal || 0);
+      }, 0),
+    [directCart, promoEval]
+  );
 
   const directBillingTotals = useMemo(
     () =>
@@ -134,9 +174,10 @@ export function useDirectInvoice({
         directCart,
         directInvoiceForm.billingType,
         selectedDirectClient,
-        ivaPerceptionAliquot
+        ivaPerceptionAliquot,
+        effectiveDirectSubtotalSum
       ),
-    [directCart, directInvoiceForm.billingType, selectedDirectClient, ivaPerceptionAliquot]
+    [directCart, directInvoiceForm.billingType, selectedDirectClient, ivaPerceptionAliquot, effectiveDirectSubtotalSum]
   );
 
   const handleSelectClient = (c: any) => {
@@ -279,7 +320,7 @@ export function useDirectInvoice({
     showProductDropdown, setShowProductDropdown,
     activeProductSuggestionIdx, setActiveProductSuggestionIdx,
     productSearchInputRef, productQtyInputRef,
-    filteredClients, filteredProducts, selectedDirectClient, directBillingTotals,
+    filteredClients, filteredProducts, selectedDirectClient, directBillingTotals, promoEval,
     handleSelectClient, handleSelectProduct,
     handleAddDirectProduct, handleRemoveDirectProduct,
     handleCloseResetHeader, handleCancelFooter,

@@ -1,6 +1,12 @@
 import { useState, useEffect, useMemo } from 'react';
 import { API_BASE_URL } from '../../../utils/api';
 import { resolveRequestIdempotencyKey } from '../../../utils/idempotencyClient';
+import { divRoundHalfUp } from '../../../utils/exactStockMath';
+import {
+  evaluateFrontendCartPromos,
+  isBonusOrderItem,
+} from '../../../utils/weeklyPromoCartEvaluator';
+import type { WeeklyPromo } from '../../admin/config/weeklyPromo.helpers';
 import {
   type CartItem,
   type ClientProfile,
@@ -17,6 +23,7 @@ interface UsePortalStoreParams {
 export function usePortalStore({ client, expireSession }: UsePortalStoreParams) {
   const [activeTab, setActiveTab] = useState<PortalTab>('catalog');
   const [products, setProducts] = useState<StoreProduct[]>([]);
+  const [weeklyPromos, setWeeklyPromos] = useState<WeeklyPromo[]>([]);
   const [rubros, setRubros] = useState<any[]>([]);
   const [commercialGroups, setCommercialGroups] = useState<any[]>([]);
   const [selectedGroupId, setSelectedGroupId] = useState<string>('all');
@@ -45,6 +52,7 @@ export function usePortalStore({ client, expireSession }: UsePortalStoreParams) 
         setProducts(json.data.products || []);
         setRubros(json.data.rubros || []);
         setCommercialGroups(json.data.commercialGroups || []);
+        setWeeklyPromos(Array.isArray(json.data.weeklyPromos) ? json.data.weeklyPromos : []);
       } else {
         console.error('Error del catálogo:', json.message);
       }
@@ -121,13 +129,28 @@ export function usePortalStore({ client, expireSession }: UsePortalStoreParams) 
     }
   };
 
-  const cartTotalFinal = useMemo(
-    () => cart.reduce((sum, item) => sum + Math.round(item.unitPrice * item.quantity), 0),
-    [cart]
+  const promoEval = useMemo(
+    () =>
+      evaluateFrontendCartPromos({
+        items: cart.map((item) => ({
+          productId: item.product.id,
+          productName: item.product.name,
+          quantity: item.quantity,
+          isPesable: Boolean(item.product.isPesable),
+          approximateWeight: (item.product as any).approximateWeight,
+          baseUnitPrice: item.unitPrice,
+        })),
+        promos: weeklyPromos,
+      }),
+    [cart, weeklyPromos],
   );
-  const cartTotalNeto = Math.round((cartTotalFinal / 1.21) * 100) / 100;
-  const cartTotalIva = Math.round((cartTotalFinal - cartTotalNeto) * 100) / 100;
-  const cartTotalItemsCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+
+  const cartTotalFinal = promoEval.totalAmount;
+  const netoCents = divRoundHalfUp(BigInt(cartTotalFinal) * 10_000n, 121n);
+  const cartTotalNeto = Number(netoCents) / 100;
+  const cartTotalIva = (cartTotalFinal * 100 - Number(netoCents)) / 100;
+  const cartTotalItemsCount =
+    cart.reduce((sum, item) => sum + item.quantity, 0) + promoEval.totalBonusUnits;
 
   const handleSubmitOrder = async () => {
     if (!client || cart.length === 0) return;
@@ -180,12 +203,14 @@ export function usePortalStore({ client, expireSession }: UsePortalStoreParams) 
 
   const handleRepeatOrder = (pastOrder: any) => {
     if (!pastOrder.items || pastOrder.items.length === 0) return;
-    pastOrder.items.forEach((item: any) => {
-      const matchedProd = products.find((p) => p.id === item.productId);
-      if (matchedProd) {
-        addToCart(matchedProd, item.quantity);
-      }
-    });
+    pastOrder.items
+      .filter((item: any) => !isBonusOrderItem(item))
+      .forEach((item: any) => {
+        const matchedProd = products.find((p) => p.id === item.productId);
+        if (matchedProd) {
+          addToCart(matchedProd, item.quantity);
+        }
+      });
     setIsCartOpen(true);
   };
 
@@ -213,6 +238,7 @@ export function usePortalStore({ client, expireSession }: UsePortalStoreParams) 
     orderSuccessMessage, setOrderSuccessMessage,
     recentOrders, accountData, isLoadingAccount,
     filteredProducts,
+    promoEval,
     addToCart, updateCartQuantity,
     cartTotalFinal, cartTotalNeto, cartTotalIva, cartTotalItemsCount,
     handleSubmitOrder, handleRepeatOrder, handleMagicDraftLoaded

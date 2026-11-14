@@ -84,6 +84,7 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
           clients={c.clients}
           products={c.products}
           rubros={c.rubros}
+          weeklyPromos={c.weeklyPromos}
           selectedClient={c.selectedClient}
           setSelectedClient={c.setSelectedClient}
           clientFilter={c.clientFilter}

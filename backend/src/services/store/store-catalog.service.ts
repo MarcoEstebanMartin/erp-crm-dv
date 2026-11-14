@@ -1,6 +1,8 @@
 import prisma from '../../utils/prisma';
 import { appCache } from '../../utils/cache';
 import { roundToIntegerPeso, toDecimal } from '../../core/money';
+import { type WeeklyPromoSpec } from '../../engines/weekly-promos.engine';
+import { fetchActiveWeeklyPromosSafe } from '../orders/order-weekly-promos.helper';
 
 const RUBRO_TO_COMMERCIAL_CATEGORY: Record<string, { category: string; icon: string }> = {
   REMOTTI: { category: 'REFRIGERADOS', icon: '❄️' },
@@ -74,6 +76,47 @@ function normalizeKey(value: string): string {
   return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().trim();
 }
 
+function applyWeeklyPromoCatalogDecoration(params: {
+  productId: number;
+  isPesable: boolean;
+  listBasePrice: number;
+  finalPrice: number;
+  previousPrice: number | null;
+  specialTag: string | null;
+  offerName: string | null;
+  isOffer: boolean;
+  weeklyPromos: WeeklyPromoSpec[];
+}) {
+  let { finalPrice, previousPrice, specialTag, offerName, isOffer } = params;
+  for (const promo of params.weeklyPromos) {
+    const item = promo.items.find((i) => i.productId === params.productId);
+    if (!item) continue;
+    isOffer = true;
+
+    if (promo.type === 'OFFER_PRICE' && item.promoUnitPrice !== null) {
+      const promoInt = roundToIntegerPeso(item.promoUnitPrice).toNumber();
+      if (item.minQuantity <= 1 && promoInt > 0 && promoInt < finalPrice) {
+        if (!previousPrice || finalPrice > promoInt) {
+          previousPrice = params.listBasePrice > promoInt ? params.listBasePrice : finalPrice;
+        }
+        finalPrice = promoInt;
+        if (!specialTag) specialTag = 'OFERTA SEMANAL';
+        if (!offerName) offerName = promo.name;
+      } else if (item.minQuantity > 1) {
+        if (!specialTag) specialTag = `DESDE ${item.minQuantity} U. A $${promoInt.toLocaleString('es-AR')}`;
+        if (!offerName) offerName = promo.name;
+      }
+    } else if (promo.type === 'BUY_X_GET_Y' && !params.isPesable) {
+      if (!specialTag) specialTag = `PROMO ${item.minQuantity}+${item.freeQuantity} GRATIS`;
+      if (!offerName) offerName = promo.name;
+    } else if (promo.type === 'COMBO') {
+      if (!specialTag) specialTag = 'COMBO SEMANAL';
+      if (!offerName) offerName = promo.name;
+    }
+  }
+  return { finalPrice, previousPrice, specialTag, offerName, isOffer };
+}
+
 export class StoreCatalogService {
   static async buildCatalog(params: { priceList?: string; rubroId?: number; search?: string }) {
     const requestedList = String(params.priceList || 'A').toUpperCase();
@@ -96,7 +139,7 @@ export class StoreCatalogService {
       ];
     }
 
-    const [products, rubros, activeCampaigns] = await Promise.all([
+    const [products, rubros, activeCampaigns, activeWeeklyPromos] = await Promise.all([
       prisma.product.findMany({
         where: whereClause,
         include: {
@@ -112,6 +155,7 @@ export class StoreCatalogService {
         where: { isActive: true },
         include: { items: { select: { productId: true, campaignGroup: true } } },
       }),
+      fetchActiveWeeklyPromosSafe(prisma),
     ]);
 
     const productCampaignGroupMap = new Map<number, string>();
@@ -147,11 +191,13 @@ export class StoreCatalogService {
       let finalPrice = listBasePrice;
       let previousPrice: number | null = null;
       let specialTag: string | null = null;
+      let offerName: string | null = null;
 
       const activeOfferItem = p.offerCampaignItems.find((i) => i.campaign && i.campaign.isActive);
-      const isOffer = Boolean(activeOfferItem);
+      let isOffer = Boolean(activeOfferItem);
 
       if (activeOfferItem) {
+        offerName = activeOfferItem.campaign.title;
         const offerVal = roundToIntegerPeso(activeOfferItem.offerPrice).toNumber();
         if (offerVal > 0) {
           finalPrice = offerVal;
@@ -168,6 +214,23 @@ export class StoreCatalogService {
           specialTag = activeOfferItem.specialTag.trim();
         }
       }
+
+      const decorated = applyWeeklyPromoCatalogDecoration({
+        productId: p.id,
+        isPesable: p.isPesable,
+        listBasePrice,
+        finalPrice,
+        previousPrice,
+        specialTag,
+        offerName,
+        isOffer,
+        weeklyPromos: activeWeeklyPromos,
+      });
+      finalPrice = decorated.finalPrice;
+      previousPrice = decorated.previousPrice;
+      specialTag = decorated.specialTag;
+      offerName = decorated.offerName;
+      isOffer = decorated.isOffer;
 
       const offerDiscount =
         previousPrice && previousPrice > finalPrice
@@ -219,7 +282,7 @@ export class StoreCatalogService {
         offerDiscount,
         previousPrice,
         specialTag,
-        offerName: activeOfferItem ? activeOfferItem.campaign.title : null,
+        offerName,
       };
     });
 
@@ -276,10 +339,11 @@ export class StoreCatalogService {
         commercialCategories,
         commercialGroups: commercialCategories,
         rubros,
+        weeklyPromos: activeWeeklyPromos,
       },
     };
 
-    appCache.set(cacheKey, responsePayload, 86400);
+    appCache.set(cacheKey, responsePayload, 300);
     return responsePayload;
   }
 }

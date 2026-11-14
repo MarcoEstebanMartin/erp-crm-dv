@@ -2,13 +2,12 @@ import prisma from '../../utils/prisma';
 import { Role, OrderStatus, MovementType } from '@prisma/client';
 import { PricingService } from '../pricing.service';
 import { logAudit } from '../../utils/audit';
+import { roundToIntegerPeso } from '../../core/money';
+import { type CartBasePricingInfo } from '../../engines/weekly-promos.engine';
 import {
-  calculateOrderLine,
-  roundToIntegerPeso,
-  roundToThreeDecimalsWeight,
-  sumIntegerAmounts,
-  toDecimal,
-} from '../../core/money';
+  decrementStockByProductMapInTx,
+  evaluateOrderCartWithWeeklyPromos,
+} from './order-weekly-promos.helper';
 
 export interface UpdateOrderDto {
   orderId: number;
@@ -52,8 +51,13 @@ export class OrderEditService {
       throw err;
     }
 
+    const paidInputItems = (items as any[]).filter((i) => !i?.isPromoBonus);
+    if (paidInputItems.length === 0) {
+      throw new Error('El pedido debe tener al menos un artículo pago.');
+    }
+
     const result = await prisma.$transaction(async (tx) => {
-      // 1. Restaurar stock de los ítems anteriores de manera atómica
+      // 1. Restaurar stock de los ítems anteriores de manera atómica (incluye bonificados previos)
       for (const oldItem of order.items) {
         await tx.product.update({
           where: { id: oldItem.productId },
@@ -66,7 +70,7 @@ export class OrderEditService {
         throw new Error('Persona no encontrada.');
       }
 
-      const productIds = items.map((i) => i.productId);
+      const productIds = paidInputItems.map((i) => i.productId);
       const dbProducts = await tx.product.findMany({
         where: { id: { in: productIds } },
         include: { rubro: true },
@@ -78,10 +82,11 @@ export class OrderEditService {
         },
       });
 
-      // 2. Validar y descontar nuevo stock con cálculo exacto Decimal.js y Snapshots
-      const orderItemsToCreate: any[] = [];
+      // 2. Validar mínimos/base y evaluar Ofertas Semanales vigentes con Decimal.js y Snapshots
+      const basePricingByProductId = new Map<number, CartBasePricingInfo>();
+      const promoInputLines = [];
 
-      for (const item of items) {
+      for (const item of paidInputItems) {
         const product = dbProducts.find((p) => p.id === item.productId);
         if (!product) {
           throw new Error(`Producto ID ${item.productId} no encontrado.`);
@@ -94,67 +99,49 @@ export class OrderEditService {
           );
         }
 
-        const pricing = PricingService.calculatePriceAndDiscountInMemory(
-          product,
-          persona,
-          dbRules,
-          order.billingType,
-        );
+        if (product.stock < item.quantity && process.env.IGNORE_STOCK_CHECK !== 'true') {
+          throw new Error(
+            `Stock insuficiente para "${product.name}" debido a una operación concurrente (Solicitado: ${item.quantity}).`,
+          );
+        }
 
-        const approxKg = Number((product as any).approximateWeight || 1) || 1;
-        const billableQtyDec = product.isPesable
-          ? item.weight
-            ? roundToThreeDecimalsWeight(item.weight)
-            : roundToThreeDecimalsWeight(toDecimal(item.quantity).times(approxKg))
-          : toDecimal(item.quantity);
+        if (!basePricingByProductId.has(product.id)) {
+          const pricing = PricingService.calculatePriceAndDiscountInMemory(
+            product,
+            persona,
+            dbRules,
+            order.billingType,
+          );
+          basePricingByProductId.set(product.id, {
+            baseUnitPrice: pricing.finalPrice,
+            baseListPrice: pricing.basePrice,
+            baseDiscountPct: pricing.discount,
+          });
+        }
 
-        const lineCalc = calculateOrderLine({
-          unitCost: Number((product as any).costPrice || 0),
-          unitPriceList: pricing.basePrice,
-          billableQty: billableQtyDec,
-          discountPct: pricing.discount,
-        });
-
-        orderItemsToCreate.push({
+        promoInputLines.push({
           productId: product.id,
           quantity: item.quantity,
-          weight: product.isPesable
-            ? item.weight
-              ? roundToThreeDecimalsWeight(item.weight).toNumber()
-              : null
-            : null,
-          unitPrice: pricing.finalPrice,
-          subtotal: lineCalc.lineSubtotal.toNumber(),
-          unitCostSnapshot: lineCalc.unitCostSnapshot.toNumber(),
-          listPriceSnapshot: lineCalc.listPriceSnapshot.toNumber(),
-          discountPctSnapshot: lineCalc.discountPctSnapshot.toNumber(),
+          weight: product.isPesable && item.weight ? item.weight : null,
         });
-
-        if (process.env.IGNORE_STOCK_CHECK === 'true') {
-          await tx.product.update({
-            where: { id: product.id },
-            data: { stock: { decrement: item.quantity } },
-          });
-        } else {
-          const res = await tx.product.updateMany({
-            where: {
-              id: product.id,
-              stock: { gte: item.quantity },
-            },
-            data: {
-              stock: { decrement: item.quantity },
-            },
-          });
-
-          if (res.count === 0) {
-            throw new Error(
-              `Stock insuficiente para "${product.name}" debido a una operación concurrente (Solicitado: ${item.quantity}).`,
-            );
-          }
-        }
       }
 
-      const totalSum = sumIntegerAmounts(orderItemsToCreate.map((i) => i.subtotal)).toNumber();
+      const evaluated = await evaluateOrderCartWithWeeklyPromos({
+        tx,
+        items: promoInputLines,
+        dbProducts,
+        basePricingByProductId,
+        ignoreStockCheck: process.env.IGNORE_STOCK_CHECK === 'true',
+      });
+
+      await decrementStockByProductMapInTx({
+        tx,
+        stockRequiredByProduct: evaluated.stockRequiredByProduct,
+        dbProducts,
+        ignoreStockCheck: process.env.IGNORE_STOCK_CHECK === 'true',
+      });
+
+      const totalSum = evaluated.totalAmount;
 
       // Validar límite de crédito
       const creditLimit = Number(persona.creditLimit || 0);
@@ -166,6 +153,17 @@ export class OrderEditService {
           );
         }
       }
+
+      const orderItemsToCreate = evaluated.lines.map((line) => ({
+        productId: line.productId,
+        quantity: line.quantity,
+        weight: line.weight,
+        unitPrice: line.unitPrice,
+        subtotal: line.subtotal,
+        unitCostSnapshot: line.unitCostSnapshot,
+        listPriceSnapshot: line.listPriceSnapshot,
+        discountPctSnapshot: line.discountPctSnapshot,
+      }));
 
       // 3. Reemplazar ítems del pedido con sus Snapshots históricos
       await tx.orderItem.deleteMany({ where: { orderId: order.id } });
@@ -193,14 +191,16 @@ export class OrderEditService {
       });
 
       await tx.stockMovement.createMany({
-        data: orderItemsToCreate.map((item) => ({
-          productId: item.productId,
-          quantity: -item.quantity,
+        data: evaluated.lines.map((line) => ({
+          productId: line.productId,
+          quantity: -line.quantity,
           type: MovementType.OUT,
           orderId: order.id,
           referenceId: `ORDER-${order.id}`,
           userId: order.sellerId,
-          reason: `Venta - Reserva de Pedido #${order.id} (Modificado)`,
+          reason: line.isPromoBonus
+            ? `Bonificación Promo (${line.appliedPromoName || 'Semanal'}) - Pedido #${order.id} (Modificado)`
+            : `Venta - Reserva de Pedido #${order.id} (Modificado)`,
         })),
       });
 

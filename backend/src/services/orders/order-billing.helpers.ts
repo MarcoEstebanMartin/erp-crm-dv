@@ -2,9 +2,84 @@ import { MovementType, BillingType } from '@prisma/client';
 import { PricingService } from '../pricing.service';
 import {
   calculateOrderLine,
+  roundToIntegerPeso,
   roundToThreeDecimalsWeight,
+  roundToTwoDecimals,
   toDecimal,
 } from '../../core/money';
+import { isPromoBonusOrderItem } from './order-weekly-promos.helper';
+
+function resolveBillingLineValues(params: {
+  item: any;
+  product: any;
+  persona: any;
+  dbRules: any[];
+  targetBillingType: BillingType;
+  quantity: number;
+  weight: number | null;
+  unitCost: number;
+}) {
+  const { item, product, persona, dbRules, targetBillingType, quantity, weight, unitCost } = params;
+
+  if (isPromoBonusOrderItem(item)) {
+    return {
+      unitPrice: 0,
+      subtotal: 0,
+      unitCostSnapshot: roundToTwoDecimals(item.unitCostSnapshot ?? unitCost).toNumber(),
+      listPriceSnapshot: roundToIntegerPeso(item.listPriceSnapshot ?? product.listPrice).toNumber(),
+      discountPctSnapshot: 100,
+    };
+  }
+
+  const pricing = PricingService.calculatePriceAndDiscountInMemory(
+    product,
+    persona,
+    dbRules,
+    targetBillingType,
+  );
+  const billableQtyDec = product.isPesable
+    ? weight
+      ? roundToThreeDecimalsWeight(weight)
+      : toDecimal(quantity)
+    : toDecimal(quantity);
+
+  const hasBillingSpecificRule = dbRules.some(
+    (r) =>
+      Boolean(r.billingType) &&
+      r.billingType === targetBillingType &&
+      (!r.productId || r.productId === product.id) &&
+      (!r.rubroId || r.rubroId === product.rubroId),
+  );
+
+  if (!hasBillingSpecificRule && item.unitPrice !== undefined && item.unitPrice !== null) {
+    const frozenUnitInt = roundToIntegerPeso(item.unitPrice);
+    const recalcUnitInt = roundToIntegerPeso(pricing.finalPrice);
+    if (frozenUnitInt.gt(0) && frozenUnitInt.lt(recalcUnitInt)) {
+      return {
+        unitPrice: frozenUnitInt.toNumber(),
+        subtotal: roundToIntegerPeso(frozenUnitInt.times(billableQtyDec)).toNumber(),
+        unitCostSnapshot: roundToTwoDecimals(item.unitCostSnapshot ?? unitCost).toNumber(),
+        listPriceSnapshot: roundToIntegerPeso(item.listPriceSnapshot ?? pricing.basePrice).toNumber(),
+        discountPctSnapshot: roundToTwoDecimals(item.discountPctSnapshot ?? 0).toNumber(),
+      };
+    }
+  }
+
+  const lc = calculateOrderLine({
+    unitCost,
+    unitPriceList: pricing.basePrice,
+    billableQty: billableQtyDec,
+    discountPct: pricing.discount,
+  });
+
+  return {
+    unitPrice: pricing.finalPrice,
+    subtotal: lc.lineSubtotal.toNumber(),
+    unitCostSnapshot: lc.unitCostSnapshot.toNumber(),
+    listPriceSnapshot: lc.listPriceSnapshot.toNumber(),
+    discountPctSnapshot: lc.discountPctSnapshot.toNumber(),
+  };
+}
 
 export function prepareInvoiceSplitItems(params: {
   orderItems: any[];
@@ -37,87 +112,62 @@ export function prepareInvoiceSplitItems(params: {
         weightInterno = roundToThreeDecimalsWeight(toDecimal(item.weight).minus(halfW)).toNumber();
       }
 
-      const pOficial = PricingService.calculatePriceAndDiscountInMemory(
-        product,
-        persona,
-        dbRules,
-        BillingType.OFFICIAL,
-      );
-      const pInterno = PricingService.calculatePriceAndDiscountInMemory(
-        product,
-        persona,
-        dbRules,
-        BillingType.INTERNAL,
-      );
-
       if (qtyOficial > 0) {
-        const actualQty = product.isPesable ? weightOficial || qtyOficial : qtyOficial;
-        const lc = calculateOrderLine({
+        const valsOficial = resolveBillingLineValues({
+          item,
+          product,
+          persona,
+          dbRules,
+          targetBillingType: BillingType.OFFICIAL,
+          quantity: qtyOficial,
+          weight: weightOficial,
           unitCost,
-          unitPriceList: pOficial.basePrice,
-          billableQty: actualQty,
-          discountPct: pOficial.discount,
         });
         oficialItemsData.push({
           orderItemId: item.id,
           productId: item.productId,
           quantity: qtyOficial,
           weight: weightOficial,
-          unitPrice: pOficial.finalPrice,
-          subtotal: lc.lineSubtotal.toNumber(),
-          unitCostSnapshot: lc.unitCostSnapshot.toNumber(),
-          listPriceSnapshot: lc.listPriceSnapshot.toNumber(),
-          discountPctSnapshot: lc.discountPctSnapshot.toNumber(),
+          ...valsOficial,
         });
       }
 
       if (qtyInterno > 0) {
-        const actualQty = product.isPesable ? weightInterno || qtyInterno : qtyInterno;
-        const lc = calculateOrderLine({
+        const valsInterno = resolveBillingLineValues({
+          item,
+          product,
+          persona,
+          dbRules,
+          targetBillingType: BillingType.INTERNAL,
+          quantity: qtyInterno,
+          weight: weightInterno,
           unitCost,
-          unitPriceList: pInterno.basePrice,
-          billableQty: actualQty,
-          discountPct: pInterno.discount,
         });
         internoItemsData.push({
           productId: item.productId,
           quantity: qtyInterno,
           weight: weightInterno,
-          unitPrice: pInterno.finalPrice,
-          subtotal: lc.lineSubtotal.toNumber(),
-          unitCostSnapshot: lc.unitCostSnapshot.toNumber(),
-          listPriceSnapshot: lc.listPriceSnapshot.toNumber(),
-          discountPctSnapshot: lc.discountPctSnapshot.toNumber(),
+          ...valsInterno,
         });
       }
     } else {
-      const pricing = PricingService.calculatePriceAndDiscountInMemory(
+      const cleanWeight = item.weight ? roundToThreeDecimalsWeight(item.weight).toNumber() : null;
+      const vals = resolveBillingLineValues({
+        item,
         product,
         persona,
         dbRules,
-        billingType,
-      );
-      const actualQty = product.isPesable
-        ? item.weight
-          ? Number(item.weight)
-          : item.quantity
-        : item.quantity;
-      const lc = calculateOrderLine({
+        targetBillingType: billingType,
+        quantity: item.quantity,
+        weight: cleanWeight,
         unitCost,
-        unitPriceList: pricing.basePrice,
-        billableQty: actualQty,
-        discountPct: pricing.discount,
       });
       const itemData = {
         orderItemId: item.id,
         productId: item.productId,
         quantity: item.quantity,
-        weight: item.weight ? roundToThreeDecimalsWeight(item.weight).toNumber() : null,
-        unitPrice: pricing.finalPrice,
-        subtotal: lc.lineSubtotal.toNumber(),
-        unitCostSnapshot: lc.unitCostSnapshot.toNumber(),
-        listPriceSnapshot: lc.listPriceSnapshot.toNumber(),
-        discountPctSnapshot: lc.discountPctSnapshot.toNumber(),
+        weight: cleanWeight,
+        ...vals,
       };
       if (hasSplit && billingType !== BillingType.OFFICIAL) {
         internoItemsData.push(itemData);

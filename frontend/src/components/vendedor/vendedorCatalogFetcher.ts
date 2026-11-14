@@ -6,6 +6,7 @@ import {
 } from '../../utils/offlineCatalogDb';
 import { isLikelyNetworkError } from '../../utils/offlineSyncManager';
 import type { Persona, Product, Order, Rubro, SaleRoute } from '../../types';
+import type { WeeklyPromo } from '../admin/config/weeklyPromo.helpers';
 
 export interface VendedorFetchInput {
   activeTab: string;
@@ -25,16 +26,18 @@ export interface VendedorFetchOutput {
   vendedorRoutes?: SaleRoute[];
   todayVisits?: any[];
   resolvedRouteId?: number | null;
+  weeklyPromos?: WeeklyPromo[];
 }
 
 async function readCachedVendedorData(input: VendedorFetchInput): Promise<VendedorFetchOutput> {
-  const [cliSnap, prodSnap, ordSnap, rubSnap, routesSnap, visitsSnap] = await Promise.all([
+  const [cliSnap, prodSnap, ordSnap, rubSnap, routesSnap, visitsSnap, promoSnap] = await Promise.all([
     loadCatalogSnapshot<Persona[]>('clients_active'),
     loadCatalogSnapshot<Product[]>('products_full'),
     loadCatalogSnapshot<Order[]>('orders_recent'),
     loadCatalogSnapshot<Rubro[]>('rubros_all'),
     loadCatalogSnapshot<SaleRoute[]>('seller_routes'),
     loadCatalogSnapshot<any[]>('today_visits'),
+    loadCatalogSnapshot<WeeklyPromo[]>('weekly_promos_active'),
   ]);
 
   let resolvedClients = cliSnap?.payload;
@@ -58,6 +61,7 @@ async function readCachedVendedorData(input: VendedorFetchInput): Promise<Vended
     rubros: rubSnap?.payload,
     vendedorRoutes: routesSnap?.payload,
     todayVisits: visitsSnap?.payload,
+    weeklyPromos: promoSnap?.payload,
   };
 }
 
@@ -68,19 +72,26 @@ export async function fetchVendedorTabState(input: VendedorFetchInput): Promise<
 
   try {
     if (input.activeTab === 'orders' || input.activeTab === 'history') {
-      const [clientData, prodData, orderData, rubroData] = await Promise.all([
+      const [clientData, prodData, orderData, rubroData, promoData] = await Promise.all([
         api.getClients(),
         api.getProducts(input.prodSearchQuery),
         api.getOrders(),
         api.getRubros(),
+        api.getActiveWeeklyPromos().catch(() => null),
       ]);
       const activeClients = clientData.filter((c: any) => c.isActive !== false);
+      const resolvedPromos = Array.isArray(promoData)
+        ? promoData
+        : (await loadCatalogSnapshot<WeeklyPromo[]>('weekly_promos_active'))?.payload || [];
       let syncTs: string | undefined;
 
       await Promise.all([
         saveCatalogSnapshot('clients_active', activeClients),
         saveCatalogSnapshot('orders_recent', orderData),
         saveCatalogSnapshot('rubros_all', rubroData),
+        Array.isArray(promoData)
+          ? saveCatalogSnapshot('weekly_promos_active', promoData)
+          : Promise.resolve(),
         !input.prodSearchQuery.trim()
           ? saveCatalogSnapshot('products_full', prodData).then((ts) => { syncTs = ts; })
           : Promise.resolve(),
@@ -93,6 +104,7 @@ export async function fetchVendedorTabState(input: VendedorFetchInput): Promise<
         products: prodData,
         orders: orderData,
         rubros: rubroData,
+        weeklyPromos: resolvedPromos,
       };
     }
 
@@ -135,16 +147,28 @@ export async function fetchVendedorTabState(input: VendedorFetchInput): Promise<
     }
 
     if (input.activeTab === 'products') {
-      const [prodData, rubroData] = await Promise.all([
+      const [prodData, rubroData, promoData] = await Promise.all([
         api.getProducts(input.searchQuery),
         api.getRubros(),
+        api.getActiveWeeklyPromos().catch(() => null),
       ]);
-      await saveCatalogSnapshot('rubros_all', rubroData);
+      await Promise.all([
+        saveCatalogSnapshot('rubros_all', rubroData),
+        Array.isArray(promoData)
+          ? saveCatalogSnapshot('weekly_promos_active', promoData)
+          : Promise.resolve(),
+      ]);
       let syncTs: string | undefined;
       if (!input.searchQuery.trim()) {
         syncTs = await saveCatalogSnapshot('products_full', prodData);
       }
-      return { fromCache: false, lastCatalogSyncAt: syncTs, products: prodData, rubros: rubroData };
+      return {
+        fromCache: false,
+        lastCatalogSyncAt: syncTs,
+        products: prodData,
+        rubros: rubroData,
+        weeklyPromos: Array.isArray(promoData) ? promoData : undefined,
+      };
     }
 
     return { fromCache: false };

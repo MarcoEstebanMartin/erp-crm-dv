@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { api } from '../../utils/api';
 import { getOrderStatusInfo } from '../../utils/orderStatusHelper';
+import { isBonusOrderItem } from '../../utils/weeklyPromoCartEvaluator';
 import {
   CATALOG_META_FRESHNESS_TTL_MS,
   CLIENTS_FRESHNESS_TTL_MS,
@@ -259,11 +260,13 @@ export function useAdminController(activeTab: string) {
   const handleOpenEditOrder = async (order: any) => {
     try {
       await loadProductsIfNeeded(false);
-      const items = order.items.map((i: any) => ({
-        id: i.id, productId: i.productId, name: i.product?.name || 'Artículo', sku: i.product?.sku || '',
-        quantity: i.quantity, weight: i.weight, isPesable: i.product?.isPesable, approximateWeight: i.product?.approximateWeight,
-        listPrice: i.price || i.unitPrice || (i.product ? i.product.listPrice : 0),
-      }));
+      const items = (order.items || [])
+        .filter((i: any) => !isBonusOrderItem(i))
+        .map((i: any) => ({
+          id: i.id, productId: i.productId, name: i.product?.name || 'Artículo', sku: i.product?.sku || '',
+          quantity: i.quantity, weight: i.weight, isPesable: i.product?.isPesable, approximateWeight: i.product?.approximateWeight,
+          listPrice: i.price || i.unitPrice || (i.product ? i.product.listPrice : 0),
+        }));
       setEditOrderModal({ open: true, orderId: order.id, clientId: order.clientId, clientName: order.client?.name || 'Cliente', items });
     } catch { setErrorMsg('Error al cargar datos para edición.'); }
   };

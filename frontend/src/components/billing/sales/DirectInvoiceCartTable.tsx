@@ -1,10 +1,12 @@
 import React from 'react';
 import type { DirectCartItem } from './sales.types';
 import { updateCartRowQty } from './salesBilling.helpers';
+import type { FrontendCartPromoEvalResult } from '../../../utils/weeklyPromoCartEvaluator';
 
 interface DirectInvoiceCartTableProps {
   directCart: DirectCartItem[];
   setDirectCart: React.Dispatch<React.SetStateAction<DirectCartItem[]>>;
+  promoEval?: FrontendCartPromoEvalResult;
   handleRemoveDirectProduct: (prodId: number) => void;
 }
 
@@ -23,6 +25,7 @@ function TrashIcon({ size }: { size: number }) {
 export function DirectInvoiceCartTable({
   directCart,
   setDirectCart,
+  promoEval,
   handleRemoveDirectProduct
 }: DirectInvoiceCartTableProps) {
   return (
@@ -52,11 +55,21 @@ export function DirectInvoiceCartTable({
               const fullBoxes = unitsPerBox > 1 ? Math.floor(Number(item.quantity || 0) / unitsPerBox) : 0;
               const remainderUnits = unitsPerBox > 1 ? Number(item.quantity || 0) % unitsPerBox : Number(item.quantity || 0);
               const belowMin = item.product.minOrderQuantity && item.product.minOrderQuantity > 1 && Number(item.quantity) < item.product.minOrderQuantity;
+              const evalLine = promoEval?.byProductId?.[item.product.id];
+              const displayUnitPrice = evalLine?.promoApplied ? evalLine.effectiveUnitPrice : Number(item.unitPrice);
+              const displaySubtotal = evalLine?.promoApplied ? evalLine.lineSubtotal : Number(item.subtotal);
 
               return (
                 <tr key={item.product.id}>
                   <td>
-                    <div style={{ fontWeight: 600 }}>{item.product.name}</div>
+                    <div style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                      <span>{item.product.name}</span>
+                      {evalLine?.promoApplied && (
+                        <span style={{ backgroundColor: '#ECFDF5', color: '#065F46', border: '1px solid #A7F3D0', fontSize: '0.68rem', fontWeight: 700, padding: '1px 6px', borderRadius: '4px' }}>
+                          {evalLine.appliedPromoName || 'Oferta'}
+                        </span>
+                      )}
+                    </div>
                     <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginTop: '2px' }}>
                       <span>SKU: {item.product.sku}</span>
                       {item.product.isPesable && (
@@ -78,7 +91,16 @@ export function DirectInvoiceCartTable({
                       )}
                     </div>
                   </td>
-                  <td>${Number(item.unitPrice).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                  <td>
+                    {evalLine?.promoApplied && Number(item.unitPrice) > displayUnitPrice && (
+                      <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', textDecoration: 'line-through' }}>
+                        ${Number(item.unitPrice).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </div>
+                    )}
+                    <span style={{ fontWeight: evalLine?.promoApplied ? 700 : 400, color: evalLine?.promoApplied ? '#065F46' : 'inherit' }}>
+                      ${displayUnitPrice.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                  </td>
                   <td>
                     <input
                       type="number"
@@ -142,7 +164,7 @@ export function DirectInvoiceCartTable({
                     )}
                   </td>
                   <td style={{ fontWeight: 600 }}>
-                    ${Number(item.subtotal).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    ${displaySubtotal.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </td>
                   <td>
                     <button type="button" className="btn btn-ghost" style={{ color: 'var(--color-danger)', padding: '4px' }} onClick={() => handleRemoveDirectProduct(item.product.id)}>
@@ -153,6 +175,29 @@ export function DirectInvoiceCartTable({
               );
             })
           )}
+          {promoEval?.bonusLines?.map((bonus) => {
+            const cartProd = directCart.find((c) => c.product.id === bonus.productId)?.product;
+            const reqStock = promoEval.stockRequiredByProduct[bonus.productId] || 0;
+            const lowStock = cartProd && Number(cartProd.stock || 0) < reqStock;
+            return (
+              <tr key={`bonus-${bonus.productId}`} style={{ backgroundColor: '#ECFDF5' }}>
+                <td>
+                  <div style={{ fontWeight: 600, color: '#065F46' }}>{bonus.productName}</div>
+                  <div style={{ fontSize: '0.7rem', color: lowStock ? '#E30613' : '#047857', fontWeight: lowStock ? 700 : 500 }}>
+                    {lowStock
+                      ? `Stock insuficiente para incluir bonificación (Disponible: ${cartProd.stock}, Req: ${reqStock})`
+                      : `Bonificación sin cargo · ${bonus.promoName}`}
+                  </div>
+                </td>
+                <td style={{ color: '#065F46', fontWeight: 600 }}>$0,00</td>
+                <td style={{ fontWeight: 700, color: '#065F46', textAlign: 'center' }}>+{bonus.quantity}</td>
+                <td style={{ textAlign: 'center', fontSize: '0.75rem', color: '#047857' }}>Sin cargo</td>
+                <td style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>No Aplica</td>
+                <td style={{ fontWeight: 700, color: '#065F46' }}>$0,00</td>
+                <td></td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>

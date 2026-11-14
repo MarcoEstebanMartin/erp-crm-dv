@@ -4,17 +4,20 @@ import { captureCurrentGpsSilently } from '../../utils/geoUtils';
 import { generateSafeIdempotencyKey } from '../../utils/idempotencyClient';
 import { loadCatalogSnapshot, saveCatalogSnapshot } from '../../utils/offlineCatalogDb';
 import { isLikelyNetworkError } from '../../utils/offlineSyncManager';
+import { isBonusOrderItem } from '../../utils/weeklyPromoCartEvaluator';
 import { cleanCityName, getTodayKey } from './vendedorHelpers';
 import { fetchVendedorTabState } from './vendedorCatalogFetcher';
 import { useVendedorOfflineSync } from './useVendedorOfflineSync';
 import type { StreetClientFormState } from './VendedorModals';
 import type { Persona, Product, Order, Rubro, SaleRoute } from '../../types';
+import type { WeeklyPromo } from '../admin/config/weeklyPromo.helpers';
 
 export function useVendedorController(activeTab: string) {
   const [clients, setClients] = useState<Persona[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [rubros, setRubros] = useState<Rubro[]>([]);
+  const [weeklyPromos, setWeeklyPromos] = useState<WeeklyPromo[]>([]);
   const [filterRubroId, setFilterRubroId] = useState<string>('');
 
   const [selectedClient, setSelectedClient] = useState<Persona | null>(null);
@@ -70,6 +73,7 @@ export function useVendedorController(activeTab: string) {
       if (result.products !== undefined) setProducts(result.products);
       if (result.orders !== undefined) setOrders(result.orders);
       if (result.rubros !== undefined) setRubros(result.rubros);
+      if (result.weeklyPromos !== undefined) setWeeklyPromos(result.weeklyPromos);
       if (result.vendedorRoutes !== undefined) setVendedorRoutes(result.vendedorRoutes);
       if (result.todayVisits !== undefined) setTodayVisits(result.todayVisits);
       if (result.resolvedRouteId && !selectedRouteId) setSelectedRouteId(result.resolvedRouteId);
@@ -243,17 +247,19 @@ export function useVendedorController(activeTab: string) {
     try {
       const prods = await api.getProducts();
       setProducts(prods);
-      const items = order.items.map((i: any) => ({
-        id: i.id, productId: i.productId, name: i.product?.name || 'Artículo', sku: i.product?.sku || '',
-        quantity: i.quantity, weight: i.weight, isPesable: i.product?.isPesable, approximateWeight: i.product?.approximateWeight,
-        listPrice: i.price || i.unitPrice || (i.product ? i.product.listPrice : 0),
-      }));
+      const items = (order.items || [])
+        .filter((i: any) => !isBonusOrderItem(i))
+        .map((i: any) => ({
+          id: i.id, productId: i.productId, name: i.product?.name || 'Artículo', sku: i.product?.sku || '',
+          quantity: i.quantity, weight: i.weight, isPesable: i.product?.isPesable, approximateWeight: i.product?.approximateWeight,
+          listPrice: i.price || i.unitPrice || (i.product ? i.product.listPrice : 0),
+        }));
       setEditOrderModal({ open: true, orderId: order.id, clientId: order.clientId, clientName: order.client?.name || order.persona?.name || 'Cliente', items });
     } catch { setErrorMsg('Error al cargar datos para edición.'); }
   };
 
   return {
-    clients, products, orders, rubros, filterRubroId, setFilterRubroId, selectedClient, setSelectedClient,
+    clients, products, orders, rubros, weeklyPromos, filterRubroId, setFilterRubroId, selectedClient, setSelectedClient,
     clientFilter, setClientFilter, cart, setCart, orderNotes, setOrderNotes, clientModal, setClientModal,
     orderDetailsModal, setOrderDetailsModal, resumenClientModal, setResumenClientModal, isPriceListModalOpen, setIsPriceListModalOpen,
     editOrderModal, setEditOrderModal, searchQuery, setSearchQuery, prodSearchQuery, setProdSearchQuery,

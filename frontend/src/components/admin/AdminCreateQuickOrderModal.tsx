@@ -1,7 +1,12 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Trash2, X } from 'lucide-react';
 import { api } from '../../utils/api';
 import { getQuickItemPrice } from './adminPrintHelpers';
+import {
+  evaluateFrontendCartPromos,
+  getProductPromoBadge,
+} from '../../utils/weeklyPromoCartEvaluator';
+import type { WeeklyPromo } from './config/weeklyPromo.helpers';
 
 interface QuickOrderModalState {
   open: boolean;
@@ -29,6 +34,39 @@ export const AdminCreateQuickOrderModal: React.FC<AdminCreateQuickOrderModalProp
   setSuccessMsg,
 }) => {
   const [quickProductQuery, setQuickProductQuery] = useState('');
+  const [weeklyPromos, setWeeklyPromos] = useState<WeeklyPromo[]>([]);
+
+  const isOpen = Boolean(createOrderModal?.open);
+  useEffect(() => {
+    if (!isOpen) return;
+    let cancelled = false;
+    api
+      .getActiveWeeklyPromos()
+      .then((res) => {
+        if (!cancelled) setWeeklyPromos(Array.isArray(res) ? res : []);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen]);
+
+  const promoEval = useMemo(() => {
+    if (!createOrderModal || !createOrderModal.open) {
+      return { byProductId: {}, bonusLines: [], stockRequiredByProduct: {}, totalAmount: 0, appliedPromoIds: [], totalBonusUnits: 0 };
+    }
+    return evaluateFrontendCartPromos({
+      items: createOrderModal.cart.map((curr) => ({
+        productId: curr.product.id,
+        productName: curr.product.name,
+        quantity: curr.quantity,
+        isPesable: Boolean(curr.product.isPesable),
+        approximateWeight: curr.product.approximateWeight,
+        baseUnitPrice: getQuickItemPrice(curr.product, createOrderModal.client),
+      })),
+      promos: weeklyPromos,
+    });
+  }, [createOrderModal, weeklyPromos]);
 
   if (!createOrderModal || !createOrderModal.open) return null;
 
@@ -89,11 +127,7 @@ export const AdminCreateQuickOrderModal: React.FC<AdminCreateQuickOrderModalProp
   const client = createOrderModal.client;
   const priceListLabel = client.priceList === 'C' ? 'Lista Especial 2' : client.priceList === 'B' ? 'Lista Especial' : 'Lista 4';
   const balance = Number(client.outstandingBalance || 0);
-  const totalAmount = createOrderModal.cart.reduce((acc, curr) => {
-    const price = getQuickItemPrice(curr.product, client);
-    const qtyOrWeight = curr.product.isPesable ? curr.quantity * (curr.product.approximateWeight || 1) : curr.quantity;
-    return acc + Math.round(price * qtyOrWeight);
-  }, 0);
+  const totalAmount = promoEval.totalAmount;
 
   return (
     <div className="modal-overlay" style={{ zIndex: 1100 }}>
@@ -128,10 +162,18 @@ export const AdminCreateQuickOrderModal: React.FC<AdminCreateQuickOrderModalProp
                   .map((p) => {
                     const price = getQuickItemPrice(p, client);
                     const inCart = createOrderModal.cart.find((i) => i.product.id === p.id);
+                    const promoBadge = getProductPromoBadge(p.id, weeklyPromos, Boolean(p.isPesable));
                     return (
                       <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '11px 16px', borderBottom: '1px solid #f0f0f2', backgroundColor: inCart ? 'rgba(16, 185, 129, 0.04)' : '#ffffff' }}>
                         <div style={{ marginRight: '12px', flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: '0.88rem', fontWeight: 600, color: 'var(--text-primary)' }}>{p.name}</div>
+                          <div style={{ fontSize: '0.88rem', fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                            <span>{p.name}</span>
+                            {promoBadge && (
+                              <span style={{ fontSize: '0.68rem', fontWeight: 700, backgroundColor: '#ECFDF5', color: '#065F46', border: '1px solid #A7F3D0', borderRadius: '4px', padding: '1px 6px' }}>
+                                {promoBadge}
+                              </span>
+                            )}
+                          </div>
                           <div style={{ fontSize: '0.76rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
                             SKU: {p.sku} · Stock: <span style={{ fontWeight: 600, color: p.stock <= 0 ? 'var(--color-danger)' : 'var(--text-primary)' }}>{p.stock}</span>
                           </div>
@@ -161,17 +203,31 @@ export const AdminCreateQuickOrderModal: React.FC<AdminCreateQuickOrderModalProp
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     {createOrderModal.cart.map((item) => {
-                      const price = getQuickItemPrice(item.product, client);
+                      const basePrice = getQuickItemPrice(item.product, client);
+                      const evaluatedLine = promoEval.byProductId[item.product.id];
+                      const price = evaluatedLine ? evaluatedLine.effectiveUnitPrice : basePrice;
                       const approxKg = item.quantity * (item.product.approximateWeight || 1);
-                      const lineTotal = item.product.isPesable ? Math.round(price * approxKg) : price * item.quantity;
+                      const lineTotal = evaluatedLine
+                        ? evaluatedLine.lineSubtotal
+                        : item.product.isPesable
+                          ? Math.round(price * approxKg)
+                          : price * item.quantity;
                       return (
                         <div key={item.product.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', border: '1px solid var(--border-color)', borderRadius: '8px', backgroundColor: '#ffffff', gap: '12px' }}>
                           <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontSize: '0.86rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-                              {item.product.name}
-                              {item.product.isPesable && <span style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--text-secondary)', marginLeft: '6px' }}>(~{approxKg.toLocaleString('es-AR')} kg)</span>}
+                            <div style={{ fontSize: '0.86rem', fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                              <span>{item.product.name}</span>
+                              {item.product.isPesable && <span style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--text-secondary)' }}>(~{approxKg.toLocaleString('es-AR')} kg)</span>}
+                              {evaluatedLine?.promoApplied && (
+                                <span style={{ fontSize: '0.68rem', fontWeight: 700, backgroundColor: '#ECFDF5', color: '#065F46', border: '1px solid #A7F3D0', borderRadius: '4px', padding: '1px 6px' }}>
+                                  {evaluatedLine.appliedPromoName || 'Oferta'}
+                                </span>
+                              )}
                             </div>
                             <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                              {evaluatedLine?.promoApplied && basePrice > price && (
+                                <span style={{ textDecoration: 'line-through', marginRight: '6px', opacity: 0.7 }}>${basePrice.toLocaleString('es-AR')}</span>
+                              )}
                               {item.product.isPesable ? `$${price.toLocaleString('es-AR')}/kg × ${approxKg.toLocaleString('es-AR')} kg = ` : `$${price.toLocaleString('es-AR')} × ${item.quantity} = `}
                               <strong style={{ color: 'var(--text-primary)' }}>${lineTotal.toLocaleString('es-AR')}</strong>
                             </div>
@@ -191,6 +247,26 @@ export const AdminCreateQuickOrderModal: React.FC<AdminCreateQuickOrderModalProp
                             <button type="button" className="btn btn-secondary" style={{ padding: '4px 9px', fontSize: '0.82rem', minWidth: '28px' }} onClick={() => handleUpdateQuickCartQty(item.product.id, item.quantity + 1)}>+</button>
                             <button type="button" className="btn btn-secondary" style={{ padding: '6px', marginLeft: '4px', color: 'var(--color-danger)' }} onClick={() => handleUpdateQuickCartQty(item.product.id, 0)}><Trash2 size={14} /></button>
                           </div>
+                        </div>
+                      );
+                    })}
+                    {promoEval.bonusLines.map((bonus) => {
+                      const cartProd = createOrderModal.cart.find((c) => c.product.id === bonus.productId)?.product;
+                      const reqStock = promoEval.stockRequiredByProduct[bonus.productId] || 0;
+                      const lowBonusStock = cartProd && Number(cartProd.stock || 0) < reqStock;
+                      return (
+                        <div key={`bonus-${bonus.productId}`} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '9px 14px', border: '1px solid #A7F3D0', borderRadius: '8px', backgroundColor: '#ECFDF5', gap: '12px' }}>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: '0.84rem', fontWeight: 600, color: '#065F46' }}>
+                              + {bonus.quantity} u. sin cargo · {bonus.productName}
+                            </div>
+                            <div style={{ fontSize: '0.73rem', color: lowBonusStock ? '#E30613' : '#047857', fontWeight: lowBonusStock ? 700 : 500 }}>
+                              {lowBonusStock
+                                ? `Stock insuficiente para incluir bonificación (Disponible: ${cartProd.stock}, Req: ${reqStock})`
+                                : bonus.promoName}
+                            </div>
+                          </div>
+                          <span style={{ fontSize: '0.88rem', fontWeight: 700, color: '#065F46' }}>$0</span>
                         </div>
                       );
                     })}

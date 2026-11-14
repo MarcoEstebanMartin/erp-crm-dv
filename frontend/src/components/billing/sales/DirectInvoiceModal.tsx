@@ -100,6 +100,7 @@ export function DirectInvoiceModal({
               <DirectInvoiceCartTable
                 directCart={directInvoice.directCart}
                 setDirectCart={directInvoice.setDirectCart}
+                promoEval={directInvoice.promoEval}
                 handleRemoveDirectProduct={directInvoice.handleRemoveDirectProduct}
               />
             </div>

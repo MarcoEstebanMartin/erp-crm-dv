@@ -16,7 +16,6 @@ import {
   roundToIntegerPeso,
   roundToThreeDecimalsWeight,
   roundToTwoDecimals,
-  sumIntegerAmounts,
   toDecimal,
 } from '../core/money';
 import {
@@ -25,6 +24,11 @@ import {
   resolveAndSettleOrderPayment,
 } from './orders/order-tax.helpers';
 import { assignFifoLotsToOrderItem } from './orders/order-billing.helpers';
+import { type CartBasePricingInfo } from '../engines/weekly-promos.engine';
+import {
+  decrementStockByProductMapInTx,
+  evaluateOrderCartWithWeeklyPromos,
+} from './orders/order-weekly-promos.helper';
 
 export interface CreateDirectInvoiceDto {
   adminId: number;
@@ -77,7 +81,8 @@ export class DirectInvoiceService {
       where: { id: { in: productIds } },
     });
 
-    const orderItemsData: any[] = [];
+    const basePricingByProductId = new Map<number, CartBasePricingInfo>();
+    const promoInputLines = [];
 
     for (const item of items) {
       const product = dbProducts.find((p) => p.id === item.productId);
@@ -120,20 +125,38 @@ export class DirectInvoiceService {
         discountPct: itemDiscount,
       });
 
-      orderItemsData.push({
+      if (!basePricingByProductId.has(product.id)) {
+        basePricingByProductId.set(product.id, {
+          baseUnitPrice: roundToIntegerPeso(lc.netUnitPrice).toNumber(),
+          baseListPrice: selectedPrice,
+          baseDiscountPct: itemDiscount,
+        });
+      }
+
+      promoInputLines.push({
         productId: product.id,
         quantity: item.quantity,
         weight: product.isPesable ? billableQtyDec.toNumber() : null,
-        unitPrice: roundToIntegerPeso(lc.netUnitPrice).toNumber(),
-        subtotal: lc.lineSubtotal.toNumber(),
-        unitCostSnapshot: lc.unitCostSnapshot.toNumber(),
-        listPriceSnapshot: lc.listPriceSnapshot.toNumber(),
-        discountPctSnapshot: lc.discountPctSnapshot.toNumber(),
-        productName: product.name,
       });
     }
 
-    let totalSum = sumIntegerAmounts(orderItemsData.map((i) => i.subtotal)).toNumber();
+    const evaluated = await evaluateOrderCartWithWeeklyPromos({
+      tx: prisma,
+      items: promoInputLines,
+      dbProducts,
+      basePricingByProductId,
+      ignoreStockCheck: process.env.IGNORE_STOCK_CHECK === 'true',
+    });
+
+    const orderItemsData = evaluated.lines.map((line) => {
+      const prod = dbProducts.find((p) => p.id === line.productId);
+      return {
+        ...line,
+        productName: prod?.name || 'Producto',
+      };
+    });
+
+    let totalSum = evaluated.totalAmount;
 
     const creditLimit = Number(persona.creditLimit || 0);
     const outstandingBalance = roundToIntegerPeso(persona.outstandingBalance || 0).toNumber();
@@ -212,24 +235,14 @@ export class DirectInvoiceService {
 
     try {
       const result = await prisma.$transaction(async (tx) => {
-        for (const itemData of orderItemsData) {
-          if (process.env.IGNORE_STOCK_CHECK === 'true') {
-            await tx.product.update({
-              where: { id: itemData.productId },
-              data: { stock: { decrement: itemData.quantity } },
-            });
-          } else {
-            const res = await tx.product.updateMany({
-              where: { id: itemData.productId, stock: { gte: itemData.quantity } },
-              data: { stock: { decrement: itemData.quantity } },
-            });
-            if (res.count === 0) {
-              throw new Error(
-                `Stock insuficiente para "${itemData.productName}" debido a una operación concurrente. Por favor reintente la venta.`,
-              );
-            }
-          }
-        }
+        await decrementStockByProductMapInTx({
+          tx,
+          stockRequiredByProduct: evaluated.stockRequiredByProduct,
+          dbProducts,
+          ignoreStockCheck: process.env.IGNORE_STOCK_CHECK === 'true',
+          formatConcurrentError: (prodName) =>
+            `Stock insuficiente para "${prodName}" debido a una operación concurrente. Por favor reintente la venta.`,
+        });
 
         for (const itemData of orderItemsData) {
           const orderItem = await tx.orderItem.create({
@@ -254,7 +267,9 @@ export class DirectInvoiceService {
               orderId: order.id,
               referenceId: `FAC-${order.id}`,
               userId: adminId,
-              reason: `Venta directa comprobante ${finalInvoiceNumber || 'INT-' + order.id}`,
+              reason: itemData.isPromoBonus
+                ? `Bonificación Promo (${itemData.appliedPromoName || 'Semanal'}) comprobante ${finalInvoiceNumber || 'INT-' + order.id}`
+                : `Venta directa comprobante ${finalInvoiceNumber || 'INT-' + order.id}`,
             },
           });
 

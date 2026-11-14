@@ -45,9 +45,13 @@ export function calculateDirectBillingTotals(
   directCart: DirectCartItem[],
   billingType: string,
   selectedDirectClient: any,
-  ivaPerceptionAliquot: number
+  ivaPerceptionAliquot: number,
+  overrideSubtotalSum?: number
 ): DirectBillingTotals {
-  const subtotalSum = directCart.reduce((sum, item) => sum + item.subtotal, 0);
+  const subtotalSum =
+    overrideSubtotalSum !== undefined
+      ? overrideSubtotalSum
+      : directCart.reduce((sum, item) => sum + item.subtotal, 0);
   let net = subtotalSum;
   let tax = 0;
   let percepIIBB = 0;

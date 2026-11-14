@@ -2,13 +2,13 @@ import prisma from '../utils/prisma';
 import { Role, BillingType, InvoiceType, OrderStatus, MovementType, SalesChannel } from '@prisma/client';
 import { PricingService } from './pricing.service';
 import { PersonaService } from './persona.service';
-import {
-  calculateOrderLine,
-  roundToThreeDecimalsWeight,
-  sumIntegerAmounts,
-  toDecimal,
-} from '../core/money';
 import { OrderScaleService } from './orders/order-scale.service';
+import { type CartBasePricingInfo } from '../engines/weekly-promos.engine';
+import {
+  decrementStockByProductMapInTx,
+  evaluateOrderCartWithWeeklyPromos,
+  isPromoBonusOrderItem,
+} from './orders/order-weekly-promos.helper';
 
 const personaService = new PersonaService();
 
@@ -54,16 +54,21 @@ export class OrderService {
       orderBy: { createdAt: 'desc' },
     });
 
-    if (existingRecentOrder && existingRecentOrder.items.length === items.length) {
-      const isExactDuplicate = items.every((newItem) =>
-        existingRecentOrder.items.some(
-          (existingItem) =>
-            existingItem.productId === newItem.productId &&
-            existingItem.quantity === newItem.quantity,
-        ),
+    if (existingRecentOrder) {
+      const existingPaidItems = existingRecentOrder.items.filter(
+        (existingItem) => !isPromoBonusOrderItem(existingItem),
       );
-      if (isExactDuplicate) {
-        return existingRecentOrder;
+      if (existingPaidItems.length === items.length) {
+        const isExactDuplicate = items.every((newItem) =>
+          existingPaidItems.some(
+            (existingItem) =>
+              existingItem.productId === newItem.productId &&
+              existingItem.quantity === newItem.quantity,
+          ),
+        );
+        if (isExactDuplicate) {
+          return existingRecentOrder;
+        }
       }
     }
 
@@ -80,8 +85,8 @@ export class OrderService {
         },
       });
 
-      const orderItemsToCreate: any[] = [];
-      const stockUpdates: { productId: number; newStock: number; quantityDecreased: number }[] = [];
+      const basePricingByProductId = new Map<number, CartBasePricingInfo>();
+      const promoInputLines = [];
 
       for (const item of items) {
         const product = dbProducts.find((p) => p.id === item.productId);
@@ -102,46 +107,36 @@ export class OrderService {
           );
         }
 
-        const pricing = PricingService.calculatePriceAndDiscountInMemory(
-          product,
-          persona,
-          dbRules,
-          billingType,
-        );
+        if (!basePricingByProductId.has(product.id)) {
+          const pricing = PricingService.calculatePriceAndDiscountInMemory(
+            product,
+            persona,
+            dbRules,
+            billingType,
+          );
+          basePricingByProductId.set(product.id, {
+            baseUnitPrice: pricing.finalPrice,
+            baseListPrice: pricing.basePrice,
+            baseDiscountPct: pricing.discount,
+          });
+        }
 
-        const approxKg = Number((product as any).approximateWeight || 1) || 1;
-        const billableQtyDec = product.isPesable
-          ? item.weight
-            ? roundToThreeDecimalsWeight(item.weight)
-            : roundToThreeDecimalsWeight(toDecimal(item.quantity).times(approxKg))
-          : toDecimal(item.quantity);
-
-        const lineCalc = calculateOrderLine({
-          unitCost: Number((product as any).costPrice || 0),
-          unitPriceList: pricing.basePrice,
-          billableQty: billableQtyDec,
-          discountPct: pricing.discount,
-        });
-
-        orderItemsToCreate.push({
+        promoInputLines.push({
           productId: product.id,
           quantity: item.quantity,
-          weight: item.weight ? roundToThreeDecimalsWeight(item.weight).toNumber() : null,
-          unitPrice: pricing.finalPrice,
-          subtotal: lineCalc.lineSubtotal.toNumber(),
-          unitCostSnapshot: lineCalc.unitCostSnapshot.toNumber(),
-          listPriceSnapshot: lineCalc.listPriceSnapshot.toNumber(),
-          discountPctSnapshot: lineCalc.discountPctSnapshot.toNumber(),
-        });
-
-        stockUpdates.push({
-          productId: product.id,
-          newStock: product.stock - item.quantity,
-          quantityDecreased: -item.quantity,
+          weight: product.isPesable && item.weight ? item.weight : null,
         });
       }
 
-      const totalSum = sumIntegerAmounts(orderItemsToCreate.map((i) => i.subtotal)).toNumber();
+      const evaluated = await evaluateOrderCartWithWeeklyPromos({
+        tx,
+        items: promoInputLines,
+        dbProducts,
+        basePricingByProductId,
+        ignoreStockCheck: process.env.IGNORE_STOCK_CHECK === 'true',
+      });
+
+      const totalSum = evaluated.totalAmount;
 
       const maxUnpaidInvoices = Number(persona.maxUnpaidInvoices || 0);
       if (maxUnpaidInvoices > 0) {
@@ -170,7 +165,7 @@ export class OrderService {
       });
 
       await tx.orderItem.createMany({
-        data: orderItemsToCreate.map((oItem) => ({
+        data: evaluated.lines.map((oItem) => ({
           orderId: order.id,
           productId: oItem.productId,
           quantity: oItem.quantity,
@@ -183,42 +178,24 @@ export class OrderService {
         })),
       });
 
-      for (const stockUp of stockUpdates) {
-        const qtyToDecrement = Math.abs(stockUp.quantityDecreased);
-        if (process.env.IGNORE_STOCK_CHECK === 'true') {
-          await tx.product.update({
-            where: { id: stockUp.productId },
-            data: { stock: { decrement: qtyToDecrement } },
-          });
-        } else {
-          const res = await tx.product.updateMany({
-            where: {
-              id: stockUp.productId,
-              stock: { gte: qtyToDecrement },
-            },
-            data: {
-              stock: { decrement: qtyToDecrement },
-            },
-          });
-
-          if (res.count === 0) {
-            const prod = dbProducts.find((p) => p.id === stockUp.productId);
-            throw new Error(
-              `Stock insuficiente para "${prod?.name || 'Producto'}" debido a una operación concurrente. Por favor reintente la carga del pedido.`,
-            );
-          }
-        }
-      }
+      await decrementStockByProductMapInTx({
+        tx,
+        stockRequiredByProduct: evaluated.stockRequiredByProduct,
+        dbProducts,
+        ignoreStockCheck: process.env.IGNORE_STOCK_CHECK === 'true',
+      });
 
       await tx.stockMovement.createMany({
-        data: stockUpdates.map((stockUp) => ({
-          productId: stockUp.productId,
-          quantity: stockUp.quantityDecreased,
+        data: evaluated.lines.map((line) => ({
+          productId: line.productId,
+          quantity: -line.quantity,
           type: MovementType.OUT,
           orderId: order.id,
           referenceId: `ORDER-${order.id}`,
           userId: sellerId,
-          reason: `Venta - Reserva de Pedido #${order.id}`,
+          reason: line.isPromoBonus
+            ? `Bonificación Promo (${line.appliedPromoName || 'Semanal'}) - Pedido #${order.id}`
+            : `Venta - Reserva de Pedido #${order.id}`,
         })),
       });
 

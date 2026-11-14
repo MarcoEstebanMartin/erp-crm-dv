@@ -132,6 +132,7 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({ onBackToStaffLogin }
         onClose={() => store.setIsCartOpen(false)}
         clientName={auth.client.name}
         cart={store.cart}
+        promoEval={store.promoEval}
         onUpdateQty={store.updateCartQuantity}
         orderNotes={store.orderNotes}
         setOrderNotes={store.setOrderNotes}

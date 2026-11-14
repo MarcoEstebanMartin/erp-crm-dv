@@ -3,14 +3,16 @@ import prisma from '../../utils/prisma';
 import { PricingService } from '../pricing.service';
 import {
   calculateAfipBreakdown,
-  calculateOrderLine,
   roundToIntegerPeso,
-  roundToThreeDecimalsWeight,
   roundToTwoDecimals,
-  sumIntegerAmounts,
   toDecimal,
 } from '../../core/money';
 import { getTiendaOnlineUser } from './store-auth.service';
+import { type CartBasePricingInfo } from '../../engines/weekly-promos.engine';
+import {
+  decrementStockByProductMapInTx,
+  evaluateOrderCartWithWeeklyPromos,
+} from '../orders/order-weekly-promos.helper';
 
 export interface StoreOrderItemInput {
   productId: number;
@@ -142,9 +144,8 @@ export class StoreOrderService {
         }),
       ]);
 
-      const orderItemsToCreate: any[] = [];
-      const stockUpdates: { productId: number; qtyToDecrement: number; productName: string }[] = [];
-      let totalBultos = 0;
+      const basePricingByProductId = new Map<number, CartBasePricingInfo>();
+      const promoInputLines = [];
 
       for (const reqItem of input.items) {
         const product = dbProducts.find((p) => p.id === reqItem.productId);
@@ -166,53 +167,59 @@ export class StoreOrderService {
           );
         }
 
-        const activeOffer = product.offerCampaignItems.find(
-          (oci) => oci.campaign && oci.campaign.isActive,
-        );
-        const resolvedPricing = resolveServerSideStorePricing(
-          product,
-          client,
-          dbRules,
-          activeOffer ? Number(activeOffer.offerPrice) : null,
-        );
+        if (!basePricingByProductId.has(product.id)) {
+          const activeOffer = product.offerCampaignItems.find(
+            (oci) => oci.campaign && oci.campaign.isActive,
+          );
+          const resolvedPricing = resolveServerSideStorePricing(
+            product,
+            client,
+            dbRules,
+            activeOffer ? Number(activeOffer.offerPrice) : null,
+          );
+          basePricingByProductId.set(product.id, {
+            baseUnitPrice: roundToIntegerPeso(resolvedPricing.finalUnitPrice).toNumber(),
+            baseListPrice: resolvedPricing.basePrice,
+            baseDiscountPct: resolvedPricing.discountPct,
+          });
+        }
 
-        const approxKg = Number(product.approximateWeight || 1) || 1;
-        const billableQty = product.isPesable
-          ? roundToThreeDecimalsWeight(toDecimal(qty).times(approxKg))
-          : toDecimal(qty);
-
-        const lineCalc = calculateOrderLine({
-          unitCost: Number(product.costPrice || 0),
-          unitPriceList: resolvedPricing.basePrice,
-          billableQty,
-          discountPct: resolvedPricing.discountPct,
-        });
-
-        totalBultos += Math.ceil(qty / Math.max(1, product.unitsPerBox || 1));
-
-        orderItemsToCreate.push({
+        promoInputLines.push({
           productId: product.id,
           quantity: qty,
           weight: null,
-          unitPrice: lineCalc.netUnitPrice.toNumber(),
-          subtotal: lineCalc.lineSubtotal.toNumber(),
-          unitCostSnapshot: lineCalc.unitCostSnapshot.toNumber(),
-          listPriceSnapshot: lineCalc.listPriceSnapshot.toNumber(),
-          discountPctSnapshot: lineCalc.discountPctSnapshot.toNumber(),
-        });
-
-        stockUpdates.push({
-          productId: product.id,
-          qtyToDecrement: qty,
-          productName: product.name,
         });
       }
 
-      if (orderItemsToCreate.length === 0) {
+      if (promoInputLines.length === 0) {
         throw new Error('Los productos seleccionados no son válidos.');
       }
 
-      const totalInteger = sumIntegerAmounts(orderItemsToCreate.map((i) => i.subtotal));
+      const evaluated = await evaluateOrderCartWithWeeklyPromos({
+        tx,
+        items: promoInputLines,
+        dbProducts,
+        basePricingByProductId,
+        ignoreStockCheck: process.env.IGNORE_STOCK_CHECK === 'true',
+      });
+
+      let totalBultos = 0;
+      const orderItemsToCreate = evaluated.lines.map((line) => {
+        const product = dbProducts.find((p) => p.id === line.productId);
+        totalBultos += Math.ceil(line.quantity / Math.max(1, product?.unitsPerBox || 1));
+        return {
+          productId: line.productId,
+          quantity: line.quantity,
+          weight: line.weight,
+          unitPrice: line.unitPrice,
+          subtotal: line.subtotal,
+          unitCostSnapshot: line.unitCostSnapshot,
+          listPriceSnapshot: line.listPriceSnapshot,
+          discountPctSnapshot: line.discountPctSnapshot,
+        };
+      });
+
+      const totalInteger = toDecimal(evaluated.totalAmount);
       const afipBreakdown = calculateAfipBreakdown(totalInteger, 21, 0);
 
       const newOrder = await tx.order.create({
@@ -245,34 +252,26 @@ export class StoreOrderService {
         },
       });
 
-      for (const stockUp of stockUpdates) {
-        if (process.env.IGNORE_STOCK_CHECK === 'true') {
-          await tx.product.update({
-            where: { id: stockUp.productId },
-            data: { stock: { decrement: stockUp.qtyToDecrement } },
-          });
-        } else {
-          const updated = await tx.product.updateMany({
-            where: { id: stockUp.productId, stock: { gte: stockUp.qtyToDecrement } },
-            data: { stock: { decrement: stockUp.qtyToDecrement } },
-          });
-          if (updated.count === 0) {
-            throw new Error(
-              `Stock insuficiente para "${stockUp.productName}" por venta simultánea. Reintentá la compra.`,
-            );
-          }
-        }
-      }
+      await decrementStockByProductMapInTx({
+        tx,
+        stockRequiredByProduct: evaluated.stockRequiredByProduct,
+        dbProducts,
+        ignoreStockCheck: process.env.IGNORE_STOCK_CHECK === 'true',
+        formatConcurrentError: (prodName) =>
+          `Stock insuficiente para "${prodName}" por venta simultánea. Reintentá la compra.`,
+      });
 
       await tx.stockMovement.createMany({
-        data: stockUpdates.map((stockUp) => ({
-          productId: stockUp.productId,
-          quantity: -stockUp.qtyToDecrement,
+        data: evaluated.lines.map((line) => ({
+          productId: line.productId,
+          quantity: -line.quantity,
           type: MovementType.OUT,
           orderId: newOrder.id,
           referenceId: `ORDER-${newOrder.id}`,
           userId: tiendaUser.id,
-          reason: `Venta Tienda Web - Reserva de Pedido #${newOrder.id}`,
+          reason: line.isPromoBonus
+            ? `Bonificación Promo Tienda Web (${line.appliedPromoName || 'Semanal'}) - Pedido #${newOrder.id}`
+            : `Venta Tienda Web - Reserva de Pedido #${newOrder.id}`,
         })),
       });
 
