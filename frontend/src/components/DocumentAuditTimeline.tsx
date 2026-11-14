@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../utils/api';
+import { translateAuditAction, translateRole } from './admin/config/auditLogDictionary';
+import { formatAuditMessage } from './admin/config/auditLogFormatter';
 import { 
   CheckCircle2, 
   AlertCircle, 
@@ -62,21 +64,12 @@ export const DocumentAuditTimeline: React.FC<DocumentAuditTimelineProps> = ({
     }
   };
 
-  const formatActionName = (action: string): string => {
-    const actionMap: Record<string, string> = {
-      CREATE_ORDER: 'Creación de Comprobante',
-      UPDATE_ORDER: 'Modificación de Comprobante',
-      UPDATE_ORDER_WEIGHTS: 'Actualización de Pesos / Armado',
-      EMIT_AFIP_INVOICE: 'Emisión de Factura AFIP',
-      CANCEL_ORDER: 'Cancelación de Comprobante',
-      CREATE_CREDIT_NOTE: 'Creación de Nota de Crédito',
-      APPROVE_CREDIT_NOTE: 'Aprobación de Nota de Crédito',
-      REJECT_CREDIT_NOTE: 'Rechazo de Nota de Crédito',
-      REGISTER_PAYMENT: 'Registro de Cobro / Recibo',
-      CANCEL_TRANSACTION: 'Anulación de Movimiento Financiero',
-      CREATE_ORDER_FAILED: 'Intento Fallido de Creación',
-    };
-    return actionMap[action] || action.replace(/_/g, ' ');
+  const formatStatusBadge = (status: string): string => {
+    const code = String(status || '').trim().toUpperCase();
+    if (code === 'SUCCESS') return 'EXITOSO';
+    if (code === 'WARNING') return 'ADVERTENCIA';
+    if (code === 'ERROR') return 'ERROR';
+    return code || 'EXITOSO';
   };
 
   const formatDate = (dateStr: string): string => {
@@ -159,7 +152,7 @@ export const DocumentAuditTimeline: React.FC<DocumentAuditTimelineProps> = ({
                   <div>
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-medium text-neutral-100">
-                        {formatActionName(log.action)}
+                        {translateAuditAction(log.action)}
                       </span>
                       <span
                         className={`text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded ${
@@ -170,9 +163,11 @@ export const DocumentAuditTimeline: React.FC<DocumentAuditTimelineProps> = ({
                             : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
                         }`}
                       >
-                        {log.status}
+                        {formatStatusBadge(log.status)}
                       </span>
                     </div>
+
+                    <p className="mt-1 text-xs text-neutral-300">{formatAuditMessage(log)}</p>
 
                     {/* Metadata: Usuario, Rol, Fecha */}
                     <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-xs text-neutral-400">
@@ -181,7 +176,7 @@ export const DocumentAuditTimeline: React.FC<DocumentAuditTimelineProps> = ({
                         {log.user?.username || `Usuario #${log.userId}`}
                         {log.user?.role && (
                           <span className="text-[10px] text-neutral-400 bg-neutral-800/80 px-1.5 py-0.2 rounded uppercase">
-                            {log.user.role}
+                            {translateRole(log.user.role)}
                           </span>
                         )}
                       </span>

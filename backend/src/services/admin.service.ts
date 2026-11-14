@@ -1,4 +1,5 @@
 import { adminUsersSubService } from './admin/admin-users.service';
+import { adminAuditSubService } from './admin/admin-audit.service';
 import { adminFinanceSubService } from './admin/admin-finance.service';
 import { adminChannelsSubService } from './admin/admin-channels.service';
 import { adminProfitabilitySubService } from './admin/admin-profitability.service';
@@ -32,10 +33,10 @@ export class AdminService {
 
   // 2. Usuarios y Logs de Auditoría
   getAuditLogs = (page = 1, limit = 50) =>
-    adminUsersSubService.getAuditLogs(page, limit);
+    adminAuditSubService.getAuditLogs(page, limit);
 
   getDocumentAuditLogs = (entityType: string, entityId: number) =>
-    adminUsersSubService.getDocumentAuditLogs(entityType, entityId);
+    adminAuditSubService.getDocumentAuditLogs(entityType, entityId);
 
   getUsers = () => adminUsersSubService.getUsers();
 

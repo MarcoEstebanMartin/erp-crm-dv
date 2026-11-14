@@ -2,6 +2,7 @@ import prisma from '../../utils/prisma';
 import bcrypt from 'bcryptjs';
 import { Role } from '@prisma/client';
 import { logAudit } from '../../utils/audit';
+import { adminAuditSubService } from './admin-audit.service';
 import {
   computePasswordVersion,
   isSystemUsername,
@@ -49,49 +50,14 @@ export class AdminUsersSubService {
    * Obtener logs de auditoría paginados.
    */
   async getAuditLogs(page: number, limit: number) {
-    const skip = (page - 1) * limit;
-
-    const [logs, total] = await prisma.$transaction([
-      prisma.auditLog.findMany({
-        skip,
-        take: limit,
-        include: {
-          user: {
-            select: { id: true, username: true, role: true },
-          },
-        },
-        orderBy: { createdAt: 'desc' },
-      }),
-      prisma.auditLog.count(),
-    ]);
-
-    return {
-      logs,
-      pagination: {
-        total,
-        page,
-        limit,
-        totalPages: Math.ceil(total / limit),
-      },
-    };
+    return adminAuditSubService.getAuditLogs(page, limit);
   }
 
   /**
    * Obtener logs de auditoría para un documento o entidad específica.
    */
   async getDocumentAuditLogs(entityType: string, entityId: number) {
-    return prisma.auditLog.findMany({
-      where: {
-        entityType,
-        entityId: Number(entityId),
-      },
-      include: {
-        user: {
-          select: { id: true, username: true, role: true },
-        },
-      },
-      orderBy: { createdAt: 'asc' },
-    });
+    return adminAuditSubService.getDocumentAuditLogs(entityType, entityId);
   }
 
   /**
