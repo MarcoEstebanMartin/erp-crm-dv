@@ -1,9 +1,27 @@
+import crypto from 'crypto';
 import { Role } from '@prisma/client';
+import { env } from '../config/env.config';
+
+export const SYSTEM_USERNAMES = new Set(['OFICINA', 'TIENDA_ONLINE']);
+
+export function isSystemUsername(username?: string | null): boolean {
+  if (!username) return false;
+  return SYSTEM_USERNAMES.has(String(username).trim().toUpperCase());
+}
+
+export function computePasswordVersion(passwordHash: string): string {
+  return crypto
+    .createHmac('sha256', env.JWT_SECRET)
+    .update(passwordHash)
+    .digest('hex')
+    .slice(0, 16);
+}
 
 export interface CachedStaffSession {
   id: number;
   role: Role;
   isActive: true;
+  pwdVer?: string;
 }
 
 export interface CachedStoreClientSession {

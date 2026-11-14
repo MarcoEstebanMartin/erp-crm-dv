@@ -27,7 +27,8 @@ export default function Login({ onLoginSuccess, onOpenStore }: LoginProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!username || !password) {
+    const cleanUsername = username.trim();
+    if (!cleanUsername || !password) {
       setError('Por favor, completa todos los campos.');
       return;
     }
@@ -36,7 +37,7 @@ export default function Login({ onLoginSuccess, onOpenStore }: LoginProps) {
     setError(null);
 
     try {
-      await api.login(username, password);
+      await api.login(cleanUsername, password);
       onLoginSuccess();
     } catch (err: any) {
       setError(err.message || 'Error de conexión. Inténtalo de nuevo.');
@@ -96,6 +97,10 @@ export default function Login({ onLoginSuccess, onOpenStore }: LoginProps) {
               placeholder="ej: admin, vendedor, deposito"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+              autoComplete="username"
               autoFocus
             />
           </div>
@@ -110,6 +115,7 @@ export default function Login({ onLoginSuccess, onOpenStore }: LoginProps) {
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                autoComplete="current-password"
                 style={{ width: '100%', paddingRight: '40px' }}
               />
               <button
@@ -155,15 +161,6 @@ export default function Login({ onLoginSuccess, onOpenStore }: LoginProps) {
             {loading ? 'Accediendo...' : 'Iniciar sesión'}
           </button>
         </form>
-
-        <div style={{ marginTop: '24px', fontSize: '0.75rem', color: 'var(--text-secondary)', borderTop: '1px solid var(--border-color)', paddingTop: '16px' }}>
-          <p>Credenciales de prueba:</p>
-          <div style={{ display: 'flex', justifyContent: 'space-around', marginTop: '6px' }}>
-            <span><strong>Admin</strong>: admin / admin!</span>
-            <span><strong>Vendedor</strong>: diego / lejarza!</span>
-            <span><strong>Depósito</strong>: miguel / miguel!</span>
-          </div>
-        </div>
       </div>
     </div>
   );

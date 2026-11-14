@@ -2,9 +2,49 @@ import prisma from '../../utils/prisma';
 import bcrypt from 'bcryptjs';
 import { Role } from '@prisma/client';
 import { logAudit } from '../../utils/audit';
-import { sessionCache } from '../../utils/session-cache.util';
+import {
+  computePasswordVersion,
+  isSystemUsername,
+  sessionCache,
+} from '../../utils/session-cache.util';
+
+const USER_PUBLIC_SELECT = {
+  id: true,
+  username: true,
+  role: true,
+  isActive: true,
+  createdAt: true,
+} as const;
+
+const SYSTEM_PROTECTED_ERROR =
+  'Las cuentas automáticas del sistema (OFICINA / Tienda Online) están protegidas y no pueden modificarse ni eliminarse.';
+
+const USER_HISTORY_DELETE_ERROR =
+  'No se puede eliminar definitivamente a este usuario porque registra historial contable, clientes asignados o auditoría. Usá "Desactivar" para bloquear su acceso conservando la trazabilidad.';
 
 export class AdminUsersSubService {
+  private async ensureNotLastActiveAdmin(user: {
+    role: Role;
+    isActive: boolean;
+  }): Promise<void> {
+    if (user.role === Role.ADMIN && user.isActive) {
+      const activeAdmins = await prisma.user.count({
+        where: { role: Role.ADMIN, isActive: true },
+      });
+      if (activeAdmins <= 1) {
+        throw new Error('Debe quedar al menos un Administrador General activo en el sistema.');
+      }
+    }
+  }
+
+  async getUserPasswordVersion(id: number): Promise<string | null> {
+    const user = await prisma.user.findUnique({
+      where: { id },
+      select: { passwordHash: true },
+    });
+    return user?.passwordHash ? computePasswordVersion(user.passwordHash) : null;
+  }
+
   /**
    * Obtener logs de auditoría paginados.
    */
@@ -59,14 +99,7 @@ export class AdminUsersSubService {
    */
   async getUsers() {
     return prisma.user.findMany({
-      select: {
-        id: true,
-        username: true,
-        role: true,
-        permissions: true,
-        isActive: true,
-        createdAt: true,
-      },
+      select: USER_PUBLIC_SELECT,
       orderBy: { username: 'asc' },
     });
   }
@@ -74,32 +107,40 @@ export class AdminUsersSubService {
   /**
    * Crear un nuevo usuario.
    */
-  async createUser(data: any, adminId?: number) {
-    const { username, password, role, permissions } = data;
+  async createUser(
+    data: { username: string; password: string; role: Role },
+    adminId?: number,
+  ) {
+    const cleanUsername = String(data.username || '').trim();
+    if (cleanUsername.length < 3) {
+      throw new Error('El nombre de usuario debe tener al menos 3 caracteres.');
+    }
+    if (isSystemUsername(cleanUsername)) {
+      throw new Error('Ese nombre está reservado para cuentas automáticas del sistema.');
+    }
+    const cleanPassword = String(data.password || '').trim();
+    if (cleanPassword.length < 6) {
+      throw new Error('La contraseña debe tener al menos 6 caracteres.');
+    }
 
-    const existing = await prisma.user.findUnique({ where: { username } });
+    const existing = await prisma.user.findFirst({
+      where: { username: { equals: cleanUsername, mode: 'insensitive' } },
+      select: { id: true },
+    });
     if (existing) {
       throw new Error('El nombre de usuario ya está registrado.');
     }
 
     const salt = await bcrypt.genSalt(10);
-    const passwordHash = await bcrypt.hash(password, salt);
+    const passwordHash = await bcrypt.hash(cleanPassword, salt);
 
     const newUser = await prisma.user.create({
       data: {
-        username,
+        username: cleanUsername,
         passwordHash,
-        role: role as Role,
-        permissions: permissions || null,
+        role: data.role,
       },
-      select: {
-        id: true,
-        username: true,
-        role: true,
-        permissions: true,
-        isActive: true,
-        createdAt: true,
-      },
+      select: USER_PUBLIC_SELECT,
     });
 
     if (adminId) {
@@ -111,7 +152,6 @@ export class AdminUsersSubService {
         newValues: {
           username: newUser.username,
           role: newUser.role,
-          permissions: newUser.permissions,
         },
       });
     }
@@ -126,9 +166,15 @@ export class AdminUsersSubService {
     const user = await prisma.user.findUnique({ where: { id } });
     if (!user) throw new Error('Usuario no encontrado.');
 
+    if (isSystemUsername(user.username)) {
+      throw new Error(SYSTEM_PROTECTED_ERROR);
+    }
+
     if (user.id === adminId) {
       throw new Error('No podés desactivar tu propio usuario administrador.');
     }
+
+    await this.ensureNotLastActiveAdmin(user);
 
     const updated = await prisma.user.update({
       where: { id: user.id },
@@ -143,8 +189,8 @@ export class AdminUsersSubService {
         action: 'TOGGLE_USER_STATUS',
         entityType: 'User',
         entityId: user.id,
-        oldValues: { isActive: user.isActive },
-        newValues: { isActive: updated.isActive },
+        oldValues: { username: user.username, isActive: user.isActive },
+        newValues: { username: updated.username, isActive: updated.isActive },
       });
     }
 
@@ -152,46 +198,66 @@ export class AdminUsersSubService {
   }
 
   /**
-   * Actualizar nombre de usuario, rol, permisos y/o contraseña.
+   * Actualizar nombre de usuario, rol y/o contraseña.
    */
   async updateUser(
     id: number,
-    data: { username?: string; role?: Role; password?: string; permissions?: any },
+    data: { username?: string; role?: Role; password?: string },
     adminId?: number,
   ) {
     const user = await prisma.user.findUnique({ where: { id } });
     if (!user) throw new Error('Usuario no encontrado.');
 
-    const updateData: any = {};
-    if (data.username && data.username.trim() !== '' && data.username.trim() !== user.username) {
-      const existing = await prisma.user.findUnique({ where: { username: data.username.trim() } });
-      if (existing) {
-        throw new Error('El nombre de usuario ya está registrado.');
-      }
-      updateData.username = data.username.trim();
+    if (isSystemUsername(user.username)) {
+      throw new Error(SYSTEM_PROTECTED_ERROR);
     }
-    if (data.role) {
+
+    const updateData: { username?: string; role?: Role; passwordHash?: string } = {};
+
+    if (data.username !== undefined) {
+      const cleanUsername = data.username.trim();
+      if (cleanUsername !== '' && cleanUsername !== user.username) {
+        if (cleanUsername.length < 3) {
+          throw new Error('El nombre de usuario debe tener al menos 3 caracteres.');
+        }
+        if (isSystemUsername(cleanUsername)) {
+          throw new Error('Ese nombre está reservado para cuentas automáticas del sistema.');
+        }
+        const existing = await prisma.user.findFirst({
+          where: {
+            username: { equals: cleanUsername, mode: 'insensitive' },
+            NOT: { id: user.id },
+          },
+          select: { id: true },
+        });
+        if (existing) {
+          throw new Error('El nombre de usuario ya está registrado.');
+        }
+        updateData.username = cleanUsername;
+      }
+    }
+
+    if (data.role && data.role !== user.role) {
+      if (user.id === adminId) {
+        throw new Error('No podés cambiar el rol de tu propio usuario en sesión.');
+      }
+      await this.ensureNotLastActiveAdmin(user);
       updateData.role = data.role;
     }
-    if (data.permissions !== undefined) {
-      updateData.permissions = data.permissions;
-    }
-    if (data.password && data.password.trim().length >= 4) {
+
+    if (data.password !== undefined && data.password !== '') {
+      const cleanPassword = data.password.trim();
+      if (cleanPassword.length < 6) {
+        throw new Error('La contraseña debe tener al menos 6 caracteres.');
+      }
       const salt = await bcrypt.genSalt(10);
-      updateData.passwordHash = await bcrypt.hash(data.password, salt);
+      updateData.passwordHash = await bcrypt.hash(cleanPassword, salt);
     }
 
     const updated = await prisma.user.update({
       where: { id },
       data: updateData,
-      select: {
-        id: true,
-        username: true,
-        role: true,
-        permissions: true,
-        isActive: true,
-        createdAt: true,
-      },
+      select: USER_PUBLIC_SELECT,
     });
     sessionCache.invalidateStaffSession(id);
 
@@ -201,8 +267,12 @@ export class AdminUsersSubService {
         action: 'UPDATE_USER',
         entityType: 'User',
         entityId: user.id,
-        oldValues: { role: user.role },
-        newValues: { role: updated.role, passwordChanged: !!data.password },
+        oldValues: { username: user.username, role: user.role },
+        newValues: {
+          username: updated.username,
+          role: updated.role,
+          passwordChanged: Boolean(updateData.passwordHash),
+        },
       });
     }
 
@@ -210,21 +280,68 @@ export class AdminUsersSubService {
   }
 
   /**
-   * Eliminar usuario por username o ID.
+   * Eliminar usuario por username o ID (solo si no posee historial vinculado).
    */
   async deleteUser(usernameOrId: string | number, adminId?: number) {
-    const user =
-      typeof usernameOrId === 'number' || !isNaN(Number(usernameOrId))
-        ? await prisma.user.findUnique({ where: { id: Number(usernameOrId) } })
-        : await prisma.user.findUnique({ where: { username: String(usernameOrId) } });
+    const raw = String(usernameOrId).trim();
+    const isNumericId = typeof usernameOrId === 'number' || /^\d+$/.test(raw);
+    const user = isNumericId
+      ? await prisma.user.findUnique({ where: { id: Number(raw) } })
+      : await prisma.user.findFirst({
+          where: { username: { equals: raw, mode: 'insensitive' } },
+        });
 
     if (!user) throw new Error('Usuario no encontrado.');
+
+    if (isSystemUsername(user.username)) {
+      throw new Error(SYSTEM_PROTECTED_ERROR);
+    }
 
     if (user.id === adminId) {
       throw new Error('No podés eliminar tu propio usuario administrador en sesión.');
     }
 
-    await prisma.user.delete({ where: { id: user.id } });
+    await this.ensureNotLastActiveAdmin(user);
+
+    const usage = await prisma.user.findUnique({
+      where: { id: user.id },
+      select: {
+        employee: { select: { id: true } },
+        _count: {
+          select: {
+            orders: true,
+            transactions: true,
+            stockMovements: true,
+            auditLogs: true,
+            personas: true,
+            cashDrawers: true,
+            creditNotes: true,
+            saleRoutes: true,
+            routeVisits: true,
+            expenses: true,
+            crmConversations: true,
+            weeklySchedules: true,
+            accountLedgerEntries: true,
+            warehouseCellsUpdated: true,
+          },
+        },
+      },
+    });
+    const totalLinked =
+      (usage?.employee ? 1 : 0) +
+      Object.values(usage?._count ?? {}).reduce((sum, n) => sum + Number(n || 0), 0);
+    if (totalLinked > 0) {
+      throw new Error(USER_HISTORY_DELETE_ERROR);
+    }
+
+    try {
+      await prisma.user.delete({ where: { id: user.id } });
+    } catch (err: any) {
+      if (err?.code === 'P2003') {
+        throw new Error(USER_HISTORY_DELETE_ERROR);
+      }
+      throw err;
+    }
     sessionCache.invalidateStaffSession(user.id);
 
     if (adminId) {

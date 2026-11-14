@@ -1,5 +1,9 @@
 import { Response } from 'express';
+import jwt from 'jsonwebtoken';
 import { AuthenticatedRequest } from '../types';
+import { env } from '../config/env.config';
+import { setStaffSessionCookie } from '../utils/cookie-auth.util';
+import { sessionCache } from '../utils/session-cache.util';
 import { adminService } from '../services/admin.service';
 import { personaService } from '../services/persona.service';
 import {
@@ -76,6 +80,28 @@ export async function toggleUserStatus(req: AuthenticatedRequest, res: Response)
 export async function updateUser(req: AuthenticatedRequest, res: Response): Promise<void> {
   try {
     const user = await adminService.updateUser(Number(req.params.id), req.body, req.user?.id);
+    if (
+      req.user?.id &&
+      Number(req.params.id) === req.user.id &&
+      typeof req.body?.password === 'string' &&
+      req.body.password.trim().length >= 6
+    ) {
+      const pwdVer = await adminService.getUserPasswordVersion(user.id);
+      if (pwdVer) {
+        const freshToken = jwt.sign(
+          { id: user.id, username: user.username, role: user.role, pwdVer },
+          env.JWT_SECRET,
+          { expiresIn: '30d' },
+        );
+        sessionCache.setStaffSession(user.id, {
+          id: user.id,
+          role: user.role,
+          isActive: true,
+          pwdVer,
+        });
+        setStaffSessionCookie(req, res, freshToken);
+      }
+    }
     res.status(200).json({ status: 'success', data: { user } });
   } catch (error: any) {
     res.status(400).json({ status: 'error', message: error.message || 'Error al actualizar usuario.' });

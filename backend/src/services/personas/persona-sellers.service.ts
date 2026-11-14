@@ -11,6 +11,9 @@ export class PersonaSellersSubService {
       where: {
         role: Role.VENDEDOR,
         isActive: true,
+        username: {
+          notIn: ['tienda_online', 'TIENDA_ONLINE'],
+        },
       },
       select: {
         id: true,

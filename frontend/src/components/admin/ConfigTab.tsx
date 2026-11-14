@@ -44,14 +44,14 @@ export default function ConfigTab({
   );
 
   // Employee Management
+  const currentUser = api.getCurrentUser();
   const [users, setUsers] = useState<any[]>([]);
-  const [userModal, setUserModal] = useState<{ open: boolean; isEdit?: boolean; id?: number; username: string; password?: string; role: string; permissions?: any }>({
+  const [userModal, setUserModal] = useState<{ open: boolean; isEdit?: boolean; id?: number; username: string; password?: string; role: string }>({
     open: false,
     isEdit: false,
     username: '',
     password: '',
     role: 'VENDEDOR',
-    permissions: { canSell: true, canPick: false, canDeliver: true, canCollect: true, canManageStock: false }
   });
   const [showPassword, setShowPassword] = useState(false);
 
@@ -150,25 +150,38 @@ export default function ConfigTab({
   // Employee handlers
   const handleUserSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!userModal.isEdit && (!userModal.username || !userModal.password)) {
-      setErrorMsg('Usuario y contraseña son requeridos.');
+    const cleanUsername = userModal.username.trim();
+    const cleanPassword = (userModal.password || '').trim();
+
+    if (cleanUsername.length < 3) {
+      setErrorMsg('El nombre de usuario debe tener al menos 3 caracteres.');
       return;
     }
+    if (!userModal.isEdit && cleanPassword.length < 6) {
+      setErrorMsg('La contraseña debe tener al menos 6 caracteres.');
+      return;
+    }
+    if (userModal.isEdit && cleanPassword.length > 0 && cleanPassword.length < 6) {
+      setErrorMsg('La nueva contraseña debe tener al menos 6 caracteres.');
+      return;
+    }
+
     try {
       if (userModal.isEdit && userModal.id) {
         await api.updateUser(userModal.id, {
-          username: userModal.username,
+          username: cleanUsername,
           role: userModal.role,
-          password: userModal.password,
-          permissions: userModal.permissions
+          password: cleanPassword,
         });
-        setSuccessMsg(`Empleado ${userModal.username} actualizado correctamente.`);
+        if (currentUser?.id === userModal.id) {
+          await api.getMe();
+        }
+        setSuccessMsg(`Empleado ${cleanUsername} actualizado correctamente.`);
       } else {
         await api.createUser({
-          username: userModal.username,
-          password: userModal.password,
+          username: cleanUsername,
+          password: cleanPassword,
           role: userModal.role,
-          permissions: userModal.permissions
         });
         setSuccessMsg('Usuario creado exitosamente.');
       }
@@ -179,15 +192,6 @@ export default function ConfigTab({
       setErrorMsg(err.message || 'Error al procesar usuario.');
     }
   };
-  const getDefaultPermissionsForRole = (role: string) => {
-    if (role === 'ADMIN' || role === 'FACTURACION') {
-      return { canSell: true, canPick: true, canDeliver: true, canCollect: true, canManageStock: true };
-    }
-    if (role === 'DEPOSITO') {
-      return { canSell: false, canPick: true, canDeliver: true, canCollect: false, canManageStock: true };
-    }
-    return { canSell: true, canPick: false, canDeliver: true, canCollect: true, canManageStock: false };
-  };
 
   const handleOpenEditUser = (u: any) => {
     setUserModal({
@@ -197,7 +201,6 @@ export default function ConfigTab({
       username: u.username,
       password: '',
       role: u.role,
-      permissions: u.permissions || getDefaultPermissionsForRole(u.role)
     });
   };
 
@@ -494,43 +497,85 @@ export default function ConfigTab({
                           </td>
                         </tr>
                       ) : (
-                        groupUsers.map(u => (
-                          <tr key={u.id} style={{ borderBottom: '1px solid #F1F5F9' }}>
-                            <td style={{ padding: '8px 12px', fontWeight: 600, fontSize: '0.88rem' }}>
-                              {u.username}
-                              {u.username.toUpperCase() === 'OFICINA' && (
-                                <span style={{ marginLeft: '8px', fontSize: '0.7rem', color: '#2980B9', background: '#EBF5FB', padding: '1px 6px', borderRadius: '4px', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
-                                  <Phone size={10} /> Teléfono / WhatsApp
+                        groupUsers.map(u => {
+                          const upperName = String(u.username || '').toUpperCase();
+                          const isSystemAccount = upperName === 'OFICINA' || upperName === 'TIENDA_ONLINE';
+                          const isSelf = currentUser?.id === u.id;
+
+                          return (
+                            <tr key={u.id} style={{ borderBottom: '1px solid #F1F5F9' }}>
+                              <td style={{ padding: '8px 12px', fontWeight: 600, fontSize: '0.88rem' }}>
+                                {u.username}
+                                {upperName === 'OFICINA' && (
+                                  <span style={{ marginLeft: '8px', fontSize: '0.7rem', color: '#2980B9', background: '#EBF5FB', padding: '1px 6px', borderRadius: '4px', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                                    <Phone size={10} /> Teléfono / WhatsApp
+                                  </span>
+                                )}
+                                {upperName === 'TIENDA_ONLINE' && (
+                                  <span style={{ marginLeft: '8px', fontSize: '0.7rem', color: '#6D28D9', background: '#F3E8FF', padding: '1px 6px', borderRadius: '4px', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                                    Tienda Online
+                                  </span>
+                                )}
+                                {isSelf && (
+                                  <span style={{ marginLeft: '8px', fontSize: '0.7rem', color: '#0F766E', background: '#CCFBF1', padding: '1px 6px', borderRadius: '4px', fontWeight: 600 }}>
+                                    Tu sesión
+                                  </span>
+                                )}
+                              </td>
+                              <td style={{ padding: '8px 12px' }}>
+                                <span className="badge" style={{ backgroundColor: group.bg, color: group.color, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.78rem', padding: '2px 8px' }}>
+                                  {group.icon}
+                                  {group.title}
                                 </span>
-                              )}
-                            </td>
-                            <td style={{ padding: '8px 12px' }}>
-                              <span className="badge" style={{ backgroundColor: group.bg, color: group.color, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.78rem', padding: '2px 8px' }}>
-                                {group.icon}
-                                {group.title}
-                              </span>
-                            </td>
-                            <td style={{ padding: '8px 12px' }}>
-                              <span style={{ fontWeight: 600, fontSize: '0.82rem', color: u.isActive !== false ? 'var(--color-success)' : 'var(--color-danger)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                                <span style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: u.isActive !== false ? 'var(--color-success)' : 'var(--color-danger)', display: 'inline-block' }} />
-                                {u.isActive !== false ? 'Activo' : 'Desactivado'}
-                              </span>
-                            </td>
-                            <td style={{ padding: '8px 12px', textAlign: 'right' }}>
-                              <div style={{ display: 'flex', gap: '4px', justifyContent: 'flex-end' }}>
-                                <button className="btn btn-secondary btn-sm" style={{ padding: '3px 8px', fontSize: '0.78rem' }} title="Editar Rol o Clave" onClick={() => handleOpenEditUser(u)}>
-                                  <Edit3 size={13} /> Editar
-                                </button>
-                                <button className="btn btn-secondary btn-sm" style={{ padding: '3px 8px', fontSize: '0.78rem' }} onClick={() => handleToggleUserActive(u.id, u.username, u.isActive === false)}>
-                                  {u.isActive !== false ? 'Desactivar' : 'Activar'}
-                                </button>
-                                <button className="btn btn-ghost btn-sm" style={{ padding: '3px 6px', color: 'var(--color-corp-red)' }} title="Eliminar Empleado" onClick={() => handleDeleteUser(u.username)}>
-                                  <Trash2 size={13} />
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))
+                              </td>
+                              <td style={{ padding: '8px 12px' }}>
+                                <span style={{ fontWeight: 600, fontSize: '0.82rem', color: u.isActive !== false ? 'var(--color-success)' : 'var(--color-danger)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                  <span style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: u.isActive !== false ? 'var(--color-success)' : 'var(--color-danger)', display: 'inline-block' }} />
+                                  {u.isActive !== false ? 'Activo' : 'Desactivado'}
+                                </span>
+                              </td>
+                              <td style={{ padding: '8px 12px', textAlign: 'right' }}>
+                                {isSystemAccount ? (
+                                  <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontStyle: 'italic' }}>
+                                    Cuenta del sistema (protegida)
+                                  </span>
+                                ) : (
+                                  <div style={{ display: 'flex', gap: '4px', justifyContent: 'flex-end' }}>
+                                    <button className="btn btn-secondary btn-sm" style={{ padding: '3px 8px', fontSize: '0.78rem' }} title="Editar Rol o Clave" onClick={() => handleOpenEditUser(u)}>
+                                      <Edit3 size={13} /> Editar
+                                    </button>
+                                    <button
+                                      className="btn btn-secondary btn-sm"
+                                      disabled={isSelf}
+                                      title={isSelf ? 'No podés desactivar tu propio usuario en sesión' : undefined}
+                                      style={{
+                                        padding: '3px 8px',
+                                        fontSize: '0.78rem',
+                                        ...(isSelf ? { opacity: 0.45, cursor: 'not-allowed' } : {}),
+                                      }}
+                                      onClick={() => handleToggleUserActive(u.id, u.username, u.isActive === false)}
+                                    >
+                                      {u.isActive !== false ? 'Desactivar' : 'Activar'}
+                                    </button>
+                                    <button
+                                      className="btn btn-ghost btn-sm"
+                                      disabled={isSelf}
+                                      title={isSelf ? 'No podés eliminar tu propio usuario en sesión' : 'Eliminar Empleado'}
+                                      style={{
+                                        padding: '3px 6px',
+                                        color: 'var(--color-corp-red)',
+                                        ...(isSelf ? { opacity: 0.35, cursor: 'not-allowed' } : {}),
+                                      }}
+                                      onClick={() => handleDeleteUser(u.username)}
+                                    >
+                                      <Trash2 size={13} />
+                                    </button>
+                                  </div>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })
                       )}
                     </React.Fragment>
                   );
@@ -1049,7 +1094,9 @@ export default function ConfigTab({
       )}
 
       {/* Modal de Agregar / Editar Empleado */}
-      {userModal.open && (
+      {userModal.open && (() => {
+        const isEditingSelf = Boolean(userModal.isEdit && currentUser?.id && userModal.id === currentUser.id);
+        return (
         <div className="modal-overlay animate-fade-in" style={{ zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div className="modal-content" style={{ maxWidth: '480px', width: '100%', padding: '24px', borderRadius: '12px', background: '#fff', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)' }}>
             <div className="modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '1px solid var(--border-color)', paddingBottom: '12px' }}>
@@ -1065,9 +1112,11 @@ export default function ConfigTab({
                 <input
                   type="text"
                   className="input"
-                  placeholder="ej: esteban, pablo, oficina..."
+                  placeholder="ej: esteban, pablo, diego..."
                   value={userModal.username}
                   onChange={(e) => setUserModal({ ...userModal, username: e.target.value })}
+                  minLength={3}
+                  maxLength={50}
                   required
                   style={{ width: '100%' }}
                 />
@@ -1081,9 +1130,10 @@ export default function ConfigTab({
                   <input
                     type={showPassword ? "text" : "password"}
                     className="input"
-                    placeholder={userModal.isEdit ? "•••••••• (Ingresá nueva clave solo si querés cambiarla)" : "••••••••"}
+                    placeholder={userModal.isEdit ? "•••••••• (Mínimo 6 caracteres para cambiar)" : "•••••••• (Mínimo 6 caracteres)"}
                     value={userModal.password || ''}
                     onChange={(e) => setUserModal({ ...userModal, password: e.target.value })}
+                    minLength={6}
                     required={!userModal.isEdit}
                     style={{ width: '100%', paddingRight: '40px' }}
                   />
@@ -1104,49 +1154,34 @@ export default function ConfigTab({
                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
                 </div>
+                <small style={{ display: 'block', marginTop: '4px', fontSize: '0.74rem', color: 'var(--text-secondary)' }}>
+                  Mínimo 6 caracteres. Al cambiar la clave se cierran automáticamente sesiones abiertas con la clave anterior.
+                </small>
               </div>
 
-              <div className="form-group" style={{ marginBottom: '20px' }}>
+              <div className="form-group" style={{ marginBottom: '16px' }}>
                 <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: '6px' }}>Rol y Nivel de Acceso en Distribuidora</label>
                 <select
                   className="select"
                   value={userModal.role}
+                  disabled={isEditingSelf}
                   onChange={(e) => setUserModal({ ...userModal, role: e.target.value })}
-                  style={{ width: '100%', height: '40px', padding: '0 10px', fontSize: '0.85rem' }}
+                  style={{ width: '100%', height: '40px', padding: '0 10px', fontSize: '0.85rem', ...(isEditingSelf ? { opacity: 0.65, cursor: 'not-allowed' } : {}) }}
                 >
                   <option value="ADMIN">Administrador General (Pablo / Esteban - Acceso Total)</option>
                   <option value="FACTURACION">Oficina / Administración (Facturación, Listas de Precio, Recibos, Notas de Crédito)</option>
                   <option value="VENDEDOR">Vendedor de Calle (Toma de pedidos en ruta)</option>
                   <option value="DEPOSITO">Depósito y Logística (Armado de pedidos, Balanza, Stock)</option>
                 </select>
+                {isEditingSelf && (
+                  <small style={{ display: 'block', marginTop: '4px', fontSize: '0.74rem', color: '#B45309' }}>
+                    No podés cambiar el rol de tu propio usuario en sesión.
+                  </small>
+                )}
               </div>
 
-              <div style={{ padding: '12px', backgroundColor: 'var(--bg-light, #fafafa)', borderRadius: '8px', border: '1px solid var(--border-color)', marginBottom: '16px' }}>
-                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, marginBottom: '8px', color: 'var(--text-primary)' }}>
-                  ⚡ Matriz de Permisos Granulares por Módulo
-                </label>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '8px' }}>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', cursor: 'pointer', fontWeight: 500 }}>
-                    <input type="checkbox" checked={userModal.permissions?.canSell ?? true} onChange={(e) => setUserModal({ ...userModal, permissions: { ...userModal.permissions, canSell: e.target.checked } })} />
-                    🛒 Toma de Pedidos / Venta
-                  </label>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', cursor: 'pointer', fontWeight: 500 }}>
-                    <input type="checkbox" checked={userModal.permissions?.canPick ?? false} onChange={(e) => setUserModal({ ...userModal, permissions: { ...userModal.permissions, canPick: e.target.checked } })} />
-                    📦 Armado Depósito (Picking)
-                  </label>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', cursor: 'pointer', fontWeight: 500 }}>
-                    <input type="checkbox" checked={userModal.permissions?.canDeliver ?? true} onChange={(e) => setUserModal({ ...userModal, permissions: { ...userModal.permissions, canDeliver: e.target.checked } })} />
-                    🚚 Hojas de Reparto & GPS
-                  </label>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', cursor: 'pointer', fontWeight: 500 }}>
-                    <input type="checkbox" checked={userModal.permissions?.canCollect ?? true} onChange={(e) => setUserModal({ ...userModal, permissions: { ...userModal.permissions, canCollect: e.target.checked } })} />
-                    💰 Cobranzas & Recibos
-                  </label>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', cursor: 'pointer', fontWeight: 500 }}>
-                    <input type="checkbox" checked={userModal.permissions?.canManageStock ?? false} onChange={(e) => setUserModal({ ...userModal, permissions: { ...userModal.permissions, canManageStock: e.target.checked } })} />
-                    📊 Inventario & Stock
-                  </label>
-                </div>
+              <div style={{ padding: '10px 12px', backgroundColor: '#F8FAFC', borderRadius: '8px', border: '1px solid var(--border-color)', marginBottom: '16px', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                Los permisos y módulos visibles se rigen al 100% por el <strong>Rol</strong> asignado.
               </div>
 
               <div className="modal-footer" style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', paddingTop: '12px', borderTop: '1px solid var(--border-color)' }}>
@@ -1158,7 +1193,8 @@ export default function ConfigTab({
             </form>
           </div>
         </div>
-      )}
+        );
+      })()}
     </div>
   );
 }

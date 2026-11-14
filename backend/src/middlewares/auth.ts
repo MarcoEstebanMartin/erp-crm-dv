@@ -4,7 +4,11 @@ import { Role } from '@prisma/client';
 import { AuthenticatedRequest, UserPayload } from '../types';
 import { env } from '../config/env.config';
 import prisma from '../utils/prisma';
-import { sessionCache } from '../utils/session-cache.util';
+import {
+  computePasswordVersion,
+  isSystemUsername,
+  sessionCache,
+} from '../utils/session-cache.util';
 import {
   clearStaffSessionCookie,
   extractStaffToken,
@@ -49,13 +53,22 @@ export async function authenticateJWT(
       const cachedStaff = sessionCache.getStaffSession(userId);
 
       if (cachedStaff) {
+        if (cachedStaff.pwdVer && decoded.pwdVer !== cachedStaff.pwdVer) {
+          clearStaffSessionCookie(req, res);
+          res.status(401).json({
+            status: 'error',
+            message: 'Tu contraseña o sesión fue actualizada. Iniciá sesión nuevamente.',
+            code: 'SESSION_REVOKED',
+          });
+          return;
+        }
         req.user.role = cachedStaff.role;
       } else {
         const userDb = await prisma.user.findUnique({
           where: { id: userId },
-          select: { isActive: true, role: true },
+          select: { isActive: true, role: true, passwordHash: true, username: true },
         });
-        if (!userDb || !userDb.isActive) {
+        if (!userDb || !userDb.isActive || (userDb.username && isSystemUsername(userDb.username))) {
           sessionCache.invalidateStaffSession(userId);
           clearStaffSessionCookie(req, res);
           res.status(401).json({
@@ -65,10 +78,23 @@ export async function authenticateJWT(
           });
           return;
         }
+        const expectedPwdVer = userDb.passwordHash
+          ? computePasswordVersion(userDb.passwordHash)
+          : undefined;
+        if (expectedPwdVer && decoded.pwdVer !== expectedPwdVer) {
+          clearStaffSessionCookie(req, res);
+          res.status(401).json({
+            status: 'error',
+            message: 'Tu contraseña o sesión fue actualizada. Iniciá sesión nuevamente.',
+            code: 'SESSION_REVOKED',
+          });
+          return;
+        }
         sessionCache.setStaffSession(userId, {
           id: userId,
           role: userDb.role,
           isActive: true,
+          pwdVer: expectedPwdVer,
         });
         req.user.role = userDb.role;
       }

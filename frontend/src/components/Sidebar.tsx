@@ -42,6 +42,10 @@ export default function Sidebar({ username, role, activeTab, setActiveTab, onLog
   // Mapear ruta actual a pestaña activa
   const currentTab = (() => {
     const segments = location.pathname.split('/').filter(Boolean);
+    if (segments[0] === 'deposito') {
+      if (segments[1] === 'stock') return 'products';
+      return 'deposito';
+    }
     if (segments.length >= 2) {
       return segments[1];
     }
@@ -53,16 +57,7 @@ export default function Sidebar({ username, role, activeTab, setActiveTab, onLog
     setIsMobileOpen(false);
   }, [location.pathname]);
 
-  const userObj = api.getCurrentUser();
-  const permissions = userObj?.permissions || {
-    canSell: role === 'VENDEDOR' || role === 'ADMIN',
-    canPick: role === 'DEPOSITO' || role === 'ADMIN',
-    canDeliver: true,
-    canCollect: true,
-    canManageStock: role === 'DEPOSITO' || role === 'ADMIN'
-  };
-
-  // Definir elementos del menú basados en el rol (Core Minimalista)
+  // Definir elementos del menú basados 100% en el rol asignado
   const getMenuItems = () => {
     if (role === 'ADMIN' || role === 'FACTURACION') {
       return [
@@ -75,25 +70,21 @@ export default function Sidebar({ username, role, activeTab, setActiveTab, onLog
       ];
     }
 
-    // Para personal operativo (VENDEDOR, DEPOSITO)
-    const items: any[] = [];
-    
-    if (permissions.canSell) {
-      items.push({ id: 'orders', label: 'Toma de Pedidos', icon: <ShoppingCart size={18} /> });
-      items.push({ id: 'clients', label: 'Clientes y Deudas', icon: <Users size={18} /> });
+    if (role === 'DEPOSITO') {
+      return [
+        { id: 'deposito', label: 'Preparación (Picking)', icon: <Warehouse size={18} /> },
+        { id: 'products', label: 'Inventario y Stock', icon: <Package size={18} /> },
+        { id: 'history', label: 'Historial de Pedidos', icon: <History size={18} /> },
+      ];
     }
-    if (permissions.canPick) {
-      items.push({ id: 'deposito', label: 'Preparación (Picking)', icon: <Warehouse size={18} /> });
-    }
-    if (permissions.canCollect) {
-      items.push({ id: 'cobranzas', label: 'Cobranzas y Recibos', icon: <DollarSign size={18} /> });
-    }
-    if (permissions.canManageStock || permissions.canSell) {
-      items.push({ id: 'products', label: 'Catálogo y Precios', icon: <Package size={18} /> });
-    }
-    items.push({ id: 'history', label: 'Historial de Pedidos', icon: <History size={18} /> });
 
-    return items;
+    return [
+      { id: 'orders', label: 'Toma de Pedidos', icon: <ShoppingCart size={18} /> },
+      { id: 'clients', label: 'Clientes y Deudas', icon: <Users size={18} /> },
+      { id: 'cobranzas', label: 'Cobranzas y Recibos', icon: <DollarSign size={18} /> },
+      { id: 'products', label: 'Catálogo y Precios', icon: <Package size={18} /> },
+      { id: 'history', label: 'Historial de Pedidos', icon: <History size={18} /> },
+    ];
   };
 
   const handleTabSelect = (tabId: string) => {

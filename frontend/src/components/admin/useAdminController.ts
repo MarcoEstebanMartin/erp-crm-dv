@@ -36,7 +36,6 @@ export function useAdminController(activeTab: string) {
     data: { id: 0, sku: '', name: '', description: '', barcode: '', costPrice: 0, listPrice: 0, listPriceB: 0, listPriceC: 0, profitMargin: 25 as string | number, minStock: 0, isPesable: false, approximateWeight: 0, unitsPerBox: 1, rubroId: '' as string | number, commercialCategory: '', providerId: '' as string | number, imageUrl: null as string | null },
   });
   const [importZipModalOpen, setImportZipModalOpen] = useState(false);
-  const [userModal, setUserModal] = useState({ open: false, username: '', password: '', role: 'VENDEDOR' });
   const [clientModal, setClientModal] = useState({
     open: false, mode: 'create',
     data: { id: 0, name: '', cuit: '', address: '', city: '', phone: '', email: '', creditLimit: 0, maxUnpaidInvoices: 0, priceList: 'A', discount: 0, isClient: true, isProvider: false, isSeller: false, isCommissionAgent: false, route: '', saleRouteId: null as number | null, sellerId: null as number | null, isActive: true },
@@ -268,7 +267,7 @@ export function useAdminController(activeTab: string) {
 
   return {
     products, users, clients, availableSellers, availableSaleRoutes, orders, financialReport, rubrosList, providersList,
-    productModal, setProductModal, importZipModalOpen, setImportZipModalOpen, userModal, setUserModal, clientModal, setClientModal,
+    productModal, setProductModal, importZipModalOpen, setImportZipModalOpen, clientModal, setClientModal,
     clientsVersion, setClientsVersion, showResumenModal, setShowResumenModal, orderDetailsModal, setOrderDetailsModal,
     editOrderModal, setEditOrderModal, clientProfileModal, setClientProfileModal, sellerProfileModal, setSellerProfileModal,
     paymentModal, setPaymentModal, fastInvoiceOrder, setFastInvoiceOrder, isPriceListModalOpen, setIsPriceListModalOpen,

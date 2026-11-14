@@ -17,7 +17,7 @@ import OrderFulfillmentModal from './modals/OrderFulfillmentModal';
 import { AdminSummaryCardModal } from './admin/AdminSummaryCardModal';
 import { AdminOrderDetailsModal } from './admin/AdminOrderDetailsModal';
 import { AdminPaymentModal } from './admin/AdminPaymentModal';
-import { AdminUserCreateModal, AdminQuickClientSearchModal } from './admin/AdminQuickModals';
+import { AdminQuickClientSearchModal } from './admin/AdminQuickModals';
 import { AdminCreateQuickOrderModal } from './admin/AdminCreateQuickOrderModal';
 import { AdminDirectInvoiceQuickModal } from './admin/AdminDirectInvoiceQuickModal';
 import { useAdminController } from './admin/useAdminController';
@@ -191,7 +191,6 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
       <ProductModal productModal={c.productModal} setProductModal={c.setProductModal} rubrosList={c.rubrosList} providersList={c.providersList} fetchData={c.fetchData} setSuccessMsg={c.setSuccessMsg} setErrorMsg={c.setErrorMsg} />
       {c.showResumenModal && <ResumenCuentaModal client={c.showResumenModal} onClose={() => c.setShowResumenModal(null)} />}
       <ClientModal clientModal={c.clientModal} setClientModal={c.setClientModal} availableSellers={c.availableSellers} availableSaleRoutes={c.availableSaleRoutes} fetchData={c.fetchData} setSuccessMsg={c.setSuccessMsg} setErrorMsg={c.setErrorMsg} setClientsVersion={c.setClientsVersion} />
-      <AdminUserCreateModal userModal={c.userModal} setUserModal={c.setUserModal} onSuccess={c.fetchData} setErrorMsg={c.setErrorMsg} setSuccessMsg={c.setSuccessMsg} />
       <ImportZipModal isOpen={c.importZipModalOpen} onClose={() => { c.setImportZipModalOpen(false); c.fetchData(); }} />
       <ClientProfileModal clientProfileModal={c.clientProfileModal} setClientProfileModal={c.setClientProfileModal} setClientModal={c.setClientModal} setPaymentModal={c.setPaymentModal} fetchData={c.fetchData} setSuccessMsg={c.setSuccessMsg} setErrorMsg={c.setErrorMsg} />
       {c.sellerProfileModal?.open && <SellerProfileModal sellerId={c.sellerProfileModal.sellerId} onClose={() => c.setSellerProfileModal(null)} onOpenReport={() => setActiveTab('reports')} />}

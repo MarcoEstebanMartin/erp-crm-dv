@@ -62,10 +62,10 @@ router.delete('/reports/weekly/:weekStart', validateRequest(deleteWeeklyReportSc
 
 router.get('/audit-logs', getAuditLogs);
 router.get('/users', getUsers);
-router.post('/users', validateRequest(createUserSchema), createUser);
-router.put('/users/:id', validateRequest(updateUserSchema), updateUser);
+router.post('/users', idempotencyGuard, validateRequest(createUserSchema), createUser);
+router.put('/users/:id', idempotencyGuard, validateRequest(updateUserSchema), updateUser);
 router.post('/users/:id/toggle', validateRequest(toggleUserStatusSchema), toggleUserStatus);
-router.delete('/users/:username', validateRequest(deleteUserSchema), deleteUser);
+router.delete('/users/:username', idempotencyGuard, validateRequest(deleteUserSchema), deleteUser);
 router.get('/config', getConfig);
 router.post('/config', idempotencyGuard, validateRequest(updateSystemConfigSchema), updateConfig);
 router.get('/reconcile/check', checkBalancesReport);

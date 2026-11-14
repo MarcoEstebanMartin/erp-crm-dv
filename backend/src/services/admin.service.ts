@@ -51,6 +51,9 @@ export class AdminService {
   deleteUser = (username: string, adminId?: number) =>
     adminUsersSubService.deleteUser(username, adminId);
 
+  getUserPasswordVersion = (id: number) =>
+    adminUsersSubService.getUserPasswordVersion(id);
+
   // 3. Reportes de Zonas, Rentabilidad y Canales
   getZoneReports = (filters: {
     sellerId?: number;

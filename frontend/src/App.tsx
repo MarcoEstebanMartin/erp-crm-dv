@@ -164,8 +164,17 @@ function App() {
               {/* Rutas de Vendedores */}
               <Route path="/vendedor/:tab?" element={<VendedorPages setActiveTab={setActiveTab} />} />
 
-              {/* Rutas de Depósito */}
-              <Route path="/deposito/:tab?" element={<DepositoPages setActiveTab={setActiveTab} />} />
+              {/* Rutas de Depósito (restringido a DEPOSITO, ADMIN y FACTURACION) */}
+              <Route
+                path="/deposito/:tab?"
+                element={
+                  user.role === 'DEPOSITO' || user.role === 'ADMIN' || user.role === 'FACTURACION' ? (
+                    <DepositoPages setActiveTab={setActiveTab} />
+                  ) : (
+                    <Navigate to={getDefaultRouteForRole(user.role)} replace />
+                  )
+                }
+              />
 
               {/* Redirección por defecto */}
               <Route path="*" element={<Navigate to={getDefaultRouteForRole(user.role)} replace />} />

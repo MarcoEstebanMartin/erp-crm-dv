@@ -2,9 +2,13 @@ import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import prisma from '../utils/prisma';
-import { AuthenticatedRequest, UserPermissions } from '../types';
+import { AuthenticatedRequest } from '../types';
 import { env } from '../config/env.config';
-import { sessionCache } from '../utils/session-cache.util';
+import {
+  computePasswordVersion,
+  isSystemUsername,
+  sessionCache,
+} from '../utils/session-cache.util';
 import { getSystemConfigSnapshot } from '../services/admin/system-config.service';
 import {
   clearStaffSessionCookie,
@@ -12,23 +16,11 @@ import {
   setStaffSessionCookie,
 } from '../utils/cookie-auth.util';
 
-export function getDefaultPermissions(role: string): UserPermissions {
-  if (role === 'ADMIN' || role === 'FACTURACION') {
-    return { canSell: true, canPick: true, canDeliver: true, canCollect: true, canManageStock: true };
-  }
-  if (role === 'VENDEDOR') {
-    return { canSell: true, canPick: false, canDeliver: true, canCollect: true, canManageStock: false };
-  }
-  if (role === 'DEPOSITO') {
-    return { canSell: false, canPick: true, canDeliver: true, canCollect: false, canManageStock: true };
-  }
-  return { canSell: true, canPick: false, canDeliver: true, canCollect: true, canManageStock: false };
-}
-
 export async function login(req: Request, res: Response): Promise<void> {
   const { username, password } = req.body;
+  const cleanUsername = typeof username === 'string' ? username.trim() : '';
 
-  if (!username || !password) {
+  if (!cleanUsername || !password) {
     res.status(400).json({
       status: 'error',
       message: 'Usuario y contraseña son requeridos.',
@@ -36,12 +28,22 @@ export async function login(req: Request, res: Response): Promise<void> {
     return;
   }
 
+  if (isSystemUsername(cleanUsername)) {
+    res.status(401).json({
+      status: 'error',
+      message: 'Credenciales inválidas.',
+    });
+    return;
+  }
+
   try {
-    const user = await prisma.user.findUnique({
-      where: { username },
+    const user = await prisma.user.findFirst({
+      where: {
+        username: { equals: cleanUsername, mode: 'insensitive' },
+      },
     });
 
-    if (!user || !user.isActive) {
+    if (!user || !user.isActive || isSystemUsername(user.username)) {
       res.status(401).json({
         status: 'error',
         message: 'Credenciales inválidas.',
@@ -58,20 +60,25 @@ export async function login(req: Request, res: Response): Promise<void> {
       return;
     }
 
-    const effectivePermissions: UserPermissions =
-      (user.permissions as unknown as UserPermissions) || getDefaultPermissions(user.role);
+    const pwdVer = computePasswordVersion(user.passwordHash);
 
     const token = jwt.sign(
       {
         id: user.id,
         username: user.username,
         role: user.role,
-        permissions: effectivePermissions,
+        pwdVer,
       },
       env.JWT_SECRET,
       { expiresIn: '30d' }
     );
 
+    sessionCache.setStaffSession(user.id, {
+      id: user.id,
+      role: user.role,
+      isActive: true,
+      pwdVer,
+    });
     setStaffSessionCookie(req, res, token);
     const systemConfig = await getSystemConfigSnapshot();
 
@@ -83,7 +90,6 @@ export async function login(req: Request, res: Response): Promise<void> {
           id: user.id,
           username: user.username,
           role: user.role,
-          permissions: effectivePermissions,
         },
         config: systemConfig,
       },
@@ -113,13 +119,12 @@ export async function getMe(req: AuthenticatedRequest, res: Response): Promise<v
         id: true,
         username: true,
         role: true,
-        permissions: true,
         isActive: true,
         createdAt: true,
       },
     });
 
-    if (!user || !user.isActive) {
+    if (!user || !user.isActive || isSystemUsername(user.username)) {
       res.status(404).json({
         status: 'error',
         message: 'Usuario no encontrado o inactivo.',
@@ -127,17 +132,12 @@ export async function getMe(req: AuthenticatedRequest, res: Response): Promise<v
       return;
     }
 
-    const effectivePermissions: UserPermissions =
-      (user.permissions as unknown as UserPermissions) || getDefaultPermissions(user.role);
     const systemConfig = await getSystemConfigSnapshot();
 
     res.status(200).json({
       status: 'success',
       data: {
-        user: {
-          ...user,
-          permissions: effectivePermissions,
-        },
+        user,
         config: systemConfig,
       },
     });
