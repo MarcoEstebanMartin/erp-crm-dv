@@ -2,8 +2,10 @@ import { Response } from 'express';
 import { AuthenticatedRequest } from '../types';
 import { adminService } from '../services/admin.service';
 import { personaService } from '../services/persona.service';
-import fs from 'fs';
-import path from 'path';
+import {
+  getSystemConfigSnapshot,
+  updateSystemConfig,
+} from '../services/admin/system-config.service';
 
 export async function getFinancialReports(req: AuthenticatedRequest, res: Response): Promise<void> {
   const { year, month } = req.query;
@@ -89,26 +91,31 @@ export async function deleteUser(req: AuthenticatedRequest, res: Response): Prom
   }
 }
 
-export async function updateConfig(req: AuthenticatedRequest, res: Response): Promise<void> {
-  const { ignoreStockCheck } = req.body;
+export async function getConfig(_req: AuthenticatedRequest, res: Response): Promise<void> {
   try {
-    const envPath = path.resolve(process.cwd(), '.env');
-    if (fs.existsSync(envPath)) {
-      let envContent = fs.readFileSync(envPath, 'utf8');
-      if (ignoreStockCheck !== undefined) {
-        const val = ignoreStockCheck ? 'true' : 'false';
-        if (envContent.includes('IGNORE_STOCK_CHECK=')) {
-          envContent = envContent.replace(/IGNORE_STOCK_CHECK=.*/g, `IGNORE_STOCK_CHECK="${val}"`);
-        } else {
-          envContent += `\nIGNORE_STOCK_CHECK="${val}"`;
-        }
-        process.env.IGNORE_STOCK_CHECK = val;
-      }
-      fs.writeFileSync(envPath, envContent);
-    }
-    res.status(200).json({ status: 'success', data: { ignoreStockCheck } });
+    const snapshot = await getSystemConfigSnapshot({ bypassCache: true });
+    res.status(200).json({ status: 'success', data: snapshot });
   } catch (error: any) {
-    res.status(500).json({ status: 'error', message: 'Error al actualizar configuración.' });
+    res.status(500).json({ status: 'error', message: error.message || 'Error al obtener configuración.' });
+  }
+}
+
+export async function updateConfig(req: AuthenticatedRequest, res: Response): Promise<void> {
+  try {
+    const snapshot = await updateSystemConfig(req.body, req.user?.id, req.ip);
+    res.status(200).json({ status: 'success', data: snapshot });
+  } catch (error: any) {
+    const msg = String(error?.message || '');
+    const isClientError =
+      msg.includes('CUIT') ||
+      msg.includes('DNI') ||
+      msg.includes('ARCA') ||
+      msg.includes('Punto de Venta') ||
+      msg.includes('requerid');
+    res.status(isClientError ? 400 : 500).json({
+      status: 'error',
+      message: error.message || 'Error al actualizar configuración.',
+    });
   }
 }
 

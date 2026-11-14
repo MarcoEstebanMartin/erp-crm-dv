@@ -1,11 +1,13 @@
+import { getCompanyProfile } from '../../utils/companyProfile';
+
 export function printOrderTicket(order: any): void {
   const printWindow = window.open('', '_blank', 'width=600,height=800');
   if (!printWindow) return;
 
-  const companyLogo = localStorage.getItem('company_nombre_fantasia') || 'DV DISTRIBUIDORA';
-  const companySub =
-    localStorage.getItem('company_razon_social') || 'Mayorista de Alimentos & Bebidas';
-  const companyCuitVal = localStorage.getItem('company_cuit') || '30-71717171-9';
+  const company = getCompanyProfile();
+  const companyLogo = company.nombreFantasia;
+  const companySub = company.razonSocial;
+  const companyCuitVal = company.cuit;
 
   printWindow.document.write(`
     <html>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../utils/api';
 import AfipExportDashboard from '../../pages/AfipExportDashboard';
+import ConfigGeneralTab from './config/ConfigGeneralTab';
 import { 
   UserPlus, 
   RotateCcw, 
@@ -38,21 +39,9 @@ export default function ConfigTab({
 }: ConfigTabProps) {
   const confirm = useConfirm();
   // Tab navigation state
-  const [configTab, setConfigTab] = useState<string>(initialTab);
-
-  // General & Company settings (localStorage read-write)
-  const [companyRazonSocial, setCompanyRazonSocial] = useState<string>(() => localStorage.getItem('company_razon_social') || 'Distribuidora de Bebidas SRL');
-  const [companyNombreFantasia, setCompanyNombreFantasia] = useState<string>(() => localStorage.getItem('company_nombre_fantasia') || 'Bebidas del Sur');
-  const [companyCuit, setCompanyCuit] = useState<string>(() => localStorage.getItem('company_cuit') || '30-71717171-9');
-  const [companyDireccion, setCompanyDireccion] = useState<string>(() => localStorage.getItem('company_direccion') || 'Av. San Martín 1234, Ciudad Autónoma de Buenos Aires');
-  const [companyTelefono, setCompanyTelefono] = useState<string>(() => localStorage.getItem('company_telefono') || '011-4567-8900');
-  const [companyEmail, setCompanyEmail] = useState<string>(() => localStorage.getItem('company_email') || 'ventas@bebidasdelsur.com');
-  const [companyPos, setCompanyPos] = useState<string>(() => localStorage.getItem('company_pos') || '1');
-  const [companyDefaultIva, setCompanyDefaultIva] = useState<string>(() => localStorage.getItem('company_default_iva') || '21');
-  
-  const [ignoreStockCheck, setIgnoreStockCheck] = useState<boolean>(() => {
-    return api.getServerConfig()?.ignoreStock || false;
-  });
+  const [configTab, setConfigTab] = useState<string>(
+    initialTab === 'rrhh' ? 'personal' : initialTab,
+  );
 
   // Employee Management
   const [users, setUsers] = useState<any[]>([]);
@@ -157,26 +146,6 @@ export default function ConfigTab({
         .catch(() => setPerceptions([]));
     }
   }, [configTab]);
-
-  const handleSaveCompanyConfig = async (e: React.FormEvent) => {
-    e.preventDefault();
-    localStorage.setItem('company_razon_social', companyRazonSocial);
-    localStorage.setItem('company_nombre_fantasia', companyNombreFantasia);
-    localStorage.setItem('company_cuit', companyCuit);
-    localStorage.setItem('company_direccion', companyDireccion);
-    localStorage.setItem('company_telefono', companyTelefono);
-    localStorage.setItem('company_email', companyEmail);
-    localStorage.setItem('company_pos', companyPos);
-    localStorage.setItem('company_default_iva', companyDefaultIva);
-    
-    try {
-      await api.updateServerConfig({ ignoreStockCheck });
-      setSuccessMsg('Configuración de la empresa y servidor guardada exitosamente.');
-    } catch {
-      setErrorMsg('Error al guardar configuración del servidor.');
-    }
-    setTimeout(() => setSuccessMsg(null), 3000);
-  };
 
   // Employee handlers
   const handleUserSubmit = async (e: React.FormEvent) => {
@@ -433,115 +402,7 @@ export default function ConfigTab({
 
       {/* Sub-tab 1: General & Empresa */}
       {configTab === 'general' && (
-        <form onSubmit={handleSaveCompanyConfig} className="card" style={{ padding: '24px' }}>
-          <h3 className="card-title" style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '0 0 4px 0' }}>
-            🏢 Datos de la Empresa & Configuración
-          </h3>
-          <p style={{ fontSize: '0.85rem', marginBottom: '20px', color: 'var(--text-secondary)' }}>
-            Configure la información comercial y los parámetros fiscales del emisor para la facturación.
-          </p>
-          
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px', marginBottom: '24px' }}>
-            <div className="form-group" style={{ marginBottom: 0 }}>
-              <label>Razón Social</label>
-              <input type="text" className="input" value={companyRazonSocial} onChange={(e) => setCompanyRazonSocial(e.target.value)} />
-            </div>
-            <div className="form-group" style={{ marginBottom: 0 }}>
-              <label>Nombre de Fantasía (Logo)</label>
-              <input type="text" className="input" value={companyNombreFantasia} onChange={(e) => setCompanyNombreFantasia(e.target.value)} />
-            </div>
-            <div className="form-group" style={{ marginBottom: 0 }}>
-              <label>CUIT del Emisor</label>
-              <input type="text" className="input" value={companyCuit} onChange={(e) => setCompanyCuit(e.target.value)} />
-            </div>
-
-            <div className="form-group" style={{ marginBottom: 0 }}>
-              <label>Dirección Comercial</label>
-              <input type="text" className="input" value={companyDireccion} onChange={(e) => setCompanyDireccion(e.target.value)} />
-            </div>
-            <div className="form-group" style={{ marginBottom: 0 }}>
-              <label>Teléfono de Contacto</label>
-              <input type="text" className="input" value={companyTelefono} onChange={(e) => setCompanyTelefono(e.target.value)} />
-            </div>
-            <div className="form-group" style={{ marginBottom: 0 }}>
-              <label>Email de Contacto</label>
-              <input type="email" className="input" value={companyEmail} onChange={(e) => setCompanyEmail(e.target.value)} />
-            </div>
-
-            <div className="form-group" style={{ marginBottom: 0 }}>
-              <label>Punto de Venta Oficial (Fact. Electrónica)</label>
-              <input type="text" className="input" value={companyPos} onChange={(e) => setCompanyPos(e.target.value)} />
-            </div>
-            <div className="form-group" style={{ marginBottom: 0 }}>
-              <label>IVA General Defecto (%)</label>
-              <input type="text" className="input" value={companyDefaultIva} onChange={(e) => setCompanyDefaultIva(e.target.value)} />
-            </div>
-          </div>
-
-          <div 
-            onClick={() => setIgnoreStockCheck(!ignoreStockCheck)}
-            style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'space-between',
-              padding: '14px 18px', 
-              backgroundColor: '#ffffff',
-              border: '1px solid var(--border-color)',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              transition: 'all 0.15s ease',
-              marginBottom: '24px',
-              userSelect: 'none'
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.borderColor = 'var(--text-secondary)')}
-            onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'var(--border-color)')}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <div style={{
-                width: '8px',
-                height: '8px',
-                borderRadius: '50%',
-                backgroundColor: ignoreStockCheck ? '#10b981' : '#9ca3af',
-                transition: 'background-color 0.2s ease',
-                flexShrink: 0
-              }} />
-              <div>
-                <div style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.88rem' }}>
-                  Habilitar Facturación sin Stock Físico <span style={{ color: 'var(--text-secondary)', fontWeight: 400, fontSize: '0.825rem' }}>(Venta en negativo)</span>
-                </div>
-                <div style={{ fontSize: '0.825rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
-                  Permite realizar ventas y emitir comprobantes incluso cuando el inventario del producto sea cero o negativo.
-                </div>
-              </div>
-            </div>
-            <div style={{
-              width: '38px',
-              height: '22px',
-              backgroundColor: ignoreStockCheck ? '#10b981' : '#e5e7eb',
-              borderRadius: '11px',
-              position: 'relative',
-              transition: 'background-color 0.2s ease',
-              flexShrink: 0,
-              marginLeft: '16px'
-            }}>
-              <div style={{
-                width: '18px',
-                height: '18px',
-                backgroundColor: '#ffffff',
-                borderRadius: '50%',
-                position: 'absolute',
-                top: '2px',
-                left: ignoreStockCheck ? '18px' : '2px',
-                transition: 'left 0.2s ease',
-                boxShadow: '0 1px 2px rgba(0,0,0,0.15)'
-              }} />
-            </div>
-          </div>
-
-          <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'flex-end' }}>
-            <button type="submit" className="btn btn-primary" style={{ padding: '10px 24px', fontWeight: 600 }}>Guardar Cambios Empresa</button>
-          </div>
-        </form>
+        <ConfigGeneralTab setErrorMsg={setErrorMsg} setSuccessMsg={setSuccessMsg} />
       )}
 
       {/* Sub-tab 3: Empleados */}

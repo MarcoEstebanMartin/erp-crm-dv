@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { X, Printer, Calendar } from 'lucide-react';
 import { api } from '../../utils/api';
+import { formatCompanyPhone, getCompanyProfile } from '../../utils/companyProfile';
 import { ResumenCuentaDetailModals } from './ResumenCuentaDetailModals';
 
 interface ResumenCuentaModalProps {
@@ -25,11 +26,12 @@ export default function ResumenCuentaModal({ client, onClose }: ResumenCuentaMod
   const [selectedWithholding, setSelectedWithholding] = useState<any | null>(null);
   const [viewLoading, setViewLoading] = useState(false);
 
-  const companyName = (localStorage.getItem('company_nombre_fantasia') || localStorage.getItem('company_razon_social') || 'Distribuidora Don Venancio').toUpperCase();
-  const companyCuit = localStorage.getItem('company_cuit') || '';
-  const companyDireccion = localStorage.getItem('company_direccion') || '';
-  const companyTelefono = localStorage.getItem('company_telefono') || '';
-  const companyEmail = localStorage.getItem('company_email') || '';
+  const company = getCompanyProfile();
+  const companyName = company.nombreFantasia.toUpperCase();
+  const companyCuit = company.cuit;
+  const companyDireccion = company.direccion;
+  const companyTelefono = formatCompanyPhone(company.telefono);
+  const companyEmail = company.email;
 
   useEffect(() => {
     fetchTransactions();
@@ -179,6 +181,8 @@ export default function ResumenCuentaModal({ client, onClose }: ResumenCuentaMod
                   {companyCuit && <span>CUIT: {companyCuit}</span>}
                   {companyCuit && (companyTelefono || companyEmail) && <span style={{ margin: '0 6px' }}>|</span>}
                   {companyTelefono && <span>Tel: {companyTelefono}</span>}
+                  {companyTelefono && companyEmail && <span style={{ margin: '0 6px' }}>|</span>}
+                  {companyEmail && <span>{companyEmail}</span>}
                 </div>
               </div>
             </div>

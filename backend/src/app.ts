@@ -86,12 +86,14 @@ const productsUploadsDir = path.join(uploadsDir, 'products');
 
 import { appCache } from './utils/cache';
 import { startDbKeepAlive } from './utils/dbKeepAlive';
+import { hydrateSystemConfigOnBoot } from './services/admin/system-config.service';
 
 (async () => {
   try {
     await ensureDirectoriesExist([uploadsDir, productsUploadsDir]);
     appCache.invalidateProductCatalog();
     startDbKeepAlive();
+    await hydrateSystemConfigOnBoot();
   } catch (err) {
     console.error('⚠️ Error durante la inicialización de archivos/directorio en el inicio:', err);
   }

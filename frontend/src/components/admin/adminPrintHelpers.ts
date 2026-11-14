@@ -1,3 +1,5 @@
+import { getCompanyProfile } from '../../utils/companyProfile';
+
 export const getQuickItemPrice = (product: any, client: any) => {
   if (!client) return Math.round(Number(product.listPrice));
   let price = Number(product.listPrice);
@@ -32,9 +34,10 @@ export const printOrderTicket = (order: any) => {
   const printWindow = window.open('', '_blank', 'width=600,height=800');
   if (!printWindow) return;
 
-  const companyLogo = localStorage.getItem('company_nombre_fantasia') || 'DV DISTRIBUIDORA';
-  const companySub = localStorage.getItem('company_razon_social') || 'Mayorista de Alimentos & Bebidas';
-  const companyCuitVal = localStorage.getItem('company_cuit') || '30-71717171-9';
+  const company = getCompanyProfile();
+  const companyLogo = company.nombreFantasia;
+  const companySub = company.razonSocial;
+  const companyCuitVal = company.cuit;
 
   printWindow.document.write(`
     <html>

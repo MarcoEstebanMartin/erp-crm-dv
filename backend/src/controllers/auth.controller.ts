@@ -5,6 +5,7 @@ import prisma from '../utils/prisma';
 import { AuthenticatedRequest, UserPermissions } from '../types';
 import { env } from '../config/env.config';
 import { sessionCache } from '../utils/session-cache.util';
+import { getSystemConfigSnapshot } from '../services/admin/system-config.service';
 import {
   clearStaffSessionCookie,
   extractStaffToken,
@@ -72,6 +73,7 @@ export async function login(req: Request, res: Response): Promise<void> {
     );
 
     setStaffSessionCookie(req, res, token);
+    const systemConfig = await getSystemConfigSnapshot();
 
     res.status(200).json({
       status: 'success',
@@ -83,10 +85,7 @@ export async function login(req: Request, res: Response): Promise<void> {
           role: user.role,
           permissions: effectivePermissions,
         },
-        config: {
-          ignoreStock: env.IGNORE_STOCK_CHECK,
-          afipProduction: env.AFIP_PRODUCTION,
-        },
+        config: systemConfig,
       },
     });
   } catch (error: unknown) {
@@ -130,6 +129,7 @@ export async function getMe(req: AuthenticatedRequest, res: Response): Promise<v
 
     const effectivePermissions: UserPermissions =
       (user.permissions as unknown as UserPermissions) || getDefaultPermissions(user.role);
+    const systemConfig = await getSystemConfigSnapshot();
 
     res.status(200).json({
       status: 'success',
@@ -138,10 +138,7 @@ export async function getMe(req: AuthenticatedRequest, res: Response): Promise<v
           ...user,
           permissions: effectivePermissions,
         },
-        config: {
-          ignoreStock: env.IGNORE_STOCK_CHECK,
-          afipProduction: env.AFIP_PRODUCTION,
-        },
+        config: systemConfig,
       },
     });
   } catch (error: unknown) {

@@ -3,6 +3,10 @@ import {
   evictRequestIdempotencyKey,
   resolveRequestIdempotencyKey,
 } from './idempotencyClient';
+import {
+  type CompanyProfile,
+  purgeLegacyCompanyLocalStorage,
+} from './companyProfile';
 
 // Usa ruta relativa para unificar origen en producción (Railway) y proxy local en desarrollo (Vite/LAN)
 export const API_BASE_URL = '/api';
@@ -115,6 +119,7 @@ export const api = {
     }
     // Purgar cualquier token legado en localStorage; la sesión reside en Cookie HttpOnly
     localStorage.removeItem('auth_token');
+    purgeLegacyCompanyLocalStorage();
     if (res.user) {
       localStorage.setItem('auth_user', JSON.stringify(res.user));
     }
@@ -148,6 +153,7 @@ export const api = {
         localStorage.setItem('auth_user', JSON.stringify(resolvedUser));
       }
       if (resolvedConfig) {
+        purgeLegacyCompanyLocalStorage();
         localStorage.setItem('auth_config', JSON.stringify(resolvedConfig));
       }
       return resolvedUser;
@@ -161,14 +167,26 @@ export const api = {
     return configStr ? JSON.parse(configStr) : null;
   },
 
-  updateServerConfig: async (config: { ignoreStockCheck?: boolean }) => {
-    
+  fetchServerConfig: async () => {
+    const cfg = await request('/admin/config');
+    if (cfg) {
+      purgeLegacyCompanyLocalStorage();
+      localStorage.setItem('auth_config', JSON.stringify(cfg));
+    }
+    return cfg;
+  },
+
+  updateServerConfig: async (config: { ignoreStockCheck?: boolean; company?: Partial<CompanyProfile> }) => {
     try {
-      await request('/admin/config', {
+      const cfg = await request('/admin/config', {
         method: 'POST',
         body: JSON.stringify(config),
       });
-      await api.getMe(); // Refrescar config
+      if (cfg) {
+        purgeLegacyCompanyLocalStorage();
+        localStorage.setItem('auth_config', JSON.stringify(cfg));
+      }
+      return cfg;
     } catch (error) {
       console.error('Error updating config', error);
       throw error;

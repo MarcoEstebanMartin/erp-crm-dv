@@ -3,6 +3,7 @@ import path from 'path';
 // @ts-ignore
 import Afip from '@afipsdk/afip.js';
 import { roundCurrency } from '../utils/math';
+import { getSystemConfigSnapshot } from './admin/system-config.service';
 
 const isProduction = process.env.AFIP_PRODUCTION === 'true';
 const cuit = process.env.AFIP_CUIT || '20409378472';
@@ -71,7 +72,8 @@ export async function emitirFacturaAFIP({
   percepcionIvaAmount,
 }: InvoiceRequest): Promise<InvoiceResult> {
   return withAfipLock(async () => {
-    const puntoDeVenta = 1; // Punto de venta por defecto
+    const sysCfg = await getSystemConfigSnapshot();
+    const puntoDeVenta = sysCfg.company.puntoVenta || 1;
     const cbteTipo = invoiceType === 'A' ? 1 : 6; // 1: Factura A, 6: Factura B
 
     // Si estamos usando Mock
@@ -84,7 +86,7 @@ export async function emitirFacturaAFIP({
       console.log(`[MOCK AFIP] Creando Factura ${invoiceType} #${mockInvoiceNum} por total ARS ${total} (Percep IIBB: ${percepcionAmount || 0}, Percep IVA: ${percepcionIvaAmount || 0})`);
 
       return {
-        invoiceNumber: `00001-${mockInvoiceNum.toString().padStart(8, '0')}`,
+        invoiceNumber: `${String(puntoDeVenta).padStart(5, '0')}-${mockInvoiceNum.toString().padStart(8, '0')}`,
         cae: mockCae,
         caeDueDate: dueDate,
         puntoVenta: puntoDeVenta,
@@ -197,10 +199,10 @@ export async function emitirFacturaAFIP({
       const dueDate = new Date();
       dueDate.setDate(dueDate.getDate() + 10);
       return {
-        invoiceNumber: `00001-${mockInvoiceNum.toString().padStart(8, '0')}`,
+        invoiceNumber: `${String(puntoDeVenta).padStart(5, '0')}-${mockInvoiceNum.toString().padStart(8, '0')}`,
         cae: mockCae,
         caeDueDate: dueDate,
-        puntoVenta: 1,
+        puntoVenta: puntoDeVenta,
       };
     }
     throw new Error(`Error AFIP: ${error.message || error}`);

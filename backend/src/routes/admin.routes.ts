@@ -12,6 +12,7 @@ import {
   toggleUserStatus,
   updateUser,
   deleteUser,
+  getConfig,
   updateConfig,
   getZoneReports,
   getWeeklyReports,
@@ -23,13 +24,15 @@ import {
   syncBalances,
 } from '../controllers/admin.controller';
 import { authenticateJWT, requireRole } from '../middlewares/auth';
+import { idempotencyGuard } from '../middlewares/idempotency.middleware';
 import { Role } from '@prisma/client';
 import { validateRequest } from '../middlewares/validateRequest';
 import {
   createUserSchema,
   toggleUserStatusSchema,
   updateUserSchema,
-  deleteUserSchema
+  deleteUserSchema,
+  updateSystemConfigSchema,
 } from '../validators/admin.validator';
 import {
   saveWeeklyReportSchema,
@@ -63,7 +66,8 @@ router.post('/users', validateRequest(createUserSchema), createUser);
 router.put('/users/:id', validateRequest(updateUserSchema), updateUser);
 router.post('/users/:id/toggle', validateRequest(toggleUserStatusSchema), toggleUserStatus);
 router.delete('/users/:username', validateRequest(deleteUserSchema), deleteUser);
-router.post('/config', updateConfig);
+router.get('/config', getConfig);
+router.post('/config', idempotencyGuard, validateRequest(updateSystemConfigSchema), updateConfig);
 router.get('/reconcile/check', checkBalancesReport);
 router.post('/reconcile/sync', syncBalances);
 

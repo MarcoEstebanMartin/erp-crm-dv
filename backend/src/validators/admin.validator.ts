@@ -34,3 +34,23 @@ export const deleteUserSchema = z.object({
   }),
 });
 
+export const updateSystemConfigSchema = z.object({
+  body: z.object({
+    ignoreStockCheck: z.boolean().optional(),
+    company: z
+      .object({
+        razonSocial: z.string().trim().min(2, 'La razón social es requerida').max(120).optional(),
+        nombreFantasia: z.string().trim().min(2, 'El nombre de fantasía es requerido').max(120).optional(),
+        cuit: z.string().trim().min(11, 'El CUIT debe tener 11 dígitos').max(15).optional(),
+        direccion: z.string().trim().max(180).optional(),
+        telefono: z.string().trim().max(50).optional(),
+        email: z.string().trim().email('Email inválido').or(z.literal('')).optional(),
+        puntoVenta: z.coerce.number().int().min(1).max(99999).optional(),
+        iibb: z.string().trim().max(40).optional(),
+        inicioActividades: z.string().trim().max(20).optional(),
+      })
+      .optional(),
+  }),
+});
+
+

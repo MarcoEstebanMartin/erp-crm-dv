@@ -1,8 +1,10 @@
+import { formatCompanyPhone, getCompanyProfile } from './companyProfile';
+
 export const printPickingList = (order: any, callback?: () => void) => {
   const printWindow = window.open('', '_blank', 'width=800,height=1000');
   if (!printWindow) return;
 
-  const companyLogo = localStorage.getItem('company_nombre_fantasia') || 'DV DISTRIBUIDORA';
+  const companyLogo = getCompanyProfile().nombreFantasia;
 
   printWindow.document.write(`
     <html>
@@ -163,9 +165,10 @@ export const printRemitoX = (order: any) => {
   const printWindow = window.open('', '_blank', 'width=900,height=1100');
   if (!printWindow) return;
 
-  const companySub = localStorage.getItem('company_razon_social') || 'Mayorista de Alimentos & Bebidas';
-  const companyAddress = localStorage.getItem('company_direccion') || 'Av. Moreno 200, General Villegas';
-  const companyPhone = localStorage.getItem('company_telefono') || 'Tel: +54 3388 42-1234';
+  const company = getCompanyProfile();
+  const companySub = company.razonSocial;
+  const companyAddress = company.direccion;
+  const companyPhone = formatCompanyPhone(company.telefono);
 
   const formattedDate = order.createdAt 
     ? new Date(order.createdAt).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' })
@@ -441,8 +444,9 @@ export const printRemitoX = (order: any) => {
 
             <div class="header-main">
               <div class="header-left">
-                <img src="${window.location.origin}/logo.png" alt="Don Venancio" style="max-height: 52px; max-width: 190px; object-fit: contain; margin-bottom: 4px;" />
-                <div class="company-sub">${companyAddress}</div>
+                <img src="${window.location.origin}/logo.png" alt="${company.nombreFantasia}" style="max-height: 52px; max-width: 190px; object-fit: contain; margin-bottom: 4px;" />
+                <div class="company-sub">${companySub}</div>
+                <div class="company-sub">${companyAddress}${companyPhone ? ` &nbsp;|&nbsp; Tel: ${companyPhone}` : ''}</div>
               </div>
 
               <div class="header-right">
@@ -527,10 +531,12 @@ export const printFacturaOficialA4 = (order: any) => {
   const printWindow = window.open('', '_blank', 'width=900,height=1100');
   if (!printWindow) return;
 
-  const companyCuit = localStorage.getItem('company_cuit') || '30-71717171-9';
-  const companyIibb = localStorage.getItem('company_iibb') || '911-440570-8';
-  const companyAddress = localStorage.getItem('company_direccion') || 'Av. Moreno 200, General Villegas';
-  const companyInitDate = localStorage.getItem('company_inicio_actividades') || '01/10/1996';
+  const company = getCompanyProfile();
+  const companyCuit = company.cuit;
+  const companyIibb = company.iibb;
+  const companyAddress = company.direccion;
+  const companyInitDate = company.inicioActividades;
+  const puntoVentaStr = String(order.puntoVenta || company.puntoVenta || 1).padStart(4, '0');
 
   const formattedDate = order.createdAt 
     ? new Date(order.createdAt).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' })
@@ -865,9 +871,10 @@ export const printFacturaOficialA4 = (order: any) => {
 
             <div class="header-main">
               <div class="header-left">
-                <img src="${window.location.origin}/logo.png" alt="Don Venancio" style="max-height: 52px; max-width: 190px; object-fit: contain; margin-bottom: 4px;" />
+                <img src="${window.location.origin}/logo.png" alt="${company.nombreFantasia}" style="max-height: 52px; max-width: 190px; object-fit: contain; margin-bottom: 4px;" />
+                <div class="company-sub"><strong>Razón Social:</strong> ${company.razonSocial}</div>
                 <div class="company-sub">${companyAddress}</div>
-                <div class="company-sub"><strong>CUIT:</strong> ${companyCuit} &nbsp;|&nbsp; <strong>IIBB:</strong> ${companyIibb}</div>
+                <div class="company-sub"><strong>CUIT:</strong> ${companyCuit}${companyIibb ? ` &nbsp;|&nbsp; <strong>IIBB:</strong> ${companyIibb}` : ''}</div>
                 <div class="company-sub"><strong>Condición IVA:</strong> RESPONSABLE INSCRIPTO</div>
               </div>
 
@@ -878,10 +885,10 @@ export const printFacturaOficialA4 = (order: any) => {
 
               <div class="header-right">
                 <div class="doc-title">${docTitle}</div>
-                <div class="doc-meta"><strong>Punto de Venta:</strong> 0005 &nbsp;|&nbsp; <strong>Comp. N°:</strong> ${invNumber}</div>
+                <div class="doc-meta"><strong>Punto de Venta:</strong> ${puntoVentaStr} &nbsp;|&nbsp; <strong>Comp. N°:</strong> ${invNumber}</div>
                 <div class="doc-meta"><strong>Fecha de Emisión:</strong> ${formattedDate}</div>
                 <div class="doc-meta"><strong>Vencimiento:</strong> ${formattedDueDate}</div>
-                <div class="doc-meta"><strong>Inicio de Actividades:</strong> ${companyInitDate}</div>
+                ${companyInitDate ? `<div class="doc-meta"><strong>Inicio de Actividades:</strong> ${companyInitDate}</div>` : ''}
               </div>
             </div>
 
@@ -1084,7 +1091,7 @@ export const printBatchPickingA4 = ({
   const printWindow = window.open('', '_blank', 'width=1000,height=1200');
   if (!printWindow) return;
 
-  const companyLogo = localStorage.getItem('company_nombre_fantasia') || 'DV DISTRIBUIDORA';
+  const companyLogo = getCompanyProfile().nombreFantasia;
 
   const getItemZone = (item: any) => item.product?.pickingZone || item.product?.rubro?.pickingZone || 'CAJAS';
   const getItemLocation = (item: any) => item.product?.defaultLocation || item.location || 'S/U';
@@ -1390,7 +1397,7 @@ export const printConsolidatedPickingA4 = ({
   const printWindow = window.open('', '_blank', 'width=1000,height=1200');
   if (!printWindow) return;
 
-  const companyLogo = localStorage.getItem('company_nombre_fantasia') || 'DV DISTRIBUIDORA';
+  const companyLogo = getCompanyProfile().nombreFantasia;
 
   const getItemZone = (item: any) => item.product?.pickingZone || item.product?.rubro?.pickingZone || 'CAJAS';
   const getItemLocation = (item: any) => item.product?.defaultLocation || item.location || 'S/U';
@@ -1675,7 +1682,7 @@ export const printShippingLabelsBultos = ({
   const printWindow = window.open('', '_blank', 'width=600,height=800');
   if (!printWindow) return;
 
-  const companyLogo = localStorage.getItem('company_nombre_fantasia') || 'DISTRIBUIDORA DON VENANCIO';
+  const companyLogo = getCompanyProfile().nombreFantasia;
 
   const labels: Array<{
     orderId: number;
@@ -1886,7 +1893,7 @@ export const printDeliveryRouteCustodyGuide = (route: any) => {
   const printWindow = window.open('', '_blank', 'width=900,height=1100');
   if (!printWindow) return;
 
-  const companyLogo = localStorage.getItem('company_nombre_fantasia') || 'DISTRIBUIDORA DON VENANCIO';
+  const companyLogo = getCompanyProfile().nombreFantasia;
   const orders = route.orders || [];
 
   const totalBultosFraccionados = orders.reduce((sum: number, o: any) => sum + Math.max(1, Number(o.bultosCount || 1)), 0);
