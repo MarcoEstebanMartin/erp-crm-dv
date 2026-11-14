@@ -11,6 +11,15 @@ import {
 // Usa ruta relativa para unificar origen en producción (Railway) y proxy local en desarrollo (Vite/LAN)
 export const API_BASE_URL = '/api';
 
+export interface AuditLogQueryFilters {
+  search?: string;
+  userId?: number | '';
+  module?: string;
+  status?: string;
+  startDate?: string;
+  endDate?: string;
+}
+
 // La sesión viaja protegida por Cookie HttpOnly (inmune a robo XSS en localStorage)
 function getHeaders() {
   return {
@@ -692,9 +701,19 @@ export const api = {
     return await request(`/admin/reports/zones${query}`);
   },
 
-  getAuditLogs: async (page = 1, limit = 50) => {
-    
-    const res = await request(`/admin/audit-logs?page=${page}&limit=${limit}`);
+  getAuditLogs: async (page = 1, limit = 50, filters?: AuditLogQueryFilters) => {
+    const params = new URLSearchParams({
+      page: String(page),
+      limit: String(limit),
+    });
+    if (filters?.search?.trim()) params.set('search', filters.search.trim());
+    if (filters?.userId !== undefined && filters?.userId !== '') params.set('userId', String(filters.userId));
+    if (filters?.module) params.set('module', filters.module);
+    if (filters?.status) params.set('status', filters.status);
+    if (filters?.startDate) params.set('startDate', filters.startDate);
+    if (filters?.endDate) params.set('endDate', filters.endDate);
+
+    const res = await request(`/admin/audit-logs?${params.toString()}`);
     return res;
   },
 

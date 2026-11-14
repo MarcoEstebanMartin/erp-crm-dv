@@ -10,6 +10,7 @@ import {
   getSystemConfigSnapshot,
   updateSystemConfig,
 } from '../services/admin/system-config.service';
+import { AuditModuleKey, AuditStatusKey } from '../validators/admin.validator';
 
 export async function getFinancialReports(req: AuthenticatedRequest, res: Response): Promise<void> {
   const { year, month } = req.query;
@@ -40,9 +41,16 @@ export async function getSalesChannelStats(req: AuthenticatedRequest, res: Respo
 }
 
 export async function getAuditLogs(req: AuthenticatedRequest, res: Response): Promise<void> {
-  const { page = 1, limit = 50 } = req.query;
+  const { page = 1, limit = 50, search, userId, module, status, startDate, endDate } = req.query;
   try {
-    const result = await adminService.getAuditLogs(Number(page), Number(limit));
+    const result = await adminService.getAuditLogs(Number(page) || 1, Number(limit) || 50, {
+      search: typeof search === 'string' && search.trim() ? search.trim() : undefined,
+      userId: typeof userId === 'string' && userId.trim() ? Number(userId) : undefined,
+      module: typeof module === 'string' && module.trim() ? (module.trim() as AuditModuleKey) : undefined,
+      status: typeof status === 'string' && status.trim() ? (status.trim() as AuditStatusKey) : undefined,
+      startDate: typeof startDate === 'string' && startDate.trim() ? startDate.trim() : undefined,
+      endDate: typeof endDate === 'string' && endDate.trim() ? endDate.trim() : undefined,
+    });
     res.status(200).json({ status: 'success', data: result });
   } catch (error: any) {
     res.status(500).json({ status: 'error', message: 'Error al obtener los registros de auditoría.' });

@@ -1,5 +1,5 @@
 import { adminUsersSubService } from './admin/admin-users.service';
-import { adminAuditSubService } from './admin/admin-audit.service';
+import { adminAuditSubService, AuditLogFilters } from './admin/admin-audit.service';
 import { adminFinanceSubService } from './admin/admin-finance.service';
 import { adminChannelsSubService } from './admin/admin-channels.service';
 import { adminProfitabilitySubService } from './admin/admin-profitability.service';
@@ -32,8 +32,8 @@ export class AdminService {
     adminFinanceSubService.getSuggestedCreditForWeek(weekStart);
 
   // 2. Usuarios y Logs de Auditoría
-  getAuditLogs = (page = 1, limit = 50) =>
-    adminAuditSubService.getAuditLogs(page, limit);
+  getAuditLogs = (page = 1, limit = 50, filters?: AuditLogFilters) =>
+    adminAuditSubService.getAuditLogs(page, limit, filters);
 
   getDocumentAuditLogs = (entityType: string, entityId: number) =>
     adminAuditSubService.getDocumentAuditLogs(entityType, entityId);

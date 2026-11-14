@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import prisma from '../../utils/prisma';
 import { adminAuditSubService } from '../admin/admin-audit.service';
+import { buildAuditLogWhere } from '../admin/admin-audit-filter.helper';
+import { getAuditLogsQuerySchema } from '../../validators/admin.validator';
 
 describe('AdminAuditSubService — Enriquecimiento legible de AuditLog (Paso 1)', () => {
   beforeEach(() => {
@@ -121,5 +123,98 @@ describe('AdminAuditSubService — Enriquecimiento legible de AuditLog (Paso 1)'
     expect(res.logs).toHaveLength(1);
     expect(res.logs[0].action).toBe('UPDATE_PERSONA');
     expect(res.logs[0].resolvedContext).toBeUndefined();
+  });
+});
+
+describe('AdminAuditSubService — Búsqueda, Filtros y Esquema (Paso 2)', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('construye where exacto con userId, módulo STOCK_WMS, status ERROR y rango horario Argentina (-03:00)', async () => {
+    const findManySpy = vi.spyOn(prisma.auditLog, 'findMany').mockReturnValue([] as any);
+    const countSpy = vi.spyOn(prisma.auditLog, 'count').mockReturnValue(0 as any);
+    vi.spyOn(prisma, '$transaction').mockResolvedValue([[], 0] as any);
+
+    const res = await adminAuditSubService.getAuditLogs(1, 30, {
+      userId: 7,
+      module: 'STOCK_WMS',
+      status: 'ERROR',
+      startDate: '2026-11-14',
+      endDate: '2026-11-14',
+    });
+
+    expect(res.pagination).toEqual({ total: 0, page: 1, limit: 30, totalPages: 1 });
+    const passedWhere = findManySpy.mock.calls[0][0]?.where as any;
+    expect(passedWhere.AND).toEqual(
+      expect.arrayContaining([
+        { userId: 7 },
+        { status: 'ERROR' },
+        {
+          createdAt: {
+            gte: new Date('2026-11-14T03:00:00.000Z'),
+            lte: new Date('2026-11-15T02:59:59.999Z'),
+          },
+        },
+      ]),
+    );
+    expect(JSON.stringify(passedWhere)).toContain('ASSIGN_WMS_LOCATION');
+    expect(countSpy).toHaveBeenCalledWith({ where: passedWhere });
+  });
+
+  it('filtra el módulo STAFF sin mezclar ingresos LOGIN por entityType User suelto', async () => {
+    const where = (await buildAuditLogWhere({ module: 'STAFF' })) as any;
+    const serialized = JSON.stringify(where);
+
+    expect(serialized).toContain('TOGGLE_USER_STATUS');
+    expect(serialized).toContain('Employee');
+    expect(where.OR).not.toContainEqual({ entityType: 'User' });
+    expect(serialized).not.toContain('"LOGIN"');
+  });
+
+  it('resuelve búsqueda de texto por producto, JSONB parametrizado y palabras clave en español (ubicación)', async () => {
+    const productFindSpy = vi.spyOn(prisma.product, 'findMany').mockResolvedValue([{ id: 1626 }] as any);
+    const rawSpy = vi.spyOn(prisma, '$queryRaw').mockResolvedValue([{ id: 901 }] as any);
+
+    const whereProd = (await buildAuditLogWhere({ search: 'Playadito' })) as any;
+    expect(productFindSpy).toHaveBeenCalledTimes(1);
+    expect(rawSpy).toHaveBeenCalledTimes(1);
+    expect(whereProd.OR).toEqual(
+      expect.arrayContaining([
+        { entityType: 'Product', entityId: { in: [1626] } },
+        { action: 'CLEAR_WMS_LOCATION', entityId: { in: [1626] } },
+        { id: { in: [901] } },
+      ]),
+    );
+
+    const whereEs = (await buildAuditLogWhere({ search: 'ubicación' })) as any;
+    const actionClause = whereEs.OR.find((c: any) => Array.isArray(c?.action?.in));
+    expect(actionClause?.action?.in).toContain('ASSIGN_WMS_LOCATION');
+  });
+
+  it('valida parámetros de consulta en getAuditLogsQuerySchema y rechaza fechas o módulos inválidos', () => {
+    const ok = getAuditLogsQuerySchema.safeParse({
+      query: {
+        page: '2',
+        limit: '30',
+        search: 'Playadito',
+        userId: '5',
+        module: 'STOCK_WMS',
+        status: 'WARNING',
+        startDate: '2026-11-01',
+        endDate: '2026-11-14',
+      },
+    });
+    expect(ok.success).toBe(true);
+
+    const badDate = getAuditLogsQuerySchema.safeParse({
+      query: { startDate: '14/11/2026' },
+    });
+    expect(badDate.success).toBe(false);
+
+    const badModule = getAuditLogsQuerySchema.safeParse({
+      query: { module: 'MODULO_INEXISTENTE' },
+    });
+    expect(badModule.success).toBe(false);
   });
 });

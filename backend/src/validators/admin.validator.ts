@@ -51,6 +51,46 @@ export const deleteUserSchema = z.object({
   }),
 });
 
+export const AUDIT_MODULE_KEYS = [
+  'ACCESS',
+  'STAFF',
+  'STOCK_WMS',
+  'CATALOG',
+  'CLIENTS',
+  'SALES',
+  'PURCHASES',
+  'FINANCE',
+  'LOGISTICS',
+  'SYSTEM',
+] as const;
+
+export type AuditModuleKey = (typeof AUDIT_MODULE_KEYS)[number];
+
+export const AUDIT_STATUS_KEYS = ['SUCCESS', 'WARNING', 'ERROR'] as const;
+
+export type AuditStatusKey = (typeof AUDIT_STATUS_KEYS)[number];
+
+export const getAuditLogsQuerySchema = z.object({
+  query: z.object({
+    page: z.string().regex(/^\d+$/, 'Página inválida').optional(),
+    limit: z.string().regex(/^\d+$/, 'Límite inválido').optional(),
+    search: z.string().trim().max(120, 'Búsqueda demasiado larga').optional(),
+    userId: z.string().regex(/^\d+$/, 'Usuario inválido').optional(),
+    module: z.enum(AUDIT_MODULE_KEYS).optional().or(z.literal('')),
+    status: z.enum(AUDIT_STATUS_KEYS).optional().or(z.literal('')),
+    startDate: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/, 'Fecha desde inválida (YYYY-MM-DD)')
+      .optional()
+      .or(z.literal('')),
+    endDate: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/, 'Fecha hasta inválida (YYYY-MM-DD)')
+      .optional()
+      .or(z.literal('')),
+  }),
+});
+
 export const updateSystemConfigSchema = z.object({
   body: z.object({
     ignoreStockCheck: z.boolean().optional(),

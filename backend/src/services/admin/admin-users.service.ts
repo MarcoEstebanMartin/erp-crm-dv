@@ -2,7 +2,7 @@ import prisma from '../../utils/prisma';
 import bcrypt from 'bcryptjs';
 import { Role } from '@prisma/client';
 import { logAudit } from '../../utils/audit';
-import { adminAuditSubService } from './admin-audit.service';
+import { adminAuditSubService, AuditLogFilters } from './admin-audit.service';
 import {
   computePasswordVersion,
   isSystemUsername,
@@ -49,8 +49,8 @@ export class AdminUsersSubService {
   /**
    * Obtener logs de auditoría paginados.
    */
-  async getAuditLogs(page: number, limit: number) {
-    return adminAuditSubService.getAuditLogs(page, limit);
+  async getAuditLogs(page: number, limit: number, filters?: AuditLogFilters) {
+    return adminAuditSubService.getAuditLogs(page, limit, filters);
   }
 
   /**

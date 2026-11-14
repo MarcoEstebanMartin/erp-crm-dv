@@ -1,4 +1,7 @@
 import prisma from '../../utils/prisma';
+import { AuditLogFilters, buildAuditLogWhere } from './admin-audit-filter.helper';
+
+export type { AuditLogFilters };
 
 export interface AuditResolvedContext {
   entityLabel?: string;
@@ -17,7 +20,7 @@ export interface AuditResolvedContext {
   >;
 }
 
-const MAX_BATCH_IDS_PER_LOG = 25;
+const MAX_BATCH_IDS_PER_LOG = 100;
 
 const ENTITY_BUCKET_KEYS = [
   'Order',
@@ -182,25 +185,27 @@ function buildLabelResolvers(maps: Record<string, Map<number, any>>): Record<str
 }
 
 export class AdminAuditSubService {
-  /** Obtener logs de auditoría paginados con contexto legible resuelto en bloque. */
-  async getAuditLogs(page: number, limit: number) {
+  /** Obtener logs de auditoría paginados con filtros opcionales y contexto legible en bloque. */
+  async getAuditLogs(page = 1, limit = 50, filters?: AuditLogFilters) {
     const safePage = Math.max(1, Math.trunc(Number(page) || 1));
     const safeLimit = Math.min(Math.max(1, Math.trunc(Number(limit) || 50)), 200);
     const skip = (safePage - 1) * safeLimit;
+    const where = await buildAuditLogWhere(filters);
 
     const [logs, total] = await prisma.$transaction([
       prisma.auditLog.findMany({
+        ...(where ? { where } : {}),
         skip,
         take: safeLimit,
         include: { user: { select: { id: true, username: true, role: true } } },
         orderBy: { createdAt: 'desc' },
       }),
-      prisma.auditLog.count(),
+      prisma.auditLog.count(where ? { where } : undefined),
     ]);
 
     return {
       logs: await this.enrichAuditLogs(logs),
-      pagination: { total, page: safePage, limit: safeLimit, totalPages: Math.ceil(total / safeLimit) },
+      pagination: { total, page: safePage, limit: safeLimit, totalPages: Math.max(1, Math.ceil(total / safeLimit)) },
     };
   }
 

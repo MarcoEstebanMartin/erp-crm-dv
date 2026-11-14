@@ -28,6 +28,7 @@ import { idempotencyGuard } from '../middlewares/idempotency.middleware';
 import { Role } from '@prisma/client';
 import { validateRequest } from '../middlewares/validateRequest';
 import {
+  getAuditLogsQuerySchema,
   createUserSchema,
   toggleUserStatusSchema,
   updateUserSchema,
@@ -65,7 +66,7 @@ router.get('/reports/weekly/autofill-sales', getAutofillSales);
 router.post('/reports/weekly', validateRequest(saveWeeklyReportSchema), saveWeeklyReport);
 router.delete('/reports/weekly/:weekStart', validateRequest(deleteWeeklyReportSchema), deleteWeeklyReport);
 
-router.get('/audit-logs', getAuditLogs);
+router.get('/audit-logs', validateRequest(getAuditLogsQuerySchema), getAuditLogs);
 router.get('/users', getUsers);
 router.post('/users', idempotencyGuard, validateRequest(createUserSchema), createUser);
 router.put('/users/:id', idempotencyGuard, validateRequest(updateUserSchema), updateUser);
