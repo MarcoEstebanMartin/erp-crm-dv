@@ -8,6 +8,7 @@ import {
   toDecimal,
 } from '../../core/money';
 import { isPromoBonusOrderItem } from './order-weekly-promos.helper';
+import { sortLotsDeterministicFefo } from './order-lot-picking.helper';
 
 function resolveBillingLineValues(params: {
   item: any;
@@ -144,6 +145,7 @@ export function prepareInvoiceSplitItems(params: {
           unitCost,
         });
         internoItemsData.push({
+          sourceOrderItemId: item.id,
           productId: item.productId,
           quantity: qtyInterno,
           weight: weightInterno,
@@ -188,16 +190,19 @@ export async function assignFifoLotsToOrderItem(
   orderItemId: number,
   productId: number,
   quantity: number,
-) {
+): Promise<Array<{ productLotId: number; quantity: number }>> {
   let remainingToAssign = quantity;
-  const activeLots = await tx.productLot.findMany({
+  const allocatedLots: Array<{ productLotId: number; quantity: number }> = [];
+  const rawLots = await tx.productLot.findMany({
     where: { productId, stock: { gt: 0 } },
     orderBy: { expirationDate: 'asc' },
   });
+  const activeLots = sortLotsDeterministicFefo(rawLots || []);
 
   for (const lot of activeLots) {
     if (remainingToAssign <= 0) break;
     const allocatedQty = Math.min(lot.stock, remainingToAssign);
+    if (allocatedQty <= 0) continue;
     remainingToAssign -= allocatedQty;
 
     await tx.productLot.update({
@@ -212,6 +217,7 @@ export async function assignFifoLotsToOrderItem(
         quantity: allocatedQty,
       },
     });
+    allocatedLots.push({ productLotId: lot.id, quantity: allocatedQty });
   }
 
   if (remainingToAssign > 0 && process.env.IGNORE_STOCK_CHECK === 'true') {
@@ -243,7 +249,10 @@ export async function assignFifoLotsToOrderItem(
         quantity: remainingToAssign,
       },
     });
+    allocatedLots.push({ productLotId: slLot.id, quantity: remainingToAssign });
   }
+
+  return allocatedLots;
 }
 
 /**

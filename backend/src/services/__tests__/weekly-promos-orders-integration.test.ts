@@ -409,8 +409,6 @@ describe('Integración Ofertas Semanales en Pedidos, Edición, Facturación y Ti
 
     (prisma.product.findMany as any).mockResolvedValue([gaseosa]);
     (prisma.weeklyPromo.findMany as any).mockResolvedValue([promo3Plus1]);
-    (prisma.order.create as any).mockResolvedValue({ id: 700, billingType: BillingType.INTERNAL });
-    (prisma.order.update as any).mockResolvedValue({ id: 700, invoiceNumber: 'INT-00700' });
 
     const productUpdateMany = vi.fn().mockResolvedValue({ count: 1 });
     const orderItemCreate = vi
@@ -428,7 +426,11 @@ describe('Integración Ofertas Semanales en Pedidos, Edición, Facturación y Ti
       stockMovement: { create: stockMovCreate },
       productLot: { findMany: lotFindMany, update: lotUpdate },
       orderItemLot: { create: orderItemLotCreate },
-      order: { findUnique: vi.fn().mockResolvedValue({ id: 700, invoiceNumber: 'INT-00700', items: [] }) },
+      order: {
+        create: vi.fn().mockResolvedValue({ id: 700, billingType: BillingType.INTERNAL }),
+        update: vi.fn().mockResolvedValue({ id: 700, invoiceNumber: 'INT-00700' }),
+        findUnique: vi.fn().mockResolvedValue({ id: 700, invoiceNumber: 'INT-00700', items: [] }),
+      },
     };
     (prisma.$transaction as any).mockImplementation(async (cb: any) => cb(mockTx));
 

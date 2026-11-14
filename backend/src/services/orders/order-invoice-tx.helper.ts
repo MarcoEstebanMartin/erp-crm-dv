@@ -1,6 +1,43 @@
 import { BillingType, InvoiceType, OrderStatus, PaymentMethod, Prisma } from '@prisma/client';
+import { roundToIntegerPeso, roundToTwoDecimals } from '../../core/money';
 import { recordInvoicePerceptions, settleOrderFinancials } from './order-tax.helpers';
 import { reassignSplitStockMovements } from './order-billing.helpers';
+import { ensureFefoLotsForOrderItem } from './order-lot-picking.helper';
+
+async function transferSplitOrderItemLotsInTx(
+  tx: any,
+  sourceOrderItemId: number | undefined,
+  targetOrderItemId: number,
+  qtyToMove: number,
+): Promise<void> {
+  if (!sourceOrderItemId || qtyToMove <= 0 || typeof tx.orderItemLot?.findMany !== 'function') {
+    return;
+  }
+
+  const sourceLinks = await tx.orderItemLot.findMany({
+    where: { orderItemId: sourceOrderItemId },
+    orderBy: { id: 'asc' },
+  });
+
+  let remaining = qtyToMove;
+  for (const link of sourceLinks || []) {
+    if (remaining <= 0) break;
+    const moveQty = Math.min(Number(link.quantity || 0), remaining);
+    if (moveQty <= 0) continue;
+
+    await tx.orderItemLot.create({
+      data: { orderItemId: targetOrderItemId, productLotId: link.productLotId, quantity: moveQty },
+    });
+
+    const leftover = Number(link.quantity || 0) - moveQty;
+    if (leftover <= 0) {
+      await tx.orderItemLot.delete({ where: { id: link.id } });
+    } else {
+      await tx.orderItemLot.update({ where: { id: link.id }, data: { quantity: leftover } });
+    }
+    remaining -= moveQty;
+  }
+}
 
 export async function executeInvoiceOrderSettlementTx(
   tx: Prisma.TransactionClient,
@@ -17,11 +54,20 @@ export async function executeInvoiceOrderSettlementTx(
     internalOrderTotal: number;
     officialOrderTotal: number;
     finalInvoiceNumber: string | null;
-    taxInfo: { percepIIBB: number; percepIVA: number };
+    finalCae: string | null;
+    finalCaeDueDate: Date | null;
+    taxInfo: {
+      net: number;
+      tax: number;
+      percepIIBB: number;
+      percepIVA: number;
+      finalInvoiceType: InvoiceType;
+      isFacturaAOfficial: boolean;
+    };
     activeDrawerId?: number;
     selectedBankId?: number;
   },
-): Promise<{ split: boolean; internalOrderId: number | null; internalOrderTotal: number }> {
+): Promise<{ updatedOrder: any; split: boolean; internalOrderId: number | null; internalOrderTotal: number }> {
   const {
     order,
     adminId,
@@ -35,10 +81,37 @@ export async function executeInvoiceOrderSettlementTx(
     internalOrderTotal,
     officialOrderTotal,
     finalInvoiceNumber,
+    finalCae,
+    finalCaeDueDate,
     taxInfo,
     activeDrawerId,
     selectedBankId,
   } = params;
+
+  if (typeof (tx as any).$queryRaw === 'function') {
+    await (tx as any).$queryRaw(Prisma.sql`SELECT id FROM "Order" WHERE id = ${order.id} FOR UPDATE`);
+  }
+
+  const currentInTx =
+    typeof tx.order?.findUnique === 'function'
+      ? await tx.order.findUnique({ where: { id: order.id }, select: { status: true } })
+      : null;
+  const effectiveStatus = currentInTx?.status ?? order.status;
+  if (effectiveStatus !== OrderStatus.PREPARED) {
+    throw new Error(`El pedido #${order.id} ya fue facturado o cambió de estado (${effectiveStatus}).`);
+  }
+
+  for (const origItem of order.items || []) {
+    if (Array.isArray(origItem.orderItemLots) && origItem.orderItemLots.length === 0 && origItem.quantity > 0) {
+      await ensureFefoLotsForOrderItem(tx, {
+        orderId: order.id,
+        orderItemId: origItem.id,
+        productId: origItem.productId,
+        quantity: origItem.quantity,
+        sellerId: order.sellerId,
+      });
+    }
+  }
 
   let internalOrderId: number | null = null;
 
@@ -57,7 +130,7 @@ export async function executeInvoiceOrderSettlementTx(
     internalOrderId = internalOrder.id;
 
     for (const item of internoItemsData) {
-      await tx.orderItem.create({
+      const createdInternalItem = await tx.orderItem.create({
         data: {
           orderId: internalOrder.id,
           productId: item.productId,
@@ -70,6 +143,12 @@ export async function executeInvoiceOrderSettlementTx(
           discountPctSnapshot: item.discountPctSnapshot,
         },
       });
+      await transferSplitOrderItemLotsInTx(
+        tx,
+        item.sourceOrderItemId ?? item.orderItemId,
+        createdInternalItem.id,
+        item.quantity,
+      );
     }
 
     await settleOrderFinancials(tx, {
@@ -86,13 +165,7 @@ export async function executeInvoiceOrderSettlementTx(
       bankAccountId: selectedBankId,
     });
 
-    await reassignSplitStockMovements(
-      tx,
-      order.id,
-      internalOrder.id,
-      order.sellerId,
-      internoItemsData,
-    );
+    await reassignSplitStockMovements(tx, order.id, internalOrder.id, order.sellerId, internoItemsData);
   }
 
   for (const item of oficialItemsData) {
@@ -126,7 +199,7 @@ export async function executeInvoiceOrderSettlementTx(
     invoiceNumber: finalInvoiceNumber || `FAC-${order.id}`,
     percepIIBB: taxInfo.percepIIBB,
     percepIVA: taxInfo.percepIVA,
-    isFacturaAOfficial: true,
+    isFacturaAOfficial: taxInfo.isFacturaAOfficial,
     provinceOrAddress: order.persona.province || order.persona.address,
   });
 
@@ -146,5 +219,26 @@ export async function executeInvoiceOrderSettlementTx(
     bankAccountId: selectedBankId,
   });
 
-  return { split: splitApplied, internalOrderId, internalOrderTotal };
+  const roundFiscal = (v: number) =>
+    taxInfo.isFacturaAOfficial ? roundToTwoDecimals(v).toNumber() : roundToIntegerPeso(v).toNumber();
+
+  const updatedOrder = await tx.order.update({
+    where: { id: order.id },
+    data: {
+      billingType,
+      invoiceType: taxInfo.finalInvoiceType,
+      invoiceNumber: finalInvoiceNumber,
+      cae: finalCae,
+      caeDueDate: finalCaeDueDate ? new Date(finalCaeDueDate) : null,
+      totalAmount: officialOrderTotal,
+      netAmount: roundFiscal(taxInfo.net),
+      taxAmount: roundFiscal(taxInfo.tax),
+      percepcionAmount: roundFiscal(taxInfo.percepIIBB),
+      percepcionIvaAmount: roundFiscal(taxInfo.percepIVA),
+      status: OrderStatus.DELIVERED,
+    },
+    include: { items: { include: { product: true, orderItemLots: true } }, persona: true },
+  });
+
+  return { updatedOrder, split: splitApplied, internalOrderId, internalOrderTotal };
 }

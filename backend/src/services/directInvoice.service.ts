@@ -5,14 +5,15 @@ import {
   InvoiceType,
   OrderStatus,
   MovementType,
-  TransactionType,
   PaymentMethod,
   SalesChannel,
 } from '@prisma/client';
 import { emitirFacturaAFIP } from './afip.service';
 import { logAudit } from '../utils/audit';
+import { PricingService } from './pricing.service';
+import { PersonaService } from './persona.service';
+import { lockProductsForUpdate } from '../utils/db-locks.util';
 import {
-  calculateOrderLine,
   roundToIntegerPeso,
   roundToThreeDecimalsWeight,
   roundToTwoDecimals,
@@ -29,6 +30,8 @@ import {
   decrementStockByProductMapInTx,
   evaluateOrderCartWithWeeklyPromos,
 } from './orders/order-weekly-promos.helper';
+
+const personaService = new PersonaService();
 
 export interface CreateDirectInvoiceDto {
   adminId: number;
@@ -52,8 +55,8 @@ export interface CreateDirectInvoiceDto {
 export class DirectInvoiceService {
   /**
    * Genera una factura directa por mostrador (Oficial AFIP o Interna),
-   * descontando stock de lotes FIFO, congelando Snapshots históricos con Decimal.js
-   * y registrando el cobro o saldo en cuenta corriente.
+   * descontando stock de lotes FEFO de forma atómica, congelando Snapshots históricos
+   * con Decimal.js + PricingService y registrando el cobro o saldo en cuenta corriente.
    */
   static async createDirectInvoice(data: CreateDirectInvoiceDto) {
     const {
@@ -79,7 +82,15 @@ export class DirectInvoiceService {
     const productIds = items.map((item) => item.productId);
     const dbProducts = await prisma.product.findMany({
       where: { id: { in: productIds } },
+      include: { rubro: true },
     });
+
+    const dbRules =
+      typeof (prisma as any)?.discountRule?.findMany === 'function'
+        ? await prisma.discountRule.findMany({
+            where: { OR: [{ personaId: persona.id }, { priceList: persona.priceList }] },
+          })
+        : [];
 
     const basePricingByProductId = new Map<number, CartBasePricingInfo>();
     const promoInputLines = [];
@@ -96,19 +107,18 @@ export class DirectInvoiceService {
         );
       }
 
-      let selectedPrice = Number(product.listPrice);
-      let itemDiscount = Number(persona.discount || 0);
-
-      if (persona.priceList === 'B') {
-        selectedPrice =
-          Number(product.listPriceB) > 0 ? Number(product.listPriceB) : Number(product.listPrice);
-        const isMelincue =
-          product.description?.toUpperCase() === 'MELINCUE' ||
-          product.name?.toUpperCase().includes('MELINCUE');
-        itemDiscount = isMelincue ? 3 : 0;
-      } else if (persona.priceList === 'C') {
-        selectedPrice =
-          Number(product.listPriceC) > 0 ? Number(product.listPriceC) : Number(product.listPrice);
+      if (!basePricingByProductId.has(product.id)) {
+        const pricing = PricingService.calculatePriceAndDiscountInMemory(
+          product,
+          persona,
+          dbRules,
+          billingType,
+        );
+        basePricingByProductId.set(product.id, {
+          baseUnitPrice: pricing.finalPrice,
+          baseListPrice: pricing.basePrice,
+          baseDiscountPct: pricing.discount,
+        });
       }
 
       const approxKg = Number((product as any).approximateWeight || 1) || 1;
@@ -117,21 +127,6 @@ export class DirectInvoiceService {
           ? roundToThreeDecimalsWeight(item.weight)
           : roundToThreeDecimalsWeight(toDecimal(item.quantity).times(approxKg))
         : toDecimal(item.quantity);
-
-      const lc = calculateOrderLine({
-        unitCost: Number((product as any).costPrice || 0),
-        unitPriceList: selectedPrice,
-        billableQty: billableQtyDec,
-        discountPct: itemDiscount,
-      });
-
-      if (!basePricingByProductId.has(product.id)) {
-        basePricingByProductId.set(product.id, {
-          baseUnitPrice: roundToIntegerPeso(lc.netUnitPrice).toNumber(),
-          baseListPrice: selectedPrice,
-          baseDiscountPct: itemDiscount,
-        });
-      }
 
       promoInputLines.push({
         productId: product.id,
@@ -172,8 +167,26 @@ export class DirectInvoiceService {
       );
     }
 
+    const maxUnpaidInvoices = Number(persona.maxUnpaidInvoices || 0);
+    if (
+      !paymentMethod &&
+      maxUnpaidInvoices > 0 &&
+      userRole !== Role.ADMIN &&
+      typeof (prisma as any)?.persona?.findUnique === 'function'
+    ) {
+      const pendingInvoicesCount = await personaService.getPersonaPendingInvoicesCount(persona.id);
+      if (pendingInvoicesCount >= maxUnpaidInvoices) {
+        throw new Error(
+          `Límite de cuenta corriente excedido. El cliente debe ${pendingInvoicesCount} boletas, y su límite máximo permitido es de ${maxUnpaidInvoices}.`,
+        );
+      }
+    }
+
     const taxInfo = await computeInvoiceTaxBreakdown(totalSum, billingType, persona);
     totalSum = taxInfo.finalTotal;
+
+    const roundFiscal = (val: number) =>
+      taxInfo.isFacturaAOfficial ? roundToTwoDecimals(val).toNumber() : roundToIntegerPeso(val).toNumber();
 
     let finalInvoiceNumber: string | null = null;
     let finalCae: string | null = null;
@@ -198,43 +211,27 @@ export class DirectInvoiceService {
       finalCaeDueDate = afipRes.caeDueDate;
     }
 
-    let order = await prisma.order.create({
-      data: {
-        personaId,
-        sellerId: adminId,
-        status: OrderStatus.DELIVERED,
-        billingType,
-        salesChannel: salesChannel || SalesChannel.MOSTRADOR,
-        totalAmount: totalSum,
-        netAmount: taxInfo.isFacturaAOfficial
-          ? roundToTwoDecimals(taxInfo.net).toNumber()
-          : roundToIntegerPeso(taxInfo.net).toNumber(),
-        taxAmount: taxInfo.isFacturaAOfficial
-          ? roundToTwoDecimals(taxInfo.tax).toNumber()
-          : roundToIntegerPeso(taxInfo.tax).toNumber(),
-        percepcionAmount: taxInfo.isFacturaAOfficial
-          ? roundToTwoDecimals(taxInfo.percepIIBB).toNumber()
-          : roundToIntegerPeso(taxInfo.percepIIBB).toNumber(),
-        percepcionIvaAmount: taxInfo.isFacturaAOfficial
-          ? roundToTwoDecimals(taxInfo.percepIVA).toNumber()
-          : roundToIntegerPeso(taxInfo.percepIVA).toNumber(),
-        invoiceType: taxInfo.finalInvoiceType,
-        cae: finalCae,
-        caeDueDate: finalCaeDueDate ? new Date(finalCaeDueDate) : null,
-        invoiceNumber: finalInvoiceNumber,
-      },
-    });
-
-    if (!finalInvoiceNumber) {
-      finalInvoiceNumber = `INT-${order.id.toString().padStart(5, '0')}`;
-      order = await prisma.order.update({
-        where: { id: order.id },
-        data: { invoiceNumber: finalInvoiceNumber },
-      });
-    }
+    const fiscalFields = {
+      personaId,
+      sellerId: adminId,
+      status: OrderStatus.DELIVERED,
+      billingType,
+      salesChannel: salesChannel || SalesChannel.MOSTRADOR,
+      totalAmount: totalSum,
+      netAmount: roundFiscal(taxInfo.net),
+      taxAmount: roundFiscal(taxInfo.tax),
+      percepcionAmount: roundFiscal(taxInfo.percepIIBB),
+      percepcionIvaAmount: roundFiscal(taxInfo.percepIVA),
+      invoiceType: taxInfo.finalInvoiceType,
+      cae: finalCae,
+      caeDueDate: finalCaeDueDate ? new Date(finalCaeDueDate) : null,
+      invoiceNumber: finalInvoiceNumber,
+    };
 
     try {
       const result = await prisma.$transaction(async (tx) => {
+        await lockProductsForUpdate(tx, Array.from(new Set(productIds)));
+
         await decrementStockByProductMapInTx({
           tx,
           stockRequiredByProduct: evaluated.stockRequiredByProduct,
@@ -243,6 +240,16 @@ export class DirectInvoiceService {
           formatConcurrentError: (prodName) =>
             `Stock insuficiente para "${prodName}" debido a una operación concurrente. Por favor reintente la venta.`,
         });
+
+        let order = await tx.order.create({ data: fiscalFields });
+        let resolvedInvoiceNumber = finalInvoiceNumber;
+        if (!resolvedInvoiceNumber) {
+          resolvedInvoiceNumber = `INT-${order.id.toString().padStart(5, '0')}`;
+          order = await tx.order.update({
+            where: { id: order.id },
+            data: { invoiceNumber: resolvedInvoiceNumber },
+          });
+        }
 
         for (const itemData of orderItemsData) {
           const orderItem = await tx.orderItem.create({
@@ -259,26 +266,50 @@ export class DirectInvoiceService {
             },
           });
 
-          await tx.stockMovement.create({
-            data: {
-              productId: itemData.productId,
-              quantity: -itemData.quantity,
-              type: MovementType.OUT,
-              orderId: order.id,
-              referenceId: `FAC-${order.id}`,
-              userId: adminId,
-              reason: itemData.isPromoBonus
-                ? `Bonificación Promo (${itemData.appliedPromoName || 'Semanal'}) comprobante ${finalInvoiceNumber || 'INT-' + order.id}`
-                : `Venta directa comprobante ${finalInvoiceNumber || 'INT-' + order.id}`,
-            },
-          });
+          const allocatedLots = await assignFifoLotsToOrderItem(
+            tx,
+            orderItem.id,
+            itemData.productId,
+            itemData.quantity,
+          );
 
-          await assignFifoLotsToOrderItem(tx, orderItem.id, itemData.productId, itemData.quantity);
+          const movReason = itemData.isPromoBonus
+            ? `Bonificación Promo (${itemData.appliedPromoName || 'Semanal'}) comprobante ${resolvedInvoiceNumber}`
+            : `Venta directa comprobante ${resolvedInvoiceNumber}`;
+
+          if (allocatedLots.length > 0) {
+            for (const alloc of allocatedLots) {
+              await tx.stockMovement.create({
+                data: {
+                  productId: itemData.productId,
+                  quantity: -alloc.quantity,
+                  type: MovementType.OUT,
+                  orderId: order.id,
+                  referenceId: `FAC-${order.id}`,
+                  userId: adminId,
+                  reason: movReason,
+                  productLotId: alloc.productLotId,
+                },
+              });
+            }
+          } else {
+            await tx.stockMovement.create({
+              data: {
+                productId: itemData.productId,
+                quantity: -itemData.quantity,
+                type: MovementType.OUT,
+                orderId: order.id,
+                referenceId: `FAC-${order.id}`,
+                userId: adminId,
+                reason: movReason,
+              },
+            });
+          }
         }
 
         await recordInvoicePerceptions(tx, {
           personaId,
-          invoiceNumber: finalInvoiceNumber || `FAC-${order.id}`,
+          invoiceNumber: resolvedInvoiceNumber || `FAC-${order.id}`,
           percepIIBB: taxInfo.percepIIBB,
           percepIVA: taxInfo.percepIVA,
           isFacturaAOfficial: taxInfo.isFacturaAOfficial,
@@ -298,14 +329,14 @@ export class DirectInvoiceService {
           checkIssuer,
           checkAmount,
           totalSum,
-          invoiceNumber: finalInvoiceNumber,
+          invoiceNumber: resolvedInvoiceNumber,
         });
 
         return await tx.order.findUnique({
           where: { id: order.id },
           include: {
             persona: true,
-            items: { include: { product: true } },
+            items: { include: { product: true, orderItemLots: true } },
           },
         });
       });
@@ -314,10 +345,10 @@ export class DirectInvoiceService {
         userId: adminId,
         action: 'CREATE_DIRECT_INVOICE',
         entityType: 'Order',
-        entityId: order.id,
+        entityId: result!.id,
         newValues: {
           billingType,
-          invoiceNumber: finalInvoiceNumber,
+          invoiceNumber: result?.invoiceNumber,
           cae: finalCae,
           total: totalSum,
         },
@@ -325,13 +356,15 @@ export class DirectInvoiceService {
 
       return result;
     } catch (secondaryError: any) {
+      if (!finalCae) {
+        throw secondaryError;
+      }
+
       await prisma.order
-        .update({
-          where: { id: order.id },
+        .create({
           data: {
-            notes:
-              (order.notes ? order.notes + ' | ' : '') +
-              `[ALERTA AFIP] CAE ${finalCae} emitido pero falló imputación de stock/caja: ${secondaryError.message}. Conciliar manualmente.`,
+            ...fiscalFields,
+            notes: `[ALERTA AFIP] CAE ${finalCae} emitido pero falló imputación de stock/caja: ${secondaryError.message}. Conciliar manualmente.`,
           },
         })
         .catch(() => {});

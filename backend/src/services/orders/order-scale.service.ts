@@ -7,6 +7,8 @@ import {
   toDecimal,
 } from '../../core/money';
 import { notifyWebOrderStatusForErpOrder } from './web-order-status-bridge.service';
+import { lockProductsForUpdate } from '../../utils/db-locks.util';
+import { adjustAssignedOrderItemLotsInTx } from './order-lot-picking.helper';
 
 export class OrderScaleService {
   /**
@@ -73,7 +75,7 @@ export class OrderScaleService {
     return await prisma.$transaction(async (tx) => {
       const order = await tx.order.findUnique({
         where: { id: orderId },
-        include: { items: { include: { product: true } } },
+        include: { items: { include: { product: true, orderItemLots: true } } },
       });
 
       if (!order) throw new Error('Pedido no encontrado.');
@@ -86,6 +88,11 @@ export class OrderScaleService {
           'El pedido debe estar pendiente, en preparación o preparado para confirmar el armado.',
         );
       }
+
+      await lockProductsForUpdate(
+        tx,
+        order.items.map((i) => i.productId),
+      );
 
       const subtotals: number[] = [];
 
@@ -137,6 +144,16 @@ export class OrderScaleService {
             data: { quantity: currentQuantity, weight: weightUpdate, subtotal },
           });
         }
+
+        await adjustAssignedOrderItemLotsInTx(tx, {
+          orderId: order.id,
+          orderItemId: item.id,
+          productId: item.productId,
+          existingLots: (item as any).orderItemLots || [],
+          previousQty: item.quantity,
+          nextQty: currentQuantity,
+          sellerId: order.sellerId,
+        });
 
         subtotals.push(subtotal);
       }

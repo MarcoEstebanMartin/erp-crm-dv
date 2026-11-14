@@ -8,9 +8,14 @@ import {
 import {
   buildDirectInvoiceRequest,
   calculateDirectBillingTotals,
-  computeClientUnitPrice
+  computeClientUnitPrice,
+  fetchPricingDiscountRules
 } from './salesBilling.helpers';
-import { evaluateFrontendCartPromos } from '../../../utils/weeklyPromoCartEvaluator';
+import {
+  calculateExactLineSubtotalInt,
+  evaluateFrontendCartPromos
+} from '../../../utils/weeklyPromoCartEvaluator';
+import { divRoundHalfUp, parseScaledBigInt, SCALE } from '../../../utils/exactStockMath';
 import type { WeeklyPromo } from '../../admin/config/weeklyPromo.helpers';
 
 interface UseDirectInvoiceParams {
@@ -42,6 +47,7 @@ export function useDirectInvoice({
   const [directInvoiceForm, setDirectInvoiceForm] = useState<DirectInvoiceFormState>(INITIAL_DIRECT_INVOICE_FORM);
   const [directCart, setDirectCart] = useState<DirectCartItem[]>([]);
   const [weeklyPromos, setWeeklyPromos] = useState<WeeklyPromo[]>([]);
+  const [discountRules, setDiscountRules] = useState<any[]>([]);
   const [selectedDirectProduct, setSelectedDirectProduct] = useState('');
   const [directProductQty, setDirectProductQty] = useState('1');
   const ivaPerceptionAliquot = ivaPerceptionAliquotOverride ?? 3.0;
@@ -121,6 +127,12 @@ export function useDirectInvoice({
       })
       .catch(() => {});
 
+    fetchPricingDiscountRules()
+      .then((rules) => {
+        if (!cancelled) setDiscountRules(rules);
+      })
+      .catch(() => {});
+
     if (bankAccounts.length > 0) {
       setDirectInvoiceForm((prev) => ({
         ...prev,
@@ -157,6 +169,35 @@ export function useDirectInvoice({
       }),
     [directCart, weeklyPromos]
   );
+
+  useEffect(() => {
+    setDirectCart((prev) => {
+      if (prev.length === 0) return prev;
+      let changed = false;
+      const next = prev.map((item) => {
+        const nextPrice = computeClientUnitPrice(
+          item.product,
+          selectedDirectClient,
+          discountRules,
+          directInvoiceForm.billingType
+        );
+        const qty = Number(item.quantity || 0);
+        const nextSubtotal = calculateExactLineSubtotalInt({
+          unitPriceInt: nextPrice,
+          quantity: qty,
+          isPesable: Boolean(item.product.isPesable),
+          weight: item.weight,
+          approximateWeight: item.product.approximateWeight
+        });
+        if (nextPrice !== item.unitPrice || nextSubtotal !== item.subtotal) {
+          changed = true;
+          return { ...item, unitPrice: nextPrice, subtotal: nextSubtotal };
+        }
+        return item;
+      });
+      return changed ? next : prev;
+    });
+  }, [selectedDirectClient, discountRules, directInvoiceForm.billingType]);
 
   const effectiveDirectSubtotalSum = useMemo(
     () =>
@@ -213,22 +254,46 @@ export function useDirectInvoice({
       setModalError(`⚠️ El producto "${prod.name}" exige un mínimo de ${minQty} unidades. Se ajustó automáticamente la cantidad.`);
     }
 
-    const finalUnitPrice = computeClientUnitPrice(prod, selectedDirectClient);
+    const finalUnitPrice = computeClientUnitPrice(
+      prod,
+      selectedDirectClient,
+      discountRules,
+      directInvoiceForm.billingType
+    );
     const existingIdx = directCart.findIndex((item) => item.product.id === prod.id);
+
+    const resolveSuggestedKg = (targetQty: number): number => {
+      const approxScaled = parseScaledBigInt(prod.approximateWeight);
+      const safeApprox = approxScaled > 0n ? approxScaled : SCALE;
+      const grams = divRoundHalfUp(BigInt(Math.max(0, Math.trunc(targetQty))) * safeApprox, 1_000n);
+      return Number(grams) / 1000;
+    };
 
     if (existingIdx !== -1) {
       const newQty = Number(directCart[existingIdx].quantity || 0) + qty;
       const newCart = [...directCart];
-      const weight = prod.isPesable ? newCart[existingIdx].weight || newQty * (prod.approximateWeight || 1) : null;
+      const existingWeight = Number(newCart[existingIdx].weight || 0);
+      const weight = prod.isPesable
+        ? existingWeight > 0
+          ? existingWeight
+          : resolveSuggestedKg(newQty)
+        : null;
       newCart[existingIdx] = {
         ...newCart[existingIdx],
         quantity: newQty,
         weight,
-        subtotal: Number((finalUnitPrice * (prod.isPesable ? (weight || 0) : newQty)).toFixed(2))
+        unitPrice: finalUnitPrice,
+        subtotal: calculateExactLineSubtotalInt({
+          unitPriceInt: finalUnitPrice,
+          quantity: newQty,
+          isPesable: Boolean(prod.isPesable),
+          weight,
+          approximateWeight: prod.approximateWeight
+        })
       };
       setDirectCart(newCart);
     } else {
-      const weight = prod.isPesable ? qty * (prod.approximateWeight || 1) : null;
+      const weight = prod.isPesable ? resolveSuggestedKg(qty) : null;
       setDirectCart((prev) => [
         ...prev,
         {
@@ -236,7 +301,13 @@ export function useDirectInvoice({
           quantity: qty,
           weight,
           unitPrice: finalUnitPrice,
-          subtotal: Number((finalUnitPrice * (prod.isPesable ? (weight || 0) : qty)).toFixed(2))
+          subtotal: calculateExactLineSubtotalInt({
+            unitPriceInt: finalUnitPrice,
+            quantity: qty,
+            isPesable: Boolean(prod.isPesable),
+            weight,
+            approximateWeight: prod.approximateWeight
+          })
         }
       ]);
     }

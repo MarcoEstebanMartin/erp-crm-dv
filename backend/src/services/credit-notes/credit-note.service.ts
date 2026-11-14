@@ -16,6 +16,7 @@ import {
 import {
   resolveCreditNoteAfipDocMeta,
   restoreReturnedStockAndLots,
+  validateCreditNoteAgainstLinkedOrder,
 } from './credit-note-stock.helper';
 import { recordLedgerMovement } from '../ledger/account-ledger.service';
 
@@ -91,10 +92,17 @@ export const creditNoteService = {
     let finalBillingType: BillingType =
       params.billingType === BillingType.OFFICIAL ? BillingType.OFFICIAL : BillingType.INTERNAL;
     const resolvedOrderId = params.orderId ? Number(params.orderId) : null;
+    let linkedOrder: any = null;
 
     if (resolvedOrderId) {
-      const linkedOrder = await prisma.order.findUnique({ where: { id: resolvedOrderId } });
-      if (linkedOrder) finalBillingType = linkedOrder.billingType;
+      linkedOrder = await prisma.order.findUnique({
+        where: { id: resolvedOrderId },
+        include: { items: true },
+      });
+      if (!linkedOrder) {
+        throw new AppError('El pedido o factura vinculado no existe.', 404);
+      }
+      finalBillingType = linkedOrder.billingType;
     }
 
     const enrichedInputs = [];
@@ -115,6 +123,22 @@ export const creditNoteService = {
 
     const isOfficial = finalBillingType === BillingType.OFFICIAL;
     const totals = calculateCreditNoteTotals(enrichedInputs, isOfficial);
+
+    if (resolvedOrderId && linkedOrder) {
+      await validateCreditNoteAgainstLinkedOrder(prisma, {
+        orderId: resolvedOrderId,
+        personaId: persona.id,
+        reason: params.reason,
+        newLines: totals.lines.map((l) => ({
+          productId: l.productId,
+          quantity: l.quantity,
+          weight: l.weight,
+        })),
+        newTotalAmount: totals.totalAmount,
+        preloadedLinkedOrder: linkedOrder,
+      });
+    }
+
     const isAdmin = params.userRole === Role.ADMIN;
     const finalStatus = isAdmin ? CreditNoteStatus.APPROVED : CreditNoteStatus.PENDING_APPROVAL;
 
@@ -134,6 +158,15 @@ export const creditNoteService = {
             clientDocType: afipMeta.docType,
             invoiceType: afipMeta.isA ? 'A' : 'B',
             total: totals.totalAmount,
+            neto: afipMeta.isA ? totals.netAmount : undefined,
+            iva: afipMeta.isA ? totals.taxAmount : undefined,
+            associatedVoucher: linkedOrder
+              ? {
+                  invoiceNumber: linkedOrder.invoiceNumber,
+                  invoiceType: linkedOrder.invoiceType,
+                  invoiceDate: linkedOrder.createdAt,
+                }
+              : null,
           });
           afipNumber = afipRes.invoiceNumber;
           cae = afipRes.cae;

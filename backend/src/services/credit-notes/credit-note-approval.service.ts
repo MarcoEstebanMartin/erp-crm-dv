@@ -14,6 +14,7 @@ import { CREDIT_NOTE_DETAIL_INCLUDE } from './credit-note.service';
 import {
   resolveCreditNoteAfipDocMeta,
   restoreReturnedStockAndLots,
+  validateCreditNoteAgainstLinkedOrder,
 } from './credit-note-stock.helper';
 import { recordLedgerMovement } from '../ledger/account-ledger.service';
 
@@ -40,6 +41,21 @@ export const creditNoteApprovalService = {
 
     const totalAmount = roundToTwoDecimals(creditNote.totalAmount.toString()).toNumber();
     const isOfficial = creditNote.billingType === BillingType.OFFICIAL;
+    const linkedOrder = creditNote.orderId
+      ? await validateCreditNoteAgainstLinkedOrder(prisma, {
+          orderId: creditNote.orderId,
+          personaId: creditNote.personaId,
+          reason: creditNote.reason,
+          newLines: creditNote.items.map((i) => ({
+            productId: i.productId,
+            quantity: i.quantity,
+            weight: i.weight !== null && i.weight !== undefined ? Number(i.weight) : null,
+          })),
+          newTotalAmount: totalAmount,
+          excludeCreditNoteId: creditNote.id,
+        })
+      : null;
+
     let creditNoteNumber: string | null = null;
     let cae: string | null = null;
     let caeDueDate: Date | null = null;
@@ -52,6 +68,15 @@ export const creditNoteApprovalService = {
           clientDocType: afipMeta.docType,
           invoiceType: afipMeta.isA ? 'A' : 'B',
           total: totalAmount,
+          neto: afipMeta.isA ? Number(creditNote.netAmount) : undefined,
+          iva: afipMeta.isA ? Number(creditNote.taxAmount) : undefined,
+          associatedVoucher: linkedOrder
+            ? {
+                invoiceNumber: linkedOrder.invoiceNumber,
+                invoiceType: linkedOrder.invoiceType,
+                invoiceDate: linkedOrder.createdAt,
+              }
+            : null,
         });
         creditNoteNumber = afipRes.invoiceNumber;
         cae = afipRes.cae;

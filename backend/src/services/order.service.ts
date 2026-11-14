@@ -3,6 +3,7 @@ import { Role, BillingType, InvoiceType, OrderStatus, MovementType, SalesChannel
 import { PricingService } from './pricing.service';
 import { PersonaService } from './persona.service';
 import { OrderScaleService } from './orders/order-scale.service';
+import { roundToIntegerPeso } from '../core/money';
 import { type CartBasePricingInfo } from '../engines/weekly-promos.engine';
 import {
   decrementStockByProductMapInTx,
@@ -137,6 +138,14 @@ export class OrderService {
       });
 
       const totalSum = evaluated.totalAmount;
+
+      const creditLimit = roundToIntegerPeso(persona.creditLimit || 0).toNumber();
+      const outstandingBalance = roundToIntegerPeso(persona.outstandingBalance || 0).toNumber();
+      if (creditLimit > 0 && outstandingBalance + totalSum > creditLimit && userRole !== Role.ADMIN) {
+        throw new Error(
+          `Límite de crédito excedido. Saldo actual: $${outstandingBalance.toLocaleString()}, Disponible: $${(creditLimit - outstandingBalance).toLocaleString()}, Requerido: $${totalSum.toLocaleString()}.`,
+        );
+      }
 
       const maxUnpaidInvoices = Number(persona.maxUnpaidInvoices || 0);
       if (maxUnpaidInvoices > 0) {

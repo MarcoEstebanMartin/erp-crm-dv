@@ -1,6 +1,7 @@
 import React from 'react';
 import type { DirectCartItem } from './sales.types';
-import { updateCartRowQty } from './salesBilling.helpers';
+import { updateCartRowQty, updateCartRowWeight } from './salesBilling.helpers';
+import { formatIntegerARS } from '../../../utils/currency';
 import type { FrontendCartPromoEvalResult } from '../../../utils/weeklyPromoCartEvaluator';
 
 interface DirectInvoiceCartTableProps {
@@ -150,21 +151,14 @@ export function DirectInvoiceCartTable({
                         className="input"
                         style={{ padding: '4px 8px', fontSize: '0.85rem' }}
                         value={item.weight || ''}
-                        onChange={(e) => {
-                          const val = Number(e.target.value);
-                          if (val >= 0) {
-                            const newCart = [...directCart];
-                            newCart[index] = { ...newCart[index], weight: val, subtotal: Number((item.unitPrice * val).toFixed(2)) };
-                            setDirectCart(newCart);
-                          }
-                        }}
+                        onChange={(e) => setDirectCart(updateCartRowWeight(directCart, index, e.target.value))}
                       />
                     ) : (
                       <span style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>No Aplica</span>
                     )}
                   </td>
                   <td style={{ fontWeight: 600 }}>
-                    ${displaySubtotal.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    {formatIntegerARS(displaySubtotal)}
                   </td>
                   <td>
                     <button type="button" className="btn btn-ghost" style={{ color: 'var(--color-danger)', padding: '4px' }} onClick={() => handleRemoveDirectProduct(item.product.id)}>

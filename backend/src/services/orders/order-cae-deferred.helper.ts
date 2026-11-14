@@ -106,19 +106,25 @@ export async function executeDeferredCaeRequest(orderId: number) {
 
   const cuitLimpio = (order.persona.cuit || '').replace(/\D/g, '');
   const isFacturaA = order.invoiceType === InvoiceType.FACTURA_A;
-  const docType = cuitLimpio.length === 11 ? 80 : 96;
+  const docType =
+    cuitLimpio.length === 11
+      ? 80
+      : cuitLimpio.length === 7 || cuitLimpio.length === 8
+        ? 96
+        : 99;
+  const resolvedClientCuit = docType === 99 ? '0' : cuitLimpio;
 
   const afipRes = await executeWithResilientRetry(
     () =>
       emitirFacturaAFIP({
-        clientCuit: cuitLimpio || '20000000001',
+        clientCuit: resolvedClientCuit,
         clientDocType: docType,
         invoiceType: isFacturaA ? 'A' : 'B',
         total: Number(order.totalAmount),
-        neto: Number(order.netAmount || 0),
-        iva: Number(order.taxAmount || 0),
-        percepcionAmount: Number(order.percepcionAmount || 0),
-        percepcionIvaAmount: Number(order.percepcionIvaAmount || 0),
+        neto: isFacturaA ? Number(order.netAmount || 0) : undefined,
+        iva: isFacturaA ? Number(order.taxAmount || 0) : undefined,
+        percepcionAmount: isFacturaA ? Number(order.percepcionAmount || 0) : undefined,
+        percepcionIvaAmount: isFacturaA ? Number(order.percepcionIvaAmount || 0) : undefined,
       }),
     {
       maxAttempts: 2,

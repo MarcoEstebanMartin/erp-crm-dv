@@ -1,8 +1,19 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { X, CheckCircle, DollarSign, Truck, AlertCircle, AlertTriangle, Printer, FileText, Zap } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { AlertCircle, AlertTriangle, Truck, X } from 'lucide-react';
 import { BillingType, PaymentMethod } from '../../utils/types';
 import { api } from '../../utils/api';
-import { printRemitoX, printOrderReceipt, printFacturaOficialA4 } from '../../utils/printHelpers';
+import { formatIntegerARS } from '../../utils/currency';
+import { isBonusOrderItem } from '../../utils/weeklyPromoCartEvaluator';
+import OrderFulfillmentBillingPanel from './OrderFulfillmentBillingPanel';
+import OrderFulfillmentSuccessView from './OrderFulfillmentSuccessView';
+import {
+  buildInitialFulfillmentWeights,
+  calculateFulfillmentLineSubtotalInt,
+  calculateFulfillmentOrderTotalInt,
+  computeSuggestedItemWeightKg,
+  detectFulfillmentWeightAnomalies,
+  isOrderItemWeighable,
+} from './orderFulfillmentMath';
 
 interface OrderFulfillmentModalProps {
   order: any;
@@ -11,13 +22,14 @@ interface OrderFulfillmentModalProps {
 }
 
 export default function OrderFulfillmentModal({ order, onClose, onSuccess }: OrderFulfillmentModalProps) {
-  const [pesableWeights, setPesableWeights] = useState<{ [orderItemId: number]: number }>({});
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const [pesableWeights, setPesableWeights] = useState<Record<number, number>>({});
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [billingCompleted, setBillingCompleted] = useState(false);
+  const [invoicedOrder, setInvoicedOrder] = useState<any>(null);
   const [deferCae, setDeferCae] = useState(false);
 
-  // Billing configuration - Default to OTHER (Cuenta Corriente)
   const [billingType, setBillingType] = useState<BillingType>(order.billingType || BillingType.INTERNAL);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(PaymentMethod.OTHER);
   const [checkNumber, setCheckNumber] = useState<string>('');
@@ -25,125 +37,71 @@ export default function OrderFulfillmentModal({ order, onClose, onSuccess }: Ord
   const [bankAccounts, setBankAccounts] = useState<any[]>([]);
 
   useEffect(() => {
-    // Inicializar pesos para productos pesables o con peso previo
-    const initialWeights: { [id: number]: number } = {};
-    order.items?.forEach((item: any) => {
-      const isPesable = item.product?.isPesable || item.isPesable;
-      const approxWeightUnit = item.product?.approximateWeight ? Number(item.product.approximateWeight) : 1;
-      const defaultAvgWeight = Number((item.quantity * approxWeightUnit).toFixed(3));
-
-      if (item.weight && Number(item.weight) > 0) {
-        initialWeights[item.id] = Number(item.weight);
-      } else if (isPesable) {
-        // Peso promedio sugerido por defecto si es pesable
-        initialWeights[item.id] = defaultAvgWeight;
-      }
-    });
-    setPesableWeights(initialWeights);
-
-    // Cargar cuentas bancarias para transferencias
+    setPesableWeights(buildInitialFulfillmentWeights(order?.items));
     api.getBankAccounts().then((banks) => {
       setBankAccounts(banks || []);
-      if (banks && banks.length > 0) {
-        setSelectedBankId(banks[0].id.toString());
-      }
+      if (banks && banks.length > 0) setSelectedBankId(banks[0].id.toString());
     }).catch(console.error);
   }, [order]);
 
+  useEffect(() => {
+    if (billingCompleted) return;
+    const el = dialogRef.current;
+    if (el && !el.open && typeof el.showModal === 'function') el.showModal();
+  }, [billingCompleted]);
+
   const handleWeightChange = (orderItemId: number, val: string) => {
     const num = parseFloat(val);
-    setPesableWeights(prev => ({
+    setPesableWeights((prev) => ({
       ...prev,
-      [orderItemId]: isNaN(num) ? 0 : num
+      [orderItemId]: Number.isFinite(num) && num >= 0 ? num : 0,
     }));
   };
 
-  // Detección automática de anomalías y sugerencia de comas faltantes
-  const anomalies = useMemo(() => {
-    if (!order.items) return [];
-    const list: { item: any; currentWeight: number; suggestedAvgWeight: number; possibleDecimalFix: number | null }[] = [];
-
-    order.items.forEach((item: any) => {
-      const isPesableProduct = item.product?.isPesable || item.isPesable;
-      const nameLower = (item.product?.name || '').toLowerCase();
-      const isCheeseOrBar = nameLower.includes('cremoso') || nameLower.includes('tybo') || nameLower.includes('barr') || nameLower.includes('queso') || nameLower.includes('horma') || nameLower.includes('sardo') || nameLower.includes('gouda') || nameLower.includes('mozzarella');
-      const approxWeightUnit = item.product?.approximateWeight ? Number(item.product.approximateWeight) : (isCheeseOrBar ? 4 : (isPesableProduct ? 1 : 1));
-      const suggestedAvgWeight = Number((item.quantity * approxWeightUnit).toFixed(3));
-      const currentWeight = pesableWeights[item.id];
-
-      if (currentWeight !== undefined && currentWeight > 0 && suggestedAvgWeight > 0) {
-        // Alerta si el peso ingresado supera el doble o es menor al 30% del promedio esperado
-        if (currentWeight > suggestedAvgWeight * 2 || (suggestedAvgWeight >= 2 && currentWeight < suggestedAvgWeight * 0.3)) {
-          let possibleFix: number | null = null;
-          const div10 = Number((currentWeight / 10).toFixed(1));
-          const div100 = Number((currentWeight / 100).toFixed(2));
-          if (div10 >= suggestedAvgWeight * 0.5 && div10 <= suggestedAvgWeight * 1.6) {
-            possibleFix = div10;
-          } else if (div100 >= suggestedAvgWeight * 0.5 && div100 <= suggestedAvgWeight * 1.6) {
-            possibleFix = div100;
-          }
-          list.push({ item, currentWeight, suggestedAvgWeight, possibleDecimalFix: possibleFix });
-        }
-      }
-    });
-
-    return list;
-  }, [order.items, pesableWeights]);
-
-  const calculateTotal = () => {
-    let total = 0;
-    order.items?.forEach((item: any) => {
-      const price = Number(item.unitPrice ?? item.price ?? 0);
-      const isPesableProduct = item.product?.isPesable || item.isPesable;
-      const nameLower = (item.product?.name || '').toLowerCase();
-      const isCheeseOrBar = nameLower.includes('cremoso') || nameLower.includes('tybo') || nameLower.includes('barr') || nameLower.includes('queso') || nameLower.includes('horma') || nameLower.includes('sardo') || nameLower.includes('gouda') || nameLower.includes('mozzarella');
-      const approxWeightUnit = item.product?.approximateWeight ? Number(item.product.approximateWeight) : (isCheeseOrBar ? 4 : 1);
-      const suggestedAvgWeight = Number((item.quantity * approxWeightUnit).toFixed(3));
-      const currentWeight = pesableWeights[item.id];
-
-      if (currentWeight !== undefined && currentWeight > 0) {
-        total += currentWeight * price;
-      } else if (isPesableProduct) {
-        total += suggestedAvgWeight * price;
-      } else {
-        total += item.quantity * price;
-      }
-    });
-    return total;
-  };
+  const anomalies = useMemo(
+    () => detectFulfillmentWeightAnomalies(order?.items, pesableWeights),
+    [order?.items, pesableWeights],
+  );
+  const currentTotal = useMemo(
+    () => calculateFulfillmentOrderTotalInt(order?.items, pesableWeights),
+    [order?.items, pesableWeights],
+  );
 
   const handleConfirmAndInvoice = async () => {
-    // Si hay anomalías graves no corregidas, pedir confirmación al usuario
     if (anomalies.length > 0) {
-      const alertDetails = anomalies.map(a => `• ${a.item.product?.name}: ${a.currentWeight} kg (Promedio esperado: ~${a.suggestedAvgWeight} kg)`).join('\n');
-      const confirmMsg = `⚠️ ALERTA DE SEGURIDAD EN PESOS:\n\nSe detectaron pesos inusualmente altos o desproporcionados:\n${alertDetails}\n\n¿Faltó ingresar una coma decimal?\n\n¿Desea confirmar y facturar igualmente con estos pesos?`;
-      if (!window.confirm(confirmMsg)) {
-        return;
-      }
+      const details = anomalies
+        .map((a) => `• ${a.item.product?.name}: ${a.currentWeight} kg (Esperado: ~${a.suggestedAvgWeight} kg)`)
+        .join('\n');
+      const ok = window.confirm(
+        `⚠️ ALERTA DE SEGURIDAD EN PESOS:\n\nSe detectaron pesos desproporcionados:\n${details}\n\n¿Desea confirmar y facturar igualmente?`,
+      );
+      if (!ok) return;
     }
 
     setLoading(true);
     setErrorMsg(null);
     try {
-      // 1. Guardar pesos de los ítems con peso ingresado (> 0)
-      const weightItems = Object.entries(pesableWeights).map(([orderItemId, weight]) => ({
-        orderItemId: Number(orderItemId),
-        weight: Number(weight)
-      })).filter(i => i.weight > 0);
-      
-      await api.confirmOrderArmado(order.id, weightItems);
+      const weighableIds = new Set<number>(
+        (order?.items || [])
+          .filter((item: any) => isOrderItemWeighable(item) && !isBonusOrderItem(item))
+          .map((item: any) => Number(item.id)),
+      );
+      const weightItems = Object.entries(pesableWeights)
+        .filter(([id, w]) => weighableIds.has(Number(id)) && Number(w) > 0)
+        .map(([id, w]) => ({ orderItemId: Number(id), weight: Number(w) }));
 
-      // 2. Facturar
+      await api.confirmOrderArmado(order.id, weightItems);
       const paymentDesc = paymentMethod === 'CHECK' && checkNumber.trim() ? `Cheque N° ${checkNumber.trim()}` : undefined;
-      await api.invoiceOrder(
+      const updatedOrder = await api.invoiceOrder(
         order.id,
         billingType,
-        paymentMethod === 'OTHER' ? undefined : paymentMethod, // Si es Cuenta Corriente, enviamos undefined para que afecte el saldo deudor
+        paymentMethod === 'OTHER' ? undefined : paymentMethod,
         paymentDesc,
         paymentMethod === 'BANK_TRANSFER' ? Number(selectedBankId) : undefined,
-        deferCae
+        deferCae,
       );
 
+      setInvoicedOrder(updatedOrder || { ...order, totalAmount: currentTotal, billingType });
       setBillingCompleted(true);
     } catch (err: any) {
       setErrorMsg(err.message || 'Error al completar el pedido.');
@@ -152,108 +110,36 @@ export default function OrderFulfillmentModal({ order, onClose, onSuccess }: Ord
     }
   };
 
-  const currentTotal = calculateTotal();
-
   if (billingCompleted) {
     return (
-      <div className="modal-overlay" style={{ zIndex: 1100 }}>
-        <div className="modal-content" style={{ width: '90vw', maxWidth: '640px', padding: '32px', textAlign: 'center', borderRadius: '16px', border: '1px solid var(--border-color)' }}>
-          <div style={{ width: '64px', height: '64px', backgroundColor: '#DCFCE7', color: '#16A34A', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px auto' }}>
-            <CheckCircle size={36} />
-          </div>
-          <h2 style={{ fontSize: '1.4rem', fontWeight: 800, margin: '0 0 8px 0', color: 'var(--text-primary)' }}>
-            ¡Pedido #{order.id} Facturado con Éxito!
-          </h2>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', marginBottom: '24px' }}>
-            Comprobante generado con éxito.
-          </p>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '24px' }}>
-            {billingType === 'OFFICIAL' ? (
-              <button
-                className="btn btn-primary"
-                style={{
-                  width: '100%',
-                  padding: '12px',
-                  fontSize: '1rem',
-                  fontWeight: 700,
-                  backgroundColor: '#0F172A',
-                  color: '#FFFFFF',
-                  borderRadius: '8px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '10px'
-                }}
-                onClick={() => printFacturaOficialA4({ ...order, totalAmount: currentTotal, billingType })}
-              >
-                <FileText size={20} /> 📄 Imprimir Factura (Sucursal A)
-              </button>
-            ) : (
-              <button
-                className="btn btn-primary"
-                style={{
-                  width: '100%',
-                  padding: '12px',
-                  fontSize: '1rem',
-                  fontWeight: 700,
-                  backgroundColor: '#0F172A',
-                  color: '#FFFFFF',
-                  borderRadius: '8px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '10px'
-                }}
-                onClick={() => printRemitoX({ ...order, totalAmount: currentTotal, billingType })}
-              >
-                <FileText size={20} /> 📄 Imprimir Factura (Sucursal X)
-              </button>
-            )}
-
-            <button
-              className="btn btn-secondary"
-              style={{
-                width: '100%',
-                padding: '12px',
-                fontSize: '1rem',
-                fontWeight: 600,
-                backgroundColor: '#F8FAFC',
-                borderColor: '#CBD5E1',
-                color: '#334155',
-                borderRadius: '8px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '10px'
-              }}
-              onClick={() => printOrderReceipt({ ...order, totalAmount: currentTotal, billingType })}
-            >
-              <Printer size={20} /> 🖨️ Imprimir Ticket
-            </button>
-          </div>
-
-          <button
-            className="btn btn-secondary"
-            style={{ width: '100%', padding: '10px', fontSize: '0.95rem', fontWeight: 600 }}
-            onClick={() => {
-              onSuccess();
-            }}
-          >
-            Finalizar
-          </button>
-        </div>
-      </div>
+      <OrderFulfillmentSuccessView
+        orderId={order.id}
+        billingType={billingType}
+        invoicedOrder={invoicedOrder}
+        fallbackTotal={currentTotal}
+        onSuccess={onSuccess}
+      />
     );
   }
 
+  const clientInfo = order.persona || order.client;
+
   return (
-    <div className="modal-overlay" style={{ zIndex: 1100 }}>
-      <div className="modal-content" style={{ width: '95vw', maxWidth: '1280px', height: '85vh', minHeight: '680px', padding: '28px', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        {/* Header - Tamaño Fijo */}
-        <div className="modal-header" style={{ flexShrink: 0, marginBottom: '16px', paddingBottom: '14px', borderBottom: '1px solid var(--border-color)' }}>
+    <dialog
+      ref={dialogRef}
+      className="app-native-dialog"
+      aria-labelledby="fulfillment-modal-title"
+      onClose={onClose}
+      {...({ closedby: 'any' } as any)}
+      style={{ width: '95vw', maxWidth: '1280px', height: '85vh', minHeight: '640px' }}
+    >
+      <div style={{ height: '100%', padding: '28px', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        <div
+          className="modal-header"
+          style={{ flexShrink: 0, marginBottom: '16px', paddingBottom: '14px', borderBottom: '1px solid var(--border-color)' }}
+        >
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <h2 style={{ fontSize: '1.35rem', margin: 0, fontWeight: 700 }}>
+            <h2 id="fulfillment-modal-title" style={{ fontSize: '1.35rem', margin: 0, fontWeight: 700 }}>
               Confirmar Armado y Facturar — Pedido #{order.id}
             </h2>
             {order.deliveryZone && (
@@ -263,43 +149,40 @@ export default function OrderFulfillmentModal({ order, onClose, onSuccess }: Ord
               </span>
             )}
           </div>
-          <button className="btn-close" onClick={onClose} style={{ padding: '6px', borderRadius: '6px' }}>
-            <X size={24} />
+          <button type="button" className="btn-close" aria-label="Cerrar ventana" onClick={onClose} style={{ padding: '6px', borderRadius: '6px' }}>
+            <X size={22} />
           </button>
         </div>
 
-        {/* Banner de Advertencia por Desviación Anómala de Peso - Flex Shrink 0 */}
         {anomalies.length > 0 && (
-          <div style={{ flexShrink: 0, backgroundColor: '#fffbe3', color: '#92400e', border: '1px solid #fcd34d', padding: '12px 18px', borderRadius: '10px', marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', boxShadow: '0 2px 6px rgba(0,0,0,0.05)' }}>
+          <div style={{ flexShrink: 0, backgroundColor: '#fffbe3', color: '#92400e', border: '1px solid #fcd34d', padding: '12px 18px', borderRadius: '10px', marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <AlertTriangle size={24} style={{ color: '#d97706', flexShrink: 0 }} />
               <div>
                 <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#78350f' }}>
-                  ⚠️ Advertencia: Peso muy superior al promedio esperado
+                  Advertencia: Peso fuera de rango respecto al promedio esperado
                 </div>
                 <div style={{ fontSize: '0.85rem', marginTop: '2px', color: '#92400e' }}>
-                  {anomalies.map(a => `${a.item.product?.name}: ${a.currentWeight} kg (esperado ~${a.suggestedAvgWeight} kg)`).join(' | ')}
+                  {anomalies.map((a) => `${a.item.product?.name}: ${a.currentWeight} kg (~${a.suggestedAvgWeight} kg)`).join(' | ')}
                 </div>
               </div>
             </div>
-            {anomalies.some(a => a.possibleDecimalFix !== null) && (
+            {anomalies.some((a) => a.possibleDecimalFix !== null) && (
               <button
                 type="button"
-                style={{ backgroundColor: '#d97706', color: '#fff', fontWeight: 700, border: 'none', padding: '8px 14px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem', whiteSpace: 'nowrap', transition: 'all 0.2s' }}
+                style={{ backgroundColor: '#d97706', color: '#fff', fontWeight: 700, border: 'none', padding: '8px 14px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem', whiteSpace: 'nowrap' }}
                 onClick={() => {
-                  anomalies.forEach(a => {
-                    if (a.possibleDecimalFix !== null) {
-                      handleWeightChange(a.item.id, a.possibleDecimalFix.toString());
-                    }
+                  anomalies.forEach((a) => {
+                    if (a.possibleDecimalFix !== null) handleWeightChange(a.item.id, a.possibleDecimalFix.toString());
                   });
                 }}
               >
-                🪄 Corregir coma faltante
+                Corregir coma faltante
               </button>
             )}
           </div>
         )}
-        
+
         {errorMsg && (
           <div style={{ flexShrink: 0, backgroundColor: '#fef2f2', color: '#dc2626', border: '1px solid #fca5a5', padding: '12px 16px', borderRadius: '8px', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
             <AlertCircle size={18} />
@@ -307,21 +190,27 @@ export default function OrderFulfillmentModal({ order, onClose, onSuccess }: Ord
           </div>
         )}
 
-        {/* Sección Principal con Grid - Ocupa todo el espacio vertical restante */}
         <div style={{ flex: 1, minHeight: 0, display: 'grid', gridTemplateColumns: '1.6fr 1fr', gap: '28px' }}>
-          {/* Columna Izquierda: Tabla de Artículos */}
           <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
             <div style={{ flexShrink: 0, display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-              <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 600 }}>Artículos Preparados</h3>
-              <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+              <h3 id="fulfillment-items-heading" style={{ margin: 0, fontSize: '1.1rem', fontWeight: 600 }}>
+                Artículos Preparados
+              </h3>
+              <span style={{ fontSize: '0.88rem', color: 'var(--text-secondary)' }}>
                 {order.items?.length || 0} ítems en total
               </span>
             </div>
 
-            <div className="table-container" style={{ flex: 1, minHeight: 0, overflowY: 'auto', border: '1px solid var(--border-color)', borderRadius: '8px' }}>
-              <table style={{ width: '100%', fontSize: '0.95rem' }}>
-                <thead>
-                  <tr style={{ backgroundColor: 'var(--background-alt)', textAlign: 'left', position: 'sticky', top: 0, zIndex: 1 }}>
+            <div
+              className="table-container"
+              tabIndex={0}
+              role="region"
+              aria-labelledby="fulfillment-items-heading"
+              style={{ flex: 1, minHeight: 0, overflow: 'auto', border: '1px solid var(--border-color)', borderRadius: '8px' }}
+            >
+              <table style={{ width: '100%', fontSize: '0.94rem' }}>
+                <thead style={{ position: 'sticky', insetBlockStart: 0, zIndex: 1, backgroundColor: 'var(--background-alt)' }}>
+                  <tr style={{ textAlign: 'left' }}>
                     <th style={{ padding: '12px 16px' }}>Producto</th>
                     <th style={{ padding: '12px 16px', textAlign: 'center' }}>Empaque / Bultos</th>
                     <th style={{ padding: '12px 16px', textAlign: 'right' }}>Cant Total</th>
@@ -331,92 +220,53 @@ export default function OrderFulfillmentModal({ order, onClose, onSuccess }: Ord
                 </thead>
                 <tbody>
                   {order.items?.map((item: any) => {
-                    const price = Number(item.unitPrice ?? item.price ?? 0);
-                    const nameLower = (item.product?.name || '').toLowerCase();
-                    const isCheeseOrBar = nameLower.includes('cremoso') || nameLower.includes('tybo') || nameLower.includes('barr') || nameLower.includes('queso') || nameLower.includes('horma') || nameLower.includes('sardo') || nameLower.includes('gouda') || nameLower.includes('mozzarella');
-                    const isPesableProduct = Boolean(item.product?.isPesable || item.isPesable || isCheeseOrBar || nameLower.includes('x kg') || nameLower.includes('por kg'));
-                    const approxWeightUnit = item.product?.approximateWeight ? Number(item.product.approximateWeight) : (isCheeseOrBar ? 4 : 1);
-                    const suggestedAvgWeight = Number((item.quantity * approxWeightUnit).toFixed(3));
-                    const currentWeight = pesableWeights[item.id];
-                    const hasWeight = currentWeight !== undefined && currentWeight > 0;
-
-                    // Desglose de empaque (cajas + sueltas)
+                    const bonus = isBonusOrderItem(item);
+                    const isPesable = !bonus && isOrderItemWeighable(item);
+                    const suggestedKg = isPesable ? computeSuggestedItemWeightKg(item) : 0;
                     const unitsPerBox = item.product?.unitsPerBox && Number(item.product.unitsPerBox) > 1 ? Number(item.product.unitsPerBox) : 1;
                     const fullBoxes = unitsPerBox > 1 ? Math.floor(item.quantity / unitsPerBox) : 0;
-                    const remainderUnits = unitsPerBox > 1 ? item.quantity % unitsPerBox : item.quantity;
-
-                    // Anomaly checks
-                    const anomalyInfo = isPesableProduct ? anomalies.find(a => a.item.id === item.id) : undefined;
+                    const remUnits = unitsPerBox > 1 ? item.quantity % unitsPerBox : item.quantity;
+                    const anomalyInfo = isPesable ? anomalies.find((a) => a.item.id === item.id) : undefined;
                     const isAnomaly = Boolean(anomalyInfo);
-
-                    let subtotal = 0;
-                    if (hasWeight) {
-                      subtotal = currentWeight * price;
-                    } else if (isPesableProduct) {
-                      subtotal = suggestedAvgWeight * price;
-                    } else {
-                      subtotal = item.quantity * price;
-                    }
+                    const subtotal = calculateFulfillmentLineSubtotalInt(item, pesableWeights);
 
                     return (
-                      <tr key={item.id} style={{ borderBottom: '1px solid var(--border-color)', backgroundColor: isAnomaly ? '#fff5f5' : undefined }}>
+                      <tr key={item.id} style={{ borderBottom: '1px solid var(--border-color)', backgroundColor: isAnomaly ? '#fff5f5' : bonus ? '#f0fdf4' : undefined }}>
                         <td style={{ padding: '12px 16px', fontWeight: 500 }}>
                           <div>{item.product?.name}</div>
-                          {isPesableProduct && (
-                            <span className="badge" style={{ backgroundColor: '#e0f2fe', color: '#0369a1', fontSize: '0.73rem', display: 'inline-block', marginTop: '4px' }}>
-                              Pesable (${price.toLocaleString('es-AR')}/kg)
+                          {bonus && (
+                            <span className="badge" style={{ backgroundColor: '#dcfce7', color: '#15803d', fontSize: '0.73rem', marginTop: '4px', display: 'inline-block' }}>
+                              Bonificación sin cargo
+                            </span>
+                          )}
+                          {!bonus && isPesable && (
+                            <span className="badge" style={{ backgroundColor: '#e0f2fe', color: '#0369a1', fontSize: '0.73rem', marginTop: '4px', display: 'inline-block' }}>
+                              Pesable ({formatIntegerARS(item.unitPrice ?? item.price ?? 0)}/kg)
                             </span>
                           )}
                         </td>
                         <td style={{ padding: '12px 16px', textAlign: 'center' }}>
                           {unitsPerBox > 1 ? (
                             <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
-                              <span
-                                className="badge"
-                                style={{
-                                  backgroundColor: fullBoxes > 0 ? (remainderUnits > 0 ? '#eff6ff' : '#f0fdf4') : '#faf5ff',
-                                  color: fullBoxes > 0 ? (remainderUnits > 0 ? '#1d4ed8' : '#15803d') : '#7e22ce',
-                                  border: `1px solid ${fullBoxes > 0 ? (remainderUnits > 0 ? '#bfdbfe' : '#bbf7d0') : '#e9d5ff'}`,
-                                  fontSize: '0.78rem',
-                                  fontWeight: 700,
-                                  padding: '3px 8px',
-                                  borderRadius: '6px',
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: '3px'
-                                }}
-                              >
-                                📦 {fullBoxes > 0 ? `${fullBoxes} ${fullBoxes === 1 ? 'Caja' : 'Cajas'}${remainderUnits > 0 ? ` + ${remainderUnits}u` : ''}` : `${remainderUnits} u sueltas`}
+                              <span className="badge" style={{ backgroundColor: fullBoxes > 0 ? (remUnits > 0 ? '#eff6ff' : '#f0fdf4') : '#faf5ff', color: fullBoxes > 0 ? (remUnits > 0 ? '#1d4ed8' : '#15803d') : '#7e22ce', border: `1px solid ${fullBoxes > 0 ? (remUnits > 0 ? '#bfdbfe' : '#bbf7d0') : '#e9d5ff'}`, fontSize: '0.78rem', fontWeight: 700, padding: '3px 8px', borderRadius: '6px' }}>
+                                {fullBoxes > 0 ? `${fullBoxes} ${fullBoxes === 1 ? 'Caja' : 'Cajas'}${remUnits > 0 ? ` + ${remUnits}u` : ''}` : `${remUnits} u sueltas`}
                               </span>
-                              <span style={{ fontSize: '0.68rem', color: '#64748b', fontWeight: 500 }}>
-                                Caja x{unitsPerBox}u
-                              </span>
+                              <span style={{ fontSize: '0.68rem', color: '#64748b', fontWeight: 500 }}>Caja x{unitsPerBox}u</span>
                             </div>
                           ) : (
                             <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>-</span>
                           )}
                         </td>
-                        <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 700, fontSize: '0.95rem' }}>
-                          {item.quantity} u
-                        </td>
+                        <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 700 }}>{item.quantity} u</td>
                         <td style={{ padding: '12px 16px', textAlign: 'center' }}>
-                          {isPesableProduct ? (
+                          {isPesable ? (
                             <>
                               <input
                                 type="number"
                                 className="input"
-                                style={{
-                                  width: '110px',
-                                  textAlign: 'center',
-                                  padding: '6px 8px',
-                                  fontWeight: 700,
-                                  fontSize: '0.95rem',
-                                  borderColor: isAnomaly ? '#dc2626' : '#f97316',
-                                  backgroundColor: isAnomaly ? '#fef2f2' : (!pesableWeights[item.id] || pesableWeights[item.id] === suggestedAvgWeight ? '#fff7ed' : undefined),
-                                  color: isAnomaly ? '#b91c1c' : undefined
-                                }}
-                                placeholder={`${suggestedAvgWeight}`}
-                                value={pesableWeights[item.id] !== undefined && pesableWeights[item.id] !== 0 ? pesableWeights[item.id] : suggestedAvgWeight}
+                                style={{ width: '110px', textAlign: 'center', padding: '6px 8px', fontWeight: 700, borderColor: isAnomaly ? '#dc2626' : '#f97316', backgroundColor: isAnomaly ? '#fef2f2' : undefined, color: isAnomaly ? '#b91c1c' : undefined }}
+                                placeholder={`${suggestedKg}`}
+                                value={pesableWeights[item.id] !== undefined && pesableWeights[item.id] !== 0 ? pesableWeights[item.id] : suggestedKg}
                                 onChange={(e) => handleWeightChange(item.id, e.target.value)}
                                 step="0.001"
                                 min="0"
@@ -424,34 +274,21 @@ export default function OrderFulfillmentModal({ order, onClose, onSuccess }: Ord
                               {isAnomaly ? (
                                 <div style={{ marginTop: '4px' }}>
                                   <span style={{ fontSize: '0.72rem', color: '#dc2626', fontWeight: 700, display: 'block' }}>
-                                    ⚠️ ¡Peso fuera de promedio! (~{suggestedAvgWeight} kg)
+                                    Peso fuera de promedio (~{suggestedKg} kg)
                                   </span>
                                   {anomalyInfo?.possibleDecimalFix && (
                                     <button
                                       type="button"
                                       onClick={() => handleWeightChange(item.id, anomalyInfo.possibleDecimalFix!.toString())}
-                                      style={{
-                                        marginTop: '4px',
-                                        padding: '3px 8px',
-                                        fontSize: '0.72rem',
-                                        backgroundColor: '#fee2e2',
-                                        color: '#991b1b',
-                                        border: '1px solid #fca5a5',
-                                        borderRadius: '4px',
-                                        cursor: 'pointer',
-                                        fontWeight: 700,
-                                        display: 'inline-flex',
-                                        alignItems: 'center',
-                                        gap: '3px'
-                                      }}
+                                      style={{ marginTop: '4px', padding: '3px 8px', fontSize: '0.72rem', backgroundColor: '#fee2e2', color: '#991b1b', border: '1px solid #fca5a5', borderRadius: '4px', cursor: 'pointer', fontWeight: 700 }}
                                     >
-                                      💡 Corregir a {anomalyInfo.possibleDecimalFix} kg
+                                      Corregir a {anomalyInfo.possibleDecimalFix} kg
                                     </button>
                                   )}
                                 </div>
                               ) : (
-                                <span style={{ fontSize: '0.72rem', color: pesableWeights[item.id] && pesableWeights[item.id] !== suggestedAvgWeight ? '#16a34a' : '#c2410c', display: 'block', marginTop: '3px', fontWeight: 600 }}>
-                                  {pesableWeights[item.id] && pesableWeights[item.id] !== suggestedAvgWeight ? '✓ Peso balanza' : `Promedio (${suggestedAvgWeight} kg)`}
+                                <span style={{ fontSize: '0.72rem', color: pesableWeights[item.id] && pesableWeights[item.id] !== suggestedKg ? '#16a34a' : '#c2410c', display: 'block', marginTop: '3px', fontWeight: 600 }}>
+                                  {pesableWeights[item.id] && pesableWeights[item.id] !== suggestedKg ? 'Peso balanza' : `Promedio (${suggestedKg} kg)`}
                                 </span>
                               )}
                             </>
@@ -459,8 +296,8 @@ export default function OrderFulfillmentModal({ order, onClose, onSuccess }: Ord
                             <span style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>-</span>
                           )}
                         </td>
-                        <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 700, fontSize: '1rem', color: isAnomaly ? '#dc2626' : undefined }}>
-                          ${Math.round(subtotal).toLocaleString('es-AR')}
+                        <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 700, color: isAnomaly ? '#dc2626' : undefined }}>
+                          {formatIntegerARS(subtotal)}
                         </td>
                       </tr>
                     );
@@ -468,112 +305,32 @@ export default function OrderFulfillmentModal({ order, onClose, onSuccess }: Ord
                 </tbody>
               </table>
             </div>
-            
+
             <div style={{ flexShrink: 0, marginTop: '16px', padding: '16px 20px', backgroundColor: 'var(--background-alt)', borderRadius: '8px', border: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Monto Total del Pedido</span>
-              <span style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--text-primary)' }}>
-                ${Math.round(currentTotal).toLocaleString('es-AR')}
-              </span>
+              <span style={{ fontSize: '1.05rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Monto Total del Pedido</span>
+              <span style={{ fontSize: '1.65rem', fontWeight: 800, color: 'var(--text-primary)' }}>{formatIntegerARS(currentTotal)}</span>
             </div>
           </div>
-          
-          {/* Columna Derecha: Panel de Facturación */}
-          <div style={{ backgroundColor: 'var(--background-alt)', padding: '22px', borderRadius: '12px', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '18px', overflowY: 'auto' }}>
-            <div style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '12px' }}>
-              <h3 style={{ fontSize: '1.2rem', margin: 0, display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700 }}>
-                <DollarSign size={20} style={{ color: '#E30613' }} /> Facturación y Cobro
-              </h3>
-            </div>
-            
-            <div className="form-group" style={{ marginBottom: 0 }}>
-              <label style={{ fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-secondary)', fontWeight: 600 }}>Cliente</label>
-              <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-primary)', marginTop: '4px' }}>
-                {order.client?.name}
-              </div>
-              {order.client?.cuit && (
-                <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
-                  CUIT: {order.client.cuit}
-                </div>
-              )}
-            </div>
 
-            <div className="form-group" style={{ marginBottom: 0 }}>
-              <label style={{ fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-secondary)', fontWeight: 600 }}>Canal de Facturación</label>
-              <select className="select" style={{ width: '100%', padding: '10px 12px', fontSize: '0.95rem', marginTop: '6px' }} value={billingType} onChange={(e) => setBillingType(e.target.value as BillingType)}>
-                <option value="OFFICIAL">Sucursal A</option>
-                <option value="INTERNAL">Sucursal X</option>
-              </select>
-            </div>
-
-            {billingType === 'OFFICIAL' && (
-              <div className="form-group" style={{ marginBottom: 0, backgroundColor: '#f8fafc', padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                <label style={{ fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.5px', color: '#475569', fontWeight: 800 }}>Modo de Emisión AFIP / ARCA</label>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '6px' }}>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.88rem', cursor: 'pointer', fontWeight: !deferCae ? 700 : 500, color: !deferCae ? '#16a34a' : '#475569' }}>
-                    <input type="radio" name="deferCae" checked={!deferCae} onChange={() => setDeferCae(false)} />
-                    🟢 Solicitar CAE Inmediato (AFIP Directo)
-                  </label>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.88rem', cursor: 'pointer', fontWeight: deferCae ? 700 : 500, color: deferCae ? '#d97706' : '#475569' }}>
-                    <input type="radio" name="deferCae" checked={deferCae} onChange={() => setDeferCae(true)} />
-                    🟡 Pre-Facturar A (Diferir CAE / Borrador)
-                  </label>
-                </div>
-              </div>
-            )}
-
-            <div className="form-group" style={{ marginBottom: 0 }}>
-              <label style={{ fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-secondary)', fontWeight: 600 }}>Medio de Pago / Condición</label>
-              <select className="select" style={{ width: '100%', padding: '10px 12px', fontSize: '0.95rem', fontWeight: 600, marginTop: '6px' }} value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)}>
-                <option value="OTHER">Cuenta Corriente</option>
-                <option value="CASH">Efectivo</option>
-                <option value="BANK_TRANSFER">Transferencia</option>
-                <option value="CHECK">Cheque</option>
-              </select>
-            </div>
-
-            {paymentMethod === 'CHECK' && (
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label style={{ fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-secondary)', fontWeight: 600 }}>Número de Cheque</label>
-                <input
-                  type="text"
-                  className="input"
-                  style={{ width: '100%', padding: '10px 12px', fontSize: '0.95rem', marginTop: '6px' }}
-                  placeholder="Ej: CH-0012948"
-                  value={checkNumber}
-                  onChange={(e) => setCheckNumber(e.target.value)}
-                />
-              </div>
-            )}
-
-            {paymentMethod === 'BANK_TRANSFER' && bankAccounts.length > 0 && (
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label style={{ fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-secondary)', fontWeight: 600 }}>Cuenta Bancaria Destino</label>
-                <select className="select" style={{ width: '100%', padding: '10px 12px', fontSize: '0.95rem', marginTop: '6px' }} value={selectedBankId} onChange={(e) => setSelectedBankId(e.target.value)}>
-                  {bankAccounts.map(b => (
-                    <option key={b.id} value={b.id}>{b.name}</option>
-                  ))}
-                </select>
-              </div>
-            )}
-            
-            <div style={{ flexGrow: 1, minHeight: '12px' }} />
-            
-            <button 
-              className="btn btn-primary" 
-              style={{ width: '100%', padding: '14px', fontSize: '1.1rem', fontWeight: 700, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px', backgroundColor: '#E30613', color: '#fff', borderRadius: '8px', border: 'none', cursor: 'pointer', transition: 'background-color 0.2s ease' }}
-              onClick={handleConfirmAndInvoice}
-              disabled={loading}
-            >
-              {loading ? (
-                <>Procesando...</>
-              ) : (
-                <><CheckCircle size={22} /> Confirmar y Facturar</>
-              )}
-            </button>
-          </div>
+          <OrderFulfillmentBillingPanel
+            clientName={clientInfo?.name}
+            clientCuit={clientInfo?.cuit}
+            billingType={billingType}
+            onBillingTypeChange={setBillingType}
+            deferCae={deferCae}
+            onDeferCaeChange={setDeferCae}
+            paymentMethod={paymentMethod}
+            onPaymentMethodChange={setPaymentMethod}
+            checkNumber={checkNumber}
+            onCheckNumberChange={setCheckNumber}
+            bankAccounts={bankAccounts}
+            selectedBankId={selectedBankId}
+            onSelectedBankIdChange={setSelectedBankId}
+            loading={loading}
+            onConfirmAndInvoice={handleConfirmAndInvoice}
+          />
         </div>
       </div>
-    </div>
+    </dialog>
   );
 }
-
