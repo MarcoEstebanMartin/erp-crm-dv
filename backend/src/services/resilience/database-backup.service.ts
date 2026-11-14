@@ -79,6 +79,7 @@ export async function runEncryptedDatabaseBackup(
     crmConversations,
     auditLogs,
     warehouseCells,
+    weeklyPromos,
   ] = await Promise.all([
     prisma.user.findMany(),
     prisma.rubro.findMany(),
@@ -103,6 +104,9 @@ export async function runEncryptedDatabaseBackup(
     prisma.auditLog.findMany({ take: 1_000, orderBy: { createdAt: 'desc' } }),
     typeof (prisma as any).warehouseCell?.findMany === 'function'
       ? prisma.warehouseCell.findMany()
+      : Promise.resolve([]),
+    typeof (prisma as any).weeklyPromo?.findMany === 'function'
+      ? prisma.weeklyPromo.findMany({ include: { items: true } })
       : Promise.resolve([]),
   ]);
 
@@ -136,6 +140,7 @@ export async function runEncryptedDatabaseBackup(
     crmConversations: crmConversations.length,
     auditLogs: auditLogs.length,
     warehouseCells: warehouseCells.length,
+    weeklyPromos: weeklyPromos.length,
   };
 
   const payloadJson = JSON.stringify({
@@ -169,6 +174,7 @@ export async function runEncryptedDatabaseBackup(
       crmConversations,
       auditLogs,
       warehouseCells,
+      weeklyPromos,
     },
   });
 

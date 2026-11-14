@@ -92,6 +92,7 @@ model User {
   weeklySchedules  WeeklySchedule[]
   accountLedgerEntries AccountLedger[]
   warehouseCellsUpdated WarehouseCell[]
+  weeklyPromosCreated WeeklyPromo[] @relation("WeeklyPromosCreatedBy")
 }
 
 model Persona {
@@ -221,6 +222,7 @@ model Product {
   discountRules      DiscountRule[]
   providerMappings   ProviderProductMapping[]
   offerCampaignItems OfferCampaignItem[]
+  weeklyPromoItems   WeeklyPromoItem[]
 
   @@index([rubroId])
   @@index([providerId])
@@ -1311,6 +1313,49 @@ model WarehouseCell {
   @@index([depId])
   @@index([isStorage])
   @@index([chamber])
+}
+
+// ==========================================
+// OFERTAS SEMANALES (PRECIO OFERTA, N+M Y COMBOS)
+// ==========================================
+
+enum WeeklyPromoType {
+  OFFER_PRICE
+  BUY_X_GET_Y
+  COMBO
+}
+
+model WeeklyPromo {
+  id          Int             @id @default(autoincrement())
+  name        String
+  type        WeeklyPromoType
+  startDate   DateTime
+  endDate     DateTime?
+  isActive    Boolean         @default(true)
+  createdById Int?
+  createdBy   User?           @relation("WeeklyPromosCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  items WeeklyPromoItem[]
+
+  @@index([isActive, startDate, endDate])
+  @@index([createdById])
+}
+
+model WeeklyPromoItem {
+  id             Int         @id @default(autoincrement())
+  promoId        Int
+  promo          WeeklyPromo @relation(fields: [promoId], references: [id], onDelete: Cascade)
+  productId      Int
+  product        Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
+  minQuantity    Int         @default(1)
+  freeQuantity   Int         @default(0)
+  promoUnitPrice Decimal?    @db.Decimal(12, 2)
+
+  @@unique([promoId, productId])
+  @@index([promoId])
+  @@index([productId])
 }
 
 

@@ -1325,34 +1325,42 @@ export const api = {
     });
   },
 
-  // --- REGLAS DE PRECIOS & DESCUENTOS ---
-  getPricingRules: async () => {
-    return await request('/pricing/rules');
+  // --- OFERTAS SEMANALES ---
+  getWeeklyPromos: async () => {
+    return await request('/weekly-promos');
   },
 
-  createDiscountRule: async (ruleData: { name: string; personaId?: number | null; priceList?: string | null; rubroId?: number | null; productId?: number | null; billingType?: string | null; discount: number }) => {
-    return await request('/pricing/rules', {
+  getActiveWeeklyPromos: async () => {
+    return await request('/weekly-promos/active');
+  },
+
+  createWeeklyPromo: async (promoData: {
+    type: 'OFFER_PRICE' | 'BUY_X_GET_Y' | 'COMBO';
+    name?: string | null;
+    startDate: string;
+    endDate?: string | null;
+    items: Array<{
+      productId: number;
+      minQuantity: number;
+      freeQuantity?: number;
+      promoUnitPrice?: number | null;
+    }>;
+  }) => {
+    return await request('/weekly-promos', {
       method: 'POST',
-      body: JSON.stringify(ruleData)
+      body: JSON.stringify(promoData),
     });
   },
 
-  deleteDiscountRule: async (id: number) => {
-    return await request(`/pricing/rules/${id}`, {
-      method: 'DELETE'
+  toggleWeeklyPromo: async (id: number) => {
+    return await request(`/weekly-promos/${id}/toggle`, {
+      method: 'PATCH',
     });
   },
 
-  createSplitBillingConfig: async (configData: { personaId: number; rubroId: number; percentageOfficial?: number; percentageInternal?: number }) => {
-    return await request('/pricing/split', {
-      method: 'POST',
-      body: JSON.stringify(configData)
-    });
-  },
-
-  deleteSplitBillingConfig: async (id: number) => {
-    return await request(`/pricing/split/${id}`, {
-      method: 'DELETE'
+  deleteWeeklyPromo: async (id: number) => {
+    return await request(`/weekly-promos/${id}`, {
+      method: 'DELETE',
     });
   },
 
@@ -1566,14 +1574,6 @@ export const api = {
 
   recalculateAndFixClientBalance: async (personaId: number) => {
     return await api.syncBalances(personaId);
-  },
-
-  createSplitConfig: async (configData: any) => {
-    return await api.createSplitBillingConfig(configData);
-  },
-
-  deleteSplitConfig: async (id: number) => {
-    return await api.deleteSplitBillingConfig(id);
   },
 
   createCampaign: async (data: { title: string; startDate?: string; endDate?: string; isActive?: boolean }) => {

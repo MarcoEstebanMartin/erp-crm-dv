@@ -20,6 +20,8 @@ interface ConfigTabProps {
   initialTab?: string;
 }
 
+import { canManageWeeklyPromos } from './config/weeklyPromo.helpers';
+
 export default function ConfigTab({
   setErrorMsg,
   setSuccessMsg,
@@ -27,22 +29,25 @@ export default function ConfigTab({
 }: ConfigTabProps) {
   const currentUser = api.getCurrentUser();
   const isAdmin = currentUser?.role === 'ADMIN';
+  const canManageOffers = canManageWeeklyPromos(currentUser);
 
   const [configTab, setConfigTab] = useState<string>(() => {
+    if (initialTab === 'prices' && canManageOffers) return 'prices';
     if (!isAdmin) return 'arca';
     if (initialTab === 'rrhh') return 'personal';
     if (initialTab === 'reconcile') return 'general';
+    if (initialTab === 'prices' && !canManageOffers) return 'general';
     return initialTab;
   });
 
   const tabs = [
-    { id: 'general', label: 'General & Empresa', icon: <Building2 size={15} />, adminOnly: true },
-    { id: 'personal', label: 'Empleados & Roles', icon: <Users size={15} />, adminOnly: true },
-    { id: 'arca', label: 'Cierre Fiscal (ARCA)', icon: <FileText size={15} />, adminOnly: false },
-    { id: 'audit', label: 'Auditoría (Logs)', icon: <FileText size={15} />, adminOnly: true },
-    { id: 'percepciones', label: 'Impuestos & Percepciones', icon: <Receipt size={15} />, adminOnly: true },
-    { id: 'prices', label: 'Reglas de Precios', icon: <Tag size={15} />, adminOnly: false },
-  ].filter((tab) => isAdmin || !tab.adminOnly);
+    { id: 'general', label: 'General & Empresa', icon: <Building2 size={15} />, visible: isAdmin },
+    { id: 'personal', label: 'Empleados & Roles', icon: <Users size={15} />, visible: isAdmin },
+    { id: 'arca', label: 'Cierre Fiscal (ARCA)', icon: <FileText size={15} />, visible: true },
+    { id: 'audit', label: 'Auditoría (Logs)', icon: <FileText size={15} />, visible: isAdmin },
+    { id: 'percepciones', label: 'Impuestos & Percepciones', icon: <Receipt size={15} />, visible: isAdmin },
+    { id: 'prices', label: 'Ofertas Semanales', icon: <Tag size={15} />, visible: canManageOffers },
+  ].filter((tab) => tab.visible);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -99,7 +104,7 @@ export default function ConfigTab({
       {isAdmin && configTab === 'percepciones' && (
         <PerceptionsTab setErrorMsg={setErrorMsg} setSuccessMsg={setSuccessMsg} />
       )}
-      {configTab === 'prices' && (
+      {canManageOffers && configTab === 'prices' && (
         <PricingRulesTab setErrorMsg={setErrorMsg} setSuccessMsg={setSuccessMsg} />
       )}
     </div>
