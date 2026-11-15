@@ -219,9 +219,9 @@ export const AdminCreateQuickOrderModal: React.FC<AdminCreateQuickOrderModalProp
             <input
               type="text"
               className="input"
-              aria-label="Buscar producto por nombre o SKU"
+              aria-label="Buscar producto"
               autoFocus
-              placeholder="Buscar producto por nombre o SKU..."
+              placeholder="Producto o SKU"
               value={quickProductQuery}
               onChange={(e) => setQuickProductQuery(e.target.value)}
               style={{ height: '42px', fontSize: '0.92rem' }}
@@ -261,12 +261,12 @@ export const AdminCreateQuickOrderModal: React.FC<AdminCreateQuickOrderModalProp
 
           <div style={{ display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden', gap: '12px' }}>
             <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
-              Artículos cargados ({createOrderModal.cart.length})
+              Artículos ({createOrderModal.cart.length})
             </div>
             <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', border: '1px solid var(--border-color)', borderRadius: '8px', backgroundColor: '#F9FAFB', padding: '10px' }}>
               {createOrderModal.cart.length === 0 ? (
                 <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)', fontSize: '0.88rem' }}>
-                  Seleccioná artículos de la izquierda para armar el pedido.
+                  Sin artículos
                 </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -359,15 +359,15 @@ export const AdminCreateQuickOrderModal: React.FC<AdminCreateQuickOrderModalProp
             <input
               type="text"
               className="input"
-              aria-label="Observaciones del pedido"
-              placeholder="Observaciones (opcional)..."
+              aria-label="Notas"
+              placeholder="Notas"
               value={createOrderModal.notes}
               onChange={(e) => setCreateOrderModal({ ...createOrderModal, notes: e.target.value })}
               style={{ height: '40px', fontSize: '0.88rem' }}
             />
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 16px', backgroundColor: '#F9FAFB', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-              <span style={{ fontWeight: 600, fontSize: '0.92rem', color: 'var(--text-secondary)' }}>Total estimado</span>
+              <span style={{ fontWeight: 600, fontSize: '0.92rem', color: 'var(--text-secondary)' }}>Total</span>
               <span style={{ fontSize: '1.35rem', fontWeight: 700, color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }}>{formatIntegerARS(totalAmount)}</span>
             </div>
           </div>
@@ -375,7 +375,7 @@ export const AdminCreateQuickOrderModal: React.FC<AdminCreateQuickOrderModalProp
 
         <div className="modal-footer" style={{ borderTop: '1px solid var(--border-color)', paddingTop: '14px', marginTop: '16px', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
           <button type="button" className="btn btn-secondary" style={{ padding: '8px 18px' }} onClick={handleClose}>Cancelar</button>
-          <button type="submit" className="btn btn-primary" style={{ padding: '8px 22px', fontWeight: 600 }} disabled={createOrderModal.cart.length === 0}>Confirmar Pedido</button>
+          <button type="submit" className="btn btn-primary" style={{ padding: '8px 22px', fontWeight: 600 }} disabled={createOrderModal.cart.length === 0}>Confirmar</button>
         </div>
       </form>
     </NativeModalDialog>

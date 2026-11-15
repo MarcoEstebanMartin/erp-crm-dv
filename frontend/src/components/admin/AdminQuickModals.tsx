@@ -1,4 +1,6 @@
 import React from 'react';
+import { X } from 'lucide-react';
+import { NativeModalDialog } from '../modals/NativeModalDialog';
 
 interface AdminQuickClientSearchModalProps {
   clientSearchModal: { open: boolean; action: 'ledger' | 'payment' | 'order' } | null;
@@ -8,6 +10,12 @@ interface AdminQuickClientSearchModalProps {
   onClose: () => void;
   onSelectClientAction: (action: 'ledger' | 'payment' | 'order', client: any) => void;
 }
+
+const MODAL_TITLES: Record<'ledger' | 'payment' | 'order', string> = {
+  ledger: 'Cuenta corriente',
+  payment: 'Cobrar',
+  order: 'Nuevo pedido',
+};
 
 export const AdminQuickClientSearchModal: React.FC<AdminQuickClientSearchModalProps> = ({
   clientSearchModal,
@@ -26,53 +34,100 @@ export const AdminQuickClientSearchModal: React.FC<AdminQuickClientSearchModalPr
   });
 
   return (
-    <div className="modal-overlay" style={{ zIndex: 1100 }}>
-      <div className="modal-content" style={{ maxWidth: '680px', width: '94vw', padding: '24px 26px', borderRadius: '12px' }}>
-        <div className="modal-header" style={{ paddingBottom: '12px', marginBottom: '14px', borderBottom: '1px solid var(--border-color)' }}>
-          <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700 }}>
-            {clientSearchModal.action === 'ledger' && 'Cuenta Corriente'}
-            {clientSearchModal.action === 'payment' && 'Cargar Recibo'}
-            {clientSearchModal.action === 'order' && 'Seleccionar Cliente'}
-          </h3>
-          <button className="btn btn-ghost" style={{ padding: '4px' }} onClick={onClose}>✕</button>
-        </div>
-        <input
-          type="text"
-          className="input"
-          autoFocus
-          placeholder="Buscar cliente por nombre o CUIT..."
-          value={quickClientQuery}
-          onChange={(e) => setQuickClientQuery(e.target.value)}
-          style={{ height: '42px', fontSize: '0.92rem' }}
-        />
-        <div style={{ maxHeight: '54vh', overflowY: 'auto', border: '1px solid var(--border-color)', borderRadius: '8px', marginTop: '12px', backgroundColor: '#ffffff' }}>
-          {filteredQuickClients.length === 0 ? (
-            <div style={{ padding: '16px', color: 'var(--text-secondary)', textAlign: 'center', fontSize: '0.85rem' }}>No se encontraron clientes.</div>
-          ) : (
-            filteredQuickClients.map((c) => (
+    <NativeModalDialog
+      isOpen={Boolean(clientSearchModal?.open)}
+      onClose={onClose}
+      ariaLabelledBy="quick-client-modal-title"
+      style={{ maxWidth: '640px', width: '94vw', padding: '20px 24px', borderRadius: '12px' }}
+    >
+      <div className="modal-header" style={{ paddingBottom: '12px', marginBottom: '14px', borderBottom: '1px solid var(--border-color)' }}>
+        <h3 id="quick-client-modal-title" style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700 }}>
+          {MODAL_TITLES[clientSearchModal.action]}
+        </h3>
+        <button type="button" aria-label="Cerrar" className="btn btn-ghost" style={{ padding: '4px' }} onClick={onClose}>
+          <X size={18} aria-hidden="true" />
+        </button>
+      </div>
+
+      <input
+        type="text"
+        name="quickClientQuery"
+        aria-label="Buscar cliente"
+        className="input"
+        autoFocus
+        placeholder="Nombre o CUIT"
+        value={quickClientQuery}
+        onChange={(e) => setQuickClientQuery(e.target.value)}
+        style={{ height: '42px', fontSize: '0.92rem' }}
+      />
+
+      <div
+        style={{
+          maxHeight: '54vh',
+          overflowY: 'auto',
+          border: '1px solid var(--border-color)',
+          borderRadius: '8px',
+          marginTop: '12px',
+          backgroundColor: 'var(--bg-card, #ffffff)',
+        }}
+      >
+        {filteredQuickClients.length === 0 ? (
+          <div style={{ padding: '16px', color: 'var(--text-secondary)', textAlign: 'center', fontSize: '0.85rem' }}>
+            Sin resultados
+          </div>
+        ) : (
+          filteredQuickClients.map((c) => {
+            const balance = Number(c.outstandingBalance || 0);
+            const absBalance = Math.abs(Math.round(balance)).toLocaleString('es-AR');
+
+            return (
               <button
                 key={c.id}
-                onClick={() => { const action = clientSearchModal.action; onClose(); onSelectClientAction(action, c); }}
-                style={{ width: '100%', padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: 'none', borderBottom: '1px solid #f0f0f2', background: 'none', cursor: 'pointer', textAlign: 'left' }}
+                type="button"
+                onClick={() => {
+                  const action = clientSearchModal.action;
+                  onClose();
+                  onSelectClientAction(action, c);
+                }}
+                style={{
+                  width: '100%',
+                  padding: '11px 16px',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  border: 'none',
+                  borderBottom: '1px solid var(--border-color)',
+                  background: 'none',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  fontVariantNumeric: 'tabular-nums',
+                }}
               >
                 <div>
                   <div style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--text-primary)' }}>{c.name}</div>
-                  {c.cuit && <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '2px' }}>CUIT: {c.cuit}</div>}
+                  {c.cuit && <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '2px' }}>{c.cuit}</div>}
                 </div>
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: '0.85rem', fontWeight: 600, color: Number(c.outstandingBalance || 0) > 0 ? 'var(--color-danger)' : Number(c.outstandingBalance || 0) < 0 ? 'var(--color-success)' : 'var(--text-primary)' }}>
-                    {Number(c.outstandingBalance || 0) < 0 ? `$${Math.abs(Math.round(Number(c.outstandingBalance))).toLocaleString('es-AR')} (A Favor)` : `$${Math.round(Number(c.outstandingBalance || 0)).toLocaleString('es-AR')}`}
-                  </div>
-                  <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>Saldo CC</div>
+                <div
+                  style={{
+                    fontSize: '0.86rem',
+                    fontWeight: 600,
+                    textAlign: 'right',
+                    color: balance > 0 ? '#E30613' : balance < 0 ? '#059669' : 'var(--text-primary)',
+                  }}
+                >
+                  {balance < 0 ? `$${absBalance} · A favor` : `$${Math.round(balance).toLocaleString('es-AR')}`}
                 </div>
               </button>
-            ))
-          )}
-        </div>
-        <div className="modal-footer" style={{ marginTop: '16px' }}>
-          <button type="button" className="btn btn-secondary" onClick={onClose}>Cancelar</button>
-        </div>
+            );
+          })
+        )}
       </div>
-    </div>
+
+      <div className="modal-footer" style={{ marginTop: '16px' }}>
+        <button type="button" className="btn btn-secondary" onClick={onClose}>
+          Cerrar
+        </button>
+      </div>
+    </NativeModalDialog>
   );
 };

@@ -1,6 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
+import { X } from 'lucide-react';
 import { api } from '../../utils/api';
 import { useConfirm } from '../../context/ConfirmContext';
+import { NativeModalDialog } from '../modals/NativeModalDialog';
 
 interface AdminPaymentModalProps {
   paymentModal: { open: boolean; clientId: number; clientName: string } | null;
@@ -62,7 +64,7 @@ export const AdminPaymentModal: React.FC<AdminPaymentModalProps> = ({
       const parsedAmount = Number(paymentAmount);
       if (parsedAmount > balance) {
         const ok = await confirm(
-          `El monto a cobrar ($${parsedAmount.toLocaleString()}) supera el saldo pendiente del cliente ($${balance.toLocaleString()}). El cliente quedará con saldo a favor. ¿Deseas continuar?`,
+          `El cobro ($${parsedAmount.toLocaleString('es-AR')}) supera el saldo ($${balance.toLocaleString('es-AR')}). ¿Continuar?`,
           { type: 'warning' },
         );
         if (!ok) return;
@@ -74,10 +76,18 @@ export const AdminPaymentModal: React.FC<AdminPaymentModalProps> = ({
       setErrorMsg(null);
       const retencionesToSend = [];
       if (paymentRetencionGananciasAmount && Number(paymentRetencionGananciasAmount) > 0) {
-        retencionesToSend.push({ taxType: 'GANANCIAS' as const, number: paymentRetencionGananciasNumber || `RET-GAN-${Date.now()}`, amount: Number(paymentRetencionGananciasAmount) });
+        retencionesToSend.push({
+          taxType: 'GANANCIAS' as const,
+          number: paymentRetencionGananciasNumber || `RET-GAN-${Date.now()}`,
+          amount: Number(paymentRetencionGananciasAmount),
+        });
       }
       if (paymentRetencionIibbAmount && Number(paymentRetencionIibbAmount) > 0) {
-        retencionesToSend.push({ taxType: 'IIBB' as const, number: paymentRetencionIibbNumber || `RET-IIBB-${Date.now()}`, amount: Number(paymentRetencionIibbAmount) });
+        retencionesToSend.push({
+          taxType: 'IIBB' as const,
+          number: paymentRetencionIibbNumber || `RET-IIBB-${Date.now()}`,
+          amount: Number(paymentRetencionIibbAmount),
+        });
       }
 
       await api.registerPayment(paymentModal.clientId, {
@@ -88,7 +98,7 @@ export const AdminPaymentModal: React.FC<AdminPaymentModalProps> = ({
         retenciones: retencionesToSend.length > 0 ? retencionesToSend : undefined,
       });
 
-      setSuccessMsg('Cobro registrado exitosamente en cuenta corriente.');
+      setSuccessMsg('Cobro registrado.');
       await onSuccess(paymentModal.clientId);
       onClose();
     } catch (err: any) {
@@ -99,96 +109,185 @@ export const AdminPaymentModal: React.FC<AdminPaymentModalProps> = ({
   };
 
   return (
-    <div className="modal-overlay">
-      <div className="modal-content" style={{ maxWidth: '400px' }}>
-        <div className="modal-header">
-          <h3>Registrar Cobro CC</h3>
-          <button className="btn btn-ghost" style={{ padding: '4px' }} onClick={onClose}>✕</button>
-        </div>
-        <form onSubmit={handleSubmit}>
-          <div style={{ fontSize: '0.85rem', marginBottom: '14px', padding: '10px', backgroundColor: 'var(--bg-light)', borderRadius: '6px' }}>
-            Registrando pago para: <strong>{paymentModal.clientName}</strong>
-          </div>
+    <NativeModalDialog
+      isOpen={Boolean(paymentModal?.open)}
+      onClose={onClose}
+      ariaLabelledBy="admin-payment-modal-title"
+      style={{ maxWidth: '420px', width: '94vw', padding: '20px 24px' }}
+    >
+      <div className="modal-header" style={{ marginBottom: '16px', paddingBottom: '12px', borderBottom: '1px solid var(--border-color)' }}>
+        <h3 id="admin-payment-modal-title" style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700 }}>
+          Cobrar · {paymentModal.clientName}
+        </h3>
+        <button type="button" aria-label="Cerrar" className="btn btn-ghost" style={{ padding: '4px' }} onClick={onClose}>
+          <X size={18} aria-hidden="true" />
+        </button>
+      </div>
 
-          {paymentPendingInvoices.length > 0 && (
-            <div className="form-group">
-              <label>Imputar a Factura</label>
-              <select
-                className="select"
-                value={paymentSelectedInvoiceId || ''}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  if (val === '') {
-                    setPaymentSelectedInvoiceId(null);
-                    setPaymentAmount(clientProfileModal?.client?.id === paymentModal.clientId ? String(Math.round(Number(clientProfileModal.client.outstandingBalance))) : '');
-                  } else {
-                    const invId = Number(val);
-                    setPaymentSelectedInvoiceId(invId);
-                    const inv = paymentPendingInvoices.find((i) => i.id === invId);
-                    if (inv) setPaymentAmount(String(Math.round(Number(inv.pendingAmount))));
-                  }
-                }}
-              >
-                <option value="">Entrega a cuenta general (sin factura específica)</option>
-                {paymentPendingInvoices.map((inv) => (
-                  <option key={inv.id} value={inv.id}>
-                    {inv.invoiceNumber} (Pendiente: ${Math.round(Number(inv.pendingAmount)).toLocaleString('es-AR')})
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-
+      <form onSubmit={handleSubmit}>
+        {paymentPendingInvoices.length > 0 && (
           <div className="form-group">
-            <label>Monto del Cobro ($)</label>
-            <input type="number" className="input" placeholder="Monto" value={paymentAmount} onChange={(e) => setPaymentAmount(e.target.value)} required disabled={paymentLoading} />
-          </div>
-          <div className="form-group">
-            <label>Método de Pago</label>
-            <select className="select" value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)} disabled={paymentLoading}>
-              <option value="CASH">Efectivo</option>
-              <option value="BANK_TRANSFER">Transferencia Bancaria</option>
-              <option value="CHECK">Cheque</option>
-              <option value="OTHER">Otro</option>
+            <label htmlFor="payment-invoice">Imputar</label>
+            <select
+              id="payment-invoice"
+              name="orderId"
+              className="select"
+              value={paymentSelectedInvoiceId || ''}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (val === '') {
+                  setPaymentSelectedInvoiceId(null);
+                  setPaymentAmount(
+                    clientProfileModal?.client?.id === paymentModal.clientId
+                      ? String(Math.round(Number(clientProfileModal.client.outstandingBalance)))
+                      : '',
+                  );
+                } else {
+                  const invId = Number(val);
+                  setPaymentSelectedInvoiceId(invId);
+                  const inv = paymentPendingInvoices.find((i) => i.id === invId);
+                  if (inv) setPaymentAmount(String(Math.round(Number(inv.pendingAmount))));
+                }
+              }}
+            >
+              <option value="">Cuenta general</option>
+              {paymentPendingInvoices.map((inv) => (
+                <option key={inv.id} value={inv.id}>
+                  {inv.invoiceNumber} (${Math.round(Number(inv.pendingAmount)).toLocaleString('es-AR')})
+                </option>
+              ))}
             </select>
           </div>
+        )}
 
-          <div style={{ borderTop: '1px dashed var(--border-color)', marginTop: '14px', paddingTop: '10px' }}>
-            <h4 style={{ margin: '0 0 10px 0', fontSize: '0.85rem', fontWeight: 600 }}>🏷️ Retenciones Recibidas (Opcional)</h4>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr', gap: '10px', marginBottom: '8px' }}>
-              <div>
-                <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>Monto Ganancias ($)</label>
-                <input type="number" step="0.01" className="input" placeholder="Monto" style={{ padding: '6px 8px', fontSize: '0.8rem' }} value={paymentRetencionGananciasAmount} onChange={(e) => setPaymentRetencionGananciasAmount(e.target.value)} disabled={paymentLoading} />
-              </div>
-              <div>
-                <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>Nro Cert. Ganancias</label>
-                <input type="text" className="input" placeholder="Nro Certificado" style={{ padding: '6px 8px', fontSize: '0.8rem' }} value={paymentRetencionGananciasNumber} onChange={(e) => setPaymentRetencionGananciasNumber(e.target.value)} disabled={paymentLoading} />
-              </div>
+        <div className="form-group">
+          <label htmlFor="payment-amount">Monto ($)</label>
+          <input
+            id="payment-amount"
+            name="amount"
+            type="number"
+            className="input"
+            value={paymentAmount}
+            onChange={(e) => setPaymentAmount(e.target.value)}
+            required
+            disabled={paymentLoading}
+          />
+        </div>
+
+        <div className="form-group">
+          <label htmlFor="payment-method">Medio de pago</label>
+          <select
+            id="payment-method"
+            name="paymentMethod"
+            className="select"
+            value={paymentMethod}
+            onChange={(e) => setPaymentMethod(e.target.value)}
+            disabled={paymentLoading}
+          >
+            <option value="CASH">Efectivo</option>
+            <option value="BANK_TRANSFER">Transferencia</option>
+            <option value="CHECK">Cheque</option>
+            <option value="OTHER">Otro</option>
+          </select>
+        </div>
+
+        <div style={{ borderTop: '1px solid var(--border-color)', marginTop: '14px', paddingTop: '12px', marginBottom: '12px' }}>
+          <h4 style={{ margin: '0 0 10px 0', fontSize: '0.84rem', fontWeight: 600 }}>Retenciones</h4>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr', gap: '10px', marginBottom: '8px' }}>
+            <div>
+              <label htmlFor="payment-ret-ganancias-amount" style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>
+                Ganancias ($)
+              </label>
+              <input
+                id="payment-ret-ganancias-amount"
+                name="retGananciasAmount"
+                type="number"
+                step="0.01"
+                className="input"
+                style={{ padding: '6px 8px', fontSize: '0.8rem' }}
+                value={paymentRetencionGananciasAmount}
+                onChange={(e) => setPaymentRetencionGananciasAmount(e.target.value)}
+                disabled={paymentLoading}
+              />
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr', gap: '10px', marginBottom: '8px' }}>
-              <div>
-                <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>Monto IIBB BsAs ($)</label>
-                <input type="number" step="0.01" className="input" placeholder="Monto" style={{ padding: '6px 8px', fontSize: '0.8rem' }} value={paymentRetencionIibbAmount} onChange={(e) => setPaymentRetencionIibbAmount(e.target.value)} disabled={paymentLoading} />
-              </div>
-              <div>
-                <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>Nro Cert. IIBB BsAs</label>
-                <input type="text" className="input" placeholder="Nro Certificado" style={{ padding: '6px 8px', fontSize: '0.8rem' }} value={paymentRetencionIibbNumber} onChange={(e) => setPaymentRetencionIibbNumber(e.target.value)} disabled={paymentLoading} />
-              </div>
+            <div>
+              <label htmlFor="payment-ret-ganancias-number" style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>
+                Certificado
+              </label>
+              <input
+                id="payment-ret-ganancias-number"
+                name="retGananciasNumber"
+                type="text"
+                className="input"
+                style={{ padding: '6px 8px', fontSize: '0.8rem' }}
+                value={paymentRetencionGananciasNumber}
+                onChange={(e) => setPaymentRetencionGananciasNumber(e.target.value)}
+                disabled={paymentLoading}
+              />
             </div>
           </div>
 
-          <div className="form-group">
-            <label>Descripción / Observaciones</label>
-            <input type="text" className="input" placeholder="ej: Cobro factura" value={paymentDescription} onChange={(e) => setPaymentDescription(e.target.value)} disabled={paymentLoading} />
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr', gap: '10px' }}>
+            <div>
+              <label htmlFor="payment-ret-iibb-amount" style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>
+                IIBB ($)
+              </label>
+              <input
+                id="payment-ret-iibb-amount"
+                name="retIibbAmount"
+                type="number"
+                step="0.01"
+                className="input"
+                style={{ padding: '6px 8px', fontSize: '0.8rem' }}
+                value={paymentRetencionIibbAmount}
+                onChange={(e) => setPaymentRetencionIibbAmount(e.target.value)}
+                disabled={paymentLoading}
+              />
+            </div>
+            <div>
+              <label htmlFor="payment-ret-iibb-number" style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>
+                Certificado
+              </label>
+              <input
+                id="payment-ret-iibb-number"
+                name="retIibbNumber"
+                type="text"
+                className="input"
+                style={{ padding: '6px 8px', fontSize: '0.8rem' }}
+                value={paymentRetencionIibbNumber}
+                onChange={(e) => setPaymentRetencionIibbNumber(e.target.value)}
+                disabled={paymentLoading}
+              />
+            </div>
           </div>
-          <div className="modal-footer">
-            <button type="button" className="btn btn-secondary" onClick={onClose} disabled={paymentLoading}>Cancelar</button>
-            <button type="submit" className="btn btn-primary" style={{ backgroundColor: 'var(--color-success)', borderColor: 'var(--color-success)' }} disabled={paymentLoading || !paymentAmount || Number(paymentAmount) <= 0}>
-              {paymentLoading ? 'Procesando...' : 'Confirmar Cobro'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+        </div>
+
+        <div className="form-group">
+          <label htmlFor="payment-notes">Notas</label>
+          <input
+            id="payment-notes"
+            name="description"
+            type="text"
+            className="input"
+            value={paymentDescription}
+            onChange={(e) => setPaymentDescription(e.target.value)}
+            disabled={paymentLoading}
+          />
+        </div>
+
+        <div className="modal-footer" style={{ marginTop: '18px' }}>
+          <button type="button" className="btn btn-secondary" onClick={onClose} disabled={paymentLoading}>
+            Cancelar
+          </button>
+          <button
+            type="submit"
+            className="btn btn-primary"
+            disabled={paymentLoading || !paymentAmount || Number(paymentAmount) <= 0}
+          >
+            {paymentLoading ? 'Guardando...' : 'Cobrar'}
+          </button>
+        </div>
+      </form>
+    </NativeModalDialog>
   );
 };

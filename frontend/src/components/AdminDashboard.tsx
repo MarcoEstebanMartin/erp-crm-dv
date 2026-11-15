@@ -38,7 +38,7 @@ const CrmDashboard = lazy(() => import('./CrmDashboard'));
 const LoadingDashboard = () => (
   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '300px', gap: '12px', padding: '40px', backgroundColor: 'var(--background-card)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
     <div style={{ width: '24px', height: '24px', borderRadius: '50%', border: '2px solid rgba(var(--color-corp-red-rgb), 0.1)', borderTopColor: 'var(--color-corp-red)', animation: 'spin 0.8s linear infinite' }} />
-    <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Cargando sección...</span>
+    <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Cargando...</span>
     <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
   </div>
 );
@@ -76,6 +76,8 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
           setIsPriceListModalOpen={c.setIsPriceListModalOpen}
           setIsQuickSearchModalOpen={c.setIsQuickSearchModalOpen}
           setIsDirectInvoiceModalOpen={c.setIsDirectInvoiceModalOpen}
+          setErrorMsg={c.setErrorMsg}
+          setSuccessMsg={c.setSuccessMsg}
         />
       )}
 
@@ -110,9 +112,9 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
 
       {(activeTab === 'fulfillment' || activeTab === 'orders' || activeTab === 'billing') && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <nav aria-label="Secciones de Pedidos y Facturación" className="linear-underline-nav">
+          <nav aria-label="Pedidos y facturación" className="linear-underline-nav">
             {[
-              { id: 'fulfillment', label: 'Armado de Pedidos', icon: <Warehouse size={15} aria-hidden="true" /> },
+              { id: 'fulfillment', label: 'Armado', icon: <Warehouse size={15} aria-hidden="true" /> },
               { id: 'orders', label: 'Historial', icon: <ShoppingCart size={15} aria-hidden="true" /> },
               { id: 'billing', label: 'Facturación', icon: <FileText size={15} aria-hidden="true" /> },
             ].map((tab) => (
@@ -141,28 +143,27 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
 
       {(activeTab === 'rendiciones' || activeTab === 'reportes' || activeTab === 'reports') && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          <div style={{ display: 'flex', gap: '8px', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px', marginBottom: '12px', overflowX: 'auto' }}>
+          <div role="tablist" aria-label="Caja y finanzas" className="linear-tablist">
             {[
-              { id: 'general', label: 'Finanzas General', icon: <DollarSign size={15} />, adminOnly: false },
-              { id: 'rendiciones', label: 'Rendiciones y Arqueos', icon: <Receipt size={15} />, adminOnly: false },
-              { id: 'gastos', label: 'Control de Gastos', icon: <DollarSign size={15} />, adminOnly: false },
-              { id: 'reportes', label: 'Reportes y Analíticas', icon: <TrendingUp size={15} />, adminOnly: true },
+              { id: 'general', label: 'Finanzas', icon: <DollarSign size={15} aria-hidden="true" />, adminOnly: false },
+              { id: 'rendiciones', label: 'Rendiciones', icon: <Receipt size={15} aria-hidden="true" />, adminOnly: false },
+              { id: 'gastos', label: 'Gastos', icon: <DollarSign size={15} aria-hidden="true" />, adminOnly: false },
+              { id: 'reportes', label: 'Reportes', icon: <TrendingUp size={15} aria-hidden="true" />, adminOnly: true },
             ]
               .filter((tab) => isAdmin || !tab.adminOnly)
               .map((tab) => (
-              <button
-                key={tab.id} type="button" className="btn"
-                style={{
-                  backgroundColor: c.cajasSubTab === tab.id ? 'var(--color-primary)' : '#fff',
-                  color: c.cajasSubTab === tab.id ? '#fff' : 'var(--text-primary)',
-                  border: c.cajasSubTab === tab.id ? '1px solid var(--color-primary)' : '1px solid var(--border-color)',
-                  fontWeight: 600, fontSize: '0.85rem', padding: '8px 16px', borderRadius: '6px', cursor: 'pointer', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: '6px',
-                }}
-                onClick={() => c.setCajasSubTab(tab.id as any)}
-              >
-                {tab.icon}{tab.label}
-              </button>
-            ))}
+                <button
+                  key={tab.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={c.cajasSubTab === tab.id}
+                  className="linear-tab"
+                  onClick={() => c.setCajasSubTab(tab.id as any)}
+                >
+                  {tab.icon}
+                  {tab.label}
+                </button>
+              ))}
           </div>
 
           <Suspense fallback={<LoadingDashboard />}>
