@@ -73,7 +73,7 @@ export default function AuditLogsFilterBar({
           }}
         >
           <div style={{ gridColumn: 'span 2', minWidth: '220px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-            <label htmlFor="audit-filter-search">Buscar texto, producto, cliente o #ID</label>
+            <label htmlFor="audit-filter-search">Buscar</label>
             <div style={{ position: 'relative' }}>
               <Search
                 size={15}
@@ -95,7 +95,7 @@ export default function AuditLogsFilterBar({
                 style={{ paddingLeft: '32px' }}
                 value={draftFilters.search || ''}
                 onChange={(e) => onDraftChange({ search: e.target.value })}
-                placeholder="Ej: Playadito, D1-R01, #845, matias..."
+                placeholder="Texto, cliente o #ID"
                 autoCorrect="off"
                 autoCapitalize="none"
                 spellCheck={false}
@@ -105,7 +105,7 @@ export default function AuditLogsFilterBar({
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-            <label htmlFor="audit-filter-user">Empleado</label>
+            <label htmlFor="audit-filter-user">Usuario</label>
             <select
               id="audit-filter-user"
               name="userId"
@@ -113,7 +113,7 @@ export default function AuditLogsFilterBar({
               value={draftFilters.userId === undefined ? '' : String(draftFilters.userId)}
               onChange={(e) => onDraftChange({ userId: e.target.value ? Number(e.target.value) : '' })}
             >
-              <option value="">Todos los usuarios</option>
+              <option value="">Todos</option>
               {users.map((u) => (
                 <option key={u.id} value={u.id}>
                   {u.username} ({translateRole(u.role)}){u.isActive === false ? ' · Inactivo' : ''}
@@ -131,7 +131,7 @@ export default function AuditLogsFilterBar({
               value={draftFilters.module || ''}
               onChange={(e) => onDraftChange({ module: e.target.value })}
             >
-              <option value="">Todos los módulos</option>
+              <option value="">Todos</option>
               {AUDIT_MODULES.map((m) => (
                 <option key={m.value} value={m.value}>
                   {m.label}
@@ -152,7 +152,7 @@ export default function AuditLogsFilterBar({
               <option value="">Todos</option>
               <option value="SUCCESS">Exitosos</option>
               <option value="WARNING">Advertencias</option>
-              <option value="ERROR">Con error</option>
+              <option value="ERROR">Errores</option>
             </select>
           </div>
 
@@ -194,17 +194,14 @@ export default function AuditLogsFilterBar({
           }}
         >
           <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '6px' }}>
-            <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', fontWeight: 500 }}>
-              Rango rápido:
-            </span>
             <button type="button" className="btn btn-secondary" style={{ padding: '4px 10px', fontSize: '0.78rem' }} onClick={() => applyDatePreset(0)}>
               Hoy
             </button>
             <button type="button" className="btn btn-secondary" style={{ padding: '4px 10px', fontSize: '0.78rem' }} onClick={() => applyDatePreset(6)}>
-              Últimos 7 días
+              7 días
             </button>
             <button type="button" className="btn btn-secondary" style={{ padding: '4px 10px', fontSize: '0.78rem' }} onClick={() => applyDatePreset(29)}>
-              Últimos 30 días
+              30 días
             </button>
           </div>
 
@@ -212,12 +209,12 @@ export default function AuditLogsFilterBar({
             {hasActiveFilters && (
               <button type="button" className="btn btn-secondary" onClick={onReset}>
                 <RotateCcw size={14} aria-hidden="true" />
-                Limpiar filtros
+                Limpiar
               </button>
             )}
             <button type="submit" className="btn btn-primary">
               <Search size={14} aria-hidden="true" />
-              Buscar / Filtrar
+              Filtrar
             </button>
           </div>
         </div>

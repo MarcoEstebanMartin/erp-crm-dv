@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useState } from 'react';
-import { ChevronDown, ChevronUp, FileText } from 'lucide-react';
+import { ChevronDown, ChevronUp } from 'lucide-react';
 import { api, type AuditLogQueryFilters } from '../../../utils/api';
 import { resolveAuditBadge } from './auditLogDictionary';
 import { formatAuditMessage } from './auditLogFormatter';
@@ -117,21 +117,6 @@ export default function AuditLogsTab() {
 
   return (
     <div className="card" style={{ padding: '24px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-        <div>
-          <h3
-            id="audit-logs-heading"
-            className="card-title"
-            style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}
-          >
-            <FileText size={20} color="var(--color-primary)" aria-hidden="true" /> Registro de Auditoría del Sistema
-          </h3>
-          <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-            Historial completo en español de ingresos y operaciones realizadas por usuarios y procesos automáticos.
-          </p>
-        </div>
-      </div>
-
       <AuditLogsFilterBar
         draftFilters={draftFilters}
         users={users}
@@ -155,30 +140,25 @@ export default function AuditLogsTab() {
       >
         <span>
           {loading
-            ? 'Cargando registros de auditoría...'
-            : `Mostrando ${auditLogs.length} de ${totalCount} registros${activeFilterFlag ? ' (con filtros activos)' : ''}`}
+            ? 'Cargando...'
+            : `${auditLogs.length} de ${totalCount}${activeFilterFlag ? ' (filtrados)' : ''}`}
         </span>
-        {auditLogs.length > 0 && (
-          <span style={{ fontSize: '0.76rem', color: 'var(--text-muted)' }}>
-            Hacé clic en una fila o en &quot;Ver&quot; para inspeccionar el detalle completo
-          </span>
-        )}
       </div>
 
       <div
         className="table-container"
         tabIndex={0}
         role="region"
-        aria-labelledby="audit-logs-heading"
+        aria-label="Registros de auditoría"
         style={{ maxHeight: 'min(680px, 75vh)', overflow: 'auto' }}
       >
         <table style={{ width: '100%', fontSize: '0.85rem', borderCollapse: 'separate', borderSpacing: 0 }}>
           <thead style={{ position: 'sticky', insetBlockStart: 0, zIndex: 1 }}>
             <tr>
-              <th style={{ padding: '10px 12px', backgroundColor: '#F9FAFB', whiteSpace: 'nowrap' }}>Fecha y Hora</th>
-              <th style={{ padding: '10px 12px', backgroundColor: '#F9FAFB', whiteSpace: 'nowrap' }}>Usuario en Sesión</th>
-              <th style={{ padding: '10px 12px', backgroundColor: '#F9FAFB', whiteSpace: 'nowrap' }}>Acción / Categoría</th>
-              <th style={{ padding: '10px 12px', backgroundColor: '#F9FAFB' }}>Detalle de la Operación</th>
+              <th style={{ padding: '10px 12px', backgroundColor: '#F9FAFB', whiteSpace: 'nowrap' }}>Fecha</th>
+              <th style={{ padding: '10px 12px', backgroundColor: '#F9FAFB', whiteSpace: 'nowrap' }}>Usuario</th>
+              <th style={{ padding: '10px 12px', backgroundColor: '#F9FAFB', whiteSpace: 'nowrap' }}>Acción</th>
+              <th style={{ padding: '10px 12px', backgroundColor: '#F9FAFB' }}>Operación</th>
               <th style={{ padding: '10px 12px', backgroundColor: '#F9FAFB', textAlign: 'right', whiteSpace: 'nowrap' }}>
                 Detalle
               </th>
@@ -188,11 +168,7 @@ export default function AuditLogsTab() {
             {auditLogs.length === 0 ? (
               <tr>
                 <td colSpan={5} style={{ textAlign: 'center', padding: '24px', color: 'var(--text-secondary)' }}>
-                  {loading
-                    ? 'Consultando auditoría...'
-                    : activeFilterFlag
-                      ? 'No se encontraron registros que coincidan con los filtros aplicados.'
-                      : 'No hay registros de auditoría disponibles en esta página.'}
+                  {loading ? 'Cargando...' : activeFilterFlag ? 'Sin resultados' : 'Sin registros'}
                 </td>
               </tr>
             ) : (
@@ -200,7 +176,7 @@ export default function AuditLogsTab() {
                 const rawUser = l.user?.username || l.username;
                 const displayUser =
                   !rawUser || rawUser.toLowerCase() === 'system' || rawUser.toLowerCase() === 'sistema'
-                    ? 'Sistema (Automático)'
+                    ? 'Sistema'
                     : rawUser;
                 const actionBadge = resolveAuditBadge(l.action || l.category || '');
                 const detailMsg = formatAuditMessage(l);

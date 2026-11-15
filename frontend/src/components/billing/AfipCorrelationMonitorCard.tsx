@@ -1,4 +1,4 @@
-import { CheckCircle2, TrendingDown, TrendingUp } from 'lucide-react';
+import { TrendingDown, TrendingUp } from 'lucide-react';
 import { type AfipMonthlyMetrics, formatCentsARS } from '../../utils/afipSubdiarioPdf';
 
 export function resolveRatioPercentages(ventasCents: bigint, comprasCents: bigint): {
@@ -40,43 +40,7 @@ export function AfipCorrelationMonitorCard({
   const isVentasTooHigh = metrics.ventasTotalCents * 10n > metrics.comprasTotalCents * 15n;
   const isComprasTooHigh = metrics.comprasTotalCents * 10n > metrics.ventasTotalCents * 12n;
 
-  let statusIcon = <CheckCircle2 size={18} aria-hidden="true" />;
-  let statusText = 'Correlación balanceada';
-  let statusDesc =
-    'La proporción entre compras registradas y ventas oficiales se mantiene equilibrada.';
-  let alertBoxStyle = {
-    backgroundColor: '#F9FAFB',
-    border: '1px solid #E5E7EB',
-    color: '#111827',
-    accent: '#111827',
-  };
-
-  if (isEmptyPeriod) {
-    statusText = 'Sin movimientos oficiales';
-    statusDesc = 'No hay compras ni ventas autorizadas con CAE en el período seleccionado.';
-    alertBoxStyle = {
-      backgroundColor: '#F9FAFB',
-      border: '1px solid #E5E7EB',
-      color: '#4B5563',
-      accent: '#6B7280',
-    };
-  } else if (isComprasTooHigh) {
-    statusIcon = <TrendingDown size={18} aria-hidden="true" />;
-    statusText = 'Alerta fiscal: Compras superan Ventas';
-    statusDesc =
-      'Los comprobantes de compra registrados superan las ventas oficiales. Revisá la facturación oficial del período.';
-    alertBoxStyle = {
-      backgroundColor: '#FEF2F2',
-      border: '1px solid rgba(227, 6, 19, 0.28)',
-      color: '#111827',
-      accent: '#E30613',
-    };
-  } else if (isVentasTooHigh) {
-    statusIcon = <TrendingUp size={18} aria-hidden="true" />;
-    statusText = 'Atención: Ventas elevadas';
-    statusDesc =
-      'La facturación oficial supera significativamente a las compras cargadas. Verificá si faltan facturas de proveedores.';
-  }
+  const showAlert = !isEmptyPeriod && (isComprasTooHigh || isVentasTooHigh);
 
   return (
     <div
@@ -84,7 +48,6 @@ export function AfipCorrelationMonitorCard({
         border: '1px solid var(--border-color)',
         borderRadius: '10px',
         padding: '20px',
-        marginBottom: '24px',
         backgroundColor: '#FFFFFF',
         position: 'relative',
         overflow: 'hidden',
@@ -137,7 +100,7 @@ export function AfipCorrelationMonitorCard({
               textTransform: 'uppercase',
             }}
           >
-            Compras Oficiales
+            Compras
           </span>
           <span
             className="tabular-nums"
@@ -152,7 +115,7 @@ export function AfipCorrelationMonitorCard({
             {formatCentsARS(metrics.comprasTotalCents)}
           </span>
           <span className="tabular-nums" style={{ fontSize: '0.75rem', color: '#6B7280' }}>
-            Neto Gravado: {formatCentsARS(metrics.comprasNetoCents)}
+            Neto: {formatCentsARS(metrics.comprasNetoCents)}
           </span>
         </div>
 
@@ -173,7 +136,7 @@ export function AfipCorrelationMonitorCard({
               textTransform: 'uppercase',
             }}
           >
-            Ventas Oficiales (con CAE)
+            Ventas CAE
           </span>
           <span
             className="tabular-nums"
@@ -188,7 +151,7 @@ export function AfipCorrelationMonitorCard({
             {formatCentsARS(metrics.ventasTotalCents)}
           </span>
           <span className="tabular-nums" style={{ fontSize: '0.75rem', color: '#6B7280' }}>
-            Neto Gravado: {formatCentsARS(metrics.ventasNetoCents)}
+            Neto: {formatCentsARS(metrics.ventasNetoCents)}
           </span>
         </div>
 
@@ -209,7 +172,7 @@ export function AfipCorrelationMonitorCard({
               textTransform: 'uppercase',
             }}
           >
-            Saldo Técnico IVA
+            Saldo IVA
           </span>
           <span
             className="tabular-nums"
@@ -224,14 +187,12 @@ export function AfipCorrelationMonitorCard({
             {formatCentsARS(ivaBalanceCents)}
           </span>
           <span style={{ fontSize: '0.75rem', color: '#6B7280' }}>
-            {ivaBalanceCents > 0n
-              ? 'Saldo a Pagar (Débito > Crédito)'
-              : 'Saldo Técnico a Favor'}
+            {ivaBalanceCents > 0n ? 'A pagar' : ivaBalanceCents < 0n ? 'A favor' : 'Saldado'}
           </span>
         </div>
       </div>
 
-      <div style={{ marginBottom: '16px' }}>
+      <div style={{ marginBottom: showAlert ? '16px' : 0 }}>
         <div
           className="tabular-nums"
           style={{
@@ -273,34 +234,34 @@ export function AfipCorrelationMonitorCard({
         </div>
       </div>
 
-      <div
-        style={{
-          backgroundColor: alertBoxStyle.backgroundColor,
-          border: alertBoxStyle.border,
-          color: alertBoxStyle.color,
-          padding: '14px',
-          borderRadius: '8px',
-          display: 'flex',
-          gap: '10px',
-          alignItems: 'flex-start',
-        }}
-      >
-        <div style={{ color: alertBoxStyle.accent, marginTop: '2px' }}>{statusIcon}</div>
-        <div>
-          <span
-            style={{
-              display: 'block',
-              fontWeight: 600,
-              fontSize: '0.88rem',
-              marginBottom: '2px',
-              color: alertBoxStyle.accent,
-            }}
-          >
-            {statusText}
-          </span>
-          <span style={{ fontSize: '0.82rem', color: '#4B5563', lineHeight: 1.4 }}>{statusDesc}</span>
+      {showAlert && (
+        <div
+          style={{
+            backgroundColor: isComprasTooHigh ? '#FEF2F2' : '#FFFBEB',
+            border: isComprasTooHigh ? '1px solid rgba(227, 6, 19, 0.28)' : '1px solid #FDE68A',
+            color: isComprasTooHigh ? '#E30613' : '#B45309',
+            padding: '10px 14px',
+            borderRadius: '8px',
+            display: 'flex',
+            gap: '8px',
+            alignItems: 'center',
+            fontSize: '0.84rem',
+            fontWeight: 600,
+          }}
+        >
+          {isComprasTooHigh ? (
+            <>
+              <TrendingDown size={16} aria-hidden="true" />
+              <span>Compras superan ventas CAE</span>
+            </>
+          ) : (
+            <>
+              <TrendingUp size={16} aria-hidden="true" />
+              <span>Ventas superan compras registradas</span>
+            </>
+          )}
         </div>
-      </div>
+      )}
     </div>
   );
 }

@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import { UserPlus, Eye, EyeOff } from 'lucide-react';
+import React, { useId, useState } from 'react';
+import { UserPlus, Eye, EyeOff, X } from 'lucide-react';
+import { NativeModalDialog } from '../../modals/NativeModalDialog';
 
 export interface UserFormState {
   open: boolean;
@@ -24,27 +25,22 @@ export default function UserFormModal({
   onSubmit,
 }: UserFormModalProps) {
   const [showPassword, setShowPassword] = useState(false);
-
-  if (!userModal.open) return null;
+  const titleId = useId();
+  const usernameId = useId();
+  const passwordId = useId();
+  const roleId = useId();
 
   const isEditingSelf = Boolean(userModal.isEdit && currentUserId && userModal.id === currentUserId);
+  const closeModal = () => setUserModal({ ...userModal, open: false });
 
   return (
-    <div
-      className="modal-overlay animate-fade-in"
-      style={{ zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+    <NativeModalDialog
+      isOpen={userModal.open}
+      onClose={closeModal}
+      ariaLabelledBy={titleId}
+      style={{ maxWidth: '460px', width: '100%', padding: 0 }}
     >
-      <div
-        className="modal-content"
-        style={{
-          maxWidth: '480px',
-          width: '100%',
-          padding: '24px',
-          borderRadius: '12px',
-          background: '#fff',
-          boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
-        }}
-      >
+      <div style={{ padding: '24px' }}>
         <div
           className="modal-header"
           style={{
@@ -56,56 +52,64 @@ export default function UserFormModal({
             paddingBottom: '12px',
           }}
         >
-          <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <UserPlus size={20} color="var(--primary-color)" />
-            {userModal.isEdit ? `Editar Empleado: ${userModal.username}` : 'Registrar Nuevo Empleado'}
+          <h3 id={titleId} style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <UserPlus size={20} color="var(--color-primary)" />
+            {userModal.isEdit ? `Editar ${userModal.username}` : 'Nuevo usuario'}
           </h3>
           <button
             type="button"
             className="btn btn-ghost"
+            aria-label="Cerrar"
             style={{ padding: '4px', cursor: 'pointer' }}
-            onClick={() => setUserModal({ ...userModal, open: false })}
+            onClick={closeModal}
           >
-            ✕
+            <X size={18} />
           </button>
         </div>
 
         <form onSubmit={onSubmit}>
           <div className="form-group" style={{ marginBottom: '14px' }}>
-            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: '6px' }}>
-              Nombre de usuario (Login)
+            <label htmlFor={usernameId} style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: '6px' }}>
+              Usuario
             </label>
             <input
+              id={usernameId}
+              name="username"
               type="text"
               className="input"
-              placeholder="ej: esteban, pablo, diego..."
               value={userModal.username}
               onChange={(e) => setUserModal({ ...userModal, username: e.target.value })}
               minLength={3}
               maxLength={50}
               required
+              autoComplete="username"
               style={{ width: '100%' }}
             />
           </div>
 
           <div className="form-group" style={{ marginBottom: '14px' }}>
-            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: '6px' }}>
-              {userModal.isEdit ? 'Nueva Contraseña (dejar en blanco para conservar actual)' : 'Contraseña de Acceso'}
+            <label htmlFor={passwordId} style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: '6px' }}>
+              {userModal.isEdit ? 'Nueva clave' : 'Clave'}
             </label>
             <div style={{ position: 'relative' }}>
               <input
+                id={passwordId}
+                name="password"
                 type={showPassword ? 'text' : 'password'}
                 className="input"
-                placeholder={userModal.isEdit ? '•••••••• (Mínimo 6 caracteres para cambiar)' : '•••••••• (Mínimo 6 caracteres)'}
+                placeholder={userModal.isEdit ? 'Dejar vacío para conservar' : undefined}
                 value={userModal.password || ''}
                 onChange={(e) => setUserModal({ ...userModal, password: e.target.value })}
                 minLength={6}
                 required={!userModal.isEdit}
+                autoComplete="new-password"
                 style={{ width: '100%', paddingRight: '40px' }}
               />
               <button
                 type="button"
-                onClick={() => setShowPassword(!showPassword)}
+                aria-pressed={showPassword}
+                aria-label={showPassword ? 'Ocultar clave' : 'Mostrar clave'}
+                onClick={() => setShowPassword((prev) => !prev)}
                 style={{
                   position: 'absolute',
                   right: '10px',
@@ -120,16 +124,15 @@ export default function UserFormModal({
                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </div>
-            <small style={{ display: 'block', marginTop: '4px', fontSize: '0.74rem', color: 'var(--text-secondary)' }}>
-              Mínimo 6 caracteres. Al cambiar la clave se cierran automáticamente sesiones abiertas con la clave anterior.
-            </small>
           </div>
 
           <div className="form-group" style={{ marginBottom: '16px' }}>
-            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: '6px' }}>
-              Rol y Nivel de Acceso en Distribuidora
+            <label htmlFor={roleId} style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: '6px' }}>
+              Rol
             </label>
             <select
+              id={roleId}
+              name="role"
               className="select"
               value={userModal.role}
               disabled={isEditingSelf}
@@ -142,45 +145,26 @@ export default function UserFormModal({
                 ...(isEditingSelf ? { opacity: 0.65, cursor: 'not-allowed' } : {}),
               }}
             >
-              <option value="ADMIN">Administrador General (Pablo / Esteban - Acceso Total)</option>
-              <option value="FACTURACION">Oficina / Administración (Facturación, Listas de Precio, Recibos, Notas de Crédito)</option>
-              <option value="VENDEDOR">Vendedor de Calle (Toma de pedidos en ruta)</option>
-              <option value="DEPOSITO">Depósito y Logística (Armado de pedidos, Balanza, Stock)</option>
+              <option value="ADMIN">Administrador</option>
+              <option value="FACTURACION">Facturación</option>
+              <option value="VENDEDOR">Vendedor</option>
+              <option value="DEPOSITO">Depósito</option>
             </select>
-            {isEditingSelf && (
-              <small style={{ display: 'block', marginTop: '4px', fontSize: '0.74rem', color: '#B45309' }}>
-                No podés cambiar el rol de tu propio usuario en sesión.
-              </small>
-            )}
-          </div>
-
-          <div
-            style={{
-              padding: '10px 12px',
-              backgroundColor: '#F8FAFC',
-              borderRadius: '8px',
-              border: '1px solid var(--border-color)',
-              marginBottom: '16px',
-              fontSize: '0.78rem',
-              color: 'var(--text-secondary)',
-            }}
-          >
-            Los permisos y módulos visibles se rigen al 100% por el <strong>Rol</strong> asignado.
           </div>
 
           <div
             className="modal-footer"
             style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', paddingTop: '12px', borderTop: '1px solid var(--border-color)' }}
           >
-            <button type="button" className="btn btn-secondary" onClick={() => setUserModal({ ...userModal, open: false })}>
+            <button type="button" className="btn btn-secondary" onClick={closeModal}>
               Cancelar
             </button>
             <button type="submit" className="btn btn-primary">
-              {userModal.isEdit ? 'Guardar Cambios' : 'Crear Usuario'}
+              {userModal.isEdit ? 'Guardar' : 'Crear'}
             </button>
           </div>
         </form>
       </div>
-    </div>
+    </NativeModalDialog>
   );
 }

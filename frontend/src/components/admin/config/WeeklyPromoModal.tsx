@@ -213,7 +213,7 @@ export default function WeeklyPromoModal({ open, products, onClose, onCreated }:
       `}</style>
       <dialog ref={dialogRef} aria-labelledby={titleId} {...({ closedby: 'any' } as Record<string, unknown>)} onClose={onClose} className="weekly-promo-dialog">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '18px 22px', borderBottom: '1px solid #E5E7EB' }}>
-          <h3 id={titleId} style={{ margin: 0, fontSize: '1.02rem', fontWeight: 700, color: '#111827' }}>Nueva oferta semanal</h3>
+          <h3 id={titleId} style={{ margin: 0, fontSize: '1.02rem', fontWeight: 700, color: '#111827' }}>Nueva oferta</h3>
           <button type="button" className="btn btn-ghost btn-sm" aria-label="Cerrar" onClick={() => dialogRef.current?.close()} style={{ padding: '4px', color: '#6B7280' }}>
             <X size={18} />
           </button>
@@ -248,7 +248,7 @@ export default function WeeklyPromoModal({ open, products, onClose, onCreated }:
                   selectedProductId={singleProductId}
                   searchValue={singleSearch}
                   excludePesable={type === 'BUY_X_GET_Y'}
-                  placeholder={type === 'BUY_X_GET_Y' ? 'Buscar producto por unidad (no pesable)...' : 'Buscar por nombre o SKU...'}
+                  placeholder={type === 'BUY_X_GET_Y' ? 'Buscar producto por unidad...' : 'Buscar producto...'}
                   onSearchChange={(val) => {
                     setSingleSearch(val);
                     if (selectedSingle && val !== selectedSingle.name) setSingleProductId(null);
@@ -259,12 +259,12 @@ export default function WeeklyPromoModal({ open, products, onClose, onCreated }:
               {type === 'OFFER_PRICE' ? (
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                   <div>
-                    <label className="wp-label">Precio oferta ($)</label>
-                    <input type="number" min="1" step="1" className="input" placeholder="Ej: 2500" value={offerPrice} onChange={(e) => setOfferPrice(e.target.value)} />
+                    <label className="wp-label">Precio ($) </label>
+                    <input type="number" min="1" step="1" className="input" value={offerPrice} onChange={(e) => setOfferPrice(e.target.value)} />
                   </div>
                   <div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '5px' }}>
-                      <label className="wp-label" style={{ marginBottom: 0 }}>Cantidad mínima (u.)</label>
+                      <label className="wp-label" style={{ marginBottom: 0 }}>Cantidad mínima</label>
                       {selectedSingle?.unitsPerBox && selectedSingle.unitsPerBox > 1 && (
                         <button type="button" className="wp-box-btn" onClick={() => setMinQty(String(selectedSingle.unitsPerBox))}>1 caja ({selectedSingle.unitsPerBox} u.)</button>
                       )}
@@ -276,7 +276,7 @@ export default function WeeklyPromoModal({ open, products, onClose, onCreated }:
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                   <div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '5px' }}>
-                      <label className="wp-label" style={{ marginBottom: 0 }}>Pagás (N unidades)</label>
+                      <label className="wp-label" style={{ marginBottom: 0 }}>Pagás</label>
                       {selectedSingle?.unitsPerBox && selectedSingle.unitsPerBox > 1 && (
                         <button type="button" className="wp-box-btn" onClick={() => setMinQty(String(selectedSingle.unitsPerBox))}>1 caja ({selectedSingle.unitsPerBox} u.)</button>
                       )}
@@ -284,14 +284,14 @@ export default function WeeklyPromoModal({ open, products, onClose, onCreated }:
                     <input type="number" min="1" step="1" className="input" value={minQty} onChange={(e) => setMinQty(e.target.value)} />
                   </div>
                   <div>
-                    <label className="wp-label">Llevás sin cargo (M)</label>
+                    <label className="wp-label">Bonificadas</label>
                     <input type="number" min="1" step="1" className="input" value={freeQty} onChange={(e) => setFreeQty(e.target.value)} />
                   </div>
                 </div>
               )}
               {selectedSingle && type === 'OFFER_PRICE' && parseIntegerPeso(offerPrice) > 0 && (
                 <div style={{ background: '#F9FAFB', border: '1px solid #E5E7EB', borderRadius: '8px', padding: '9px 12px', fontSize: '0.8rem', color: '#374151' }}>
-                  Lista actual: <strong>{formatArsInteger(selectedSingle.listPrice)}</strong> → Ahorro por unidad:{' '}
+                  Lista: <strong>{formatArsInteger(selectedSingle.listPrice)}</strong> · Ahorro/u.:{' '}
                   <strong>{formatArsInteger(parseIntegerPeso(selectedSingle.listPrice) - parseIntegerPeso(offerPrice))}</strong>
                 </div>
               )}
@@ -322,7 +322,7 @@ export default function WeeklyPromoModal({ open, products, onClose, onCreated }:
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                       <div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                          <label className="wp-label" style={{ marginBottom: 0 }}>Cantidad (u.)</label>
+                          <label className="wp-label" style={{ marginBottom: 0 }}>Cantidad</label>
                           {selectedProd?.unitsPerBox && selectedProd.unitsPerBox > 1 && (
                             <button type="button" className="wp-box-btn" onClick={() => setComboRows((prev) => prev.map((r) => (r.key === row.key ? { ...r, minQuantity: String(selectedProd.unitsPerBox) } : r)))}>
                               1 caja ({selectedProd.unitsPerBox} u.)
@@ -332,37 +332,37 @@ export default function WeeklyPromoModal({ open, products, onClose, onCreated }:
                         <input type="number" min="1" step="1" className="input" value={row.minQuantity} onChange={(e) => setComboRows((prev) => prev.map((r) => (r.key === row.key ? { ...r, minQuantity: e.target.value } : r)))} />
                       </div>
                       <div>
-                        <label className="wp-label">Precio combo c/u ($)</label>
-                        <input type="number" min="1" step="1" className="input" placeholder="Ej: 1950" value={row.promoUnitPrice} onChange={(e) => setComboRows((prev) => prev.map((r) => (r.key === row.key ? { ...r, promoUnitPrice: e.target.value } : r)))} />
+                        <label className="wp-label">Precio unitario ($)</label>
+                        <input type="number" min="1" step="1" className="input" value={row.promoUnitPrice} onChange={(e) => setComboRows((prev) => prev.map((r) => (r.key === row.key ? { ...r, promoUnitPrice: e.target.value } : r)))} />
                       </div>
                     </div>
                   </div>
                 );
               })}
               <button type="button" className="btn btn-ghost btn-sm" onClick={() => { const key = nextRowKey.current++; setComboRows((prev) => [...prev, { key, productId: null, search: '', minQuantity: '1', promoUnitPrice: '' }]); }} style={{ alignSelf: 'flex-start', border: '1px dashed #D1D5DB', fontSize: '0.8rem' }}>
-                <Plus size={14} /> Agregar producto al combo
+                <Plus size={14} /> Agregar producto
               </button>
               {comboTotals.complete && (
                 <div style={{ background: '#F9FAFB', border: '1px solid #E5E7EB', borderRadius: '8px', padding: '9px 12px', fontSize: '0.8rem', color: '#374151' }}>
-                  Total del combo: <strong>{formatArsInteger(comboTotals.promoTotal)}</strong> (Lista: {formatArsInteger(comboTotals.listTotal)} · Ahorro: <strong>{formatArsInteger(comboTotals.savings)}</strong>)
+                  Total: <strong>{formatArsInteger(comboTotals.promoTotal)}</strong> · Lista: {formatArsInteger(comboTotals.listTotal)} · Ahorro: <strong>{formatArsInteger(comboTotals.savings)}</strong>
                 </div>
               )}
             </div>
           )}
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', borderTop: '1px solid #F3F4F6', paddingTop: '12px' }}>
-            <div><label className="wp-label">Vigencia desde</label><input type="date" className="input" value={startDate} onChange={(e) => setStartDate(e.target.value)} /></div>
+            <div><label className="wp-label">Desde</label><input type="date" className="input" value={startDate} onChange={(e) => setStartDate(e.target.value)} /></div>
             <div><label className="wp-label">Hasta</label><input type="date" className="input" value={endDate} onChange={(e) => setEndDate(e.target.value)} /></div>
           </div>
 
           <div>
-            <label className="wp-label">Nombre visible (opcional)</label>
-            <input type="text" className="input" maxLength={120} placeholder="Se genera automáticamente si lo dejás vacío" value={name} onChange={(e) => setName(e.target.value)} />
+            <label className="wp-label">Nombre</label>
+            <input type="text" className="input" maxLength={120} value={name} onChange={(e) => setName(e.target.value)} />
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', borderTop: '1px solid #E5E7EB', paddingTop: '14px' }}>
             <button type="button" className="btn btn-ghost" onClick={() => dialogRef.current?.close()} disabled={saving}>Cancelar</button>
-            <button type="submit" className="btn btn-primary" disabled={saving}>{saving ? 'Guardando...' : 'Publicar oferta'}</button>
+            <button type="submit" className="btn btn-primary" disabled={saving}>{saving ? 'Guardando...' : 'Publicar'}</button>
           </div>
         </form>
       </dialog>

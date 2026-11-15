@@ -52,10 +52,15 @@
 
 ## Artículo V: Estética UI (Stripe / Linear / Notion) y Puertas de Calidad
 1. **Minimalismo y Velocidad**: Abundante espacio en blanco, bordes de `1px`, paleta de grises de alta fidelidad y rojo `#E30613` reservado exclusivamente para CTAs críticos o peligro.
-2. **Puertas de Calidad Obligatorias (Quality Gates)**: Ningún paso se da por terminado sin aprobar con **0 errores**:
+2. **Cero Palabras de Relleno (Minimalismo Premium)**: Mostrar únicamente datos reales importantes y acciones directas. Queda **prohibido**:
+   - Escribir subtítulos o párrafos explicativos debajo de títulos, interruptores o botones autoexplicativos (ej.: usar únicamente el botón `"Cambiar Clave"`, sin tarjetas envolventes ni frases explicativas).
+   - Agregar supratítulos decorativos (`SEGURIDAD DE LA CUENTA`, `REGLAS OPERATIVAS`, `PROMOCIONES COMERCIALES`) cuando el contenido ya es evidente.
+   - Agregar notas al pie o estados obvios (*"Encabezado oficial sincronizado..."*, *"Ingresá tus credenciales"*, *"Conexión establecida"*, *"Hacé clic en una fila..."*); solo mostrar avisos ante errores o alertas accionables.
+   - Redactar botones o etiquetas verbosas: priorizar microcopy directo de 1 a 3 palabras (`Cambiar Clave`, `Editar`, `Guardar`, `Nuevo usuario`, `TXT AFIP (.zip)`, `Subdiarios PDF`).
+3. **Puertas de Calidad Obligatorias (Quality Gates)**: Ningún paso se da por terminado sin aprobar con **0 errores**:
    - `cd backend && npx tsc --noEmit`
    - `cd backend && npx vitest run`
    - `cd frontend && npx tsc --noEmit`
 
 ---
-**Versión de Constitución**: 2.0.0 (Fusión Blindada SDD) | **Estado**: Activa y Vinculante
+**Versión de Constitución**: 2.1.0 (Fusión Blindada SDD) | **Estado**: Activa y Vinculante

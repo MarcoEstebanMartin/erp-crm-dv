@@ -58,22 +58,22 @@ export default function AuditLogDetailPanel({ log }: AuditLogDetailPanelProps) {
             fontWeight: 500,
           }}
         >
-          <strong>Motivo registrado:</strong> {inspection.errorBanner}
+          <strong>Motivo:</strong> {inspection.errorBanner}
         </div>
       )}
 
       {inspection.batchItems && inspection.batchItems.length > 0 && (
         <div>
           <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '6px' }}>
-            Detalle completo de productos ajustados ({inspection.batchItems.length})
+            Productos ajustados ({inspection.batchItems.length})
           </div>
           <div style={{ overflowX: 'auto', border: '1px solid var(--border-color)', borderRadius: '6px' }}>
             <table style={{ width: '100%', fontSize: '0.8rem', borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ backgroundColor: '#F9FAFB', borderBottom: '1px solid var(--border-color)' }}>
                   <th style={{ padding: '7px 10px', textAlign: 'left' }}>Producto</th>
-                  <th style={{ padding: '7px 10px', textAlign: 'right', whiteSpace: 'nowrap' }}>Stock Anterior</th>
-                  <th style={{ padding: '7px 10px', textAlign: 'right', whiteSpace: 'nowrap' }}>Stock Nuevo</th>
+                  <th style={{ padding: '7px 10px', textAlign: 'right', whiteSpace: 'nowrap' }}>Anterior</th>
+                  <th style={{ padding: '7px 10px', textAlign: 'right', whiteSpace: 'nowrap' }}>Nuevo</th>
                   <th style={{ padding: '7px 10px', textAlign: 'right', whiteSpace: 'nowrap' }}>Diferencia</th>
                 </tr>
               </thead>
@@ -118,7 +118,7 @@ export default function AuditLogDetailPanel({ log }: AuditLogDetailPanelProps) {
       {inspection.changes.length > 0 && (
         <div>
           <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '6px' }}>
-            {inspection.hasBeforeColumn ? 'Comparativa Antes vs. Después' : 'Datos registrados en la operación'}
+            {inspection.hasBeforeColumn ? 'Cambios' : 'Datos'}
           </div>
           <div style={{ overflowX: 'auto', border: '1px solid var(--border-color)', borderRadius: '6px' }}>
             <table style={{ width: '100%', fontSize: '0.8rem', borderCollapse: 'collapse' }}>
@@ -126,10 +126,10 @@ export default function AuditLogDetailPanel({ log }: AuditLogDetailPanelProps) {
                 <tr style={{ backgroundColor: '#F9FAFB', borderBottom: '1px solid var(--border-color)' }}>
                   <th style={{ padding: '7px 10px', textAlign: 'left', width: '28%' }}>Campo</th>
                   {inspection.hasBeforeColumn && (
-                    <th style={{ padding: '7px 10px', textAlign: 'left', width: '36%' }}>Valor Anterior</th>
+                    <th style={{ padding: '7px 10px', textAlign: 'left', width: '36%' }}>Anterior</th>
                   )}
                   <th style={{ padding: '7px 10px', textAlign: 'left' }}>
-                    {inspection.hasBeforeColumn ? 'Valor Nuevo' : 'Valor Registrado'}
+                    {inspection.hasBeforeColumn ? 'Nuevo' : 'Valor'}
                   </th>
                 </tr>
               </thead>
@@ -157,7 +157,7 @@ export default function AuditLogDetailPanel({ log }: AuditLogDetailPanelProps) {
 
       {!inspection.errorBanner && !inspection.batchItems?.length && inspection.changes.length === 0 && (
         <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-          No se registraron campos adicionales más allá del resumen de la operación.
+          Sin detalle adicional
         </p>
       )}
     </div>

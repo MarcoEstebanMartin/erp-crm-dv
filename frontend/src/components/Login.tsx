@@ -49,12 +49,12 @@ export default function Login({ onLoginSuccess, onOpenStore }: LoginProps) {
   return (
     <div className="layout-auth">
       <div className="card auth-card">
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '22px' }}>
           {!logoFailed ? (
-            <img 
-              src="/logo.png" 
-              alt="Logo DV" 
-              style={{ height: '60px', objectFit: 'contain', marginBottom: '8px' }}
+            <img
+              src="/logo.png"
+              alt="Logo DV"
+              style={{ height: '60px', objectFit: 'contain' }}
               onError={() => setLogoFailed(true)}
             />
           ) : (
@@ -63,14 +63,12 @@ export default function Login({ onLoginSuccess, onOpenStore }: LoginProps) {
               color: '#fff',
               padding: '12px',
               borderRadius: '50%',
-              display: 'inline-flex'
+              display: 'inline-flex',
             }}>
               <Shield size={28} />
             </div>
           )}
         </div>
-        
-        <p style={{ fontSize: '0.85rem', marginBottom: '28px', color: 'var(--text-secondary)' }}>Ingresá tus credenciales de acceso</p>
 
         {error && (
           <div style={{
@@ -81,7 +79,7 @@ export default function Login({ onLoginSuccess, onOpenStore }: LoginProps) {
             fontSize: '0.85rem',
             textAlign: 'left',
             marginBottom: '20px',
-            border: '1px solid rgba(227, 6, 19, 0.15)'
+            border: '1px solid rgba(227, 6, 19, 0.15)',
           }}>
             {error}
           </div>
@@ -93,10 +91,11 @@ export default function Login({ onLoginSuccess, onOpenStore }: LoginProps) {
             <input
               type="text"
               id="username"
+              name="username"
               className="input"
-              placeholder="ej: admin, vendedor, deposito"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
+              required
               autoCapitalize="none"
               autoCorrect="off"
               spellCheck={false}
@@ -106,20 +105,23 @@ export default function Login({ onLoginSuccess, onOpenStore }: LoginProps) {
           </div>
 
           <div className="form-group" style={{ textAlign: 'left', position: 'relative' }}>
-            <label htmlFor="password">Contraseña</label>
+            <label htmlFor="password">Clave</label>
             <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
               <input
                 type={showPassword ? 'text' : 'password'}
                 id="password"
+                name="password"
                 className="input"
-                placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                required
                 autoComplete="current-password"
                 style={{ width: '100%', paddingRight: '40px' }}
               />
               <button
                 type="button"
+                aria-pressed={showPassword}
+                aria-label={showPassword ? 'Ocultar clave' : 'Mostrar clave'}
                 onClick={() => setShowPassword(!showPassword)}
                 style={{
                   position: 'absolute',
@@ -131,7 +133,7 @@ export default function Login({ onLoginSuccess, onOpenStore }: LoginProps) {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  padding: '4px'
+                  padding: '4px',
                 }}
               >
                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -139,26 +141,19 @@ export default function Login({ onLoginSuccess, onOpenStore }: LoginProps) {
             </div>
           </div>
 
-          <div className="form-group" style={{ margin: '20px 0 24px 0', alignItems: 'flex-start' }}>
-            {serverOnline === false && (
-              <span style={{ fontSize: '0.85rem', color: 'var(--color-danger)', fontWeight: 600, marginTop: '4px', textAlign: 'left' }}>
-                ❌ El servidor está desconectado. Por favor, iniciá el backend para poder ingresar.
-              </span>
-            )}
-            {serverOnline === true && (
-              <span style={{ fontSize: '0.75rem', color: 'var(--color-success)', marginTop: '4px', textAlign: 'left' }}>
-                🟢 Conexión con el servidor establecida.
-              </span>
-            )}
-          </div>
+          {serverOnline === false && (
+            <div style={{ marginTop: '14px', textAlign: 'left', fontSize: '0.82rem', color: '#E30613', fontWeight: 600 }}>
+              Servidor sin conexión
+            </div>
+          )}
 
           <button
             type="submit"
             className="btn btn-primary"
-            style={{ width: '100%', padding: '14px' }}
+            style={{ width: '100%', padding: '14px', marginTop: '20px' }}
             disabled={loading || serverOnline === false}
           >
-            {loading ? 'Accediendo...' : 'Iniciar sesión'}
+            {loading ? 'Ingresando...' : 'Ingresar'}
           </button>
         </form>
       </div>

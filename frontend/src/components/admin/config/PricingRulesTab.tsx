@@ -105,16 +105,11 @@ export default function PricingRulesTab({ setErrorMsg, setSuccessMsg }: PricingR
   return (
     <div style={{ backgroundColor: '#FFFFFF', border: '1px solid var(--border-color)', borderRadius: '10px', padding: '24px' }}>
       <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '16px', marginBottom: '20px' }}>
-        <div>
-          <span style={{ fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.06em', color: '#6B7280', textTransform: 'uppercase' }}>
-            Promociones comerciales
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <h2 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700, color: '#111827' }}>Ofertas</h2>
+          <span style={{ fontSize: '0.76rem', fontWeight: 600, color: '#374151', background: '#F3F4F6', border: '1px solid #E5E7EB', borderRadius: '999px', padding: '2px 10px' }}>
+            {activeCount} {activeCount === 1 ? 'vigente' : 'vigentes'}
           </span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '4px' }}>
-            <h2 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700, color: '#111827' }}>Ofertas Semanales</h2>
-            <span style={{ fontSize: '0.76rem', fontWeight: 600, color: '#374151', background: '#F3F4F6', border: '1px solid #E5E7EB', borderRadius: '999px', padding: '2px 10px' }}>
-              {activeCount} {activeCount === 1 ? 'vigente' : 'vigentes'}
-            </span>
-          </div>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -149,13 +144,11 @@ export default function PricingRulesTab({ setErrorMsg, setSuccessMsg }: PricingR
 
       {loading ? (
         <div style={{ padding: '36px 16px', textAlign: 'center', color: '#6B7280', fontSize: '0.88rem' }}>
-          Cargando ofertas semanales...
+          Cargando...
         </div>
       ) : visiblePromos.length === 0 ? (
         <div style={{ border: '1px dashed #E5E7EB', borderRadius: '8px', padding: '36px 20px', textAlign: 'center', color: '#6B7280', fontSize: '0.88rem' }}>
-          {promos.length === 0
-            ? 'No hay ofertas semanales cargadas. Creá una con "+ Nueva oferta".'
-            : 'No hay ofertas vigentes en este momento. Cambiá a "Todas" para ver pausadas o programadas.'}
+          {promos.length === 0 ? 'Sin ofertas' : 'Sin ofertas vigentes'}
         </div>
       ) : (
         <div style={{ overflowX: 'auto', border: '1px solid #E5E7EB', borderRadius: '8px' }}>
@@ -163,7 +156,7 @@ export default function PricingRulesTab({ setErrorMsg, setSuccessMsg }: PricingR
             <thead>
               <tr style={{ background: '#F9FAFB', borderBottom: '1px solid #E5E7EB', color: '#6B7280', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                 <th style={{ padding: '10px 14px', fontWeight: 600 }}>Tipo</th>
-                <th style={{ padding: '10px 14px', fontWeight: 600 }}>Detalle</th>
+                <th style={{ padding: '10px 14px', fontWeight: 600 }}>Oferta</th>
                 <th style={{ padding: '10px 14px', fontWeight: 600 }}>Vigencia</th>
                 <th style={{ padding: '10px 14px', fontWeight: 600 }}>Estado</th>
                 <th style={{ padding: '10px 14px', fontWeight: 600, textAlign: 'right' }}>Acciones</th>

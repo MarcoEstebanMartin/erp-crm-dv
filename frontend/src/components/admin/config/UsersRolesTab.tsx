@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { UserPlus, Trash2, Edit3, Crown, Building2, Truck, Package, Users, Phone } from 'lucide-react';
+import { UserPlus, Trash2, Edit3, Crown, Building2, Truck, Package, Phone } from 'lucide-react';
 import { api } from '../../../utils/api';
 import { useConfirm } from '../../../context/ConfirmContext';
 import UserFormModal, { type UserFormState } from './UserFormModal';
@@ -12,32 +12,28 @@ interface UsersRolesTabProps {
 const ROLE_GROUPS = [
   {
     roleKey: 'ADMIN',
-    title: 'Administración General',
-    desc: 'Pablo, Esteban y Administración principal',
+    title: 'Administración',
     icon: <Crown size={14} />,
     bg: '#FDEDEC',
     color: '#C0392B',
   },
   {
     roleKey: 'FACTURACION',
-    title: 'Oficina / Administración',
-    desc: 'Dario, Agustin (Facturación, recibos, notas de crédito, listas de precio)',
+    title: 'Facturación',
     icon: <Building2 size={14} />,
     bg: '#EBF5FB',
     color: '#2980B9',
   },
   {
     roleKey: 'VENDEDOR',
-    title: 'Vendedores de Calle',
-    desc: 'Preventa y toma de pedidos en ruta',
+    title: 'Vendedores',
     icon: <Truck size={14} />,
     bg: '#E8F8F5',
     color: '#117A65',
   },
   {
     roleKey: 'DEPOSITO',
-    title: 'Depósito y Logística',
-    desc: 'Armado de pedidos, pesables y control de stock',
+    title: 'Depósito',
     icon: <Package size={14} />,
     bg: '#FEF9E7',
     color: '#B7950B',
@@ -45,9 +41,9 @@ const ROLE_GROUPS = [
 ];
 
 function formatLastLogin(value?: string | null): string {
-  if (!value) return 'Sin registros';
+  if (!value) return '—';
   const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return 'Sin registros';
+  if (Number.isNaN(d.getTime())) return '—';
   return d.toLocaleString('es-AR', {
     day: '2-digit',
     month: '2-digit',
@@ -165,21 +161,14 @@ export default function UsersRolesTab({ setErrorMsg, setSuccessMsg }: UsersRoles
   return (
     <>
       <div className="card" style={{ padding: '20px 24px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-          <div>
-            <h3 className="card-title" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Users size={20} color="var(--color-primary)" /> Nómina de Empleados & Roles
-            </h3>
-            <p style={{ margin: '2px 0 0 0', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-              Gestión unificada de accesos organizada por jerarquía y áreas de trabajo.
-            </p>
-          </div>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginBottom: '12px' }}>
           <button
+            type="button"
             className="btn btn-primary"
             style={{ padding: '8px 16px', fontSize: '0.85rem' }}
             onClick={() => setUserModal({ open: true, isEdit: false, username: '', password: '', role: 'VENDEDOR' })}
           >
-            <UserPlus size={16} /> <span style={{ marginLeft: '6px' }}>Agregar Nuevo Empleado</span>
+            <UserPlus size={16} /> <span style={{ marginLeft: '6px' }}>Nuevo usuario</span>
           </button>
         </div>
 
@@ -187,8 +176,8 @@ export default function UsersRolesTab({ setErrorMsg, setSuccessMsg }: UsersRoles
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr>
-                <th style={{ padding: '8px 12px', fontSize: '0.8rem' }}>Usuario (Login)</th>
-                <th style={{ padding: '8px 12px', fontSize: '0.8rem' }}>Rol Asignado</th>
+                <th style={{ padding: '8px 12px', fontSize: '0.8rem' }}>Usuario</th>
+                <th style={{ padding: '8px 12px', fontSize: '0.8rem' }}>Rol</th>
                 <th style={{ padding: '8px 12px', fontSize: '0.8rem' }}>Estado</th>
                 <th style={{ padding: '8px 12px', fontSize: '0.8rem' }}>Último acceso</th>
                 <th style={{ padding: '8px 12px', fontSize: '0.8rem', textAlign: 'right' }}>Acciones</th>
@@ -201,23 +190,18 @@ export default function UsersRolesTab({ setErrorMsg, setSuccessMsg }: UsersRoles
                   <React.Fragment key={group.roleKey}>
                     <tr style={{ backgroundColor: group.bg, borderTop: '2px solid var(--border-color)', borderBottom: '1px solid var(--border-color)' }}>
                       <td colSpan={5} style={{ padding: '6px 12px', fontWeight: 700, fontSize: '0.82rem', color: group.color }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            {group.icon}
-                            <span>{group.title}</span>
-                            <span style={{ fontSize: '0.75rem', opacity: 0.8, fontWeight: 600 }}>({groupUsers.length})</span>
-                          </div>
-                          <span style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--text-secondary)', fontStyle: 'italic' }}>
-                            {group.desc}
-                          </span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          {group.icon}
+                          <span>{group.title}</span>
+                          <span style={{ fontSize: '0.75rem', opacity: 0.8, fontWeight: 600 }}>({groupUsers.length})</span>
                         </div>
                       </td>
                     </tr>
 
                     {groupUsers.length === 0 ? (
                       <tr>
-                        <td colSpan={5} style={{ padding: '8px 12px', fontSize: '0.8rem', color: 'var(--text-secondary)', fontStyle: 'italic', textAlign: 'center' }}>
-                          Sin cuentas asignadas en este rol.
+                        <td colSpan={5} style={{ padding: '8px 12px', fontSize: '0.8rem', color: 'var(--text-secondary)', textAlign: 'center' }}>
+                          Sin usuarios
                         </td>
                       </tr>
                     ) : (
@@ -263,23 +247,23 @@ export default function UsersRolesTab({ setErrorMsg, setSuccessMsg }: UsersRoles
                             </td>
                             <td style={{ padding: '8px 12px', textAlign: 'right' }}>
                               {isSystemAccount ? (
-                                <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontStyle: 'italic' }}>
-                                  Cuenta del sistema (protegida)
+                                <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                                  Sistema
                                 </span>
                               ) : (
                                 <div style={{ display: 'flex', gap: '4px', justifyContent: 'flex-end' }}>
                                   <button
+                                    type="button"
                                     className="btn btn-secondary btn-sm"
                                     style={{ padding: '3px 8px', fontSize: '0.78rem' }}
-                                    title="Editar Rol o Clave"
                                     onClick={() => handleOpenEditUser(u)}
                                   >
                                     <Edit3 size={13} /> Editar
                                   </button>
                                   <button
+                                    type="button"
                                     className="btn btn-secondary btn-sm"
                                     disabled={isSelf}
-                                    title={isSelf ? 'No podés desactivar tu propio usuario en sesión' : undefined}
                                     style={{
                                       padding: '3px 8px',
                                       fontSize: '0.78rem',
@@ -290,9 +274,10 @@ export default function UsersRolesTab({ setErrorMsg, setSuccessMsg }: UsersRoles
                                     {u.isActive !== false ? 'Desactivar' : 'Activar'}
                                   </button>
                                   <button
+                                    type="button"
                                     className="btn btn-ghost btn-sm"
                                     disabled={isSelf}
-                                    title={isSelf ? 'No podés eliminar tu propio usuario en sesión' : 'Eliminar Empleado'}
+                                    aria-label="Eliminar usuario"
                                     style={{
                                       padding: '3px 6px',
                                       color: 'var(--color-corp-red)',

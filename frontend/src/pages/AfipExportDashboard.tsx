@@ -155,61 +155,80 @@ export default function AfipExportDashboard() {
       )}
 
       <div className="card">
-        <h2 className="card-title" style={{ marginBottom: '4px' }}>
-          Libro IVA Digital AFIP &amp; Correlación Fiscal
-        </h2>
-        <p style={{ color: 'var(--text-secondary)', fontSize: '0.84rem', marginBottom: '20px' }}>
-          Exportación oficial de registros TXT (Libro IVA Digital AFIP / ARCA) y subdiarios PDF para comprobantes autorizados con CAE.
-        </p>
-
         <div
           style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-            gap: '16px',
-            marginBottom: '24px',
+            display: 'flex',
+            flexWrap: 'wrap',
+            alignItems: 'flex-end',
+            justifyContent: 'space-between',
+            gap: '14px',
+            marginBottom: '20px',
             backgroundColor: '#F9FAFB',
-            padding: '16px',
+            padding: '14px 16px',
             borderRadius: '8px',
             border: '1px solid #E5E7EB',
           }}
         >
-          <div className="form-group" style={{ marginBottom: 0 }}>
-            <label htmlFor="afip-month-select" style={{ fontWeight: 600 }}>
-              Mes a liquidar
-            </label>
-            <select
-              id="afip-month-select"
-              className="select"
-              value={month}
-              onChange={(e) => setMonth(Number(e.target.value))}
-            >
-              {MONTHS.map((m) => (
-                <option key={m.value} value={m.value}>
-                  {m.label}
-                </option>
-              ))}
-            </select>
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', gap: '12px' }}>
+            <div className="form-group" style={{ marginBottom: 0, minWidth: '150px' }}>
+              <label htmlFor="afip-month-select" style={{ fontWeight: 600 }}>
+                Mes
+              </label>
+              <select
+                id="afip-month-select"
+                name="month"
+                className="select"
+                value={month}
+                onChange={(e) => setMonth(Number(e.target.value))}
+              >
+                {MONTHS.map((m) => (
+                  <option key={m.value} value={m.value}>
+                    {m.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="form-group" style={{ marginBottom: 0, width: '110px' }}>
+              <label htmlFor="afip-year-input" style={{ fontWeight: 600 }}>
+                Año
+              </label>
+              <input
+                id="afip-year-input"
+                name="year"
+                type="number"
+                className="input tabular-nums"
+                value={year}
+                onChange={(e) => setYear(Number(e.target.value))}
+                min={2020}
+                max={2100}
+              />
+            </div>
           </div>
-          <div className="form-group" style={{ marginBottom: 0 }}>
-            <label htmlFor="afip-year-input" style={{ fontWeight: 600 }}>
-              Año fiscal
-            </label>
-            <input
-              id="afip-year-input"
-              type="number"
-              className="input tabular-nums"
-              value={year}
-              onChange={(e) => setYear(Number(e.target.value))}
-              min={2020}
-              max={2100}
-            />
+
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '10px' }}>
+            <button
+              type="button"
+              className="btn btn-primary"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '7px' }}
+              onClick={handleDownloadTxt}
+              disabled={loading}
+            >
+              <FileText size={16} aria-hidden="true" />
+              TXT AFIP (.zip)
+            </button>
+
+            <button
+              type="button"
+              className="btn btn-secondary"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', color: '#111827' }}
+              onClick={handleGeneratePdfs}
+              disabled={loading}
+            >
+              <FileDown size={16} aria-hidden="true" />
+              Subdiarios PDF
+            </button>
           </div>
         </div>
-
-        <AfipCorrelationMonitorCard metrics={metrics} fetchingMetrics={fetchingMetrics} />
-
-        <h3 style={{ fontSize: '0.96rem', fontWeight: 600, marginBottom: '14px' }}>Exportación Legal AFIP / ARCA</h3>
 
         {loading && progressMsg && (
           <div
@@ -229,43 +248,7 @@ export default function AfipExportDashboard() {
           </div>
         )}
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
-          <button
-            type="button"
-            className="btn btn-primary"
-            style={{ padding: '16px', flexDirection: 'column', gap: '8px', height: 'auto' }}
-            onClick={handleDownloadTxt}
-            disabled={loading}
-          >
-            <FileText size={24} aria-hidden="true" />
-            <div style={{ textAlign: 'center' }}>
-              <span style={{ display: 'block', fontWeight: 600, fontSize: '0.95rem' }}>
-                Descargar Archivos AFIP (.zip)
-              </span>
-              <span style={{ fontSize: '0.75rem', opacity: 0.85, fontWeight: 400 }}>
-                Reg. Ventas, Compras, Alícuotas y Percepciones IVA
-              </span>
-            </div>
-          </button>
-
-          <button
-            type="button"
-            className="btn btn-secondary"
-            style={{ padding: '16px', flexDirection: 'column', gap: '8px', height: 'auto', color: '#111827' }}
-            onClick={handleGeneratePdfs}
-            disabled={loading}
-          >
-            <FileDown size={24} aria-hidden="true" />
-            <div style={{ textAlign: 'center' }}>
-              <span style={{ display: 'block', fontWeight: 600, fontSize: '0.95rem' }}>
-                Descargar Subdiarios (PDF)
-              </span>
-              <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 400 }}>
-                Libro IVA Ventas y Compras formato oficial
-              </span>
-            </div>
-          </button>
-        </div>
+        <AfipCorrelationMonitorCard metrics={metrics} fetchingMetrics={fetchingMetrics} />
       </div>
 
       <style>{`

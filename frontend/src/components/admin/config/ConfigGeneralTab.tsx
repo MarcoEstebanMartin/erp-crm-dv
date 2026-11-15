@@ -18,15 +18,15 @@ interface EditFieldSpec {
 }
 
 const COMPANY_EDIT_FIELDS: EditFieldSpec[] = [
-  { key: 'razonSocial', label: 'Razón Social', required: true },
-  { key: 'nombreFantasia', label: 'Nombre de Fantasía', required: true },
-  { key: 'cuit', label: 'CUIT del Emisor', required: true, placeholder: '20-16316505-9' },
-  { key: 'puntoVenta', label: 'Punto de Venta ARCA', type: 'number', required: true },
-  { key: 'direccion', label: 'Dirección Comercial' },
-  { key: 'telefono', label: 'Teléfono de Contacto' },
-  { key: 'email', label: 'Email de Contacto', type: 'email' },
-  { key: 'iibb', label: 'Ingresos Brutos (opcional)', placeholder: 'Opcional para Factura A/B' },
-  { key: 'inicioActividades', label: 'Inicio de Actividades (opcional)', placeholder: 'Ej: 01/10/1996' },
+  { key: 'razonSocial', label: 'Razón social', required: true },
+  { key: 'nombreFantasia', label: 'Nombre comercial', required: true },
+  { key: 'cuit', label: 'CUIT', required: true, placeholder: '20-00000000-0' },
+  { key: 'puntoVenta', label: 'Punto de venta', type: 'number', required: true },
+  { key: 'direccion', label: 'Dirección' },
+  { key: 'telefono', label: 'Teléfono' },
+  { key: 'email', label: 'Email', type: 'email' },
+  { key: 'iibb', label: 'IIBB' },
+  { key: 'inicioActividades', label: 'Inicio de actividades', placeholder: 'DD/MM/AAAA' },
 ];
 
 const s = {
@@ -35,13 +35,6 @@ const s = {
     border: '1px solid var(--border-color)',
     borderRadius: '10px',
     padding: '24px',
-  } as React.CSSProperties,
-  sectionTag: {
-    fontSize: '0.7rem',
-    fontWeight: 600,
-    letterSpacing: '0.07em',
-    textTransform: 'uppercase',
-    color: '#6B7280',
   } as React.CSSProperties,
   fieldLabel: {
     display: 'block',
@@ -64,7 +57,6 @@ const s = {
 };
 
 export default function ConfigGeneralTab({ setErrorMsg, setSuccessMsg }: ConfigGeneralTabProps) {
-  const currentUser = api.getCurrentUser();
   const [company, setCompany] = useState<CompanyProfile>(() => getCompanyProfile());
   const [draft, setDraft] = useState<CompanyProfile>(() => getCompanyProfile());
   const [isEditing, setIsEditing] = useState(false);
@@ -107,7 +99,7 @@ export default function ConfigGeneralTab({ setErrorMsg, setSuccessMsg }: ConfigG
       setCompany(updated);
       setDraft(updated);
       setIsEditing(false);
-      setSuccessMsg('Datos oficiales de la empresa actualizados.');
+      setSuccessMsg('Empresa actualizada.');
       setTimeout(() => setSuccessMsg(null), 3000);
     } catch (err: any) {
       setErrorMsg(err?.message || 'Error al guardar los datos de la empresa.');
@@ -124,11 +116,11 @@ export default function ConfigGeneralTab({ setErrorMsg, setSuccessMsg }: ConfigG
     setErrorMsg(null);
     try {
       await api.updateServerConfig({ ignoreStockCheck: next });
-      setSuccessMsg(next ? 'Facturación sin stock físico habilitada.' : 'Control estricto de stock físico activado.');
+      setSuccessMsg(next ? 'Facturación sin stock activada.' : 'Control de stock activado.');
       setTimeout(() => setSuccessMsg(null), 2500);
     } catch (err: any) {
       setIgnoreStock(!next);
-      setErrorMsg(err?.message || 'No se pudo actualizar la regla operativa.');
+      setErrorMsg(err?.message || 'No se pudo actualizar la regla.');
     } finally {
       setSavingStock(false);
     }
@@ -142,11 +134,7 @@ export default function ConfigGeneralTab({ setErrorMsg, setSuccessMsg }: ConfigG
     setErrorMsg(null);
     try {
       await api.updateServerConfig({ afipMockMode: next });
-      setSuccessMsg(
-        next
-          ? 'Modo Simulacro Fiscal ARCA activado (sin emisiones reales).'
-          : 'Modo Simulacro Fiscal ARCA desactivado.',
-      );
+      setSuccessMsg(next ? 'Simulacro ARCA activado.' : 'Simulacro ARCA desactivado.');
       setTimeout(() => setSuccessMsg(null), 2500);
     } catch (err: any) {
       setAfipMockMode(!next);
@@ -159,8 +147,7 @@ export default function ConfigGeneralTab({ setErrorMsg, setSuccessMsg }: ConfigG
   const operationalRules = [
     {
       key: 'ignore-stock',
-      title: 'Permitir facturación sin stock físico',
-      description: 'Habilita ventas y emisión de comprobantes cuando el inventario disponible sea cero o negativo.',
+      title: 'Facturar sin stock',
       checked: ignoreStock,
       saving: savingStock,
       onToggle: handleToggleIgnoreStock,
@@ -168,9 +155,7 @@ export default function ConfigGeneralTab({ setErrorMsg, setSuccessMsg }: ConfigG
     },
     {
       key: 'afip-mock',
-      title: 'Modo Simulacro Fiscal ARCA (Pruebas sin CAE real)',
-      description:
-        'Emite numeración correlativa y CAE simulado en Facturas A/B y Notas de Crédito sin enviar comprobantes reales a ARCA.',
+      title: 'Simulacro fiscal ARCA',
       checked: afipMockMode,
       saving: savingAfipMock,
       onToggle: handleToggleAfipMock,
@@ -180,11 +165,11 @@ export default function ConfigGeneralTab({ setErrorMsg, setSuccessMsg }: ConfigG
 
   const formattedPos = String(company.puntoVenta || 1).padStart(4, '0');
   const readItems: Array<{ label: string; value: string }> = [
-    { label: 'Domicilio Comercial', value: company.direccion || 'Sin especificar' },
-    { label: 'Teléfono / WhatsApp', value: formatCompanyPhone(company.telefono) || 'Sin especificar' },
-    { label: 'Correo Electrónico', value: company.email || 'Sin especificar' },
-    ...(company.iibb ? [{ label: 'Ingresos Brutos (IIBB)', value: company.iibb }] : []),
-    ...(company.inicioActividades ? [{ label: 'Inicio de Actividades', value: company.inicioActividades }] : []),
+    { label: 'Dirección', value: company.direccion || '—' },
+    { label: 'Teléfono', value: formatCompanyPhone(company.telefono) || '—' },
+    { label: 'Email', value: company.email || '—' },
+    ...(company.iibb ? [{ label: 'IIBB', value: company.iibb }] : []),
+    ...(company.inicioActividades ? [{ label: 'Inicio', value: company.inicioActividades }] : []),
   ];
 
   return (
@@ -192,8 +177,7 @@ export default function ConfigGeneralTab({ setErrorMsg, setSuccessMsg }: ConfigG
       <section style={s.card}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px', flexWrap: 'wrap' }}>
           <div>
-            <div style={s.sectionTag}>Identidad Fiscal y Comercial</div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', marginTop: '6px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
               <h3 style={{ margin: 0, fontSize: '1.125rem', fontWeight: 700, color: '#111827', letterSpacing: '-0.02em' }}>
                 {company.nombreFantasia}
               </h3>
@@ -213,8 +197,8 @@ export default function ConfigGeneralTab({ setErrorMsg, setSuccessMsg }: ConfigG
               </span>
             </div>
             <p style={{ margin: '4px 0 0 0', fontSize: '0.84rem', color: '#4B5563' }}>
-              Razón Social: <strong style={{ color: '#111827', fontWeight: 600 }}>{company.razonSocial}</strong>
-              {' · '}Punto de Venta {formattedPos}
+              <strong style={{ color: '#111827', fontWeight: 600 }}>{company.razonSocial}</strong>
+              {' · '}PV {formattedPos}
             </p>
           </div>
 
@@ -232,47 +216,47 @@ export default function ConfigGeneralTab({ setErrorMsg, setSuccessMsg }: ConfigG
         </div>
 
         {!isEditing ? (
-          <>
-            <div style={{ ...s.dividerTop, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: '16px 24px' }}>
-              {readItems.map((item) => (
-                <div key={item.label}>
-                  <span style={s.fieldLabel}>{item.label}</span>
-                  <div style={s.readValue}>{item.value}</div>
-                </div>
-              ))}
-            </div>
-            <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '1px solid #F3F4F6', fontSize: '0.78rem', color: '#6B7280' }}>
-              Encabezado oficial sincronizado en comprobantes, remitos, tickets y resúmenes de cuenta.
-            </div>
-          </>
+          <div style={{ ...s.dividerTop, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: '16px 24px' }}>
+            {readItems.map((item) => (
+              <div key={item.label}>
+                <span style={s.fieldLabel}>{item.label}</span>
+                <div style={s.readValue}>{item.value}</div>
+              </div>
+            ))}
+          </div>
         ) : (
           <form onSubmit={handleSaveCompany} style={s.dividerTop}>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: '14px 16px' }}>
-              {COMPANY_EDIT_FIELDS.map((field) => (
-                <div key={field.key}>
-                  <label style={s.fieldLabel}>{field.label}</label>
-                  <input
-                    type={field.type || 'text'}
-                    className="input"
-                    required={field.required}
-                    placeholder={field.placeholder}
-                    min={field.type === 'number' ? 1 : undefined}
-                    max={field.type === 'number' ? 99999 : undefined}
-                    value={String(draft[field.key] ?? '')}
-                    onChange={(e) =>
-                      setDraft({
-                        ...draft,
-                        [field.key]:
-                          field.type === 'number'
-                            ? e.target.value === ''
-                              ? ('' as unknown as number)
-                              : Number(e.target.value)
-                            : e.target.value,
-                      })
-                    }
-                  />
-                </div>
-              ))}
+              {COMPANY_EDIT_FIELDS.map((field) => {
+                const inputId = `company-${String(field.key)}`;
+                return (
+                  <div key={field.key}>
+                    <label htmlFor={inputId} style={s.fieldLabel}>{field.label}</label>
+                    <input
+                      id={inputId}
+                      name={String(field.key)}
+                      type={field.type || 'text'}
+                      className="input"
+                      required={field.required}
+                      placeholder={field.placeholder}
+                      min={field.type === 'number' ? 1 : undefined}
+                      max={field.type === 'number' ? 99999 : undefined}
+                      value={String(draft[field.key] ?? '')}
+                      onChange={(e) =>
+                        setDraft({
+                          ...draft,
+                          [field.key]:
+                            field.type === 'number'
+                              ? e.target.value === ''
+                                ? ('' as unknown as number)
+                                : Number(e.target.value)
+                              : e.target.value,
+                        })
+                      }
+                    />
+                  </div>
+                );
+              })}
             </div>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '18px' }}>
               <button
@@ -284,7 +268,7 @@ export default function ConfigGeneralTab({ setErrorMsg, setSuccessMsg }: ConfigG
                 Cancelar
               </button>
               <button type="submit" className="btn btn-primary" disabled={savingCompany}>
-                {savingCompany ? 'Guardando...' : 'Guardar cambios'}
+                {savingCompany ? 'Guardando...' : 'Guardar'}
               </button>
             </div>
           </form>
@@ -292,7 +276,6 @@ export default function ConfigGeneralTab({ setErrorMsg, setSuccessMsg }: ConfigG
       </section>
 
       <section style={s.card}>
-        <div style={{ ...s.sectionTag, marginBottom: '12px' }}>Reglas Operativas</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
           {operationalRules.map((rule, idx) => (
             <div
@@ -306,10 +289,7 @@ export default function ConfigGeneralTab({ setErrorMsg, setSuccessMsg }: ConfigG
                 borderTop: idx > 0 ? '1px solid #F3F4F6' : 'none',
               }}
             >
-              <div>
-                <div style={{ fontSize: '0.9rem', fontWeight: 600, color: '#111827' }}>{rule.title}</div>
-                <div style={{ fontSize: '0.81rem', color: '#6B7280', marginTop: '2px' }}>{rule.description}</div>
-              </div>
+              <div style={{ fontSize: '0.9rem', fontWeight: 600, color: '#111827' }}>{rule.title}</div>
 
               <button
                 type="button"
@@ -351,29 +331,17 @@ export default function ConfigGeneralTab({ setErrorMsg, setSuccessMsg }: ConfigG
         </div>
       </section>
 
-      <section style={s.card}>
-        <div style={{ ...s.sectionTag, marginBottom: '12px' }}>Seguridad de la Cuenta</div>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap' }}>
-          <div>
-            <div style={{ fontSize: '0.9rem', fontWeight: 600, color: '#111827' }}>
-              Contraseña de acceso{currentUser?.username ? ` (${currentUser.username})` : ''}
-            </div>
-            <div style={{ fontSize: '0.81rem', color: '#6B7280', marginTop: '2px' }}>
-              Actualizá tu clave personal. Las sesiones abiertas en otros dispositivos se cerrarán automáticamente.
-            </div>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => setChangePwdOpen(true)}
-            className="btn btn-secondary"
-            style={{ padding: '6px 12px', fontSize: '0.8rem', fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}
-          >
-            <Key size={13} />
-            Cambiar clave
-          </button>
-        </div>
-      </section>
+      <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
+        <button
+          type="button"
+          onClick={() => setChangePwdOpen(true)}
+          className="btn btn-secondary"
+          style={{ padding: '7px 14px', fontSize: '0.84rem', fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+        >
+          <Key size={13} />
+          Cambiar Clave
+        </button>
+      </div>
 
       <ChangeOwnPasswordModal open={changePwdOpen} onClose={() => setChangePwdOpen(false)} />
     </div>

@@ -360,3 +360,16 @@
 - [ ] **Paso 4: Facturación y Cuentas Corrientes**
 - [ ] **Paso 5: Salidas de Viaje, Entregas y Devoluciones**
 - [ ] **Paso 6: Cobranzas, Rendiciones, Cierre de Cajas y Cuadratura Final**
+
+---
+
+## Plan Activo: Pilar Minimalista Premium — Cero Palabras de Relleno en Todo el ERP (Paso a Paso)
+
+- [x] **Paso 1: Ley institucional (`AGENTS.md` + `constitution.md`) + Limpieza total de Configuración y Login**
+  - [x] Blindar la regla de **Cero Palabras de Relleno** en `.agents/AGENTS.md` y `.specify/memory/constitution.md` (`v2.1.0`).
+  - [x] Limpiar módulo **Configuración** (`ConfigTab.tsx` 135 l. con `.linear-tablist`, `ConfigGeneralTab.tsx` 349 l., `ChangeOwnPasswordModal.tsx` 171 l., `UsersRolesTab.tsx` 313 l., `UserFormModal.tsx` 170 l., `PricingRulesTab.tsx` 234 l., `WeeklyPromoModal.tsx` 371 l., `PerceptionsTab.tsx` 136 l., `AuditLogsTab.tsx` 289 l., `AuditLogsFilterBar.tsx` 224 l., `AuditLogDetailPanel.tsx` 165 l., `AfipExportDashboard.tsx` 262 l., `AfipCorrelationMonitorCard.tsx` 267 l.) y **Login** (`Login.tsx` 162 l.), migrando modales a `<NativeModalDialog>` (todos ≤ 450 líneas).
+  - [x] Verificar con `minimalismPillarStep1.test.ts` (6/6 tests), Backend `tsc --noEmit` + `vitest run` (`52/52` archivos, `248/248` tests), Frontend `tsc --noEmit` + `vitest run` (`16/16` archivos, `68/68` tests) y `npm run build` (`tsc -b && vite build` + `tsc`, exit `0`).
+- [ ] **Paso 2: Limpieza y compactación de Panel Principal (`HomeTab.tsx` + división modular `< 300` l.), Sidebar y Modales Rápidos de Admin**
+- [ ] **Paso 3: Limpieza de Clientes y Cuentas, Rutas de Preventa y Preventa Móvil (`VendedorDashboard`)**
+- [ ] **Paso 4: Limpieza de Pedidos, Armado, Facturación, Productos/Stock y Depósito WMS**
+- [ ] **Paso 5: Limpieza de Caja, Cobranzas y Gastos (`Finanzas`, `Rendiciones`, `Gastos` + división modular `< 300` l.), Compras, Logística/Flota y Reportes**

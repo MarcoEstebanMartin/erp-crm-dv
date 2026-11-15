@@ -27,6 +27,11 @@ Este archivo define las reglas innegociables de comportamiento, arquitectura mod
 
 ## 3. Estética y Diseño (Stripe / Linear / Notion)
 - **Minimalismo y Velocidad**: Interfaz limpia, ágil, con abundante espacio en blanco, bordes finos de `1px` y grises de alta fidelidad.
+- **Cero Palabras de Relleno (Minimalismo Premium)**: Mostrar únicamente datos reales importantes y acciones directas. Queda **prohibido**:
+  1. Escribir subtítulos o párrafos explicativos debajo de títulos, interruptores o botones que ya se explican solos (ej.: usar únicamente el botón `"Cambiar Clave"`, jamás envolverlo en tarjetas con *"Seguridad de la Cuenta / Contraseña de acceso / Actualizá tu clave personal..."*).
+  2. Agregar supratítulos decorativos (`SEGURIDAD DE LA CUENTA`, `REGLAS OPERATIVAS`, `PROMOCIONES COMERCIALES`) cuando el dato o tabla habla por sí mismo.
+  3. Agregar notas al pie o estados obvios (*"Encabezado oficial sincronizado..."*, *"Ingresá tus credenciales"*, *"Conexión establecida"*, *"Hacé clic en una fila para ver..."*). Solo mostrar avisos cuando exista una alerta accionable o error real.
+  4. Redactar botones o etiquetas verbosas: usar microcopy directo de 1 a 3 palabras (`Cambiar Clave`, `Editar`, `Guardar`, `Nuevo usuario`, `TXT AFIP (.zip)`, `Subdiarios PDF`).
 - **Uso del Color**: Paleta de tonos grises y oscuros minimalistas. El color corporativo rojo `#E30613` se reserva exclusivamente para CTAs críticos, indicadores de peligro o alertas específicas.
 - **Micro-animaciones y Optimización de Clics**: Transiciones suaves y diseño pensado para que las acciones comunes (buscar con buscador fonético, cambiar de pestaña, pesar en balanza, facturar o cobrar) se realicen en la menor cantidad de pasos posible.
 - **Sin Datos de Relleno**: Prohibido usar placeholders temporales; poblar siempre con datos reales de la distribuidora.
