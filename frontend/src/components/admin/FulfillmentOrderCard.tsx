@@ -1,5 +1,12 @@
-import { CheckSquare, Printer, Zap } from 'lucide-react';
+import { AlertCircle, CheckSquare, FileText, Printer, RotateCcw, Tag } from 'lucide-react';
 import { getOrderStatusInfo } from '../../utils/orderStatusHelper';
+import {
+  formatBigIntARS,
+  formatOrderRelativeAge,
+  resolveOrderFiscalChannelBadge,
+  resolveOrderOriginLabel,
+  toOrderIntegerPesosBigInt,
+} from '../../utils/fulfillmentCardMeta.helper';
 import {
   formatArgentinaDateKey,
   isOrderPendingCae,
@@ -23,6 +30,16 @@ export interface FulfillmentOrderCardProps {
   onPrintReceipt: (order: any) => void;
 }
 
+const SECONDARY_ACTION_STYLE = {
+  height: '26px',
+  padding: '0 8px',
+  fontSize: '0.75rem',
+  fontWeight: 500,
+  backgroundColor: '#FFFFFF',
+  borderColor: '#E5E7EB',
+  color: '#374151',
+} as const;
+
 export function FulfillmentOrderCard({
   order: o,
   column,
@@ -41,6 +58,9 @@ export function FulfillmentOrderCard({
   const statusInfo = getOrderStatusInfo(o);
   const clientName = resolveOrderClientName(o, 'Cliente sin Nombre');
   const clientCity = resolveOrderClientCity(o);
+  const originLabel = resolveOrderOriginLabel(o);
+  const channelBadge = resolveOrderFiscalChannelBadge(o);
+  const relativeAge = formatOrderRelativeAge(o.createdAt);
   const pendingCae = isOrderPendingCae(o);
   const orderDateKey = formatArgentinaDateKey(o.updatedAt || o.createdAt || new Date());
   const todayKey = formatArgentinaDateKey(new Date());
@@ -50,29 +70,29 @@ export function FulfillmentOrderCard({
     month: '2-digit',
     timeZone: 'America/Argentina/Buenos_Aires',
   });
+  const totalFormatted = formatBigIntARS(toOrderIntegerPesosBigInt(o.totalAmount));
 
   return (
-    <div
+    <article
+      className="fulfillment-card"
       style={{
-        background: isSelected ? '#F8FAFC' : 'var(--background-card)',
+        backgroundColor: isSelected ? '#F8FAFC' : '#FFFFFF',
         borderRadius: '8px',
-        padding: '8px 10px',
-        border: isSelected
-          ? '2px solid #6366F1'
-          : isPriorDayPendingCae
-            ? '1px solid #F59E0B'
-            : '1px solid var(--border-color)',
-        boxShadow: isSelected ? '0 2px 8px rgba(99, 102, 241, 0.12)' : '0 1px 3px rgba(0,0,0,0.03)',
+        padding: '10px 12px',
+        borderStyle: 'solid',
+        borderWidth: isSelected ? '1.5px' : '1px',
+        borderColor: isSelected ? '#111827' : '#E5E7EB',
+        borderLeftWidth: isPriorDayPendingCae ? '3px' : isSelected ? '1.5px' : '1px',
+        borderLeftColor: isPriorDayPendingCae ? '#E30613' : isSelected ? '#111827' : '#E5E7EB',
+        boxShadow: '0 1px 2px rgba(17, 24, 39, 0.03)',
         display: 'flex',
         flexDirection: 'column',
-        gap: '5px',
-        transition: 'all 0.15s ease',
-        cursor: 'default',
+        gap: '6px',
+        transition: 'border-color 0.15s ease, box-shadow 0.15s ease',
       }}
-      className="fulfillment-card"
     >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '6px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden', minWidth: 0 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0, flex: 1 }}>
           {column === 'PENDING' && (
             <input
               type="checkbox"
@@ -80,24 +100,24 @@ export function FulfillmentOrderCard({
               onChange={() => onToggleSelect(o.id)}
               style={{
                 cursor: 'pointer',
-                width: '15px',
-                height: '15px',
-                accentColor: '#6366F1',
+                width: '14px',
+                height: '14px',
+                accentColor: '#111827',
                 flexShrink: 0,
               }}
               aria-label={`Seleccionar pedido #${o.id} para lote A4`}
-              title="Seleccionar para imprimir en lote A4"
             />
           )}
           <span
+            className="tabular-nums"
             style={{
-              fontWeight: 800,
-              fontSize: '0.78rem',
-              background: '#F1F5F9',
+              fontWeight: 700,
+              fontSize: '0.75rem',
+              backgroundColor: '#F3F4F6',
               padding: '1px 6px',
               borderRadius: '4px',
-              color: '#334155',
-              border: '1px solid #E2E8F0',
+              color: '#111827',
+              border: '1px solid #E5E7EB',
               flexShrink: 0,
             }}
           >
@@ -105,32 +125,32 @@ export function FulfillmentOrderCard({
           </span>
           <span
             style={{
-              fontWeight: 700,
+              fontWeight: 600,
               fontSize: '0.86rem',
               whiteSpace: 'nowrap',
               overflow: 'hidden',
               textOverflow: 'ellipsis',
-              color: 'var(--text-main)',
+              color: '#111827',
             }}
             title={clientName}
           >
             {clientName}
           </span>
         </div>
-        <span
-          className="badge"
-          style={{
-            backgroundColor: statusInfo.color + '18',
-            color: statusInfo.color,
-            fontWeight: 700,
-            fontSize: '0.7rem',
-            padding: '2px 7px',
-            borderRadius: '10px',
-            flexShrink: 0,
-          }}
-        >
-          {statusInfo.label}
-        </span>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexShrink: 0 }}>
+          <span
+            className={channelBadge.isOfficial ? 'badge-minimal badge-minimal--solid' : 'badge-minimal'}
+            title={channelBadge.title}
+          >
+            {channelBadge.code}
+          </span>
+          {relativeAge && (
+            <span className="tabular-nums" style={{ fontSize: '0.72rem', color: '#6B7280', fontWeight: 500 }}>
+              {relativeAge}
+            </span>
+          )}
+        </div>
       </div>
 
       <div
@@ -138,16 +158,30 @@ export function FulfillmentOrderCard({
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          fontSize: '0.78rem',
-          color: 'var(--text-secondary)',
+          gap: '8px',
+          fontSize: '0.76rem',
+          color: '#6B7280',
         }}
       >
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-          <span>{o.items?.length || 0} items</span>
-          {clientCity && <span style={{ fontSize: '0.75rem', opacity: 0.85 }}>{clientCity}</span>}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0, flexWrap: 'wrap' }}>
+          <span>{o.items?.length || 0} ítems</span>
+          <span aria-hidden="true">·</span>
+          <span style={{ color: '#4B5563', fontWeight: 500 }}>{originLabel}</span>
+          {clientCity && (
+            <>
+              <span aria-hidden="true">·</span>
+              <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '140px' }}>
+                {clientCity}
+              </span>
+            </>
+          )}
+          <span className="badge-minimal" style={{ padding: '1px 5px', fontSize: '0.68rem' }}>
+            {statusInfo.label}
+          </span>
         </div>
-        <div style={{ fontWeight: 800, fontSize: '0.88rem', color: '#0F172A' }}>
-          ${Math.round(Number(o.totalAmount)).toLocaleString('es-AR')}
+
+        <div className="tabular-nums" style={{ fontWeight: 700, fontSize: '0.9rem', color: '#111827', flexShrink: 0 }}>
+          {totalFormatted}
         </div>
       </div>
 
@@ -157,66 +191,38 @@ export function FulfillmentOrderCard({
             <button
               type="button"
               className="btn btn-secondary"
-              style={{
-                flex: 1,
-                display: 'flex',
-                justifyContent: 'center',
-                alignItems: 'center',
-                gap: '4px',
-                height: '26px',
-                padding: '0 6px',
-                fontSize: '0.75rem',
-                fontWeight: 600,
-                backgroundColor: '#F8FAFC',
-                borderColor: '#E2E8F0',
-                color: '#475569',
-              }}
+              style={{ ...SECONDARY_ACTION_STYLE, flex: 1 }}
               onClick={() => onPrintPickingList(o)}
               title="Imprimir Hoja de Armado"
             >
-              <Printer size={13} /> Hoja
+              <Printer size={13} aria-hidden="true" />
+              Hoja
             </button>
             <button
               type="button"
               className="btn btn-secondary"
-              style={{
-                flex: 1,
-                display: 'flex',
-                justifyContent: 'center',
-                alignItems: 'center',
-                gap: '4px',
-                height: '26px',
-                padding: '0 6px',
-                fontSize: '0.75rem',
-                fontWeight: 700,
-                backgroundColor: '#FEF3C7',
-                borderColor: '#F59E0B',
-                color: '#B45309',
-              }}
+              style={{ ...SECONDARY_ACTION_STYLE, flex: 1 }}
               onClick={() => onPrintLabels(o)}
               title="Imprimir Rótulos Térmicos de Bultos"
             >
+              <Tag size={13} aria-hidden="true" />
               Rótulo
             </button>
             <button
               type="button"
               className="btn btn-primary"
               style={{
-                flex: 1.2,
-                display: 'flex',
-                justifyContent: 'center',
-                alignItems: 'center',
-                gap: '4px',
+                flex: 1.25,
                 height: '26px',
-                padding: '0 6px',
-                fontSize: '0.75rem',
-                fontWeight: 700,
-                backgroundColor: '#6366F1',
-                borderColor: '#6366F1',
+                padding: '0 8px',
+                fontSize: '0.76rem',
+                fontWeight: 600,
+                backgroundColor: '#111827',
+                borderColor: '#111827',
                 color: '#FFFFFF',
               }}
               onClick={() => onOpenFulfillmentModal(o)}
-              title="Facturar Directamente"
+              title="Armar, pesar y facturar pedido"
             >
               Facturar
             </button>
@@ -228,21 +234,11 @@ export function FulfillmentOrderCard({
             <button
               type="button"
               className="btn btn-secondary"
-              style={{
-                height: '26px',
-                padding: '0 8px',
-                fontSize: '0.74rem',
-                fontWeight: 600,
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px',
-                backgroundColor: '#F8FAFC',
-                borderColor: '#E2E8F0',
-                color: '#475569',
-              }}
+              style={SECONDARY_ACTION_STYLE}
               onClick={() => onRevertToPending(o.id)}
               title="Devolver este pedido a la columna Pendientes"
             >
+              <RotateCcw size={12} aria-hidden="true" />
               Volver
             </button>
             <button
@@ -250,21 +246,18 @@ export function FulfillmentOrderCard({
               className="btn btn-primary"
               style={{
                 flex: 1,
-                display: 'flex',
-                justifyContent: 'center',
-                alignItems: 'center',
-                gap: '5px',
                 height: '26px',
-                padding: '0 8px',
-                fontSize: '0.78rem',
-                fontWeight: 700,
-                backgroundColor: '#4F46E5',
-                color: 'white',
-                borderColor: '#4F46E5',
+                padding: '0 10px',
+                fontSize: '0.76rem',
+                fontWeight: 600,
+                backgroundColor: '#111827',
+                borderColor: '#111827',
+                color: '#FFFFFF',
               }}
               onClick={() => onOpenFulfillmentModal(o)}
             >
-              <CheckSquare size={13} /> Confirmar Armado
+              <CheckSquare size={13} aria-hidden="true" />
+              Confirmar Armado
             </button>
           </div>
         )}
@@ -278,26 +271,26 @@ export function FulfillmentOrderCard({
                   alignItems: 'center',
                   justifyContent: 'space-between',
                   gap: '6px',
-                  backgroundColor: '#FEF3C7',
-                  border: '1px solid #F59E0B',
+                  backgroundColor: '#FEF2F2',
+                  border: '1px solid rgba(227, 6, 19, 0.28)',
                   borderRadius: '6px',
-                  padding: '4px 8px',
+                  padding: '5px 8px',
                 }}
               >
                 <span
                   style={{
                     fontSize: '0.7rem',
-                    fontWeight: 800,
-                    color: '#B45309',
+                    fontWeight: 600,
+                    color: '#E30613',
                     display: 'flex',
                     alignItems: 'center',
                     gap: '4px',
                   }}
                 >
-                  <Zap size={12} />
+                  <AlertCircle size={12} aria-hidden="true" />
                   {isPriorDayPendingCae
-                    ? `Pre-Factura del ${formattedShortDate} — Pendiente CAE`
-                    : 'PENDIENTE CAE (PRE-FACTURA)'}
+                    ? `Pre-Factura ${formattedShortDate} — Sin CAE`
+                    : 'Pendiente CAE AFIP'}
                 </span>
                 <button
                   type="button"
@@ -307,10 +300,10 @@ export function FulfillmentOrderCard({
                     height: '22px',
                     padding: '0 8px',
                     fontSize: '0.7rem',
-                    fontWeight: 700,
-                    backgroundColor: '#D97706',
-                    borderColor: '#D97706',
-                    color: 'white',
+                    fontWeight: 600,
+                    backgroundColor: '#E30613',
+                    borderColor: '#E30613',
+                    color: '#FFFFFF',
                     borderRadius: '4px',
                     flexShrink: 0,
                   }}
@@ -327,46 +320,22 @@ export function FulfillmentOrderCard({
                 <button
                   type="button"
                   className="btn btn-secondary"
-                  style={{
-                    flex: 1,
-                    display: 'flex',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    gap: '4px',
-                    height: '26px',
-                    padding: '0 6px',
-                    fontSize: '0.76rem',
-                    fontWeight: 700,
-                    backgroundColor: '#F8FAFC',
-                    borderColor: '#CBD5E1',
-                    color: '#0F172A',
-                  }}
+                  style={{ ...SECONDARY_ACTION_STYLE, flex: 1, fontWeight: 600, color: '#111827' }}
                   onClick={() => onPrintFacturaA4(o)}
                   title="Imprimir Factura Oficial A4"
                 >
+                  <FileText size={12} aria-hidden="true" />
                   Factura A4
                 </button>
               ) : (
                 <button
                   type="button"
                   className="btn btn-secondary"
-                  style={{
-                    flex: 1,
-                    display: 'flex',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    gap: '4px',
-                    height: '26px',
-                    padding: '0 6px',
-                    fontSize: '0.76rem',
-                    fontWeight: 700,
-                    backgroundColor: '#F8FAFC',
-                    borderColor: '#CBD5E1',
-                    color: '#0F172A',
-                  }}
+                  style={{ ...SECONDARY_ACTION_STYLE, flex: 1, fontWeight: 600, color: '#111827' }}
                   onClick={() => onPrintRemitoX(o)}
                   title="Imprimir Boleta Remito X en hoja A4"
                 >
+                  <FileText size={12} aria-hidden="true" />
                   Boleta A4
                 </button>
               )}
@@ -374,29 +343,17 @@ export function FulfillmentOrderCard({
               <button
                 type="button"
                 className="btn btn-secondary"
-                style={{
-                  flex: 1,
-                  display: 'flex',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  gap: '4px',
-                  height: '26px',
-                  padding: '0 6px',
-                  fontSize: '0.76rem',
-                  fontWeight: 600,
-                  backgroundColor: '#F8FAFC',
-                  borderColor: '#CBD5E1',
-                  color: '#475569',
-                }}
+                style={{ ...SECONDARY_ACTION_STYLE, flex: 1 }}
                 onClick={() => onPrintReceipt(o)}
                 title="Imprimir Ticket Térmico de 80mm"
               >
-                <Printer size={13} /> Ticket
+                <Printer size={12} aria-hidden="true" />
+                Ticket
               </button>
             </div>
           </div>
         )}
       </div>
-    </div>
+    </article>
   );
 }

@@ -1,4 +1,4 @@
-import { Plus, Zap } from 'lucide-react';
+import { AlertCircle, Plus, Zap } from 'lucide-react';
 import type { SalesInvoiceTypeFilter } from './sales.types';
 import { isOfficialInvoice } from './salesBilling.helpers';
 import { isOrderPendingCae, resolveOrderPersona } from '../../../utils/orderSearchAndStatus.helper';
@@ -37,7 +37,7 @@ export function SalesInvoicesTable({
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          marginBottom: '16px',
+          marginBottom: '14px',
           gap: '12px',
           flexWrap: 'wrap',
         }}
@@ -47,46 +47,50 @@ export function SalesInvoicesTable({
             Facturas y Comprobantes de Venta Emitidos
           </h3>
           <p style={{ fontSize: '0.8rem', marginTop: '2px', color: 'var(--text-secondary)' }}>
-            Comprobantes con facturación fiscal (incluyendo Pre-Facturas pendientes de CAE) o presupuestos entregados.
+            Comprobantes fiscales autorizados, Pre-Facturas pendientes de CAE y presupuestos entregados.
           </p>
         </div>
         <button
           type="button"
           className="btn btn-primary"
           onClick={onOpenDirectInvoiceModal}
-          style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
         >
-          <Plus size={16} />
+          <Plus size={16} aria-hidden="true" />
           Emitir Factura Directa
         </button>
       </div>
 
-      <div className="table-container">
+      <div
+        className="table-container table-container--sticky"
+        role="region"
+        aria-label="Facturas y comprobantes de venta emitidos"
+        tabIndex={0}
+      >
         <table>
           <thead>
             <tr>
-              <th>Fecha</th>
-              <th>Tipo</th>
-              <th>Comprobante / CAE</th>
-              <th>Cliente</th>
-              <th>CUIT</th>
-              <th>Neto Gravado</th>
-              <th>IVA (21%)</th>
-              <th>Percep. IIBB</th>
-              <th>Total</th>
-              <th>Acciones</th>
+              <th scope="col">Fecha</th>
+              <th scope="col">Tipo</th>
+              <th scope="col">Comprobante / CAE</th>
+              <th scope="col">Cliente</th>
+              <th scope="col">CUIT</th>
+              <th scope="col" style={{ textAlign: 'right' }}>Neto Gravado</th>
+              <th scope="col" style={{ textAlign: 'right' }}>IVA (21%)</th>
+              <th scope="col" style={{ textAlign: 'right' }}>Percep. IIBB</th>
+              <th scope="col" style={{ textAlign: 'right' }}>Total</th>
+              <th scope="col" style={{ textAlign: 'center' }}>Acciones</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={10} style={{ textAlign: 'center' }}>
+                <td colSpan={10} style={{ textAlign: 'center', padding: '24px 0', color: 'var(--text-secondary)' }}>
                   Cargando comprobantes de venta...
                 </td>
               </tr>
             ) : visibleInvoices.length === 0 ? (
               <tr>
-                <td colSpan={10} style={{ textAlign: 'center' }}>
+                <td colSpan={10} style={{ textAlign: 'center', padding: '24px 0', color: 'var(--text-secondary)' }}>
                   No se encontraron comprobantes emitidos.
                 </td>
               </tr>
@@ -94,34 +98,22 @@ export function SalesInvoicesTable({
               visibleInvoices.map((inv) => {
                 const persona = resolveOrderPersona(inv);
                 const pendingCae = isOrderPendingCae(inv);
+                const isOfficial = inv.billingType === 'OFFICIAL';
                 const decimalOpts =
-                  inv.billingType === 'OFFICIAL' && inv.invoiceType === 'FACTURA_A'
+                  isOfficial && inv.invoiceType === 'FACTURA_A'
                     ? { minimumFractionDigits: 2, maximumFractionDigits: 2 }
                     : { minimumFractionDigits: 0, maximumFractionDigits: 0 };
 
                 return (
                   <tr key={inv.id}>
-                    <td>{new Date(inv.createdAt).toLocaleDateString('es-AR')}</td>
+                    <td style={{ whiteSpace: 'nowrap' }}>
+                      {new Date(inv.createdAt).toLocaleDateString('es-AR')}
+                    </td>
                     <td>
                       <span
-                        style={{
-                          fontSize: '0.75rem',
-                          fontWeight: 600,
-                          padding: '2px 6px',
-                          borderRadius: '4px',
-                          backgroundColor:
-                            inv.invoiceType === 'FACTURA_A'
-                              ? '#E1F5FE'
-                              : inv.invoiceType === 'FACTURA_B'
-                                ? '#E8F5E9'
-                                : '#ECEFF1',
-                          color:
-                            inv.invoiceType === 'FACTURA_A'
-                              ? '#0288D1'
-                              : inv.invoiceType === 'FACTURA_B'
-                                ? '#2E7D32'
-                                : 'var(--text-primary)',
-                        }}
+                        className={
+                          isOfficial ? 'badge-minimal badge-minimal--solid' : 'badge-minimal'
+                        }
                       >
                         {inv.invoiceType === 'FACTURA_A'
                           ? 'Factura A'
@@ -139,44 +131,29 @@ export function SalesInvoicesTable({
                           CAE: {inv.cae}
                         </div>
                       ) : pendingCae ? (
-                        <span
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '4px',
-                            marginTop: '2px',
-                            fontSize: '0.68rem',
-                            fontWeight: 700,
-                            padding: '1px 6px',
-                            borderRadius: '4px',
-                            backgroundColor: '#FEF3C7',
-                            color: '#B45309',
-                            border: '1px solid #F59E0B',
-                          }}
-                        >
+                        <span className="badge-minimal badge-minimal--danger" style={{ marginTop: '3px', fontSize: '0.68rem' }}>
+                          <AlertCircle size={11} aria-hidden="true" />
                           Sin CAE (Pre-Factura)
                         </span>
                       ) : null}
                     </td>
-                    <td>{persona?.name || inv.clientName || 'Consumidor Final'}</td>
-                    <td>{persona?.cuit || 'Sin CUIT'}</td>
-                    <td>${Number(inv.netAmount || 0).toLocaleString('es-AR', decimalOpts)}</td>
-                    <td>${Number(inv.taxAmount || 0).toLocaleString('es-AR', decimalOpts)}</td>
-                    <td>
-                      {Number(inv.percepcionAmount || 0) > 0 ? (
-                        <span style={{ color: 'var(--color-warning)', fontWeight: 500 }}>
-                          ${Number(inv.percepcionAmount).toLocaleString('es-AR', decimalOpts)}
-                        </span>
-                      ) : (
-                        '$0'
-                      )}
+                    <td style={{ fontWeight: 500, color: '#111827' }}>
+                      {persona?.name || inv.clientName || 'Consumidor Final'}
                     </td>
-                    <td style={{ fontWeight: 700 }}>
-                      $
-                      {Number(inv.totalAmount).toLocaleString('es-AR', {
-                        minimumFractionDigits: 0,
-                        maximumFractionDigits: 0,
-                      })}
+                    <td style={{ color: 'var(--text-secondary)' }}>{persona?.cuit || 'Sin CUIT'}</td>
+                    <td style={{ textAlign: 'right' }}>
+                      ${Number(inv.netAmount || 0).toLocaleString('es-AR', decimalOpts)}
+                    </td>
+                    <td style={{ textAlign: 'right' }}>
+                      ${Number(inv.taxAmount || 0).toLocaleString('es-AR', decimalOpts)}
+                    </td>
+                    <td style={{ textAlign: 'right', color: 'var(--text-secondary)' }}>
+                      {Number(inv.percepcionAmount || 0) > 0
+                        ? `$${Number(inv.percepcionAmount).toLocaleString('es-AR', decimalOpts)}`
+                        : '$0'}
+                    </td>
+                    <td style={{ textAlign: 'right', fontWeight: 700, color: '#111827' }}>
+                      ${Number(inv.totalAmount).toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                     </td>
                     <td>
                       <div style={{ display: 'flex', gap: '6px', justifyContent: 'center', flexWrap: 'wrap' }}>
@@ -186,25 +163,22 @@ export function SalesInvoicesTable({
                             className="btn btn-primary"
                             disabled={requestingCaeOrderId === inv.id}
                             style={{
-                              padding: '4px 8px',
-                              fontSize: '0.76rem',
-                              backgroundColor: '#D97706',
-                              borderColor: '#D97706',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '4px',
+                              padding: '4px 9px',
+                              fontSize: '0.75rem',
+                              backgroundColor: '#E30613',
+                              borderColor: '#E30613',
                             }}
                             onClick={() => onRequestOrderCae(inv.id)}
                             title="Solicitar CAE a AFIP/ARCA para autorizar esta Pre-Factura"
                           >
-                            <Zap size={12} />
+                            <Zap size={12} aria-hidden="true" />
                             {requestingCaeOrderId === inv.id ? 'Solicitando...' : 'Solicitar CAE'}
                           </button>
                         )}
                         <button
                           type="button"
                           className="btn btn-secondary"
-                          style={{ padding: '4px 8px', fontSize: '0.78rem' }}
+                          style={{ padding: '4px 9px', fontSize: '0.76rem', color: '#111827' }}
                           onClick={() => onViewInvoice(inv)}
                         >
                           Ver Factura
@@ -212,14 +186,7 @@ export function SalesInvoicesTable({
                         <button
                           type="button"
                           className="btn btn-secondary"
-                          style={{
-                            padding: '4px 8px',
-                            fontSize: '0.78rem',
-                            color: 'var(--color-danger, #dc2626)',
-                            borderColor: 'var(--color-danger, #dc2626)',
-                            backgroundColor: 'transparent',
-                            transition: 'all 0.2s',
-                          }}
+                          style={{ padding: '4px 9px', fontSize: '0.76rem' }}
                           onClick={() => handleCreateCreditNoteFromInvoice(inv)}
                           title="Emitir Nota de Crédito para este comprobante"
                         >

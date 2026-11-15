@@ -2,6 +2,7 @@ import React from 'react';
 import { X } from 'lucide-react';
 import { SCALE, divRoundHalfUp } from '../../../utils/exactStockMath';
 import { CreditNoteCartSection } from './CreditNoteCartSection';
+import { NativeModalDialog } from '../../modals/NativeModalDialog';
 
 interface CreateCreditNoteModalProps {
   isOpen: boolean;
@@ -74,8 +75,6 @@ export function CreateCreditNoteModal({
   onAddCNProduct,
   onRemoveCNProduct,
 }: CreateCreditNoteModalProps) {
-  if (!isOpen) return null;
-
   const subtotal = creditNoteCart.reduce((sum, item) => sum + Number(item.subtotal || 0), 0);
   const cleanCuit = selectedCNClient?.cuit ? String(selectedCNClient.cuit).replace(/-/g, '') : '';
   const isOfficialA = creditNoteForm.billingType === 'OFFICIAL' && cleanCuit.length === 11;
@@ -92,42 +91,43 @@ export function CreateCreditNoteModal({
   const projectedBalance = Math.round(((currentBalance - subtotal) * Number(SCALE)) / Number(SCALE));
 
   return (
-    <div className="modal-overlay">
+    <NativeModalDialog
+      isOpen={isOpen}
+      onClose={onClose}
+      ariaLabelledBy="create-cn-modal-title"
+      closeOnBackdrop={false}
+      style={{
+        maxWidth: '1200px',
+        width: '92vw',
+        height: '88vh',
+        maxHeight: '90vh',
+        padding: '24px',
+      }}
+    >
       <div
-        className="modal-content"
         style={{
-          maxWidth: '1200px',
-          width: '92vw',
-          height: '88vh',
           display: 'flex',
-          flexDirection: 'column',
-          overflow: 'hidden',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          borderBottom: '1px solid var(--border-color)',
+          paddingBottom: '12px',
+          marginBottom: '16px',
         }}
       >
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            borderBottom: '1px solid var(--border-color)',
-            paddingBottom: '12px',
-            marginBottom: '16px',
-          }}
+        <h3 id="create-cn-modal-title">
+          Emitir Nota de Crédito{' '}
+          {creditNoteForm.orderId ? `para Factura #${creditNoteForm.orderId}` : '(Libre)'}
+        </h3>
+        <button
+          type="button"
+          className="btn btn-ghost"
+          style={{ padding: '4px' }}
+          onClick={onClose}
+          aria-label="Cerrar emisión de Nota de Crédito"
         >
-          <h3>
-            Emitir Nota de Crédito{' '}
-            {creditNoteForm.orderId ? `para Factura #${creditNoteForm.orderId}` : '(Libre)'}
-          </h3>
-          <button
-            type="button"
-            className="btn btn-ghost"
-            style={{ padding: '4px' }}
-            onClick={onClose}
-            aria-label="Cerrar emisión de Nota de Crédito"
-          >
-            <X size={18} />
-          </button>
-        </div>
+          <X size={18} aria-hidden="true" />
+        </button>
+      </div>
 
         <form onSubmit={onSubmit} style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: '20px', flex: 1, overflow: 'hidden' }}>
@@ -348,19 +348,21 @@ export function CreateCreditNoteModal({
                   }}
                 >
                   <span style={{ fontWeight: 700 }}>Total a Acreditar:</span>
-                  <span style={{ fontWeight: 700, color: 'var(--color-success)' }}>
+                  <span className="tabular-nums" style={{ fontWeight: 700, color: '#111827' }}>
                     -${subtotal.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                   </span>
                 </div>
 
                 {selectedCNClient && (
                   <div
+                    className="tabular-nums"
                     style={{
                       fontSize: '0.78rem',
                       padding: '8px 12px',
-                      borderRadius: '4px',
-                      backgroundColor: '#e6f4ea',
-                      color: '#137333',
+                      borderRadius: '6px',
+                      backgroundColor: '#F3F4F6',
+                      border: '1px solid #E5E7EB',
+                      color: '#111827',
                       marginTop: '10px',
                       fontWeight: 500,
                       textAlign: 'center',
@@ -382,7 +384,6 @@ export function CreateCreditNoteModal({
             </div>
           </div>
         </form>
-      </div>
-    </div>
+    </NativeModalDialog>
   );
 }

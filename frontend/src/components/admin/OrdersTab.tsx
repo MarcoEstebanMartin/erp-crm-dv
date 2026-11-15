@@ -1,11 +1,15 @@
 import { useState, useMemo } from 'react';
+import { RefreshCw, Globe, Eye, Printer, Edit, Trash2 } from 'lucide-react';
 import { api } from '../../utils/api';
 import { orderApi } from '../../api/order.api';
 import { OrderStatus } from '../../utils/types';
 import { getOrderStatusInfo } from '../../utils/orderStatusHelper';
-import { RefreshCw, Globe, Eye, Printer, Edit, Trash2 } from 'lucide-react';
 import { useConfirm } from '../../context/ConfirmContext';
 import { printOrderTicket } from './orderTicketPrinter';
+import {
+  formatBigIntARS,
+  toOrderIntegerPesosBigInt,
+} from '../../utils/fulfillmentCardMeta.helper';
 import {
   getWebOrderBadgeCode,
   matchesOrderSearch,
@@ -136,12 +140,11 @@ export default function OrdersTab({
           <button
             type="button"
             className="btn btn-secondary"
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
             onClick={handleManualWebSync}
             disabled={syncingWeb}
             title="Sincronizar pedidos entrantes de donvenancio.com.ar y Bot WhatsApp"
           >
-            <Globe size={15} />
+            <Globe size={15} aria-hidden="true" />
             <span>{syncingWeb ? 'Sincronizando...' : 'Sincronizar Web'}</span>
           </button>
 
@@ -150,29 +153,35 @@ export default function OrdersTab({
             className="btn btn-secondary"
             onClick={fetchData}
             title="Actualizar listado"
+            aria-label="Actualizar historial de pedidos"
           >
-            <RefreshCw size={16} />
+            <RefreshCw size={16} aria-hidden="true" />
           </button>
         </div>
       </search>
 
-      <div className="table-container">
+      <div
+        className="table-container table-container--sticky"
+        role="region"
+        aria-label="Historial de pedidos"
+        tabIndex={0}
+      >
         <table>
           <thead>
             <tr>
-              <th>Nro Pedido</th>
-              <th>Cliente</th>
-              <th>Fecha</th>
-              <th>Monto Total</th>
-              <th>Canal</th>
-              <th>Estado</th>
-              <th>Acciones</th>
+              <th scope="col">Nro Pedido</th>
+              <th scope="col">Cliente</th>
+              <th scope="col">Fecha</th>
+              <th scope="col" style={{ textAlign: 'right' }}>Monto Total</th>
+              <th scope="col">Canal</th>
+              <th scope="col">Estado</th>
+              <th scope="col">Acciones</th>
             </tr>
           </thead>
           <tbody>
             {filteredOrders.length === 0 ? (
               <tr>
-                <td colSpan={7} style={{ textAlign: 'center', padding: '24px 0' }}>
+                <td colSpan={7} style={{ textAlign: 'center', padding: '24px 0', color: 'var(--text-secondary)' }}>
                   No se encontraron pedidos.
                 </td>
               </tr>
@@ -181,44 +190,40 @@ export default function OrdersTab({
                 const webCode = getWebOrderBadgeCode(o);
                 const persona = resolveOrderPersona(o);
                 const statusInfo = getOrderStatusInfo(o);
+                const isCancelled = o.status === 'CANCELLED';
+
                 return (
                   <tr key={o.id}>
-                    <td style={{ fontWeight: 700 }}>
+                    <td style={{ fontWeight: 700, whiteSpace: 'nowrap' }}>
                       <div>#{o.id}</div>
                       {webCode && (
-                        <span
-                          style={{
-                            display: 'inline-block',
-                            marginTop: '3px',
-                            padding: '1px 6px',
-                            borderRadius: '4px',
-                            fontSize: '0.68rem',
-                            fontWeight: 600,
-                            backgroundColor: '#05966918',
-                            color: '#059669',
-                            border: '1px solid #05966940',
-                          }}
-                        >
+                        <span className="badge-minimal" style={{ marginTop: '3px', fontSize: '0.68rem' }}>
                           Web · {webCode}
                         </span>
                       )}
                     </td>
                     <td>
-                      <div style={{ fontWeight: 600 }}>{persona?.name || o.clientName || 'Consumidor Final'}</div>
+                      <div style={{ fontWeight: 600, color: '#111827' }}>
+                        {persona?.name || o.clientName || 'Consumidor Final'}
+                      </div>
                       <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
                         {persona?.city ? `${persona.city} · ` : ''}
-                        Items: {o.items?.length || 0}
+                        Ítems: {o.items?.length || 0}
                         {o.invoiceNumber ? ` · ${o.invoiceNumber}` : ''}
                       </div>
                     </td>
-                    <td>{new Date(o.createdAt).toLocaleDateString('es-AR')}</td>
-                    <td style={{ fontWeight: 600 }}>
-                      ${Math.round(Number(o.totalAmount)).toLocaleString('es-AR')}
+                    <td style={{ whiteSpace: 'nowrap' }}>
+                      {new Date(o.createdAt).toLocaleDateString('es-AR')}
+                    </td>
+                    <td style={{ fontWeight: 700, textAlign: 'right', color: '#111827' }}>
+                      {formatBigIntARS(toOrderIntegerPesosBigInt(o.totalAmount))}
                     </td>
                     <td>
                       <span
                         className={
-                          o.billingType === 'OFFICIAL' ? 'badge badge-official' : 'badge badge-internal'
+                          o.billingType === 'OFFICIAL'
+                            ? 'badge-minimal badge-minimal--solid'
+                            : 'badge-minimal'
                         }
                       >
                         {o.billingType === 'OFFICIAL' ? 'Sucursal A' : 'Sucursal X'}
@@ -226,13 +231,7 @@ export default function OrdersTab({
                     </td>
                     <td>
                       <span
-                        className={`badge badge-${statusInfo.badgeClass}`}
-                        style={{
-                          backgroundColor: statusInfo.color + '15',
-                          color: statusInfo.color,
-                          border: `1px solid ${statusInfo.color}30`,
-                          fontWeight: 600,
-                        }}
+                        className={isCancelled ? 'badge-minimal badge-minimal--danger' : 'badge-minimal'}
                       >
                         {statusInfo.label}
                       </span>
@@ -242,41 +241,45 @@ export default function OrdersTab({
                         <button
                           type="button"
                           className="btn btn-secondary"
-                          style={{ padding: '6px 10px' }}
+                          style={{ padding: '6px 9px' }}
                           title="Ver Detalle"
+                          aria-label={`Ver detalle del pedido #${o.id}`}
                           onClick={() => setOrderDetailsModal(o)}
                         >
-                          <Eye size={14} />
+                          <Eye size={14} aria-hidden="true" />
                         </button>
                         <button
                           type="button"
                           className="btn btn-secondary"
-                          style={{ padding: '6px 10px' }}
+                          style={{ padding: '6px 9px' }}
                           title="Imprimir Ticket"
+                          aria-label={`Imprimir ticket del pedido #${o.id}`}
                           onClick={() => printOrderTicket(o)}
                         >
-                          <Printer size={14} />
+                          <Printer size={14} aria-hidden="true" />
                         </button>
                         {o.status === 'PENDING' && (
                           <button
                             type="button"
                             className="btn btn-secondary"
-                            style={{ padding: '6px 10px' }}
+                            style={{ padding: '6px 9px' }}
                             title="Editar Pedido"
+                            aria-label={`Editar pedido #${o.id}`}
                             onClick={() => handleOpenEditOrder(o)}
                           >
-                            <Edit size={14} />
+                            <Edit size={14} aria-hidden="true" />
                           </button>
                         )}
                         {o.status !== 'CANCELLED' && o.status !== 'DELIVERED' && (
                           <button
                             type="button"
                             className="btn btn-secondary"
-                            style={{ padding: '6px 10px', color: 'var(--color-danger)' }}
-                            title="Cancelar"
+                            style={{ padding: '6px 9px', color: '#E30613', borderColor: 'rgba(227, 6, 19, 0.25)' }}
+                            title="Cancelar Pedido"
+                            aria-label={`Cancelar pedido #${o.id}`}
                             onClick={() => handleCancelOrder(o.id)}
                           >
-                            <Trash2 size={14} />
+                            <Trash2 size={14} aria-hidden="true" />
                           </button>
                         )}
                       </div>

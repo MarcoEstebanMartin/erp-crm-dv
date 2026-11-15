@@ -3,6 +3,7 @@ import { isOfficialInvoice } from './salesBilling.helpers';
 import { InvoicePreviewFooter } from './InvoicePreviewFooter';
 import { formatCompanyPhone, getCompanyProfile } from '../../../utils/companyProfile';
 import { resolveOrderPersona } from '../../../utils/orderSearchAndStatus.helper';
+import { NativeModalDialog } from '../../modals/NativeModalDialog';
 
 interface InvoicePreviewModalProps {
   invoice: any | null;
@@ -46,10 +47,19 @@ export function InvoicePreviewModal({ invoice, onClose }: InvoicePreviewModalPro
     : `${posStr}-${invoice.invoiceNumber || String(invoice.id || 0).padStart(8, '0')}`;
 
   return (
-    <div className="modal-overlay print-modal">
-      <div className="modal-content print-content-box" style={{ maxWidth: '850px', width: '90vw' }}>
+    <NativeModalDialog
+      isOpen={Boolean(invoice)}
+      onClose={onClose}
+      ariaLabelledBy="invoice-preview-modal-title"
+      className="print-modal"
+      style={{ maxWidth: '850px', width: '90vw', padding: '24px' }}
+    >
+      <div
+        className="print-content-box"
+        style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden', minHeight: 0 }}
+      >
         <div className="modal-header no-print">
-          <h3>Vista Previa del Comprobante</h3>
+          <h3 id="invoice-preview-modal-title">Vista Previa del Comprobante</h3>
           <button
             type="button"
             className="btn btn-ghost"
@@ -57,22 +67,23 @@ export function InvoicePreviewModal({ invoice, onClose }: InvoicePreviewModalPro
             onClick={onClose}
             aria-label="Cerrar vista previa"
           >
-            <X size={18} />
+            <X size={18} aria-hidden="true" />
           </button>
         </div>
 
-        <div
-          id="print-area"
-          className="invoice-container-box"
-          style={{
-            backgroundColor: '#fff',
-            padding: '30px',
-            border: '1px solid #ddd',
-            fontFamily: 'Arial, sans-serif',
-            color: '#000',
-            fontSize: '0.85rem',
-          }}
-        >
+        <div className="print-modal-scroll" style={{ flex: 1, overflowY: 'auto', paddingRight: '4px' }}>
+          <div
+            id="print-area"
+            className="invoice-container-box"
+            style={{
+              backgroundColor: '#fff',
+              padding: '30px',
+              border: '1px solid #ddd',
+              fontFamily: 'Arial, sans-serif',
+              color: '#000',
+              fontSize: '0.85rem',
+            }}
+          >
           <div style={{ display: 'flex', border: '2px solid #000', marginBottom: '20px', position: 'relative' }}>
             <div
               style={{
@@ -181,12 +192,12 @@ export function InvoicePreviewModal({ invoice, onClose }: InvoicePreviewModalPro
           <table style={{ width: '100%', borderCollapse: 'collapse', border: '2px solid #000', marginBottom: '20px' }}>
             <thead>
               <tr style={{ backgroundColor: '#eee', borderBottom: '2px solid #000' }}>
-                <th style={{ padding: '8px', borderRight: '1px solid #000', textAlign: 'left' }}>Código / SKU</th>
-                <th style={{ padding: '8px', borderRight: '1px solid #000', textAlign: 'left' }}>Descripción del Artículo</th>
-                <th style={{ padding: '8px', borderRight: '1px solid #000', textAlign: 'right', width: '70px' }}>Cant</th>
-                <th style={{ padding: '8px', borderRight: '1px solid #000', textAlign: 'right', width: '80px' }}>Kilos</th>
-                <th style={{ padding: '8px', borderRight: '1px solid #000', textAlign: 'right', width: '100px' }}>P. Unit</th>
-                <th style={{ padding: '8px', textAlign: 'right', width: '110px' }}>Importe</th>
+                <th scope="col" style={{ padding: '8px', borderRight: '1px solid #000', textAlign: 'left' }}>Código / SKU</th>
+                <th scope="col" style={{ padding: '8px', borderRight: '1px solid #000', textAlign: 'left' }}>Descripción del Artículo</th>
+                <th scope="col" style={{ padding: '8px', borderRight: '1px solid #000', textAlign: 'right', width: '70px' }}>Cant</th>
+                <th scope="col" style={{ padding: '8px', borderRight: '1px solid #000', textAlign: 'right', width: '80px' }}>Kilos</th>
+                <th scope="col" style={{ padding: '8px', borderRight: '1px solid #000', textAlign: 'right', width: '100px' }}>P. Unit</th>
+                <th scope="col" style={{ padding: '8px', textAlign: 'right', width: '110px' }}>Importe</th>
               </tr>
             </thead>
             <tbody>
@@ -223,58 +234,22 @@ export function InvoicePreviewModal({ invoice, onClose }: InvoicePreviewModalPro
           </table>
 
           <InvoicePreviewFooter invoice={invoice} isOfficial={isOfficial} decimalOptions={decimalOptions} />
+          </div>
         </div>
 
-        <div className="modal-footer no-print" style={{ display: 'flex', justifyContent: 'space-between' }}>
+        <div className="modal-footer no-print" style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '14px', marginTop: '12px', borderTop: '1px solid var(--border-color)' }}>
           <button
             type="button"
-            className="btn btn-secondary"
+            className="btn btn-primary"
             onClick={() => window.print()}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              backgroundColor: 'var(--color-primary)',
-              color: '#fff',
-              borderColor: 'var(--color-primary)',
-            }}
           >
-            <Printer size={16} /> Imprimir Comprobante
+            <Printer size={16} aria-hidden="true" /> Imprimir Comprobante
           </button>
           <button type="button" className="btn btn-secondary" onClick={onClose}>
             Cerrar
           </button>
         </div>
       </div>
-
-      <style>{`
-        @media print {
-          body * { visibility: hidden !important; }
-          .print-modal,
-          .print-content-box,
-          #print-area,
-          #print-area * {
-            visibility: visible !important;
-          }
-          .print-modal {
-            position: absolute !important;
-            left: 0 !important;
-            top: 0 !important;
-            width: 100% !important;
-            background: #ffffff !important;
-            padding: 0 !important;
-            margin: 0 !important;
-          }
-          .print-content-box {
-            max-width: 100% !important;
-            width: 100% !important;
-            padding: 0 !important;
-            border: none !important;
-            box-shadow: none !important;
-          }
-          .no-print, .no-print * { display: none !important; }
-        }
-      `}</style>
-    </div>
+    </NativeModalDialog>
   );
 }

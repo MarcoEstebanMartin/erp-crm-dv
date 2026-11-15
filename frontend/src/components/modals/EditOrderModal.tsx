@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { Trash2 } from 'lucide-react';
+import { Trash2, X } from 'lucide-react';
 import { api } from '../../utils/api';
+import { NativeModalDialog } from './NativeModalDialog';
 import {
   computeClientUnitPrice,
   fetchPricingDiscountRules,
@@ -102,33 +103,35 @@ const EditOrderModal: React.FC<EditOrderModalProps> = ({
   );
 
   return (
-    <div className="modal-overlay">
-      <div
-        className="modal-content"
-        style={{ maxWidth: '820px', display: 'flex', flexDirection: 'column', maxHeight: '90vh' }}
-      >
-        <div className="modal-header">
-          <div>
-            <h3>
-              Editar Pedido #{editOrderModal.orderId} - {editOrderModal.clientName}
-            </h3>
-            <div style={{ fontSize: '0.76rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
-              Lista aplicable: <strong>{priceListLabel}</strong>
-              {Number(activeClient?.discount || 0) > 0
-                ? ` · Desc. base ${Number(activeClient.discount)}%`
-                : ''}
-            </div>
+    <NativeModalDialog
+      isOpen={Boolean(editOrderModal?.open)}
+      onClose={() => setEditOrderModal(null)}
+      ariaLabelledBy="edit-order-modal-title"
+      closeOnBackdrop={false}
+      style={{ maxWidth: '820px', width: '95vw', maxHeight: '90vh', padding: '24px' }}
+    >
+      <div className="modal-header">
+        <div>
+          <h3 id="edit-order-modal-title">
+            Editar Pedido #{editOrderModal.orderId} - {editOrderModal.clientName}
+          </h3>
+          <div style={{ fontSize: '0.76rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+            Lista aplicable: <strong>{priceListLabel}</strong>
+            {Number(activeClient?.discount || 0) > 0
+              ? ` · Desc. base ${Number(activeClient.discount)}%`
+              : ''}
           </div>
-          <button
-            type="button"
-            className="btn btn-ghost"
-            style={{ padding: '4px' }}
-            onClick={() => setEditOrderModal(null)}
-            aria-label="Cerrar edición de pedido"
-          >
-            ✕
-          </button>
         </div>
+        <button
+          type="button"
+          className="btn btn-ghost"
+          style={{ padding: '4px' }}
+          onClick={() => setEditOrderModal(null)}
+          aria-label="Cerrar edición de pedido"
+        >
+          <X size={18} aria-hidden="true" />
+        </button>
+      </div>
 
         <div
           style={{
@@ -397,7 +400,7 @@ const EditOrderModal: React.FC<EditOrderModalProps> = ({
                 }}
               >
                 <span>Nuevo Total Estimado:</span>
-                <span>${estimatedTotal.toLocaleString('es-AR')}</span>
+                <span className="tabular-nums">${estimatedTotal.toLocaleString('es-AR')}</span>
               </div>
             </div>
           </div>
@@ -418,8 +421,7 @@ const EditOrderModal: React.FC<EditOrderModalProps> = ({
             Guardar Cambios
           </button>
         </div>
-      </div>
-    </div>
+    </NativeModalDialog>
   );
 };
 

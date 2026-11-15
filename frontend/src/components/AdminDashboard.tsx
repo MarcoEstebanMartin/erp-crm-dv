@@ -110,26 +110,24 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
 
       {(activeTab === 'fulfillment' || activeTab === 'orders' || activeTab === 'billing') && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <div style={{ display: 'flex', gap: '8px', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px', overflowX: 'auto' }}>
+          <nav aria-label="Secciones de Pedidos y Facturación" className="linear-underline-nav">
             {[
-              { id: 'fulfillment', label: 'Armado de Pedidos', icon: <Warehouse size={15} /> },
-              { id: 'orders', label: 'Historial', icon: <ShoppingCart size={15} /> },
-              { id: 'billing', label: 'Facturación', icon: <FileText size={15} /> },
+              { id: 'fulfillment', label: 'Armado de Pedidos', icon: <Warehouse size={15} aria-hidden="true" /> },
+              { id: 'orders', label: 'Historial', icon: <ShoppingCart size={15} aria-hidden="true" /> },
+              { id: 'billing', label: 'Facturación', icon: <FileText size={15} aria-hidden="true" /> },
             ].map((tab) => (
               <button
-                key={tab.id} type="button" className="btn"
-                style={{
-                  backgroundColor: activeTab === tab.id ? 'var(--color-primary)' : '#fff',
-                  color: activeTab === tab.id ? '#fff' : 'var(--text-primary)',
-                  border: activeTab === tab.id ? '1px solid var(--color-primary)' : '1px solid var(--border-color)',
-                  fontWeight: 600, fontSize: '0.85rem', padding: '8px 16px', borderRadius: '6px', cursor: 'pointer', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: '6px',
-                }}
+                key={tab.id}
+                type="button"
+                className="linear-nav-link"
+                aria-current={activeTab === tab.id ? 'page' : undefined}
                 onClick={() => setActiveTab(tab.id)}
               >
-                {tab.icon}{tab.label}
+                {tab.icon}
+                {tab.label}
               </button>
             ))}
-          </div>
+          </nav>
 
           {activeTab === 'fulfillment' && <Suspense fallback={<LoadingDashboard />}><FulfillmentDashboard /></Suspense>}
           {activeTab === 'orders' && <OrdersTab orders={c.orders} fetchData={c.fetchData} setOrderDetailsModal={c.setOrderDetailsModal} handleOpenEditOrder={c.handleOpenEditOrder} setErrorMsg={c.setErrorMsg} setSuccessMsg={c.setSuccessMsg} />}

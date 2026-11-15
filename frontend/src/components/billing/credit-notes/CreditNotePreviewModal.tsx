@@ -1,5 +1,6 @@
 import { Printer, X } from 'lucide-react';
 import { formatCompanyPhone, getCompanyProfile } from '../../../utils/companyProfile';
+import { NativeModalDialog } from '../../modals/NativeModalDialog';
 
 interface CreditNotePreviewModalProps {
   creditNote: any | null;
@@ -23,17 +24,21 @@ export function CreditNotePreviewModal({ creditNote, onClose }: CreditNotePrevie
   const code = isA ? 'COD. 003' : isB ? 'COD. 008' : 'COD. 000';
 
   return (
-    <div className="modal-overlay" style={{ zIndex: 1000 }}>
+    <NativeModalDialog
+      isOpen={Boolean(creditNote)}
+      onClose={onClose}
+      ariaLabelledBy="cn-preview-modal-title"
+      className="print-modal"
+      style={{ maxWidth: '850px', width: '90vw', padding: '24px' }}
+    >
       <div
-        className="modal-content"
+        className="print-content-box"
         style={{
-          maxWidth: '850px',
-          width: '90vw',
-          maxHeight: '90vh',
-          padding: '24px',
           display: 'flex',
           flexDirection: 'column',
+          flex: 1,
           overflow: 'hidden',
+          minHeight: 0,
         }}
       >
         <div
@@ -47,7 +52,9 @@ export function CreditNotePreviewModal({ creditNote, onClose }: CreditNotePrevie
             marginBottom: '16px',
           }}
         >
-          <h2 style={{ fontSize: '1.1rem', fontWeight: 700 }}>Visualización de Comprobante</h2>
+          <h2 id="cn-preview-modal-title" style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0 }}>
+            Visualización de Comprobante
+          </h2>
           <button
             type="button"
             className="btn btn-ghost"
@@ -55,11 +62,11 @@ export function CreditNotePreviewModal({ creditNote, onClose }: CreditNotePrevie
             onClick={onClose}
             aria-label="Cerrar vista previa"
           >
-            <X size={18} />
+            <X size={18} aria-hidden="true" />
           </button>
         </div>
 
-        <div style={{ flex: 1, overflowY: 'auto', paddingRight: '4px' }}>
+        <div className="print-modal-scroll" style={{ flex: 1, overflowY: 'auto', paddingRight: '4px' }}>
           <div
             id="invoice-print-section"
             style={{
@@ -175,11 +182,11 @@ export function CreditNotePreviewModal({ creditNote, onClose }: CreditNotePrevie
             <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '20px' }}>
               <thead>
                 <tr style={{ borderBottom: '2px solid #000', backgroundColor: '#eee' }}>
-                  <th style={{ padding: '6px', textAlign: 'left' }}>Producto</th>
-                  <th style={{ padding: '6px', textAlign: 'right', width: '80px' }}>Cant</th>
-                  <th style={{ padding: '6px', textAlign: 'right', width: '80px' }}>Kilos</th>
-                  <th style={{ padding: '6px', textAlign: 'right', width: '100px' }}>P. Unit</th>
-                  <th style={{ padding: '6px', textAlign: 'right', width: '110px' }}>Importe</th>
+                  <th scope="col" style={{ padding: '6px', textAlign: 'left' }}>Producto</th>
+                  <th scope="col" style={{ padding: '6px', textAlign: 'right', width: '80px' }}>Cant</th>
+                  <th scope="col" style={{ padding: '6px', textAlign: 'right', width: '80px' }}>Kilos</th>
+                  <th scope="col" style={{ padding: '6px', textAlign: 'right', width: '100px' }}>P. Unit</th>
+                  <th scope="col" style={{ padding: '6px', textAlign: 'right', width: '110px' }}>Importe</th>
                 </tr>
               </thead>
               <tbody>
@@ -230,9 +237,9 @@ export function CreditNotePreviewModal({ creditNote, onClose }: CreditNotePrevie
                   ) : (
                     <div
                       style={{
-                        backgroundColor: '#FEF3C7',
-                        border: '1px solid #F59E0B',
-                        color: '#92400E',
+                        backgroundColor: '#FEF2F2',
+                        border: '1px solid rgba(227, 6, 19, 0.35)',
+                        color: '#E30613',
                         padding: '8px',
                         borderRadius: '4px',
                         fontWeight: 700,
@@ -302,27 +309,19 @@ export function CreditNotePreviewModal({ creditNote, onClose }: CreditNotePrevie
           </div>
         </div>
 
-        <div className="modal-footer no-print" style={{ display: 'flex', justifyContent: 'space-between', padding: '16px 0 0 0' }}>
+        <div className="modal-footer no-print" style={{ display: 'flex', justifyContent: 'space-between', padding: '16px 0 0 0', marginTop: '12px', borderTop: '1px solid var(--border-color)' }}>
           <button
             type="button"
-            className="btn btn-secondary"
+            className="btn btn-primary"
             onClick={() => window.print()}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              backgroundColor: 'var(--color-primary)',
-              color: '#fff',
-              borderColor: 'var(--color-primary)',
-            }}
           >
-            <Printer size={16} /> Imprimir Comprobante
+            <Printer size={16} aria-hidden="true" /> Imprimir Comprobante
           </button>
           <button type="button" className="btn btn-secondary" onClick={onClose}>
             Cerrar
           </button>
         </div>
       </div>
-    </div>
+    </NativeModalDialog>
   );
 }

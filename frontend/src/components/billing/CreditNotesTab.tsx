@@ -24,10 +24,10 @@ interface CreditNotesTabProps {
   setViewCreditNoteModal: (note: any | null) => void;
 }
 
-const STATUS_BADGE_MAP: Record<string, { bg: string; color: string; label: string }> = {
-  APPROVED: { bg: '#E8F5E9', color: '#2E7D32', label: 'Aprobada' },
-  PENDING_APPROVAL: { bg: '#FFF9C4', color: '#F57F17', label: 'Pendiente Aprobación' },
-  REJECTED: { bg: '#FFEBEE', color: '#C62828', label: 'Rechazada' },
+const STATUS_BADGE_MAP: Record<string, { className: string; label: string }> = {
+  APPROVED: { className: 'badge-minimal badge-minimal--solid', label: 'Aprobada' },
+  PENDING_APPROVAL: { className: 'badge-minimal', label: 'Pendiente Aprobación' },
+  REJECTED: { className: 'badge-minimal badge-minimal--danger', label: 'Rechazada' },
 };
 
 export default function CreditNotesTab(props: CreditNotesTabProps) {
@@ -56,7 +56,7 @@ export default function CreditNotesTab(props: CreditNotesTabProps) {
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
-            marginBottom: '16px',
+            marginBottom: '14px',
             gap: '12px',
             flexWrap: 'wrap',
           }}
@@ -73,36 +73,40 @@ export default function CreditNotesTab(props: CreditNotesTabProps) {
             type="button"
             className="btn btn-primary"
             onClick={ctrl.openFreeCreditNoteModal}
-            style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
           >
-            <Plus size={16} />
+            <Plus size={16} aria-hidden="true" />
             Crear Nota de Crédito Libre
           </button>
         </div>
 
-        <div className="table-container">
+        <div
+          className="table-container table-container--sticky"
+          role="region"
+          aria-label="Notas de crédito y devoluciones emitidas"
+          tabIndex={0}
+        >
           <table>
             <thead>
               <tr>
-                <th>Fecha Emisión</th>
-                <th>Estado</th>
-                <th>Nro Comprobante</th>
-                <th>Cliente</th>
-                <th>Concepto / Motivo</th>
-                <th>Total Acreditado</th>
-                <th>Acciones</th>
+                <th scope="col">Fecha Emisión</th>
+                <th scope="col">Estado</th>
+                <th scope="col">Nro Comprobante</th>
+                <th scope="col">Cliente</th>
+                <th scope="col">Concepto / Motivo</th>
+                <th scope="col" style={{ textAlign: 'right' }}>Total Acreditado</th>
+                <th scope="col" style={{ textAlign: 'center' }}>Acciones</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={7} style={{ textAlign: 'center' }}>
+                  <td colSpan={7} style={{ textAlign: 'center', padding: '24px 0', color: 'var(--text-secondary)' }}>
                     Cargando notas de crédito...
                   </td>
                 </tr>
               ) : creditNotes.length === 0 ? (
                 <tr>
-                  <td colSpan={7} style={{ textAlign: 'center' }}>
+                  <td colSpan={7} style={{ textAlign: 'center', padding: '24px 0', color: 'var(--text-secondary)' }}>
                     No se encontraron notas de crédito.
                   </td>
                 </tr>
@@ -111,26 +115,19 @@ export default function CreditNotesTab(props: CreditNotesTabProps) {
                   const statusStyle = STATUS_BADGE_MAP[note.status] || STATUS_BADGE_MAP.REJECTED;
                   return (
                     <tr key={note.id}>
-                      <td>{new Date(note.createdAt).toLocaleDateString('es-AR')}</td>
+                      <td style={{ whiteSpace: 'nowrap' }}>
+                        {new Date(note.createdAt).toLocaleDateString('es-AR')}
+                      </td>
                       <td>
-                        <span
-                          style={{
-                            fontSize: '0.75rem',
-                            fontWeight: 600,
-                            padding: '2px 6px',
-                            borderRadius: '4px',
-                            backgroundColor: statusStyle.bg,
-                            color: statusStyle.color,
-                          }}
-                        >
-                          {statusStyle.label}
-                        </span>
+                        <span className={statusStyle.className}>{statusStyle.label}</span>
                       </td>
                       <td style={{ fontFamily: 'monospace', fontWeight: 600 }}>
                         {note.creditNoteNumber || `NCI-PENDIENTE-${note.id}`}
                       </td>
                       <td>
-                        <div>{note.persona?.name || 'Consumidor Final'}</div>
+                        <div style={{ fontWeight: 500, color: '#111827' }}>
+                          {note.persona?.name || 'Consumidor Final'}
+                        </div>
                         <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
                           CUIT: {note.persona?.cuit || 'S/D'}
                         </div>
@@ -143,7 +140,7 @@ export default function CreditNotesTab(props: CreditNotesTabProps) {
                           </div>
                         )}
                       </td>
-                      <td style={{ fontWeight: 700, color: 'var(--color-danger)' }}>
+                      <td style={{ fontWeight: 700, textAlign: 'right', color: '#E30613' }}>
                         -${Number(note.totalAmount).toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                       </td>
                       <td>
@@ -151,7 +148,7 @@ export default function CreditNotesTab(props: CreditNotesTabProps) {
                           <button
                             type="button"
                             className="btn btn-secondary"
-                            style={{ padding: '4px 8px', fontSize: '0.78rem' }}
+                            style={{ padding: '4px 9px', fontSize: '0.76rem', color: '#111827' }}
                             onClick={() => setViewCreditNoteModal(note)}
                           >
                             Ver Detalle
@@ -160,14 +157,8 @@ export default function CreditNotesTab(props: CreditNotesTabProps) {
                             <>
                               <button
                                 type="button"
-                                className="btn btn-secondary"
-                                style={{
-                                  padding: '4px 8px',
-                                  fontSize: '0.78rem',
-                                  color: 'var(--color-success)',
-                                  borderColor: 'var(--color-success)',
-                                  backgroundColor: 'transparent',
-                                }}
+                                className="btn btn-primary"
+                                style={{ padding: '4px 9px', fontSize: '0.76rem' }}
                                 onClick={() => ctrl.handleApproveCreditNote(note.id)}
                               >
                                 Aprobar
@@ -176,11 +167,10 @@ export default function CreditNotesTab(props: CreditNotesTabProps) {
                                 type="button"
                                 className="btn btn-secondary"
                                 style={{
-                                  padding: '4px 8px',
-                                  fontSize: '0.78rem',
-                                  color: 'var(--color-danger)',
-                                  borderColor: 'var(--color-danger)',
-                                  backgroundColor: 'transparent',
+                                  padding: '4px 9px',
+                                  fontSize: '0.76rem',
+                                  color: '#E30613',
+                                  borderColor: 'rgba(227, 6, 19, 0.35)',
                                 }}
                                 onClick={() => ctrl.handleRejectCreditNote(note.id)}
                               >

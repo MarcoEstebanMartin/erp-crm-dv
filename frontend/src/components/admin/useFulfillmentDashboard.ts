@@ -6,6 +6,11 @@ import {
   printShippingLabelsBultos,
 } from '../../utils/printHelpers';
 import {
+  computeAdaptiveFulfillmentColumns,
+  formatBigIntARS,
+  sumOrdersTotalInt,
+} from '../../utils/fulfillmentCardMeta.helper';
+import {
   isOrderPendingCae,
   matchesOrderSearch,
   resolveOrderClientRoute,
@@ -37,6 +42,7 @@ export function useFulfillmentDashboard() {
   const [selectedRoute, setSelectedRoute] = useState<string>('ALL');
   const [selectedZone, setSelectedZone] = useState<string>('ALL');
   const [selectedOrderIds, setSelectedOrderIds] = useState<number[]>([]);
+  const [viewMode, setViewMode] = useState<'board' | 'list'>('board');
 
   const [confirmState, setConfirmState] = useState<FulfillmentConfirmState>({
     isOpen: false,
@@ -156,6 +162,16 @@ export function useFulfillmentDashboard() {
   );
   const billedOrPendingCae = filteredOrders.filter((o) => shouldShowInFulfillmentBilledColumn(o));
   const pendingCaeCount = billedOrPendingCae.filter((o) => isOrderPendingCae(o)).length;
+  const pendingTotalLabel = useMemo(() => formatBigIntARS(sumOrdersTotalInt(pending)), [pending]);
+  const preparingTotalLabel = useMemo(() => formatBigIntARS(sumOrdersTotalInt(preparing)), [preparing]);
+  const billedTotalLabel = useMemo(
+    () => formatBigIntARS(sumOrdersTotalInt(billedOrPendingCae)),
+    [billedOrPendingCae],
+  );
+  const boardGridTemplate = useMemo(
+    () => computeAdaptiveFulfillmentColumns(pending.length, preparing.length, billedOrPendingCae.length),
+    [pending.length, preparing.length, billedOrPendingCae.length],
+  );
 
   const getFilterLabel = () => {
     const parts: string[] = [];
@@ -307,6 +323,12 @@ export function useFulfillmentDashboard() {
     preparing,
     billedOrPendingCae,
     pendingCaeCount,
+    viewMode,
+    setViewMode,
+    pendingTotalLabel,
+    preparingTotalLabel,
+    billedTotalLabel,
+    boardGridTemplate,
     fetchOrders,
     handleRequestCae,
     toggleSelectOrder,

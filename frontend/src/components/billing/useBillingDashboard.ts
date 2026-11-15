@@ -4,7 +4,7 @@ import { billingApi } from '../../api/billing.api';
 import { formatArgentinaDateKey } from '../../utils/orderSearchAndStatus.helper';
 import type { SalesInvoiceTypeFilter } from './sales/sales.types';
 
-export type BillingSubTab = 'ventas' | 'retenciones' | 'notas-credito';
+export type BillingSubTab = 'ventas' | 'retenciones' | 'notas-credito' | 'libro-iva';
 
 export function useBillingDashboard(activeTab: string) {
   const [activeSubTab, setActiveSubTab] = useState<BillingSubTab>('ventas');
@@ -104,6 +104,10 @@ export function useBillingDashboard(activeTab: string) {
   }, []);
 
   const loadDocuments = useCallback(async () => {
+    if (activeSubTab === 'libro-iva') {
+      setLoading(false);
+      return;
+    }
     const seq = ++requestSeqRef.current;
     setLoading(true);
     try {

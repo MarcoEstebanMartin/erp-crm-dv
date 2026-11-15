@@ -235,10 +235,10 @@ label {
   color: var(--text-primary);
 }
 
-/* 6. Tablas - Estructura Compacta de 1px (Estilo Linear) */
+/* 6. Tablas - Estructura Compacta de 1px con Cabecera Fija (Estilo Linear) */
 .table-container {
   width: 100%;
-  overflow-x: auto;
+  overflow: auto;
   border-radius: var(--radius-md);
   border: 1px solid var(--border-color);
   background-color: var(--bg-card);
@@ -246,11 +246,32 @@ label {
   box-shadow: var(--shadow-sm);
 }
 
+.table-container--sticky {
+  max-height: 68vh;
+}
+
+.table-container:focus-visible {
+  outline: 2px solid var(--text-primary);
+  outline-offset: 2px;
+}
+
 table {
   width: 100%;
   border-collapse: collapse;
   text-align: left;
   font-size: 0.85rem;
+}
+
+.tabular-nums,
+.table-container td,
+.table-container th {
+  font-variant-numeric: tabular-nums;
+}
+
+.table-container thead {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 2;
 }
 
 th {
@@ -746,6 +767,12 @@ dialog.app-native-dialog {
   margin: auto;
 }
 
+dialog.app-native-dialog[open] {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
 dialog.app-native-dialog:modal {
   overscroll-behavior: contain;
 }
@@ -755,6 +782,109 @@ dialog.app-native-dialog::backdrop {
   backdrop-filter: blur(4px);
   overflow: hidden;
   overscroll-behavior: contain;
+}
+
+/* Navegación / Sub-pestañas subrayadas estilo Linear */
+.linear-underline-nav,
+.linear-tablist {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  border-bottom: 1px solid var(--border-color);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.linear-underline-nav::-webkit-scrollbar,
+.linear-tablist::-webkit-scrollbar {
+  display: none;
+}
+
+.linear-nav-link,
+.linear-tab {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 10px 2px;
+  margin: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.4;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color var(--transition-fast);
+}
+
+.linear-nav-link:hover,
+.linear-tab:hover {
+  color: var(--text-primary);
+  background: transparent;
+}
+
+.linear-nav-link:focus-visible,
+.linear-tab:focus-visible {
+  outline: 2px solid var(--text-primary);
+  outline-offset: 2px;
+}
+
+.linear-nav-link[aria-current="page"],
+.linear-tab[aria-selected="true"] {
+  color: var(--text-primary);
+}
+
+.linear-nav-link[aria-current="page"]::after,
+.linear-tab[aria-selected="true"]::after {
+  content: '';
+  position: absolute;
+  inset-inline: 0;
+  inset-block-end: 0;
+  border-block-end: 2px solid var(--text-primary);
+}
+
+/* Badges Minimalistas Monocromáticos y Alerta Corporativa */
+.badge-minimal {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  background-color: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  color: #334155;
+  white-space: nowrap;
+}
+
+.badge-minimal--solid {
+  background-color: #FFFFFF;
+  border: 1px solid #111827;
+  color: #111827;
+}
+
+.badge-minimal--danger {
+  background-color: #FEF2F2;
+  border: 1px solid rgba(227, 6, 19, 0.28);
+  color: var(--color-corp-red);
+}
+
+.fulfillment-board-grid {
+  display: grid;
+  gap: 14px;
+  flex-grow: 1;
+  min-height: 0;
+}
+
+@media (max-width: 960px) {
+  .fulfillment-board-grid {
+    grid-template-columns: 1fr !important;
+  }
 }
 
 /* 12. Listas de Selección de Productos para Pedidos */
@@ -1111,8 +1241,43 @@ dialog.app-native-dialog::backdrop {
 
   .sidebar,
   .no-print, 
-  .no-print * {
+  .no-print *,
+  dialog.app-native-dialog.print-modal[open]::backdrop {
     display: none !important;
+  }
+
+  dialog.app-native-dialog.print-modal[open] {
+    position: static !important;
+    inset: auto !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    max-height: none !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    overflow: visible !important;
+    background: #ffffff !important;
+  }
+
+  dialog.app-native-dialog.print-modal[open] .print-content-box,
+  dialog.app-native-dialog.print-modal[open] .print-modal-scroll {
+    max-width: 100% !important;
+    max-height: none !important;
+    width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    overflow: visible !important;
+  }
+
+  dialog.app-native-dialog.print-modal[open] #print-area,
+  dialog.app-native-dialog.print-modal[open] #print-area *,
+  dialog.app-native-dialog.print-modal[open] #invoice-print-section,
+  dialog.app-native-dialog.print-modal[open] #invoice-print-section * {
+    visibility: visible !important;
   }
 
   .print-only {
