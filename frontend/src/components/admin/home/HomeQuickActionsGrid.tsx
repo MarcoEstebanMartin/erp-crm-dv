@@ -53,17 +53,18 @@ export function HomeQuickActionsGrid({
       <style>{`
         .quick-actions-grid {
           display: grid;
-          grid-template-columns: repeat(4, 1fr);
+          grid-template-columns: repeat(4, minmax(175px, 200px));
+          justify-content: center;
           gap: 10px;
         }
-        @media (max-width: 1024px) {
+        @media (max-width: 900px) {
           .quick-actions-grid {
-            grid-template-columns: repeat(2, 1fr);
+            grid-template-columns: repeat(2, minmax(175px, 220px));
           }
         }
         @media (max-width: 550px) {
           .quick-actions-grid {
-            grid-template-columns: repeat(1, 1fr);
+            grid-template-columns: repeat(1, minmax(0, 1fr));
           }
         }
         .quick-action-card:hover {
@@ -82,14 +83,14 @@ export function HomeQuickActionsGrid({
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'flex-start',
-              padding: '10px 14px',
+              padding: '8px 12px',
               backgroundColor: 'var(--bg-card, #ffffff)',
               border: '1px solid var(--border-color, #e5e5e7)',
               borderRadius: '8px',
               cursor: 'pointer',
               textAlign: 'left',
               width: '100%',
-              gap: '10px',
+              gap: '9px',
               transition: 'background-color 0.15s ease, border-color 0.15s ease',
             }}
           >
@@ -98,8 +99,8 @@ export function HomeQuickActionsGrid({
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                width: '30px',
-                height: '30px',
+                width: '28px',
+                height: '28px',
                 borderRadius: '6px',
                 backgroundColor: 'var(--bg-light, #f5f5f7)',
                 border: '1px solid var(--border-color, #e5e5e7)',
