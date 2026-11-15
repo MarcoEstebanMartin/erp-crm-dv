@@ -1,7 +1,7 @@
-import React from 'react';
+import type { FC } from 'react';
 import { Plus, Check, DollarSign, Trash2, Search, UserPlus, Eye, Edit } from 'lucide-react';
 
-export const ComprasFacturasTab: React.FC<{
+export const ComprasFacturasTab: FC<{
   isAdmin: boolean;
   supplierMetrics: { totalDeuda: number; vencidasCount: number; totalVencidas: number; proximasCount: number; totalProximas: number };
   filteredInvoices: any[];
@@ -27,81 +27,84 @@ export const ComprasFacturasTab: React.FC<{
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', marginBottom: '20px' }}>
           <div className="card" style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
             <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Deuda Pendiente Total</span>
-            <span style={{ fontSize: '1.4rem', fontWeight: 700 }}>${Math.round(supplierMetrics.totalDeuda).toLocaleString('es-AR')}</span>
+            <span className="tabular-nums" style={{ fontSize: '1.4rem', fontWeight: 700 }}>${Math.round(supplierMetrics.totalDeuda).toLocaleString('es-AR')}</span>
           </div>
           <div className="card" style={{ padding: '16px', borderLeft: '4px solid var(--color-danger)', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-            <span style={{ fontSize: '0.78rem', color: 'var(--color-danger)', fontWeight: 600 }}>⚠️ Facturas Vencidas ({supplierMetrics.vencidasCount})</span>
-            <span style={{ fontSize: '1.4rem', fontWeight: 700, color: 'var(--color-danger)' }}>${Math.round(supplierMetrics.totalVencidas).toLocaleString('es-AR')}</span>
+            <span style={{ fontSize: '0.78rem', color: 'var(--color-danger)', fontWeight: 600 }}>Facturas Vencidas ({supplierMetrics.vencidasCount})</span>
+            <span className="tabular-nums" style={{ fontSize: '1.4rem', fontWeight: 700, color: 'var(--color-danger)' }}>${Math.round(supplierMetrics.totalVencidas).toLocaleString('es-AR')}</span>
           </div>
           <div className="card" style={{ padding: '16px', borderLeft: '4px solid var(--color-warning)', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-            <span style={{ fontSize: '0.78rem', color: '#B78103', fontWeight: 600 }}>⏳ Próximos Vencimientos 7d ({supplierMetrics.proximasCount})</span>
-            <span style={{ fontSize: '1.4rem', fontWeight: 700, color: '#B78103' }}>${Math.round(supplierMetrics.totalProximas).toLocaleString('es-AR')}</span>
+            <span style={{ fontSize: '0.78rem', color: '#B78103', fontWeight: 600 }}>Vencimientos 7d ({supplierMetrics.proximasCount})</span>
+            <span className="tabular-nums" style={{ fontSize: '1.4rem', fontWeight: 700, color: '#B78103' }}>${Math.round(supplierMetrics.totalProximas).toLocaleString('es-AR')}</span>
           </div>
         </div>
       )}
 
       <div className="card">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
-          <div>
-            <h3 className="card-title" style={{ margin: 0 }}>📥 Comprobantes y Facturas de Compra</h3>
-            <p style={{ fontSize: '0.8rem', marginTop: '2px' }}>Historial impositivo y contable de compras vinculadas al IVA Crédito Fiscal.</p>
-          </div>
-          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-            <input type="text" placeholder="Buscar factura o proveedor..." className="input" style={{ fontSize: '0.8rem', padding: '6px 12px' }} value={supplierQuery} onChange={(e) => setSupplierQuery(e.target.value)} />
-            <input type="date" className="input" style={{ fontSize: '0.8rem', padding: '6px 12px' }} value={supplierStartDate} onChange={(e) => setSupplierStartDate(e.target.value)} />
-            <input type="date" className="input" style={{ fontSize: '0.8rem', padding: '6px 12px' }} value={supplierEndDate} onChange={(e) => setSupplierEndDate(e.target.value)} />
-            <select className="input" style={{ fontSize: '0.8rem', padding: '6px 12px', minWidth: '175px' }} value={branchFilter} onChange={(e) => setBranchFilter(e.target.value as any)}>
-              <option value="ALL">🏢 Todas las Sucursales</option>
-              <option value="OFFICIAL">Sucursal A</option>
-              <option value="INTERNAL">Sucursal X</option>
-            </select>
-            <button className="btn btn-primary" onClick={onOpenSupplierModal}><Plus size={16} /> Cargar Factura Manual</button>
+          <h3 className="card-title" style={{ margin: 0 }}>Facturas de Compra</h3>
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+            <search aria-label="Filtrar facturas de compra" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+              <label htmlFor="compras-inv-search" className="visually-hidden">Buscar factura o proveedor</label>
+              <input id="compras-inv-search" type="text" placeholder="Buscar factura o proveedor..." className="input" style={{ fontSize: '0.8rem', padding: '6px 12px' }} value={supplierQuery} onChange={(e) => setSupplierQuery(e.target.value)} autoCorrect="off" autoCapitalize="none" spellCheck={false} />
+              <label htmlFor="compras-inv-start" className="visually-hidden">Desde</label>
+              <input id="compras-inv-start" type="date" className="input" style={{ fontSize: '0.8rem', padding: '6px 12px' }} value={supplierStartDate} onChange={(e) => setSupplierStartDate(e.target.value)} />
+              <label htmlFor="compras-inv-end" className="visually-hidden">Hasta</label>
+              <input id="compras-inv-end" type="date" className="input" style={{ fontSize: '0.8rem', padding: '6px 12px' }} value={supplierEndDate} onChange={(e) => setSupplierEndDate(e.target.value)} />
+              <label htmlFor="compras-inv-branch" className="visually-hidden">Sucursal</label>
+              <select id="compras-inv-branch" className="input" style={{ fontSize: '0.8rem', padding: '6px 12px', minWidth: '165px' }} value={branchFilter} onChange={(e) => setBranchFilter(e.target.value as 'ALL' | 'OFFICIAL' | 'INTERNAL')}>
+                <option value="ALL">Todas las sucursales</option>
+                <option value="OFFICIAL">Sucursal A</option>
+                <option value="INTERNAL">Sucursal X</option>
+              </select>
+            </search>
+            <button type="button" className="btn btn-primary" onClick={onOpenSupplierModal}><Plus size={16} aria-hidden="true" /> Nueva Factura</button>
           </div>
         </div>
 
-        <div className="table-container">
+        <div className="table-container table-container--sticky" role="region" aria-label="Facturas de compra" tabIndex={0}>
           <table>
             <thead>
               <tr>
-                <th>Fecha Emisión</th>
-                <th>Fecha Vto.</th>
-                <th>Tipo</th>
-                <th>Sucursal</th>
-                <th>Nro Comprobante</th>
-                <th>Proveedor</th>
-                <th>Neto</th>
-                <th>IVA</th>
-                <th>Total</th>
-                <th>Pagado</th>
-                <th>Estado</th>
-                <th style={{ textAlign: 'center' }}>Acciones</th>
+                <th scope="col">Emisión</th>
+                <th scope="col">Vto.</th>
+                <th scope="col">Tipo</th>
+                <th scope="col">Sucursal</th>
+                <th scope="col">Comprobante</th>
+                <th scope="col">Proveedor</th>
+                <th scope="col">Neto</th>
+                <th scope="col">IVA</th>
+                <th scope="col">Total</th>
+                <th scope="col">Pagado</th>
+                <th scope="col">Estado</th>
+                <th scope="col" style={{ textAlign: 'center' }}>Acciones</th>
               </tr>
             </thead>
             <tbody>
               {filteredInvoices.length === 0 ? (
-                <tr><td colSpan={12} style={{ textAlign: 'center' }}>No se encontraron comprobantes de compra.</td></tr>
+                <tr><td colSpan={12} style={{ textAlign: 'center' }}>Sin comprobantes encontrados.</td></tr>
               ) : (
                 filteredInvoices.map((inv) => {
                   const isOverdue = inv.dueDate && new Date(inv.dueDate) < new Date() && inv.status !== 'PAID';
                   return (
                     <tr key={inv.id} style={isOverdue ? { backgroundColor: '#FFF5F5' } : undefined}>
-                      <td>{new Date(inv.issueDate).toLocaleDateString('es-AR', { timeZone: 'UTC' })}</td>
-                      <td>{inv.dueDate ? new Date(inv.dueDate).toLocaleDateString('es-AR', { timeZone: 'UTC' }) : 'S/D'}</td>
+                      <td className="tabular-nums">{new Date(inv.issueDate).toLocaleDateString('es-AR', { timeZone: 'UTC' })}</td>
+                      <td className="tabular-nums">{inv.dueDate ? new Date(inv.dueDate).toLocaleDateString('es-AR', { timeZone: 'UTC' }) : 'S/D'}</td>
                       <td style={{ fontWeight: 600 }}>{inv.invoiceType?.replace('_', ' ')}</td>
                       <td>
                         <span style={{ fontSize: '0.72rem', fontWeight: 600, padding: '2px 6px', borderRadius: '4px', backgroundColor: inv.billingType === 'OFFICIAL' ? '#E8F5E9' : '#ECEFF1', color: inv.billingType === 'OFFICIAL' ? '#2E7D32' : '#37474F' }}>
                           {inv.billingType === 'OFFICIAL' ? 'Suc. A' : 'Suc. X'}
                         </span>
                       </td>
-                      <td style={{ fontFamily: 'monospace' }}>{inv.invoiceNumber}</td>
+                      <td className="tabular-nums" style={{ fontFamily: 'monospace' }}>{inv.invoiceNumber}</td>
                       <td>
                         <div style={{ fontWeight: 600 }}>{inv.persona?.name}</div>
-                        <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>CUIT: {inv.persona?.cuit}</div>
+                        <div className="tabular-nums" style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>CUIT: {inv.persona?.cuit}</div>
                       </td>
-                      <td>${Number(inv.netAmount || 0).toLocaleString('es-AR')}</td>
-                      <td>${Number(inv.taxAmount || 0).toLocaleString('es-AR')}</td>
-                      <td style={{ fontWeight: 700 }}>${Number(inv.totalAmount || 0).toLocaleString('es-AR')}</td>
-                      <td>${Number(inv.paidAmount || 0).toLocaleString('es-AR')}</td>
+                      <td className="tabular-nums">${Number(inv.netAmount || 0).toLocaleString('es-AR')}</td>
+                      <td className="tabular-nums">${Number(inv.taxAmount || 0).toLocaleString('es-AR')}</td>
+                      <td className="tabular-nums" style={{ fontWeight: 700 }}>${Number(inv.totalAmount || 0).toLocaleString('es-AR')}</td>
+                      <td className="tabular-nums">${Number(inv.paidAmount || 0).toLocaleString('es-AR')}</td>
                       <td>
                         <span style={{ fontSize: '0.72rem', fontWeight: 600, padding: '2px 6px', borderRadius: '4px', backgroundColor: inv.status === 'PAID' ? 'var(--color-success-bg)' : isOverdue ? '#FFF0F0' : 'var(--color-warning-bg)', color: inv.status === 'PAID' ? 'var(--color-success)' : isOverdue ? 'var(--color-danger)' : 'var(--color-warning)' }}>
                           {inv.status === 'PAID' ? 'Saldada' : isOverdue ? 'Vencida' : 'Pendiente'}
@@ -111,15 +114,15 @@ export const ComprasFacturasTab: React.FC<{
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
                           {inv.status === 'PAID' ? (
                             <span style={{ fontSize: '0.72rem', fontWeight: 600, padding: '3px 8px', borderRadius: '6px', backgroundColor: 'var(--color-success-bg)', color: 'var(--color-success)', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
-                              <Check size={12} /> Saldada
+                              <Check size={12} aria-hidden="true" /> Saldada
                             </span>
                           ) : (
-                            <button onClick={() => onOpenPayInvoice(inv)} className="btn" style={{ padding: '4px 10px', fontSize: '0.76rem', fontWeight: 600, backgroundColor: 'var(--color-success)', color: '#FFFFFF', borderRadius: '6px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                              <DollarSign size={13} /> Cargar Pago
+                            <button type="button" onClick={() => onOpenPayInvoice(inv)} className="btn" style={{ padding: '4px 10px', fontSize: '0.76rem', fontWeight: 600, backgroundColor: 'var(--color-success)', color: '#FFFFFF', borderRadius: '6px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                              <DollarSign size={13} aria-hidden="true" /> Pagar
                             </button>
                           )}
-                          <button onClick={() => onDeleteInvoice(inv.id, inv.invoiceNumber)} style={{ background: 'none', border: 'none', padding: '4px', cursor: 'pointer', color: 'var(--color-danger)' }} title="Anular Factura">
-                            <Trash2 size={15} />
+                          <button type="button" onClick={() => onDeleteInvoice(inv.id, inv.invoiceNumber)} style={{ background: 'none', border: 'none', padding: '4px', cursor: 'pointer', color: 'var(--color-danger)' }} aria-label={`Anular factura ${inv.invoiceNumber}`} title="Anular factura">
+                            <Trash2 size={15} aria-hidden="true" />
                           </button>
                         </div>
                       </td>
@@ -135,7 +138,7 @@ export const ComprasFacturasTab: React.FC<{
   );
 };
 
-export const ComprasProveedoresTab: React.FC<{
+export const ComprasProveedoresTab: FC<{
   isAdmin: boolean;
   filteredProviders: any[];
   providerSearch: string;
@@ -151,39 +154,37 @@ export const ComprasProveedoresTab: React.FC<{
   return (
     <div className="card">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
-        <div>
-          <h3 className="card-title" style={{ margin: 0 }}>👥 Fichero de Proveedores ({filteredProviders.length})</h3>
-          <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Administración de cuentas corrientes, datos de facturación y contactos.</p>
-        </div>
-        <div style={{ display: 'flex', gap: '10px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', backgroundColor: '#fff', border: '1px solid var(--border-color)', borderRadius: '6px', padding: '4px 10px', gap: '6px' }}>
-            <Search size={14} />
-            <input type="text" placeholder="Buscar CUIT o nombre..." value={providerSearch} onChange={(e) => setProviderSearch(e.target.value)} style={{ border: 'none', outline: 'none', fontSize: '0.8rem', width: '180px' }} />
-          </div>
-          <button className="btn btn-primary" onClick={onOpenCreateProvider}><UserPlus size={16} /> Registrar Proveedor</button>
+        <h3 className="card-title" style={{ margin: 0 }}>Proveedores ({filteredProviders.length})</h3>
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+          <search aria-label="Buscar proveedores" style={{ display: 'flex', alignItems: 'center', backgroundColor: '#fff', border: '1px solid var(--border-color)', borderRadius: '6px', padding: '4px 10px', gap: '6px' }}>
+            <label htmlFor="compras-prov-search" className="visually-hidden">Buscar proveedor</label>
+            <Search size={14} aria-hidden="true" />
+            <input id="compras-prov-search" type="text" placeholder="CUIT o razón social..." value={providerSearch} onChange={(e) => setProviderSearch(e.target.value)} style={{ border: 'none', outline: 'none', fontSize: '0.8rem', width: '180px' }} autoCorrect="off" autoCapitalize="none" spellCheck={false} />
+          </search>
+          <button type="button" className="btn btn-primary" onClick={onOpenCreateProvider}><UserPlus size={16} aria-hidden="true" /> Nuevo Proveedor</button>
         </div>
       </div>
 
-      <div className="table-container">
+      <div className="table-container table-container--sticky" role="region" aria-label="Proveedores" tabIndex={0}>
         <table>
           <thead>
             <tr>
-              <th>Proveedor / Razón Social</th>
-              <th>Rubro / Marcas Provistas</th>
-              <th>Contactos y Teléfonos</th>
-              <th style={{ width: '110px' }}>Acciones</th>
+              <th scope="col">Proveedor</th>
+              <th scope="col">Rubro</th>
+              <th scope="col">Contactos</th>
+              <th scope="col" style={{ width: '110px' }}>Acciones</th>
             </tr>
           </thead>
           <tbody>
             {filteredProviders.length === 0 ? (
-              <tr><td colSpan={4} style={{ textAlign: 'center' }}>No se encontraron proveedores.</td></tr>
+              <tr><td colSpan={4} style={{ textAlign: 'center' }}>Sin proveedores encontrados.</td></tr>
             ) : (
               filteredProviders.map((p) => (
                 <tr key={p.id}>
                   <td>
                     <div style={{ fontWeight: 600, fontSize: '0.88rem' }}>{p.name}</div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>📍 {p.address ? `${p.address} (${p.city || 'S/D'})` : 'Sin Dirección'}</div>
-                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontFamily: 'monospace' }}>{p.cuit ? `CUIT: ${p.cuit}` : 'Sin CUIT'}{p.email ? ` | ✉️ ${p.email}` : ''}</div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{p.address ? `${p.address} (${p.city || 'S/D'})` : 'Sin domicilio'}</div>
+                    <div className="tabular-nums" style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontFamily: 'monospace' }}>{p.cuit ? `CUIT: ${p.cuit}` : 'Sin CUIT'}{p.email ? ` · ${p.email}` : ''}</div>
                   </td>
                   <td>
                     {p.rubro ? (
@@ -194,19 +195,19 @@ export const ComprasProveedoresTab: React.FC<{
                     {Array.isArray(p.contacts) && p.contacts.length > 0 ? (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                         {p.contacts.map((c: any, idx: number) => (
-                          <div key={idx} style={{ fontSize: '0.76rem' }}><strong>{c.name}</strong> {c.phone ? `📞 ${c.phone}` : ''}</div>
+                          <div key={idx} className="tabular-nums" style={{ fontSize: '0.76rem' }}><strong>{c.name}</strong>{c.phone ? ` · ${c.phone}` : ''}</div>
                         ))}
                       </div>
                     ) : (
-                      <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>{p.phone ? `📞 ${p.phone}` : 'Sin contacto'}</span>
+                      <span className="tabular-nums" style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>{p.phone || 'Sin contacto'}</span>
                     )}
                   </td>
                   <td>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                      <button className="btn btn-secondary" style={{ padding: '4px 8px', fontSize: '0.76rem', display: 'flex', alignItems: 'center', gap: '4px', justifyContent: 'center' }} onClick={() => onOpenAccountSummary(p)}><Eye size={12} /> Resumen</button>
-                      <button className="btn btn-secondary" style={{ padding: '4px 8px', fontSize: '0.76rem', display: 'flex', alignItems: 'center', gap: '4px', justifyContent: 'center' }} onClick={() => onOpenEditProvider(p)}><Edit size={12} /> Editar</button>
+                      <button type="button" className="btn btn-secondary" style={{ padding: '4px 8px', fontSize: '0.76rem', display: 'flex', alignItems: 'center', gap: '4px', justifyContent: 'center' }} onClick={() => onOpenAccountSummary(p)}><Eye size={12} aria-hidden="true" /> Resumen</button>
+                      <button type="button" className="btn btn-secondary" style={{ padding: '4px 8px', fontSize: '0.76rem', display: 'flex', alignItems: 'center', gap: '4px', justifyContent: 'center' }} onClick={() => onOpenEditProvider(p)}><Edit size={12} aria-hidden="true" /> Editar</button>
                       {isAdmin && (
-                        <button className="btn btn-secondary" style={{ padding: '4px 8px', fontSize: '0.76rem', display: 'flex', alignItems: 'center', gap: '4px', justifyContent: 'center', color: 'var(--color-danger)' }} onClick={() => onDeleteProvider(p.id, p.name)}><Trash2 size={12} /> Eliminar</button>
+                        <button type="button" className="btn btn-secondary" style={{ padding: '4px 8px', fontSize: '0.76rem', display: 'flex', alignItems: 'center', gap: '4px', justifyContent: 'center', color: 'var(--color-danger)' }} onClick={() => onDeleteProvider(p.id, p.name)}><Trash2 size={12} aria-hidden="true" /> Eliminar</button>
                       )}
                     </div>
                   </td>

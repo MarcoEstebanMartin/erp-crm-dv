@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { CheckCircle, RefreshCw, AlertCircle, ShieldCheck } from 'lucide-react';
+import { CheckCircle, RefreshCw, AlertCircle, ShieldCheck, X } from 'lucide-react';
 import ArqueoCajaModal from './ArqueoCajaModal';
 import type { RendicionesTabType, RouteGroup, SellerGroup } from './rendiciones/types';
 import { useRendicionesAudit } from './rendiciones/useRendicionesAudit';
@@ -24,13 +24,15 @@ const RendicionesDashboard: React.FC = () => {
     deposit.fetchDrawers();
   }, []);
 
+  const topError = (audit.errorMsg && !audit.auditTarget ? audit.errorMsg : null) || deposit.drawerError;
+
   return (
     <div style={{ padding: '0px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-      {/* Mensajes de feedback */}
       {audit.successMsg && (
         <div
+          role="status"
           style={{
-            padding: '14px 20px',
+            padding: '12px 16px',
             backgroundColor: '#ecfdf5',
             color: '#065f46',
             borderRadius: '8px',
@@ -39,18 +41,25 @@ const RendicionesDashboard: React.FC = () => {
             fontWeight: 500,
             display: 'flex',
             alignItems: 'center',
-            gap: '8px'
+            justifyContent: 'space-between',
+            gap: '8px',
           }}
         >
-          <CheckCircle size={18} color="#10b981" />
-          <span>{audit.successMsg}</span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <CheckCircle size={18} color="#10b981" aria-hidden="true" />
+            <span>{audit.successMsg}</span>
+          </span>
+          <button type="button" className="btn btn-ghost" style={{ padding: '4px' }} onClick={() => audit.setSuccessMsg(null)} aria-label="Cerrar notificación">
+            <X size={15} aria-hidden="true" />
+          </button>
         </div>
       )}
 
-      {audit.errorMsg && !audit.auditTarget && (
+      {topError && (
         <div
+          role="alert"
           style={{
-            padding: '14px 20px',
+            padding: '12px 16px',
             backgroundColor: '#fef2f2',
             color: '#991b1b',
             borderRadius: '8px',
@@ -59,27 +68,37 @@ const RendicionesDashboard: React.FC = () => {
             fontWeight: 500,
             display: 'flex',
             alignItems: 'center',
-            gap: '8px'
+            justifyContent: 'space-between',
+            gap: '8px',
           }}
         >
-          <AlertCircle size={18} color="#ef4444" />
-          <span>{audit.errorMsg}</span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <AlertCircle size={18} color="#ef4444" aria-hidden="true" />
+            <span>{topError}</span>
+          </span>
+          <button
+            type="button"
+            className="btn btn-ghost"
+            style={{ padding: '4px' }}
+            onClick={() => {
+              audit.setErrorMsg(null);
+              deposit.setDrawerError(null);
+            }}
+            aria-label="Cerrar alerta"
+          >
+            <X size={15} aria-hidden="true" />
+          </button>
         </div>
       )}
 
-      {/* Tarjeta Principal */}
       <div className="card" style={{ padding: '24px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
-          <div>
-            <h2 style={{ fontSize: '1.4rem', fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--text-primary)' }}>
-              <ShieldCheck size={26} color="var(--color-primary)" />
-              Control y Arqueo de Cajas Operativas
-            </h2>
-            <p style={{ margin: '6px 0 0 0', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
-              Realice el conteo físico de efectivo y cheques traídos de la calle. Al confirmarse el arqueo, los fondos ingresarán directamente a la Caja Grande (Central).
-            </p>
-          </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
+          <h2 style={{ fontSize: '1.35rem', fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--text-primary)' }}>
+            <ShieldCheck size={24} color="var(--color-primary)" aria-hidden="true" />
+            Arqueo de Cajas
+          </h2>
           <button
+            type="button"
             className="btn btn-ghost"
             onClick={() => {
               audit.fetchRendiciones();
@@ -88,7 +107,7 @@ const RendicionesDashboard: React.FC = () => {
             disabled={audit.loading}
             style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
           >
-            <RefreshCw size={16} className={audit.loading ? 'animate-spin' : ''} />
+            <RefreshCw size={16} className={audit.loading ? 'animate-spin' : ''} aria-hidden="true" />
             <span>Actualizar</span>
           </button>
         </div>
@@ -103,10 +122,12 @@ const RendicionesDashboard: React.FC = () => {
           onOpenAudit={audit.handleOpenAudit}
           onInspectDrawer={deposit.handleInspectDrawer}
           onOpenCloseCaja={(drawerId) => {
+            deposit.setDrawerError(null);
             deposit.setAmountInput('');
             deposit.setCajaActionModal({ open: true, branch: 'DEPOSITO', mode: 'close', drawerId });
           }}
           onOpenNewCaja={() => {
+            deposit.setDrawerError(null);
             deposit.setAmountInput('');
             deposit.setCajaActionModal({ open: true, branch: 'DEPOSITO', mode: 'open' });
           }}
@@ -153,7 +174,11 @@ const RendicionesDashboard: React.FC = () => {
         open={Boolean(deposit.cajaActionModal?.open && deposit.cajaActionModal.mode === 'open')}
         amountInput={deposit.amountInput}
         onAmountChange={deposit.setAmountInput}
-        onClose={() => deposit.setCajaActionModal(null)}
+        errorMsg={deposit.drawerError}
+        onClose={() => {
+          deposit.setDrawerError(null);
+          deposit.setCajaActionModal(null);
+        }}
         onSubmit={deposit.handleCajaActionSubmit}
       />
 

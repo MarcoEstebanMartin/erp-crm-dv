@@ -1,31 +1,36 @@
-import { useState, useEffect } from 'react';
-import { api } from '../../utils/api';
+import { useEffect, useState } from 'react';
 import { useConfirm } from '../../context/ConfirmContext';
+import { api } from '../../utils/api';
 
 const normalizeString = (str: string | null | undefined): string => {
   if (!str) return '';
   return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().trim();
 };
 
-const DEFAULT_SUPPLIERS = [
+export const DEFAULT_SUPPLIERS = [
   'REMOTTI- RTO', 'NIZA SA', 'DIST.JUNIN', 'A.G.D.', 'CASA NINI', 'R.P.B.',
   'FIDEOS EL RECORD', 'SODECAR SA', 'CREMIGAL', 'FRATELLI BRANCA', 'COMISION M.PAGO', 'PERC-ING.BRUTOS'
 ];
 
-const DEFAULT_LOCALITIES = [
+export const DEFAULT_LOCALITIES = [
   'GENERAL VILLEGAS', 'EMILIO V. BUNGE', 'BANDERALÓ', 'BERNARDO LARROUDÉ', 'PIEDRITAS',
   'CORONEL CHARLONE', 'BUCHARDO', 'TRES ALGARROBOS', 'CARLOS TEJEDOR', 'FLORENTINO AMEGHINO',
   'BLAQUIER', 'RIVADAVIA', 'FORTÍN OLAVARRÍA', 'INTENDENTE ALVEAR', 'RUFINO', 'CEBALLOS',
   'REALICÓ', 'VILLA SAUZE', 'SANSINENA', 'SANTA ELEODORA', 'SANTA REGINA', 'VILLA SABOYA', 'CAÑADA SECA'
 ];
 
-const getMonday = (dStr: string) => {
+export const getMonday = (dStr: string) => {
   const d = new Date(dStr + 'T00:00:00');
   const day = d.getDay();
   const diff = d.getDate() - day + (day === 0 ? -6 : 1);
   const monday = new Date(d.setDate(diff));
   return monday.toISOString().split('T')[0];
 };
+
+export interface WeeklyCashStatusMsg {
+  type: 'success' | 'error';
+  text: string;
+}
 
 export function useWeeklyCashController() {
   const confirm = useConfirm();
@@ -39,6 +44,8 @@ export function useWeeklyCashController() {
   const [saving, setSaving] = useState(false);
   const [suggestedCredit, setSuggestedCredit] = useState<number>(0);
   const [weeksDropdownOpen, setWeeksDropdownOpen] = useState(false);
+  const [newWeekDate, setNewWeekDate] = useState<string>(() => new Date().toISOString().split('T')[0]);
+  const [statusMsg, setStatusMsg] = useState<WeeklyCashStatusMsg | null>(null);
 
   const setupNewWeek = async (weekStart: string) => {
     setSelectedWeekStart(weekStart);
@@ -95,8 +102,9 @@ export function useWeeklyCashController() {
 
   const handleSelectWeek = async (weekStart: string) => {
     if (isDirty) {
-      if (!await confirm('Tenés cambios sin guardar en esta planilla. ¿Querés descartarlos y cambiar de semana?', { type: 'warning' })) return;
+      if (!await confirm('Tenés cambios sin guardar en esta planilla. ¿Descartarlos?', { type: 'warning' })) return;
     }
+    setStatusMsg(null);
     const report = weeklyReports.find(r => r.weekStart === weekStart);
     setSelectedWeekStart(weekStart);
     if (report) {
@@ -119,34 +127,35 @@ export function useWeeklyCashController() {
 
   const handleSaveWeekly = async () => {
     setSaving(true);
+    setStatusMsg(null);
     try {
       await api.saveWeeklyReport({ weekStart: selectedWeekStart, purchases, sales, credit, buffer });
-      alert('Planilla semanal guardada con éxito.');
+      setStatusMsg({ type: 'success', text: 'Planilla guardada.' });
       setIsDirty(false);
       await loadWeeklyReports(selectedWeekStart);
     } catch (err: any) {
-      alert('Error al guardar la planilla: ' + (err.message || err));
+      setStatusMsg({ type: 'error', text: `Error al guardar: ${err.message || err}` });
     } finally {
       setSaving(false);
     }
   };
 
   const handleDeleteWeekly = async () => {
-    if (!await confirm(`¿Estás seguro de que querés eliminar la planilla de la semana ${selectedWeekStart}? Esta acción no se puede deshacer.`, { type: 'danger' })) return;
+    if (!await confirm(`¿Eliminar la planilla de la semana ${selectedWeekStart}?`, { type: 'danger' })) return;
+    setStatusMsg(null);
     try {
       await api.deleteWeeklyReport(selectedWeekStart);
-      alert('Planilla eliminada con éxito.');
+      setStatusMsg({ type: 'success', text: 'Planilla eliminada.' });
       setIsDirty(false);
       await loadWeeklyReports();
     } catch (err: any) {
-      alert('Error al eliminar la planilla: ' + (err.message || err));
+      setStatusMsg({ type: 'error', text: `Error al eliminar: ${err.message || err}` });
     }
   };
 
-  const handleCreateNewWeek = () => {
-    const defaultVal = new Date().toISOString().split('T')[0];
-    const userVal = window.prompt('Ingresá una fecha de la semana que querés crear (se ajustará automáticamente al lunes de esa semana):', defaultVal);
-    if (userVal) handleSelectWeek(getMonday(userVal));
+  const handleCreateNewWeek = (dateInput?: string) => {
+    const val = (dateInput ?? newWeekDate) || new Date().toISOString().split('T')[0];
+    handleSelectWeek(getMonday(val));
   };
 
   const addPurchaseRow = () => { setPurchases(prev => [...prev, { company: '', date: '', amount: 0 }]); setIsDirty(true); };
@@ -164,10 +173,11 @@ export function useWeeklyCashController() {
   };
 
   const handleAutofillSales = async () => {
+    setStatusMsg(null);
     try {
       const autoSales = await api.getAutofillSales(selectedWeekStart);
       if (!autoSales || autoSales.length === 0) {
-        alert('No se encontraron ventas entregadas en el sistema para esta semana.');
+        setStatusMsg({ type: 'error', text: 'Sin ventas entregadas para esta semana.' });
         return;
       }
       setSales(prevSales => {
@@ -188,16 +198,17 @@ export function useWeeklyCashController() {
         return newSales;
       });
       setIsDirty(true);
-      alert('Ventas completadas con éxito en base a los pedidos entregados.');
+      setStatusMsg({ type: 'success', text: 'Ventas completadas desde el ERP.' });
     } catch (err: any) {
-      alert('Error al autocompletar ventas: ' + (err.message || err));
+      setStatusMsg({ type: 'error', text: `Error al autocompletar ventas: ${err.message || err}` });
     }
   };
 
   return {
     weeklyReports, selectedWeekStart, purchases, sales, credit, setCredit,
     buffer, setBuffer, isDirty, setIsDirty, saving, suggestedCredit,
-    weeksDropdownOpen, setWeeksDropdownOpen,
+    weeksDropdownOpen, setWeeksDropdownOpen, newWeekDate, setNewWeekDate,
+    statusMsg, setStatusMsg,
     handleSelectWeek, handleSaveWeekly, handleDeleteWeekly, handleCreateNewWeek,
     addPurchaseRow, removePurchaseRow, handlePurchaseChange,
     addSalesRow, removeSalesRow, handleSalesChange, handleAutofillSales

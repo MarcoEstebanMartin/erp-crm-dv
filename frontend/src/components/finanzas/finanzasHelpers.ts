@@ -224,3 +224,25 @@ export const computeFilteredMetricsAndLedger = (
     detailedCashItems, detailedCheckItems, detailedTransferItems, detailedExpenseItems, detailedNetItems,
   };
 };
+
+export const computeCajaGrandeBalance = (allDrawers: any[], allTxs: any[]): number => {
+  const centralClosed = (allDrawers || [])
+    .filter((d: any) => d.status === 'CLOSED' && d.drawerType === 'CENTRAL')
+    .sort((a: any, b: any) => new Date(b.closedAt).getTime() - new Date(a.closedAt).getTime());
+  const lastCentral = centralClosed[0] || null;
+  const cutoffDate = lastCentral ? new Date(lastCentral.closedAt) : null;
+  const baseBalance = lastCentral ? Number(lastCentral.realBalance || 0) : 0;
+
+  const closed = (allDrawers || []).filter(
+    (d: any) => d.status === 'CLOSED' && d.drawerType !== 'CENTRAL' && (!cutoffDate || new Date(d.closedAt) > cutoffDate)
+  );
+  const netDrawersCash = closed.reduce(
+    (acc: number, curr: any) => acc + (Number(curr.realBalance || 0) - Number(curr.openingBalance || 0)),
+    0
+  );
+  const overallExpenses = (allTxs || []).filter(
+    (t: any) => t.type === 'OUTCOME' && t.cashDrawerId === null && t.bankAccountId === null && (!cutoffDate || new Date(t.createdAt) > cutoffDate)
+  );
+  const totalExpensesOverall = overallExpenses.reduce((acc: number, curr: any) => acc + Number(curr.amount || 0), 0);
+  return baseBalance + netDrawersCash - totalExpensesOverall;
+};

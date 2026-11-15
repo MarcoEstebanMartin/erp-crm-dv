@@ -1,92 +1,66 @@
-import { useState, lazy, Suspense } from 'react';
+import { useState, lazy, Suspense, useRef, type KeyboardEvent } from 'react';
 import { Truck, Layers, Fuel } from 'lucide-react';
 
 const RepartoDashboard = lazy(() => import('./RepartoDashboard'));
 const FleetDashboard = lazy(() => import('./FleetDashboard'));
 const FuelControlDashboard = lazy(() => import('./FuelControlDashboard'));
 
+type LogisticaSubTab = 'reparto' | 'flota' | 'combustible';
+
+const TABS: Array<{ id: LogisticaSubTab; label: string; Icon: typeof Truck }> = [
+  { id: 'reparto', label: 'Hojas de Reparto', Icon: Truck },
+  { id: 'flota', label: 'Flota', Icon: Layers },
+  { id: 'combustible', label: 'Combustible', Icon: Fuel },
+];
+
 const MiniSpinner = () => (
   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '30vh', gap: '8px' }}>
-    <div style={{
-      width: '20px',
-      height: '20px',
-      borderRadius: '50%',
-      border: '2px solid rgba(var(--color-corp-red-rgb), 0.1)',
-      borderTopColor: 'var(--color-corp-red)',
-      animation: 'spin 0.8s linear infinite'
-    }} />
-    <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Cargando sección...</span>
-    <style>{`
-      @keyframes spin {
-        to { transform: rotate(360deg); }
-      }
-    `}</style>
+    <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Cargando...</span>
   </div>
 );
 
 export default function LogisticaDashboard() {
-  const [subTab, setSubTab] = useState<'reparto' | 'flota' | 'combustible'>('reparto');
+  const [subTab, setSubTab] = useState<LogisticaSubTab>('reparto');
+  const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
-  const tabs = [
-    { id: 'reparto', label: 'Hojas de Reparto', icon: <Truck size={16} /> },
-    { id: 'flota', label: 'Flota de Vehículos', icon: <Layers size={16} /> },
-    { id: 'combustible', label: 'Control de Combustible', icon: <Fuel size={16} /> }
-  ] as const;
+  const handleTabKeyDown = (e: KeyboardEvent<HTMLButtonElement>, idx: number) => {
+    let nextIdx = idx;
+    if (e.key === 'ArrowRight') nextIdx = (idx + 1) % TABS.length;
+    else if (e.key === 'ArrowLeft') nextIdx = (idx - 1 + TABS.length) % TABS.length;
+    else if (e.key === 'Home') nextIdx = 0;
+    else if (e.key === 'End') nextIdx = TABS.length - 1;
+    else return;
+    e.preventDefault();
+    setSubTab(TABS[nextIdx].id);
+    tabRefs.current[nextIdx]?.focus();
+  };
 
   return (
     <div className="logistica-dashboard-container" style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
-      {/* Cabecera y Tabs Horizontales Premium */}
-      <div style={{ 
-        display: 'flex', 
-        flexDirection: 'column', 
-        borderBottom: '1px solid var(--border-color)', 
-        backgroundColor: 'var(--bg-card, #fff)',
-        padding: '16px 24px 0 24px',
-        marginBottom: '20px'
-      }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-          <div>
-            <h1 style={{ fontSize: '1.45rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
-              Logística y Flota
-            </h1>
-            <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', margin: '4px 0 0 0' }}>
-              Gestione las entregas, la flota propia de vehículos, consumos, vencimientos y preventas territoriales.
-            </p>
-          </div>
-        </div>
+      <div style={{ display: 'flex', flexDirection: 'column', borderBottom: '1px solid var(--border-color)', backgroundColor: 'var(--bg-card, #fff)', padding: '16px 24px 12px 24px', marginBottom: '20px', gap: '12px' }}>
+        <h1 style={{ fontSize: '1.4rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
+          Logística y Flota
+        </h1>
 
-        {/* Barra de Tabs horizontales */}
-        <div style={{ display: 'flex', gap: '8px' }}>
-          {tabs.map((tab) => {
+        <div role="tablist" aria-label="Secciones de Logística" className="linear-tablist">
+          {TABS.map((tab, idx) => {
             const isActive = subTab === tab.id;
+            const Icon = tab.Icon;
             return (
               <button
                 key={tab.id}
+                ref={(el) => { tabRefs.current[idx] = el; }}
+                id={`logistica-tab-${tab.id}`}
+                type="button"
+                role="tab"
+                aria-selected={isActive}
+                tabIndex={isActive ? 0 : -1}
+                className="linear-tab"
                 onClick={() => setSubTab(tab.id)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  padding: '10px 16px',
-                  border: 'none',
-                  borderBottom: isActive ? '2px solid var(--color-corp-red)' : '2px solid transparent',
-                  backgroundColor: 'transparent',
-                  color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
-                  fontWeight: isActive ? 600 : 500,
-                  fontSize: '0.86rem',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                  outline: 'none',
-                  opacity: isActive ? 1 : 0.75
-                }}
-                onMouseEnter={(e) => {
-                  if (!isActive) e.currentTarget.style.opacity = '1';
-                }}
-                onMouseLeave={(e) => {
-                  if (!isActive) e.currentTarget.style.opacity = '0.75';
-                }}
+                onKeyDown={(e) => handleTabKeyDown(e, idx)}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
               >
-                {tab.icon}
+                <Icon size={15} aria-hidden="true" />
                 {tab.label}
               </button>
             );
@@ -94,8 +68,7 @@ export default function LogisticaDashboard() {
         </div>
       </div>
 
-      {/* Contenido con carga diferida */}
-      <div style={{ padding: '0 24px 24px 24px', flex: 1 }}>
+      <div role="tabpanel" aria-labelledby={`logistica-tab-${subTab}`} style={{ padding: '0 24px 24px 24px', flex: 1 }}>
         <Suspense fallback={<MiniSpinner />}>
           {subTab === 'reparto' && <RepartoDashboard />}
           {subTab === 'flota' && <FleetDashboard />}

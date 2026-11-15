@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { Users, TrendingUp, DollarSign, MapPin } from 'lucide-react';
+import { useEffect, useState, type FC } from 'react';
+import { DollarSign, MapPin, TrendingUp, Users } from 'lucide-react';
 import { api } from '../../utils/api';
-import { ZoneAnalysisFiltersBar } from './ZoneAnalysisFiltersBar';
 import { ZoneAnalysisCopilotAndTables } from './ZoneAnalysisCopilotAndTables';
+import { ZoneAnalysisFiltersBar } from './ZoneAnalysisFiltersBar';
 
 const formatWeekLabel = (dateStr: string) => {
   if (!dateStr) return '';
@@ -12,7 +12,7 @@ const formatWeekLabel = (dateStr: string) => {
   return `${date.getDate()} ${months[date.getMonth()]}`;
 };
 
-export const ZoneAnalysisReportTab: React.FC = () => {
+export const ZoneAnalysisReportTab: FC = () => {
   const [zoneData, setZoneData] = useState<any>({
     clients: [],
     totalClients: 0,
@@ -50,9 +50,8 @@ export const ZoneAnalysisReportTab: React.FC = () => {
   const loadZoneData = async () => {
     setZoneLoading(true);
     try {
-      let startStr: string | undefined = undefined;
-      let endStr: string | undefined = undefined;
-
+      let startStr: string | undefined;
+      let endStr: string | undefined;
       const now = new Date();
       if (zoneDatePreset === 'this_week') {
         startStr = new Date(now.getTime() - 7 * 24 * 3600 * 1000).toISOString().split('T')[0];
@@ -133,19 +132,18 @@ export const ZoneAnalysisReportTab: React.FC = () => {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
         <div className="card" style={{ padding: '20px', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)' }}>CLIENTES EN LA ZONA</span>
-            <Users size={18} color="var(--text-secondary)" />
+            <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Clientes</span>
+            <Users size={18} color="var(--text-secondary)" aria-hidden="true" />
           </div>
-          <span style={{ fontSize: '1.8rem', fontWeight: 700 }}>{zoneData.totalClients}</span>
-          <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Clientes activos registrados</span>
+          <span className="tabular-nums" style={{ fontSize: '1.8rem', fontWeight: 700 }}>{zoneData.totalClients}</span>
         </div>
 
         <div className="card" style={{ padding: '20px', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)' }}>COBERTURA DE VENTAS</span>
-            <TrendingUp size={18} color="#1a73e8" />
+            <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Cobertura</span>
+            <TrendingUp size={18} color="#1a73e8" aria-hidden="true" />
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div className="tabular-nums" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <span style={{ fontSize: '1.8rem', fontWeight: 700 }}>
               {zoneData.clientsWithMovements ? zoneData.clientsWithMovements.length : 0} de {zoneData.totalClients || 0}
             </span>
@@ -153,60 +151,54 @@ export const ZoneAnalysisReportTab: React.FC = () => {
               {zoneData.totalClients > 0 ? Math.round(((zoneData.clientsWithMovements ? zoneData.clientsWithMovements.length : 0) / zoneData.totalClients) * 100) : 0}%
             </span>
           </div>
-          <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Clientes con compras en el período</span>
         </div>
 
         <div className="card" style={{ padding: '20px', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)' }}>FACTURACIÓN TOTAL</span>
-            <DollarSign size={18} color="#137333" />
+            <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Facturación</span>
+            <DollarSign size={18} color="#137333" aria-hidden="true" />
           </div>
-          <span style={{ fontSize: '1.8rem', fontWeight: 700, color: '#137333' }}>${totalInvoicedInZone.toLocaleString()}</span>
-          <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Ventas entregadas acumuladas</span>
+          <span className="tabular-nums" style={{ fontSize: '1.8rem', fontWeight: 700, color: '#137333' }}>${totalInvoicedInZone.toLocaleString()}</span>
         </div>
 
         <div className="card" style={{ padding: '20px', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)' }}>TICKET PROMEDIO</span>
-            <TrendingUp size={18} color="#1a73e8" />
+            <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Ticket promedio</span>
+            <TrendingUp size={18} color="#1a73e8" aria-hidden="true" />
           </div>
-          <span style={{ fontSize: '1.8rem', fontWeight: 700, color: '#1a73e8' }}>${avgTicketInZone.toLocaleString()}</span>
-          <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Monto promedio por pedido</span>
+          <span className="tabular-nums" style={{ fontSize: '1.8rem', fontWeight: 700, color: '#1a73e8' }}>${avgTicketInZone.toLocaleString()}</span>
         </div>
 
         <div className="card" style={{ padding: '20px', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '8px', borderLeft: '4px solid var(--color-corp-red)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)' }}>DEUDA EN LA ZONA</span>
-            <MapPin size={18} color="var(--color-corp-red)" />
+            <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Deuda</span>
+            <MapPin size={18} color="var(--color-corp-red)" aria-hidden="true" />
           </div>
-          <span style={{ fontSize: '1.8rem', fontWeight: 700, color: 'var(--color-corp-red)' }}>${(zoneData.totalDebt || 0).toLocaleString()}</span>
-          <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Saldo total pendiente</span>
+          <span className="tabular-nums" style={{ fontSize: '1.8rem', fontWeight: 700, color: 'var(--color-corp-red)' }}>${(zoneData.totalDebt || 0).toLocaleString()}</span>
         </div>
       </div>
 
       <div className="card" style={{ padding: '24px', borderRadius: '12px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px', flexWrap: 'wrap', gap: '12px' }}>
-          <h4 style={{ fontSize: '1.1rem', fontWeight: 600, margin: 0 }}>Evolución de Facturación Semanal</h4>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
+          <h4 style={{ fontSize: '1.05rem', fontWeight: 600, margin: 0 }}>Facturación semanal</h4>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Visualizar por:</span>
+            <label htmlFor="zone-rubro-chart-select" style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Categoría</label>
             <select
+              id="zone-rubro-chart-select"
               className="select"
               value={selectedRubroChart}
               onChange={e => { setSelectedRubroChart(e.target.value); setHoveredWeekIdx(null); }}
               style={{ padding: '6px 12px', fontSize: '0.8rem', width: 'auto', minWidth: '160px', height: '32px' }}
             >
-              <option value="all">Todas las categorías</option>
+              <option value="all">Todas</option>
               {availableRubros.map((r: string) => <option key={r} value={r}>{r}</option>)}
             </select>
           </div>
         </div>
-        <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: '0 0 24px 0' }}>
-          Ventas entregadas consolidadas por semana. Pasa el cursor sobre las barras para ver el detalle de cada semana.
-        </p>
 
         {zoneWeeklyInvoicing.length === 0 ? (
-          <div style={{ height: '180px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'var(--bg-light)', borderRadius: '8px', border: '1px dashed var(--border-color)', color: 'var(--text-secondary)' }}>
-            No hay registros de facturación en esta zona.
+          <div style={{ height: '160px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'var(--bg-light)', borderRadius: '8px', border: '1px dashed var(--border-color)', color: 'var(--text-secondary)' }}>
+            Sin registros en esta zona.
           </div>
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 280px', gap: '32px', alignItems: 'center' }}>
@@ -217,13 +209,21 @@ export const ZoneAnalysisReportTab: React.FC = () => {
                   const weeklyVal = getWeeklyVal(week);
                   const heightPct = weeklyVal > 0 ? Math.max((weeklyVal / maxWeeklyAmount) * 100, 3) : 0;
                   return (
-                    <div key={week.weekStart} onMouseEnter={() => setHoveredWeekIdx(idx)} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer', height: '100%', justifyContent: 'flex-end' }}>
+                    <button
+                      key={week.weekStart}
+                      type="button"
+                      aria-label={`Semana ${formatWeekLabel(week.weekStart)}: $${weeklyVal.toLocaleString()}`}
+                      onMouseEnter={() => setHoveredWeekIdx(idx)}
+                      onFocus={() => setHoveredWeekIdx(idx)}
+                      onClick={() => setHoveredWeekIdx(idx)}
+                      style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer', height: '100%', justifyContent: 'flex-end', border: 'none', background: 'transparent', padding: 0 }}
+                    >
                       <div style={{ width: '100%', maxWidth: '36px', height: `${heightPct}%`, backgroundColor: isActive ? '#1a73e8' : '#e0e0e0', borderRadius: '4px 4px 0 0', transition: 'all 0.2s ease' }} />
-                    </div>
+                    </button>
                   );
                 })}
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-secondary)', padding: '0 4px' }}>
+              <div className="tabular-nums" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-secondary)', padding: '0 4px' }}>
                 {zoneWeeklyInvoicing.map((week: any) => (
                   <div key={week.weekStart} style={{ flex: 1, textAlign: 'center', maxWidth: '36px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {formatWeekLabel(week.weekStart)}
@@ -232,16 +232,16 @@ export const ZoneAnalysisReportTab: React.FC = () => {
               </div>
             </div>
 
-            <div style={{ backgroundColor: 'var(--bg-light)', padding: '20px', borderRadius: '12px', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div className="tabular-nums" style={{ backgroundColor: 'var(--bg-light)', padding: '20px', borderRadius: '12px', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '10px' }}>
-                <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', textTransform: 'uppercase' }}>SEMANA SELECCIONADA</span>
+                <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block' }}>Semana</span>
                 <span style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                  Semana del {activeWeek ? formatWeekLabel(activeWeek.weekStart) : 'N/A'}
+                  {activeWeek ? formatWeekLabel(activeWeek.weekStart) : 'N/A'}
                 </span>
               </div>
               <div>
                 <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block' }}>
-                  {selectedRubroChart === 'all' ? 'Facturación total' : `Facturación ${selectedRubroChart}`}
+                  {selectedRubroChart === 'all' ? 'Facturación' : selectedRubroChart}
                 </span>
                 <span style={{ fontSize: '1.4rem', fontWeight: 700, color: '#137333' }}>
                   ${activeWeek ? getWeeklyVal(activeWeek).toLocaleString() : '0'}
@@ -253,7 +253,7 @@ export const ZoneAnalysisReportTab: React.FC = () => {
                   <span style={{ fontSize: '1.1rem', fontWeight: 600 }}>{activeWeek ? activeWeek.count : '0'}</span>
                 </div>
                 <div>
-                  <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block' }}>Ticket Prom.</span>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block' }}>Ticket prom.</span>
                   <span style={{ fontSize: '1.1rem', fontWeight: 600 }}>
                     ${activeWeek && activeWeek.count > 0 ? Math.round(getWeeklyVal(activeWeek) / activeWeek.count).toLocaleString() : '0'}
                   </span>

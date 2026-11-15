@@ -1,1284 +1,164 @@
-import React, { useState, useEffect } from 'react';
-import { api, API_BASE_URL } from '../utils/api';
-import { DollarSign, Plus, Trash2, X, RefreshCw, Calendar, FileText, CheckCircle, Tag, Truck, UploadCloud, AlertCircle, Filter, Check, FileSpreadsheet, TrendingDown, Info, Car, Copy } from 'lucide-react';
-import { useConfirm } from '../context/ConfirmContext';
-
-interface ExpenseCategory {
-  id: number;
-  name: string;
-  description: string | null;
-}
-
-interface Expense {
-  id: number;
-  amount: string;
-  date: string;
-  description: string;
-  categoryId: number;
-  category: ExpenseCategory;
-  paymentMethod: string;
-  cashDrawerId: number | null;
-  bankAccountId: number | null;
-  vehicleId: number | null;
-  vehicle?: { id: number; plate: string; brand: string; model: string } | null;
-  user: { id: number; username: string };
-  transaction?: any;
-}
+import { AlertCircle, Check, Copy, FileSpreadsheet, Plus, X } from 'lucide-react';
+import { AVAILABLE_YEARS, getMonthName } from './gastos/gastos.types';
+import { useGastosController } from './gastos/useGastosController';
+import { GastosOverviewAndTable } from './gastos/GastosOverviewAndTable';
+import { GastosCreateModal, GastosImportExcelModal } from './gastos/GastosCreateAndImportModals';
+import { GastosCopyMonthModal } from './gastos/GastosCopyMonthModal';
 
 export default function GastosDashboard() {
-  const confirm = useConfirm();
-  const isAdmin = api.getCurrentUser()?.role === 'ADMIN';
-  // Datos principales
-  const [gastos, setGastos] = useState<any[]>([]);
-  const [expenses, setExpenses] = useState<Expense[]>([]);
-  const [categories, setCategories] = useState<ExpenseCategory[]>([]);
-  const [vehicles, setVehicles] = useState<any[]>([]);
-  const [bankAccounts, setBankAccounts] = useState<any[]>([]);
-  
-  // Estado de carga y errores
-  const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [successMsg, setSuccessMsg] = useState<string | null>(null);
-  
-  // Filtros (Inicializado en el mes actual)
-  const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
-  const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth() + 1);
-  const [filterCategoryId, setFilterCategoryId] = useState<string>('');
-  const [filterPaymentMethod, setFilterPaymentMethod] = useState<string>('');
-  
-  // Modales
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
-  
-  // Modal de clonación / copia de gastos
-  const [isCopyModalOpen, setIsCopyModalOpen] = useState(false);
-  const [copySourceYear, setCopySourceYear] = useState<number>(selectedYear);
-  const [copySourceMonth, setCopySourceMonth] = useState<number>(selectedMonth === 1 ? 12 : selectedMonth - 1);
-  const [copyTargetDate, setCopyTargetDate] = useState<string>(`${selectedYear}-${String(selectedMonth).padStart(2, '0')}-01`);
-  const [sourceExpenses, setSourceExpenses] = useState<any[]>([]);
-  const [loadingSource, setLoadingSource] = useState(false);
-  const [submittingCopy, setSubmittingCopy] = useState(false);
-  
-  // Formulario nuevo gasto
-  const [newAmount, setNewAmount] = useState('');
-  const [newCategoryId, setNewCategoryId] = useState('');
-  const [newDescription, setNewDescription] = useState('');
-  const [newDate, setNewDate] = useState(new Date().toISOString().split('T')[0]);
-  const [newPaymentMethod, setNewPaymentMethod] = useState('CASH');
-  const [newBankAccountId, setNewBankAccountId] = useState('');
-  const [newVehicleId, setNewVehicleId] = useState('');
-  const [newBillingType, setNewBillingType] = useState('INTERNAL');
-
-  // Carga inicial
-  useEffect(() => {
-    fetchInitialData();
-  }, []);
-
-  // Recargar al cambiar filtros de período
-  useEffect(() => {
-    fetchExpenses();
-  }, [selectedYear, selectedMonth, filterCategoryId, filterPaymentMethod]);
-
-  const fetchInitialData = async () => {
-    setLoading(true);
-    setErrorMsg(null);
-    try {
-      // 1. Cargar Categorías
-      const cats = await api.getExpenseCategories();
-      setCategories(cats || []);
-      
-      // 2. Cargar Bancos y Cajas
-      try {
-        const fleetData = await api.getCashDrawers();
-        const bankData = await api.getBankAccounts();
-        setBankAccounts(bankData || []);
-      } catch (e) {
-        console.error('Error fetching bank accounts', e);
-      }
-      
-      // Intentamos cargar vehículos usando la ruta configurada en la API
-      try {
-        const res = await fetch(`${API_BASE_URL}/fleet/vehicles`, {
-          credentials: 'include',
-        });
-        const text = await res.text();
-        const json = text && text.trim() ? JSON.parse(text) : {};
-        if (json.status === 'success') {
-          setVehicles(json.data.vehicles || []);
-        }
-      } catch (e) {
-        console.error('Error fetching vehicles', e);
-      }
-
-      try {
-        await fetchExpenses();
-      } catch (e) {
-        console.error('Error fetching expenses', e);
-      }
-    } catch (error: any) {
-      console.error(error);
-      setErrorMsg('Error al cargar la información inicial.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchExpenses = async () => {
-    try {
-      const filters: any = {
-        year: selectedYear,
-        month: selectedMonth
-      };
-      if (filterCategoryId) filters.categoryId = Number(filterCategoryId);
-      if (filterPaymentMethod) filters.paymentMethod = filterPaymentMethod;
-
-      const data = await api.getExpensesList(filters);
-      setExpenses(data || []);
-    } catch (err: any) {
-      console.error(err);
-      setErrorMsg('Error al obtener el listado de gastos.');
-    }
-  };
-
-  const handleCreateExpense = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setErrorMsg(null);
-    
-    const amount = Number(newAmount);
-    if (isNaN(amount) || amount <= 0) {
-      setErrorMsg('Por favor, ingrese un monto válido mayor a 0.');
-      return;
-    }
-    if (!newCategoryId) {
-      setErrorMsg('Debe seleccionar una categoría para el gasto.');
-      return;
-    }
-    if (!newDescription.trim()) {
-      setErrorMsg('La descripción es obligatoria.');
-      return;
-    }
-
-    setSubmitting(true);
-    try {
-      await api.createExpenseNew({
-        amount,
-        categoryId: Number(newCategoryId),
-        description: newDescription.trim(),
-        date: newDate ? new Date(newDate).toISOString() : undefined,
-        paymentMethod: newPaymentMethod,
-        bankAccountId: newPaymentMethod === 'BANK_TRANSFER' ? Number(newBankAccountId) : undefined,
-        vehicleId: newVehicleId ? Number(newVehicleId) : undefined,
-        billingType: newBillingType
-      });
-
-      setSuccessMsg('Gasto registrado con éxito.');
-      setIsCreateModalOpen(false);
-      resetForm();
-      fetchExpenses();
-      setTimeout(() => setSuccessMsg(null), 3000);
-    } catch (err: any) {
-      console.error(err);
-      setErrorMsg(err.message || 'Error al registrar el gasto.');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleDeleteExpense = async (id: number) => {
-    if (!await confirm('¿Está seguro de que desea eliminar este gasto? Si afectó a una cuenta bancaria, se revertirá el saldo correspondiente.', { type: 'danger' })) {
-      return;
-    }
-
-    setErrorMsg(null);
-    try {
-      await api.deleteExpenseNew(id);
-      setSuccessMsg('Gasto eliminado con éxito.');
-      fetchExpenses();
-      setTimeout(() => setSuccessMsg(null), 3000);
-    } catch (err: any) {
-      console.error(err);
-      setErrorMsg(err.message || 'Error al eliminar el gasto.');
-    }
-  };
-
-  // Importar Excel
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [importing, setImporting] = useState(false);
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      setSelectedFile(e.target.files[0]);
-    }
-  };
-
-  const handleImportExcel = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedFile) {
-      setErrorMsg('Por favor seleccione un archivo Excel.');
-      return;
-    }
-
-    setImporting(true);
-    setErrorMsg(null);
-    try {
-      const res = await api.importExpensesExcel(selectedFile);
-      setSuccessMsg(res.message || 'Gastos importados exitosamente.');
-      setIsImportModalOpen(false);
-      setSelectedFile(null);
-      
-      // Auto-seleccionar Mayo 2026 para visualizar inmediatamente los datos del Excel
-      setSelectedYear(2026);
-      setSelectedMonth(5);
-      
-      fetchExpenses();
-      setTimeout(() => setSuccessMsg(null), 5000);
-    } catch (err: any) {
-      console.error(err);
-      setErrorMsg(err.message || 'Error al importar los gastos del Excel.');
-    } finally {
-      setImporting(false);
-    }
-  };
-
-  const resetForm = () => {
-    setNewAmount('');
-    setNewCategoryId('');
-    setNewDescription('');
-    setNewDate(new Date().toISOString().split('T')[0]);
-    setNewPaymentMethod('CASH');
-    setNewBankAccountId('');
-    setNewVehicleId('');
-    setNewBillingType('INTERNAL');
-  };
-
-  // Handlers para clonación de gastos del mes anterior
-  const openCopyModal = () => {
-    const srcMonth = selectedMonth === 1 ? 12 : selectedMonth - 1;
-    const srcYear = selectedMonth === 1 ? selectedYear - 1 : selectedYear;
-    setCopySourceMonth(srcMonth);
-    setCopySourceYear(srcYear);
-    setCopyTargetDate(`${selectedYear}-${String(selectedMonth).padStart(2, '0')}-01`);
-    setIsCopyModalOpen(true);
-    fetchSourceExpenses(srcYear, srcMonth);
-  };
-
-  const fetchSourceExpenses = async (year: number, month: number) => {
-    setLoadingSource(true);
-    try {
-      const data = await api.getExpensesList({ year, month });
-      const mapped = (data || []).map((exp: any) => ({
-        id: exp.id,
-        selected: true,
-        amount: String(exp.amount),
-        description: exp.description,
-        categoryId: exp.categoryId,
-        categoryName: exp.category?.name || 'General',
-        paymentMethod: exp.paymentMethod || 'CASH',
-        bankAccountId: exp.bankAccountId || undefined,
-        vehicleId: exp.vehicleId || undefined
-      }));
-      setSourceExpenses(mapped);
-    } catch (e) {
-      console.error('Error al cargar gastos del mes de origen:', e);
-    } finally {
-      setLoadingSource(false);
-    }
-  };
-
-  const handleExecuteCopy = async () => {
-    const selectedItems = sourceExpenses.filter(item => item.selected && Number(item.amount) > 0);
-    if (selectedItems.length === 0) {
-      setErrorMsg('Debe seleccionar al menos un gasto válido para clonar.');
-      return;
-    }
-
-    setSubmittingCopy(true);
-    setErrorMsg(null);
-    try {
-      const payload = selectedItems.map(item => ({
-        amount: Number(item.amount),
-        categoryId: item.categoryId,
-        description: item.description,
-        date: copyTargetDate,
-        paymentMethod: item.paymentMethod,
-        bankAccountId: item.bankAccountId,
-        vehicleId: item.vehicleId
-      }));
-
-      const res = await api.createBulkExpenses({
-        expenses: payload,
-        targetDate: copyTargetDate
-      });
-
-      setSuccessMsg(res.message || `Se clonaron ${selectedItems.length} gastos con éxito para ${getMonthName(selectedMonth)} ${selectedYear}.`);
-      setIsCopyModalOpen(false);
-      fetchExpenses();
-      setTimeout(() => setSuccessMsg(null), 4000);
-    } catch (err: any) {
-      console.error(err);
-      setErrorMsg(err.message || 'Error al clonar los gastos.');
-    } finally {
-      setSubmittingCopy(false);
-    }
-  };
-
-  // Cálculos estadísticos
-  const totalGasto = expenses.reduce((sum, e) => sum + Number(e.amount), 0);
-  
-  // Agrupar por categoría
-  const categoryTotals: { [key: string]: { amount: number; description: string | null } } = {};
-  expenses.forEach(e => {
-    const catName = e.category?.name || 'General';
-    if (!categoryTotals[catName]) {
-      categoryTotals[catName] = { amount: 0, description: e.category?.description || 'Gastos operativos generales' };
-    }
-    categoryTotals[catName].amount += Number(e.amount);
-  });
-
-  const sortedCategories = Object.keys(categoryTotals)
-    .map(name => ({
-      name,
-      amount: categoryTotals[name].amount,
-      pct: totalGasto > 0 ? (categoryTotals[name].amount / totalGasto) * 100 : 0,
-      description: categoryTotals[name].description
-    }))
-    .sort((a, b) => b.amount - a.amount);
-
-  const getMethodLabel = (method: string) => {
-    switch (method) {
-      case 'CASH': return 'Efectivo';
-      case 'BANK_TRANSFER': return 'Transf. Bancaria';
-      case 'CHECK': return 'Cheque';
-      default: return method;
-    }
-  };
-
-  const getMonthName = (m: number) => {
-    const months = [
-      'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-      'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
-    ];
-    return months[m - 1];
-  };
+  const g = useGastosController();
+  const anyModalOpen = g.isCreateModalOpen || g.isImportModalOpen || g.isCopyModalOpen;
 
   return (
-    <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '24px', padding: '4px' }}>
-      
-      {/* Mensajes de feedback */}
-      {errorMsg && (
-        <div style={{ 
-          padding: '12px 16px', 
-          backgroundColor: '#fff5f5', 
-          color: '#c53030', 
-          borderRadius: '6px', 
-          fontSize: '0.88rem', 
-          display: 'flex', 
-          alignItems: 'center', 
-          gap: '10px',
-          border: '1px solid #feb2b2'
-        }}>
-          <AlertCircle size={16} />
-          <span>{errorMsg}</span>
+    <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '20px', padding: '4px' }}>
+      {g.errorMsg && !anyModalOpen && (
+        <div role="alert" style={{ padding: '12px 16px', backgroundColor: '#fff5f5', color: '#c53030', borderRadius: '6px', fontSize: '0.88rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', border: '1px solid #feb2b2' }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <AlertCircle size={16} aria-hidden="true" />
+            <span>{g.errorMsg}</span>
+          </span>
+          <button type="button" className="btn btn-ghost" style={{ padding: '2px' }} onClick={() => g.setErrorMsg(null)} aria-label="Cerrar alerta">
+            <X size={15} aria-hidden="true" />
+          </button>
         </div>
       )}
 
-      {successMsg && (
-        <div style={{ 
-          padding: '12px 16px', 
-          backgroundColor: '#f0fff4', 
-          color: '#22543d', 
-          borderRadius: '6px', 
-          fontSize: '0.88rem', 
-          display: 'flex', 
-          alignItems: 'center', 
-          gap: '10px',
-          border: '1px solid #9ae6b4'
-        }}>
-          <Check size={16} style={{ color: '#38a169' }} />
-          <span>{successMsg}</span>
+      {g.successMsg && (
+        <div role="status" style={{ padding: '12px 16px', backgroundColor: '#f0fff4', color: '#22543d', borderRadius: '6px', fontSize: '0.88rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', border: '1px solid #9ae6b4' }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <Check size={16} style={{ color: '#38a169' }} aria-hidden="true" />
+            <span>{g.successMsg}</span>
+          </span>
+          <button type="button" className="btn btn-ghost" style={{ padding: '2px' }} onClick={() => g.setSuccessMsg(null)} aria-label="Cerrar notificación">
+            <X size={15} aria-hidden="true" />
+          </button>
         </div>
       )}
 
-      {/* Cabecera del Dashboard */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
-        <div>
-          <h2 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Control de Gastos Operativos</h2>
-          <p style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
-            Lleva el registro y categorización de egresos para el cálculo exacto de la rentabilidad.
-          </p>
-        </div>
-        <div style={{ display: 'flex', gap: '12px' }}>
-          <button 
-            className="btn btn-secondary" 
-            onClick={openCopyModal}
-            title="Copiar los gastos fijos del mes anterior para este período"
-            style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px' }}
-          >
-            <Copy size={16} />
-            <span>Copiar Mes Anterior</span>
+        <h2 style={{ fontSize: '1.45rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Gastos Operativos</h2>
+        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+          <button type="button" className="btn btn-secondary" onClick={g.openCopyModal} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Copy size={15} aria-hidden="true" />
+            <span>Copiar Mes</span>
           </button>
 
-          {isAdmin && (
-            <button 
-              className="btn btn-secondary" 
-              onClick={() => setIsImportModalOpen(true)}
-              style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px' }}
-            >
-              <FileSpreadsheet size={16} />
+          {g.isAdmin && (
+            <button type="button" className="btn btn-secondary" onClick={() => { g.setErrorMsg(null); g.setIsImportModalOpen(true); }} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <FileSpreadsheet size={15} aria-hidden="true" />
               <span>Importar Excel</span>
             </button>
           )}
-          
-          <button 
-            className="btn" 
-            onClick={() => setIsCreateModalOpen(true)}
-            style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: '8px', 
-              backgroundColor: 'var(--color-primary)', 
-              color: '#fff', 
-              padding: '10px 16px',
-              borderRadius: '6px',
-              fontWeight: 500
-            }}
-          >
-            <Plus size={16} />
-            <span>Registrar Gasto</span>
+
+          <button type="button" className="btn btn-primary" onClick={() => { g.setErrorMsg(null); g.setIsCreateModalOpen(true); }} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Plus size={15} aria-hidden="true" />
+            <span>Nuevo Gasto</span>
           </button>
         </div>
       </div>
 
-      {/* Barra de Filtros */}
-      <div className="card" style={{ padding: '16px 20px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)' }}>
+      <search aria-label="Filtrar gastos" className="card" style={{ padding: '16px 20px' }}>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'flex-end' }}>
           <div style={{ minWidth: '120px' }}>
-            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>Año</label>
-            <select 
-              value={selectedYear} 
-              onChange={e => setSelectedYear(Number(e.target.value))}
-              className="select"
-              style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-card)' }}
-            >
-              <option value={2026}>2026</option>
-              <option value={2025}>2025</option>
-              <option value={2024}>2024</option>
+            <label htmlFor="gastos-year" style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, marginBottom: '6px' }}>Año</label>
+            <select id="gastos-year" value={g.selectedYear} onChange={(e) => g.setSelectedYear(Number(e.target.value))} className="select">
+              {AVAILABLE_YEARS.map((y) => (<option key={y} value={y}>{y}</option>))}
             </select>
           </div>
 
           <div style={{ minWidth: '140px' }}>
-            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>Mes</label>
-            <select 
-              value={selectedMonth} 
-              onChange={e => setSelectedMonth(Number(e.target.value))}
-              className="select"
-              style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-card)' }}
-            >
-              {[1,2,3,4,5,6,7,8,9,10,11,12].map(m => (
-                <option key={m} value={m}>{getMonthName(m)}</option>
-              ))}
+            <label htmlFor="gastos-month" style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, marginBottom: '6px' }}>Mes</label>
+            <select id="gastos-month" value={g.selectedMonth} onChange={(e) => g.setSelectedMonth(Number(e.target.value))} className="select">
+              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((m) => (<option key={m} value={m}>{getMonthName(m)}</option>))}
             </select>
           </div>
 
           <div style={{ minWidth: '180px' }}>
-            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>Categoría</label>
-            <select 
-              value={filterCategoryId} 
-              onChange={e => setFilterCategoryId(e.target.value)}
-              className="select"
-              style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-card)' }}
-            >
-              <option value="">Todas las categorías</option>
-              {categories.map(c => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
+            <label htmlFor="gastos-category" style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, marginBottom: '6px' }}>Categoría</label>
+            <select id="gastos-category" value={g.filterCategoryId} onChange={(e) => g.setFilterCategoryId(e.target.value)} className="select">
+              <option value="">Todas</option>
+              {g.categories.map((c) => (<option key={c.id} value={c.id}>{c.name}</option>))}
             </select>
           </div>
 
           <div style={{ minWidth: '160px' }}>
-            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>Medio de Pago</label>
-            <select 
-              value={filterPaymentMethod} 
-              onChange={e => setFilterPaymentMethod(e.target.value)}
-              className="select"
-              style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-card)' }}
-            >
-              <option value="">Todos los medios</option>
+            <label htmlFor="gastos-method" style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, marginBottom: '6px' }}>Medio de Pago</label>
+            <select id="gastos-method" value={g.filterPaymentMethod} onChange={(e) => g.setFilterPaymentMethod(e.target.value)} className="select">
+              <option value="">Todos</option>
               <option value="CASH">Efectivo</option>
               <option value="BANK_TRANSFER">Transferencia</option>
               <option value="CHECK">Cheque</option>
             </select>
           </div>
         </div>
-      </div>
+      </search>
 
-      {/* Grid de Contenido Principal */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', alignItems: 'stretch' }}>
-        
-        {/* LADO IZQUIERDO: KPIs y Gráfico de Categorías */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          
-          {/* Tarjeta de Resumen Financiero */}
-          <div className="card" style={{ 
-            padding: '24px', 
-            borderRadius: 'var(--radius-md)', 
-            border: '1px solid var(--border-color)',
-            backgroundColor: '#111827', // Diseño oscuro Stripe premium
-            color: '#fff',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            position: 'relative',
-            overflow: 'hidden'
-          }}>
-            <div>
-              <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                Gastos Totales - {getMonthName(selectedMonth)} {selectedYear}
-              </span>
-              <h3 style={{ fontSize: '2.4rem', fontWeight: 700, margin: '8px 0 4px 0', fontFamily: 'monospace', letterSpacing: '-0.02em' }}>
-                ${totalGasto.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
-              </h3>
-              <p style={{ fontSize: '0.85rem', color: '#9CA3AF', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <Info size={14} />
-                <span>{expenses.length} gastos operativos registrados.</span>
-              </p>
-            </div>
-            <div style={{ 
-              width: '56px', 
-              height: '56px', 
-              borderRadius: '12px', 
-              backgroundColor: 'rgba(255,255,255,0.08)', 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'center',
-              color: '#fff'
-            }}>
-              <TrendingDown size={28} style={{ color: 'var(--color-corp-red)' }} />
-            </div>
-          </div>
+      <GastosOverviewAndTable
+        expenses={g.expenses}
+        selectedMonth={g.selectedMonth}
+        selectedYear={g.selectedYear}
+        totalGasto={g.totalGasto}
+        sortedCategories={g.sortedCategories}
+        isAdmin={g.isAdmin}
+        onDeleteExpense={g.handleDeleteExpense}
+      />
 
-          {/* Gráfico de Distribución (Barras Horizontales Premium) */}
-          <div className="card" style={{ padding: '24px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', flex: 1 }}>
-            <h3 style={{ fontSize: '1.05rem', fontWeight: 600, margin: '0 0 16px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span>Distribución de Gastos por Categoría</span>
-            </h3>
-            
-            {sortedCategories.length === 0 ? (
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', minHeight: '200px', color: 'var(--text-secondary)', gap: '12px' }}>
-                <TrendingDown size={36} style={{ color: 'var(--text-muted)' }} />
-                <span style={{ fontSize: '0.9rem' }}>No hay gastos en este mes para graficar.</span>
-              </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', overflowY: 'auto', maxHeight: '350px', paddingRight: '4px' }}>
-                {sortedCategories.map((cat, idx) => (
-                  <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', fontWeight: 500 }}>
-                      <span style={{ color: 'var(--text-primary)' }}>{cat.name}</span>
-                      <div style={{ display: 'flex', gap: '10px' }}>
-                        <span style={{ fontWeight: 600 }}>${cat.amount.toLocaleString('es-AR')}</span>
-                        <span style={{ color: 'var(--text-muted)' }}>({cat.pct.toFixed(1)}%)</span>
-                      </div>
-                    </div>
-                    {/* Barra de Progreso CSS pura con transición suave */}
-                    <div style={{ width: '100%', height: '8px', backgroundColor: '#F3F4F6', borderRadius: '4px', overflow: 'hidden' }}>
-                      <div style={{ 
-                        width: `${cat.pct}%`, 
-                        height: '100%', 
-                        // Gradiente de grises elegantes de Stripe/Linear, o rojo corporativo para el top 1
-                        backgroundColor: idx === 0 ? 'var(--color-corp-red)' : 'var(--color-primary)',
-                        borderRadius: '4px',
-                        transition: 'width 0.8s cubic-bezier(0.25, 1, 0.5, 1)'
-                      }} />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
+      <GastosCreateModal
+        isOpen={g.isCreateModalOpen}
+        onClose={() => { g.setErrorMsg(null); g.setIsCreateModalOpen(false); }}
+        submitting={g.submitting}
+        errorMsg={g.errorMsg}
+        categories={g.categories}
+        bankAccounts={g.bankAccounts}
+        vehicles={g.vehicles}
+        newAmount={g.newAmount}
+        setNewAmount={g.setNewAmount}
+        newDate={g.newDate}
+        setNewDate={g.setNewDate}
+        newCategoryId={g.newCategoryId}
+        setNewCategoryId={g.setNewCategoryId}
+        newDescription={g.newDescription}
+        setNewDescription={g.setNewDescription}
+        newPaymentMethod={g.newPaymentMethod}
+        setNewPaymentMethod={g.setNewPaymentMethod}
+        newBillingType={g.newBillingType}
+        setNewBillingType={g.setNewBillingType}
+        newBankAccountId={g.newBankAccountId}
+        setNewBankAccountId={g.setNewBankAccountId}
+        newVehicleId={g.newVehicleId}
+        setNewVehicleId={g.setNewVehicleId}
+        onSubmit={g.handleCreateExpense}
+      />
 
-        {/* LADO DERECHO: Tabla / Listado de Gastos */}
-        <div className="card" style={{ 
-          padding: '24px', 
-          borderRadius: 'var(--radius-md)', 
-          border: '1px solid var(--border-color)',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'stretch'
-        }}>
-          <h3 style={{ fontSize: '1.05rem', fontWeight: 600, margin: '0 0 16px 0' }}>Detalle de Transacciones</h3>
-          
-          <div style={{ overflowX: 'auto', flex: 1, minHeight: '380px' }}>
-            {expenses.length === 0 ? (
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-secondary)', gap: '12px', padding: '40px 0' }}>
-                <Info size={32} style={{ color: 'var(--text-muted)' }} />
-                <span style={{ fontSize: '0.9rem' }}>No se encontraron gastos registrados para los filtros seleccionados.</span>
-              </div>
-            ) : (
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
-                <thead>
-                  <tr style={{ borderBottom: '2px solid var(--border-color)', color: 'var(--text-secondary)', fontWeight: 600, textAlign: 'left' }}>
-                    <th style={{ padding: '10px 8px' }}>Fecha</th>
-                    <th style={{ padding: '10px 8px' }}>Descripción</th>
-                    <th style={{ padding: '10px 8px' }}>Categoría</th>
-                    <th style={{ padding: '10px 8px', textAlign: 'right' }}>Monto</th>
-                    <th style={{ padding: '10px 8px', textAlign: 'center' }}>Pago</th>
-                    <th style={{ padding: '10px 8px', textAlign: 'center' }}>Acciones</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {expenses.map((e) => (
-                    <tr key={e.id} style={{ borderBottom: '1px solid var(--border-color)', height: '44px' }}>
-                      <td style={{ padding: '8px', whiteSpace: 'nowrap', color: 'var(--text-secondary)' }}>
-                        {new Date(e.date).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' })}
-                      </td>
-                      <td style={{ padding: '8px', fontWeight: 500 }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                          <span>{e.description}</span>
-                          {e.vehicle && (
-                            <span style={{ fontSize: '0.72rem', color: '#1a73e8', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                              <Car size={10} />
-                              <span>{e.vehicle.brand} {e.vehicle.model} ({e.vehicle.plate})</span>
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                      <td style={{ padding: '8px' }}>
-                        <span style={{ 
-                          padding: '3px 8px', 
-                          borderRadius: '4px', 
-                          backgroundColor: '#F3F4F6', 
-                          fontSize: '0.75rem',
-                          fontWeight: 500,
-                          color: 'var(--text-primary)'
-                        }}>
-                          {e.category?.name || 'General'}
-                        </span>
-                      </td>
-                      <td style={{ padding: '8px', textAlign: 'right', fontWeight: 600, fontFamily: 'monospace' }}>
-                        ${Number(e.amount).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
-                      </td>
-                      <td style={{ padding: '8px', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.75rem' }}>
-                        {getMethodLabel(e.paymentMethod)}
-                      </td>
-                      <td style={{ padding: '8px', textAlign: 'center' }}>
-                        {isAdmin && (
-                          <button 
-                            onClick={() => handleDeleteExpense(e.id)}
-                          style={{
-                            background: 'none',
-                            border: 'none',
-                            color: 'var(--color-danger)',
-                            cursor: 'pointer',
-                            padding: '4px',
-                            borderRadius: '4px',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            transition: 'background-color var(--transition-fast)'
-                          }}
-                          onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--color-danger-bg)'}
-                          onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
-                          title="Eliminar Gasto"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </div>
-        </div>
+      <GastosImportExcelModal
+        isOpen={g.isImportModalOpen}
+        onClose={() => { g.setErrorMsg(null); g.setIsImportModalOpen(false); }}
+        importing={g.importing}
+        errorMsg={g.errorMsg}
+        selectedFile={g.selectedFile}
+        onFileChange={g.handleFileChange}
+        onSubmit={g.handleImportExcel}
+      />
 
-      </div>
-
-      {/* ====================================================================
-          MODAL: REGISTRAR GASTO MANUAL
-          ==================================================================== */}
-      {isCreateModalOpen && (
-        <div className="modal-overlay" onClick={() => !submitting && setIsCreateModalOpen(false)}>
-          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '500px', padding: '24px' }}>
-            <div className="modal-header" style={{ marginBottom: '20px' }}>
-              <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 700 }}>Registrar Gasto Operativo</h3>
-              <button 
-                type="button" 
-                className="btn btn-ghost" 
-                onClick={() => setIsCreateModalOpen(false)} 
-                disabled={submitting}
-              >
-                ✕
-              </button>
-            </div>
-
-            <form onSubmit={handleCreateExpense} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                <div className="form-group">
-                  <label className="form-label" style={{ fontWeight: 500, fontSize: '0.8rem', marginBottom: '6px', display: 'block' }}>Monto ($)</label>
-                  <input 
-                    type="number"
-                    className="input"
-                    required
-                    min="0.01"
-                    step="0.01"
-                    placeholder="0.00"
-                    value={newAmount}
-                    onChange={e => setNewAmount(e.target.value)}
-                    style={{ fontSize: '1.1rem', fontFamily: 'monospace', width: '100%' }}
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label" style={{ fontWeight: 500, fontSize: '0.8rem', marginBottom: '6px', display: 'block' }}>Fecha</label>
-                  <input 
-                    type="date"
-                    className="input"
-                    required
-                    value={newDate}
-                    onChange={e => setNewDate(e.target.value)}
-                    style={{ width: '100%' }}
-                  />
-                </div>
-              </div>
-
-              <div className="form-group">
-                <label className="form-label" style={{ fontWeight: 500, fontSize: '0.8rem', marginBottom: '6px', display: 'block' }}>Categoría de Gasto</label>
-                <select 
-                  className="input"
-                  required
-                  value={newCategoryId}
-                  onChange={e => setNewCategoryId(e.target.value)}
-                  style={{ width: '100%', padding: '10px 12px', backgroundColor: '#fff', borderRadius: '6px' }}
-                >
-                  <option value="">Seleccione una categoría...</option>
-                  {categories.map(c => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="form-group">
-                <label className="form-label" style={{ fontWeight: 500, fontSize: '0.8rem', marginBottom: '6px', display: 'block' }}>Detalle / Descripción</label>
-                <input 
-                  type="text"
-                  className="input"
-                  required
-                  placeholder="Ej: Pago de luz depósito Villegas, Reparación furgón Partner..."
-                  value={newDescription}
-                  onChange={e => setNewDescription(e.target.value)}
-                  style={{ width: '100%' }}
-                />
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                <div className="form-group">
-                  <label className="form-label" style={{ fontWeight: 500, fontSize: '0.8rem', marginBottom: '6px', display: 'block' }}>Medio de Pago</label>
-                  <select 
-                    className="input" 
-                    value={newPaymentMethod} 
-                    onChange={e => {
-                      setNewPaymentMethod(e.target.value);
-                      if (e.target.value === 'BANK_TRANSFER' && bankAccounts.length > 0) {
-                        setNewBankAccountId(String(bankAccounts[0].id));
-                      }
-                    }}
-                    style={{ width: '100%', padding: '10px 12px', backgroundColor: '#fff', borderRadius: '6px' }}
-                  >
-                    <option value="CASH">Efectivo (Caja Chica)</option>
-                    <option value="BANK_TRANSFER">Transferencia Bancaria</option>
-                    <option value="CHECK">Cheque diferido</option>
-                  </select>
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label" style={{ fontWeight: 500, fontSize: '0.8rem', marginBottom: '6px', display: 'block' }}>Canal Contable</label>
-                  <select 
-                    className="input" 
-                    value={newBillingType} 
-                    onChange={e => setNewBillingType(e.target.value)}
-                    style={{ width: '100%', padding: '10px 12px', backgroundColor: '#fff', borderRadius: '6px' }}
-                  >
-                    <option value="INTERNAL">Sucursal X</option>
-                    <option value="OFFICIAL">Sucursal A</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* Campos condicionales */}
-              {newPaymentMethod === 'BANK_TRANSFER' && (
-                <div className="form-group fade-in">
-                  <label className="form-label" style={{ fontWeight: 500, fontSize: '0.8rem', marginBottom: '6px', display: 'block' }}>Cuenta Bancaria Destino</label>
-                  <select 
-                    className="input"
-                    required
-                    value={newBankAccountId}
-                    onChange={e => setNewBankAccountId(e.target.value)}
-                    style={{ width: '100%', padding: '10px 12px', backgroundColor: '#fff', borderRadius: '6px' }}
-                  >
-                    <option value="">Seleccione cuenta...</option>
-                    {bankAccounts.map(b => (
-                      <option key={b.id} value={b.id}>{b.name} (${Number(b.balance).toLocaleString('es-AR')})</option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              <div className="form-group">
-                <label className="form-label" style={{ fontWeight: 500, fontSize: '0.8rem', marginBottom: '6px', display: 'block' }}>Asociar a Vehículo de Flota (Opcional)</label>
-                <select 
-                  className="input"
-                  value={newVehicleId}
-                  onChange={e => setNewVehicleId(e.target.value)}
-                  style={{ width: '100%', padding: '10px 12px', backgroundColor: '#fff', borderRadius: '6px' }}
-                >
-                  <option value="">Ningún vehículo (Gasto general)</option>
-                  {vehicles.map(v => (
-                    <option key={v.id} value={v.id}>{v.brand} {v.model} - Patente: {v.plate}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', borderTop: '1px solid var(--border-color)', paddingTop: '16px', marginTop: '10px' }}>
-                <button 
-                  type="button" 
-                  className="btn btn-secondary" 
-                  onClick={() => setIsCreateModalOpen(false)}
-                  disabled={submitting}
-                >
-                  Cancelar
-                </button>
-                <button 
-                  type="submit" 
-                  className="btn" 
-                  disabled={submitting}
-                  style={{ 
-                    backgroundColor: 'var(--color-primary)', 
-                    color: '#fff', 
-                    border: 'none', 
-                    padding: '10px 20px',
-                    borderRadius: '6px',
-                    fontWeight: 600,
-                    cursor: submitting ? 'default' : 'pointer'
-                  }}
-                >
-                  {submitting ? 'Guardando...' : 'Confirmar Gasto'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* ====================================================================
-          MODAL: IMPORTAR DESDE EXCEL
-          ==================================================================== */}
-      {isImportModalOpen && (
-        <div className="modal-overlay" onClick={() => !importing && setIsImportModalOpen(false)}>
-          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '480px', padding: '24px' }}>
-            <div className="modal-header" style={{ marginBottom: '20px' }}>
-              <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 700 }}>Importar Planilla de Gastos</h3>
-              <button 
-                type="button" 
-                className="btn btn-ghost" 
-                onClick={() => setIsImportModalOpen(false)} 
-                disabled={importing}
-              >
-                ✕
-              </button>
-            </div>
-
-            <form onSubmit={handleImportExcel} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: '1.4' }}>
-                Sube el archivo Excel con el detalle de los gastos de la distribuidora (`GastosDistribuidora.xlsx`). El sistema desglosará de manera inteligente los gastos generales, los sueldos del personal y las patentes de camiones.
-              </p>
-
-              {/* Zona de Drop/Upload */}
-              <div 
-                style={{
-                  border: '2px dashed var(--border-color)',
-                  borderRadius: '8px',
-                  padding: '30px 20px',
-                  textAlign: 'center',
-                  backgroundColor: '#F9FAFB',
-                  cursor: 'pointer',
-                  transition: 'border-color var(--transition-fast)',
-                  position: 'relative'
-                }}
-                onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--text-secondary)'}
-                onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border-color)'}
-              >
-                <input 
-                  type="file" 
-                  accept=".xlsx, .csv"
-                  onChange={handleFileChange}
-                  style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    width: '100%',
-                    height: '100%',
-                    opacity: 0,
-                    cursor: 'pointer'
-                  }}
-                  disabled={importing}
-                />
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
-                  <UploadCloud size={36} style={{ color: 'var(--text-muted)' }} />
-                  <span style={{ fontSize: '0.88rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-                    {selectedFile ? selectedFile.name : 'Seleccionar o arrastrar archivo'}
-                  </span>
-                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                    Formatos admitidos: .xlsx, .xls (Tamaño máximo: 5MB)
-                  </span>
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', borderTop: '1px solid var(--border-color)', paddingTop: '16px' }}>
-                <button 
-                  type="button" 
-                  className="btn btn-secondary" 
-                  onClick={() => setIsImportModalOpen(false)}
-                  disabled={importing}
-                >
-                  Cancelar
-                </button>
-                <button 
-                  type="submit" 
-                  className="btn" 
-                  disabled={!selectedFile || importing}
-                  style={{ 
-                    backgroundColor: 'var(--color-corp-red)', // Rojo corporativo para CTAs críticos
-                    color: '#fff', 
-                    border: 'none', 
-                    padding: '10px 20px',
-                    borderRadius: '6px',
-                    fontWeight: 600,
-                    cursor: (!selectedFile || importing) ? 'default' : 'pointer'
-                  }}
-                >
-                  {importing ? 'Procesando Archivo...' : 'Iniciar Importación'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Modal de Clonar / Copiar Gastos del Mes Anterior */}
-      {isCopyModalOpen && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000,
-          padding: '16px'
-        }}>
-          <div className="card" style={{
-            width: '100%',
-            maxWidth: '900px',
-            maxHeight: '90vh',
-            display: 'flex',
-            flexDirection: 'column',
-            backgroundColor: 'var(--bg-card)',
-            borderRadius: '12px',
-            overflow: 'hidden',
-            boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04)'
-          }}>
-            {/* Cabecera Modal */}
-            <div style={{
-              padding: '16px 24px',
-              borderBottom: '1px solid var(--border-color)',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              backgroundColor: 'var(--bg-hover)'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div style={{
-                  padding: '8px',
-                  backgroundColor: 'rgba(227, 6, 19, 0.1)',
-                  color: 'var(--color-corp-red)',
-                  borderRadius: '8px',
-                  display: 'flex'
-                }}>
-                  <Copy size={20} />
-                </div>
-                <div>
-                  <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                    Clonar Gastos de {getMonthName(copySourceMonth)} {copySourceYear}
-                  </h3>
-                  <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                    Generación masiva para {getMonthName(selectedMonth)} {selectedYear}. Podés editar los montos antes de confirmar.
-                  </p>
-                </div>
-              </div>
-              <button 
-                onClick={() => setIsCopyModalOpen(false)}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            {/* Configuración Origen y Destino */}
-            <div style={{
-              padding: '16px 24px',
-              backgroundColor: 'var(--bg-hover)',
-              borderBottom: '1px solid var(--border-color)',
-              display: 'flex',
-              gap: '16px',
-              flexWrap: 'wrap',
-              alignItems: 'center'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <label style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Mes Origen:</label>
-                <select
-                  value={copySourceMonth}
-                  onChange={(e) => {
-                    const m = Number(e.target.value);
-                    setCopySourceMonth(m);
-                    fetchSourceExpenses(copySourceYear, m);
-                  }}
-                  className="select"
-                  style={{ padding: '6px 10px', fontSize: '0.85rem', borderRadius: '6px' }}
-                >
-                  {[1,2,3,4,5,6,7,8,9,10,11,12].map(m => (
-                    <option key={m} value={m}>{getMonthName(m)}</option>
-                  ))}
-                </select>
-                <select
-                  value={copySourceYear}
-                  onChange={(e) => {
-                    const y = Number(e.target.value);
-                    setCopySourceYear(y);
-                    fetchSourceExpenses(y, copySourceMonth);
-                  }}
-                  className="select"
-                  style={{ padding: '6px 10px', fontSize: '0.85rem', borderRadius: '6px' }}
-                >
-                  <option value={2026}>2026</option>
-                  <option value={2025}>2025</option>
-                </select>
-              </div>
-
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: 'auto' }}>
-                <label style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Fecha de registro en {getMonthName(selectedMonth)}:</label>
-                <input
-                  type="date"
-                  value={copyTargetDate}
-                  onChange={(e) => setCopyTargetDate(e.target.value)}
-                  className="input"
-                  style={{ padding: '6px 10px', fontSize: '0.85rem', borderRadius: '6px', width: '150px' }}
-                />
-              </div>
-            </div>
-
-            {/* Contenido Tabla Editable */}
-            <div style={{ padding: '16px 24px', overflowY: 'auto', flex: 1 }}>
-              {loadingSource ? (
-                <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-secondary)' }}>
-                  <RefreshCw size={24} className="spin" style={{ margin: '0 auto 10px' }} />
-                  <p style={{ fontSize: '0.9rem' }}>Cargando gastos del período de origen...</p>
-                </div>
-              ) : sourceExpenses.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-secondary)' }}>
-                  <AlertCircle size={32} style={{ margin: '0 auto 10px', color: '#f59e0b' }} />
-                  <p style={{ fontWeight: 600 }}>No se encontraron gastos en {getMonthName(copySourceMonth)} {copySourceYear}.</p>
-                  <p style={{ fontSize: '0.85rem' }}>Selecciona otro mes de origen arriba para clonar sus registros.</p>
-                </div>
-              ) : (
-                <>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <button
-                        type="button"
-                        className="btn btn-secondary"
-                        onClick={() => {
-                          const allSelected = sourceExpenses.every(s => s.selected);
-                          setSourceExpenses(sourceExpenses.map(s => ({ ...s, selected: !allSelected })));
-                        }}
-                        style={{ padding: '4px 10px', fontSize: '0.8rem' }}
-                      >
-                        {sourceExpenses.every(s => s.selected) ? 'Desmarcar Todos' : 'Marcar Todos'}
-                      </button>
-                      <span style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
-                        {sourceExpenses.filter(s => s.selected).length} de {sourceExpenses.length} seleccionados
-                      </span>
-                    </div>
-
-                    <div style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                      Total Lote: <span style={{ color: 'var(--color-corp-red)' }}>
-                        ${sourceExpenses
-                          .filter(s => s.selected)
-                          .reduce((sum, s) => sum + (Number(s.amount) || 0), 0)
-                          .toLocaleString('es-AR', { minimumFractionDigits: 2 })}
-                      </span>
-                    </div>
-                  </div>
-
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
-                    <thead>
-                      <tr style={{ borderBottom: '2px solid var(--border-color)', textAlign: 'left' }}>
-                        <th style={{ padding: '8px', width: '40px' }}>✓</th>
-                        <th style={{ padding: '8px' }}>Descripción</th>
-                        <th style={{ padding: '8px' }}>Categoría</th>
-                        <th style={{ padding: '8px', width: '160px' }}>Monto ($)</th>
-                        <th style={{ padding: '8px', width: '140px' }}>Medio Pago</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {sourceExpenses.map((item, index) => (
-                        <tr 
-                          key={item.id || index}
-                          style={{
-                            borderBottom: '1px solid var(--border-color)',
-                            backgroundColor: item.selected ? 'transparent' : 'var(--bg-hover)',
-                            opacity: item.selected ? 1 : 0.5
-                          }}
-                        >
-                          <td style={{ padding: '8px', textAlign: 'center' }}>
-                            <input
-                              type="checkbox"
-                              checked={item.selected}
-                              onChange={(e) => {
-                                const updated = [...sourceExpenses];
-                                updated[index].selected = e.target.checked;
-                                setSourceExpenses(updated);
-                              }}
-                              style={{ width: '16px', height: '16px', cursor: 'pointer' }}
-                            />
-                          </td>
-                          <td style={{ padding: '8px' }}>
-                            <input
-                              type="text"
-                              value={item.description}
-                              disabled={!item.selected}
-                              onChange={(e) => {
-                                const updated = [...sourceExpenses];
-                                updated[index].description = e.target.value;
-                                setSourceExpenses(updated);
-                              }}
-                              className="input"
-                              style={{ width: '100%', padding: '4px 8px', fontSize: '0.85rem' }}
-                            />
-                          </td>
-                          <td style={{ padding: '8px', color: 'var(--text-secondary)' }}>
-                            <span style={{
-                              padding: '2px 8px',
-                              backgroundColor: 'var(--bg-hover)',
-                              borderRadius: '4px',
-                              border: '1px solid var(--border-color)',
-                              fontSize: '0.78rem'
-                            }}>
-                              {item.categoryName}
-                            </span>
-                          </td>
-                          <td style={{ padding: '8px' }}>
-                            <input
-                              type="number"
-                              step="0.01"
-                              value={item.amount}
-                              disabled={!item.selected}
-                              onChange={(e) => {
-                                const updated = [...sourceExpenses];
-                                updated[index].amount = e.target.value;
-                                setSourceExpenses(updated);
-                              }}
-                              className="input"
-                              style={{
-                                width: '100%',
-                                padding: '4px 8px',
-                                fontSize: '0.88rem',
-                                fontWeight: 600,
-                                textAlign: 'right',
-                                color: item.selected ? 'var(--text-primary)' : 'inherit'
-                              }}
-                            />
-                          </td>
-                          <td style={{ padding: '8px' }}>
-                            <select
-                              value={item.paymentMethod}
-                              disabled={!item.selected}
-                              onChange={(e) => {
-                                const updated = [...sourceExpenses];
-                                updated[index].paymentMethod = e.target.value;
-                                setSourceExpenses(updated);
-                              }}
-                              className="select"
-                              style={{ width: '100%', padding: '4px 6px', fontSize: '0.8rem' }}
-                            >
-                              <option value="CASH">Efectivo</option>
-                              <option value="BANK_TRANSFER">Transferencia</option>
-                            </select>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </>
-              )}
-            </div>
-
-            {/* Footer Modal */}
-            <div style={{
-              padding: '16px 24px',
-              borderTop: '1px solid var(--border-color)',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              backgroundColor: 'var(--bg-hover)'
-            }}>
-              <button
-                type="button"
-                className="btn btn-secondary"
-                onClick={() => setIsCopyModalOpen(false)}
-                disabled={submittingCopy}
-              >
-                Cancelar
-              </button>
-
-              <button
-                type="button"
-                className="btn"
-                onClick={handleExecuteCopy}
-                disabled={submittingCopy || loadingSource || sourceExpenses.filter(s => s.selected).length === 0}
-                style={{
-                  backgroundColor: 'var(--color-corp-red)',
-                  color: '#fff',
-                  padding: '8px 20px',
-                  fontWeight: 600,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px'
-                }}
-              >
-                {submittingCopy ? (
-                  <>
-                    <RefreshCw size={16} className="spin" />
-                    <span>Generando Gastos...</span>
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle size={16} />
-                    <span>Generar {sourceExpenses.filter(s => s.selected).length} Gastos en {getMonthName(selectedMonth)}</span>
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
+      <GastosCopyMonthModal
+        isOpen={g.isCopyModalOpen}
+        onClose={() => { g.setErrorMsg(null); g.setIsCopyModalOpen(false); }}
+        errorMsg={g.errorMsg}
+        selectedYear={g.selectedYear}
+        selectedMonth={g.selectedMonth}
+        copySourceYear={g.copySourceYear}
+        setCopySourceYear={g.setCopySourceYear}
+        copySourceMonth={g.copySourceMonth}
+        setCopySourceMonth={g.setCopySourceMonth}
+        copyTargetDate={g.copyTargetDate}
+        setCopyTargetDate={g.setCopyTargetDate}
+        sourceExpenses={g.sourceExpenses}
+        setSourceExpenses={g.setSourceExpenses}
+        loadingSource={g.loadingSource}
+        submittingCopy={g.submittingCopy}
+        onFetchSource={g.fetchSourceExpenses}
+        onExecuteCopy={g.handleExecuteCopy}
+      />
     </div>
   );
 }

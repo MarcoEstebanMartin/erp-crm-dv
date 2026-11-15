@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, type FormEvent } from 'react';
 import { api } from '../../utils/api';
 import { useConfirm } from '../../context/ConfirmContext';
 import { useGpsTracker } from '../../hooks/useGpsTracker';
@@ -13,23 +13,22 @@ export function useRepartoController() {
   const [routes, setRoutes] = useState<any[]>([]);
   const [pendingOrders, setPendingOrders] = useState<any[]>([]);
   const [selectedRoute, setSelectedRoute] = useState<any | null>(null);
+  const [gpsHistory, setGpsHistory] = useState<[number, number][]>([]);
+  const [liveGpsInfo, setLiveGpsInfo] = useState<any>(null);
 
   const visibleRoutes = useMemo(() => {
     if (isAdminOrOffice) return routes;
     const uname = (currentUser?.username || '').toLowerCase().trim();
-    return routes.filter(r => {
+    return routes.filter((r) => {
       const dName = (r.driverName || '').toLowerCase().trim();
       return dName.includes(uname) || uname.includes(dName);
     });
   }, [routes, isAdminOrOffice, currentUser?.username]);
 
-  const [gpsHistory, setGpsHistory] = useState<[number, number][]>([]);
-  const [liveGpsInfo, setLiveGpsInfo] = useState<any>(null);
-
   useGpsTracker({
     activeRouteId: selectedRoute?.id,
     isActive: selectedRoute?.status === 'IN_TRANSIT' || selectedRoute?.custodyStatus === 'LOADED_IN_TRANSIT',
-    intervalMs: 60000
+    intervalMs: 60000,
   });
 
   useEffect(() => {
@@ -43,9 +42,7 @@ export function useRepartoController() {
         .then((data: any) => {
           if (data?.route) {
             setLiveGpsInfo(data.route);
-            if (Array.isArray(data.pings)) {
-              setGpsHistory(data.pings.map((p: any) => [p.latitude, p.longitude]));
-            }
+            if (Array.isArray(data.pings)) setGpsHistory(data.pings.map((p: any) => [p.latitude, p.longitude]));
           }
         })
         .catch(() => {});
@@ -56,7 +53,7 @@ export function useRepartoController() {
   }, [selectedRoute?.id]);
 
   const { clientCoordsCache, handleUpdateClientCoords } = useRepartoGeocoder({
-    pendingOrders, setPendingOrders, routes, setRoutes, selectedRoute, setSelectedRoute
+    pendingOrders, setPendingOrders, routes, setRoutes, selectedRoute, setSelectedRoute,
   });
 
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -67,7 +64,7 @@ export function useRepartoController() {
   const [selectedOrderIds, setSelectedOrderIds] = useState<number[]>([]);
   const [loadedDrivers, setLoadedDrivers] = useState<string[]>([]);
   const [loadedVehicles, setLoadedVehicles] = useState<{ plate: string; description: string }[]>([]);
-  const [expandedStops, setExpandedStops] = useState<{ [key: string]: boolean }>({});
+  const [expandedStops, setExpandedStops] = useState<Record<string, boolean>>({});
   const [selectedVehicleKey, setSelectedVehicleKey] = useState('');
 
   const [showSettleModal, setShowSettleModal] = useState(false);
@@ -83,7 +80,7 @@ export function useRepartoController() {
 
   const {
     createRouteStreetPoints, selectedRouteStreetPoints,
-    currentTspRoute, mapPoints, activeRouteTspDetails
+    currentTspRoute, mapPoints, activeRouteTspDetails,
   } = useRepartoTspRoutes({ selectedOrderIds, pendingOrders, selectedRoute, clientCoordsCache });
 
   const fetchRoutesAndOrders = async () => {
@@ -91,7 +88,6 @@ export function useRepartoController() {
     try {
       const allRoutes = await api.getDeliveryRoutes();
       setRoutes(allRoutes);
-
       if (!isAdminOrOffice) {
         const uname = (currentUser?.username || '').toLowerCase().trim();
         const myRoutes = allRoutes.filter((r: any) => {
@@ -99,23 +95,15 @@ export function useRepartoController() {
           return dName.includes(uname) || uname.includes(dName);
         });
         if (myRoutes.length > 0) {
-          const activeOrFirst = myRoutes.find((r: any) => r.status === 'IN_TRANSIT' || r.custodyStatus === 'LOADED_IN_TRANSIT') || myRoutes[0];
-          setSelectedRoute(activeOrFirst);
+          setSelectedRoute(myRoutes.find((r: any) => r.status === 'IN_TRANSIT' || r.custodyStatus === 'LOADED_IN_TRANSIT') || myRoutes[0]);
         } else {
           setSelectedRoute(null);
         }
       }
-
       const allOrders = await api.getOrders();
-      const available = allOrders.filter((o: any) => (o.status === 'PREPARED' || o.status === 'DELIVERED' || !!o.invoiceNumber) && !o.deliveryRouteId && o.status !== 'CANCELLED');
-      setPendingOrders(available);
-
-      try {
-        const banks = await api.getBankAccounts();
-        setBankAccounts(banks || []);
-      } catch {
-        console.warn('Cuentas bancarias no disponibles para este perfil.');
-      }
+      setPendingOrders(allOrders.filter((o: any) => (o.status === 'PREPARED' || o.status === 'DELIVERED' || !!o.invoiceNumber) && !o.deliveryRouteId && o.status !== 'CANCELLED'));
+      try { setBankAccounts((await api.getBankAccounts()) || []); }
+      catch { console.warn('Cuentas bancarias no disponibles para este perfil.'); }
     } catch (err) {
       console.error('Error al cargar datos logísticos:', err);
       setErrorMsg('Error al cargar datos logísticos.');
@@ -136,17 +124,14 @@ export function useRepartoController() {
     }
   };
 
-  useEffect(() => {
-    fetchRoutesAndOrders();
-    fetchLogisticsResources();
-  }, []);
+  useEffect(() => { fetchRoutesAndOrders(); fetchLogisticsResources(); }, []);
 
   const handleDeleteRoute = async (routeId: number) => {
-    if (!await confirm('¿Estás seguro de que deseas eliminar esta hoja de ruta? Los pedidos asociados serán liberados.', { type: 'danger' })) return;
+    if (!await confirm('¿Eliminar esta hoja de ruta? Los pedidos asociados serán liberados.', { type: 'danger' })) return;
     setLoading(true);
     try {
       await api.deleteDeliveryRoute(routeId);
-      setSuccessMsg('Hoja de ruta eliminada y pedidos liberados.');
+      setSuccessMsg('Hoja de ruta eliminada.');
       if (selectedRoute?.id === routeId) setSelectedRoute(null);
       await fetchRoutesAndOrders();
     } catch (err: any) {
@@ -158,26 +143,22 @@ export function useRepartoController() {
 
   const uniqueCities = useMemo(() => {
     const citiesSet = new Set<string>();
-    pendingOrders.forEach(o => { if (o.persona?.city) citiesSet.add(o.persona.city.toUpperCase().trim()); });
+    pendingOrders.forEach((o) => { if (o.persona?.city) citiesSet.add(o.persona.city.toUpperCase().trim()); });
     return Array.from(citiesSet).sort();
   }, [pendingOrders]);
 
   const uniqueZones = useMemo(() => {
     if (selectedCityFilter === 'ALL') return [];
     const zonesSet = new Set<string>();
-    pendingOrders
-      .filter(o => o.persona?.city?.toUpperCase().trim() === selectedCityFilter)
-      .forEach(o => { if (o.persona?.route) zonesSet.add(o.persona.route.toUpperCase().trim()); });
+    pendingOrders.filter((o) => o.persona?.city?.toUpperCase().trim() === selectedCityFilter).forEach((o) => { if (o.persona?.route) zonesSet.add(o.persona.route.toUpperCase().trim()); });
     return Array.from(zonesSet).sort();
   }, [pendingOrders, selectedCityFilter]);
 
   const filteredPendingOrders = useMemo(() => {
     let list = pendingOrders;
     if (selectedCityFilter !== 'ALL') {
-      list = list.filter(o => o.persona?.city?.toUpperCase().trim() === selectedCityFilter);
-      if (selectedZoneFilter !== 'ALL') {
-        list = list.filter(o => o.persona?.route?.toUpperCase().trim() === selectedZoneFilter);
-      }
+      list = list.filter((o) => o.persona?.city?.toUpperCase().trim() === selectedCityFilter);
+      if (selectedZoneFilter !== 'ALL') list = list.filter((o) => o.persona?.route?.toUpperCase().trim() === selectedZoneFilter);
     }
     return list;
   }, [pendingOrders, selectedCityFilter, selectedZoneFilter]);
@@ -185,6 +166,7 @@ export function useRepartoController() {
   useEffect(() => { setSelectedZoneFilter('ALL'); }, [selectedCityFilter]);
 
   const handleOpenSettleModal = (route: any) => {
+    setErrorMsg(null);
     setSettleRoute(route);
     setSettlements(route.orders.map((o: any) => ({
       orderId: o.id,
@@ -195,31 +177,24 @@ export function useRepartoController() {
       bankAccountId: bankAccounts[0]?.id || '',
       checkNumber: '',
       checkIssuer: '',
-      checkAmount: Number(o.totalAmount)
+      checkAmount: Number(o.totalAmount),
     })));
     setShowSettleModal(true);
   };
 
-  const handleSettleSubmit = async (e: React.FormEvent) => {
+  const handleSettleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!settleRoute) return;
-    setErrorMsg(null);
-    setSuccessMsg(null);
-    setLoading(true);
+    setErrorMsg(null); setSuccessMsg(null); setLoading(true);
     try {
-      const expectedCash = settlements.filter(s => s.paymentMethod === 'CASH').reduce((sum, s) => sum + s.amount, 0);
-      const expectedTransfers = settlements.filter(s => s.paymentMethod === 'BANK_TRANSFER').reduce((sum, s) => sum + s.amount, 0);
-      const expectedChecks = settlements.filter(s => s.paymentMethod === 'CHECK').reduce((sum, s) => sum + s.amount, 0);
+      const expectedCash = settlements.filter((s) => s.paymentMethod === 'CASH').reduce((sum, s) => sum + s.amount, 0);
+      const expectedTransfers = settlements.filter((s) => s.paymentMethod === 'BANK_TRANSFER').reduce((sum, s) => sum + s.amount, 0);
+      const expectedChecks = settlements.filter((s) => s.paymentMethod === 'CHECK').reduce((sum, s) => sum + s.amount, 0);
       await api.settleDeliveryRoute(settleRoute.id, {
-        settlements,
-        cashDeclared: expectedCash,
-        checksDeclared: expectedChecks,
-        transfersDeclared: expectedTransfers
+        settlements, cashDeclared: expectedCash, checksDeclared: expectedChecks, transfersDeclared: expectedTransfers,
       });
-      setSuccessMsg(`✨ Hoja de ruta #${settleRoute.id} liquidada y completada con éxito. Cobros registrados.`);
-      setShowSettleModal(false);
-      setSettleRoute(null);
-      setSelectedRoute(null);
+      setSuccessMsg(`Hoja de ruta #${settleRoute.id} liquidada.`);
+      setShowSettleModal(false); setSettleRoute(null); setSelectedRoute(null);
       fetchRoutesAndOrders();
     } catch (err: any) {
       setErrorMsg(err.message || 'Error al liquidar la hoja de ruta.');
@@ -229,52 +204,39 @@ export function useRepartoController() {
   };
 
   const handleToggleOrder = (orderId: number) => {
-    setSelectedOrderIds(prev => prev.includes(orderId) ? prev.filter(id => id !== orderId) : [...prev, orderId]);
+    setSelectedOrderIds((prev) => (prev.includes(orderId) ? prev.filter((id) => id !== orderId) : [...prev, orderId]));
   };
 
   const handleTransferCustody = async (route: any) => {
     const totalBultos = route.orders?.reduce((sum: number, o: any) => sum + Math.max(1, Number(o.bultosCount || 1)), 0) || 0;
-    if (!window.confirm(`¿Confirmar la carga de ${totalBultos} bultos en el vehículo de ${route.driverName} y transferir la custodia legal/operativa al chofer?`)) return;
+    if (!await confirm(`¿Confirmar carga de ${totalBultos} bultos y transferir custodia a ${route.driverName}?`, { type: 'warning' })) return;
     try {
       setLoading(true);
       const updated = await api.transferRouteCustody(route.id);
-      setSuccessMsg(`🔒 Carga de ${totalBultos} bultos confirmada. Custodia transferida exitosamente a ${route.driverName}.`);
+      setSuccessMsg(`Carga confirmada (${totalBultos} bultos). Custodia transferida a ${route.driverName}.`);
       setSelectedRoute(updated);
       fetchRoutesAndOrders();
     } catch (err: any) {
-      setErrorMsg(err.message || 'Error al transferir la custodia de la ruta.');
+      setErrorMsg(err.message || 'Error al transferir custodia.');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleCreateRouteSubmit = async (e: React.FormEvent) => {
+  const handleCreateRouteSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    setErrorMsg(null);
-    setSuccessMsg(null);
-    if (selectedOrderIds.length === 0) {
-      setErrorMsg('Debe seleccionar al menos un pedido para el reparto.');
-      return;
-    }
+    setErrorMsg(null); setSuccessMsg(null);
+    if (selectedOrderIds.length === 0) { setErrorMsg('Seleccione al menos un pedido.'); return; }
     try {
       setLoading(true);
       await api.createDeliveryRoute({
-        driverName,
-        companionName: companionName.trim() || undefined,
-        vehiclePlate,
-        vehicleDescription,
-        orderIds: currentTspRoute.map(node => node.id)
+        driverName, companionName: companionName.trim() || undefined, vehiclePlate, vehicleDescription,
+        orderIds: currentTspRoute.map((node) => node.id),
       });
-      setSuccessMsg('✨ Hoja de ruta de reparto creada y optimizada con éxito.');
+      setSuccessMsg('Hoja de ruta creada.');
       setShowCreateModal(false);
-      setDriverName('');
-      setCompanionName('');
-      setVehiclePlate('');
-      setVehicleDescription('');
-      setSelectedVehicleKey('');
-      setSelectedOrderIds([]);
-      fetchRoutesAndOrders();
-      fetchLogisticsResources();
+      setDriverName(''); setCompanionName(''); setVehiclePlate(''); setVehicleDescription(''); setSelectedVehicleKey(''); setSelectedOrderIds([]);
+      fetchRoutesAndOrders(); fetchLogisticsResources();
     } catch (err: any) {
       setErrorMsg(err.message || 'Error al guardar la hoja de ruta.');
     } finally {
@@ -286,10 +248,8 @@ export function useRepartoController() {
     try {
       setLoading(true);
       await api.updateRouteStatus(routeId, nextStatus);
-      setSuccessMsg(`✨ Hoja de ruta #${routeId} actualizada a estado: ${nextStatus === 'IN_TRANSIT' ? 'En Viaje' : 'Completada (Entregada)'}`);
-      if (selectedRoute && selectedRoute.id === routeId) {
-        setSelectedRoute((prev: any) => ({ ...prev, status: nextStatus }));
-      }
+      setSuccessMsg(`Hoja de ruta #${routeId}: ${nextStatus === 'IN_TRANSIT' ? 'En Viaje' : 'Completada'}`);
+      if (selectedRoute && selectedRoute.id === routeId) setSelectedRoute((prev: any) => ({ ...prev, status: nextStatus }));
       fetchRoutesAndOrders();
     } catch (err: any) {
       setErrorMsg(err.message || 'Error al cambiar estado.');
@@ -298,13 +258,10 @@ export function useRepartoController() {
     }
   };
 
-  const logisticsStats = useMemo(() => {
-    const inTransitRoutes = routes.filter(r => r.status === 'IN_TRANSIT');
-    return {
-      inTransitCount: inTransitRoutes.length,
-      pendingOrdersCount: pendingOrders.length
-    };
-  }, [routes, pendingOrders]);
+  const logisticsStats = useMemo(() => ({
+    inTransitCount: routes.filter((r) => r.status === 'IN_TRANSIT').length,
+    pendingOrdersCount: pendingOrders.length,
+  }), [routes, pendingOrders]);
 
   return {
     currentUser, isAdminOrOffice, visibleRoutes, selectedRoute, setSelectedRoute,
@@ -320,6 +277,6 @@ export function useRepartoController() {
     uniqueCities, uniqueZones, filteredPendingOrders,
     handleDeleteRoute, handleOpenSettleModal, handleSettleSubmit, handleToggleOrder,
     handleTransferCustody, currentTspRoute, mapPoints, activeRouteTspDetails,
-    handleCreateRouteSubmit, handleChangeStatus, logisticsStats
+    handleCreateRouteSubmit, handleChangeStatus, logisticsStats,
   };
 }

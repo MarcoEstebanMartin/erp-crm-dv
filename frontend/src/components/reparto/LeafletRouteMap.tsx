@@ -110,7 +110,7 @@ export function LeafletRouteMap({
       if (gpsLocation && typeof gpsLocation.lat === 'number' && typeof gpsLocation.lng === 'number') {
         const truckIcon = L.divIcon({
           className: 'custom-truck-icon',
-          html: `<div style="background-color:#E30613; color:white; border-radius:50%; width:32px; height:32px; display:flex; align-items:center; justify-content:center; font-size:16px; border: 2px solid white; box-shadow: 0 2px 8px rgba(227,6,19,0.5);">🚚</div>`,
+          html: `<div style="background-color:#E30613; color:white; border-radius:50%; width:32px; height:32px; display:flex; align-items:center; justify-content:center; border: 2px solid white; box-shadow: 0 2px 8px rgba(227,6,19,0.5);"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/></svg></div>`,
           iconSize: [32, 32],
           iconAnchor: [16, 16]
         });
@@ -120,7 +120,7 @@ export function LeafletRouteMap({
 
         L.marker([gpsLocation.lat, gpsLocation.lng], { icon: truckIcon })
           .addTo(map)
-          .bindPopup(`<b>🚚 Vehículo en Vivo: ${gpsLocation.vehiclePlate || 'Unidad de Reparto'}</b><br/>Velocidad: <strong>${speedText}</strong><br/>Última transmisión: <strong>${timeText}</strong>`);
+          .bindPopup(`<b>Vehículo en Vivo: ${gpsLocation.vehiclePlate || 'Unidad de Reparto'}</b><br/>Velocidad: <strong>${speedText}</strong><br/>Última transmisión: <strong>${timeText}</strong>`);
       }
     }
 

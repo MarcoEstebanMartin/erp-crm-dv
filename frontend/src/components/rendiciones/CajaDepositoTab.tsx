@@ -11,7 +11,7 @@ export default function CajaDepositoTab({
   activeDrawer,
   onInspect,
   onOpenCloseModal,
-  onOpenNewModal
+  onOpenNewModal,
 }: CajaDepositoTabProps) {
   const isOpen = !!activeDrawer;
 
@@ -25,20 +25,15 @@ export default function CajaDepositoTab({
           flexDirection: 'column',
           position: 'relative',
           overflow: 'hidden',
-          border: '1px solid var(--border-color)'
+          border: '1px solid var(--border-color)',
         }}
       >
         {isOpen && (
-          <div style={{ position: 'absolute', top: 0, left: 0, width: '4px', height: '100%', backgroundColor: '#10b981' }}></div>
+          <div style={{ position: 'absolute', top: 0, left: 0, width: '4px', height: '100%', backgroundColor: '#10b981' }} />
         )}
 
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px', gap: '8px' }}>
-          <div style={{ minWidth: 0, flex: 1 }}>
-            <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 600 }}>Caja Depósito</h3>
-            <p style={{ margin: '4px 0 0 0', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
-              Ventas de mostrador y depósito
-            </p>
-          </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', gap: '8px' }}>
+          <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 600 }}>Caja Depósito</h3>
           <div
             style={{
               backgroundColor: isOpen ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
@@ -50,33 +45,33 @@ export default function CajaDepositoTab({
               display: 'flex',
               alignItems: 'center',
               gap: '4px',
-              whiteSpace: 'nowrap'
+              whiteSpace: 'nowrap',
             }}
           >
-            {isOpen ? <Unlock size={14} /> : <Lock size={14} />}
+            {isOpen ? <Unlock size={14} aria-hidden="true" /> : <Lock size={14} aria-hidden="true" />}
             {isOpen ? 'Operativa' : 'Cerrada'}
           </div>
         </div>
 
-        <div style={{ flex: 1, margin: '16px 0' }}>
+        <div style={{ flex: 1, margin: '12px 0 18px 0' }}>
           {isOpen ? (
             <div style={{ padding: '14px', backgroundColor: 'var(--bg-light)', borderRadius: '8px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                <span style={{ color: 'var(--text-secondary)', fontSize: '0.88rem' }}>Fondo Inicial:</span>
-                <strong style={{ fontFamily: 'monospace', fontSize: '0.88rem' }}>
-                  ${Number(activeDrawer.openingBalance).toLocaleString()}
+                <span style={{ color: 'var(--text-secondary)', fontSize: '0.88rem' }}>Fondo Inicial</span>
+                <strong className="tabular-nums" style={{ fontFamily: 'monospace', fontSize: '0.88rem' }}>
+                  ${Number(activeDrawer.openingBalance).toLocaleString('es-AR')}
                 </strong>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: 'var(--text-secondary)', fontSize: '0.88rem' }}>Apertura:</span>
-                <span style={{ fontSize: '0.88rem' }}>
+                <span style={{ color: 'var(--text-secondary)', fontSize: '0.88rem' }}>Apertura</span>
+                <span className="tabular-nums" style={{ fontSize: '0.88rem' }}>
                   {new Date(activeDrawer.openedAt).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
                 </span>
               </div>
             </div>
           ) : (
             <div style={{ padding: '16px', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.88rem' }}>
-              La caja se encuentra inactiva. Deberás abrirla con un saldo inicial para operar.
+              Caja cerrada
             </div>
           )}
         </div>
@@ -90,7 +85,7 @@ export default function CajaDepositoTab({
                 style={{ width: '100%', padding: '10px 14px', fontSize: '0.9rem', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
                 onClick={() => onInspect(activeDrawer)}
               >
-                <Eye size={16} /> Ver Movimientos
+                <Eye size={16} aria-hidden="true" /> Ver Movimientos
               </button>
               <button
                 type="button"
@@ -98,7 +93,7 @@ export default function CajaDepositoTab({
                 style={{ width: '100%', padding: '10px 14px', fontSize: '0.9rem', backgroundColor: '#fef2f2', color: '#ef4444', border: '1px solid #fecaca', borderRadius: '8px' }}
                 onClick={() => onOpenCloseModal(activeDrawer.id)}
               >
-                Arqueo y Cierre de Caja
+                Cerrar Caja
               </button>
             </div>
           ) : (

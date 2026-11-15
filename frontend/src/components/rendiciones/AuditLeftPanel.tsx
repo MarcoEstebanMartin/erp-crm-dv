@@ -1,8 +1,9 @@
+import { MapPin } from 'lucide-react';
 import {
   type AuditTarget,
   type DeclaredCheckItem,
   formatCurrency,
-  getDetectedRoutesAndCities
+  getDetectedRoutesAndCities,
 } from './types';
 import DeclaredChecksWidget from './DeclaredChecksWidget';
 
@@ -45,7 +46,7 @@ export default function AuditLeftPanel({
   auditRouteNote,
   onAuditRouteNoteChange,
   auditNotes,
-  onAuditNotesChange
+  onAuditNotesChange,
 }: AuditLeftPanelProps) {
   const expectedCash = Number(auditTarget.data.totalCash || 0);
   const expectedChecks = Number(auditTarget.data.totalChecks || 0);
@@ -63,49 +64,47 @@ export default function AuditLeftPanel({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', overflowY: 'auto', paddingRight: '6px' }}>
-      {/* 1. Sistema (Teórico Esperado) */}
       <div className="card" style={{ padding: '14px', backgroundColor: '#f8fafc', border: '1px solid var(--border-color)', borderRadius: '8px' }}>
-        <h4 style={{ margin: '0 0 10px 0', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-          1. Sistema (Teórico Esperado)
+        <h4 style={{ margin: '0 0 10px 0', fontSize: '0.88rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+          Sistema (Esperado)
         </h4>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
-            <span style={{ color: 'var(--text-secondary)' }}>Efectivo en Sistema:</span>
-            <strong style={{ fontFamily: 'monospace' }}>{formatCurrency(expectedCash)}</strong>
+            <span style={{ color: 'var(--text-secondary)' }}>Efectivo</span>
+            <strong className="tabular-nums" style={{ fontFamily: 'monospace' }}>{formatCurrency(expectedCash)}</strong>
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
-            <span style={{ color: 'var(--text-secondary)' }}>Cheques en Sistema:</span>
-            <strong style={{ fontFamily: 'monospace' }}>{formatCurrency(expectedChecks)}</strong>
+            <span style={{ color: 'var(--text-secondary)' }}>Cheques</span>
+            <strong className="tabular-nums" style={{ fontFamily: 'monospace' }}>{formatCurrency(expectedChecks)}</strong>
           </div>
 
           <div style={{ height: '1px', backgroundColor: '#e2e8f0', margin: '2px 0' }} />
 
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem' }}>
-            <span style={{ color: 'var(--text-secondary)' }}>Sucursal A (Oficial):</span>
-            <span style={{ fontWeight: 500 }}>{formatCurrency(auditTarget.data.totalBranchA)}</span>
+            <span style={{ color: 'var(--text-secondary)' }}>Sucursal A</span>
+            <span className="tabular-nums" style={{ fontWeight: 500 }}>{formatCurrency(auditTarget.data.totalBranchA)}</span>
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem' }}>
-            <span style={{ color: 'var(--text-secondary)' }}>Sucursal X (Interna):</span>
-            <span style={{ fontWeight: 500 }}>{formatCurrency(auditTarget.data.totalBranchX)}</span>
+            <span style={{ color: 'var(--text-secondary)' }}>Sucursal X</span>
+            <span className="tabular-nums" style={{ fontWeight: 500 }}>{formatCurrency(auditTarget.data.totalBranchX)}</span>
           </div>
 
           <div style={{ height: '1px', backgroundColor: '#e2e8f0', margin: '2px 0' }} />
 
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.98rem', fontWeight: 700 }}>
-            <span style={{ color: 'var(--text-primary)' }}>Total Esperado:</span>
-            <span style={{ color: 'var(--color-primary)', fontFamily: 'monospace' }}>{formatCurrency(totalExpected)}</span>
+            <span style={{ color: 'var(--text-primary)' }}>Total Esperado</span>
+            <span className="tabular-nums" style={{ color: 'var(--color-primary)', fontFamily: 'monospace' }}>{formatCurrency(totalExpected)}</span>
           </div>
         </div>
       </div>
 
-      {/* 2. Conteo Físico Recibido */}
       <div className="card" style={{ padding: '14px', border: '1px solid var(--border-color)', borderRadius: '8px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-          <h4 style={{ margin: 0, fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-            2. Conteo Físico Recibido
+          <h4 style={{ margin: 0, fontSize: '0.88rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+            Conteo Físico
           </h4>
           <button
             type="button"
@@ -114,20 +113,20 @@ export default function AuditLeftPanel({
               onRealCashChange(String(expectedCash));
               onRealChecksChange(String(expectedChecks));
             }}
-            style={{ fontSize: '0.75rem', padding: '3px 8px', display: 'inline-flex', alignItems: 'center', gap: '4px', backgroundColor: '#f0fdf4', color: '#15803d', borderColor: '#bbf7d0' }}
-            title="Auto-completar los casilleros con los montos esperados si coinciden sin diferencia"
+            style={{ fontSize: '0.75rem', padding: '3px 8px', backgroundColor: '#f0fdf4', color: '#15803d', borderColor: '#bbf7d0' }}
           >
-            ⚡ Sin Diferencia (Copiar)
+            Igualar
           </button>
         </div>
 
         <div className="form-group" style={{ marginBottom: '12px' }}>
-          <label style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>
+          <label htmlFor="audit-real-cash" style={{ fontSize: '0.78rem', fontWeight: 600, display: 'block', marginBottom: '4px' }}>
             Efectivo Declarado ($)
           </label>
           <input
+            id="audit-real-cash"
             type="number"
-            className="input"
+            className="input tabular-nums"
             placeholder="0.00"
             required
             min="0"
@@ -135,7 +134,7 @@ export default function AuditLeftPanel({
             autoFocus
             value={realCash}
             onChange={(e) => onRealCashChange(e.target.value)}
-            style={{ fontSize: '1.1rem', fontFamily: 'monospace', width: '100%', padding: '6px 10px' }}
+            style={{ fontSize: '1.1rem', fontFamily: 'monospace', padding: '6px 10px' }}
           />
         </div>
 
@@ -154,20 +153,23 @@ export default function AuditLeftPanel({
         />
 
         <div className="form-group" style={{ marginBottom: '10px' }}>
-          <label style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>
-            Pueblo / Ruta de Cobro (Identificación)
+          <label htmlFor="audit-route-note" style={{ fontSize: '0.78rem', fontWeight: 600, display: 'block', marginBottom: '4px' }}>
+            Ciudad / Ruta
           </label>
           <input
+            id="audit-route-note"
             type="text"
             className="input"
-            placeholder="Ej: General Villegas, Bunge, Ruta 33..."
+            placeholder="Ciudad o ruta"
             value={auditRouteNote}
             onChange={(e) => onAuditRouteNoteChange(e.target.value)}
-            style={{ width: '100%', fontSize: '0.85rem', padding: '6px 10px' }}
+            style={{ fontSize: '0.85rem', padding: '6px 10px' }}
           />
           {detected.list.length > 0 && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px', flexWrap: 'wrap' }}>
-              <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: 500 }}>📍 Detectado:</span>
+              <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                <MapPin size={11} aria-hidden="true" /> Detectado:
+              </span>
               {detected.list.map((item, idx) => (
                 <button
                   key={idx}
@@ -181,7 +183,7 @@ export default function AuditLeftPanel({
                     border: auditRouteNote === item.name ? '1px solid #0284c7' : '1px solid #cbd5e1',
                     color: auditRouteNote === item.name ? '#0369a1' : '#334155',
                     cursor: 'pointer',
-                    fontWeight: 500
+                    fontWeight: 500,
                   }}
                 >
                   {item.name} ({item.count})
@@ -192,21 +194,21 @@ export default function AuditLeftPanel({
         </div>
 
         <div className="form-group" style={{ marginBottom: '0px' }}>
-          <label style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>
-            Observaciones del Arqueo
+          <label htmlFor="audit-notes" style={{ fontSize: '0.78rem', fontWeight: 600, display: 'block', marginBottom: '4px' }}>
+            Observaciones
           </label>
           <input
+            id="audit-notes"
             type="text"
             className="input"
-            placeholder="Ej: Diferencia justificada por vueltos..."
+            placeholder="Opcional"
             value={auditNotes}
             onChange={(e) => onAuditNotesChange(e.target.value)}
-            style={{ width: '100%', fontSize: '0.85rem', padding: '6px 10px' }}
+            style={{ fontSize: '0.85rem', padding: '6px 10px' }}
           />
         </div>
       </div>
 
-      {/* Widget de Conciliación y Diferencias en tiempo real */}
       <div
         style={{
           padding: '12px 16px',
@@ -216,24 +218,21 @@ export default function AuditLeftPanel({
           color: totalDiff === 0 ? '#166534' : totalDiff > 0 ? '#0f766e' : '#991b1b',
           display: 'flex',
           justifyContent: 'space-between',
-          alignItems: 'center'
+          alignItems: 'center',
         }}
       >
         <div>
           <h4 style={{ margin: '0 0 2px 0', fontSize: '0.9rem', fontWeight: 700 }}>
-            {totalDiff === 0 ? 'Caja Conciliada (Cuadrado)' : totalDiff > 0 ? 'Sobrante Detectado' : 'Faltante de Caja'}
+            {totalDiff === 0 ? 'Cuadrado' : totalDiff > 0 ? 'Sobrante' : 'Faltante'}
           </h4>
-          <p style={{ margin: 0, fontSize: '0.78rem', opacity: 0.9 }}>
-            Efectivo: {diffCash >= 0 ? '+' : ''}
-            {formatCurrency(diffCash)} | Cheques: {diffChecks >= 0 ? '+' : ''}
-            {formatCurrency(diffChecks)}
-          </p>
+          <div className="tabular-nums" style={{ fontSize: '0.78rem', opacity: 0.9 }}>
+            Efectivo: {diffCash >= 0 ? '+' : ''}{formatCurrency(diffCash)} · Cheques: {diffChecks >= 0 ? '+' : ''}{formatCurrency(diffChecks)}
+          </div>
         </div>
         <div style={{ textAlign: 'right' }}>
-          <div style={{ fontSize: '0.7rem', opacity: 0.8, textTransform: 'uppercase' }}>Diferencia Total</div>
-          <div style={{ fontSize: '1.25rem', fontWeight: 800, fontFamily: 'monospace' }}>
-            {totalDiff > 0 ? '+' : ''}
-            {formatCurrency(totalDiff)}
+          <div style={{ fontSize: '0.74rem', opacity: 0.85 }}>Diferencia</div>
+          <div className="tabular-nums" style={{ fontSize: '1.25rem', fontWeight: 800, fontFamily: 'monospace' }}>
+            {totalDiff > 0 ? '+' : ''}{formatCurrency(totalDiff)}
           </div>
         </div>
       </div>

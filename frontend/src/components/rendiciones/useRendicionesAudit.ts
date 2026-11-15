@@ -1,15 +1,17 @@
 import React, { useState } from 'react';
 import { api } from '../../utils/api';
+import { useConfirm } from '../../context/ConfirmContext';
 import {
   type AuditTarget,
   type DeclaredCheckItem,
   type RouteGroup,
   type SellerGroup,
   formatCurrency,
-  getDetectedRoutesAndCities
+  getDetectedRoutesAndCities,
 } from './types';
 
 export function useRendicionesAudit() {
+  const confirm = useConfirm();
   const [sellers, setSellers] = useState<SellerGroup[]>([]);
   const [routes, setRoutes] = useState<RouteGroup[]>([]);
   const [loading, setLoading] = useState(false);
@@ -18,16 +20,16 @@ export function useRendicionesAudit() {
 
   const [auditTarget, setAuditTarget] = useState<AuditTarget | null>(null);
   const [arqueoResult, setArqueoResult] = useState<any | null>(null);
-  const [realCash, setRealCash] = useState<string>('');
-  const [realChecks, setRealChecks] = useState<string>('');
-  const [auditRouteNote, setAuditRouteNote] = useState<string>('');
-  const [auditNotes, setAuditNotes] = useState<string>('');
+  const [realCash, setRealCash] = useState('');
+  const [realChecks, setRealChecks] = useState('');
+  const [auditRouteNote, setAuditRouteNote] = useState('');
+  const [auditNotes, setAuditNotes] = useState('');
   const [declaredChecksList, setDeclaredChecksList] = useState<DeclaredCheckItem[]>([]);
-  const [newCheckNumber, setNewCheckNumber] = useState<string>('');
-  const [newCheckBank, setNewCheckBank] = useState<string>('');
-  const [newCheckAmount, setNewCheckAmount] = useState<string>('');
+  const [newCheckNumber, setNewCheckNumber] = useState('');
+  const [newCheckBank, setNewCheckBank] = useState('');
+  const [newCheckAmount, setNewCheckAmount] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
-  const [selectedDrawerId, setSelectedDrawerId] = useState<string>('');
+  const [selectedDrawerId, setSelectedDrawerId] = useState('');
 
   const fetchRendiciones = async () => {
     setLoading(true);
@@ -93,8 +95,8 @@ export function useRendicionesAudit() {
       {
         number: newCheckNumber.trim() || 'S/N',
         bank: newCheckBank.trim() || 'Banco',
-        amount: amt
-      }
+        amount: amt,
+      },
     ];
     setDeclaredChecksList(updated);
     const sumChecks = updated.reduce((acc, c) => acc + c.amount, 0);
@@ -116,13 +118,14 @@ export function useRendicionesAudit() {
     const clientName = tx.persona?.name || 'Cliente';
     const amountStr = formatCurrency(Number(tx.amount));
 
-    if (
-      !window.confirm(
-        `¿Estás seguro de eliminar el recibo ${receiptName} (${clientName} por ${amountStr})?\n\nEsta acción restablecerá ${amountStr} al saldo pendiente del cliente.`
-      )
-    ) {
-      return;
-    }
+    const ok = await confirm({
+      title: 'Eliminar recibo',
+      message: `¿Eliminar recibo ${receiptName} (${clientName} por ${amountStr})? Se restablecerá el saldo pendiente del cliente.`,
+      confirmText: 'Eliminar',
+      cancelText: 'Cancelar',
+      type: 'danger',
+    });
+    if (!ok) return;
 
     setActionLoading(true);
     setErrorMsg(null);
@@ -144,14 +147,15 @@ export function useRendicionesAudit() {
           totalChecks: method === 'CHECK' ? auditTarget.data.totalChecks - amt : auditTarget.data.totalChecks,
           totalTransfers:
             method === 'BANK_TRANSFER' ? auditTarget.data.totalTransfers - amt : auditTarget.data.totalTransfers,
-          transactions: remainingTxs
+          transactions: remainingTxs,
         };
 
         setAuditTarget({ ...auditTarget, data: updatedData });
       }
 
       fetchRendiciones();
-      alert(res.message || 'Recibo eliminado correctamente.');
+      setSuccessMsg(res.message || 'Recibo eliminado.');
+      setTimeout(() => setSuccessMsg(null), 4000);
     } catch (err: any) {
       console.error('Error al eliminar recibo:', err);
       setErrorMsg(err.message || 'Error al eliminar recibo');
@@ -168,7 +172,7 @@ export function useRendicionesAudit() {
     const checksVal = Number(realChecks || 0);
 
     if (isNaN(cashVal) || cashVal < 0 || isNaN(checksVal) || checksVal < 0) {
-      setErrorMsg('Por favor ingrese montos válidos mayores o iguales a cero.');
+      setErrorMsg('Ingrese montos válidos mayores o iguales a cero.');
       return;
     }
 
@@ -180,7 +184,7 @@ export function useRendicionesAudit() {
         realChecks: checksVal,
         routeNote: auditRouteNote ? auditRouteNote.trim() : undefined,
         notes: auditNotes ? auditNotes.trim() : undefined,
-        declaredChecks: declaredChecksList
+        declaredChecks: declaredChecksList,
       };
 
       if (selectedDrawerId) {
@@ -198,7 +202,7 @@ export function useRendicionesAudit() {
       if (res.status === 'success' && res.data) {
         setArqueoResult(res.data);
       } else {
-        setSuccessMsg(res.message || 'Arqueo procesado y caja cerrada correctamente.');
+        setSuccessMsg(res.message || 'Arqueo confirmado.');
         setTimeout(() => setSuccessMsg(null), 5000);
       }
 
@@ -217,7 +221,9 @@ export function useRendicionesAudit() {
     routes,
     loading,
     errorMsg,
+    setErrorMsg,
     successMsg,
+    setSuccessMsg,
     auditTarget,
     arqueoResult,
     setArqueoResult,
@@ -243,6 +249,6 @@ export function useRendicionesAudit() {
     handleAddDeclaredCheck,
     handleRemoveDeclaredCheck,
     handleDeleteReceipt,
-    handleVerifySubmit
+    handleVerifySubmit,
   };
 }

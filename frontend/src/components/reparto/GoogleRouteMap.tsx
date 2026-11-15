@@ -172,11 +172,11 @@ export function GoogleRouteMap({
           color: 'var(--text-primary, #1d1d1f)',
           fontWeight: 500
         }}>
-          <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            🛣️ <strong>Recorrido vial:</strong> {metrics.distance}
+          <span className="tabular-nums" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <strong>Distancia:</strong> {metrics.distance}
           </span>
-          <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            ⏱️ <strong>Tiempo estimado:</strong> {metrics.duration}
+          <span className="tabular-nums" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <strong>Duración:</strong> {metrics.duration}
           </span>
         </div>
       )}

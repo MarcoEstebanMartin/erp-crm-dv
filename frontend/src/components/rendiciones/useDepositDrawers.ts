@@ -8,6 +8,7 @@ export function useDepositDrawers() {
   const [loadingHistory, setLoadingHistory] = useState(true);
   const [amountInput, setAmountInput] = useState('');
   const [cajaActionModal, setCajaActionModal] = useState<CajaActionModalState | null>(null);
+  const [drawerError, setDrawerError] = useState<string | null>(null);
 
   const [inspectDrawer, setInspectDrawer] = useState<any | null>(null);
   const [inspectTxs, setInspectTxs] = useState<any[]>([]);
@@ -18,9 +19,7 @@ export function useDepositDrawers() {
     d.setDate(d.getDate() - 7);
     return d.toISOString().split('T')[0];
   });
-  const [filterEndDate, setFilterEndDate] = useState(() => {
-    return new Date().toISOString().split('T')[0];
-  });
+  const [filterEndDate, setFilterEndDate] = useState(() => new Date().toISOString().split('T')[0]);
 
   const filteredHistory = historicalDrawers.filter((d: any) => {
     const closedDate = new Date(d.closedAt);
@@ -45,12 +44,14 @@ export function useDepositDrawers() {
       setHistoricalDrawers(history);
     } catch (err: any) {
       console.error('Error fetching drawers for history:', err);
+      setDrawerError(err?.message || 'Error al cargar historial de cajas.');
     } finally {
       setLoadingHistory(false);
     }
   };
 
   const handleInspectDrawer = async (drawer: any) => {
+    setDrawerError(null);
     setInspectDrawer(drawer);
     setLoadingTxs(true);
     try {
@@ -58,7 +59,7 @@ export function useDepositDrawers() {
       setInspectTxs(txs || []);
     } catch (err: any) {
       console.error('Error fetching transactions for historical drawer', err);
-      alert('Error al cargar los comprobantes de la caja.');
+      setDrawerError(err?.message || 'Error al cargar comprobantes de la caja.');
     } finally {
       setLoadingTxs(false);
     }
@@ -76,6 +77,7 @@ export function useDepositDrawers() {
     routeNote?: string,
     notes?: string
   ) => {
+    setDrawerError(null);
     try {
       if (cajaActionModal?.mode === 'close' && cajaActionModal.drawerId) {
         await api.closeDrawer(
@@ -90,7 +92,7 @@ export function useDepositDrawers() {
         fetchDrawers();
       }
     } catch (err: any) {
-      alert(err.message || 'Error al cerrar caja.');
+      setDrawerError(err?.message || 'Error al cerrar caja.');
     }
   };
 
@@ -98,6 +100,7 @@ export function useDepositDrawers() {
     e.preventDefault();
     if (!cajaActionModal) return;
 
+    setDrawerError(null);
     try {
       const amount = Number(amountInput);
       if (isNaN(amount) || amount < 0) {
@@ -114,7 +117,7 @@ export function useDepositDrawers() {
       setAmountInput('');
       fetchDrawers();
     } catch (err: any) {
-      alert(err.message || 'Ocurrió un error al procesar la caja.');
+      setDrawerError(err?.message || 'Ocurrió un error al procesar la caja.');
     }
   };
 
@@ -125,6 +128,8 @@ export function useDepositDrawers() {
     setAmountInput,
     cajaActionModal,
     setCajaActionModal,
+    drawerError,
+    setDrawerError,
     inspectDrawer,
     inspectTxs,
     loadingTxs,
@@ -137,6 +142,6 @@ export function useDepositDrawers() {
     handleInspectDrawer,
     handleCloseInspect,
     handleCajaArqueoSubmit,
-    handleCajaActionSubmit
+    handleCajaActionSubmit,
   };
 }

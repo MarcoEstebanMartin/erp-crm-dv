@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef, type FormEvent, type KeyboardEvent } from 'react';
+import { AlertTriangle, CheckCircle, X } from 'lucide-react';
 import { api } from '../utils/api';
 import { PurchaseScannerModal } from './PurchaseScannerModal';
 import { useConfirm } from '../context/ConfirmContext';
@@ -8,12 +9,30 @@ import { ComprasCreateReceiveModals } from './compras/ComprasCreateReceiveModals
 import { ComprasSupplierInvoiceAndPayModals } from './compras/ComprasSupplierInvoiceAndPayModals';
 import { ComprasProviderModals } from './compras/ComprasProviderModals';
 
+type ComprasSubTab = 'ordenes' | 'recepciones' | 'facturas' | 'proveedores';
+
+const SUB_TABS: Array<{ id: ComprasSubTab; label: string }> = [
+  { id: 'ordenes', label: 'Órdenes de Compra' },
+  { id: 'recepciones', label: 'Recepciones' },
+  { id: 'facturas', label: 'Facturas de Compra' },
+  { id: 'proveedores', label: 'Proveedores' },
+];
+
+const INITIAL_SUPPLIER_FORM = () => ({
+  personaId: '', invoiceNumber: '', invoiceType: 'FACTURA_A',
+  issueDate: new Date().toISOString().split('T')[0],
+  dueDate: new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString().split('T')[0],
+  netAmount: '', taxAmount: '', percepcionAmount: '', percepcionPampa: '', percepcionBsAs: '',
+  percepcionIva: '', percepcionIva5329: '', impuestosInternos: '', totalAmount: '', billingType: 'OFFICIAL',
+});
+
 export default function ComprasDashboard() {
   const currentUser = api.getCurrentUser();
   const isAdmin = currentUser?.role === 'ADMIN';
   const confirm = useConfirm();
+  const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
-  const [activeSubTab, setActiveSubTab] = useState<'ordenes' | 'recepciones' | 'facturas' | 'proveedores'>('ordenes');
+  const [activeSubTab, setActiveSubTab] = useState<ComprasSubTab>('ordenes');
   const [purchaseOrders, setPurchaseOrders] = useState<any[]>([]);
   const [providers, setProviders] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
@@ -37,13 +56,7 @@ export default function ComprasDashboard() {
   const [lotAssignments, setLotAssignments] = useState<Record<number, { lotNumber: string; expirationDate: string }>>({});
 
   const [showSupplierModal, setShowSupplierModal] = useState(false);
-  const [supplierForm, setSupplierForm] = useState({
-    personaId: '', invoiceNumber: '', invoiceType: 'FACTURA_A',
-    issueDate: new Date().toISOString().split('T')[0],
-    dueDate: new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString().split('T')[0],
-    netAmount: '', taxAmount: '', percepcionAmount: '', percepcionPampa: '', percepcionBsAs: '',
-    percepcionIva: '', percepcionIva5329: '', impuestosInternos: '', totalAmount: '', billingType: 'OFFICIAL',
-  });
+  const [supplierForm, setSupplierForm] = useState(INITIAL_SUPPLIER_FORM);
 
   const [providerModal, setProviderModal] = useState<{ open: boolean; mode: 'create' | 'edit'; data: any } | null>(null);
   const [accountSummaryModal, setAccountSummaryModal] = useState<any | null>(null);
@@ -74,6 +87,18 @@ export default function ComprasDashboard() {
 
   useEffect(() => { loadData(); }, [supplierStartDate, supplierEndDate, supplierQuery]);
   useEffect(() => { setSuccessMsg(null); setErrorMsg(null); }, [activeSubTab]);
+
+  const handleTabKeyDown = (e: KeyboardEvent<HTMLButtonElement>, idx: number) => {
+    let nextIdx = idx;
+    if (e.key === 'ArrowRight') nextIdx = (idx + 1) % SUB_TABS.length;
+    else if (e.key === 'ArrowLeft') nextIdx = (idx - 1 + SUB_TABS.length) % SUB_TABS.length;
+    else if (e.key === 'Home') nextIdx = 0;
+    else if (e.key === 'End') nextIdx = SUB_TABS.length - 1;
+    else return;
+    e.preventDefault();
+    setActiveSubTab(SUB_TABS[nextIdx].id);
+    tabRefs.current[nextIdx]?.focus();
+  };
 
   const filteredInvoices = supplierInvoices.filter((inv) => branchFilter === 'ALL' || inv.billingType === branchFilter);
   const filteredProviders = useMemo(() => {
@@ -109,6 +134,7 @@ export default function ComprasDashboard() {
   }, [autoCalculatedTotal]);
 
   const handleOpenPayInvoice = async (inv: any) => {
+    setErrorMsg(null);
     const pendingAmount = Number(inv.totalAmount || 0) - Number(inv.paidAmount || 0);
     const initialAmt = pendingAmount > 0 ? pendingAmount.toFixed(2) : Number(inv.totalAmount || 0).toFixed(2);
     setPaymentForm({ amount: initialAmt, paymentMethod: 'CASH', bankAccountId: '', branch: inv.billingType === 'OFFICIAL' ? 'A' : 'X', description: `Pago Factura ${inv.invoiceNumber}` });
@@ -117,7 +143,7 @@ export default function ComprasDashboard() {
     try { setBankAccounts((await api.getBankAccounts()) || []); } catch {}
   };
 
-  const handlePayInvoiceSubmit = async (e: React.FormEvent) => {
+  const handlePayInvoiceSubmit = async (e: FormEvent) => {
     e.preventDefault();
     const inv = payInvoiceModal.invoice;
     if (!inv) return;
@@ -130,23 +156,26 @@ export default function ComprasDashboard() {
       } else {
         await api.registerPayment(inv.personaId, { amount: validItems[0].amount, paymentMethod: validItems[0].paymentMethod, bankAccountId: validItems[0].bankAccountId, description: paymentForm.description, branch: paymentForm.branch, supplierInvoiceId: inv.id });
       }
-      setSuccessMsg(`✅ Pago registrado para factura ${inv.invoiceNumber}.`);
+      setErrorMsg(null);
+      setSuccessMsg(`Pago registrado para factura ${inv.invoiceNumber}.`);
       setPayInvoiceModal({ open: false, invoice: null });
       loadData();
     } catch (err: any) { setErrorMsg(err.message || 'Error al registrar pago.'); }
   };
 
-  const handleCreateOrderSubmit = async (e: React.FormEvent) => {
+  const handleCreateOrderSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!selectedProviderId || cart.length === 0) return setErrorMsg('Seleccione proveedor y agregue artículos.');
     try {
       await api.createPurchaseOrder({ personaId: Number(selectedProviderId), items: cart.map((i) => ({ productId: i.productId, quantity: i.quantity, costPrice: i.costPrice })) });
-      setSuccessMsg('✨ Orden de compra creada con éxito.');
+      setErrorMsg(null);
+      setSuccessMsg('Orden de compra creada.');
       setShowCreateModal(false); setSelectedProviderId(''); setCart([]); loadData();
     } catch (err: any) { setErrorMsg(err.message || 'Error al guardar orden de compra.'); }
   };
 
   const handleOpenReceiveModal = (order: any) => {
+    setErrorMsg(null);
     setInvoiceNumber('');
     const initial: Record<number, { lotNumber: string; expirationDate: string }> = {};
     order.items.forEach((item: any) => { initial[item.productId] = { lotNumber: `LOTE-PO-${order.id}`, expirationDate: new Date(Date.now() + 180 * 24 * 3600 * 1000).toISOString().split('T')[0] }; });
@@ -154,17 +183,18 @@ export default function ComprasDashboard() {
     setShowReceiveModal(order);
   };
 
-  const handleReceiveOrderSubmit = async (e: React.FormEvent) => {
+  const handleReceiveOrderSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!showReceiveModal) return;
     try {
       await api.receivePurchaseOrder(showReceiveModal.id, { invoiceNumber, lotAssignments });
-      setSuccessMsg(`✨ Orden de compra #${showReceiveModal.id} recibida e ingresada al depósito.`);
+      setErrorMsg(null);
+      setSuccessMsg(`Orden de compra #${showReceiveModal.id} recibida.`);
       setShowReceiveModal(null); loadData();
     } catch (err: any) { setErrorMsg(err.message || 'Error al procesar recepción.'); }
   };
 
-  const handleCreateSupplierInvoiceSubmit = async (e: React.FormEvent) => {
+  const handleCreateSupplierInvoiceSubmit = async (e: FormEvent) => {
     e.preventDefault();
     const f = supplierForm;
     if (!f.personaId || !f.invoiceNumber || !f.netAmount || !f.totalAmount) return setErrorMsg('Complete los campos obligatorios.');
@@ -178,69 +208,90 @@ export default function ComprasDashboard() {
         percepcionIva: Number(f.percepcionIva || 0), impuestosInternos: Number(f.impuestosInternos || 0),
         totalAmount: Number(f.totalAmount), billingType: f.billingType || 'OFFICIAL',
       });
-      setSuccessMsg('✅ Factura de compra registrada con éxito.');
+      setErrorMsg(null);
+      setSuccessMsg('Factura de compra registrada.');
       setShowSupplierModal(false); loadData();
     } catch (err: any) { setErrorMsg(err.message || 'Error al guardar factura.'); }
   };
 
-  const handleProviderSubmit = async (e: React.FormEvent) => {
+  const handleProviderSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!providerModal?.data.name) return setErrorMsg('El nombre es obligatorio.');
     try {
       const payload = { ...providerModal.data, isClient: false, isProvider: true, isSeller: false, isCommissionAgent: false };
       if (providerModal.mode === 'create') await api.createPersona(payload);
       else await api.updatePersona(providerModal.data.id, payload);
-      setProviderModal(null); setSuccessMsg('✨ Proveedor guardado.'); loadData();
+      setErrorMsg(null);
+      setProviderModal(null); setSuccessMsg('Proveedor guardado.'); loadData();
     } catch (err: any) { setErrorMsg(err.message || 'Error al guardar proveedor.'); }
   };
 
+  const hasFormModalOpen = showCreateModal || Boolean(showReceiveModal) || showSupplierModal || payInvoiceModal.open || Boolean(providerModal?.open);
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-      {successMsg && <div className="alert alert-success" onClick={() => setSuccessMsg(null)}>{successMsg}</div>}
-      {errorMsg && <div className="alert alert-danger" onClick={() => setErrorMsg(null)}>{errorMsg}</div>}
+      {successMsg && (
+        <div role="status" className="alert alert-success" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: 0 }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}><CheckCircle size={16} aria-hidden="true" />{successMsg}</span>
+          <button type="button" className="btn btn-ghost" style={{ padding: '4px' }} onClick={() => setSuccessMsg(null)} aria-label="Cerrar notificación"><X size={15} aria-hidden="true" /></button>
+        </div>
+      )}
+      {errorMsg && !hasFormModalOpen && (
+        <div role="alert" className="alert alert-danger" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: 0 }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}><AlertTriangle size={16} aria-hidden="true" />{errorMsg}</span>
+          <button type="button" className="btn btn-ghost" style={{ padding: '4px' }} onClick={() => setErrorMsg(null)} aria-label="Cerrar alerta"><X size={15} aria-hidden="true" /></button>
+        </div>
+      )}
 
-      <div style={{ display: 'flex', gap: '4px', backgroundColor: '#EAEAEA', padding: '4px', borderRadius: '8px', width: 'fit-content', flexWrap: 'wrap' }}>
-        {[
-          { id: 'ordenes', label: '📋 Órdenes de Compra' },
-          { id: 'recepciones', label: '📦 Recepción e Ingresos' },
-          { id: 'facturas', label: '📥 Facturas de Compra' },
-          { id: 'proveedores', label: '👥 Fichero de Proveedores' },
-        ].map((tab) => (
-          <button key={tab.id} className="btn" onClick={() => setActiveSubTab(tab.id as any)} style={{ padding: '6px 14px', fontSize: '0.82rem', fontWeight: 600, backgroundColor: activeSubTab === tab.id ? '#FFFFFF' : 'transparent', color: activeSubTab === tab.id ? '#1C1C1E' : '#5E5E62', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>
-            {tab.label}
-          </button>
-        ))}
+      <div role="tablist" aria-label="Secciones de Compras" className="linear-tablist">
+        {SUB_TABS.map((tab, idx) => {
+          const isActive = activeSubTab === tab.id;
+          return (
+            <button
+              key={tab.id} ref={(el) => { tabRefs.current[idx] = el; }} id={`compras-tab-${tab.id}`}
+              type="button" role="tab" aria-selected={isActive} tabIndex={isActive ? 0 : -1} className="linear-tab"
+              onClick={() => setActiveSubTab(tab.id)} onKeyDown={(e) => handleTabKeyDown(e, idx)}
+            >
+              {tab.label}
+            </button>
+          );
+        })}
       </div>
 
-      {(activeSubTab === 'ordenes' || activeSubTab === 'recepciones') && (
-        <ComprasOrdenesRecepcionesTabs
-          activeSubTab={activeSubTab} purchaseOrders={purchaseOrders}
-          onOpenCreateModal={() => setShowCreateModal(true)} onOpenReceiveModal={handleOpenReceiveModal}
-          onViewDetailsModal={setViewDetailsModal} onSelectScannerFile={(file) => { setScannerFile(file); setShowScannerModal(true); }}
-        />
-      )}
+      <div role="tabpanel" aria-labelledby={`compras-tab-${activeSubTab}`}>
+        {(activeSubTab === 'ordenes' || activeSubTab === 'recepciones') && (
+          <ComprasOrdenesRecepcionesTabs
+            activeSubTab={activeSubTab} purchaseOrders={purchaseOrders}
+            onOpenCreateModal={() => { setErrorMsg(null); setShowCreateModal(true); }}
+            onOpenReceiveModal={handleOpenReceiveModal}
+            onViewDetailsModal={setViewDetailsModal}
+            onSelectScannerFile={(file) => { setScannerFile(file); setShowScannerModal(true); }}
+          />
+        )}
 
-      {activeSubTab === 'facturas' && (
-        <ComprasFacturasTab
-          isAdmin={isAdmin} supplierMetrics={supplierMetrics} filteredInvoices={filteredInvoices}
-          supplierQuery={supplierQuery} setSupplierQuery={setSupplierQuery}
-          supplierStartDate={supplierStartDate} setSupplierStartDate={setSupplierStartDate}
-          supplierEndDate={supplierEndDate} setSupplierEndDate={setSupplierEndDate}
-          branchFilter={branchFilter} setBranchFilter={setBranchFilter}
-          onOpenSupplierModal={() => setShowSupplierModal(true)} onOpenPayInvoice={handleOpenPayInvoice}
-          onDeleteInvoice={async (id, num) => { if (await confirm(`¿Anular factura ${num}?`, { type: 'danger' })) { await api.deleteSupplierInvoice(id); loadData(); } }}
-        />
-      )}
+        {activeSubTab === 'facturas' && (
+          <ComprasFacturasTab
+            isAdmin={isAdmin} supplierMetrics={supplierMetrics} filteredInvoices={filteredInvoices}
+            supplierQuery={supplierQuery} setSupplierQuery={setSupplierQuery}
+            supplierStartDate={supplierStartDate} setSupplierStartDate={setSupplierStartDate}
+            supplierEndDate={supplierEndDate} setSupplierEndDate={setSupplierEndDate}
+            branchFilter={branchFilter} setBranchFilter={setBranchFilter}
+            onOpenSupplierModal={() => { setErrorMsg(null); setShowSupplierModal(true); }}
+            onOpenPayInvoice={handleOpenPayInvoice}
+            onDeleteInvoice={async (id, num) => { if (await confirm(`¿Anular factura ${num}?`, { type: 'danger' })) { await api.deleteSupplierInvoice(id); loadData(); } }}
+          />
+        )}
 
-      {activeSubTab === 'proveedores' && (
-        <ComprasProveedoresTab
-          isAdmin={isAdmin} filteredProviders={filteredProviders} providerSearch={providerSearch} setProviderSearch={setProviderSearch}
-          onOpenCreateProvider={() => setProviderModal({ open: true, mode: 'create', data: { id: 0, name: '', cuit: '', address: '', city: '', phone: '', email: '', paymentTermDays: 30, rubro: '', contacts: [] } })}
-          onOpenAccountSummary={async (p) => { const res = await api.getPersonaLedger(p.id); setAccountSummaryModal(p); setLedgerData(res.ledger || []); }}
-          onOpenEditProvider={(p) => setProviderModal({ open: true, mode: 'edit', data: { ...p, rubro: p.rubro || '', contacts: Array.isArray(p.contacts) ? p.contacts : [] } })}
-          onDeleteProvider={async (id, name) => { if (await confirm(`¿Eliminar proveedor ${name}?`, { type: 'danger' })) { await api.deletePersona(id); loadData(); } }}
-        />
-      )}
+        {activeSubTab === 'proveedores' && (
+          <ComprasProveedoresTab
+            isAdmin={isAdmin} filteredProviders={filteredProviders} providerSearch={providerSearch} setProviderSearch={setProviderSearch}
+            onOpenCreateProvider={() => { setErrorMsg(null); setProviderModal({ open: true, mode: 'create', data: { id: 0, name: '', cuit: '', address: '', city: '', phone: '', email: '', paymentTermDays: 30, rubro: '', contacts: [] } }); }}
+            onOpenAccountSummary={async (p) => { const res = await api.getPersonaLedger(p.id); setAccountSummaryModal(p); setLedgerData(res.ledger || []); }}
+            onOpenEditProvider={(p) => { setErrorMsg(null); setProviderModal({ open: true, mode: 'edit', data: { ...p, rubro: p.rubro || '', contacts: Array.isArray(p.contacts) ? p.contacts : [] } }); }}
+            onDeleteProvider={async (id, name) => { if (await confirm(`¿Eliminar proveedor ${name}?`, { type: 'danger' })) { await api.deletePersona(id); loadData(); } }}
+          />
+        )}
+      </div>
 
       <ComprasCreateReceiveModals
         showCreateModal={showCreateModal} setShowCreateModal={setShowCreateModal} providers={providers} products={products}
@@ -248,6 +299,7 @@ export default function ComprasDashboard() {
         showReceiveModal={showReceiveModal} setShowReceiveModal={setShowReceiveModal} invoiceNumber={invoiceNumber} setInvoiceNumber={setInvoiceNumber}
         lotAssignments={lotAssignments} onLotAssignmentChange={(pid, f, v) => setLotAssignments((prev) => ({ ...prev, [pid]: { ...prev[pid], [f]: v } }))}
         onReceiveSubmit={handleReceiveOrderSubmit} viewDetailsModal={viewDetailsModal} setViewDetailsModal={setViewDetailsModal}
+        errorMsg={errorMsg} setErrorMsg={setErrorMsg}
       />
 
       <ComprasSupplierInvoiceAndPayModals
@@ -258,16 +310,18 @@ export default function ComprasDashboard() {
         payInvoiceModal={payInvoiceModal} setPayInvoiceModal={setPayInvoiceModal}
         paymentForm={paymentForm} setPaymentForm={setPaymentForm} paymentItems={paymentItems} setPaymentItems={setPaymentItems}
         bankAccounts={bankAccounts} onPayInvoiceSubmit={handlePayInvoiceSubmit}
+        errorMsg={errorMsg} setErrorMsg={setErrorMsg}
       />
 
       <ComprasProviderModals
         providerModal={providerModal} setProviderModal={setProviderModal} onProviderSubmit={handleProviderSubmit}
         accountSummaryModal={accountSummaryModal} setAccountSummaryModal={setAccountSummaryModal} ledgerData={ledgerData}
+        errorMsg={errorMsg} setErrorMsg={setErrorMsg}
       />
 
       <PurchaseScannerModal
         isOpen={showScannerModal} onClose={() => setShowScannerModal(false)} file={scannerFile}
-        onSuccess={() => { setSuccessMsg('✨ Documento procesado con éxito.'); loadData(); }}
+        onSuccess={() => { setSuccessMsg('Documento procesado.'); loadData(); }}
       />
     </div>
   );

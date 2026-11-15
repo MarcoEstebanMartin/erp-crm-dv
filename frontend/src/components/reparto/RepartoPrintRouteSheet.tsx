@@ -27,11 +27,10 @@ export function PrintRouteSheet({ route, locations }: { route: any; locations: a
             />
             <h1 style={{ margin: 0, fontSize: '1.6rem', fontWeight: 700, color: '#1D1D1F', display: 'none' }}>DISTRIBUIDORA DV</h1>
           </div>
-          <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: '#555' }}>Logística y Distribución Mayorista de Alimentos y Bebidas</p>
         </div>
         <div style={{ textAlign: 'right' }}>
-          <h2 style={{ margin: 0, fontSize: '1.4rem', fontWeight: 700, color: 'var(--color-corp-red)' }}>HOJA DE RUTA #{route.id}</h2>
-          <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: '#555' }}>Fecha: {new Date(route.date || route.createdAt).toLocaleDateString('es-AR')}</p>
+          <h2 className="tabular-nums" style={{ margin: 0, fontSize: '1.4rem', fontWeight: 700, color: 'var(--color-corp-red)' }}>Hoja de Ruta #{route.id}</h2>
+          <div className="tabular-nums" style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: '#555' }}>Fecha: {new Date(route.date || route.createdAt).toLocaleDateString('es-AR')}</div>
         </div>
       </div>
 
@@ -49,8 +48,8 @@ export function PrintRouteSheet({ route, locations }: { route: any; locations: a
         <div className="print-card" style={{ border: '1px solid #ccc', padding: '8px', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '10px', backgroundColor: '#fafafa' }}>
           <img src={qrCodeUrl} alt="QR Google Maps" style={{ width: '80px', height: '80px', border: '1px solid #eee' }} />
           <div style={{ fontSize: '0.72rem', lineHeight: '1.3' }}>
-            <strong style={{ display: 'block', marginBottom: '4px', color: '#1D1D1F' }}>📲 GPS GOOGLE MAPS</strong>
-            Escanea el código QR para abrir el recorrido y navegar parada por parada en tiempo real.
+            <strong style={{ display: 'block', marginBottom: '2px', color: '#1D1D1F' }}>QR Ruta GPS</strong>
+            <span>Google Maps</span>
           </div>
         </div>
       </div>
@@ -59,14 +58,14 @@ export function PrintRouteSheet({ route, locations }: { route: any; locations: a
       <table className="print-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem', marginTop: '10px' }}>
         <thead>
           <tr style={{ backgroundColor: '#f2f2f2' }}>
-            <th style={{ width: '40px', textAlign: 'center', border: '1px solid #1D1D1F', padding: '6px' }}>Parada</th>
-            <th style={{ width: '180px', border: '1px solid #1D1D1F', padding: '6px' }}>Cliente</th>
-            <th style={{ border: '1px solid #1D1D1F', padding: '6px' }}>Dirección</th>
-            <th style={{ width: '100px', border: '1px solid #1D1D1F', padding: '6px' }}>Comprobante</th>
-            <th style={{ width: '100px', textAlign: 'right', border: '1px solid #1D1D1F', padding: '6px' }}>Importe a Cobrar</th>
-            <th style={{ width: '130px', border: '1px solid #1D1D1F', padding: '6px' }}>Cobrado Físico ($)</th>
-            <th style={{ width: '110px', textAlign: 'center', border: '1px solid #1D1D1F', padding: '6px' }}>Estado Entrega</th>
-            <th style={{ width: '140px', border: '1px solid #1D1D1F', padding: '6px' }}>Firma del Cliente</th>
+            <th scope="col" style={{ width: '40px', textAlign: 'center', border: '1px solid #1D1D1F', padding: '6px' }}>Parada</th>
+            <th scope="col" style={{ width: '180px', border: '1px solid #1D1D1F', padding: '6px' }}>Cliente</th>
+            <th scope="col" style={{ border: '1px solid #1D1D1F', padding: '6px' }}>Dirección</th>
+            <th scope="col" style={{ width: '100px', border: '1px solid #1D1D1F', padding: '6px' }}>Comprobante</th>
+            <th scope="col" style={{ width: '100px', textAlign: 'right', border: '1px solid #1D1D1F', padding: '6px' }}>Importe a Cobrar</th>
+            <th scope="col" style={{ width: '130px', border: '1px solid #1D1D1F', padding: '6px' }}>Cobrado Físico ($)</th>
+            <th scope="col" style={{ width: '110px', textAlign: 'center', border: '1px solid #1D1D1F', padding: '6px' }}>Estado Entrega</th>
+            <th scope="col" style={{ width: '140px', border: '1px solid #1D1D1F', padding: '6px' }}>Firma del Cliente</th>
           </tr>
         </thead>
         <tbody>
@@ -74,17 +73,17 @@ export function PrintRouteSheet({ route, locations }: { route: any; locations: a
             const order = route.orders?.find((o: any) => o.id === stop.id);
             return (
               <tr key={idx} style={{ pageBreakInside: 'avoid' }}>
-                <td style={{ textAlign: 'center', fontWeight: 'bold', border: '1px solid #1D1D1F', padding: '6px' }}>{idx + 1}</td>
+                <td className="tabular-nums" style={{ textAlign: 'center', fontWeight: 'bold', border: '1px solid #1D1D1F', padding: '6px' }}>{idx + 1}</td>
                 <td style={{ border: '1px solid #1D1D1F', padding: '6px' }}>
                   <div style={{ fontWeight: 'bold' }}>{stop.name}</div>
-                  {order?.persona?.phone && <div style={{ fontSize: '0.7rem', color: '#555' }}>Tel: {order.persona.phone}</div>}
-                  {order?.persona?.cuit && <div style={{ fontSize: '0.7rem', color: '#555' }}>CUIT: {order.persona.cuit}</div>}
+                  {order?.persona?.phone && <div className="tabular-nums" style={{ fontSize: '0.7rem', color: '#555' }}>Tel: {order.persona.phone}</div>}
+                  {order?.persona?.cuit && <div className="tabular-nums" style={{ fontSize: '0.7rem', color: '#555' }}>CUIT: {order.persona.cuit}</div>}
                 </td>
                 <td style={{ border: '1px solid #1D1D1F', padding: '6px' }}>
                   <div>{stop.address}</div>
                 </td>
-                <td style={{ fontFamily: 'monospace', border: '1px solid #1D1D1F', padding: '6px' }}>{stop.invoice}</td>
-                <td style={{ textAlign: 'right', fontWeight: 'bold', border: '1px solid #1D1D1F', padding: '6px' }}>
+                <td className="tabular-nums" style={{ fontFamily: 'monospace', border: '1px solid #1D1D1F', padding: '6px' }}>{stop.invoice}</td>
+                <td className="tabular-nums" style={{ textAlign: 'right', fontWeight: 'bold', border: '1px solid #1D1D1F', padding: '6px' }}>
                   ${Number(order?.totalAmount || 0).toLocaleString('es-AR')}
                 </td>
                 <td style={{ fontSize: '0.7rem', border: '1px solid #1D1D1F', padding: '6px' }}>
@@ -123,11 +122,11 @@ export function PrintRouteSheet({ route, locations }: { route: any; locations: a
             <tbody>
               <tr>
                 <td style={{ padding: '3px 0' }}>Total Pedidos Planificados:</td>
-                <td style={{ textAlign: 'right', fontWeight: 'bold' }}>{route.orders?.length || 0} entregas</td>
+                <td className="tabular-nums" style={{ textAlign: 'right', fontWeight: 'bold' }}>{route.orders?.length || 0} entregas</td>
               </tr>
               <tr style={{ borderBottom: '1px solid #ddd' }}>
                 <td style={{ padding: '3px 0' }}>Total a Cobrar Estimado:</td>
-                <td style={{ textAlign: 'right', fontWeight: 'bold', fontSize: '0.85rem' }}>${totalAmount.toLocaleString('es-AR')}</td>
+                <td className="tabular-nums" style={{ textAlign: 'right', fontWeight: 'bold', fontSize: '0.85rem' }}>${totalAmount.toLocaleString('es-AR')}</td>
               </tr>
               <tr>
                 <td style={{ padding: '3px 0', paddingTop: '6px' }}>Efectivo Rendido Físico:</td>
