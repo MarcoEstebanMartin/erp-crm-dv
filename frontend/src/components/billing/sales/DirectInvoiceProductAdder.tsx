@@ -1,4 +1,5 @@
 import React from 'react';
+import { formatIntegerARS } from '../../../utils/currency';
 
 interface DirectInvoiceProductAdderProps {
   products: any[];
@@ -42,11 +43,14 @@ export function DirectInvoiceProductAdder({
   return (
     <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '16px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-        <label style={{ fontWeight: 600, fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+        <label
+          htmlFor="direct-invoice-product-search"
+          style={{ fontWeight: 600, fontSize: '0.8rem', color: 'var(--text-secondary)' }}
+        >
           Añadir Producto (Nombre, SKU o Barcode)
         </label>
         {currentSelectedProd && (
-          <span style={{ fontSize: '0.78rem', color: 'var(--color-success)', fontWeight: 600 }}>
+          <span style={{ fontSize: '0.78rem', color: '#111827', fontWeight: 600 }}>
             Seleccionado: {currentSelectedProd.name} (Stock: {currentSelectedProd.stock})
           </span>
         )}
@@ -55,6 +59,7 @@ export function DirectInvoiceProductAdder({
       <div style={{ display: 'flex', gap: '10px', position: 'relative' }}>
         <div style={{ flex: 1, position: 'relative' }}>
           <input
+            id="direct-invoice-product-search"
             ref={productSearchInputRef}
             type="text"
             className="input"
@@ -118,7 +123,7 @@ export function DirectInvoiceProductAdder({
                     }}
                     onMouseEnter={() => setActiveProductSuggestionIdx(idx)}
                     style={{
-                      backgroundColor: isActive ? '#e8f0fe' : 'inherit',
+                      backgroundColor: isActive ? '#F3F4F6' : 'inherit',
                       cursor: 'pointer',
                       padding: '8px 12px',
                       fontSize: '0.85rem',
@@ -133,8 +138,9 @@ export function DirectInvoiceProductAdder({
                             style={{
                               fontSize: '0.72rem',
                               fontWeight: 700,
-                              color: '#d97706',
-                              backgroundColor: '#fef3c7',
+                              color: '#374151',
+                              backgroundColor: '#F3F4F6',
+                              border: '1px solid #D1D5DB',
                               padding: '1px 5px',
                               borderRadius: '4px'
                             }}
@@ -143,10 +149,11 @@ export function DirectInvoiceProductAdder({
                           </span>
                         )}
                         <span
+                          className="tabular-nums"
                           style={{
                             fontSize: '0.75rem',
                             fontWeight: 600,
-                            color: p.stock > 0 ? 'var(--color-success)' : 'var(--color-danger)'
+                            color: p.stock > 0 ? '#111827' : '#E30613'
                           }}
                         >
                           Stock: {p.stock}
@@ -154,6 +161,7 @@ export function DirectInvoiceProductAdder({
                       </div>
                     </div>
                     <div
+                      className="tabular-nums"
                       style={{
                         fontSize: '0.75rem',
                         color: 'var(--text-secondary)',
@@ -164,20 +172,20 @@ export function DirectInvoiceProductAdder({
                       }}
                     >
                       <span>SKU: {p.sku || 'S/D'}</span>
-                      <span>| Precio Lista: ${p.listPrice}</span>
-                      {p.isPesable && <span style={{ color: '#0369a1', fontWeight: 600 }}>(Pesable)</span>}
+                      <span>| Precio Lista: {formatIntegerARS(p.listPrice)}</span>
+                      {p.isPesable && <span style={{ color: '#4B5563', fontWeight: 600 }}>(Pesable)</span>}
                       {p.unitsPerBox && p.unitsPerBox > 1 && (
                         <span
                           style={{
-                            color: '#475569',
+                            color: '#374151',
                             fontWeight: 600,
-                            backgroundColor: '#f1f5f9',
+                            backgroundColor: '#F9FAFB',
                             padding: '1px 6px',
                             borderRadius: '4px',
-                            border: '1px solid #cbd5e1'
+                            border: '1px solid #D1D5DB'
                           }}
                         >
-                          📦 Caja x{p.unitsPerBox}u
+                          Caja x{p.unitsPerBox}u
                         </span>
                       )}
                     </div>
@@ -192,7 +200,8 @@ export function DirectInvoiceProductAdder({
           <input
             ref={productQtyInputRef}
             type="number"
-            className="input"
+            className="input tabular-nums"
+            aria-label="Cantidad a añadir"
             min="1"
             placeholder="Cant"
             value={directProductQty}
@@ -217,13 +226,13 @@ export function DirectInvoiceProductAdder({
                 fontWeight: 700,
                 padding: '6px 10px',
                 whiteSpace: 'nowrap',
-                backgroundColor: '#eff6ff',
-                color: '#1d4ed8',
-                border: '1px solid #bfdbfe'
+                backgroundColor: '#F9FAFB',
+                color: '#111827',
+                border: '1px solid #D1D5DB'
               }}
               onClick={() => setDirectProductQty(currentSelectedProd.unitsPerBox.toString())}
             >
-              📦 1 Caja ({currentSelectedProd.unitsPerBox}u)
+              1 Caja ({currentSelectedProd.unitsPerBox}u)
             </button>
             <button
               type="button"
@@ -233,13 +242,13 @@ export function DirectInvoiceProductAdder({
                 fontWeight: 700,
                 padding: '6px 10px',
                 whiteSpace: 'nowrap',
-                backgroundColor: '#f0fdf4',
-                color: '#15803d',
-                border: '1px solid #bbf7d0'
+                backgroundColor: '#F9FAFB',
+                color: '#111827',
+                border: '1px solid #D1D5DB'
               }}
               onClick={() => setDirectProductQty((currentSelectedProd.unitsPerBox * 2).toString())}
             >
-              📦 2 Cajas ({currentSelectedProd.unitsPerBox * 2}u)
+              2 Cajas ({currentSelectedProd.unitsPerBox * 2}u)
             </button>
           </div>
         )}

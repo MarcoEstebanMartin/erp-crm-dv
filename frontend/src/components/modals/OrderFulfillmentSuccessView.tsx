@@ -54,8 +54,9 @@ export default function OrderFulfillmentSuccessView({
           style={{
             width: '64px',
             height: '64px',
-            backgroundColor: '#DCFCE7',
-            color: '#16A34A',
+            backgroundColor: '#F3F4F6',
+            color: '#111827',
+            border: '1px solid #E5E7EB',
             borderRadius: '50%',
             display: 'flex',
             alignItems: 'center',
@@ -63,7 +64,7 @@ export default function OrderFulfillmentSuccessView({
             margin: '0 auto 16px auto',
           }}
         >
-          <CheckCircle size={36} />
+          <CheckCircle size={36} aria-hidden="true" />
         </div>
 
         <h2
@@ -88,7 +89,7 @@ export default function OrderFulfillmentSuccessView({
                 padding: '12px',
                 fontSize: '0.98rem',
                 fontWeight: 700,
-                backgroundColor: '#0F172A',
+                backgroundColor: '#111827',
                 color: '#FFFFFF',
                 borderRadius: '8px',
                 display: 'flex',
@@ -98,7 +99,7 @@ export default function OrderFulfillmentSuccessView({
               }}
               onClick={() => printFacturaOficialA4(printableOrder)}
             >
-              <FileText size={18} /> Imprimir Factura (Sucursal A)
+              <FileText size={18} aria-hidden="true" /> Imprimir Factura (Sucursal A)
             </button>
           ) : (
             <button
@@ -109,7 +110,7 @@ export default function OrderFulfillmentSuccessView({
                 padding: '12px',
                 fontSize: '0.98rem',
                 fontWeight: 700,
-                backgroundColor: '#0F172A',
+                backgroundColor: '#111827',
                 color: '#FFFFFF',
                 borderRadius: '8px',
                 display: 'flex',
@@ -119,7 +120,7 @@ export default function OrderFulfillmentSuccessView({
               }}
               onClick={() => printRemitoX(printableOrder)}
             >
-              <FileText size={18} /> Imprimir Remito (Sucursal X)
+              <FileText size={18} aria-hidden="true" /> Imprimir Remito (Sucursal X)
             </button>
           )}
 
@@ -131,9 +132,9 @@ export default function OrderFulfillmentSuccessView({
               padding: '12px',
               fontSize: '0.96rem',
               fontWeight: 600,
-              backgroundColor: '#F8FAFC',
-              borderColor: '#CBD5E1',
-              color: '#334155',
+              backgroundColor: '#FFFFFF',
+              borderColor: '#E5E7EB',
+              color: '#111827',
               borderRadius: '8px',
               display: 'flex',
               alignItems: 'center',
@@ -142,7 +143,7 @@ export default function OrderFulfillmentSuccessView({
             }}
             onClick={() => printOrderReceipt(printableOrder)}
           >
-            <Printer size={18} /> Imprimir Ticket
+            <Printer size={18} aria-hidden="true" /> Imprimir Ticket
           </button>
         </div>
 

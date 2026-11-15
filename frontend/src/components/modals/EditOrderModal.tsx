@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { Trash2, X } from 'lucide-react';
+import { X } from 'lucide-react';
 import { api } from '../../utils/api';
 import { NativeModalDialog } from './NativeModalDialog';
+import { EditOrderItemsPanel, type EditOrderModalState } from './EditOrderItemsPanel';
 import {
   computeClientUnitPrice,
   fetchPricingDiscountRules,
@@ -11,24 +12,7 @@ import { matchesSmartSearch } from '../../utils/orderSearchAndStatus.helper';
 import { calculateExactLineSubtotalInt } from '../../utils/weeklyPromoCartEvaluator';
 
 interface EditOrderModalProps {
-  editOrderModal: {
-    open: boolean;
-    orderId: number;
-    clientId: number;
-    clientName: string;
-    client?: any;
-    items: {
-      id: number;
-      productId: number;
-      name: string;
-      sku: string;
-      quantity: number;
-      listPrice: number;
-      weight?: number | null;
-      isPesable?: boolean;
-      approximateWeight?: number | null;
-    }[];
-  } | null;
+  editOrderModal: EditOrderModalState | null;
   setEditOrderModal: (val: any) => void;
   products: any[];
   fetchData: () => void;
@@ -244,166 +228,11 @@ const EditOrderModal: React.FC<EditOrderModalProps> = ({
             </div>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <h4 style={{ marginBottom: '10px', fontSize: '0.9rem' }}>Detalle Actual del Pedido</h4>
-            <div
-              style={{
-                flex: 1,
-                overflowY: 'auto',
-                maxHeight: '350px',
-                border: '1px solid var(--border-color)',
-                borderRadius: '4px',
-                padding: '10px',
-              }}
-            >
-              {editOrderModal.items.length === 0 ? (
-                <p
-                  style={{
-                    fontSize: '0.8rem',
-                    color: 'var(--text-secondary)',
-                    textAlign: 'center',
-                    marginTop: '20px',
-                  }}
-                >
-                  No hay artículos en el pedido.
-                </p>
-              ) : (
-                editOrderModal.items.map((item) => (
-                  <div
-                    key={item.productId}
-                    style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      padding: '8px 0',
-                      borderBottom: '1px solid #f0f0f0',
-                    }}
-                  >
-                    <div style={{ flex: 1, marginRight: '10px' }}>
-                      <div style={{ fontSize: '0.85rem', fontWeight: 600 }}>{item.name}</div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                        ${Number(item.listPrice).toLocaleString('es-AR')} c/u{' '}
-                        {item.isPesable && '(Por Kg)'}
-                      </div>
-                      {item.isPesable && (
-                        <div
-                          style={{
-                            marginTop: '4px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px',
-                          }}
-                        >
-                          <span style={{ fontSize: '0.75rem', fontWeight: 600 }}>
-                            Peso Exacto (Kg):
-                          </span>
-                          <input
-                            type="number"
-                            step="0.01"
-                            className="input"
-                            style={{ width: '80px', padding: '2px 6px', fontSize: '0.8rem' }}
-                            value={item.weight || ''}
-                            onChange={(e) => {
-                              const val = parseFloat(e.target.value);
-                              setEditOrderModal({
-                                ...editOrderModal,
-                                items: editOrderModal.items.map((i) =>
-                                  i.productId === item.productId
-                                    ? { ...i, weight: isNaN(val) ? null : val }
-                                    : i,
-                                ),
-                              });
-                            }}
-                          />
-                        </div>
-                      )}
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <button
-                        type="button"
-                        className="btn btn-secondary"
-                        style={{ padding: '2px 6px' }}
-                        onClick={() => {
-                          const newQty = item.quantity - 1;
-                          if (newQty <= 0) {
-                            setEditOrderModal({
-                              ...editOrderModal,
-                              items: editOrderModal.items.filter(
-                                (i) => i.productId !== item.productId,
-                              ),
-                            });
-                          } else {
-                            setEditOrderModal({
-                              ...editOrderModal,
-                              items: editOrderModal.items.map((i) =>
-                                i.productId === item.productId ? { ...i, quantity: newQty } : i,
-                              ),
-                            });
-                          }
-                        }}
-                      >
-                        -
-                      </button>
-                      <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>{item.quantity}</span>
-                      <button
-                        type="button"
-                        className="btn btn-secondary"
-                        style={{ padding: '2px 6px' }}
-                        onClick={() => {
-                          setEditOrderModal({
-                            ...editOrderModal,
-                            items: editOrderModal.items.map((i) =>
-                              i.productId === item.productId
-                                ? { ...i, quantity: i.quantity + 1 }
-                                : i,
-                            ),
-                          });
-                        }}
-                      >
-                        +
-                      </button>
-                      <button
-                        type="button"
-                        className="btn btn-ghost text-danger"
-                        style={{ padding: '4px' }}
-                        onClick={() => {
-                          setEditOrderModal({
-                            ...editOrderModal,
-                            items: editOrderModal.items.filter(
-                              (i) => i.productId !== item.productId,
-                            ),
-                          });
-                        }}
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-
-            <div
-              style={{
-                marginTop: '16px',
-                borderTop: '1px solid var(--border-color)',
-                paddingTop: '12px',
-              }}
-            >
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  fontWeight: 'bold',
-                  fontSize: '1.05rem',
-                  marginBottom: '12px',
-                }}
-              >
-                <span>Nuevo Total Estimado:</span>
-                <span className="tabular-nums">${estimatedTotal.toLocaleString('es-AR')}</span>
-              </div>
-            </div>
-          </div>
+          <EditOrderItemsPanel
+            editOrderModal={editOrderModal}
+            setEditOrderModal={setEditOrderModal}
+            estimatedTotal={estimatedTotal}
+          />
         </div>
 
         <div

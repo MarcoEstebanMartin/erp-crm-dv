@@ -1,4 +1,6 @@
 import React from 'react';
+import { AlertTriangle } from 'lucide-react';
+import { formatIntegerARS } from '../../../utils/currency';
 import { getClientPriceListLabel } from './salesBilling.helpers';
 
 interface DirectInvoiceClientSelectorProps {
@@ -34,11 +36,15 @@ export function DirectInvoiceClientSelector({
   return (
     <>
       <div className="form-group" style={{ margin: 0, position: 'relative' }}>
-        <label style={{ fontWeight: 600, fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+        <label
+          htmlFor="direct-invoice-client-search"
+          style={{ fontWeight: 600, fontSize: '0.8rem', color: 'var(--text-secondary)' }}
+        >
           Cliente (Nombre o CUIT)
         </label>
         <div style={{ position: 'relative' }}>
           <input
+            id="direct-invoice-client-search"
             ref={clientSearchInputRef}
             type="text"
             className="input"
@@ -99,7 +105,7 @@ export function DirectInvoiceClientSelector({
                     onMouseDown={() => handleSelectClient(c)}
                     onMouseEnter={() => setActiveClientSuggestionIdx(idx)}
                     style={{
-                      backgroundColor: isActive ? '#e8f0fe' : 'inherit',
+                      backgroundColor: isActive ? '#F3F4F6' : 'inherit',
                       cursor: 'pointer',
                       padding: '8px 12px',
                       fontSize: '0.85rem',
@@ -107,11 +113,11 @@ export function DirectInvoiceClientSelector({
                     }}
                   >
                     <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{c.name}</div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                    <div className="tabular-nums" style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
                       CUIT: {c.cuit || 'S/D'} | Saldo CC:{' '}
                       {cBalance < 0
-                        ? `$${Math.abs(cBalance).toLocaleString()} (A Favor)`
-                        : `$${cBalance.toLocaleString()}`}{' '}
+                        ? `${formatIntegerARS(Math.abs(cBalance))} (A Favor)`
+                        : formatIntegerARS(cBalance)}{' '}
                       | Lista: {c.priceList || 'A'}
                     </div>
                   </div>
@@ -141,7 +147,7 @@ export function DirectInvoiceClientSelector({
             <strong>Lista de Precios:</strong>{' '}
             <span
               className="badge"
-              style={{ backgroundColor: '#e8f0fe', color: '#1a73e8', fontWeight: 600, padding: '2px 6px', borderRadius: '4px' }}
+              style={{ backgroundColor: '#F3F4F6', color: '#111827', border: '1px solid #E5E7EB', fontWeight: 600, padding: '2px 6px', borderRadius: '4px' }}
             >
               {getClientPriceListLabel(selectedDirectClient.priceList)}
             </span>
@@ -149,40 +155,43 @@ export function DirectInvoiceClientSelector({
           <div>
             <strong>Tiene Cta. Corriente:</strong>{' '}
             <span
+              className="tabular-nums"
               style={{
                 fontWeight: 700,
                 color:
                   Number(selectedDirectClient.creditLimit || 0) > 0 ||
                   Number(selectedDirectClient.paymentTermDays || 0) > 0
-                    ? '#059669'
-                    : '#64748b'
+                    ? '#111827'
+                    : '#6B7280'
               }}
             >
               {Number(selectedDirectClient.creditLimit || 0) > 0 ||
               Number(selectedDirectClient.paymentTermDays || 0) > 0
-                ? `SÍ ${Number(selectedDirectClient.creditLimit || 0) > 0 ? `(Límite: $${Number(selectedDirectClient.creditLimit).toLocaleString()})` : ''}`
+                ? `SÍ ${Number(selectedDirectClient.creditLimit || 0) > 0 ? `(Límite: ${formatIntegerARS(selectedDirectClient.creditLimit)})` : ''}`
                 : 'NO (Solo Contado)'}
             </span>
           </div>
           <div>
             <strong>Saldo Cuenta Corriente:</strong>{' '}
             <span
+              className="tabular-nums"
               style={{
-                color: balance > 0 ? 'var(--color-danger)' : balance < 0 ? 'var(--color-success)' : 'inherit',
+                color: balance > 0 ? '#E30613' : '#111827',
                 fontWeight: 700
               }}
             >
               {balance < 0
-                ? `$${Math.abs(balance).toLocaleString()} (A Favor)`
-                : `$${balance.toLocaleString()}`}
+                ? `${formatIntegerARS(Math.abs(balance))} (A Favor)`
+                : formatIntegerARS(balance)}
             </span>
           </div>
           <div>
             <strong>Boletas Pendientes:</strong>{' '}
             <span
+              className="tabular-nums"
               style={{
                 fontWeight: 700,
-                color: pendingCount > 0 ? (isLimitReached ? 'var(--color-danger)' : '#d97706') : '#059669'
+                color: pendingCount > 0 ? (isLimitReached ? '#E30613' : '#111827') : '#374151'
               }}
             >
               {pendingCount}
@@ -194,13 +203,14 @@ export function DirectInvoiceClientSelector({
 
           {isLimitReached && (
             <div
+              role="alert"
               style={{
                 gridColumn: 'span 2',
-                backgroundColor: '#fef2f2',
-                border: '1px solid #fca5a5',
+                backgroundColor: '#FEF2F2',
+                border: '1px solid #FECACA',
                 borderRadius: '4px',
                 padding: '6px 10px',
-                color: '#991b1b',
+                color: '#E30613',
                 fontWeight: 600,
                 fontSize: '0.78rem',
                 display: 'flex',
@@ -209,15 +219,17 @@ export function DirectInvoiceClientSelector({
                 marginTop: '2px'
               }}
             >
-              ⚠️ Límite de boletas alcanzado: El cliente debe {pendingCount} de {maxUnpaid} boletas permitidas.
+              <AlertTriangle size={14} aria-hidden="true" />
+              Límite de boletas alcanzado: El cliente debe {pendingCount} de {maxUnpaid} boletas permitidas.
             </div>
           )}
 
           {balance > 0 && !isLimitReached && (
             <div
+              role="alert"
               style={{
                 gridColumn: 'span 2',
-                color: 'var(--color-danger)',
+                color: '#E30613',
                 fontWeight: 600,
                 fontSize: '0.78rem',
                 display: 'flex',
@@ -226,19 +238,20 @@ export function DirectInvoiceClientSelector({
                 marginTop: '2px'
               }}
             >
-              ⚠️ Regla Boleta contra Boleta: El cliente tiene saldo pendiente.
+              <AlertTriangle size={14} aria-hidden="true" />
+              Regla Boleta contra Boleta: El cliente tiene saldo pendiente.
             </div>
           )}
         </div>
       ) : (
         <div
           style={{
-            backgroundColor: '#fbfbe4',
-            border: '1px dashed #e6c64c',
+            backgroundColor: '#F9FAFB',
+            border: '1px dashed #D1D5DB',
             borderRadius: '6px',
             padding: '12px',
             fontSize: '0.825rem',
-            color: '#856404',
+            color: '#4B5563',
             textAlign: 'center'
           }}
         >

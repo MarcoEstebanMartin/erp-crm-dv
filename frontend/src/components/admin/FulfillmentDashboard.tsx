@@ -1,4 +1,3 @@
-import { LayoutGrid, List, Printer, RefreshCw, Search, Tag } from 'lucide-react';
 import {
   printPickingList,
   printOrderReceipt,
@@ -9,6 +8,7 @@ import OrderFulfillmentModal from '../modals/OrderFulfillmentModal';
 import ConfirmModal from '../modals/ConfirmModal';
 import { FulfillmentOrderCard } from './FulfillmentOrderCard';
 import { FulfillmentListView } from './FulfillmentListView';
+import { FulfillmentToolbar } from './FulfillmentToolbar';
 import { useFulfillmentDashboard } from './useFulfillmentDashboard';
 
 const COLUMN_CONTAINER_STYLE = {
@@ -26,221 +26,26 @@ export default function FulfillmentDashboard() {
 
   return (
     <div style={{ padding: '0 4px', height: '100%', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-      <div
-        style={{
-          display: 'flex',
-          flexWrap: 'wrap',
-          gap: '10px',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          backgroundColor: '#FFFFFF',
-          padding: '10px 14px',
-          borderRadius: '10px',
-          border: '1px solid #E5E7EB',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, letterSpacing: '-0.025em', color: '#111827' }}>
-            Armado &amp; Facturación
-          </h2>
-          <button
-            type="button"
-            className="btn btn-secondary"
-            style={{ padding: '4px 8px', height: '28px', borderRadius: '6px' }}
-            onClick={f.fetchOrders}
-            disabled={f.loading}
-            title="Recargar pedidos"
-            aria-label="Recargar pedidos en armado"
-          >
-            <RefreshCw size={13} className={f.loading ? 'spin' : ''} aria-hidden="true" />
-          </button>
-
-          <div
-            role="group"
-            aria-label="Cambiar modo de vista"
-            style={{
-              display: 'inline-flex',
-              border: '1px solid #E5E7EB',
-              borderRadius: '6px',
-              backgroundColor: '#F9FAFB',
-              padding: '2px',
-              gap: '2px',
-            }}
-          >
-            <button
-              type="button"
-              className="btn btn-ghost"
-              aria-pressed={f.viewMode === 'board'}
-              onClick={() => f.setViewMode('board')}
-              style={{
-                height: '24px',
-                padding: '0 8px',
-                fontSize: '0.75rem',
-                fontWeight: 600,
-                borderRadius: '4px',
-                backgroundColor: f.viewMode === 'board' ? '#FFFFFF' : 'transparent',
-                color: f.viewMode === 'board' ? '#111827' : '#6B7280',
-                boxShadow: f.viewMode === 'board' ? '0 1px 2px rgba(0,0,0,0.06)' : 'none',
-              }}
-            >
-              <LayoutGrid size={13} aria-hidden="true" />
-              Tablero
-            </button>
-            <button
-              type="button"
-              className="btn btn-ghost"
-              aria-pressed={f.viewMode === 'list'}
-              onClick={() => f.setViewMode('list')}
-              style={{
-                height: '24px',
-                padding: '0 8px',
-                fontSize: '0.75rem',
-                fontWeight: 600,
-                borderRadius: '4px',
-                backgroundColor: f.viewMode === 'list' ? '#FFFFFF' : 'transparent',
-                color: f.viewMode === 'list' ? '#111827' : '#6B7280',
-                boxShadow: f.viewMode === 'list' ? '0 1px 2px rgba(0,0,0,0.06)' : 'none',
-              }}
-            >
-              <List size={13} aria-hidden="true" />
-              Lista
-            </button>
-          </div>
-        </div>
-
-        <search aria-label="Filtrar pedidos en armado">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-            <div className="search-input-wrapper" style={{ position: 'relative' }}>
-              <label htmlFor="fulfillment-search" className="visually-hidden">
-                Buscar pedidos en armado por cliente, #pedido o código web
-              </label>
-              <Search
-                size={14}
-                aria-hidden="true"
-                style={{ position: 'absolute', left: '8px', top: '7px', color: 'var(--text-secondary)' }}
-              />
-              <input
-                id="fulfillment-search"
-                name="q"
-                type="search"
-                className="input"
-                placeholder="Buscar cliente, #ID o DV-..."
-                autoComplete="off"
-                autoCorrect="off"
-                autoCapitalize="none"
-                spellCheck={false}
-                style={{ paddingLeft: '28px', paddingRight: '8px', height: '28px', fontSize: '0.8rem', width: '175px' }}
-                value={f.searchQuery}
-                onChange={(e) => f.setSearchQuery(e.target.value)}
-              />
-            </div>
-
-            <select
-              aria-label="Filtrar por ruta"
-              className="input"
-              style={{ padding: '3px 8px', height: '28px', fontSize: '0.8rem', width: 'auto' }}
-              value={f.selectedRoute}
-              onChange={(e) => f.setSelectedRoute(e.target.value)}
-            >
-              <option value="ALL">Todas las Rutas</option>
-              {f.uniqueRoutes.map((r: any) => (
-                <option key={r} value={r}>
-                  {r}
-                </option>
-              ))}
-            </select>
-
-            <select
-              aria-label="Filtrar por vendedor"
-              className="input"
-              style={{ padding: '3px 8px', height: '28px', fontSize: '0.8rem', width: 'auto' }}
-              value={f.selectedSeller}
-              onChange={(e) => f.setSelectedSeller(e.target.value)}
-            >
-              <option value="ALL">Vendedores</option>
-              {f.uniqueSellers.map((s: any) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
-
-            <select
-              aria-label="Filtrar por zona de depósito"
-              className="input"
-              style={{ padding: '3px 8px', height: '28px', fontSize: '0.8rem', width: 'auto', fontWeight: 500 }}
-              value={f.selectedZone}
-              onChange={(e) => f.setSelectedZone(e.target.value)}
-            >
-              <option value="ALL">Zonas</option>
-              <option value="FRIO">Frío</option>
-              <option value="CAJAS">Cajas</option>
-              <option value="TABLA">Tabla</option>
-            </select>
-          </div>
-        </search>
-
-        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-          <button
-            type="button"
-            className="btn btn-primary"
-            style={{
-              height: '28px',
-              padding: '0 12px',
-              fontSize: '0.78rem',
-              fontWeight: 600,
-              backgroundColor: '#111827',
-              borderColor: '#111827',
-              borderRadius: '6px',
-            }}
-            onClick={f.handlePrintBatchA4}
-            title="Imprimir lote de pedidos seleccionados (máximo 8 por hoja A4)"
-          >
-            <Printer size={13} aria-hidden="true" />
-            Lote A4 {f.selectedOrderIds.length > 0 ? `(${f.selectedOrderIds.length})` : ''}
-          </button>
-
-          <button
-            type="button"
-            className="btn btn-secondary"
-            style={{
-              height: '28px',
-              padding: '0 10px',
-              fontSize: '0.78rem',
-              fontWeight: 600,
-              backgroundColor: '#FFFFFF',
-              borderColor: '#E5E7EB',
-              color: '#374151',
-              borderRadius: '6px',
-            }}
-            onClick={f.handlePrintConsolidated}
-            title="Imprimir planilla de consolidado total por depósito"
-          >
-            <Printer size={13} aria-hidden="true" />
-            Consolidado {f.selectedOrderIds.length > 0 ? `(${f.selectedOrderIds.length})` : ''}
-          </button>
-
-          <button
-            type="button"
-            className="btn btn-secondary"
-            style={{
-              height: '28px',
-              padding: '0 10px',
-              fontSize: '0.78rem',
-              fontWeight: 600,
-              backgroundColor: '#FFFFFF',
-              borderColor: '#E5E7EB',
-              color: '#374151',
-              borderRadius: '6px',
-            }}
-            onClick={() => f.handlePrintLabels()}
-            title="Imprimir rótulos térmicos adhesivos para los bultos"
-          >
-            <Tag size={13} aria-hidden="true" />
-            Rótulos Bultos {f.selectedOrderIds.length > 0 ? `(${f.selectedOrderIds.length})` : ''}
-          </button>
-        </div>
-      </div>
+      <FulfillmentToolbar
+        loading={f.loading}
+        viewMode={f.viewMode}
+        setViewMode={f.setViewMode}
+        fetchOrders={f.fetchOrders}
+        searchQuery={f.searchQuery}
+        setSearchQuery={f.setSearchQuery}
+        selectedRoute={f.selectedRoute}
+        setSelectedRoute={f.setSelectedRoute}
+        uniqueRoutes={f.uniqueRoutes}
+        selectedSeller={f.selectedSeller}
+        setSelectedSeller={f.setSelectedSeller}
+        uniqueSellers={f.uniqueSellers}
+        selectedZone={f.selectedZone}
+        setSelectedZone={f.setSelectedZone}
+        selectedOrderIdsCount={f.selectedOrderIds.length}
+        handlePrintBatchA4={f.handlePrintBatchA4}
+        handlePrintConsolidated={f.handlePrintConsolidated}
+        handlePrintLabels={() => f.handlePrintLabels()}
+      />
 
       {f.viewMode === 'list' ? (
         <FulfillmentListView

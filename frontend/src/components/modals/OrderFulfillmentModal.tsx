@@ -26,6 +26,7 @@ export default function OrderFulfillmentModal({ order, onClose, onSuccess }: Ord
   const [pesableWeights, setPesableWeights] = useState<Record<number, number>>({});
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [confirmAnomalyBypass, setConfirmAnomalyBypass] = useState(false);
   const [billingCompleted, setBillingCompleted] = useState(false);
   const [invoicedOrder, setInvoicedOrder] = useState<any>(null);
   const [deferCae, setDeferCae] = useState(false);
@@ -52,6 +53,7 @@ export default function OrderFulfillmentModal({ order, onClose, onSuccess }: Ord
 
   const handleWeightChange = (orderItemId: number, val: string) => {
     const num = parseFloat(val);
+    setConfirmAnomalyBypass(false);
     setPesableWeights((prev) => ({
       ...prev,
       [orderItemId]: Number.isFinite(num) && num >= 0 ? num : 0,
@@ -67,17 +69,8 @@ export default function OrderFulfillmentModal({ order, onClose, onSuccess }: Ord
     [order?.items, pesableWeights],
   );
 
-  const handleConfirmAndInvoice = async () => {
-    if (anomalies.length > 0) {
-      const details = anomalies
-        .map((a) => `• ${a.item.product?.name}: ${a.currentWeight} kg (Esperado: ~${a.suggestedAvgWeight} kg)`)
-        .join('\n');
-      const ok = window.confirm(
-        `⚠️ ALERTA DE SEGURIDAD EN PESOS:\n\nSe detectaron pesos desproporcionados:\n${details}\n\n¿Desea confirmar y facturar igualmente?`,
-      );
-      if (!ok) return;
-    }
-
+  const executeConfirmAndInvoice = async () => {
+    setConfirmAnomalyBypass(false);
     setLoading(true);
     setErrorMsg(null);
     try {
@@ -108,6 +101,14 @@ export default function OrderFulfillmentModal({ order, onClose, onSuccess }: Ord
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleConfirmAndInvoice = async () => {
+    if (anomalies.length > 0) {
+      setConfirmAnomalyBypass(true);
+      return;
+    }
+    await executeConfirmAndInvoice();
   };
 
   if (billingCompleted) {
@@ -143,49 +144,77 @@ export default function OrderFulfillmentModal({ order, onClose, onSuccess }: Ord
               Confirmar Armado y Facturar — Pedido #{order.id}
             </h2>
             {order.deliveryZone && (
-              <span className="badge" style={{ backgroundColor: 'var(--accent-bg-light)', color: 'var(--accent-color)', fontSize: '0.85rem', padding: '4px 10px' }}>
-                <Truck size={14} style={{ marginRight: '4px', verticalAlign: 'middle' }} />
+              <span className="badge" style={{ backgroundColor: '#F3F4F6', color: '#111827', border: '1px solid #E5E7EB', fontSize: '0.85rem', padding: '4px 10px' }}>
+                <Truck size={14} aria-hidden="true" style={{ marginRight: '4px', verticalAlign: 'middle' }} />
                 {order.deliveryZone}
               </span>
             )}
           </div>
           <button type="button" className="btn-close" aria-label="Cerrar ventana" onClick={onClose} style={{ padding: '6px', borderRadius: '6px' }}>
-            <X size={22} />
+            <X size={22} aria-hidden="true" />
           </button>
         </div>
 
         {anomalies.length > 0 && (
-          <div style={{ flexShrink: 0, backgroundColor: '#fffbe3', color: '#92400e', border: '1px solid #fcd34d', padding: '12px 18px', borderRadius: '10px', marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+          <div
+            role={confirmAnomalyBypass ? 'alertdialog' : 'alert'}
+            aria-label="Alerta de seguridad en pesos"
+            style={{ flexShrink: 0, backgroundColor: '#FEF2F2', color: '#111827', border: '1px solid rgba(227, 6, 19, 0.28)', padding: '12px 18px', borderRadius: '10px', marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}
+          >
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <AlertTriangle size={24} style={{ color: '#d97706', flexShrink: 0 }} />
+              <AlertTriangle size={24} aria-hidden="true" style={{ color: '#E30613', flexShrink: 0 }} />
               <div>
-                <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#78350f' }}>
-                  Advertencia: Peso fuera de rango respecto al promedio esperado
+                <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#E30613' }}>
+                  {confirmAnomalyBypass
+                    ? 'Confirmación requerida: se detectaron pesos desproporcionados'
+                    : 'Advertencia: Peso fuera de rango respecto al promedio esperado'}
                 </div>
-                <div style={{ fontSize: '0.85rem', marginTop: '2px', color: '#92400e' }}>
+                <div style={{ fontSize: '0.85rem', marginTop: '2px', color: '#374151' }}>
                   {anomalies.map((a) => `${a.item.product?.name}: ${a.currentWeight} kg (~${a.suggestedAvgWeight} kg)`).join(' | ')}
                 </div>
               </div>
             </div>
-            {anomalies.some((a) => a.possibleDecimalFix !== null) && (
-              <button
-                type="button"
-                style={{ backgroundColor: '#d97706', color: '#fff', fontWeight: 700, border: 'none', padding: '8px 14px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem', whiteSpace: 'nowrap' }}
-                onClick={() => {
-                  anomalies.forEach((a) => {
-                    if (a.possibleDecimalFix !== null) handleWeightChange(a.item.id, a.possibleDecimalFix.toString());
-                  });
-                }}
-              >
-                Corregir coma faltante
-              </button>
-            )}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+              {anomalies.some((a) => a.possibleDecimalFix !== null) && (
+                <button
+                  type="button"
+                  style={{ backgroundColor: '#FFFFFF', color: '#E30613', fontWeight: 700, border: '1px solid #FECACA', padding: '7px 12px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem', whiteSpace: 'nowrap' }}
+                  onClick={() => {
+                    anomalies.forEach((a) => {
+                      if (a.possibleDecimalFix !== null) handleWeightChange(a.item.id, a.possibleDecimalFix.toString());
+                    });
+                  }}
+                >
+                  Corregir coma faltante
+                </button>
+              )}
+              {confirmAnomalyBypass && (
+                <>
+                  <button
+                    type="button"
+                    disabled={loading}
+                    onClick={() => setConfirmAnomalyBypass(false)}
+                    style={{ backgroundColor: '#FFFFFF', color: '#111827', fontWeight: 600, border: '1px solid #D1D5DB', padding: '7px 12px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem', whiteSpace: 'nowrap' }}
+                  >
+                    Revisar pesos
+                  </button>
+                  <button
+                    type="button"
+                    disabled={loading}
+                    onClick={() => void executeConfirmAndInvoice()}
+                    style={{ backgroundColor: '#E30613', color: '#FFFFFF', fontWeight: 700, border: 'none', padding: '7px 14px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem', whiteSpace: 'nowrap' }}
+                  >
+                    {loading ? 'Procesando...' : 'Confirmar pesos y facturar igual'}
+                  </button>
+                </>
+              )}
+            </div>
           </div>
         )}
 
         {errorMsg && (
-          <div style={{ flexShrink: 0, backgroundColor: '#fef2f2', color: '#dc2626', border: '1px solid #fca5a5', padding: '12px 16px', borderRadius: '8px', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <AlertCircle size={18} />
+          <div role="alert" style={{ flexShrink: 0, backgroundColor: '#FEF2F2', color: '#E30613', border: '1px solid #FECACA', padding: '12px 16px', borderRadius: '8px', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <AlertCircle size={18} aria-hidden="true" />
             <span>{errorMsg}</span>
           </div>
         )}
@@ -211,11 +240,11 @@ export default function OrderFulfillmentModal({ order, onClose, onSuccess }: Ord
               <table style={{ width: '100%', fontSize: '0.94rem' }}>
                 <thead style={{ position: 'sticky', insetBlockStart: 0, zIndex: 1, backgroundColor: 'var(--background-alt)' }}>
                   <tr style={{ textAlign: 'left' }}>
-                    <th style={{ padding: '12px 16px' }}>Producto</th>
-                    <th style={{ padding: '12px 16px', textAlign: 'center' }}>Empaque / Bultos</th>
-                    <th style={{ padding: '12px 16px', textAlign: 'right' }}>Cant Total</th>
-                    <th style={{ padding: '12px 16px', textAlign: 'center' }}>Peso Real (Kg)</th>
-                    <th style={{ padding: '12px 16px', textAlign: 'right' }}>Subtotal</th>
+                    <th scope="col" style={{ padding: '12px 16px' }}>Producto</th>
+                    <th scope="col" style={{ padding: '12px 16px', textAlign: 'center' }}>Empaque / Bultos</th>
+                    <th scope="col" style={{ padding: '12px 16px', textAlign: 'right' }}>Cant Total</th>
+                    <th scope="col" style={{ padding: '12px 16px', textAlign: 'center' }}>Peso Real (Kg)</th>
+                    <th scope="col" style={{ padding: '12px 16px', textAlign: 'right' }}>Subtotal</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -231,16 +260,16 @@ export default function OrderFulfillmentModal({ order, onClose, onSuccess }: Ord
                     const subtotal = calculateFulfillmentLineSubtotalInt(item, pesableWeights);
 
                     return (
-                      <tr key={item.id} style={{ borderBottom: '1px solid var(--border-color)', backgroundColor: isAnomaly ? '#fff5f5' : bonus ? '#f0fdf4' : undefined }}>
+                      <tr key={item.id} style={{ borderBottom: '1px solid var(--border-color)', backgroundColor: isAnomaly ? '#FEF2F2' : bonus ? '#F9FAFB' : undefined }}>
                         <td style={{ padding: '12px 16px', fontWeight: 500 }}>
                           <div>{item.product?.name}</div>
                           {bonus && (
-                            <span className="badge" style={{ backgroundColor: '#dcfce7', color: '#15803d', fontSize: '0.73rem', marginTop: '4px', display: 'inline-block' }}>
+                            <span className="badge" style={{ backgroundColor: '#F3F4F6', color: '#111827', border: '1px solid #D1D5DB', fontSize: '0.73rem', marginTop: '4px', display: 'inline-block' }}>
                               Bonificación sin cargo
                             </span>
                           )}
                           {!bonus && isPesable && (
-                            <span className="badge" style={{ backgroundColor: '#e0f2fe', color: '#0369a1', fontSize: '0.73rem', marginTop: '4px', display: 'inline-block' }}>
+                            <span className="badge" style={{ backgroundColor: '#F3F4F6', color: '#374151', border: '1px solid #E5E7EB', fontSize: '0.73rem', marginTop: '4px', display: 'inline-block' }}>
                               Pesable ({formatIntegerARS(item.unitPrice ?? item.price ?? 0)}/kg)
                             </span>
                           )}
@@ -248,23 +277,24 @@ export default function OrderFulfillmentModal({ order, onClose, onSuccess }: Ord
                         <td style={{ padding: '12px 16px', textAlign: 'center' }}>
                           {unitsPerBox > 1 ? (
                             <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
-                              <span className="badge" style={{ backgroundColor: fullBoxes > 0 ? (remUnits > 0 ? '#eff6ff' : '#f0fdf4') : '#faf5ff', color: fullBoxes > 0 ? (remUnits > 0 ? '#1d4ed8' : '#15803d') : '#7e22ce', border: `1px solid ${fullBoxes > 0 ? (remUnits > 0 ? '#bfdbfe' : '#bbf7d0') : '#e9d5ff'}`, fontSize: '0.78rem', fontWeight: 700, padding: '3px 8px', borderRadius: '6px' }}>
+                              <span className="badge" style={{ backgroundColor: '#F9FAFB', color: '#111827', border: '1px solid #E5E7EB', fontSize: '0.78rem', fontWeight: 700, padding: '3px 8px', borderRadius: '6px' }}>
                                 {fullBoxes > 0 ? `${fullBoxes} ${fullBoxes === 1 ? 'Caja' : 'Cajas'}${remUnits > 0 ? ` + ${remUnits}u` : ''}` : `${remUnits} u sueltas`}
                               </span>
-                              <span style={{ fontSize: '0.68rem', color: '#64748b', fontWeight: 500 }}>Caja x{unitsPerBox}u</span>
+                              <span style={{ fontSize: '0.68rem', color: '#6B7280', fontWeight: 500 }}>Caja x{unitsPerBox}u</span>
                             </div>
                           ) : (
                             <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>-</span>
                           )}
                         </td>
-                        <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 700 }}>{item.quantity} u</td>
+                        <td className="tabular-nums" style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 700 }}>{item.quantity} u</td>
                         <td style={{ padding: '12px 16px', textAlign: 'center' }}>
                           {isPesable ? (
                             <>
                               <input
                                 type="number"
-                                className="input"
-                                style={{ width: '110px', textAlign: 'center', padding: '6px 8px', fontWeight: 700, borderColor: isAnomaly ? '#dc2626' : '#f97316', backgroundColor: isAnomaly ? '#fef2f2' : undefined, color: isAnomaly ? '#b91c1c' : undefined }}
+                                className="input tabular-nums"
+                                aria-label={`Peso real en kg para ${item.product?.name || 'artículo'}`}
+                                style={{ width: '110px', textAlign: 'center', padding: '6px 8px', fontWeight: 700, borderColor: isAnomaly ? '#E30613' : '#D1D5DB', backgroundColor: isAnomaly ? '#FEF2F2' : undefined, color: isAnomaly ? '#E30613' : undefined }}
                                 placeholder={`${suggestedKg}`}
                                 value={pesableWeights[item.id] !== undefined && pesableWeights[item.id] !== 0 ? pesableWeights[item.id] : suggestedKg}
                                 onChange={(e) => handleWeightChange(item.id, e.target.value)}
@@ -273,21 +303,21 @@ export default function OrderFulfillmentModal({ order, onClose, onSuccess }: Ord
                               />
                               {isAnomaly ? (
                                 <div style={{ marginTop: '4px' }}>
-                                  <span style={{ fontSize: '0.72rem', color: '#dc2626', fontWeight: 700, display: 'block' }}>
+                                  <span style={{ fontSize: '0.72rem', color: '#E30613', fontWeight: 700, display: 'block' }}>
                                     Peso fuera de promedio (~{suggestedKg} kg)
                                   </span>
                                   {anomalyInfo?.possibleDecimalFix && (
                                     <button
                                       type="button"
                                       onClick={() => handleWeightChange(item.id, anomalyInfo.possibleDecimalFix!.toString())}
-                                      style={{ marginTop: '4px', padding: '3px 8px', fontSize: '0.72rem', backgroundColor: '#fee2e2', color: '#991b1b', border: '1px solid #fca5a5', borderRadius: '4px', cursor: 'pointer', fontWeight: 700 }}
+                                      style={{ marginTop: '4px', padding: '3px 8px', fontSize: '0.72rem', backgroundColor: '#FEF2F2', color: '#E30613', border: '1px solid #FECACA', borderRadius: '4px', cursor: 'pointer', fontWeight: 700 }}
                                     >
                                       Corregir a {anomalyInfo.possibleDecimalFix} kg
                                     </button>
                                   )}
                                 </div>
                               ) : (
-                                <span style={{ fontSize: '0.72rem', color: pesableWeights[item.id] && pesableWeights[item.id] !== suggestedKg ? '#16a34a' : '#c2410c', display: 'block', marginTop: '3px', fontWeight: 600 }}>
+                                <span style={{ fontSize: '0.72rem', color: pesableWeights[item.id] && pesableWeights[item.id] !== suggestedKg ? '#111827' : '#6B7280', display: 'block', marginTop: '3px', fontWeight: 600 }}>
                                   {pesableWeights[item.id] && pesableWeights[item.id] !== suggestedKg ? 'Peso balanza' : `Promedio (${suggestedKg} kg)`}
                                 </span>
                               )}
@@ -296,7 +326,7 @@ export default function OrderFulfillmentModal({ order, onClose, onSuccess }: Ord
                             <span style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>-</span>
                           )}
                         </td>
-                        <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 700, color: isAnomaly ? '#dc2626' : undefined }}>
+                        <td className="tabular-nums" style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 700, color: isAnomaly ? '#E30613' : undefined }}>
                           {formatIntegerARS(subtotal)}
                         </td>
                       </tr>

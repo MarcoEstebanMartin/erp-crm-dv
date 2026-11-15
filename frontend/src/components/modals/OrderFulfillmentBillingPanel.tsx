@@ -66,7 +66,7 @@ export default function OrderFulfillmentBillingPanel({
     >
       <div style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '12px' }}>
         <h3 style={{ fontSize: '1.15rem', margin: 0, display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700 }}>
-          <DollarSign size={20} style={{ color: '#E30613' }} /> Facturación y Cobro
+          <DollarSign size={20} aria-hidden="true" style={{ color: '#111827' }} /> Facturación y Cobro
         </h3>
       </div>
 
@@ -99,16 +99,16 @@ export default function OrderFulfillmentBillingPanel({
       </div>
 
       {billingType === 'OFFICIAL' && (
-        <div style={{ backgroundColor: '#f8fafc', padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-          <span style={{ fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.5px', color: '#475569', fontWeight: 800 }}>
+        <div style={{ backgroundColor: '#F9FAFB', padding: '12px', borderRadius: '8px', border: '1px solid #E5E7EB' }}>
+          <span style={{ fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.5px', color: '#4B5563', fontWeight: 800 }}>
             Modo de Emisión AFIP / ARCA
           </span>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '6px' }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.88rem', cursor: 'pointer', fontWeight: !deferCae ? 700 : 500, color: !deferCae ? '#16a34a' : '#475569' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.88rem', cursor: 'pointer', fontWeight: !deferCae ? 700 : 500, color: !deferCae ? '#111827' : '#4B5563' }}>
               <input type="radio" name="deferCae" checked={!deferCae} onChange={() => onDeferCaeChange(false)} />
               Solicitar CAE Inmediato (AFIP Directo)
             </label>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.88rem', cursor: 'pointer', fontWeight: deferCae ? 700 : 500, color: deferCae ? '#d97706' : '#475569' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.88rem', cursor: 'pointer', fontWeight: deferCae ? 700 : 500, color: deferCae ? '#111827' : '#4B5563' }}>
               <input type="radio" name="deferCae" checked={deferCae} onChange={() => onDeferCaeChange(true)} />
               Pre-Facturar A (Diferir CAE / Borrador)
             </label>
@@ -197,7 +197,7 @@ export default function OrderFulfillmentBillingPanel({
       >
         {loading ? 'Procesando...' : (
           <>
-            <CheckCircle size={20} /> Confirmar y Facturar
+            <CheckCircle size={20} aria-hidden="true" /> Confirmar y Facturar
           </>
         )}
       </button>
