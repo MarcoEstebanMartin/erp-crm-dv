@@ -14,26 +14,25 @@ const DELIVERY_ROUTES = [
 const CARD_STYLE: React.CSSProperties = {
   border: '1px solid var(--border-color)',
   borderRadius: 'var(--radius-md)',
-  padding: '20px',
-  backgroundColor: 'rgba(249, 250, 251, 0.35)',
-  boxShadow: 'var(--shadow-sm)',
+  padding: '18px',
+  backgroundColor: '#fafafa',
 };
 
 const HEADER_STYLE: React.CSSProperties = {
-  margin: '0 0 16px 0',
-  fontSize: '0.88rem',
+  margin: '0 0 14px 0',
+  fontSize: '0.84rem',
   fontWeight: 700,
   color: 'var(--text-secondary)',
   textTransform: 'uppercase',
-  letterSpacing: '0.05em',
+  letterSpacing: '0.04em',
   borderBottom: '1px solid var(--border-color)',
-  paddingBottom: '10px',
+  paddingBottom: '8px',
 };
 
 const SELECT_STYLE: React.CSSProperties = {
-  height: '40px',
-  padding: '8px 12px',
-  fontSize: '0.92rem',
+  height: '38px',
+  padding: '6px 10px',
+  fontSize: '0.9rem',
   borderRadius: '6px',
   border: '1px solid var(--border-color)',
   boxSizing: 'border-box',
@@ -81,46 +80,49 @@ export const ClientLocationCommercialCard: React.FC<ClientLocationCommercialCard
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
       <div style={CARD_STYLE}>
-        <h4 style={HEADER_STYLE}>📍 Dirección Fiscal / Entrega y Logística</h4>
+        <h4 style={HEADER_STYLE}>Ubicación</h4>
 
-        <div className="form-group" style={{ marginBottom: '16px' }}>
-          <label style={LABEL_STYLE}>Dirección de Entrega / Domicilio Fiscal</label>
+        <div className="form-group" style={{ marginBottom: '14px' }}>
+          <label htmlFor="client-address" style={LABEL_STYLE}>Dirección</label>
           <input
+            id="client-address"
             ref={addressInputRef}
             type="text"
             className="input"
-            placeholder="ej: Pringles 120"
+            placeholder="Dirección"
             value={data.address || ''}
             onChange={(e) => onChangeData({ address: e.target.value })}
-            style={{ width: '100%', height: '40px', fontSize: '0.92rem' }}
+            style={{ width: '100%', height: '38px', fontSize: '0.9rem' }}
           />
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1.1fr 0.9fr', gap: '16px', marginBottom: '16px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1.1fr 0.9fr', gap: '14px', marginBottom: '14px' }}>
           <div className="form-group" style={{ marginBottom: 0 }}>
-            <label style={LABEL_STYLE}>Localidad / Ciudad</label>
+            <label htmlFor="client-city" style={LABEL_STYLE}>Localidad</label>
             <input
+              id="client-city"
               type="text"
               className="input"
-              placeholder="ej: General Villegas"
+              placeholder="Localidad"
               value={data.city || ''}
               onChange={(e) => onChangeData({ city: e.target.value })}
-              style={{ width: '100%', height: '40px', fontSize: '0.92rem' }}
+              style={{ width: '100%', height: '38px', fontSize: '0.9rem' }}
             />
           </div>
 
           <div className="form-group" style={{ marginBottom: 0 }}>
-            <label style={LABEL_STYLE}>Barrio (en General Villegas)</label>
+            <label htmlFor="client-barrio" style={LABEL_STYLE}>Barrio</label>
             <input
+              id="client-barrio"
               type="text"
               list="barrio-suggestions"
               className="input"
-              placeholder="ej: CENTRO 1, TROCHA..."
+              placeholder="Barrio"
               value={data.barrio || ''}
               onChange={(e) => onChangeData({ barrio: e.target.value })}
-              style={{ width: '100%', height: '40px', fontSize: '0.92rem' }}
+              style={{ width: '100%', height: '38px', fontSize: '0.9rem' }}
             />
             <datalist id="barrio-suggestions">
               {BARRIO_SUGGESTIONS.map((b) => (
@@ -131,14 +133,15 @@ export const ClientLocationCommercialCard: React.FC<ClientLocationCommercialCard
         </div>
 
         <div className="form-group" style={{ marginBottom: 0 }}>
-          <label style={LABEL_STYLE}>Ruta de Reparto y Despacho</label>
+          <label htmlFor="client-delivery-route" style={LABEL_STYLE}>Ruta de reparto</label>
           <select
+            id="client-delivery-route"
             className="select"
             value={data.route || ''}
             onChange={(e) => onChangeData({ route: e.target.value })}
             style={SELECT_STYLE}
           >
-            <option value="">Sin Ruta de Reparto Asignada</option>
+            <option value="">Sin ruta</option>
             {DELIVERY_ROUTES.map((r) => (
               <option key={r} value={r}>{r}</option>
             ))}
@@ -146,27 +149,21 @@ export const ClientLocationCommercialCard: React.FC<ClientLocationCommercialCard
         </div>
       </div>
 
-      <div style={{ ...CARD_STYLE, opacity: data.isClient ? 1 : 0.65, transition: 'var(--transition-medium)' }}>
-        <h4 style={{ ...HEADER_STYLE, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span>💼 Condiciones Comerciales</span>
-          {!data.isClient && (
-            <small style={{ textTransform: 'none', color: 'var(--text-muted)', fontSize: '0.78rem', fontWeight: 500 }}>
-              (Habilitá el rol Cliente para editar estas opciones)
-            </small>
-          )}
-        </h4>
+      <div style={{ ...CARD_STYLE, opacity: data.isClient ? 1 : 0.6 }}>
+        <h4 style={HEADER_STYLE}>Condiciones comerciales</h4>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '0.85fr 1.15fr', gap: '16px', marginBottom: '16px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '0.85fr 1.15fr', gap: '14px', marginBottom: '14px' }}>
           <div className="form-group" style={{ marginBottom: 0 }}>
-            <label style={LABEL_STYLE}>Vendedor Asignado</label>
+            <label htmlFor="client-seller" style={LABEL_STYLE}>Vendedor</label>
             <select
+              id="client-seller"
               className="select"
               value={data.sellerId || ''}
               onChange={(e) => onChangeData({ sellerId: e.target.value ? Number(e.target.value) : null })}
               disabled={!data.isClient}
               style={SELECT_STYLE}
             >
-              <option value="">Sin Vendedor Asignado</option>
+              <option value="">Sin vendedor</option>
               {availableSellers.map((s) => (
                 <option key={s.id} value={s.id}>{s.username.replace('_', ' ').toUpperCase()}</option>
               ))}
@@ -174,44 +171,47 @@ export const ClientLocationCommercialCard: React.FC<ClientLocationCommercialCard
           </div>
 
           <div className="form-group" style={{ marginBottom: 0 }}>
-            <label style={LABEL_STYLE}>Ruta de Venta (Preventista)</label>
+            <label htmlFor="client-sale-route" style={LABEL_STYLE}>Ruta de preventa</label>
             <select
+              id="client-sale-route"
               className="select"
               value={data.saleRouteId || ''}
               onChange={(e) => handleSaleRouteChange(e.target.value)}
               disabled={!data.isClient}
               style={SELECT_STYLE}
             >
-              <option value="">Sin Ruta de Venta Asignada</option>
+              <option value="">Sin ruta</option>
               {availableSaleRoutes.map((r) => (
-                <option key={r.id} value={r.id}>{r.name} ({r.seller?.username || 'Sin Vendedor'})</option>
+                <option key={r.id} value={r.id}>{r.name} ({r.seller?.username || '-'})</option>
               ))}
             </select>
           </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
           <div className="form-group" style={{ marginBottom: 0 }}>
-            <label style={LABEL_STYLE}>Límite de Cuenta Corriente</label>
+            <label htmlFor="client-credit-limit" style={LABEL_STYLE}>Límite Cta Cte</label>
             <select
+              id="client-credit-limit"
               className="select"
               value={data.maxUnpaidInvoices ?? 0}
               onChange={(e) => onChangeData({ maxUnpaidInvoices: Number(e.target.value) })}
               disabled={!data.isClient}
               style={SELECT_STYLE}
             >
-              <option value={0}>Sin Cuenta Corriente (Contado)</option>
-              <option value={0.5}>Media Boleta Pendiente</option>
-              <option value={1}>Hasta 1 Boleta Pendiente</option>
-              <option value={2}>Hasta 2 Boletas Pendientes</option>
-              <option value={3}>Hasta 3 Boletas Pendientes</option>
-              <option value={4}>Hasta 4 Boletas Pendientes (Máximo)</option>
+              <option value={0}>Contado</option>
+              <option value={0.5}>1/2 Boleta</option>
+              <option value={1}>1 Boleta</option>
+              <option value={2}>2 Boletas</option>
+              <option value={3}>3 Boletas</option>
+              <option value={4}>4 Boletas</option>
             </select>
           </div>
 
           <div className="form-group" style={{ marginBottom: 0 }}>
-            <label style={LABEL_STYLE}>Lista de Precios Asignada</label>
+            <label htmlFor="client-price-list" style={LABEL_STYLE}>Lista de precios</label>
             <select
+              id="client-price-list"
               className="select"
               value={data.priceList || 'A'}
               onChange={(e) => onChangeData({ priceList: e.target.value })}

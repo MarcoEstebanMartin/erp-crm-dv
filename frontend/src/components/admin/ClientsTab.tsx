@@ -4,6 +4,7 @@ import { UserPlus, MapPin } from 'lucide-react';
 import SaleRoutesDashboard from '../SaleRoutesDashboard';
 import { OFFICIAL_CITIES, normalizeString } from './clientsHelpers';
 import { DebtorsByCityReportView } from './DebtorsByCityReportView';
+import { useConfirm } from '../../context/ConfirmContext';
 import { ClientsPersonasTable } from './ClientsPersonasTable';
 import ClientsGpsMapModal from '../modals/ClientsGpsMapModal';
 
@@ -41,6 +42,8 @@ export default function ClientsTab({
   const [availableSellers, setAvailableSellers] = useState<any[]>([]);
   const [availableSaleRoutes, setAvailableSaleRoutes] = useState<any[]>([]);
   const [updatingClientId, setUpdatingClientId] = useState<number | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string>('');
+  const confirm = useConfirm();
 
   useEffect(() => {
     let isCurrent = true;
@@ -148,11 +151,11 @@ export default function ClientsTab({
   const isLocationFiltered = selectedCityFilter !== 'ALL' || selectedRouteFilter !== 'ALL' || searchQuery.trim() !== '';
 
   const handleDeletePersona = async (personaId: number, name: string) => {
-    if (!window.confirm(`¿Estás seguro de que deseas eliminar a "${name}"?`)) return;
+    if (!(await confirm(`¿Eliminar a "${name}"?`, { type: 'danger', confirmText: 'Eliminar' }))) return;
     try {
       await api.deletePersona(personaId);
       setClients((prev) => prev.filter((c) => c.id !== personaId));
-    } catch (err: any) { alert(err.message || 'Error al eliminar el registro.'); }
+    } catch (err: any) { setErrorMsg(err.message || 'Error al eliminar el registro.'); }
   };
 
   const handleUpdateCtaCte = async (client: any, newValue: number) => {
@@ -160,25 +163,27 @@ export default function ClientsTab({
       setUpdatingClientId(client.id);
       await api.updatePersona(client.id, { ...client, maxUnpaidInvoices: newValue });
       setClients((prev) => prev.map((c) => (c.id === client.id ? { ...c, maxUnpaidInvoices: newValue } : c)));
-    } catch { alert('Error al actualizar límite de Cta Cte.'); } finally { setUpdatingClientId(null); }
+    } catch { setErrorMsg('Error al actualizar límite de Cta Cte.'); } finally { setUpdatingClientId(null); }
   };
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '8px', borderBottom: '1px solid var(--border-color)' }}>
+        <div className="linear-tablist" role="tablist" aria-label="Vistas de personas" style={{ borderBottom: 'none' }}>
           {[
             { id: 'client', label: 'Clientes' },
             { id: 'seller', label: 'Vendedores' },
             { id: 'commission_agent', label: 'Comisionistas' },
-            { id: 'debtors_by_city', label: '📊 Deudores por Ruta' },
-            { id: 'sale_routes', label: 'Rutas de Preventa' },
+            { id: 'debtors_by_city', label: 'Deudores' },
+            { id: 'sale_routes', label: 'Rutas' },
           ].map((tab) => (
             <button
               key={tab.id}
-              className={`btn ${personaRoleFilter === tab.id ? 'btn-primary' : 'btn-secondary'}`}
-              style={{ padding: '6px 14px', fontSize: '0.82rem', borderRadius: '20px' }}
-              onClick={() => { setPersonaRoleFilter(tab.id); setClients([]); setSelectedCityFilter('ALL'); }}
+              type="button"
+              role="tab"
+              aria-selected={personaRoleFilter === tab.id}
+              className="linear-tab"
+              onClick={() => { setPersonaRoleFilter(tab.id); setClients([]); setSelectedCityFilter('ALL'); setErrorMsg(''); }}
             >
               {tab.label}
             </button>
@@ -189,14 +194,21 @@ export default function ClientsTab({
           <button
             type="button"
             className="btn btn-secondary"
-            style={{ padding: '6px 14px', fontSize: '0.82rem', display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: 600 }}
+            style={{ padding: '6px 12px', fontSize: '0.82rem', display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: 600, marginBottom: '4px' }}
             onClick={() => setIsGpsMapOpen(true)}
           >
-            <MapPin size={15} color="#E30613" />
-            <span>Mapa GPS Interactivo ({filteredClients.length})</span>
+            <MapPin size={15} />
+            <span>Mapa GPS ({filteredClients.length})</span>
           </button>
         )}
       </div>
+
+      {errorMsg && (
+        <div role="alert" style={{ padding: '10px 14px', marginBottom: '14px', backgroundColor: '#fef2f2', border: '1px solid #fecaca', borderRadius: '6px', color: '#991b1b', fontSize: '0.84rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span>{errorMsg}</span>
+          <button type="button" className="btn btn-ghost" style={{ padding: '2px 8px', fontSize: '0.78rem' }} onClick={() => setErrorMsg('')}>Cerrar</button>
+        </div>
+      )}
 
       {personaRoleFilter === 'debtors_by_city' ? (
         <DebtorsByCityReportView
@@ -216,41 +228,50 @@ export default function ClientsTab({
         <SaleRoutesDashboard />
       ) : (
         <>
-          <div className="actions-bar" style={{ display: 'flex', gap: '12px', marginBottom: '16px', flexWrap: 'wrap' }}>
-            <div className="search-input-wrapper" style={{ flex: 1, minWidth: '240px' }}>
-              <input type="text" className="input" placeholder="Buscar fonético por nombre, CUIT, localidad..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
-            </div>
+          <div className="actions-bar" style={{ display: 'flex', gap: '12px', marginBottom: '16px', flexWrap: 'wrap', alignItems: 'center' }}>
+            <search className="search-input-wrapper" style={{ flex: 1, minWidth: '240px' }}>
+              <label htmlFor="clients-search" className="sr-only">Buscar</label>
+              <input
+                id="clients-search"
+                type="text"
+                className="input"
+                placeholder="Buscar nombre, CUIT o localidad"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                autoCorrect="off"
+                autoCapitalize="none"
+                spellCheck={false}
+              />
+            </search>
 
-            <select className="select" value={selectedCityFilter} onChange={(e) => setSelectedCityFilter(e.target.value)} style={{ minWidth: '190px', height: '38px' }}>
-              <option value="ALL">Todas las Localidades ({cityCounts.ALL || 0})</option>
+            <select aria-label="Filtrar por localidad" className="select" value={selectedCityFilter} onChange={(e) => setSelectedCityFilter(e.target.value)} style={{ minWidth: '185px', height: '38px' }}>
+              <option value="ALL">Localidades ({cityCounts.ALL || 0})</option>
               {OFFICIAL_CITIES.map((city) => (<option key={city} value={city}>{city} ({cityCounts[city] || 0})</option>))}
               <option value="OTRAS">Otras ({cityCounts.OTRAS || 0})</option>
             </select>
 
             {personaRoleFilter === 'client' && (
-              <select className="select" value={selectedRouteFilter} onChange={(e) => setSelectedRouteFilter(e.target.value)} style={{ minWidth: '190px', height: '38px' }}>
-                <option value="ALL">Todas las Rutas ({routeCounts.ALL || 0})</option>
+              <select aria-label="Filtrar por ruta" className="select" value={selectedRouteFilter} onChange={(e) => setSelectedRouteFilter(e.target.value)} style={{ minWidth: '185px', height: '38px' }}>
+                <option value="ALL">Rutas ({routeCounts.ALL || 0})</option>
                 {availableSaleRoutes.map((route) => (<option key={route.id} value={route.id}>{route.name} ({routeCounts[route.id] || 0})</option>))}
-                <option value="SIN_RUTA">Sin Ruta ({routeCounts.SIN_RUTA || 0})</option>
+                <option value="SIN_RUTA">Sin ruta ({routeCounts.SIN_RUTA || 0})</option>
               </select>
             )}
 
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '0 14px', height: '38px', backgroundColor: isLocationFiltered ? '#f0fdf4' : '#f8fafc', border: isLocationFiltered ? '1px solid #bbf7d0' : '1px solid #e2e8f0', borderRadius: '6px', fontSize: '0.84rem', whiteSpace: 'nowrap' }}>
-              <span style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: isLocationFiltered ? '#16a34a' : '#94a3b8', display: 'inline-block' }} />
-              <span style={{ color: isLocationFiltered ? '#15803d' : '#64748b', fontWeight: 500 }}>{isLocationFiltered ? 'Filtrados:' : 'Total:'}</span>
-              <span style={{ fontWeight: 700, fontSize: '0.98rem', color: isLocationFiltered ? '#166534' : '#0f172a' }}>{filteredClients.length.toLocaleString('es-AR')}</span>
+            <div className="tabular-nums" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '0 12px', height: '38px', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '0.84rem', whiteSpace: 'nowrap' }}>
+              <span style={{ color: '#64748b', fontWeight: 500 }}>{isLocationFiltered ? 'Filtrados' : 'Total'}</span>
+              <span style={{ fontWeight: 700, fontSize: '0.95rem', color: '#0f172a' }}>{filteredClients.length.toLocaleString('es-AR')}</span>
             </div>
 
             {personaRoleFilter === 'client' && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginLeft: 'auto', marginRight: '12px' }}>
-                <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <input type="checkbox" checked={showInactive} onChange={(e) => setShowInactive(e.target.checked)} style={{ width: '16px', height: '16px', cursor: 'pointer' }} />
-                  Ver Inactivos
-                </label>
-              </div>
+              <label htmlFor="clients-show-inactive" style={{ fontSize: '0.84rem', color: 'var(--text-secondary)', fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px', marginLeft: 'auto', marginRight: '8px' }}>
+                <input id="clients-show-inactive" type="checkbox" checked={showInactive} onChange={(e) => setShowInactive(e.target.checked)} style={{ width: '16px', height: '16px', cursor: 'pointer' }} />
+                <span>Inactivos</span>
+              </label>
             )}
 
             <button
+              type="button"
               className="btn btn-primary"
               onClick={() =>
                 setClientModal({
@@ -265,7 +286,7 @@ export default function ClientsTab({
               }
             >
               <UserPlus size={16} />
-              <span>Registrar {personaRoleFilter === 'client' ? 'Cliente' : personaRoleFilter === 'provider' ? 'Proveedor' : personaRoleFilter === 'seller' ? 'Vendedor' : 'Comisionista'}</span>
+              <span>Nuevo {personaRoleFilter === 'client' ? 'cliente' : personaRoleFilter === 'provider' ? 'proveedor' : personaRoleFilter === 'seller' ? 'vendedor' : 'comisionista'}</span>
             </button>
           </div>
 
@@ -288,7 +309,7 @@ export default function ClientsTab({
       <ClientsGpsMapModal
         isOpen={isGpsMapOpen}
         clients={filteredClients}
-        activeFilterLabel={selectedCityFilter !== 'ALL' ? selectedCityFilter : 'Padrón General'}
+        activeFilterLabel={selectedCityFilter !== 'ALL' ? selectedCityFilter : 'Clientes'}
         onClose={() => setIsGpsMapOpen(false)}
         onSelectClient={(client) => { setIsGpsMapOpen(false); handleViewClientProfile(client); }}
       />

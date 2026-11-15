@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { X, Printer, Calendar } from 'lucide-react';
 import { api } from '../../utils/api';
 import { formatCompanyPhone, getCompanyProfile } from '../../utils/companyProfile';
+import { useConfirm } from '../../context/ConfirmContext';
+import { NativeModalDialog } from './NativeModalDialog';
 import { ResumenCuentaDetailModals } from './ResumenCuentaDetailModals';
 
 interface ResumenCuentaModalProps {
@@ -19,12 +21,14 @@ export default function ResumenCuentaModal({ client, onClose }: ResumenCuentaMod
 
   const userRole = localStorage.getItem('user_role') || '';
   const isAdminOrFacturacion = userRole === 'ADMIN' || userRole === 'FACTURACION';
+  const confirm = useConfirm();
 
   const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
   const [selectedCreditNote, setSelectedCreditNote] = useState<any | null>(null);
   const [selectedTransaction, setSelectedTransaction] = useState<any | null>(null);
   const [selectedWithholding, setSelectedWithholding] = useState<any | null>(null);
   const [viewLoading, setViewLoading] = useState(false);
+  const [actionBanner, setActionBanner] = useState<{ type: 'error' | 'success'; text: string } | null>(null);
 
   const company = getCompanyProfile();
   const companyName = company.nombreFantasia.toUpperCase();
@@ -88,8 +92,8 @@ export default function ResumenCuentaModal({ client, onClose }: ResumenCuentaMod
       });
 
       setTransactions(combined);
-    } catch (err) {
-      console.error('Error fetching transactions', err);
+    } catch {
+      setActionBanner({ type: 'error', text: 'Error al cargar movimientos.' });
     } finally {
       setLoading(false);
     }
@@ -108,155 +112,184 @@ export default function ResumenCuentaModal({ client, onClose }: ResumenCuentaMod
       else if (fullId.startsWith('credit-note-')) setSelectedCreditNote(await api.getCreditNoteById(Number(fullId.split('-').pop())));
       else if (fullId.startsWith('transaction-')) setSelectedTransaction(await api.getTransactionById(Number(fullId.split('-').pop())));
     } catch {
-      alert('No se pudo cargar el detalle del comprobante.');
+      setActionBanner({ type: 'error', text: 'No se pudo cargar el detalle.' });
     } finally {
       setViewLoading(false);
     }
   };
 
   const handleDeleteReceipt = async (txId: number, receiptDesc: string, creditAmount: number) => {
-    if (!window.confirm(`¿Estás seguro de que deseas anular y eliminar el recibo "${receiptDesc}"? Esto devolverá $${creditAmount.toLocaleString('es-AR')} al saldo pendiente del cliente.`)) return;
+    if (!(await confirm(`¿Anular recibo "${receiptDesc}" por $${creditAmount.toLocaleString('es-AR')}?`))) return;
     try {
       const res = await api.deleteReceipt(txId);
-      alert(res.message || 'Recibo anulado y eliminado correctamente.');
+      setActionBanner({ type: 'success', text: res.message || 'Recibo anulado.' });
       setSelectedTransaction(null);
       fetchTransactions();
     } catch (err: any) {
-      alert(err?.response?.data?.error || err?.message || 'Error al anular recibo.');
+      setActionBanner({ type: 'error', text: err?.response?.data?.error || err?.message || 'Error al anular recibo.' });
     }
   };
 
   return (
-    <div className="modal-overlay">
-      <div className="modal-content" style={{ maxWidth: '920px', width: '95%' }}>
-        <div className="no-print" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-          <div>
-            <h2 style={{ margin: 0, fontSize: '1.25rem' }}>Resumen de Cuenta A4</h2>
-            <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '0.88rem' }}>Cliente: <strong>{client.name}</strong></p>
-          </div>
-          <button className="btn btn-ghost" onClick={onClose}><X size={20} /></button>
+    <NativeModalDialog
+      isOpen={Boolean(client)}
+      onClose={onClose}
+      ariaLabelledBy="resumen-cuenta-title"
+      className="print-modal"
+      style={{ maxWidth: '920px', width: '95vw', maxHeight: '92vh', padding: '22px', borderRadius: '12px' }}
+    >
+      <div className="print-content-box" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        <div className="no-print" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h2 id="resumen-cuenta-title" style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700 }}>
+            Resumen de cuenta · {client.name}
+          </h2>
+          <button type="button" className="btn btn-ghost" aria-label="Cerrar" onClick={onClose}>
+            <X size={20} />
+          </button>
         </div>
 
-        <div className="no-print" style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '20px', backgroundColor: 'var(--bg-light)', padding: '12px 16px', borderRadius: '8px', flexWrap: 'wrap' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <Calendar size={16} color="var(--text-secondary)" />
-            <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>Rango:</span>
+        {actionBanner && (
+          <div
+            className="no-print"
+            role={actionBanner.type === 'error' ? 'alert' : 'status'}
+            style={{
+              padding: '9px 12px',
+              borderRadius: '6px',
+              fontSize: '0.82rem',
+              backgroundColor: actionBanner.type === 'error' ? '#fef2f2' : '#f0fdf4',
+              border: `1px solid ${actionBanner.type === 'error' ? '#fecaca' : '#bbf7d0'}`,
+              color: actionBanner.type === 'error' ? '#991b1b' : '#166534',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            }}
+          >
+            <span>{actionBanner.text}</span>
+            <button type="button" className="btn btn-ghost" style={{ padding: '2px 6px', fontSize: '0.75rem' }} onClick={() => setActionBanner(null)}>Cerrar</button>
           </div>
-          <select className="input" style={{ width: 'auto', padding: '6px 12px', fontSize: '0.84rem' }} value={dateRange} onChange={(e) => setDateRange(e.target.value)}>
-            <option value="7days">Últimos 7 días</option>
-            <option value="30days">Últimos 30 días</option>
-            <option value="90days">Últimos 90 días</option>
-            <option value="all">Histórico completo</option>
-            <option value="custom">Rango personalizado...</option>
-          </select>
+        )}
 
-          <select className="input" style={{ width: 'auto', padding: '6px 12px', fontSize: '0.84rem' }} value={branchFilter} onChange={(e) => setBranchFilter(e.target.value as any)}>
-            <option value="ALL">Todas las Sucursales (A + X)</option>
-            <option value="OFFICIAL">Sucursal A (Oficial)</option>
-            <option value="INTERNAL">Sucursal X (Interno)</option>
+        <div className="no-print" style={{ display: 'flex', gap: '10px', alignItems: 'center', backgroundColor: '#f8fafc', padding: '10px 14px', borderRadius: '8px', flexWrap: 'wrap', border: '1px solid var(--border-color)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Calendar size={15} color="var(--text-secondary)" />
+            <select aria-label="Rango de fechas" className="input" style={{ width: 'auto', padding: '6px 10px', fontSize: '0.84rem' }} value={dateRange} onChange={(e) => setDateRange(e.target.value)}>
+              <option value="7days">7 días</option>
+              <option value="30days">30 días</option>
+              <option value="90days">90 días</option>
+              <option value="all">Histórico</option>
+              <option value="custom">Personalizado</option>
+            </select>
+          </div>
+
+          <select aria-label="Sucursal" className="input" style={{ width: 'auto', padding: '6px 10px', fontSize: '0.84rem' }} value={branchFilter} onChange={(e) => setBranchFilter(e.target.value as any)}>
+            <option value="ALL">Todas (A + X)</option>
+            <option value="OFFICIAL">Sucursal A</option>
+            <option value="INTERNAL">Sucursal X</option>
           </select>
 
           {dateRange === 'custom' && (
-            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-              <input type="date" className="input" style={{ padding: '5px 10px', fontSize: '0.82rem' }} value={customStart} onChange={(e) => setCustomStart(e.target.value)} />
-              <span>a</span>
-              <input type="date" className="input" style={{ padding: '5px 10px', fontSize: '0.82rem' }} value={customEnd} onChange={(e) => setCustomEnd(e.target.value)} />
+            <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+              <input aria-label="Desde" type="date" className="input" style={{ padding: '5px 8px', fontSize: '0.82rem' }} value={customStart} onChange={(e) => setCustomStart(e.target.value)} />
+              <span>-</span>
+              <input aria-label="Hasta" type="date" className="input" style={{ padding: '5px 8px', fontSize: '0.82rem' }} value={customEnd} onChange={(e) => setCustomEnd(e.target.value)} />
             </div>
           )}
 
           <div style={{ flex: 1 }} />
-          <button className="btn btn-primary" onClick={() => window.print()} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.84rem' }}>
-            <Printer size={16} /> Imprimir Resumen A4
+          <button type="button" className="btn btn-primary" onClick={() => window.print()} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.84rem' }}>
+            <Printer size={15} /> Imprimir
           </button>
         </div>
 
-        <div className="print-only-container" style={{ backgroundColor: '#fff', padding: '20px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '22px', borderBottom: '2px solid #111827', paddingBottom: '14px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-              <img src="/logo.png" alt="Logo Distribuidora" style={{ height: '44px', width: 'auto', objectFit: 'contain' }} />
-              <div style={{ textAlign: 'left', lineHeight: '1.3' }}>
-                <strong style={{ fontSize: '1.05rem', color: '#111827' }}>{companyName}</strong>
-                {companyDireccion && <div style={{ fontSize: '0.72rem', color: '#6b7280' }}>{companyDireccion}</div>}
-                <div style={{ fontSize: '0.72rem', color: '#6b7280' }}>
-                  {companyCuit && <span>CUIT: {companyCuit}</span>}
-                  {companyCuit && (companyTelefono || companyEmail) && <span style={{ margin: '0 6px' }}>|</span>}
-                  {companyTelefono && <span>Tel: {companyTelefono}</span>}
-                  {companyTelefono && companyEmail && <span style={{ margin: '0 6px' }}>|</span>}
-                  {companyEmail && <span>{companyEmail}</span>}
+        <div className="print-modal-scroll" style={{ maxHeight: '64vh', overflowY: 'auto' }}>
+          <div id="print-area" className="print-only-container" style={{ backgroundColor: '#fff', padding: '20px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '2px solid #111827', paddingBottom: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <img src="/logo.png" alt="Logo Distribuidora" style={{ height: '42px', width: 'auto', objectFit: 'contain' }} />
+                <div style={{ textAlign: 'left', lineHeight: '1.3' }}>
+                  <strong style={{ fontSize: '1.02rem', color: '#111827' }}>{companyName}</strong>
+                  {companyDireccion && <div style={{ fontSize: '0.72rem', color: '#6b7280' }}>{companyDireccion}</div>}
+                  <div style={{ fontSize: '0.72rem', color: '#6b7280' }}>
+                    {companyCuit && <span>CUIT: {companyCuit}</span>}
+                    {companyCuit && (companyTelefono || companyEmail) && <span style={{ margin: '0 6px' }}>|</span>}
+                    {companyTelefono && <span>{companyTelefono}</span>}
+                    {companyTelefono && companyEmail && <span style={{ margin: '0 6px' }}>|</span>}
+                    {companyEmail && <span>{companyEmail}</span>}
+                  </div>
                 </div>
               </div>
+              <div style={{ textAlign: 'right', lineHeight: '1.3' }}>
+                <h2 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: '#111827' }}>RESUMEN DE CUENTA</h2>
+                <div className="tabular-nums" style={{ fontSize: '0.78rem', color: '#6b7280', marginTop: '2px' }}>{new Date().toLocaleDateString('es-AR')}</div>
+              </div>
             </div>
-            <div style={{ textAlign: 'right', lineHeight: '1.3' }}>
-              <h2 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, color: '#111827' }}>RESUMEN DE CUENTA</h2>
-              <div style={{ fontSize: '0.78rem', color: '#6b7280', marginTop: '2px' }}>Emisión: <strong>{new Date().toLocaleDateString('es-AR')}</strong></div>
-            </div>
-          </div>
 
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '6px', padding: '12px 16px', marginBottom: '20px' }}>
-            <div>
-              <div style={{ fontSize: '0.7rem', textTransform: 'uppercase', color: '#6b7280', fontWeight: 600 }}>Cliente</div>
-              <strong style={{ fontSize: '1.08rem', color: '#111827' }}>{client.name}</strong>
-              {(client.cuit || client.phone) && (
-                <div style={{ fontSize: '0.78rem', color: '#4b5563', marginTop: '2px' }}>
-                  {client.cuit && <span>CUIT: {client.cuit}</span>}
-                  {client.cuit && client.phone && <span style={{ margin: '0 6px' }}>|</span>}
-                  {client.phone && <span>Tel: {client.phone}</span>}
-                </div>
-              )}
-            </div>
-            <div style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: '0.7rem', textTransform: 'uppercase', color: '#6b7280', fontWeight: 600 }}>Saldo Actual</div>
-              <strong style={{ fontSize: '1.25rem', color: Number(client.outstandingBalance) > 0 ? 'var(--color-corp-red)' : '#111827' }}>
-                ${Math.round(Number(client.outstandingBalance || 0)).toLocaleString('es-AR')}
-              </strong>
-            </div>
-          </div>
-
-          {loading ? (
-            <div style={{ textAlign: 'center', padding: '40px' }}>Cargando movimientos...</div>
-          ) : (
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.88rem' }}>
-              <thead>
-                <tr style={{ backgroundColor: '#f5f5f5', borderBottom: '1px solid #ddd' }}>
-                  <th className="no-print" style={{ padding: '10px', textAlign: 'left' }}>ID</th>
-                  <th style={{ padding: '10px', textAlign: 'left' }}>Fecha</th>
-                  <th style={{ padding: '10px', textAlign: 'left' }}>Comprobante</th>
-                  <th style={{ padding: '10px', textAlign: 'right' }}>Debe</th>
-                  <th style={{ padding: '10px', textAlign: 'right' }}>Haber</th>
-                </tr>
-              </thead>
-              <tbody>
-                {transactions.length === 0 ? (
-                  <tr><td colSpan={5} style={{ textAlign: 'center', padding: '20px' }}>No hay movimientos en el rango seleccionado.</td></tr>
-                ) : (
-                  transactions.map((t, idx) => {
-                    const isClickable = t.id && (t.id.startsWith('order-') || t.id.startsWith('credit-note-') || t.id.startsWith('transaction-') || t.id.startsWith('withholding-'));
-                    const movId = t?.movementId ? String(t.movementId) : '-';
-                    return (
-                      <tr key={idx} style={{ borderBottom: '1px solid #eee' }}>
-                        <td className="no-print" style={{ padding: '10px' }}>
-                          {isClickable ? (
-                            <button style={{ background: 'none', border: 'none', color: 'var(--text-primary)', textDecoration: 'underline', cursor: 'pointer', fontWeight: 600, padding: 0 }} disabled={viewLoading} onClick={() => handleViewDetail(t.id)}>{movId}</button>
-                          ) : <span style={{ color: 'var(--text-secondary)' }}>{movId}</span>}
-                        </td>
-                        <td style={{ padding: '10px' }}>{t.isPureDate ? t.date.toLocaleDateString('es-AR', { timeZone: 'UTC' }) : t.date.toLocaleDateString('es-AR')}</td>
-                        <td style={{ padding: '10px' }}>
-                          {isClickable ? (
-                            <>
-                              <button className="no-print" style={{ background: 'none', border: 'none', color: 'var(--text-primary)', textDecoration: 'underline', cursor: 'pointer', padding: 0, textAlign: 'left' }} disabled={viewLoading} onClick={() => handleViewDetail(t.id)}>{t.description}</button>
-                              <span className="print-only">{t.description}</span>
-                            </>
-                          ) : t.description}
-                        </td>
-                        <td style={{ padding: '10px', textAlign: 'right', color: t.debit > 0 ? 'var(--color-danger)' : 'inherit' }}>{t.debit > 0 ? `$${Math.round(t.debit).toLocaleString('es-AR')}` : ''}</td>
-                        <td style={{ padding: '10px', textAlign: 'right', color: t.credit > 0 ? '#059669' : 'inherit', fontWeight: t.credit > 0 ? 600 : 400 }}>{t.credit > 0 ? `$${Math.round(t.credit).toLocaleString('es-AR')}` : ''}</td>
-                      </tr>
-                    );
-                  })
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '6px', padding: '12px 16px', marginBottom: '18px' }}>
+              <div>
+                <div style={{ fontSize: '0.7rem', textTransform: 'uppercase', color: '#6b7280', fontWeight: 600 }}>Cliente</div>
+                <strong style={{ fontSize: '1.05rem', color: '#111827' }}>{client.name}</strong>
+                {(client.cuit || client.phone) && (
+                  <div className="tabular-nums" style={{ fontSize: '0.78rem', color: '#4b5563', marginTop: '2px' }}>
+                    {client.cuit && <span>CUIT: {client.cuit}</span>}
+                    {client.cuit && client.phone && <span style={{ margin: '0 6px' }}>|</span>}
+                    {client.phone && <span>{client.phone}</span>}
+                  </div>
                 )}
-              </tbody>
-            </table>
-          )}
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: '0.7rem', textTransform: 'uppercase', color: '#6b7280', fontWeight: 600 }}>Saldo</div>
+                <strong className="tabular-nums" style={{ fontSize: '1.25rem', color: Number(client.outstandingBalance) > 0 ? 'var(--color-corp-red)' : '#111827' }}>
+                  ${Math.round(Number(client.outstandingBalance || 0)).toLocaleString('es-AR')}
+                </strong>
+              </div>
+            </div>
+
+            {loading ? (
+              <div style={{ textAlign: 'center', padding: '32px' }}>Cargando...</div>
+            ) : (
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.86rem' }}>
+                <thead>
+                  <tr style={{ backgroundColor: '#f5f5f5', borderBottom: '1px solid #ddd' }}>
+                    <th scope="col" className="no-print" style={{ padding: '9px', textAlign: 'left' }}>ID</th>
+                    <th scope="col" style={{ padding: '9px', textAlign: 'left' }}>Fecha</th>
+                    <th scope="col" style={{ padding: '9px', textAlign: 'left' }}>Comprobante</th>
+                    <th scope="col" style={{ padding: '9px', textAlign: 'right' }}>Debe</th>
+                    <th scope="col" style={{ padding: '9px', textAlign: 'right' }}>Haber</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {transactions.length === 0 ? (
+                    <tr><td colSpan={5} style={{ textAlign: 'center', padding: '20px', color: 'var(--text-secondary)' }}>Sin movimientos</td></tr>
+                  ) : (
+                    transactions.map((t, idx) => {
+                      const isClickable = t.id && (t.id.startsWith('order-') || t.id.startsWith('credit-note-') || t.id.startsWith('transaction-') || t.id.startsWith('withholding-'));
+                      const movId = t?.movementId ? String(t.movementId) : '-';
+                      return (
+                        <tr key={idx} style={{ borderBottom: '1px solid #eee' }}>
+                          <td className="no-print tabular-nums" style={{ padding: '9px' }}>
+                            {isClickable ? (
+                              <button type="button" style={{ background: 'none', border: 'none', color: 'var(--text-primary)', textDecoration: 'underline', cursor: 'pointer', fontWeight: 600, padding: 0 }} disabled={viewLoading} onClick={() => handleViewDetail(t.id)}>{movId}</button>
+                            ) : <span style={{ color: 'var(--text-secondary)' }}>{movId}</span>}
+                          </td>
+                          <td className="tabular-nums" style={{ padding: '9px' }}>{t.isPureDate ? t.date.toLocaleDateString('es-AR', { timeZone: 'UTC' }) : t.date.toLocaleDateString('es-AR')}</td>
+                          <td style={{ padding: '9px' }}>
+                            {isClickable ? (
+                              <>
+                                <button type="button" className="no-print" style={{ background: 'none', border: 'none', color: 'var(--text-primary)', textDecoration: 'underline', cursor: 'pointer', padding: 0, textAlign: 'left' }} disabled={viewLoading} onClick={() => handleViewDetail(t.id)}>{t.description}</button>
+                                <span className="resumen-print-inline">{t.description}</span>
+                              </>
+                            ) : t.description}
+                          </td>
+                          <td className="tabular-nums" style={{ padding: '9px', textAlign: 'right', color: t.debit > 0 ? 'var(--color-danger)' : 'inherit' }}>{t.debit > 0 ? `$${Math.round(t.debit).toLocaleString('es-AR')}` : ''}</td>
+                          <td className="tabular-nums" style={{ padding: '9px', textAlign: 'right', color: t.credit > 0 ? '#059669' : 'inherit', fontWeight: t.credit > 0 ? 600 : 400 }}>{t.credit > 0 ? `$${Math.round(t.credit).toLocaleString('es-AR')}` : ''}</td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            )}
+          </div>
         </div>
       </div>
 
@@ -274,16 +307,13 @@ export default function ResumenCuentaModal({ client, onClose }: ResumenCuentaMod
       />
 
       <style>{`
-        .print-only { display: none; }
+        .resumen-print-inline { display: none; }
         @media print {
-          body * { visibility: hidden; }
-          .modal-content, .modal-content * { visibility: visible; }
           .no-print { display: none !important; }
-          .print-only { display: inline !important; }
-          .modal-content { position: absolute; left: 0; top: 0; width: 100% !important; max-width: 100% !important; padding: 0 !important; border: none !important; box-shadow: none !important; }
+          .resumen-print-inline { display: inline !important; position: static !important; }
           .print-only-container { border: none !important; padding: 0 !important; }
         }
       `}</style>
-    </div>
+    </NativeModalDialog>
   );
 }

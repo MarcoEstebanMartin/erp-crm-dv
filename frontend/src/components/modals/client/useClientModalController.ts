@@ -119,14 +119,14 @@ export function useClientModalController({
       if (afipData.alreadyRegistered && clientModal.mode === 'create' && afipData.existingPersona) {
         setModalBanner({
           tone: 'warning',
-          text: `⚠️ Este CUIT ya está registrado en tu padrón como "${afipData.existingPersona.name}".`,
+          text: `CUIT ya registrado como "${afipData.existingPersona.name}".`,
           existingClientId: afipData.existingPersona.id,
         });
       } else {
         const hasAddress = Boolean(afipData.address);
         setModalBanner({
           tone: 'success',
-          text: `✓ ${afipData.name}`,
+          text: `${afipData.name}`,
         });
         if (!hasAddress) {
           setTimeout(() => addressInputRef.current?.focus(), 60);
@@ -152,7 +152,7 @@ export function useClientModalController({
     e.preventDefault();
     const { mode, data } = clientModal;
     if (!data.name || !data.name.trim()) {
-      setModalBanner({ tone: 'error', text: 'El Nombre Comercial / Razón Social es obligatorio.' });
+      setModalBanner({ tone: 'error', text: 'El nombre es obligatorio.' });
       return;
     }
 
@@ -184,7 +184,7 @@ export function useClientModalController({
       else await api.updatePersona(data.id, payload);
 
       setClientModal({ ...clientModal, open: false });
-      setSuccessMsg('Persona guardada exitosamente.');
+      setSuccessMsg('Guardado.');
       fetchData();
       setClientsVersion((prev) => prev + 1);
     } catch (err: any) {

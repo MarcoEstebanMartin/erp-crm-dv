@@ -156,7 +156,7 @@ export function useVendedorController(activeTab: string) {
         routeId: effectiveRouteId, latitude: gps?.lat ?? null, longitude: gps?.lng ?? null, idempotencyKey: orderIdempotencyKey,
       });
       markLocalVisit(selectedClient.id);
-      setSuccessMsg(`Modo Sin Señal: El pedido de "${selectedClient.name}" quedó protegido en la cola local y se enviará solo al recuperar red.`);
+      setSuccessMsg(`Pedido de "${selectedClient.name}" guardado offline.`);
       setCart([]); setOrderNotes(''); setSelectedClient(null); setClientFilter('');
     };
 
@@ -170,7 +170,7 @@ export function useVendedorController(activeTab: string) {
         } catch {}
       }
       markLocalVisit(selectedClient.id);
-      setSuccessMsg(`¡Pedido cargado con éxito${gps ? ' + Check-in GPS registrado' : ''}! Se envió a depósito.`);
+      setSuccessMsg(`Pedido enviado${gps ? ' (GPS OK)' : ''}.`);
       setCart([]); setOrderNotes(''); setSelectedClient(null); setClientFilter('');
       fetchData();
     } catch (err: any) {
@@ -208,7 +208,7 @@ export function useVendedorController(activeTab: string) {
         status: 'NO_BUY', noBuyReason: noSaleModal.reason, notes: noSaleModal.notes,
         latitude: gps?.lat ?? null, longitude: gps?.lng ?? null, idempotencyKey: visitIdempotencyKey,
       });
-      setSuccessMsg('Sin conexión. Visita guardada en cola local.');
+      setSuccessMsg('Visita guardada offline.');
       setNoSaleModal(null);
     };
 
@@ -219,7 +219,7 @@ export function useVendedorController(activeTab: string) {
       const [visitsData, routeDetail] = await Promise.all([api.getTodayVisits(), api.getSaleRouteById(selectedRouteId)]);
       setTodayVisits(visitsData.visits || []);
       setClients(routeDetail.route.clients || []);
-      setSuccessMsg('Visita y Check-in GPS registrados con éxito.');
+      setSuccessMsg('Visita registrada.');
       setNoSaleModal(null);
     } catch (err: any) {
       if (isLikelyNetworkError(err)) await enqueueVisit();

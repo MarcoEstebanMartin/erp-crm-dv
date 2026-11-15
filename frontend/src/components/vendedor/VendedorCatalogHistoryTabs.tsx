@@ -12,68 +12,57 @@ interface VendedorHistoryTabProps {
   onEditOrder: (order: Order) => void;
 }
 
-export const VendedorHistoryTab: React.FC<VendedorHistoryTabProps> = ({
-  orders,
-  onViewOrderDetails,
-  onEditOrder,
-}) => {
-  return (
-    <div
-      className="table-container table-container--sticky"
-      role="region"
-      aria-label="Historial de pedidos del vendedor"
-      tabIndex={0}
-    >
-      <table>
-        <thead>
-          <tr>
-            <th scope="col">Fecha</th>
-            <th scope="col">Cliente</th>
-            <th scope="col">Nro Comprobante</th>
-            <th scope="col">Canal</th>
-            <th scope="col">Total</th>
-            <th scope="col">Estado Envío</th>
-            <th scope="col">Acciones</th>
-          </tr>
-        </thead>
-        <tbody>
-          {orders.length === 0 ? (
-            <tr><td colSpan={7} style={{ textAlign: 'center', padding: '24px 0' }}>No registraste pedidos aún.</td></tr>
-          ) : (
-            orders.map((o) => {
-              const statusInfo = getOrderStatusInfo(o);
-              return (
-                <tr key={o.id}>
-                  <td style={{ fontSize: '0.8rem' }}>{new Date(o.createdAt).toLocaleDateString('es-AR')}</td>
-                  <td style={{ fontWeight: 500 }}>{o.client?.name || o.persona?.name || 'S/D'}</td>
-                  <td style={{ fontFamily: 'monospace' }}>{o.invoiceNumber || 'Pendiente'}</td>
-                  <td>
-                    <span className={o.billingType === 'OFFICIAL' ? 'badge badge-official' : 'badge badge-internal'}>
-                      {o.billingType === 'OFFICIAL' ? 'Sucursal A' : 'Sucursal X'}
-                    </span>
-                  </td>
-                  <td style={{ fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>{formatIntegerARS(o.totalAmount)}</td>
-                  <td>
-                    <span className={`badge badge-${statusInfo.badgeClass}`} style={{ backgroundColor: statusInfo.color + '15', color: statusInfo.color, border: `1px solid ${statusInfo.color}30`, fontWeight: 600 }}>
-                      {statusInfo.label}
-                    </span>
-                  </td>
-                  <td style={{ display: 'flex', gap: '6px' }}>
-                    <button type="button" className="btn btn-secondary" style={{ padding: '4px 8px' }} title="Ver Detalle" aria-label={`Ver detalle pedido #${o.id}`} onClick={() => onViewOrderDetails(o)}><Eye size={12} aria-hidden="true" /></button>
-                    <button type="button" className="btn btn-secondary" style={{ padding: '4px 8px' }} title="Imprimir Ticket" aria-label={`Imprimir ticket pedido #${o.id}`} onClick={() => printOrderTicket(o)}><Printer size={12} aria-hidden="true" /></button>
-                    {o.status === 'PENDING' && (
-                      <button type="button" className="btn btn-secondary" style={{ padding: '4px 8px' }} title="Editar Pedido" aria-label={`Editar pedido #${o.id}`} onClick={() => onEditOrder(o)}><Edit size={12} aria-hidden="true" /></button>
-                    )}
-                  </td>
-                </tr>
-              );
-            })
-          )}
-        </tbody>
-      </table>
-    </div>
-  );
-};
+export const VendedorHistoryTab: React.FC<VendedorHistoryTabProps> = ({ orders, onViewOrderDetails, onEditOrder }) => (
+  <div className="table-container table-container--sticky" role="region" aria-label="Historial de pedidos" tabIndex={0}>
+    <table>
+      <thead>
+        <tr>
+          <th scope="col">Fecha</th>
+          <th scope="col">Cliente</th>
+          <th scope="col">Comprobante</th>
+          <th scope="col">Canal</th>
+          <th scope="col">Total</th>
+          <th scope="col">Estado</th>
+          <th scope="col">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {orders.length === 0 ? (
+          <tr><td colSpan={7} style={{ textAlign: 'center', padding: '24px 0' }}>Sin pedidos</td></tr>
+        ) : (
+          orders.map((o) => {
+            const statusInfo = getOrderStatusInfo(o);
+            return (
+              <tr key={o.id}>
+                <td className="tabular-nums" style={{ fontSize: '0.8rem' }}>{new Date(o.createdAt).toLocaleDateString('es-AR')}</td>
+                <td style={{ fontWeight: 500 }}>{o.client?.name || o.persona?.name || '-'}</td>
+                <td className="tabular-nums" style={{ fontFamily: 'monospace' }}>{o.invoiceNumber || 'Pendiente'}</td>
+                <td>
+                  <span className={o.billingType === 'OFFICIAL' ? 'badge badge-official' : 'badge badge-internal'}>
+                    {o.billingType === 'OFFICIAL' ? 'Sucursal A' : 'Sucursal X'}
+                  </span>
+                </td>
+                <td className="tabular-nums" style={{ fontWeight: 600 }}>{formatIntegerARS(o.totalAmount)}</td>
+                <td>
+                  <span className={`badge badge-${statusInfo.badgeClass}`} style={{ backgroundColor: statusInfo.color + '15', color: statusInfo.color, border: `1px solid ${statusInfo.color}30`, fontWeight: 600 }}>
+                    {statusInfo.label}
+                  </span>
+                </td>
+                <td style={{ display: 'flex', gap: '6px' }}>
+                  <button type="button" className="btn btn-secondary" style={{ padding: '4px 8px' }} title="Ver detalle" aria-label={`Ver detalle pedido #${o.id}`} onClick={() => onViewOrderDetails(o)}><Eye size={12} aria-hidden="true" /></button>
+                  <button type="button" className="btn btn-secondary" style={{ padding: '4px 8px' }} title="Imprimir ticket" aria-label={`Imprimir ticket pedido #${o.id}`} onClick={() => printOrderTicket(o)}><Printer size={12} aria-hidden="true" /></button>
+                  {o.status === 'PENDING' && (
+                    <button type="button" className="btn btn-secondary" style={{ padding: '4px 8px' }} title="Editar pedido" aria-label={`Editar pedido #${o.id}`} onClick={() => onEditOrder(o)}><Edit size={12} aria-hidden="true" /></button>
+                  )}
+                </td>
+              </tr>
+            );
+          })
+        )}
+      </tbody>
+    </table>
+  </div>
+);
 
 interface VendedorCatalogReadOnlyTabProps {
   products: Product[];
@@ -86,13 +75,7 @@ interface VendedorCatalogReadOnlyTabProps {
 }
 
 export const VendedorCatalogReadOnlyTab: React.FC<VendedorCatalogReadOnlyTabProps> = ({
-  products,
-  rubros,
-  searchQuery,
-  setSearchQuery,
-  filterRubroId,
-  setFilterRubroId,
-  onOpenPriceListModal,
+  products, rubros, searchQuery, setSearchQuery, filterRubroId, setFilterRubroId, onOpenPriceListModal,
 }) => {
   const filtered = sortVendedorCatalog(
     products.filter((p) => {
@@ -110,13 +93,15 @@ export const VendedorCatalogReadOnlyTab: React.FC<VendedorCatalogReadOnlyTabProp
   return (
     <div className="no-print">
       <div className="actions-bar" style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap', marginBottom: '16px' }}>
-        <div className="search-input-wrapper" style={{ flex: 1, minWidth: '250px', position: 'relative' }}>
+        <search className="search-input-wrapper" style={{ flex: 1, minWidth: '250px', position: 'relative' }}>
+          <label htmlFor="vendedor-catalog-search" className="sr-only">Buscar producto</label>
           <Search size={14} aria-hidden="true" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)', pointerEvents: 'none' }} />
-          <input type="text" className="input" aria-label="Buscar en el catálogo" placeholder="Buscar en el catálogo..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} style={{ paddingLeft: '34px' }} />
-        </div>
+          <input id="vendedor-catalog-search" type="text" className="input" placeholder="Buscar producto" autoCorrect="off" autoCapitalize="none" spellCheck={false} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} style={{ paddingLeft: '34px' }} />
+        </search>
         <div className="form-group" style={{ margin: 0, minWidth: '180px' }}>
-          <select aria-label="Filtrar catálogo por rubro" className="input" style={{ height: '40px', fontSize: '0.85rem', padding: '8px 12px' }} value={filterRubroId} onChange={(e) => setFilterRubroId(e.target.value)}>
-            <option value="">-- Todos los Rubros --</option>
+          <label htmlFor="vendedor-catalog-rubro" className="sr-only">Rubro</label>
+          <select id="vendedor-catalog-rubro" className="input" style={{ height: '40px', fontSize: '0.85rem', padding: '8px 12px' }} value={filterRubroId} onChange={(e) => setFilterRubroId(e.target.value)}>
+            <option value="">Todos los rubros</option>
             {rubros.map((r) => (<option key={r.id} value={r.id}>{r.name}</option>))}
           </select>
         </div>
@@ -128,14 +113,14 @@ export const VendedorCatalogReadOnlyTab: React.FC<VendedorCatalogReadOnlyTabProp
 
       <div className="catalog-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '8px', padding: '10px 4px' }}>
         {filtered.length === 0 ? (
-          <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-secondary)', gridColumn: '1 / -1' }}>No se encontraron productos.</div>
+          <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-secondary)', gridColumn: '1 / -1' }}>Sin productos</div>
         ) : (
           filtered.map((p) => {
             const imgSrc = p.imageUrl ? (p.imageUrl.startsWith('http') ? p.imageUrl : p.imageUrl.startsWith('/') ? `${p.imageUrl}?v=2.0` : `/uploads/products/${p.imageUrl}?v=2.0`) : null;
             return (
               <div key={p.id} className="product-card" style={{ backgroundColor: '#fff', borderRadius: '8px', border: '1px solid var(--border-color)', overflow: 'hidden', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '10px', position: 'relative' }}>
                 <div style={{ position: 'relative', height: '140px', width: '100%', backgroundColor: '#f8fafc', borderRadius: '6px', overflow: 'hidden', marginBottom: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <span style={{ position: 'absolute', top: '4px', left: '4px', backgroundColor: 'rgba(15, 23, 42, 0.75)', color: '#ffffff', fontFamily: 'monospace', fontSize: '0.68rem', fontWeight: 700, padding: '2px 6px', borderRadius: '4px', zIndex: 3 }}>#{p.sku || p.id}</span>
+                  <span className="tabular-nums" style={{ position: 'absolute', top: '4px', left: '4px', backgroundColor: 'rgba(15, 23, 42, 0.75)', color: '#ffffff', fontFamily: 'monospace', fontSize: '0.68rem', fontWeight: 700, padding: '2px 6px', borderRadius: '4px', zIndex: 3 }}>#{p.sku || p.id}</span>
                   {imgSrc ? (
                     <img src={imgSrc} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'contain', padding: '4px' }} loading="lazy" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
                   ) : (
@@ -145,7 +130,7 @@ export const VendedorCatalogReadOnlyTab: React.FC<VendedorCatalogReadOnlyTabProp
                   )}
                   {p.stock <= 0 && <span style={{ position: 'absolute', top: '4px', right: '4px', background: 'var(--color-danger)', color: '#fff', fontSize: '0.65rem', padding: '2px 6px', borderRadius: '4px', fontWeight: 700, zIndex: 3 }}>Agotado</span>}
                 </div>
-                <span style={{ fontWeight: 800, fontSize: '1.2rem', color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }}>{formatIntegerARS(p.listPrice)}</span>
+                <span className="tabular-nums" style={{ fontWeight: 800, fontSize: '1.2rem', color: 'var(--text-primary)' }}>{formatIntegerARS(p.listPrice)}</span>
                 <div style={{ fontWeight: 600, fontSize: '0.8rem', marginTop: '6px', textAlign: 'center' }}>{p.name}</div>
               </div>
             );
