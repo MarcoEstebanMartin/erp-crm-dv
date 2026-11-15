@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import type { Product, ProductLot } from '../../types';
 import { SECTORS_INFO } from './depositomapaData';
-import { X, AlertCircle, ShieldCheck, Lock } from 'lucide-react';
+import { X, AlertCircle, Lock, Layers } from 'lucide-react';
+import { NativeModalDialog } from '../modals/NativeModalDialog';
 import { api } from '../../utils/api';
 import { useConfirm } from '../../context/ConfirmContext';
 import { Slot3DRackIsometricView } from './Slot3DRackIsometricView';
@@ -20,11 +21,13 @@ interface Slot3DInspectorModalProps {
   onStockUpdated: () => void;
 }
 
-export const Slot3DInspectorModal: React.FC<Slot3DInspectorModalProps> = ({
+type Slot3DInspectorInnerProps = Omit<Slot3DInspectorModalProps, 'slot'> & {
+  slot: NonNullable<Slot3DInspectorModalProps['slot']>;
+};
+
+const Slot3DInspectorInner: React.FC<Slot3DInspectorInnerProps> = ({
   isOpen, onClose, slot, initialLevel, products, onStockUpdated,
 }) => {
-  if (!isOpen || !slot) return null;
-
   const confirm = useConfirm();
   const chamberInfo = SECTORS_INFO[slot.chamber] || SECTORS_INFO.GENERAL;
   const supportedLevels = extractSlotLevels(slot.nivel);
@@ -107,7 +110,7 @@ export const Slot3DInspectorModal: React.FC<Slot3DInspectorModalProps> = ({
         expirationDate: expirationDate || undefined,
         reason,
       });
-      setSuccessMsg(`⚡ Mercadería ubicada en ${targetLocation} (stock comercial conservado sin descalces).`);
+      setSuccessMsg(`Mercadería ubicada en ${targetLocation}.`);
       setShowLoadForm(false); setSelectedProductId(''); setSourceLotId(''); setQuantity(''); setLotNumber('');
       onStockUpdated();
       setTimeout(() => setSuccessMsg(null), 4000);
@@ -137,7 +140,7 @@ export const Slot3DInspectorModal: React.FC<Slot3DInspectorModalProps> = ({
         defaultLocation: p.defaultLocation && p.defaultLocation.toUpperCase().startsWith(slot.code.toUpperCase()) ? null : p.defaultLocation,
         lots: (p.lots || []).map((l) => l.id === lot.id ? { ...l, location: 'S/U' } : l),
       }));
-      setSuccessMsg(`⚡ Posición ${currentLevelCode} liberada (stock resguardado en S/U).`);
+      setSuccessMsg(`Posición ${currentLevelCode} liberada a S/U.`);
       onStockUpdated();
       setTimeout(() => setSuccessMsg(null), 3000);
     } catch (err: any) { setErrorMsg(err.message || 'Error al liberar la posición del slot.'); } finally { setLoading(false); }
@@ -149,7 +152,7 @@ export const Slot3DInspectorModal: React.FC<Slot3DInspectorModalProps> = ({
     try {
       setLoading(true); setErrorMsg(null);
       await api.clearWmsLocation({ locationCode: slot.code, mode: 'UNASSIGN' });
-      setSuccessMsg(`🧹 Slot ${slot.code} liberado por completo (unidades resguardadas en S/U).`);
+      setSuccessMsg(`Slot ${slot.code} liberado a S/U.`);
       onStockUpdated();
       setTimeout(() => setSuccessMsg(null), 3000);
     } catch (err: any) { setErrorMsg(err.message || 'Error al liberar el slot completo.'); } finally { setLoading(false); }
@@ -159,23 +162,29 @@ export const Slot3DInspectorModal: React.FC<Slot3DInspectorModalProps> = ({
   const rack3DLevel: 'A' | 'B' | 'C' = activeLevel === 'B' || activeLevel === 'C' ? activeLevel : 'A';
 
   return (
-    <div className="wms-modal-backdrop" onClick={onClose}>
-      <div className="wms-modal-card" onClick={(e) => e.stopPropagation()}>
+    <NativeModalDialog
+      isOpen={isOpen}
+      onClose={onClose}
+      ariaLabelledBy="wms-slot-3d-title"
+      className="wms-modal-card"
+      style={{ padding: 0, maxWidth: '1040px', width: '95vw', maxHeight: '92vh' }}
+    >
+      <div style={{ display: 'flex', flexDirection: 'column', maxHeight: '92vh' }}>
         <div className="wms-modal-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{ width: '42px', height: '42px', borderRadius: '10px', backgroundColor: chamberInfo.bg, color: chamberInfo.color, border: `1.5px solid ${chamberInfo.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.4rem', fontWeight: 'bold' }}>
-              {chamberInfo.icon}
+            <div style={{ width: '42px', height: '42px', borderRadius: '10px', backgroundColor: chamberInfo.bg, color: chamberInfo.color, border: `1.5px solid ${chamberInfo.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>
+              <Layers size={20} aria-hidden="true" />
             </div>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)' }}>Slot {slot.code}</h3>
-                <span className="badge badge-success" style={{ fontSize: '0.72rem', padding: '3px 8px' }}>
-                  {totalStockInSlot > 0 ? `🟢 ${totalStockInSlot} u. Ubicadas` : '⚪ Vacío / Libre'}
+                <h3 id="wms-slot-3d-title" style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)' }}>Slot {slot.code}</h3>
+                <span className="badge badge-success" style={{ fontSize: '0.72rem', padding: '3px 8px', fontVariantNumeric: 'tabular-nums' }}>
+                  {totalStockInSlot > 0 ? `${totalStockInSlot} u.` : 'Vacío'}
                 </span>
-                {slot.customLabel && <span className="badge badge-secondary" style={{ fontSize: '0.7rem' }}>🏷️ {slot.customLabel}</span>}
+                {slot.customLabel && <span className="badge badge-secondary" style={{ fontSize: '0.7rem' }}>{slot.customLabel}</span>}
               </div>
-              <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                {slot.deposito} • {chamberInfo.label} • Pisos Habilitados: <strong>{slot.nivel}</strong>
+              <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-secondary)', fontVariantNumeric: 'tabular-nums' }}>
+                {slot.deposito} · {chamberInfo.label} · Niveles: <strong>{slot.nivel}</strong>
               </p>
             </div>
           </div>
@@ -183,17 +192,17 @@ export const Slot3DInspectorModal: React.FC<Slot3DInspectorModalProps> = ({
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             {totalStockInSlot > 0 && (
               <button type="button" className="btn btn-sm" style={{ backgroundColor: '#fee2e2', color: '#dc2626', border: '1px solid #fca5a5', fontWeight: 700, fontSize: '0.78rem', padding: '6px 12px', borderRadius: '6px' }} onClick={handleVacateEntireSlot} disabled={loading}>
-                🧹 Liberar Slot a S/U
+                Liberar Slot a S/U
               </button>
             )}
-            <button type="button" className="wms-close-btn" onClick={onClose} aria-label="Cerrar modal"><X size={20} /></button>
+            <button type="button" className="wms-close-btn" onClick={onClose} aria-label="Cerrar"><X size={20} /></button>
           </div>
         </div>
 
         {isSlotBlocked && (
-          <div className="alert alert-danger" style={{ margin: '12px 18px 0 18px', padding: '9px 14px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Lock size={15} />
-            <span>Este slot está bloqueado temporalmente por mantenimiento. Podés liberar su mercadería a S/U, pero no admite nuevas cargas.</span>
+          <div role="alert" className="alert alert-danger" style={{ margin: '12px 18px 0 18px', padding: '9px 14px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Lock size={15} aria-hidden="true" />
+            <span>Slot bloqueado: solo admite liberar mercadería a S/U.</span>
           </div>
         )}
         {errorMsg && <div className="alert alert-danger" style={{ margin: '12px 18px 0 18px', padding: '10px 14px', fontSize: '0.82rem', display: 'flex', alignItems: 'center', gap: '8px' }}><AlertCircle size={16} /><span>{errorMsg}</span></div>}
@@ -227,20 +236,23 @@ export const Slot3DInspectorModal: React.FC<Slot3DInspectorModalProps> = ({
                     <span className="badge badge-secondary" style={{ fontSize: '0.72rem' }}>{currentItems.length} lote(s)</span>
                     {currentItems.length > 0 && !isSlotBlocked && (
                       <button type="button" className="btn btn-sm btn-primary" style={{ fontSize: '0.76rem', padding: '4px 10px', borderRadius: '6px', fontWeight: 700 }} onClick={() => setShowLoadForm(true)}>
-                        ➕ Ubicar Mercadería
+                        Ubicar Mercadería
                       </button>
                     )}
                   </div>
                 </div>
 
                 {currentItems.length === 0 ? (
-                  <div style={{ padding: '30px 10px', textAlign: 'center', backgroundColor: '#fafafa', border: '1px dashed var(--border-color)', borderRadius: '8px' }}>
-                    <div style={{ fontSize: '2.2rem', marginBottom: '6px' }}>{isSlotBlocked ? '🔒' : '⚪'}</div>
-                    <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-primary)' }}>Piso Vacío</div>
-                    <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', margin: '4px 0 14px 0' }}>No hay unidades ubicadas en el Nivel {activeLevel} de esta estantería.</p>
+                  <div style={{ padding: '24px 10px', textAlign: 'center', backgroundColor: '#fafafa', border: '1px dashed var(--border-color)', borderRadius: '8px' }}>
+                    {isSlotBlocked && (
+                      <div style={{ marginBottom: '6px', color: '#dc2626', display: 'flex', justifyContent: 'center' }}>
+                        <Lock size={22} aria-hidden="true" />
+                      </div>
+                    )}
+                    <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-primary)', marginBottom: !isSlotBlocked ? '12px' : 0 }}>Piso Vacío</div>
                     {!isSlotBlocked && (
                       <button type="button" className="btn btn-primary" style={{ fontSize: '0.82rem', padding: '7px 14px', fontWeight: 600 }} onClick={() => setShowLoadForm(true)}>
-                        ➕ Ubicar Mercadería Existente Aquí
+                        Ubicar Mercadería
                       </button>
                     )}
                   </div>
@@ -271,7 +283,7 @@ export const Slot3DInspectorModal: React.FC<Slot3DInspectorModalProps> = ({
                             </div>
                           )}
                           <button type="button" className="btn btn-outline btn-sm" onClick={() => handleVacatePosition(product, lot)} style={{ fontSize: '0.76rem', padding: '4px 10px', borderRadius: '6px', color: '#e30613', borderColor: '#fca5a5', fontWeight: 700, marginLeft: 'auto' }}>
-                            ↩️ Liberar a S/U
+                            Liberar a S/U
                           </button>
                         </div>
                       </div>
@@ -283,13 +295,15 @@ export const Slot3DInspectorModal: React.FC<Slot3DInspectorModalProps> = ({
           </div>
         </div>
 
-        <div className="wms-modal-footer">
-          <div style={{ fontSize: '0.76rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <ShieldCheck size={14} color="#22c55e" /><span>Regla Contable Δ Stock = 0: Reubicar o liberar nunca altera el stock comercial</span>
-          </div>
-          <button type="button" className="btn btn-secondary" onClick={onClose} style={{ fontSize: '0.82rem', padding: '6px 14px' }}>Cerrar Inspector</button>
+        <div className="wms-modal-footer" style={{ justifyContent: 'flex-end' }}>
+          <button type="button" className="btn btn-secondary" onClick={onClose} style={{ fontSize: '0.82rem', padding: '6px 14px' }}>Cerrar</button>
         </div>
       </div>
-    </div>
+    </NativeModalDialog>
   );
+};
+
+export const Slot3DInspectorModal: React.FC<Slot3DInspectorModalProps> = (props) => {
+  if (!props.isOpen || !props.slot) return null;
+  return <Slot3DInspectorInner key={props.slot.code} {...props} slot={props.slot} />;
 };

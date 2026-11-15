@@ -42,7 +42,7 @@ export default function RubrosList({ onRubroUpdated }: RubrosListProps) {
     setEditingId(rubro.id);
     setEditName(rubro.name);
     setEditPickingZone(rubro.pickingZone || 'CAJAS');
-    // Extraer el porcentaje de rentabilidad base 1 (ej: 1.25 -> 25)
+    // Extraer porcentaje base 1 (1.25 -> 25)
     const marginNum = rubro.profitMargin || 1.25;
     const percentage = Math.round((marginNum - 1) * 100);
     setEditMargin(percentage.toString());
@@ -64,7 +64,7 @@ export default function RubrosList({ onRubroUpdated }: RubrosListProps) {
       return;
     }
     
-    // Convertir porcentaje a multiplicador (ej: 25 -> 1.25)
+    // Convertir porcentaje a multiplicador (25 -> 1.25)
     const multiplier = 1 + (marginVal / 100);
 
     try {
@@ -116,40 +116,35 @@ export default function RubrosList({ onRubroUpdated }: RubrosListProps) {
     <div style={{ animation: 'fadeIn 0.3s ease-out' }}>
       
       {errorMsg && (
-        <div style={{ backgroundColor: 'var(--color-danger)', color: '#fff', padding: '12px 16px', borderRadius: '8px', marginBottom: '16px', fontSize: '0.9rem' }}>
+        <div role="alert" style={{ backgroundColor: 'var(--color-danger)', color: '#fff', padding: '12px 16px', borderRadius: '8px', marginBottom: '16px', fontSize: '0.9rem' }}>
           {errorMsg}
         </div>
       )}
       {successMsg && (
-        <div style={{ backgroundColor: 'var(--color-success)', color: '#fff', padding: '12px 16px', borderRadius: '8px', marginBottom: '16px', fontSize: '0.9rem' }}>
+        <div role="status" style={{ backgroundColor: 'var(--color-success)', color: '#fff', padding: '12px 16px', borderRadius: '8px', marginBottom: '16px', fontSize: '0.9rem' }}>
           {successMsg}
         </div>
       )}
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <div>
-          <h2 style={{ fontSize: '1.2rem', fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>Gestión de Rubros y Rentabilidad</h2>
-          <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: '4px 0 0 0' }}>
-            Al modificar la rentabilidad de un rubro, los precios de todos sus productos se recalcularán automáticamente.
-          </p>
-        </div>
+        <h2 style={{ fontSize: '1.2rem', fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>Rubros</h2>
         {!isCreating && (
-          <button className="btn btn-primary" style={{ borderRadius: '8px' }} onClick={() => setIsCreating(true)}>
-            <Plus size={16} />
+          <button type="button" className="btn btn-primary" style={{ borderRadius: '8px' }} onClick={() => setIsCreating(true)}>
+            <Plus size={16} aria-hidden="true" />
             <span>Nuevo Rubro</span>
           </button>
         )}
       </div>
 
-      <div className="table-container" style={{ borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--border-color)', boxShadow: '0 4px 12px rgba(0,0,0,0.03)' }}>
+      <div className="table-container table-container--sticky" role="region" aria-label="Rubros y rentabilidad" tabIndex={0} style={{ borderRadius: '12px', border: '1px solid var(--border-color)', boxShadow: '0 4px 12px rgba(0,0,0,0.03)' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead style={{ backgroundColor: 'var(--bg-muted)' }}>
             <tr>
-              <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>ID</th>
-              <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>RUBRO</th>
-              <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>RENTABILIDAD (%)</th>
-              <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>ZONA PICKING</th>
-              <th style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>ACCIÓN</th>
+              <th scope="col" style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>ID</th>
+              <th scope="col" style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Rubro</th>
+              <th scope="col" style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Rentabilidad (%)</th>
+              <th scope="col" style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Zona Picking</th>
+              <th scope="col" style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Acción</th>
             </tr>
           </thead>
           <tbody>
@@ -162,6 +157,7 @@ export default function RubrosList({ onRubroUpdated }: RubrosListProps) {
                   <input
                     type="text"
                     className="input"
+                    aria-label="Nombre del rubro"
                     placeholder="Nombre del rubro"
                     value={newRubroName}
                     onChange={(e) => setNewRubroName(e.target.value)}
@@ -173,7 +169,8 @@ export default function RubrosList({ onRubroUpdated }: RubrosListProps) {
                   <div style={{ display: 'inline-flex', alignItems: 'center' }}>
                     <input
                       type="number"
-                      className="input"
+                      className="input tabular-nums"
+                      aria-label="Rentabilidad (%)"
                       value={newRubroMargin}
                       onChange={(e) => setNewRubroMargin(e.target.value)}
                       style={{ width: '80px', padding: '6px 10px', fontSize: '0.9rem', borderRadius: '6px', textAlign: 'right' }}
@@ -184,21 +181,22 @@ export default function RubrosList({ onRubroUpdated }: RubrosListProps) {
                 <td style={{ padding: '12px 16px', textAlign: 'center' }}>
                   <select
                     className="select"
+                    aria-label="Zona de picking"
                     value={newRubroPickingZone}
                     onChange={(e) => setNewRubroPickingZone(e.target.value)}
                     style={{ padding: '6px 10px', fontSize: '0.9rem', borderRadius: '6px', minWidth: '130px' }}
                   >
-                    <option value="CAJAS">📦 Cajas / Secos</option>
-                    <option value="FRIO">❄️ Frío / Lácteos</option>
-                    <option value="TABLA">🍾 Bebidas / Tabla</option>
+                    <option value="CAJAS">Cajas / Secos</option>
+                    <option value="FRIO">Frío / Lácteos</option>
+                    <option value="TABLA">Bebidas / Tabla</option>
                   </select>
                 </td>
                 <td style={{ padding: '12px 16px', textAlign: 'right' }}>
                   <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                    <button className="btn btn-primary" style={{ padding: '6px 12px', borderRadius: '6px' }} onClick={handleCreateNew}>
-                      <Check size={16} /> Guardar
+                    <button type="button" className="btn btn-primary" style={{ padding: '6px 12px', borderRadius: '6px' }} onClick={handleCreateNew}>
+                      <Check size={16} aria-hidden="true" /> Guardar
                     </button>
-                    <button className="btn btn-secondary" style={{ padding: '6px 12px', borderRadius: '6px' }} onClick={() => setIsCreating(false)}>
+                    <button type="button" className="btn btn-secondary" style={{ padding: '6px 12px', borderRadius: '6px' }} onClick={() => setIsCreating(false)}>
                       Cancelar
                     </button>
                   </div>
@@ -222,13 +220,14 @@ export default function RubrosList({ onRubroUpdated }: RubrosListProps) {
 
                 return (
                   <tr key={r.id} style={{ borderBottom: '1px solid var(--border-color)', transition: 'background-color 0.2s' }} className="hover-bg-muted">
-                    <td style={{ padding: '12px 16px', fontFamily: 'monospace', color: 'var(--text-secondary)' }}>#{r.id}</td>
+                    <td className="tabular-nums" style={{ padding: '12px 16px', fontFamily: 'monospace', color: 'var(--text-secondary)' }}>#{r.id}</td>
                     
                     <td style={{ padding: '12px 16px' }}>
                       {isEditing ? (
                         <input
                           type="text"
                           className="input"
+                          aria-label={`Nombre de ${r.name}`}
                           value={editName}
                           onChange={(e) => setEditName(e.target.value)}
                           style={{ padding: '6px 10px', fontSize: '0.9rem', borderRadius: '6px' }}
@@ -243,7 +242,8 @@ export default function RubrosList({ onRubroUpdated }: RubrosListProps) {
                         <div style={{ display: 'inline-flex', alignItems: 'center' }}>
                           <input
                             type="number"
-                            className="input"
+                            className="input tabular-nums"
+                            aria-label={`Rentabilidad de ${r.name}`}
                             value={editMargin}
                             onChange={(e) => setEditMargin(e.target.value)}
                             style={{ width: '80px', padding: '6px 10px', fontSize: '0.9rem', borderRadius: '6px', textAlign: 'right' }}
@@ -251,7 +251,7 @@ export default function RubrosList({ onRubroUpdated }: RubrosListProps) {
                           <span style={{ marginLeft: '8px', color: 'var(--text-secondary)', fontWeight: 600 }}>%</span>
                         </div>
                       ) : (
-                        <span style={{ backgroundColor: 'var(--bg-card)', padding: '4px 12px', borderRadius: '20px', fontWeight: 600, fontSize: '0.85rem', color: 'var(--color-primary)', border: '1px solid var(--border-color)' }}>
+                        <span className="tabular-nums" style={{ backgroundColor: 'var(--bg-card)', padding: '4px 12px', borderRadius: '20px', fontWeight: 600, fontSize: '0.85rem', color: 'var(--color-primary)', border: '1px solid var(--border-color)' }}>
                           {percentage}%
                         </span>
                       )}
@@ -261,13 +261,14 @@ export default function RubrosList({ onRubroUpdated }: RubrosListProps) {
                       {isEditing ? (
                         <select
                           className="select"
+                          aria-label={`Zona de picking de ${r.name}`}
                           value={editPickingZone}
                           onChange={(e) => setEditPickingZone(e.target.value)}
                           style={{ padding: '6px 10px', fontSize: '0.9rem', borderRadius: '6px', minWidth: '130px' }}
                         >
-                          <option value="CAJAS">📦 Cajas / Secos</option>
-                          <option value="FRIO">❄️ Frío / Lácteos</option>
-                          <option value="TABLA">🍾 Bebidas / Tabla</option>
+                          <option value="CAJAS">Cajas / Secos</option>
+                          <option value="FRIO">Frío / Lácteos</option>
+                          <option value="TABLA">Bebidas / Tabla</option>
                         </select>
                       ) : (
                         <span style={{
@@ -282,7 +283,7 @@ export default function RubrosList({ onRubroUpdated }: RubrosListProps) {
                           color: r.pickingZone === 'FRIO' ? '#007AFF' : r.pickingZone === 'TABLA' ? '#FF9500' : '#8E8E93',
                           border: r.pickingZone === 'FRIO' ? '1px solid rgba(0, 122, 255, 0.15)' : r.pickingZone === 'TABLA' ? '1px solid rgba(255, 149, 0, 0.15)' : '1px solid rgba(142, 142, 147, 0.15)'
                         }}>
-                          {r.pickingZone === 'FRIO' ? '❄️ Frío' : r.pickingZone === 'TABLA' ? '🍾 Tabla' : '📦 Cajas'}
+                          {r.pickingZone === 'FRIO' ? 'Frío' : r.pickingZone === 'TABLA' ? 'Tabla' : 'Cajas'}
                         </span>
                       )}
                     </td>
@@ -290,21 +291,22 @@ export default function RubrosList({ onRubroUpdated }: RubrosListProps) {
                     <td style={{ padding: '12px 16px', textAlign: 'right' }}>
                       {isEditing ? (
                         <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                          <button className="btn btn-primary" style={{ padding: '6px', borderRadius: '6px' }} onClick={() => handleSaveEdit(r.id)} title="Guardar">
-                            <Check size={16} />
+                          <button type="button" className="btn btn-primary" style={{ padding: '6px', borderRadius: '6px' }} onClick={() => handleSaveEdit(r.id)} aria-label="Guardar">
+                            <Check size={16} aria-hidden="true" />
                           </button>
-                          <button className="btn btn-secondary" style={{ padding: '6px', borderRadius: '6px' }} onClick={handleCancelEdit} title="Cancelar">
-                            <X size={16} />
+                          <button type="button" className="btn btn-secondary" style={{ padding: '6px', borderRadius: '6px' }} onClick={handleCancelEdit} aria-label="Cancelar">
+                            <X size={16} aria-hidden="true" />
                           </button>
                         </div>
                       ) : (
                         <button 
+                          type="button"
                           className="btn btn-ghost" 
                           style={{ padding: '6px', borderRadius: '6px', color: 'var(--text-secondary)' }} 
-                          title="Editar rubro"
+                          aria-label={`Editar ${r.name}`}
                           onClick={() => handleEditClick(r)}
                         >
-                          <Edit size={16} />
+                          <Edit size={16} aria-hidden="true" />
                         </button>
                       )}
                     </td>

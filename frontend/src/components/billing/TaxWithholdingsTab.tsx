@@ -36,11 +36,8 @@ export default function TaxWithholdingsTab({
         >
           <div>
             <h3 className="card-title" style={{ margin: 0 }}>
-              Declaraciones de Retenciones Impositivas Sufridas
+              Retenciones
             </h3>
-            <p style={{ fontSize: '0.8rem', marginTop: '2px', color: 'var(--text-secondary)' }}>
-              Comprobantes de retención cargados manualmente para deducir saldo fiscal de cuenta corriente.
-            </p>
           </div>
           <button
             type="button"
@@ -48,7 +45,7 @@ export default function TaxWithholdingsTab({
             onClick={() => setShowWithholdingModal(true)}
           >
             <Plus size={16} aria-hidden="true" />
-            Cargar Certificado Retención
+            Cargar Retención
           </button>
         </div>
 
@@ -113,7 +110,7 @@ export default function TaxWithholdingsTab({
                     <td style={{ fontWeight: 500, color: 'var(--text-secondary)' }}>
                       {w.jurisdiction || 'No Aplica'}
                     </td>
-                    <td style={{ textAlign: 'right', fontWeight: 700, color: '#111827' }}>
+                    <td className="tabular-nums" style={{ textAlign: 'right', fontWeight: 700, color: '#111827' }}>
                       ${Number(w.amount).toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                     </td>
                   </tr>

@@ -243,7 +243,7 @@ export function useDirectInvoice({
 
     let qty = Number(directProductQty);
     if (isNaN(qty) || qty <= 0) {
-      alert('La cantidad debe ser mayor a 0');
+      setModalError('La cantidad debe ser mayor a 0.');
       return;
     }
 
@@ -251,7 +251,7 @@ export function useDirectInvoice({
     if (qty < minQty) {
       qty = minQty;
       setDirectProductQty(String(minQty));
-      setModalError(`⚠️ El producto "${prod.name}" exige un mínimo de ${minQty} unidades. Se ajustó automáticamente la cantidad.`);
+      setModalError(`El producto "${prod.name}" exige un mínimo de ${minQty} unidades. Se ajustó automáticamente la cantidad.`);
     }
 
     const finalUnitPrice = computeClientUnitPrice(
@@ -355,7 +355,7 @@ export function useDirectInvoice({
     setIsSubmitting(true);
     try {
       const res = await api.createDirectInvoice(payload);
-      setSuccessMsg(`✅ Factura directa emitida con éxito. Comprobante: ${res?.invoiceNumber || 'Emitido'}`);
+      setSuccessMsg(`Factura directa emitida. Comprobante: ${res?.invoiceNumber || 'Emitido'}`);
       setShowDirectInvoiceModal(false);
       setModalError(null);
       setDirectCart([]);

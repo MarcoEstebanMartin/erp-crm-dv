@@ -63,11 +63,8 @@ export default function CreditNotesTab(props: CreditNotesTabProps) {
         >
           <div>
             <h3 className="card-title" style={{ margin: 0 }}>
-              Notas de Crédito y Devoluciones Emitidas
+              Notas de Crédito
             </h3>
-            <p style={{ fontSize: '0.8rem', marginTop: '2px', color: 'var(--text-secondary)' }}>
-              Anulación parcial o total de facturas y reingreso trazado de mercadería al stock.
-            </p>
           </div>
           <button
             type="button"
@@ -75,7 +72,7 @@ export default function CreditNotesTab(props: CreditNotesTabProps) {
             onClick={ctrl.openFreeCreditNoteModal}
           >
             <Plus size={16} aria-hidden="true" />
-            Crear Nota de Crédito Libre
+            Nueva Nota de Crédito
           </button>
         </div>
 
@@ -140,7 +137,7 @@ export default function CreditNotesTab(props: CreditNotesTabProps) {
                           </div>
                         )}
                       </td>
-                      <td style={{ fontWeight: 700, textAlign: 'right', color: '#E30613' }}>
+                      <td className="tabular-nums" style={{ fontWeight: 700, textAlign: 'right', color: '#E30613' }}>
                         -${Number(note.totalAmount).toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                       </td>
                       <td>

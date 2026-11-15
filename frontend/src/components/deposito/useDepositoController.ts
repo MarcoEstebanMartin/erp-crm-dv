@@ -229,10 +229,10 @@ export function useDepositoController(activeTab: string, confirm: any) {
           generatedLabels.push({ index: index++, total: totalBultos, zone, client: selectedOrder.persona?.name || selectedOrder.client?.name || 'Cliente', route: selectedOrder.persona?.route || 'RETIRO EN DEPÓSITO', sequence: selectedOrder.persona?.routeSequence ? `VISITA #${selectedOrder.persona.routeSequence}` : 'S/D', orderId: selectedOrder.id });
         }
       };
-      addLabels(bultosData.frio, '❄️ SECTOR FRÍO (FRACCIONADO)');
-      addLabels(bultosData.secos, '📥 SECTOR SECOS (FRACCIONADO)');
-      addLabels(bultosData.tabla, '🍾 BEBIDAS / TABLA (CONSOLID.)');
-      addLabels(bultosData.cajasCerradas, '📦 CAJA CERRADA / ORIGINAL');
+      addLabels(bultosData.frio, 'SECTOR FRÍO (FRACCIONADO)');
+      addLabels(bultosData.secos, 'SECTOR SECOS (FRACCIONADO)');
+      addLabels(bultosData.tabla, 'BEBIDAS / TABLA (CONSOLID.)');
+      addLabels(bultosData.cajasCerradas, 'CAJA CERRADA / ORIGINAL');
 
       playBeep('success');
       setSuccessMsg(`Pedido #${selectedOrder.id} preparado con éxito (${totalBultos} bultos).`);
@@ -275,7 +275,10 @@ export function useDepositoController(activeTab: string, confirm: any) {
 
   const handleBatchStartPicking = async () => {
     const pendingSelected = selectedOrdersList.filter((o) => o.status === OrderStatus.PENDING);
-    if (pendingSelected.length === 0) return alert("No hay pedidos seleccionados en estado 'Esperando Picking'.");
+    if (pendingSelected.length === 0) {
+      setErrorMsg('Seleccioná al menos un pedido pendiente.');
+      return;
+    }
     if (!(await confirm(`¿Deseás pasar los ${pendingSelected.length} pedidos seleccionados a 'En Preparación'?`))) return;
     setLoading(true);
     try {

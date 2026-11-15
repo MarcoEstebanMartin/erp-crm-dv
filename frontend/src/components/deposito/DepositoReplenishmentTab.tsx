@@ -80,9 +80,7 @@ export const DepositoReplenishmentTab: React.FC<DepositoReplenishmentTabProps> =
 
   const handleCreatePO = async (providerId: number, items: any[]) => {
     if (!providerId || providerId === 0) {
-      alert(
-        'No se puede generar orden de compra para productos sin proveedor asignado. Asigná un proveedor al producto primero.',
-      );
+      setErrorMsg('Asigná un proveedor al producto antes de generar la orden de compra.');
       return;
     }
 
@@ -130,21 +128,18 @@ export const DepositoReplenishmentTab: React.FC<DepositoReplenishmentTabProps> =
         }}
       >
         <div>
-          <h3 style={{ margin: 0 }}>Sugerencias de Compra (Reabastecimiento)</h3>
-          <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-            Productos con stock inferior al mínimo o con demanda insatisfecha por pedidos pendientes.
-          </p>
+          <h3 style={{ margin: 0 }}>Reposición</h3>
         </div>
-        <button className="btn btn-secondary" onClick={onRefresh}>
-          <RefreshCw size={16} />
+        <button type="button" className="btn btn-secondary" onClick={onRefresh} aria-label="Actualizar">
+          <RefreshCw size={16} aria-hidden="true" />
         </button>
       </div>
 
       {loading ? (
         <div style={{ padding: '40px 0', textAlign: 'center' }}>
-          <RefreshCw size={24} style={{ animation: 'spin 1.5s linear infinite' }} />
+          <RefreshCw size={24} style={{ animation: 'spin 1.5s linear infinite' }} aria-hidden="true" />
           <p style={{ marginTop: '10px', color: 'var(--text-secondary)' }}>
-            Analizando inventario y pedidos...
+            Analizando inventario...
           </p>
         </div>
       ) : groupedSuggestions.length === 0 ? (
@@ -156,11 +151,8 @@ export const DepositoReplenishmentTab: React.FC<DepositoReplenishmentTabProps> =
             borderRadius: 'var(--radius-md)',
           }}
         >
-          <Check size={32} style={{ color: 'var(--color-success)', marginBottom: '8px' }} />
-          <h4 style={{ margin: 0 }}>¡Stock en Niveles Saludables!</h4>
-          <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-            No se detectaron faltantes ni productos por debajo del stock mínimo.
-          </p>
+          <Check size={32} aria-hidden="true" style={{ color: 'var(--color-success)', marginBottom: '8px' }} />
+          <h4 style={{ margin: 0 }}>Stock al día</h4>
         </div>
       ) : (
         <div className="replenishment-grid">
@@ -200,9 +192,9 @@ export const DepositoReplenishmentTab: React.FC<DepositoReplenishmentTabProps> =
                   <table style={{ width: '100%', fontSize: '0.8rem', borderCollapse: 'collapse' }}>
                     <thead>
                       <tr style={{ borderBottom: '1px solid var(--border-color)', color: 'var(--text-secondary)' }}>
-                        <th style={{ textAlign: 'left', padding: '4px' }}>Artículo</th>
-                        <th style={{ textAlign: 'center', padding: '4px' }}>Déficit</th>
-                        <th style={{ textAlign: 'right', padding: '4px' }}>Costo</th>
+                        <th scope="col" style={{ textAlign: 'left', padding: '4px' }}>Artículo</th>
+                        <th scope="col" style={{ textAlign: 'center', padding: '4px' }}>Déficit</th>
+                        <th scope="col" style={{ textAlign: 'right', padding: '4px' }}>Costo</th>
                       </tr>
                     </thead>
                     <tbody>

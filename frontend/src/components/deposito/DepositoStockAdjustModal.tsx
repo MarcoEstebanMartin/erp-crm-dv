@@ -1,4 +1,5 @@
-import React from 'react';
+import { X } from 'lucide-react';
+import { NativeModalDialog } from '../modals/NativeModalDialog';
 import type { Product } from '../../types';
 import { LOCATION_MAP } from './depositoHelpers';
 import { extractCleanLotNumber, formatCleanExpirationDate } from '../stock/lotLabel';
@@ -42,33 +43,39 @@ export const DepositoStockAdjustModal: React.FC<DepositoStockAdjustModalProps> =
     });
 
   return (
-    <div className="modal-overlay">
-      <div className="modal-content">
+    <NativeModalDialog
+      isOpen={Boolean(stockModal.open && stockModal.product)}
+      onClose={handleClose}
+      ariaLabelledBy="deposito-stock-adjust-title"
+      style={{ maxWidth: '480px', width: '94vw', padding: '24px' }}
+    >
+      <div>
         <div className="modal-header">
-          <h3>Ajustar Stock Físico</h3>
-          <button className="btn btn-ghost" style={{ padding: '4px' }} onClick={handleClose}>
-            ✕
+          <h3 id="deposito-stock-adjust-title" style={{ margin: 0 }}>Ajustar Stock</h3>
+          <button type="button" className="btn btn-ghost" style={{ padding: '4px' }} onClick={handleClose} aria-label="Cerrar">
+            <X size={18} aria-hidden="true" />
           </button>
         </div>
         <form onSubmit={onSubmit}>
           <div style={{ marginBottom: '16px', fontSize: '0.9rem' }}>
             <p>
-              <strong>Artículo:</strong> {stockModal.product.name}
+              <strong>{stockModal.product.name}</strong>
             </p>
-            <p>
-              <strong>SKU:</strong> {stockModal.product.sku}
+            <p style={{ fontFamily: 'monospace', color: 'var(--text-secondary)' }}>
+              SKU: {stockModal.product.sku}
             </p>
-            <p>
-              <strong>Stock actual total:</strong> {stockModal.product.stock} u.
+            <p className="tabular-nums">
+              <strong>Stock actual:</strong> {stockModal.product.stock} u.
             </p>
           </div>
 
           <div className="form-group">
-            <label>Cantidad a Sumar o Restar</label>
+            <label htmlFor="deposito-adjust-qty">Cantidad (+ / -)</label>
             <input
+              id="deposito-adjust-qty"
               type="number"
-              className="input"
-              placeholder="Ej: 50 para sumar, -20 para restar"
+              className="input tabular-nums"
+              placeholder="+50 / -20"
               value={stockModal.quantityChange || ''}
               onChange={(e) =>
                 setStockModal({ ...stockModal, quantityChange: Number(e.target.value) })
@@ -78,8 +85,9 @@ export const DepositoStockAdjustModal: React.FC<DepositoStockAdjustModalProps> =
           </div>
 
           <div className="form-group">
-            <label>Lote Asociado</label>
+            <label htmlFor="deposito-adjust-lot">Lote</label>
             <select
+              id="deposito-adjust-lot"
               className="select"
               value={stockModal.isNewLot ? '__new__' : stockModal.lotNumber}
               onChange={(e) => {
@@ -106,7 +114,7 @@ export const DepositoStockAdjustModal: React.FC<DepositoStockAdjustModalProps> =
                 }
               }}
             >
-              <option value="">Sin lote (Stock Genérico / General)</option>
+              <option value="">Sin lote</option>
               {(stockModal.product?.lots || []).map((lot: any) => (
                 <option key={lot.id} value={lot.lotNumber}>
                   Lote: {extractCleanLotNumber(lot.lotNumber)} ({lot.location || 'S/U'} · Stock: {lot.stock} u. ·{' '}
@@ -121,8 +129,9 @@ export const DepositoStockAdjustModal: React.FC<DepositoStockAdjustModalProps> =
 
           {(stockModal.lotNumber || stockModal.isNewLot) && (
             <div className="form-group">
-              <label>Ubicación Física Estandarizada</label>
+              <label htmlFor="deposito-adjust-location">Ubicación</label>
               <select
+                id="deposito-adjust-location"
                 className="select"
                 value={
                   Object.keys(LOCATION_MAP).includes(stockModal.location)
@@ -142,19 +151,24 @@ export const DepositoStockAdjustModal: React.FC<DepositoStockAdjustModalProps> =
               >
                 {Object.entries(LOCATION_MAP).map(([key, info]) => (
                   <option key={key} value={key}>
-                    {info.icon} {info.label}
+                    {info.label}
                   </option>
                 ))}
-                <option value="__custom__">✍️ Personalizada / Otra...</option>
+                <option value="__custom__">Personalizada / Otra...</option>
               </select>
 
               {(!Object.keys(LOCATION_MAP).includes(stockModal.location) ||
                 stockModal.location === '') && (
                 <input
+                  id="deposito-adjust-custom-location"
                   type="text"
                   className="input"
+                  aria-label="Ubicación personalizada"
+                  autoCorrect="off"
+                  autoCapitalize="none"
+                  spellCheck={false}
                   style={{ marginTop: '8px' }}
-                  placeholder="Escribir ubicación personalizada..."
+                  placeholder="Código de ubicación"
                   value={stockModal.location || ''}
                   onChange={(e) => setStockModal({ ...stockModal, location: e.target.value })}
                 />
@@ -172,19 +186,24 @@ export const DepositoStockAdjustModal: React.FC<DepositoStockAdjustModalProps> =
               }}
             >
               <div className="form-group" style={{ marginBottom: 0 }}>
-                <label>Nro de Lote Nuevo</label>
+                <label htmlFor="deposito-adjust-new-lot">Nuevo Lote</label>
                 <input
+                  id="deposito-adjust-new-lot"
                   type="text"
                   className="input"
-                  placeholder="Ej: L-VENC-01"
+                  placeholder="L-VENC-01"
+                  autoCorrect="off"
+                  autoCapitalize="none"
+                  spellCheck={false}
                   value={stockModal.lotNumber}
                   onChange={(e) => setStockModal({ ...stockModal, lotNumber: e.target.value })}
                   required
                 />
               </div>
               <div className="form-group" style={{ marginBottom: 0 }}>
-                <label>Fecha de Vencimiento</label>
+                <label htmlFor="deposito-adjust-new-exp">Vencimiento</label>
                 <input
+                  id="deposito-adjust-new-exp"
                   type="date"
                   className="input"
                   value={stockModal.expirationDate}
@@ -198,8 +217,9 @@ export const DepositoStockAdjustModal: React.FC<DepositoStockAdjustModalProps> =
           )}
 
           <div className="form-group">
-            <label>Motivo del Ajuste de Stock</label>
+            <label htmlFor="deposito-adjust-reason">Motivo</label>
             <select
+              id="deposito-adjust-reason"
               className="select"
               value={stockModal.reason}
               onChange={(e) => setStockModal({ ...stockModal, reason: e.target.value })}
@@ -222,11 +242,11 @@ export const DepositoStockAdjustModal: React.FC<DepositoStockAdjustModalProps> =
               Cancelar
             </button>
             <button type="submit" className="btn btn-primary" disabled={loading}>
-              {loading ? 'Ajustando...' : 'Aplicar Ajuste'}
+              {loading ? 'Ajustando...' : 'Aplicar'}
             </button>
           </div>
         </form>
       </div>
-    </div>
+    </NativeModalDialog>
   );
 };

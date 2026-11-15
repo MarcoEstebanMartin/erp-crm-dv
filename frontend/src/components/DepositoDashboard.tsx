@@ -50,19 +50,21 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
 
   return (
     <div style={{ width: '100%' }}>
-      <div className="no-print" style={{ display: 'flex', gap: '8px', marginBottom: '20px', flexWrap: 'wrap', borderBottom: '1px solid var(--border-color)', paddingBottom: '12px' }}>
+      <div className="no-print linear-tablist" role="tablist" aria-label="Depósito WMS" style={{ marginBottom: '20px' }}>
         {[
-          { id: 'wms-map', label: 'Mapa 3D del Depósito (210 Slots)', icon: <Map size={16} /> },
-          { id: 'picking', label: 'Preparación / Picking', icon: <ClipboardList size={16} /> },
-          { id: 'stock-list', label: 'Inventario Físico', icon: <Warehouse size={16} /> },
-          { id: 'lot-expiration', label: 'Lotes y Vencimientos', icon: <Calendar size={16} /> },
-          { id: 'replenishment', label: 'Reabastecimiento', icon: <ShoppingCart size={16} /> },
+          { id: 'wms-map', label: 'Mapa WMS', icon: <Map size={15} aria-hidden="true" /> },
+          { id: 'picking', label: 'Picking', icon: <ClipboardList size={15} aria-hidden="true" /> },
+          { id: 'stock-list', label: 'Inventario', icon: <Warehouse size={15} aria-hidden="true" /> },
+          { id: 'lot-expiration', label: 'Lotes', icon: <Calendar size={15} aria-hidden="true" /> },
+          { id: 'replenishment', label: 'Reposición', icon: <ShoppingCart size={15} aria-hidden="true" /> },
         ].map((t) => (
           <button
             key={t.id}
             type="button"
-            className={`btn ${c.subTab === t.id ? 'btn-primary' : 'btn-secondary'}`}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '7px 14px', fontSize: '0.82rem', fontWeight: 600 }}
+            role="tab"
+            aria-selected={c.subTab === t.id}
+            className="linear-tab"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
             onClick={() => { c.setSubTab(t.id); c.setSelectedOrder(null); c.setShowConsolidatedView(false); }}
           >
             {t.icon}
@@ -71,8 +73,8 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
         ))}
       </div>
 
-      {c.errorMsg && <div className="alert alert-danger" style={{ marginBottom: '16px' }}>{c.errorMsg}</div>}
-      {c.successMsg && <div className="alert alert-success" style={{ marginBottom: '16px' }} onClick={() => c.setSuccessMsg(null)}>{c.successMsg}</div>}
+      {c.errorMsg && <div role="alert" className="alert alert-danger" style={{ marginBottom: '16px' }}>{c.errorMsg}</div>}
+      {c.successMsg && <div role="status" className="alert alert-success" style={{ marginBottom: '16px' }} onClick={() => c.setSuccessMsg(null)}>{c.successMsg}</div>}
 
       {(c.subTab === 'picking' || c.selectedOrder || c.showConsolidatedView) && (
         c.selectedOrder ? (

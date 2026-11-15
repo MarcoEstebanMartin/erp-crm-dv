@@ -174,10 +174,10 @@ export const DepositoPrintLayouts: React.FC<DepositoPrintLayoutsProps> = ({
             if (zoneItems.length === 0) return null;
             const zoneName =
               zone === 'FRIO'
-                ? '❄️ SECTOR FRÍO'
+                ? 'SECTOR FRÍO'
                 : zone === 'TABLA'
-                  ? '🍾 SECTOR TABLA/BEBIDAS'
-                  : '📦 SECTOR SECOS/CAJAS';
+                  ? 'SECTOR TABLA/BEBIDAS'
+                  : 'SECTOR SECOS/CAJAS';
 
             return (
               <div key={zone} style={{ marginBottom: '20px', pageBreakInside: 'avoid' }}>
@@ -198,7 +198,7 @@ export const DepositoPrintLayouts: React.FC<DepositoPrintLayoutsProps> = ({
                   <tbody>
                     {zoneItems.map((item, idx) => (
                       <tr key={idx}>
-                        <td style={{ border: '1px solid #000', padding: '4px', textAlign: 'center', fontWeight: 'bold', fontSize: '12px' }}>☐</td>
+                        <td style={{ border: '1px solid #000', padding: '4px', textAlign: 'center', fontWeight: 'bold', fontSize: '12px' }}>[ ]</td>
                         <td style={{ border: '1px solid #000', padding: '4px', fontFamily: 'monospace', fontWeight: 'bold' }}>
                           {getProductLocation(item.product)}
                         </td>

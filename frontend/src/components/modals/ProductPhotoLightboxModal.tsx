@@ -1,5 +1,6 @@
 import React from 'react';
-import { Upload } from 'lucide-react';
+import { Upload, X } from 'lucide-react';
+import { NativeModalDialog } from './NativeModalDialog';
 
 interface ProductPhotoLightboxModalProps {
   previewModal: {
@@ -9,7 +10,7 @@ interface ProductPhotoLightboxModalProps {
     sku: string;
     productId: number;
     categoryName: string;
-    categoryIcon: string;
+    categoryIcon?: string;
   } | null;
   onClose: () => void;
   onUploadImage?: (productId: number, file: File) => Promise<void>;
@@ -23,31 +24,30 @@ export const ProductPhotoLightboxModal: React.FC<ProductPhotoLightboxModalProps>
   if (!previewModal || !previewModal.open) return null;
 
   return (
-    <div
-      className="modal-overlay"
-      style={{ backdropFilter: 'blur(8px)', backgroundColor: 'rgba(0,0,0,0.65)', zIndex: 1200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-      onClick={onClose}
+    <NativeModalDialog
+      isOpen={Boolean(previewModal.open)}
+      onClose={onClose}
+      ariaLabelledBy="photo-lightbox-title"
+      style={{ maxWidth: '500px', width: '90vw', padding: '24px' }}
     >
-      <div
-        className="modal-content fade-in"
-        style={{ backgroundColor: 'var(--bg-card)', padding: '24px', borderRadius: '16px', maxWidth: '500px', width: '90%', textAlign: 'center', position: 'relative', boxShadow: '0 20px 40px rgba(0,0,0,0.3)', border: '1px solid var(--border-color)' }}
-        onClick={(e) => e.stopPropagation()}
-      >
+      <div style={{ textAlign: 'center', position: 'relative' }}>
         <button
+          type="button"
           onClick={onClose}
-          style={{ position: 'absolute', top: '16px', right: '16px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', fontSize: '1.2rem', fontWeight: 'bold' }}
+          aria-label="Cerrar"
+          className="btn btn-ghost"
+          style={{ position: 'absolute', top: '-8px', right: '-8px', padding: '6px' }}
         >
-          ✕
+          <X size={18} aria-hidden="true" />
         </button>
 
         <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', backgroundColor: 'var(--bg-muted)', padding: '4px 12px', borderRadius: '20px', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '12px' }}>
-          <span>{previewModal.categoryIcon}</span>
           <span>{previewModal.categoryName}</span>
           <span style={{ opacity: 0.5 }}>|</span>
           <span style={{ fontFamily: 'monospace' }}>SKU: {previewModal.sku}</span>
         </div>
 
-        <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: '0 0 16px 0', color: 'var(--text-primary)' }}>
+        <h3 id="photo-lightbox-title" style={{ fontSize: '1.1rem', fontWeight: 700, margin: '0 0 16px 0', color: 'var(--text-primary)' }}>
           {previewModal.name}
         </h3>
 
@@ -62,6 +62,7 @@ export const ProductPhotoLightboxModal: React.FC<ProductPhotoLightboxModalProps>
         {onUploadImage && (
           <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'center', gap: '10px' }}>
             <button
+              type="button"
               className="btn btn-secondary"
               style={{ borderRadius: '8px', fontSize: '0.85rem', padding: '8px 16px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
               onClick={() => {
@@ -77,13 +78,13 @@ export const ProductPhotoLightboxModal: React.FC<ProductPhotoLightboxModalProps>
                 input.click();
               }}
             >
-              <Upload size={14} />
+              <Upload size={14} aria-hidden="true" />
               <span>Cambiar Imagen</span>
             </button>
           </div>
         )}
       </div>
-    </div>
+    </NativeModalDialog>
   );
 };
 export default ProductPhotoLightboxModal;

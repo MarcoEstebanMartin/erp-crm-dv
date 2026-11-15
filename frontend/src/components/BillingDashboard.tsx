@@ -14,10 +14,10 @@ interface BillingDashboardProps {
 }
 
 const SUB_TAB_OPTIONS: Array<{ id: BillingSubTab; label: string }> = [
-  { id: 'ventas', label: 'Comprobantes Venta' },
+  { id: 'ventas', label: 'Comprobantes' },
   { id: 'notas-credito', label: 'Notas de Crédito' },
   { id: 'retenciones', label: 'Retenciones' },
-  { id: 'libro-iva', label: 'Libro IVA Digital AFIP' },
+  { id: 'libro-iva', label: 'Libro IVA Digital' },
 ];
 
 export default function BillingDashboard({ activeTab }: BillingDashboardProps) {
@@ -123,7 +123,6 @@ export default function BillingDashboard({ activeTab }: BillingDashboardProps) {
               type="button"
               role="tab"
               aria-selected={isActive}
-              aria-controls={`billing-panel-${tab.id}`}
               tabIndex={isActive ? 0 : -1}
               className="linear-tab"
               onClick={() => b.setActiveSubTab(tab.id)}

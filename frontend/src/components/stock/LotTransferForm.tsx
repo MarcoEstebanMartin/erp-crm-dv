@@ -26,10 +26,10 @@ export default function LotTransferForm({
       </h4>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
-        {/* Lote Origen */}
         <div className="form-group" style={{ marginBottom: 0 }}>
-          <label>Lote de Origen</label>
+          <label htmlFor="transfer-from-lot">Lote de Origen</label>
           <select
+            id="transfer-from-lot"
             className="select"
             value={transferData.fromLotId}
             onChange={(e) => onChange({ ...transferData, fromLotId: Number(e.target.value) })}
@@ -51,12 +51,12 @@ export default function LotTransferForm({
           </select>
         </div>
 
-        {/* Cantidad */}
         <div className="form-group" style={{ marginBottom: 0 }}>
-          <label>Cantidad a transferir</label>
+          <label htmlFor="transfer-qty">Cantidad a transferir</label>
           <input
+            id="transfer-qty"
             type="number"
-            className="input"
+            className="input tabular-nums"
             value={transferData.quantity || ''}
             onChange={(e) => onChange({ ...transferData, quantity: Number(e.target.value) })}
             required
@@ -72,10 +72,10 @@ export default function LotTransferForm({
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
-        {/* Lote Destino */}
         <div className="form-group" style={{ marginBottom: 0 }}>
-          <label>Lote de Destino</label>
+          <label htmlFor="transfer-to-lot">Lote de Destino</label>
           <select
+            id="transfer-to-lot"
             className="select"
             value={transferData.isNewDestLot ? '__new__' : transferData.toLotNumber}
             onChange={(e) => {
@@ -105,11 +105,11 @@ export default function LotTransferForm({
           </select>
         </div>
 
-        {/* Fecha de vencimiento (si es nuevo lote) */}
         {transferData.isNewDestLot && (
           <div className="form-group" style={{ marginBottom: 0, animation: 'slideDown 0.15s ease-out' }}>
-            <label>Fecha Vencimiento (Nuevo Lote)</label>
+            <label htmlFor="transfer-new-exp">Vencimiento</label>
             <input
+              id="transfer-new-exp"
               type="date"
               className="input"
               value={transferData.toExpirationDate}
@@ -120,14 +120,17 @@ export default function LotTransferForm({
           </div>
         )}
 
-        {/* Input Código Lote Nuevo */}
         {transferData.isNewDestLot && (
           <div className="form-group" style={{ marginBottom: 0, animation: 'slideDown 0.15s ease-out' }}>
-            <label>Código del Nuevo Lote</label>
+            <label htmlFor="transfer-new-lot">Nuevo Lote</label>
             <input
+              id="transfer-new-lot"
               type="text"
               className="input"
-              placeholder="Ej: L-2026-02"
+              placeholder="L-2026-02"
+              autoCorrect="off"
+              autoCapitalize="none"
+              spellCheck={false}
               value={transferData.toLotNumber}
               onChange={(e) => onChange({ ...transferData, toLotNumber: e.target.value })}
               required

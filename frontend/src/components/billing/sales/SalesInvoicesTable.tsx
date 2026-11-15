@@ -44,11 +44,8 @@ export function SalesInvoicesTable({
       >
         <div>
           <h3 className="card-title" style={{ margin: 0 }}>
-            Facturas y Comprobantes de Venta Emitidos
+            Comprobantes de Venta
           </h3>
-          <p style={{ fontSize: '0.8rem', marginTop: '2px', color: 'var(--text-secondary)' }}>
-            Comprobantes fiscales autorizados, Pre-Facturas pendientes de CAE y presupuestos entregados.
-          </p>
         </div>
         <button
           type="button"
@@ -56,7 +53,7 @@ export function SalesInvoicesTable({
           onClick={onOpenDirectInvoiceModal}
         >
           <Plus size={16} aria-hidden="true" />
-          Emitir Factura Directa
+          Nueva Factura
         </button>
       </div>
 

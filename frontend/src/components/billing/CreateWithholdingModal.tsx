@@ -105,7 +105,7 @@ export function CreateWithholdingModal({
     >
       <div className="modal-header" style={{ marginBottom: '18px' }}>
         <h3 id="create-withholding-title" style={{ margin: 0 }}>
-          Ingresar Certificado de Retención
+          Cargar Retención
         </h3>
         <button
           type="button"
@@ -139,8 +139,11 @@ export function CreateWithholdingModal({
             id="withholding-client-search"
             type="search"
             className="input"
-            placeholder="Escribí para buscar cliente por nombre o CUIT..."
+            placeholder="Cliente o CUIT..."
             autoComplete="off"
+            autoCorrect="off"
+            autoCapitalize="none"
+            spellCheck={false}
             value={clientSearchQuery}
             onChange={(e) => {
               setClientSearchQuery(e.target.value);
@@ -200,7 +203,7 @@ export function CreateWithholdingModal({
               id="withholding-number"
               type="text"
               className="input"
-              placeholder="Ej: RET-10293"
+              placeholder="RET-10293"
               value={form.number}
               onChange={(e) => setForm((prev) => ({ ...prev, number: e.target.value }))}
               required
@@ -238,7 +241,7 @@ export function CreateWithholdingModal({
             Cancelar
           </button>
           <button type="submit" className="btn btn-primary" disabled={submitting}>
-            {submitting ? 'Guardando...' : 'Guardar Comprobante'}
+            {submitting ? 'Guardando...' : 'Guardar'}
           </button>
         </div>
       </form>

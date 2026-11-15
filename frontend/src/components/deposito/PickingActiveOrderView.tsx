@@ -65,7 +65,7 @@ export const PickingActiveOrderView: React.FC<PickingActiveOrderViewProps> = ({
 
       <div style={{ marginBottom: '24px', backgroundColor: 'var(--bg-secondary)', padding: '14px 18px', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-          <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Progreso de Preparación</span>
+          <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-secondary)' }}>Progreso</span>
           <span style={{ fontSize: '0.88rem', fontWeight: 800, color: progressPercent === 100 ? 'var(--color-success)' : 'var(--text-primary)' }}>
             {itemsPreparedCount} listos, {itemsPartialCount} parciales de {totalItemsCount} productos ({progressPercent}%)
           </span>
@@ -77,10 +77,10 @@ export const PickingActiveOrderView: React.FC<PickingActiveOrderViewProps> = ({
 
       <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', borderBottom: '1px solid var(--border-color)', paddingBottom: '12px', flexWrap: 'wrap' }}>
         {[
-          { id: 'ALL', label: '🌐 Todos los Sectores', color: '#1e293b' },
-          { id: 'FRIO', label: '❄️ Sector Frío', color: '#007AFF' },
-          { id: 'TABLA', label: '🍾 Sector Tabla/Bebidas', color: '#FF9500' },
-          { id: 'CAJAS', label: '📦 Sector Secos/Cajas', color: '#8E8E93' },
+          { id: 'ALL', label: 'Todos', color: '#1e293b' },
+          { id: 'FRIO', label: 'Frío', color: '#007AFF' },
+          { id: 'TABLA', label: 'Tabla/Bebidas', color: '#FF9500' },
+          { id: 'CAJAS', label: 'Secos/Cajas', color: '#8E8E93' },
         ].map((zone) => (
           <button
             key={zone.id} type="button" className="btn"
@@ -99,20 +99,20 @@ export const PickingActiveOrderView: React.FC<PickingActiveOrderViewProps> = ({
       </div>
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-        <h4 style={{ fontSize: '0.95rem', margin: 0 }}>Lista de Artículos a Preparar (Picking List)</h4>
+        <h4 style={{ fontSize: '0.95rem', margin: 0 }}>Picking List</h4>
         <button type="button" className="btn btn-secondary" style={{ padding: '6px 12px', fontSize: '0.8rem', backgroundColor: 'var(--bg-secondary)' }} onClick={onFIFOAutoFillAll}>
-          ⚡ Auto-completar Todo (FIFO)
+          Auto FIFO Todo
         </button>
       </div>
 
-      <div className="table-container" style={{ border: '1px solid var(--border-color)', marginBottom: '20px' }}>
+      <div className="table-container table-container--sticky" role="region" aria-label="Picking del pedido" tabIndex={0} style={{ border: '1px solid var(--border-color)', marginBottom: '20px' }}>
         <table>
           <thead>
             <tr>
-              <th>Artículo y Trazabilidad de Lotes</th>
-              <th>Cantidad Pedida</th>
-              <th>Stock General</th>
-              <th>Código SKU</th>
+              <th scope="col">Artículo y Lotes</th>
+              <th scope="col">Cantidad</th>
+              <th scope="col">Stock</th>
+              <th scope="col">SKU</th>
             </tr>
           </thead>
           <tbody>
@@ -124,16 +124,16 @@ export const PickingActiveOrderView: React.FC<PickingActiveOrderViewProps> = ({
               const itemZone = item.product?.pickingZone || item.product?.rubro?.pickingZone || 'CAJAS';
               const unitsPerBox = item.product?.unitsPerBox || 1;
 
-              let packingType = '📥 Fracc. Secos';
+              let packingType = 'Fracc. Secos';
               let badgeStyle: React.CSSProperties = { backgroundColor: 'rgba(142, 142, 147, 0.08)', color: '#8E8E93', border: '1px solid rgba(142, 142, 147, 0.15)' };
               if (unitsPerBox > 1 && item.quantity % unitsPerBox === 0) {
-                packingType = `📦 ${item.quantity / unitsPerBox} Caja(s) Cerrada(s)`;
+                packingType = `${item.quantity / unitsPerBox} Caja(s) Cerrada(s)`;
                 badgeStyle = { backgroundColor: 'rgba(52, 199, 89, 0.08)', color: '#34C759', border: '1px solid rgba(52, 199, 89, 0.15)' };
               } else if (itemZone === 'FRIO') {
-                packingType = '❄️ Fracc. Frío';
+                packingType = 'Fracc. Frío';
                 badgeStyle = { backgroundColor: 'rgba(0, 122, 255, 0.08)', color: '#007AFF', border: '1px solid rgba(0, 122, 255, 0.15)' };
               } else if (itemZone === 'TABLA') {
-                packingType = '🍾 Tabla/Consol.';
+                packingType = 'Tabla/Consol.';
                 badgeStyle = { backgroundColor: 'rgba(255, 149, 0, 0.08)', color: '#FF9500', border: '1px solid rgba(255, 149, 0, 0.15)' };
               }
 
@@ -148,25 +148,25 @@ export const PickingActiveOrderView: React.FC<PickingActiveOrderViewProps> = ({
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '8px' }}>
                       <span style={{ fontWeight: 600, fontSize: '0.95rem' }}>{item.product?.name}</span>
                       {item.product?.defaultLocation && (
-                        <span style={{ padding: '2px 8px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 700, backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
-                          📍 {item.product.defaultLocation}
+                        <span style={{ padding: '2px 8px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 700, backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)', fontFamily: 'monospace' }}>
+                          {item.product.defaultLocation}
                         </span>
                       )}
-                      <span style={{ padding: '2px 8px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', ...badgeStyle }}>
+                      <span style={{ padding: '2px 8px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 700, ...badgeStyle }}>
                         {packingType}
                       </span>
                     </div>
 
                     <div style={{ backgroundColor: 'var(--bg-secondary)', padding: '12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', marginTop: '10px' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                        <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Lotes Disponibles en Góndola:</span>
+                        <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Lotes</span>
                         <button type="button" className="btn btn-ghost" style={{ padding: '2px 8px', fontSize: '0.75rem', height: 'auto', color: 'var(--accent-color)' }} onClick={() => onFIFOAutoFill(item)}>
-                          ⚡ Auto-completar (FIFO)
+                          Auto FIFO
                         </button>
                       </div>
 
                       {productLots.length === 0 ? (
-                        <div style={{ fontSize: '0.8rem', color: 'var(--accent-color)' }}>⚠️ Sin lotes registrados en depósito.</div>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--accent-color)' }}>Sin lotes en depósito.</div>
                       ) : (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                           {productLots.map((lot: any) => {
@@ -185,18 +185,19 @@ export const PickingActiveOrderView: React.FC<PickingActiveOrderViewProps> = ({
                                     <span style={{ display: 'inline-flex', alignItems: 'center', padding: '2px 6px', backgroundColor: isConfirmed ? '#e6f4ea' : '#fef7e0', border: isConfirmed ? '1px solid #137333' : '1px solid #b06000', borderRadius: '4px', fontWeight: 600, fontSize: '0.72rem', color: isConfirmed ? '#137333' : '#b06000' }}>
                                       Estante: {lot.location}
                                       <button type="button" onClick={() => setConfirmedLocations((prev) => ({ ...prev, [lot.id]: !prev[lot.id] }))} style={{ marginLeft: '6px', background: 'none', border: 'none', boxShadow: 'none', color: isConfirmed ? '#137333' : '#b06000', cursor: 'pointer', padding: 0, fontWeight: 700, fontSize: '0.7rem' }}>
-                                        {isConfirmed ? '✓' : 'Confirmar'}
+                                        {isConfirmed ? <Check size={12} aria-hidden="true" /> : 'Confirmar'}
                                       </button>
                                     </span>
                                   )}
-                                  <span style={{ color: 'var(--text-secondary)' }}>(Físico: {lot.stock} u.)</span>
+                                  <span className="tabular-nums" style={{ color: 'var(--text-secondary)' }}>({lot.stock} u.)</span>
                                   {hasRealExp && (
                                     <span style={{ color: 'var(--text-secondary)' }}>[Vence: {formatCleanExpirationDate(lot.expirationDate)}]</span>
                                   )}
                                 </span>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                   <input
-                                    type="number" className="input"
+                                    type="number" className="input tabular-nums"
+                                    aria-label={`Cantidad lote ${cleanLot} para ${item.product?.name}`}
                                     style={{ width: '70px', padding: '4px 6px', fontSize: '0.8rem', height: '28px', textAlign: 'center', opacity: isConfirmed ? 1 : 0.6 }}
                                     min={0} max={lot.stock} value={qty || ''}
                                     onChange={(e) => onLotQtyChange(item.id, lot.id, Number(e.target.value), lot.stock)}
@@ -212,19 +213,21 @@ export const PickingActiveOrderView: React.FC<PickingActiveOrderViewProps> = ({
 
                       <div style={{ marginTop: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem', borderTop: '1px solid var(--border-color)', paddingTop: '8px' }}>
                         <span style={{ fontWeight: 600, color: assignedSum === item.quantity ? 'var(--color-success)' : assignedSum > 0 ? 'var(--color-warning)' : 'var(--accent-color)' }}>
-                          {assignedSum === item.quantity ? '✓ Completado' : assignedSum > 0 ? `⚠️ Armado parcial (Faltante de ${item.quantity - assignedSum} u.)` : '⚠️ Pendiente de asignación'}
+                          {assignedSum === item.quantity ? 'Completado' : assignedSum > 0 ? `Parcial (Faltan ${item.quantity - assignedSum} u.)` : 'Pendiente'}
                         </span>
-                        <span style={{ fontWeight: 700 }}>{assignedSum} de {item.quantity} u.</span>
+                        <span className="tabular-nums" style={{ fontWeight: 700 }}>{assignedSum} / {item.quantity} u.</span>
                       </div>
 
                       {item.product?.isPesable && (
                         <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px solid var(--border-color)' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--accent-color)' }}>⚖️ Peso Exacto Total (Balanza):</span>
+                            <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--accent-color)' }}>Peso Real (Kg)</span>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                               <input
-                                type="number" step="0.001" className="input" style={{ width: '95px', textAlign: 'right', fontWeight: 700 }}
-                                placeholder={item.product?.approximateWeight ? `Aprox: ${(Number(item.quantity) * Number(item.product.approximateWeight)).toFixed(2)}` : 'Ej: 4.250'}
+                                type="number" step="0.001" className="input tabular-nums"
+                                aria-label={`Peso en kg de ${item.product?.name}`}
+                                style={{ width: '95px', textAlign: 'right', fontWeight: 700 }}
+                                placeholder={item.product?.approximateWeight ? `~${(Number(item.quantity) * Number(item.product.approximateWeight)).toFixed(2)}` : '4.250'}
                                 value={pesableWeights[item.id] || ''}
                                 onChange={(e) => setPesableWeights((prev) => ({ ...prev, [item.id]: Number(e.target.value) }))}
                               />
@@ -232,14 +235,14 @@ export const PickingActiveOrderView: React.FC<PickingActiveOrderViewProps> = ({
                             </div>
                           </div>
                           {anomaly.isAnomaly && (
-                            <div style={{ marginTop: '8px', padding: '8px 10px', backgroundColor: '#FEF3C7', border: '1px solid #F59E0B', borderRadius: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
+                            <div role="alert" style={{ marginTop: '8px', padding: '8px 10px', backgroundColor: '#FEF3C7', border: '1px solid #F59E0B', borderRadius: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.76rem', color: '#92400E', fontWeight: 600 }}>
-                                <AlertTriangle size={14} />
-                                <span>Peso inusual ({currentWeightVal} kg vs esperado ~{anomaly.expectedKg} kg). ¿Faltó la coma decimal?</span>
+                                <AlertTriangle size={14} aria-hidden="true" />
+                                <span>Peso inusual ({currentWeightVal} kg vs esperado ~{anomaly.expectedKg} kg).</span>
                               </div>
                               {anomaly.suggestedKg !== null && (
                                 <button type="button" className="btn" style={{ backgroundColor: '#D97706', color: '#fff', fontSize: '0.74rem', padding: '4px 10px', fontWeight: 700, borderRadius: '6px' }} onClick={() => setPesableWeights((prev) => ({ ...prev, [item.id]: anomaly.suggestedKg! }))}>
-                                  🪄 Corregir coma ({anomaly.suggestedKg} kg)
+                                  Corregir ({anomaly.suggestedKg} kg)
                                 </button>
                               )}
                             </div>

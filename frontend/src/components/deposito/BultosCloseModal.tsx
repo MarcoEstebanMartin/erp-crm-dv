@@ -1,4 +1,5 @@
-import React from 'react';
+import { X } from 'lucide-react';
+import { NativeModalDialog } from '../modals/NativeModalDialog';
 
 export interface BultosData {
   frio: number;
@@ -33,46 +34,27 @@ export const BultosCloseModal: React.FC<BultosCloseModalProps> = ({
     Number(bultosData.cajasCerradas);
 
   return (
-    <div className="modal-overlay">
-      <div className="modal-content" style={{ maxWidth: '450px' }}>
+    <NativeModalDialog
+      isOpen={true}
+      onClose={onClose}
+      ariaLabelledBy="bultos-close-title"
+      style={{ maxWidth: '450px', width: '94vw', padding: '24px' }}
+    >
+      <div>
         <div className="modal-header">
-          <h3>Confirmación de Bultos Físicos</h3>
-          <button className="btn btn-ghost" style={{ padding: '4px' }} onClick={onClose}>
-            ✕
+          <h3 id="bultos-close-title" style={{ margin: 0 }}>Confirmar Bultos</h3>
+          <button type="button" className="btn btn-ghost" style={{ padding: '4px' }} onClick={onClose} aria-label="Cerrar">
+            <X size={18} aria-hidden="true" />
           </button>
         </div>
 
-        <div style={{ padding: '10px 0 20px 0' }}>
-          <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '16px' }}>
-            Ingresá la cantidad de paquetes, bandejas o bultos armados para pegar las etiquetas de reparto:
-          </p>
-
+        <div style={{ padding: '16px 0 20px 0' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             {[
-              {
-                key: 'frio' as const,
-                icon: '❄️',
-                title: 'Bandejas de Frío (Lácteos sueltos)',
-                desc: 'Productos sueltos de heladera',
-              },
-              {
-                key: 'secos' as const,
-                icon: '📥',
-                title: 'Bandejas de Secos (Mercadería suelta)',
-                desc: 'Paquetes o latas sueltas',
-              },
-              {
-                key: 'tabla' as const,
-                icon: '🍾',
-                title: 'Bebidas / Tabla (Atados/Bolsones)',
-                desc: 'Packs grandes o bolsas pesadas',
-              },
-              {
-                key: 'cajasCerradas' as const,
-                icon: '📦',
-                title: 'Cajas Cerradas (Bultos cerrados)',
-                desc: 'Cajas originales de fábrica',
-              },
+              { key: 'frio' as const, title: 'Bandejas Frío' },
+              { key: 'secos' as const, title: 'Bandejas Secos' },
+              { key: 'tabla' as const, title: 'Bebidas / Tabla' },
+              { key: 'cajasCerradas' as const, title: 'Cajas Cerradas' },
             ].map((item) => (
               <div
                 key={item.key}
@@ -86,18 +68,13 @@ export const BultosCloseModal: React.FC<BultosCloseModalProps> = ({
                   border: '1px solid var(--border-color)',
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ fontSize: '1.2rem' }}>{item.icon}</span>
-                  <div>
-                    <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>{item.title}</div>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                      {item.desc}
-                    </span>
-                  </div>
-                </div>
+                <label htmlFor={`bultos-${item.key}`} style={{ fontWeight: 600, fontSize: '0.85rem', margin: 0 }}>
+                  {item.title}
+                </label>
                 <input
+                  id={`bultos-${item.key}`}
                   type="number"
-                  className="input"
+                  className="input tabular-nums"
                   style={{ width: '70px', textAlign: 'center', fontWeight: 'bold' }}
                   min={0}
                   value={bultosData[item.key] || ''}
@@ -123,8 +100,9 @@ export const BultosCloseModal: React.FC<BultosCloseModalProps> = ({
               alignItems: 'center',
             }}
           >
-            <span style={{ fontWeight: 600, fontSize: '1rem' }}>Total Bultos:</span>
+            <span style={{ fontWeight: 600, fontSize: '1rem' }}>Total Bultos</span>
             <span
+              className="tabular-nums"
               style={{
                 fontSize: '1.4rem',
                 fontWeight: 800,
@@ -150,10 +128,10 @@ export const BultosCloseModal: React.FC<BultosCloseModalProps> = ({
             onClick={onConfirm}
             disabled={loading || totalBultos <= 0}
           >
-            {loading ? 'Finalizando...' : 'Confirmar y Generar Etiquetas 🖨️'}
+            {loading ? 'Finalizando...' : 'Confirmar e Imprimir'}
           </button>
         </div>
       </div>
-    </div>
+    </NativeModalDialog>
   );
 };

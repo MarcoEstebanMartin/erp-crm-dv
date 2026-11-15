@@ -15,10 +15,10 @@ interface ProductsTabProps {
 }
 
 const CATALOG_TABS: { id: CatalogTabId; label: string }[] = [
-  { id: 'products', label: 'Lista de Productos' },
-  { id: 'stock', label: 'Control y Valorización de Stock' },
-  { id: 'map', label: 'Mapa de Depósito' },
-  { id: 'inactive_products', label: 'Productos Inactivos' },
+  { id: 'products', label: 'Productos' },
+  { id: 'stock', label: 'Stock' },
+  { id: 'map', label: 'Mapa WMS' },
+  { id: 'inactive_products', label: 'Inactivos' },
 ];
 
 export default function ProductsTab({
@@ -42,15 +42,9 @@ export default function ProductsTab({
     <div style={{ width: '100%' }}>
       <div
         role="tablist"
-        aria-label="Secciones de Productos y Stock"
-        style={{
-          display: 'flex',
-          gap: '24px',
-          alignItems: 'center',
-          marginBottom: '20px',
-          borderBottom: '1px solid var(--border-color)',
-          flexWrap: 'wrap',
-        }}
+        aria-label="Catálogo y Stock"
+        className="linear-tablist"
+        style={{ marginBottom: '20px' }}
       >
         {CATALOG_TABS.map((t) => {
           const isSelected = catalogTab === t.id;
@@ -60,21 +54,8 @@ export default function ProductsTab({
               type="button"
               role="tab"
               aria-selected={isSelected}
+              className="linear-tab"
               onClick={() => setCatalogTab(t.id)}
-              style={{
-                background: 'transparent',
-                border: 'none',
-                borderBottom: isSelected ? '2px solid var(--color-primary)' : '2px solid transparent',
-                borderRadius: 0,
-                boxShadow: 'none',
-                padding: '8px 2px 12px',
-                marginBottom: '-1px',
-                fontSize: '0.88rem',
-                fontWeight: isSelected ? 600 : 500,
-                color: isSelected ? 'var(--color-primary)' : 'var(--text-secondary)',
-                cursor: 'pointer',
-                transition: 'color 0.15s ease, border-color 0.15s ease',
-              }}
             >
               {t.label}
             </button>

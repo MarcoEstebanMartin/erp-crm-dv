@@ -36,7 +36,7 @@ export function useLotManager({
   const [showTransferPanel, setShowTransferPanel] = useState(false);
   const [transferData, setTransferData] = useState<TransferLotData>(INITIAL_TRANSFER_DATA);
 
-  // Mantener actualizado el producto en el modal de gestión de lotes cuando cambian los props (ej: tras refresh)
+  // Mantener actualizado el producto en el modal de gestión de lotes tras refresh
   useEffect(() => {
     if (lotManagerModal.open && lotManagerModal.product) {
       const fresh = products.find((p) => p.id === lotManagerModal.product.id);

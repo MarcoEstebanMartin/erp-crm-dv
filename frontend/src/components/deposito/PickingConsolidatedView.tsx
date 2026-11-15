@@ -42,17 +42,14 @@ export const PickingConsolidatedView: React.FC<PickingConsolidatedViewProps> = (
         className="no-print"
       >
         <div>
-          <h3 style={{ margin: 0 }}>Planilla de Picking Consolidada</h3>
-          <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-            Sumatoria de {selectedOrdersList.length} pedidos seleccionados.
-          </p>
+          <h3 style={{ margin: 0 }}>Picking Consolidado</h3>
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
           <button type="button" className="btn btn-secondary" onClick={() => window.print()}>
-            🖨️ Imprimir Planilla A4
+            Imprimir A4
           </button>
           <button type="button" className="btn btn-secondary" onClick={onBack}>
-            Volver al Listado
+            Volver
           </button>
         </div>
       </div>
@@ -91,10 +88,10 @@ export const PickingConsolidatedView: React.FC<PickingConsolidatedViewProps> = (
         }}
       >
         {[
-          { id: 'ALL', label: '🌐 Todo Consolidado', color: '#1e293b' },
-          { id: 'FRIO', label: '❄️ Sector Frío', color: '#007AFF' },
-          { id: 'TABLA', label: '🍾 Sector Tabla/Bebidas', color: '#FF9500' },
-          { id: 'CAJAS', label: '📦 Sector Secos/Cajas', color: '#8E8E93' },
+          { id: 'ALL', label: 'Todo', color: '#1e293b' },
+          { id: 'FRIO', label: 'Frío', color: '#007AFF' },
+          { id: 'TABLA', label: 'Tabla/Bebidas', color: '#FF9500' },
+          { id: 'CAJAS', label: 'Secos/Cajas', color: '#8E8E93' },
         ].map((zone) => {
           const count =
             zone.id === 'ALL'
@@ -131,18 +128,21 @@ export const PickingConsolidatedView: React.FC<PickingConsolidatedViewProps> = (
       </div>
 
       <div
-        className="table-container no-print"
+        className="table-container table-container--sticky no-print"
+        role="region"
+        aria-label="Planilla de picking consolidada"
+        tabIndex={0}
         style={{ border: '1px solid var(--border-color)', borderRadius: 'var(--radius-sm)' }}
       >
         <table>
           <thead>
             <tr>
-              <th style={{ width: '40px', textAlign: 'center' }}>✓</th>
-              <th style={{ width: '120px' }}>Ubicación</th>
-              <th>Artículo / SKU</th>
-              <th style={{ width: '120px' }}>Sector</th>
-              <th style={{ width: '100px', textAlign: 'right' }}>Cant. Total</th>
-              <th>Desglose por Pedido</th>
+              <th scope="col" style={{ width: '40px', textAlign: 'center' }}>Sel.</th>
+              <th scope="col" style={{ width: '120px' }}>Ubicación</th>
+              <th scope="col">Artículo / SKU</th>
+              <th scope="col" style={{ width: '120px' }}>Sector</th>
+              <th scope="col" style={{ width: '100px', textAlign: 'right' }}>Cant.</th>
+              <th scope="col">Pedidos</th>
             </tr>
           </thead>
           <tbody>
@@ -215,7 +215,7 @@ export const PickingConsolidatedView: React.FC<PickingConsolidatedViewProps> = (
                           fontFamily: 'monospace',
                         }}
                       >
-                        📍 {location}
+                        {location}
                       </span>
                     </td>
                     <td style={{ verticalAlign: 'middle' }}>

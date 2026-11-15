@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { AlertCircle, AlertTriangle, Truck, X } from 'lucide-react';
 import { BillingType, PaymentMethod } from '../../utils/types';
 import { api } from '../../utils/api';
 import { formatIntegerARS } from '../../utils/currency';
 import { isBonusOrderItem } from '../../utils/weeklyPromoCartEvaluator';
+import { NativeModalDialog } from './NativeModalDialog';
 import OrderFulfillmentBillingPanel from './OrderFulfillmentBillingPanel';
 import OrderFulfillmentSuccessView from './OrderFulfillmentSuccessView';
 import {
@@ -22,7 +23,6 @@ interface OrderFulfillmentModalProps {
 }
 
 export default function OrderFulfillmentModal({ order, onClose, onSuccess }: OrderFulfillmentModalProps) {
-  const dialogRef = useRef<HTMLDialogElement>(null);
   const [pesableWeights, setPesableWeights] = useState<Record<number, number>>({});
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -44,12 +44,6 @@ export default function OrderFulfillmentModal({ order, onClose, onSuccess }: Ord
       if (banks && banks.length > 0) setSelectedBankId(banks[0].id.toString());
     }).catch(console.error);
   }, [order]);
-
-  useEffect(() => {
-    if (billingCompleted) return;
-    const el = dialogRef.current;
-    if (el && !el.open && typeof el.showModal === 'function') el.showModal();
-  }, [billingCompleted]);
 
   const handleWeightChange = (orderItemId: number, val: string) => {
     const num = parseFloat(val);
@@ -126,12 +120,10 @@ export default function OrderFulfillmentModal({ order, onClose, onSuccess }: Ord
   const clientInfo = order.persona || order.client;
 
   return (
-    <dialog
-      ref={dialogRef}
-      className="app-native-dialog"
-      aria-labelledby="fulfillment-modal-title"
+    <NativeModalDialog
+      isOpen={!billingCompleted}
       onClose={onClose}
-      {...({ closedby: 'any' } as any)}
+      ariaLabelledBy="fulfillment-modal-title"
       style={{ width: '95vw', maxWidth: '1280px', height: '85vh', minHeight: '640px' }}
     >
       <div style={{ height: '100%', padding: '28px', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
@@ -141,7 +133,7 @@ export default function OrderFulfillmentModal({ order, onClose, onSuccess }: Ord
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <h2 id="fulfillment-modal-title" style={{ fontSize: '1.35rem', margin: 0, fontWeight: 700 }}>
-              Confirmar Armado y Facturar — Pedido #{order.id}
+              Armado y Facturar — Pedido #{order.id}
             </h2>
             {order.deliveryZone && (
               <span className="badge" style={{ backgroundColor: '#F3F4F6', color: '#111827', border: '1px solid #E5E7EB', fontSize: '0.85rem', padding: '4px 10px' }}>
@@ -225,8 +217,8 @@ export default function OrderFulfillmentModal({ order, onClose, onSuccess }: Ord
               <h3 id="fulfillment-items-heading" style={{ margin: 0, fontSize: '1.1rem', fontWeight: 600 }}>
                 Artículos Preparados
               </h3>
-              <span style={{ fontSize: '0.88rem', color: 'var(--text-secondary)' }}>
-                {order.items?.length || 0} ítems en total
+              <span className="tabular-nums" style={{ fontSize: '0.88rem', color: 'var(--text-secondary)' }}>
+                {order.items?.length || 0} ítems
               </span>
             </div>
 
@@ -337,8 +329,8 @@ export default function OrderFulfillmentModal({ order, onClose, onSuccess }: Ord
             </div>
 
             <div style={{ flexShrink: 0, marginTop: '16px', padding: '16px 20px', backgroundColor: 'var(--background-alt)', borderRadius: '8px', border: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: '1.05rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Monto Total del Pedido</span>
-              <span style={{ fontSize: '1.65rem', fontWeight: 800, color: 'var(--text-primary)' }}>{formatIntegerARS(currentTotal)}</span>
+              <span style={{ fontSize: '1.05rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Total del Pedido</span>
+              <span className="tabular-nums" style={{ fontSize: '1.65rem', fontWeight: 800, color: 'var(--text-primary)' }}>{formatIntegerARS(currentTotal)}</span>
             </div>
           </div>
 
@@ -361,6 +353,6 @@ export default function OrderFulfillmentModal({ order, onClose, onSuccess }: Ord
           />
         </div>
       </div>
-    </dialog>
+    </NativeModalDialog>
   );
 }

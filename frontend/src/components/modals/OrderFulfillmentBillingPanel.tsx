@@ -21,8 +21,6 @@ interface OrderFulfillmentBillingPanelProps {
 
 const labelCapsStyle = {
   fontSize: '0.82rem',
-  textTransform: 'uppercase' as const,
-  letterSpacing: '0.5px',
   color: 'var(--text-secondary)',
   fontWeight: 600,
 };
@@ -100,17 +98,17 @@ export default function OrderFulfillmentBillingPanel({
 
       {billingType === 'OFFICIAL' && (
         <div style={{ backgroundColor: '#F9FAFB', padding: '12px', borderRadius: '8px', border: '1px solid #E5E7EB' }}>
-          <span style={{ fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.5px', color: '#4B5563', fontWeight: 800 }}>
-            Modo de Emisión AFIP / ARCA
+          <span style={{ fontSize: '0.78rem', color: '#4B5563', fontWeight: 700 }}>
+            Emisión AFIP / ARCA
           </span>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '6px' }}>
             <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.88rem', cursor: 'pointer', fontWeight: !deferCae ? 700 : 500, color: !deferCae ? '#111827' : '#4B5563' }}>
               <input type="radio" name="deferCae" checked={!deferCae} onChange={() => onDeferCaeChange(false)} />
-              Solicitar CAE Inmediato (AFIP Directo)
+              CAE Inmediato
             </label>
             <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.88rem', cursor: 'pointer', fontWeight: deferCae ? 700 : 500, color: deferCae ? '#111827' : '#4B5563' }}>
               <input type="radio" name="deferCae" checked={deferCae} onChange={() => onDeferCaeChange(true)} />
-              Pre-Facturar A (Diferir CAE / Borrador)
+              Pre-Facturar A (Diferir CAE)
             </label>
           </div>
         </div>
@@ -144,7 +142,7 @@ export default function OrderFulfillmentBillingPanel({
             type="text"
             className="input"
             style={selectInputStyle}
-            placeholder="Ej: CH-0012948"
+            placeholder="CH-0012948"
             value={checkNumber}
             onChange={(e) => onCheckNumberChange(e.target.value)}
           />

@@ -24,6 +24,7 @@ export const DepositoLotsExpirationTab: React.FC<DepositoLotsExpirationTabProps>
   setStockModal,
   onPrintLabels,
 }) => {
+  const [printError, setPrintError] = React.useState<string | null>(null);
   const realExpiringLots = expiringLots.filter((lot) => !isSentinelExpiration(lot.expirationDate));
 
   const allLotsList: { product: any; lot: any }[] = [];
@@ -138,16 +139,14 @@ export const DepositoLotsExpirationTab: React.FC<DepositoLotsExpirationTabProps>
           }}
         >
           <div>
-            <h3 style={{ margin: 0 }}>Control General de Lotes</h3>
-            <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-              Visualizá el vencimiento y la ubicación física de todos los lotes con stock en el sistema.
-            </p>
+            <h3 style={{ margin: 0 }}>Lotes y Vencimientos</h3>
           </div>
           <div style={{ display: 'flex', gap: '8px' }}>
             <button
               type="button"
               className="btn btn-secondary"
               onClick={() => {
+                setPrintError(null);
                 const activeLots: any[] = [];
                 allProducts.forEach((prod) => {
                   (prod.lots || []).forEach((lot: any) => {
@@ -164,33 +163,39 @@ export const DepositoLotsExpirationTab: React.FC<DepositoLotsExpirationTabProps>
                   });
                 });
                 if (activeLots.length === 0) {
-                  alert('No hay lotes con stock para imprimir etiquetas.');
+                  setPrintError('No hay lotes con stock para imprimir etiquetas.');
                   return;
                 }
                 onPrintLabels(activeLots);
               }}
             >
-              <Printer size={16} />
-              <span>Imprimir Todas las Etiquetas</span>
+              <Printer size={16} aria-hidden="true" />
+              <span>Imprimir Etiquetas</span>
             </button>
-            <button type="button" className="btn btn-secondary" onClick={onRefresh}>
-              <RefreshCw size={16} />
+            <button type="button" className="btn btn-secondary" onClick={onRefresh} aria-label="Actualizar">
+              <RefreshCw size={16} aria-hidden="true" />
             </button>
           </div>
         </div>
 
-        <div className="table-container">
+        {printError && (
+          <div role="alert" className="alert alert-danger" style={{ marginBottom: '12px' }}>
+            {printError}
+          </div>
+        )}
+
+        <div className="table-container table-container--sticky" role="region" aria-label="Lotes registrados" tabIndex={0}>
           <table>
             <thead>
               <tr>
-                <th>SKU</th>
-                <th>Artículo</th>
-                <th>Lote</th>
-                <th>Fecha Vencimiento</th>
-                <th>Estado Vence</th>
-                <th>Ubicación</th>
-                <th style={{ textAlign: 'right' }}>Stock Lote</th>
-                <th>Acciones</th>
+                <th scope="col">SKU</th>
+                <th scope="col">Artículo</th>
+                <th scope="col">Lote</th>
+                <th scope="col">Vencimiento</th>
+                <th scope="col">Estado</th>
+                <th scope="col">Ubicación</th>
+                <th scope="col" style={{ textAlign: 'right' }}>Stock</th>
+                <th scope="col">Acciones</th>
               </tr>
             </thead>
             <tbody>

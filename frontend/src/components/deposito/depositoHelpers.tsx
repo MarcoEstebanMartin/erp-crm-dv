@@ -28,39 +28,39 @@ export const LOCATION_MAP: Record<
   string,
   { label: string; icon: string; color: string; bg: string; description: string }
 > = {
-  'D1-CAM2-R01-A': { label: 'D1-CAM2-R01-A - Quesos Tybo / Barra', icon: '❄️', color: '#007AFF', bg: 'rgba(0, 122, 255, 0.08)', description: 'Cámaras Frío 2 - Rack 2 Niveles (A Piso): Picking' },
-  'D1-CAM2-R01-B': { label: 'D1-CAM2-R01-B - Quesos Reserva / Pulmón', icon: '❄️', color: '#007AFF', bg: 'rgba(0, 122, 255, 0.08)', description: 'Cámaras Frío 2 - Rack 2 Niveles (B Viga 1): Pulmón' },
-  'D1-CAM2-R02-A': { label: 'D1-CAM2-R02-A - Mozzarella / Gouda', icon: '❄️', color: '#007AFF', bg: 'rgba(0, 122, 255, 0.08)', description: 'Cámaras Frío 2 - Rack 2 Niveles (A Piso): Picking' },
-  'D1-CAM2-R02-B': { label: 'D1-CAM2-R02-B - Mozzarella Reserva', icon: '❄️', color: '#007AFF', bg: 'rgba(0, 122, 255, 0.08)', description: 'Cámaras Frío 2 - Rack 2 Niveles (B Viga 1): Pulmón' },
-  'D1-CAM2-P01': { label: 'D1-CAM2-P01 - Pallet Queso Melincué Barra', icon: '❄️', color: '#007AFF', bg: 'rgba(0, 122, 255, 0.08)', description: 'Cámaras Frío 2 - Slot Piso Pallet 1' },
-  'D1-CAM2-P02': { label: 'D1-CAM2-P02 - Pallet Queso Melincué Tybo', icon: '❄️', color: '#007AFF', bg: 'rgba(0, 122, 255, 0.08)', description: 'Cámaras Frío 2 - Slot Piso Pallet 2' },
-  'D1-CAM2-P03': { label: 'D1-CAM2-P03 - Pallet Queso Cremoso Remotti', icon: '❄️', color: '#007AFF', bg: 'rgba(0, 122, 255, 0.08)', description: 'Cámaras Frío 2 - Slot Piso Pallet 3' },
-  'D1-CAM2-P04': { label: 'D1-CAM2-P04 - Pallet Fiambres / Embutidos', icon: '❄️', color: '#007AFF', bg: 'rgba(0, 122, 255, 0.08)', description: 'Cámaras Frío 2 - Slot Piso Pallet 4' },
-  'D1-CAM2-P05': { label: 'D1-CAM2-P05 - Pallet Queso Sardo / Bloque', icon: '❄️', color: '#007AFF', bg: 'rgba(0, 122, 255, 0.08)', description: 'Cámaras Frío 2 - Slot Piso Pallet 5' },
-  'D1-CAM2-P06': { label: 'D1-CAM2-P06 - Pallet Por Salut / Fresco', icon: '❄️', color: '#007AFF', bg: 'rgba(0, 122, 255, 0.08)', description: 'Cámaras Frío 2 - Slot Piso Pallet 6' },
-  'D1-CAM2-R03-A': { label: 'D1-CAM2-R03-A - Salames / Jamones / Fiambres', icon: '❄️', color: '#007AFF', bg: 'rgba(0, 122, 255, 0.08)', description: 'Cámaras Frío 2 - Rack Derecha A' },
-  'D1-CAM2-R03-B': { label: 'D1-CAM2-R03-B - Fiambres Reserva / Cajas', icon: '❄️', color: '#007AFF', bg: 'rgba(0, 122, 255, 0.08)', description: 'Cámaras Frío 2 - Rack Derecha B' },
-  'D1-CAM2-R04-A': { label: 'D1-CAM2-R04-A - Cremas / Mantecas / Lácteos', icon: '❄️', color: '#007AFF', bg: 'rgba(0, 122, 255, 0.08)', description: 'Cámaras Frío 2 - Rack Derecha A' },
-  'D1-CAM2-R04-B': { label: 'D1-CAM2-R04-B - Mantecas / Cremas Reserva', icon: '❄️', color: '#007AFF', bg: 'rgba(0, 122, 255, 0.08)', description: 'Cámaras Frío 2 - Rack Derecha B' },
-  'D1-CAM1-EST-N1': { label: 'D1-CAM1-EST-N1 - Queso Por Salut / Azul Potes', icon: '❄️', color: '#007AFF', bg: 'rgba(0, 122, 255, 0.08)', description: 'Cámara 1 Frío - Estantería Nivel 1' },
-  'D1-CAM1-EST-N2': { label: 'D1-CAM1-EST-N2 - Quesos Fraccionados / Potes', icon: '❄️', color: '#007AFF', bg: 'rgba(0, 122, 255, 0.08)', description: 'Cámara 1 Frío - Estantería Nivel 2' },
-  'D1-CAM1-EST-N3': { label: 'D1-CAM1-EST-N3 - Yogures Potes / Cremas', icon: '❄️', color: '#007AFF', bg: 'rgba(0, 122, 255, 0.08)', description: 'Cámara 1 Frío - Estantería Nivel 3' },
-  'D1-CAM1-EST-N4': { label: 'D1-CAM1-EST-N4 - Postres / Sodecar Fraccionados', icon: '❄️', color: '#007AFF', bg: 'rgba(0, 122, 255, 0.08)', description: 'Cámara 1 Frío - Estantería Nivel 4' },
-  'D1-CAM1-EST-N5': { label: 'D1-CAM1-EST-N5 - Reposición Potes / Cajas', icon: '❄️', color: '#007AFF', bg: 'rgba(0, 122, 255, 0.08)', description: 'Cámara 1 Frío - Estantería Nivel 5' },
-  'D1-CAM1-P01': { label: 'D1-CAM1-P01 - Pallet Mozzarella Cremigal', icon: '❄️', color: '#007AFF', bg: 'rgba(0, 122, 255, 0.08)', description: 'Cámara 1 Frío - Piso 1' },
-  'D1-CAM1-P02': { label: 'D1-CAM1-P02 - Pallet Queso Por Salut Melincu', icon: '❄️', color: '#007AFF', bg: 'rgba(0, 122, 255, 0.08)', description: 'Cámara 1 Frío - Piso 2' },
-  'D1-CAM1-P03': { label: 'D1-CAM1-P03 - Pallet Sodecar / Embutidos', icon: '❄️', color: '#007AFF', bg: 'rgba(0, 122, 255, 0.08)', description: 'Cámara 1 Frío - Piso 3' },
-  'D1-CAM1-P04': { label: 'D1-CAM1-P04 - Pallet Stock Reserva Frío', icon: '❄️', color: '#007AFF', bg: 'rgba(0, 122, 255, 0.08)', description: 'Cámara 1 Frío - Piso 4' },
-  'D1-CAM3-R01-A': { label: 'D1-CAM3-R01-A - Conservas Cumaná / Puré Tomate', icon: '📦', color: '#8E8E93', bg: 'rgba(142, 142, 147, 0.08)', description: 'Cámara 3 Seco - Rack Nivel A' },
-  'D1-CAM3-R01-B': { label: 'D1-CAM3-R01-B - Cumaná Reserva / Cajas', icon: '📦', color: '#8E8E93', bg: 'rgba(142, 142, 147, 0.08)', description: 'Cámara 3 Seco - Rack Nivel B' },
-  'D1-RACK1-M01-A': { label: 'D1-RACK1-M01-A - Bebidas / Aperitivos Rotación', icon: '📦', color: '#8E8E93', bg: 'rgba(142, 142, 147, 0.08)', description: 'Rack 1 Entrada - Módulo 1 A' },
-  'D1-EST-LIC-N1': { label: 'D1-EST-LIC-N1 - Botellas Aperitivos Alta Rotac', icon: '🍾', color: '#FF9500', bg: 'rgba(255, 149, 0, 0.08)', description: 'Estantería Licores - Nivel 1' },
-  'D2-RACK-AZUL-M01-A': { label: 'D2-RACK-AZUL-M01-A - Cajas Cumaná / Puré / Tomate', icon: '🏢', color: '#5856D6', bg: 'rgba(88, 86, 214, 0.08)', description: 'Racks Azules - Módulo 1 Piso' },
-  'D2-PISO-FID-01': { label: 'D2-PISO-FID-01 - Pallet Fideos 308 Tallarín', icon: '🏢', color: '#5856D6', bg: 'rgba(88, 86, 214, 0.08)', description: 'Patio Fideos 308 - Slot 1' },
-  'D2-PISO-ACE-01': { label: 'D2-PISO-ACE-01 - Pallet Aceite Natura 900ml', icon: '🏢', color: '#5856D6', bg: 'rgba(88, 86, 214, 0.08)', description: 'Patio Aceites - Slot 1' },
-  'D3-PISO-UAT-01': { label: 'D3-PISO-UAT-01 - Pallet Leche UAT Cremigal Ente', icon: '🥛', color: '#FF2D55', bg: 'rgba(255, 45, 85, 0.08)', description: 'Patio Leches UAT - Slot 1' },
-  'D3-PISO-PAPEL-01': { label: 'D3-PISO-PAPEL-01 - Pallet Papel Higiénico Felpita', icon: '📦', color: '#FF2D55', bg: 'rgba(255, 45, 85, 0.08)', description: 'Patio Papelería - Slot 1' },
-  'S/U': { label: 'Sin Ubicación', icon: '📍', color: '#8E8E93', bg: 'rgba(142, 142, 147, 0.08)', description: 'Artículos sin ubicación física asignada' },
+  'D1-CAM2-R01-A': { label: 'D1-CAM2-R01-A - Quesos Tybo / Barra', icon: '', color: '#007AFF', bg: 'rgba(0, 122, 255, 0.08)', description: 'Cámaras Frío 2 - Rack 2 Niveles (A Piso): Picking' },
+  'D1-CAM2-R01-B': { label: 'D1-CAM2-R01-B - Quesos Reserva / Pulmón', icon: '', color: '#007AFF', bg: 'rgba(0, 122, 255, 0.08)', description: 'Cámaras Frío 2 - Rack 2 Niveles (B Viga 1): Pulmón' },
+  'D1-CAM2-R02-A': { label: 'D1-CAM2-R02-A - Mozzarella / Gouda', icon: '', color: '#007AFF', bg: 'rgba(0, 122, 255, 0.08)', description: 'Cámaras Frío 2 - Rack 2 Niveles (A Piso): Picking' },
+  'D1-CAM2-R02-B': { label: 'D1-CAM2-R02-B - Mozzarella Reserva', icon: '', color: '#007AFF', bg: 'rgba(0, 122, 255, 0.08)', description: 'Cámaras Frío 2 - Rack 2 Niveles (B Viga 1): Pulmón' },
+  'D1-CAM2-P01': { label: 'D1-CAM2-P01 - Pallet Queso Melincué Barra', icon: '', color: '#007AFF', bg: 'rgba(0, 122, 255, 0.08)', description: 'Cámaras Frío 2 - Slot Piso Pallet 1' },
+  'D1-CAM2-P02': { label: 'D1-CAM2-P02 - Pallet Queso Melincué Tybo', icon: '', color: '#007AFF', bg: 'rgba(0, 122, 255, 0.08)', description: 'Cámaras Frío 2 - Slot Piso Pallet 2' },
+  'D1-CAM2-P03': { label: 'D1-CAM2-P03 - Pallet Queso Cremoso Remotti', icon: '', color: '#007AFF', bg: 'rgba(0, 122, 255, 0.08)', description: 'Cámaras Frío 2 - Slot Piso Pallet 3' },
+  'D1-CAM2-P04': { label: 'D1-CAM2-P04 - Pallet Fiambres / Embutidos', icon: '', color: '#007AFF', bg: 'rgba(0, 122, 255, 0.08)', description: 'Cámaras Frío 2 - Slot Piso Pallet 4' },
+  'D1-CAM2-P05': { label: 'D1-CAM2-P05 - Pallet Queso Sardo / Bloque', icon: '', color: '#007AFF', bg: 'rgba(0, 122, 255, 0.08)', description: 'Cámaras Frío 2 - Slot Piso Pallet 5' },
+  'D1-CAM2-P06': { label: 'D1-CAM2-P06 - Pallet Por Salut / Fresco', icon: '', color: '#007AFF', bg: 'rgba(0, 122, 255, 0.08)', description: 'Cámaras Frío 2 - Slot Piso Pallet 6' },
+  'D1-CAM2-R03-A': { label: 'D1-CAM2-R03-A - Salames / Jamones / Fiambres', icon: '', color: '#007AFF', bg: 'rgba(0, 122, 255, 0.08)', description: 'Cámaras Frío 2 - Rack Derecha A' },
+  'D1-CAM2-R03-B': { label: 'D1-CAM2-R03-B - Fiambres Reserva / Cajas', icon: '', color: '#007AFF', bg: 'rgba(0, 122, 255, 0.08)', description: 'Cámaras Frío 2 - Rack Derecha B' },
+  'D1-CAM2-R04-A': { label: 'D1-CAM2-R04-A - Cremas / Mantecas / Lácteos', icon: '', color: '#007AFF', bg: 'rgba(0, 122, 255, 0.08)', description: 'Cámaras Frío 2 - Rack Derecha A' },
+  'D1-CAM2-R04-B': { label: 'D1-CAM2-R04-B - Mantecas / Cremas Reserva', icon: '', color: '#007AFF', bg: 'rgba(0, 122, 255, 0.08)', description: 'Cámaras Frío 2 - Rack Derecha B' },
+  'D1-CAM1-EST-N1': { label: 'D1-CAM1-EST-N1 - Queso Por Salut / Azul Potes', icon: '', color: '#007AFF', bg: 'rgba(0, 122, 255, 0.08)', description: 'Cámara 1 Frío - Estantería Nivel 1' },
+  'D1-CAM1-EST-N2': { label: 'D1-CAM1-EST-N2 - Quesos Fraccionados / Potes', icon: '', color: '#007AFF', bg: 'rgba(0, 122, 255, 0.08)', description: 'Cámara 1 Frío - Estantería Nivel 2' },
+  'D1-CAM1-EST-N3': { label: 'D1-CAM1-EST-N3 - Yogures Potes / Cremas', icon: '', color: '#007AFF', bg: 'rgba(0, 122, 255, 0.08)', description: 'Cámara 1 Frío - Estantería Nivel 3' },
+  'D1-CAM1-EST-N4': { label: 'D1-CAM1-EST-N4 - Postres / Sodecar Fraccionados', icon: '', color: '#007AFF', bg: 'rgba(0, 122, 255, 0.08)', description: 'Cámara 1 Frío - Estantería Nivel 4' },
+  'D1-CAM1-EST-N5': { label: 'D1-CAM1-EST-N5 - Reposición Potes / Cajas', icon: '', color: '#007AFF', bg: 'rgba(0, 122, 255, 0.08)', description: 'Cámara 1 Frío - Estantería Nivel 5' },
+  'D1-CAM1-P01': { label: 'D1-CAM1-P01 - Pallet Mozzarella Cremigal', icon: '', color: '#007AFF', bg: 'rgba(0, 122, 255, 0.08)', description: 'Cámara 1 Frío - Piso 1' },
+  'D1-CAM1-P02': { label: 'D1-CAM1-P02 - Pallet Queso Por Salut Melincu', icon: '', color: '#007AFF', bg: 'rgba(0, 122, 255, 0.08)', description: 'Cámara 1 Frío - Piso 2' },
+  'D1-CAM1-P03': { label: 'D1-CAM1-P03 - Pallet Sodecar / Embutidos', icon: '', color: '#007AFF', bg: 'rgba(0, 122, 255, 0.08)', description: 'Cámara 1 Frío - Piso 3' },
+  'D1-CAM1-P04': { label: 'D1-CAM1-P04 - Pallet Stock Reserva Frío', icon: '', color: '#007AFF', bg: 'rgba(0, 122, 255, 0.08)', description: 'Cámara 1 Frío - Piso 4' },
+  'D1-CAM3-R01-A': { label: 'D1-CAM3-R01-A - Conservas Cumaná / Puré Tomate', icon: '', color: '#8E8E93', bg: 'rgba(142, 142, 147, 0.08)', description: 'Cámara 3 Seco - Rack Nivel A' },
+  'D1-CAM3-R01-B': { label: 'D1-CAM3-R01-B - Cumaná Reserva / Cajas', icon: '', color: '#8E8E93', bg: 'rgba(142, 142, 147, 0.08)', description: 'Cámara 3 Seco - Rack Nivel B' },
+  'D1-RACK1-M01-A': { label: 'D1-RACK1-M01-A - Bebidas / Aperitivos Rotación', icon: '', color: '#8E8E93', bg: 'rgba(142, 142, 147, 0.08)', description: 'Rack 1 Entrada - Módulo 1 A' },
+  'D1-EST-LIC-N1': { label: 'D1-EST-LIC-N1 - Botellas Aperitivos Alta Rotac', icon: '', color: '#FF9500', bg: 'rgba(255, 149, 0, 0.08)', description: 'Estantería Licores - Nivel 1' },
+  'D2-RACK-AZUL-M01-A': { label: 'D2-RACK-AZUL-M01-A - Cajas Cumaná / Puré / Tomate', icon: '', color: '#5856D6', bg: 'rgba(88, 86, 214, 0.08)', description: 'Racks Azules - Módulo 1 Piso' },
+  'D2-PISO-FID-01': { label: 'D2-PISO-FID-01 - Pallet Fideos 308 Tallarín', icon: '', color: '#5856D6', bg: 'rgba(88, 86, 214, 0.08)', description: 'Patio Fideos 308 - Slot 1' },
+  'D2-PISO-ACE-01': { label: 'D2-PISO-ACE-01 - Pallet Aceite Natura 900ml', icon: '', color: '#5856D6', bg: 'rgba(88, 86, 214, 0.08)', description: 'Patio Aceites - Slot 1' },
+  'D3-PISO-UAT-01': { label: 'D3-PISO-UAT-01 - Pallet Leche UAT Cremigal Ente', icon: '', color: '#FF2D55', bg: 'rgba(255, 45, 85, 0.08)', description: 'Patio Leches UAT - Slot 1' },
+  'D3-PISO-PAPEL-01': { label: 'D3-PISO-PAPEL-01 - Pallet Papel Higiénico Felpita', icon: '', color: '#FF2D55', bg: 'rgba(255, 45, 85, 0.08)', description: 'Patio Papelería - Slot 1' },
+  'S/U': { label: 'Sin Ubicación', icon: '', color: '#8E8E93', bg: 'rgba(142, 142, 147, 0.08)', description: 'Artículos sin ubicación física asignada' },
 };
 
 export const getProductLocation = (product: any): string => {
@@ -73,7 +73,7 @@ export const renderLocationTag = (locCode: string) => {
   const code = locCode || 'S/U';
   const info = LOCATION_MAP[code] || {
     label: code,
-    icon: '📍',
+    icon: '',
     color: '#8E8E93',
     bg: 'var(--bg-secondary)',
     description: '',
@@ -96,7 +96,7 @@ export const renderLocationTag = (locCode: string) => {
       }}
       title={info.description || ''}
     >
-      {info.icon} {info.label}
+      {info.label}
     </span>
   );
 };
@@ -127,7 +127,7 @@ export const sortItemsByOptimalRoute = (items: any[]) => {
 
 /**
  * Detector Automático de "Coma Faltante" (Spec 003 / OrderEngine.normalizeScaleWeight)
- * Detecta cuando un operario tipea gramos (ej: 4250) o le falta la coma (ej: 42.5) en vez de kilos (4.250 kg).
+ * Detecta cuando un operario tipea gramos (4250) o le falta la coma (42.5) en vez de kilos (4.250 kg).
  */
 export function detectWeightAnomaly(
   inputWeight: number,
@@ -144,7 +144,7 @@ export function detectWeightAnomaly(
   const unitApprox = Number(approxWeightKg) > 0 ? Number(approxWeightKg) : 4.0;
   const expectedKg = Number((Math.max(1, quantity) * unitApprox).toFixed(3));
 
-  // Caso 1: Ingresó en gramos (>= 100, ej: 4250 -> 4.250 kg)
+  // Caso 1: Ingresó en gramos (>= 100, 4250 -> 4.250 kg)
   if (inputWeight >= 100) {
     const div1000 = Number((inputWeight / 1000).toFixed(3));
     return {
@@ -154,7 +154,7 @@ export function detectWeightAnomaly(
     };
   }
 
-  // Caso 2: Peso supera el doble de lo esperado (ej: 42.5 kg para 1 horma de 4.25 kg)
+  // Caso 2: Peso supera el doble de lo esperado (42.5 kg para 1 horma de 4.25 kg)
   if (inputWeight > expectedKg * 2.2) {
     const div10 = Number((inputWeight / 10).toFixed(3));
     const div100 = Number((inputWeight / 100).toFixed(3));

@@ -27,12 +27,10 @@ export const Slot3DRackIsometricView: React.FC<Slot3DRackIsometricViewProps> = (
           style={{
             fontSize: '0.78rem',
             fontWeight: 700,
-            textTransform: 'uppercase',
-            letterSpacing: '0.5px',
             color: '#64748b',
           }}
         >
-          🏢 Estantería Tridimensional (3 Pisos)
+          Estantería (3 Niveles)
         </span>
         <span
           className="badge"
@@ -74,7 +72,7 @@ export const Slot3DRackIsometricView: React.FC<Slot3DRackIsometricViewProps> = (
               <div className="wms-3d-items-preview">
                 {itemsLevelC.map((item, idx) => (
                   <div key={idx} className="wms-3d-item-pill">
-                    📦 {item.product.name} ({item.lot.stock}u)
+                    {item.product.name} ({item.lot.stock}u)
                   </div>
                 ))}
               </div>
@@ -119,7 +117,7 @@ export const Slot3DRackIsometricView: React.FC<Slot3DRackIsometricViewProps> = (
               <div className="wms-3d-items-preview">
                 {itemsLevelB.map((item, idx) => (
                   <div key={idx} className="wms-3d-item-pill">
-                    📦 {item.product.name} ({item.lot.stock}u)
+                    {item.product.name} ({item.lot.stock}u)
                   </div>
                 ))}
               </div>
@@ -160,7 +158,7 @@ export const Slot3DRackIsometricView: React.FC<Slot3DRackIsometricViewProps> = (
               <div className="wms-3d-items-preview">
                 {itemsLevelA.map((item, idx) => (
                   <div key={idx} className="wms-3d-item-pill">
-                    📦 {item.product.name} ({item.lot.stock}u)
+                    {item.product.name} ({item.lot.stock}u)
                   </div>
                 ))}
               </div>
@@ -173,9 +171,6 @@ export const Slot3DRackIsometricView: React.FC<Slot3DRackIsometricViewProps> = (
         </div>
       </div>
 
-      <div style={{ fontSize: '0.73rem', color: '#64748b', textAlign: 'center', marginTop: '12px' }}>
-        💡 Tocá cualquiera de los 3 pisos en la estantería 3D para inspeccionar o cargar mercadería.
-      </div>
     </div>
   );
 };

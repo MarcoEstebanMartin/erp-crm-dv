@@ -28,32 +28,37 @@ export const DepositoStockListTab: React.FC<DepositoStockListTabProps> = ({
 }) => {
   return (
     <div>
-      <div className="actions-bar">
+      <search aria-label="Filtrar inventario físico" className="actions-bar">
         <div className="search-input-wrapper">
+          <label htmlFor="deposito-stock-search" className="visually-hidden">Buscar inventario</label>
           <input
-            type="text"
+            id="deposito-stock-search"
+            type="search"
             className="input"
-            placeholder="Buscar por SKU, nombre o código de barra..."
+            placeholder="Buscar SKU, nombre o EAN..."
+            autoCorrect="off"
+            autoCapitalize="none"
+            spellCheck={false}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
-        <button type="button" className="btn btn-secondary" onClick={onRefresh} title="Actualizar listado">
-          <RefreshCw size={16} />
+        <button type="button" className="btn btn-secondary" onClick={onRefresh} aria-label="Actualizar listado">
+          <RefreshCw size={16} aria-hidden="true" />
         </button>
-      </div>
+      </search>
 
-      <div className="table-container">
+      <div className="table-container table-container--sticky" role="region" aria-label="Inventario físico" tabIndex={0}>
         <table>
           <thead>
             <tr>
-              <th>SKU</th>
-              <th>Artículo</th>
-              <th>Ubicación WMS / Lotes</th>
-              <th style={{ textAlign: 'right' }}>Stock Físico</th>
-              <th style={{ textAlign: 'right' }}>Stock Mínimo</th>
-              <th>Estado</th>
-              <th style={{ textAlign: 'center' }}>Ajuste</th>
+              <th scope="col">SKU</th>
+              <th scope="col">Artículo</th>
+              <th scope="col">Ubicación / Lotes</th>
+              <th scope="col" style={{ textAlign: 'right' }}>Stock</th>
+              <th scope="col" style={{ textAlign: 'right' }}>Mínimo</th>
+              <th scope="col">Estado</th>
+              <th scope="col" style={{ textAlign: 'center' }}>Ajuste</th>
             </tr>
           </thead>
           <tbody>
@@ -139,7 +144,7 @@ export const DepositoStockListTab: React.FC<DepositoStockListTabProps> = ({
                               >
                                 <MapPin size={12} />
                                 <span>
-                                  {entry.location} · {entry.units} u.{onJumpToMapLocation ? ' ↗' : ''}
+                                  {entry.location} · {entry.units} u.
                                 </span>
                               </button>
                             ))}
@@ -211,7 +216,7 @@ export const DepositoStockListTab: React.FC<DepositoStockListTabProps> = ({
                         style={{ padding: '5px 12px', fontSize: '0.78rem', whiteSpace: 'nowrap' }}
                         onClick={() => onOpenStockModal(p)}
                       >
-                        Modificar Stock
+                        Ajustar
                       </button>
                     </td>
                   </tr>

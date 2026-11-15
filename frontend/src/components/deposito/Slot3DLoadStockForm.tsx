@@ -51,7 +51,7 @@ export const Slot3DLoadStockForm: React.FC<Slot3DLoadStockFormProps> = ({
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #E2E8F0', paddingBottom: '8px' }}>
         <h4 style={{ margin: 0, fontSize: '0.92rem', fontWeight: 800, color: '#0F172A' }}>
-          📥 Ubicar Mercadería en Nivel {activeLevel}
+          Ubicar en Nivel {activeLevel}
         </h4>
         <span className="badge" style={{ backgroundColor: '#E2E8F0', color: '#475569', fontSize: '0.72rem', fontWeight: 700 }}>
           {slot.code}-{activeLevel}
@@ -59,8 +59,8 @@ export const Slot3DLoadStockForm: React.FC<Slot3DLoadStockFormProps> = ({
       </div>
 
       <div>
-        <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: 700, color: '#475569', marginBottom: '5px' }}>
-          1. Seleccionar Producto con Stock Disponible
+        <label htmlFor="slot-load-product" style={{ display: 'block', fontSize: '0.76rem', fontWeight: 700, color: '#475569', marginBottom: '5px' }}>
+          Producto
         </label>
 
         {selectedProduct && wms ? (
@@ -77,15 +77,15 @@ export const Slot3DLoadStockForm: React.FC<Slot3DLoadStockFormProps> = ({
                 onClick={() => { setSelectedProductId(''); setProductSearch(''); setSourceLotId(''); setQuantity(''); }}
                 style={{ fontSize: '0.74rem', fontWeight: 700, color: '#0F172A', backgroundColor: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: '6px', padding: '3px 9px', cursor: 'pointer' }}
               >
-                ✕ Cambiar
+                Cambiar
               </button>
             </div>
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', fontSize: '0.73rem' }}>
-              <span style={{ backgroundColor: '#DCFCE7', color: '#15803D', fontWeight: 700, padding: '2px 7px', borderRadius: '4px' }}>
-                📦 Sin Ubicar (S/U): {wms.unassignedUnits} u.
+              <span style={{ backgroundColor: '#DCFCE7', color: '#15803D', fontWeight: 700, padding: '2px 7px', borderRadius: '4px', fontVariantNumeric: 'tabular-nums' }}>
+                Sin Ubicar (S/U): {wms.unassignedUnits} u.
               </span>
-              <span style={{ backgroundColor: '#E2E8F0', color: '#334155', fontWeight: 600, padding: '2px 7px', borderRadius: '4px' }}>
-                🟢 Ya en Mapa: {wms.locatedUnits} u.
+              <span style={{ backgroundColor: '#E2E8F0', color: '#334155', fontWeight: 600, padding: '2px 7px', borderRadius: '4px', fontVariantNumeric: 'tabular-nums' }}>
+                En Mapa: {wms.locatedUnits} u.
               </span>
               <span style={{ color: '#475569', fontWeight: 600, padding: '2px 4px' }}>
                 Total Físico: <strong>{wms.totalUnits} u.</strong>
@@ -95,11 +95,12 @@ export const Slot3DLoadStockForm: React.FC<Slot3DLoadStockFormProps> = ({
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
             <input
-              type="text" className="form-control" placeholder="🔍 Buscar por nombre o SKU (ej: Cremoso, 0001)..."
+              type="search" className="form-control" aria-label="Buscar producto o SKU" autoCorrect="off" autoCapitalize="none" spellCheck={false} placeholder="Buscar nombre o SKU"
               value={productSearch} onChange={(e) => setProductSearch(e.target.value)}
               style={{ height: '36px', fontSize: '0.83rem', borderRadius: '8px', border: '1px solid #CBD5E1', backgroundColor: '#FFFFFF', paddingLeft: '12px' }}
             />
             <select
+              id="slot-load-product"
               className="form-control" value={selectedProductId}
               onChange={(e) => {
                 const nextId = e.target.value ? Number(e.target.value) : '';
@@ -126,7 +127,7 @@ export const Slot3DLoadStockForm: React.FC<Slot3DLoadStockFormProps> = ({
 
       <div style={{ backgroundColor: '#FFFFFF', padding: '10px 12px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-          <label style={{ fontSize: '0.76rem', fontWeight: 700, color: '#475569', margin: 0 }}>2. Lote de Origen</label>
+          <label htmlFor="slot-load-source-lot" style={{ fontSize: '0.76rem', fontWeight: 700, color: '#475569', margin: 0 }}>Lote de Origen</label>
           <label style={{ fontSize: '0.73rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px', color: '#64748B', fontWeight: 600 }}>
             <input type="checkbox" checked={isNewLot} onChange={(e) => { setIsNewLot(e.target.checked); if (e.target.checked) setSourceLotId(''); }} />
             <span>Renombrar código de lote</span>
@@ -135,6 +136,7 @@ export const Slot3DLoadStockForm: React.FC<Slot3DLoadStockFormProps> = ({
 
         {selectedProduct && activeLots.length > 0 && !isNewLot ? (
           <select
+            id="slot-load-source-lot"
             className="form-control"
             value={sourceLotId}
             onChange={(e) => {
@@ -154,15 +156,17 @@ export const Slot3DLoadStockForm: React.FC<Slot3DLoadStockFormProps> = ({
           </select>
         ) : (
           <input
-            type="text" className="form-control" placeholder="Código de lote opcional (ej: L-2026)" value={lotNumber} onChange={(e) => setLotNumber(e.target.value)}
+            id="slot-load-source-lot"
+            type="text" className="form-control" autoCorrect="off" autoCapitalize="none" spellCheck={false} placeholder="Código de lote (opcional)" value={lotNumber} onChange={(e) => setLotNumber(e.target.value)}
             style={{ height: '35px', fontSize: '0.82rem', borderRadius: '8px', border: '1px solid #E2E8F0' }}
           />
         )}
 
         {isNewLot && (
           <div style={{ marginTop: '8px' }}>
-            <label style={{ display: 'block', fontSize: '0.73rem', color: '#64748B', marginBottom: '3px', fontWeight: 600 }}>Fecha de Vencimiento (Opcional)</label>
+            <label htmlFor="slot-load-exp" style={{ display: 'block', fontSize: '0.73rem', color: '#64748B', marginBottom: '3px', fontWeight: 600 }}>Vencimiento (Opcional)</label>
             <input
+              id="slot-load-exp"
               type="date" className="form-control" value={expirationDate} onChange={(e) => setExpirationDate(e.target.value)}
               style={{ height: '34px', fontSize: '0.8rem', borderRadius: '8px', border: '1px solid #E2E8F0' }}
             />
@@ -173,28 +177,30 @@ export const Slot3DLoadStockForm: React.FC<Slot3DLoadStockFormProps> = ({
       <div style={{ display: 'flex', gap: '12px', width: '100%' }}>
         <div style={{ width: '165px', flexShrink: 0 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '5px' }}>
-            <label style={{ fontSize: '0.76rem', fontWeight: 700, color: '#475569' }}>3. Cantidad (u.)</label>
+            <label htmlFor="slot-load-qty" style={{ fontSize: '0.76rem', fontWeight: 700, color: '#475569' }}>Cantidad (u.)</label>
             {wms && wms.unassignedUnits > 0 && (
               <button
                 type="button"
                 onClick={() => setQuantity(chosenSourceLot ? chosenSourceLot.stock : wms.unassignedUnits)}
-                style={{ fontSize: '0.68rem', fontWeight: 700, color: '#007AFF', background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
+                style={{ fontSize: '0.68rem', fontWeight: 700, color: '#007AFF', background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontVariantNumeric: 'tabular-nums' }}
               >
                 Usar {chosenSourceLot ? chosenSourceLot.stock : wms.unassignedUnits} u.
               </button>
             )}
           </div>
           <input
+            id="slot-load-qty"
             type="number" min="1" max={maxRelocatable > 0 ? maxRelocatable : undefined} step="1"
             className="form-control" placeholder="Cant." value={quantity}
             onChange={(e) => setQuantity(e.target.value ? Math.trunc(Number(e.target.value)) : '')}
-            style={{ height: '36px', fontSize: '0.88rem', fontWeight: 700, borderRadius: '8px', border: '1px solid #CBD5E1', width: '100%', boxSizing: 'border-box' }}
+            style={{ height: '36px', fontSize: '0.88rem', fontWeight: 700, borderRadius: '8px', border: '1px solid #CBD5E1', width: '100%', boxSizing: 'border-box', fontVariantNumeric: 'tabular-nums' }}
           />
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: 700, color: '#475569', marginBottom: '5px' }}>4. Observación</label>
+          <label htmlFor="slot-load-reason" style={{ display: 'block', fontSize: '0.76rem', fontWeight: 700, color: '#475569', marginBottom: '5px' }}>Observación</label>
           <input
-            type="text" className="form-control" placeholder="Ej: Acomodado en cámara" value={reason} onChange={(e) => setReason(e.target.value)}
+            id="slot-load-reason"
+            type="text" className="form-control" placeholder="Observación" value={reason} onChange={(e) => setReason(e.target.value)}
             style={{ height: '36px', fontSize: '0.8rem', borderRadius: '8px', border: '1px solid #CBD5E1', width: '100%', boxSizing: 'border-box' }}
           />
         </div>
@@ -205,7 +211,7 @@ export const Slot3DLoadStockForm: React.FC<Slot3DLoadStockFormProps> = ({
           type="submit" className="btn btn-primary" disabled={loading || (selectedProduct ? maxRelocatable <= 0 : false)}
           style={{ flex: 1, height: '38px', fontSize: '0.84rem', fontWeight: 700, borderRadius: '8px', backgroundColor: '#0F172A', borderColor: '#0F172A', color: '#FFFFFF' }}
         >
-          {loading ? 'Ubicando...' : `📥 Ubicar en Nivel ${activeLevel} (Δ Stock = 0)`}
+          {loading ? 'Ubicando...' : `Ubicar en Nivel ${activeLevel}`}
         </button>
         <button
           type="button" className="btn btn-secondary" onClick={onCancel}

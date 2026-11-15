@@ -1,4 +1,5 @@
 import { X } from 'lucide-react';
+import { NativeModalDialog } from '../modals/NativeModalDialog';
 import { extractCleanLotNumber } from './lotLabel';
 
 interface ProductKardexDrawerProps {
@@ -19,65 +20,59 @@ export default function ProductKardexDrawer({
   if (!open || !product) return null;
 
   return (
-    <div
+    <NativeModalDialog
+      isOpen={Boolean(open && product)}
+      onClose={onClose}
+      ariaLabelledBy="product-kardex-title"
       style={{
-        position: 'fixed',
-        top: 0,
-        right: 0,
-        bottom: 0,
-        width: '420px',
-        backgroundColor: 'var(--bg-card)',
-        boxShadow: '-4px 0 24px rgba(0,0,0,0.08)',
-        borderLeft: '1px solid var(--border-color)',
-        zIndex: 1000,
-        padding: '24px',
-        display: 'flex',
-        flexDirection: 'column',
-        animation: 'slideLeft 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
+        margin: '0 0 0 auto',
+        maxWidth: '440px',
+        width: '94vw',
+        height: '100dvh',
+        maxHeight: '100dvh',
+        borderRadius: '12px 0 0 12px',
+        padding: 0,
       }}
     >
-      {/* Header Panel */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', paddingBottom: '12px', borderBottom: '1px solid var(--border-color)' }}>
-        <div>
-          <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700 }}>Historial de Stock (Kárdex)</h3>
-          <p style={{ margin: '2px 0 0 0', fontSize: '0.78rem', color: 'var(--text-secondary)', fontFamily: 'monospace' }}>
-            {product.sku} • {product.name}
-          </p>
+      <div style={{ height: '100%', padding: '24px', display: 'flex', flexDirection: 'column', boxSizing: 'border-box' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', paddingBottom: '12px', borderBottom: '1px solid var(--border-color)' }}>
+          <div>
+            <h3 id="product-kardex-title" style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700 }}>Kárdex</h3>
+            <p style={{ margin: '2px 0 0 0', fontSize: '0.78rem', color: 'var(--text-secondary)', fontFamily: 'monospace' }}>
+              {product.sku} · {product.name}
+            </p>
+          </div>
+          <button
+            type="button"
+            className="btn btn-ghost"
+            aria-label="Cerrar"
+            style={{ padding: '4px', borderRadius: '50%', border: 'none', cursor: 'pointer' }}
+            onClick={onClose}
+          >
+            <X size={18} aria-hidden="true" />
+          </button>
         </div>
-        <button
-          className="btn btn-ghost"
-          style={{ padding: '4px', borderRadius: '50%', border: 'none', cursor: 'pointer' }}
-          onClick={onClose}
+
+        <div
+          style={{
+            backgroundColor: 'var(--bg-app)',
+            padding: '12px 16px',
+            borderRadius: '8px',
+            marginBottom: '20px',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center'
+          }}
         >
-          <X size={18} />
-        </button>
-      </div>
+          <span style={{ fontSize: '0.85rem', fontWeight: 500, color: 'var(--text-secondary)' }}>
+            Stock Actual
+          </span>
+          <span className="tabular-nums" style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+            {product.stock} u.
+          </span>
+        </div>
 
-      {/* Físico Actual */}
-      <div
-        style={{
-          backgroundColor: 'var(--bg-app)',
-          padding: '12px 16px',
-          borderRadius: '8px',
-          marginBottom: '20px',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center'
-        }}
-      >
-        <span style={{ fontSize: '0.85rem', fontWeight: 500, color: 'var(--text-secondary)' }}>
-          Inventario Físico Actual:
-        </span>
-        <span style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-          {product.stock} u.
-        </span>
-      </div>
-
-      {/* Timeline Content */}
-      <div style={{ flex: 1, overflowY: 'auto', paddingRight: '4px' }}>
-        <h4 style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '14px' }}>
-          Timeline de Movimientos
-        </h4>
+        <div style={{ flex: 1, overflowY: 'auto', paddingRight: '4px' }}>
 
         {loading ? (
           <div style={{ textAlign: 'center', padding: '32px 0', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
@@ -164,7 +159,8 @@ export default function ProductKardexDrawer({
             })}
           </div>
         )}
+        </div>
       </div>
-    </div>
+    </NativeModalDialog>
   );
 }

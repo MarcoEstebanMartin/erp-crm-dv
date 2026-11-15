@@ -119,14 +119,10 @@ export const WarehouseSlotConfigSidebar: React.FC<WarehouseSlotConfigSidebarProp
       </div>
 
       {!cell ? (
-        <div style={{ padding: '32px 10px', textAlign: 'center', color: 'var(--text-secondary)' }}>
-          <div style={{ fontSize: '2.1rem', marginBottom: '8px' }}>🛠️</div>
+        <div style={{ padding: '24px 10px', textAlign: 'center', color: 'var(--text-secondary)' }}>
           <div style={{ fontWeight: 700, fontSize: '0.88rem', color: 'var(--text-primary)' }}>
-            Tocá cualquier celda del plano
+            Seleccioná una celda del mapa
           </div>
-          <p style={{ fontSize: '0.76rem', marginTop: '4px' }}>
-            Podés habilitar nuevos slots sobre un pasillo blanco, cambiar la cantidad de pisos o bloquear por mantenimiento.
-          </p>
         </div>
       ) : (
         <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '11px' }}>
@@ -150,8 +146,8 @@ export const WarehouseSlotConfigSidebar: React.FC<WarehouseSlotConfigSidebarProp
             </div>
           )}
 
-          {errorMsg && <div className="alert alert-danger" style={{ padding: '8px 10px', fontSize: '0.76rem', margin: 0 }}>{errorMsg}</div>}
-          {successMsg && <div className="alert alert-success" style={{ padding: '8px 10px', fontSize: '0.76rem', margin: 0 }}>{successMsg}</div>}
+          {errorMsg && <div role="alert" className="alert alert-danger" style={{ padding: '8px 10px', fontSize: '0.76rem', margin: 0 }}>{errorMsg}</div>}
+          {successMsg && <div role="status" className="alert alert-success" style={{ padding: '8px 10px', fontSize: '0.76rem', margin: 0 }}>{successMsg}</div>}
 
           <div>
             <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#334155', marginBottom: '5px' }}>Función de la Celda</label>
@@ -162,7 +158,7 @@ export const WarehouseSlotConfigSidebar: React.FC<WarehouseSlotConfigSidebarProp
                 onClick={() => setIsStorage(true)}
                 style={{ fontSize: '0.76rem', fontWeight: 700, padding: '6px' }}
               >
-                📦 Slot Estantería
+                Slot Estantería
               </button>
               <button
                 type="button"
@@ -172,7 +168,7 @@ export const WarehouseSlotConfigSidebar: React.FC<WarehouseSlotConfigSidebarProp
                 title={activeUnitsInCell > 0 ? 'Primero liberá las unidades a S/U' : ''}
                 style={{ fontSize: '0.76rem', fontWeight: 700, padding: '6px' }}
               >
-                🚶 Pasillo Libre
+                Pasillo Libre
               </button>
             </div>
           </div>
@@ -180,8 +176,8 @@ export const WarehouseSlotConfigSidebar: React.FC<WarehouseSlotConfigSidebarProp
           {isStorage && (
             <>
               <div>
-                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>Pisos / Niveles Habilitados</label>
-                <select className="form-control" value={levels} onChange={(e) => setLevels(e.target.value)} style={{ fontSize: '0.78rem', height: '34px' }}>
+                <label htmlFor="wms-cfg-levels" style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>Niveles</label>
+                <select id="wms-cfg-levels" className="form-control" value={levels} onChange={(e) => setLevels(e.target.value)} style={{ fontSize: '0.78rem', height: '34px' }}>
                   {LEVEL_PRESET_OPTIONS.map((opt) => (
                     <option key={opt.value} value={opt.value}>{opt.label}</option>
                   ))}
@@ -189,31 +185,32 @@ export const WarehouseSlotConfigSidebar: React.FC<WarehouseSlotConfigSidebarProp
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>Cámara / Sector</label>
-                <select className="form-control" value={chamber} onChange={(e) => setChamber(e.target.value)} style={{ fontSize: '0.78rem', height: '34px' }}>
+                <label htmlFor="wms-cfg-chamber" style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>Sector</label>
+                <select id="wms-cfg-chamber" className="form-control" value={chamber} onChange={(e) => setChamber(e.target.value)} style={{ fontSize: '0.78rem', height: '34px' }}>
                   {Object.entries(SECTORS_INFO)
                     .filter(([k]) => k !== 'GENERAL')
                     .map(([k, info]) => (
-                      <option key={k} value={k}>{info.icon} {info.label}</option>
+                      <option key={k} value={k}>{info.label}</option>
                     ))}
                 </select>
               </div>
 
               <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.76rem', fontWeight: 600, color: '#334155', backgroundColor: '#f8fafc', padding: '8px 10px', borderRadius: '6px', border: '1px solid #e2e8f0', cursor: 'pointer' }}>
                 <input type="checkbox" checked={isBlocked} onChange={(e) => setIsBlocked(e.target.checked)} />
-                <span>🔒 Bloquear nuevas cargas (Mantenimiento)</span>
+                <span>Bloquear nuevas cargas</span>
               </label>
             </>
           )}
 
           <div>
-            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
-              {isStorage ? 'Etiqueta / Nota del Slot (Opcional)' : 'Cartel de Referencia en Plano (Opcional)'}
+            <label htmlFor="wms-cfg-label" style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
+              {isStorage ? 'Etiqueta (Opcional)' : 'Referencia (Opcional)'}
             </label>
             <input
+              id="wms-cfg-label"
               type="text"
               className="form-control"
-              placeholder={isStorage ? 'Ej: Quesos Duros / Picking' : 'Ej: Mesa Control / Acceso'}
+              placeholder={isStorage ? 'Etiqueta opcional' : 'Referencia opcional'}
               value={label}
               maxLength={50}
               onChange={(e) => setLabel(e.target.value)}

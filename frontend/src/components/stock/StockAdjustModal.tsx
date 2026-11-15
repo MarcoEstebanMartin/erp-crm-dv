@@ -1,5 +1,6 @@
 import React from 'react';
 import { X } from 'lucide-react';
+import { NativeModalDialog } from '../modals/NativeModalDialog';
 import type { AdjustModalState } from './types';
 import {
   extractCleanLotNumber,
@@ -25,17 +26,23 @@ export default function StockAdjustModal({
   if (!modal.open || !modal.product) return null;
 
   return (
-    <div className="modal-overlay">
-      <div className="modal-content" style={{ borderRadius: '12px', padding: '24px', maxWidth: '450px' }}>
+    <NativeModalDialog
+      isOpen={Boolean(modal.open && modal.product)}
+      onClose={onClose}
+      ariaLabelledBy="stock-adjust-modal-title"
+      style={{ borderRadius: '12px', padding: '24px', maxWidth: '450px', width: '94vw' }}
+    >
+      <div>
         <div className="modal-header" style={{ marginBottom: '20px' }}>
-          <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700 }}>Ajustar Stock Físico</h3>
+          <h3 id="stock-adjust-modal-title" style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700 }}>Ajustar Stock</h3>
           <button
             type="button"
             className="btn btn-ghost"
+            aria-label="Cerrar"
             style={{ padding: '4px', borderRadius: '6px', border: 'none', cursor: 'pointer' }}
             onClick={onClose}
           >
-            <X size={16} />
+            <X size={16} aria-hidden="true" />
           </button>
         </div>
 
@@ -51,36 +58,35 @@ export default function StockAdjustModal({
             }}
           >
             <div style={{ marginBottom: '4px' }}>
-              <strong>Artículo:</strong> {modal.product.name}
+              <strong>{modal.product.name}</strong>
             </div>
             <div style={{ marginBottom: '4px', fontFamily: 'monospace', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
               SKU: {modal.product.sku}
             </div>
-            <div style={{ fontVariantNumeric: 'tabular-nums' }}>
-              <strong>Stock actual en depósito:</strong>{' '}
+            <div className="tabular-nums">
+              <strong>Stock actual:</strong>{' '}
               <span style={{ fontWeight: 700 }}>{modal.product.stock} u.</span>
             </div>
           </div>
 
           <div className="form-group">
-            <label>Cantidad a Sumar o Restar</label>
+            <label htmlFor="stock-adjust-qty">Cantidad (+ / -)</label>
             <input
+              id="stock-adjust-qty"
               type="number"
-              className="input"
-              placeholder="Ej: 24 para ingresar, -12 para egresar"
+              className="input tabular-nums"
+              placeholder="+24 / -12"
               value={modal.quantityChange || ''}
               onChange={(e) => onChange({ ...modal, quantityChange: Number(e.target.value) })}
               required
               style={{ borderRadius: '8px' }}
             />
-            <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-              Use valores positivos para entradas de stock y negativos para salidas.
-            </span>
           </div>
 
           <div className="form-group">
-            <label>Lote del Producto</label>
+            <label htmlFor="stock-adjust-lot">Lote</label>
             <select
+              id="stock-adjust-lot"
               className="select"
               value={modal.isNewLot ? '__new__' : modal.lotNumber}
               onChange={(e) => {
@@ -93,7 +99,7 @@ export default function StockAdjustModal({
               }}
               style={{ borderRadius: '8px' }}
             >
-              <option value="">Sin lote (Stock Genérico / General)</option>
+              <option value="">Sin lote</option>
               {(modal.product.lots || []).map((lot: any) => {
                 const cleanLot = extractCleanLotNumber(lot.lotNumber);
                 const locLabel = lot.location && lot.location !== 'S/U' ? ` · ${lot.location}` : '';
@@ -116,11 +122,15 @@ export default function StockAdjustModal({
           {modal.isNewLot && (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px', animation: 'fadeIn 0.2s ease-out' }}>
               <div className="form-group" style={{ marginBottom: 0 }}>
-                <label>Código Lote</label>
+                <label htmlFor="stock-adjust-new-lot">Código Lote</label>
                 <input
+                  id="stock-adjust-new-lot"
                   type="text"
                   className="input"
-                  placeholder="Ej: L-2026-01"
+                  placeholder="L-2026-01"
+                  autoCorrect="off"
+                  autoCapitalize="none"
+                  spellCheck={false}
                   value={modal.lotNumber}
                   onChange={(e) => onChange({ ...modal, lotNumber: e.target.value })}
                   required
@@ -128,8 +138,9 @@ export default function StockAdjustModal({
                 />
               </div>
               <div className="form-group" style={{ marginBottom: 0 }}>
-                <label>Fecha Vencimiento</label>
+                <label htmlFor="stock-adjust-new-exp">Vencimiento</label>
                 <input
+                  id="stock-adjust-new-exp"
                   type="date"
                   className="input"
                   value={modal.expirationDate}
@@ -142,8 +153,9 @@ export default function StockAdjustModal({
           )}
 
           <div className="form-group">
-            <label>Detalle / Motivo del Ajuste</label>
+            <label htmlFor="stock-adjust-reason">Motivo</label>
             <select
+              id="stock-adjust-reason"
               className="select"
               value={modal.reason}
               onChange={(e) => onChange({ ...modal, reason: e.target.value })}
@@ -165,11 +177,11 @@ export default function StockAdjustModal({
               Cancelar
             </button>
             <button type="submit" className="btn btn-primary" disabled={loading} style={{ borderRadius: '8px' }}>
-              {loading ? 'Procesando...' : 'Aplicar Ajuste'}
+              {loading ? 'Procesando...' : 'Aplicar'}
             </button>
           </div>
         </form>
       </div>
-    </div>
+    </NativeModalDialog>
   );
 }

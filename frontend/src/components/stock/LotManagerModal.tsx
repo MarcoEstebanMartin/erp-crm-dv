@@ -1,5 +1,6 @@
 import React from 'react';
 import { X, Edit2, Trash2, ArrowLeftRight, PackageMinus } from 'lucide-react';
+import { NativeModalDialog } from '../modals/NativeModalDialog';
 import type { TransferLotData } from './types';
 import LotTransferForm from './LotTransferForm';
 import {
@@ -48,14 +49,19 @@ export default function LotManagerModal({
   const lots = product.lots || [];
 
   return (
-    <div className="modal-overlay">
-      <div className="modal-content" style={{ borderRadius: '12px', padding: '24px', maxWidth: '650px', width: '90%' }}>
+    <NativeModalDialog
+      isOpen={Boolean(open && product)}
+      onClose={onClose}
+      ariaLabelledBy="lot-manager-modal-title"
+      style={{ borderRadius: '12px', padding: '24px', maxWidth: '650px', width: '94vw' }}
+    >
+      <div>
         <div className="modal-header" style={{ marginBottom: '20px' }}>
-          <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700 }}>
-            {canMutateStock ? 'Gestionar Lotes' : 'Consulta de Lotes'}
+          <h3 id="lot-manager-modal-title" style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700 }}>
+            {canMutateStock ? 'Gestionar Lotes' : 'Lotes'}
           </h3>
-          <button type="button" className="btn btn-ghost" style={{ padding: '4px', borderRadius: '6px', border: 'none', cursor: 'pointer' }} onClick={onClose}>
-            <X size={16} />
+          <button type="button" className="btn btn-ghost" aria-label="Cerrar" style={{ padding: '4px', borderRadius: '6px', border: 'none', cursor: 'pointer' }} onClick={onClose}>
+            <X size={16} aria-hidden="true" />
           </button>
         </div>
 
@@ -88,13 +94,17 @@ export default function LotManagerModal({
           />
         ) : canMutateStock && editingLot ? (
           <form onSubmit={onUpdateLotSubmit} style={{ animation: 'slideDown 0.2s ease-out' }}>
-            <h4 style={{ margin: '0 0 16px 0', fontSize: '0.9rem', fontWeight: 600 }}>Editar Propiedades del Lote</h4>
+            <h4 style={{ margin: '0 0 16px 0', fontSize: '0.9rem', fontWeight: 600 }}>Editar Lote</h4>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
               <div className="form-group" style={{ marginBottom: 0 }}>
-                <label>Código de Lote</label>
+                <label htmlFor="lot-edit-number">Código de Lote</label>
                 <input
+                  id="lot-edit-number"
                   type="text"
                   className="input"
+                  autoCorrect="off"
+                  autoCapitalize="none"
+                  spellCheck={false}
                   value={editLotNumber}
                   onChange={(e) => onEditLotNumberChange(e.target.value)}
                   required
@@ -102,22 +112,27 @@ export default function LotManagerModal({
                 />
               </div>
               <div className="form-group" style={{ marginBottom: 0 }}>
-                <label>Ubicación Física</label>
+                <label htmlFor="lot-edit-location">Ubicación</label>
                 <input
+                  id="lot-edit-location"
                   type="text"
                   className="input"
+                  autoCorrect="off"
+                  autoCapitalize="none"
+                  spellCheck={false}
                   value={editLocation}
                   onChange={(e) => onEditLocationChange(e.target.value)}
-                  placeholder="Ej: D1-R01-C04-A o S/U"
+                  placeholder="D1-R01-C04-A o S/U"
                   style={{ borderRadius: '8px', width: '100%' }}
                 />
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+            <div style={{ marginBottom: '16px', maxWidth: '280px' }}>
               <div className="form-group" style={{ marginBottom: 0 }}>
-                <label>Fecha de Vencimiento</label>
+                <label htmlFor="lot-edit-expiration">Vencimiento</label>
                 <input
+                  id="lot-edit-expiration"
                   type="date"
                   className="input"
                   value={editExpirationDate}
@@ -126,11 +141,6 @@ export default function LotManagerModal({
                   style={{ borderRadius: '8px', width: '100%' }}
                 />
               </div>
-              <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'flex-start', paddingBottom: '4px' }}>
-                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                  Los cambios afectarán únicamente a las propiedades del lote sin alterar su cantidad física.
-                </span>
-              </div>
             </div>
 
             <div className="modal-footer" style={{ borderTop: '1px solid var(--border-color)', paddingTop: '16px', marginTop: '20px' }}>
@@ -138,22 +148,22 @@ export default function LotManagerModal({
                 Cancelar
               </button>
               <button type="submit" className="btn btn-primary" disabled={loading} style={{ borderRadius: '8px' }}>
-                {loading ? 'Guardando...' : 'Guardar Cambios'}
+                {loading ? 'Guardando...' : 'Guardar'}
               </button>
             </div>
           </form>
         ) : (
           <div>
-            <h4 style={{ margin: '0 0 12px 0', fontSize: '0.88rem', fontWeight: 600 }}>Lotes Registrados</h4>
-            <div style={{ overflowX: 'auto', border: '1px solid var(--border-color)', borderRadius: '8px', maxHeight: '300px' }}>
+            <h4 style={{ margin: '0 0 12px 0', fontSize: '0.88rem', fontWeight: 600 }}>Lotes</h4>
+            <div className="table-container table-container--sticky" role="region" aria-label="Lotes registrados" tabIndex={0} style={{ border: '1px solid var(--border-color)', borderRadius: '8px', maxHeight: '300px' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
                 <thead style={{ backgroundColor: 'var(--bg-muted)', position: 'sticky', top: 0, zIndex: 1 }}>
                   <tr style={{ borderBottom: '1px solid var(--border-color)' }}>
-                    <th style={{ ...TH_LOT_STYLE, textAlign: 'left' }}>LOTE</th>
-                    <th style={{ ...TH_LOT_STYLE, textAlign: 'center' }}>STOCK</th>
-                    <th style={{ ...TH_LOT_STYLE, textAlign: 'left' }}>VENCIMIENTO</th>
-                    <th style={{ ...TH_LOT_STYLE, textAlign: 'left' }}>UBICACIÓN</th>
-                    {canMutateStock && <th style={{ ...TH_LOT_STYLE, textAlign: 'right' }}>ACCIONES</th>}
+                    <th scope="col" style={{ ...TH_LOT_STYLE, textAlign: 'left' }}>Lote</th>
+                    <th scope="col" style={{ ...TH_LOT_STYLE, textAlign: 'center' }}>Stock</th>
+                    <th scope="col" style={{ ...TH_LOT_STYLE, textAlign: 'left' }}>Vencimiento</th>
+                    <th scope="col" style={{ ...TH_LOT_STYLE, textAlign: 'left' }}>Ubicación</th>
+                    {canMutateStock && <th scope="col" style={{ ...TH_LOT_STYLE, textAlign: 'right' }}>Acciones</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -236,6 +246,6 @@ export default function LotManagerModal({
           </div>
         )}
       </div>
-    </div>
+    </NativeModalDialog>
   );
 }

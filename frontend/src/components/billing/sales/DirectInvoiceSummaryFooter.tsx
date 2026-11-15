@@ -74,13 +74,14 @@ export function DirectInvoiceSummaryFooter({
             color: 'var(--accent-color)'
           }}
         >
-          <span>TOTAL GENERAL:</span>
+          <span>TOTAL</span>
           <span>${directBillingTotals.total.toLocaleString('es-AR')}</span>
         </div>
       </div>
 
       {modalError && (
         <div
+          role="alert"
           style={{
             padding: '10px 14px',
             backgroundColor: '#fef2f2',
@@ -92,7 +93,7 @@ export function DirectInvoiceSummaryFooter({
             marginTop: '12px'
           }}
         >
-          ⚠️ {modalError}
+          {modalError}
         </div>
       )}
 
@@ -106,7 +107,7 @@ export function DirectInvoiceSummaryFooter({
           style={{ flex: 1.5, backgroundColor: 'var(--color-success)', borderColor: 'var(--color-success)', fontWeight: 700 }}
           disabled={isSubmitting || isCartEmpty}
         >
-          {isSubmitting ? 'Procesando Factura...' : 'Facturar y Confirmar'}
+          {isSubmitting ? 'Procesando...' : 'Facturar'}
         </button>
       </div>
     </>

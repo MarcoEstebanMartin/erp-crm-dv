@@ -11,7 +11,7 @@ import {
   type MergedSlotCellData,
   type WarehouseCellOverride,
 } from './warehouseLayoutMerger';
-import { Maximize2, Minimize2, Search, Settings2 } from 'lucide-react';
+import { Maximize2, Minimize2, Search, Settings2, X } from 'lucide-react';
 import { api } from '../../utils/api';
 
 interface WarehouseMapProps {
@@ -156,30 +156,37 @@ export const WarehouseMap: React.FC<WarehouseMapProps> = ({
       <div style={{ backgroundColor: '#ffffff', border: '1px solid var(--border-color)', borderRadius: '10px', padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px', flexWrap: 'wrap' }}>
-            <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: 'var(--text-primary)' }}>🗺️ Plano Gráfico Interactivo del Depósito</h3>
-            <span className="badge badge-success" style={{ fontSize: '0.72rem', padding: '3px 9px' }}>
-              {activeSlotsCount} Slots Activos {customCells.length > 0 ? `(${customCells.length} personalizados)` : ''}
+            <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: 'var(--text-primary)' }}>Mapa Depósito</h3>
+            <span className="badge badge-success" style={{ fontSize: '0.72rem', padding: '3px 9px', fontVariantNumeric: 'tabular-nums' }}>
+              {activeSlotsCount} Slots
             </span>
           </div>
-          <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: 0 }}>
-            {isEditMode
-              ? 'Modo Configuración ADMIN activo: tocá cualquier celda (slot o pasillo) para editar sus pisos, sector o bloqueo.'
-              : 'Tocá cualquier estantería para abrir el inspector 3D y ubicar mercadería sin alterar el stock contable.'}
-          </p>
         </div>
 
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
-          <div style={{ position: 'relative', width: '210px' }}>
-            <input type="text" className="form-control" placeholder="Buscar Slot o Producto..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} style={{ fontSize: '0.8rem', paddingLeft: '28px', height: '34px' }} />
-            <Search size={14} style={{ position: 'absolute', left: '9px', top: '10px', color: '#94a3b8' }} />
-          </div>
+          <search aria-label="Buscar slot o producto" style={{ position: 'relative', width: '210px' }}>
+            <label htmlFor="wms-map-search" className="visually-hidden">Buscar slot o producto</label>
+            <input
+              id="wms-map-search"
+              type="search"
+              className="form-control"
+              autoCorrect="off"
+              autoCapitalize="none"
+              spellCheck={false}
+              placeholder="Slot o producto..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              style={{ fontSize: '0.8rem', paddingLeft: '28px', height: '34px' }}
+            />
+            <Search size={14} aria-hidden="true" style={{ position: 'absolute', left: '9px', top: '10px', color: '#94a3b8' }} />
+          </search>
 
           <div className="btn-group" style={{ display: 'flex', gap: '4px' }}>
             {([
-              { id: 'ALL', label: '🌐 Planta' },
-              { id: 'D1', label: '🏢 Dep. 1' },
-              { id: 'D2', label: '🏢 Dep. 2' },
-              { id: 'D3', label: '🏢 Dep. 3' },
+              { id: 'ALL', label: 'Planta' },
+              { id: 'D1', label: 'Dep. 1' },
+              { id: 'D2', label: 'Dep. 2' },
+              { id: 'D3', label: 'Dep. 3' },
             ] as const).map((btn) => (
               <button
                 key={btn.id} type="button" className={`btn ${selectedWarehouse === btn.id ? 'btn-primary' : 'btn-secondary'}`}
@@ -221,15 +228,16 @@ export const WarehouseMap: React.FC<WarehouseMapProps> = ({
       {focusLocationCode && selectedSlot && (
         <div style={{ padding: '10px 16px', backgroundColor: '#eff6ff', border: '1.5px solid #3b82f6', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
           <span style={{ fontSize: '0.82rem', color: '#1e3a8a', fontWeight: 700 }}>
-            🎯 Mostrando ubicación <strong>{focusLocationCode}</strong> seleccionada desde la tabla de Stock.
+            Ubicación <strong>{focusLocationCode}</strong>
           </span>
           <div style={{ display: 'flex', gap: '8px' }}>
             <button type="button" className="btn btn-primary btn-sm" style={{ fontSize: '0.76rem', fontWeight: 700, padding: '4px 12px', borderRadius: '6px' }} onClick={() => setIs3DModalOpen(true)}>
-              📦 Abrir Estantería 3D (Nivel {focusedLevel || 'A'})
+              Estantería 3D (Nivel {focusedLevel || 'A'})
             </button>
             {onClearFocus && (
-              <button type="button" className="btn btn-secondary btn-sm" style={{ fontSize: '0.76rem', padding: '4px 10px', borderRadius: '6px' }} onClick={onClearFocus}>
-                ✕ Cerrar aviso
+              <button type="button" className="btn btn-secondary btn-sm" style={{ fontSize: '0.76rem', padding: '4px 10px', borderRadius: '6px', display: 'inline-flex', alignItems: 'center', gap: '4px' }} onClick={onClearFocus} aria-label="Cerrar aviso">
+                <X size={13} aria-hidden="true" />
+                Cerrar
               </button>
             )}
           </div>
@@ -237,22 +245,23 @@ export const WarehouseMap: React.FC<WarehouseMapProps> = ({
       )}
 
       <div style={{ padding: '10px 16px', backgroundColor: '#ffffff', border: '1px solid var(--border-color)', borderRadius: '8px', display: 'flex', gap: '8px', fontSize: '0.78rem', flexWrap: 'wrap', alignItems: 'center' }}>
-        <span style={{ fontWeight: 700, color: 'var(--text-primary)', marginRight: '4px' }}>Filtrar Cámara / Sector:</span>
+        <span style={{ fontWeight: 700, color: 'var(--text-primary)', marginRight: '4px' }}>Sector:</span>
         {Object.entries(SECTORS_INFO).filter(([key]) => key !== 'GENERAL').map(([key, info]) => {
           const isSelected = selectedSector === key;
           return (
             <button
               key={key} type="button" className="btn btn-sm"
-              style={{ backgroundColor: isSelected ? info.color : info.bg, color: isSelected ? '#ffffff' : info.color, border: `1.5px solid ${info.border}`, fontWeight: 600, fontSize: '0.76rem', padding: '4px 10px', borderRadius: '6px' }}
+              style={{ backgroundColor: isSelected ? info.color : info.bg, color: isSelected ? '#ffffff' : info.color, border: `1.5px solid ${info.border}`, fontWeight: 600, fontSize: '0.76rem', padding: '4px 10px', borderRadius: '6px', display: 'inline-flex', alignItems: 'center', gap: '5px' }}
               onClick={() => { setSelectedSector(selectedSector === key ? 'ALL' : key); if (selectedWarehouse === 'ALL') setSelectedWarehouse('D1'); }}
             >
-              {info.icon} {info.label}
+              <span aria-hidden="true" style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: isSelected ? '#ffffff' : info.color, display: 'inline-block' }} />
+              {info.label}
             </button>
           );
         })}
         {selectedSector !== 'ALL' && (
           <button type="button" className="btn btn-ghost btn-sm" style={{ fontSize: '0.75rem', marginLeft: 'auto', color: 'var(--text-secondary)' }} onClick={() => setSelectedSector('ALL')}>
-            🔄 Limpiar Selección
+            Limpiar
           </button>
         )}
       </div>
@@ -308,9 +317,13 @@ export const WarehouseMap: React.FC<WarehouseMapProps> = ({
                           title={isSlot ? `Slot ${slotCode} (${cellText})${cell.customLabel ? ` [${cell.customLabel}]` : ''} - ${cell.isBlocked ? 'BLOQUEADO' : hasStock ? `${stockData?.totalStock} u.` : 'Vacío'}` : isEditMode ? `Pasillo ${slotCode} (clic para configurar)` : cellText}
                         >
                           {isSlot ? (
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '2px' }}>
                               <span>{cellText}</span>
-                              {cell.isBlocked ? <span style={{ fontSize: '0.58rem' }}>🔒</span> : hasStock ? <span style={{ color: '#22c55e', fontSize: '0.58rem' }}>🟢</span> : null}
+                              {cell.isBlocked ? (
+                                <span aria-label="Bloqueado" style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#dc2626', display: 'inline-block' }} />
+                              ) : hasStock ? (
+                                <span aria-label="Con stock" style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#22c55e', display: 'inline-block' }} />
+                              ) : null}
                             </div>
                           ) : cellText}
                         </td>

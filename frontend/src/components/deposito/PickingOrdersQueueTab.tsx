@@ -68,22 +68,31 @@ export const PickingOrdersQueueTab: React.FC<PickingOrdersQueueTabProps> = ({
         </div>
       )}
 
-      <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '20px' }}>
-        Pedidos en cola de distribución cargados por vendedores. Iniciá el picking para armar bultos físicos.
-      </p>
-
-      <div className="actions-bar" style={{ flexWrap: 'wrap', gap: '10px', marginBottom: '16px' }}>
+      <search aria-label="Filtrar cola de picking" className="actions-bar" style={{ flexWrap: 'wrap', gap: '10px', marginBottom: '16px' }}>
         <div className="search-input-wrapper" style={{ minWidth: '280px' }}>
-          <input type="text" className="input" placeholder="Buscar nro pedido, cliente, localidad..." value={orderSearchQuery} onChange={(e) => setOrderSearchQuery(e.target.value)} />
+          <label htmlFor="picking-orders-search" className="visually-hidden">Buscar pedidos</label>
+          <input
+            id="picking-orders-search"
+            type="search"
+            className="input"
+            placeholder="Nro pedido, cliente o localidad..."
+            autoCorrect="off"
+            autoCapitalize="none"
+            spellCheck={false}
+            value={orderSearchQuery}
+            onChange={(e) => setOrderSearchQuery(e.target.value)}
+          />
         </div>
 
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+          <label htmlFor="picking-route-filter" className="visually-hidden">Ruta</label>
           <select
+            id="picking-route-filter"
             className="select" style={{ width: '200px', height: '38px', padding: '6px 12px' }} value={routeFilter}
             onChange={(e) => { setRouteFilter(e.target.value); if (e.target.value !== 'ALL') setWithdrawalFilter(false); }}
           >
-            <option value="ALL">📍 Todas las Rutas</option>
-            {uniqueRoutes.map((r) => (<option key={r} value={r}>🛣️ {r}</option>))}
+            <option value="ALL">Todas las Rutas</option>
+            {uniqueRoutes.map((r) => (<option key={r} value={r}>{r}</option>))}
           </select>
 
           <button
@@ -97,7 +106,7 @@ export const PickingOrdersQueueTab: React.FC<PickingOrdersQueueTabProps> = ({
             }}
             onClick={() => { const val = !withdrawalFilter; setWithdrawalFilter(val); if (val) setRouteFilter('ALL'); }}
           >
-            🏢 Retiros Depósito
+            Retiros Depósito
           </button>
 
           <div style={{ display: 'flex', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-sm)', overflow: 'hidden', height: '38px' }}>
@@ -121,28 +130,29 @@ export const PickingOrdersQueueTab: React.FC<PickingOrdersQueueTabProps> = ({
             ))}
           </div>
 
-          <button className="btn btn-secondary" style={{ height: '38px' }} onClick={onRefresh}><RefreshCw size={16} /></button>
+          <button type="button" className="btn btn-secondary" style={{ height: '38px' }} onClick={onRefresh} aria-label="Actualizar"><RefreshCw size={16} aria-hidden="true" /></button>
         </div>
-      </div>
+      </search>
 
       {Object.keys(selectedOrderIds).length > 0 && (
         <div style={{ backgroundColor: 'var(--bg-secondary)', border: '1px dashed var(--border-color)', padding: '12px 16px', borderRadius: 'var(--radius-md)', marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
-          <div style={{ fontSize: '0.88rem', fontWeight: 600 }}>⚡ {Object.keys(selectedOrderIds).length} pedido(s) seleccionado(s)</div>
+          <div className="tabular-nums" style={{ fontSize: '0.88rem', fontWeight: 600 }}>{Object.keys(selectedOrderIds).length} seleccionado(s)</div>
           <div style={{ display: 'flex', gap: '8px' }}>
             <button type="button" className="btn btn-secondary" style={{ padding: '6px 14px' }} onClick={() => setSelectedOrderIds({})}>Limpiar</button>
-            <button type="button" className="btn btn-secondary" style={{ padding: '6px 14px', border: '1px solid var(--accent-color)' }} onClick={onBatchStartPicking} disabled={loading}>🏁 Iniciar Picking en Lote</button>
-            <button type="button" className="btn btn-primary" style={{ padding: '6px 14px', backgroundColor: 'var(--color-primary)' }} onClick={onOpenConsolidatedView}>👁️ Ver Picking Consolidado</button>
+            <button type="button" className="btn btn-secondary" style={{ padding: '6px 14px', border: '1px solid var(--accent-color)' }} onClick={onBatchStartPicking} disabled={loading}>Iniciar Lote</button>
+            <button type="button" className="btn btn-primary" style={{ padding: '6px 14px', backgroundColor: 'var(--color-primary)' }} onClick={onOpenConsolidatedView}>Consolidado</button>
           </div>
         </div>
       )}
 
-      <div className="table-container">
+      <div className="table-container table-container--sticky" role="region" aria-label="Cola de picking" tabIndex={0}>
         <table>
           <thead>
             <tr>
-              <th style={{ width: '40px', textAlign: 'center' }}>
+              <th scope="col" style={{ width: '40px', textAlign: 'center' }}>
                 <input
                   type="checkbox"
+                  aria-label="Seleccionar todos"
                   checked={filteredOrders.length > 0 && filteredOrders.every((o) => selectedOrderIds[o.id])}
                   ref={(el) => {
                     if (el) {
@@ -153,17 +163,17 @@ export const PickingOrdersQueueTab: React.FC<PickingOrdersQueueTabProps> = ({
                   onChange={onToggleSelectAll}
                 />
               </th>
-              <th>Nro Pedido</th>
-              <th>Cliente / Localidad</th>
-              <th>Ruta / Despacho</th>
-              <th>Items a preparar</th>
-              <th>Estado</th>
-              <th>Acción</th>
+              <th scope="col">Nro Pedido</th>
+              <th scope="col">Cliente / Localidad</th>
+              <th scope="col">Ruta / Despacho</th>
+              <th scope="col">Ítems</th>
+              <th scope="col">Estado</th>
+              <th scope="col">Acción</th>
             </tr>
           </thead>
           <tbody>
             {filteredOrders.length === 0 ? (
-              <tr><td colSpan={7} style={{ textAlign: 'center', padding: '24px 0' }}>No hay pedidos para mostrar con los filtros seleccionados.</td></tr>
+              <tr><td colSpan={7} style={{ textAlign: 'center', padding: '24px 0' }}>Sin pedidos para mostrar.</td></tr>
             ) : (
               filteredOrders.map((o) => {
                 const isChecked = !!selectedOrderIds[o.id];
@@ -172,7 +182,9 @@ export const PickingOrdersQueueTab: React.FC<PickingOrdersQueueTabProps> = ({
                   <tr key={o.id} style={{ backgroundColor: isChecked ? 'rgba(0,0,0,0.015)' : 'transparent' }}>
                     <td style={{ textAlign: 'center', verticalAlign: 'middle' }}>
                       <input
-                        type="checkbox" checked={isChecked}
+                        type="checkbox"
+                        aria-label={`Seleccionar pedido #${o.id}`}
+                        checked={isChecked}
                         onChange={() => setSelectedOrderIds((prev) => {
                           const copy = { ...prev };
                           if (copy[o.id]) delete copy[o.id]; else copy[o.id] = true;
@@ -180,34 +192,34 @@ export const PickingOrdersQueueTab: React.FC<PickingOrdersQueueTabProps> = ({
                         })}
                       />
                     </td>
-                    <td style={{ fontWeight: 700 }}>#{o.id}</td>
+                    <td className="tabular-nums" style={{ fontWeight: 700 }}>#{o.id}</td>
                     <td style={{ fontWeight: 600 }}>
                       <div>{o.persona?.name || o.client?.name}</div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 400 }}>📍 {o.persona?.city || 'Sin Localidad'}</div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 400 }}>{o.persona?.city || 'Sin Localidad'}</div>
                     </td>
                     <td>
                       {isWithdrawal ? (
-                        <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#10B981', backgroundColor: '#ECFDF5', border: '1px solid rgba(16, 185, 129, 0.15)', padding: '2px 8px', borderRadius: '4px' }}>🏢 RETIRO DEPÓSITO</span>
+                        <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#10B981', backgroundColor: '#ECFDF5', border: '1px solid rgba(16, 185, 129, 0.15)', padding: '2px 8px', borderRadius: '4px' }}>RETIRO DEPÓSITO</span>
                       ) : (
                         o.persona?.route && (
-                          <span style={{ backgroundColor: 'rgba(59, 130, 246, 0.1)', color: 'var(--color-primary)', border: '1px solid rgba(59, 130, 246, 0.15)', padding: '2px 8px', borderRadius: '4px', fontSize: '0.72rem', fontWeight: 700 }}>🛣️ {o.persona.route}</span>
+                          <span style={{ backgroundColor: 'rgba(59, 130, 246, 0.1)', color: 'var(--color-primary)', border: '1px solid rgba(59, 130, 246, 0.15)', padding: '2px 8px', borderRadius: '4px', fontSize: '0.72rem', fontWeight: 700 }}>{o.persona.route}</span>
                         )
                       )}
                     </td>
-                    <td>{(o.items || []).length} artículos distintos</td>
+                    <td className="tabular-nums">{(o.items || []).length} ítems</td>
                     <td>
                       <span className={`badge ${o.status === 'PENDING' ? 'badge-pending' : 'badge-preparing'}`}>
-                        {o.status === 'PENDING' ? 'Esperando Picking' : 'En Preparación'}
+                        {o.status === 'PENDING' ? 'Pendiente' : 'En Preparación'}
                       </span>
                     </td>
                     <td>
                       {o.status === 'PENDING' ? (
-                        <button className="btn btn-primary" style={{ padding: '6px 12px', fontSize: '0.8rem' }} onClick={() => onStartPicking(o.id)}>
-                          <Play size={12} /><span>Iniciar Armado</span>
+                        <button type="button" className="btn btn-primary" style={{ padding: '6px 12px', fontSize: '0.8rem' }} onClick={() => onStartPicking(o.id)}>
+                          <Play size={12} aria-hidden="true" /><span>Iniciar Armado</span>
                         </button>
                       ) : (
-                        <button className="btn btn-secondary" style={{ padding: '6px 12px', fontSize: '0.8rem' }} onClick={() => onSelectOrder(o)}>
-                          <Eye size={12} /><span>Ver Picking List</span>
+                        <button type="button" className="btn btn-secondary" style={{ padding: '6px 12px', fontSize: '0.8rem' }} onClick={() => onSelectOrder(o)}>
+                          <Eye size={12} aria-hidden="true" /><span>Ver Picking</span>
                         </button>
                       )}
                     </td>
