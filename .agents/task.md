@@ -355,9 +355,9 @@
   - [x] **Modo Simulacro Fiscal ARCA (`AFIP_MOCK` / `afipMockMode`)**: Agregado en `env.config.ts`, `admin.validator.ts`, `system-config.service.ts`, `afip.service.ts` (numeración correlativa y CAE simulado de 14 dígitos sin emitir comprobantes reales en ARCA), `api.ts` y `ConfigGeneralTab.tsx` (interruptor accesible `role="switch"` en Reglas Operativas) + `AFIP_MOCK=true` en `backend/.env`.
   - [x] **Reinicio atómico con `200 u.` iniciales (`backend/scripts/reset_movements.js`)**: Vaciado transaccional completo preservando maestros, 18 vencimientos de flota y ubicaciones WMS del Mapa 3D, secuencias reiniciadas a `1` (incluyendo `AccountLedger_id_seq`, `RouteGpsPing_id_seq`, `SaleRouteVisit_id_seq` y `movement_seq`), `331` productos activos en `200 u.` exactas (`66.200 u.` totales) con asientos `IN` y `0` descalces en auditoría.
   - [x] **Verificación**: Backend `tsc --noEmit` (`0` errores) + `vitest run` (`52/52` suites / `248/248` tests) ✅ + Frontend `tsc --noEmit` (`0` errores) + `vitest run` (`15/15` suites / `62/62` tests) ✅ + servidor local activo en simulacro (`3001` / `5174`).
-- [x] **Paso 2: Carga de los 30 Pedidos** ✅ COMPLETADO
-  - [x] Creado script reanudable e idempotente `backend/scripts/seed_simulation_orders.ts` usando el servicio real `OrderService.createOrder` (`Decimal.js`, snapshots inmutables, reserva preventiva de stock y asientos `StockMovement` `OUT`).
-  - [x] Cargados **30 pedidos reales** en estado `PENDING` (`diego`: 8, `fabian`: 7, `norberto`: 6, `maria_jose`: 4, `OFICINA`: 5) — `15` `OFFICIAL` + `15` `INTERNAL`, `20` ítems pesables para balanza (`FRIO`), zonas `FRIO`/`TABLA`/`CAJAS`, monto total `$2.373.837` y `0` descalces entre `Product.stock` y `StockMovement` (`-294 u.` reservadas).
+- [x] **Paso 2: Carga de los 80 Pedidos Variados (`30` base + `50` adicionales)** ✅ COMPLETADO
+  - [x] Creado y ampliado script reanudable `backend/scripts/seed_simulation_orders.ts` (`--add50`) usando `OrderService.createOrder` (`Decimal.js`, snapshots inmutables, reserva preventiva de stock y asientos `StockMovement` `OUT`).
+  - [x] Cargados **80 pedidos reales** en estado `PENDING` (`diego`: 21, `fabian`: 19, `norberto`: 15, `maria_jose`: 12, `OFICINA`: 13) con variedad de productos en zonas `FRIO`/`TABLA`/`CAJAS` y pesables para balanza, con `0` descalces entre `Product.stock` y `StockMovement`.
 - [ ] **Paso 3: Preparación, Picking y Balanza**
 - [ ] **Paso 4: Facturación y Cuentas Corrientes**
 - [ ] **Paso 5: Salidas de Viaje, Entregas y Devoluciones**

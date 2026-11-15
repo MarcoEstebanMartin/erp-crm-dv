@@ -10,6 +10,7 @@ import { OrderService } from '../src/services/order.service';
 interface SellerPlan {
   username: string;
   count: number;
+  add50Count: number;
   channels: SalesChannel[];
   officialRatio: number;
   tag: string;
@@ -19,6 +20,7 @@ const SELLER_PLANS: SellerPlan[] = [
   {
     username: 'diego',
     count: 8,
+    add50Count: 13,
     channels: [SalesChannel.PREVENTA_RUTA],
     officialRatio: 0.5,
     tag: 'Pueblos Norte/Oeste',
@@ -26,6 +28,7 @@ const SELLER_PLANS: SellerPlan[] = [
   {
     username: 'fabian',
     count: 7,
+    add50Count: 12,
     channels: [SalesChannel.PREVENTA_RUTA],
     officialRatio: 0.6,
     tag: 'Villegas Centro',
@@ -33,13 +36,15 @@ const SELLER_PLANS: SellerPlan[] = [
   {
     username: 'norberto',
     count: 6,
+    add50Count: 9,
     channels: [SalesChannel.PREVENTA_RUTA],
-    officialRatio: 0.35,
+    officialRatio: 0.45,
     tag: 'Villegas Sur',
   },
   {
     username: 'maria_jose',
     count: 4,
+    add50Count: 8,
     channels: [SalesChannel.PREVENTA_RUTA],
     officialRatio: 0.5,
     tag: 'Alvear',
@@ -47,6 +52,7 @@ const SELLER_PLANS: SellerPlan[] = [
   {
     username: 'OFICINA',
     count: 5,
+    add50Count: 8,
     channels: [SalesChannel.MOSTRADOR, SalesChannel.MOSTRADOR, SalesChannel.MOSTRADOR, SalesChannel.TELEFONICO, SalesChannel.TELEFONICO],
     officialRatio: 0.6,
     tag: 'Mostrador / Telefónico',
@@ -74,23 +80,38 @@ function buildOrderItems(
     items.push({ productId: prod.id, quantity: minQ * mult });
   };
 
-  // Incluir un pesable en 2 de cada 3 pedidos para probar balanza en Depósito
+  // Incluir 1 o 2 pesables en ~65% de los pedidos recorriendo las 34 variedades
   if (pesables.length > 0 && orderIndex % 3 !== 2) {
-    const p = pesables[orderIndex % pesables.length];
-    const qty = Math.max(1, p.minOrderQuantity || 1);
-    const approx = Number(p.approximateWeight || 3.5);
-    usedIds.add(p.id);
-    items.push({
-      productId: p.id,
-      quantity: qty,
-      weight: Number((approx * qty).toFixed(2)),
-    });
+    const p1 = pesables[(orderIndex * 5) % pesables.length];
+    const qty1 = Math.max(1, p1.minOrderQuantity || 1);
+    const approx1 = Number(p1.approximateWeight || 3.5);
+    usedIds.add(p1.id);
+    items.push({ productId: p1.id, quantity: qty1, weight: Number((approx1 * qty1).toFixed(2)) });
+
+    if (orderIndex % 4 === 0 && pesables.length > 1) {
+      const p2 = pesables[(orderIndex * 5 + 11) % pesables.length];
+      if (!usedIds.has(p2.id)) {
+        const qty2 = Math.max(1, p2.minOrderQuantity || 1);
+        const approx2 = Number(p2.approximateWeight || 3.0);
+        usedIds.add(p2.id);
+        items.push({ productId: p2.id, quantity: qty2, weight: Number((approx2 * qty2).toFixed(2)) });
+      }
+    }
   }
 
-  // Mezclar zonas de picking (FRIO, TABLA, CAJAS)
-  if (frioNormales.length > 0) pushNormal(frioNormales[orderIndex % frioNormales.length], 1);
-  if (tablaNormales.length > 0) pushNormal(tablaNormales[orderIndex % tablaNormales.length], (orderIndex % 2) + 1);
-  if (cajasNormales.length > 0) pushNormal(cajasNormales[(orderIndex * 2) % cajasNormales.length], 1);
+  // Mezclar múltiples ítems variados entre FRIO, TABLA y CAJAS (3 a 7 ítems totales)
+  if (frioNormales.length > 0) {
+    pushNormal(frioNormales[(orderIndex * 3) % frioNormales.length], 1);
+    if (orderIndex % 2 === 0) pushNormal(frioNormales[(orderIndex * 3 + 7) % frioNormales.length], 2);
+  }
+  if (tablaNormales.length > 0) {
+    pushNormal(tablaNormales[(orderIndex * 7) % tablaNormales.length], (orderIndex % 2) + 1);
+    pushNormal(tablaNormales[(orderIndex * 7 + 19) % tablaNormales.length], 1);
+  }
+  if (cajasNormales.length > 0) {
+    pushNormal(cajasNormales[(orderIndex * 11) % cajasNormales.length], (orderIndex % 3) + 1);
+    if (orderIndex % 2 === 1) pushNormal(cajasNormales[(orderIndex * 11 + 23) % cajasNormales.length], 1);
+  }
 
   if (items.length === 0 && cajasNormales.length > 0) {
     pushNormal(cajasNormales[0], 1);
@@ -99,15 +120,17 @@ function buildOrderItems(
 }
 
 async function main() {
+  const isAdd50Mode = process.argv.includes('--add50');
   const existingOrders = await prisma.order.count();
-  if (existingOrders >= 30 && !process.argv.includes('--force')) {
+  if (!isAdd50Mode && existingOrders >= 30 && !process.argv.includes('--force')) {
     console.log(
-      `ℹ️ Ya existen ${existingOrders} pedidos en la base de datos (>= 30). Usá --force si querés agregar otros igualmente.`,
+      `ℹ️ Ya existen ${existingOrders} pedidos en la base de datos (>= 30). Usá --add50 para sumar 50 variados o --force.`,
     );
     return;
   }
 
-  console.log('🚀 Generando 30 pedidos reales de simulación mediante OrderService.createOrder...\n');
+  const labelCount = isAdd50Mode ? '50 pedidos adicionales variados' : '30 pedidos reales';
+  console.log(`🚀 Generando ${labelCount} de simulación mediante OrderService.createOrder...\n`);
 
   const [users, activeProducts] = await Promise.all([
     prisma.user.findMany({
@@ -160,9 +183,11 @@ async function main() {
       select: { personaId: true },
     });
     const usedPersonaIds = new Set(existingSellerOrders.map((o) => o.personaId));
-    const pendingCount = process.argv.includes('--force')
-      ? plan.count
-      : Math.max(0, plan.count - existingSellerOrders.length);
+    const pendingCount = isAdd50Mode
+      ? plan.add50Count
+      : process.argv.includes('--force')
+        ? plan.count
+        : Math.max(0, plan.count - existingSellerOrders.length);
 
     if (pendingCount === 0) {
       globalIdx += plan.count;
@@ -197,12 +222,12 @@ async function main() {
       const billingType = wantsOfficial ? BillingType.OFFICIAL : BillingType.INTERNAL;
       const salesChannel = plan.channels[i % plan.channels.length];
 
-      const items = buildOrderItems(globalIdx, pesables, frioNormales, tablaNormales, cajasNormales);
-      let notes = `Simulación ${plan.tag} #${globalIdx + 1}`;
-      if (plan.username === 'norberto' && i === pendingCount - 1) {
+      const items = buildOrderItems(existingOrders + globalIdx, pesables, frioNormales, tablaNormales, cajasNormales);
+      let notes = `Simulación ${plan.tag} #${existingOrders + globalIdx + 1}`;
+      if (!isAdd50Mode && plan.username === 'norberto' && i === pendingCount - 1) {
         notes += ' [CASO PRUEBA: Devolución parcial en entrega]';
       }
-      if (plan.username === 'OFICINA' && i === pendingCount - 1) {
+      if (!isAdd50Mode && plan.username === 'OFICINA' && i === pendingCount - 1) {
         notes += ' [CASO PRUEBA: Anulación con reversión de stock]';
       }
 
