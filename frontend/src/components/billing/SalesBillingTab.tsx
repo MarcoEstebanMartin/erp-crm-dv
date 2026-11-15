@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { SalesBillingTabProps, SalesInvoiceTypeFilter } from './sales/sales.types';
+import type { SalesBillingTabProps } from './sales/sales.types';
 import { useDirectInvoice } from './sales/useDirectInvoice';
 import { SalesInvoicesTable } from './sales/SalesInvoicesTable';
 import { DirectInvoiceModal } from './sales/DirectInvoiceModal';
@@ -13,24 +13,28 @@ export default function SalesBillingTab({
   products,
   bankAccounts,
   activeDrawers,
+  ivaPerceptionAliquot,
+  salesInvoiceTypeFilter,
+  requestingCaeOrderId,
+  onRequestOrderCae,
   loading,
   loadData,
   setErrorMsg,
   setSuccessMsg,
-  handleCreateCreditNoteFromInvoice
+  handleCreateCreditNoteFromInvoice,
 }: SalesBillingTabProps) {
   const [viewInvoiceModal, setViewInvoiceModal] = useState<any | null>(null);
-  const [salesInvoiceTypeFilter, setSalesInvoiceTypeFilter] = useState<SalesInvoiceTypeFilter>('ALL');
 
   const directInvoice = useDirectInvoice({
     personas,
     products,
     bankAccounts,
     activeDrawers,
+    ivaPerceptionAliquotOverride: ivaPerceptionAliquot,
     loadData,
     setErrorMsg,
     setSuccessMsg,
-    onInvoiceCreated: (inv) => setViewInvoiceModal(inv)
+    onInvoiceCreated: (inv) => setViewInvoiceModal(inv),
   });
 
   return (
@@ -39,7 +43,8 @@ export default function SalesBillingTab({
         salesInvoices={salesInvoices}
         loading={loading}
         salesInvoiceTypeFilter={salesInvoiceTypeFilter}
-        setSalesInvoiceTypeFilter={setSalesInvoiceTypeFilter}
+        requestingCaeOrderId={requestingCaeOrderId}
+        onRequestOrderCae={onRequestOrderCae}
         onOpenDirectInvoiceModal={() => directInvoice.setShowDirectInvoiceModal(true)}
         onViewInvoice={(inv) => setViewInvoiceModal(inv)}
         handleCreateCreditNoteFromInvoice={handleCreateCreditNoteFromInvoice}

@@ -19,6 +19,7 @@ import {
   validateCreditNoteAgainstLinkedOrder,
 } from './credit-note-stock.helper';
 import { recordLedgerMovement } from '../ledger/account-ledger.service';
+import { parseArgentinaTimestampRange } from '../billing/billing-date-range.helper';
 
 export const CREDIT_NOTE_DETAIL_INCLUDE = {
   persona: true,
@@ -33,24 +34,26 @@ export const creditNoteService = {
     endDate?: string;
     query?: string;
     status?: string;
+    billingType?: string;
   }) {
     const whereClause: Record<string, any> = {};
 
-    if (query.startDate && query.endDate) {
-      whereClause.createdAt = {
-        gte: new Date(String(query.startDate)),
-        lte: new Date(String(query.endDate)),
-      };
+    const dateRange = parseArgentinaTimestampRange(query.startDate, query.endDate);
+    if (dateRange) {
+      whereClause.createdAt = dateRange;
     }
-    if (query.status) {
+    if (query.status && query.status !== 'ALL') {
       whereClause.status = query.status as CreditNoteStatus;
     }
-    if (query.query) {
-      const q = String(query.query);
+    if (query.billingType === BillingType.OFFICIAL || query.billingType === BillingType.INTERNAL) {
+      whereClause.billingType = query.billingType as BillingType;
+    }
+    const rawQ = typeof query.query === 'string' ? query.query.trim() : '';
+    if (rawQ) {
       whereClause.OR = [
-        { creditNoteNumber: { contains: q, mode: 'insensitive' } },
-        { persona: { name: { contains: q, mode: 'insensitive' } } },
-        { persona: { cuit: { contains: q } } },
+        { creditNoteNumber: { contains: rawQ, mode: 'insensitive' } },
+        { persona: { name: { contains: rawQ, mode: 'insensitive' } } },
+        { persona: { cuit: { contains: rawQ } } },
       ];
     }
 

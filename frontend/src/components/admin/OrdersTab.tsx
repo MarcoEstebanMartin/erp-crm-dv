@@ -6,6 +6,12 @@ import { getOrderStatusInfo } from '../../utils/orderStatusHelper';
 import { RefreshCw, Globe, Eye, Printer, Edit, Trash2 } from 'lucide-react';
 import { useConfirm } from '../../context/ConfirmContext';
 import { printOrderTicket } from './orderTicketPrinter';
+import {
+  getWebOrderBadgeCode,
+  matchesOrderSearch,
+  matchesOrderStatusFilter,
+  resolveOrderPersona,
+} from '../../utils/orderSearchAndStatus.helper';
 
 interface OrdersTabProps {
   orders: any[];
@@ -14,17 +20,6 @@ interface OrdersTabProps {
   handleOpenEditOrder: (order: any) => void;
   setErrorMsg: (msg: string | null) => void;
   setSuccessMsg: (msg: string | null) => void;
-}
-
-function getWebOrderBadgeCode(order: any): string | null {
-  if (order?.bultosDetails && typeof order.bultosDetails === 'object' && order.bultosDetails.webOrderId) {
-    return String(order.bultosDetails.webOrderId);
-  }
-  if (typeof order?.notes === 'string') {
-    const m = order.notes.trim().match(/^\[(DV-\d+)\]/i);
-    if (m?.[1]) return m[1].toUpperCase();
-  }
-  return order?.salesChannel === 'TIENDA_WEB' ? 'WEB' : null;
 }
 
 export default function OrdersTab({
@@ -46,8 +41,9 @@ export default function OrdersTab({
         '¿Está seguro de que desea cancelar este pedido? Se restaurará el stock físico.',
         { type: 'danger' },
       ))
-    )
+    ) {
       return;
+    }
     try {
       await api.updateOrderStatus(id, OrderStatus.CANCELLED);
       setSuccessMsg(`Pedido #${id} cancelado correctamente.`);
@@ -79,74 +75,86 @@ export default function OrdersTab({
 
   const filteredOrders = useMemo(() => {
     return orders.filter((o: any) => {
-      if (orderStatusFilter !== 'ALL') {
-        const statusInfo = getOrderStatusInfo(o);
-        const logicalKey = statusInfo.label.toUpperCase().replace(' ', '_');
-        let targetKey = orderStatusFilter;
-        if (orderStatusFilter === 'RECIBIDO') targetKey = 'PENDIENTE';
-        if (logicalKey !== targetKey) return false;
-      }
-      if (searchQuery) {
-        const q = searchQuery.toLowerCase();
-        const webCode = getWebOrderBadgeCode(o)?.toLowerCase() || '';
-        const matchesClient = o.client?.name?.toLowerCase().includes(q);
-        const matchesId = String(o.id).includes(q) || webCode.includes(q);
-        return matchesClient || matchesId;
-      }
-      return true;
+      if (!matchesOrderStatusFilter(o, orderStatusFilter)) return false;
+      return matchesOrderSearch(o, searchQuery);
     });
   }, [orders, orderStatusFilter, searchQuery]);
 
   return (
     <div>
-      <div
-        className="actions-bar"
-        style={{
-          display: 'grid',
-          gridTemplateColumns: '1fr auto auto auto',
-          gap: '12px',
-          marginBottom: '16px',
-        }}
-      >
-        <div className="search-input-wrapper">
-          <input
-            type="text"
-            className="input"
-            placeholder="Buscar por cliente, #pedido o código DV-XXXX..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
+      <search aria-label="Filtrar historial de pedidos">
+        <div
+          className="actions-bar"
+          style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr auto auto auto',
+            gap: '12px',
+            marginBottom: '16px',
+          }}
+        >
+          <div className="search-input-wrapper">
+            <label htmlFor="orders-history-search" className="visually-hidden">
+              Buscar pedidos por cliente, #pedido, factura o código DV
+            </label>
+            <input
+              id="orders-history-search"
+              name="q"
+              type="search"
+              className="input"
+              placeholder="Buscar por cliente, CUIT, #pedido o código DV-XXXX..."
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="none"
+              spellCheck={false}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+
+          <div>
+            <label htmlFor="orders-history-status" className="visually-hidden">
+              Filtrar por estado
+            </label>
+            <select
+              id="orders-history-status"
+              name="status"
+              className="select"
+              value={orderStatusFilter}
+              onChange={(e) => setOrderStatusFilter(e.target.value)}
+            >
+              <option value="ALL">Todos los Estados</option>
+              <option value="RECIBIDO">Pedidos Recibidos</option>
+              <option value="EN_PICKING">Pedidos en Picking</option>
+              <option value="ARMADO">Pedidos Armados (Pend. Facturación)</option>
+              <option value="FACTURADO">Pedidos Facturados</option>
+              <option value="EN_VIAJE">Pedidos en Viaje</option>
+              <option value="ENTREGADO">Pedidos Entregados</option>
+              <option value="CANCELADO">Cancelados</option>
+            </select>
+          </div>
+
+          <button
+            type="button"
+            className="btn btn-secondary"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+            onClick={handleManualWebSync}
+            disabled={syncingWeb}
+            title="Sincronizar pedidos entrantes de donvenancio.com.ar y Bot WhatsApp"
+          >
+            <Globe size={15} />
+            <span>{syncingWeb ? 'Sincronizando...' : 'Sincronizar Web'}</span>
+          </button>
+
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={fetchData}
+            title="Actualizar listado"
+          >
+            <RefreshCw size={16} />
+          </button>
         </div>
-
-        <select
-          className="select"
-          value={orderStatusFilter}
-          onChange={(e) => setOrderStatusFilter(e.target.value)}
-        >
-          <option value="ALL">Todos los Estados</option>
-          <option value="RECIBIDO">Pedidos Recibidos</option>
-          <option value="ARMADO">Pedidos Armados (Pend. Facturación)</option>
-          <option value="FACTURADO">Pedidos Facturados</option>
-          <option value="EN_VIAJE">Pedidos en Viaje</option>
-          <option value="ENTREGADO">Pedidos Entregados</option>
-          <option value="CANCELADO">Cancelados</option>
-        </select>
-
-        <button
-          className="btn btn-secondary"
-          style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-          onClick={handleManualWebSync}
-          disabled={syncingWeb}
-          title="Sincronizar pedidos entrantes de donvenancio.com.ar y Bot WhatsApp"
-        >
-          <Globe size={15} />
-          <span>{syncingWeb ? 'Sincronizando...' : 'Sincronizar Web'}</span>
-        </button>
-
-        <button className="btn btn-secondary" onClick={fetchData} title="Actualizar listado">
-          <RefreshCw size={16} />
-        </button>
-      </div>
+      </search>
 
       <div className="table-container">
         <table>
@@ -171,6 +179,8 @@ export default function OrdersTab({
             ) : (
               filteredOrders.map((o) => {
                 const webCode = getWebOrderBadgeCode(o);
+                const persona = resolveOrderPersona(o);
+                const statusInfo = getOrderStatusInfo(o);
                 return (
                   <tr key={o.id}>
                     <td style={{ fontWeight: 700 }}>
@@ -194,9 +204,11 @@ export default function OrdersTab({
                       )}
                     </td>
                     <td>
-                      <div style={{ fontWeight: 600 }}>{o.client?.name}</div>
+                      <div style={{ fontWeight: 600 }}>{persona?.name || o.clientName || 'Consumidor Final'}</div>
                       <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                        Items: {o.items.length}
+                        {persona?.city ? `${persona.city} · ` : ''}
+                        Items: {o.items?.length || 0}
+                        {o.invoiceNumber ? ` · ${o.invoiceNumber}` : ''}
                       </div>
                     </td>
                     <td>{new Date(o.createdAt).toLocaleDateString('es-AR')}</td>
@@ -213,26 +225,22 @@ export default function OrdersTab({
                       </span>
                     </td>
                     <td>
-                      {(() => {
-                        const statusInfo = getOrderStatusInfo(o);
-                        return (
-                          <span
-                            className={`badge badge-${statusInfo.badgeClass}`}
-                            style={{
-                              backgroundColor: statusInfo.color + '15',
-                              color: statusInfo.color,
-                              border: `1px solid ${statusInfo.color}30`,
-                              fontWeight: 600,
-                            }}
-                          >
-                            {statusInfo.label}
-                          </span>
-                        );
-                      })()}
+                      <span
+                        className={`badge badge-${statusInfo.badgeClass}`}
+                        style={{
+                          backgroundColor: statusInfo.color + '15',
+                          color: statusInfo.color,
+                          border: `1px solid ${statusInfo.color}30`,
+                          fontWeight: 600,
+                        }}
+                      >
+                        {statusInfo.label}
+                      </span>
                     </td>
                     <td>
                       <div style={{ display: 'flex', gap: '6px' }}>
                         <button
+                          type="button"
                           className="btn btn-secondary"
                           style={{ padding: '6px 10px' }}
                           title="Ver Detalle"
@@ -241,6 +249,7 @@ export default function OrdersTab({
                           <Eye size={14} />
                         </button>
                         <button
+                          type="button"
                           className="btn btn-secondary"
                           style={{ padding: '6px 10px' }}
                           title="Imprimir Ticket"
@@ -250,6 +259,7 @@ export default function OrdersTab({
                         </button>
                         {o.status === 'PENDING' && (
                           <button
+                            type="button"
                             className="btn btn-secondary"
                             style={{ padding: '6px 10px' }}
                             title="Editar Pedido"
@@ -260,6 +270,7 @@ export default function OrdersTab({
                         )}
                         {o.status !== 'CANCELLED' && o.status !== 'DELIVERED' && (
                           <button
+                            type="button"
                             className="btn btn-secondary"
                             style={{ padding: '6px 10px', color: 'var(--color-danger)' }}
                             title="Cancelar"

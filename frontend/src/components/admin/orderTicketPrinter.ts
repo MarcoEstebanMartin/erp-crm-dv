@@ -1,13 +1,20 @@
-import { getCompanyProfile } from '../../utils/companyProfile';
+import { formatCompanyPhone, getCompanyProfile } from '../../utils/companyProfile';
+import { resolveOrderPersona } from '../../utils/orderSearchAndStatus.helper';
 
 export function printOrderTicket(order: any): void {
   const printWindow = window.open('', '_blank', 'width=600,height=800');
   if (!printWindow) return;
 
   const company = getCompanyProfile();
-  const companyLogo = company.nombreFantasia;
-  const companySub = company.razonSocial;
-  const companyCuitVal = company.cuit;
+  const companyPhone = formatCompanyPhone(company.telefono);
+  const client = resolveOrderPersona(order);
+  const clientName = client?.name || order.clientName || 'Consumidor Final';
+  const clientCuit = client?.cuit || 'Consumidor Final';
+  const clientAddress = client?.address
+    ? `${client.address}${client?.city ? ` (${client.city})` : ''}`
+    : client?.city || 'Retira en local';
+  const hasBalance = client?.outstandingBalance != null;
+  const previousBalance = Math.round(Number(client?.outstandingBalance || 0));
 
   printWindow.document.write(`
     <html>
@@ -27,16 +34,18 @@ export function printOrderTicket(order: any): void {
       </head>
       <body>
         <div class="header">
-          <div class="logo">${companyLogo}</div>
-          <div>${companySub}</div>
-          <div>CUIT: ${companyCuitVal}</div>
+          <div class="logo">${company.nombreFantasia}</div>
+          <div>${company.razonSocial}</div>
+          ${company.direccion ? `<div>${company.direccion}</div>` : ''}
+          <div>CUIT: ${company.cuit}${companyPhone ? ` · Tel: ${companyPhone}` : ''}</div>
           <div>Fecha: ${new Date(order.createdAt || Date.now()).toLocaleString('es-AR')}</div>
           <div><strong>PEDIDO NRO: ${order.id}</strong></div>
         </div>
         <div class="divider"></div>
-        <div><strong>Cliente:</strong> ${order.client?.name}</div>
-        <div><strong>CUIT:</strong> ${order.client?.cuit || 'Consumidor Final'}</div>
-        <div><strong>Dirección:</strong> ${order.client?.address || 'Retira en local'}</div>
+        <div><strong>Cliente:</strong> ${clientName}</div>
+        <div><strong>CUIT:</strong> ${clientCuit}</div>
+        <div><strong>Dirección:</strong> ${clientAddress}</div>
+        ${hasBalance ? `<div><strong>Saldo Cta. Cte.:</strong> $${previousBalance.toLocaleString('es-AR')}</div>` : ''}
         <div class="divider"></div>
         <table>
           <thead>
@@ -48,7 +57,7 @@ export function printOrderTicket(order: any): void {
             </tr>
           </thead>
           <tbody>
-            ${order.items
+            ${(order.items || [])
               .map((item: any) => {
                 const price = Number(item.unitPrice ?? item.price ?? 0);
                 const isPesable =
@@ -62,7 +71,7 @@ export function printOrderTicket(order: any): void {
                   isPesable && item.weight
                     ? `${item.quantity} u (${Number(item.weight).toFixed(2)} kg)`
                     : isPesable
-                      ? `${item.quantity} u (${(item.quantity * (item.product?.approximateWeight || 1)).toLocaleString()} kg aprox)`
+                      ? `${item.quantity} u (${(item.quantity * (item.product?.approximateWeight || 1)).toLocaleString('es-AR')} kg aprox)`
                       : `${item.quantity} u`;
                 return `
                   <tr>

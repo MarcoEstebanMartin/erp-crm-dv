@@ -1,7 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { api } from '../../utils/api';
-import { getOrderStatusInfo } from '../../utils/orderStatusHelper';
 import { isBonusOrderItem } from '../../utils/weeklyPromoCartEvaluator';
+import {
+  matchesOrderStatusFilter,
+  resolveOrderPersona,
+} from '../../utils/orderSearchAndStatus.helper';
 import {
   CATALOG_META_FRESHNESS_TTL_MS,
   CLIENTS_FRESHNESS_TTL_MS,
@@ -44,7 +47,14 @@ export function useAdminController(activeTab: string) {
   const [clientsVersion, setClientsVersion] = useState(0);
   const [showResumenModal, setShowResumenModal] = useState<any>(null);
   const [orderDetailsModal, setOrderDetailsModal] = useState<any | null>(null);
-  const [editOrderModal, setEditOrderModal] = useState<{ open: boolean; orderId: number; clientId: number; clientName: string; items: any[] } | null>(null);
+  const [editOrderModal, setEditOrderModal] = useState<{
+    open: boolean;
+    orderId: number;
+    clientId: number;
+    clientName: string;
+    client?: any;
+    items: any[];
+  } | null>(null);
 
   const [clientProfileModal, setClientProfileModal] = useState<{ open: boolean; client: any; ledger: any[] } | null>(null);
   const [sellerProfileModal, setSellerProfileModal] = useState<{ open: boolean; sellerId: number } | null>(null);
@@ -176,11 +186,10 @@ export function useAdminController(activeTab: string) {
       } else if (activeTab === 'orders') {
         const data = await api.getOrders();
         if (orderStatusFilter !== 'ALL') {
-          setOrders(data.filter((o: any) => {
-            const logicalKey = getOrderStatusInfo(o).label.toUpperCase().replace(' ', '_');
-            return orderStatusFilter === 'RECIBIDO' ? logicalKey === 'RECIBIDO' || logicalKey === 'EN_PICKING' : logicalKey === orderStatusFilter;
-          }));
-        } else setOrders(data);
+          setOrders(data.filter((o: any) => matchesOrderStatusFilter(o, orderStatusFilter)));
+        } else {
+          setOrders(data);
+        }
       }
     } catch (err: any) {
       setErrorMsg(err.message || 'Error de conexión');
@@ -259,16 +268,35 @@ export function useAdminController(activeTab: string) {
 
   const handleOpenEditOrder = async (order: any) => {
     try {
-      await loadProductsIfNeeded(false);
+      await Promise.all([loadProductsIfNeeded(false), loadClientsIfNeeded(false)]);
+      const persona =
+        resolveOrderPersona(order) ||
+        clients.find((cl) => cl.id === (order.personaId || order.clientId)) ||
+        null;
       const items = (order.items || [])
         .filter((i: any) => !isBonusOrderItem(i))
         .map((i: any) => ({
-          id: i.id, productId: i.productId, name: i.product?.name || 'Artículo', sku: i.product?.sku || '',
-          quantity: i.quantity, weight: i.weight, isPesable: i.product?.isPesable, approximateWeight: i.product?.approximateWeight,
-          listPrice: i.price || i.unitPrice || (i.product ? i.product.listPrice : 0),
+          id: i.id,
+          productId: i.productId,
+          name: i.product?.name || 'Artículo',
+          sku: i.product?.sku || '',
+          quantity: i.quantity,
+          weight: i.weight,
+          isPesable: i.product?.isPesable,
+          approximateWeight: i.product?.approximateWeight,
+          listPrice: Number(i.unitPrice ?? i.price ?? i.product?.listPrice ?? 0),
         }));
-      setEditOrderModal({ open: true, orderId: order.id, clientId: order.clientId, clientName: order.client?.name || 'Cliente', items });
-    } catch { setErrorMsg('Error al cargar datos para edición.'); }
+      setEditOrderModal({
+        open: true,
+        orderId: order.id,
+        clientId: persona?.id || order.personaId || order.clientId || 0,
+        clientName: persona?.name || 'Cliente',
+        client: persona,
+        items,
+      });
+    } catch {
+      setErrorMsg('Error al cargar datos para edición.');
+    }
   };
 
   return {

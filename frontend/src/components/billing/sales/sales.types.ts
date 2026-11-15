@@ -6,6 +6,10 @@ export interface SalesBillingTabProps {
   products: any[];
   bankAccounts: any[];
   activeDrawers: any[];
+  ivaPerceptionAliquot?: number;
+  salesInvoiceTypeFilter: SalesInvoiceTypeFilter;
+  requestingCaeOrderId?: number | null;
+  onRequestOrderCae?: (orderId: number) => void;
   loading: boolean;
   loadData: () => void;
   setErrorMsg: (msg: string | null) => void;
@@ -51,5 +55,5 @@ export const INITIAL_DIRECT_INVOICE_FORM: DirectInvoiceFormState = {
   bankAccountId: '',
   checkNumber: '',
   checkIssuer: '',
-  isEcheq: false
+  isEcheq: false,
 };

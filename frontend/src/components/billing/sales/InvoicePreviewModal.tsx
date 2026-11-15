@@ -1,6 +1,8 @@
 import { Printer, X } from 'lucide-react';
 import { isOfficialInvoice } from './salesBilling.helpers';
 import { InvoicePreviewFooter } from './InvoicePreviewFooter';
+import { formatCompanyPhone, getCompanyProfile } from '../../../utils/companyProfile';
+import { resolveOrderPersona } from '../../../utils/orderSearchAndStatus.helper';
 
 interface InvoicePreviewModalProps {
   invoice: any | null;
@@ -10,6 +12,9 @@ interface InvoicePreviewModalProps {
 export function InvoicePreviewModal({ invoice, onClose }: InvoicePreviewModalProps) {
   if (!invoice) return null;
 
+  const company = getCompanyProfile();
+  const phoneDisplay = formatCompanyPhone(company.telefono);
+  const client = resolveOrderPersona(invoice);
   const isOfficial = isOfficialInvoice(invoice);
   const issueDateStr = invoice.issueDate || invoice.createdAt;
   const decimalOptions =
@@ -35,12 +40,23 @@ export function InvoicePreviewModal({ invoice, onClose }: InvoicePreviewModalPro
           ? 'COD. 011'
           : 'COD. 000';
 
+  const posStr = String(invoice.puntoVenta || company.puntoVenta || 1).padStart(4, '0');
+  const compNro = invoice.invoiceNumber?.includes('-')
+    ? invoice.invoiceNumber
+    : `${posStr}-${invoice.invoiceNumber || String(invoice.id || 0).padStart(8, '0')}`;
+
   return (
     <div className="modal-overlay print-modal">
       <div className="modal-content print-content-box" style={{ maxWidth: '850px', width: '90vw' }}>
         <div className="modal-header no-print">
           <h3>Vista Previa del Comprobante</h3>
-          <button type="button" className="btn btn-ghost" style={{ padding: '4px' }} onClick={onClose}>
+          <button
+            type="button"
+            className="btn btn-ghost"
+            style={{ padding: '4px' }}
+            onClick={onClose}
+            aria-label="Cerrar vista previa"
+          >
             <X size={18} />
           </button>
         </div>
@@ -48,18 +64,54 @@ export function InvoicePreviewModal({ invoice, onClose }: InvoicePreviewModalPro
         <div
           id="print-area"
           className="invoice-container-box"
-          style={{ backgroundColor: '#fff', padding: '30px', border: '1px solid #ddd', fontFamily: 'Arial, sans-serif', color: '#000', fontSize: '0.85rem' }}
+          style={{
+            backgroundColor: '#fff',
+            padding: '30px',
+            border: '1px solid #ddd',
+            fontFamily: 'Arial, sans-serif',
+            color: '#000',
+            fontSize: '0.85rem',
+          }}
         >
           <div style={{ display: 'flex', border: '2px solid #000', marginBottom: '20px', position: 'relative' }}>
-            <div style={{ position: 'absolute', top: '-2px', left: '50%', transform: 'translateX(-50%)', width: '44px', height: '44px', backgroundColor: '#fff', border: '2px solid #000', borderTop: '0', textAlign: 'center', fontSize: '1.6rem', fontWeight: 800, zIndex: 2 }}>
+            <div
+              style={{
+                position: 'absolute',
+                top: '-2px',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                width: '44px',
+                height: '44px',
+                backgroundColor: '#fff',
+                border: '2px solid #000',
+                borderTop: '0',
+                textAlign: 'center',
+                fontSize: '1.6rem',
+                fontWeight: 800,
+                zIndex: 2,
+              }}
+            >
               {letter}
               <div style={{ fontSize: '0.5rem', fontWeight: 600, marginTop: '-4px' }}>{code}</div>
             </div>
 
             <div style={{ width: '50%', padding: '16px', borderRight: '1px solid #000' }}>
-              <div style={{ fontSize: '1.3rem', fontWeight: 800 }}>DISTRIBUIDORA DV</div>
-              <div style={{ fontSize: '0.8rem', marginTop: '4px', fontWeight: 600 }}>Ruta 5 - Km 320, General Villegas, Buenos Aires</div>
-              <div style={{ fontSize: '0.75rem', color: '#444', marginTop: '2px' }}>Tel: (03388) 15-429304 | E-mail: contacto@distribuidoradv.com</div>
+              <div style={{ fontSize: '1.25rem', fontWeight: 800, textTransform: 'uppercase' }}>
+                {company.nombreFantasia}
+              </div>
+              <div style={{ fontSize: '0.78rem', fontWeight: 600, marginTop: '2px' }}>
+                {company.razonSocial}
+              </div>
+              {company.direccion && (
+                <div style={{ fontSize: '0.78rem', marginTop: '4px', fontWeight: 600 }}>
+                  {company.direccion}
+                </div>
+              )}
+              <div style={{ fontSize: '0.75rem', color: '#444', marginTop: '2px' }}>
+                {phoneDisplay ? `Tel: ${phoneDisplay}` : ''}
+                {phoneDisplay && company.email ? ' | ' : ''}
+                {company.email ? `E-mail: ${company.email}` : ''}
+              </div>
               <div style={{ fontSize: '0.75rem', color: '#444' }}>IVA: Responsable Inscripto</div>
             </div>
 
@@ -68,26 +120,48 @@ export function InvoicePreviewModal({ invoice, onClose }: InvoicePreviewModalPro
                 {isOfficial ? 'Factura Oficial' : 'Presupuesto de Venta Interna'}
               </div>
               <div style={{ marginTop: '8px' }}>
-                <strong>Comp. Nro: {invoice.invoiceNumber?.split('-')[1] || invoice.invoiceNumber || '00000000'}</strong>
+                <strong>Comp. Nro: {compNro}</strong>
               </div>
               <div>Fecha de Emisión: {new Date(issueDateStr).toLocaleDateString('es-AR')}</div>
               <div style={{ fontSize: '0.75rem', marginTop: '8px' }}>
-                <div>CUIT: 30-71490283-9</div>
-                <div>Ingresos Brutos: 30-71490283-9 (Convenio Multilateral)</div>
-                <div>Inicio de Actividades: 01/03/2018</div>
+                <div>CUIT: {company.cuit}</div>
+                {company.iibb && <div>Ingresos Brutos: {company.iibb}</div>}
+                {company.inicioActividades && (
+                  <div>Inicio de Actividades: {company.inicioActividades}</div>
+                )}
               </div>
             </div>
           </div>
 
-          <div style={{ border: '2px solid #000', padding: '16px', marginBottom: '20px', display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '8px' }}>
+          <div
+            style={{
+              border: '2px solid #000',
+              padding: '16px',
+              marginBottom: '20px',
+              display: 'grid',
+              gridTemplateColumns: '1.2fr 1fr',
+              gap: '8px',
+            }}
+          >
             <div>
-              <div><strong>Nombre / Razón Social:</strong> {invoice.persona?.name || 'Consumidor Final'}</div>
-              <div><strong>Domicilio:</strong> {invoice.persona?.address || 'Retiro en Local'}</div>
-              <div><strong>CUIT / DNI:</strong> {invoice.persona?.cuit || 'S/D'}</div>
-              <div><strong>Categoría de IVA:</strong> {invoice.invoiceType === 'FACTURA_A' ? 'Responsable Inscripto' : 'Consumidor Final'}</div>
+              <div>
+                <strong>Nombre / Razón Social:</strong> {client?.name || invoice.clientName || 'Consumidor Final'}
+              </div>
+              <div>
+                <strong>Domicilio:</strong> {client?.address || 'Retiro en Local'}
+              </div>
+              <div>
+                <strong>CUIT / DNI:</strong> {client?.cuit || 'S/D'}
+              </div>
+              <div>
+                <strong>Categoría de IVA:</strong>{' '}
+                {invoice.invoiceType === 'FACTURA_A' ? 'Responsable Inscripto' : 'Consumidor Final'}
+              </div>
             </div>
             <div style={{ borderLeft: '1px solid #ddd', paddingLeft: '16px' }}>
-              <div><strong>Condición de Venta:</strong></div>
+              <div>
+                <strong>Condición de Venta:</strong>
+              </div>
               <div style={{ fontSize: '1rem', fontWeight: 700, marginTop: '4px', textTransform: 'uppercase' }}>
                 {invoice.paymentMethod === 'BANK_TRANSFER'
                   ? 'TRANSFERENCIA'
@@ -98,7 +172,8 @@ export function InvoicePreviewModal({ invoice, onClose }: InvoicePreviewModalPro
                       : 'CUENTA CORRIENTE'}
               </div>
               <div style={{ fontSize: '0.75rem', color: '#555', marginTop: '6px' }}>
-                Saldo CC Histórico del Cliente: ${Number(invoice.persona?.outstandingBalance || 0).toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                Saldo CC Actual del Cliente: $
+                {Math.round(Number(client?.outstandingBalance ?? 0)).toLocaleString('es-AR')}
               </div>
             </div>
           </div>
@@ -123,10 +198,18 @@ export function InvoicePreviewModal({ invoice, onClose }: InvoicePreviewModalPro
 
                   return (
                     <tr key={idx} style={{ borderBottom: '1px solid #000' }}>
-                      <td style={{ padding: '8px', borderRight: '1px solid #000', fontFamily: 'monospace' }}>{item.product?.sku || 'S/D'}</td>
-                      <td style={{ padding: '8px', borderRight: '1px solid #000', fontWeight: 600 }}>{item.product?.name || item.productName || 'Artículo general'}</td>
-                      <td style={{ padding: '8px', borderRight: '1px solid #000', textAlign: 'right' }}>{item.quantity}</td>
-                      <td style={{ padding: '8px', borderRight: '1px solid #000', textAlign: 'right' }}>{item.weight || '-'}</td>
+                      <td style={{ padding: '8px', borderRight: '1px solid #000', fontFamily: 'monospace' }}>
+                        {item.product?.sku || 'S/D'}
+                      </td>
+                      <td style={{ padding: '8px', borderRight: '1px solid #000', fontWeight: 600 }}>
+                        {item.product?.name || item.productName || 'Artículo general'}
+                      </td>
+                      <td style={{ padding: '8px', borderRight: '1px solid #000', textAlign: 'right' }}>
+                        {item.quantity}
+                      </td>
+                      <td style={{ padding: '8px', borderRight: '1px solid #000', textAlign: 'right' }}>
+                        {item.weight || '-'}
+                      </td>
                       <td style={{ padding: '8px', borderRight: '1px solid #000', textAlign: 'right' }}>
                         ${Number(displayPrice).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </td>
@@ -147,7 +230,14 @@ export function InvoicePreviewModal({ invoice, onClose }: InvoicePreviewModalPro
             type="button"
             className="btn btn-secondary"
             onClick={() => window.print()}
-            style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: 'var(--color-primary)', color: '#fff', borderColor: 'var(--color-primary)' }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              backgroundColor: 'var(--color-primary)',
+              color: '#fff',
+              borderColor: 'var(--color-primary)',
+            }}
           >
             <Printer size={16} /> Imprimir Comprobante
           </button>

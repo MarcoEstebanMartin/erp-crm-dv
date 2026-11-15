@@ -6,27 +6,43 @@ import { roundToTwoDecimals } from '../../core/money';
 import { calculateSupplierInvoiceBreakdown } from '../../engines/credit-purchase.engine';
 import { recordSupplierInvoicePerceptions } from './supplier-tax.helper';
 import { recordLedgerMovement } from '../ledger/account-ledger.service';
+import { parseArgentinaTimestampRange, parseCalendarDateRange } from './billing-date-range.helper';
 
 export const supplierInvoiceService = {
-  async getSalesInvoices(query: { startDate?: string; endDate?: string; query?: string }) {
+  async getSalesInvoices(query: {
+    startDate?: string;
+    endDate?: string;
+    query?: string;
+    billingType?: string;
+  }) {
     const whereClause: Record<string, any> = {
       status: 'DELIVERED',
       invoiceNumber: { not: null },
     };
 
-    if (query.startDate && query.endDate) {
-      whereClause.createdAt = {
-        gte: new Date(String(query.startDate)),
-        lte: new Date(String(query.endDate)),
-      };
+    const dateRange = parseArgentinaTimestampRange(query.startDate, query.endDate);
+    if (dateRange) {
+      whereClause.createdAt = dateRange;
     }
-    if (query.query) {
-      const q = String(query.query);
-      whereClause.OR = [
-        { invoiceNumber: { contains: q, mode: 'insensitive' } },
-        { persona: { name: { contains: q, mode: 'insensitive' } } },
-        { persona: { cuit: { contains: q } } },
+
+    if (query.billingType === BillingType.OFFICIAL || query.billingType === BillingType.INTERNAL) {
+      whereClause.billingType = query.billingType as BillingType;
+    }
+
+    const rawQ = typeof query.query === 'string' ? query.query.trim() : '';
+    if (rawQ) {
+      const orFilters: any[] = [
+        { invoiceNumber: { contains: rawQ, mode: 'insensitive' } },
+        { persona: { name: { contains: rawQ, mode: 'insensitive' } } },
+        { persona: { cuit: { contains: rawQ } } },
       ];
+      if (/^#?\d+$/.test(rawQ)) {
+        const numericId = Number(rawQ.replace(/^#/, ''));
+        if (Number.isInteger(numericId) && numericId > 0) {
+          orFilters.push({ id: numericId });
+        }
+      }
+      whereClause.OR = orFilters;
     }
 
     return prisma.order.findMany({
@@ -47,18 +63,17 @@ export const supplierInvoiceService = {
   async getSupplierInvoices(query: { startDate?: string; endDate?: string; query?: string }) {
     const whereClause: Record<string, any> = {};
 
-    if (query.startDate && query.endDate) {
-      whereClause.issueDate = {
-        gte: new Date(String(query.startDate)),
-        lte: new Date(String(query.endDate)),
-      };
+    const issueDateRange = parseCalendarDateRange(query.startDate, query.endDate);
+    if (issueDateRange) {
+      whereClause.issueDate = issueDateRange;
     }
-    if (query.query) {
-      const q = String(query.query);
+
+    const rawQ = typeof query.query === 'string' ? query.query.trim() : '';
+    if (rawQ) {
       whereClause.OR = [
-        { invoiceNumber: { contains: q, mode: 'insensitive' } },
-        { persona: { name: { contains: q, mode: 'insensitive' } } },
-        { persona: { cuit: { contains: q } } },
+        { invoiceNumber: { contains: rawQ, mode: 'insensitive' } },
+        { persona: { name: { contains: rawQ, mode: 'insensitive' } } },
+        { persona: { cuit: { contains: rawQ } } },
       ];
     }
 

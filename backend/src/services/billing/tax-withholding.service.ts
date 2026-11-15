@@ -3,6 +3,7 @@ import prisma from '../../utils/prisma';
 import { logAudit } from '../../utils/audit';
 import { roundToTwoDecimals } from '../../core/money';
 import { recordLedgerMovement } from '../ledger/account-ledger.service';
+import { parseCalendarDateRange } from './billing-date-range.helper';
 
 export const taxWithholdingService = {
   async getTaxWithholdings(query: {
@@ -10,17 +11,25 @@ export const taxWithholdingService = {
     taxType?: string;
     startDate?: string;
     endDate?: string;
+    query?: string;
   }) {
     const whereClause: Record<string, any> = {};
 
     if (query.type) whereClause.type = String(query.type);
     if (query.taxType) whereClause.taxType = String(query.taxType);
 
-    if (query.startDate && query.endDate) {
-      whereClause.date = {
-        gte: new Date(String(query.startDate)),
-        lte: new Date(String(query.endDate)),
-      };
+    const dateRange = parseCalendarDateRange(query.startDate, query.endDate);
+    if (dateRange) {
+      whereClause.date = dateRange;
+    }
+
+    const rawQ = typeof query.query === 'string' ? query.query.trim() : '';
+    if (rawQ) {
+      whereClause.OR = [
+        { number: { contains: rawQ, mode: 'insensitive' } },
+        { persona: { name: { contains: rawQ, mode: 'insensitive' } } },
+        { persona: { cuit: { contains: rawQ } } },
+      ];
     }
 
     return prisma.taxWithholding.findMany({
