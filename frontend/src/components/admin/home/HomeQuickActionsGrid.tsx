@@ -81,6 +81,7 @@ export function HomeQuickActionsGrid({
             style={{
               display: 'flex',
               alignItems: 'center',
+              justifyContent: 'flex-start',
               padding: '10px 14px',
               backgroundColor: 'var(--bg-card, #ffffff)',
               border: '1px solid var(--border-color, #e5e5e7)',
