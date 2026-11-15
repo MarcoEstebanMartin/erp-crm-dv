@@ -163,10 +163,12 @@ export default function HomeTab({
   };
 
   return (
-    <div>
+    <div style={{ maxWidth: '980px', margin: '0 auto' }}>
       <style>{`
         .home-stat-btn { cursor: pointer; transition: transform 0.15s ease, box-shadow 0.15s ease; }
         .home-stat-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06); }
+        .home-mid-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-top: 20px; align-items: stretch; }
+        @media (max-width: 820px) { .home-mid-row { grid-template-columns: 1fr; } }
       `}</style>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '20px' }}>
@@ -204,12 +206,25 @@ export default function HomeTab({
         ))}
       </div>
 
-      <HomePendingCashCard
-        sellers={pendingRendicionesDetails.sellers}
-        routes={pendingRendicionesDetails.routes}
-        loading={loadingRendicionesDetails}
-        onOpenRendiciones={() => setActiveTab('rendiciones')}
-      />
+      <div className="home-mid-row">
+        <HomePendingCashCard
+          sellers={pendingRendicionesDetails.sellers}
+          routes={pendingRendicionesDetails.routes}
+          loading={loadingRendicionesDetails}
+          onOpenRendiciones={() => setActiveTab('rendiciones')}
+        />
+
+        <HomeWeeklyScheduleRibbon
+          currentWeek={weeklyScheduleData.currentWeek}
+          todayName={todayName}
+          activeDayScheduleItems={activeDayScheduleItems}
+          allItems={weeklyScheduleData.items}
+          showFullWeek={showFullWeek}
+          onToggleCurrentWeek={handleToggleCurrentWeek}
+          onToggleFullWeek={() => setShowFullWeek((prev) => !prev)}
+          onOpenScheduleModal={() => setIsScheduleModalOpen(true)}
+        />
+      </div>
 
       <HomeQuickActionsGrid
         onDirectInvoice={() => setIsDirectInvoiceModalOpen(true)}
@@ -220,17 +235,6 @@ export default function HomeTab({
         onOpenLedger={() => openClientSearch('ledger')}
         onOpenPayment={() => openClientSearch('payment')}
         onOpenFleetExpense={() => setShowGastoModal(true)}
-      />
-
-      <HomeWeeklyScheduleRibbon
-        currentWeek={weeklyScheduleData.currentWeek}
-        todayName={todayName}
-        activeDayScheduleItems={activeDayScheduleItems}
-        allItems={weeklyScheduleData.items}
-        showFullWeek={showFullWeek}
-        onToggleCurrentWeek={handleToggleCurrentWeek}
-        onToggleFullWeek={() => setShowFullWeek((prev) => !prev)}
-        onOpenScheduleModal={() => setIsScheduleModalOpen(true)}
       />
 
       <FleetExpenseQuickModal isOpen={showGastoModal} onClose={() => setShowGastoModal(false)} onSuccessMsg={(msg) => setSuccessMsg?.(msg)} />

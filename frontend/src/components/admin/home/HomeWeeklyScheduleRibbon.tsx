@@ -27,13 +27,13 @@ export function HomeWeeklyScheduleRibbon({
   const formattedToday = todayName.charAt(0) + todayName.slice(1).toLowerCase();
 
   return (
-    <div>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <div
         style={{
-          marginTop: '16px',
-          padding: '10px 16px',
+          flex: 1,
+          padding: '16px 20px',
           backgroundColor: 'var(--bg-card, #ffffff)',
-          borderRadius: '8px',
+          borderRadius: '10px',
           border: '1px solid var(--border-color, #e5e5e7)',
           display: 'flex',
           flexWrap: 'wrap',

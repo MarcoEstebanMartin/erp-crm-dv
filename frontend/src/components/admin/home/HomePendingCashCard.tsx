@@ -20,7 +20,7 @@ export function HomePendingCashCard({
   return (
     <section
       style={{
-        marginTop: '20px',
+        height: '100%',
         backgroundColor: 'var(--bg-card, #ffffff)',
         borderRadius: '10px',
         border: '1px solid var(--border-color, #e5e5e7)',

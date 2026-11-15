@@ -53,13 +53,12 @@ export function HomeQuickActionsGrid({
       <style>{`
         .quick-actions-grid {
           display: grid;
-          grid-template-columns: repeat(4, minmax(175px, 200px));
-          justify-content: center;
+          grid-template-columns: repeat(4, minmax(0, 1fr));
           gap: 10px;
         }
         @media (max-width: 900px) {
           .quick-actions-grid {
-            grid-template-columns: repeat(2, minmax(175px, 220px));
+            grid-template-columns: repeat(2, minmax(0, 1fr));
           }
         }
         @media (max-width: 550px) {
