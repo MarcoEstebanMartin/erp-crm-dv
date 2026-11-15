@@ -71,6 +71,8 @@ export default function ConfigGeneralTab({ setErrorMsg, setSuccessMsg }: ConfigG
   const [savingCompany, setSavingCompany] = useState(false);
   const [ignoreStock, setIgnoreStock] = useState<boolean>(() => Boolean(api.getServerConfig()?.ignoreStock));
   const [savingStock, setSavingStock] = useState(false);
+  const [afipMockMode, setAfipMockMode] = useState<boolean>(() => Boolean(api.getServerConfig()?.afipMockMode));
+  const [savingAfipMock, setSavingAfipMock] = useState(false);
   const [changePwdOpen, setChangePwdOpen] = useState(false);
   const isEditingRef = useRef(false);
   isEditingRef.current = isEditing;
@@ -85,6 +87,7 @@ export default function ConfigGeneralTab({ setErrorMsg, setSuccessMsg }: ConfigG
         setCompany(normalized);
         if (!isEditingRef.current) setDraft(normalized);
         setIgnoreStock(Boolean(cfg.ignoreStock));
+        setAfipMockMode(Boolean(cfg.afipMockMode));
       })
       .catch(() => {});
     return () => {
@@ -130,6 +133,50 @@ export default function ConfigGeneralTab({ setErrorMsg, setSuccessMsg }: ConfigG
       setSavingStock(false);
     }
   };
+
+  const handleToggleAfipMock = async () => {
+    if (savingAfipMock) return;
+    const next = !afipMockMode;
+    setAfipMockMode(next);
+    setSavingAfipMock(true);
+    setErrorMsg(null);
+    try {
+      await api.updateServerConfig({ afipMockMode: next });
+      setSuccessMsg(
+        next
+          ? 'Modo Simulacro Fiscal ARCA activado (sin emisiones reales).'
+          : 'Modo Simulacro Fiscal ARCA desactivado.',
+      );
+      setTimeout(() => setSuccessMsg(null), 2500);
+    } catch (err: any) {
+      setAfipMockMode(!next);
+      setErrorMsg(err?.message || 'No se pudo actualizar el modo simulacro ARCA.');
+    } finally {
+      setSavingAfipMock(false);
+    }
+  };
+
+  const operationalRules = [
+    {
+      key: 'ignore-stock',
+      title: 'Permitir facturación sin stock físico',
+      description: 'Habilita ventas y emisión de comprobantes cuando el inventario disponible sea cero o negativo.',
+      checked: ignoreStock,
+      saving: savingStock,
+      onToggle: handleToggleIgnoreStock,
+      activeColor: '#10B981',
+    },
+    {
+      key: 'afip-mock',
+      title: 'Modo Simulacro Fiscal ARCA (Pruebas sin CAE real)',
+      description:
+        'Emite numeración correlativa y CAE simulado en Facturas A/B y Notas de Crédito sin enviar comprobantes reales a ARCA.',
+      checked: afipMockMode,
+      saving: savingAfipMock,
+      onToggle: handleToggleAfipMock,
+      activeColor: '#F59E0B',
+    },
+  ];
 
   const formattedPos = String(company.puntoVenta || 1).padStart(4, '0');
   const readItems: Array<{ label: string; value: string }> = [
@@ -246,51 +293,61 @@ export default function ConfigGeneralTab({ setErrorMsg, setSuccessMsg }: ConfigG
 
       <section style={s.card}>
         <div style={{ ...s.sectionTag, marginBottom: '12px' }}>Reglas Operativas</div>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
-          <div>
-            <div style={{ fontSize: '0.9rem', fontWeight: 600, color: '#111827' }}>
-              Permitir facturación sin stock físico
-            </div>
-            <div style={{ fontSize: '0.81rem', color: '#6B7280', marginTop: '2px' }}>
-              Habilita ventas y emisión de comprobantes cuando el inventario disponible sea cero o negativo.
-            </div>
-          </div>
-
-          <button
-            type="button"
-            role="switch"
-            aria-checked={ignoreStock}
-            aria-label="Permitir facturación sin stock físico"
-            disabled={savingStock}
-            onClick={handleToggleIgnoreStock}
-            style={{
-              width: '40px',
-              height: '22px',
-              padding: 0,
-              border: 'none',
-              borderRadius: '9999px',
-              backgroundColor: ignoreStock ? '#10B981' : '#E5E7EB',
-              position: 'relative',
-              cursor: savingStock ? 'wait' : 'pointer',
-              transition: 'background-color 0.2s ease',
-              flexShrink: 0,
-            }}
-          >
-            <span
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          {operationalRules.map((rule, idx) => (
+            <div
+              key={rule.key}
               style={{
-                display: 'block',
-                width: '18px',
-                height: '18px',
-                borderRadius: '50%',
-                backgroundColor: '#FFFFFF',
-                boxShadow: '0 1px 2px rgba(0, 0, 0, 0.18)',
-                position: 'absolute',
-                top: '2px',
-                left: ignoreStock ? '20px' : '2px',
-                transition: 'left 0.2s ease',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '16px',
+                paddingTop: idx > 0 ? '14px' : 0,
+                borderTop: idx > 0 ? '1px solid #F3F4F6' : 'none',
               }}
-            />
-          </button>
+            >
+              <div>
+                <div style={{ fontSize: '0.9rem', fontWeight: 600, color: '#111827' }}>{rule.title}</div>
+                <div style={{ fontSize: '0.81rem', color: '#6B7280', marginTop: '2px' }}>{rule.description}</div>
+              </div>
+
+              <button
+                type="button"
+                role="switch"
+                aria-checked={rule.checked}
+                aria-label={rule.title}
+                disabled={rule.saving}
+                onClick={rule.onToggle}
+                style={{
+                  width: '40px',
+                  height: '22px',
+                  padding: 0,
+                  border: 'none',
+                  borderRadius: '9999px',
+                  backgroundColor: rule.checked ? rule.activeColor : '#E5E7EB',
+                  position: 'relative',
+                  cursor: rule.saving ? 'wait' : 'pointer',
+                  transition: 'background-color 0.2s ease',
+                  flexShrink: 0,
+                }}
+              >
+                <span
+                  style={{
+                    display: 'block',
+                    width: '18px',
+                    height: '18px',
+                    borderRadius: '50%',
+                    backgroundColor: '#FFFFFF',
+                    boxShadow: '0 1px 2px rgba(0, 0, 0, 0.18)',
+                    position: 'absolute',
+                    top: '2px',
+                    left: rule.checked ? '20px' : '2px',
+                    transition: 'left 0.2s ease',
+                  }}
+                />
+              </button>
+            </div>
+          ))}
         </div>
       </section>
 

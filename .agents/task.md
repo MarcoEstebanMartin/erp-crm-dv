@@ -345,3 +345,18 @@
   - [x] **4B (División `printHelpers`, Migración Impresión/Tickets/Vendedor y Limpieza de Archivos Muertos)**: `printHelpers.ts` (`7` l. barrel) dividido en `printFormatters.ts` (`100` l.), `printRemitoAndReceipt.ts` (`286` l.), `printPickingSheets.ts` (`259` l.), `printConsolidatedPicking.ts` (`185` l.) y `printShippingAndCustody.ts` (`268` l.); migración en `orderTicketPrinter.ts` (`105` l.), `VendedorCatalogHistoryTabs.tsx` (`157` l.) y `AdminCreateQuickOrderModal.tsx` (`383` l., `computeClientUnitPrice`, `calculateExactLineSubtotalInt` con `unitPriceInt`, `<NativeModalDialog>`, cero `alert()`); eliminados 3 archivos muertos (`FacturacionDashboard.tsx`, `FastDataEntryArmado.tsx`, `adminPrintHelpers.ts`).
   - [x] **4C (Extracciones de Componentes, Accesibilidad Minimalista y Tests Frontend)**: `FulfillmentToolbar.tsx` (`261` l.) extraído de `FulfillmentDashboard.tsx` (`248` l.), `AfipCorrelationMonitorCard.tsx` (`306` l., `resolveRatioPercentages`) extraído de `AfipExportDashboard.tsx` (`279` l.), `EditOrderItemsPanel.tsx` (`207` l.) extraído de `EditOrderModal.tsx` (`257` l.); pulido minimalista y accesibilidad en `OrderFulfillmentModal.tsx` (`366` l., confirmación inline en `<dialog>` sin `window.confirm`), `OrderFulfillmentBillingPanel.tsx` (`206` l.), `OrderFulfillmentSuccessView.tsx` (`162` l.), `DirectInvoiceCartTable.tsx` (`261` l.), `DirectInvoiceClientSelector.tsx` (`263` l.) y `DirectInvoiceProductAdder.tsx` (`269` l.), más `printAndStep4Audit.test.ts` (`7` tests).
   - [x] **Verificación**: Backend `tsc --noEmit` (`0` errores) + `npx vitest run` (`52/52` suites / `246/246` tests, incl. `orders-billing-step4-audit.test.ts` `10/10`) ✅ + Frontend `tsc --noEmit` (`0` errores) + `npx vitest run` (`15/15` suites / `62/62` tests, incl. `printAndStep4Audit.test.ts` `7/7`) + `npm run build` (`vite build` exit `0`, `2277` módulos) ✅.
+
+---
+
+## Plan Activo: Simulación Integral de Jornada Operativa (30 Pedidos — Modo Simulacro)
+
+- [x] **Paso 1: Backup Cifrado Previo + Modo Simulacro Fiscal ARCA (`AFIP_MOCK`) + Reinicio Atómico de Movimientos (`200 u.` iniciales)** ✅ COMPLETADO
+  - [x] **Resguardo cifrado previo (`AES-256-GCM`)**: `backup_ERP_2026-11-15T19-59-37.dvbackup.enc` (`SHA-256: eef6a24e449a76b4cf8abd5da71afb5a1a41fffdb27d340d8c6823aa035195d5`).
+  - [x] **Modo Simulacro Fiscal ARCA (`AFIP_MOCK` / `afipMockMode`)**: Agregado en `env.config.ts`, `admin.validator.ts`, `system-config.service.ts`, `afip.service.ts` (numeración correlativa y CAE simulado de 14 dígitos sin emitir comprobantes reales en ARCA), `api.ts` y `ConfigGeneralTab.tsx` (interruptor accesible `role="switch"` en Reglas Operativas) + `AFIP_MOCK=true` en `backend/.env`.
+  - [x] **Reinicio atómico con `200 u.` iniciales (`backend/scripts/reset_movements.js`)**: Vaciado transaccional completo preservando maestros, 18 vencimientos de flota y ubicaciones WMS del Mapa 3D, secuencias reiniciadas a `1` (incluyendo `AccountLedger_id_seq`, `RouteGpsPing_id_seq`, `SaleRouteVisit_id_seq` y `movement_seq`), `331` productos activos en `200 u.` exactas (`66.200 u.` totales) con asientos `IN` y `0` descalces en auditoría.
+  - [x] **Verificación**: Backend `tsc --noEmit` (`0` errores) + `vitest run` (`52/52` suites / `248/248` tests) ✅ + Frontend `tsc --noEmit` (`0` errores) + `vitest run` (`15/15` suites / `62/62` tests) ✅ + servidor local activo en simulacro (`3001` / `5174`).
+- [ ] **Paso 2: Carga de los 30 Pedidos (25 por script o 30 por script + carga manual en vivo)**
+- [ ] **Paso 3: Preparación, Picking y Balanza**
+- [ ] **Paso 4: Facturación y Cuentas Corrientes**
+- [ ] **Paso 5: Salidas de Viaje, Entregas y Devoluciones**
+- [ ] **Paso 6: Cobranzas, Rendiciones, Cierre de Cajas y Cuadratura Final**

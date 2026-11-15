@@ -94,6 +94,7 @@ export const getAuditLogsQuerySchema = z.object({
 export const updateSystemConfigSchema = z.object({
   body: z.object({
     ignoreStockCheck: z.boolean().optional(),
+    afipMockMode: z.boolean().optional(),
     company: z
       .object({
         razonSocial: z.string().trim().min(2, 'La razón social es requerida').max(120).optional(),

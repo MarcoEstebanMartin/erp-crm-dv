@@ -3,16 +3,18 @@ import path from 'path';
 // @ts-ignore
 import Afip from '@afipsdk/afip.js';
 import { roundToTwoDecimals, toDecimal } from '../core/money';
+import prisma from '../utils/prisma';
 import { getSystemConfigSnapshot } from './admin/system-config.service';
 
 const isTestEnv = process.env.VITEST === 'true' || process.env.NODE_ENV === 'test';
-const isProduction = process.env.AFIP_PRODUCTION === 'true' && !isTestEnv;
+const envAfipMock = process.env.AFIP_MOCK === 'true';
+const isProduction = process.env.AFIP_PRODUCTION === 'true' && !isTestEnv && !envAfipMock;
 const cuit = process.env.AFIP_CUIT || '20409378472';
 const certPath = path.resolve(process.env.AFIP_CERT_PATH || './certs/homo.crt');
 const keyPath = path.resolve(process.env.AFIP_KEY_PATH || './certs/homo.key');
 
 const certsExist = fs.existsSync(certPath) && fs.existsSync(keyPath);
-const useMock = isTestEnv || (!certsExist && !isProduction);
+const useMock = isTestEnv || envAfipMock || (!certsExist && !isProduction);
 
 let afipClient: any = null;
 let afipLock = Promise.resolve();
@@ -36,6 +38,8 @@ if (!useMock) {
     console.error('❌ Error inicializando el SDK de AFIP:', err.message);
     console.log('⚠️ Se activará el modo MOCK debido a error de inicialización.');
   }
+} else if (envAfipMock && !isTestEnv) {
+  console.log('🧪 AFIP SDK en MODO SIMULACRO FISCAL (AFIP_MOCK=true — Cero emisiones reales en ARCA).');
 } else if (!isTestEnv) {
   console.log('⚠️ Certificados no encontrados en ./certs/. Corriendo AFIP en MODO MOCK para desarrollo.');
 }
@@ -254,9 +258,51 @@ export function buildAfipCreditNotePayload(params: {
   return payload;
 }
 
-function generateMockAfipResult(puntoDeVenta: number, caeSuffix: '1' | '2'): InvoiceResult {
-  const mockNum = Math.floor(100000 + Math.random() * 900000);
-  const mockCae = `9999${Math.floor(10000000 + Math.random() * 90000000)}${caeSuffix}`;
+function extractVoucherSequence(invoiceNumber: string | null | undefined, posPrefix: string): number {
+  if (!invoiceNumber || !invoiceNumber.startsWith(posPrefix)) return 0;
+  const num = Number(invoiceNumber.slice(posPrefix.length).replace(/\D/g, ''));
+  return Number.isInteger(num) && num > 0 ? num : 0;
+}
+
+async function resolveNextMockVoucherNumber(puntoDeVenta: number, cbteTipo: 1 | 6 | 3 | 8): Promise<number> {
+  if (isTestEnv) {
+    return Math.floor(100000 + Math.random() * 900000);
+  }
+  const posPrefix = `${String(puntoDeVenta).padStart(5, '0')}-`;
+  try {
+    if (cbteTipo === 1 || cbteTipo === 6) {
+      const rows = await prisma.order.findMany({
+        where: {
+          billingType: 'OFFICIAL',
+          invoiceType: cbteTipo === 1 ? 'FACTURA_A' : 'FACTURA_B',
+          invoiceNumber: { startsWith: posPrefix },
+        },
+        select: { invoiceNumber: true },
+      });
+      return rows.reduce((max, r) => Math.max(max, extractVoucherSequence(r.invoiceNumber, posPrefix)), 0) + 1;
+    }
+    const rows = await prisma.creditNote.findMany({
+      where: {
+        billingType: 'OFFICIAL',
+        creditNoteType: cbteTipo === 3 ? 'NOTA_CREDITO_A' : 'NOTA_CREDITO_B',
+        creditNoteNumber: { startsWith: posPrefix },
+      },
+      select: { creditNoteNumber: true },
+    });
+    return rows.reduce((max, r) => Math.max(max, extractVoucherSequence(r.creditNoteNumber, posPrefix)), 0) + 1;
+  } catch {
+    return Math.floor(100000 + Math.random() * 900000);
+  }
+}
+
+function generateMockAfipResult(
+  puntoDeVenta: number,
+  caeSuffix: '1' | '2',
+  voucherNum?: number,
+): InvoiceResult {
+  const mockNum = voucherNum && voucherNum > 0 ? voucherNum : Math.floor(100000 + Math.random() * 900000);
+  const randomEight = String(Math.floor(10000000 + Math.random() * 90000000));
+  const mockCae = `99999${randomEight}${caeSuffix}`;
   const dueDate = new Date();
   dueDate.setDate(dueDate.getDate() + 10);
   return {
@@ -274,10 +320,13 @@ export async function emitirFacturaAFIP(request: InvoiceRequest): Promise<Invoic
   return withAfipLock(async () => {
     const sysCfg = await getSystemConfigSnapshot();
     const puntoDeVenta = sysCfg.company.puntoVenta || 1;
-    const cbteTipo = request.invoiceType === 'A' ? 1 : 6;
+    const cbteTipo: 1 | 6 = request.invoiceType === 'A' ? 1 : 6;
+    const isSimulacro =
+      useMock || process.env.AFIP_MOCK === 'true' || Boolean(sysCfg.afipMockMode) || !afipClient;
 
-    if (useMock || !afipClient) {
-      return generateMockAfipResult(puntoDeVenta, '1');
+    if (isSimulacro) {
+      const nextVoucher = await resolveNextMockVoucherNumber(puntoDeVenta, cbteTipo);
+      return generateMockAfipResult(puntoDeVenta, '1', nextVoucher);
     }
 
     try {
@@ -332,10 +381,13 @@ export async function emitirNotaCreditoAFIP(
     const sysCfg = await getSystemConfigSnapshot();
     const puntoDeVenta = sysCfg.company.puntoVenta || 1;
     const emitterCuit = sysCfg.company.cuit || cuit;
-    const cbteTipo = request.invoiceType === 'A' ? 3 : 8;
+    const cbteTipo: 3 | 8 = request.invoiceType === 'A' ? 3 : 8;
+    const isSimulacro =
+      useMock || process.env.AFIP_MOCK === 'true' || Boolean(sysCfg.afipMockMode) || !afipClient;
 
-    if (useMock || !afipClient) {
-      return generateMockAfipResult(puntoDeVenta, '2');
+    if (isSimulacro) {
+      const nextVoucher = await resolveNextMockVoucherNumber(puntoDeVenta, cbteTipo);
+      return generateMockAfipResult(puntoDeVenta, '2', nextVoucher);
     }
 
     try {

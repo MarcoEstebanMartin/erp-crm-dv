@@ -192,7 +192,7 @@ export const api = {
     return cfg;
   },
 
-  updateServerConfig: async (config: { ignoreStockCheck?: boolean; company?: Partial<CompanyProfile> }) => {
+  updateServerConfig: async (config: { ignoreStockCheck?: boolean; afipMockMode?: boolean; company?: Partial<CompanyProfile> }) => {
     try {
       const cfg = await request('/admin/config', {
         method: 'POST',

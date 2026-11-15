@@ -12,6 +12,7 @@ export interface EnvConfig {
   JSON_BODY_LIMIT: string;
   IGNORE_STOCK_CHECK: boolean;
   AFIP_PRODUCTION: boolean;
+  AFIP_MOCK: boolean;
   PRODUCTION_CATALOG_DATABASE_URL?: string;
   ALLOW_PRODUCTION_CATALOG_WRITE: boolean;
   WHATSAPP_ENABLED: boolean;
@@ -91,6 +92,7 @@ export function validateEnvConfig(sourceEnv: NodeJS.ProcessEnv = process.env): E
     JSON_BODY_LIMIT: (sourceEnv.JSON_BODY_LIMIT || '1mb').trim(),
     IGNORE_STOCK_CHECK: sourceEnv.IGNORE_STOCK_CHECK === 'true',
     AFIP_PRODUCTION: sourceEnv.AFIP_PRODUCTION === 'true',
+    AFIP_MOCK: sourceEnv.AFIP_MOCK === 'true',
     PRODUCTION_CATALOG_DATABASE_URL: sourceEnv.PRODUCTION_CATALOG_DATABASE_URL?.trim() || undefined,
     ALLOW_PRODUCTION_CATALOG_WRITE: sourceEnv.ALLOW_PRODUCTION_CATALOG_WRITE === 'true',
     WHATSAPP_ENABLED: sourceEnv.WHATSAPP_ENABLED === 'true',

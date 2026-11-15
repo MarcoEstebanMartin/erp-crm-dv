@@ -163,4 +163,44 @@ describe('AFIP Service Invariants Unit Tests (Igualdad Impositiva y ARCA RG 4540
     expect(ncRes.invoiceNumber.startsWith('00004-')).toBe(true);
     expect(ncRes.cae).toMatch(/2$/);
   });
+
+  it('En modo simulacro (afipMockMode=true) emite Factura y Nota de Crédito con CAE simulado de 14 dígitos sin llamar a ARCA', async () => {
+    vi.spyOn(systemConfigService, 'getSystemConfigSnapshot').mockResolvedValue({
+      ignoreStock: false,
+      afipProduction: false,
+      afipMockMode: true,
+      company: {
+        ...systemConfigService.DEFAULT_COMPANY_PROFILE,
+        puntoVenta: 2,
+      },
+    });
+
+    const facRes = await emitirFacturaAFIP({
+      clientCuit: '30712345678',
+      clientDocType: 80,
+      invoiceType: 'A',
+      total: 24200,
+      neto: 20000,
+      iva: 4200,
+    });
+
+    expect(facRes.puntoVenta).toBe(2);
+    expect(facRes.invoiceNumber).toMatch(/^00002-\d{8}$/);
+    expect(facRes.cae).toMatch(/^99999\d{8}1$/);
+    expect(facRes.cae).toHaveLength(14);
+
+    const ncRes = await emitirNotaCreditoAFIP({
+      clientCuit: '30712345678',
+      clientDocType: 80,
+      invoiceType: 'A',
+      total: 12100,
+      neto: 10000,
+      iva: 2100,
+    });
+
+    expect(ncRes.puntoVenta).toBe(2);
+    expect(ncRes.invoiceNumber).toMatch(/^00002-\d{8}$/);
+    expect(ncRes.cae).toMatch(/^99999\d{8}2$/);
+    expect(ncRes.cae).toHaveLength(14);
+  });
 });

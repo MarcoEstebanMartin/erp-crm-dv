@@ -10,20 +10,25 @@ import { updateSystemConfigSchema } from '../../validators/admin.validator';
 
 describe('SystemConfigService — Identidad Fiscal y Reglas Operativas en PostgreSQL', () => {
   const originalIgnoreStock = process.env.IGNORE_STOCK_CHECK;
+  const originalAfipMock = process.env.AFIP_MOCK;
+  const originalAfipProd = process.env.AFIP_PRODUCTION;
 
   beforeEach(() => {
     vi.restoreAllMocks();
     resetSystemConfigCacheForTests();
     process.env.IGNORE_STOCK_CHECK = 'false';
+    process.env.AFIP_MOCK = 'false';
+    process.env.AFIP_PRODUCTION = 'true';
   });
 
   afterEach(() => {
     resetSystemConfigCacheForTests();
-    if (originalIgnoreStock === undefined) {
-      delete process.env.IGNORE_STOCK_CHECK;
-    } else {
-      process.env.IGNORE_STOCK_CHECK = originalIgnoreStock;
-    }
+    if (originalIgnoreStock === undefined) delete process.env.IGNORE_STOCK_CHECK;
+    else process.env.IGNORE_STOCK_CHECK = originalIgnoreStock;
+    if (originalAfipMock === undefined) delete process.env.AFIP_MOCK;
+    else process.env.AFIP_MOCK = originalAfipMock;
+    if (originalAfipProd === undefined) delete process.env.AFIP_PRODUCTION;
+    else process.env.AFIP_PRODUCTION = originalAfipProd;
   });
 
   it('Devuelve los datos oficiales de Don Venancio sin registros previos y sanea placeholders viejos', async () => {
@@ -116,6 +121,7 @@ describe('SystemConfigService — Identidad Fiscal y Reglas Operativas en Postgr
     const schemaCheck = updateSystemConfigSchema.safeParse({
       body: {
         ignoreStockCheck: false,
+        afipMockMode: true,
         company: {
           razonSocial: 'Pablo David Martin',
           cuit: '20-16316505-9',
@@ -125,5 +131,41 @@ describe('SystemConfigService — Identidad Fiscal y Reglas Operativas en Postgr
       },
     });
     expect(schemaCheck.success).toBe(true);
+  });
+
+  it('Lee y persiste afip_mock_mode desactivando afipProduction efectivo mientras dure el simulacro', async () => {
+    const upsertedRows: Array<{ key: string; value: string }> = [];
+
+    vi.spyOn(prisma.systemSetting, 'findMany').mockResolvedValueOnce([
+      {
+        key: 'afip_mock_mode',
+        value: 'true',
+        updatedAt: new Date(),
+      },
+    ]);
+
+    const snapshot = await getSystemConfigSnapshot();
+    expect(snapshot.afipMockMode).toBe(true);
+    expect(snapshot.afipProduction).toBe(false);
+    expect(process.env.AFIP_MOCK).toBe('true');
+
+    vi.spyOn(prisma, '$transaction').mockImplementation(async (cb: any) => {
+      const txMock = {
+        systemSetting: {
+          upsert: vi.fn().mockImplementation(async ({ where, create }: any) => {
+            upsertedRows.push({ key: where.key, value: create.value });
+            return { key: where.key, value: create.value, updatedAt: new Date() };
+          }),
+        },
+      };
+      return cb(txMock);
+    });
+    vi.spyOn(prisma.auditLog, 'create').mockResolvedValue({ id: 2 } as any);
+
+    const toggledOff = await updateSystemConfig({ afipMockMode: false }, 1, '127.0.0.1');
+    expect(toggledOff.afipMockMode).toBe(false);
+    expect(toggledOff.afipProduction).toBe(true);
+    expect(process.env.AFIP_MOCK).toBe('false');
+    expect(upsertedRows).toEqual([{ key: 'afip_mock_mode', value: 'false' }]);
   });
 });

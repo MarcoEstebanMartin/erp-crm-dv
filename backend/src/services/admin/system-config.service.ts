@@ -18,6 +18,7 @@ export interface CompanyProfile {
 export interface SystemConfigSnapshot {
   ignoreStock: boolean;
   afipProduction: boolean;
+  afipMockMode?: boolean;
   company: CompanyProfile;
 }
 
@@ -35,6 +36,7 @@ export const DEFAULT_COMPANY_PROFILE: CompanyProfile = {
 
 const COMPANY_PROFILE_KEY = 'company_profile';
 const IGNORE_STOCK_KEY = 'ignore_stock_check';
+const AFIP_MOCK_KEY = 'afip_mock_mode';
 const CONFIG_CACHE_TTL_MS = 30_000;
 
 const LEGACY_PLACEHOLDERS = new Set([
@@ -143,18 +145,23 @@ export async function getSystemConfigSnapshot(options?: {
     process.env.IGNORE_STOCK_CHECK !== undefined
       ? process.env.IGNORE_STOCK_CHECK === 'true'
       : env.IGNORE_STOCK_CHECK;
-  const afipProduction = process.env.AFIP_PRODUCTION === 'true' || env.AFIP_PRODUCTION;
+  const envAfipMock =
+    process.env.AFIP_MOCK !== undefined
+      ? process.env.AFIP_MOCK === 'true'
+      : env.AFIP_MOCK;
+  let afipMockMode = envAfipMock;
+  let afipProduction = (process.env.AFIP_PRODUCTION === 'true' || env.AFIP_PRODUCTION) && !afipMockMode;
 
   let company: CompanyProfile = { ...DEFAULT_COMPANY_PROFILE };
   let ignoreStock = envIgnoreStock;
 
   if (!canQuerySystemSetting('findMany')) {
-    return { ignoreStock, afipProduction, company };
+    return { ignoreStock, afipProduction, afipMockMode, company };
   }
 
   try {
     const rows = await prisma.systemSetting.findMany({
-      where: { key: { in: [COMPANY_PROFILE_KEY, IGNORE_STOCK_KEY] } },
+      where: { key: { in: [COMPANY_PROFILE_KEY, IGNORE_STOCK_KEY, AFIP_MOCK_KEY] } },
     });
 
     const companyRow = rows.find((r) => r.key === COMPANY_PROFILE_KEY);
@@ -168,17 +175,25 @@ export async function getSystemConfigSnapshot(options?: {
       process.env.IGNORE_STOCK_CHECK = ignoreStock ? 'true' : 'false';
     }
 
-    const snapshot: SystemConfigSnapshot = { ignoreStock, afipProduction, company };
+    const mockRow = rows.find((r) => r.key === AFIP_MOCK_KEY);
+    if (mockRow) {
+      afipMockMode = mockRow.value === 'true';
+      process.env.AFIP_MOCK = afipMockMode ? 'true' : 'false';
+    }
+
+    afipProduction = (process.env.AFIP_PRODUCTION === 'true' || env.AFIP_PRODUCTION) && !afipMockMode;
+    const snapshot: SystemConfigSnapshot = { ignoreStock, afipProduction, afipMockMode, company };
     cachedSnapshot = { data: snapshot, expiresAt: Date.now() + CONFIG_CACHE_TTL_MS };
     return snapshot;
   } catch (err) {
     console.warn('⚠️ No se pudo leer SystemSetting desde DB, usando perfil oficial por defecto:', err);
-    return { ignoreStock, afipProduction, company };
+    return { ignoreStock, afipProduction, afipMockMode, company };
   }
 }
 
 export interface UpdateSystemConfigInput {
   ignoreStockCheck?: boolean;
+  afipMockMode?: boolean;
   company?: Partial<CompanyProfile>;
 }
 
@@ -224,6 +239,8 @@ export async function updateSystemConfig(
 
   const nextIgnoreStock =
     input.ignoreStockCheck !== undefined ? Boolean(input.ignoreStockCheck) : previous.ignoreStock;
+  const nextAfipMock =
+    input.afipMockMode !== undefined ? Boolean(input.afipMockMode) : Boolean(previous.afipMockMode);
 
   await prisma.$transaction(async (tx) => {
     if (input.company) {
@@ -240,15 +257,29 @@ export async function updateSystemConfig(
         create: { key: IGNORE_STOCK_KEY, value: nextIgnoreStock ? 'true' : 'false' },
       });
     }
+    if (input.afipMockMode !== undefined) {
+      await tx.systemSetting.upsert({
+        where: { key: AFIP_MOCK_KEY },
+        update: { value: nextAfipMock ? 'true' : 'false' },
+        create: { key: AFIP_MOCK_KEY, value: nextAfipMock ? 'true' : 'false' },
+      });
+    }
   });
 
   if (input.ignoreStockCheck !== undefined) {
     process.env.IGNORE_STOCK_CHECK = nextIgnoreStock ? 'true' : 'false';
   }
+  if (input.afipMockMode !== undefined) {
+    process.env.AFIP_MOCK = nextAfipMock ? 'true' : 'false';
+  }
+
+  const nextAfipProduction =
+    (process.env.AFIP_PRODUCTION === 'true' || env.AFIP_PRODUCTION) && !nextAfipMock;
 
   const nextSnapshot: SystemConfigSnapshot = {
     ignoreStock: nextIgnoreStock,
-    afipProduction: previous.afipProduction,
+    afipProduction: nextAfipProduction,
+    afipMockMode: nextAfipMock,
     company: nextCompany,
   };
   cachedSnapshot = { data: nextSnapshot, expiresAt: Date.now() + CONFIG_CACHE_TTL_MS };
