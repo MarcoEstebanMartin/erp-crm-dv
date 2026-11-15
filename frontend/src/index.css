@@ -504,6 +504,7 @@ tr:hover td {
 .sidebar-link {
   display: flex;
   align-items: center;
+  justify-content: flex-start;
   gap: 12px;
   width: 100%;
   padding: 12px 14px;
@@ -1058,6 +1059,7 @@ dialog.app-native-dialog::backdrop {
   .sidebar-link {
     display: flex;
     align-items: center;
+    justify-content: flex-start;
     gap: 12px;
     padding: 11px 14px;
     font-size: 0.9rem;

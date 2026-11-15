@@ -146,6 +146,11 @@ export default function HomeTab({
     return raw.charAt(0).toUpperCase() + raw.slice(1);
   }, []);
 
+  const displayUsername = useMemo(() => {
+    const raw = api.getCurrentUser()?.username?.trim() || 'Admin';
+    return raw.charAt(0).toUpperCase() + raw.slice(1);
+  }, []);
+
   const kpiCards = [
     { key: 'RECIBIDO', label: 'Recibidos', count: recibidosCount, accent: '#007AFF' },
     { key: 'ARMADO', label: 'En armado', count: armadosCount, accent: '#D97706' },
@@ -164,9 +169,9 @@ export default function HomeTab({
         .home-stat-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06); }
       `}</style>
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', flexWrap: 'wrap', gap: '8px', marginBottom: '20px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '20px' }}>
         <h1 style={{ fontSize: '1.5rem', fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--text-primary)', margin: 0 }}>
-          Inicio
+          Hola, {displayUsername}!
         </h1>
         <span style={{ fontSize: '0.84rem', color: 'var(--text-secondary)', fontWeight: 500 }}>{formattedDate}</span>
       </div>

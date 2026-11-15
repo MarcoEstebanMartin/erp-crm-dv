@@ -24,7 +24,7 @@ interface SidebarProps {
 }
 
 const ROLE_LABELS: Record<string, string> = {
-  ADMIN: 'Admin',
+  ADMIN: 'Administrador',
   FACTURACION: 'Facturación',
   VENDEDOR: 'Preventa',
   DEPOSITO: 'Depósito',
@@ -207,7 +207,7 @@ export default function Sidebar({ username, role, activeTab, setActiveTab, onLog
           </div>
           <div className="sidebar-status" style={{ marginTop: '8px' }}>
             <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
-              {username ? `${username} · ${roleLabel}` : roleLabel}
+              {roleLabel}
             </span>
           </div>
         </div>
