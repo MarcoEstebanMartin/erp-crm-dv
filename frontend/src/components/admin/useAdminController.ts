@@ -33,6 +33,10 @@ export function useAdminController(activeTab: string) {
     hasRubros: false,
     providersAt: 0,
     hasProviders: false,
+    sellersAt: 0,
+    hasSellers: false,
+    saleRoutesAt: 0,
+    hasSaleRoutes: false,
   });
 
   const [productModal, setProductModal] = useState({
@@ -114,6 +118,39 @@ export function useAdminController(activeTab: string) {
     freshnessRef.current.hasClients = Array.isArray(allClients) && allClients.length > 0;
   }, []);
 
+  const loadClientMetaIfNeeded = useCallback(async (force: boolean) => {
+    const needSellers = shouldFetchAdminResource({
+      lastFetchedAt: freshnessRef.current.sellersAt,
+      hasData: freshnessRef.current.hasSellers,
+      ttlMs: CATALOG_META_FRESHNESS_TTL_MS,
+      force,
+    });
+    const needRoutes = shouldFetchAdminResource({
+      lastFetchedAt: freshnessRef.current.saleRoutesAt,
+      hasData: freshnessRef.current.hasSaleRoutes,
+      ttlMs: CATALOG_META_FRESHNESS_TTL_MS,
+      force,
+    });
+    if (!needSellers && !needRoutes) return;
+
+    await Promise.all([
+      needSellers
+        ? api.getSellersList().then((sellers) => {
+            setAvailableSellers(sellers || []);
+            freshnessRef.current.sellersAt = Date.now();
+            freshnessRef.current.hasSellers = Array.isArray(sellers);
+          })
+        : Promise.resolve(),
+      needRoutes
+        ? api.getSaleRoutes().then((routesRes) => {
+            setAvailableSaleRoutes(routesRes?.routes || []);
+            freshnessRef.current.saleRoutesAt = Date.now();
+            freshnessRef.current.hasSaleRoutes = Array.isArray(routesRes?.routes);
+          })
+        : Promise.resolve(),
+    ]);
+  }, []);
+
   const runTabFetch = useCallback(async (force: boolean) => {
     setErrorMsg(null);
     try {
@@ -175,13 +212,7 @@ export function useAdminController(activeTab: string) {
         setUsers(await api.getUsers());
       } else if (activeTab === 'clients') {
         try {
-          const [sellers, routesRes] = await Promise.all([
-            api.getSellersList(),
-            api.getSaleRoutes(),
-            loadClientsIfNeeded(force),
-          ]);
-          setAvailableSellers(sellers || []);
-          setAvailableSaleRoutes(routesRes.routes || []);
+          await Promise.all([loadClientMetaIfNeeded(force), loadClientsIfNeeded(force)]);
         } catch (e) { console.error('Error al cargar datos de preventa:', e); }
       } else if (activeTab === 'orders') {
         const data = await api.getOrders();
@@ -194,7 +225,7 @@ export function useAdminController(activeTab: string) {
     } catch (err: any) {
       setErrorMsg(err.message || 'Error de conexión');
     }
-  }, [activeTab, cajasSubTab, orderStatusFilter, loadClientsIfNeeded, loadProductsIfNeeded]);
+  }, [activeTab, cajasSubTab, orderStatusFilter, loadClientsIfNeeded, loadClientMetaIfNeeded, loadProductsIfNeeded]);
 
   // Refresco explícito tras mutaciones (SIEMPRE consulta datos frescos del servidor)
   const fetchData = useCallback(async () => {
@@ -210,14 +241,10 @@ export function useAdminController(activeTab: string) {
 
   useEffect(() => {
     if (!clientModal.open) return;
-    if (availableSellers.length > 0 || availableSaleRoutes.length > 0) return;
-    Promise.all([api.getSellersList(), api.getSaleRoutes()])
-      .then(([sellers, routesRes]) => {
-        setAvailableSellers(sellers || []);
-        setAvailableSaleRoutes(routesRes?.routes || []);
-      })
-      .catch((e) => console.error('Error al cargar vendedores/rutas:', e));
-  }, [clientModal.open, availableSellers.length, availableSaleRoutes.length]);
+    void loadClientMetaIfNeeded(false).catch((e) =>
+      console.error('Error al cargar vendedores/rutas:', e),
+    );
+  }, [clientModal.open, loadClientMetaIfNeeded]);
 
   const handleViewClientProfile = async (client: any) => {
     setErrorMsg(null);
@@ -300,7 +327,7 @@ export function useAdminController(activeTab: string) {
   };
 
   return {
-    products, users, clients, availableSellers, availableSaleRoutes, orders, financialReport, rubrosList, providersList,
+    products, users, clients, setClients, availableSellers, availableSaleRoutes, orders, financialReport, rubrosList, providersList,
     productModal, setProductModal, importZipModalOpen, setImportZipModalOpen, clientModal, setClientModal,
     clientsVersion, setClientsVersion, showResumenModal, setShowResumenModal, orderDetailsModal, setOrderDetailsModal,
     editOrderModal, setEditOrderModal, clientProfileModal, setClientProfileModal, sellerProfileModal, setSellerProfileModal,

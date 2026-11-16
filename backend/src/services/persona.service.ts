@@ -19,7 +19,7 @@ export class PersonaService {
     if (role === 'client') whereClause.isClient = true;
     else if (role === 'provider') whereClause.isProvider = true;
     else if (role === 'seller') whereClause.isSeller = true;
-    else if (role === 'commission') whereClause.isCommissionAgent = true;
+    else if (role === 'commission' || role === 'commission_agent') whereClause.isCommissionAgent = true;
 
     let personas = await prisma.persona.findMany({
       where: whereClause,
@@ -47,15 +47,13 @@ export class PersonaService {
 
     if (role === 'client') {
       try {
-        const report = await this.getDebtorsReport(userId, userRole);
-        const debtorMap = new Map();
-        report.debtors.forEach((d: any) => debtorMap.set(d.id, d.pendingInvoicesCount));
+        const metricsMap = await personaDebtorsSubService.getDebtMetricsByPersonaIds(personas);
         return personas.map((p) => ({
           ...p,
-          pendingInvoicesCount: debtorMap.get(p.id) || 0,
+          pendingInvoicesCount: metricsMap.get(p.id)?.pendingInvoicesCount ?? 0,
         }));
       } catch (err) {
-        console.error('Error fetching debtors report inside getPersonas:', err);
+        console.error('Error fetching debtors metrics inside getPersonas:', err);
         return personas;
       }
     }

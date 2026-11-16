@@ -101,6 +101,10 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
       {activeTab === 'clients' && (
         <ClientsTab
           setActiveTab={setActiveTab}
+          clients={c.clients}
+          setClients={c.setClients}
+          availableSellers={c.availableSellers}
+          availableSaleRoutes={c.availableSaleRoutes}
           setClientModal={c.setClientModal}
           setShowResumenModal={c.setShowResumenModal}
           setPaymentModal={c.setPaymentModal}
@@ -205,6 +209,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
         onSuccess={async (clientId) => {
           if (c.clientProfileModal?.client?.id === clientId) await c.handleRefreshClientProfile(clientId);
           c.fetchData();
+          c.setClientsVersion((prev) => prev + 1);
         }}
         setErrorMsg={c.setErrorMsg}
         setSuccessMsg={c.setSuccessMsg}
