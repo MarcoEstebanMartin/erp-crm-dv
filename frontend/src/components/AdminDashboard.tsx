@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react';
-import { ShoppingCart, Receipt, DollarSign, FileText, TrendingUp, Warehouse } from 'lucide-react';
+import { ShoppingCart, Receipt, DollarSign, FileText, TrendingUp, Truck, Warehouse } from 'lucide-react';
 import { api } from '../utils/api';
 import HomeTab from './admin/HomeTab';
 import ClientsTab from './admin/ClientsTab';
@@ -26,6 +26,7 @@ import { useAdminController } from './admin/useAdminController';
 const PriceListModal = lazy(() => import('./PriceListModal'));
 const UnifiedReportsDashboard = lazy(() => import('./UnifiedReportsDashboard'));
 const FulfillmentDashboard = lazy(() => import('./admin/FulfillmentDashboard'));
+const RepartoDashboard = lazy(() => import('./RepartoDashboard'));
 const RendicionesDashboard = lazy(() => import('./RendicionesDashboard'));
 const LogisticaDashboard = lazy(() => import('./LogisticaDashboard'));
 const ComprasDashboard = lazy(() => import('./ComprasDashboard'));
@@ -115,11 +116,12 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
         />
       )}
 
-      {(activeTab === 'fulfillment' || activeTab === 'orders' || activeTab === 'billing') && (
+      {(activeTab === 'fulfillment' || activeTab === 'entregas' || activeTab === 'orders' || activeTab === 'billing') && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <nav aria-label="Pedidos y facturación" className="linear-underline-nav">
             {[
               { id: 'fulfillment', label: 'Armado', icon: <Warehouse size={15} aria-hidden="true" /> },
+              { id: 'entregas', label: 'Entregas', icon: <Truck size={15} aria-hidden="true" /> },
               { id: 'orders', label: 'Historial', icon: <ShoppingCart size={15} aria-hidden="true" /> },
               { id: 'billing', label: 'Facturación', icon: <FileText size={15} aria-hidden="true" /> },
             ].map((tab) => (
@@ -137,6 +139,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
           </nav>
 
           {activeTab === 'fulfillment' && <Suspense fallback={<LoadingDashboard />}><FulfillmentDashboard /></Suspense>}
+          {activeTab === 'entregas' && <Suspense fallback={<LoadingDashboard />}><RepartoDashboard /></Suspense>}
           {activeTab === 'orders' && (
             <OrdersTab
               initialStatusFilter={c.orderStatusFilter}

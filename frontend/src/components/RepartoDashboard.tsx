@@ -33,7 +33,7 @@ export default function RepartoDashboard() {
         <div className="no-print" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
           <div className="card" style={{ padding: '16px', borderRadius: '10px', border: '1px solid var(--border-color)', backgroundColor: '#fff' }}>
             <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
-              Viajes Activos
+              Viajes activos
             </span>
             <span className="tabular-nums" style={{ fontSize: '1.4rem', fontWeight: 700, color: '#681da8' }}>
               {c.logisticsStats.inTransitCount} {c.logisticsStats.inTransitCount === 1 ? 'viaje activo' : 'viajes activos'}
@@ -42,7 +42,7 @@ export default function RepartoDashboard() {
 
           <div className="card" style={{ padding: '16px', borderRadius: '10px', border: '1px solid var(--border-color)', backgroundColor: '#fff' }}>
             <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
-              Pedidos en Espera
+              Para reparto
             </span>
             <span className="tabular-nums" style={{ fontSize: '1.4rem', fontWeight: 700, color: '#3c4043' }}>
               {c.logisticsStats.pendingOrdersCount} {c.logisticsStats.pendingOrdersCount === 1 ? 'pedido' : 'pedidos'}
@@ -62,33 +62,21 @@ export default function RepartoDashboard() {
         <div className="card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
             <h3 className="card-title" style={{ margin: 0 }}>
-              {c.isAdminOrOffice ? 'Hojas de Ruta' : 'Mi Hoja de Ruta'}
+              {c.isAdminOrOffice ? 'Viajes' : 'Mi Viaje'}
             </h3>
             {c.isAdminOrOffice && (
-              <button
-                type="button"
-                className="btn btn-primary"
-                onClick={() => {
-                  c.setErrorMsg(null);
-                  c.setDriverName('');
-                  c.setVehiclePlate('');
-                  c.setVehicleDescription('');
-                  c.setSelectedVehicleKey('');
-                  c.setSelectedOrderIds([]);
-                  c.setShowCreateModal(true);
-                }}
-              >
-                <Plus size={16} aria-hidden="true" /> Nueva Ruta
+              <button type="button" className="btn btn-primary" onClick={c.handleOpenCreateModal}>
+                <Plus size={16} aria-hidden="true" /> Nuevo Viaje
               </button>
             )}
           </div>
 
-          <div className="table-container table-container--sticky" role="region" aria-label="Hojas de ruta" tabIndex={0}>
+          <div className="table-container table-container--sticky" role="region" aria-label="Viajes de reparto" tabIndex={0}>
             <table>
               <thead>
                 <tr>
-                  <th scope="col">ID</th>
-                  <th scope="col">Chofer / Patente</th>
+                  <th scope="col">Viaje</th>
+                  <th scope="col">Conductor / Vehículo</th>
                   <th scope="col">Pedidos</th>
                   <th scope="col">Estado</th>
                   <th scope="col">Acciones</th>
@@ -96,7 +84,7 @@ export default function RepartoDashboard() {
               </thead>
               <tbody>
                 {c.visibleRoutes.length === 0 ? (
-                  <tr><td colSpan={5} style={{ textAlign: 'center' }}>Sin hojas de ruta asignadas.</td></tr>
+                  <tr><td colSpan={5} style={{ textAlign: 'center' }}>Sin viajes registrados.</td></tr>
                 ) : (
                   c.visibleRoutes.map((r) => (
                     <tr
@@ -104,17 +92,22 @@ export default function RepartoDashboard() {
                       onClick={() => c.setSelectedRoute(r)}
                       style={{ cursor: 'pointer', backgroundColor: c.selectedRoute?.id === r.id ? 'var(--bg-app)' : 'transparent' }}
                     >
-                      <td className="tabular-nums" style={{ fontWeight: 600 }}>#{r.id}</td>
+                      <td className="tabular-nums" style={{ fontWeight: 600 }}>
+                        <div>#{r.id}</div>
+                        {r.routeName && <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', fontWeight: 500 }}>{r.routeName}</div>}
+                      </td>
                       <td>
                         <div style={{ fontWeight: 500 }}>
                           {r.driverName}
                           {r.companionName && (
                             <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 400, marginLeft: '6px' }}>
-                              (Acomp: {r.companionName})
+                              (+{r.companionName})
                             </span>
                           )}
                         </div>
-                        <div className="tabular-nums" style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{r.vehiclePlate} ({r.vehicleDescription})</div>
+                        <div className="tabular-nums" style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                          {r.vehiclePlate}{r.vehicleDescription ? ` (${r.vehicleDescription})` : ''}
+                        </div>
                       </td>
                       <td>
                         <span className="badge tabular-nums" style={{ backgroundColor: '#E2E2E2' }}>{r.orders?.length || 0} pedidos</span>
@@ -130,11 +123,11 @@ export default function RepartoDashboard() {
                       </td>
                       <td onClick={(e) => e.stopPropagation()}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <button type="button" className="btn btn-ghost" onClick={() => c.setSelectedRoute(r)} style={{ padding: '4px', minWidth: 'auto', height: 'auto' }} aria-label={`Ver ruta ${r.id}`} title="Ver detalle">
+                          <button type="button" className="btn btn-ghost" onClick={() => c.setSelectedRoute(r)} style={{ padding: '4px', minWidth: 'auto', height: 'auto' }} aria-label={`Ver viaje ${r.id}`} title="Ver detalle">
                             <ChevronRight size={16} aria-hidden="true" />
                           </button>
                           {r.status === 'PENDING' && (
-                            <button type="button" className="btn btn-ghost" onClick={() => c.handleDeleteRoute(r.id)} style={{ padding: '4px', minWidth: 'auto', height: 'auto', color: '#ef4444' }} aria-label={`Eliminar ruta ${r.id}`} title="Eliminar hoja de ruta">
+                            <button type="button" className="btn btn-ghost" onClick={() => c.handleDeleteRoute(r.id)} style={{ padding: '4px', minWidth: 'auto', height: 'auto', color: '#ef4444' }} aria-label={`Eliminar viaje ${r.id}`} title="Eliminar viaje">
                               <X size={16} aria-hidden="true" />
                             </button>
                           )}
@@ -157,6 +150,8 @@ export default function RepartoDashboard() {
             gpsHistory={c.gpsHistory}
             expandedStops={c.expandedStops}
             setExpandedStops={c.setExpandedStops}
+            handleEditRoute={c.handleOpenEditModal}
+            handleReorderStop={c.handleReorderStop}
             handleTransferCustody={c.handleTransferCustody}
             handleChangeStatus={c.handleChangeStatus}
             handleOpenSettleModal={c.handleOpenSettleModal}
@@ -167,19 +162,25 @@ export default function RepartoDashboard() {
 
       <RepartoCreateRouteModal
         show={c.showCreateModal}
+        editingRouteId={c.editingRouteId}
         onClose={() => { c.setErrorMsg(null); c.setShowCreateModal(false); }}
         onSubmit={c.handleCreateRouteSubmit}
+        routeName={c.routeName} setRouteName={c.setRouteName}
         driverName={c.driverName} setDriverName={c.setDriverName}
+        driverEmployeeId={c.driverEmployeeId} setDriverEmployeeId={c.setDriverEmployeeId}
         companionName={c.companionName} setCompanionName={c.setCompanionName}
         vehiclePlate={c.vehiclePlate} setVehiclePlate={c.setVehiclePlate}
         vehicleDescription={c.vehicleDescription} setVehicleDescription={c.setVehicleDescription}
+        setVehicleId={c.setVehicleId}
         selectedVehicleKey={c.selectedVehicleKey} setSelectedVehicleKey={c.setSelectedVehicleKey}
-        loadedDrivers={c.loadedDrivers} loadedVehicles={c.loadedVehicles}
+        driverOptions={c.driverOptions} fleetVehicles={c.fleetVehicles}
         selectedCityFilter={c.selectedCityFilter} setSelectedCityFilter={c.setSelectedCityFilter}
         selectedZoneFilter={c.selectedZoneFilter} setSelectedZoneFilter={c.setSelectedZoneFilter}
         uniqueCities={c.uniqueCities} uniqueZones={c.uniqueZones}
+        modalOrderPool={c.modalOrderPool}
         filteredPendingOrders={c.filteredPendingOrders}
         selectedOrderIds={c.selectedOrderIds} handleToggleOrder={c.handleToggleOrder}
+        handleSelectCityOrders={c.handleSelectCityOrders}
         currentTspRoute={c.currentTspRoute} createRouteStreetPoints={c.createRouteStreetPoints}
         mapPoints={c.mapPoints} handleUpdateClientCoords={c.handleUpdateClientCoords}
         errorMsg={c.errorMsg}
