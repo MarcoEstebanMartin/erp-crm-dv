@@ -7,7 +7,12 @@ import { HomeWeeklyScheduleRibbon } from './home/HomeWeeklyScheduleRibbon';
 import { FleetExpenseQuickModal } from './home/FleetExpenseQuickModal';
 
 interface HomeTabProps {
-  orders: any[];
+  orders?: any[];
+  ordersSummary?: {
+    recibidosCount: number;
+    armadosCount: number;
+    facturadosCount: number;
+  } | null;
   setActiveTab: (tab: string) => void;
   setSummaryCardModal: (modal: { open: boolean; cardKey: string; cardLabel: string } | null) => void;
   setClientModal: (modal: any) => void;
@@ -44,7 +49,8 @@ const EMPTY_CLIENT_DATA = {
 };
 
 export default function HomeTab({
-  orders,
+  orders = [],
+  ordersSummary,
   setActiveTab,
   setSummaryCardModal,
   setClientModal,
@@ -57,23 +63,31 @@ export default function HomeTab({
   setSuccessMsg,
 }: HomeTabProps) {
   const recibidosCount = useMemo(
-    () => orders.filter((o) => o.status === 'PENDING' || o.status === 'RECIBIDO').length,
-    [orders],
+    () =>
+      ordersSummary
+        ? ordersSummary.recibidosCount
+        : orders.filter((o) => o.status === 'PENDING' || o.status === 'RECIBIDO').length,
+    [ordersSummary, orders],
   );
   const armadosCount = useMemo(
-    () => orders.filter((o) => o.status === 'PREPARING' || (o.status === 'PREPARED' && !o.invoiceNumber)).length,
-    [orders],
+    () =>
+      ordersSummary
+        ? ordersSummary.armadosCount
+        : orders.filter((o) => o.status === 'PREPARING' || (o.status === 'PREPARED' && !o.invoiceNumber)).length,
+    [ordersSummary, orders],
   );
   const facturadosCount = useMemo(
     () =>
-      orders.filter(
-        (o) =>
-          o.invoiceNumber ||
-          o.status === 'DELIVERED' ||
-          o.status === 'BILLED' ||
-          (o.deliveryRoute && (o.deliveryRoute.status === 'IN_TRANSIT' || o.deliveryRoute.status === 'COMPLETED')),
-      ).length,
-    [orders],
+      ordersSummary
+        ? ordersSummary.facturadosCount
+        : orders.filter(
+            (o) =>
+              o.invoiceNumber ||
+              o.status === 'DELIVERED' ||
+              o.status === 'BILLED' ||
+              (o.deliveryRoute && (o.deliveryRoute.status === 'IN_TRANSIT' || o.deliveryRoute.status === 'COMPLETED')),
+          ).length,
+    [ordersSummary, orders],
   );
 
   const [pendingRendicionesDetails, setPendingRendicionesDetails] = useState<{ sellers: any[]; routes: any[] }>({

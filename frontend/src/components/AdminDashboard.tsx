@@ -68,6 +68,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
       {activeTab === 'dashboard' && (
         <HomeTab
           orders={c.orders}
+          ordersSummary={c.ordersSummary}
           setActiveTab={setActiveTab}
           setSummaryCardModal={c.setSummaryCardModal}
           setClientModal={c.setClientModal}
@@ -136,7 +137,17 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
           </nav>
 
           {activeTab === 'fulfillment' && <Suspense fallback={<LoadingDashboard />}><FulfillmentDashboard /></Suspense>}
-          {activeTab === 'orders' && <OrdersTab orders={c.orders} fetchData={c.fetchData} setOrderDetailsModal={c.setOrderDetailsModal} handleOpenEditOrder={c.handleOpenEditOrder} setErrorMsg={c.setErrorMsg} setSuccessMsg={c.setSuccessMsg} />}
+          {activeTab === 'orders' && (
+            <OrdersTab
+              initialStatusFilter={c.orderStatusFilter}
+              ordersVersion={c.ordersVersion}
+              fetchData={c.fetchData}
+              setOrderDetailsModal={c.setOrderDetailsModal}
+              handleOpenEditOrder={c.handleOpenEditOrder}
+              setErrorMsg={c.setErrorMsg}
+              setSuccessMsg={c.setSuccessMsg}
+            />
+          )}
           {activeTab === 'billing' && <Suspense fallback={<LoadingDashboard />}><BillingDashboard activeTab={activeTab} setActiveTab={setActiveTab} /></Suspense>}
         </div>
       )}

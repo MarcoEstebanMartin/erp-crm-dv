@@ -6,34 +6,154 @@ export interface GetOrdersQuery {
   userRole: string;
   billingType?: string;
   status?: string;
+  statusGroup?: string;
+  search?: string;
   page?: string;
   limit?: string;
 }
 
+export interface OrdersSummaryResult {
+  recibidosCount: number;
+  armadosCount: number;
+  facturadosCount: number;
+}
+
+const MAX_PAGE_LIMIT = 200;
+
+export function buildOrderStatusGroupWhere(statusGroup?: string): Record<string, any> | null {
+  const key = statusGroup?.trim().toUpperCase();
+  if (!key || key === 'ALL') return null;
+
+  switch (key) {
+    case 'RECIBIDO':
+      return { status: OrderStatus.PENDING };
+    case 'EN_PICKING':
+      return { status: OrderStatus.PREPARING };
+    case 'ARMADO':
+      return { status: OrderStatus.PREPARED, invoiceNumber: null };
+    case 'FACTURADO':
+      return {
+        OR: [
+          { invoiceNumber: { not: null } },
+          { status: OrderStatus.DELIVERED },
+          { deliveryRoute: { is: { status: { in: ['IN_TRANSIT', 'COMPLETED'] } } } },
+        ],
+      };
+    case 'EN_VIAJE':
+      return { deliveryRoute: { is: { status: 'IN_TRANSIT' } } };
+    case 'ENTREGADO':
+      return { status: OrderStatus.DELIVERED };
+    case 'CANCELADO':
+      return { status: OrderStatus.CANCELLED };
+    default:
+      return null;
+  }
+}
+
+export function buildOrderSearchWhere(search?: string): Record<string, any> | null {
+  const q = search?.trim();
+  if (!q) return null;
+
+  const orConditions: any[] = [
+    { invoiceNumber: { contains: q, mode: 'insensitive' } },
+    { notes: { contains: q, mode: 'insensitive' } },
+    {
+      persona: {
+        is: {
+          OR: [
+            { name: { contains: q, mode: 'insensitive' } },
+            { cuit: { contains: q } },
+            { city: { contains: q, mode: 'insensitive' } },
+          ],
+        },
+      },
+    },
+  ];
+
+  const cleanNumeric = q.replace(/^#/, '');
+  if (/^\d+$/.test(cleanNumeric)) {
+    const parsedId = Number(cleanNumeric);
+    if (Number.isSafeInteger(parsedId) && parsedId > 0 && parsedId <= 2147483647) {
+      orConditions.push({ id: parsedId });
+    }
+  }
+
+  return { OR: orConditions };
+}
+
 export class OrderQueriesService {
   /**
-   * Obtiene el listado paginado de pedidos filtrando según rol y estado.
+   * Contadores livianos para las 3 tarjetas de Inicio (3 COUNT(*) indexados en paralelo).
+   */
+  static async getOrdersSummary(userId: number, userRole: string): Promise<OrdersSummaryResult> {
+    const baseWhere: Record<string, any> = {};
+    if (userRole === Role.VENDEDOR) {
+      baseWhere.sellerId = userId;
+    }
+
+    const [recibidosCount, armadosCount, facturadosCount] = await Promise.all([
+      prisma.order.count({
+        where: { ...baseWhere, status: OrderStatus.PENDING },
+      }),
+      prisma.order.count({
+        where: {
+          ...baseWhere,
+          OR: [
+            { status: OrderStatus.PREPARING },
+            { status: OrderStatus.PREPARED, invoiceNumber: null },
+          ],
+        },
+      }),
+      prisma.order.count({
+        where: {
+          ...baseWhere,
+          OR: [
+            { invoiceNumber: { not: null } },
+            { status: OrderStatus.DELIVERED },
+            { deliveryRoute: { is: { status: { in: ['IN_TRANSIT', 'COMPLETED'] } } } },
+          ],
+        },
+      }),
+    ]);
+
+    return { recibidosCount, armadosCount, facturadosCount };
+  }
+
+  /**
+   * Obtiene el listado paginado de pedidos filtrando según rol, estado lógico y búsqueda.
    * - ADMIN / DEPOSITO / FACTURACION: Ven todos los pedidos.
    * - VENDEDOR: Solo ve los pedidos que él mismo cargó.
    */
   static async getOrders(query: GetOrdersQuery) {
-    const { userId, userRole, billingType, status, page, limit } = query;
-    const whereClause: any = {};
+    const { userId, userRole, billingType, status, statusGroup, search, page, limit } = query;
+    const andClauses: Record<string, any>[] = [];
 
     if (userRole === Role.VENDEDOR) {
-      whereClause.sellerId = userId;
+      andClauses.push({ sellerId: userId });
     }
-
     if (billingType) {
-      whereClause.billingType = billingType as BillingType;
+      andClauses.push({ billingType: billingType as BillingType });
     }
-
     if (status) {
-      whereClause.status = status as OrderStatus;
+      andClauses.push({ status: status as OrderStatus });
     }
 
-    const pageNum = page ? Math.max(1, parseInt(page, 10)) : undefined;
-    const limitNum = limit ? Math.max(1, parseInt(limit, 10)) : undefined;
+    const groupWhere = buildOrderStatusGroupWhere(statusGroup);
+    if (groupWhere) {
+      andClauses.push(groupWhere);
+    }
+
+    const searchWhere = buildOrderSearchWhere(search);
+    if (searchWhere) {
+      andClauses.push(searchWhere);
+    }
+
+    const whereClause = andClauses.length > 0 ? { AND: andClauses } : {};
+
+    const pageNum = page ? Math.max(1, parseInt(page, 10) || 1) : undefined;
+    const limitNum = limit
+      ? Math.min(MAX_PAGE_LIMIT, Math.max(1, parseInt(limit, 10) || 50))
+      : undefined;
     const skip = pageNum && limitNum ? (pageNum - 1) * limitNum : undefined;
     const take = limitNum || undefined;
 
@@ -82,7 +202,7 @@ export class OrderQueriesService {
             },
           },
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
         skip,
         take,
       }),
@@ -95,7 +215,7 @@ export class OrderQueriesService {
         total: totalCount,
         page: pageNum || 1,
         limit: limitNum || totalCount,
-        totalPages: limitNum ? Math.ceil(totalCount / limitNum) : 1,
+        totalPages: limitNum ? Math.max(1, Math.ceil(totalCount / limitNum)) : 1,
       },
     };
   }

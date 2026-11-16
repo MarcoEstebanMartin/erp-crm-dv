@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { api } from '../../utils/api';
 import { isBonusOrderItem } from '../../utils/weeklyPromoCartEvaluator';
 import {
-  matchesOrderStatusFilter,
   resolveOrderPersona,
 } from '../../utils/orderSearchAndStatus.helper';
 import {
@@ -20,6 +19,12 @@ export function useAdminController(activeTab: string) {
   const [availableSellers, setAvailableSellers] = useState<User[]>([]);
   const [availableSaleRoutes, setAvailableSaleRoutes] = useState<SaleRoute[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
+  const [ordersSummary, setOrdersSummary] = useState<{
+    recibidosCount: number;
+    armadosCount: number;
+    facturadosCount: number;
+  } | null>(null);
+  const [ordersVersion, setOrdersVersion] = useState(0);
   const [financialReport, setFinancialReport] = useState<any | null>(null);
   const [rubrosList, setRubrosList] = useState<Rubro[]>([]);
   const [providersList, setProvidersList] = useState<Persona[]>([]);
@@ -155,12 +160,12 @@ export function useAdminController(activeTab: string) {
     setErrorMsg(null);
     try {
       if (activeTab === 'dashboard') {
-        // Prioriza pintar pedidos del Panel General de inmediato y precalienta catálogo/clientes en paralelo sin bloquear
-        const ordersPromise = api.getOrders().then((allOrders) => setOrders(allOrders));
+        // Prioriza contadores livianos (3 COUNT SQL) y precalienta catálogo/clientes en paralelo sin bloquear
+        const summaryPromise = api.getOrdersSummary().then((summary) => setOrdersSummary(summary));
         void Promise.all([loadClientsIfNeeded(force), loadProductsIfNeeded(force)]).catch((e) =>
           console.error('Error al precalentar catálogo/clientes:', e),
         );
-        await ordersPromise;
+        await summaryPromise;
       } else if (
         activeTab === 'reportes' ||
         activeTab === 'reports' ||
@@ -215,11 +220,8 @@ export function useAdminController(activeTab: string) {
           await Promise.all([loadClientMetaIfNeeded(force), loadClientsIfNeeded(force)]);
         } catch (e) { console.error('Error al cargar datos de preventa:', e); }
       } else if (activeTab === 'orders') {
-        const data = await api.getOrders();
-        if (orderStatusFilter !== 'ALL') {
-          setOrders(data.filter((o: any) => matchesOrderStatusFilter(o, orderStatusFilter)));
-        } else {
-          setOrders(data);
+        if (force) {
+          setOrdersVersion((prev) => prev + 1);
         }
       }
     } catch (err: any) {
@@ -327,7 +329,7 @@ export function useAdminController(activeTab: string) {
   };
 
   return {
-    products, users, clients, setClients, availableSellers, availableSaleRoutes, orders, financialReport, rubrosList, providersList,
+    products, users, clients, setClients, availableSellers, availableSaleRoutes, orders, ordersSummary, ordersVersion, financialReport, rubrosList, providersList,
     productModal, setProductModal, importZipModalOpen, setImportZipModalOpen, clientModal, setClientModal,
     clientsVersion, setClientsVersion, showResumenModal, setShowResumenModal, orderDetailsModal, setOrderDetailsModal,
     editOrderModal, setEditOrderModal, clientProfileModal, setClientProfileModal, sellerProfileModal, setSellerProfileModal,

@@ -1,11 +1,12 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Eye, X } from 'lucide-react';
+import { api } from '../../utils/api';
 import { getOrderStatusInfo } from '../../utils/orderStatusHelper';
 import { NativeModalDialog } from '../modals/NativeModalDialog';
 
 interface AdminSummaryCardModalProps {
   summaryCardModal: { open: boolean; cardKey: string; cardLabel: string } | null;
-  orders: any[];
+  orders?: any[];
   onClose: () => void;
   onSelectOrderDetails: (order: any) => void;
   onViewAllInOrdersTab: (cardKey: string) => void;
@@ -13,28 +14,37 @@ interface AdminSummaryCardModalProps {
 
 export const AdminSummaryCardModal: React.FC<AdminSummaryCardModalProps> = ({
   summaryCardModal,
-  orders,
   onClose,
   onSelectOrderDetails,
   onViewAllInOrdersTab,
 }) => {
-  if (!summaryCardModal || !summaryCardModal.open) return null;
+  const [cardOrders, setCardOrders] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  const cardOrders = orders.filter((o) => {
-    const statusInfo = getOrderStatusInfo(o);
-    const logicalKey = statusInfo.label.toUpperCase().replace(' ', '_');
-    if (summaryCardModal.cardKey === 'RECIBIDO') return o.status === 'PENDING' || o.status === 'RECIBIDO';
-    if (summaryCardModal.cardKey === 'ARMADO') return o.status === 'PREPARING' || (o.status === 'PREPARED' && !o.invoiceNumber);
-    if (summaryCardModal.cardKey === 'FACTURADO') {
-      return (
-        o.invoiceNumber ||
-        o.status === 'DELIVERED' ||
-        o.status === 'BILLED' ||
-        (o.deliveryRoute && (o.deliveryRoute.status === 'IN_TRANSIT' || o.deliveryRoute.status === 'COMPLETED'))
-      );
-    }
-    return logicalKey === summaryCardModal.cardKey;
-  });
+  const isOpen = Boolean(summaryCardModal?.open);
+  const cardKey = summaryCardModal?.cardKey || '';
+
+  useEffect(() => {
+    if (!isOpen || !cardKey) return;
+    let active = true;
+    setLoading(true);
+    api
+      .getOrdersPage({ statusGroup: cardKey, page: 1, limit: 30 })
+      .then((res) => {
+        if (active) setCardOrders(res.orders || []);
+      })
+      .catch(() => {
+        if (active) setCardOrders([]);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [isOpen, cardKey]);
+
+  if (!summaryCardModal || !summaryCardModal.open) return null;
 
   return (
     <NativeModalDialog
@@ -53,7 +63,11 @@ export const AdminSummaryCardModal: React.FC<AdminSummaryCardModalProps> = ({
       </div>
 
       <div style={{ padding: '4px 0 12px 0', flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-        {cardOrders.length === 0 ? (
+        {loading ? (
+          <div style={{ textAlign: 'center', padding: '36px 0', color: 'var(--text-secondary)', fontSize: '0.88rem' }}>
+            Cargando...
+          </div>
+        ) : cardOrders.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '36px 0', color: 'var(--text-secondary)', fontSize: '0.88rem' }}>
             Sin pedidos
           </div>

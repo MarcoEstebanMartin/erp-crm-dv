@@ -540,6 +540,42 @@ export const api = {
     return res.orders;
   },
 
+  getOrdersSummary: async (): Promise<{
+    recibidosCount: number;
+    armadosCount: number;
+    facturadosCount: number;
+  }> => {
+    return await request('/orders/summary');
+  },
+
+  getOrdersPage: async (params: {
+    page?: number;
+    limit?: number;
+    statusGroup?: string;
+    search?: string;
+    billingType?: BillingType;
+    status?: OrderStatus;
+  }) => {
+    const qs = new URLSearchParams();
+    if (params.page) qs.set('page', String(params.page));
+    if (params.limit) qs.set('limit', String(params.limit));
+    if (params.statusGroup && params.statusGroup !== 'ALL') qs.set('statusGroup', params.statusGroup);
+    if (params.search && params.search.trim()) qs.set('search', params.search.trim());
+    if (params.billingType) qs.set('billingType', params.billingType);
+    if (params.status) qs.set('status', params.status);
+    const queryStr = qs.toString();
+    const res = await request(`/orders${queryStr ? `?${queryStr}` : ''}`);
+    return {
+      orders: res.orders || [],
+      pagination: res.pagination || {
+        total: 0,
+        page: params.page || 1,
+        limit: params.limit || 50,
+        totalPages: 1,
+      },
+    };
+  },
+
   getOrderById: async (id: number) => {
     const res = await request(`/orders/${id}`);
     return res.order;

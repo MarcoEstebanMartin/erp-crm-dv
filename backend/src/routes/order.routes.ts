@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import {
   getOrders,
+  getOrdersSummary,
   getOrderById,
   createOrder,
   updateOrderStatus,
@@ -47,6 +48,7 @@ router.post(
 );
 
 // Rutas accesibles por cualquier usuario autenticado para ver su flujo
+router.get('/summary', authenticateJWT, getOrdersSummary);
 router.get('/', authenticateJWT, getOrders);
 router.get('/:id', authenticateJWT, getOrderById);
 

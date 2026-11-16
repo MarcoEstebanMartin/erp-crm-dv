@@ -52,16 +52,36 @@ function respondOrderError(
   });
 }
 
+export async function getOrdersSummary(req: AuthenticatedRequest, res: Response): Promise<void> {
+  const actor = requireOrderActor(req, res);
+  if (!actor) return;
+
+  try {
+    const summary = await OrderQueriesService.getOrdersSummary(actor.userId, actor.userRole);
+    res.status(200).json({ status: 'success', data: summary });
+  } catch (error: any) {
+    respondOrderError(res, { ...error, message: 'Error al obtener resumen de pedidos.' }, 500, 'Error al obtener resumen de pedidos.');
+  }
+}
+
 export async function getOrders(req: AuthenticatedRequest, res: Response): Promise<void> {
   const actor = requireOrderActor(req, res);
   if (!actor) return;
+
+  const rawStatus = typeof req.query.status === 'string' ? req.query.status.trim() : undefined;
+  if (rawStatus && !Object.values(OrderStatus).includes(rawStatus as OrderStatus)) {
+    res.status(400).json({ status: 'error', message: `Estado de pedido inválido: ${rawStatus}.` });
+    return;
+  }
 
   try {
     const data = await OrderQueriesService.getOrders({
       userId: actor.userId,
       userRole: actor.userRole,
       billingType: req.query.billingType as string | undefined,
-      status: req.query.status as string | undefined,
+      status: rawStatus,
+      statusGroup: typeof req.query.statusGroup === 'string' ? req.query.statusGroup.trim() : undefined,
+      search: typeof req.query.search === 'string' ? req.query.search.trim() : undefined,
       page: req.query.page as string | undefined,
       limit: req.query.limit as string | undefined,
     });
