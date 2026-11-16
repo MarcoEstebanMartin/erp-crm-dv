@@ -140,12 +140,12 @@ export function FulfillmentToolbar({
               name="q"
               type="search"
               className="input"
-              placeholder="Buscar cliente, #ID o DV-..."
+              placeholder="Buscar..."
               autoComplete="off"
               autoCorrect="off"
               autoCapitalize="none"
               spellCheck={false}
-              style={{ paddingLeft: '28px', paddingRight: '8px', height: '28px', fontSize: '0.8rem', width: '175px' }}
+              style={{ paddingLeft: '28px', paddingRight: '8px', height: '28px', fontSize: '0.8rem', width: '165px' }}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -158,7 +158,7 @@ export function FulfillmentToolbar({
             value={selectedRoute}
             onChange={(e) => setSelectedRoute(e.target.value)}
           >
-            <option value="ALL">Todas las Rutas</option>
+            <option value="ALL">Rutas</option>
             {uniqueRoutes.map((r) => (
               <option key={r} value={r}>
                 {r}

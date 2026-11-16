@@ -187,8 +187,13 @@ export default function HomeTab({
             className="card stat-card home-stat-btn"
             style={{
               width: '100%',
-              textAlign: 'left',
-              padding: '16px 20px',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              textAlign: 'center',
+              gap: '4px',
+              padding: '18px 20px',
               background: 'var(--bg-card, #ffffff)',
               border: '1px solid var(--border-color)',
               borderLeft: `3px solid ${card.accent}`,
@@ -197,10 +202,10 @@ export default function HomeTab({
             }}
             onClick={() => setSummaryCardModal({ open: true, cardKey: card.key, cardLabel: card.label })}
           >
-            <div className="stat-label" style={{ fontWeight: 600, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+            <div className="stat-label" style={{ fontWeight: 600, fontSize: '0.82rem', color: 'var(--text-secondary)', marginBottom: 0 }}>
               {card.label}
             </div>
-            <div className="stat-value" style={{ color: 'var(--text-primary)', fontSize: '2rem', fontWeight: 800, marginTop: '6px' }}>
+            <div className="stat-value" style={{ color: 'var(--text-primary)', fontSize: '2.1rem', fontWeight: 800, lineHeight: 1.1 }}>
               {card.count}
             </div>
           </button>

@@ -126,7 +126,7 @@ export default function FinanzasDashboard() {
         </h2>
         <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flexWrap: 'wrap' }}>
           <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: '0.82rem', opacity: 0.8 }}>Saldo Disponible</div>
+            <div style={{ fontSize: '0.82rem', opacity: 0.8 }}>Saldo</div>
             <div className="tabular-nums" style={{ fontSize: '2.1rem', fontWeight: 700, color: '#10b981', fontFamily: 'monospace' }}>${Math.round(cajaGrandeBalance).toLocaleString('es-AR')}</div>
           </div>
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
@@ -136,17 +136,17 @@ export default function FinanzasDashboard() {
               </button>
             )}
             <button type="button" className="btn btn-secondary" style={{ backgroundColor: '#334155', borderColor: '#475569', color: 'white', display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '10px 14px' }} onClick={() => setReconModalOpen(true)}>
-              <CheckSquare size={15} aria-hidden="true" /> Conciliar Bancos
+              <CheckSquare size={15} aria-hidden="true" /> Conciliar
             </button>
             <button type="button" className="btn btn-primary" style={{ backgroundColor: 'var(--color-corp-red)', borderColor: 'var(--color-corp-red)', display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '10px 14px' }} onClick={() => { setModalError(null); setExpenseModalOpen(true); }}>
-              <PlusCircle size={16} aria-hidden="true" /> Registrar Gasto
+              <PlusCircle size={16} aria-hidden="true" /> Gasto
             </button>
           </div>
         </div>
       </div>
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
-        <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 600 }}>Resumen del Período</h3>
+        <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 600 }}>Período</h3>
         <search aria-label="Filtrar período financiero" style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
           <label htmlFor="fin-start-date" style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>Desde</label>
           <input id="fin-start-date" type="date" className="input" value={filterStartDate} onChange={(e) => setFilterStartDate(e.target.value)} style={{ padding: '6px 10px', width: 'auto' }} />
@@ -156,27 +156,46 @@ export default function FinanzasDashboard() {
         </search>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: '14px' }}>
         {kpiCards.map((card) => (
           <button
-            key={card.key} type="button"
+            key={card.key}
+            type="button"
             onClick={() => { setModalCategory(card.key); setModalTitle(card.label); setModalMovements(card.items); setDetailModalOpen(true); }}
-            style={{ padding: '18px', backgroundColor: card.bg, border: `1px solid ${card.border}`, borderRadius: '12px', cursor: 'pointer', textAlign: 'left', font: 'inherit', width: '100%', minWidth: 0 }}
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'stretch',
+              justifyContent: 'space-between',
+              gap: '10px',
+              padding: '16px 18px',
+              backgroundColor: card.bg,
+              border: `1px solid ${card.border}`,
+              borderRadius: '12px',
+              cursor: 'pointer',
+              textAlign: 'left',
+              font: 'inherit',
+              width: '100%',
+              minWidth: 0,
+              boxShadow: 'none',
+            }}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', width: '100%' }}>
               <span style={{ fontSize: '0.82rem', color: card.color, fontWeight: 600, lineHeight: 1.25 }}>{card.label}</span>
-              <Eye size={15} color={card.color} aria-hidden="true" style={{ flexShrink: 0 }} />
+              <Eye size={15} color={card.color} aria-hidden="true" style={{ flexShrink: 0, opacity: 0.8 }} />
             </div>
-            <div className="tabular-nums" style={{ fontSize: 'clamp(1.2rem, 1.8vw, 1.55rem)', lineHeight: 1.2, fontWeight: 700, color: card.color, fontFamily: 'monospace', overflowWrap: 'anywhere' }}>${Math.round(card.val).toLocaleString('es-AR')}</div>
-            <div className="tabular-nums" style={{ fontSize: '0.74rem', color: card.color, marginTop: '8px', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 600 }}>
-              <span>{card.items.length} movimientos</span><ChevronRight size={12} aria-hidden="true" />
+            <div className="tabular-nums" style={{ fontSize: 'clamp(1.25rem, 1.5vw, 1.55rem)', lineHeight: 1.15, fontWeight: 700, color: card.color, fontFamily: 'monospace', whiteSpace: 'nowrap' }}>
+              ${Math.round(card.val).toLocaleString('es-AR')}
+            </div>
+            <div className="tabular-nums" style={{ fontSize: '0.75rem', color: card.color, display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 600, opacity: 0.9 }}>
+              <span>{card.items.length} movimientos</span><ChevronRight size={13} aria-hidden="true" />
             </div>
           </button>
         ))}
       </div>
 
       <div>
-        <h3 style={{ margin: '0 0 12px 0', fontSize: '1.15rem', fontWeight: 600 }}>Movimientos de Caja Grande</h3>
+        <h3 style={{ margin: '0 0 12px 0', fontSize: '1.15rem', fontWeight: 600 }}>Movimientos</h3>
         <div className="table-container table-container--sticky" role="region" aria-label="Movimientos de Caja Grande" tabIndex={0}>
           <table>
             <thead>
@@ -184,7 +203,7 @@ export default function FinanzasDashboard() {
             </thead>
             <tbody>
               {m.ledger.length === 0 ? (
-                <tr><td colSpan={5} style={{ textAlign: 'center', padding: '24px', color: 'var(--text-secondary)' }}>Sin movimientos en el período.</td></tr>
+                <tr><td colSpan={5} style={{ textAlign: 'center', padding: '24px', color: 'var(--text-secondary)' }}>Sin movimientos</td></tr>
               ) : m.ledger.map((item) => (
                 <tr key={item.id} style={{ cursor: item.drawer ? 'pointer' : 'default' }} onClick={() => item.drawer && setInspectingDrawer(item.drawer)}>
                   <td style={{ fontSize: '0.82rem' }}>{new Date(item.date).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' })}</td>
@@ -206,7 +225,7 @@ export default function FinanzasDashboard() {
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(380px, 1fr))', gap: '20px' }}>
         <div className="card" style={{ padding: '20px' }}>
-          <h3 style={{ margin: '0 0 12px 0', fontSize: '1.05rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}><Landmark size={18} aria-hidden="true" /> Cuentas Bancarias</h3>
+          <h3 style={{ margin: '0 0 12px 0', fontSize: '1.05rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}><Landmark size={18} aria-hidden="true" /> Bancos</h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             {bankAccounts.map((b: any) => (
               <div key={b.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', border: '1px solid var(--border-color)', borderRadius: '8px', backgroundColor: 'var(--bg-light)' }}>
@@ -226,13 +245,13 @@ export default function FinanzasDashboard() {
         </div>
 
         <div className="card" style={{ padding: '20px' }}>
-          <h3 style={{ margin: '0 0 12px 0', fontSize: '1.05rem', fontWeight: 600 }}>Transferencias del Período</h3>
+          <h3 style={{ margin: '0 0 12px 0', fontSize: '1.05rem', fontWeight: 600 }}>Transferencias</h3>
           <div className="table-container" role="region" aria-label="Transferencias del período" tabIndex={0} style={{ maxHeight: '260px', marginTop: 0 }}>
             <table style={{ fontSize: '0.82rem' }}>
               <thead><tr><th scope="col">Fecha</th><th scope="col">Cliente</th><th scope="col">Cuenta</th><th scope="col" style={{ textAlign: 'right' }}>Monto</th></tr></thead>
               <tbody>
                 {m.transfers.length === 0 ? (
-                  <tr><td colSpan={4} style={{ textAlign: 'center', padding: '20px', color: 'var(--text-secondary)' }}>Sin transferencias en el período.</td></tr>
+                  <tr><td colSpan={4} style={{ textAlign: 'center', padding: '20px', color: 'var(--text-secondary)' }}>Sin transferencias</td></tr>
                 ) : m.transfers.map((t: any) => (
                   <tr key={t.id}>
                     <td>{new Date(t.createdAt).toLocaleDateString('es-AR')}</td>

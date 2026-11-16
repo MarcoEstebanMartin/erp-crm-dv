@@ -149,7 +149,7 @@ export default function ProductsList({
             id="products-search-input"
             type="search"
             className="input"
-            placeholder="Buscar SKU, nombre o EAN..."
+            placeholder="Buscar..."
             autoCorrect="off"
             autoCapitalize="none"
             spellCheck={false}
@@ -217,7 +217,7 @@ export default function ProductsList({
           </thead>
           <tbody>
             {visibleProducts.length === 0 ? (
-              <tr><td colSpan={6} style={{ textAlign: 'center', padding: '32px 0', color: 'var(--text-secondary)' }}>No se encontraron productos.</td></tr>
+              <tr><td colSpan={6} style={{ textAlign: 'center', padding: '32px 0', color: 'var(--text-secondary)' }}>Sin productos</td></tr>
             ) : (
               visibleProducts.map((p) => {
                 const precioFinal = Number(p.listPrice) || 0;

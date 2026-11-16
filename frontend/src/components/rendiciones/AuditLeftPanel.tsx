@@ -66,7 +66,7 @@ export default function AuditLeftPanel({
     <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', overflowY: 'auto', paddingRight: '6px' }}>
       <div className="card" style={{ padding: '14px', backgroundColor: '#f8fafc', border: '1px solid var(--border-color)', borderRadius: '8px' }}>
         <h4 style={{ margin: '0 0 10px 0', fontSize: '0.88rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-          Sistema (Esperado)
+          Sistema
         </h4>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -83,19 +83,19 @@ export default function AuditLeftPanel({
           <div style={{ height: '1px', backgroundColor: '#e2e8f0', margin: '2px 0' }} />
 
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem' }}>
-            <span style={{ color: 'var(--text-secondary)' }}>Sucursal A</span>
+            <span style={{ color: 'var(--text-secondary)' }}>Fiscal</span>
             <span className="tabular-nums" style={{ fontWeight: 500 }}>{formatCurrency(auditTarget.data.totalBranchA)}</span>
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem' }}>
-            <span style={{ color: 'var(--text-secondary)' }}>Sucursal X</span>
+            <span style={{ color: 'var(--text-secondary)' }}>Interno</span>
             <span className="tabular-nums" style={{ fontWeight: 500 }}>{formatCurrency(auditTarget.data.totalBranchX)}</span>
           </div>
 
           <div style={{ height: '1px', backgroundColor: '#e2e8f0', margin: '2px 0' }} />
 
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.98rem', fontWeight: 700 }}>
-            <span style={{ color: 'var(--text-primary)' }}>Total Esperado</span>
+            <span style={{ color: 'var(--text-primary)' }}>Total</span>
             <span className="tabular-nums" style={{ color: 'var(--color-primary)', fontFamily: 'monospace' }}>{formatCurrency(totalExpected)}</span>
           </div>
         </div>
@@ -104,7 +104,7 @@ export default function AuditLeftPanel({
       <div className="card" style={{ padding: '14px', border: '1px solid var(--border-color)', borderRadius: '8px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
           <h4 style={{ margin: 0, fontSize: '0.88rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-            Conteo Físico
+            Declarado
           </h4>
           <button
             type="button"
@@ -121,7 +121,7 @@ export default function AuditLeftPanel({
 
         <div className="form-group" style={{ marginBottom: '12px' }}>
           <label htmlFor="audit-real-cash" style={{ fontSize: '0.78rem', fontWeight: 600, display: 'block', marginBottom: '4px' }}>
-            Efectivo Declarado ($)
+            Efectivo
           </label>
           <input
             id="audit-real-cash"

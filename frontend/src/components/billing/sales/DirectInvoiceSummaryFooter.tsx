@@ -31,7 +31,7 @@ export function DirectInvoiceSummaryFooter({
         }}
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '6px' }}>
-          <span>Subtotal / Bruto:</span>
+          <span>Subtotal</span>
           <span style={{ fontWeight: 600 }}>
             ${(directBillingTotals.net + directBillingTotals.tax).toLocaleString('es-AR')}
           </span>
@@ -40,11 +40,11 @@ export function DirectInvoiceSummaryFooter({
         {billingType === 'OFFICIAL' && (
           <>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '6px' }}>
-              <span>Neto Gravado (Exento de IVA):</span>
+              <span>Neto</span>
               <span>${directBillingTotals.net.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '6px' }}>
-              <span>IVA (21%):</span>
+              <span>IVA 21%</span>
               <span>${directBillingTotals.tax.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
             </div>
             {directBillingTotals.percepcion > 0 && (

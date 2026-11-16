@@ -55,14 +55,14 @@ export function DirectInvoiceModal({
           }}
         >
           <FileText size={18} aria-hidden="true" />
-          Emitir Factura de Venta Directa
+          Venta directa
         </h2>
         <button
           type="button"
           className="btn btn-ghost"
           style={{ padding: '4px' }}
           onClick={directInvoice.handleCloseResetHeader}
-          aria-label="Cerrar facturación directa"
+          aria-label="Cerrar"
         >
           <X size={18} aria-hidden="true" />
         </button>

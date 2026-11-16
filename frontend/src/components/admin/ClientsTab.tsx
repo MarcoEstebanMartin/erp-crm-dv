@@ -219,7 +219,7 @@ export default function ClientsTab({
                 id="clients-search"
                 type="text"
                 className="input"
-                placeholder="Buscar nombre, CUIT o localidad"
+                placeholder="Buscar..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 autoCorrect="off"

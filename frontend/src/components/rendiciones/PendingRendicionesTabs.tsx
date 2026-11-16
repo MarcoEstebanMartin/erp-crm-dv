@@ -111,7 +111,7 @@ export default function PendingRendicionesTabs({
         sellers.length === 0 ? (
           <div style={{ padding: '44px', textAlign: 'center', backgroundColor: '#f8fafc', borderRadius: '12px', border: '1px dashed var(--border-color)', color: 'var(--text-secondary)' }}>
             <CheckCircle size={32} color="#10b981" aria-hidden="true" style={{ margin: '0 auto 10px' }} />
-            <h3 style={{ margin: 0, color: 'var(--text-primary)', fontWeight: 600 }}>Vendedores al día</h3>
+            <h3 style={{ margin: 0, color: 'var(--text-primary)', fontWeight: 600 }}>Al día</h3>
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -142,7 +142,7 @@ export default function PendingRendicionesTabs({
 
                   <div style={{ display: 'flex', alignItems: 'center', gap: '32px' }}>
                     <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Total a Rendir</div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>A rendir</div>
                       <div className="tabular-nums" style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)', fontFamily: 'monospace' }}>
                         {formatCurrency(item.totalToCollect)}
                       </div>
@@ -160,7 +160,7 @@ export default function PendingRendicionesTabs({
         routes.length === 0 ? (
           <div style={{ padding: '44px', textAlign: 'center', backgroundColor: '#f8fafc', borderRadius: '12px', border: '1px dashed var(--border-color)', color: 'var(--text-secondary)' }}>
             <CheckCircle size={32} color="#10b981" aria-hidden="true" style={{ margin: '0 auto 10px' }} />
-            <h3 style={{ margin: 0, color: 'var(--text-primary)', fontWeight: 600 }}>Repartidores al día</h3>
+            <h3 style={{ margin: 0, color: 'var(--text-primary)', fontWeight: 600 }}>Al día</h3>
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -184,7 +184,7 @@ export default function PendingRendicionesTabs({
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '32px' }}>
                   <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Total a Rendir</div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>A rendir</div>
                     <div className="tabular-nums" style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)', fontFamily: 'monospace' }}>
                       {formatCurrency(item.totalToCollect)}
                     </div>

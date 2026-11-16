@@ -76,15 +76,15 @@ export default function RepartoDashboard() {
               <thead>
                 <tr>
                   <th scope="col">Viaje</th>
-                  <th scope="col">Conductor / Vehículo</th>
+                  <th scope="col">Chofer / Vehículo</th>
                   <th scope="col">Pedidos</th>
                   <th scope="col">Estado</th>
-                  <th scope="col">Acciones</th>
+                  <th scope="col"><span className="visually-hidden">Acciones</span></th>
                 </tr>
               </thead>
               <tbody>
                 {c.visibleRoutes.length === 0 ? (
-                  <tr><td colSpan={5} style={{ textAlign: 'center' }}>Sin viajes registrados.</td></tr>
+                  <tr><td colSpan={5} style={{ textAlign: 'center' }}>Sin viajes</td></tr>
                 ) : (
                   c.visibleRoutes.map((r) => (
                     <tr
@@ -110,7 +110,7 @@ export default function RepartoDashboard() {
                         </div>
                       </td>
                       <td>
-                        <span className="badge tabular-nums" style={{ backgroundColor: '#E2E2E2' }}>{r.orders?.length || 0} pedidos</span>
+                        <span className="badge tabular-nums" style={{ backgroundColor: '#E2E2E2' }}>{r.orders?.length || 0}</span>
                       </td>
                       <td>
                         <span style={{
@@ -118,7 +118,7 @@ export default function RepartoDashboard() {
                           backgroundColor: r.status === 'COMPLETED' ? 'var(--color-success-bg)' : r.status === 'IN_TRANSIT' ? 'var(--color-info-bg)' : 'var(--color-warning-bg)',
                           color: r.status === 'COMPLETED' ? 'var(--color-success)' : r.status === 'IN_TRANSIT' ? 'var(--color-info)' : 'var(--color-warning)',
                         }}>
-                          {r.status === 'PENDING' ? 'Pendiente' : r.status === 'IN_TRANSIT' ? 'En Viaje' : 'Completado'}
+                          {r.status === 'PENDING' ? 'Pendiente' : r.status === 'IN_TRANSIT' ? 'En viaje' : 'Completado'}
                         </span>
                       </td>
                       <td onClick={(e) => e.stopPropagation()}>

@@ -95,7 +95,7 @@ const RendicionesDashboard: React.FC = () => {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
           <h2 style={{ fontSize: '1.35rem', fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--text-primary)' }}>
             <ShieldCheck size={24} color="var(--color-primary)" aria-hidden="true" />
-            Arqueo de Cajas
+            Rendiciones
           </h2>
           <button
             type="button"

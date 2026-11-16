@@ -32,18 +32,20 @@ export default function AuditReceiptsPanel({
       <div className="table-container" role="region" aria-label="Recibos incluidos" tabIndex={0} style={{ flex: 1, margin: 0, border: 'none', borderRadius: 0, boxShadow: 'none' }}>
         {transactions.length === 0 ? (
           <div style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.88rem' }}>
-            Sin recibos en esta rendición.
+            Sin recibos
           </div>
         ) : (
           <table style={{ fontSize: '0.8rem' }}>
             <thead>
               <tr>
-                <th scope="col">Recibo / Pedido</th>
+                <th scope="col">Recibo</th>
                 <th scope="col">Cliente</th>
-                <th scope="col">Sucursal</th>
+                <th scope="col">Tipo</th>
                 <th scope="col">Medio</th>
                 <th scope="col" style={{ textAlign: 'right' }}>Monto</th>
-                <th scope="col" style={{ textAlign: 'center', width: '80px' }}>Acción</th>
+                <th scope="col" style={{ textAlign: 'center', width: '48px' }}>
+                  <span className="visually-hidden">Acción</span>
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -63,7 +65,7 @@ export default function AuditReceiptsPanel({
                   </td>
                   <td>
                     <span style={{ fontWeight: 600, color: tx.billingType === 'OFFICIAL' ? '#1e40af' : '#b45309' }}>
-                      {tx.billingType === 'OFFICIAL' ? 'A (Oficial)' : 'X (Interna)'}
+                      {tx.billingType === 'OFFICIAL' ? 'AFIP' : 'X'}
                     </span>
                   </td>
                   <td>
@@ -95,11 +97,11 @@ export default function AuditReceiptsPanel({
                       className="btn btn-ghost"
                       onClick={() => onDeleteReceipt(tx)}
                       disabled={actionLoading}
-                      style={{ padding: '4px 6px', color: '#ef4444', fontSize: '0.75rem', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                      style={{ padding: '4px', color: '#ef4444', display: 'inline-flex', alignItems: 'center' }}
+                      title="Eliminar"
                       aria-label={`Eliminar recibo ${tx.receiptNumber || tx.id}`}
                     >
                       <Trash2 size={14} color="#ef4444" aria-hidden="true" />
-                      <span>Eliminar</span>
                     </button>
                   </td>
                 </tr>

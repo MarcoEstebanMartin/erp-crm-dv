@@ -33,12 +33,8 @@ export function DirectInvoicePaymentPanel({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', borderLeft: '1px solid var(--border-color)', paddingLeft: '24px', overflowY: 'auto' }}>
-      <h3 style={{ fontSize: '0.95rem', fontWeight: 700, margin: 0, borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
-        Comprobante
-      </h3>
-
       <div className="form-group">
-        <label>Tipo de Facturación</label>
+        <label>Comprobante</label>
         <div style={{ display: 'flex', gap: '16px', marginTop: '4px' }}>
           <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 500 }}>
             <input
@@ -48,7 +44,7 @@ export function DirectInvoicePaymentPanel({
               checked={directInvoiceForm.billingType === 'INTERNAL'}
               onChange={() => setDirectInvoiceForm((prev) => ({ ...prev, billingType: 'INTERNAL' }))}
             />
-            Interno (Presupuesto X)
+            Interno
           </label>
           <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 500 }}>
             <input
@@ -59,12 +55,12 @@ export function DirectInvoicePaymentPanel({
               checked={directInvoiceForm.billingType === 'OFFICIAL'}
               onChange={() => setDirectInvoiceForm((prev) => ({ ...prev, billingType: 'OFFICIAL' }))}
             />
-            Oficial AFIP (A / B)
+            AFIP
           </label>
         </div>
         {invalidOfficialCuit && (
           <div style={{ fontSize: '0.75rem', color: 'var(--color-warning)', marginTop: '4px' }}>
-            * El cliente no posee CUIT válido registrado para facturación oficial.
+            Sin CUIT para AFIP
           </div>
         )}
       </div>
@@ -116,7 +112,7 @@ export function DirectInvoicePaymentPanel({
       </div>
 
       <div className="form-group" style={{ marginTop: '8px' }}>
-        <label style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--text-primary)' }}>Condición de Cobro</label>
+        <label style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--text-primary)' }}>Cobro</label>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '6px' }}>
           <label style={{
             display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px',
@@ -131,7 +127,7 @@ export function DirectInvoicePaymentPanel({
               onChange={() => setDirectInvoiceForm((prev) => ({ ...prev, immediatePayment: true }))}
               style={{ width: '15px', height: '15px' }}
             />
-            <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-primary)' }}>Cobro en el Acto</span>
+            <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-primary)' }}>Contado</span>
           </label>
 
           <label style={{
@@ -147,7 +143,7 @@ export function DirectInvoicePaymentPanel({
               onChange={() => setDirectInvoiceForm((prev) => ({ ...prev, immediatePayment: false }))}
               style={{ width: '15px', height: '15px' }}
             />
-            <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-primary)' }}>Cuenta Corriente</span>
+            <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-primary)' }}>Cta. Cte.</span>
           </label>
         </div>
       </div>
@@ -155,25 +151,25 @@ export function DirectInvoicePaymentPanel({
       {directInvoiceForm.immediatePayment && (
         <div style={{ backgroundColor: 'var(--bg-app)', border: '1px solid var(--border-color)', borderRadius: '6px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
           <div className="form-group" style={{ margin: 0 }}>
-            <label htmlFor="direct-payment-method">Método de Pago</label>
+            <label htmlFor="direct-payment-method">Medio</label>
             <select
               id="direct-payment-method"
               className="select"
               value={directInvoiceForm.paymentMethod}
               onChange={(e) => setDirectInvoiceForm((prev) => ({ ...prev, paymentMethod: e.target.value }))}
             >
-              <option value="CASH">Efectivo (Caja Chica)</option>
-              <option value="BANK_TRANSFER">Transferencia / MercadoPago</option>
-              <option value="CHECK">Cheque de Terceros</option>
+              <option value="CASH">Efectivo</option>
+              <option value="BANK_TRANSFER">Transferencia</option>
+              <option value="CHECK">Cheque</option>
             </select>
           </div>
 
           {directInvoiceForm.paymentMethod === 'CASH' && (
             <div className="form-group" style={{ margin: 0 }}>
-              <label htmlFor="direct-cash-drawer">Caja Operativa</label>
+              <label htmlFor="direct-cash-drawer">Caja</label>
               {activeDrawers.length === 0 ? (
                 <div style={{ color: 'var(--color-danger)', fontSize: '0.78rem', marginTop: '4px', fontWeight: 600 }}>
-                  <span role="alert">No hay cajas abiertas.</span>
+                  <span role="alert">Sin cajas abiertas</span>
                 </div>
               ) : (
                 <select
@@ -185,7 +181,7 @@ export function DirectInvoicePaymentPanel({
                 >
                   {activeDrawers.map((d) => (
                     <option key={d.id} value={d.id}>
-                      Caja #{d.id} - {d.branch} ({d.user?.name || 'Administración'})
+                      #{d.id} · {d.branch}
                     </option>
                   ))}
                 </select>
@@ -195,7 +191,7 @@ export function DirectInvoicePaymentPanel({
 
           {directInvoiceForm.paymentMethod === 'BANK_TRANSFER' && (
             <div className="form-group" style={{ margin: 0 }}>
-              <label htmlFor="direct-bank-account">Cuenta de Destino</label>
+              <label htmlFor="direct-bank-account">Cuenta</label>
               <select
                 id="direct-bank-account"
                 className="select"
@@ -205,7 +201,7 @@ export function DirectInvoicePaymentPanel({
               >
                 {bankAccounts.map((b) => (
                   <option key={b.id} value={b.id}>
-                    {b.bankName} - CBU: {b.cbu || 'N/A'} (Saldo: ${Number(b.balance).toLocaleString()})
+                    {b.bankName} · ${Number(b.balance).toLocaleString('es-AR')}
                   </option>
                 ))}
               </select>
@@ -216,14 +212,14 @@ export function DirectInvoicePaymentPanel({
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                 <div className="form-group" style={{ margin: 0 }}>
-                  <label htmlFor="direct-check-number">Nro de Cheque</label>
+                  <label htmlFor="direct-check-number">N° Cheque</label>
                   <input
                     id="direct-check-number"
                     type="text"
                     className="input"
                     value={directInvoiceForm.checkNumber}
                     onChange={(e) => setDirectInvoiceForm((prev) => ({ ...prev, checkNumber: e.target.value }))}
-                    placeholder="Nro Cheque"
+                    placeholder="Número"
                     autoCorrect="off"
                     autoCapitalize="none"
                     spellCheck={false}
@@ -231,14 +227,14 @@ export function DirectInvoicePaymentPanel({
                   />
                 </div>
                 <div className="form-group" style={{ margin: 0 }}>
-                  <label htmlFor="direct-check-issuer">Emisor / Librador</label>
+                  <label htmlFor="direct-check-issuer">Emisor</label>
                   <input
                     id="direct-check-issuer"
                     type="text"
                     className="input"
                     value={directInvoiceForm.checkIssuer}
                     onChange={(e) => setDirectInvoiceForm((prev) => ({ ...prev, checkIssuer: e.target.value }))}
-                    placeholder="Nombre Emisor"
+                    placeholder="Titular"
                     required
                   />
                 </div>
@@ -251,7 +247,7 @@ export function DirectInvoicePaymentPanel({
                   onChange={(e) => setDirectInvoiceForm((prev) => ({ ...prev, isEcheq: e.target.checked }))}
                   style={{ width: '16px', height: '16px' }}
                 />
-                <label htmlFor="isEcheq" style={{ cursor: 'pointer', margin: 0, fontSize: '0.8rem' }}>¿Es un Cheque Electrónico (Echeq)?</label>
+                <label htmlFor="isEcheq" style={{ cursor: 'pointer', margin: 0, fontSize: '0.8rem' }}>Echeq</label>
               </div>
             </div>
           )}

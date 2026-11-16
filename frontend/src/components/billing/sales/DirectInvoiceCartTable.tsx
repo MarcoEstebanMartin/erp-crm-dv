@@ -39,7 +39,7 @@ export function DirectInvoiceCartTable({
             <th scope="col">Producto</th>
             <th scope="col">Precio Unit.</th>
             <th scope="col" style={{ width: '85px' }}>Cant.</th>
-            <th scope="col" style={{ textAlign: 'center' }}>Empaque / Bultos</th>
+            <th scope="col" style={{ textAlign: 'center' }}>Bultos</th>
             <th scope="col" style={{ width: '100px' }}>Kilos</th>
             <th scope="col">Subtotal</th>
             <th scope="col" style={{ width: '40px' }}>
@@ -51,7 +51,7 @@ export function DirectInvoiceCartTable({
           {directCart.length === 0 ? (
             <tr>
               <td colSpan={7} style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-secondary)' }}>
-                El carrito de compras está vacío.
+                Sin productos
               </td>
             </tr>
           ) : (
@@ -130,9 +130,7 @@ export function DirectInvoiceCartTable({
                             borderRadius: '4px',
                           }}
                         >
-                          {belowMin
-                            ? `Mínimo exigido: ${item.product.minOrderQuantity} u.`
-                            : `Mín. ${item.product.minOrderQuantity} u. OK`}
+                          Mín. {item.product.minOrderQuantity} u.
                         </span>
                       )}
                     </div>

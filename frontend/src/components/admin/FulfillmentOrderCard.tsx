@@ -164,25 +164,27 @@ export function FulfillmentOrderCard({
           justifyContent: 'space-between',
           alignItems: 'center',
           gap: '8px',
-          fontSize: '0.76rem',
+          fontSize: '0.75rem',
           color: '#6B7280',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', minWidth: 0, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
           <span>{o.items?.length || 0} ítems</span>
           <span aria-hidden="true">·</span>
           <span style={{ color: '#4B5563', fontWeight: 500 }}>{originLabel}</span>
           {clientCity && (
             <>
               <span aria-hidden="true">·</span>
-              <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '140px' }}>
+              <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '130px' }}>
                 {clientCity}
               </span>
             </>
           )}
-          <span className="badge-minimal" style={{ padding: '1px 5px', fontSize: '0.68rem' }}>
-            {statusInfo.label}
-          </span>
+          {column === 'BILLED' && statusInfo.label === 'Entregado' && (
+            <span className="badge-minimal" style={{ padding: '1px 5px', fontSize: '0.67rem' }}>
+              Entregado
+            </span>
+          )}
         </div>
 
         <div className="tabular-nums" style={{ fontWeight: 700, fontSize: '0.9rem', color: '#111827', flexShrink: 0 }}>
@@ -190,183 +192,178 @@ export function FulfillmentOrderCard({
         </div>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
+      {column === 'BILLED' && pendingCae && (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '6px',
+            backgroundColor: '#FEF2F2',
+            border: '1px solid rgba(227, 6, 19, 0.28)',
+            borderRadius: '6px',
+            padding: '5px 8px',
+          }}
+        >
+          <span
+            style={{
+              fontSize: '0.7rem',
+              fontWeight: 600,
+              color: '#E30613',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+            }}
+          >
+            <AlertCircle size={12} aria-hidden="true" />
+            {isPriorDayPendingCae
+              ? `${formattedShortDate} · Sin CAE`
+              : 'Sin CAE'}
+          </span>
+          <button
+            type="button"
+            className="btn btn-primary"
+            disabled={requestingCaeId === o.id}
+            style={{
+              height: '22px',
+              padding: '0 8px',
+              fontSize: '0.7rem',
+              fontWeight: 600,
+              backgroundColor: '#E30613',
+              borderColor: '#E30613',
+              color: '#FFFFFF',
+              borderRadius: '4px',
+              flexShrink: 0,
+            }}
+            onClick={() => onRequestCae(o.id)}
+            title="Solicitar CAE"
+          >
+            {requestingCaeId === o.id ? 'Solicitando...' : 'Solicitar CAE'}
+          </button>
+        </div>
+      )}
+
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginTop: '2px' }}>
         <OrderDeliveryBadgeControl
           order={o}
           pendingRoutes={pendingRoutes}
           compact
           onUpdated={() => onOrderDeliveryUpdated?.()}
         />
-      </div>
 
-      <div style={{ display: 'flex', gap: '6px', marginTop: '2px' }}>
-        {column === 'PENDING' && (
-          <>
-            <button
-              type="button"
-              className="btn btn-secondary"
-              style={{ ...SECONDARY_ACTION_STYLE, flex: 1 }}
-              onClick={() => onPrintPickingList(o)}
-              title="Imprimir Hoja de Armado"
-            >
-              <Printer size={13} aria-hidden="true" />
-              Hoja
-            </button>
-            <button
-              type="button"
-              className="btn btn-secondary"
-              style={{ ...SECONDARY_ACTION_STYLE, flex: 1 }}
-              onClick={() => onPrintLabels(o)}
-              title="Imprimir Rótulos Térmicos de Bultos"
-            >
-              <Tag size={13} aria-hidden="true" />
-              Rótulo
-            </button>
-            <button
-              type="button"
-              className="btn btn-primary"
-              style={{
-                flex: 1.25,
-                height: '26px',
-                padding: '0 8px',
-                fontSize: '0.76rem',
-                fontWeight: 600,
-                backgroundColor: '#111827',
-                borderColor: '#111827',
-                color: '#FFFFFF',
-              }}
-              onClick={() => onOpenFulfillmentModal(o)}
-              title="Armar, pesar y facturar pedido"
-            >
-              Facturar
-            </button>
-          </>
-        )}
-
-        {column === 'PREPARING' && (
-          <div style={{ display: 'flex', gap: '6px', width: '100%' }}>
-            <button
-              type="button"
-              className="btn btn-secondary"
-              style={SECONDARY_ACTION_STYLE}
-              onClick={() => onRevertToPending(o.id)}
-              title="Devolver este pedido a la columna Pendientes"
-            >
-              <RotateCcw size={12} aria-hidden="true" />
-              Volver
-            </button>
-            <button
-              type="button"
-              className="btn btn-primary"
-              style={{
-                flex: 1,
-                height: '26px',
-                padding: '0 10px',
-                fontSize: '0.76rem',
-                fontWeight: 600,
-                backgroundColor: '#111827',
-                borderColor: '#111827',
-                color: '#FFFFFF',
-              }}
-              onClick={() => onOpenFulfillmentModal(o)}
-            >
-              <CheckSquare size={13} aria-hidden="true" />
-              Confirmar Armado
-            </button>
-          </div>
-        )}
-
-        {column === 'BILLED' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', width: '100%' }}>
-            {pendingCae && (
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  gap: '6px',
-                  backgroundColor: '#FEF2F2',
-                  border: '1px solid rgba(227, 6, 19, 0.28)',
-                  borderRadius: '6px',
-                  padding: '5px 8px',
-                }}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexShrink: 0 }}>
+          {column === 'PENDING' && (
+            <>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                style={{ ...SECONDARY_ACTION_STYLE, width: '28px', padding: 0 }}
+                onClick={() => onPrintPickingList(o)}
+                title="Hoja de armado"
+                aria-label={`Imprimir hoja de armado pedido #${o.id}`}
               >
-                <span
-                  style={{
-                    fontSize: '0.7rem',
-                    fontWeight: 600,
-                    color: '#E30613',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                  }}
-                >
-                  <AlertCircle size={12} aria-hidden="true" />
-                  {isPriorDayPendingCae
-                    ? `Pre-Factura ${formattedShortDate} — Sin CAE`
-                    : 'Pendiente CAE AFIP'}
-                </span>
-                <button
-                  type="button"
-                  className="btn btn-primary"
-                  disabled={requestingCaeId === o.id}
-                  style={{
-                    height: '22px',
-                    padding: '0 8px',
-                    fontSize: '0.7rem',
-                    fontWeight: 600,
-                    backgroundColor: '#E30613',
-                    borderColor: '#E30613',
-                    color: '#FFFFFF',
-                    borderRadius: '4px',
-                    flexShrink: 0,
-                  }}
-                  onClick={() => onRequestCae(o.id)}
-                  title="Solicitar CAE a AFIP ahora"
-                >
-                  {requestingCaeId === o.id ? 'Solicitando...' : 'Solicitar CAE'}
-                </button>
-              </div>
-            )}
+                <Printer size={13} aria-hidden="true" />
+              </button>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                style={{ ...SECONDARY_ACTION_STYLE, width: '28px', padding: 0 }}
+                onClick={() => onPrintLabels(o)}
+                title="Rótulos de bultos"
+                aria-label={`Imprimir rótulos pedido #${o.id}`}
+              >
+                <Tag size={13} aria-hidden="true" />
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary"
+                style={{
+                  height: '26px',
+                  padding: '0 12px',
+                  fontSize: '0.75rem',
+                  fontWeight: 600,
+                  backgroundColor: '#111827',
+                  borderColor: '#111827',
+                  color: '#FFFFFF',
+                }}
+                onClick={() => onOpenFulfillmentModal(o)}
+              >
+                Facturar
+              </button>
+            </>
+          )}
 
-            <div style={{ display: 'flex', gap: '6px', width: '100%' }}>
+          {column === 'PREPARING' && (
+            <>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                style={{ ...SECONDARY_ACTION_STYLE, width: '28px', padding: 0 }}
+                onClick={() => onRevertToPending(o.id)}
+                title="Volver a Pendientes"
+                aria-label={`Devolver pedido #${o.id} a Pendientes`}
+              >
+                <RotateCcw size={12} aria-hidden="true" />
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary"
+                style={{
+                  height: '26px',
+                  padding: '0 10px',
+                  fontSize: '0.75rem',
+                  fontWeight: 600,
+                  backgroundColor: '#111827',
+                  borderColor: '#111827',
+                  color: '#FFFFFF',
+                }}
+                onClick={() => onOpenFulfillmentModal(o)}
+              >
+                <CheckSquare size={12} aria-hidden="true" />
+                Confirmar
+              </button>
+            </>
+          )}
+
+          {column === 'BILLED' && (
+            <>
               {o.billingType === 'OFFICIAL' ? (
                 <button
                   type="button"
                   className="btn btn-secondary"
-                  style={{ ...SECONDARY_ACTION_STYLE, flex: 1, fontWeight: 600, color: '#111827' }}
+                  style={{ ...SECONDARY_ACTION_STYLE, fontWeight: 600, color: '#111827' }}
                   onClick={() => onPrintFacturaA4(o)}
-                  title="Imprimir Factura Oficial A4"
+                  title="Factura A4"
                 >
                   <FileText size={12} aria-hidden="true" />
-                  Factura A4
+                  A4
                 </button>
               ) : (
                 <button
                   type="button"
                   className="btn btn-secondary"
-                  style={{ ...SECONDARY_ACTION_STYLE, flex: 1, fontWeight: 600, color: '#111827' }}
+                  style={{ ...SECONDARY_ACTION_STYLE, fontWeight: 600, color: '#111827' }}
                   onClick={() => onPrintRemitoX(o)}
-                  title="Imprimir Boleta Remito X en hoja A4"
+                  title="Boleta A4"
                 >
                   <FileText size={12} aria-hidden="true" />
-                  Boleta A4
+                  A4
                 </button>
               )}
 
               <button
                 type="button"
                 className="btn btn-secondary"
-                style={{ ...SECONDARY_ACTION_STYLE, flex: 1 }}
+                style={SECONDARY_ACTION_STYLE}
                 onClick={() => onPrintReceipt(o)}
-                title="Imprimir Ticket Térmico de 80mm"
+                title="Ticket 80mm"
               >
                 <Printer size={12} aria-hidden="true" />
                 Ticket
               </button>
-            </div>
-          </div>
-        )}
+            </>
+          )}
+        </div>
       </div>
     </article>
   );

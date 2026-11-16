@@ -40,7 +40,7 @@ export function DirectInvoiceClientSelector({
           htmlFor="direct-invoice-client-search"
           style={{ fontWeight: 600, fontSize: '0.8rem', color: 'var(--text-secondary)' }}
         >
-          Cliente (Nombre o CUIT)
+          Cliente
         </label>
         <div style={{ position: 'relative' }}>
           <input
@@ -48,7 +48,7 @@ export function DirectInvoiceClientSelector({
             ref={clientSearchInputRef}
             type="text"
             className="input"
-            placeholder="Escribí para buscar cliente por nombre o CUIT..."
+            placeholder="Buscar por nombre o CUIT..."
             value={clientSearchQuery}
             onChange={(e) => {
               setClientSearchQuery(e.target.value);
@@ -153,7 +153,7 @@ export function DirectInvoiceClientSelector({
             </span>
           </div>
           <div>
-            <strong>Tiene Cta. Corriente:</strong>{' '}
+            <strong>Cta. Cte.:</strong>{' '}
             <span
               className="tabular-nums"
               style={{
@@ -167,12 +167,14 @@ export function DirectInvoiceClientSelector({
             >
               {Number(selectedDirectClient.creditLimit || 0) > 0 ||
               Number(selectedDirectClient.paymentTermDays || 0) > 0
-                ? `SÍ ${Number(selectedDirectClient.creditLimit || 0) > 0 ? `(Límite: ${formatIntegerARS(selectedDirectClient.creditLimit)})` : ''}`
-                : 'NO (Solo Contado)'}
+                ? Number(selectedDirectClient.creditLimit || 0) > 0
+                  ? `Límite ${formatIntegerARS(selectedDirectClient.creditLimit)}`
+                  : 'Habilitada'
+                : 'Solo contado'}
             </span>
           </div>
           <div>
-            <strong>Saldo Cuenta Corriente:</strong>{' '}
+            <strong>Saldo:</strong>{' '}
             <span
               className="tabular-nums"
               style={{
@@ -181,12 +183,12 @@ export function DirectInvoiceClientSelector({
               }}
             >
               {balance < 0
-                ? `${formatIntegerARS(Math.abs(balance))} (A Favor)`
+                ? `${formatIntegerARS(Math.abs(balance))} a favor`
                 : formatIntegerARS(balance)}
             </span>
           </div>
           <div>
-            <strong>Boletas Pendientes:</strong>{' '}
+            <strong>Pendientes:</strong>{' '}
             <span
               className="tabular-nums"
               style={{
@@ -195,9 +197,7 @@ export function DirectInvoiceClientSelector({
               }}
             >
               {pendingCount}
-              {maxUnpaid > 0
-                ? ` de ${maxUnpaid} máx. permitida${maxUnpaid > 1 ? 's' : ''}`
-                : ' (Sin límite)'}
+              {maxUnpaid > 0 ? ` / ${maxUnpaid}` : ''}
             </span>
           </div>
 
@@ -220,7 +220,7 @@ export function DirectInvoiceClientSelector({
               }}
             >
               <AlertTriangle size={14} aria-hidden="true" />
-              Límite de boletas alcanzado: El cliente debe {pendingCount} de {maxUnpaid} boletas permitidas.
+              Límite alcanzado ({pendingCount}/{maxUnpaid})
             </div>
           )}
 
@@ -239,25 +239,11 @@ export function DirectInvoiceClientSelector({
               }}
             >
               <AlertTriangle size={14} aria-hidden="true" />
-              Regla Boleta contra Boleta: El cliente tiene saldo pendiente.
+              Saldo pendiente
             </div>
           )}
         </div>
-      ) : (
-        <div
-          style={{
-            backgroundColor: '#F9FAFB',
-            border: '1px dashed #D1D5DB',
-            borderRadius: '6px',
-            padding: '12px',
-            fontSize: '0.825rem',
-            color: '#4B5563',
-            textAlign: 'center'
-          }}
-        >
-          Debe buscar y seleccionar un cliente para habilitar la carga de productos.
-        </div>
-      )}
+      ) : null}
     </>
   );
 }

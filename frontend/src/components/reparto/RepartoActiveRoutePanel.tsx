@@ -46,9 +46,9 @@ export const RepartoActiveRoutePanel: FC<RepartoActiveRoutePanelProps> = ({
             Viaje #{selectedRoute.id}{selectedRoute.routeName ? ` · ${selectedRoute.routeName}` : ''}
           </h3>
           <div className="tabular-nums" style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-            Conductor: <strong style={{ color: 'var(--text-primary)' }}>{selectedRoute.driverName}</strong>
-            {selectedRoute.companionName && <> · Acompañante: <strong style={{ color: 'var(--text-primary)' }}>{selectedRoute.companionName}</strong></>}
-            {' '}· Vehículo: <strong style={{ color: 'var(--text-primary)' }}>{selectedRoute.vehiclePlate}</strong>
+            <strong style={{ color: 'var(--text-primary)' }}>{selectedRoute.driverName}</strong>
+            {selectedRoute.companionName && <> · <strong style={{ color: 'var(--text-primary)' }}>{selectedRoute.companionName}</strong></>}
+            {' '}· <strong style={{ color: 'var(--text-primary)' }}>{selectedRoute.vehiclePlate}</strong>
             {selectedRoute.vehicleDescription ? ` (${selectedRoute.vehicleDescription})` : ''}
           </div>
           <div className="tabular-nums" style={{ fontSize: '0.78rem', fontWeight: 600, color: '#111827', marginTop: '4px' }}>
@@ -57,12 +57,12 @@ export const RepartoActiveRoutePanel: FC<RepartoActiveRoutePanelProps> = ({
           {selectedRoute.custodyStatus === 'LOADED_IN_TRANSIT' ? (
             <div className="tabular-nums" style={{ fontSize: '0.75rem', fontWeight: 700, color: '#15803d', backgroundColor: '#dcfce7', padding: '3px 8px', borderRadius: '4px', marginTop: '6px', display: 'inline-flex', alignItems: 'center', gap: '5px', border: '1px solid #86efac' }}>
               <Lock size={12} aria-hidden="true" />
-              Custodia: {selectedRoute.driverName} ({metrics.totalBultos} Bultos){selectedRoute.signedByDriverAt ? ` · ${new Date(selectedRoute.signedByDriverAt).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}` : ''}
+              Custodia: {selectedRoute.driverName} ({metrics.totalBultos} bultos){selectedRoute.signedByDriverAt ? ` · ${new Date(selectedRoute.signedByDriverAt).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}` : ''}
             </div>
           ) : (
             <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#b45309', backgroundColor: '#fef3c7', padding: '3px 8px', borderRadius: '4px', marginTop: '6px', display: 'inline-flex', alignItems: 'center', gap: '5px', border: '1px solid #fde68a' }}>
               <Clock size={12} aria-hidden="true" />
-              Pendiente Carga
+              Sin carga
             </div>
           )}
         </div>
@@ -75,21 +75,21 @@ export const RepartoActiveRoutePanel: FC<RepartoActiveRoutePanelProps> = ({
           )}
           {selectedRoute.custodyStatus !== 'LOADED_IN_TRANSIT' && (
             <button type="button" className="btn btn-warning" style={{ fontSize: '0.78rem', backgroundColor: '#FEF3C7', borderColor: '#F59E0B', color: '#B45309', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '4px' }} onClick={() => handleTransferCustody(selectedRoute)}>
-              <Lock size={12} aria-hidden="true" /> Transferir Custodia
+              <Lock size={12} aria-hidden="true" /> Custodia
             </button>
           )}
           {isPendingRoute && (
             <button type="button" className="btn btn-secondary" style={{ fontSize: '0.78rem', display: 'inline-flex', alignItems: 'center', gap: '4px' }} onClick={() => handleChangeStatus(selectedRoute.id, 'IN_TRANSIT')}>
-              <Play size={12} aria-hidden="true" /> Iniciar Viaje
+              <Play size={12} aria-hidden="true" /> Iniciar
             </button>
           )}
           {selectedRoute.status === 'IN_TRANSIT' && (
             <button type="button" className="btn btn-primary" style={{ fontSize: '0.78rem', backgroundColor: 'var(--color-success)', borderColor: 'var(--color-success)', display: 'inline-flex', alignItems: 'center', gap: '4px' }} onClick={() => handleOpenSettleModal(selectedRoute)}>
-              <CheckCircle size={12} aria-hidden="true" /> Rendir Viaje
+              <CheckCircle size={12} aria-hidden="true" /> Rendir
             </button>
           )}
           <button type="button" className="btn btn-secondary no-print" style={{ fontSize: '0.78rem', display: 'inline-flex', alignItems: 'center', gap: '4px' }} onClick={() => printDeliveryRouteCustodyGuide(selectedRoute)}>
-            <Printer size={12} aria-hidden="true" /> Guía de Carga
+            <Printer size={12} aria-hidden="true" /> Guía
           </button>
         </div>
       </div>
@@ -98,7 +98,7 @@ export const RepartoActiveRoutePanel: FC<RepartoActiveRoutePanelProps> = ({
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap', gap: '8px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
             <Map size={14} aria-hidden="true" />
-            <span>Recorrido y GPS</span>
+            <span>Recorrido</span>
           </div>
           {liveGpsInfo?.lastGpsUpdate && (
             <div className="tabular-nums" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 10px', borderRadius: '12px', backgroundColor: 'rgba(16, 185, 129, 0.1)', color: '#059669', fontSize: '0.75rem', fontWeight: 600 }}>
