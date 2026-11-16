@@ -4,6 +4,7 @@ import path from 'path';
 import { env } from './config/env.config';
 import { ensureDirectoriesExist } from './utils/fileSync.util';
 import { errorHandler } from './middlewares/errorHandler.middleware';
+import { createHttpCompressionMiddleware } from './middlewares/compression.middleware';
 import { securityHeadersMiddleware } from './middlewares/securityHeaders.middleware';
 import { mountSpaFrontend } from './middlewares/spa-static.middleware';
 import {
@@ -48,6 +49,7 @@ const app: Application = express();
 app.disable('x-powered-by');
 app.set('trust proxy', env.TRUST_PROXY);
 app.use(securityHeadersMiddleware);
+app.use(createHttpCompressionMiddleware());
 
 app.use(
   cors({
