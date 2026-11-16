@@ -1,4 +1,5 @@
 import React from 'react';
+import { Store, Truck } from 'lucide-react';
 import type { DirectBillingTotals, DirectInvoiceFormState } from './sales.types';
 import { DirectInvoiceSummaryFooter } from './DirectInvoiceSummaryFooter';
 
@@ -66,6 +67,52 @@ export function DirectInvoicePaymentPanel({
             * El cliente no posee CUIT válido registrado para facturación oficial.
           </div>
         )}
+      </div>
+
+      <div className="form-group" style={{ marginBottom: 0 }}>
+        <span style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--text-primary)' }}>Entrega</span>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '6px' }}>
+          <button
+            type="button"
+            onClick={() => setDirectInvoiceForm((prev) => ({ ...prev, deliveryMethod: 'PICKUP' }))}
+            style={{
+              padding: '8px 10px',
+              borderRadius: '6px',
+              fontSize: '0.84rem',
+              fontWeight: 600,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px',
+              cursor: 'pointer',
+              backgroundColor: directInvoiceForm.deliveryMethod === 'PICKUP' ? '#111827' : '#FFFFFF',
+              color: directInvoiceForm.deliveryMethod === 'PICKUP' ? '#FFFFFF' : '#374151',
+              border: `1px solid ${directInvoiceForm.deliveryMethod === 'PICKUP' ? '#111827' : '#D1D5DB'}`,
+            }}
+          >
+            <Store size={14} aria-hidden="true" /> Retiro local
+          </button>
+          <button
+            type="button"
+            onClick={() => setDirectInvoiceForm((prev) => ({ ...prev, deliveryMethod: 'DELIVERY' }))}
+            style={{
+              padding: '8px 10px',
+              borderRadius: '6px',
+              fontSize: '0.84rem',
+              fontWeight: 600,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px',
+              cursor: 'pointer',
+              backgroundColor: directInvoiceForm.deliveryMethod === 'DELIVERY' ? '#111827' : '#FFFFFF',
+              color: directInvoiceForm.deliveryMethod === 'DELIVERY' ? '#FFFFFF' : '#374151',
+              border: `1px solid ${directInvoiceForm.deliveryMethod === 'DELIVERY' ? '#111827' : '#D1D5DB'}`,
+            }}
+          >
+            <Truck size={14} aria-hidden="true" /> Reparto
+          </button>
+        </div>
       </div>
 
       <div className="form-group" style={{ marginTop: '8px' }}>

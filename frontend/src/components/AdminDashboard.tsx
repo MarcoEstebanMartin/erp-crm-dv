@@ -203,6 +203,12 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
         orderDetailsModal={c.orderDetailsModal}
         onClose={() => c.setOrderDetailsModal(null)}
         onFastInvoice={(order) => c.setFastInvoiceOrder(order)}
+        fetchData={c.fetchData}
+        onOrderUpdated={(updated) =>
+          c.setOrderDetailsModal((prev: any) => (prev ? { ...prev, ...updated } : null))
+        }
+        setErrorMsg={c.setErrorMsg}
+        setSuccessMsg={c.setSuccessMsg}
       />
 
       <EditOrderModal editOrderModal={c.editOrderModal} setEditOrderModal={c.setEditOrderModal} products={c.products} fetchData={c.fetchData} setSuccessMsg={c.setSuccessMsg} setErrorMsg={c.setErrorMsg} />

@@ -23,6 +23,10 @@ export function getOrderStatusInfo(order: any): OrderStatusInfo {
     }
   }
 
+  if (order.deliveredAt) {
+    return { label: 'Entregado', badgeClass: 'delivered', color: 'var(--color-success)' };
+  }
+
   if (order.status === 'PREPARED' && !order.invoiceNumber) {
     return { label: 'Armado', badgeClass: 'prepared', color: '#4F46E5' };
   }

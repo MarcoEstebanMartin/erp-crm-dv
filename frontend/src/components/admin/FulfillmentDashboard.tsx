@@ -6,6 +6,7 @@ import {
 } from '../../utils/printHelpers';
 import OrderFulfillmentModal from '../modals/OrderFulfillmentModal';
 import ConfirmModal from '../modals/ConfirmModal';
+import { usePendingDeliveryRoutesQuery } from '../../hooks/queries';
 import { FulfillmentOrderCard } from './FulfillmentOrderCard';
 import { FulfillmentListView } from './FulfillmentListView';
 import { FulfillmentToolbar } from './FulfillmentToolbar';
@@ -23,6 +24,8 @@ const COLUMN_CONTAINER_STYLE = {
 
 export default function FulfillmentDashboard() {
   const f = useFulfillmentDashboard();
+  const { data: pendingRoutes = [] } = usePendingDeliveryRoutesQuery();
+  const handleDeliveryUpdated = () => void f.fetchOrders();
 
   return (
     <div style={{ padding: '0 4px', height: '100%', display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -52,6 +55,7 @@ export default function FulfillmentDashboard() {
           pending={f.pending}
           preparing={f.preparing}
           billedOrPendingCae={f.billedOrPendingCae}
+          pendingRoutes={pendingRoutes}
           selectedOrderIds={f.selectedOrderIds}
           requestingCaeId={f.requestingCaeId}
           onToggleSelect={f.toggleSelectOrder}
@@ -64,6 +68,7 @@ export default function FulfillmentDashboard() {
           onPrintFacturaA4={printFacturaOficialA4}
           onPrintRemitoX={printRemitoX}
           onPrintReceipt={printOrderReceipt}
+          onOrderDeliveryUpdated={handleDeliveryUpdated}
         />
       ) : (
         <div
@@ -109,6 +114,7 @@ export default function FulfillmentDashboard() {
                     key={o.id}
                     order={o}
                     column="PENDING"
+                    pendingRoutes={pendingRoutes}
                     isSelected={f.selectedOrderIds.includes(o.id)}
                     onToggleSelect={f.toggleSelectOrder}
                     onPrintPickingList={printPickingList}
@@ -119,6 +125,7 @@ export default function FulfillmentDashboard() {
                     onPrintFacturaA4={printFacturaOficialA4}
                     onPrintRemitoX={printRemitoX}
                     onPrintReceipt={printOrderReceipt}
+                    onOrderDeliveryUpdated={handleDeliveryUpdated}
                   />
                 ))
               )}
@@ -158,6 +165,7 @@ export default function FulfillmentDashboard() {
                     key={o.id}
                     order={o}
                     column="PREPARING"
+                    pendingRoutes={pendingRoutes}
                     isSelected={false}
                     onToggleSelect={f.toggleSelectOrder}
                     onPrintPickingList={printPickingList}
@@ -168,6 +176,7 @@ export default function FulfillmentDashboard() {
                     onPrintFacturaA4={printFacturaOficialA4}
                     onPrintRemitoX={printRemitoX}
                     onPrintReceipt={printOrderReceipt}
+                    onOrderDeliveryUpdated={handleDeliveryUpdated}
                   />
                 ))
               )}
@@ -201,6 +210,7 @@ export default function FulfillmentDashboard() {
                     key={o.id}
                     order={o}
                     column="BILLED"
+                    pendingRoutes={pendingRoutes}
                     isSelected={false}
                     requestingCaeId={f.requestingCaeId}
                     onToggleSelect={f.toggleSelectOrder}
@@ -212,6 +222,7 @@ export default function FulfillmentDashboard() {
                     onPrintFacturaA4={printFacturaOficialA4}
                     onPrintRemitoX={printRemitoX}
                     onPrintReceipt={printOrderReceipt}
+                    onOrderDeliveryUpdated={handleDeliveryUpdated}
                   />
                 ))
               )}

@@ -8,32 +8,44 @@ import {
   toOrderIntegerPesosBigInt,
 } from '../../utils/fulfillmentCardMeta.helper';
 import { resolveOrderPersona } from '../../utils/orderSearchAndStatus.helper';
+import { usePendingDeliveryRoutesQuery } from '../../hooks/queries';
+import { OrderDeliveryBadgeControl } from '../common/OrderDeliveryBadgeControl';
 import { NativeModalDialog } from '../modals/NativeModalDialog';
 
 interface AdminOrderDetailsModalProps {
   orderDetailsModal: any | null;
   onClose: () => void;
   onFastInvoice: (order: any) => void;
+  fetchData?: () => void;
+  onOrderUpdated?: (updatedOrder: any) => void;
+  setErrorMsg?: (msg: string | null) => void;
+  setSuccessMsg?: (msg: string | null) => void;
 }
 
 export const AdminOrderDetailsModal: React.FC<AdminOrderDetailsModalProps> = ({
   orderDetailsModal,
   onClose,
   onFastInvoice,
+  fetchData,
+  onOrderUpdated,
+  setErrorMsg,
+  setSuccessMsg,
 }) => {
+  const { data: pendingRoutes = [] } = usePendingDeliveryRoutesQuery(Boolean(orderDetailsModal));
+
   if (!orderDetailsModal) return null;
 
   const persona = resolveOrderPersona(orderDetailsModal);
   const statusInfo = getOrderStatusInfo(orderDetailsModal);
   const labelUpper = statusInfo.label.toUpperCase();
+  const isDeliveredDone =
+    Boolean(orderDetailsModal.deliveredAt) ||
+    orderDetailsModal.deliveryRoute?.status === 'COMPLETED';
+  const isInTransit = orderDetailsModal.deliveryRoute?.status === 'IN_TRANSIT';
+
   let currentIdx = 0;
-  if (
-    orderDetailsModal.status === 'PREPARING' ||
-    orderDetailsModal.status === 'PREPARED' ||
-    labelUpper.includes('PICKING') ||
-    labelUpper.includes('ARMADO')
-  ) {
-    currentIdx = 1;
+  if (isDeliveredDone || isInTransit) {
+    currentIdx = 3;
   } else if (
     orderDetailsModal.invoiceNumber ||
     orderDetailsModal.status === 'DELIVERED' ||
@@ -43,6 +55,13 @@ export const AdminOrderDetailsModal: React.FC<AdminOrderDetailsModalProps> = ({
     labelUpper.includes('VIAJE')
   ) {
     currentIdx = 2;
+  } else if (
+    orderDetailsModal.status === 'PREPARING' ||
+    orderDetailsModal.status === 'PREPARED' ||
+    labelUpper.includes('PICKING') ||
+    labelUpper.includes('ARMADO')
+  ) {
+    currentIdx = 1;
   }
 
   return (
@@ -101,10 +120,11 @@ export const AdminOrderDetailsModal: React.FC<AdminOrderDetailsModalProps> = ({
           >
             {[
               { key: 'RECIBIDO', label: '1. Recibido' },
-              { key: 'EN_PICKING', label: '2. En Picking' },
+              { key: 'EN_PICKING', label: '2. Picking' },
               { key: 'FACTURADO', label: '3. Facturado' },
+              { key: 'ENTREGA', label: '4. Entrega' },
             ].map((step, idx, arr) => {
-              const isCompleted = idx <= currentIdx;
+              const isCompleted = idx < 3 ? idx <= currentIdx : isDeliveredDone;
               const isActive = idx === currentIdx;
               return (
                 <React.Fragment key={step.key}>
@@ -194,7 +214,7 @@ export const AdminOrderDetailsModal: React.FC<AdminOrderDetailsModalProps> = ({
           }}
         >
           <div>
-            <span style={{ color: '#6B7280', fontSize: '0.7rem', display: 'block', fontWeight: 700, textTransform: 'uppercase' }}>
+            <span style={{ color: '#6B7280', fontSize: '0.74rem', display: 'block', fontWeight: 600 }}>
               Cliente
             </span>
             <strong style={{ color: '#111827', fontSize: '0.94rem' }}>
@@ -202,24 +222,42 @@ export const AdminOrderDetailsModal: React.FC<AdminOrderDetailsModalProps> = ({
             </strong>
           </div>
           <div>
-            <span style={{ color: '#6B7280', fontSize: '0.7rem', display: 'block', fontWeight: 700, textTransform: 'uppercase' }}>
-              CUIT / C.U.I.L.
+            <span style={{ color: '#6B7280', fontSize: '0.74rem', display: 'block', fontWeight: 600 }}>
+              CUIT / CUIL
             </span>
             <strong style={{ color: '#111827' }}>{persona?.cuit || 'S/D'}</strong>
           </div>
           <div>
-            <span style={{ color: '#6B7280', fontSize: '0.7rem', display: 'block', fontWeight: 700, textTransform: 'uppercase' }}>
-              Dirección de Entrega
+            <span style={{ color: '#6B7280', fontSize: '0.74rem', display: 'block', fontWeight: 600 }}>
+              Dirección
             </span>
-            <strong style={{ color: '#111827' }}>{persona?.address || 'S/D'}</strong>
+            <strong style={{ color: '#111827' }}>
+              {persona?.address || 'S/D'}
+              {persona?.city ? ` (${persona.city})` : ''}
+            </strong>
           </div>
           <div>
-            <span style={{ color: '#6B7280', fontSize: '0.7rem', display: 'block', fontWeight: 700, textTransform: 'uppercase' }}>
-              Fecha de Carga
+            <span style={{ color: '#6B7280', fontSize: '0.74rem', display: 'block', fontWeight: 600 }}>
+              Fecha
             </span>
             <strong className="tabular-nums" style={{ color: '#111827' }}>
               {new Date(orderDetailsModal.createdAt).toLocaleString('es-AR')}
             </strong>
+          </div>
+          <div style={{ gridColumn: '1 / -1', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', flexWrap: 'wrap', paddingTop: '6px', borderTop: '1px solid #E5E7EB' }}>
+            <span style={{ color: '#6B7280', fontSize: '0.78rem', fontWeight: 600 }}>
+              Entrega
+            </span>
+            <OrderDeliveryBadgeControl
+              order={orderDetailsModal}
+              pendingRoutes={pendingRoutes}
+              onUpdated={(updated) => {
+                onOrderUpdated?.(updated);
+                fetchData?.();
+              }}
+              onError={setErrorMsg}
+              onSuccess={setSuccessMsg}
+            />
           </div>
           {orderDetailsModal.notes && (
             <div

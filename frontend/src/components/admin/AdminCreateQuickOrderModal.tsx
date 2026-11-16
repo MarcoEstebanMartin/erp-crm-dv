@@ -1,7 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Trash2, X } from 'lucide-react';
+import { Store, Trash2, Truck, X } from 'lucide-react';
 import { api } from '../../utils/api';
 import { formatIntegerARS } from '../../utils/currency';
+import { usePendingDeliveryRoutesQuery } from '../../hooks/queries';
+import { formatDeliveryRouteOptionLabel } from '../../utils/orderDeliveryHelpers';
 import { matchesSmartSearch } from '../../utils/orderSearchAndStatus.helper';
 import {
   calculateExactLineSubtotalInt,
@@ -21,6 +23,8 @@ interface QuickOrderModalState {
   client: any;
   cart: { product: any; quantity: number; isEmergencyOverride?: boolean }[];
   salesChannel?: string;
+  deliveryMethod?: 'DELIVERY' | 'PICKUP';
+  deliveryRouteId?: number | null;
   notes: string;
 }
 
@@ -47,6 +51,7 @@ export const AdminCreateQuickOrderModal: React.FC<AdminCreateQuickOrderModalProp
   const [stockNotice, setStockNotice] = useState<string | null>(null);
 
   const isOpen = Boolean(createOrderModal?.open);
+  const { data: pendingRoutes = [] } = usePendingDeliveryRoutesQuery(isOpen);
   useEffect(() => {
     if (!isOpen) return;
     let cancelled = false;
@@ -136,6 +141,10 @@ export const AdminCreateQuickOrderModal: React.FC<AdminCreateQuickOrderModalProp
     });
   };
 
+  const selectedDeliveryMethod = createOrderModal.deliveryMethod || 'DELIVERY';
+  const selectedDeliveryRouteId =
+    selectedDeliveryMethod === 'DELIVERY' ? (createOrderModal.deliveryRouteId ?? null) : null;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (createOrderModal.cart.length === 0) return;
@@ -145,6 +154,8 @@ export const AdminCreateQuickOrderModal: React.FC<AdminCreateQuickOrderModalProp
       await api.createOrder({
         clientId: createOrderModal.client.id,
         salesChannel: 'MOSTRADOR',
+        deliveryMethod: selectedDeliveryMethod,
+        deliveryRouteId: selectedDeliveryRouteId,
         items: createOrderModal.cart.map((item) => ({
           productId: item.product.id,
           quantity: item.quantity,
@@ -163,7 +174,7 @@ export const AdminCreateQuickOrderModal: React.FC<AdminCreateQuickOrderModalProp
   };
 
   const client = createOrderModal.client;
-  const priceListLabel = getClientPriceListLabel(client);
+  const priceListLabel = getClientPriceListLabel(client?.priceList);
   const balance = Number(client.outstandingBalance || 0);
   const totalAmount = promoEval.totalAmount;
   const filteredProducts = products
@@ -353,6 +364,49 @@ export const AdminCreateQuickOrderModal: React.FC<AdminCreateQuickOrderModalProp
                     );
                   })}
                 </div>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                className="btn"
+                onClick={() => setCreateOrderModal({ ...createOrderModal, deliveryMethod: 'DELIVERY' })}
+                style={{
+                  padding: '6px 12px', fontSize: '0.82rem', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '6px',
+                  backgroundColor: selectedDeliveryMethod === 'DELIVERY' ? '#111827' : '#FFFFFF',
+                  color: selectedDeliveryMethod === 'DELIVERY' ? '#FFFFFF' : '#374151',
+                  border: `1px solid ${selectedDeliveryMethod === 'DELIVERY' ? '#111827' : '#D1D5DB'}`,
+                }}
+              >
+                <Truck size={14} aria-hidden="true" /> Reparto
+              </button>
+              <button
+                type="button"
+                className="btn"
+                onClick={() => setCreateOrderModal({ ...createOrderModal, deliveryMethod: 'PICKUP', deliveryRouteId: null })}
+                style={{
+                  padding: '6px 12px', fontSize: '0.82rem', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '6px',
+                  backgroundColor: selectedDeliveryMethod === 'PICKUP' ? '#111827' : '#FFFFFF',
+                  color: selectedDeliveryMethod === 'PICKUP' ? '#FFFFFF' : '#374151',
+                  border: `1px solid ${selectedDeliveryMethod === 'PICKUP' ? '#111827' : '#D1D5DB'}`,
+                }}
+              >
+                <Store size={14} aria-hidden="true" /> Retiro local
+              </button>
+              {selectedDeliveryMethod === 'DELIVERY' && (
+                <select
+                  aria-label="Asignar a viaje"
+                  className="select"
+                  value={selectedDeliveryRouteId ? String(selectedDeliveryRouteId) : ''}
+                  onChange={(e) => setCreateOrderModal({ ...createOrderModal, deliveryMethod: 'DELIVERY', deliveryRouteId: e.target.value ? Number(e.target.value) : null })}
+                  style={{ flex: 1, minWidth: '180px', height: '34px', fontSize: '0.82rem' }}
+                >
+                  <option value="">Sin viaje asignado</option>
+                  {pendingRoutes.map((r: any) => (
+                    <option key={r.id} value={r.id}>{formatDeliveryRouteOptionLabel(r)}</option>
+                  ))}
+                </select>
               )}
             </div>
 

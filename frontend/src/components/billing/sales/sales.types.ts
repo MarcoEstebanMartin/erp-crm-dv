@@ -20,6 +20,7 @@ export interface SalesBillingTabProps {
 export interface DirectInvoiceFormState {
   personaId: string;
   billingType: string;
+  deliveryMethod: 'DELIVERY' | 'PICKUP';
   immediatePayment: boolean;
   paymentMethod: string;
   cashDrawerId: string;
@@ -49,6 +50,7 @@ export interface DirectBillingTotals {
 export const INITIAL_DIRECT_INVOICE_FORM: DirectInvoiceFormState = {
   personaId: '',
   billingType: 'INTERNAL',
+  deliveryMethod: 'PICKUP',
   immediatePayment: true,
   paymentMethod: 'CASH',
   cashDrawerId: '',

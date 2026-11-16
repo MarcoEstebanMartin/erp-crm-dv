@@ -1,4 +1,4 @@
-import { CheckCircle, DollarSign } from 'lucide-react';
+import { CheckCircle, DollarSign, Store, Truck } from 'lucide-react';
 import { BillingType, PaymentMethod } from '../../utils/types';
 
 interface OrderFulfillmentBillingPanelProps {
@@ -6,6 +6,12 @@ interface OrderFulfillmentBillingPanelProps {
   clientCuit?: string | null;
   billingType: BillingType;
   onBillingTypeChange: (value: BillingType) => void;
+  deliveryMethod: 'DELIVERY' | 'PICKUP';
+  onDeliveryMethodChange: (value: 'DELIVERY' | 'PICKUP') => void;
+  markPickedUpNow: boolean;
+  onMarkPickedUpNowChange: (value: boolean) => void;
+  deliveryLocked?: boolean;
+  assignedRouteLabel?: string | null;
   deferCae: boolean;
   onDeferCaeChange: (value: boolean) => void;
   paymentMethod: PaymentMethod;
@@ -37,6 +43,12 @@ export default function OrderFulfillmentBillingPanel({
   clientCuit,
   billingType,
   onBillingTypeChange,
+  deliveryMethod,
+  onDeliveryMethodChange,
+  markPickedUpNow,
+  onMarkPickedUpNowChange,
+  deliveryLocked = false,
+  assignedRouteLabel = null,
   deferCae,
   onDeferCaeChange,
   paymentMethod,
@@ -113,6 +125,81 @@ export default function OrderFulfillmentBillingPanel({
           </div>
         </div>
       )}
+
+      <div className="form-group" style={{ marginBottom: 0 }}>
+        <span style={labelCapsStyle}>Entrega</span>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '6px' }}>
+          <button
+            type="button"
+            disabled={deliveryLocked}
+            onClick={() => onDeliveryMethodChange('DELIVERY')}
+            style={{
+              padding: '8px 10px',
+              borderRadius: '6px',
+              fontSize: '0.86rem',
+              fontWeight: 600,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px',
+              cursor: deliveryLocked ? 'not-allowed' : 'pointer',
+              backgroundColor: deliveryMethod === 'DELIVERY' ? '#111827' : '#FFFFFF',
+              color: deliveryMethod === 'DELIVERY' ? '#FFFFFF' : '#374151',
+              border: `1px solid ${deliveryMethod === 'DELIVERY' ? '#111827' : '#D1D5DB'}`,
+            }}
+          >
+            <Truck size={15} aria-hidden="true" /> Reparto
+          </button>
+          <button
+            type="button"
+            disabled={deliveryLocked}
+            onClick={() => onDeliveryMethodChange('PICKUP')}
+            style={{
+              padding: '8px 10px',
+              borderRadius: '6px',
+              fontSize: '0.86rem',
+              fontWeight: 600,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px',
+              cursor: deliveryLocked ? 'not-allowed' : 'pointer',
+              backgroundColor: deliveryMethod === 'PICKUP' ? '#111827' : '#FFFFFF',
+              color: deliveryMethod === 'PICKUP' ? '#FFFFFF' : '#374151',
+              border: `1px solid ${deliveryMethod === 'PICKUP' ? '#111827' : '#D1D5DB'}`,
+            }}
+          >
+            <Store size={15} aria-hidden="true" /> Retiro local
+          </button>
+        </div>
+        {deliveryMethod === 'DELIVERY' && assignedRouteLabel && (
+          <div style={{ fontSize: '0.78rem', color: '#4B5563', fontWeight: 600, marginTop: '6px' }}>
+            {assignedRouteLabel}
+          </div>
+        )}
+        {deliveryMethod === 'PICKUP' && (
+          <label
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              fontSize: '0.84rem',
+              fontWeight: 600,
+              color: '#111827',
+              marginTop: '8px',
+              cursor: 'pointer',
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={markPickedUpNow}
+              disabled={deliveryLocked}
+              onChange={(e) => onMarkPickedUpNowChange(e.target.checked)}
+            />
+            Entregar en el acto
+          </label>
+        )}
+      </div>
 
       <div className="form-group" style={{ marginBottom: 0 }}>
         <label htmlFor="fulfillment-payment-method" style={labelCapsStyle}>

@@ -3,7 +3,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import { RefreshCw, Globe, Eye, Printer, Edit, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { api } from '../../utils/api';
 import { orderApi } from '../../api/order.api';
-import { ORDERS_QUERY_KEYS, useOrdersPageQuery } from '../../hooks/queries';
+import { ORDERS_QUERY_KEYS, useOrdersPageQuery, usePendingDeliveryRoutesQuery } from '../../hooks/queries';
+import { OrderDeliveryBadgeControl } from '../common/OrderDeliveryBadgeControl';
 import { OrderStatus } from '../../utils/types';
 import { getOrderStatusInfo } from '../../utils/orderStatusHelper';
 import { useConfirm } from '../../context/ConfirmContext';
@@ -71,6 +72,7 @@ export default function OrdersTab({
     statusGroup: orderStatusFilter,
     search: debouncedSearch,
   });
+  const { data: pendingRoutes = [] } = usePendingDeliveryRoutesQuery();
 
   useEffect(() => {
     if (queryError) {
@@ -183,6 +185,8 @@ export default function OrdersTab({
               <option value="ARMADO">Pedidos Armados (Pend. Facturación)</option>
               <option value="FACTURADO">Pedidos Facturados</option>
               <option value="EN_VIAJE">Pedidos en Viaje</option>
+              <option value="SIN_VIAJE">Reparto sin Viaje</option>
+              <option value="RETIRO_LOCAL">Retiro en Local</option>
               <option value="ENTREGADO">Pedidos Entregados</option>
               <option value="CANCELADO">Cancelados</option>
             </select>
@@ -226,6 +230,7 @@ export default function OrdersTab({
               <th scope="col">Fecha</th>
               <th scope="col" style={{ textAlign: 'right' }}>Monto Total</th>
               <th scope="col">Canal</th>
+              <th scope="col">Entrega</th>
               <th scope="col">Estado</th>
               <th scope="col">Acciones</th>
             </tr>
@@ -233,13 +238,13 @@ export default function OrdersTab({
           <tbody>
             {loading && orders.length === 0 ? (
               <tr>
-                <td colSpan={7} style={{ textAlign: 'center', padding: '24px 0', color: 'var(--text-secondary)' }}>
+                <td colSpan={8} style={{ textAlign: 'center', padding: '24px 0', color: 'var(--text-secondary)' }}>
                   Cargando...
                 </td>
               </tr>
             ) : orders.length === 0 ? (
               <tr>
-                <td colSpan={7} style={{ textAlign: 'center', padding: '24px 0', color: 'var(--text-secondary)' }}>
+                <td colSpan={8} style={{ textAlign: 'center', padding: '24px 0', color: 'var(--text-secondary)' }}>
                   No se encontraron pedidos.
                 </td>
               </tr>
@@ -286,6 +291,19 @@ export default function OrdersTab({
                       >
                         {o.billingType === 'OFFICIAL' ? 'Sucursal A' : 'Sucursal X'}
                       </span>
+                    </td>
+                    <td>
+                      <OrderDeliveryBadgeControl
+                        order={o}
+                        pendingRoutes={pendingRoutes}
+                        compact
+                        onUpdated={() => {
+                          fetchData();
+                          void refetch();
+                        }}
+                        onError={setErrorMsg}
+                        onSuccess={setSuccessMsg}
+                      />
                     </td>
                     <td>
                       <span

@@ -1,5 +1,6 @@
 import { AlertCircle, CheckSquare, FileText, Printer, RotateCcw, Tag } from 'lucide-react';
 import { getOrderStatusInfo } from '../../utils/orderStatusHelper';
+import { OrderDeliveryBadgeControl } from '../common/OrderDeliveryBadgeControl';
 import {
   formatBigIntARS,
   formatOrderRelativeAge,
@@ -17,6 +18,7 @@ import {
 export interface FulfillmentOrderCardProps {
   order: any;
   column: 'PENDING' | 'PREPARING' | 'BILLED';
+  pendingRoutes?: any[];
   isSelected: boolean;
   requestingCaeId?: number | null;
   onToggleSelect: (id: number) => void;
@@ -28,6 +30,7 @@ export interface FulfillmentOrderCardProps {
   onPrintFacturaA4: (order: any) => void;
   onPrintRemitoX: (order: any) => void;
   onPrintReceipt: (order: any) => void;
+  onOrderDeliveryUpdated?: () => void;
 }
 
 const SECONDARY_ACTION_STYLE = {
@@ -43,6 +46,7 @@ const SECONDARY_ACTION_STYLE = {
 export function FulfillmentOrderCard({
   order: o,
   column,
+  pendingRoutes = [],
   isSelected,
   requestingCaeId,
   onToggleSelect,
@@ -54,6 +58,7 @@ export function FulfillmentOrderCard({
   onPrintFacturaA4,
   onPrintRemitoX,
   onPrintReceipt,
+  onOrderDeliveryUpdated,
 }: FulfillmentOrderCardProps) {
   const statusInfo = getOrderStatusInfo(o);
   const clientName = resolveOrderClientName(o, 'Cliente sin Nombre');
@@ -183,6 +188,15 @@ export function FulfillmentOrderCard({
         <div className="tabular-nums" style={{ fontWeight: 700, fontSize: '0.9rem', color: '#111827', flexShrink: 0 }}>
           {totalFormatted}
         </div>
+      </div>
+
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
+        <OrderDeliveryBadgeControl
+          order={o}
+          pendingRoutes={pendingRoutes}
+          compact
+          onUpdated={() => onOrderDeliveryUpdated?.()}
+        />
       </div>
 
       <div style={{ display: 'flex', gap: '6px', marginTop: '2px' }}>

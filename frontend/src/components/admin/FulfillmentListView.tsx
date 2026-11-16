@@ -1,4 +1,5 @@
 import { AlertCircle, CheckSquare, FileText, Printer, RotateCcw, Tag } from 'lucide-react';
+import { OrderDeliveryBadgeControl } from '../common/OrderDeliveryBadgeControl';
 import {
   formatBigIntARS,
   formatOrderRelativeAge,
@@ -16,6 +17,7 @@ interface FulfillmentListViewProps {
   pending: any[];
   preparing: any[];
   billedOrPendingCae: any[];
+  pendingRoutes?: any[];
   selectedOrderIds: number[];
   requestingCaeId?: number | null;
   onToggleSelect: (id: number) => void;
@@ -28,6 +30,7 @@ interface FulfillmentListViewProps {
   onPrintFacturaA4: (order: any) => void;
   onPrintRemitoX: (order: any) => void;
   onPrintReceipt: (order: any) => void;
+  onOrderDeliveryUpdated?: () => void;
 }
 
 type FulfillmentStage = 'PENDING' | 'PREPARING' | 'BILLED';
@@ -42,6 +45,7 @@ export function FulfillmentListView({
   pending,
   preparing,
   billedOrPendingCae,
+  pendingRoutes = [],
   selectedOrderIds,
   requestingCaeId,
   onToggleSelect,
@@ -54,6 +58,7 @@ export function FulfillmentListView({
   onPrintFacturaA4,
   onPrintRemitoX,
   onPrintReceipt,
+  onOrderDeliveryUpdated,
 }: FulfillmentListViewProps) {
   const rows: ListRow[] = [
     ...pending.map((order): ListRow => ({ order, stage: 'PENDING', stageLabel: 'Pendiente' })),
@@ -90,6 +95,7 @@ export function FulfillmentListView({
             <th scope="col">Antigüedad</th>
             <th scope="col">Canal</th>
             <th scope="col">Etapa</th>
+            <th scope="col">Entrega</th>
             <th scope="col" style={{ textAlign: 'right' }}>Total</th>
             <th scope="col" style={{ textAlign: 'right' }}>Acciones</th>
           </tr>
@@ -97,7 +103,7 @@ export function FulfillmentListView({
         <tbody>
           {rows.length === 0 ? (
             <tr>
-              <td colSpan={9} style={{ textAlign: 'center', padding: '28px 14px', color: 'var(--text-secondary)' }}>
+              <td colSpan={10} style={{ textAlign: 'center', padding: '28px 14px', color: 'var(--text-secondary)' }}>
                 No hay pedidos que coincidan con los filtros seleccionados.
               </td>
             </tr>
@@ -146,6 +152,14 @@ export function FulfillmentListView({
                       {pendingCae && <AlertCircle size={11} aria-hidden="true" />}
                       {pendingCae ? 'Sin CAE' : stageLabel}
                     </span>
+                  </td>
+                  <td>
+                    <OrderDeliveryBadgeControl
+                      order={o}
+                      pendingRoutes={pendingRoutes}
+                      compact
+                      onUpdated={() => onOrderDeliveryUpdated?.()}
+                    />
                   </td>
                   <td style={{ textAlign: 'right', fontWeight: 700, color: '#111827' }}>
                     {formatBigIntARS(toOrderIntegerPesosBigInt(o.totalAmount))}

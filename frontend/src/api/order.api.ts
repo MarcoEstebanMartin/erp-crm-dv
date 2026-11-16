@@ -22,6 +22,14 @@ export const orderApi = {
     return apiClient.post(`/orders/${id}/invoice`, data);
   },
 
+  updateOrderDelivery: (id: string | number, data: any) => {
+    return apiClient.patch(`/orders/${id}/delivery`, data);
+  },
+
+  bulkUpdateOrdersDelivery: (data: any) => {
+    return apiClient.post('/orders/bulk-delivery', data);
+  },
+
   syncWebOrders: () => {
     return apiClient.post<{ status: string; data: any }>('/orders/sync-web', {});
   },

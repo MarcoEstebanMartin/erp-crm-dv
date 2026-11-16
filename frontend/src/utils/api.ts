@@ -555,6 +555,9 @@ export const api = {
     search?: string;
     billingType?: BillingType;
     status?: OrderStatus;
+    deliveryMethod?: 'DELIVERY' | 'PICKUP';
+    deliveryRouteId?: number | 'NONE';
+    dispatchQueue?: boolean;
   }) => {
     const qs = new URLSearchParams();
     if (params.page) qs.set('page', String(params.page));
@@ -563,6 +566,9 @@ export const api = {
     if (params.search && params.search.trim()) qs.set('search', params.search.trim());
     if (params.billingType) qs.set('billingType', params.billingType);
     if (params.status) qs.set('status', params.status);
+    if (params.deliveryMethod) qs.set('deliveryMethod', params.deliveryMethod);
+    if (params.deliveryRouteId !== undefined) qs.set('deliveryRouteId', String(params.deliveryRouteId));
+    if (params.dispatchQueue) qs.set('dispatchQueue', 'true');
     const queryStr = qs.toString();
     const res = await request(`/orders${queryStr ? `?${queryStr}` : ''}`);
     return {
@@ -587,7 +593,14 @@ export const api = {
   },
 
   createOrder: async (
-    orderData: { clientId: number, salesChannel?: string, items: { productId: number, quantity: number, isEmergencyOverride?: boolean }[], notes?: string },
+    orderData: {
+      clientId: number;
+      salesChannel?: string;
+      deliveryMethod?: 'DELIVERY' | 'PICKUP';
+      deliveryRouteId?: number | null;
+      items: { productId: number; quantity: number; isEmergencyOverride?: boolean }[];
+      notes?: string;
+    },
     options?: { idempotencyKey?: string }
   ) => {
     const { clientId, ...rest } = orderData;
@@ -608,12 +621,56 @@ export const api = {
     return res.order;
   },
 
-  invoiceOrder: async (id: number, billingType: BillingType, paymentMethod?: PaymentMethod, paymentDescription?: string, bankAccountId?: number, deferCae?: boolean) => {    
+  invoiceOrder: async (
+    id: number,
+    billingType: BillingType,
+    paymentMethod?: PaymentMethod,
+    paymentDescription?: string,
+    bankAccountId?: number,
+    deferCae?: boolean,
+    deliveryMethod?: 'DELIVERY' | 'PICKUP',
+    markPickedUp?: boolean
+  ) => {    
     const res = await request(`/orders/${id}/invoice`, {
       method: 'POST',
-      body: JSON.stringify({ billingType, paymentMethod, paymentDescription, bankAccountId, deferCae })
+      body: JSON.stringify({
+        billingType,
+        paymentMethod,
+        paymentDescription,
+        bankAccountId,
+        deferCae,
+        deliveryMethod,
+        markPickedUp,
+      })
     });
     return res.order;
+  },
+
+  updateOrderDelivery: async (
+    id: number,
+    payload: {
+      deliveryMethod: 'DELIVERY' | 'PICKUP';
+      deliveryRouteId?: number | null;
+      deliverySequence?: number | null;
+      markPickedUp?: boolean;
+    }
+  ) => {
+    const res = await request(`/orders/${id}/delivery`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    });
+    return res.order;
+  },
+
+  bulkUpdateOrdersDelivery: async (payload: {
+    orderIds: number[];
+    deliveryMethod: 'DELIVERY' | 'PICKUP';
+    deliveryRouteId?: number | null;
+  }) => {
+    return await request('/orders/bulk-delivery', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
   },
 
   requestCaeForOrder: async (id: number) => {
@@ -1149,7 +1206,11 @@ export const api = {
   createDirectInvoice: async (payload: {
     personaId: number;
     billingType: string;
+    deliveryMethod?: 'DELIVERY' | 'PICKUP';
+    deliveryRouteId?: number | null;
+    markDelivered?: boolean;
     paymentMethod?: string;
+    cashDrawerId?: number;
     bankAccountId?: number;
     checkNumber?: string;
     checkIssuer?: string;
@@ -1203,6 +1264,14 @@ export const api = {
     const res = await request('/logistics', {
       method: 'POST',
       body: JSON.stringify(routeData)
+    });
+    return res.route;
+  },
+
+  updateDeliveryRoute: async (id: number, routeData: any) => {
+    const res = await request(`/logistics/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(routeData),
     });
     return res.route;
   },

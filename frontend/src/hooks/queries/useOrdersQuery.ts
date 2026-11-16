@@ -9,6 +9,9 @@ export interface OrdersPageParams {
   search?: string;
   billingType?: BillingType;
   status?: OrderStatus;
+  deliveryMethod?: 'DELIVERY' | 'PICKUP';
+  deliveryRouteId?: number | 'NONE';
+  dispatchQueue?: boolean;
 }
 
 export const ORDERS_QUERY_KEYS = {
@@ -16,6 +19,20 @@ export const ORDERS_QUERY_KEYS = {
   summary: ['orders', 'summary'] as const,
   page: (params: OrdersPageParams) => ['orders', 'page', params] as const,
 };
+
+export const PENDING_ROUTES_QUERY_KEY = ['logistics', 'pending-routes'] as const;
+
+export function usePendingDeliveryRoutesQuery(enabled = true) {
+  return useQuery({
+    queryKey: PENDING_ROUTES_QUERY_KEY,
+    queryFn: async () => {
+      const routes = await api.getDeliveryRoutes({ status: 'PENDING' });
+      return Array.isArray(routes) ? routes : [];
+    },
+    staleTime: 20_000,
+    enabled,
+  });
+}
 
 export function useOrders(billingType?: BillingType, status?: OrderStatus) {
   return useQuery({

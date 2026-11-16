@@ -14,8 +14,8 @@ export function isOfficialInvoice(inv: any): boolean {
   );
 }
 
-export function getClientPriceListLabel(priceList?: string | null): string {
-  if (!priceList || priceList === 'A' || priceList === '4' || priceList === 'SUCURSAL A') {
+export function getClientPriceListLabel(priceList?: unknown): string {
+  if (typeof priceList !== 'string' || !priceList || priceList === 'A' || priceList === '4' || priceList === 'SUCURSAL A') {
     return 'Lista 4';
   }
   if (priceList === 'B' || priceList === 'Especial') {
@@ -267,9 +267,12 @@ export function buildDirectInvoiceRequest(
     };
   }
 
+  const deliveryMethod = form.deliveryMethod === 'DELIVERY' ? 'DELIVERY' : 'PICKUP';
   const payload: any = {
     personaId: Number(personaId),
     billingType,
+    deliveryMethod,
+    markDelivered: deliveryMethod === 'PICKUP',
     paymentMethod: immediatePayment ? paymentMethod : undefined,
     cashDrawerId: immediatePayment && paymentMethod === 'CASH' ? Number(effectiveCashDrawerId) : undefined,
     bankAccountId: immediatePayment && paymentMethod === 'BANK_TRANSFER' ? Number(effectiveBankAccountId) : undefined,

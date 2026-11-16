@@ -8,6 +8,9 @@ import { NativeModalDialog } from './NativeModalDialog';
 import OrderFulfillmentBillingPanel from './OrderFulfillmentBillingPanel';
 import OrderFulfillmentSuccessView from './OrderFulfillmentSuccessView';
 import {
+  formatDeliveryRouteOptionLabel,
+} from '../../utils/orderDeliveryHelpers';
+import {
   buildInitialFulfillmentWeights,
   calculateFulfillmentLineSubtotalInt,
   calculateFulfillmentOrderTotalInt,
@@ -32,6 +35,10 @@ export default function OrderFulfillmentModal({ order, onClose, onSuccess }: Ord
   const [deferCae, setDeferCae] = useState(false);
 
   const [billingType, setBillingType] = useState<BillingType>(order.billingType || BillingType.INTERNAL);
+  const [deliveryMethod, setDeliveryMethod] = useState<'DELIVERY' | 'PICKUP'>(
+    order?.deliveryMethod === 'PICKUP' ? 'PICKUP' : 'DELIVERY',
+  );
+  const [markPickedUpNow, setMarkPickedUpNow] = useState(true);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(PaymentMethod.OTHER);
   const [checkNumber, setCheckNumber] = useState<string>('');
   const [selectedBankId, setSelectedBankId] = useState<string>('');
@@ -39,6 +46,8 @@ export default function OrderFulfillmentModal({ order, onClose, onSuccess }: Ord
 
   useEffect(() => {
     setPesableWeights(buildInitialFulfillmentWeights(order?.items));
+    setDeliveryMethod(order?.deliveryMethod === 'PICKUP' ? 'PICKUP' : 'DELIVERY');
+    setMarkPickedUpNow(true);
     api.getBankAccounts().then((banks) => {
       setBankAccounts(banks || []);
       if (banks && banks.length > 0) setSelectedBankId(banks[0].id.toString());
@@ -86,6 +95,8 @@ export default function OrderFulfillmentModal({ order, onClose, onSuccess }: Ord
         paymentDesc,
         paymentMethod === 'BANK_TRANSFER' ? Number(selectedBankId) : undefined,
         deferCae,
+        deliveryLocked ? undefined : deliveryMethod,
+        !deliveryLocked && deliveryMethod === 'PICKUP' ? markPickedUpNow : undefined,
       );
 
       setInvoicedOrder(updatedOrder || { ...order, totalAmount: currentTotal, billingType });
@@ -118,6 +129,13 @@ export default function OrderFulfillmentModal({ order, onClose, onSuccess }: Ord
   }
 
   const clientInfo = order.persona || order.client;
+  const deliveryLocked = Boolean(
+    order?.deliveryRouteId &&
+      (order?.deliveryRoute?.status === 'IN_TRANSIT' || order?.deliveryRoute?.status === 'COMPLETED'),
+  );
+  const assignedRouteLabel = order?.deliveryRouteId
+    ? formatDeliveryRouteOptionLabel(order.deliveryRoute || { id: order.deliveryRouteId })
+    : null;
 
   return (
     <NativeModalDialog
@@ -339,6 +357,12 @@ export default function OrderFulfillmentModal({ order, onClose, onSuccess }: Ord
             clientCuit={clientInfo?.cuit}
             billingType={billingType}
             onBillingTypeChange={setBillingType}
+            deliveryMethod={deliveryMethod}
+            onDeliveryMethodChange={setDeliveryMethod}
+            markPickedUpNow={markPickedUpNow}
+            onMarkPickedUpNowChange={setMarkPickedUpNow}
+            deliveryLocked={deliveryLocked}
+            assignedRouteLabel={assignedRouteLabel}
             deferCae={deferCae}
             onDeferCaeChange={setDeferCae}
             paymentMethod={paymentMethod}

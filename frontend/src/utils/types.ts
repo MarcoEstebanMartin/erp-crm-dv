@@ -49,3 +49,9 @@ export const PaymentMethod = {
   OTHER: 'OTHER',
 } as const;
 export type PaymentMethod = typeof PaymentMethod[keyof typeof PaymentMethod];
+
+export const DeliveryMethod = {
+  DELIVERY: 'DELIVERY',
+  PICKUP: 'PICKUP',
+} as const;
+export type DeliveryMethod = typeof DeliveryMethod[keyof typeof DeliveryMethod];

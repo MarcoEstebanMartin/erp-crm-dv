@@ -8,6 +8,8 @@ export type OrderFilterStatusKey =
   | 'FACTURADO'
   | 'EN_VIAJE'
   | 'ENTREGADO'
+  | 'RETIRO_LOCAL'
+  | 'SIN_VIAJE'
   | 'CANCELADO';
 
 export function normalizeSearchText(value: unknown): string {
@@ -108,6 +110,17 @@ export function getOrderLogicalStatusKey(order: any): Exclude<OrderFilterStatusK
 
 export function matchesOrderStatusFilter(order: any, filterKey: string): boolean {
   if (!filterKey || filterKey === 'ALL') return true;
+  if (filterKey === 'RETIRO_LOCAL') {
+    return order?.status !== 'CANCELLED' && order?.deliveryMethod === 'PICKUP';
+  }
+  if (filterKey === 'SIN_VIAJE') {
+    return (
+      order?.status !== 'CANCELLED' &&
+      (order?.deliveryMethod || 'DELIVERY') === 'DELIVERY' &&
+      !order?.deliveryRouteId &&
+      !order?.deliveredAt
+    );
+  }
   const target = filterKey === 'PENDIENTE' ? 'RECIBIDO' : filterKey;
   return getOrderLogicalStatusKey(order) === target;
 }
