@@ -87,9 +87,7 @@ export function HomeQuickActionsGrid({
               border: '1px solid var(--border-color, #e5e5e7)',
               borderRadius: '8px',
               cursor: 'pointer',
-              textAlign: 'center',
               width: '100%',
-              gap: '9px',
               transition: 'background-color 0.15s ease, border-color 0.15s ease',
             }}
           >
@@ -97,29 +95,40 @@ export function HomeQuickActionsGrid({
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center',
-                width: '28px',
-                height: '28px',
-                borderRadius: '6px',
-                backgroundColor: 'var(--bg-light, #f5f5f7)',
-                border: '1px solid var(--border-color, #e5e5e7)',
-                color: 'var(--text-secondary)',
-                flexShrink: 0,
+                gap: '9px',
+                width: '168px',
+                maxWidth: '100%',
+                textAlign: 'left',
               }}
             >
-              {act.icon}
-            </span>
-            <span
-              style={{
-                fontSize: '0.84rem',
-                fontWeight: 600,
-                color: 'var(--text-primary)',
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-              }}
-            >
-              {act.label}
+              <span
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '28px',
+                  height: '28px',
+                  borderRadius: '6px',
+                  backgroundColor: 'var(--bg-light, #f5f5f7)',
+                  border: '1px solid var(--border-color, #e5e5e7)',
+                  color: 'var(--text-secondary)',
+                  flexShrink: 0,
+                }}
+              >
+                {act.icon}
+              </span>
+              <span
+                style={{
+                  fontSize: '0.84rem',
+                  fontWeight: 600,
+                  color: 'var(--text-primary)',
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                }}
+              >
+                {act.label}
+              </span>
             </span>
           </button>
         ))}
