@@ -1,6 +1,21 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../utils/api';
 import { BillingType, OrderStatus } from '../../utils/types';
+
+export interface OrdersPageParams {
+  page?: number;
+  limit?: number;
+  statusGroup?: string;
+  search?: string;
+  billingType?: BillingType;
+  status?: OrderStatus;
+}
+
+export const ORDERS_QUERY_KEYS = {
+  all: ['orders'] as const,
+  summary: ['orders', 'summary'] as const,
+  page: (params: OrdersPageParams) => ['orders', 'page', params] as const,
+};
 
 export function useOrders(billingType?: BillingType, status?: OrderStatus) {
   return useQuery({
@@ -9,6 +24,25 @@ export function useOrders(billingType?: BillingType, status?: OrderStatus) {
       const data = await api.getOrders(billingType, status);
       return data || [];
     },
+  });
+}
+
+export function useOrdersSummaryQuery(enabled = true) {
+  return useQuery({
+    queryKey: ORDERS_QUERY_KEYS.summary,
+    queryFn: () => api.getOrdersSummary(),
+    staleTime: 20_000,
+    enabled,
+  });
+}
+
+export function useOrdersPageQuery(params: OrdersPageParams, enabled = true) {
+  return useQuery({
+    queryKey: ORDERS_QUERY_KEYS.page(params),
+    queryFn: () => api.getOrdersPage(params),
+    placeholderData: keepPreviousData,
+    staleTime: 15_000,
+    enabled,
   });
 }
 

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { api } from '../../utils/api';
 import { isBonusOrderItem } from '../../utils/weeklyPromoCartEvaluator';
 import {
@@ -10,24 +11,43 @@ import {
   PRODUCTS_FRESHNESS_TTL_MS,
   shouldFetchAdminResource,
 } from '../../utils/adminFetchPolicy';
+import {
+  CLIENTS_QUERY_KEYS,
+  HOME_QUERY_KEYS,
+  ORDERS_QUERY_KEYS,
+  PRODUCTS_QUERY_KEYS,
+} from '../../hooks/queries';
 import type { Product, User, Persona, Order, Rubro, SaleRoute } from '../../types';
 
 export function useAdminController(activeTab: string) {
-  const [products, setProducts] = useState<Product[]>([]);
+  const queryClient = useQueryClient();
+  const [products, setProducts] = useState<Product[]>(
+    () => queryClient.getQueryData<Product[]>(PRODUCTS_QUERY_KEYS.adminList) || [],
+  );
   const [users, setUsers] = useState<User[]>([]);
-  const [clients, setClients] = useState<Persona[]>([]);
-  const [availableSellers, setAvailableSellers] = useState<User[]>([]);
-  const [availableSaleRoutes, setAvailableSaleRoutes] = useState<SaleRoute[]>([]);
+  const [clients, setClients] = useState<Persona[]>(
+    () => queryClient.getQueryData<Persona[]>(CLIENTS_QUERY_KEYS.list('client')) || [],
+  );
+  const [availableSellers, setAvailableSellers] = useState<User[]>(
+    () => queryClient.getQueryData<User[]>(CLIENTS_QUERY_KEYS.sellers) || [],
+  );
+  const [availableSaleRoutes, setAvailableSaleRoutes] = useState<SaleRoute[]>(
+    () => queryClient.getQueryData<SaleRoute[]>(CLIENTS_QUERY_KEYS.saleRoutes) || [],
+  );
   const [orders, setOrders] = useState<Order[]>([]);
   const [ordersSummary, setOrdersSummary] = useState<{
     recibidosCount: number;
     armadosCount: number;
     facturadosCount: number;
-  } | null>(null);
+  } | null>(() => queryClient.getQueryData(ORDERS_QUERY_KEYS.summary) || null);
   const [ordersVersion, setOrdersVersion] = useState(0);
   const [financialReport, setFinancialReport] = useState<any | null>(null);
-  const [rubrosList, setRubrosList] = useState<Rubro[]>([]);
-  const [providersList, setProvidersList] = useState<Persona[]>([]);
+  const [rubrosList, setRubrosList] = useState<Rubro[]>(
+    () => queryClient.getQueryData<Rubro[]>(PRODUCTS_QUERY_KEYS.rubros) || [],
+  );
+  const [providersList, setProvidersList] = useState<Persona[]>(
+    () => queryClient.getQueryData<Persona[]>(CLIENTS_QUERY_KEYS.list('provider')) || [],
+  );
 
   const freshnessRef = useRef({
     productsAt: 0,
@@ -100,11 +120,15 @@ export function useAdminController(activeTab: string) {
     ) {
       return;
     }
-    const allProducts = await api.getProducts('', true);
+    const allProducts = await queryClient.fetchQuery({
+      queryKey: PRODUCTS_QUERY_KEYS.adminList,
+      queryFn: () => api.getProducts('', true),
+      staleTime: force ? 0 : PRODUCTS_FRESHNESS_TTL_MS,
+    });
     setProducts(allProducts);
     freshnessRef.current.productsAt = Date.now();
     freshnessRef.current.hasProducts = Array.isArray(allProducts) && allProducts.length > 0;
-  }, []);
+  }, [queryClient]);
 
   const loadClientsIfNeeded = useCallback(async (force: boolean) => {
     if (
@@ -117,11 +141,15 @@ export function useAdminController(activeTab: string) {
     ) {
       return;
     }
-    const allClients = await api.getPersonas('client');
+    const allClients = await queryClient.fetchQuery({
+      queryKey: CLIENTS_QUERY_KEYS.list('client'),
+      queryFn: () => api.getPersonas('client'),
+      staleTime: force ? 0 : CLIENTS_FRESHNESS_TTL_MS,
+    });
     setClients(allClients);
     freshnessRef.current.clientsAt = Date.now();
     freshnessRef.current.hasClients = Array.isArray(allClients) && allClients.length > 0;
-  }, []);
+  }, [queryClient]);
 
   const loadClientMetaIfNeeded = useCallback(async (force: boolean) => {
     const needSellers = shouldFetchAdminResource({
@@ -140,28 +168,46 @@ export function useAdminController(activeTab: string) {
 
     await Promise.all([
       needSellers
-        ? api.getSellersList().then((sellers) => {
-            setAvailableSellers(sellers || []);
-            freshnessRef.current.sellersAt = Date.now();
-            freshnessRef.current.hasSellers = Array.isArray(sellers);
-          })
+        ? queryClient
+            .fetchQuery({
+              queryKey: CLIENTS_QUERY_KEYS.sellers,
+              queryFn: () => api.getSellersList(),
+              staleTime: force ? 0 : CATALOG_META_FRESHNESS_TTL_MS,
+            })
+            .then((sellers) => {
+              setAvailableSellers(sellers || []);
+              freshnessRef.current.sellersAt = Date.now();
+              freshnessRef.current.hasSellers = Array.isArray(sellers);
+            })
         : Promise.resolve(),
       needRoutes
-        ? api.getSaleRoutes().then((routesRes) => {
-            setAvailableSaleRoutes(routesRes?.routes || []);
-            freshnessRef.current.saleRoutesAt = Date.now();
-            freshnessRef.current.hasSaleRoutes = Array.isArray(routesRes?.routes);
-          })
+        ? queryClient
+            .fetchQuery({
+              queryKey: CLIENTS_QUERY_KEYS.saleRoutes,
+              queryFn: async () => (await api.getSaleRoutes())?.routes || [],
+              staleTime: force ? 0 : CATALOG_META_FRESHNESS_TTL_MS,
+            })
+            .then((routes) => {
+              setAvailableSaleRoutes(routes || []);
+              freshnessRef.current.saleRoutesAt = Date.now();
+              freshnessRef.current.hasSaleRoutes = Array.isArray(routes);
+            })
         : Promise.resolve(),
     ]);
-  }, []);
+  }, [queryClient]);
 
   const runTabFetch = useCallback(async (force: boolean) => {
     setErrorMsg(null);
     try {
       if (activeTab === 'dashboard') {
-        // Prioriza contadores livianos (3 COUNT SQL) y precalienta catálogo/clientes en paralelo sin bloquear
-        const summaryPromise = api.getOrdersSummary().then((summary) => setOrdersSummary(summary));
+        // Prioriza contadores livianos (3 COUNT SQL) con caché React Query y precalienta catálogo/clientes
+        const summaryPromise = queryClient
+          .fetchQuery({
+            queryKey: ORDERS_QUERY_KEYS.summary,
+            queryFn: () => api.getOrdersSummary(),
+            staleTime: force ? 0 : 20_000,
+          })
+          .then((summary) => setOrdersSummary(summary));
         void Promise.all([loadClientsIfNeeded(force), loadProductsIfNeeded(force)]).catch((e) =>
           console.error('Error al precalentar catálogo/clientes:', e),
         );
@@ -227,12 +273,16 @@ export function useAdminController(activeTab: string) {
     } catch (err: any) {
       setErrorMsg(err.message || 'Error de conexión');
     }
-  }, [activeTab, cajasSubTab, orderStatusFilter, loadClientsIfNeeded, loadClientMetaIfNeeded, loadProductsIfNeeded]);
+  }, [activeTab, cajasSubTab, orderStatusFilter, loadClientsIfNeeded, loadClientMetaIfNeeded, loadProductsIfNeeded, queryClient]);
 
-  // Refresco explícito tras mutaciones (SIEMPRE consulta datos frescos del servidor)
+  // Refresco explícito tras mutaciones (invalida React Query + consulta datos frescos del servidor)
   const fetchData = useCallback(async () => {
+    void queryClient.invalidateQueries({ queryKey: ORDERS_QUERY_KEYS.all });
+    void queryClient.invalidateQueries({ queryKey: CLIENTS_QUERY_KEYS.all });
+    void queryClient.invalidateQueries({ queryKey: PRODUCTS_QUERY_KEYS.all });
+    void queryClient.invalidateQueries({ queryKey: HOME_QUERY_KEYS.all });
     await runTabFetch(true);
-  }, [runTabFetch]);
+  }, [queryClient, runTabFetch]);
 
   // Navegación entre pestañas (usa memoria fresca para cambio en 0ms)
   useEffect(() => {

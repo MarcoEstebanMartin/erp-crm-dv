@@ -1,6 +1,12 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../utils/api';
 
+export const PRODUCTS_QUERY_KEYS = {
+  all: ['products'] as const,
+  adminList: ['products', 'all'] as const,
+  rubros: ['rubros'] as const,
+};
+
 export function useProducts(search?: string) {
   return useQuery({
     queryKey: ['products', search],

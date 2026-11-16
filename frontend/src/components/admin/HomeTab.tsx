@@ -1,5 +1,11 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { api } from '../../utils/api';
+import {
+  HOME_QUERY_KEYS,
+  usePendingRendicionesQuery,
+  useWeeklyScheduleQuery,
+} from '../../hooks/queries';
 import WeeklyScheduleModal from '../modals/WeeklyScheduleModal';
 import { HomePendingCashCard } from './home/HomePendingCashCard';
 import { HomeQuickActionsGrid } from './home/HomeQuickActionsGrid';
@@ -90,44 +96,27 @@ export default function HomeTab({
     [ordersSummary, orders],
   );
 
-  const [pendingRendicionesDetails, setPendingRendicionesDetails] = useState<{ sellers: any[]; routes: any[] }>({
-    sellers: [],
-    routes: [],
-  });
-  const [loadingRendicionesDetails, setLoadingRendicionesDetails] = useState(false);
-  const [weeklyScheduleData, setWeeklyScheduleData] = useState<{ currentWeek: string; items: any[] }>({
-    currentWeek: 'SEMANA_1',
-    items: [],
-  });
+  const queryClient = useQueryClient();
+  const { data: pendingRendicionesRaw, isLoading: loadingRendicionesDetails } =
+    usePendingRendicionesQuery();
+  const { data: weeklyScheduleRaw } = useWeeklyScheduleQuery();
+
+  const pendingRendicionesDetails: { sellers: any[]; routes: any[] } = {
+    sellers: pendingRendicionesRaw?.sellers || [],
+    routes: pendingRendicionesRaw?.routes || [],
+  };
+  const weeklyScheduleData: { currentWeek: string; items: any[] } = {
+    currentWeek: weeklyScheduleRaw?.currentWeek || 'SEMANA_1',
+    items: weeklyScheduleRaw?.items || [],
+  };
+
   const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
   const [showFullWeek, setShowFullWeek] = useState(false);
   const [showGastoModal, setShowGastoModal] = useState(false);
 
-  const fetchRendicionesDetails = async () => {
-    setLoadingRendicionesDetails(true);
-    try {
-      const res = await api.getPendingRendiciones();
-      if (res) setPendingRendicionesDetails({ sellers: res.sellers || [], routes: res.routes || [] });
-    } catch (err) {
-      console.error('Error al obtener rendiciones pendientes:', err);
-    } finally {
-      setLoadingRendicionesDetails(false);
-    }
+  const fetchWeeklySchedule = () => {
+    void queryClient.invalidateQueries({ queryKey: HOME_QUERY_KEYS.weeklySchedule });
   };
-
-  const fetchWeeklySchedule = async () => {
-    try {
-      const res = await api.getWeeklySchedule();
-      if (res) setWeeklyScheduleData({ currentWeek: res.currentWeek || 'SEMANA_1', items: res.items || [] });
-    } catch (err) {
-      console.error('Error al cargar cronograma semanal:', err);
-    }
-  };
-
-  useEffect(() => {
-    fetchWeeklySchedule();
-    fetchRendicionesDetails();
-  }, []);
 
   const handleToggleCurrentWeek = async () => {
     const nextWeek = weeklyScheduleData.currentWeek === 'SEMANA_1' ? 'SEMANA_2' : 'SEMANA_1';

@@ -1,7 +1,9 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { RefreshCw, Globe, Eye, Printer, Edit, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { api } from '../../utils/api';
 import { orderApi } from '../../api/order.api';
+import { ORDERS_QUERY_KEYS, useOrdersPageQuery } from '../../hooks/queries';
 import { OrderStatus } from '../../utils/types';
 import { getOrderStatusInfo } from '../../utils/orderStatusHelper';
 import { useConfirm } from '../../context/ConfirmContext';
@@ -37,13 +39,11 @@ export default function OrdersTab({
   setSuccessMsg,
 }: OrdersTabProps) {
   const confirm = useConfirm();
-  const [orders, setOrders] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [orderStatusFilter, setOrderStatusFilter] = useState<string>(initialStatusFilter || 'ALL');
   const [page, setPage] = useState(1);
-  const [pagination, setPagination] = useState({ total: 0, page: 1, limit: ORDERS_PAGE_LIMIT, totalPages: 1 });
   const [syncingWeb, setSyncingWeb] = useState(false);
 
   useEffect(() => {
@@ -59,27 +59,38 @@ export default function OrdersTab({
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  const loadOrdersPage = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await api.getOrdersPage({
-        page,
-        limit: ORDERS_PAGE_LIMIT,
-        statusGroup: orderStatusFilter,
-        search: debouncedSearch,
-      });
-      setOrders(res.orders || []);
-      setPagination(res.pagination);
-    } catch (err: any) {
-      setErrorMsg(err?.message || 'Error al cargar pedidos.');
-    } finally {
-      setLoading(false);
-    }
-  }, [page, orderStatusFilter, debouncedSearch, setErrorMsg]);
+  const {
+    data: ordersPageData,
+    isLoading: loading,
+    isFetching,
+    error: queryError,
+    refetch,
+  } = useOrdersPageQuery({
+    page,
+    limit: ORDERS_PAGE_LIMIT,
+    statusGroup: orderStatusFilter,
+    search: debouncedSearch,
+  });
 
   useEffect(() => {
-    void loadOrdersPage();
-  }, [loadOrdersPage, ordersVersion]);
+    if (queryError) {
+      setErrorMsg((queryError as any)?.message || 'Error al cargar pedidos.');
+    }
+  }, [queryError, setErrorMsg]);
+
+  useEffect(() => {
+    if (ordersVersion > 0) {
+      void queryClient.invalidateQueries({ queryKey: ORDERS_QUERY_KEYS.all });
+    }
+  }, [ordersVersion, queryClient]);
+
+  const orders: any[] = ordersPageData?.orders || [];
+  const pagination = ordersPageData?.pagination || {
+    total: 0,
+    page: 1,
+    limit: ORDERS_PAGE_LIMIT,
+    totalPages: 1,
+  };
 
   const handleCancelOrder = async (id: number) => {
     if (
@@ -94,7 +105,7 @@ export default function OrdersTab({
       await api.updateOrderStatus(id, OrderStatus.CANCELLED);
       setSuccessMsg(`Pedido #${id} cancelado correctamente.`);
       fetchData();
-      void loadOrdersPage();
+      void queryClient.invalidateQueries({ queryKey: ORDERS_QUERY_KEYS.all });
     } catch (err: any) {
       setErrorMsg(err.message || 'Error al cancelar pedido.');
     }
@@ -106,7 +117,7 @@ export default function OrdersTab({
       const resp = await orderApi.syncWebOrders();
       const report = resp?.data;
       fetchData();
-      void loadOrdersPage();
+      void queryClient.invalidateQueries({ queryKey: ORDERS_QUERY_KEYS.all });
       if (report?.importedCount > 0) {
         setSuccessMsg(
           `Ingresaron ${report.importedCount} pedido(s) nuevo(s) desde Tienda Web / WhatsApp.`,
@@ -191,7 +202,8 @@ export default function OrdersTab({
           <button
             type="button"
             className="btn btn-secondary"
-            onClick={() => void loadOrdersPage()}
+            onClick={() => void refetch()}
+            disabled={isFetching}
             title="Actualizar listado"
             aria-label="Actualizar historial de pedidos"
           >

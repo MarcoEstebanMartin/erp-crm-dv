@@ -1,6 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../utils/api';
 
+export const CLIENTS_QUERY_KEYS = {
+  all: ['clients'] as const,
+  list: (role: string) => ['clients', role] as const,
+  sellers: ['clients', 'sellers'] as const,
+  saleRoutes: ['sale-routes'] as const,
+};
+
 export function useClients(role = 'CLIENT', search?: string) {
   return useQuery({
     queryKey: ['clients', role, search],

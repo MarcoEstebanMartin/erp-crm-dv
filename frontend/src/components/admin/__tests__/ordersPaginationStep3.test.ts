@@ -27,7 +27,7 @@ describe('Paso 3 Velocidad — Inicio Liviano y Paginación Real en Pedidos', ()
     const homeTabSrc = readAdminFile('HomeTab.tsx');
     const summaryModalSrc = readAdminFile('AdminSummaryCardModal.tsx');
 
-    expect(ordersTabSrc).toContain('api.getOrdersPage');
+    expect(ordersTabSrc).toContain('useOrdersPageQuery');
     expect(ordersTabSrc).toContain('ORDERS_PAGE_LIMIT = 50');
     expect(ordersTabSrc).toContain('Anterior');
     expect(ordersTabSrc).toContain('Siguiente');
