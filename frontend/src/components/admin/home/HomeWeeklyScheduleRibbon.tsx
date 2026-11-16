@@ -27,11 +27,10 @@ export function HomeWeeklyScheduleRibbon({
   const formattedToday = todayName.charAt(0) + todayName.slice(1).toLowerCase();
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+    <section style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
       <div
         style={{
-          flex: 1,
-          padding: '16px 20px',
+          padding: '12px 16px',
           backgroundColor: 'var(--bg-card, #ffffff)',
           borderRadius: '10px',
           border: '1px solid var(--border-color, #e5e5e7)',
@@ -40,7 +39,7 @@ export function HomeWeeklyScheduleRibbon({
           alignItems: 'center',
           justifyContent: 'space-between',
           gap: '12px',
-          fontSize: '0.83rem',
+          fontSize: '0.82rem',
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
@@ -167,12 +166,12 @@ export function HomeWeeklyScheduleRibbon({
         <div
           style={{
             marginTop: '8px',
-            padding: '12px',
-            backgroundColor: 'var(--bg-light, #f9fafb)',
-            borderRadius: '8px',
-            border: '1px solid var(--border-color)',
+            padding: '10px 12px',
+            backgroundColor: 'var(--bg-card, #ffffff)',
+            borderRadius: '10px',
+            border: '1px solid var(--border-color, #e5e5e7)',
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
             gap: '8px',
           }}
         >
@@ -228,6 +227,6 @@ export function HomeWeeklyScheduleRibbon({
           })}
         </div>
       )}
-    </div>
+    </section>
   );
 }
