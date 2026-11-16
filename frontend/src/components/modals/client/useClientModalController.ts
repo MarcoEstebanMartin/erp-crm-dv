@@ -177,6 +177,14 @@ export function useClientModalController({
         isSeller: Boolean(data.isSeller),
         isCommissionAgent: Boolean(data.isCommissionAgent),
         sellerId: data.sellerId ? Number(data.sellerId) : null,
+        latitude:
+          data.latitude !== undefined && data.latitude !== '' && data.latitude !== null
+            ? Number(data.latitude)
+            : null,
+        longitude:
+          data.longitude !== undefined && data.longitude !== '' && data.longitude !== null
+            ? Number(data.longitude)
+            : null,
         isActive: data.isActive !== false,
       };
 

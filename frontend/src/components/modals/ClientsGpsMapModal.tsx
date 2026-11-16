@@ -1,8 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { X, Navigation, MapPin } from 'lucide-react';
+import { X, Navigation, MapPin, Search } from 'lucide-react';
 import { NativeModalDialog } from './NativeModalDialog';
 import { api } from '../../utils/api';
-import { InteractiveRouteMap, type RouteMapMarker } from '../common/InteractiveRouteMap';
+import { OfficialGoogleMap } from '../common/OfficialGoogleMap';
+import type { OfficialMapMarker } from '../../utils/officialGoogleMapHelpers';
 import { DEPOT_VILLEGAS, buildGoogleMapsMultiStopRouteUrl } from '../../utils/geoUtils';
 
 interface ClientsGpsMapModalProps {
@@ -22,9 +23,14 @@ export const ClientsGpsMapModal: React.FC<ClientsGpsMapModalProps> = ({
 }) => {
   const [tab, setTab] = useState<'MAP' | 'VISITS'>('MAP');
   const [todayVisits, setTodayVisits] = useState<any[]>([]);
+  const [mapQuery, setMapQuery] = useState('');
 
   useEffect(() => {
-    if (isOpen && tab === 'VISITS') {
+    if (!isOpen) {
+      setMapQuery('');
+      return;
+    }
+    if (tab === 'VISITS') {
       api
         .getTodayVisits()
         .then((res) => setTodayVisits(res?.visits || []))
@@ -33,40 +39,64 @@ export const ClientsGpsMapModal: React.FC<ClientsGpsMapModalProps> = ({
   }, [isOpen, tab]);
 
   const customersWithLocation = useMemo(() => {
-    const withCoords = (clients || []).filter(
-      (c) => Number.isFinite(Number(c.latitude)) && Number.isFinite(Number(c.longitude)) && Number(c.latitude) !== 0,
-    );
-    return withCoords.length > 0 ? withCoords : (clients || []).slice(0, 40);
+    return (clients || []).filter((c) => {
+      const lat = Number(c.latitude);
+      const lng = Number(c.longitude);
+      return (
+        c.latitude !== null &&
+        c.latitude !== undefined &&
+        c.longitude !== null &&
+        c.longitude !== undefined &&
+        Number.isFinite(lat) &&
+        Number.isFinite(lng) &&
+        lat !== 0 &&
+        lng !== 0
+      );
+    });
   }, [clients]);
 
-  const customerMarkers = useMemo<RouteMapMarker[]>(() => {
-    return customersWithLocation.slice(0, 120).map((c) => ({
+  const filteredCustomers = useMemo(() => {
+    const q = mapQuery.trim().toLowerCase();
+    if (!q) return customersWithLocation;
+    return customersWithLocation.filter((c) =>
+      `${c.name || ''} ${c.address || ''} ${c.city || ''}`.toLowerCase().includes(q),
+    );
+  }, [customersWithLocation, mapQuery]);
+
+  const customerMarkers = useMemo<OfficialMapMarker[]>(() => {
+    return filteredCustomers.map((c) => ({
       id: String(c.id),
-      lat: Number(c.latitude) || DEPOT_VILLEGAS.lat,
-      lng: Number(c.longitude) || DEPOT_VILLEGAS.lng,
+      lat: Number(c.latitude),
+      lng: Number(c.longitude),
       title: c.name,
       subtitle: `${c.address || '-'}${c.city ? ` · ${c.city}` : ''}${Number(c.outstandingBalance || 0) > 0 ? ` · $${Math.round(Number(c.outstandingBalance)).toLocaleString('es-AR')}` : ''}`,
       color: Number(c.outstandingBalance || 0) > 0 ? 'red' : 'blue',
     }));
-  }, [customersWithLocation]);
+  }, [filteredCustomers]);
 
-  const visitMarkers = useMemo<RouteMapMarker[]>(() => {
+  const visitMarkers = useMemo<OfficialMapMarker[]>(() => {
+    const q = mapQuery.trim().toLowerCase();
     return todayVisits
       .filter((v) => v.latitude && v.longitude)
+      .filter((v) => {
+        if (!q) return true;
+        return `${v.seller?.username || ''} ${v.persona?.name || ''}`.toLowerCase().includes(q);
+      })
       .map((v) => ({
         id: `v-${v.id}`,
         lat: Number(v.latitude),
         lng: Number(v.longitude),
-        title: `${v.seller?.username || 'Vendedor'} → ${v.persona?.name || 'Cliente'}`,
+        title: `${v.seller?.username || 'Vendedor'} - ${v.persona?.name || 'Cliente'}`,
         subtitle: `${new Date(v.visitedAt || v.createdAt).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })} hs · ${v.status === 'ORDERED' ? 'Compró' : `Sin compra (${v.noBuyReason || '-'})`}`,
         color: v.status === 'ORDERED' ? 'emerald' : 'amber',
       }));
-  }, [todayVisits]);
+  }, [todayVisits, mapQuery]);
 
   if (!isOpen) return null;
 
   const activeMarkers = tab === 'MAP' ? customerMarkers : visitMarkers;
   const centerPoint = activeMarkers[0] ?? DEPOT_VILLEGAS;
+  const isSearchFocused = mapQuery.trim().length > 0 && activeMarkers.length > 0;
 
   return (
     <NativeModalDialog
@@ -78,7 +108,7 @@ export const ClientsGpsMapModal: React.FC<ClientsGpsMapModalProps> = ({
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '10px', marginBottom: '12px', flexWrap: 'wrap', gap: '10px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <MapPin size={17} color="#334155" />
+            <MapPin size={17} color="#334155" aria-hidden="true" />
             <h3 id="clients-gps-map-title" style={{ margin: 0, fontSize: '1rem', fontWeight: 700 }}>
               Mapa GPS · {activeFilterLabel}
             </h3>
@@ -107,7 +137,21 @@ export const ClientsGpsMapModal: React.FC<ClientsGpsMapModalProps> = ({
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+          <search aria-label="Buscar en mapa">
+            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+              <Search size={14} aria-hidden="true" style={{ position: 'absolute', left: '9px', color: 'var(--text-secondary)', pointerEvents: 'none' }} />
+              <input
+                type="search"
+                aria-label="Buscar cliente o dirección en mapa"
+                className="input"
+                placeholder="Buscar cliente..."
+                value={mapQuery}
+                onChange={(e) => setMapQuery(e.target.value)}
+                style={{ width: '190px', height: '32px', paddingLeft: '28px', fontSize: '0.78rem' }}
+              />
+            </div>
+          </search>
           {activeMarkers.length > 0 && (
             <a
               href={buildGoogleMapsMultiStopRouteUrl(activeMarkers)}
@@ -116,23 +160,25 @@ export const ClientsGpsMapModal: React.FC<ClientsGpsMapModalProps> = ({
               className="btn btn-secondary"
               style={{ fontSize: '0.78rem', padding: '6px 12px', display: 'inline-flex', alignItems: 'center', gap: '6px', textDecoration: 'none' }}
             >
-              <Navigation size={14} />
+              <Navigation size={14} aria-hidden="true" />
               <span>Google Maps</span>
             </a>
           )}
           <button type="button" className="btn btn-ghost" aria-label="Cerrar" style={{ padding: '4px' }} onClick={onClose}>
-            <X size={18} />
+            <X size={18} aria-hidden="true" />
           </button>
         </div>
       </div>
 
-      <InteractiveRouteMap
+      <OfficialGoogleMap
         markers={activeMarkers}
         centerLat={centerPoint.lat}
         centerLng={centerPoint.lng}
-        defaultZoom={14}
+        defaultZoom={isSearchFocused ? 16 : 13}
         heightPx={540}
-        showRouteLine={tab === 'VISITS'}
+        showDepot={false}
+        showDirections={false}
+        showMarkersPolyline={tab === 'VISITS'}
         onSelectMarker={(markerId) => {
           if (tab === 'MAP' && onSelectClient) {
             const found = clients.find((c) => String(c.id) === markerId);

@@ -47,6 +47,7 @@ import { OrderQueriesService } from '../orders/order-queries.service';
 import { OrderDeliveryService } from '../orders/order-delivery.service';
 import { deliveryRouteService } from '../logistics/delivery-route.service';
 import { logisticsResourcesService } from '../logistics/logistics-resources.service';
+import { createPersonaSchema, updatePersonaSchema } from '../../validators/persona.validator';
 
 describe('Paso 1 Entregas y Viajes — Queries, Asignación, Rutas y Recursos Reales', () => {
   beforeEach(() => {
@@ -316,5 +317,39 @@ describe('Paso 1 Entregas y Viajes — Queries, Asignación, Rutas y Recursos Re
     expect(resources.driverOptions).toHaveLength(1);
     expect(resources.driverOptions[0].fullName).toBe('Matías Ignacio Rodríguez');
     expect(resources.drivers).toEqual(['Matías Ignacio Rodríguez']);
+  });
+
+  it('createPersonaSchema y updatePersonaSchema validan coordenadas GPS exactas, nullables y rechazan fuera de rango', () => {
+    expect(
+      createPersonaSchema.safeParse({
+        body: {
+          name: 'Autoservicio La Esquina',
+          barrio: 'CENTRO 1',
+          latitude: -35.0322,
+          longitude: -63.0134,
+          maxUnpaidInvoices: 2,
+        },
+      }).success,
+    ).toBe(true);
+
+    expect(
+      updatePersonaSchema.safeParse({
+        params: { id: '42' },
+        body: { latitude: null, longitude: '' },
+      }).success,
+    ).toBe(true);
+
+    expect(
+      updatePersonaSchema.safeParse({
+        params: { id: '42' },
+        body: { latitude: -95, longitude: -63.01 },
+      }).success,
+    ).toBe(false);
+
+    expect(
+      createPersonaSchema.safeParse({
+        body: { name: 'Test', longitude: 190 },
+      }).success,
+    ).toBe(false);
   });
 });

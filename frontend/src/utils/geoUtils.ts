@@ -5,9 +5,9 @@ export interface GpsCaptureResult {
 }
 
 export const DEPOT_VILLEGAS = {
-  lat: -35.0328,
-  lng: -63.0125,
-  label: 'Depósito Don Venancio (General Villegas)',
+  lat: -35.0322,
+  lng: -63.0134,
+  label: 'Depósito Don Venancio · Pringles 116, General Villegas',
 };
 
 export function captureCurrentGpsSilently(timeoutMs = 3500): Promise<GpsCaptureResult | null> {
@@ -74,6 +74,7 @@ export function buildGoogleMapsSingleUrl(lat: number, lng: number): string {
 
 export function buildGoogleMapsMultiStopRouteUrl(
   stops: Array<{ lat: number; lng: number; title?: string }>,
+  options?: { roundTrip?: boolean },
 ): string {
   if (stops.length === 0) {
     return buildGoogleMapsSingleUrl(DEPOT_VILLEGAS.lat, DEPOT_VILLEGAS.lng);
@@ -81,21 +82,25 @@ export function buildGoogleMapsMultiStopRouteUrl(
   const uniqueStops: Array<{ lat: number; lng: number }> = [];
   const seen = new Set<string>();
   for (const s of stops) {
-    const key = `${s.lat.toFixed(4)},${s.lng.toFixed(4)}`;
+    if (!Number.isFinite(s.lat) || !Number.isFinite(s.lng)) continue;
+    const key = `${s.lat.toFixed(5)},${s.lng.toFixed(5)}`;
     if (!seen.has(key)) {
       seen.add(key);
       uniqueStops.push(s);
     }
-    if (uniqueStops.length >= 10) break;
+    if (uniqueStops.length >= 20) break;
+  }
+
+  if (uniqueStops.length === 0) {
+    return buildGoogleMapsSingleUrl(DEPOT_VILLEGAS.lat, DEPOT_VILLEGAS.lng);
   }
 
   const origin = `${DEPOT_VILLEGAS.lat},${DEPOT_VILLEGAS.lng}`;
+  const isRoundTrip = Boolean(options?.roundTrip);
   const last = uniqueStops[uniqueStops.length - 1]!;
-  const destination = `${last.lat},${last.lng}`;
-  const waypoints = uniqueStops
-    .slice(0, -1)
-    .map((s) => `${s.lat},${s.lng}`)
-    .join('|');
+  const destination = isRoundTrip ? origin : `${last.lat},${last.lng}`;
+  const waypointStops = isRoundTrip ? uniqueStops : uniqueStops.slice(0, -1);
+  const waypoints = waypointStops.map((s) => `${s.lat},${s.lng}`).join('|');
 
   const params = new URLSearchParams({ api: '1', origin, destination, travelmode: 'driving' });
   if (waypoints) params.set('waypoints', waypoints);

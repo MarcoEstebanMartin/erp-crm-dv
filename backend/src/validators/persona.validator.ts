@@ -20,9 +20,16 @@ export const createPersonaSchema = z.object({
     cuit: z.string().optional().nullable(),
     address: z.string().optional().nullable(),
     city: z.string().optional().nullable(),
+    barrio: z.string().optional().nullable(),
     route: z.string().optional().nullable(),
     saleRouteId: safeNullableNumericPreprocess().optional(),
     routeSequence: safeNullableNumericPreprocess().optional(),
+    latitude: safeNullableNumericPreprocess()
+      .refine((val) => val === null || (val >= -90 && val <= 90), 'Latitud inválida')
+      .optional(),
+    longitude: safeNullableNumericPreprocess()
+      .refine((val) => val === null || (val >= -180 && val <= 180), 'Longitud inválida')
+      .optional(),
     phone: z.string().optional().nullable(),
     email: z.string().email('Debe ser un email válido').optional().nullable().or(z.literal('')),
     isClient: z.boolean().optional(),
@@ -30,11 +37,15 @@ export const createPersonaSchema = z.object({
     isSeller: z.boolean().optional(),
     isCommissionAgent: z.boolean().optional(),
     creditLimit: safeNumericPreprocess(0).refine(val => val >= 0, 'El límite de crédito debe ser mayor o igual a 0').optional(),
+    maxUnpaidInvoices: safeNumericPreprocess(0)
+      .refine((val) => val >= 0, 'El límite de boletas debe ser mayor o igual a 0')
+      .optional(),
     priceList: z.string().optional().nullable(),
     discount: safeNumericPreprocess(0).refine(val => val >= 0 && val <= 100, 'El descuento debe estar entre 0 y 100').optional(),
     contacts: z.any().optional(),
     sellerId: z.union([z.number(), z.string()]).optional().nullable(),
     paymentTermDays: safeNumericPreprocess(30).refine(val => val >= 0, 'El plazo de pago debe ser mayor o igual a 0').optional(),
+    webPin: z.string().optional().nullable(),
     isActive: z.boolean().optional(),
     rubro: z.string().optional().nullable(),
   }),
@@ -49,9 +60,16 @@ export const updatePersonaSchema = z.object({
     cuit: z.string().optional().nullable(),
     address: z.string().optional().nullable(),
     city: z.string().optional().nullable(),
+    barrio: z.string().optional().nullable(),
     route: z.string().optional().nullable(),
     saleRouteId: safeNullableNumericPreprocess().optional(),
     routeSequence: safeNullableNumericPreprocess().optional(),
+    latitude: safeNullableNumericPreprocess()
+      .refine((val) => val === null || (val >= -90 && val <= 90), 'Latitud inválida')
+      .optional(),
+    longitude: safeNullableNumericPreprocess()
+      .refine((val) => val === null || (val >= -180 && val <= 180), 'Longitud inválida')
+      .optional(),
     phone: z.string().optional().nullable(),
     email: z.string().email('Debe ser un email válido').optional().nullable().or(z.literal('')),
     isClient: z.boolean().optional(),
@@ -59,11 +77,15 @@ export const updatePersonaSchema = z.object({
     isSeller: z.boolean().optional(),
     isCommissionAgent: z.boolean().optional(),
     creditLimit: safeNumericPreprocess(0).refine(val => val >= 0, 'El límite de crédito debe ser mayor o igual a 0').optional(),
+    maxUnpaidInvoices: safeNumericPreprocess(0)
+      .refine((val) => val >= 0, 'El límite de boletas debe ser mayor o igual a 0')
+      .optional(),
     priceList: z.string().optional().nullable(),
     discount: safeNumericPreprocess(0).refine(val => val >= 0 && val <= 100, 'El descuento debe estar entre 0 y 100').optional(),
     contacts: z.any().optional(),
     sellerId: z.union([z.number(), z.string()]).optional().nullable(),
     paymentTermDays: safeNumericPreprocess(30).refine(val => val >= 0, 'El plazo de pago debe ser mayor o igual a 0').optional(),
+    webPin: z.string().optional().nullable(),
     isActive: z.boolean().optional(),
     rubro: z.string().optional().nullable(),
   }),

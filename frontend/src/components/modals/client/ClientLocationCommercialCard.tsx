@@ -1,4 +1,5 @@
 import React from 'react';
+import { ClientGpsPickerSection } from './ClientGpsPickerSection';
 
 const BARRIO_SUGGESTIONS = [
   'CENTRO 1', 'CENTRO 2', 'CENTRO 3', 'CENTRO 4', 'TROCHA',
@@ -147,6 +148,8 @@ export const ClientLocationCommercialCard: React.FC<ClientLocationCommercialCard
             ))}
           </select>
         </div>
+
+        <ClientGpsPickerSection data={data} onChangeData={onChangeData} />
       </div>
 
       <div style={{ ...CARD_STYLE, opacity: data.isClient ? 1 : 0.6 }}>

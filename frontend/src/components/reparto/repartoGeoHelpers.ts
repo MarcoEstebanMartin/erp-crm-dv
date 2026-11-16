@@ -1,13 +1,10 @@
-export const VILLEGAS_DEPOT: [number, number] = [-35.030, -63.010]; // Moreno 200, Villegas (Base/Depósito)
+import { DEPOT_VILLEGAS } from '../../utils/geoUtils';
+import { loadOfficialGoogleMaps } from '../../utils/googleMapsLoader';
 
-export const CLIENT_COORDS: { [key: number]: { lat: number; lng: number; address: string } } = {
-  1: { lat: -35.032, lng: -63.008, address: 'Moreno 142, General Villegas' },
-  2: { lat: -35.028, lng: -63.015, address: 'Rivadavia 350, General Villegas' },
-  3: { lat: -35.035, lng: -63.012, address: 'Castelli 580, General Villegas' },
-};
+export const VILLEGAS_DEPOT: [number, number] = [DEPOT_VILLEGAS.lat, DEPOT_VILLEGAS.lng];
 
-export const CITY_BASE_COORDS: { [key: string]: { lat: number; lng: number } } = {
-  'general villegas': { lat: -35.030, lng: -63.010 },
+export const CITY_BASE_COORDS: Record<string, { lat: number; lng: number }> = {
+  'general villegas': { lat: DEPOT_VILLEGAS.lat, lng: DEPOT_VILLEGAS.lng },
   'emilio v. bunge': { lat: -34.764, lng: -63.031 },
   'emilio bunge': { lat: -34.764, lng: -63.031 },
   'piedritas': { lat: -34.887, lng: -62.880 },
@@ -33,7 +30,7 @@ export const CITY_BASE_COORDS: { [key: string]: { lat: number; lng: number } } =
   'santa eleodora': { lat: -34.851, lng: -62.825 },
   'cañada seca': { lat: -34.805, lng: -62.791 },
   'canada seca': { lat: -34.805, lng: -62.791 },
-  'caba': { lat: -34.6037, lng: -58.3816 }
+  'caba': { lat: -34.6037, lng: -58.3816 },
 };
 
 const KNOWN_CITIES = [
@@ -61,8 +58,15 @@ const KNOWN_CITIES = [
   { key: 'eleodora', name: 'Santa Eleodora' },
   { key: 'canada seca', name: 'Cañada Seca' },
   { key: 'cañada seca', name: 'Cañada Seca' },
-  { key: 'caba', name: 'CABA' }
+  { key: 'caba', name: 'CABA' },
 ];
+
+export interface ClientCoordLookupResult {
+  lat: number;
+  lng: number;
+  address: string;
+  hasExactGps: boolean;
+}
 
 export function detectRealCity(persona: any): string {
   const city = (persona?.city || '').trim().toLowerCase();
@@ -92,7 +96,7 @@ export function getCityBaseCoords(persona: any): { lat: number; lng: number } {
       return CITY_BASE_COORDS[key];
     }
   }
-  return { lat: -35.030, lng: -63.010 };
+  return { lat: DEPOT_VILLEGAS.lat, lng: DEPOT_VILLEGAS.lng };
 }
 
 export function cleanStreetAddress(address: string, cityName: string): string {
@@ -106,7 +110,7 @@ export function cleanStreetAddress(address: string, cityName: string): string {
 
   const placeholders = [
     'zona urbana', 'zona rural', 's/n', 'sin numero', 'sin nro',
-    'rural', 'acceso', 'zona quintas', 'conocido', 'acceso principal'
+    'rural', 'acceso', 'zona quintas', 'conocido', 'acceso principal',
   ];
 
   const lower = clean.toLowerCase();
@@ -124,36 +128,57 @@ export function applyJitter(lat: number, lng: number, id: number): { lat: number
   const radius = 0.00045;
   return {
     lat: lat + Math.sin(angle) * radius,
-    lng: lng + Math.cos(angle) * radius
+    lng: lng + Math.cos(angle) * radius,
   };
+}
+
+function formatDisplayAddress(persona: any, fallbackCity: string): string {
+  const street = typeof persona?.address === 'string' ? persona.address.trim() : '';
+  if (!street) return fallbackCity;
+  if (fallbackCity && !street.toLowerCase().includes(fallbackCity.toLowerCase())) {
+    return `${street}, ${fallbackCity}`;
+  }
+  return street;
 }
 
 export function getClientCoords(
   clientId: number,
   clientName: string,
   persona?: any,
-  cache?: { [key: number]: { lat: number; lng: number; address: string } }
-) {
-  if (persona && typeof persona.latitude === 'number' && typeof persona.longitude === 'number') {
-    return { lat: persona.latitude, lng: persona.longitude, address: persona.address || '' };
-  }
-  if (CLIENT_COORDS[clientId]) return CLIENT_COORDS[clientId];
-  if (cache && cache[clientId]) return cache[clientId];
-
-  const hash = clientName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-  const base = getCityBaseCoords(persona);
-  const lat = base.lat + ((hash % 100 - 50) * 0.0003);
-  const lng = base.lng + (((hash * 7) % 100 - 50) * 0.0003);
-
-  const street = persona?.address;
+  cache?: Record<number, { lat: number; lng: number; address: string; hasExactGps?: boolean }>,
+): ClientCoordLookupResult {
   const city = detectRealCity(persona);
+  const pLat = persona?.latitude !== null && persona?.latitude !== undefined ? Number(persona.latitude) : NaN;
+  const pLng = persona?.longitude !== null && persona?.longitude !== undefined ? Number(persona.longitude) : NaN;
 
-  let realAddress = street || 'Acceso Villegas S/N';
-  if (city && !realAddress.toLowerCase().includes(city.toLowerCase())) {
-    realAddress += `, ${city}`;
+  if (Number.isFinite(pLat) && Number.isFinite(pLng) && pLat !== 0 && pLng !== 0) {
+    return {
+      lat: pLat,
+      lng: pLng,
+      address: formatDisplayAddress(persona, city),
+      hasExactGps: true,
+    };
   }
 
-  return { lat, lng, address: realAddress };
+  if (cache && cache[clientId]) {
+    return {
+      lat: cache[clientId].lat,
+      lng: cache[clientId].lng,
+      address: cache[clientId].address || formatDisplayAddress(persona, city),
+      hasExactGps: Boolean(cache[clientId].hasExactGps),
+    };
+  }
+
+  const hash = (clientName || 'C').split('').reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
+  const base = getCityBaseCoords(persona);
+  const offset = applyJitter(base.lat, base.lng, clientId || hash || 1);
+
+  return {
+    lat: offset.lat,
+    lng: offset.lng,
+    address: formatDisplayAddress(persona, city),
+    hasExactGps: false,
+  };
 }
 
 export function solveTSP<T extends { lat: number; lng: number }>(start: [number, number], targets: T[]): T[] {
@@ -182,46 +207,11 @@ export function solveTSP<T extends { lat: number; lng: number }>(start: [number,
 }
 
 export async function fetchOSRMRoute(points: [number, number][]): Promise<[number, number][]> {
-  if (points.length < 2) return points;
-  try {
-    const coordinatesStr = points.map(p => `${p[1]},${p[0]}`).join(';');
-    const url = `https://router.project-osrm.org/route/v1/driving/${coordinatesStr}?overview=full&geometries=geojson`;
-    const response = await fetch(url);
-    if (!response.ok) throw new Error('Error en API OSRM');
-    const data = await response.json();
-    if (data.code === 'Ok' && data.routes && data.routes[0]) {
-      const coords = data.routes[0].geometry.coordinates;
-      return coords.map((c: [number, number]) => [c[1], c[0]]);
-    }
-  } catch (error) {
-    console.error('Error al obtener la ruta de OSRM, usando líneas rectas:', error);
-  }
   return points;
 }
 
 export const loadGoogleMapsScript = (apiKey: string, callback: () => void) => {
-  if ((window as any).google && (window as any).google.maps) {
-    callback();
-    return;
-  }
-  const id = 'google-maps-js';
-  const existingScript = document.getElementById(id);
-  if (existingScript) {
-    const interval = setInterval(() => {
-      if ((window as any).google && (window as any).google.maps) {
-        clearInterval(interval);
-        callback();
-      }
-    }, 100);
-    return;
-  }
-  const script = document.createElement('script');
-  script.id = id;
-  script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=geometry`;
-  script.async = true;
-  script.defer = true;
-  script.onload = () => {
-    if (callback) callback();
-  };
-  document.head.appendChild(script);
+  loadOfficialGoogleMaps(apiKey)
+    .then(() => callback())
+    .catch(() => {});
 };
