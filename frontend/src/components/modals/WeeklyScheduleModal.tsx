@@ -34,6 +34,16 @@ const WEEK_FILTERS = [
   { id: 'ALL', label: 'Todas' },
 ];
 
+const DAY_LABELS: Record<string, string> = {
+  LUNES: 'Lunes',
+  MARTES: 'Martes',
+  MIERCOLES: 'Miércoles',
+  JUEVES: 'Jueves',
+  VIERNES: 'Viernes',
+  SABADO: 'Sábado',
+  DOMINGO: 'Domingo',
+};
+
 export default function WeeklyScheduleModal({
   isOpen,
   onClose,
@@ -135,9 +145,23 @@ export default function WeeklyScheduleModal({
     }
   };
 
+  const showWeekColumn = selectedWeekFilter === 'ALL';
+
   return (
-    <NativeModalDialog isOpen={isOpen} onClose={onClose} ariaLabelledBy="weekly-schedule-modal-title" style={{ width: '95vw', maxWidth: '840px', maxHeight: '90vh' }}>
-      <div style={{ padding: '16px 22px', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: 'var(--bg-light, #f9fafb)' }}>
+    <NativeModalDialog
+      isOpen={isOpen}
+      onClose={onClose}
+      ariaLabelledBy="weekly-schedule-modal-title"
+      style={{
+        width: '96vw',
+        maxWidth: '1140px',
+        maxHeight: '90vh',
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
+      }}
+    >
+      <div style={{ padding: '16px 24px', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: 'var(--bg-light, #f9fafb)', flexShrink: 0 }}>
         <h2 id="weekly-schedule-modal-title" style={{ fontSize: '1.05rem', fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>
           Cronograma semanal
         </h2>
@@ -146,7 +170,7 @@ export default function WeeklyScheduleModal({
         </button>
       </div>
 
-      <div style={{ padding: '12px 22px', backgroundColor: 'var(--bg-card, #ffffff)', borderBottom: '1px solid var(--border-color)', display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
+      <div style={{ padding: '12px 24px', backgroundColor: 'var(--bg-card, #ffffff)', borderBottom: '1px solid var(--border-color)', display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '10px', flexShrink: 0 }}>
         <div style={{ display: 'flex', gap: '4px', backgroundColor: 'var(--bg-light, #f3f4f6)', padding: '3px', borderRadius: '8px' }}>
           {WEEK_FILTERS.map((f) => {
             const active = selectedWeekFilter === f.id;
@@ -197,23 +221,25 @@ export default function WeeklyScheduleModal({
         </div>
       )}
 
-      <div style={{ padding: '16px 22px', overflowY: 'auto', flex: 1 }}>
+      <div style={{ padding: '16px 24px', overflowY: 'auto', flex: 1, minHeight: 0 }}>
         {isEditing ? (
           <WeeklyScheduleForm form={form} setForm={setForm} editingId={editingId} loading={loading} onCancel={() => setIsEditing(false)} onSubmit={handleSubmit} />
         ) : filteredItems.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '32px 16px', color: 'var(--text-secondary)', fontSize: '0.88rem' }}>Sin entradas</div>
         ) : (
           <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.84rem' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
               <thead>
-                <tr style={{ backgroundColor: 'var(--bg-light, #f9fafb)', borderBottom: '1px solid var(--border-color)', textAlign: 'left' }}>
-                  <th style={{ padding: '10px 12px', fontWeight: 600 }}>Semana</th>
-                  <th style={{ padding: '10px 12px', fontWeight: 600 }}>Día</th>
-                  <th style={{ padding: '10px 12px', fontWeight: 600 }}>Actividad</th>
-                  <th style={{ padding: '10px 12px', fontWeight: 600 }}>Responsable</th>
-                  <th style={{ padding: '10px 12px', fontWeight: 600 }}>Localidad</th>
-                  <th style={{ padding: '10px 12px', fontWeight: 600 }}>Notas</th>
-                  <th style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 600 }}></th>
+                <tr style={{ backgroundColor: 'var(--bg-light, #f9fafb)', borderBottom: '1px solid var(--border-color)', textAlign: 'left', color: 'var(--text-secondary)', fontSize: '0.78rem' }}>
+                  {showWeekColumn && <th scope="col" style={{ padding: '10px 12px', fontWeight: 600 }}>Semana</th>}
+                  <th scope="col" style={{ padding: '10px 12px', fontWeight: 600 }}>Día</th>
+                  <th scope="col" style={{ padding: '10px 12px', fontWeight: 600 }}>Actividad</th>
+                  <th scope="col" style={{ padding: '10px 12px', fontWeight: 600 }}>Responsable</th>
+                  <th scope="col" style={{ padding: '10px 12px', fontWeight: 600 }}>Localidad</th>
+                  <th scope="col" style={{ padding: '10px 12px', fontWeight: 600 }}>Notas</th>
+                  <th scope="col" style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 600 }}>
+                    <span className="visually-hidden">Acciones</span>
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -221,21 +247,29 @@ export default function WeeklyScheduleModal({
                   const actInfo = ACTIVITY_TYPES.find((a) => a.value === item.activityType) || ACTIVITY_TYPES[0];
                   return (
                     <tr key={item.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
-                      <td style={{ padding: '10px 12px', whiteSpace: 'nowrap' }}>
-                        {item.weekType === 'SEMANA_1' ? 'Semana 1' : item.weekType === 'SEMANA_2' ? 'Semana 2' : 'Todas'}
+                      {showWeekColumn && (
+                        <td style={{ padding: '11px 12px', whiteSpace: 'nowrap', color: 'var(--text-secondary)' }}>
+                          {item.weekType === 'SEMANA_1' ? 'Semana 1' : item.weekType === 'SEMANA_2' ? 'Semana 2' : 'Todas'}
+                        </td>
+                      )}
+                      <td style={{ padding: '11px 12px', fontWeight: 600, whiteSpace: 'nowrap', color: 'var(--text-primary)' }}>
+                        {DAY_LABELS[item.dayOfWeek] || item.dayOfWeek}
                       </td>
-                      <td style={{ padding: '10px 12px', fontWeight: 600 }}>{item.dayOfWeek}</td>
-                      <td style={{ padding: '10px 12px' }}>
-                        <span style={{ padding: '3px 8px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 600, backgroundColor: actInfo.bg, color: actInfo.color }}>
+                      <td style={{ padding: '11px 12px', whiteSpace: 'nowrap' }}>
+                        <span style={{ padding: '3px 9px', borderRadius: '5px', fontSize: '0.75rem', fontWeight: 600, backgroundColor: actInfo.bg, color: actInfo.color }}>
                           {actInfo.label}
                         </span>
                       </td>
-                      <td style={{ padding: '10px 12px', color: 'var(--text-secondary)' }}>{item.sellerName || '-'}</td>
-                      <td style={{ padding: '10px 12px', fontWeight: 600 }}>{item.location}</td>
-                      <td style={{ padding: '10px 12px', color: 'var(--text-secondary)', maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <td style={{ padding: '11px 12px', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+                        {item.sellerName || '-'}
+                      </td>
+                      <td style={{ padding: '11px 12px', fontWeight: 600, color: 'var(--text-primary)' }}>
+                        {item.location}
+                      </td>
+                      <td style={{ padding: '11px 12px', color: 'var(--text-secondary)' }}>
                         {item.description || '-'}
                       </td>
-                      <td style={{ padding: '10px 12px', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                      <td style={{ padding: '11px 12px', textAlign: 'right', whiteSpace: 'nowrap' }}>
                         <button type="button" aria-label={`Editar ${item.location}`} onClick={() => handleOpenEdit(item)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', marginRight: '8px', padding: '4px' }}>
                           <Edit2 size={15} aria-hidden="true" />
                         </button>
@@ -252,7 +286,7 @@ export default function WeeklyScheduleModal({
         )}
       </div>
 
-      <div style={{ padding: '12px 22px', borderTop: '1px solid var(--border-color)', display: 'flex', justifyContent: 'flex-end', backgroundColor: 'var(--bg-light, #f9fafb)' }}>
+      <div style={{ padding: '12px 24px', borderTop: '1px solid var(--border-color)', display: 'flex', justifyContent: 'flex-end', backgroundColor: 'var(--bg-light, #f9fafb)', flexShrink: 0 }}>
         <button type="button" className="btn btn-secondary" onClick={onClose}>Cerrar</button>
       </div>
     </NativeModalDialog>
