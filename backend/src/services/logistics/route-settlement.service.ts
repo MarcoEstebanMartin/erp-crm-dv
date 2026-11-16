@@ -159,6 +159,7 @@ export const routeSettlementService = {
             where: { id: order.id },
             data: {
               status: OrderStatus.DELIVERED,
+              deliveredAt: new Date(),
               invoiceType: finalInvoiceType,
               invoiceNumber: finalInvoiceNumber,
               cae: finalCae,
@@ -176,6 +177,11 @@ export const routeSettlementService = {
             userId: input.userId,
             reference: `Pedido #${order.id}`,
             description: `Factura ${order.invoiceNumber || finalInvoiceNumber} (Reparto Ruta #${route.id})`,
+          });
+        } else if (order.status === OrderStatus.DELIVERED && !order.deliveredAt) {
+          await tx.order.update({
+            where: { id: order.id },
+            data: { deliveredAt: new Date() },
           });
         }
 

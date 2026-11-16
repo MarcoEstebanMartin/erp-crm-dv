@@ -2,6 +2,7 @@ import prisma from '../utils/prisma';
 import {
   Role,
   BillingType,
+  DeliveryMethod,
   InvoiceType,
   OrderStatus,
   MovementType,
@@ -13,6 +14,8 @@ import { logAudit } from '../utils/audit';
 import { PricingService } from './pricing.service';
 import { PersonaService } from './persona.service';
 import { lockProductsForUpdate } from '../utils/db-locks.util';
+import { resolveDefaultDeliveryMethod } from '../engines/delivery-dispatch.engine';
+import { reserveStopSlotOnPendingRouteInTx } from './logistics/delivery-route-stops.helper';
 import {
   roundToIntegerPeso,
   roundToThreeDecimalsWeight,
@@ -39,6 +42,9 @@ export interface CreateDirectInvoiceDto {
   personaId: number;
   billingType: BillingType;
   salesChannel?: SalesChannel;
+  deliveryMethod?: DeliveryMethod;
+  deliveryRouteId?: number | null;
+  markDelivered?: boolean;
   paymentMethod?: PaymentMethod;
   bankAccountId?: number;
   cashDrawerId?: number;
@@ -211,12 +217,21 @@ export class DirectInvoiceService {
       finalCaeDueDate = afipRes.caeDueDate;
     }
 
+    const resolvedDeliveryMethod = resolveDefaultDeliveryMethod({
+      salesChannel,
+      isDirectCounterInvoice: true,
+      explicitMethod: data.deliveryMethod,
+    }) as DeliveryMethod;
+    const isPickup = resolvedDeliveryMethod === DeliveryMethod.PICKUP;
+
     const fiscalFields = {
       personaId,
       sellerId: adminId,
       status: OrderStatus.DELIVERED,
       billingType,
       salesChannel: salesChannel || SalesChannel.MOSTRADOR,
+      deliveryMethod: resolvedDeliveryMethod,
+      deliveredAt: isPickup && data.markDelivered !== false ? new Date() : null,
       totalAmount: totalSum,
       netAmount: roundFiscal(taxInfo.net),
       taxAmount: roundFiscal(taxInfo.tax),
@@ -241,7 +256,18 @@ export class DirectInvoiceService {
             `Stock insuficiente para "${prodName}" debido a una operación concurrente. Por favor reintente la venta.`,
         });
 
-        let order = await tx.order.create({ data: fiscalFields });
+        const slot =
+          !isPickup && data.deliveryRouteId
+            ? await reserveStopSlotOnPendingRouteInTx(tx, data.deliveryRouteId)
+            : { deliveryRouteId: null, deliverySequence: null };
+
+        let order = await tx.order.create({
+          data: {
+            ...fiscalFields,
+            deliveryRouteId: slot.deliveryRouteId,
+            deliverySequence: slot.deliverySequence,
+          },
+        });
         let resolvedInvoiceNumber = finalInvoiceNumber;
         if (!resolvedInvoiceNumber) {
           resolvedInvoiceNumber = `INT-${order.id.toString().padStart(5, '0')}`;

@@ -42,6 +42,11 @@ enum SalesChannel {
   TELEFONICO
 }
 
+enum DeliveryMethod {
+  DELIVERY
+  PICKUP
+}
+
 enum CreditNoteStatus {
   PENDING_APPROVAL
   APPROVED
@@ -260,8 +265,11 @@ model Order {
   // Relaciones
   items           OrderItem[]
   transactions    Transaction[]
-  deliveryRouteId Int?
-  deliveryRoute   DeliveryRoute? @relation(fields: [deliveryRouteId], references: [id], onDelete: SetNull)
+  deliveryMethod   DeliveryMethod @default(DELIVERY)
+  deliveryRouteId  Int?
+  deliveryRoute    DeliveryRoute? @relation(fields: [deliveryRouteId], references: [id], onDelete: SetNull)
+  deliverySequence Int?
+  deliveredAt      DateTime?
   creditNotes     CreditNote[]
   crmDraft        CrmOrderDraft?
   stockMovements  StockMovement[]
@@ -272,6 +280,7 @@ model Order {
   @@index([createdAt])
   @@index([status])
   @@index([deliveryRouteId])
+  @@index([deliveryMethod, deliveryRouteId, status])
   @@index([salesChannel])
   @@index([movementId])
   @@index([invoiceNumber])
@@ -526,7 +535,10 @@ model TaxWithholding {
 
 model DeliveryRoute {
   id                 Int      @id @default(autoincrement())
+  routeName          String?
   driverName         String
+  driverEmployeeId   Int?
+  driverEmployee     Employee? @relation("DriverDeliveryRoutes", fields: [driverEmployeeId], references: [id], onDelete: SetNull)
   companionName      String?
   vehiclePlate       String
   vehicleDescription String?
@@ -553,6 +565,8 @@ model DeliveryRoute {
   orders Order[]
 
   @@index([vehicleId])
+  @@index([driverEmployeeId])
+  @@index([status, date])
 }
 
 model RouteGpsPing {
@@ -1017,6 +1031,7 @@ model Employee {
   payrolls  Payroll[]
   vacations EmployeeVacation[]
   documents EmployeeDocument[]
+  drivenRoutes DeliveryRoute[] @relation("DriverDeliveryRoutes")
 
   @@index([position])
   @@index([department])

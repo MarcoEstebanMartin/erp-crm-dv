@@ -2,6 +2,12 @@ import { Prisma } from '@prisma/client';
 import prisma from '../../utils/prisma';
 import AppError from '../../utils/AppError';
 import { logAudit } from '../../utils/audit';
+import { normalizeStopSequences } from '../../engines/delivery-dispatch.engine';
+import { logisticsResourcesService } from './logistics-resources.service';
+import {
+  recalculatePendingRoutesInTx,
+  validateAndAssignStopsInTx,
+} from './delivery-route-stops.helper';
 
 export const SAFE_PERSONA_SELECT = {
   id: true, name: true, cuit: true, address: true, city: true, barrio: true,
@@ -13,17 +19,6 @@ export const SAFE_PERSONA_SELECT = {
   iibbAliquot: true, paymentTermDays: true, isActive: true, createdAt: true, updatedAt: true,
 } satisfies Prisma.PersonaSelect;
 
-const AUTHORIZED_DRIVERS = ['Agustin', 'Fabian', 'Matias', 'Miguel', 'Norberto'];
-
-const DEFAULT_VEHICLES = [
-  { plate: 'AB 919 WO', description: 'MERCEDES ACCELO 1016' },
-  { plate: 'AE 178 EC', description: 'MERCEDES ACCELO 815' },
-  { plate: 'FUL 385', description: 'MERCEDES 710' },
-  { plate: 'AI 148 CP', description: 'KYC MAMUT' },
-  { plate: 'AG 422 GS', description: 'PEUGEOT PARTNER BLANCA' },
-  { plate: 'AE 764 FE', description: 'PEUGEOT PARTNER' },
-];
-
 export interface GetDeliveryRoutesFilter {
   startDate?: string;
   endDate?: string;
@@ -32,7 +27,9 @@ export interface GetDeliveryRoutesFilter {
 
 export interface CreateDeliveryRouteInput {
   userId?: number;
-  driverName: string;
+  routeName?: string | null;
+  driverName?: string | null;
+  driverEmployeeId?: number | null;
   companionName?: string | null;
   vehiclePlate?: string | null;
   vehicleDescription?: string | null;
@@ -41,10 +38,23 @@ export interface CreateDeliveryRouteInput {
   orderIds: number[];
 }
 
+export interface UpdateDeliveryRouteInput {
+  routeId: number;
+  userId?: number;
+  routeName?: string | null;
+  driverName?: string;
+  driverEmployeeId?: number | null;
+  companionName?: string | null;
+  vehiclePlate?: string | null;
+  vehicleDescription?: string | null;
+  vehicleId?: number | null;
+  date?: string | null;
+  orderIds?: number[];
+}
+
 export const deliveryRouteService = {
   async getDeliveryRoutes(filters: GetDeliveryRoutesFilter) {
     const whereClause: Prisma.DeliveryRouteWhereInput = {};
-
     if (filters.startDate && filters.endDate) {
       whereClause.date = {
         gte: new Date(String(filters.startDate)),
@@ -58,7 +68,12 @@ export const deliveryRouteService = {
     return prisma.deliveryRoute.findMany({
       where: whereClause,
       include: {
+        vehicle: { select: { id: true, plate: true, brand: true, model: true, status: true } },
+        driverEmployee: {
+          select: { id: true, firstName: true, lastName: true, position: true, phone: true, userId: true },
+        },
         orders: {
+          orderBy: [{ deliverySequence: 'asc' }, { id: 'asc' }],
           include: {
             persona: { select: SAFE_PERSONA_SELECT },
             items: { include: { product: true } },
@@ -70,52 +85,54 @@ export const deliveryRouteService = {
   },
 
   async createDeliveryRoute(input: CreateDeliveryRouteInput) {
-    if (
-      !input.driverName ||
-      (!input.vehiclePlate && !input.vehicleId) ||
-      !Array.isArray(input.orderIds)
-    ) {
+    const hasDriver = Boolean((input.driverName && input.driverName.trim()) || input.driverEmployeeId);
+    const hasVehicle = Boolean((input.vehiclePlate && input.vehiclePlate.trim()) || input.vehicleId);
+    if (!hasDriver || !hasVehicle || !Array.isArray(input.orderIds)) {
       throw new AppError(
         'Chofer, patente (o vehículo de la flota) y listado de pedidos son obligatorios.',
         400,
       );
     }
 
-    let finalPlate = input.vehiclePlate ? String(input.vehiclePlate).trim() : '';
-    let finalDesc = input.vehicleDescription ? String(input.vehicleDescription).trim() : null;
-    let vId = input.vehicleId ? Number(input.vehicleId) : null;
-
-    if (vId) {
-      const dbVehicle = await prisma.vehicle.findUnique({ where: { id: vId } });
-      if (dbVehicle) {
-        if (!finalPlate) finalPlate = dbVehicle.plate;
-        if (!finalDesc) finalDesc = `${dbVehicle.brand} ${dbVehicle.model}`;
-      } else {
-        vId = null;
-      }
+    const resolved = await logisticsResourcesService.resolveRouteDriverAndVehicle(input);
+    if (!resolved.driverName || (!resolved.vehiclePlate && !resolved.vehicleId)) {
+      throw new AppError(
+        'Chofer, patente (o vehículo de la flota) y listado de pedidos son obligatorios.',
+        400,
+      );
     }
 
     const route = await prisma.$transaction(async (tx) => {
       const newRoute = await tx.deliveryRoute.create({
         data: {
-          driverName: input.driverName.trim(),
+          routeName: input.routeName ? String(input.routeName).trim() : null,
+          driverName: resolved.driverName,
+          driverEmployeeId: resolved.driverEmployeeId,
           companionName: input.companionName ? input.companionName.trim() : null,
-          vehiclePlate: finalPlate || '',
-          vehicleDescription: finalDesc || null,
-          vehicleId: vId,
+          vehiclePlate: resolved.vehiclePlate || '',
+          vehicleDescription: resolved.vehicleDescription || null,
+          vehicleId: resolved.vehicleId,
           date: input.date ? new Date(input.date) : new Date(),
           status: 'PENDING',
         },
       });
 
-      if (input.orderIds.length > 0) {
-        await tx.order.updateMany({
-          where: { id: { in: input.orderIds.map(Number) } },
-          data: { deliveryRouteId: newRoute.id },
-        });
-      }
+      const { totalBultos, sourceRouteIdsToRecalc } = await validateAndAssignStopsInTx(
+        tx,
+        newRoute.id,
+        'PENDING',
+        input.orderIds,
+      );
 
-      return newRoute;
+      const finalRoute =
+        totalBultos > 0
+          ? await tx.deliveryRoute.update({ where: { id: newRoute.id }, data: { totalBultos } })
+          : newRoute;
+
+      if (sourceRouteIdsToRecalc.length > 0) {
+        await recalculatePendingRoutesInTx(tx, sourceRouteIdsToRecalc);
+      }
+      return finalRoute;
     });
 
     if (input.userId) {
@@ -127,8 +144,100 @@ export const deliveryRouteService = {
         newValues: route,
       });
     }
-
     return route;
+  },
+
+  async updateDeliveryRoute(input: UpdateDeliveryRouteInput) {
+    const existing = await prisma.deliveryRoute.findUnique({
+      where: { id: input.routeId },
+      include: { orders: { select: { id: true } } },
+    });
+    if (!existing) throw new AppError('Hoja de ruta no encontrada.', 404);
+    if (existing.status !== 'PENDING') {
+      throw new AppError('Solo se pueden editar hojas de ruta en estado Pendiente.', 400);
+    }
+
+    const resolved = await logisticsResourcesService.resolveRouteDriverAndVehicle({
+      driverName: input.driverName !== undefined ? input.driverName : existing.driverName,
+      driverEmployeeId:
+        input.driverEmployeeId !== undefined ? input.driverEmployeeId : existing.driverEmployeeId,
+      vehicleId: input.vehicleId !== undefined ? input.vehicleId : existing.vehicleId,
+      vehiclePlate:
+        input.vehiclePlate !== undefined
+          ? input.vehiclePlate
+          : input.vehicleId !== undefined && input.vehicleId !== existing.vehicleId
+            ? ''
+            : existing.vehiclePlate,
+      vehicleDescription:
+        input.vehicleDescription !== undefined
+          ? input.vehicleDescription
+          : input.vehicleId !== undefined && input.vehicleId !== existing.vehicleId
+            ? null
+            : existing.vehicleDescription,
+    });
+
+    const updated = await prisma.$transaction(async (tx) => {
+      let nextTotalBultos = existing.totalBultos;
+      let sourceRoutesToRecalc: number[] = [];
+
+      if (Array.isArray(input.orderIds)) {
+        const nextIds = normalizeStopSequences(input.orderIds).map((s) => s.orderId);
+        const nextSet = new Set(nextIds);
+        const removedIds = existing.orders.map((o) => o.id).filter((id) => !nextSet.has(id));
+        if (removedIds.length > 0) {
+          await tx.order.updateMany({
+            where: { id: { in: removedIds }, deliveryRouteId: input.routeId },
+            data: { deliveryRouteId: null, deliverySequence: null },
+          });
+        }
+        const assigned = await validateAndAssignStopsInTx(
+          tx,
+          input.routeId,
+          existing.status,
+          nextIds,
+        );
+        nextTotalBultos = assigned.totalBultos;
+        sourceRoutesToRecalc = assigned.sourceRouteIdsToRecalc;
+      }
+
+      const route = await tx.deliveryRoute.update({
+        where: { id: input.routeId },
+        data: {
+          routeName:
+            input.routeName !== undefined ? (input.routeName ? input.routeName.trim() : null) : undefined,
+          driverName: resolved.driverName || existing.driverName,
+          driverEmployeeId: resolved.driverEmployeeId,
+          companionName:
+            input.companionName !== undefined
+              ? input.companionName
+                ? input.companionName.trim()
+                : null
+              : undefined,
+          vehicleId: resolved.vehicleId,
+          vehiclePlate: resolved.vehiclePlate,
+          vehicleDescription: resolved.vehicleDescription,
+          date: input.date ? new Date(input.date) : undefined,
+          totalBultos: nextTotalBultos,
+        },
+      });
+
+      if (sourceRoutesToRecalc.length > 0) {
+        await recalculatePendingRoutesInTx(tx, sourceRoutesToRecalc);
+      }
+      return route;
+    });
+
+    if (input.userId) {
+      await logAudit({
+        userId: input.userId,
+        action: 'UPDATE_DELIVERY_ROUTE',
+        entityType: 'DeliveryRoute',
+        entityId: updated.id,
+        oldValues: existing,
+        newValues: updated,
+      });
+    }
+    return updated;
   },
 
   async updateRouteStatus(routeId: number, status: string, userId?: number) {
@@ -146,10 +255,9 @@ export const deliveryRouteService = {
       if (status === 'COMPLETED' && updatedRoute.orders.length > 0) {
         await tx.order.updateMany({
           where: { deliveryRouteId: updatedRoute.id, status: { not: 'CANCELLED' } },
-          data: { status: 'DELIVERED' },
+          data: { status: 'DELIVERED', deliveredAt: new Date() },
         });
       }
-
       return updatedRoute;
     });
 
@@ -162,7 +270,6 @@ export const deliveryRouteService = {
         newValues: route,
       });
     }
-
     return route;
   },
 
@@ -180,7 +287,7 @@ export const deliveryRouteService = {
       if (route.orders.length > 0) {
         await tx.order.updateMany({
           where: { deliveryRouteId: routeId },
-          data: { deliveryRouteId: null },
+          data: { deliveryRouteId: null, deliverySequence: null },
         });
       }
       await tx.deliveryRoute.delete({ where: { id: routeId } });
@@ -198,25 +305,6 @@ export const deliveryRouteService = {
   },
 
   async getLogisticsResources() {
-    const pastRoutes = await prisma.deliveryRoute.findMany({
-      select: { driverName: true, vehiclePlate: true, vehicleDescription: true },
-    });
-
-    const vehicleMap = new Map<string, string>();
-    DEFAULT_VEHICLES.forEach((v) => vehicleMap.set(v.plate.toUpperCase(), v.description));
-    pastRoutes.forEach((r) => {
-      if (r.vehiclePlate) {
-        const plate = r.vehiclePlate.trim().toUpperCase();
-        if (!vehicleMap.has(plate)) {
-          vehicleMap.set(plate, r.vehicleDescription?.trim() || '');
-        }
-      }
-    });
-
-    const vehicles = Array.from(vehicleMap.entries())
-      .map(([plate, description]) => ({ plate, description }))
-      .sort((a, b) => a.plate.localeCompare(b.plate));
-
-    return { drivers: AUTHORIZED_DRIVERS, vehicles };
+    return logisticsResourcesService.getLogisticsResources();
   },
 };

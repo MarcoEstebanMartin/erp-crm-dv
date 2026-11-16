@@ -1,4 +1,4 @@
-import { BillingType, InvoiceType, OrderStatus, PaymentMethod, Prisma } from '@prisma/client';
+import { BillingType, DeliveryMethod, InvoiceType, OrderStatus, PaymentMethod, Prisma } from '@prisma/client';
 import { roundToIntegerPeso, roundToTwoDecimals } from '../../core/money';
 import { recordInvoicePerceptions, settleOrderFinancials } from './order-tax.helpers';
 import { reassignSplitStockMovements } from './order-billing.helpers';
@@ -66,6 +66,8 @@ export async function executeInvoiceOrderSettlementTx(
     };
     activeDrawerId?: number;
     selectedBankId?: number;
+    deliveryMethod?: DeliveryMethod;
+    markPickedUp?: boolean;
   },
 ): Promise<{ updatedOrder: any; split: boolean; internalOrderId: number | null; internalOrderTotal: number }> {
   const {
@@ -114,6 +116,18 @@ export async function executeInvoiceOrderSettlementTx(
   }
 
   let internalOrderId: number | null = null;
+  const effectiveDeliveryMethod: DeliveryMethod =
+    params.deliveryMethod ?? (order.deliveryMethod as DeliveryMethod) ?? DeliveryMethod.DELIVERY;
+  const isPickup = effectiveDeliveryMethod === DeliveryMethod.PICKUP;
+  const nextDeliveredAt = isPickup
+    ? params.markPickedUp === false
+      ? null
+      : params.markPickedUp === true
+        ? new Date()
+        : order.deliveredAt ?? null
+    : params.deliveryMethod === DeliveryMethod.DELIVERY
+      ? null
+      : undefined;
 
   if (splitApplied) {
     const internalOrder = await tx.order.create({
@@ -125,6 +139,10 @@ export async function executeInvoiceOrderSettlementTx(
         invoiceNumber: `INT-${order.id.toString().padStart(5, '0')}-X`,
         totalAmount: internalOrderTotal,
         status: OrderStatus.DELIVERED,
+        deliveryMethod: effectiveDeliveryMethod,
+        deliveryRouteId: isPickup ? null : order.deliveryRouteId ?? null,
+        deliverySequence: isPickup ? null : order.deliverySequence ?? null,
+        deliveredAt: nextDeliveredAt ?? order.deliveredAt ?? null,
       },
     });
     internalOrderId = internalOrder.id;
@@ -236,6 +254,13 @@ export async function executeInvoiceOrderSettlementTx(
       percepcionAmount: roundFiscal(taxInfo.percepIIBB),
       percepcionIvaAmount: roundFiscal(taxInfo.percepIVA),
       status: OrderStatus.DELIVERED,
+      ...(params.deliveryMethod !== undefined
+        ? {
+            deliveryMethod: effectiveDeliveryMethod,
+            ...(isPickup ? { deliveryRouteId: null, deliverySequence: null } : {}),
+          }
+        : {}),
+      ...(nextDeliveredAt !== undefined ? { deliveredAt: nextDeliveredAt } : {}),
     },
     include: { items: { include: { product: true, orderItemLots: true } }, persona: true },
   });

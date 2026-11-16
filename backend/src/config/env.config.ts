@@ -17,6 +17,7 @@ export interface EnvConfig {
   ALLOW_PRODUCTION_CATALOG_WRITE: boolean;
   WHATSAPP_ENABLED: boolean;
   ENABLE_EMBEDDED_STORE: boolean;
+  GOOGLE_MAPS_API_KEY?: string;
 }
 
 export function parseTrustProxy(rawValue?: string): TrustProxySetting {
@@ -97,6 +98,9 @@ export function validateEnvConfig(sourceEnv: NodeJS.ProcessEnv = process.env): E
     ALLOW_PRODUCTION_CATALOG_WRITE: sourceEnv.ALLOW_PRODUCTION_CATALOG_WRITE === 'true',
     WHATSAPP_ENABLED: sourceEnv.WHATSAPP_ENABLED === 'true',
     ENABLE_EMBEDDED_STORE: enableEmbeddedStore,
+    GOOGLE_MAPS_API_KEY:
+      (sourceEnv.GOOGLE_MAPS_API_KEY || sourceEnv.VITE_GOOGLE_MAPS_API_KEY || '').trim() ||
+      undefined,
   };
 }
 

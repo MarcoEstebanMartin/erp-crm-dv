@@ -3,6 +3,7 @@ import { Role } from '@prisma/client';
 import {
   getDeliveryRoutes,
   createDeliveryRoute,
+  updateDeliveryRoute,
   updateRouteStatus,
   settleDeliveryRoute,
   deleteDeliveryRoute,
@@ -20,6 +21,7 @@ import {
   routeIdParamSchema,
   settleDeliveryRouteSchema,
   transferRouteCustodySchema,
+  updateDeliveryRouteSchema,
   updateRouteStatusSchema,
 } from '../validators/logistics.validator';
 
@@ -33,6 +35,13 @@ const canSettleOrDeleteRoutes = requireRole([Role.ADMIN, Role.FACTURACION]);
 router.get('/resources', getLogisticsResources);
 router.get('/', getDeliveryRoutes);
 router.post('/', canManageRoutes, validateRequest(createDeliveryRouteSchema), idempotencyGuard, createDeliveryRoute);
+router.patch(
+  '/:id',
+  canManageRoutes,
+  validateRequest(updateDeliveryRouteSchema),
+  idempotencyGuard,
+  updateDeliveryRoute,
+);
 router.patch('/:id/status', validateRequest(updateRouteStatusSchema), updateRouteStatus);
 router.post('/:id/custody', validateRequest(transferRouteCustodySchema), transferRouteCustody);
 router.post(

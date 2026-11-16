@@ -1,5 +1,5 @@
 import prisma from '../../utils/prisma';
-import { Role, BillingType, OrderStatus, PaymentMethod } from '@prisma/client';
+import { Role, BillingType, DeliveryMethod, OrderStatus, PaymentMethod } from '@prisma/client';
 import { logAudit } from '../../utils/audit';
 import { roundToIntegerPeso, roundToTwoDecimals, sumIntegerAmounts } from '../../core/money';
 import { computeInvoiceTaxBreakdown } from './order-tax.helpers';
@@ -21,6 +21,8 @@ export interface InvoiceOrderDto {
   paymentDescription?: string;
   bankAccountId?: number;
   deferCae?: boolean;
+  deliveryMethod?: DeliveryMethod;
+  markPickedUp?: boolean;
 }
 
 const activeOrderBillingLocks = new Map<number, Promise<any>>();
@@ -182,6 +184,8 @@ export class OrderBillingService {
             taxInfo,
             activeDrawerId,
             selectedBankId,
+            deliveryMethod: data.deliveryMethod,
+            markPickedUp: data.markPickedUp,
           }),
         );
 

@@ -1,5 +1,5 @@
 import prisma from '../../utils/prisma';
-import { Role, BillingType, OrderStatus } from '@prisma/client';
+import { Role, BillingType, DeliveryMethod, OrderStatus } from '@prisma/client';
 
 export interface GetOrdersQuery {
   userId: number;
@@ -7,6 +7,9 @@ export interface GetOrdersQuery {
   billingType?: string;
   status?: string;
   statusGroup?: string;
+  deliveryMethod?: string;
+  deliveryRouteId?: string;
+  dispatchQueue?: string;
   search?: string;
   page?: string;
   limit?: string;
@@ -43,6 +46,15 @@ export function buildOrderStatusGroupWhere(statusGroup?: string): Record<string,
       return { deliveryRoute: { is: { status: 'IN_TRANSIT' } } };
     case 'ENTREGADO':
       return { status: OrderStatus.DELIVERED };
+    case 'RETIRO_LOCAL':
+      return { deliveryMethod: DeliveryMethod.PICKUP, status: { not: OrderStatus.CANCELLED } };
+    case 'SIN_VIAJE':
+      return {
+        deliveryMethod: DeliveryMethod.DELIVERY,
+        deliveryRouteId: null,
+        deliveredAt: null,
+        status: { not: OrderStatus.CANCELLED },
+      };
     case 'CANCELADO':
       return { status: OrderStatus.CANCELLED };
     default:
@@ -125,7 +137,19 @@ export class OrderQueriesService {
    * - VENDEDOR: Solo ve los pedidos que él mismo cargó.
    */
   static async getOrders(query: GetOrdersQuery) {
-    const { userId, userRole, billingType, status, statusGroup, search, page, limit } = query;
+    const {
+      userId,
+      userRole,
+      billingType,
+      status,
+      statusGroup,
+      deliveryMethod,
+      deliveryRouteId,
+      dispatchQueue,
+      search,
+      page,
+      limit,
+    } = query;
     const andClauses: Record<string, any>[] = [];
 
     if (userRole === Role.VENDEDOR) {
@@ -136,6 +160,27 @@ export class OrderQueriesService {
     }
     if (status) {
       andClauses.push({ status: status as OrderStatus });
+    }
+    if (deliveryMethod) {
+      const dm = deliveryMethod.trim().toUpperCase();
+      if (dm === DeliveryMethod.DELIVERY || dm === DeliveryMethod.PICKUP) {
+        andClauses.push({ deliveryMethod: dm as DeliveryMethod });
+      }
+    }
+    if (deliveryRouteId) {
+      const rId = parseInt(deliveryRouteId, 10);
+      if (Number.isInteger(rId) && rId > 0) {
+        andClauses.push({ deliveryRouteId: rId });
+      }
+    }
+    if (dispatchQueue === 'true') {
+      andClauses.push({
+        deliveryMethod: DeliveryMethod.DELIVERY,
+        deliveryRouteId: null,
+        deliveredAt: null,
+        status: { not: OrderStatus.CANCELLED },
+        OR: [{ status: OrderStatus.PREPARED }, { invoiceNumber: { not: null } }],
+      });
     }
 
     const groupWhere = buildOrderStatusGroupWhere(statusGroup);
@@ -167,8 +212,11 @@ export class OrderQueriesService {
               name: true,
               cuit: true,
               city: true,
+              barrio: true,
               route: true,
               address: true,
+              latitude: true,
+              longitude: true,
               phone: true,
               province: true,
               priceList: true,
@@ -182,7 +230,15 @@ export class OrderQueriesService {
             select: { id: true, username: true },
           },
           deliveryRoute: {
-            select: { id: true, status: true, driverName: true, vehiclePlate: true },
+            select: {
+              id: true,
+              routeName: true,
+              status: true,
+              driverName: true,
+              vehiclePlate: true,
+              date: true,
+              custodyStatus: true,
+            },
           },
           items: {
             include: {
@@ -230,7 +286,15 @@ export class OrderQueriesService {
         persona: true,
         seller: { select: { id: true, username: true } },
         deliveryRoute: {
-          select: { id: true, status: true, driverName: true, vehiclePlate: true },
+          select: {
+            id: true,
+            routeName: true,
+            status: true,
+            driverName: true,
+            vehiclePlate: true,
+            date: true,
+            custodyStatus: true,
+          },
         },
         items: {
           include: {

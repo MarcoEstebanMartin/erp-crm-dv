@@ -1,9 +1,19 @@
 import prisma from '../utils/prisma';
-import { Role, BillingType, InvoiceType, OrderStatus, MovementType, SalesChannel } from '@prisma/client';
+import {
+  Role,
+  BillingType,
+  DeliveryMethod,
+  InvoiceType,
+  OrderStatus,
+  MovementType,
+  SalesChannel,
+} from '@prisma/client';
 import { PricingService } from './pricing.service';
 import { PersonaService } from './persona.service';
 import { OrderScaleService } from './orders/order-scale.service';
 import { roundToIntegerPeso } from '../core/money';
+import { resolveDefaultDeliveryMethod } from '../engines/delivery-dispatch.engine';
+import { reserveStopSlotOnPendingRouteInTx } from './logistics/delivery-route-stops.helper';
 import { type CartBasePricingInfo } from '../engines/weekly-promos.engine';
 import {
   decrementStockByProductMapInTx,
@@ -19,6 +29,8 @@ export interface CreateOrderDto {
   personaId: number;
   billingType?: BillingType;
   salesChannel?: SalesChannel;
+  deliveryMethod?: DeliveryMethod;
+  deliveryRouteId?: number | null;
   notes?: string;
   items: { productId: number; quantity: number; weight?: number; isEmergencyOverride?: boolean }[];
   idempotencyKey?: string;
@@ -160,6 +172,17 @@ export class OrderService {
         }
       }
 
+      const resolvedDeliveryMethod = resolveDefaultDeliveryMethod({
+        salesChannel,
+        isDirectCounterInvoice: false,
+        explicitMethod: data.deliveryMethod,
+      }) as DeliveryMethod;
+
+      const slot =
+        resolvedDeliveryMethod === DeliveryMethod.DELIVERY && data.deliveryRouteId
+          ? await reserveStopSlotOnPendingRouteInTx(tx, data.deliveryRouteId)
+          : { deliveryRouteId: null, deliverySequence: null };
+
       const order = await tx.order.create({
         data: {
           personaId,
@@ -167,6 +190,9 @@ export class OrderService {
           billingType: billingType || BillingType.INTERNAL,
           invoiceType: InvoiceType.PRESUPUESTO,
           salesChannel: salesChannel || SalesChannel.MOSTRADOR,
+          deliveryMethod: resolvedDeliveryMethod,
+          deliveryRouteId: slot.deliveryRouteId,
+          deliverySequence: slot.deliverySequence,
           notes: notes ? notes.trim() : undefined,
           totalAmount: totalSum,
           status: OrderStatus.PENDING,

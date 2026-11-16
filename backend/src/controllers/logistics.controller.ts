@@ -34,7 +34,11 @@ export async function createDeliveryRoute(req: AuthenticatedRequest, res: Respon
   try {
     const route = await deliveryRouteService.createDeliveryRoute({
       userId: req.user?.id,
+      routeName: req.body.routeName,
       driverName: req.body.driverName,
+      driverEmployeeId: req.body.driverEmployeeId
+        ? parseInt(String(req.body.driverEmployeeId), 10)
+        : null,
       companionName: req.body.companionName,
       vehiclePlate: req.body.vehiclePlate,
       vehicleDescription: req.body.vehicleDescription,
@@ -45,6 +49,37 @@ export async function createDeliveryRoute(req: AuthenticatedRequest, res: Respon
     res.status(201).json({ status: 'success', data: { route } });
   } catch (error) {
     handleLogisticsError(res, error, 'Error al crear la hoja de ruta de reparto.');
+  }
+}
+
+export async function updateDeliveryRoute(req: AuthenticatedRequest, res: Response): Promise<void> {
+  try {
+    const route = await deliveryRouteService.updateDeliveryRoute({
+      routeId: parseInt(String(req.params.id), 10),
+      userId: req.user?.id,
+      routeName: req.body.routeName,
+      driverName: req.body.driverName,
+      driverEmployeeId:
+        req.body.driverEmployeeId !== undefined
+          ? req.body.driverEmployeeId === null
+            ? null
+            : parseInt(String(req.body.driverEmployeeId), 10)
+          : undefined,
+      companionName: req.body.companionName,
+      vehiclePlate: req.body.vehiclePlate,
+      vehicleDescription: req.body.vehicleDescription,
+      vehicleId:
+        req.body.vehicleId !== undefined
+          ? req.body.vehicleId === null
+            ? null
+            : parseInt(String(req.body.vehicleId), 10)
+          : undefined,
+      date: req.body.date,
+      orderIds: req.body.orderIds,
+    });
+    res.status(200).json({ status: 'success', data: { route } });
+  } catch (error) {
+    handleLogisticsError(res, error, 'Error al actualizar la hoja de ruta de reparto.');
   }
 }
 

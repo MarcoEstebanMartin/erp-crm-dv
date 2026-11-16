@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { BillingType, OrderStatus, PaymentMethod, SalesChannel } from '@prisma/client';
+import { BillingType, DeliveryMethod, OrderStatus, PaymentMethod, SalesChannel } from '@prisma/client';
 
 const positiveIdParamsSchema = z.object({
   id: z.string().regex(/^\d+$/, 'ID de pedido inválido'),
@@ -19,6 +19,8 @@ export const createOrderSchema = z.object({
       clientId: z.number().int().positive().optional(),
       billingType: z.nativeEnum(BillingType).optional(),
       salesChannel: z.nativeEnum(SalesChannel).optional(),
+      deliveryMethod: z.nativeEnum(DeliveryMethod).optional(),
+      deliveryRouteId: z.number().int().positive().nullable().optional(),
       notes: z.string().max(1000).nullable().optional(),
       items: z.array(orderItemInputSchema).min(1, 'El pedido debe tener al menos un item'),
     })
@@ -63,6 +65,8 @@ export const invoiceOrderSchema = z.object({
     paymentDescription: z.string().max(500).nullable().optional(),
     bankAccountId: z.number().int().positive().nullable().optional(),
     deferCae: z.boolean().optional(),
+    markPickedUp: z.boolean().optional(),
+    deliveryMethod: z.nativeEnum(DeliveryMethod).optional(),
   }),
 });
 
@@ -71,6 +75,9 @@ export const createDirectInvoiceSchema = z.object({
     personaId: z.number().int().positive('El cliente es requerido'),
     billingType: z.nativeEnum(BillingType).optional(),
     salesChannel: z.nativeEnum(SalesChannel).optional(),
+    deliveryMethod: z.nativeEnum(DeliveryMethod).optional(),
+    deliveryRouteId: z.number().int().positive().nullable().optional(),
+    markDelivered: z.boolean().optional(),
     paymentMethod: z.nativeEnum(PaymentMethod).optional(),
     paymentDescription: z.string().max(500).nullable().optional(),
     bankAccountId: z.number().int().positive().nullable().optional(),
@@ -124,4 +131,22 @@ export const confirmArmadoSchema = z.object({
         .optional(),
     })
     .optional(),
+});
+
+export const updateOrderDeliverySchema = z.object({
+  params: positiveIdParamsSchema,
+  body: z.object({
+    deliveryMethod: z.nativeEnum(DeliveryMethod),
+    deliveryRouteId: z.number().int().positive().nullable().optional(),
+    deliverySequence: z.number().int().positive().nullable().optional(),
+    markPickedUp: z.boolean().optional(),
+  }),
+});
+
+export const bulkUpdateOrdersDeliverySchema = z.object({
+  body: z.object({
+    orderIds: z.array(z.coerce.number().int().positive()).min(1, 'Seleccione al menos un pedido.').max(200),
+    deliveryMethod: z.nativeEnum(DeliveryMethod),
+    deliveryRouteId: z.number().int().positive().nullable().optional(),
+  }),
 });

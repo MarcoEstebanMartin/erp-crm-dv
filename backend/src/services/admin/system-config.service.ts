@@ -19,6 +19,7 @@ export interface SystemConfigSnapshot {
   ignoreStock: boolean;
   afipProduction: boolean;
   afipMockMode?: boolean;
+  googleMapsApiKey?: string;
   company: CompanyProfile;
 }
 
@@ -152,11 +153,19 @@ export async function getSystemConfigSnapshot(options?: {
   let afipMockMode = envAfipMock;
   let afipProduction = (process.env.AFIP_PRODUCTION === 'true' || env.AFIP_PRODUCTION) && !afipMockMode;
 
+  const googleMapsApiKey = (
+    env.GOOGLE_MAPS_API_KEY ||
+    process.env.GOOGLE_MAPS_API_KEY ||
+    process.env.VITE_GOOGLE_MAPS_API_KEY ||
+    ''
+  ).trim();
+  const mapsField = googleMapsApiKey ? { googleMapsApiKey } : {};
+
   let company: CompanyProfile = { ...DEFAULT_COMPANY_PROFILE };
   let ignoreStock = envIgnoreStock;
 
   if (!canQuerySystemSetting('findMany')) {
-    return { ignoreStock, afipProduction, afipMockMode, company };
+    return { ignoreStock, afipProduction, afipMockMode, ...mapsField, company };
   }
 
   try {
@@ -182,12 +191,18 @@ export async function getSystemConfigSnapshot(options?: {
     }
 
     afipProduction = (process.env.AFIP_PRODUCTION === 'true' || env.AFIP_PRODUCTION) && !afipMockMode;
-    const snapshot: SystemConfigSnapshot = { ignoreStock, afipProduction, afipMockMode, company };
+    const snapshot: SystemConfigSnapshot = {
+      ignoreStock,
+      afipProduction,
+      afipMockMode,
+      ...mapsField,
+      company,
+    };
     cachedSnapshot = { data: snapshot, expiresAt: Date.now() + CONFIG_CACHE_TTL_MS };
     return snapshot;
   } catch (err) {
     console.warn('⚠️ No se pudo leer SystemSetting desde DB, usando perfil oficial por defecto:', err);
-    return { ignoreStock, afipProduction, afipMockMode, company };
+    return { ignoreStock, afipProduction, afipMockMode, ...mapsField, company };
   }
 }
 
@@ -275,11 +290,18 @@ export async function updateSystemConfig(
 
   const nextAfipProduction =
     (process.env.AFIP_PRODUCTION === 'true' || env.AFIP_PRODUCTION) && !nextAfipMock;
+  const googleMapsApiKey = (
+    env.GOOGLE_MAPS_API_KEY ||
+    process.env.GOOGLE_MAPS_API_KEY ||
+    process.env.VITE_GOOGLE_MAPS_API_KEY ||
+    ''
+  ).trim();
 
   const nextSnapshot: SystemConfigSnapshot = {
     ignoreStock: nextIgnoreStock,
     afipProduction: nextAfipProduction,
     afipMockMode: nextAfipMock,
+    ...(googleMapsApiKey ? { googleMapsApiKey } : {}),
     company: nextCompany,
   };
   cachedSnapshot = { data: nextSnapshot, expiresAt: Date.now() + CONFIG_CACHE_TTL_MS };

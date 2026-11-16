@@ -81,6 +81,12 @@ export async function getOrders(req: AuthenticatedRequest, res: Response): Promi
       billingType: req.query.billingType as string | undefined,
       status: rawStatus,
       statusGroup: typeof req.query.statusGroup === 'string' ? req.query.statusGroup.trim() : undefined,
+      deliveryMethod:
+        typeof req.query.deliveryMethod === 'string' ? req.query.deliveryMethod.trim() : undefined,
+      deliveryRouteId:
+        typeof req.query.deliveryRouteId === 'string' ? req.query.deliveryRouteId.trim() : undefined,
+      dispatchQueue:
+        typeof req.query.dispatchQueue === 'string' ? req.query.dispatchQueue.trim() : undefined,
       search: typeof req.query.search === 'string' ? req.query.search.trim() : undefined,
       page: req.query.page as string | undefined,
       limit: req.query.limit as string | undefined,
@@ -107,7 +113,16 @@ export async function createOrder(req: AuthenticatedRequest, res: Response): Pro
   const actor = requireOrderActor(req, res);
   if (!actor) return;
 
-  const { personaId, clientId, billingType, salesChannel, notes, items } = req.body;
+  const {
+    personaId,
+    clientId,
+    billingType,
+    salesChannel,
+    deliveryMethod,
+    deliveryRouteId,
+    notes,
+    items,
+  } = req.body;
   const targetPersonaId = personaId || clientId;
   if (!targetPersonaId) {
     res.status(400).json({ status: 'error', message: 'Debe especificar el cliente (personaId o clientId).' });
@@ -121,6 +136,8 @@ export async function createOrder(req: AuthenticatedRequest, res: Response): Pro
       personaId: targetPersonaId,
       billingType,
       salesChannel,
+      deliveryMethod,
+      deliveryRouteId,
       notes,
       items,
     });
@@ -214,6 +231,8 @@ export async function invoiceOrder(req: AuthenticatedRequest, res: Response): Pr
       paymentDescription: req.body.paymentDescription,
       bankAccountId: req.body.bankAccountId,
       deferCae: req.body.deferCae,
+      deliveryMethod: req.body.deliveryMethod,
+      markPickedUp: req.body.markPickedUp,
     });
     res.status(200).json({ status: 'success', data });
   } catch (error: any) {

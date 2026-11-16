@@ -19,7 +19,9 @@ export const routeIdParamSchema = z.object({
 export const createDeliveryRouteSchema = z.object({
   body: z
     .object({
-      driverName: z.string().trim().min(1, 'El chofer es obligatorio.').max(120),
+      routeName: z.string().trim().max(120).optional().nullable(),
+      driverName: z.string().trim().max(120).optional().nullable(),
+      driverEmployeeId: optionalPositiveInt,
       companionName: z.string().max(120).optional().nullable(),
       vehiclePlate: z.string().max(30).optional().nullable(),
       vehicleDescription: z.string().max(200).optional().nullable(),
@@ -28,12 +30,40 @@ export const createDeliveryRouteSchema = z.object({
       orderIds: z.array(z.coerce.number().int().positive()),
     })
     .refine(
+      (data) => Boolean((data.driverName && data.driverName.trim().length > 0) || data.driverEmployeeId),
+      {
+        message: 'El chofer es obligatorio.',
+        path: ['driverName'],
+      },
+    )
+    .refine(
       (data) => Boolean((data.vehiclePlate && data.vehiclePlate.trim().length > 0) || data.vehicleId),
       {
         message: 'Chofer, patente (o vehículo de la flota) y listado de pedidos son obligatorios.',
         path: ['vehiclePlate'],
       },
     ),
+});
+
+export const updateDeliveryRouteSchema = z.object({
+  params: routeIdParamSchema.shape.params,
+  body: z.object({
+    routeName: z.string().trim().max(120).optional().nullable(),
+    driverName: z.string().trim().min(1).max(120).optional(),
+    driverEmployeeId: z.preprocess(
+      (v) => (v === '' || v === undefined ? undefined : v === null ? null : v),
+      z.coerce.number().int().positive().nullable().optional(),
+    ),
+    companionName: z.string().max(120).optional().nullable(),
+    vehiclePlate: z.string().max(30).optional().nullable(),
+    vehicleDescription: z.string().max(200).optional().nullable(),
+    vehicleId: z.preprocess(
+      (v) => (v === '' || v === undefined ? undefined : v === null ? null : v),
+      z.coerce.number().int().positive().nullable().optional(),
+    ),
+    date: z.string().optional().nullable(),
+    orderIds: z.array(z.coerce.number().int().positive()).optional(),
+  }),
 });
 
 export const updateRouteStatusSchema = z.object({

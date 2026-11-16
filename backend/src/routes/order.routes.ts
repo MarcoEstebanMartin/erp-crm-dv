@@ -16,6 +16,10 @@ import {
   getWebOrderSyncStatusHandler,
   triggerWebOrderSyncHandler,
 } from '../controllers/web-order-sync.controller';
+import {
+  bulkUpdateOrdersDeliveryHandler,
+  updateOrderDeliveryHandler,
+} from '../controllers/order-delivery.controller';
 import { authenticateJWT, requireRole } from '../middlewares/auth';
 import { idempotencyGuard } from '../middlewares/idempotency.middleware';
 import { Role } from '@prisma/client';
@@ -28,6 +32,8 @@ import {
   createDirectInvoiceSchema,
   updateOrderWeightsSchema,
   confirmArmadoSchema,
+  updateOrderDeliverySchema,
+  bulkUpdateOrdersDeliverySchema,
 } from '../validators/order.validator';
 
 const router = Router();
@@ -49,6 +55,14 @@ router.post(
 
 // Rutas accesibles por cualquier usuario autenticado para ver su flujo
 router.get('/summary', authenticateJWT, getOrdersSummary);
+router.post(
+  '/bulk-delivery',
+  authenticateJWT,
+  requireRole([Role.ADMIN, Role.FACTURACION, Role.DEPOSITO]),
+  validateRequest(bulkUpdateOrdersDeliverySchema),
+  idempotencyGuard,
+  bulkUpdateOrdersDeliveryHandler,
+);
 router.get('/', authenticateJWT, getOrders);
 router.get('/:id', authenticateJWT, getOrderById);
 
@@ -63,6 +77,16 @@ router.put('/:id', authenticateJWT, requireRole([Role.ADMIN, Role.FACTURACION, R
 
 // Actualización de estado del pedido (Picking - ADMIN, FACTURACION y DEPOSITO)
 router.put('/:id/status', authenticateJWT, requireRole([Role.ADMIN, Role.FACTURACION, Role.DEPOSITO]), validateRequest(updateOrderStatusSchema), updateOrderStatus);
+
+// Designación de entrega (Viaje específico o Retiro en local)
+router.patch(
+  '/:id/delivery',
+  authenticateJWT,
+  requireRole([Role.ADMIN, Role.FACTURACION, Role.DEPOSITO, Role.VENDEDOR]),
+  validateRequest(updateOrderDeliverySchema),
+  idempotencyGuard,
+  updateOrderDeliveryHandler,
+);
 
 // Facturar y cobrar pedido preparado (ADMIN y FACTURACION)
 router.post('/:id/invoice', authenticateJWT, requireRole([Role.ADMIN, Role.FACTURACION]), validateRequest(invoiceOrderSchema), idempotencyGuard, invoiceOrder);
