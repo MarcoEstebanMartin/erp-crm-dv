@@ -19,7 +19,6 @@ export const receiptService = {
         persona: {
           select: {
             id: true,
-            code: true,
             name: true,
             cuit: true,
             address: true,

@@ -108,7 +108,7 @@ describe('Servicios Financieros, Cobranzas y Gastos (Integridad Atómica y Segur
       paymentMethod: PaymentMethod.CASH,
       billingType: BillingType.INTERNAL,
       verified: true,
-      persona: { id: 10, code: 'C010', name: 'Kiosco Central', cuit: '20-12345678-9', address: 'Mitre 100', city: 'Villegas' },
+      persona: { id: 10, name: 'Kiosco Central', cuit: '20-12345678-9', address: 'Mitre 100', city: 'Villegas' },
       user: { id: 2, username: 'preventa1' },
     } as any);
 
@@ -121,7 +121,6 @@ describe('Servicios Financieros, Cobranzas y Gastos (Integridad Atómica y Segur
           persona: {
             select: {
               id: true,
-              code: true,
               name: true,
               cuit: true,
               address: true,

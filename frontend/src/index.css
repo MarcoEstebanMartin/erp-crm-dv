@@ -488,6 +488,21 @@ tr:hover td {
   gap: 20px;
 }
 
+.order-creation-grid > * {
+  min-width: 0;
+}
+
+.vendedor-history-cards {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  .order-creation-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+}
+
 .catalog-filters-row {
   display: flex;
   gap: 8px;
@@ -1978,6 +1993,34 @@ dialog.app-native-dialog::backdrop {
 }
 
 @media (max-width: 768px) {
+  .vendedor-top-nav-bar {
+    display: none;
+  }
+
+  .vendedor-history-table-desktop {
+    display: none;
+  }
+
+  .vendedor-history-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .catalog-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .search-input-wrapper {
+    min-width: 0 !important;
+    width: 100%;
+  }
+
+  .main-content:has(~ .vendedor-bottom-nav),
+  body:has(.vendedor-bottom-nav) .main-content {
+    padding-bottom: 84px !important;
+  }
+
   .vendedor-bottom-nav {
     display: flex;
     position: fixed;

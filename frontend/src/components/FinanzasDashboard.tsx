@@ -156,18 +156,18 @@ export default function FinanzasDashboard() {
         </search>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(195px, 1fr))', gap: '14px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px' }}>
         {kpiCards.map((card) => (
           <button
             key={card.key} type="button"
             onClick={() => { setModalCategory(card.key); setModalTitle(card.label); setModalMovements(card.items); setDetailModalOpen(true); }}
-            style={{ padding: '18px', backgroundColor: card.bg, border: `1px solid ${card.border}`, borderRadius: '12px', cursor: 'pointer', textAlign: 'left', font: 'inherit', width: '100%' }}
+            style={{ padding: '18px', backgroundColor: card.bg, border: `1px solid ${card.border}`, borderRadius: '12px', cursor: 'pointer', textAlign: 'left', font: 'inherit', width: '100%', minWidth: 0 }}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-              <span style={{ fontSize: '0.82rem', color: card.color, fontWeight: 600 }}>{card.label}</span>
-              <Eye size={15} color={card.color} aria-hidden="true" />
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+              <span style={{ fontSize: '0.82rem', color: card.color, fontWeight: 600, lineHeight: 1.25 }}>{card.label}</span>
+              <Eye size={15} color={card.color} aria-hidden="true" style={{ flexShrink: 0 }} />
             </div>
-            <div className="tabular-nums" style={{ fontSize: '1.65rem', fontWeight: 700, color: card.color, fontFamily: 'monospace' }}>${Math.round(card.val).toLocaleString('es-AR')}</div>
+            <div className="tabular-nums" style={{ fontSize: 'clamp(1.2rem, 1.8vw, 1.55rem)', lineHeight: 1.2, fontWeight: 700, color: card.color, fontFamily: 'monospace', overflowWrap: 'anywhere' }}>${Math.round(card.val).toLocaleString('es-AR')}</div>
             <div className="tabular-nums" style={{ fontSize: '0.74rem', color: card.color, marginTop: '8px', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 600 }}>
               <span>{card.items.length} movimientos</span><ChevronRight size={12} aria-hidden="true" />
             </div>
