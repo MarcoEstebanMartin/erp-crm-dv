@@ -179,6 +179,8 @@ model Persona {
   @@index([saleRouteId])
   @@index([cuit])
   @@index([name])
+  @@index([isClient, isActive, name])
+  @@index([isClient, outstandingBalance])
 }
 
 model Product {
@@ -274,6 +276,9 @@ model Order {
   @@index([movementId])
   @@index([invoiceNumber])
   @@index([personaId, createdAt])
+  @@index([status, createdAt, id])
+  @@index([sellerId, status, createdAt])
+  @@index([createdAt, id])
   @@unique([billingType, invoiceType, invoiceNumber])
 }
 
@@ -446,6 +451,8 @@ model Transaction {
   @@index([supplierInvoiceId])
   @@index([createdAt])
   @@index([movementId])
+  @@index([personaId, type, orderId])
+  @@index([orderId, type])
 }
 
 model AuditLog {
@@ -624,6 +631,8 @@ model CreditNote {
   @@index([orderId])
   @@index([userId])
   @@index([status])
+  @@index([personaId, status, orderId])
+  @@index([orderId, status])
 }
 
 model CreditNoteItem {

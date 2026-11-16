@@ -2,7 +2,7 @@ import http from 'http';
 import express from 'express';
 import { describe, expect, it } from 'vitest';
 import { createHttpCompressionMiddleware } from '../../middlewares/compression.middleware';
-import { resolvePrismaLogConfig } from '../../utils/prisma';
+import { resolvePooledDatabaseUrl, resolvePrismaLogConfig } from '../../utils/prisma';
 
 function requestRaw(
   port: number,
@@ -90,5 +90,19 @@ describe('Paso 2 Velocidad — Compresión HTTP Turbo (gzip) y Logs SQL Limpios'
     expect(resolvePrismaLogConfig('development', true)).toEqual(['query', 'warn', 'error']);
     expect(resolvePrismaLogConfig('production', false)).toEqual(['error']);
     expect(resolvePrismaLogConfig('test', false)).toEqual(['error']);
+  });
+
+  it('resolvePooledDatabaseUrl agrega pgbouncer, connection_limit y pool_timeout al pooler de Supabase sin pisar valores explícitos', () => {
+    const barePooler = 'postgresql://postgres.ref:pass@aws-0-sa-east-1.pooler.supabase.com:6543/postgres';
+    const resolved = resolvePooledDatabaseUrl(barePooler, '15');
+    expect(resolved).toContain('pgbouncer=true');
+    expect(resolved).toContain('connection_limit=15');
+    expect(resolved).toContain('pool_timeout=20');
+
+    const customPooler =
+      'postgresql://postgres.ref:pass@aws-0-sa-east-1.pooler.supabase.com:6543/postgres?pgbouncer=true&connection_limit=25&pool_timeout=30';
+    expect(resolvePooledDatabaseUrl(customPooler, '15')).toBe(customPooler);
+
+    expect(resolvePooledDatabaseUrl('')).toBeUndefined();
   });
 });
