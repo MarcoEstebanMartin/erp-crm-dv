@@ -1,4 +1,6 @@
+import { useState } from 'react';
 import { ChevronRight } from 'lucide-react';
+import { PendingReceiptsSummaryModal, type PendingReceiptGroup } from './PendingReceiptsSummaryModal';
 
 interface HomePendingCashCardProps {
   sellers: any[];
@@ -15,6 +17,7 @@ export function HomePendingCashCard({
   loading,
   onOpenRendiciones,
 }: HomePendingCashCardProps) {
+  const [selectedGroup, setSelectedGroup] = useState<PendingReceiptGroup | null>(null);
   const pendingCount = sellers.length + routes.length;
 
   return (
@@ -114,7 +117,16 @@ export function HomePendingCashCard({
                 checks={checks}
                 transfers={transfers}
                 total={total}
-                onClick={onOpenRendiciones}
+                onClick={() =>
+                  setSelectedGroup({
+                    label: name,
+                    transactions: s.transactions || [],
+                    totalCash: cash,
+                    totalChecks: checks,
+                    totalTransfers: transfers,
+                    totalToCollect: total,
+                  })
+                }
               />
             );
           })}
@@ -137,12 +149,27 @@ export function HomePendingCashCard({
                 checks={checks}
                 transfers={transfers}
                 total={total}
-                onClick={onOpenRendiciones}
+                onClick={() =>
+                  setSelectedGroup({
+                    label,
+                    transactions: r.transactions || [],
+                    totalCash: cash,
+                    totalChecks: checks,
+                    totalTransfers: transfers,
+                    totalToCollect: total,
+                  })
+                }
               />
             );
           })}
         </div>
       )}
+
+      <PendingReceiptsSummaryModal
+        group={selectedGroup}
+        onClose={() => setSelectedGroup(null)}
+        onGoToRendiciones={onOpenRendiciones}
+      />
     </section>
   );
 }
