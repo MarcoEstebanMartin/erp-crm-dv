@@ -1,6 +1,7 @@
 let runtimeGoogleMapsApiKey = '';
 let loadingPromise: Promise<any> | null = null;
 let loadingApiKey = '';
+const apiKeyListeners = new Set<() => void>();
 
 export interface GoogleGeocodeResult {
   lat: number;
@@ -10,7 +11,17 @@ export interface GoogleGeocodeResult {
 }
 
 export function setRuntimeGoogleMapsApiKey(key?: string | null): void {
-  runtimeGoogleMapsApiKey = typeof key === 'string' ? key.trim() : '';
+  const nextKey = typeof key === 'string' ? key.trim() : '';
+  if (nextKey === runtimeGoogleMapsApiKey) return;
+  runtimeGoogleMapsApiKey = nextKey;
+  apiKeyListeners.forEach((listener) => listener());
+}
+
+export function subscribeGoogleMapsApiKey(listener: () => void): () => void {
+  apiKeyListeners.add(listener);
+  return () => {
+    apiKeyListeners.delete(listener);
+  };
 }
 
 export function resolveGoogleMapsApiKey(explicitKey?: string): string {

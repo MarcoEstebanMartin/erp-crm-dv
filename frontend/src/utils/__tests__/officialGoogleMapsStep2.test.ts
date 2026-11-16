@@ -3,7 +3,11 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
 import { DEPOT_VILLEGAS, buildGoogleMapsMultiStopRouteUrl } from '../geoUtils';
-import { resolveGoogleMapsApiKey, setRuntimeGoogleMapsApiKey } from '../googleMapsLoader';
+import {
+  resolveGoogleMapsApiKey,
+  setRuntimeGoogleMapsApiKey,
+  subscribeGoogleMapsApiKey,
+} from '../googleMapsLoader';
 import { escapeMapHtml } from '../officialGoogleMapHelpers';
 import { VILLEGAS_DEPOT, getClientCoords } from '../../components/reparto/repartoGeoHelpers';
 
@@ -22,12 +26,18 @@ describe('Paso 2 — Mapa Único Oficial Google Maps API y GPS Exacto en Cliente
     expect(VILLEGAS_DEPOT).toEqual([DEPOT_VILLEGAS.lat, DEPOT_VILLEGAS.lng]);
   });
 
-  it('resuelve la API key oficial en orden explícita / env / runtime / localStorage', () => {
+  it('resuelve la API key oficial en orden explícita / env / runtime / localStorage y notifica suscriptores', () => {
+    let calls = 0;
+    const unsubscribe = subscribeGoogleMapsApiKey(() => {
+      calls += 1;
+    });
     setRuntimeGoogleMapsApiKey('AIzaRuntimeFallbackKey12345');
+    expect(calls).toBe(1);
     expect(resolveGoogleMapsApiKey('AIzaExplicitKey999')).toBe('AIzaExplicitKey999');
 
     const resolvedDefault = resolveGoogleMapsApiKey();
     expect(resolvedDefault.length).toBeGreaterThan(0);
+    unsubscribe();
   });
 
   it('getClientCoords marca hasExactGps=true con GPS real y hasExactGps=false en respaldo por localidad sin placeholders', () => {

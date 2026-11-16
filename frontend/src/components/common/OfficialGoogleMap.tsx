@@ -1,7 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ExternalLink, MapPin } from 'lucide-react';
 import { DEPOT_VILLEGAS, buildGoogleMapsMultiStopRouteUrl } from '../../utils/geoUtils';
-import { loadOfficialGoogleMaps } from '../../utils/googleMapsLoader';
+import {
+  loadOfficialGoogleMaps,
+  subscribeGoogleMapsApiKey,
+} from '../../utils/googleMapsLoader';
 import type {
   LiveVehicleGpsPoint,
   OfficialMapMarker,
@@ -68,6 +71,13 @@ export function OfficialGoogleMap({
   const [ready, setReady] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [metrics, setMetrics] = useState<{ distance: string; duration: string } | null>(null);
+  const [runtimeKeyVersion, setRuntimeKeyVersion] = useState(0);
+
+  useEffect(() => {
+    return subscribeGoogleMapsApiKey(() => {
+      setRuntimeKeyVersion((v) => v + 1);
+    });
+  }, []);
 
   const validStops = useMemo(
     () => (stops || []).filter((s) => Number.isFinite(s.lat) && Number.isFinite(s.lng)),
@@ -109,7 +119,7 @@ export function OfficialGoogleMap({
     return () => {
       mounted = false;
     };
-  }, [apiKey]);
+  }, [apiKey, runtimeKeyVersion]);
 
   useEffect(() => {
     const gmaps = (window as any).google?.maps;
