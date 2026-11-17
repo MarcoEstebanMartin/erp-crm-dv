@@ -32,12 +32,12 @@ router.post(
   createCategory,
 );
 
-// Rutas de gastos
-router.get('/', authenticateJWT, requireRole([Role.ADMIN, Role.FACTURACION]), getExpenses);
+// Rutas de gastos (exclusivo ADMIN)
+router.get('/', authenticateJWT, requireRole([Role.ADMIN]), getExpenses);
 router.post(
   '/',
   authenticateJWT,
-  requireRole([Role.ADMIN, Role.FACTURACION]),
+  requireRole([Role.ADMIN]),
   validateRequest(createExpenseSchema),
   idempotencyGuard,
   createExpense,
@@ -45,7 +45,7 @@ router.post(
 router.post(
   '/bulk',
   authenticateJWT,
-  requireRole([Role.ADMIN, Role.FACTURACION]),
+  requireRole([Role.ADMIN]),
   validateRequest(createBulkExpensesSchema),
   idempotencyGuard,
   createBulkExpenses,

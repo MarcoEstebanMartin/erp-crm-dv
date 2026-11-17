@@ -166,10 +166,10 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           <div role="tablist" aria-label="Caja y finanzas" className="linear-tablist">
             {[
-              { id: 'general', label: 'Finanzas', icon: <DollarSign size={15} aria-hidden="true" />, adminOnly: false },
+              { id: 'general', label: 'Finanzas', icon: <DollarSign size={15} aria-hidden="true" />, adminOnly: true },
               { id: 'rendiciones', label: 'Rendiciones', icon: <Receipt size={15} aria-hidden="true" />, adminOnly: false },
               { id: 'field-receipts', label: 'Recibos Digitales', icon: <Receipt size={15} aria-hidden="true" />, adminOnly: false },
-              { id: 'gastos', label: 'Gastos', icon: <DollarSign size={15} aria-hidden="true" />, adminOnly: false },
+              { id: 'gastos', label: 'Gastos', icon: <DollarSign size={15} aria-hidden="true" />, adminOnly: true },
               { id: 'reportes', label: 'Reportes', icon: <TrendingUp size={15} aria-hidden="true" />, adminOnly: true },
             ]
               .filter((tab) => isAdmin || !tab.adminOnly)
@@ -189,7 +189,21 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
           </div>
 
           <Suspense fallback={<LoadingDashboard />}>
-            {c.cajasSubTab === 'general' ? <FinanzasDashboard /> : c.cajasSubTab === 'rendiciones' ? <RendicionesDashboard /> : c.cajasSubTab === 'field-receipts' ? <FieldSettlementsTab /> : c.cajasSubTab === 'gastos' ? <GastosDashboard /> : isAdmin ? <UnifiedReportsDashboard orders={c.orders} users={c.users} clients={c.clients} products={c.products} financialReport={c.financialReport} /> : <FinanzasDashboard />}
+            {c.cajasSubTab === 'field-receipts' ? (
+              <FieldSettlementsTab />
+            ) : c.cajasSubTab === 'rendiciones' ? (
+              <RendicionesDashboard />
+            ) : isAdmin && c.cajasSubTab === 'general' ? (
+              <FinanzasDashboard />
+            ) : isAdmin && c.cajasSubTab === 'gastos' ? (
+              <GastosDashboard />
+            ) : isAdmin && c.cajasSubTab === 'reportes' ? (
+              <UnifiedReportsDashboard orders={c.orders} users={c.users} clients={c.clients} products={c.products} financialReport={c.financialReport} />
+            ) : isAdmin ? (
+              <FinanzasDashboard />
+            ) : (
+              <RendicionesDashboard />
+            )}
           </Suspense>
         </div>
       )}

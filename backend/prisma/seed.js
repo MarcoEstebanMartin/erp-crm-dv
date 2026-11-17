@@ -62,12 +62,12 @@ async function main() {
   });
 
 
-  // Administración (Dario y Agustin)
+  // Administración operativa / Facturación (Dario y Agustin)
   const uDario = await prisma.user.create({
-    data: { username: 'dario', passwordHash: await pwhash('dario2026-Erp!'), role: 'ADMIN' }
+    data: { username: 'dario', passwordHash: await pwhash('dario2026-Erp!'), role: 'FACTURACION' }
   });
   const uAgustin = await prisma.user.create({
-    data: { username: 'agustin', passwordHash: await pwhash('agustin2026-Erp!'), role: 'ADMIN' }
+    data: { username: 'agustin', passwordHash: await pwhash('agustin2026-Erp!'), role: 'FACTURACION' }
   });
   
   // Default admin

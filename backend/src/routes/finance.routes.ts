@@ -77,14 +77,14 @@ router.post(
 router.put(
   '/bank-accounts/:id',
   authenticateJWT,
-  requireRole([Role.ADMIN, Role.FACTURACION]),
+  requireRole([Role.ADMIN]),
   validateRequest(updateBankAccountSchema),
   updateBankAccount,
 );
 router.post(
   '/bank-accounts/transfer',
   authenticateJWT,
-  requireRole([Role.ADMIN, Role.FACTURACION]),
+  requireRole([Role.ADMIN]),
   validateRequest(transferFundsSchema),
   idempotencyGuard,
   transferFunds,
@@ -92,7 +92,7 @@ router.post(
 router.put(
   '/transactions/:id/verify',
   authenticateJWT,
-  requireRole([Role.ADMIN, Role.FACTURACION]),
+  requireRole([Role.ADMIN]),
   validateRequest(verifyTransactionSchema),
   verifyTransaction,
 );
@@ -100,7 +100,7 @@ router.get('/transactions/:id', authenticateJWT, getTransactionById);
 router.post(
   '/expenses',
   authenticateJWT,
-  requireRole([Role.ADMIN, Role.FACTURACION]),
+  requireRole([Role.ADMIN]),
   validateRequest(createCentralExpenseSchema),
   idempotencyGuard,
   createExpense,
