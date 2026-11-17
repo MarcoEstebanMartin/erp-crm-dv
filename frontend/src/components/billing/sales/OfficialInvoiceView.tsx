@@ -66,13 +66,13 @@ export function OfficialInvoiceView({ invoice }: OfficialInvoiceViewProps) {
       className="invoice-container-box"
       style={{
         backgroundColor: '#ffffff',
-        padding: '32px',
+        padding: '20px 24px',
         border: '1px solid #e5e7eb',
         borderRadius: '8px',
         fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
         color: '#111827',
-        fontSize: '0.84rem',
-        lineHeight: 1.45,
+        fontSize: '0.8rem',
+        lineHeight: 1.38,
       }}
     >
       {/* Header Oficial Minimalista: Logo + Empresa | Letra AFIP | Comprobante y Datos Fiscales */}
@@ -80,10 +80,10 @@ export function OfficialInvoiceView({ invoice }: OfficialInvoiceViewProps) {
         style={{
           display: 'grid',
           gridTemplateColumns: '1fr auto 1fr',
-          gap: '20px',
+          gap: '16px',
           alignItems: 'start',
-          paddingBottom: '20px',
-          marginBottom: '20px',
+          paddingBottom: '14px',
+          marginBottom: '14px',
           borderBottom: '1px solid #e5e7eb',
         }}
       >
@@ -216,9 +216,9 @@ export function OfficialInvoiceView({ invoice }: OfficialInvoiceViewProps) {
         style={{
           display: 'grid',
           gridTemplateColumns: '1.35fr 1fr',
-          gap: '16px',
-          padding: '14px 18px',
-          marginBottom: '20px',
+          gap: '14px',
+          padding: '10px 14px',
+          marginBottom: '14px',
           backgroundColor: '#f9fafb',
           border: '1px solid #e5e7eb',
           borderRadius: '8px',
@@ -283,23 +283,23 @@ export function OfficialInvoiceView({ invoice }: OfficialInvoiceViewProps) {
           border: '1px solid #e5e7eb',
           borderRadius: '8px',
           overflow: 'hidden',
-          marginBottom: '20px',
+          marginBottom: '14px',
         }}
       >
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
           <thead>
             <tr style={{ backgroundColor: '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
               <th
                 scope="col"
                 style={{
-                  padding: '10px 12px',
+                  padding: '8px 8px 8px 10px',
                   textAlign: 'left',
-                  fontSize: '0.68rem',
+                  fontSize: '0.66rem',
                   fontWeight: 600,
                   textTransform: 'uppercase',
                   letterSpacing: '0.05em',
                   color: '#6b7280',
-                  width: '80px',
+                  width: '56px',
                 }}
               >
                 SKU
@@ -307,9 +307,9 @@ export function OfficialInvoiceView({ invoice }: OfficialInvoiceViewProps) {
               <th
                 scope="col"
                 style={{
-                  padding: '10px 12px',
+                  padding: '8px',
                   textAlign: 'left',
-                  fontSize: '0.68rem',
+                  fontSize: '0.66rem',
                   fontWeight: 600,
                   textTransform: 'uppercase',
                   letterSpacing: '0.05em',
@@ -321,14 +321,14 @@ export function OfficialInvoiceView({ invoice }: OfficialInvoiceViewProps) {
               <th
                 scope="col"
                 style={{
-                  padding: '10px 12px',
+                  padding: '8px',
                   textAlign: 'right',
-                  fontSize: '0.68rem',
+                  fontSize: '0.66rem',
                   fontWeight: 600,
                   textTransform: 'uppercase',
                   letterSpacing: '0.05em',
                   color: '#6b7280',
-                  width: '60px',
+                  width: '48px',
                 }}
               >
                 Cant.
@@ -336,14 +336,14 @@ export function OfficialInvoiceView({ invoice }: OfficialInvoiceViewProps) {
               <th
                 scope="col"
                 style={{
-                  padding: '10px 12px',
+                  padding: '8px',
                   textAlign: 'right',
-                  fontSize: '0.68rem',
+                  fontSize: '0.66rem',
                   fontWeight: 600,
                   textTransform: 'uppercase',
                   letterSpacing: '0.05em',
                   color: '#6b7280',
-                  width: '68px',
+                  width: '54px',
                 }}
               >
                 Kilos
@@ -351,32 +351,46 @@ export function OfficialInvoiceView({ invoice }: OfficialInvoiceViewProps) {
               <th
                 scope="col"
                 style={{
-                  padding: '10px 12px',
+                  padding: '8px',
                   textAlign: 'right',
-                  fontSize: '0.68rem',
+                  fontSize: '0.66rem',
                   fontWeight: 600,
                   textTransform: 'uppercase',
                   letterSpacing: '0.05em',
                   color: '#6b7280',
-                  width: '108px',
+                  width: '90px',
+                  lineHeight: 1.25,
                 }}
               >
-                {isFacturaAOfficial ? 'P. Unit (s/ IVA)' : 'P. Unit'}
+                P. Unit
+                {isFacturaAOfficial && (
+                  <>
+                    <br />
+                    <span style={{ fontWeight: 500, color: '#9ca3af' }}>(s/ IVA)</span>
+                  </>
+                )}
               </th>
               <th
                 scope="col"
                 style={{
-                  padding: '10px 12px',
+                  padding: '8px 10px 8px 8px',
                   textAlign: 'right',
-                  fontSize: '0.68rem',
+                  fontSize: '0.66rem',
                   fontWeight: 600,
                   textTransform: 'uppercase',
                   letterSpacing: '0.05em',
                   color: '#6b7280',
-                  width: '116px',
+                  width: '96px',
+                  lineHeight: 1.25,
                 }}
               >
-                {isFacturaAOfficial ? 'Importe (s/ IVA)' : 'Importe'}
+                Importe
+                {isFacturaAOfficial && (
+                  <>
+                    <br />
+                    <span style={{ fontWeight: 500, color: '#9ca3af' }}>(s/ IVA)</span>
+                  </>
+                )}
               </th>
             </tr>
           </thead>
@@ -399,20 +413,20 @@ export function OfficialInvoiceView({ invoice }: OfficialInvoiceViewProps) {
                 >
                   <td
                     style={{
-                      padding: '10px 12px',
+                      padding: '6px 8px 6px 10px',
                       fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
-                      fontSize: '0.76rem',
+                      fontSize: '0.74rem',
                       color: '#6b7280',
                     }}
                   >
                     {item.product?.sku || 'S/D'}
                   </td>
-                  <td style={{ padding: '10px 12px', fontWeight: 500, color: '#111827' }}>
+                  <td style={{ padding: '6px 8px', fontWeight: 500, color: '#111827' }}>
                     {item.product?.name || item.productName || 'Artículo general'}
                   </td>
                   <td
                     style={{
-                      padding: '10px 12px',
+                      padding: '6px 8px',
                       textAlign: 'right',
                       fontVariantNumeric: 'tabular-nums',
                       color: '#374151',
@@ -422,7 +436,7 @@ export function OfficialInvoiceView({ invoice }: OfficialInvoiceViewProps) {
                   </td>
                   <td
                     style={{
-                      padding: '10px 12px',
+                      padding: '6px 8px',
                       textAlign: 'right',
                       fontVariantNumeric: 'tabular-nums',
                       color: '#374151',
@@ -432,7 +446,7 @@ export function OfficialInvoiceView({ invoice }: OfficialInvoiceViewProps) {
                   </td>
                   <td
                     style={{
-                      padding: '10px 12px',
+                      padding: '6px 8px',
                       textAlign: 'right',
                       fontVariantNumeric: 'tabular-nums',
                       color: '#374151',
@@ -442,7 +456,7 @@ export function OfficialInvoiceView({ invoice }: OfficialInvoiceViewProps) {
                   </td>
                   <td
                     style={{
-                      padding: '10px 12px',
+                      padding: '6px 10px 6px 8px',
                       textAlign: 'right',
                       fontWeight: 600,
                       fontVariantNumeric: 'tabular-nums',

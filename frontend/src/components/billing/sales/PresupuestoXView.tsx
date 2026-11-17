@@ -46,13 +46,13 @@ export function PresupuestoXView({ invoice }: PresupuestoXViewProps) {
       className="invoice-container-box"
       style={{
         backgroundColor: '#ffffff',
-        padding: '32px',
+        padding: '20px 24px',
         border: '1px solid #e5e7eb',
         borderRadius: '8px',
         fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
         color: '#111827',
-        fontSize: '0.84rem',
-        lineHeight: 1.45,
+        fontSize: '0.8rem',
+        lineHeight: 1.38,
       }}
     >
       {/* Header minimalista sin datos de la distribuidora */}
@@ -61,8 +61,8 @@ export function PresupuestoXView({ invoice }: PresupuestoXViewProps) {
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          paddingBottom: '20px',
-          marginBottom: '20px',
+          paddingBottom: '12px',
+          marginBottom: '14px',
           borderBottom: '1px solid #e5e7eb',
         }}
       >
@@ -88,9 +88,9 @@ export function PresupuestoXView({ invoice }: PresupuestoXViewProps) {
         style={{
           display: 'grid',
           gridTemplateColumns: '1.35fr 1fr',
-          gap: '16px',
-          padding: '14px 18px',
-          marginBottom: '20px',
+          gap: '14px',
+          padding: '10px 14px',
+          marginBottom: '14px',
           backgroundColor: '#f9fafb',
           border: '1px solid #e5e7eb',
           borderRadius: '8px',
@@ -153,23 +153,23 @@ export function PresupuestoXView({ invoice }: PresupuestoXViewProps) {
           border: '1px solid #e5e7eb',
           borderRadius: '8px',
           overflow: 'hidden',
-          marginBottom: '20px',
+          marginBottom: '14px',
         }}
       >
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
           <thead>
             <tr style={{ backgroundColor: '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
               <th
                 scope="col"
                 style={{
-                  padding: '10px 12px',
+                  padding: '8px 8px 8px 10px',
                   textAlign: 'left',
-                  fontSize: '0.68rem',
+                  fontSize: '0.66rem',
                   fontWeight: 600,
                   textTransform: 'uppercase',
                   letterSpacing: '0.05em',
                   color: '#6b7280',
-                  width: '84px',
+                  width: '56px',
                 }}
               >
                 SKU
@@ -177,9 +177,9 @@ export function PresupuestoXView({ invoice }: PresupuestoXViewProps) {
               <th
                 scope="col"
                 style={{
-                  padding: '10px 12px',
+                  padding: '8px',
                   textAlign: 'left',
-                  fontSize: '0.68rem',
+                  fontSize: '0.66rem',
                   fontWeight: 600,
                   textTransform: 'uppercase',
                   letterSpacing: '0.05em',
@@ -191,14 +191,14 @@ export function PresupuestoXView({ invoice }: PresupuestoXViewProps) {
               <th
                 scope="col"
                 style={{
-                  padding: '10px 12px',
+                  padding: '8px',
                   textAlign: 'right',
-                  fontSize: '0.68rem',
+                  fontSize: '0.66rem',
                   fontWeight: 600,
                   textTransform: 'uppercase',
                   letterSpacing: '0.05em',
                   color: '#6b7280',
-                  width: '64px',
+                  width: '48px',
                 }}
               >
                 Cant.
@@ -206,14 +206,14 @@ export function PresupuestoXView({ invoice }: PresupuestoXViewProps) {
               <th
                 scope="col"
                 style={{
-                  padding: '10px 12px',
+                  padding: '8px',
                   textAlign: 'right',
-                  fontSize: '0.68rem',
+                  fontSize: '0.66rem',
                   fontWeight: 600,
                   textTransform: 'uppercase',
                   letterSpacing: '0.05em',
                   color: '#6b7280',
-                  width: '72px',
+                  width: '54px',
                 }}
               >
                 Kilos
@@ -221,14 +221,14 @@ export function PresupuestoXView({ invoice }: PresupuestoXViewProps) {
               <th
                 scope="col"
                 style={{
-                  padding: '10px 12px',
+                  padding: '8px',
                   textAlign: 'right',
-                  fontSize: '0.68rem',
+                  fontSize: '0.66rem',
                   fontWeight: 600,
                   textTransform: 'uppercase',
                   letterSpacing: '0.05em',
                   color: '#6b7280',
-                  width: '96px',
+                  width: '90px',
                 }}
               >
                 P. Unit
@@ -236,14 +236,14 @@ export function PresupuestoXView({ invoice }: PresupuestoXViewProps) {
               <th
                 scope="col"
                 style={{
-                  padding: '10px 12px',
+                  padding: '8px 10px 8px 8px',
                   textAlign: 'right',
-                  fontSize: '0.68rem',
+                  fontSize: '0.66rem',
                   fontWeight: 600,
                   textTransform: 'uppercase',
                   letterSpacing: '0.05em',
                   color: '#6b7280',
-                  width: '108px',
+                  width: '96px',
                 }}
               >
                 Importe
@@ -262,20 +262,20 @@ export function PresupuestoXView({ invoice }: PresupuestoXViewProps) {
                 >
                   <td
                     style={{
-                      padding: '10px 12px',
+                      padding: '6px 8px 6px 10px',
                       fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
-                      fontSize: '0.76rem',
+                      fontSize: '0.74rem',
                       color: '#6b7280',
                     }}
                   >
                     {item.product?.sku || 'S/D'}
                   </td>
-                  <td style={{ padding: '10px 12px', fontWeight: 500, color: '#111827' }}>
+                  <td style={{ padding: '6px 8px', fontWeight: 500, color: '#111827' }}>
                     {item.product?.name || item.productName || 'Artículo general'}
                   </td>
                   <td
                     style={{
-                      padding: '10px 12px',
+                      padding: '6px 8px',
                       textAlign: 'right',
                       fontVariantNumeric: 'tabular-nums',
                       color: '#374151',
@@ -285,7 +285,7 @@ export function PresupuestoXView({ invoice }: PresupuestoXViewProps) {
                   </td>
                   <td
                     style={{
-                      padding: '10px 12px',
+                      padding: '6px 8px',
                       textAlign: 'right',
                       fontVariantNumeric: 'tabular-nums',
                       color: '#374151',
@@ -295,7 +295,7 @@ export function PresupuestoXView({ invoice }: PresupuestoXViewProps) {
                   </td>
                   <td
                     style={{
-                      padding: '10px 12px',
+                      padding: '6px 8px',
                       textAlign: 'right',
                       fontVariantNumeric: 'tabular-nums',
                       color: '#374151',
@@ -305,7 +305,7 @@ export function PresupuestoXView({ invoice }: PresupuestoXViewProps) {
                   </td>
                   <td
                     style={{
-                      padding: '10px 12px',
+                      padding: '6px 10px 6px 8px',
                       textAlign: 'right',
                       fontWeight: 600,
                       fontVariantNumeric: 'tabular-nums',
