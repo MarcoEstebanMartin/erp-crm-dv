@@ -1,0 +1,388 @@
+import React, { useEffect, useRef, useState } from 'react';
+import { Mic, Square, Send, Sparkles, X, Trash2, AlertTriangle, Check } from 'lucide-react';
+import { orderApi } from '../../api/order.api';
+import type { Persona, Product } from '../../types';
+
+interface ParsedDraftItem {
+  productId: number;
+  sku: string;
+  productName: string;
+  quantity: number;
+  unitPrice: number;
+  note?: string;
+}
+
+interface ClientCandidate {
+  id: number;
+  name: string;
+  city: string | null;
+  address: string | null;
+}
+
+interface VendedorAiOrderModalProps {
+  open: boolean;
+  onClose: () => void;
+  clients: Persona[];
+  products: Product[];
+  selectedClient: Persona | null;
+  onApplyDraft: (payload: {
+    client: Persona | null;
+    items: Array<{ product: Product; quantity: number }>;
+    orderNotes: string | null;
+  }) => void;
+}
+
+export const VendedorAiOrderModal: React.FC<VendedorAiOrderModalProps> = ({
+  open,
+  onClose,
+  clients,
+  products,
+  selectedClient,
+  onApplyDraft,
+}) => {
+  const dialogRef = useRef<HTMLDialogElement | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+
+  const [textInput, setTextInput] = useState('');
+  const [isRecording, setIsRecording] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const [draftClientId, setDraftClientId] = useState<number | null>(selectedClient?.id ?? null);
+  const [clientCandidates, setClientCandidates] = useState<ClientCandidate[]>([]);
+  const [clientQuery, setClientQuery] = useState<string | null>(null);
+  const [draftItems, setDraftItems] = useState<ParsedDraftItem[]>([]);
+  const [unmatchedLines, setUnmatchedLines] = useState<string[]>([]);
+  const [draftNotes, setDraftNotes] = useState<string | null>(null);
+  const [hasParsed, setHasParsed] = useState(false);
+
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    if (open && !dialog.open) {
+      setErrorMsg(null);
+      setDraftClientId(selectedClient?.id ?? null);
+      dialog.showModal();
+    } else if (!open && dialog.open) {
+      dialog.close();
+    }
+  }, [open, selectedClient]);
+
+  useEffect(() => {
+    return () => {
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+        mediaRecorderRef.current.stop();
+      }
+    };
+  }, []);
+
+  const runParse = async (payload: { text?: string; audioBase64?: string; audioMimeType?: string }) => {
+    setLoading(true);
+    setErrorMsg(null);
+    try {
+      const res = await orderApi.parseOrderWithAi({
+        ...payload,
+        selectedClientId: selectedClient?.id,
+      });
+      const data = res.data;
+      if (data.rawText && !textInput.trim()) {
+        setTextInput(data.rawText);
+      } else if (payload.audioBase64 && data.rawText) {
+        setTextInput(data.rawText);
+      }
+
+      if (!selectedClient) {
+        if (data.detectedClient) {
+          setDraftClientId(data.detectedClient.id);
+        } else {
+          setDraftClientId(null);
+        }
+        setClientCandidates(data.clientCandidates || []);
+        setClientQuery(data.clientQuery || null);
+      }
+
+      setDraftItems(data.items || []);
+      setUnmatchedLines(data.unmatchedLines || []);
+      setDraftNotes(data.orderNotes || null);
+      setHasParsed(true);
+    } catch (err: any) {
+      setErrorMsg(err?.message || 'No se pudo interpretar el pedido.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleStartRecording = async () => {
+    if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
+      setErrorMsg('Tu navegador no soporta grabación de audio.');
+      return;
+    }
+    setErrorMsg(null);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/ogg';
+      const recorder = new MediaRecorder(stream, { mimeType });
+      audioChunksRef.current = [];
+
+      recorder.ondataavailable = (ev) => {
+        if (ev.data.size > 0) audioChunksRef.current.push(ev.data);
+      };
+
+      recorder.onstop = () => {
+        stream.getTracks().forEach((t) => t.stop());
+        const blob = new Blob(audioChunksRef.current, { type: mimeType });
+        if (blob.size === 0) return;
+
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const resultStr = typeof reader.result === 'string' ? reader.result : '';
+          const base64 = resultStr.includes(',') ? resultStr.split(',')[1] : resultStr;
+          if (base64) {
+            void runParse({ audioBase64: base64, audioMimeType: mimeType });
+          }
+        };
+        reader.readAsDataURL(blob);
+      };
+
+      mediaRecorderRef.current = recorder;
+      recorder.start();
+      setIsRecording(true);
+    } catch {
+      setErrorMsg('Permiso de micrófono denegado o no disponible.');
+    }
+  };
+
+  const handleStopRecording = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop();
+    }
+    setIsRecording(false);
+  };
+
+  const handleUpdateQty = (productId: number, delta: number) => {
+    setDraftItems((prev) =>
+      prev
+        .map((item) => (item.productId === productId ? { ...item, quantity: Math.max(0, item.quantity + delta) } : item))
+        .filter((item) => item.quantity > 0),
+    );
+  };
+
+  const handleApply = () => {
+    const resolvedClient =
+      selectedClient || clients.find((c) => c.id === draftClientId) || null;
+
+    const mappedItems = draftItems
+      .map((item) => {
+        const product = products.find((p) => p.id === item.productId);
+        return product ? { product, quantity: item.quantity } : null;
+      })
+      .filter((entry): entry is { product: Product; quantity: number } => Boolean(entry));
+
+    onApplyDraft({
+      client: resolvedClient,
+      items: mappedItems,
+      orderNotes: draftNotes,
+    });
+    onClose();
+  };
+
+  const resolvedClientObj = selectedClient || clients.find((c) => c.id === draftClientId) || null;
+
+  return (
+    <dialog
+      ref={dialogRef}
+      className="app-native-dialog"
+      aria-labelledby="ai-order-modal-title"
+      closedby="any"
+      onClose={onClose}
+      style={{
+        margin: 'auto',
+        width: 'min(540px, 94vw)',
+        maxHeight: '88vh',
+        borderRadius: '14px',
+        border: '1px solid var(--border-color)',
+        padding: 0,
+        backgroundColor: '#fff',
+        boxShadow: '0 20px 50px rgba(15, 23, 42, 0.18)',
+      }}
+    >
+      <div style={{ display: 'flex', flexDirection: 'column', maxHeight: '88vh' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 16px', borderBottom: '1px solid var(--border-color)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Sparkles size={18} color="var(--color-corp-red)" aria-hidden="true" />
+            <h2 id="ai-order-modal-title" style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+              Pedido IA
+            </h2>
+          </div>
+          <button type="button" className="btn btn-secondary" style={{ padding: '6px' }} aria-label="Cerrar" onClick={onClose}>
+            <X size={16} aria-hidden="true" />
+          </button>
+        </div>
+
+        <div style={{ padding: '14px 16px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            {!isRecording ? (
+              <button
+                type="button"
+                className="btn btn-secondary"
+                disabled={loading}
+                onClick={handleStartRecording}
+                style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', padding: '10px 12px', fontWeight: 600 }}
+              >
+                <Mic size={16} color="var(--color-corp-red)" aria-hidden="true" />
+                Grabar audio
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="btn"
+                onClick={handleStopRecording}
+                style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', padding: '10px 12px', fontWeight: 700, backgroundColor: 'var(--color-corp-red)', color: '#fff', border: 'none' }}
+              >
+                <Square size={14} aria-hidden="true" />
+                Detener y enviar
+              </button>
+            )}
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <label htmlFor="ai-order-text" className="sr-only">Mensaje o dictado del pedido</label>
+            <textarea
+              id="ai-order-text"
+              className="input"
+              rows={3}
+              autofocus
+              placeholder="Ej: Para Don José: 2 cajas de fideos Matarazzo y 3 aceites Natura"
+              value={textInput}
+              onChange={(e) => setTextInput(e.target.value)}
+              disabled={loading || isRecording}
+              style={{ width: '100%', resize: 'vertical', fontSize: '0.9rem', padding: '10px 12px' }}
+            />
+            <button
+              type="button"
+              className="btn btn-primary"
+              disabled={loading || isRecording || !textInput.trim()}
+              onClick={() => runParse({ text: textInput })}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', padding: '10px 14px', fontWeight: 600 }}
+            >
+              <Send size={15} aria-hidden="true" />
+              {loading ? 'Interpretando...' : 'Interpretar'}
+            </button>
+          </div>
+
+          {errorMsg && (
+            <div style={{ padding: '10px 12px', borderRadius: '8px', backgroundColor: 'rgba(var(--color-corp-red-rgb), 0.08)', color: 'var(--color-corp-red)', fontSize: '0.82rem', fontWeight: 600 }}>
+              {errorMsg}
+            </div>
+          )}
+
+          {hasParsed && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', paddingTop: '6px', borderTop: '1px solid var(--border-color)' }}>
+              {!selectedClient && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <label htmlFor="ai-client-select" style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-secondary)' }}>
+                    Cliente {clientQuery && !resolvedClientObj ? `(mencionado: "${clientQuery}")` : ''}
+                  </label>
+                  {clientCandidates.length > 0 && !resolvedClientObj && (
+                    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                      {clientCandidates.map((cand) => (
+                        <button
+                          key={cand.id}
+                          type="button"
+                          className="btn btn-secondary"
+                          style={{ padding: '4px 10px', fontSize: '0.76rem' }}
+                          onClick={() => setDraftClientId(cand.id)}
+                        >
+                          {cand.name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  <select
+                    id="ai-client-select"
+                    className="input"
+                    value={draftClientId ?? ''}
+                    onChange={(e) => setDraftClientId(e.target.value ? Number(e.target.value) : null)}
+                    style={{ fontSize: '0.86rem', padding: '8px 10px' }}
+                  >
+                    <option value="">Elegir cliente después</option>
+                    {clients.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}{c.city ? ` (${c.city})` : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {draftItems.length > 0 ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  {draftItems.map((item) => (
+                    <div
+                      key={item.productId}
+                      style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', padding: '8px 10px', borderRadius: '8px', border: '1px solid var(--border-color)', backgroundColor: '#fafafa' }}
+                    >
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <div style={{ fontSize: '0.84rem', fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {item.productName}
+                        </div>
+                        <div className="tabular-nums" style={{ fontSize: '0.74rem', color: 'var(--text-secondary)' }}>
+                          ${Math.round(item.unitPrice).toLocaleString('es-AR')} c/u
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+                        <button type="button" className="btn btn-secondary" style={{ padding: '4px 9px', fontWeight: 700 }} onClick={() => handleUpdateQty(item.productId, -1)}>-</button>
+                        <span className="tabular-nums" style={{ minWidth: '24px', textAlign: 'center', fontWeight: 700, fontSize: '0.86rem' }}>{item.quantity}</span>
+                        <button type="button" className="btn btn-secondary" style={{ padding: '4px 9px', fontWeight: 700 }} onClick={() => handleUpdateQty(item.productId, 1)}>+</button>
+                        <button type="button" className="btn btn-secondary" style={{ padding: '5px' }} aria-label="Quitar" onClick={() => handleUpdateQty(item.productId, -item.quantity)}>
+                          <Trash2 size={14} aria-hidden="true" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div style={{ fontSize: '0.84rem', color: 'var(--text-secondary)', textAlign: 'center', padding: '8px' }}>
+                  Sin productos detectados.
+                </div>
+              )}
+
+              {unmatchedLines.length > 0 && (
+                <div style={{ padding: '8px 10px', borderRadius: '8px', backgroundColor: '#fffbeb', border: '1px solid #fde68a', fontSize: '0.78rem', color: '#92400e', display: 'flex', gap: '6px', alignItems: 'flex-start' }}>
+                  <AlertTriangle size={15} style={{ flexShrink: 0, marginTop: '1px' }} aria-hidden="true" />
+                  <div>
+                    <strong>No reconocidos:</strong> {unmatchedLines.join(' · ')}
+                  </div>
+                </div>
+              )}
+
+              {draftNotes && (
+                <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                  <strong>Notas:</strong> {draftNotes}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {hasParsed && draftItems.length > 0 && (
+          <div style={{ padding: '12px 16px', borderTop: '1px solid var(--border-color)', display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+            <button type="button" className="btn btn-secondary" onClick={onClose}>
+              Cancelar
+            </button>
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={handleApply}
+              style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 700 }}
+            >
+              <Check size={16} aria-hidden="true" />
+              Cargar al carrito
+            </button>
+          </div>
+        )}
+      </div>
+    </dialog>
+  );
+};

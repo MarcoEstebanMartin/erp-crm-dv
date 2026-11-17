@@ -1,7 +1,8 @@
-import React, { useMemo, useRef } from 'react';
-import { Trash2, ShoppingCart, UserPlus, Package } from 'lucide-react';
+import React, { useMemo, useRef, useState } from 'react';
+import { Trash2, ShoppingCart, UserPlus, Package, Sparkles } from 'lucide-react';
 import { cleanCityName, getWhatsAppLink, getVendedorItemPrice, matchesSearchTokens, sortVendedorCatalog } from './vendedorHelpers';
 import { evaluateFrontendCartPromos, getProductPromoBadge } from '../../utils/weeklyPromoCartEvaluator';
+import { VendedorAiOrderModal } from './VendedorAiOrderModal';
 import type { Persona, Product, Rubro } from '../../types';
 import type { WeeklyPromo } from '../admin/config/weeklyPromo.helpers';
 
@@ -67,10 +68,22 @@ export const VendedorOrderTakeTab: React.FC<VendedorOrderTakeTabProps> = ({
   }), [cart, selectedClient, weeklyPromos]);
   const cartTotal = promoEval.totalAmount;
   const cartSectionRef = useRef<HTMLDivElement | null>(null);
+  const [aiModalOpen, setAiModalOpen] = useState(false);
   const totalUnits = cart.reduce((sum, item) => sum + item.quantity, 0);
 
   return (
     <div style={{ paddingBottom: cart.length > 0 ? '84px' : undefined }}>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '10px' }}>
+        <button
+          type="button"
+          className="btn btn-secondary"
+          onClick={() => setAiModalOpen(true)}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 14px', fontSize: '0.84rem', fontWeight: 700 }}
+        >
+          <Sparkles size={15} color="var(--color-corp-red)" aria-hidden="true" />
+          Pedido IA
+        </button>
+      </div>
       <div className="card" style={{ marginBottom: '14px', padding: '14px' }}>
         {!selectedClient ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -398,6 +411,36 @@ export const VendedorOrderTakeTab: React.FC<VendedorOrderTakeTabProps> = ({
           </div>
         </div>
       )}
+
+      <VendedorAiOrderModal
+        open={aiModalOpen}
+        onClose={() => setAiModalOpen(false)}
+        clients={clients}
+        products={products}
+        selectedClient={selectedClient}
+        onApplyDraft={({ client, items, orderNotes: aiNotes }) => {
+          if (client && !selectedClient) {
+            setSelectedClient(client);
+          }
+          if (items.length > 0) {
+            setCart((prev) => {
+              const next = [...prev];
+              for (const entry of items) {
+                const idx = next.findIndex((c) => Number(c.product.id) === Number(entry.product.id));
+                if (idx >= 0) {
+                  next[idx] = { ...next[idx], quantity: next[idx].quantity + entry.quantity };
+                } else {
+                  next.push({ product: entry.product, quantity: entry.quantity });
+                }
+              }
+              return next;
+            });
+          }
+          if (aiNotes) {
+            setOrderNotes(orderNotes ? `${orderNotes} · ${aiNotes}` : aiNotes);
+          }
+        }}
+      />
     </div>
   );
 };

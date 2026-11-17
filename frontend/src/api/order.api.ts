@@ -37,4 +37,32 @@ export const orderApi = {
   getWebSyncStatus: () => {
     return apiClient.get<{ status: string; data: any }>('/orders/sync-web/status');
   },
+
+  parseOrderWithAi: (data: {
+    text?: string;
+    audioBase64?: string;
+    audioMimeType?: string;
+    selectedClientId?: number;
+  }) => {
+    return apiClient.post<{
+      status: string;
+      data: {
+        rawText: string;
+        usedAi: boolean;
+        detectedClient: { id: number; name: string; city: string | null; address: string | null } | null;
+        clientQuery: string | null;
+        clientCandidates: Array<{ id: number; name: string; city: string | null; address: string | null }>;
+        items: Array<{
+          productId: number;
+          sku: string;
+          productName: string;
+          quantity: number;
+          unitPrice: number;
+          note?: string;
+        }>;
+        unmatchedLines: string[];
+        orderNotes: string | null;
+      };
+    }>('/orders/ai-parse', data);
+  },
 };
