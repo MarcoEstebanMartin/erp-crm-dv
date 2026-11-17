@@ -30,7 +30,7 @@ export function OfficialInvoiceView({ invoice }: OfficialInvoiceViewProps) {
 
   const isFacturaA = invoice.invoiceType === 'FACTURA_A';
   const isFacturaAOfficial = invoice.billingType === 'OFFICIAL' && isFacturaA;
-  const decimalOptions: Intl.NumberFormatOptions = isFacturaAOfficial
+  const decimalOptions: { minimumFractionDigits: number; maximumFractionDigits: number } = isFacturaAOfficial
     ? { minimumFractionDigits: 2, maximumFractionDigits: 2 }
     : { minimumFractionDigits: 0, maximumFractionDigits: 0 };
 

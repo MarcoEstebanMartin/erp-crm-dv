@@ -187,6 +187,58 @@ const CONTAINER_WORDS = new Set([
 ]);
 
 /**
+ * Prefiltra el catálogo a los productos más relevantes según los tokens del pedido
+ * para que Gemini Flash responda rápido sin exceder el timeout con catálogos grandes.
+ */
+function prefilterCatalogForAi(
+  rawText: string,
+  catalog: CatalogEntry[],
+  limit = 60,
+): CatalogEntry[] {
+  if (catalog.length <= limit) return catalog;
+
+  const normText = normalizeSearchText(rawText);
+  const tokens = Array.from(
+    new Set(
+      normText
+        .split(' ')
+        .filter(
+          (t) =>
+            t.length >= 2 &&
+            !ITEM_STOP_WORDS.has(t) &&
+            !CONTAINER_WORDS.has(t) &&
+            !(/^\d$/.test(t)),
+        ),
+    ),
+  );
+
+  if (tokens.length === 0) return catalog.slice(0, limit);
+
+  const scored: Array<{ prod: CatalogEntry; score: number }> = [];
+  for (const prod of catalog) {
+    const prodNorm = normalizeSearchText(`${prod.name} ${prod.sku} ${prod.commercialCategory || ''}`);
+    const prodWords = new Set(prodNorm.split(' '));
+    let score = 0;
+    for (const token of tokens) {
+      if (prodWords.has(token)) {
+        score += token.length >= 4 ? 4 : 3;
+      } else if (prodNorm.includes(token)) {
+        score += token.length >= 4 ? 2 : 1;
+      }
+    }
+    if (score > 0) {
+      scored.push({ prod, score });
+    }
+  }
+
+  if (scored.length === 0) return catalog.slice(0, limit);
+  return scored
+    .sort((a, b) => b.score - a.score)
+    .slice(0, limit)
+    .map((entry) => entry.prod);
+}
+
+/**
  * Fallback determinista local para extraer ítems del texto cuando Gemini no está disponible.
  */
 export function parseOrderItemsLocalFallback(
@@ -371,7 +423,8 @@ export async function parseVendedorOrderWithAi(
 
   if (isGeminiApiKeyConfigured()) {
     try {
-      const catalogCompact = catalog.map((p) => ({
+      const relevantCatalog = prefilterCatalogForAi(rawText, catalog, 60);
+      const catalogCompact = relevantCatalog.map((p) => ({
         id: p.id,
         sku: p.sku,
         name: p.name,
@@ -413,7 +466,7 @@ Tu tarea es interpretar el mensaje o dictado de un vendedor y devolver un borrad
         systemInstruction,
         input: userInput,
         jsonSchema: AI_ORDER_PARSE_JSON_SCHEMA,
-        preferredModels: [DEFAULT_GEMINI_FLASH_MODEL, FALLBACK_GEMINI_FLASH_LITE_MODEL],
+        preferredModels: [FALLBACK_GEMINI_FLASH_LITE_MODEL, DEFAULT_GEMINI_FLASH_MODEL],
       });
 
       const parsed = aiOrderParseResultValidator.parse(parseStructuredJsonText(responseText));
