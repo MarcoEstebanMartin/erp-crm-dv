@@ -59,6 +59,12 @@
 /* 1. Reseteo y General */
 html {
   scroll-behavior: smooth;
+  touch-action: manipulation;
+  -webkit-text-size-adjust: 100%;
+}
+
+button, a, input, select, textarea {
+  touch-action: manipulation;
 }
 
 * {
@@ -981,6 +987,22 @@ dialog.app-native-dialog::backdrop {
 }
 
 /* 13. Vista Responsiva Móvil Avanzada (Drawer & Layout Adaptativo) */
+@media (max-width: 768px), (pointer: coarse) {
+  html {
+    scroll-padding-bottom: calc(5rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* Evita zoom automático en iOS/Android al enfocar campos de texto o selectores */
+  input:not([type="checkbox"]):not([type="radio"]),
+  select,
+  textarea,
+  .input,
+  .select,
+  .textarea {
+    font-size: 16px !important;
+  }
+}
+
 @media (max-width: 768px) {
   .mobile-header {
     display: flex;
@@ -1990,6 +2012,22 @@ dialog.app-native-dialog::backdrop {
   color: #FFFFFF !important;
   border-color: var(--text-primary) !important;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+}
+
+@media (max-width: 768px), (pointer: coarse) {
+  html {
+    scroll-padding-bottom: calc(5rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* Evita zoom automático en iOS/Android al enfocar campos de texto o selectores */
+  input:not([type="checkbox"]):not([type="radio"]),
+  select,
+  textarea,
+  .input,
+  .select,
+  .textarea {
+    font-size: 16px !important;
+  }
 }
 
 @media (max-width: 768px) {
