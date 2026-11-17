@@ -18,8 +18,8 @@ Eliminar el talonario físico de papel de **vendedores y repartidores** en **Dis
    - Un mismo recibo puede combinar distintos medios de pago (ej. parte en efectivo + parte en transferencia + cheque).
 5. **Reglas por Medio de Pago**:
    - **Efectivo**: Baja la deuda del cliente y suma a la *Caja en Tránsito* del cobrador.
-   - **Transferencia**: Exige **foto del comprobante** (y nro. de referencia). Entra como **"Pendiente de verificación bancaria"** hasta que administración confirma el ingreso en `Caja y Cobranzas`. Si se rechaza por no acreditarse, revive automáticamente la deuda del cliente.
-   - **Cheque (Físico / eCheq)**: Exige banco, nro. de cheque, CUIT emisor, fecha de pago, monto y **foto frente/dorso** (en físicos). Entra en *Cartera de Cheques en Tránsito* del cobrador. Si el banco rechaza el cheque más adelante, el ERP revierte el pago y revive la deuda del cliente.
+   - **Transferencia**: Foto recomendada (opcional, no bloqueante) del comprobante y nro. de referencia. Entra como **"Pendiente de verificación bancaria"** hasta que administración confirma el ingreso en `Caja y Cobranzas`. Si se rechaza por no acreditarse, revive automáticamente la deuda del cliente.
+   - **Cheque (Físico / eCheq)**: Exige banco, nro. de cheque, fecha de pago y monto (foto frente/dorso recomendada/opcional). Entra en *Cartera de Cheques en Tránsito* del cobrador. Si el banco rechaza el cheque más adelante, el ERP revierte el pago y revive la deuda del cliente.
 6. **Modo Offline Seguro (Sin Señal)**:
    - Al iniciar el día con WiFi, el celular precarga la ruta, clientes y saldos pendientes.
    - Sin señal, guarda los cobros en una cola local persistente y muestra un comprobante provisorio.

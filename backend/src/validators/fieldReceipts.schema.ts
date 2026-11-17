@@ -16,26 +16,12 @@ export const fieldReceiptPaymentSchema = z
     isEcheq: z.boolean().optional().default(false),
   })
   .superRefine((val, ctx) => {
-    if (val.paymentMethod === 'BANK_TRANSFER' && !val.proofImageUrl) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: 'La transferencia requiere foto del comprobante.',
-        path: ['proofImageUrl'],
-      });
-    }
     if (val.paymentMethod === 'CHECK') {
       if (!val.checkBank || !val.checkNumber || !val.checkDueDate) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           message: 'El cheque requiere banco, número y fecha de vencimiento.',
           path: ['checkNumber'],
-        });
-      }
-      if (!val.isEcheq && !val.checkFrontImageUrl) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: 'El cheque físico requiere foto de frente.',
-          path: ['checkFrontImageUrl'],
         });
       }
     }
