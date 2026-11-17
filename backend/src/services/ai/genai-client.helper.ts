@@ -98,7 +98,7 @@ export function getGenAIClient(overrideClient?: GoogleGenAI): GoogleGenAI {
   if (overrideClient) return overrideClient;
   const apiKey = (process.env.GEMINI_API_KEY || '').trim();
   if (!cachedClient || cachedKey !== apiKey) {
-    cachedClient = new GoogleGenAI({ apiKey });
+    cachedClient = new GoogleGenAI({ apiKey, apiVersion: 'v1beta' });
     cachedKey = apiKey;
   }
   return cachedClient;
