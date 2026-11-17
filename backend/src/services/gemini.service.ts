@@ -1,6 +1,8 @@
 import type { GoogleGenAI } from '@google/genai';
 import {
+  DEFAULT_GEMINI_FLASH_MODEL,
   DEFAULT_GEMINI_TRANSCRIBE_MODEL,
+  FALLBACK_GEMINI_FLASH_LITE_MODEL,
   buildInlineMediaContent,
   isGeminiApiKeyConfigured,
   runGeminiInteraction,
@@ -105,7 +107,11 @@ export class GeminiService {
     try {
       const rawText = await runGeminiInteraction({
         client: this.clientOverride,
-        preferredModels: [DEFAULT_GEMINI_TRANSCRIBE_MODEL],
+        preferredModels: [
+          DEFAULT_GEMINI_TRANSCRIBE_MODEL,
+          FALLBACK_GEMINI_FLASH_LITE_MODEL,
+          DEFAULT_GEMINI_FLASH_MODEL,
+        ],
         systemInstruction:
           'Eres un asistente experto en toma de pedidos comerciales mayoristas de alimentos y bebidas en Argentina.',
         input: [

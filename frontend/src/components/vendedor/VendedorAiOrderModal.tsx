@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Mic, Square, Send, Sparkles, X, Trash2, AlertTriangle, Check } from 'lucide-react';
+import { Mic, Square, Send, Sparkles, X, Trash2, AlertTriangle, Check, Loader2 } from 'lucide-react';
 import { orderApi } from '../../api/order.api';
 import type { Persona, Product } from '../../types';
 
@@ -48,7 +48,10 @@ export const VendedorAiOrderModal: React.FC<VendedorAiOrderModalProps> = ({
   const [isRecording, setIsRecording] = useState(false);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [loadingSeconds, setLoadingSeconds] = useState(0);
+  const [loadingLabel, setLoadingLabel] = useState('Procesando...');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const requestSeqRef = useRef(0);
 
   const [draftClientId, setDraftClientId] = useState<number | null>(selectedClient?.id ?? null);
   const [clientCandidates, setClientCandidates] = useState<ClientCandidate[]>([]);
@@ -89,14 +92,41 @@ export const VendedorAiOrderModal: React.FC<VendedorAiOrderModalProps> = ({
     };
   }, []);
 
+  useEffect(() => {
+    if (!loading) {
+      setLoadingSeconds(0);
+      return;
+    }
+    const timer = window.setInterval(() => {
+      setLoadingSeconds((s) => s + 1);
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [loading]);
+
+  const handleCancelProcessing = () => {
+    requestSeqRef.current += 1;
+    setLoading(false);
+    setErrorMsg('Procesamiento cancelado.');
+  };
+
   const runParse = async (payload: { text?: string; audioBase64?: string; audioMimeType?: string }) => {
+    const seq = ++requestSeqRef.current;
     setLoading(true);
+    setLoadingLabel(payload.audioBase64 ? 'Transcribiendo audio...' : 'Interpretando pedido...');
     setErrorMsg(null);
+    let timeoutId: number | undefined;
     try {
-      const res = await orderApi.parseOrderWithAi({
-        ...payload,
-        selectedClientId: selectedClient?.id,
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        timeoutId = window.setTimeout(() => reject(new Error('Tiempo de espera agotado (30s). Reintentá.')), 30_000);
       });
+      const res = await Promise.race([
+        orderApi.parseOrderWithAi({
+          ...payload,
+          selectedClientId: selectedClient?.id,
+        }),
+        timeoutPromise,
+      ]);
+      if (seq !== requestSeqRef.current) return;
       const data = res.data;
       if (data.rawText && !textInput.trim()) {
         setTextInput(data.rawText);
@@ -119,9 +149,13 @@ export const VendedorAiOrderModal: React.FC<VendedorAiOrderModalProps> = ({
       setDraftNotes(data.orderNotes || null);
       setHasParsed(true);
     } catch (err: any) {
+      if (seq !== requestSeqRef.current) return;
       setErrorMsg(err?.message || 'No se pudo interpretar el pedido.');
     } finally {
-      setLoading(false);
+      if (timeoutId !== undefined) window.clearTimeout(timeoutId);
+      if (seq === requestSeqRef.current) {
+        setLoading(false);
+      }
     }
   };
 
@@ -308,8 +342,20 @@ export const VendedorAiOrderModal: React.FC<VendedorAiOrderModalProps> = ({
           </div>
 
           {loading && (
-            <div style={{ padding: '10px 12px', borderRadius: '8px', backgroundColor: '#f8fafc', border: '1px solid var(--border-color)', color: 'var(--text-primary)', fontSize: '0.84rem', fontWeight: 600, textAlign: 'center' }}>
-              Procesando pedido con IA...
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', padding: '10px 12px', borderRadius: '8px', backgroundColor: '#f8fafc', border: '1px solid var(--border-color)', color: 'var(--text-primary)', fontSize: '0.84rem', fontWeight: 600 }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                <Loader2 size={15} className="animate-spin" aria-hidden="true" />
+                <span>{loadingLabel}</span>
+                <span className="tabular-nums" style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>{loadingSeconds}s</span>
+              </span>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={handleCancelProcessing}
+                style={{ padding: '4px 10px', fontSize: '0.76rem' }}
+              >
+                Cancelar
+              </button>
             </div>
           )}
 

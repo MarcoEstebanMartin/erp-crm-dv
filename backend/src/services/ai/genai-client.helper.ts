@@ -39,21 +39,40 @@ export function resolveCurrentGeminiModel(configuredModel?: string | null): stri
   return trimmed;
 }
 
+const RATE_LIMITED_UNTIL = new Map<string, number>();
+const RATE_LIMIT_COOLDOWN_MS = 5 * 60 * 1000;
+
+function isModelInCooldown(model: string): boolean {
+  const until = RATE_LIMITED_UNTIL.get(model);
+  if (!until) return false;
+  if (Date.now() >= until) {
+    RATE_LIMITED_UNTIL.delete(model);
+    return false;
+  }
+  return true;
+}
+
 /**
- * Construye la cascada de modelos vigentes para llamadas multimodales o de texto.
+ * Construye la cascada de modelos vigentes para llamadas multimodales o de texto,
+ * omitiendo modelos en cooldown por 429 salvo que todos estén enfriándose.
  */
 export function buildGeminiModelCascade(
   preferredModels?: string[],
   envModel = process.env.GEMINI_MODEL,
 ): string[] {
   const normalizedPrimary = resolveCurrentGeminiModel(envModel);
-  const candidates = [
-    ...(preferredModels || []),
-    normalizedPrimary,
-    DEFAULT_GEMINI_FLASH_MODEL,
-    FALLBACK_GEMINI_FLASH_LITE_MODEL,
-  ];
-  return Array.from(new Set(candidates.filter(Boolean)));
+  const candidates = Array.from(
+    new Set(
+      [
+        ...(preferredModels || []),
+        normalizedPrimary,
+        DEFAULT_GEMINI_FLASH_MODEL,
+        FALLBACK_GEMINI_FLASH_LITE_MODEL,
+      ].filter(Boolean),
+    ),
+  );
+  const active = candidates.filter((m) => !isModelInCooldown(m));
+  return active.length > 0 ? active : candidates;
 }
 
 export type InlineMultimodalBlock =
@@ -149,19 +168,36 @@ export async function runGeminiInteraction(options: RunGeminiInteractionOptions)
 
   for (const model of models) {
     try {
-      const interaction = await client.interactions.create({
+      const isTranscribeModel = model === DEFAULT_GEMINI_TRANSCRIBE_MODEL;
+      const effectiveInput =
+        isTranscribeModel && Array.isArray(options.input)
+          ? options.input.filter((item) => item.type !== 'text')
+          : options.input;
+
+      const interactionPromise = client.interactions.create({
         model,
-        input: options.input as any,
-        system_instruction: options.systemInstruction,
+        input: effectiveInput as any,
+        ...(isTranscribeModel ? {} : { system_instruction: options.systemInstruction }),
         store: false,
-        response_format: options.jsonSchema
-          ? {
-              type: 'text',
-              mime_type: 'application/json',
-              schema: options.jsonSchema,
-            }
-          : undefined,
+        ...(isTranscribeModel
+          ? { generation_config: { transcription_config: { mode: 'smart' } } as any }
+          : {
+              response_format: options.jsonSchema
+                ? {
+                    type: 'text',
+                    mime_type: 'application/json',
+                    schema: options.jsonSchema,
+                  }
+                : undefined,
+            }),
       });
+
+      const interaction = await Promise.race([
+        interactionPromise,
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error(`Timeout esperando respuesta de ${model} (20s)`)), 20_000),
+        ),
+      ]);
 
       const text = extractInteractionOutputText(interaction);
       if (!text) {
@@ -170,8 +206,12 @@ export async function runGeminiInteraction(options: RunGeminiInteractionOptions)
       return text;
     } catch (err: any) {
       lastError = err;
+      const msg = String(err?.message || err);
+      if (err?.status === 429 || msg.includes('429') || msg.toLowerCase().includes('rate limit')) {
+        RATE_LIMITED_UNTIL.set(model, Date.now() + RATE_LIMIT_COOLDOWN_MS);
+      }
       console.warn(
-        `[GenAI] Modelo ${model} falló o no estuvo disponible: ${err?.message || err}. Probando siguiente...`,
+        `[GenAI] Modelo ${model} falló o no estuvo disponible: ${msg}. Probando siguiente...`,
       );
     }
   }
