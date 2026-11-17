@@ -100,8 +100,18 @@ export const FinancialSummaryReportTab: FC<FinancialSummaryReportTabProps> = ({ 
         <div className="card" style={{ padding: '20px', borderRadius: '12px' }}>
           <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '8px' }}>Utilidad bruta</span>
           <div className="tabular-nums" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '1.6rem', fontWeight: 700, color: '#137333' }}>${totalMargenBruto.toLocaleString('es-AR')}</span>
-            <span className="badge" style={{ backgroundColor: '#e6f4ea', color: '#137333', fontSize: '0.75rem', padding: '2px 6px' }}>{pctMargenBruto}%</span>
+            <span style={{ fontSize: '1.6rem', fontWeight: 700, color: totalMargenBruto >= 0 ? '#137333' : 'var(--color-corp-red)' }}>${totalMargenBruto.toLocaleString('es-AR')}</span>
+            <span
+              className="badge"
+              style={{
+                backgroundColor: totalMargenBruto >= 0 ? '#e6f4ea' : 'var(--color-danger-bg)',
+                color: totalMargenBruto >= 0 ? '#137333' : 'var(--color-danger)',
+                fontSize: '0.75rem',
+                padding: '2px 6px'
+              }}
+            >
+              {pctMargenBruto}%
+            </span>
           </div>
         </div>
 
@@ -110,7 +120,7 @@ export const FinancialSummaryReportTab: FC<FinancialSummaryReportTabProps> = ({ 
           <span className="tabular-nums" style={{ fontSize: '1.6rem', fontWeight: 700, color: 'var(--color-corp-red)' }}>${totalGastosReal.toLocaleString('es-AR')}</span>
         </div>
 
-        <div className="card" style={{ padding: '20px', borderRadius: '12px', borderLeft: '4px solid #137333' }}>
+        <div className="card" style={{ padding: '20px', borderRadius: '12px', borderLeft: `4px solid ${totalMargenNeto >= 0 ? '#137333' : 'var(--color-corp-red)'}` }}>
           <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '8px' }}>Rentabilidad neta</span>
           <div className="tabular-nums" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span style={{ fontSize: '1.6rem', fontWeight: 700, color: totalMargenNeto >= 0 ? '#137333' : 'var(--color-corp-red)' }}>
@@ -150,9 +160,9 @@ export const FinancialSummaryReportTab: FC<FinancialSummaryReportTabProps> = ({ 
                   <td style={{ padding: '12px', fontWeight: 600 }}>Sucursal A (Oficial)</td>
                   <td className="tabular-nums" style={{ padding: '12px' }}>${officialSales.toLocaleString('es-AR')}</td>
                   <td className="tabular-nums" style={{ padding: '12px', color: 'var(--text-secondary)' }}>${officialCostReal.toLocaleString('es-AR')}</td>
-                  <td className="tabular-nums" style={{ padding: '12px', fontWeight: 600, color: '#137333' }}>${Math.round(officialSales - officialCostReal).toLocaleString('es-AR')}</td>
+                  <td className="tabular-nums" style={{ padding: '12px', fontWeight: 600, color: (officialSales - officialCostReal) >= 0 ? '#137333' : 'var(--color-corp-red)' }}>${Math.round(officialSales - officialCostReal).toLocaleString('es-AR')}</td>
                   <td className="tabular-nums" style={{ padding: '12px', textAlign: 'center' }}>
-                    <span className="badge" style={{ backgroundColor: '#e8f0fe', color: '#1a73e8', fontWeight: 600 }}>
+                    <span className="badge" style={{ backgroundColor: (officialSales - officialCostReal) >= 0 ? '#e8f0fe' : 'var(--color-danger-bg)', color: (officialSales - officialCostReal) >= 0 ? '#1a73e8' : 'var(--color-danger)', fontWeight: 600 }}>
                       {officialSales > 0 ? Math.round(((officialSales - officialCostReal) / officialSales) * 100) : 0}%
                     </span>
                   </td>
@@ -161,9 +171,9 @@ export const FinancialSummaryReportTab: FC<FinancialSummaryReportTabProps> = ({ 
                   <td style={{ padding: '12px', fontWeight: 600 }}>Sucursal X (Interno)</td>
                   <td className="tabular-nums" style={{ padding: '12px' }}>${internalSales.toLocaleString('es-AR')}</td>
                   <td className="tabular-nums" style={{ padding: '12px', color: 'var(--text-secondary)' }}>${internalCostReal.toLocaleString('es-AR')}</td>
-                  <td className="tabular-nums" style={{ padding: '12px', fontWeight: 600, color: '#137333' }}>${Math.round(internalSales - internalCostReal).toLocaleString('es-AR')}</td>
+                  <td className="tabular-nums" style={{ padding: '12px', fontWeight: 600, color: (internalSales - internalCostReal) >= 0 ? '#137333' : 'var(--color-corp-red)' }}>${Math.round(internalSales - internalCostReal).toLocaleString('es-AR')}</td>
                   <td className="tabular-nums" style={{ padding: '12px', textAlign: 'center' }}>
-                    <span className="badge" style={{ backgroundColor: '#e8f0fe', color: '#1a73e8', fontWeight: 600 }}>
+                    <span className="badge" style={{ backgroundColor: (internalSales - internalCostReal) >= 0 ? '#e8f0fe' : 'var(--color-danger-bg)', color: (internalSales - internalCostReal) >= 0 ? '#1a73e8' : 'var(--color-danger)', fontWeight: 600 }}>
                       {internalSales > 0 ? Math.round(((internalSales - internalCostReal) / internalSales) * 100) : 0}%
                     </span>
                   </td>

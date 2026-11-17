@@ -5,6 +5,7 @@ import { readExcelSheetObjects } from '../../utils/excel-reader.util';
 import {
   normalizeSku,
   parseExcelNumber,
+  validatePricesExcel,
   validateProductsExcel,
 } from '../excel_validator.service';
 
@@ -74,5 +75,32 @@ describe('Paso S3 — Motor Seguro ExcelJS (Anti-Prototype-Pollution, CSV Argent
     expect(report.rows[0].data.sku).toBe('0045');
     expect(report.rows[0].data.costPrice).toBe(1250.5);
     expect(report.rows[1].status).toBe('WARNING'); // Rubro 'Fiambres' nuevo -> WARNING informativo
+  });
+
+  it('Advierte con WARNING cuando costPrice supera listPrice (margen negativo / costo por bulto)', async () => {
+    vi.spyOn(prisma.product, 'findMany').mockResolvedValue([
+      { id: 1, sku: '0261', name: 'MAROLIO ARROZ 10 X 1 KG', costPrice: 10938.4, listPrice: 1837, rubroId: 1 },
+    ] as any);
+    vi.spyOn(prisma.rubro, 'findMany').mockResolvedValue([
+      { id: 1, name: 'ARROZ', description: 'ARROZ' },
+    ] as any);
+
+    const csvProducts = [
+      'SKU;DESCRIPCION;RUBRO;COSTO;PRECIO;BULTO',
+      '0261;MAROLIO ARROZ 10 X 1 KG;ARROZ;10938.4;1837;10',
+    ].join('\n');
+
+    const prodReport = await validateProductsExcel(Buffer.from(csvProducts, 'utf8'));
+    expect(prodReport.rows[0].status).toBe('WARNING');
+    expect(prodReport.rows[0].messages.some((m) => /margen negativo/i.test(m))).toBe(true);
+
+    const csvPrices = [
+      'SKU;PRECIO',
+      '0261;1837',
+    ].join('\n');
+
+    const priceReport = await validatePricesExcel(Buffer.from(csvPrices, 'utf8'));
+    expect(priceReport.rows[0].status).toBe('WARNING');
+    expect(priceReport.rows[0].messages.some((m) => /margen negativo/i.test(m))).toBe(true);
   });
 });

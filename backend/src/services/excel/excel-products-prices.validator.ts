@@ -83,6 +83,13 @@ export async function validateProductsExcel(fileBuffer: Buffer): Promise<Validat
       messages.push(`El rubro '${rubroName}' no existe y se creará automáticamente.`);
     }
 
+    if (costPrice !== null && listPrice !== null && listPrice > 0 && costPrice > listPrice) {
+      if (status !== 'ERROR') status = 'WARNING';
+      messages.push(
+        `Margen negativo: el costo ($${costPrice}) supera al precio de venta ($${listPrice}). Revisá si el costo está cargado por bulto.`,
+      );
+    }
+
     if (sku && status !== 'ERROR') {
       if (dbProductMap.has(sku)) {
         action = 'UPDATE';
@@ -190,6 +197,15 @@ export async function validatePricesExcel(fileBuffer: Buffer): Promise<Validatio
     }
 
     const currentProd = dbProductMap.get(sku);
+    const effectiveCost = costPrice ?? (currentProd?.costPrice ? Number(currentProd.costPrice) : 0);
+    const effectiveList = listPrice ?? (currentProd?.listPrice ? Number(currentProd.listPrice) : 0);
+
+    if (effectiveList > 0 && effectiveCost > effectiveList) {
+      if ((status as string) !== 'ERROR') status = 'WARNING';
+      messages.push(
+        `Margen negativo: el costo ($${effectiveCost}) supera al precio de venta ($${effectiveList}). Revisá si el costo está cargado por bulto.`,
+      );
+    }
 
     if ((status as string) === 'ERROR') errorCount++;
     else if ((status as string) === 'WARNING') warningCount++;
