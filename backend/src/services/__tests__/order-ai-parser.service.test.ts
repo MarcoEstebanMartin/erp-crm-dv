@@ -150,4 +150,64 @@ describe('order-ai-parser.service', () => {
     expect(result.clientCandidates).toEqual([]);
     expect(result.items[0]).toMatchObject({ productId: 102, quantity: 4 });
   });
+
+  it('auto-resuelve cliente parcial claro cuando Gemini devuelve detectedClientId: null y clientQuery "Esteban Martin"', async () => {
+    (prisma.persona.findMany as any).mockResolvedValue([
+      ...MOCK_CLIENTS,
+      { id: 77, name: 'Marco Esteban Martin', city: 'General Villegas', address: null },
+      { id: 78, name: 'Esteban Lopez', city: 'Banderaló', address: null },
+    ]);
+    vi.spyOn(genaiHelper, 'isGeminiApiKeyConfigured').mockReturnValue(true);
+    vi.spyOn(genaiHelper, 'runGeminiInteraction').mockResolvedValue(
+      JSON.stringify({
+        detectedClientId: null,
+        clientQuery: 'Esteban Martin',
+        items: [{ productId: 102, quantity: 1, note: null }],
+        unmatchedLines: [],
+        orderNotes: null,
+      }),
+    );
+
+    const result = await parseVendedorOrderWithAi({
+      text: 'Cargale a Esteban Martin 1 aceite natura',
+    });
+
+    expect(result.detectedClient?.id).toBe(77);
+    expect(result.detectedClient?.name).toBe('Marco Esteban Martin');
+  });
+
+  it('no sustituye "fernet de litro" por 750ml ni "numero 3" por N°2 en el fallback local', () => {
+    const parsed = parseOrderItemsLocalFallback(
+      '1 caja de fernet de litro, 1 caja de fideos 308 numero 3',
+      [
+        {
+          id: 201,
+          sku: 'FER-750',
+          name: 'BRANCA FERNET X 750 ML',
+          listPrice: 17772,
+          unitsPerBox: 12,
+          commercialCategory: 'Bebidas',
+        },
+        {
+          id: 202,
+          sku: 'FID-308-2',
+          name: '308 TALLARIN N°2 MORRON X 500G',
+          listPrice: 1939,
+          unitsPerBox: 12,
+          commercialCategory: 'Almacen',
+        },
+        {
+          id: 203,
+          sku: 'FID-308-3',
+          name: '308 TALLARIN N°3 X 500G',
+          listPrice: 1939,
+          unitsPerBox: 12,
+          commercialCategory: 'Almacen',
+        },
+      ],
+    );
+
+    expect(parsed.items.map((i) => i.productId)).toEqual([203]);
+    expect(parsed.unmatchedLines).toEqual(['1 caja de fernet de litro']);
+  });
 });

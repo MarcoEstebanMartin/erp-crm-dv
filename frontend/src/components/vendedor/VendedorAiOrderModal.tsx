@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Mic, Square, Send, Sparkles, X, Trash2, AlertTriangle, Check, Loader2 } from 'lucide-react';
 import { orderApi } from '../../api/order.api';
+import { AiClientSelector } from './AiClientSelector';
 import type { Persona, Product } from '../../types';
 
 interface ParsedDraftItem {
@@ -255,8 +256,6 @@ export const VendedorAiOrderModal: React.FC<VendedorAiOrderModalProps> = ({
     onClose();
   };
 
-  const resolvedClientObj = selectedClient || clients.find((c) => c.id === draftClientId) || null;
-
   return (
     <dialog
       ref={dialogRef}
@@ -368,40 +367,13 @@ export const VendedorAiOrderModal: React.FC<VendedorAiOrderModalProps> = ({
           {hasParsed && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', paddingTop: '6px', borderTop: '1px solid var(--border-color)' }}>
               {!selectedClient && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <label htmlFor="ai-client-select" style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-secondary)' }}>
-                    Cliente {clientQuery && !resolvedClientObj ? `(mencionado: "${clientQuery}")` : ''}
-                  </label>
-                  {clientCandidates.length > 0 && !resolvedClientObj && (
-                    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                      {clientCandidates.map((cand) => (
-                        <button
-                          key={cand.id}
-                          type="button"
-                          className="btn btn-secondary"
-                          style={{ padding: '4px 10px', fontSize: '0.76rem' }}
-                          onClick={() => setDraftClientId(cand.id)}
-                        >
-                          {cand.name}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                  <select
-                    id="ai-client-select"
-                    className="input"
-                    value={draftClientId ?? ''}
-                    onChange={(e) => setDraftClientId(e.target.value ? Number(e.target.value) : null)}
-                    style={{ fontSize: '0.86rem', padding: '8px 10px' }}
-                  >
-                    <option value="">Elegir cliente después</option>
-                    {clients.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}{c.city ? ` (${c.city})` : ''}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                <AiClientSelector
+                  clients={clients}
+                  draftClientId={draftClientId}
+                  clientQuery={clientQuery}
+                  clientCandidates={clientCandidates}
+                  onSelectClient={setDraftClientId}
+                />
               )}
 
               {draftItems.length > 0 ? (

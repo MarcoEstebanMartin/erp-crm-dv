@@ -66,7 +66,10 @@ function normalizeSearchText(value: string): string {
 }
 
 const CLIENT_STOP_WORDS = new Set([
-  'para', 'cliente', 'cargar', 'carga', 'pedido', 'de', 'del', 'la', 'el', 'los', 'las', 'a', 'al', 'almacen', 'kiosco', 'despensa', 'autoservicio', 'super', 'minimercado',
+  'para', 'cliente', 'cargar', 'carga', 'cargale', 'regalale', 'anotale', 'sumale', 'ponele', 'pedido',
+  'de', 'del', 'la', 'el', 'los', 'las', 'a', 'al', 'un', 'una', 'uno', 'unos', 'unas', 'dos', 'tres', 'cuatro', 'cinco',
+  'caja', 'cajas', 'pack', 'packs', 'bulto', 'bultos', 'litro', 'litros', 'por', 'numero', 'nro',
+  'almacen', 'kiosco', 'despensa', 'autoservicio', 'super', 'minimercado',
 ]);
 
 function levenshtein(a: string, b: string): number {
@@ -88,14 +91,14 @@ function levenshtein(a: string, b: string): number {
 }
 
 /**
- * Busca candidatos de cliente por similitud de tokens normalizados (incluye orden invertido y errores tipográficos/fonéticos).
+ * Puntúa candidatos de cliente por similitud de tokens normalizados (orden invertido, subconjunto y errores tipográficos).
  */
-export function findClientCandidatesLocal(
+function scoreClientCandidatesLocal(
   queryText: string,
   clients: AiParsedClientRef[],
   limit = 5,
   preferredSellerId?: number,
-): AiParsedClientRef[] {
+): Array<{ client: AiParsedClientRef; score: number; matchedTokens: number; totalQueryTokens: number }> {
   const normalizedQuery = normalizeSearchText(queryText);
   if (!normalizedQuery) return [];
 
@@ -105,7 +108,7 @@ export function findClientCandidatesLocal(
 
   if (queryTokens.length === 0) return [];
 
-  const scored: Array<{ client: AiParsedClientRef; score: number }> = [];
+  const scored: Array<{ client: AiParsedClientRef; score: number; matchedTokens: number; totalQueryTokens: number }> = [];
 
   for (const client of clients) {
     const clientNameNorm = normalizeSearchText(client.name);
@@ -122,7 +125,7 @@ export function findClientCandidatesLocal(
 
     for (const qt of queryTokens) {
       if (clientTokens.some((ct) => ct === qt)) {
-        score += 25;
+        score += 30;
         matchedTokens += 1;
       } else if (clientTokens.some((ct) => ct.startsWith(qt) || qt.startsWith(ct) || ct.includes(qt) || qt.includes(ct))) {
         score += 14;
@@ -143,19 +146,33 @@ export function findClientCandidatesLocal(
       score += matchedTokens * 15;
     }
 
+    // Bono fuerte cuando todos los tokens buscados aparecen en el nombre del cliente (ej. "Esteban Martin" -> "Marco Esteban Martin")
+    if (matchedTokens === queryTokens.length) {
+      score += 80;
+    }
+
     if (score > 0 && preferredSellerId && client.sellerId === preferredSellerId) {
       score += 18;
     }
 
     if (score > 0) {
-      scored.push({ client, score });
+      scored.push({ client, score, matchedTokens, totalQueryTokens: queryTokens.length });
     }
   }
 
-  return scored
-    .sort((a, b) => b.score - a.score)
-    .slice(0, limit)
-    .map((entry) => entry.client);
+  return scored.sort((a, b) => b.score - a.score).slice(0, limit);
+}
+
+/**
+ * Busca candidatos de cliente por similitud de tokens normalizados (incluye orden invertido y errores tipográficos/fonéticos).
+ */
+export function findClientCandidatesLocal(
+  queryText: string,
+  clients: AiParsedClientRef[],
+  limit = 5,
+  preferredSellerId?: number,
+): AiParsedClientRef[] {
+  return scoreClientCandidatesLocal(queryText, clients, limit, preferredSellerId).map((entry) => entry.client);
 }
 
 const ITEM_STOP_WORDS = new Set([
@@ -201,6 +218,11 @@ export function parseOrderItemsLocalFallback(
     let bestProduct: CatalogEntry | null = null;
     let bestScore = 0;
 
+    const wantsLiter = /\b(litro|litros|1l|1000\s*ml|1000ml)\b/.test(normClause);
+    const wants500 = /\b500\b/.test(normClause);
+    const requestedNumberMatch = normClause.match(/\b(?:numero|nro|n)\s*(\d+)\b/);
+    const requestedNumber = requestedNumberMatch ? requestedNumberMatch[1] : null;
+
     for (const prod of catalog) {
       const prodNorm = normalizeSearchText(`${prod.name} ${prod.sku}`);
       let score = 0;
@@ -209,6 +231,23 @@ export function parseOrderItemsLocalFallback(
           score += token.length >= 4 ? 2 : 1;
         }
       }
+
+      // Evitar sustituir tamaños o números explícitos (ej: "fernet de litro" != "750 ml", "500" != "1 kg", "N° 3" != "N° 2")
+      if (wantsLiter && /\b750\b/.test(prodNorm) && !/\b(1000|1l|1\s*l|litro)\b/.test(prodNorm)) {
+        score = 0;
+      }
+      if (wants500 && /\b1\s*kg\b/.test(prodNorm) && !/\b500\b/.test(prodNorm)) {
+        score = 0;
+      }
+      if (requestedNumber) {
+        const prodNumMatch = prodNorm.match(/\b(?:n|nro|numero)\s*(\d+)\b/);
+        if (prodNumMatch && prodNumMatch[1] !== requestedNumber) {
+          score = 0;
+        } else if (prodNumMatch && prodNumMatch[1] === requestedNumber) {
+          score += 3;
+        }
+      }
+
       if (score > bestScore) {
         bestScore = score;
         bestProduct = prod;
@@ -294,7 +333,7 @@ export async function parseVendedorOrderWithAi(
         unitsPerBox: true,
         commercialCategory: true,
       },
-      take: 600,
+      orderBy: { name: 'asc' },
     }),
     input.selectedClientId
       ? Promise.resolve([])
@@ -358,10 +397,13 @@ export async function parseVendedorOrderWithAi(
       const systemInstruction = `
 Eres el asistente de toma de pedidos mayoristas de DV Distribuidora (alimentos y bebidas en Argentina).
 Tu tarea es interpretar el mensaje o dictado de un vendedor y devolver un borrador estructurado:
-1. CLIENTE: Si el vendedor menciona un cliente y no hay cliente preseleccionado, busca el ID más probable en CLIENTES CANDIDATOS aunque el nombre y apellido estén en otro orden, falte una letra o haya un error de transcripción (ej: "MARCO ESTEBAN MARTI" -> "MARTIN MARCO ESTEBAN"). Si hay dos clientes muy parecidos, prioriza el que tenga isMine: true. Solo deja detectedClientId en null si realmente hay empate o ambigüedad real, y coloca el nombre mencionado en clientQuery.
-2. PRODUCTOS: Empareja ÚNICAMENTE productos explícitamente solicitados contra CATÁLOGO DISPONIBLE. Jamás inventes productos.
+1. CLIENTE: Si el vendedor menciona un cliente y no hay cliente preseleccionado, busca el ID más probable en CLIENTES CANDIDATOS aunque el nombre y apellido estén en otro orden, falte algún nombre/apellido o haya un error de transcripción (ej: "Esteban Martin" -> "Marco Esteban Martin", "MARCO ESTEBAN MARTI" -> "MARTIN MARCO ESTEBAN"). Si hay dos clientes muy parecidos, prioriza el que tenga isMine: true. Solo deja detectedClientId en null si realmente hay empate o ambigüedad real, y coloca el nombre mencionado en clientQuery.
+2. PRODUCTOS Y TAMAÑOS EXACTOS: Empareja ÚNICAMENTE productos explícitamente solicitados contra CATÁLOGO DISPONIBLE. Jamás inventes productos ni sustituyas tamaños, pesos, volúmenes o variedades:
+   - "de litro" / "1 litro" / "1L" / "1000 ml" equivale EXCLUSIVAMENTE a 1L / 1000ML (NUNCA elijas 750ml).
+   - "por 500" / "500g" / "medio kilo" equivale EXCLUSIVAMENTE a 500g (NUNCA elijas 1kg).
+   - "número 3" / "N° 3" equivale EXCLUSIVAMENTE a N°3 (NUNCA elijas N°2).
 3. Si pide "caja", "cajón", "pack" o "bulto", multiplica la cantidad por 'unitsPerBox' (si unitsPerBox > 1).
-4. Si menciona algún producto que NO encuentras con certeza en el catálogo, agrégalo tal cual en unmatchedLines para que el vendedor lo revise.
+4. Si menciona algún producto que NO encuentras con su marca y tamaño/variedad exactos en el catálogo, agrégalo tal cual en unmatchedLines (aclarando brevemente si solo existe otro tamaño, ej: "fernet de litro (solo 750ml)") para que el vendedor lo revise.
 5. Si menciona aclaraciones de entrega o pago ("entregar a la tarde", "paga en efectivo"), colócalas en orderNotes.
 `.trim();
 
@@ -371,7 +413,7 @@ Tu tarea es interpretar el mensaje o dictado de un vendedor y devolver un borrad
         systemInstruction,
         input: userInput,
         jsonSchema: AI_ORDER_PARSE_JSON_SCHEMA,
-        preferredModels: [FALLBACK_GEMINI_FLASH_LITE_MODEL, DEFAULT_GEMINI_FLASH_MODEL],
+        preferredModels: [DEFAULT_GEMINI_FLASH_MODEL, FALLBACK_GEMINI_FLASH_LITE_MODEL],
       });
 
       const parsed = aiOrderParseResultValidator.parse(parseStructuredJsonText(responseText));
@@ -418,7 +460,20 @@ Tu tarea es interpretar el mensaje o dictado de un vendedor y devolver un borrad
       }
     }
   } else if (!input.selectedClientId && !detectedClient && clientQuery && clientList.length > 0) {
-    clientCandidates = findClientCandidatesLocal(clientQuery, clientList, 5, input.sellerId);
+    const scoredCandidates = scoreClientCandidatesLocal(clientQuery, clientList, 5, input.sellerId);
+    clientCandidates = scoredCandidates.map((entry) => entry.client);
+
+    // Si el mejor candidato cubre todos los tokens buscados (ej: "Esteban Martin" -> "Marco Esteban Martin")
+    // y supera claramente al segundo (o es el único), seleccionarlo automáticamente.
+    const top = scoredCandidates[0];
+    const second = scoredCandidates[1];
+    if (
+      top &&
+      top.matchedTokens === top.totalQueryTokens &&
+      (!second || top.score - second.score >= 25)
+    ) {
+      detectedClient = top.client;
+    }
   }
 
   return {

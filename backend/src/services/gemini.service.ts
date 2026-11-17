@@ -113,11 +113,11 @@ export class GeminiService {
           DEFAULT_GEMINI_FLASH_MODEL,
         ],
         systemInstruction:
-          'Eres un asistente experto en toma de pedidos comerciales mayoristas de alimentos y bebidas en Argentina.',
+          'Eres un transcriptor experto para vendedores mayoristas de alimentos y bebidas en Argentina. El hablante dicta pedidos para clientes usando modismos argentinos como "cargale a...", "anotale a...", "para...", "sumale...", "caja", "pack", "bulto", "de litro", "por 500", "número 3". Nunca confundas "cargale" con "regalale".',
         input: [
           {
             type: 'text',
-            text: 'Escucha esta nota de voz y transcribe textualmente los productos, cantidades y marcas solicitados.',
+            text: 'Escucha esta nota de voz y transcribe textualmente en español rioplatense el cliente mencionado, las cantidades, envases (caja, pack, bulto, unidad) y los productos con su marca, variedad y tamaño exacto (ej: "de litro", "750", "por 500", "número 3").',
           },
           audioBlock,
         ],
