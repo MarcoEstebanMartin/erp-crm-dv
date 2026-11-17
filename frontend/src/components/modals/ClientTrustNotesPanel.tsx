@@ -4,9 +4,9 @@ import { api } from '../../utils/api';
 import {
   NOTE_CATEGORIES,
   NOTE_CATEGORY_LABELS,
-  PersonaNoteCategory,
   TRUST_TAGS,
 } from '../../utils/trustTags';
+import type { PersonaNoteCategory } from '../../utils/trustTags';
 
 interface PersonaNoteItem {
   id: number;
