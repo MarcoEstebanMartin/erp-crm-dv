@@ -197,10 +197,11 @@ describe('Servicios Financieros, Cobranzas y Gastos (Integridad Atómica y Segur
 
     expect(txSpy).toHaveBeenCalledTimes(1);
     expect(mockTx.cashDrawer.create).toHaveBeenCalledOnce();
-    expect(mockTx.bankAccount.update).toHaveBeenCalledWith({
-      where: { id: 3 },
-      data: { balance: { increment: 25000 } },
+    expect(mockTx.transaction.update).toHaveBeenCalledWith({
+      where: { id: 202 },
+      data: { verified: false, cashDrawerId: 88, bankAccountId: 3 },
     });
+    expect(mockTx.bankAccount.update).not.toHaveBeenCalled();
     expect(result.difference).toBe(0);
     expect(result.verifiedReceipts).toHaveLength(2);
   });

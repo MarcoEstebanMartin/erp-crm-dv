@@ -1056,10 +1056,10 @@ export const api = {
     }
   },
 
-  verifyTransaction: async (id: number, verified: boolean, adjustedAmount?: number) => {
+  verifyTransaction: async (id: number, verified: boolean, adjustedAmount?: number, bankAccountId?: number) => {
     const res = await request(`/finance/transactions/${id}/verify`, {
       method: 'PUT',
-      body: JSON.stringify({ verified, adjustedAmount })
+      body: JSON.stringify({ verified, adjustedAmount, bankAccountId })
     });
     return res;
   },

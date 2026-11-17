@@ -156,6 +156,10 @@ export class PersonaPaymentSubService {
         }
 
         let bankAccountId: number | null = null;
+        const isPendingBankTransferIncome =
+          resolvedType === TransactionType.INCOME &&
+          item.paymentMethod === PaymentMethod.BANK_TRANSFER;
+
         if (
           item.paymentMethod === PaymentMethod.BANK_TRANSFER ||
           item.paymentMethod === PaymentMethod.CHECK
@@ -168,15 +172,17 @@ export class PersonaPaymentSubService {
           }
           bankAccountId = Number(selectedBankId);
 
-          await tx.bankAccount.update({
-            where: { id: bankAccountId },
-            data: {
-              balance: {
-                increment:
-                  resolvedType === TransactionType.INCOME ? item.amount : -item.amount,
+          if (!isPendingBankTransferIncome) {
+            await tx.bankAccount.update({
+              where: { id: bankAccountId },
+              data: {
+                balance: {
+                  increment:
+                    resolvedType === TransactionType.INCOME ? item.amount : -item.amount,
+                },
               },
-            },
-          });
+            });
+          }
         }
 
         const txBillingType =
@@ -202,7 +208,7 @@ export class PersonaPaymentSubService {
             bankAccountId,
             supplierInvoiceId: supplierInvoiceId ? Number(supplierInvoiceId) : null,
             orderId: orderId ? Number(orderId) : null,
-            verified: true,
+            verified: !isPendingBankTransferIncome,
           },
         });
         createdTransactions.push(transaction);

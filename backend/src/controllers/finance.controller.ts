@@ -239,6 +239,10 @@ export async function verifyTransaction(req: AuthenticatedRequest, res: Response
         req.body.adjustedAmount !== undefined && req.body.adjustedAmount !== null
           ? Number(req.body.adjustedAmount)
           : undefined,
+      bankAccountId:
+        req.body.bankAccountId !== undefined && req.body.bankAccountId !== null
+          ? Number(req.body.bankAccountId)
+          : undefined,
     });
     res.status(200).json({ status: 'success', data: { transaction } });
   } catch (error) {

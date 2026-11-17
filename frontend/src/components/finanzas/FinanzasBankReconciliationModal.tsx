@@ -100,7 +100,8 @@ export const FinanzasBankReconciliationModal: React.FC<FinanzasBankReconciliatio
     const exacts = csvRows.map((r) => ({ row: r, m: getRowMatchStatus(r) })).filter((x) => x.m.status === 'exact' && x.m.tx);
     if (exacts.length === 0 || !(await confirm(`¿Conciliar las ${exacts.length} transferencias exactas en lote?`))) return;
     await runReconAction(async () => {
-      await Promise.all(exacts.map((x) => api.verifyTransaction(x.m.tx.id, true)));
+      const bankIdNum = Number(reconBankId) || undefined;
+      await Promise.all(exacts.map((x) => api.verifyTransaction(x.m.tx.id, true, undefined, bankIdNum)));
       setReconciledRows((prev) => { const next = new Set(prev); exacts.forEach((x) => next.add(x.row.id)); return next; });
     }, 'Error al conciliar en lote.');
   };
@@ -109,7 +110,8 @@ export const FinanzasBankReconciliationModal: React.FC<FinanzasBankReconciliatio
     const ids = Array.from(selectedTxs);
     if (ids.length === 0 || !(await confirm(`¿Verificar las ${ids.length} transferencias seleccionadas?`))) return;
     await runReconAction(async () => {
-      await Promise.all(ids.map((id) => api.verifyTransaction(id, true)));
+      const bankIdNum = Number(reconBankId) || undefined;
+      await Promise.all(ids.map((id) => api.verifyTransaction(id, true, undefined, bankIdNum)));
       setSelectedTxs(new Set());
     }, 'Error al verificar transferencias seleccionadas.');
   };
@@ -215,9 +217,9 @@ export const FinanzasBankReconciliationModal: React.FC<FinanzasBankReconciliatio
                         </div>
                         <div style={{ textAlign: 'right' }}>
                           <div className="tabular-nums" style={{ fontWeight: 700, fontFamily: 'monospace', fontSize: '1rem' }}>${Math.round(row.amount).toLocaleString('es-AR')}</div>
-                          {mInfo.status === 'exact' && mInfo.tx && <button type="button" className="btn btn-sm" style={{ backgroundColor: '#10b981', color: '#fff', fontSize: '0.72rem', padding: '4px 8px', marginTop: '4px' }} onClick={() => runReconAction(() => api.verifyTransaction(mInfo.tx.id, true, row.amount), 'Error al conciliar.', row.id)}>Conciliar</button>}
-                          {mInfo.status === 'rounding' && mInfo.tx && <button type="button" className="btn btn-sm" style={{ backgroundColor: '#f59e0b', color: '#fff', fontSize: '0.72rem', padding: '4px 8px', marginTop: '4px' }} onClick={() => runReconAction(() => api.verifyTransaction(mInfo.tx.id, true, row.amount), 'Error al conciliar.', row.id)}>Ajustar y Conciliar</button>}
-                          {mInfo.status === 'unregistered' && mInfo.client && <button type="button" className="btn btn-sm" style={{ backgroundColor: '#3b82f6', color: '#fff', fontSize: '0.72rem', padding: '4px 8px', marginTop: '4px' }} onClick={() => runReconAction(() => api.registerPayment(mInfo.client.id, { amount: row.amount, paymentMethod: 'BANK_TRANSFER', description: `Cobro MP Conciliación - Op ${row.id} - Payer: ${row.payerName}`, branch: 'X', type: 'INCOME', bankAccountId: Number(reconBankId) }), 'Error al registrar cobro.', row.id)}>Registrar Cobro</button>}
+                          {mInfo.status === 'exact' && mInfo.tx && <button type="button" className="btn btn-sm" style={{ backgroundColor: '#10b981', color: '#fff', fontSize: '0.72rem', padding: '4px 8px', marginTop: '4px' }} onClick={() => runReconAction(() => api.verifyTransaction(mInfo.tx.id, true, row.amount, Number(reconBankId) || undefined), 'Error al conciliar.', row.id)}>Conciliar</button>}
+                          {mInfo.status === 'rounding' && mInfo.tx && <button type="button" className="btn btn-sm" style={{ backgroundColor: '#f59e0b', color: '#fff', fontSize: '0.72rem', padding: '4px 8px', marginTop: '4px' }} onClick={() => runReconAction(() => api.verifyTransaction(mInfo.tx.id, true, row.amount, Number(reconBankId) || undefined), 'Error al conciliar.', row.id)}>Ajustar y Conciliar</button>}
+                          {mInfo.status === 'unregistered' && mInfo.client && <button type="button" className="btn btn-sm" style={{ backgroundColor: '#3b82f6', color: '#fff', fontSize: '0.72rem', padding: '4px 8px', marginTop: '4px' }} onClick={() => runReconAction(async () => { const res = await api.registerPayment(mInfo.client.id, { amount: row.amount, paymentMethod: 'BANK_TRANSFER', description: `Cobro MP Conciliación - Op ${row.id} - Payer: ${row.payerName}`, branch: 'X', type: 'INCOME', bankAccountId: Number(reconBankId) }); if (res?.transaction?.id) await api.verifyTransaction(res.transaction.id, true, undefined, Number(reconBankId) || undefined); }, 'Error al registrar cobro.', row.id)}>Registrar Cobro</button>}
                           {mInfo.status === 'reconciled' && <span style={{ fontSize: '0.72rem', color: '#10b981', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '3px' }}><Check size={13} aria-hidden="true" /> Listo</span>}
                         </div>
                       </div>
@@ -264,7 +266,7 @@ export const FinanzasBankReconciliationModal: React.FC<FinanzasBankReconciliatio
                 </div>
                 <div style={{ textAlign: 'right' }}>
                   <div className="tabular-nums" style={{ fontFamily: 'monospace', fontWeight: 700 }}>${Math.round(Number(t.amount)).toLocaleString('es-AR')}</div>
-                  <button type="button" className="btn btn-ghost" style={{ fontSize: '0.68rem', padding: '1px 6px', color: t.verified ? '#64748b' : '#10b981' }} onClick={async () => { await api.verifyTransaction(t.id, !t.verified); onRefreshMainData(); reload(); }}>
+                  <button type="button" className="btn btn-ghost" style={{ fontSize: '0.68rem', padding: '1px 6px', color: t.verified ? '#64748b' : '#10b981' }} onClick={async () => { await api.verifyTransaction(t.id, !t.verified, undefined, !t.verified ? (Number(reconBankId) || undefined) : undefined); onRefreshMainData(); reload(); }}>
                     {t.verified ? 'Verificada' : 'Verificar'}
                   </button>
                 </div>

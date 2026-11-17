@@ -74,6 +74,7 @@ export const verifyTransactionSchema = z.object({
   body: z.object({
     verified: z.boolean(),
     adjustedAmount: z.coerce.number().positive().optional().nullable(),
+    bankAccountId: z.coerce.number().int().positive().optional().nullable(),
   }),
 });
 

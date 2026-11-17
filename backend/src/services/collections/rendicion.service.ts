@@ -213,7 +213,13 @@ export const rendicionService = {
       }
 
       for (const t of txs) {
-        if (t.paymentMethod === PaymentMethod.BANK_TRANSFER || t.paymentMethod === PaymentMethod.CHECK) {
+        if (t.paymentMethod === PaymentMethod.BANK_TRANSFER) {
+          const selectedBankId = t.bankAccountId || defaultBank?.id || null;
+          await tx.transaction.update({
+            where: { id: t.id },
+            data: { verified: false, cashDrawerId: createdDrawer.id, bankAccountId: selectedBankId },
+          });
+        } else if (t.paymentMethod === PaymentMethod.CHECK) {
           const selectedBankId = t.bankAccountId || defaultBank?.id || null;
           const txAmt = roundToTwoDecimals(t.amount.toString()).toNumber();
 

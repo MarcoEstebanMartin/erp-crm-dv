@@ -115,10 +115,10 @@ export const cashDrawerService = {
           const method = (r.paymentMethod as PaymentMethod) || PaymentMethod.CASH;
           const billing = normalizeReceiptBillingType(r.billingType);
           const checkSuffix = r.checkNumber ? ` (Cheque N° ${String(r.checkNumber).trim()})` : '';
-          const bankAccountId =
-            method === PaymentMethod.BANK_TRANSFER
-              ? (r.bankAccountId ? Number(r.bankAccountId) : defaultBank?.id ?? null)
-              : null;
+          const isBankTransfer = method === PaymentMethod.BANK_TRANSFER;
+          const bankAccountId = isBankTransfer
+            ? (r.bankAccountId ? Number(r.bankAccountId) : defaultBank?.id ?? null)
+            : null;
 
           const createdTx = await tx.transaction.create({
             data: {
@@ -131,7 +131,7 @@ export const cashDrawerService = {
               description: `Recibo/Cobranza - Arqueo de Caja${checkSuffix}`,
               cashDrawerId: drawer.id,
               bankAccountId,
-              verified: true,
+              verified: !isBankTransfer,
             },
           });
 
@@ -149,13 +149,6 @@ export const cashDrawerService = {
             reference: `Recibo #${createdTx.id}`,
             description: `Recibo N° ${receiptNumber} - Arqueo de Caja${checkSuffix}`,
           });
-
-          if (method === PaymentMethod.BANK_TRANSFER && bankAccountId) {
-            await tx.bankAccount.update({
-              where: { id: bankAccountId },
-              data: { balance: { increment: receiptAmt } },
-            });
-          }
         }
       }
 

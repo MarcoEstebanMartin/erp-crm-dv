@@ -72,6 +72,7 @@ export const transactionAdminService = {
     txId: number;
     verified: boolean;
     adjustedAmount?: number | null;
+    bankAccountId?: number | null;
   }) {
     const transaction = await prisma.transaction.findUnique({ where: { id: params.txId } });
     if (!transaction) throw new AppError('Transacción no encontrada.', 404);
@@ -85,8 +86,12 @@ export const transactionAdminService = {
         (transaction.paymentMethod === PaymentMethod.BANK_TRANSFER ||
           transaction.paymentMethod === PaymentMethod.CHECK)
       ) {
-        const defaultBank = await tx.bankAccount.findFirst();
-        resolvedBankAccountId = defaultBank?.id ?? null;
+        if (params.bankAccountId) {
+          resolvedBankAccountId = Number(params.bankAccountId);
+        } else {
+          const defaultBank = await tx.bankAccount.findFirst();
+          resolvedBankAccountId = defaultBank?.id ?? null;
+        }
       }
 
       const deltas = calculateVerificationDeltas({

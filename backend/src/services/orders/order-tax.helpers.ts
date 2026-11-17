@@ -150,12 +150,7 @@ export async function settleOrderFinancials(
   });
 
   if (paymentMethod) {
-    if (paymentMethod === 'BANK_TRANSFER' && bankAccountId) {
-      await tx.bankAccount.update({
-        where: { id: bankAccountId },
-        data: { balance: { increment: settledPaymentAmount } },
-      });
-    }
+    const isBankTransfer = paymentMethod === 'BANK_TRANSFER';
 
     const createdTx = await tx.transaction.create({
       data: {
@@ -169,7 +164,7 @@ export async function settleOrderFinancials(
         description,
         cashDrawerId,
         bankAccountId,
-        verified: true,
+        verified: !isBankTransfer,
       },
     });
 
