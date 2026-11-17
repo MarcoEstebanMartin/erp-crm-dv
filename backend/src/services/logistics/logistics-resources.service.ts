@@ -112,7 +112,9 @@ export const logisticsResourcesService = {
       });
     }
 
-    const driverOptions = buildDispatchDriverCandidates(rawEmployees || []);
+    const driverOptions = buildDispatchDriverCandidates(rawEmployees || []).filter(
+      (d) => d.isPrimaryDriver,
+    );
     const drivers = driverOptions.map((d) => d.fullName);
 
     const googleMapsApiKey =

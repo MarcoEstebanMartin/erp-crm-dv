@@ -1,4 +1,4 @@
-import type { FC, FormEvent } from 'react';
+import { useEffect, useState, type FC, type FormEvent } from 'react';
 import { MapPin, CheckCircle, X } from 'lucide-react';
 import { NativeModalDialog } from '../modals/NativeModalDialog';
 import { RouteMap } from './LeafletRouteMap';
@@ -61,6 +61,12 @@ export const RepartoCreateRouteModal: FC<RepartoCreateRouteModalProps> = ({
 }) => {
   const selectedOrders = modalOrderPool.filter((o) => selectedOrderIds.includes(o.id));
   const metrics = computeTripDisplayMetrics(selectedOrders);
+  const [isCustomDriver, setIsCustomDriver] = useState(false);
+
+  useEffect(() => {
+    if (!show) return;
+    setIsCustomDriver(Boolean(driverName && !driverOptions.some((d) => d.fullName === driverName)));
+  }, [show, editingRouteId]);
 
   return (
     <NativeModalDialog isOpen={show} onClose={onClose} ariaLabelledBy="reparto-create-modal-title" style={{ maxWidth: '1220px', width: '94vw', padding: '24px' }}>
@@ -95,9 +101,16 @@ export const RepartoCreateRouteModal: FC<RepartoCreateRouteModalProps> = ({
                 <select
                   id="reparto-driver"
                   className="select"
-                  value={driverName}
+                  value={isCustomDriver ? 'CUSTOM' : driverName}
                   onChange={(e) => {
                     const nextName = e.target.value;
+                    if (nextName === 'CUSTOM') {
+                      setIsCustomDriver(true);
+                      setDriverName('');
+                      setDriverEmployeeId(null);
+                      return;
+                    }
+                    setIsCustomDriver(false);
                     setDriverName(nextName);
                     const found = driverOptions.find((d) => d.fullName === nextName);
                     setDriverEmployeeId(found?.employeeId ?? null);
@@ -110,9 +123,7 @@ export const RepartoCreateRouteModal: FC<RepartoCreateRouteModalProps> = ({
                       {d.fullName}
                     </option>
                   ))}
-                  {driverName && !driverOptions.some((d) => d.fullName === driverName) && (
-                    <option value={driverName}>{driverName}</option>
-                  )}
+                  <option value="CUSTOM">Otro</option>
                 </select>
               </div>
               <div className="form-group" style={{ marginBottom: 0 }}>
@@ -145,6 +156,24 @@ export const RepartoCreateRouteModal: FC<RepartoCreateRouteModalProps> = ({
                 </select>
               </div>
             </div>
+
+            {isCustomDriver && (
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label htmlFor="reparto-driver-custom">Nombre del conductor</label>
+                <input
+                  id="reparto-driver-custom"
+                  type="text"
+                  className="input"
+                  placeholder="Nombre y apellido"
+                  value={driverName}
+                  onChange={(e) => {
+                    setDriverName(e.target.value);
+                    setDriverEmployeeId(null);
+                  }}
+                  required
+                />
+              </div>
+            )}
 
             {selectedVehicleKey === 'CUSTOM' && (
               <div style={{ display: 'grid', gridTemplateColumns: '130px 1fr', gap: '10px' }}>

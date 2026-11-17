@@ -71,9 +71,17 @@ export interface TripSummaryMetrics {
   totalAmountPesos: number;
 }
 
+const NON_DELIVERY_FLEET_PLATES = new Set([
+  'DEP-GRAL',
+  'OTF 197',
+  'AF 747 KX',
+  'AD 032 KX',
+]);
+
 /**
  * Determina si un vehículo de la flota está habilitado para reparto vial,
- * excluyendo autoelevadores, registros administrativos y unidades fuera de servicio.
+ * excluyendo autoelevadores, registros administrativos, vehículos particulares/gerenciales
+ * y unidades fuera de servicio.
  */
 export function isRoadFleetVehicle(vehicle: RoadVehicleCandidateInput): boolean {
   const status = (vehicle.status ?? 'ACTIVE').trim().toUpperCase();
@@ -82,7 +90,7 @@ export function isRoadFleetVehicle(vehicle: RoadVehicleCandidateInput): boolean 
   const plate = (vehicle.plate || '').trim().toUpperCase();
   const brand = (vehicle.brand || '').trim().toUpperCase();
   if (!plate) return false;
-  if (plate.startsWith('ELEV-') || plate === 'DEP-GRAL') return false;
+  if (plate.startsWith('ELEV-') || NON_DELIVERY_FLEET_PLATES.has(plate)) return false;
   if (brand === 'AUTOELEVADOR' || brand === 'ADMINISTRACION') return false;
 
   return true;

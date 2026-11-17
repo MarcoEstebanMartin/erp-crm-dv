@@ -9,7 +9,7 @@ import {
 } from '../delivery-dispatch.engine';
 
 describe('delivery-dispatch.engine — Reglas Puras de Despacho, Flota y Retiro Local', () => {
-  it('filtra ELEV-VERDE, ELEV-ROSA, DEP-GRAL e inactivos dejando solo vehículos viales ACTIVE', () => {
+  it('filtra ELEV-VERDE, ELEV-ROSA, DEP-GRAL, particulares/gerenciales e inactivos dejando solo vehículos de reparto ACTIVE', () => {
     const vehicles = [
       { id: 1, plate: 'AB 919 WO', brand: 'MERCEDES BENZ', model: 'ACCELO 1016', status: 'ACTIVE' },
       { id: 2, plate: 'ELEV-VERDE', brand: 'AUTOELEVADOR', model: 'VERDE ELECTRICO', status: 'ACTIVE' },
@@ -17,6 +17,9 @@ describe('delivery-dispatch.engine — Reglas Puras de Despacho, Flota y Retiro 
       { id: 4, plate: 'DEP-GRAL', brand: 'ADMINISTRACION', model: 'DEPOSITO Y CHOFERES', status: 'ACTIVE' },
       { id: 5, plate: 'FUL 385', brand: 'MERCEDES BENZ', model: '710', status: 'MAINTENANCE' },
       { id: 6, plate: 'AE 764 FE', brand: 'PEUGEOT', model: 'PARTNER', status: 'ACTIVE' },
+      { id: 7, plate: 'AF 747 KX', brand: 'VOLKSWAGEN', model: 'AMAROK 3.0', status: 'ACTIVE' },
+      { id: 8, plate: 'AD 032 KX', brand: 'VOLKSWAGEN', model: 'AMAROK 2.0', status: 'ACTIVE' },
+      { id: 9, plate: 'OTF 197', brand: 'AUDI', model: 'A1 1.4 T SPORTBACK', status: 'ACTIVE' },
     ];
 
     const roadPlates = vehicles.filter(isRoadFleetVehicle).map((v) => v.plate);
