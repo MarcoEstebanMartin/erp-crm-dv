@@ -11,6 +11,7 @@ import { FulfillmentOrderCard } from './FulfillmentOrderCard';
 import { FulfillmentListView } from './FulfillmentListView';
 import { FulfillmentToolbar } from './FulfillmentToolbar';
 import { useFulfillmentDashboard } from './useFulfillmentDashboard';
+import { FULFILLMENT_STAGE_TONES } from '../../utils/fulfillmentCardMeta.helper';
 
 const COLUMN_CONTAINER_STYLE = {
   display: 'flex',
@@ -55,6 +56,7 @@ export default function FulfillmentDashboard() {
           pending={f.pending}
           preparing={f.preparing}
           billedOrPendingCae={f.billedOrPendingCae}
+          pendingCaeCount={f.pendingCaeCount}
           pendingRoutes={pendingRoutes}
           selectedOrderIds={f.selectedOrderIds}
           requestingCaeId={f.requestingCaeId}
@@ -75,10 +77,28 @@ export default function FulfillmentDashboard() {
           className="fulfillment-board-grid"
           style={{ gridTemplateColumns: f.boardGridTemplate }}
         >
-          <section aria-label="Pedidos pendientes de armado" style={COLUMN_CONTAINER_STYLE}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', gap: '8px' }}>
-              <h3 style={{ margin: 0, fontSize: '0.88rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', color: '#111827' }}>
-                <span style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: '#111827' }} />
+          <section
+            aria-label="Pedidos pendientes de armado"
+            style={{
+              ...COLUMN_CONTAINER_STYLE,
+              borderTop: `3px solid ${FULFILLMENT_STAGE_TONES.PENDING.accent}`,
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: '10px',
+                gap: '8px',
+                backgroundColor: FULFILLMENT_STAGE_TONES.PENDING.bg,
+                border: `1px solid ${FULFILLMENT_STAGE_TONES.PENDING.border}`,
+                borderRadius: '7px',
+                padding: '6px 10px',
+              }}
+            >
+              <h3 style={{ margin: 0, fontSize: '0.88rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', color: FULFILLMENT_STAGE_TONES.PENDING.text }}>
+                <span style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: FULFILLMENT_STAGE_TONES.PENDING.dot }} />
                 <span>Pendientes ({f.pending.length})</span>
                 <span className="tabular-nums" style={{ fontSize: '0.78rem', fontWeight: 600, color: '#6B7280' }}>
                   · {f.pendingTotalLabel}
@@ -132,10 +152,28 @@ export default function FulfillmentDashboard() {
             </div>
           </section>
 
-          <section aria-label="Pedidos en picking" style={COLUMN_CONTAINER_STYLE}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', gap: '8px' }}>
-              <h3 style={{ margin: 0, fontSize: '0.88rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', color: '#111827' }}>
-                <span style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: '#6B7280' }} />
+          <section
+            aria-label="Pedidos en picking"
+            style={{
+              ...COLUMN_CONTAINER_STYLE,
+              borderTop: `3px solid ${FULFILLMENT_STAGE_TONES.PREPARING.accent}`,
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: '10px',
+                gap: '8px',
+                backgroundColor: FULFILLMENT_STAGE_TONES.PREPARING.bg,
+                border: `1px solid ${FULFILLMENT_STAGE_TONES.PREPARING.border}`,
+                borderRadius: '7px',
+                padding: '6px 10px',
+              }}
+            >
+              <h3 style={{ margin: 0, fontSize: '0.88rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', color: FULFILLMENT_STAGE_TONES.PREPARING.text }}>
+                <span style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: FULFILLMENT_STAGE_TONES.PREPARING.dot }} />
                 <span>En Picking ({f.preparing.length})</span>
                 <span className="tabular-nums" style={{ fontSize: '0.78rem', fontWeight: 600, color: '#6B7280' }}>
                   · {f.preparingTotalLabel}
@@ -183,10 +221,28 @@ export default function FulfillmentDashboard() {
             </div>
           </section>
 
-          <section aria-label="Pedidos facturados hoy y pendientes de CAE" style={COLUMN_CONTAINER_STYLE}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', gap: '6px' }}>
-              <h3 style={{ margin: 0, fontSize: '0.88rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', color: '#111827' }}>
-                <span style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: '#9CA3AF' }} />
+          <section
+            aria-label="Pedidos facturados hoy y pendientes de CAE"
+            style={{
+              ...COLUMN_CONTAINER_STYLE,
+              borderTop: `3px solid ${FULFILLMENT_STAGE_TONES.BILLED.accent}`,
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: '10px',
+                gap: '6px',
+                backgroundColor: FULFILLMENT_STAGE_TONES.BILLED.bg,
+                border: `1px solid ${FULFILLMENT_STAGE_TONES.BILLED.border}`,
+                borderRadius: '7px',
+                padding: '6px 10px',
+              }}
+            >
+              <h3 style={{ margin: 0, fontSize: '0.88rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', color: FULFILLMENT_STAGE_TONES.BILLED.text }}>
+                <span style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: FULFILLMENT_STAGE_TONES.BILLED.dot }} />
                 <span>Facturados Hoy ({f.billedOrPendingCae.length})</span>
                 <span className="tabular-nums" style={{ fontSize: '0.78rem', fontWeight: 600, color: '#6B7280' }}>
                   · {f.billedTotalLabel}

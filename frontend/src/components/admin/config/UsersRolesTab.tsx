@@ -57,6 +57,7 @@ export default function UsersRolesTab({ setErrorMsg, setSuccessMsg }: UsersRoles
   const confirm = useConfirm();
   const currentUser = api.getCurrentUser();
   const [users, setUsers] = useState<any[]>([]);
+  const [showInactive, setShowInactive] = useState(false);
   const [userModal, setUserModal] = useState<UserFormState>({
     open: false,
     isEdit: false,
@@ -134,7 +135,11 @@ export default function UsersRolesTab({ setErrorMsg, setSuccessMsg }: UsersRoles
     setSuccessMsg(null);
     try {
       await api.toggleUserStatus(id);
-      setSuccessMsg(`Usuario ${username} ${active ? 'activado' : 'desactivado'} con éxito.`);
+      setSuccessMsg(
+        active
+          ? `Usuario ${username} activado con éxito.`
+          : `Usuario ${username} desactivado y oculto de la lista.`,
+      );
       const dataUsers = await api.getUsers();
       setUsers(dataUsers);
     } catch (err: any) {
@@ -158,10 +163,28 @@ export default function UsersRolesTab({ setErrorMsg, setSuccessMsg }: UsersRoles
     }
   };
 
+  const inactiveCount = users.filter((u) => u.isActive === false).length;
+  const visibleUsers = showInactive ? users : users.filter((u) => u.isActive !== false);
+
   return (
     <>
       <div className="card" style={{ padding: '20px 24px' }}>
-        <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginBottom: '12px' }}>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+          {inactiveCount > 0 && (
+            <button
+              type="button"
+              aria-pressed={showInactive}
+              className={showInactive ? 'btn btn-secondary' : 'btn btn-ghost'}
+              style={{
+                padding: '8px 12px',
+                fontSize: '0.82rem',
+                color: showInactive ? 'var(--text-primary)' : 'var(--text-secondary)',
+              }}
+              onClick={() => setShowInactive((prev) => !prev)}
+            >
+              {showInactive ? `Ocultar inactivos (${inactiveCount})` : `Inactivos (${inactiveCount})`}
+            </button>
+          )}
           <button
             type="button"
             className="btn btn-primary"
@@ -185,7 +208,7 @@ export default function UsersRolesTab({ setErrorMsg, setSuccessMsg }: UsersRoles
             </thead>
             <tbody>
               {ROLE_GROUPS.map((group) => {
-                const groupUsers = users.filter((u) => u.role === group.roleKey);
+                const groupUsers = visibleUsers.filter((u) => u.role === group.roleKey);
                 return (
                   <React.Fragment key={group.roleKey}>
                     <tr style={{ backgroundColor: group.bg, borderTop: '2px solid var(--border-color)', borderBottom: '1px solid var(--border-color)' }}>

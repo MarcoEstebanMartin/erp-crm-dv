@@ -186,6 +186,7 @@ export function useClientModalController({
             ? Number(data.longitude)
             : null,
         isActive: data.isActive !== false,
+        hireDate: data.hireDate ? data.hireDate : null,
       };
 
       if (mode === 'create') await api.createPersona(payload);

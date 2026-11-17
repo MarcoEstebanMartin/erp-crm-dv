@@ -35,6 +35,7 @@ describe('PricingService Unit Tests (Motor de Precios y Reglas)', () => {
     paymentTermDays: 30,
     webPin: null,
     birthDate: null,
+    hireDate: null,
     isActive: true,
     createdAt: new Date(),
     updatedAt: new Date(),

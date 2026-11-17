@@ -38,7 +38,7 @@ export const createPersonaSchema = z.object({
     isCommissionAgent: z.boolean().optional(),
     creditLimit: safeNumericPreprocess(0).refine(val => val >= 0, 'El límite de crédito debe ser mayor o igual a 0').optional(),
     maxUnpaidInvoices: safeNumericPreprocess(0)
-      .refine((val) => val >= 0, 'El límite de boletas debe ser mayor o igual a 0')
+      .refine((val) => val >= 0 && val <= 2, 'El límite de boletas debe estar entre 0 y 2')
       .optional(),
     priceList: z.string().optional().nullable(),
     discount: safeNumericPreprocess(0).refine(val => val >= 0 && val <= 100, 'El descuento debe estar entre 0 y 100').optional(),
@@ -48,6 +48,7 @@ export const createPersonaSchema = z.object({
     webPin: z.string().optional().nullable(),
     isActive: z.boolean().optional(),
     rubro: z.string().optional().nullable(),
+    hireDate: z.string().optional().nullable().or(z.literal('')),
   }),
 });
 
@@ -78,7 +79,7 @@ export const updatePersonaSchema = z.object({
     isCommissionAgent: z.boolean().optional(),
     creditLimit: safeNumericPreprocess(0).refine(val => val >= 0, 'El límite de crédito debe ser mayor o igual a 0').optional(),
     maxUnpaidInvoices: safeNumericPreprocess(0)
-      .refine((val) => val >= 0, 'El límite de boletas debe ser mayor o igual a 0')
+      .refine((val) => val >= 0 && val <= 2, 'El límite de boletas debe estar entre 0 y 2')
       .optional(),
     priceList: z.string().optional().nullable(),
     discount: safeNumericPreprocess(0).refine(val => val >= 0 && val <= 100, 'El descuento debe estar entre 0 y 100').optional(),
@@ -88,6 +89,7 @@ export const updatePersonaSchema = z.object({
     webPin: z.string().optional().nullable(),
     isActive: z.boolean().optional(),
     rubro: z.string().optional().nullable(),
+    hireDate: z.string().optional().nullable().or(z.literal('')),
   }),
 });
 

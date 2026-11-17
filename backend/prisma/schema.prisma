@@ -113,6 +113,7 @@ model Persona {
   email     String?
   rubro     String?
   birthDate DateTime?
+  hireDate  DateTime?
 
   // Roles de Persona
   isClient          Boolean @default(true)

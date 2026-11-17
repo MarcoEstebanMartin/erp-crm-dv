@@ -66,3 +66,6 @@ Este archivo define las reglas innegociables de comportamiento, arquitectura mod
 ## 8. Metodología Spec-Driven Development (SDD - GitHub Spec Kit)
 - **Constitución y Plantillas (`.specify/`)**: Gobernada por `.specify/memory/constitution.md` y las especificaciones en `specs/`.
 - **Tablero Único de Tarea (`.agents/task.md`)**: Toda tarea activa se gestiona y verifica a través de `.agents/task.md`.
+
+## 9. Nombres Limpios en Pruebas y Datos de Demo
+- **Prohibido usar siglas técnicas (`qa_`, `E2E`, `test_`) en datos visibles**: Cada vez que se creen usuarios, vendedores, choferes o rutas para pruebas o demostraciones en el sistema, usar siempre nombres claros y prolijos: **`Gemini`** (Admin), **`Gemini Ventas`** (Vendedor) y **`Gemini Reparto`** (Chofer/Reparto).

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Printer, MessageCircle, ChevronDown } from 'lucide-react';
+import { DebtorsPrintSheet } from './DebtorsPrintSheet';
 
 interface DebtorsByCityReportViewProps {
   debtorsReport: any[];
@@ -40,6 +41,11 @@ export const DebtorsByCityReportView: React.FC<DebtorsByCityReportViewProps> = (
     if (!groups[city]) groups[city] = [];
     groups[city].push(d);
   });
+
+  const selectedSellerObj = availableSellers.find((s) => s.id.toString() === selectedSellerFilter);
+  const sellerLabel = selectedSellerFilter === 'ALL'
+    ? 'Todos'
+    : (selectedSellerObj?.username?.replace('_', ' ').toUpperCase() || selectedSellerFilter);
 
   return (
     <div className="card" style={{ padding: '24px', marginBottom: '20px' }}>
@@ -221,6 +227,12 @@ export const DebtorsByCityReportView: React.FC<DebtorsByCityReportViewProps> = (
           })}
         </div>
       )}
+
+      <DebtorsPrintSheet
+        filteredDebtors={filteredDebtors}
+        groups={groups}
+        sellerLabel={sellerLabel}
+      />
     </div>
   );
 };

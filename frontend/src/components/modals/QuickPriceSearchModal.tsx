@@ -49,7 +49,7 @@ export default function QuickPriceSearchModal({ isOpen, onClose }: QuickPriceSea
       isOpen={isOpen}
       onClose={onClose}
       ariaLabel="Buscar precio"
-      style={{ maxWidth: '620px', width: '92vw', margin: '10vh auto auto auto', borderRadius: '12px' }}
+      style={{ maxWidth: '620px', width: '92vw', borderRadius: '12px' }}
     >
       <div
         style={{

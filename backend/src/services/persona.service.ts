@@ -144,6 +144,7 @@ export class PersonaService {
         longitude: data.longitude != null ? Number(data.longitude) : null,
         webPin: data.webPin != null ? String(data.webPin).trim() : null,
         birthDate: data.birthDate ? new Date(data.birthDate) : null,
+        hireDate: data.hireDate ? new Date(data.hireDate) : null,
       },
     });
 
@@ -202,6 +203,7 @@ export class PersonaService {
         longitude: data.longitude !== undefined ? (data.longitude !== null ? Number(data.longitude) : null) : undefined,
         webPin: data.webPin !== undefined ? (data.webPin ? String(data.webPin).trim() : null) : undefined,
         birthDate: data.birthDate !== undefined ? (data.birthDate ? new Date(data.birthDate) : null) : undefined,
+        hireDate: data.hireDate !== undefined ? (data.hireDate ? new Date(data.hireDate) : null) : undefined,
       },
     });
 

@@ -212,8 +212,8 @@ export default function ClientsTab({
         <SaleRoutesDashboard />
       ) : (
         <>
-          <div className="actions-bar" style={{ display: 'flex', gap: '12px', marginBottom: '16px', flexWrap: 'wrap', alignItems: 'center' }}>
-            <search className="search-input-wrapper" style={{ flex: 1, minWidth: '240px' }}>
+          <div className="actions-bar" style={{ display: 'flex', gap: '10px', marginBottom: '16px', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'flex-start' }}>
+            <search className="search-input-wrapper" style={{ flex: '1 1 220px', maxWidth: '340px', minWidth: '200px' }}>
               <label htmlFor="clients-search" className="sr-only">Buscar</label>
               <input
                 id="clients-search"
@@ -228,14 +228,14 @@ export default function ClientsTab({
               />
             </search>
 
-            <select aria-label="Filtrar por localidad" className="select" value={selectedCityFilter} onChange={(e) => setSelectedCityFilter(e.target.value)} style={{ minWidth: '185px', height: '38px' }}>
+            <select aria-label="Filtrar por localidad" className="select" value={selectedCityFilter} onChange={(e) => setSelectedCityFilter(e.target.value)} style={{ width: 'auto', minWidth: '170px', height: '38px' }}>
               <option value="ALL">Localidades ({cityCounts.ALL || 0})</option>
               {OFFICIAL_CITIES.map((city) => (<option key={city} value={city}>{city} ({cityCounts[city] || 0})</option>))}
               <option value="OTRAS">Otras ({cityCounts.OTRAS || 0})</option>
             </select>
 
             {personaRoleFilter === 'client' && (
-              <select aria-label="Filtrar por ruta" className="select" value={selectedRouteFilter} onChange={(e) => setSelectedRouteFilter(e.target.value)} style={{ minWidth: '185px', height: '38px' }}>
+              <select aria-label="Filtrar por ruta" className="select" value={selectedRouteFilter} onChange={(e) => setSelectedRouteFilter(e.target.value)} style={{ width: 'auto', minWidth: '170px', height: '38px' }}>
                 <option value="ALL">Rutas ({routeCounts.ALL || 0})</option>
                 {availableSaleRoutes.map((route) => (<option key={route.id} value={route.id}>{route.name} ({routeCounts[route.id] || 0})</option>))}
                 <option value="SIN_RUTA">Sin ruta ({routeCounts.SIN_RUTA || 0})</option>
@@ -247,21 +247,24 @@ export default function ClientsTab({
               <span style={{ fontWeight: 700, fontSize: '0.95rem', color: '#0f172a' }}>{filteredClients.length.toLocaleString('es-AR')}</span>
             </div>
 
-            {personaRoleFilter === 'client' && (
-              <label htmlFor="clients-show-inactive" style={{ fontSize: '0.84rem', color: 'var(--text-secondary)', fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px', marginLeft: 'auto', marginRight: '8px' }}>
-                <input id="clients-show-inactive" type="checkbox" checked={showInactive} onChange={(e) => setShowInactive(e.target.checked)} style={{ width: '16px', height: '16px', cursor: 'pointer' }} />
-                <span>Inactivos</span>
-              </label>
-            )}
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '12px', marginLeft: 'auto' }}>
+              {personaRoleFilter === 'client' && (
+                <label htmlFor="clients-show-inactive" style={{ fontSize: '0.84rem', color: 'var(--text-secondary)', fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}>
+                  <input id="clients-show-inactive" type="checkbox" checked={showInactive} onChange={(e) => setShowInactive(e.target.checked)} style={{ width: '16px', height: '16px', cursor: 'pointer' }} />
+                  <span>Inactivos</span>
+                </label>
+              )}
 
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={() => setClientModal({ open: true, mode: 'create', data: buildEmptyPersonaDraft(personaRoleFilter, showInactive) })}
-            >
-              <UserPlus size={16} />
-              <span>Nuevo {personaRoleFilter === 'client' ? 'cliente' : personaRoleFilter === 'provider' ? 'proveedor' : personaRoleFilter === 'seller' ? 'vendedor' : 'comisionista'}</span>
-            </button>
+              <button
+                type="button"
+                className="btn btn-primary"
+                style={{ whiteSpace: 'nowrap' }}
+                onClick={() => setClientModal({ open: true, mode: 'create', data: buildEmptyPersonaDraft(personaRoleFilter, showInactive) })}
+              >
+                <UserPlus size={16} />
+                <span>Nuevo {personaRoleFilter === 'client' ? 'cliente' : personaRoleFilter === 'provider' ? 'proveedor' : personaRoleFilter === 'seller' ? 'vendedor' : 'comisionista'}</span>
+              </button>
+            </div>
           </div>
 
           <ClientsPersonasTable

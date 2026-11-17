@@ -2089,3 +2089,113 @@ dialog.app-native-dialog::backdrop {
   white-space: nowrap;
 }
 
+/* Acordeón minimalista de Bancos (nativo <details>/<summary>) */
+.bank-accordion-list {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--bg-card);
+  overflow: hidden;
+}
+
+.bank-item + .bank-item,
+.bank-item + .bank-zero-group,
+.bank-zero-group + .bank-item {
+  border-top: 1px solid var(--border-color);
+}
+
+.bank-summary {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  cursor: pointer;
+  user-select: none;
+  transition: background-color var(--transition-fast);
+}
+
+.bank-summary::-webkit-details-marker {
+  display: none;
+}
+
+.bank-summary:hover {
+  background-color: var(--bg-app);
+}
+
+.bank-summary-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.bank-summary-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bank-chevron {
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+
+details[open] > .bank-summary .bank-chevron {
+  transform: rotate(90deg);
+  color: var(--text-primary);
+}
+
+.bank-detail-body {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px 10px 34px;
+  border-top: 1px dashed var(--border-color);
+  background-color: var(--bg-app);
+  font-size: 0.76rem;
+  color: var(--text-secondary);
+}
+
+.bank-zero-group > .bank-summary {
+  background-color: var(--bg-app);
+}
+
+.bank-zero-group > .bank-summary .bank-summary-left {
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.bank-zero-list {
+  border-top: 1px solid var(--border-color);
+}
+
+.bank-item::details-content,
+.bank-zero-group::details-content {
+  interpolate-size: allow-keywords;
+  overflow: clip;
+  contain: layout;
+}
+
+.bank-item:not([open])::details-content,
+.bank-zero-group:not([open])::details-content {
+  block-size: 0;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .bank-chevron {
+    transition: transform 0.18s ease, color 0.18s ease;
+  }
+
+  .bank-item::details-content,
+  .bank-zero-group::details-content {
+    transition: block-size 0.22s ease, content-visibility 0.22s ease allow-discrete;
+  }
+}
+

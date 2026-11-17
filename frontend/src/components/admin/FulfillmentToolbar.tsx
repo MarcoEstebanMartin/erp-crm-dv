@@ -86,25 +86,6 @@ export function FulfillmentToolbar({
           <button
             type="button"
             className="btn btn-ghost"
-            aria-pressed={viewMode === 'board'}
-            onClick={() => setViewMode('board')}
-            style={{
-              height: '24px',
-              padding: '0 8px',
-              fontSize: '0.75rem',
-              fontWeight: 600,
-              borderRadius: '4px',
-              backgroundColor: viewMode === 'board' ? '#FFFFFF' : 'transparent',
-              color: viewMode === 'board' ? '#111827' : '#6B7280',
-              boxShadow: viewMode === 'board' ? '0 1px 2px rgba(0,0,0,0.06)' : 'none',
-            }}
-          >
-            <LayoutGrid size={13} aria-hidden="true" />
-            Tablero
-          </button>
-          <button
-            type="button"
-            className="btn btn-ghost"
             aria-pressed={viewMode === 'list'}
             onClick={() => setViewMode('list')}
             style={{
@@ -120,6 +101,25 @@ export function FulfillmentToolbar({
           >
             <List size={13} aria-hidden="true" />
             Lista
+          </button>
+          <button
+            type="button"
+            className="btn btn-ghost"
+            aria-pressed={viewMode === 'board'}
+            onClick={() => setViewMode('board')}
+            style={{
+              height: '24px',
+              padding: '0 8px',
+              fontSize: '0.75rem',
+              fontWeight: 600,
+              borderRadius: '4px',
+              backgroundColor: viewMode === 'board' ? '#FFFFFF' : 'transparent',
+              color: viewMode === 'board' ? '#111827' : '#6B7280',
+              boxShadow: viewMode === 'board' ? '0 1px 2px rgba(0,0,0,0.06)' : 'none',
+            }}
+          >
+            <LayoutGrid size={13} aria-hidden="true" />
+            Tablero
           </button>
         </div>
       </div>

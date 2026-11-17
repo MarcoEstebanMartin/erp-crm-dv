@@ -161,7 +161,7 @@ export function PendingReceiptsSummaryModal({
                         </td>
                         <td>
                           <span style={{ fontWeight: 600, color: tx.billingType === 'OFFICIAL' ? '#1e40af' : '#b45309' }}>
-                            {tx.billingType === 'OFFICIAL' ? 'AFIP' : 'X'}
+                            {tx.billingType === 'OFFICIAL' ? 'A' : 'X'}
                           </span>
                         </td>
                         <td>

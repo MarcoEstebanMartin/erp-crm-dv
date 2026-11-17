@@ -127,3 +127,40 @@ export function computeAdaptiveFulfillmentColumns(
     .map((count) => (count > 0 ? 'minmax(310px, 1.35fr)' : 'minmax(210px, 0.55fr)'))
     .join(' ');
 }
+
+export type FulfillmentStageKey = 'PENDING' | 'PREPARING' | 'BILLED';
+
+export interface FulfillmentStageTone {
+  dot: string;
+  bg: string;
+  border: string;
+  text: string;
+  accent: string;
+}
+
+/**
+ * Paleta sutil compartida entre Tablero y Lista para identificar cada etapa de armado.
+ */
+export const FULFILLMENT_STAGE_TONES: Record<FulfillmentStageKey, FulfillmentStageTone> = {
+  PENDING: {
+    dot: '#D97706',
+    bg: '#FFFBEB',
+    border: '#FDE68A',
+    text: '#92400E',
+    accent: '#F59E0B',
+  },
+  PREPARING: {
+    dot: '#2563EB',
+    bg: '#EFF6FF',
+    border: '#BFDBFE',
+    text: '#1E40AF',
+    accent: '#3B82F6',
+  },
+  BILLED: {
+    dot: '#059669',
+    bg: '#ECFDF5',
+    border: '#A7F3D0',
+    text: '#065F46',
+    accent: '#10B981',
+  },
+};

@@ -46,36 +46,33 @@ export const SaleRouteDetailPanel: React.FC<SaleRouteDetailPanelProps> = ({
   const gpsCount = clients.filter(
     (c) => c.latitude !== null && c.longitude !== null && Number(c.latitude) !== 0,
   ).length;
+  const missingGpsCount = clients.length - gpsCount;
 
   return (
-    <div className="card" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px', borderBottom: '1px solid var(--border-color)', paddingBottom: '14px' }}>
+    <div style={{ border: '1px solid var(--border-color)', borderRadius: '8px', backgroundColor: '#ffffff', padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px', borderBottom: '1px solid #f1f5f9', paddingBottom: '14px' }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-            <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700 }}>{route.name}</h3>
-            <span
-              style={{
-                fontSize: '0.74rem',
-                fontWeight: 600,
-                padding: '2px 8px',
-                borderRadius: '10px',
-                backgroundColor: route.isActive !== false ? '#E6F4EA' : '#FCE8E6',
-                color: route.isActive !== false ? '#137333' : '#C5221F',
-              }}
-            >
-              {route.isActive !== false ? 'Activa' : 'Inactiva'}
-            </span>
+            <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: '#0f172a' }}>{route.name}</h3>
+            {route.isActive === false && (
+              <span style={{ fontSize: '0.72rem', fontWeight: 600, padding: '2px 8px', borderRadius: '10px', backgroundColor: '#FCE8E6', color: '#C5221F' }}>
+                Inactiva
+              </span>
+            )}
           </div>
-          <div style={{ display: 'flex', gap: '12px', marginTop: '6px', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+          <div className="tabular-nums" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '4px', fontSize: '0.8rem', color: '#64748b' }}>
             <span>{route.seller?.username ? route.seller.username.replace('_', ' ').toUpperCase() : 'Sin vendedor'}</span>
             {route.dayOfWeek && <span>· {route.dayOfWeek}</span>}
+            <span>· {clients.length} clientes</span>
+            <span>· {gpsCount} con GPS</span>
+            {missingGpsCount > 0 && <span style={{ color: '#b45309', fontWeight: 600 }}>· {missingGpsCount} sin GPS</span>}
           </div>
         </div>
 
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
           {hasSequenceChanges && (
-            <button type="button" className="btn btn-primary" disabled={savingSequence} onClick={onSaveSequence} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-              <Save size={15} />
+            <button type="button" className="btn btn-primary" disabled={savingSequence} onClick={onSaveSequence} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 12px', fontSize: '0.8rem' }}>
+              <Save size={14} />
               <span>{savingSequence ? 'Guardando...' : 'Guardar orden'}</span>
             </button>
           )}
@@ -84,33 +81,18 @@ export const SaleRouteDetailPanel: React.FC<SaleRouteDetailPanelProps> = ({
             className="btn btn-secondary"
             disabled={clients.length === 0}
             onClick={onOpenOptimize}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 10px', fontSize: '0.8rem' }}
           >
-            <MapPin size={15} />
+            <MapPin size={14} />
             <span>Optimizar GPS</span>
           </button>
-          <button type="button" className="btn btn-secondary" onClick={onOpenEdit} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-            <Edit3 size={15} />
+          <button type="button" className="btn btn-secondary" onClick={onOpenEdit} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 10px', fontSize: '0.8rem' }}>
+            <Edit3 size={14} />
             <span>Editar</span>
           </button>
-          <button type="button" className="btn btn-ghost text-danger" aria-label="Eliminar ruta" title="Eliminar" onClick={onDeleteRoute} style={{ color: '#e30613', padding: '6px 10px' }}>
-            <Trash2 size={16} />
+          <button type="button" className="btn btn-ghost" aria-label="Eliminar ruta" title="Eliminar" onClick={onDeleteRoute} style={{ color: '#64748b', padding: '6px 8px' }}>
+            <Trash2 size={15} />
           </button>
-        </div>
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
-        <div style={{ padding: '10px 14px', borderRadius: '8px', border: '1px solid var(--border-color)', backgroundColor: '#fafafa' }}>
-          <div style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Clientes</div>
-          <div className="tabular-nums" style={{ fontSize: '1.15rem', fontWeight: 700 }}>{clients.length}</div>
-        </div>
-        <div style={{ padding: '10px 14px', borderRadius: '8px', border: '1px solid var(--border-color)', backgroundColor: '#fafafa' }}>
-          <div style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Con GPS</div>
-          <div className="tabular-nums" style={{ fontSize: '1.15rem', fontWeight: 700 }}>{gpsCount}</div>
-        </div>
-        <div style={{ padding: '10px 14px', borderRadius: '8px', border: '1px solid var(--border-color)', backgroundColor: '#fafafa' }}>
-          <div style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Sin GPS</div>
-          <div className="tabular-nums" style={{ fontSize: '1.15rem', fontWeight: 700 }}>{clients.length - gpsCount}</div>
         </div>
       </div>
 
@@ -118,11 +100,11 @@ export const SaleRouteDetailPanel: React.FC<SaleRouteDetailPanelProps> = ({
         <table>
           <thead>
             <tr>
-              <th scope="col" style={{ width: '72px' }}>Orden</th>
+              <th scope="col" style={{ width: '60px' }}>Orden</th>
               <th scope="col">Cliente</th>
               <th scope="col">Localidad</th>
               <th scope="col" style={{ textAlign: 'right' }}>Saldo</th>
-              <th scope="col" style={{ width: '120px', textAlign: 'right' }}>Acciones</th>
+              <th scope="col" style={{ width: '108px', textAlign: 'right' }}>Acciones</th>
             </tr>
           </thead>
           <tbody>
@@ -135,16 +117,19 @@ export const SaleRouteDetailPanel: React.FC<SaleRouteDetailPanelProps> = ({
             ) : (
               clients.map((client, idx) => {
                 const balance = Number(client.outstandingBalance || 0);
+                const absBal = Math.abs(Math.round(balance)).toLocaleString('es-AR');
+                const balLabel = balance > 0 ? `$${absBal}` : balance < 0 ? `+$${absBal}` : '$0';
+                const balColor = balance > 0 ? 'var(--color-danger)' : balance < 0 ? 'var(--color-success)' : '#64748b';
                 return (
                   <tr key={client.id}>
-                    <td className="tabular-nums" style={{ fontWeight: 700 }}>{idx + 1}</td>
+                    <td className="tabular-nums" style={{ fontWeight: 600, color: '#64748b' }}>{idx + 1}</td>
                     <td>
-                      <div style={{ fontWeight: 600 }}>{client.name}</div>
-                      {client.address && <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{client.address}</div>}
+                      <div style={{ fontWeight: 600, color: '#0f172a' }}>{client.name}</div>
+                      {client.address && <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{client.address}</div>}
                     </td>
-                    <td>{client.city || '-'}</td>
-                    <td className="tabular-nums" style={{ textAlign: 'right', fontWeight: 600, color: balance > 0 ? 'var(--color-danger)' : 'inherit' }}>
-                      ${Math.round(balance).toLocaleString('es-AR')}
+                    <td style={{ color: '#475569' }}>{client.city || '—'}</td>
+                    <td className="tabular-nums" style={{ textAlign: 'right', fontWeight: 600, color: balColor }}>
+                      {balLabel}
                     </td>
                     <td>
                       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '4px' }}>

@@ -209,7 +209,7 @@ export const ClientIdentityRolesCard: React.FC<ClientIdentityRolesCardProps> = (
           </div>
         </fieldset>
 
-        <div className="form-group" style={{ marginBottom: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
           <label
             htmlFor="client-active"
             style={{
@@ -233,6 +233,22 @@ export const ClientIdentityRolesCard: React.FC<ClientIdentityRolesCardProps> = (
             />
             <span style={{ fontWeight: data.isActive !== false ? 600 : 400 }}>Activo</span>
           </label>
+
+          {Boolean(data.isSeller) && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <label htmlFor="client-hire-date" style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>
+                Fecha de ingreso
+              </label>
+              <input
+                id="client-hire-date"
+                type="date"
+                className="input"
+                value={data.hireDate ? String(data.hireDate).slice(0, 10) : ''}
+                onChange={(e) => onChangeData({ hireDate: e.target.value || null })}
+                style={{ width: 'auto', height: '36px', fontSize: '0.85rem' }}
+              />
+            </div>
+          )}
         </div>
       </div>
     </div>

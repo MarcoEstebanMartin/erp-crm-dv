@@ -42,7 +42,7 @@ export function useFulfillmentDashboard() {
   const [selectedRoute, setSelectedRoute] = useState<string>('ALL');
   const [selectedZone, setSelectedZone] = useState<string>('ALL');
   const [selectedOrderIds, setSelectedOrderIds] = useState<number[]>([]);
-  const [viewMode, setViewMode] = useState<'board' | 'list'>('board');
+  const [viewMode, setViewMode] = useState<'board' | 'list'>('list');
 
   const [confirmState, setConfirmState] = useState<FulfillmentConfirmState>({
     isOpen: false,

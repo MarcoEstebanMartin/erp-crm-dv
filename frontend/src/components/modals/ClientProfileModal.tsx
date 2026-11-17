@@ -95,6 +95,7 @@ const ClientProfileModal: React.FC<ClientProfileModalProps> = ({
         saleRouteId: client.saleRouteId || null,
         sellerId: client.sellerId || null,
         isActive: client.isActive !== false,
+        hireDate: client.hireDate ? String(client.hireDate).slice(0, 10) : '',
       },
     });
     setClientProfileModal(null);
@@ -152,7 +153,8 @@ const ClientProfileModal: React.FC<ClientProfileModalProps> = ({
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.55fr', gap: '22px', overflowY: 'auto', flex: 1, paddingRight: '4px' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '18px', borderRight: '1px solid var(--border-color)', paddingRight: '18px' }}>
-          <div style={{ border: '1px solid var(--border-color)', padding: '16px', borderRadius: '8px', backgroundColor: '#fafafa' }}>
+          {(client.isClient || client.isProvider) && (
+            <div style={{ border: '1px solid var(--border-color)', padding: '16px', borderRadius: '8px', backgroundColor: '#fafafa' }}>
             <h4 style={{ margin: '0 0 12px 0', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--text-secondary)', fontWeight: 700, borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
               Cuenta
             </h4>
@@ -212,7 +214,8 @@ const ClientProfileModal: React.FC<ClientProfileModalProps> = ({
                 </button>
               )}
             </div>
-          </div>
+            </div>
+          )}
 
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
@@ -303,16 +306,41 @@ const ClientProfileModal: React.FC<ClientProfileModalProps> = ({
               <span style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase' }}>Localidad</span>
               <div style={{ fontSize: '0.94rem', fontWeight: 500, color: 'var(--text-primary)', marginTop: '4px' }}>{client.city || '-'}</div>
             </div>
-            <div>
-              <span style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase' }}>Reparto</span>
-              <div style={{ fontSize: '0.94rem', fontWeight: 600, color: 'var(--text-primary)', marginTop: '4px' }}>{client.route || '-'}</div>
-            </div>
-            <div>
-              <span style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase' }}>Vendedor</span>
-              <div style={{ fontSize: '0.94rem', fontWeight: 600, color: 'var(--text-primary)', marginTop: '4px' }}>
-                {client.seller?.username ? client.seller.username.replace('_', ' ').toUpperCase() : '-'}
-              </div>
-            </div>
+            {client.isSeller && !client.isClient ? (
+              <>
+                <div>
+                  <span style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase' }}>Ruta</span>
+                  <div style={{ fontSize: '0.94rem', fontWeight: 600, color: 'var(--text-primary)', marginTop: '4px' }}>{client.saleRoute?.name || client.route || '-'}</div>
+                </div>
+                <div>
+                  <span style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase' }}>Fecha de ingreso</span>
+                  <div className="tabular-nums" style={{ fontSize: '0.94rem', fontWeight: 600, color: 'var(--text-primary)', marginTop: '4px' }}>
+                    {client.hireDate ? new Date(client.hireDate).toLocaleDateString('es-AR', { timeZone: 'UTC' }) : '-'}
+                  </div>
+                </div>
+              </>
+            ) : (
+              <>
+                <div>
+                  <span style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase' }}>Reparto</span>
+                  <div style={{ fontSize: '0.94rem', fontWeight: 600, color: 'var(--text-primary)', marginTop: '4px' }}>{client.route || '-'}</div>
+                </div>
+                <div>
+                  <span style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase' }}>Vendedor</span>
+                  <div style={{ fontSize: '0.94rem', fontWeight: 600, color: 'var(--text-primary)', marginTop: '4px' }}>
+                    {client.seller?.username ? client.seller.username.replace('_', ' ').toUpperCase() : '-'}
+                  </div>
+                </div>
+                {client.isSeller && (
+                  <div>
+                    <span style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase' }}>Fecha de ingreso</span>
+                    <div className="tabular-nums" style={{ fontSize: '0.94rem', fontWeight: 600, color: 'var(--text-primary)', marginTop: '4px' }}>
+                      {client.hireDate ? new Date(client.hireDate).toLocaleDateString('es-AR', { timeZone: 'UTC' }) : '-'}
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
           </div>
         </div>
       </div>

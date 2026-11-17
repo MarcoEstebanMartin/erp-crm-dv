@@ -1,5 +1,19 @@
 import { formatResponsibleName } from '../../utils/formatters';
 
+/** Normaliza los nombres de medios de pago con capitalización uniforme para tablas y modales. */
+export const formatPaymentMethodLabel = (method?: string | null): string => {
+  switch (method) {
+    case 'CASH':
+      return 'Efectivo';
+    case 'CHECK':
+      return 'Cheque';
+    case 'BANK_TRANSFER':
+      return 'Transferencia';
+    default:
+      return 'Otro';
+  }
+};
+
 export const parseMercadoPagoCsv = (text: string): any[] => {
   const lines = text.split(/\r?\n/).map((line) => line.trim()).filter((line) => line.length > 0);
   if (lines.length < 2) return [];
@@ -143,7 +157,7 @@ export const computeFilteredMetricsAndLedger = (
           type: isInc ? 'INGRESO' : 'EGRESO',
           origin: branchLabel,
           description: t.description || (isInc ? 'Cobro en cierre de caja' : 'Salida en cierre de caja'),
-          paymentMethod: t.paymentMethod === 'CASH' ? 'EFECTIVO' : t.paymentMethod === 'CHECK' ? 'CHEQUE' : t.paymentMethod,
+          paymentMethod: formatPaymentMethodLabel(t.paymentMethod),
           reference: t.receiptNumber || undefined,
           amount: Number(t.amount || 0),
           orderId: t.orderId || undefined,
@@ -154,7 +168,7 @@ export const computeFilteredMetricsAndLedger = (
       });
     } else {
       const netAmount = Number(d.realBalance || 0) - Number(d.openingBalance || 0);
-      if (netAmount > 0) detailedCashItems.push({ id: `drawer-summary-${d.id}`, date: d.closedAt, type: 'INGRESO', origin: branchLabel, description: branchLabel, paymentMethod: 'EFECTIVO', amount: netAmount });
+      if (netAmount > 0) detailedCashItems.push({ id: `drawer-summary-${d.id}`, date: d.closedAt, type: 'INGRESO', origin: branchLabel, description: branchLabel, paymentMethod: 'Efectivo', amount: netAmount });
     }
   });
 
@@ -164,7 +178,7 @@ export const computeFilteredMetricsAndLedger = (
     type: 'INGRESO',
     origin: t.bankAccount ? `Banco: ${t.bankAccount.bankName || t.bankAccount.name || 'Cta Bancaria'}` : 'Transferencia Bancaria',
     description: t.description || 'Ingreso por transferencia bancaria',
-    paymentMethod: 'TRANSFERENCIA',
+    paymentMethod: 'Transferencia',
     reference: t.receiptNumber || undefined,
     amount: Number(t.amount || 0),
     orderId: t.orderId || undefined,
@@ -177,7 +191,7 @@ export const computeFilteredMetricsAndLedger = (
     type: 'EGRESO',
     origin: 'Gastos Generales (Tesorería)',
     description: t.description || 'Gasto registrado',
-    paymentMethod: t.paymentMethod === 'CASH' ? 'EFECTIVO' : t.paymentMethod === 'CHECK' ? 'CHEQUE' : 'OTRO',
+    paymentMethod: formatPaymentMethodLabel(t.paymentMethod),
     reference: t.receiptNumber || undefined,
     amount: Number(t.amount || 0),
   }));
@@ -189,9 +203,7 @@ export const computeFilteredMetricsAndLedger = (
     const netAmount = Number(d.realBalance || 0) - Number(d.openingBalance || 0);
     const methodsSet = new Set<string>();
     (d.transactions || []).forEach((t: any) => {
-      if (t.paymentMethod === 'CASH') methodsSet.add('Efectivo');
-      else if (t.paymentMethod === 'CHECK') methodsSet.add('Cheque');
-      else if (t.paymentMethod === 'BANK_TRANSFER') methodsSet.add('Transferencia');
+      if (t.paymentMethod) methodsSet.add(formatPaymentMethodLabel(t.paymentMethod));
     });
     const methods = Array.from(methodsSet);
     ledgerItems.push({
@@ -211,7 +223,7 @@ export const computeFilteredMetricsAndLedger = (
       date: t.createdAt,
       type: 'EGRESO',
       description: `Gasto: ${t.description}`,
-      paymentMethod: t.paymentMethod === 'CASH' ? 'EFECTIVO' : t.paymentMethod === 'CHECK' ? 'CHEQUE' : 'OTRO',
+      paymentMethod: formatPaymentMethodLabel(t.paymentMethod),
       amount: Number(t.amount),
     });
   });

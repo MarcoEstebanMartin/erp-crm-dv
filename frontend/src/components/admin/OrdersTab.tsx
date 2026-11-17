@@ -148,14 +148,14 @@ export default function OrdersTab({
         >
           <div className="search-input-wrapper">
             <label htmlFor="orders-history-search" className="visually-hidden">
-              Buscar pedidos por cliente, #pedido, factura o código DV
+              Buscar por Cliente o Cuit
             </label>
             <input
               id="orders-history-search"
               name="q"
               type="search"
               className="input"
-              placeholder="Buscar por cliente, CUIT, #pedido o código DV-XXXX..."
+              placeholder="Buscar por Cliente o Cuit"
               autoComplete="off"
               autoCorrect="off"
               autoCapitalize="none"

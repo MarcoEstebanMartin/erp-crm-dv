@@ -57,7 +57,7 @@ export default function Sidebar({ username, role, activeTab, setActiveTab, onLog
       return [
         { id: 'dashboard', label: 'Inicio', icon: <LayoutDashboard size={18} aria-hidden="true" /> },
         { id: 'products', label: 'Productos', icon: <Package size={18} aria-hidden="true" /> },
-        { id: 'clients', label: 'Clientes', icon: <Users size={18} aria-hidden="true" /> },
+        { id: 'clients', label: 'Personas', icon: <Users size={18} aria-hidden="true" /> },
         { id: 'fulfillment', label: 'Pedidos', icon: <Warehouse size={18} aria-hidden="true" /> },
         { id: 'logistica', label: 'Logística', icon: <Truck size={18} aria-hidden="true" /> },
         { id: 'rendiciones', label: 'Caja', icon: <DollarSign size={18} aria-hidden="true" /> },
@@ -75,7 +75,7 @@ export default function Sidebar({ username, role, activeTab, setActiveTab, onLog
 
     return [
       { id: 'orders', label: 'Pedidos', icon: <ShoppingCart size={18} aria-hidden="true" /> },
-      { id: 'clients', label: 'Clientes', icon: <Users size={18} aria-hidden="true" /> },
+      { id: 'clients', label: 'Personas', icon: <Users size={18} aria-hidden="true" /> },
       { id: 'cobranzas', label: 'Cobranzas', icon: <DollarSign size={18} aria-hidden="true" /> },
       { id: 'products', label: 'Catálogo', icon: <Package size={18} aria-hidden="true" /> },
       { id: 'history', label: 'Historial', icon: <History size={18} aria-hidden="true" /> },

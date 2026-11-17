@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../utils/api';
-import { DollarSign, RefreshCw, PlusCircle, Landmark, CheckSquare, Eye, ChevronRight, Lock, Edit2 } from 'lucide-react';
+import { DollarSign, RefreshCw, PlusCircle, CheckSquare, Eye, ChevronRight, Lock } from 'lucide-react';
 import { useConfirm } from '../context/ConfirmContext';
 import FinanceMovementModal from './FinanceMovementModal';
 import { computeCajaGrandeBalance, computeFilteredMetricsAndLedger } from './finanzas/finanzasHelpers';
 import { FinanzasBankReconciliationModal } from './finanzas/FinanzasBankReconciliationModal';
 import { FinanzasExpenseModal, FinanzasDrawerInspectModal, FinanzasCentralCloseAndBankModals } from './finanzas/FinanzasModals';
+import { FinanzasBanksCard } from './finanzas/FinanzasBanksCard';
 
 export default function FinanzasDashboard() {
   const confirm = useConfirm();
@@ -224,25 +225,16 @@ export default function FinanzasDashboard() {
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(380px, 1fr))', gap: '20px' }}>
-        <div className="card" style={{ padding: '20px' }}>
-          <h3 style={{ margin: '0 0 12px 0', fontSize: '1.05rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}><Landmark size={18} aria-hidden="true" /> Bancos</h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {bankAccounts.map((b: any) => (
-              <div key={b.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', border: '1px solid var(--border-color)', borderRadius: '8px', backgroundColor: 'var(--bg-light)' }}>
-                <div>
-                  <div style={{ fontWeight: 600, fontSize: '0.88rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    {b.name}
-                    <button type="button" aria-label={`Editar ${b.name}`} onClick={() => { setModalError(null); setEditingBankId(b.id); setEditingBankName(b.name); setEditingBankAccountNumber(b.accountNumber || ''); setEditingBankModalOpen(true); }} style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--text-secondary)', padding: '2px', display: 'inline-flex' }}>
-                      <Edit2 size={13} aria-hidden="true" />
-                    </button>
-                  </div>
-                  <div className="tabular-nums" style={{ fontSize: '0.76rem', color: 'var(--text-secondary)', fontFamily: 'monospace' }}>{b.accountNumber || 'Sin número'}</div>
-                </div>
-                <div className="tabular-nums" style={{ fontWeight: 700, fontSize: '1.05rem', color: '#10b981', fontFamily: 'monospace' }}>${Math.round(Number(b.balance)).toLocaleString('es-AR', { maximumFractionDigits: 0 })}</div>
-              </div>
-            ))}
-          </div>
-        </div>
+        <FinanzasBanksCard
+          bankAccounts={bankAccounts}
+          onEditBank={(b) => {
+            setModalError(null);
+            setEditingBankId(b.id);
+            setEditingBankName(b.name);
+            setEditingBankAccountNumber(b.accountNumber || '');
+            setEditingBankModalOpen(true);
+          }}
+        />
 
         <div className="card" style={{ padding: '20px' }}>
           <h3 style={{ margin: '0 0 12px 0', fontSize: '1.05rem', fontWeight: 600 }}>Transferencias</h3>

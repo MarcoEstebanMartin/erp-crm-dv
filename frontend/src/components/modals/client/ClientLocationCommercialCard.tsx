@@ -133,101 +133,117 @@ export const ClientLocationCommercialCard: React.FC<ClientLocationCommercialCard
           </div>
         </div>
 
-        <div className="form-group" style={{ marginBottom: 0 }}>
-          <label htmlFor="client-delivery-route" style={LABEL_STYLE}>Ruta de reparto</label>
-          <select
-            id="client-delivery-route"
-            className="select"
-            value={data.route || ''}
-            onChange={(e) => onChangeData({ route: e.target.value })}
-            style={SELECT_STYLE}
-          >
-            <option value="">Sin ruta</option>
-            {DELIVERY_ROUTES.map((r) => (
-              <option key={r} value={r}>{r}</option>
-            ))}
-          </select>
+        <div style={{ display: 'grid', gridTemplateColumns: data.isSeller && !data.isClient ? '1fr 1fr' : '1fr', gap: '14px' }}>
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <label htmlFor="client-delivery-route" style={LABEL_STYLE}>Ruta de reparto</label>
+            <select
+              id="client-delivery-route"
+              className="select"
+              value={data.route || ''}
+              onChange={(e) => onChangeData({ route: e.target.value })}
+              style={SELECT_STYLE}
+            >
+              <option value="">Sin ruta</option>
+              {DELIVERY_ROUTES.map((r) => (
+                <option key={r} value={r}>{r}</option>
+              ))}
+            </select>
+          </div>
+
+          {data.isSeller && !data.isClient && (
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label htmlFor="seller-sale-route" style={LABEL_STYLE}>Ruta de preventa</label>
+              <select
+                id="seller-sale-route"
+                className="select"
+                value={data.saleRouteId || ''}
+                onChange={(e) => handleSaleRouteChange(e.target.value)}
+                style={SELECT_STYLE}
+              >
+                <option value="">Sin ruta</option>
+                {availableSaleRoutes.map((r) => (
+                  <option key={r.id} value={r.id}>{r.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
 
         <ClientGpsPickerSection data={data} onChangeData={onChangeData} />
       </div>
 
-      <div style={{ ...CARD_STYLE, opacity: data.isClient ? 1 : 0.6 }}>
-        <h4 style={HEADER_STYLE}>Condiciones comerciales</h4>
+      {Boolean(data.isClient) && (
+        <div style={CARD_STYLE}>
+          <h4 style={HEADER_STYLE}>Condiciones comerciales</h4>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '0.85fr 1.15fr', gap: '14px', marginBottom: '14px' }}>
-          <div className="form-group" style={{ marginBottom: 0 }}>
-            <label htmlFor="client-seller" style={LABEL_STYLE}>Vendedor</label>
-            <select
-              id="client-seller"
-              className="select"
-              value={data.sellerId || ''}
-              onChange={(e) => onChangeData({ sellerId: e.target.value ? Number(e.target.value) : null })}
-              disabled={!data.isClient}
-              style={SELECT_STYLE}
-            >
-              <option value="">Sin vendedor</option>
-              {availableSellers.map((s) => (
-                <option key={s.id} value={s.id}>{s.username.replace('_', ' ').toUpperCase()}</option>
-              ))}
-            </select>
+          <div style={{ display: 'grid', gridTemplateColumns: '0.85fr 1.15fr', gap: '14px', marginBottom: '14px' }}>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label htmlFor="client-seller" style={LABEL_STYLE}>Vendedor</label>
+              <select
+                id="client-seller"
+                className="select"
+                value={data.sellerId || ''}
+                onChange={(e) => onChangeData({ sellerId: e.target.value ? Number(e.target.value) : null })}
+                style={SELECT_STYLE}
+              >
+                <option value="">Sin vendedor</option>
+                {availableSellers.map((s) => (
+                  <option key={s.id} value={s.id}>{s.username.replace('_', ' ').toUpperCase()}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label htmlFor="client-sale-route" style={LABEL_STYLE}>Ruta de preventa</label>
+              <select
+                id="client-sale-route"
+                className="select"
+                value={data.saleRouteId || ''}
+                onChange={(e) => handleSaleRouteChange(e.target.value)}
+                style={SELECT_STYLE}
+              >
+                <option value="">Sin ruta</option>
+                {availableSaleRoutes.map((r) => (
+                  <option key={r.id} value={r.id}>{r.name} ({r.seller?.username || '-'})</option>
+                ))}
+              </select>
+            </div>
           </div>
 
-          <div className="form-group" style={{ marginBottom: 0 }}>
-            <label htmlFor="client-sale-route" style={LABEL_STYLE}>Ruta de preventa</label>
-            <select
-              id="client-sale-route"
-              className="select"
-              value={data.saleRouteId || ''}
-              onChange={(e) => handleSaleRouteChange(e.target.value)}
-              disabled={!data.isClient}
-              style={SELECT_STYLE}
-            >
-              <option value="">Sin ruta</option>
-              {availableSaleRoutes.map((r) => (
-                <option key={r.id} value={r.id}>{r.name} ({r.seller?.username || '-'})</option>
-              ))}
-            </select>
-          </div>
-        </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label htmlFor="client-credit-limit" style={LABEL_STYLE}>Límite Cta Cte</label>
+              <select
+                id="client-credit-limit"
+                className="select"
+                value={Math.min(Number(data.maxUnpaidInvoices ?? 0), 2)}
+                onChange={(e) => onChangeData({ maxUnpaidInvoices: Number(e.target.value) })}
+                style={SELECT_STYLE}
+              >
+                <option value={0}>Contado</option>
+                <option value={0.5}>1/2 Boleta</option>
+                <option value={1}>1 Boleta</option>
+                <option value={2}>2 Boletas</option>
+              </select>
+            </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
-          <div className="form-group" style={{ marginBottom: 0 }}>
-            <label htmlFor="client-credit-limit" style={LABEL_STYLE}>Límite Cta Cte</label>
-            <select
-              id="client-credit-limit"
-              className="select"
-              value={data.maxUnpaidInvoices ?? 0}
-              onChange={(e) => onChangeData({ maxUnpaidInvoices: Number(e.target.value) })}
-              disabled={!data.isClient}
-              style={SELECT_STYLE}
-            >
-              <option value={0}>Contado</option>
-              <option value={0.5}>1/2 Boleta</option>
-              <option value={1}>1 Boleta</option>
-              <option value={2}>2 Boletas</option>
-              <option value={3}>3 Boletas</option>
-              <option value={4}>4 Boletas</option>
-            </select>
-          </div>
-
-          <div className="form-group" style={{ marginBottom: 0 }}>
-            <label htmlFor="client-price-list" style={LABEL_STYLE}>Lista de precios</label>
-            <select
-              id="client-price-list"
-              className="select"
-              value={data.priceList || 'A'}
-              onChange={(e) => onChangeData({ priceList: e.target.value })}
-              disabled={!data.isClient}
-              style={SELECT_STYLE}
-            >
-              <option value="A">Lista 4 (General)</option>
-              <option value="B">Lista Especial</option>
-              <option value="C">Lista Especial 2</option>
-            </select>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label htmlFor="client-price-list" style={LABEL_STYLE}>Lista de precios</label>
+              <select
+                id="client-price-list"
+                className="select"
+                value={data.priceList || 'A'}
+                onChange={(e) => onChangeData({ priceList: e.target.value })}
+                style={SELECT_STYLE}
+              >
+                <option value="A">Lista 4 (General)</option>
+                <option value="B">Lista Especial</option>
+                <option value="C">Lista Especial 2</option>
+              </select>
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };

@@ -1,11 +1,19 @@
-import { AlertCircle, CheckSquare, FileText, Printer, RotateCcw, Tag } from 'lucide-react';
+import { useState } from 'react';
+import { AlertCircle } from 'lucide-react';
 import { OrderDeliveryBadgeControl } from '../common/OrderDeliveryBadgeControl';
+import { FulfillmentListRowActions } from './FulfillmentListRowActions';
 import {
+  FulfillmentStageFilterBar,
+  type FulfillmentListStageFilter,
+} from './FulfillmentStageFilterBar';
+import {
+  FULFILLMENT_STAGE_TONES,
   formatBigIntARS,
   formatOrderRelativeAge,
   resolveOrderFiscalChannelBadge,
   resolveOrderOriginLabel,
   toOrderIntegerPesosBigInt,
+  type FulfillmentStageKey,
 } from '../../utils/fulfillmentCardMeta.helper';
 import {
   isOrderPendingCae,
@@ -17,6 +25,7 @@ interface FulfillmentListViewProps {
   pending: any[];
   preparing: any[];
   billedOrPendingCae: any[];
+  pendingCaeCount: number;
   pendingRoutes?: any[];
   selectedOrderIds: number[];
   requestingCaeId?: number | null;
@@ -33,11 +42,9 @@ interface FulfillmentListViewProps {
   onOrderDeliveryUpdated?: () => void;
 }
 
-type FulfillmentStage = 'PENDING' | 'PREPARING' | 'BILLED';
-
 interface ListRow {
   order: any;
-  stage: FulfillmentStage;
+  stage: FulfillmentStageKey;
   stageLabel: string;
 }
 
@@ -45,6 +52,7 @@ export function FulfillmentListView({
   pending,
   preparing,
   billedOrPendingCae,
+  pendingCaeCount,
   pendingRoutes = [],
   selectedOrderIds,
   requestingCaeId,
@@ -60,35 +68,50 @@ export function FulfillmentListView({
   onPrintReceipt,
   onOrderDeliveryUpdated,
 }: FulfillmentListViewProps) {
-  const rows: ListRow[] = [
+  const [stageFilter, setStageFilter] = useState<FulfillmentListStageFilter>('ALL');
+
+  const allRows: ListRow[] = [
     ...pending.map((order): ListRow => ({ order, stage: 'PENDING', stageLabel: 'Pendiente' })),
     ...preparing.map((order): ListRow => ({ order, stage: 'PREPARING', stageLabel: 'En Picking' })),
     ...billedOrPendingCae.map((order): ListRow => ({ order, stage: 'BILLED', stageLabel: 'Facturado' })),
   ];
 
+  const rows = stageFilter === 'ALL' ? allRows : allRows.filter((r) => r.stage === stageFilter);
   const allPendingSelected = pending.length > 0 && pending.every((o) => selectedOrderIds.includes(o.id));
+  const canSelectPending = pending.length > 0 && (stageFilter === 'ALL' || stageFilter === 'PENDING');
 
   return (
-    <div
-      className="table-container table-container--sticky"
-      role="region"
-      aria-label="Listado compacto de pedidos en armado y facturación"
-      tabIndex={0}
-      style={{ marginTop: 0 }}
-    >
-      <table>
-        <thead>
-          <tr>
-            <th scope="col" style={{ width: '36px', textAlign: 'center' }}>
-              <input
-                type="checkbox"
-                checked={allPendingSelected}
-                onChange={onToggleSelectAllPending}
-                disabled={pending.length === 0}
-                aria-label="Seleccionar todos los pedidos pendientes para lote A4"
-                style={{ accentColor: '#111827', cursor: pending.length > 0 ? 'pointer' : 'not-allowed' }}
-              />
-            </th>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+      <FulfillmentStageFilterBar
+        stageFilter={stageFilter}
+        onSelectStage={setStageFilter}
+        totalCount={allRows.length}
+        pendingCount={pending.length}
+        preparingCount={preparing.length}
+        billedCount={billedOrPendingCae.length}
+        pendingCaeCount={pendingCaeCount}
+      />
+
+      <div
+        className="table-container table-container--sticky"
+        role="region"
+        aria-label="Listado compacto de pedidos en armado y facturación"
+        tabIndex={0}
+        style={{ marginTop: 0 }}
+      >
+        <table>
+          <thead>
+            <tr>
+              <th scope="col" style={{ width: '36px', textAlign: 'center' }}>
+                <input
+                  type="checkbox"
+                  checked={allPendingSelected}
+                  onChange={onToggleSelectAllPending}
+                  disabled={!canSelectPending}
+                  aria-label="Seleccionar todos los pedidos pendientes para lote A4"
+                  style={{ accentColor: '#111827', cursor: canSelectPending ? 'pointer' : 'not-allowed' }}
+                />
+              </th>
             <th scope="col">Pedido</th>
             <th scope="col">Cliente / Localidad</th>
             <th scope="col">Origen</th>
@@ -116,9 +139,17 @@ export function FulfillmentListView({
               const channelBadge = resolveOrderFiscalChannelBadge(o);
               const pendingCae = isOrderPendingCae(o);
               const isSelected = selectedOrderIds.includes(o.id);
+              const tone = FULFILLMENT_STAGE_TONES[stage];
+              const rowAccent = pendingCae ? '#E30613' : tone.accent;
 
               return (
-                <tr key={o.id} style={{ backgroundColor: isSelected ? '#F8FAFC' : undefined }}>
+                <tr
+                  key={o.id}
+                  style={{
+                    backgroundColor: isSelected ? '#F8FAFC' : undefined,
+                    boxShadow: `inset 3px 0 0 ${rowAccent}`,
+                  }}
+                >
                   <td style={{ textAlign: 'center' }}>
                     {stage === 'PENDING' ? (
                       <input
@@ -148,10 +179,27 @@ export function FulfillmentListView({
                     </span>
                   </td>
                   <td>
-                    <span className={pendingCae ? 'badge-minimal badge-minimal--danger' : 'badge-minimal'}>
-                      {pendingCae && <AlertCircle size={11} aria-hidden="true" />}
-                      {pendingCae ? 'Sin CAE' : stageLabel}
-                    </span>
+                    {pendingCae ? (
+                      <span className="badge-minimal badge-minimal--danger">
+                        <AlertCircle size={11} aria-hidden="true" />
+                        Sin CAE
+                      </span>
+                    ) : (
+                      <span
+                        className="badge-minimal"
+                        style={{
+                          backgroundColor: tone.bg,
+                          borderColor: tone.border,
+                          color: tone.text,
+                        }}
+                      >
+                        <span
+                          aria-hidden="true"
+                          style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: tone.dot }}
+                        />
+                        {stageLabel}
+                      </span>
+                    )}
                   </td>
                   <td>
                     <OrderDeliveryBadgeControl
@@ -165,105 +213,20 @@ export function FulfillmentListView({
                     {formatBigIntARS(toOrderIntegerPesosBigInt(o.totalAmount))}
                   </td>
                   <td>
-                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '5px', flexWrap: 'wrap' }}>
-                      {stage === 'PENDING' && (
-                        <>
-                          <button
-                            type="button"
-                            className="btn btn-secondary"
-                            style={{ padding: '4px 8px', fontSize: '0.74rem' }}
-                            onClick={() => onPrintPickingList(o)}
-                            title="Imprimir Hoja de Armado"
-                            aria-label={`Imprimir hoja de armado pedido #${o.id}`}
-                          >
-                            <Printer size={13} aria-hidden="true" />
-                          </button>
-                          <button
-                            type="button"
-                            className="btn btn-secondary"
-                            style={{ padding: '4px 8px', fontSize: '0.74rem' }}
-                            onClick={() => onPrintLabels(o)}
-                            title="Imprimir Rótulos de Bultos"
-                            aria-label={`Imprimir rótulos pedido #${o.id}`}
-                          >
-                            <Tag size={13} aria-hidden="true" />
-                          </button>
-                          <button
-                            type="button"
-                            className="btn btn-primary"
-                            style={{ padding: '4px 10px', fontSize: '0.75rem' }}
-                            onClick={() => onOpenFulfillmentModal(o)}
-                          >
-                            Facturar
-                          </button>
-                        </>
-                      )}
-
-                      {stage === 'PREPARING' && (
-                        <>
-                          <button
-                            type="button"
-                            className="btn btn-secondary"
-                            style={{ padding: '4px 8px', fontSize: '0.74rem' }}
-                            onClick={() => onRevertToPending(o.id)}
-                            title="Devolver a Pendientes"
-                            aria-label={`Devolver pedido #${o.id} a Pendientes`}
-                          >
-                            <RotateCcw size={13} aria-hidden="true" />
-                          </button>
-                          <button
-                            type="button"
-                            className="btn btn-primary"
-                            style={{ padding: '4px 10px', fontSize: '0.75rem' }}
-                            onClick={() => onOpenFulfillmentModal(o)}
-                          >
-                            <CheckSquare size={13} aria-hidden="true" />
-                            Confirmar
-                          </button>
-                        </>
-                      )}
-
-                      {stage === 'BILLED' && (
-                        <>
-                          {pendingCae && (
-                            <button
-                              type="button"
-                              className="btn btn-primary"
-                              disabled={requestingCaeId === o.id}
-                              style={{
-                                padding: '4px 9px',
-                                fontSize: '0.74rem',
-                                backgroundColor: '#E30613',
-                                borderColor: '#E30613',
-                              }}
-                              onClick={() => onRequestCae(o.id)}
-                            >
-                              {requestingCaeId === o.id ? 'Solicitando...' : 'Solicitar CAE'}
-                            </button>
-                          )}
-                          <button
-                            type="button"
-                            className="btn btn-secondary"
-                            style={{ padding: '4px 8px', fontSize: '0.74rem' }}
-                            onClick={() => (o.billingType === 'OFFICIAL' ? onPrintFacturaA4(o) : onPrintRemitoX(o))}
-                            title={o.billingType === 'OFFICIAL' ? 'Factura A4' : 'Boleta A4'}
-                          >
-                            <FileText size={13} aria-hidden="true" />
-                            {o.billingType === 'OFFICIAL' ? 'A4' : 'Rem. X'}
-                          </button>
-                          <button
-                            type="button"
-                            className="btn btn-secondary"
-                            style={{ padding: '4px 8px', fontSize: '0.74rem' }}
-                            onClick={() => onPrintReceipt(o)}
-                            title="Imprimir Ticket"
-                            aria-label={`Imprimir ticket pedido #${o.id}`}
-                          >
-                            <Printer size={13} aria-hidden="true" />
-                          </button>
-                        </>
-                      )}
-                    </div>
+                    <FulfillmentListRowActions
+                      order={o}
+                      stage={stage}
+                      pendingCae={pendingCae}
+                      requestingCaeId={requestingCaeId}
+                      onPrintPickingList={onPrintPickingList}
+                      onPrintLabels={onPrintLabels}
+                      onOpenFulfillmentModal={onOpenFulfillmentModal}
+                      onRevertToPending={onRevertToPending}
+                      onRequestCae={onRequestCae}
+                      onPrintFacturaA4={onPrintFacturaA4}
+                      onPrintRemitoX={onPrintRemitoX}
+                      onPrintReceipt={onPrintReceipt}
+                    />
                   </td>
                 </tr>
               );
@@ -271,6 +234,7 @@ export function FulfillmentListView({
           )}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }

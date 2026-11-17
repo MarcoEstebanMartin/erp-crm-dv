@@ -153,15 +153,17 @@ export const printDeliveryRouteCustodyGuide = (route: any) => {
   const rowsHtml = orders
     .map((o: any) => {
       const client = resolvePrintClientMeta(o);
+      const addressLine = [client.address, client.city].filter(Boolean).join(' · ');
+      const noteText = (o.notes || o.bultosDetails?.notes || '').trim();
       return `<tr>
-        <td style="text-align: center;"><div style="width: 16px; height: 16px; border: 1.5px solid #000; margin: 0 auto;"></div></td>
-        <td><strong>#${o.id}</strong></td>
+        <td class="col-check"><span class="check-box"></span></td>
+        <td class="col-id">#${o.id}</td>
         <td>
-          <strong>${escapePrintHtml(client.name)}</strong>
-          <div style="font-size: 10.5px; color: #374151;">Dir: ${escapePrintHtml(client.address)}${client.city ? ` (${escapePrintHtml(client.city)})` : ''}</div>
+          <div class="client-name">${escapePrintHtml(client.name)}</div>
+          ${addressLine ? `<div class="client-addr">${escapePrintHtml(addressLine)}</div>` : ''}
         </td>
-        <td style="text-align: center; font-weight: 900; font-size: 13px;">${o.bultosCount || 1} u</td>
-        <td style="font-size: 11px;">${escapePrintHtml(o.notes || o.bultosDetails?.notes || '-')}</td>
+        <td class="col-bultos">${o.bultosCount || 1} u</td>
+        <td class="col-notes">${noteText ? escapePrintHtml(noteText) : '<span class="muted">—</span>'}</td>
       </tr>`;
     })
     .join('');
@@ -171,89 +173,104 @@ export const printDeliveryRouteCustodyGuide = (route: any) => {
     `<!DOCTYPE html>
     <html>
       <head>
-        <title>Guía de Carga y Transferencia de Custodia - Ruta #${route.id}</title>
+        <title>Hoja de Ruta #${route.id}</title>
         <style>
-          @page { size: A4 portrait; margin: 10mm; }
+          @page { size: A4 portrait; margin: 12mm 14mm; }
           * { box-sizing: border-box; }
-          body { font-family: ${PRINT_FONT_STACK}; font-size: 12px; color: #111827; margin: 0; padding: 0; }
-          .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #000; padding-bottom: 8px; margin-bottom: 12px; }
-          .title { font-size: 18px; font-weight: 900; text-transform: uppercase; }
-          .subtitle { font-size: 12px; font-weight: 700; color: #000; }
-          .summary-card { border: 2.5px solid #000; border-radius: 8px; padding: 12px; margin-bottom: 16px; background: #f9fafb; }
-          .summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 8px; }
-          .category-box { border: 1.5px solid #000; border-radius: 6px; padding: 10px; background: #fff; }
-          .category-title { font-size: 11px; font-weight: 900; text-transform: uppercase; margin-bottom: 4px; color: #374151; }
-          .category-val { font-size: 20px; font-weight: 900; color: #000; }
-          table { width: 100%; border-collapse: collapse; margin-top: 12px; }
-          th { border: 1.5px solid #000; background: #f3f4f6; padding: 6px 8px; font-size: 11px; text-transform: uppercase; font-weight: 900; text-align: left; }
-          td { border: 1px solid #d1d5db; padding: 6px 8px; font-size: 11.5px; vertical-align: middle; }
-          .signature-box { border: 2px solid #000; border-radius: 8px; padding: 16px; margin-top: 24px; background: #fff; }
-          @media print { body { -webkit-print-color-adjust: exact; } }
+          body { font-family: ${PRINT_FONT_STACK}; font-size: 11px; color: #111827; margin: 0; padding: 0; line-height: 1.35; -webkit-font-smoothing: antialiased; }
+          .header { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 1px solid #111827; padding-bottom: 10px; margin-bottom: 14px; }
+          .brand { font-size: 14px; font-weight: 700; letter-spacing: -0.01em; text-transform: uppercase; color: #111827; }
+          .doc-type { font-size: 10px; font-weight: 500; color: #6b7280; letter-spacing: 0.04em; text-transform: uppercase; margin-top: 2px; }
+          .route-ref { text-align: right; }
+          .route-num { font-size: 16px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+          .route-date { font-size: 10.5px; color: #6b7280; font-variant-numeric: tabular-nums; margin-top: 1px; }
+          .meta-strip { display: grid; grid-template-columns: 1.35fr 1.15fr 0.8fr 0.8fr 0.75fr; border: 1px solid #e5e7eb; border-radius: 6px; margin-bottom: 16px; overflow: hidden; }
+          .meta-cell { padding: 9px 11px; border-right: 1px solid #e5e7eb; }
+          .meta-cell:last-child { border-right: none; background: #f9fafb; }
+          .meta-label { font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #6b7280; margin-bottom: 3px; }
+          .meta-val { font-size: 11.5px; font-weight: 600; color: #111827; font-variant-numeric: tabular-nums; }
+          .meta-sub { font-size: 9.5px; color: #6b7280; margin-top: 1px; }
+          .section-label { font-size: 9.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #6b7280; margin: 0 0 6px 0; }
+          table { width: 100%; border-collapse: collapse; }
+          th { border-bottom: 1px solid #d1d5db; padding: 6px 8px; font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; color: #6b7280; text-align: left; }
+          td { border-bottom: 1px solid #f3f4f6; padding: 7px 8px; vertical-align: middle; }
+          .col-check { width: 32px; text-align: center; }
+          .check-box { display: inline-block; width: 13px; height: 13px; border: 1px solid #9ca3af; border-radius: 3px; vertical-align: middle; }
+          .col-id { width: 56px; font-weight: 600; font-variant-numeric: tabular-nums; color: #374151; }
+          .client-name { font-weight: 600; color: #111827; font-size: 11px; }
+          .client-addr { font-size: 9.5px; color: #6b7280; margin-top: 1px; }
+          .col-bultos { width: 68px; text-align: center; font-weight: 600; font-variant-numeric: tabular-nums; }
+          .col-notes { font-size: 10px; color: #4b5563; }
+          .muted { color: #9ca3af; }
+          .custody-footer { margin-top: 22px; padding-top: 12px; border-top: 1px solid #e5e7eb; break-inside: avoid; }
+          .custody-note { font-size: 9.5px; color: #6b7280; line-height: 1.45; margin-bottom: 28px; }
+          .signatures { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; }
+          .sig-block { border-top: 1px solid #9ca3af; padding-top: 6px; }
+          .sig-title { font-size: 10px; font-weight: 600; color: #111827; }
+          .sig-sub { font-size: 9px; color: #6b7280; margin-top: 2px; }
+          @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
         </style>
       </head>
       <body>
         <div class="header">
           <div>
-            <div class="title">${escapePrintHtml(company.nombreFantasia)}</div>
-            <div class="subtitle">GUÍA DE CARGA Y ACTA OFICIAL DE TRANSFERENCIA DE CUSTODIA</div>
+            <div class="brand">${escapePrintHtml(company.nombreFantasia)}</div>
+            <div class="doc-type">Hoja de ruta · Transferencia de custodia</div>
           </div>
-          <div style="text-align: right;">
-            <div style="font-size: 18px; font-weight: 900;">HOJA DE RUTA #${route.id}</div>
-            <div>Fecha: ${new Date(route.date || Date.now()).toLocaleDateString('es-AR')}</div>
-          </div>
-        </div>
-        <div class="summary-card">
-          <div style="display: flex; justify-content: space-between; font-size: 13.5px; font-weight: 900; border-bottom: 1.5px solid #000; padding-bottom: 6px;">
-            <span>CHOFER / REPARTIDOR: ${driverNameUpper}${companionHtml}</span>
-            <span>VEHÍCULO: ${escapePrintHtml(route.vehiclePlate || 'S/D')} ${route.vehicleDescription ? `(${escapePrintHtml(route.vehicleDescription)})` : ''}</span>
-          </div>
-          <div class="summary-grid">
-            <div class="category-box">
-              <div class="category-title">1. CAJAS CERRADAS FÁBRICA (TABLA)</div>
-              <div class="category-val">~ ${totalCajasTablaEstimadas} Cajas</div>
-              <div style="font-size: 10.5px; color: #4b5563; margin-top: 2px;">Palletizado sellado de origen (Conteo masivo)</div>
-            </div>
-            <div class="category-box">
-              <div class="category-title">2. BULTOS FRACCIONADOS Y FRÍO (FAJADOS)</div>
-              <div class="category-val">${totalBultosFraccionados} Bultos</div>
-              <div style="font-size: 10.5px; color: #4b5563; margin-top: 2px;">Cajas abiertas con Faja de Seguridad y Rótulo Térmico</div>
-            </div>
-          </div>
-          <div style="margin-top: 10px; background: #000; color: #fff; padding: 8px 12px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; font-size: 15px; font-weight: 900;">
-            <span>TOTAL ESTIMADO DE BULTOS A CARGAR:</span>
-            <span>${totalBultosRuta} BULTOS TOTALES</span>
+          <div class="route-ref">
+            <div class="route-num">Ruta #${route.id}</div>
+            <div class="route-date">${new Date(route.date || Date.now()).toLocaleDateString('es-AR')}</div>
           </div>
         </div>
-        <h4 style="font-size: 13px; font-weight: 900; margin: 16px 0 6px 0; text-transform: uppercase;">Detalle de Pedidos de la Ruta (${orders.length} pedidos)</h4>
+        <div class="meta-strip">
+          <div class="meta-cell">
+            <div class="meta-label">Chofer</div>
+            <div class="meta-val">${driverNameUpper || 'S/D'}</div>
+            ${companionHtml ? `<div class="meta-sub">${companionHtml.replace(/^\s*\(|\)\s*$/g, '')}</div>` : ''}
+          </div>
+          <div class="meta-cell">
+            <div class="meta-label">Vehículo</div>
+            <div class="meta-val">${escapePrintHtml(route.vehiclePlate || 'S/D')}</div>
+            ${route.vehicleDescription ? `<div class="meta-sub">${escapePrintHtml(route.vehicleDescription)}</div>` : ''}
+          </div>
+          <div class="meta-cell">
+            <div class="meta-label">Cajas tabla</div>
+            <div class="meta-val">~ ${totalCajasTablaEstimadas}</div>
+          </div>
+          <div class="meta-cell">
+            <div class="meta-label">Fajados</div>
+            <div class="meta-val">${totalBultosFraccionados} u</div>
+          </div>
+          <div class="meta-cell">
+            <div class="meta-label">Total carga</div>
+            <div class="meta-val" style="font-size: 13px;">${totalBultosRuta}</div>
+          </div>
+        </div>
+        <div class="section-label">Pedidos (${orders.length})</div>
         <table>
           <thead>
             <tr>
-              <th style="width: 30px; text-align: center;">OK</th>
-              <th style="width: 70px;">Pedido</th>
-              <th>Cliente y Dirección</th>
-              <th style="width: 90px; text-align: center;">Bultos Fajados</th>
-              <th>Notas / Observaciones Vendedor</th>
+              <th style="width: 32px; text-align: center;">OK</th>
+              <th style="width: 56px;">Pedido</th>
+              <th>Cliente</th>
+              <th style="width: 68px; text-align: center;">Bultos</th>
+              <th>Notas</th>
             </tr>
           </thead>
           <tbody>${rowsHtml}</tbody>
         </table>
-        <div class="signature-box">
-          <div style="font-size: 12px; font-weight: 900; text-transform: uppercase; margin-bottom: 6px;">
-            DECLARACIÓN Y TRANSFERENCIA DE CUSTODIA LEGAL DE CARGA
+        <div class="custody-footer">
+          <div class="custody-note">
+            El chofer declara recibir en conformidad el total de bultos detallados, asumiendo su custodia y transporte hasta la entrega efectiva al cliente.
           </div>
-          <div style="font-size: 11px; line-height: 1.4; color: #1f2937;">
-            Por medio de la presente, el chofer abajo firmante declara haber contado y recibido en perfecta conformidad el total de bultos cerrados y fajados detallados en esta guía. A partir de este momento, asume la responsabilidad total de la custodia y transporte de la mercadería hasta su entrega efectiva al cliente final.
-          </div>
-          <div style="display: flex; justify-content: space-between; margin-top: 35px; border-top: 1px dashed #000; padding-top: 10px;">
-            <div style="width: 45%;">
-              <div>________________________________________</div>
-              <div style="font-size: 11px; font-weight: 800; margin-top: 3px;">Firma Chofer: ${driverNameUpper}</div>
-              <div style="font-size: 10px; color: #4b5563;">DNI / Aclaración:</div>
+          <div class="signatures">
+            <div class="sig-block">
+              <div class="sig-title">Chofer · ${driverNameUpper}</div>
+              <div class="sig-sub">DNI / Aclaración</div>
             </div>
-            <div style="width: 45%;">
-              <div>________________________________________</div>
-              <div style="font-size: 11px; font-weight: 800; margin-top: 3px;">Firma Responsable Despacho / Depósito</div>
-              <div style="font-size: 10px; color: #4b5563;">Fecha / Hora Carga: ____/____/______ ____:____ hs</div>
+            <div class="sig-block">
+              <div class="sig-title">Responsable Despacho</div>
+              <div class="sig-sub">Fecha y hora de carga: ____ / ____ / ____ · ____ : ____ hs</div>
             </div>
           </div>
         </div>

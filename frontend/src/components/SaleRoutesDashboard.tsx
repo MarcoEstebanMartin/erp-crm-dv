@@ -199,14 +199,14 @@ export default function SaleRoutesDashboard() {
         </div>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(240px, 290px) 1fr', gap: '18px', alignItems: 'start' }}>
-        <div className="card" style={{ padding: '12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(240px, 285px) 1fr', gap: '20px', alignItems: 'start' }}>
+        <div style={{ border: '1px solid var(--border-color)', borderRadius: '8px', backgroundColor: '#ffffff', overflow: 'hidden' }}>
           {loading ? (
-            <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.86rem' }}>Cargando...</div>
+            <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>Cargando...</div>
           ) : routes.length === 0 ? (
-            <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.86rem' }}>Sin rutas</div>
+            <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>Sin rutas</div>
           ) : (
-            routes.map((r) => {
+            routes.map((r, idx) => {
               const selected = selectedRouteId === r.id;
               return (
                 <button
@@ -217,23 +217,27 @@ export default function SaleRoutesDashboard() {
                   style={{
                     width: '100%',
                     textAlign: 'left',
-                    padding: '10px 12px',
-                    borderRadius: '8px',
-                    border: selected ? '1px solid #0f172a' : '1px solid var(--border-color)',
-                    backgroundColor: selected ? '#f8fafc' : '#ffffff',
+                    padding: '10px 14px',
+                    border: 'none',
+                    borderBottom: idx < routes.length - 1 ? '1px solid #f1f5f9' : 'none',
+                    borderLeft: selected ? '2px solid #111827' : '2px solid transparent',
+                    backgroundColor: selected ? '#f8fafc' : 'transparent',
                     cursor: 'pointer',
                     display: 'flex',
                     flexDirection: 'column',
-                    gap: '4px',
+                    alignItems: 'stretch',
+                    gap: '2px',
                   }}
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
-                    <span style={{ fontWeight: 700, fontSize: '0.9rem', color: '#0f172a' }}>{r.name}</span>
-                    <span className="tabular-nums" style={{ fontSize: '0.76rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                    <span style={{ fontWeight: selected ? 700 : 600, fontSize: '0.86rem', color: selected ? '#0f172a' : '#334155', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {r.name}
+                    </span>
+                    <span className="tabular-nums" style={{ fontSize: '0.76rem', fontWeight: 500, color: '#64748b', flexShrink: 0 }}>
                       {r._count?.clients || 0}
                     </span>
                   </div>
-                  <div style={{ fontSize: '0.76rem', color: 'var(--text-secondary)' }}>
+                  <div style={{ fontSize: '0.74rem', color: '#64748b' }}>
                     {r.seller?.username ? r.seller.username.replace('_', ' ').toUpperCase() : 'Sin vendedor'}
                     {r.dayOfWeek ? ` · ${r.dayOfWeek}` : ''}
                   </div>

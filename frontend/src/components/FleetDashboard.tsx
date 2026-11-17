@@ -1,4 +1,4 @@
-import { Car, Plus, AlertTriangle, AlertCircle, Layers, ChevronRight, X } from 'lucide-react';
+import { Car, Plus, AlertTriangle, AlertCircle, Layers, X } from 'lucide-react';
 import { FleetStatusBadge, getExpiryLabel, isExpiryClose, isExpiryOverdue } from './fleet/fleet.types';
 import { useFleetController } from './fleet/useFleetController';
 import { FleetVehicleDetailPanel } from './fleet/FleetVehicleDetailPanel';
@@ -50,12 +50,12 @@ export default function FleetDashboard() {
         </div>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1.8fr', gap: '20px', alignItems: 'start' }}>
-        <div style={{ border: '1px solid var(--border-color)', borderRadius: '8px', backgroundColor: 'var(--bg-card, #fff)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', borderBottom: '1px solid var(--border-color)' }}>
-            <span className="tabular-nums" style={{ fontWeight: 600, fontSize: '0.92rem' }}>Flota Activa ({c.vehicles.length})</span>
-            <button type="button" className="btn btn-secondary" onClick={c.openCreateVehicle} style={{ padding: '6px 10px', fontSize: '0.78rem' }}>
-              <Plus size={14} aria-hidden="true" /> Nuevo Vehículo
+      <div style={{ display: 'grid', gridTemplateColumns: '1.1fr 1.9fr', gap: '20px', alignItems: 'start' }}>
+        <div style={{ border: '1px solid var(--border-color)', borderRadius: '8px', backgroundColor: 'var(--bg-card, #fff)', overflow: 'hidden' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 18px', borderBottom: '1px solid var(--border-color)' }}>
+            <span className="tabular-nums" style={{ fontWeight: 600, fontSize: '0.9rem' }}>Flota ({c.vehicles.length})</span>
+            <button type="button" className="btn btn-secondary" onClick={c.openCreateVehicle} style={{ padding: '5px 10px', fontSize: '0.78rem' }}>
+              <Plus size={14} aria-hidden="true" /> Nuevo
             </button>
           </div>
 
@@ -68,7 +68,7 @@ export default function FleetDashboard() {
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column' }}>
-              {c.vehicles.map((v) => {
+              {c.vehicles.map((v, idx) => {
                 const isSelected = c.selectedVehicleId === v.id;
                 const hasCritical = v.expirations.some((e) => isExpiryClose(e.expirationDate));
                 return (
@@ -78,25 +78,26 @@ export default function FleetDashboard() {
                     onClick={() => c.setSelectedVehicleId(v.id)}
                     style={{
                       width: '100%', textAlign: 'left', border: 'none',
-                      borderBottom: '1px solid var(--border-color)',
-                      borderLeft: isSelected ? '3px solid var(--color-corp-red)' : '3px solid transparent',
+                      borderBottom: idx < c.vehicles.length - 1 ? '1px solid #f1f5f9' : 'none',
+                      borderLeft: isSelected ? '2px solid #111827' : '2px solid transparent',
                       display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                      padding: '14px 20px', cursor: 'pointer',
-                      backgroundColor: isSelected ? 'rgba(0, 0, 0, 0.02)' : 'transparent',
+                      padding: '11px 16px', cursor: 'pointer',
+                      backgroundColor: isSelected ? '#f8fafc' : 'transparent',
                     }}
                   >
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span className="tabular-nums" style={{ fontWeight: 700, fontSize: '0.9rem', color: isSelected ? 'var(--text-primary)' : 'var(--text-secondary)' }}>{v.plate}</span>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
+                        <span className="tabular-nums" style={{ fontWeight: isSelected ? 700 : 600, fontSize: '0.88rem', color: isSelected ? '#0f172a' : '#334155' }}>{v.plate}</span>
                         {hasCritical && <AlertTriangle size={13} color="var(--color-corp-red)" aria-hidden="true" />}
-                        <FleetStatusBadge status={v.status} />
+                        {v.status !== 'ACTIVE' && <FleetStatusBadge status={v.status} />}
                       </div>
-                      <span className="tabular-nums" style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>{v.brand} {v.model} ({v.year})</span>
+                      <span className="tabular-nums" style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {v.brand} {v.model} ({v.year})
+                      </span>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <span className="tabular-nums" style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-primary)' }}>{v.currentOdometer.toLocaleString()} km</span>
-                      <ChevronRight size={16} aria-hidden="true" style={{ opacity: 0.3 }} />
-                    </div>
+                    <span className="tabular-nums" style={{ fontSize: '0.8rem', fontWeight: 500, color: 'var(--text-secondary)', whiteSpace: 'nowrap', marginLeft: '12px' }}>
+                      {v.currentOdometer.toLocaleString('es-AR')} km
+                    </span>
                   </button>
                 );
               })}
