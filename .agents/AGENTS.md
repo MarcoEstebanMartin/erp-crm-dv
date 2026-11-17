@@ -50,6 +50,9 @@ Este archivo define las reglas innegociables de comportamiento, arquitectura mod
 
 ## 6. Comandos Rápidos y Stack Oficial (GitHub + Supabase + Railway)
 - **Stack Único de Producción**: Código en **GitHub**, datos e imágenes maestras en **Supabase** (`sa-east-1`) y despliegue unificado 24/7 (Frontend SPA + Backend API bajo el mismo origen HTTPS, sin `ngrok` ni plataformas extra) en **Railway**.
+- **Mapa de Servicios en Railway (Proyecto `don-venancio`)**:
+  - **Web Oficial + Chatbot + Catálogo + Ofertas**: servicio `don-venancio` (`https://donvenancio.com.ar`, repo `MarcoEstebanMartin/chatbot-08-10-2026`). **No tocar** desde este repo.
+  - **ERP-CRM DV (este proyecto, en pruebas)**: servicio `erp-dv-prueba` (`https://erp-dv-prueba-production.up.railway.app`). Despliegue con `railway.cmd up --detach -p fa70da17-b02f-4a41-b9ed-686161c04e07 -e 3ea8d1cb-d06d-4368-8f6f-ade2665e0ae8 -s f8b7a8df-aa9d-405d-b685-0aad665050f0`.
 - **Comando "abri" / "abrir" / "abre todo" (Inicio Seguro de Jornada)**:
   1. Ejecutar `git status -sb` y `git pull --ff-only origin main` para bajar automáticamente cualquier avance hecho desde otra PC.
   2. Ejecutar `ipconfig` para obtener la IPv4 local activa.
