@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { FieldCollectionPage } from './field-receipts/FieldCollectionPage';
 import { ClipboardList, Calendar, ShoppingCart, Map, Warehouse } from 'lucide-react';
 import { useConfirm } from '../context/ConfirmContext';
 import { WarehouseMap } from './deposito/WarehouseMap';
@@ -21,6 +22,10 @@ interface DepositoDashboardProps {
 export default function DepositoDashboard({ activeTab }: DepositoDashboardProps) {
   const confirm = useConfirm();
   const c = useDepositoController(activeTab, confirm);
+
+  if (activeTab === 'field-receipts') {
+    return <FieldCollectionPage />;
+  }
   const [focusedMapLocation, setFocusedMapLocation] = useState<string | null>(null);
 
   const isOrderFullyAssigned =

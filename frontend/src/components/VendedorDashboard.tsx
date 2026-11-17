@@ -1,7 +1,8 @@
 import React from 'react';
-import { ShoppingCart, CheckCircle2, Package, Users, DollarSign, History } from 'lucide-react';
+import { ShoppingCart, CheckCircle2, Package, Users, DollarSign, History, Receipt } from 'lucide-react';
 import PriceListModal from './PriceListModal';
 import MobileCobros from './MobileCobros';
+import { FieldCollectionPage } from './field-receipts/FieldCollectionPage';
 import EditOrderModal from './modals/EditOrderModal';
 import ResumenCuentaModal from './modals/ResumenCuentaModal';
 import { AdminOrderDetailsModal } from './admin/AdminOrderDetailsModal';
@@ -58,6 +59,15 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
           onClick={() => setActiveTab('cobranzas')}
         >
           <DollarSign size={16} /><span>Cobranzas</span>
+        </button>
+
+        <button
+          type="button"
+          className={`vendedor-nav-pill ${activeTab === 'field-receipts' ? 'vendedor-nav-pill-active' : ''}`}
+          aria-current={activeTab === 'field-receipts' ? 'page' : undefined}
+          onClick={() => setActiveTab('field-receipts')}
+        >
+          <Receipt size={16} /><span>Recibos</span>
         </button>
 
         <button
@@ -167,6 +177,8 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
           cleanCityName={cleanCityName}
         />
       )}
+
+      {activeTab === 'field-receipts' && <FieldCollectionPage />}
 
       {activeTab === 'products' && (
         <VendedorCatalogReadOnlyTab

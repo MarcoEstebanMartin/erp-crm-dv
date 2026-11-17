@@ -69,6 +69,7 @@ export default function Sidebar({ username, role, activeTab, setActiveTab, onLog
       return [
         { id: 'deposito', label: 'Picking', icon: <Warehouse size={18} aria-hidden="true" /> },
         { id: 'products', label: 'Stock', icon: <Package size={18} aria-hidden="true" /> },
+        { id: 'field-receipts', label: 'Recibos', icon: <DollarSign size={18} aria-hidden="true" /> },
         { id: 'history', label: 'Historial', icon: <History size={18} aria-hidden="true" /> },
       ];
     }
@@ -77,6 +78,7 @@ export default function Sidebar({ username, role, activeTab, setActiveTab, onLog
       { id: 'orders', label: 'Pedidos', icon: <ShoppingCart size={18} aria-hidden="true" /> },
       { id: 'clients', label: 'Personas', icon: <Users size={18} aria-hidden="true" /> },
       { id: 'cobranzas', label: 'Cobranzas', icon: <DollarSign size={18} aria-hidden="true" /> },
+      { id: 'field-receipts', label: 'Recibos', icon: <DollarSign size={18} aria-hidden="true" /> },
       { id: 'products', label: 'Catálogo', icon: <Package size={18} aria-hidden="true" /> },
       { id: 'history', label: 'Historial', icon: <History size={18} aria-hidden="true" /> },
     ];

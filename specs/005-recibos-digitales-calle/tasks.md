@@ -6,5 +6,5 @@
 - [x] **T004 (Fase B)**: Implementar `receiptPdf.service.ts` (PDF oficial inalterable con código de verificación) y `whatsappDispatch.service.ts` (integración directa con Meta WhatsApp Cloud API - plantilla `Utility` + webhook de estado).
 - [x] **T005 (Fase B)**: Implementar `fieldReceipts.controller.ts` y `fieldReceipts.routes.ts` montados en `/api/field-receipts`.
 - [x] **T006 (Fase C)**: Implementar cola offline segura en IndexedDB (`offlineReceiptQueue.ts`) con precarga de ruta/saldos, bloqueo de edición/borrado local y sincronización automática al recuperar señal.
-- [ ] **T007 (Fase C)**: Construir vista móvil de cobranza en calle (`FieldCollectionPage.tsx` y `FieldCollectModal.tsx`) soportando pagos parciales, a cuenta, combinados y cámara directa para fotos de comprobantes/cheques.
+- [x] **T007 (Fase C)**: Construir vista móvil de cobranza en calle (`FieldCollectionPage.tsx` y `FieldCollectModal.tsx`) soportando pagos parciales, a cuenta, combinados y cámara directa para fotos de comprobantes/cheques.
 - [ ] **T008 (Fase D)**: Construir panel de oficina en `Caja y Cobranzas` (`SettlementsTab.tsx` / verificación de transferencias, cartera de cheques, aprobación de rendiciones y monitor de envíos WhatsApp). Verificar `tsc --noEmit` + `vitest run`.
