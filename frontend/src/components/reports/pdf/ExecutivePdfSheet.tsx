@@ -30,20 +30,15 @@ export const ExecutivePdfSheet = forwardRef<HTMLDivElement, ExecutivePdfSheetPro
       ) : (
         <div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #0f172a', paddingBottom: '14px', marginBottom: '22px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-              <img
-                src="/logo.png"
-                alt="Logo DV"
-                style={{ height: '56px', width: 'auto', objectFit: 'contain' }}
-                onError={(e) => { e.currentTarget.style.display = 'none'; }}
-              />
-              <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#475569', borderLeft: '2px solid #e2e8f0', paddingLeft: '12px' }}>
-                Distribuidora DV
-              </div>
-            </div>
+            <img
+              src="/logo.png"
+              alt="Logo DV"
+              style={{ height: '56px', width: 'auto', objectFit: 'contain' }}
+              onError={(e) => { e.currentTarget.style.display = 'none'; }}
+            />
             <div style={{ textAlign: 'right' }}>
               <h1 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: '#0f172a' }}>
-                Informe Ejecutivo de Resultados
+                Reporte Ejecutivo
               </h1>
               <div className="tabular-nums" style={{ fontSize: '0.78rem', color: '#475569', marginTop: '4px' }}>
                 Período: <strong>{formatEsDate(data.period.startDate)}</strong> al <strong>{formatEsDate(data.period.endDate)}</strong>
