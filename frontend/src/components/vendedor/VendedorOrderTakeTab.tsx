@@ -135,51 +135,53 @@ export const VendedorOrderTakeTab: React.FC<VendedorOrderTakeTabProps> = ({
               )}
             </search>
 
-            <div style={{ display: 'flex', flexDirection: 'column', maxHeight: '210px', overflowY: 'auto', border: '1px solid var(--border-color)', borderRadius: '8px', backgroundColor: '#fff' }}>
-              {filteredClients.length === 0 ? (
-                <div style={{ padding: '14px', textAlign: 'center', fontSize: '0.84rem', color: 'var(--text-secondary)' }}>Sin clientes</div>
-              ) : (
-                filteredClients.slice(0, 30).map((c, idx) => {
-                  const debt = Number(c.outstandingBalance || 0);
-                  return (
-                    <button
-                      key={c.id}
-                      type="button"
-                      onClick={() => { setSelectedClient(c); setClientFilter(''); }}
-                      style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        gap: '10px',
-                        padding: '11px 12px',
-                        border: 'none',
-                        borderBottom: idx < Math.min(filteredClients.length, 30) - 1 ? '1px solid var(--border-color)' : 'none',
-                        borderRadius: 0,
-                        boxShadow: 'none',
-                        backgroundColor: '#fff',
-                        cursor: 'pointer',
-                        textAlign: 'left',
-                        width: '100%',
-                      }}
-                    >
-                      <div style={{ minWidth: 0, flex: 1 }}>
-                        <div style={{ fontWeight: 600, fontSize: '0.92rem', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.name}</div>
-                        {(c.address || c.city) && (
-                          <div style={{ fontSize: '0.76rem', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {[c.address, c.city].filter(Boolean).join(' · ')}
-                          </div>
+            {deferredClientFilter.trim().length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', maxHeight: '240px', overflowY: 'auto', border: '1px solid var(--border-color)', borderRadius: '8px', backgroundColor: '#fff' }}>
+                {filteredClients.length === 0 ? (
+                  <div style={{ padding: '14px', textAlign: 'center', fontSize: '0.84rem', color: 'var(--text-secondary)' }}>Sin clientes</div>
+                ) : (
+                  filteredClients.slice(0, 30).map((c, idx) => {
+                    const debt = Number(c.outstandingBalance || 0);
+                    return (
+                      <button
+                        key={c.id}
+                        type="button"
+                        onClick={() => { setSelectedClient(c); setClientFilter(''); }}
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          gap: '10px',
+                          padding: '11px 12px',
+                          border: 'none',
+                          borderBottom: idx < Math.min(filteredClients.length, 30) - 1 ? '1px solid var(--border-color)' : 'none',
+                          borderRadius: 0,
+                          boxShadow: 'none',
+                          backgroundColor: '#fff',
+                          cursor: 'pointer',
+                          textAlign: 'left',
+                          width: '100%',
+                        }}
+                      >
+                        <div style={{ minWidth: 0, flex: 1 }}>
+                          <div style={{ fontWeight: 600, fontSize: '0.92rem', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.name}</div>
+                          {(c.address || c.city) && (
+                            <div style={{ fontSize: '0.76rem', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {[c.address, c.city].filter(Boolean).join(' · ')}
+                            </div>
+                          )}
+                        </div>
+                        {debt > 0 && (
+                          <span className="tabular-nums" style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-corp-red)', flexShrink: 0 }}>
+                            ${Math.round(debt).toLocaleString('es-AR')}
+                          </span>
                         )}
-                      </div>
-                      {debt > 0 && (
-                        <span className="tabular-nums" style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-corp-red)', flexShrink: 0 }}>
-                          ${Math.round(debt).toLocaleString('es-AR')}
-                        </span>
-                      )}
-                    </button>
-                  );
-                })
-              )}
-            </div>
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+            )}
           </div>
         ) : (
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px' }}>
@@ -225,8 +227,9 @@ export const VendedorOrderTakeTab: React.FC<VendedorOrderTakeTabProps> = ({
           )}
         </search>
 
-        <div style={{ maxHeight: '420px', overflowY: 'auto', border: '1px solid var(--border-color)', borderRadius: '8px', backgroundColor: '#fff' }}>
-            filteredProducts.length === 0 ? (
+        {deferredProdQuery.trim().length > 0 && (
+          <div style={{ maxHeight: '420px', overflowY: 'auto', border: '1px solid var(--border-color)', borderRadius: '8px', backgroundColor: '#fff' }}>
+            {filteredProducts.length === 0 ? (
               <div style={{ padding: '18px', textAlign: 'center', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Sin productos</div>
             ) : (
               <>
@@ -310,8 +313,9 @@ export const VendedorOrderTakeTab: React.FC<VendedorOrderTakeTabProps> = ({
                   </div>
                 )}
               </>
-            )
-        </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* 3. Pedido */}
