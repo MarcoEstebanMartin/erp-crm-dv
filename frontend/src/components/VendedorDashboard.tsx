@@ -1,15 +1,15 @@
 import React from 'react';
-import { ShoppingCart, CheckCircle2, Package, Users, DollarSign, History, Receipt } from 'lucide-react';
+import { ShoppingCart, CheckCircle2, Package, History, Receipt, Home, Navigation } from 'lucide-react';
 import PriceListModal from './PriceListModal';
 import MobileCobros from './MobileCobros';
 import { FieldCollectionPage } from './field-receipts/FieldCollectionPage';
 import EditOrderModal from './modals/EditOrderModal';
 import ResumenCuentaModal from './modals/ResumenCuentaModal';
-import { AdminOrderDetailsModal } from './admin/AdminOrderDetailsModal';
+import { VendedorHomeTab } from './vendedor/VendedorHomeTab';
 import { VendedorOrderTakeTab } from './vendedor/VendedorOrderTakeTab';
 import { VendedorRoutesTab } from './vendedor/VendedorRoutesTab';
 import { VendedorHistoryTab, VendedorCatalogReadOnlyTab } from './vendedor/VendedorCatalogHistoryTabs';
-import { VendedorStreetClientModal, VendedorNoSaleModal } from './vendedor/VendedorModals';
+import { VendedorStreetClientModal, VendedorNoSaleModal, VendedorOrderDetailModal } from './vendedor/VendedorModals';
 import { VendedorOfflineBanner } from './vendedor/VendedorOfflineBanner';
 import { cleanCityName } from './vendedor/vendedorHelpers';
 import { useVendedorController } from './vendedor/useVendedorController';
@@ -24,10 +24,29 @@ interface VendedorDashboardProps {
 
 export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorDashboardProps) {
   const c = useVendedorController(activeTab);
+  const [collectClientId, setCollectClientId] = React.useState<number | null>(null);
 
   return (
     <div style={{ width: '100%' }}>
       <nav aria-label="Preventa" className="vendedor-top-nav-bar" style={{ marginBottom: '16px', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
+        <button
+          type="button"
+          className={`vendedor-nav-pill ${activeTab === 'inicio' ? 'vendedor-nav-pill-active' : ''}`}
+          aria-current={activeTab === 'inicio' ? 'page' : undefined}
+          onClick={() => setActiveTab('inicio')}
+        >
+          <Home size={16} /><span>Inicio</span>
+        </button>
+
+        <button
+          type="button"
+          className={`vendedor-nav-pill ${activeTab === 'clients' ? 'vendedor-nav-pill-active' : ''}`}
+          aria-current={activeTab === 'clients' ? 'page' : undefined}
+          onClick={() => setActiveTab('clients')}
+        >
+          <Navigation size={16} /><span>Ruta</span>
+        </button>
+
         <button
           type="button"
           className={`vendedor-nav-pill ${activeTab === 'orders' ? 'vendedor-nav-pill-active' : ''}`}
@@ -35,7 +54,7 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
           onClick={() => setActiveTab('orders')}
         >
           <ShoppingCart size={16} />
-          <span>Pedidos</span>
+          <span>Vender</span>
           {c.cart.length > 0 && (
             <span className="tabular-nums" style={{ backgroundColor: activeTab === 'orders' ? '#fff' : 'var(--color-corp-red)', color: activeTab === 'orders' ? 'var(--text-primary)' : '#fff', fontSize: '0.7rem', fontWeight: 700, padding: '2px 6px', borderRadius: '10px', marginLeft: '4px' }}>
               {c.cart.length}
@@ -45,29 +64,11 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
 
         <button
           type="button"
-          className={`vendedor-nav-pill ${activeTab === 'clients' ? 'vendedor-nav-pill-active' : ''}`}
-          aria-current={activeTab === 'clients' ? 'page' : undefined}
-          onClick={() => setActiveTab('clients')}
-        >
-          <Users size={16} /><span>Rutas</span>
-        </button>
-
-        <button
-          type="button"
-          className={`vendedor-nav-pill ${activeTab === 'cobranzas' ? 'vendedor-nav-pill-active' : ''}`}
-          aria-current={activeTab === 'cobranzas' ? 'page' : undefined}
-          onClick={() => setActiveTab('cobranzas')}
-        >
-          <DollarSign size={16} /><span>Cobranzas</span>
-        </button>
-
-        <button
-          type="button"
           className={`vendedor-nav-pill ${activeTab === 'field-receipts' ? 'vendedor-nav-pill-active' : ''}`}
           aria-current={activeTab === 'field-receipts' ? 'page' : undefined}
           onClick={() => setActiveTab('field-receipts')}
         >
-          <Receipt size={16} /><span>Recibos</span>
+          <Receipt size={16} /><span>Cobrar</span>
         </button>
 
         <button
@@ -112,6 +113,19 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
           <CheckCircle2 size={17} />
           <span>{c.successMsg}</span>
         </div>
+      )}
+
+      {activeTab === 'inicio' && (
+        <VendedorHomeTab
+          vendedorRoutes={c.vendedorRoutes}
+          selectedRouteId={c.selectedRouteId}
+          cartCount={c.cart.length}
+          onGoToSell={() => setActiveTab('orders')}
+          onGoToRoute={() => setActiveTab('clients')}
+          onGoToCollect={() => setActiveTab('field-receipts')}
+          onGoToHistory={() => setActiveTab('history')}
+          onGoToCatalog={() => setActiveTab('products')}
+        />
       )}
 
       {activeTab === 'orders' && (
@@ -163,7 +177,7 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
           onSync={() => { c.setLoading(true); c.fetchData().finally(() => c.setLoading(false)); }}
           onOpenNewClientModal={() => c.setClientModal({ open: true, name: '', cuit: '', address: '', city: '', phone: '', email: '', route: '', saleRouteId: c.selectedRouteId || '', latitude: null, longitude: null })}
           onOpenNoSaleModal={(client) => c.setNoSaleModal({ open: true, clientId: client.id, clientName: client.name, reason: 'Estaba cerrado', notes: '' })}
-          onCollectClient={(client) => { c.setSelectedClient(client); setActiveTab('cobranzas'); }}
+          onCollectClient={(client) => { setCollectClientId(client.id); setActiveTab('field-receipts'); }}
           onSellToClient={(client) => { c.setSelectedClient(client); setActiveTab('orders'); }}
           onOpenResumenClient={(client) => c.setResumenClientModal(client)}
         />
@@ -178,7 +192,12 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
         />
       )}
 
-      {activeTab === 'field-receipts' && <FieldCollectionPage />}
+      {activeTab === 'field-receipts' && (
+        <FieldCollectionPage
+          initialClientId={collectClientId}
+          onInitialClientHandled={() => setCollectClientId(null)}
+        />
+      )}
 
       {activeTab === 'products' && (
         <VendedorCatalogReadOnlyTab
@@ -201,10 +220,9 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
         onSubmit={c.handleCreateClient}
       />
 
-      <AdminOrderDetailsModal
-        orderDetailsModal={c.orderDetailsModal}
+      <VendedorOrderDetailModal
+        order={c.orderDetailsModal}
         onClose={() => c.setOrderDetailsModal(null)}
-        onFastInvoice={() => {}}
       />
 
       <EditOrderModal

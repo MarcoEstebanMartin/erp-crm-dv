@@ -3,6 +3,25 @@ export const getTodayKey = () => {
   return `visits_${today.getFullYear()}-${today.getMonth() + 1}-${today.getDate()}`;
 };
 
+const normalizeSearchText = (value: string): string =>
+  value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+
+/**
+ * Coincide si todas las palabras buscadas aparecen en cualquier orden dentro de los campos dados.
+ */
+export const matchesSearchTokens = (
+  fields: (string | null | undefined)[],
+  query: string,
+): boolean => {
+  const tokens = normalizeSearchText(query).trim().split(/\s+/).filter(Boolean);
+  if (tokens.length === 0) return true;
+  const haystack = normalizeSearchText(fields.filter(Boolean).join(' '));
+  return tokens.every((token) => haystack.includes(token));
+};
+
 export const cleanCityName = (city: string | null | undefined): string => {
   if (!city) return 'OTRAS';
   const upper = city.toUpperCase().trim();

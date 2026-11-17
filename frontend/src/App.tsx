@@ -74,7 +74,7 @@ function App() {
   const getDefaultRouteForRole = (role: string) => {
     if (role === 'ADMIN' || role === 'FACTURACION') return '/admin/dashboard';
     if (role === 'DEPOSITO') return '/deposito/picking';
-    return '/vendedor/orders';
+    return '/vendedor/inicio';
   };
 
   const handleLoginSuccess = () => {

@@ -1,8 +1,7 @@
 import React from 'react';
-import { Eye, Edit, Printer, Package, FileText, Search } from 'lucide-react';
+import { Eye, Edit, Package, FileText, Search } from 'lucide-react';
 import { getOrderStatusInfo } from '../../utils/orderStatusHelper';
 import { formatIntegerARS } from '../../utils/currency';
-import { printOrderTicket } from '../admin/orderTicketPrinter';
 import { sortVendedorCatalog } from './vendedorHelpers';
 import type { Order, Product, Rubro } from '../../types';
 
@@ -20,8 +19,6 @@ export const VendedorHistoryTab: React.FC<VendedorHistoryTabProps> = ({ orders, 
           <tr>
             <th scope="col">Fecha</th>
             <th scope="col">Cliente</th>
-            <th scope="col">Comprobante</th>
-            <th scope="col">Canal</th>
             <th scope="col">Total</th>
             <th scope="col">Estado</th>
             <th scope="col">Acciones</th>
@@ -29,7 +26,7 @@ export const VendedorHistoryTab: React.FC<VendedorHistoryTabProps> = ({ orders, 
         </thead>
         <tbody>
           {orders.length === 0 ? (
-            <tr><td colSpan={7} style={{ textAlign: 'center', padding: '24px 0' }}>Sin pedidos</td></tr>
+            <tr><td colSpan={5} style={{ textAlign: 'center', padding: '24px 0' }}>Sin pedidos</td></tr>
           ) : (
             orders.map((o) => {
               const statusInfo = getOrderStatusInfo(o);
@@ -37,12 +34,6 @@ export const VendedorHistoryTab: React.FC<VendedorHistoryTabProps> = ({ orders, 
                 <tr key={o.id}>
                   <td className="tabular-nums" style={{ fontSize: '0.8rem' }}>{new Date(o.createdAt).toLocaleDateString('es-AR')}</td>
                   <td style={{ fontWeight: 500 }}>{o.client?.name || o.persona?.name || '-'}</td>
-                  <td className="tabular-nums" style={{ fontFamily: 'monospace' }}>{o.invoiceNumber || 'Pendiente'}</td>
-                  <td>
-                    <span className={o.billingType === 'OFFICIAL' ? 'badge badge-official' : 'badge badge-internal'}>
-                      {o.billingType === 'OFFICIAL' ? 'Sucursal A' : 'Sucursal X'}
-                    </span>
-                  </td>
                   <td className="tabular-nums" style={{ fontWeight: 600 }}>{formatIntegerARS(o.totalAmount)}</td>
                   <td>
                     <span className={`badge badge-${statusInfo.badgeClass}`} style={{ backgroundColor: statusInfo.color + '15', color: statusInfo.color, border: `1px solid ${statusInfo.color}30`, fontWeight: 600 }}>
@@ -51,7 +42,6 @@ export const VendedorHistoryTab: React.FC<VendedorHistoryTabProps> = ({ orders, 
                   </td>
                   <td style={{ display: 'flex', gap: '6px' }}>
                     <button type="button" className="btn btn-secondary" style={{ padding: '4px 8px' }} title="Ver detalle" aria-label={`Ver detalle pedido #${o.id}`} onClick={() => onViewOrderDetails(o)}><Eye size={12} aria-hidden="true" /></button>
-                    <button type="button" className="btn btn-secondary" style={{ padding: '4px 8px' }} title="Imprimir ticket" aria-label={`Imprimir ticket pedido #${o.id}`} onClick={() => printOrderTicket(o)}><Printer size={12} aria-hidden="true" /></button>
                     {o.status === 'PENDING' && (
                       <button type="button" className="btn btn-secondary" style={{ padding: '4px 8px' }} title="Editar pedido" aria-label={`Editar pedido #${o.id}`} onClick={() => onEditOrder(o)}><Edit size={12} aria-hidden="true" /></button>
                     )}
@@ -76,7 +66,7 @@ export const VendedorHistoryTab: React.FC<VendedorHistoryTabProps> = ({ orders, 
                 <div style={{ minWidth: 0 }}>
                   <div style={{ fontWeight: 600, fontSize: '0.92rem', color: 'var(--text-primary)' }}>{o.client?.name || o.persona?.name || '-'}</div>
                   <div className="tabular-nums" style={{ fontSize: '0.76rem', color: 'var(--text-secondary)' }}>
-                    {new Date(o.createdAt).toLocaleDateString('es-AR')} · {o.invoiceNumber || 'Pendiente'}
+                    {new Date(o.createdAt).toLocaleDateString('es-AR')} · Pedido #{o.id}
                   </div>
                 </div>
                 <span className={`badge badge-${statusInfo.badgeClass}`} style={{ backgroundColor: statusInfo.color + '15', color: statusInfo.color, border: `1px solid ${statusInfo.color}30`, fontWeight: 600, flexShrink: 0 }}>
@@ -87,7 +77,6 @@ export const VendedorHistoryTab: React.FC<VendedorHistoryTabProps> = ({ orders, 
                 <span className="tabular-nums" style={{ fontWeight: 700, fontSize: '1rem' }}>{formatIntegerARS(o.totalAmount)}</span>
                 <div style={{ display: 'flex', gap: '8px' }}>
                   <button type="button" className="btn btn-secondary" style={{ padding: '6px 10px' }} aria-label={`Ver detalle pedido #${o.id}`} onClick={() => onViewOrderDetails(o)}><Eye size={14} aria-hidden="true" /></button>
-                  <button type="button" className="btn btn-secondary" style={{ padding: '6px 10px' }} aria-label={`Imprimir ticket pedido #${o.id}`} onClick={() => printOrderTicket(o)}><Printer size={14} aria-hidden="true" /></button>
                   {o.status === 'PENDING' && (
                     <button type="button" className="btn btn-secondary" style={{ padding: '6px 10px' }} aria-label={`Editar pedido #${o.id}`} onClick={() => onEditOrder(o)}><Edit size={14} aria-hidden="true" /></button>
                   )}

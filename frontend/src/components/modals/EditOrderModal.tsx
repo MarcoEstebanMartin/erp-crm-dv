@@ -92,7 +92,7 @@ const EditOrderModal: React.FC<EditOrderModalProps> = ({
       onClose={() => setEditOrderModal(null)}
       ariaLabelledBy="edit-order-modal-title"
       closeOnBackdrop={false}
-      style={{ maxWidth: '820px', width: '95vw', maxHeight: '90vh', padding: '24px' }}
+      style={{ maxWidth: '820px', width: '95vw', maxHeight: '90vh', padding: '16px' }}
     >
       <div className="modal-header">
         <div>
@@ -120,10 +120,11 @@ const EditOrderModal: React.FC<EditOrderModalProps> = ({
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: '1.1fr 1fr',
-            gap: '20px',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+            gap: '16px',
             overflowY: 'auto',
-            flex: 1,
+            flex: '1 1 auto',
+            minHeight: 0,
             padding: '10px 0',
           }}
         >

@@ -15,7 +15,8 @@ import { NativeModalDialog } from '../modals/NativeModalDialog';
 interface AdminOrderDetailsModalProps {
   orderDetailsModal: any | null;
   onClose: () => void;
-  onFastInvoice: (order: any) => void;
+  onFastInvoice?: (order: any) => void;
+  hidePrintTicket?: boolean;
   fetchData?: () => void;
   onOrderUpdated?: (updatedOrder: any) => void;
   setErrorMsg?: (msg: string | null) => void;
@@ -26,6 +27,7 @@ export const AdminOrderDetailsModal: React.FC<AdminOrderDetailsModalProps> = ({
   orderDetailsModal,
   onClose,
   onFastInvoice,
+  hidePrintTicket = false,
   fetchData,
   onOrderUpdated,
   setErrorMsg,
@@ -362,7 +364,7 @@ export const AdminOrderDetailsModal: React.FC<AdminOrderDetailsModalProps> = ({
         className="modal-footer"
         style={{ borderTop: '1px solid #E5E7EB', paddingTop: '14px', marginTop: '12px' }}
       >
-        {!orderDetailsModal.invoiceNumber && orderDetailsModal.status !== 'CANCELLED' && (
+        {onFastInvoice && !orderDetailsModal.invoiceNumber && orderDetailsModal.status !== 'CANCELLED' && (
           <button
             type="button"
             className="btn btn-primary"
@@ -375,17 +377,19 @@ export const AdminOrderDetailsModal: React.FC<AdminOrderDetailsModalProps> = ({
             <span>Facturar Directo</span>
           </button>
         )}
-        <button
-          type="button"
-          className="btn btn-secondary"
-          onClick={() => {
-            printOrderTicket(orderDetailsModal);
-            onClose();
-          }}
-        >
-          <Printer size={16} aria-hidden="true" />
-          <span>Imprimir Ticket</span>
-        </button>
+        {!hidePrintTicket && (
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={() => {
+              printOrderTicket(orderDetailsModal);
+              onClose();
+            }}
+          >
+            <Printer size={16} aria-hidden="true" />
+            <span>Imprimir Ticket</span>
+          </button>
+        )}
         <button type="button" className="btn btn-secondary" onClick={onClose}>
           Cerrar
         </button>

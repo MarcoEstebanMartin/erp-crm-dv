@@ -8,7 +8,7 @@ export interface VendedorPagesProps {
 }
 
 export const VendedorPages: React.FC<VendedorPagesProps> = ({ setActiveTab }) => {
-  const { tab = 'orders' } = useParams<{ tab?: string }>();
+  const { tab = 'inicio' } = useParams<{ tab?: string }>();
   const navigate = useNavigate();
 
   const handleTabChange = (newTab: string) => {

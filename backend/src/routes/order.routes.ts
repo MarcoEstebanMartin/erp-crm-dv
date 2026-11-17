@@ -20,10 +20,12 @@ import {
   bulkUpdateOrdersDeliveryHandler,
   updateOrderDeliveryHandler,
 } from '../controllers/order-delivery.controller';
+import { parseAiOrderHandler } from '../controllers/order-ai.controller';
 import { authenticateJWT, requireRole } from '../middlewares/auth';
 import { idempotencyGuard } from '../middlewares/idempotency.middleware';
 import { Role } from '@prisma/client';
 import { validateRequest } from '../middlewares/validateRequest';
+import { parseAiOrderBodySchema } from '../validators/order-ai.validator';
 import {
   createOrderSchema,
   updateOrderStatusSchema,
@@ -63,6 +65,15 @@ router.post(
   idempotencyGuard,
   bulkUpdateOrdersDeliveryHandler,
 );
+// Interpretación IA (voz o texto) de pedido para app de vendedores
+router.post(
+  '/ai-parse',
+  authenticateJWT,
+  requireRole([Role.ADMIN, Role.FACTURACION, Role.VENDEDOR]),
+  validateRequest(parseAiOrderBodySchema),
+  parseAiOrderHandler,
+);
+
 router.get('/', authenticateJWT, getOrders);
 router.get('/:id', authenticateJWT, getOrderById);
 

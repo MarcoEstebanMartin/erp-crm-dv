@@ -34,6 +34,12 @@ function extractApiError(data: any, fallback: string): string {
   return data?.message || data?.error || fallback;
 }
 
+function createApiError(data: any, fallback: string, status: number): Error {
+  const err = new Error(extractApiError(data, fallback)) as Error & { status?: number };
+  err.status = status;
+  return err;
+}
+
 export const apiClient = {
   async get<T = any>(endpoint: string): Promise<T> {
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
@@ -42,7 +48,7 @@ export const apiClient = {
     handleUnauthorizedIfStaffScreen(endpoint, response.status);
     const data = await parseJsonResponse(response);
     if (!response.ok) {
-      throw new Error(extractApiError(data, 'Error en la petición GET'));
+      throw createApiError(data, 'Error en la petición GET', response.status);
     }
     return data as T;
   },
@@ -74,7 +80,7 @@ export const apiClient = {
       if (response.status >= 400 && response.status !== 409) {
         evictRequestIdempotencyKey('POST', endpoint, serialized);
       }
-      throw new Error(extractApiError(data, 'Error en la petición POST'));
+      throw createApiError(data, 'Error en la petición POST', response.status);
     }
     return data as T;
   },
@@ -106,7 +112,7 @@ export const apiClient = {
       if (response.status >= 400 && response.status !== 409) {
         evictRequestIdempotencyKey('PUT', endpoint, serialized);
       }
-      throw new Error(extractApiError(data, 'Error en la petición PUT'));
+      throw createApiError(data, 'Error en la petición PUT', response.status);
     }
     return data as T;
   },
@@ -138,7 +144,7 @@ export const apiClient = {
       if (response.status >= 400 && response.status !== 409) {
         evictRequestIdempotencyKey('PATCH', endpoint, serialized);
       }
-      throw new Error(extractApiError(data, 'Error en la petición PATCH'));
+      throw createApiError(data, 'Error en la petición PATCH', response.status);
     }
     return data as T;
   },
@@ -166,7 +172,7 @@ export const apiClient = {
       if (response.status >= 400 && response.status !== 409) {
         evictRequestIdempotencyKey('DELETE', endpoint);
       }
-      throw new Error(extractApiError(data, 'Error en la petición DELETE'));
+      throw createApiError(data, 'Error en la petición DELETE', response.status);
     }
     return data as T;
   },
@@ -180,7 +186,7 @@ export const apiClient = {
     handleUnauthorizedIfStaffScreen(endpoint, response.status);
     const data = await parseJsonResponse(response);
     if (!response.ok) {
-      throw new Error(extractApiError(data, 'Error en la petición POST FormData'));
+      throw createApiError(data, 'Error en la petición POST FormData', response.status);
     }
     return data as T;
   },

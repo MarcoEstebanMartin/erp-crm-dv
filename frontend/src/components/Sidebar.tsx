@@ -4,10 +4,14 @@ import {
   Building2,
   DollarSign,
   History,
+  Home,
   LayoutDashboard,
   LogOut,
   Menu,
+  Navigation,
   Package,
+  Receipt,
+  RefreshCw,
   ShoppingCart,
   Truck,
   Users,
@@ -35,6 +39,7 @@ export default function Sidebar({ username, role, activeTab, setActiveTab, onLog
   const navigate = useNavigate();
   const location = useLocation();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const currentTab = (() => {
     const segments = location.pathname.split('/').filter(Boolean);
@@ -45,7 +50,7 @@ export default function Sidebar({ username, role, activeTab, setActiveTab, onLog
     if (segments.length >= 2) {
       return segments[1];
     }
-    return activeTab || (role === 'VENDEDOR' ? 'orders' : role === 'DEPOSITO' ? 'deposito' : 'dashboard');
+    return activeTab || (role === 'VENDEDOR' ? 'inicio' : role === 'DEPOSITO' ? 'deposito' : 'dashboard');
   })();
 
   useEffect(() => {
@@ -75,12 +80,10 @@ export default function Sidebar({ username, role, activeTab, setActiveTab, onLog
     }
 
     return [
-      { id: 'orders', label: 'Pedidos', icon: <ShoppingCart size={18} aria-hidden="true" /> },
-      { id: 'clients', label: 'Personas', icon: <Users size={18} aria-hidden="true" /> },
-      { id: 'cobranzas', label: 'Cobranzas', icon: <DollarSign size={18} aria-hidden="true" /> },
-      { id: 'field-receipts', label: 'Recibos', icon: <DollarSign size={18} aria-hidden="true" /> },
-      { id: 'products', label: 'Catálogo', icon: <Package size={18} aria-hidden="true" /> },
-      { id: 'history', label: 'Historial', icon: <History size={18} aria-hidden="true" /> },
+      { id: 'inicio', label: 'Inicio', icon: <Home size={18} aria-hidden="true" /> },
+      { id: 'clients', label: 'Ruta', icon: <Navigation size={18} aria-hidden="true" /> },
+      { id: 'orders', label: 'Vender', icon: <ShoppingCart size={18} aria-hidden="true" /> },
+      { id: 'field-receipts', label: 'Cobrar', icon: <Receipt size={18} aria-hidden="true" /> },
     ];
   };
 
@@ -143,6 +146,33 @@ export default function Sidebar({ username, role, activeTab, setActiveTab, onLog
           <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
             {username || roleLabel}
           </span>
+
+          {isVendedor && (
+            <button
+              type="button"
+              onClick={() => {
+                if (isRefreshing) return;
+                setIsRefreshing(true);
+                window.dispatchEvent(new CustomEvent('dv:vendedor-sync'));
+                setTimeout(() => setIsRefreshing(false), 900);
+              }}
+              aria-label="Actualizar datos"
+              title="Actualizar datos"
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: 'var(--text-primary)',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                padding: '6px',
+                borderRadius: '6px',
+                touchAction: 'manipulation',
+              }}
+            >
+              <RefreshCw size={17} className={isRefreshing ? 'spin-animation' : ''} aria-hidden="true" />
+            </button>
+          )}
 
           <button
             type="button"

@@ -38,6 +38,7 @@ const ClientModal: React.FC<ClientModalProps> = (props) => {
       style={{
         maxWidth: '1080px',
         width: '96vw',
+        height: 'min(680px, 94vh)',
         maxHeight: '94vh',
         display: 'flex',
         flexDirection: 'column',

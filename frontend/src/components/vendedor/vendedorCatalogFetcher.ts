@@ -56,7 +56,7 @@ async function readCachedVendedorData(input: VendedorFetchInput): Promise<Vended
     lastCatalogSyncAt: prodSnap?.updatedAt,
     hasAnyCachedData: Boolean(prodSnap?.payload || cliSnap?.payload),
     clients: resolvedClients,
-    products: filteredProducts,
+    products: prodSnap?.payload || filteredProducts,
     orders: ordSnap?.payload,
     rubros: rubSnap?.payload,
     vendedorRoutes: routesSnap?.payload,
@@ -71,10 +71,31 @@ export async function fetchVendedorTabState(input: VendedorFetchInput): Promise<
   }
 
   try {
+    if (input.activeTab === 'inicio') {
+      const routesData = await api.getSellerSaleRoutes();
+      const routesList: SaleRoute[] = routesData.routes || [];
+      await saveCatalogSnapshot('seller_routes', routesList);
+
+      let routeIdToLoad = input.selectedRouteId;
+      if (!routeIdToLoad && routesList.length > 0) {
+        const daysMap: Record<number, string> = {
+          0: 'DOMINGO', 1: 'LUNES', 2: 'MARTES', 3: 'MIERCOLES', 4: 'JUEVES', 5: 'VIERNES', 6: 'SABADO',
+        };
+        const todayRoute = routesList.find((r: any) => r.dayOfWeek === daysMap[new Date().getDay()]);
+        routeIdToLoad = todayRoute ? todayRoute.id : routesList[0].id;
+      }
+
+      return {
+        fromCache: false,
+        vendedorRoutes: routesList,
+        resolvedRouteId: routeIdToLoad,
+      };
+    }
+
     if (input.activeTab === 'orders' || input.activeTab === 'history') {
       const [clientData, prodData, orderData, rubroData, promoData] = await Promise.all([
         api.getClients(),
-        api.getProducts(input.prodSearchQuery),
+        api.getProducts(''),
         api.getOrders(),
         api.getRubros(),
         api.getActiveWeeklyPromos().catch(() => null),
@@ -148,7 +169,7 @@ export async function fetchVendedorTabState(input: VendedorFetchInput): Promise<
 
     if (input.activeTab === 'products') {
       const [prodData, rubroData, promoData] = await Promise.all([
-        api.getProducts(input.searchQuery),
+        api.getProducts(''),
         api.getRubros(),
         api.getActiveWeeklyPromos().catch(() => null),
       ]);

@@ -1,6 +1,6 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useRef } from 'react';
 import { Trash2, ShoppingCart, UserPlus, Package } from 'lucide-react';
-import { cleanCityName, getWhatsAppLink, getVendedorItemPrice, sortVendedorCatalog } from './vendedorHelpers';
+import { cleanCityName, getWhatsAppLink, getVendedorItemPrice, matchesSearchTokens, sortVendedorCatalog } from './vendedorHelpers';
 import { evaluateFrontendCartPromos, getProductPromoBadge } from '../../utils/weeklyPromoCartEvaluator';
 import type { Persona, Product, Rubro } from '../../types';
 import type { WeeklyPromo } from '../admin/config/weeklyPromo.helpers';
@@ -39,7 +39,7 @@ export const VendedorOrderTakeTab: React.FC<VendedorOrderTakeTabProps> = ({
   onAddToCart, onUpdateCartQty, onConfirmOrder, onOpenNewClientModal,
 }) => {
   const filteredClientsForSelect = clients.filter((c) => {
-    const matchesSearch = c.name.toLowerCase().includes(clientFilter.toLowerCase()) || (c.cuit && c.cuit.includes(clientFilter));
+    const matchesSearch = matchesSearchTokens([c.name, c.cuit, c.city, c.address], clientFilter);
     const matchesCity = selectedCityFilters.length === 0 || selectedCityFilters.includes(cleanCityName(c.city));
     return matchesSearch && matchesCity;
   });
@@ -66,47 +66,112 @@ export const VendedorOrderTakeTab: React.FC<VendedorOrderTakeTabProps> = ({
     promos: weeklyPromos,
   }), [cart, selectedClient, weeklyPromos]);
   const cartTotal = promoEval.totalAmount;
+  const cartSectionRef = useRef<HTMLDivElement | null>(null);
+  const totalUnits = cart.reduce((sum, item) => sum + item.quantity, 0);
 
   return (
-    <div>
-      <div className="card" style={{ marginBottom: '16px', padding: '16px' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          <search>
-            <label htmlFor="vendedor-order-client-search" className="sr-only">Buscar cliente</label>
-            <input id="vendedor-order-client-search" type="text" className="input" placeholder="Buscar cliente" autoCorrect="off" autoCapitalize="none" spellCheck={false} value={clientFilter} onChange={(e) => setClientFilter(e.target.value)} style={{ fontSize: '0.88rem', padding: '10px 12px', width: '100%' }} />
-          </search>
-          <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', padding: '4px 2px', scrollbarWidth: 'none' }}>
-            <button type="button" onClick={() => setSelectedCityFilters([])} style={{ padding: '4px 10px', borderRadius: '15px', fontSize: '0.75rem', fontWeight: 600, border: '1px solid', borderColor: selectedCityFilters.length === 0 ? 'var(--text-primary)' : 'var(--border-color)', backgroundColor: selectedCityFilters.length === 0 ? 'var(--text-primary)' : '#fff', color: selectedCityFilters.length === 0 ? '#fff' : 'var(--text-secondary)', whiteSpace: 'nowrap', cursor: 'pointer' }}>Todas</button>
-            {uniqueCities.map((city) => {
-              const isActive = selectedCityFilters.includes(city);
-              return (
-                <button key={city} type="button" onClick={() => setSelectedCityFilters(isActive ? selectedCityFilters.filter((c) => c !== city) : [...selectedCityFilters, city])} style={{ padding: '4px 10px', borderRadius: '15px', fontSize: '0.75rem', fontWeight: 600, border: '1px solid', borderColor: isActive ? 'var(--accent-color)' : 'var(--border-color)', backgroundColor: isActive ? 'rgba(var(--color-corp-red-rgb), 0.06)' : '#fff', color: isActive ? 'var(--accent-color)' : 'var(--text-secondary)', whiteSpace: 'nowrap', cursor: 'pointer' }}>
-                  {city}
-                </button>
-              );
-            })}
-          </div>
-          <div className="client-select-row">
-            <div style={{ flex: 1 }}>
-              <label htmlFor="vendedor-order-client-select" className="sr-only">Cliente</label>
-              <select id="vendedor-order-client-select" className="select" value={selectedClient ? selectedClient.id : ''} onChange={(e) => setSelectedClient(clients.find((c) => c.id === Number(e.target.value)) || null)} style={{ paddingRight: '40px' }}>
-                <option value="">{clientFilter.trim() ? `Seleccionar cliente (${filteredClientsForSelect.length})` : 'Seleccionar cliente'}</option>
-                {filteredClientsForSelect.map((c) => (<option key={c.id} value={c.id}>{c.name}</option>))}
-              </select>
+    <div style={{ paddingBottom: cart.length > 0 ? '84px' : undefined }}>
+      <div className="card" style={{ marginBottom: '14px', padding: '14px' }}>
+        {!selectedClient ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <search style={{ flex: 1 }}>
+                <label htmlFor="vendedor-order-client-search" className="sr-only">Buscar cliente</label>
+                <input
+                  id="vendedor-order-client-search"
+                  type="search"
+                  className="input"
+                  placeholder="Buscar cliente por nombre o CUIT"
+                  autoCorrect="off"
+                  autoCapitalize="none"
+                  spellCheck={false}
+                  value={clientFilter}
+                  onChange={(e) => setClientFilter(e.target.value)}
+                  style={{ fontSize: '0.9rem', padding: '10px 12px', width: '100%' }}
+                />
+              </search>
+              <button type="button" className="btn btn-secondary" style={{ padding: '10px 12px', flexShrink: 0 }} title="Nuevo cliente" aria-label="Nuevo cliente" onClick={onOpenNewClientModal}>
+                <UserPlus size={16} aria-hidden="true" />
+              </button>
             </div>
-            <button type="button" className="btn btn-secondary" style={{ padding: '8px 12px' }} title="Nuevo cliente" aria-label="Nuevo cliente" onClick={onOpenNewClientModal}>
-              <UserPlus size={16} aria-hidden="true" />
-            </button>
-          </div>
-        </div>
 
-        {selectedClient && (
-          <div style={{ marginTop: '10px', fontSize: '0.825rem', display: 'flex', flexDirection: 'column', gap: '4px', padding: '10px', backgroundColor: 'var(--bg-light)', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
-            <div>
-              <strong>Dirección:</strong> {selectedClient.address || '-'} | <strong>Teléfono:</strong> <span className="tabular-nums">{selectedClient.phone || '-'}</span>
-              {selectedClient.phone && (<a href={getWhatsAppLink(selectedClient.phone)} target="_blank" rel="noopener noreferrer" style={{ marginLeft: '6px', color: '#166534', fontSize: '0.78rem', fontWeight: 600 }}>WhatsApp</a>)}
+            {uniqueCities.length > 1 && (
+              <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', padding: '2px', scrollbarWidth: 'none' }}>
+                <button type="button" onClick={() => setSelectedCityFilters([])} style={{ padding: '4px 10px', borderRadius: '15px', fontSize: '0.75rem', fontWeight: 600, border: '1px solid', borderColor: selectedCityFilters.length === 0 ? 'var(--text-primary)' : 'var(--border-color)', backgroundColor: selectedCityFilters.length === 0 ? 'var(--text-primary)' : '#fff', color: selectedCityFilters.length === 0 ? '#fff' : 'var(--text-secondary)', whiteSpace: 'nowrap', cursor: 'pointer' }}>Todas</button>
+                {uniqueCities.map((city) => {
+                  const isActive = selectedCityFilters.includes(city);
+                  return (
+                    <button key={city} type="button" onClick={() => setSelectedCityFilters(isActive ? selectedCityFilters.filter((c) => c !== city) : [...selectedCityFilters, city])} style={{ padding: '4px 10px', borderRadius: '15px', fontSize: '0.75rem', fontWeight: 600, border: '1px solid', borderColor: isActive ? 'var(--accent-color)' : 'var(--border-color)', backgroundColor: isActive ? 'rgba(var(--color-corp-red-rgb), 0.06)' : '#fff', color: isActive ? 'var(--accent-color)' : 'var(--text-secondary)', whiteSpace: 'nowrap', cursor: 'pointer' }}>
+                      {city}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '220px', overflowY: 'auto' }}>
+              {filteredClientsForSelect.length === 0 ? (
+                <div style={{ padding: '14px', textAlign: 'center', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>Sin clientes</div>
+              ) : (
+                filteredClientsForSelect.slice(0, 25).map((c) => {
+                  const debt = Number(c.outstandingBalance || 0);
+                  return (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={() => { setSelectedClient(c); setClientFilter(''); }}
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        gap: '8px',
+                        padding: '10px 12px',
+                        borderRadius: '8px',
+                        border: '1px solid var(--border-color)',
+                        backgroundColor: '#fff',
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                        width: '100%',
+                      }}
+                    >
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontWeight: 600, fontSize: '0.88rem', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.name}</div>
+                        <div style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {c.address || '-'}{c.city ? ` · ${c.city}` : ''}
+                        </div>
+                      </div>
+                      {debt > 0 && (
+                        <span className="tabular-nums" style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--color-corp-red)', backgroundColor: 'rgba(var(--color-corp-red-rgb), 0.06)', padding: '3px 8px', borderRadius: '10px', flexShrink: 0 }}>
+                          Debe ${Math.round(debt).toLocaleString('es-AR')}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })
+              )}
             </div>
-            <div className="client-info-stats">
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontWeight: 700, fontSize: '0.96rem', color: 'var(--text-primary)' }}>{selectedClient.name}</div>
+                <div style={{ fontSize: '0.76rem', color: 'var(--text-secondary)' }}>
+                  {selectedClient.address || '-'}
+                  {selectedClient.phone && (
+                    <>
+                      {' · '}
+                      <span className="tabular-nums">{selectedClient.phone}</span>
+                      <a href={getWhatsAppLink(selectedClient.phone)} target="_blank" rel="noopener noreferrer" style={{ marginLeft: '6px', color: '#166534', fontWeight: 600 }}>WhatsApp</a>
+                    </>
+                  )}
+                </div>
+              </div>
+              <button type="button" className="btn btn-secondary" style={{ padding: '6px 12px', fontSize: '0.78rem', flexShrink: 0 }} onClick={() => setSelectedClient(null)}>
+                Cambiar
+              </button>
+            </div>
+            <div className="client-info-stats" style={{ fontSize: '0.78rem' }}>
               <span>
                 <strong>Saldo:</strong>{' '}
                 <span className="tabular-nums" style={{ color: Number(selectedClient.outstandingBalance || 0) > 0 ? 'var(--color-danger)' : Number(selectedClient.outstandingBalance || 0) < 0 ? 'var(--color-success)' : 'var(--text-primary)', fontWeight: 600 }}>
@@ -116,17 +181,12 @@ export const VendedorOrderTakeTab: React.FC<VendedorOrderTakeTabProps> = ({
               <span><strong>Lista:</strong> <span style={{ fontWeight: 600 }}>{selectedClient.priceList === 'C' ? 'Lista Especial 2' : selectedClient.priceList === 'B' ? 'Lista Especial' : 'Lista 4 Oficial'}</span></span>
               {Number(selectedClient.discount || 0) > 0 && <span className="tabular-nums" style={{ color: 'var(--color-success)' }}><strong>Desc.:</strong> {selectedClient.discount}%</span>}
             </div>
-            {Number(selectedClient.outstandingBalance || 0) > 0 && (
-              <div className="tabular-nums" style={{ marginTop: '4px', padding: '6px 8px', backgroundColor: '#FEF2F2', border: '1px solid #FECACA', borderRadius: '4px', color: '#B91C1C', fontSize: '0.775rem', fontWeight: 600 }}>
-                Deuda: ${Math.round(Number(selectedClient.outstandingBalance)).toLocaleString('es-AR')}
-              </div>
-            )}
           </div>
         )}
       </div>
 
       <div className="order-creation-grid">
-        <div className="card" style={{ display: 'flex', flexDirection: 'column' }}>
+        <div ref={cartSectionRef} className="card" style={{ display: 'flex', flexDirection: 'column' }}>
           <div className="catalog-filters-row">
             <search className="search-input-wrapper" style={{ flex: 1.2 }}>
               <label htmlFor="vendedor-order-prod-search" className="sr-only">Buscar producto</label>
@@ -183,7 +243,7 @@ export const VendedorOrderTakeTab: React.FC<VendedorOrderTakeTabProps> = ({
           </div>
         </div>
 
-        <div className="card" style={{ display: 'flex', flexDirection: 'column' }}>
+        <div ref={cartSectionRef} className="card" style={{ display: 'flex', flexDirection: 'column' }}>
           <h3 style={{ fontSize: '0.95rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '12px' }}>
             <ShoppingCart size={18} aria-hidden="true" /><span>Pedido</span>
           </h3>
@@ -264,6 +324,80 @@ export const VendedorOrderTakeTab: React.FC<VendedorOrderTakeTabProps> = ({
           </div>
         </div>
       </div>
+
+      {cart.length > 0 && (
+        <div
+          style={{
+            position: 'fixed',
+            bottom: 'calc(68px + env(safe-area-inset-bottom, 0px))',
+            left: '12px',
+            right: '12px',
+            zIndex: 1030,
+            maxWidth: '520px',
+            margin: '0 auto',
+            backgroundColor: '#111827',
+            color: '#ffffff',
+            borderRadius: '12px',
+            padding: '10px 14px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '10px',
+            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.22)',
+          }}
+        >
+          <div style={{ minWidth: 0 }}>
+            <div className="tabular-nums" style={{ fontSize: '0.74rem', color: '#9ca3af', fontWeight: 600 }}>
+              {totalUnits} {totalUnits === 1 ? 'unidad' : 'unidades'}
+            </div>
+            <div className="tabular-nums" style={{ fontSize: '1.08rem', fontWeight: 700 }}>
+              ${cartTotal.toLocaleString('es-AR')}
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
+            <button
+              type="button"
+              onClick={() => cartSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+              style={{
+                padding: '8px 12px',
+                borderRadius: '8px',
+                border: '1px solid rgba(255,255,255,0.25)',
+                backgroundColor: 'transparent',
+                color: '#ffffff',
+                fontSize: '0.82rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              Ver
+            </button>
+            <button
+              type="button"
+              disabled={loading}
+              onClick={() => {
+                if (!selectedClient) {
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                  return;
+                }
+                onConfirmOrder();
+              }}
+              style={{
+                padding: '8px 14px',
+                borderRadius: '8px',
+                border: 'none',
+                backgroundColor: 'var(--color-corp-red)',
+                color: '#ffffff',
+                fontSize: '0.82rem',
+                fontWeight: 700,
+                cursor: loading ? 'not-allowed' : 'pointer',
+                opacity: loading ? 0.7 : 1,
+              }}
+            >
+              {loading ? 'Enviando...' : selectedClient ? 'Confirmar' : 'Elegir cliente'}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

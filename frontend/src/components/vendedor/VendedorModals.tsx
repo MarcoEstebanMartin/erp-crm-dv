@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { MapPin, X } from 'lucide-react';
 import { NativeModalDialog } from '../modals/NativeModalDialog';
+import { getOrderStatusInfo } from '../../utils/orderStatusHelper';
+import { formatIntegerARS } from '../../utils/currency';
 import type { SaleRoute } from '../../types';
 
 export interface StreetClientFormState {
@@ -212,6 +214,78 @@ export const VendedorNoSaleModal: React.FC<VendedorNoSaleModalProps> = ({
           </button>
         </div>
       </form>
+    </NativeModalDialog>
+  );
+};
+
+interface VendedorOrderDetailModalProps {
+  order: any | null;
+  onClose: () => void;
+}
+
+/**
+ * Vista móvil minimalista del detalle de un pedido para vendedores (sin controles de facturación).
+ */
+export const VendedorOrderDetailModal: React.FC<VendedorOrderDetailModalProps> = ({ order, onClose }) => {
+  if (!order) return null;
+  const statusInfo = getOrderStatusInfo(order);
+  const clientName = order.client?.name || order.persona?.name || 'Cliente';
+
+  return (
+    <NativeModalDialog isOpen={Boolean(order)} onClose={onClose} ariaLabelledBy="vendedor-order-detail-title" style={{ width: 'min(520px, 95vw)', maxHeight: '88vh', padding: '16px', borderRadius: '12px' }}>
+      <div className="modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', paddingBottom: '10px', borderBottom: '1px solid var(--border-color)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+          <h3 id="vendedor-order-detail-title" style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700 }}>Pedido #{order.id}</h3>
+          <span className="badge" style={{ backgroundColor: `${statusInfo.color}15`, color: statusInfo.color, border: `1px solid ${statusInfo.color}30`, fontWeight: 600 }}>
+            {statusInfo.label}
+          </span>
+        </div>
+        <button type="button" className="btn btn-ghost" aria-label="Cerrar detalle" style={{ padding: '4px' }} onClick={onClose}>
+          <X size={18} />
+        </button>
+      </div>
+
+      <div style={{ flex: '1 1 auto', minHeight: 0, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        <div style={{ padding: '10px 12px', backgroundColor: '#F9FAFB', borderRadius: '8px', border: '1px solid var(--border-color)', fontSize: '0.84rem' }}>
+          <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{clientName}</div>
+          <div className="tabular-nums" style={{ color: 'var(--text-secondary)', fontSize: '0.78rem', marginTop: '2px' }}>
+            {new Date(order.createdAt).toLocaleString('es-AR')}
+          </div>
+          {order.notes && <div style={{ marginTop: '6px', color: 'var(--text-primary)' }}><strong>Notas:</strong> {order.notes}</div>}
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          {(order.items || []).length === 0 ? (
+            <div style={{ padding: '14px', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.84rem' }}>Sin artículos</div>
+          ) : (
+            (order.items || []).map((item: any, idx: number) => {
+              const unitPrice = Math.round(Number(item.unitPrice ?? item.price ?? 0));
+              const subtotal = Math.round(Number(item.subtotal ?? unitPrice * Number(item.quantity || 1)));
+              return (
+                <div key={item.id ?? idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', padding: '8px 10px', border: '1px solid var(--border-color)', borderRadius: '8px', backgroundColor: '#fff' }}>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontWeight: 600, fontSize: '0.86rem', color: 'var(--text-primary)' }}>{item.product?.name || 'Artículo'}</div>
+                    <div className="tabular-nums" style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                      {item.quantity} u.{item.weight ? ` · ${Number(item.weight).toFixed(2)} Kg` : ''} · ${unitPrice.toLocaleString('es-AR')}
+                    </div>
+                  </div>
+                  <div className="tabular-nums" style={{ fontWeight: 700, fontSize: '0.9rem', flexShrink: 0 }}>
+                    ${subtotal.toLocaleString('es-AR')}
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </div>
+
+      <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '12px', marginTop: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+          <div style={{ fontSize: '0.74rem', color: 'var(--text-secondary)' }}>Total</div>
+          <div className="tabular-nums" style={{ fontSize: '1.2rem', fontWeight: 800 }}>{formatIntegerARS(order.totalAmount)}</div>
+        </div>
+        <button type="button" className="btn btn-secondary" onClick={onClose}>Cerrar</button>
+      </div>
     </NativeModalDialog>
   );
 };

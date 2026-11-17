@@ -64,8 +64,8 @@ export function useVendedorController(activeTab: string) {
     try {
       const result = await fetchVendedorTabState({
         activeTab,
-        prodSearchQuery,
-        searchQuery,
+        prodSearchQuery: '',
+        searchQuery: '',
         selectedRouteId,
       });
 
@@ -86,7 +86,7 @@ export function useVendedorController(activeTab: string) {
     } catch (err: any) {
       setErrorMsg(err.message || 'Error al obtener datos.');
     }
-  }, [activeTab, prodSearchQuery, selectedRouteId, searchQuery, offlineSync.setLastCatalogSyncAt, offlineSync.setUsingCachedCatalog]);
+  }, [activeTab, selectedRouteId, offlineSync.setLastCatalogSyncAt, offlineSync.setUsingCachedCatalog]);
 
   fetchRef.current = fetchData;
 
@@ -97,6 +97,14 @@ export function useVendedorController(activeTab: string) {
 
   useEffect(() => { fetchData(); }, [fetchData]);
   useEffect(() => { setSuccessMsg(null); setErrorMsg(null); }, [activeTab]);
+  useEffect(() => {
+    const onManualSync = () => {
+      void offlineSync.syncNow();
+      void fetchData().then(() => showToast('Actualizado', 'info'));
+    };
+    window.addEventListener('dv:vendedor-sync', onManualSync);
+    return () => window.removeEventListener('dv:vendedor-sync', onManualSync);
+  }, [fetchData, offlineSync.syncNow, showToast]);
 
   const uniqueCities = useMemo(() => {
     const unique = [...new Set(clients.map((c) => cleanCityName(c.city)))];

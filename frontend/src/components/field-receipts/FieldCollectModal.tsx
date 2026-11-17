@@ -41,6 +41,15 @@ interface FieldCollectModalProps {
   }) => void;
 }
 
+function findDefaultTransferBankId(bankAccounts: OfflineBundleBankAccount[]): string {
+  const mpAccount = bankAccounts.find((b) => {
+    const n = b.name.toLowerCase();
+    return n.includes('mp') || n.includes('mercado pago') || n.includes('mercadopago');
+  });
+  const target = mpAccount ?? bankAccounts[0];
+  return target ? String(target.id) : '';
+}
+
 function createEmptyPayment(defaultAmount = ''): PaymentDraft {
   return {
     id: Math.random().toString(36).slice(2, 9),
@@ -255,7 +264,16 @@ export const FieldCollectModal: React.FC<FieldCollectModalProps> = ({
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
                 <select
                   value={p.paymentMethod}
-                  onChange={(e) => updatePayment(p.id, { paymentMethod: e.target.value as FieldPaymentMethod })}
+                  onChange={(e) => {
+                    const nextMethod = e.target.value as FieldPaymentMethod;
+                    updatePayment(p.id, {
+                      paymentMethod: nextMethod,
+                      bankAccountId:
+                        nextMethod === 'BANK_TRANSFER' && !p.bankAccountId
+                          ? findDefaultTransferBankId(bankAccounts)
+                          : p.bankAccountId,
+                    });
+                  }}
                   style={{ flex: 1, padding: '8px 10px', borderRadius: '8px', border: '1px solid #d1d5db', fontWeight: 600 }}
                 >
                   <option value="CASH">Efectivo</option>

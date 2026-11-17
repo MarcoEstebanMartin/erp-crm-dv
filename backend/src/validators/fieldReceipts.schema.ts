@@ -6,13 +6,13 @@ export const fieldReceiptPaymentSchema = z
     amount: z.coerce.number().positive('El importe debe ser mayor a $0'),
     bankAccountId: z.coerce.number().int().positive().nullable().optional(),
     transferReference: z.string().trim().max(120).nullable().optional(),
-    proofImageUrl: z.string().trim().max(2000).nullable().optional(),
+    proofImageUrl: z.string().trim().max(2_000_000).nullable().optional(),
     checkBank: z.string().trim().max(100).nullable().optional(),
     checkNumber: z.string().trim().max(60).nullable().optional(),
     checkIssuerCuit: z.string().trim().max(20).nullable().optional(),
     checkDueDate: z.string().datetime({ offset: true }).or(z.string().min(8)).nullable().optional(),
-    checkFrontImageUrl: z.string().trim().max(2000).nullable().optional(),
-    checkBackImageUrl: z.string().trim().max(2000).nullable().optional(),
+    checkFrontImageUrl: z.string().trim().max(2_000_000).nullable().optional(),
+    checkBackImageUrl: z.string().trim().max(2_000_000).nullable().optional(),
     isEcheq: z.boolean().optional().default(false),
   })
   .superRefine((val, ctx) => {

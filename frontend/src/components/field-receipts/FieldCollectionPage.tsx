@@ -16,8 +16,17 @@ import {
   type QueuedFieldReceipt,
 } from '../../utils/offlineReceiptQueue';
 import { FieldCollectModal } from './FieldCollectModal';
+import { matchesSearchTokens } from '../vendedor/vendedorHelpers';
 
-export const FieldCollectionPage: React.FC = () => {
+interface FieldCollectionPageProps {
+  initialClientId?: number | null;
+  onInitialClientHandled?: () => void;
+}
+
+export const FieldCollectionPage: React.FC<FieldCollectionPageProps> = ({
+  initialClientId = null,
+  onInitialClientHandled,
+}) => {
   const [online, setOnline] = useState(() => (typeof navigator !== 'undefined' ? navigator.onLine : true));
   const [clients, setClients] = useState<OfflineBundleClient[]>([]);
   const [bankAccounts, setBankAccounts] = useState<OfflineBundleBankAccount[]>([]);
@@ -44,8 +53,8 @@ export const FieldCollectionPage: React.FC = () => {
         setCollectorUserId(cached.collectorUserId);
       }
       if (navigator.onLine) {
-        await flushOfflineReceiptQueue();
-        const [bundle, mySettlements] = await Promise.all([
+        const [, bundle, mySettlements] = await Promise.all([
+          flushOfflineReceiptQueue(),
           fieldReceiptsApi.getOfflineBundle(),
           fieldReceiptsApi.listMySettlements(),
         ]);
@@ -72,23 +81,31 @@ export const FieldCollectionPage: React.FC = () => {
     const stopSync = startOfflineSyncListener(() => {
       void refreshAll();
     });
+    const onManualSync = () => {
+      void refreshAll();
+    };
+    window.addEventListener('dv:vendedor-sync', onManualSync);
     return () => {
       window.removeEventListener('online', onOnline);
       window.removeEventListener('offline', onOffline);
+      window.removeEventListener('dv:vendedor-sync', onManualSync);
       stopSync();
     };
   }, [refreshAll]);
 
+  useEffect(() => {
+    if (!initialClientId || clients.length === 0) return;
+    const match = clients.find((c) => c.id === initialClientId);
+    if (match) {
+      setSelectedClient(match);
+      onInitialClientHandled?.();
+    }
+  }, [initialClientId, clients, onInitialClientHandled]);
+
   const filteredClients = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return clients.slice(0, 60);
+    if (!search.trim()) return clients.slice(0, 60);
     return clients
-      .filter(
-        (c) =>
-          c.name.toLowerCase().includes(q) ||
-          (c.city && c.city.toLowerCase().includes(q)) ||
-          (c.cuit && c.cuit.includes(q)),
-      )
+      .filter((c) => matchesSearchTokens([c.name, c.city, c.cuit, c.address], search))
       .slice(0, 60);
   }, [clients, search]);
 
@@ -132,6 +149,12 @@ export const FieldCollectionPage: React.FC = () => {
         </button>
       </div>
 
+      {pendingQueue.some((item) => item.lastError) && (
+        <div role="alert" style={{ padding: '10px 14px', borderRadius: '10px', background: '#fef2f2', border: '1px solid #fecaca', color: '#991b1b', fontSize: '0.84rem' }}>
+          Error al sincronizar: {pendingQueue.find((item) => item.lastError)?.lastError}
+        </div>
+      )}
+
       {feedback && (
         <div style={{ padding: '10px 14px', borderRadius: '10px', background: '#ecfdf5', border: '1px solid #a7f3d0', color: '#065f46', fontSize: '0.88rem', fontWeight: 600 }}>
           {feedback}
@@ -167,6 +190,11 @@ export const FieldCollectionPage: React.FC = () => {
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        {loading && clients.length === 0 && (
+          <div style={{ textAlign: 'center', padding: '24px', color: '#6b7280', fontSize: '0.88rem' }}>
+            Cargando clientes...
+          </div>
+        )}
         {filteredClients.map((client) => (
           <div
             key={client.id}
@@ -188,7 +216,7 @@ export const FieldCollectionPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setSelectedClient(client)}
-                style={{ padding: '8px 14px', borderRadius: '8px', border: 'none', background: '#111827', color: '#fff', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer' }}
+                style={{ padding: '8px 14px', minHeight: '40px', borderRadius: '8px', border: 'none', background: '#111827', color: '#fff', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer', touchAction: 'manipulation', flexShrink: 0 }}
               >
                 Cobrar
               </button>

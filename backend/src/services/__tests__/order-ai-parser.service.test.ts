@@ -1,0 +1,144 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import prisma from '../../utils/prisma';
+import * as genaiHelper from '../ai/genai-client.helper';
+import { geminiService } from '../gemini.service';
+import {
+  findClientCandidatesLocal,
+  parseOrderItemsLocalFallback,
+  parseVendedorOrderWithAi,
+} from '../orders/order-ai-parser.service';
+
+vi.mock('../../utils/prisma', () => ({
+  default: {
+    product: {
+      findMany: vi.fn(),
+    },
+    persona: {
+      findMany: vi.fn(),
+    },
+  },
+}));
+
+const MOCK_PRODUCTS = [
+  {
+    id: 101,
+    sku: 'FID-MAT-500',
+    name: 'Fideos Matarazzo Tallarin 500g',
+    listPrice: 1200,
+    costPrice: 900,
+    unitsPerBox: 12,
+    commercialCategory: 'Almacen',
+  },
+  {
+    id: 102,
+    sku: 'ACE-NAT-15',
+    name: 'Aceite Natura Girasol 1.5L',
+    listPrice: 3500,
+    costPrice: 2800,
+    unitsPerBox: 6,
+    commercialCategory: 'Almacen',
+  },
+];
+
+const MOCK_CLIENTS = [
+  { id: 1, name: 'Almacén Don José', city: 'General Villegas', address: 'San Martín 120' },
+  { id: 2, name: 'Kiosco El Pepe', city: 'Banderaló', address: 'Belgrano 45' },
+  { id: 3, name: 'Despensa Pepe', city: 'General Villegas', address: 'Mitre 300' },
+];
+
+describe('order-ai-parser.service', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    (prisma.product.findMany as any).mockResolvedValue(MOCK_PRODUCTS);
+    (prisma.persona.findMany as any).mockResolvedValue(MOCK_CLIENTS);
+  });
+
+  it('detecta cliente único y multiplica cajas en fallback local cuando Gemini no está configurado', async () => {
+    vi.spyOn(genaiHelper, 'isGeminiApiKeyConfigured').mockReturnValue(false);
+
+    const result = await parseVendedorOrderWithAi({
+      text: 'Para Don Jose 2 cajas de fideos matarazzo y 3 aceites natura',
+    });
+
+    expect(result.usedAi).toBe(false);
+    expect(result.detectedClient?.id).toBe(1);
+    expect(result.items).toEqual([
+      expect.objectContaining({
+        productId: 101,
+        quantity: 24, // 2 cajas x 12 unidades
+        unitPrice: 1200,
+      }),
+      expect.objectContaining({
+        productId: 102,
+        quantity: 3,
+        unitPrice: 3500,
+      }),
+    ]);
+    expect(result.unmatchedLines).toEqual([]);
+  });
+
+  it('devuelve candidatos cuando hay ambigüedad de clientes (mismo nombre parcial)', () => {
+    const candidates = findClientCandidatesLocal('para pepe', MOCK_CLIENTS);
+    expect(candidates.map((c) => c.id)).toEqual([2, 3]);
+  });
+
+  it('guarda en unmatchedLines los productos con cantidad que no existen en el catálogo', () => {
+    const parsed = parseOrderItemsLocalFallback(
+      '3 fideos matarazzo, 5 yerba desconocida xyz',
+      MOCK_PRODUCTS.map((p) => ({
+        id: p.id,
+        sku: p.sku,
+        name: p.name,
+        listPrice: p.listPrice,
+        unitsPerBox: p.unitsPerBox,
+        commercialCategory: p.commercialCategory,
+      })),
+    );
+
+    expect(parsed.items).toHaveLength(1);
+    expect(parsed.items[0].productId).toBe(101);
+    expect(parsed.unmatchedLines).toEqual(['5 yerba desconocida xyz']);
+  });
+
+  it('transcribe audio base64 e interpreta cliente, ítems y notas mediante Gemini', async () => {
+    vi.spyOn(geminiService, 'transcribeAudioOrder').mockResolvedValue({
+      rawText: 'Para Don José mandame 2 aceites natura, entregar a la tarde',
+    });
+    vi.spyOn(genaiHelper, 'isGeminiApiKeyConfigured').mockReturnValue(true);
+    vi.spyOn(genaiHelper, 'runGeminiInteraction').mockResolvedValue(
+      JSON.stringify({
+        detectedClientId: 1,
+        clientQuery: 'Don José',
+        items: [{ productId: 102, quantity: 2, note: null }],
+        unmatchedLines: [],
+        orderNotes: 'Entregar a la tarde',
+      }),
+    );
+
+    const result = await parseVendedorOrderWithAi({
+      audioBase64: 'UklGRg==',
+      audioMimeType: 'audio/webm',
+    });
+
+    expect(geminiService.transcribeAudioOrder).toHaveBeenCalledWith('audio/webm', 'UklGRg==');
+    expect(result.usedAi).toBe(true);
+    expect(result.detectedClient?.id).toBe(1);
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0]).toMatchObject({ productId: 102, quantity: 2, unitPrice: 3500 });
+    expect(result.orderNotes).toBe('Entregar a la tarde');
+  });
+
+  it('no consulta clientes cuando selectedClientId ya fue elegido en pantalla', async () => {
+    vi.spyOn(genaiHelper, 'isGeminiApiKeyConfigured').mockReturnValue(false);
+
+    const result = await parseVendedorOrderWithAi({
+      text: '4 aceites natura',
+      selectedClientId: 2,
+    });
+
+    expect(prisma.persona.findMany).not.toHaveBeenCalled();
+    expect(result.detectedClient).toBeNull();
+    expect(result.clientCandidates).toEqual([]);
+    expect(result.items[0]).toMatchObject({ productId: 102, quantity: 4 });
+  });
+});
