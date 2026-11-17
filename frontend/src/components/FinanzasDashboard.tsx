@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../utils/api';
-import { DollarSign, RefreshCw, PlusCircle, CheckSquare, Eye, ChevronRight, Lock } from 'lucide-react';
+import { DollarSign, RefreshCw, PlusCircle, Eye, ChevronRight, Lock } from 'lucide-react';
 import { useConfirm } from '../context/ConfirmContext';
 import FinanceMovementModal from './FinanceMovementModal';
 import { computeCajaGrandeBalance, computeFilteredMetricsAndLedger } from './finanzas/finanzasHelpers';
@@ -139,9 +139,6 @@ export default function FinanzasDashboard() {
                 <Lock size={15} aria-hidden="true" /> Cerrar Caja
               </button>
             )}
-            <button type="button" className="btn btn-secondary" style={{ backgroundColor: '#334155', borderColor: '#475569', color: 'white', display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '10px 14px' }} onClick={() => setReconModalOpen(true)}>
-              <CheckSquare size={15} aria-hidden="true" /> Conciliar
-            </button>
             <button type="button" className="btn btn-primary" style={{ backgroundColor: 'var(--color-corp-red)', borderColor: 'var(--color-corp-red)', display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '10px 14px' }} onClick={() => { setModalError(null); setExpenseModalOpen(true); }}>
               <PlusCircle size={16} aria-hidden="true" /> Gasto
             </button>
