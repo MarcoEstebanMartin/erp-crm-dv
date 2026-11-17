@@ -6,7 +6,7 @@ import { loadCatalogSnapshot, saveCatalogSnapshot } from '../../utils/offlineCat
 import { isLikelyNetworkError } from '../../utils/offlineSyncManager';
 import { isBonusOrderItem } from '../../utils/weeklyPromoCartEvaluator';
 import { cleanCityName, getTodayKey } from './vendedorHelpers';
-import { fetchVendedorTabState } from './vendedorCatalogFetcher';
+import { fetchVendedorTabState, readCachedVendedorData } from './vendedorCatalogFetcher';
 import { useVendedorOfflineSync } from './useVendedorOfflineSync';
 import type { StreetClientFormState } from './VendedorModals';
 import type { Persona, Product, Order, Rubro, SaleRoute } from '../../types';
@@ -48,37 +48,69 @@ export function useVendedorController(activeTab: string) {
   const [selectedRouteId, setSelectedRouteId] = useState<number | null>(null);
   const [todayVisits, setTodayVisits] = useState<any[]>([]);
 
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const selectedRouteIdRef = useRef<number | null>(selectedRouteId);
+  selectedRouteIdRef.current = selectedRouteId;
+  const lastFetchedTabAtRef = useRef<Record<string, number>>({});
+
   const showToast = useCallback((message: string, type: 'success' | 'error' | 'info' = 'success') => {
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
     setToast({ message, type });
-    setTimeout(() => setToast(null), 2500);
+    toastTimerRef.current = setTimeout(() => setToast(null), 2500);
   }, []);
 
-  const fetchRef = useRef<() => void>(() => undefined);
+  const fetchRef = useRef<(force?: boolean) => void>(() => undefined);
   const offlineSync = useVendedorOfflineSync({
-    onSynced: () => fetchRef.current(),
+    onSynced: () => fetchRef.current(true),
     showToast,
   });
 
-  const fetchData = useCallback(async () => {
+  const applyTabResult = useCallback((result: Awaited<ReturnType<typeof fetchVendedorTabState>>) => {
+    if (result.clients !== undefined) setClients(result.clients);
+    if (result.products !== undefined) setProducts(result.products);
+    if (result.orders !== undefined) setOrders(result.orders);
+    if (result.rubros !== undefined) setRubros(result.rubros);
+    if (result.weeklyPromos !== undefined) setWeeklyPromos(result.weeklyPromos);
+    if (result.vendedorRoutes !== undefined) setVendedorRoutes(result.vendedorRoutes);
+    if (result.todayVisits !== undefined) setTodayVisits(result.todayVisits);
+    if (result.resolvedRouteId && !selectedRouteIdRef.current) setSelectedRouteId(result.resolvedRouteId);
+    if (result.lastCatalogSyncAt) offlineSync.setLastCatalogSyncAt(result.lastCatalogSyncAt);
+  }, [offlineSync.setLastCatalogSyncAt]);
+
+  const fetchData = useCallback(async (force = false) => {
     setErrorMsg(null);
+    const now = Date.now();
+    const lastAt = lastFetchedTabAtRef.current[activeTab] || 0;
+    if (!force && now - lastAt < 20_000) return;
+
+    // Hidratación instantánea desde IndexedDB si aún no hay datos cargados para la pestaña
+    if (products.length === 0 || clients.length === 0) {
+      readCachedVendedorData({
+        activeTab,
+        prodSearchQuery: '',
+        searchQuery: '',
+        selectedRouteId: selectedRouteIdRef.current,
+      }).then((cached) => {
+        if (cached.hasAnyCachedData) {
+          setClients((prev) => (prev.length === 0 && cached.clients ? cached.clients : prev));
+          setProducts((prev) => (prev.length === 0 && cached.products ? cached.products : prev));
+          setRubros((prev) => (prev.length === 0 && cached.rubros ? cached.rubros : prev));
+          setWeeklyPromos((prev) => (prev.length === 0 && cached.weeklyPromos ? cached.weeklyPromos : prev));
+          setVendedorRoutes((prev) => (prev.length === 0 && cached.vendedorRoutes ? cached.vendedorRoutes : prev));
+        }
+      }).catch(() => {});
+    }
+
     try {
       const result = await fetchVendedorTabState({
         activeTab,
         prodSearchQuery: '',
         searchQuery: '',
-        selectedRouteId,
+        selectedRouteId: selectedRouteIdRef.current,
       });
 
-      if (result.clients !== undefined) setClients(result.clients);
-      if (result.products !== undefined) setProducts(result.products);
-      if (result.orders !== undefined) setOrders(result.orders);
-      if (result.rubros !== undefined) setRubros(result.rubros);
-      if (result.weeklyPromos !== undefined) setWeeklyPromos(result.weeklyPromos);
-      if (result.vendedorRoutes !== undefined) setVendedorRoutes(result.vendedorRoutes);
-      if (result.todayVisits !== undefined) setTodayVisits(result.todayVisits);
-      if (result.resolvedRouteId && !selectedRouteId) setSelectedRouteId(result.resolvedRouteId);
-      if (result.lastCatalogSyncAt) offlineSync.setLastCatalogSyncAt(result.lastCatalogSyncAt);
-
+      applyTabResult(result);
+      lastFetchedTabAtRef.current[activeTab] = Date.now();
       offlineSync.setUsingCachedCatalog(result.fromCache);
       if (result.fromCache && !result.hasAnyCachedData) {
         setErrorMsg('Sin conexión y sin copia local previa del catálogo.');
@@ -86,7 +118,7 @@ export function useVendedorController(activeTab: string) {
     } catch (err: any) {
       setErrorMsg(err.message || 'Error al obtener datos.');
     }
-  }, [activeTab, selectedRouteId, offlineSync.setLastCatalogSyncAt, offlineSync.setUsingCachedCatalog]);
+  }, [activeTab, applyTabResult, offlineSync.setUsingCachedCatalog]);
 
   fetchRef.current = fetchData;
 
@@ -100,7 +132,7 @@ export function useVendedorController(activeTab: string) {
   useEffect(() => {
     const onManualSync = () => {
       void offlineSync.syncNow();
-      void fetchData().then(() => showToast('Actualizado', 'info'));
+      void fetchData(true).then(() => showToast('Actualizado', 'info'));
     };
     window.addEventListener('dv:vendedor-sync', onManualSync);
     return () => window.removeEventListener('dv:vendedor-sync', onManualSync);
@@ -113,29 +145,41 @@ export function useVendedorController(activeTab: string) {
     return sorted;
   }, [clients]);
 
-  const addToCart = (product: any) => {
-    const existing = cart.find((item) => item.product.id === product.id);
+  const addToCart = useCallback((product: any) => {
     const minQty = product.minOrderQuantity || 1;
-    if (existing) {
-      if (existing.quantity >= product.stock) return showToast(`Stock máximo de ${product.name} alcanzado.`, 'error');
-      const newQty = existing.quantity + 1;
-      setCart(cart.map((item) => (item.product.id === product.id ? { ...item, quantity: newQty } : item)));
-      showToast(`Agregado: ${product.name} (x${newQty})`, 'success');
-    } else {
-      if (product.stock <= 0) return showToast(`Sin stock de ${product.name}.`, 'error');
-      setCart([...cart, { product, quantity: minQty }]);
+    setCart((prev) => {
+      const existing = prev.find((item) => item.product.id === product.id);
+      if (existing) {
+        if (existing.quantity >= product.stock) {
+          showToast(`Stock máximo de ${product.name} alcanzado.`, 'error');
+          return prev;
+        }
+        const newQty = existing.quantity + 1;
+        showToast(`Agregado: ${product.name} (x${newQty})`, 'success');
+        return prev.map((item) => (item.product.id === product.id ? { ...item, quantity: newQty } : item));
+      }
+      if (product.stock <= 0) {
+        showToast(`Sin stock de ${product.name}.`, 'error');
+        return prev;
+      }
       showToast(`Agregado: ${product.name} (x${minQty})`, 'success');
-    }
-  };
+      return [...prev, { product, quantity: minQty }];
+    });
+  }, [showToast]);
 
-  const updateCartQty = (productId: number, change: number) => {
-    const existing = cart.find((item) => item.product.id === productId);
-    if (!existing) return;
-    const newQty = existing.quantity + change;
-    if (newQty <= 0) setCart(cart.filter((item) => item.product.id !== productId));
-    else if (newQty <= existing.product.stock) setCart(cart.map((item) => (item.product.id === productId ? { ...item, quantity: newQty } : item)));
-    else setErrorMsg(`Solo hay ${existing.product.stock} unidades en stock.`);
-  };
+  const updateCartQty = useCallback((productId: number, change: number) => {
+    setCart((prev) => {
+      const existing = prev.find((item) => item.product.id === productId);
+      if (!existing) return prev;
+      const newQty = existing.quantity + change;
+      if (newQty <= 0) return prev.filter((item) => item.product.id !== productId);
+      if (newQty <= existing.product.stock) {
+        return prev.map((item) => (item.product.id === productId ? { ...item, quantity: newQty } : item));
+      }
+      setErrorMsg(`Solo hay ${existing.product.stock} unidades en stock.`);
+      return prev;
+    });
+  }, []);
 
   const markLocalVisit = (clientId: number) => {
     const updatedVisits = { ...sessionVisits, [clientId]: { status: 'VENTA' } };
@@ -156,7 +200,7 @@ export function useVendedorController(activeTab: string) {
     const orderIdempotencyKey = generateSafeIdempotencyKey();
 
     setLoading(true);
-    const gps = await captureCurrentGpsSilently(3000);
+    const gps = await captureCurrentGpsSilently(1000);
 
     const saveOrderToOfflineQueue = async () => {
       await offlineSync.queueOrderOffline({
@@ -180,7 +224,7 @@ export function useVendedorController(activeTab: string) {
       markLocalVisit(selectedClient.id);
       setSuccessMsg(`Pedido enviado${gps ? ' (GPS OK)' : ''}.`);
       setCart([]); setOrderNotes(''); setSelectedClient(null); setClientFilter('');
-      fetchData();
+      fetchData(true);
     } catch (err: any) {
       if (isLikelyNetworkError(err)) await saveOrderToOfflineQueue();
       else setErrorMsg(err.message || 'Error al procesar el pedido.');

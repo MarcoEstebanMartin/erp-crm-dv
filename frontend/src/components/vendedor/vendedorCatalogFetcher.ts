@@ -29,7 +29,7 @@ export interface VendedorFetchOutput {
   weeklyPromos?: WeeklyPromo[];
 }
 
-async function readCachedVendedorData(input: VendedorFetchInput): Promise<VendedorFetchOutput> {
+export async function readCachedVendedorData(input: VendedorFetchInput): Promise<VendedorFetchOutput> {
   const [cliSnap, prodSnap, ordSnap, rubSnap, routesSnap, visitsSnap, promoSnap] = await Promise.all([
     loadCatalogSnapshot<Persona[]>('clients_active'),
     loadCatalogSnapshot<Product[]>('products_full'),
@@ -47,8 +47,8 @@ async function readCachedVendedorData(input: VendedorFetchInput): Promise<Vended
   }
 
   const q = input.activeTab === 'products' ? input.searchQuery : input.prodSearchQuery;
-  const filteredProducts = prodSnap?.payload
-    ? filterCachedProducts(prodSnap.payload, q)
+  const products = prodSnap?.payload
+    ? (q.trim() ? filterCachedProducts(prodSnap.payload, q) : prodSnap.payload)
     : undefined;
 
   return {
@@ -56,7 +56,7 @@ async function readCachedVendedorData(input: VendedorFetchInput): Promise<Vended
     lastCatalogSyncAt: prodSnap?.updatedAt,
     hasAnyCachedData: Boolean(prodSnap?.payload || cliSnap?.payload),
     clients: resolvedClients,
-    products: prodSnap?.payload || filteredProducts,
+    products,
     orders: ordSnap?.payload,
     rubros: rubSnap?.payload,
     vendedorRoutes: routesSnap?.payload,
@@ -92,11 +92,10 @@ export async function fetchVendedorTabState(input: VendedorFetchInput): Promise<
       };
     }
 
-    if (input.activeTab === 'orders' || input.activeTab === 'history') {
-      const [clientData, prodData, orderData, rubroData, promoData] = await Promise.all([
+    if (input.activeTab === 'orders') {
+      const [clientData, prodData, rubroData, promoData] = await Promise.all([
         api.getClients(),
         api.getProducts(''),
-        api.getOrders(),
         api.getRubros(),
         api.getActiveWeeklyPromos().catch(() => null),
       ]);
@@ -104,28 +103,30 @@ export async function fetchVendedorTabState(input: VendedorFetchInput): Promise<
       const resolvedPromos = Array.isArray(promoData)
         ? promoData
         : (await loadCatalogSnapshot<WeeklyPromo[]>('weekly_promos_active'))?.payload || [];
-      let syncTs: string | undefined;
 
-      await Promise.all([
+      void Promise.all([
         saveCatalogSnapshot('clients_active', activeClients),
-        saveCatalogSnapshot('orders_recent', orderData),
         saveCatalogSnapshot('rubros_all', rubroData),
-        Array.isArray(promoData)
-          ? saveCatalogSnapshot('weekly_promos_active', promoData)
-          : Promise.resolve(),
-        !input.prodSearchQuery.trim()
-          ? saveCatalogSnapshot('products_full', prodData).then((ts) => { syncTs = ts; })
-          : Promise.resolve(),
-      ]);
+        Array.isArray(promoData) ? saveCatalogSnapshot('weekly_promos_active', promoData) : Promise.resolve(),
+        !input.prodSearchQuery.trim() ? saveCatalogSnapshot('products_full', prodData) : Promise.resolve(),
+      ]).catch(() => {});
 
       return {
         fromCache: false,
-        lastCatalogSyncAt: syncTs,
+        lastCatalogSyncAt: new Date().toISOString(),
         clients: activeClients,
         products: prodData,
-        orders: orderData,
         rubros: rubroData,
         weeklyPromos: resolvedPromos,
+      };
+    }
+
+    if (input.activeTab === 'history') {
+      const orderData = await api.getOrders();
+      void saveCatalogSnapshot('orders_recent', orderData).catch(() => {});
+      return {
+        fromCache: false,
+        orders: orderData,
       };
     }
 

@@ -1,4 +1,4 @@
-import React, { useMemo, useRef } from 'react';
+import React, { useDeferredValue, useMemo, useRef } from 'react';
 import { Search, ShoppingCart, Trash2, X } from 'lucide-react';
 import { getVendedorItemPrice, matchesSearchTokens, sortVendedorCatalog } from './vendedorHelpers';
 import { evaluateFrontendCartPromos, getProductPromoBadge } from '../../utils/weeklyPromoCartEvaluator';
@@ -52,9 +52,12 @@ export const VendedorOrderTakeTab: React.FC<VendedorOrderTakeTabProps> = ({
     }
   }, []);
 
+  const deferredClientFilter = useDeferredValue(clientFilter);
+  const deferredProdQuery = useDeferredValue(prodSearchQuery);
+
   const filteredClients = useMemo(() => {
     const list = clients.filter((c) =>
-      matchesSearchTokens([c.name, c.cuit, c.city, c.address], clientFilter),
+      matchesSearchTokens([c.name, c.cuit, c.city, c.address], deferredClientFilter),
     );
     if (!currentUserId) return list;
     return [...list].sort((a, b) => {
@@ -62,19 +65,27 @@ export const VendedorOrderTakeTab: React.FC<VendedorOrderTakeTabProps> = ({
       const bMine = Number((b as any).sellerId) === currentUserId ? 1 : 0;
       return bMine - aMine;
     });
-  }, [clients, clientFilter, currentUserId]);
+  }, [clients, deferredClientFilter, currentUserId]);
 
   const filteredProducts = useMemo(
     () =>
       sortVendedorCatalog(
         products.filter((p) =>
-          matchesSearchTokens([p.name, p.sku, p.barcode, p.description], prodSearchQuery),
+          matchesSearchTokens([p.name, p.sku, p.barcode, p.description], deferredProdQuery),
         ),
         rubros,
         filterRubroId,
       ),
-    [products, prodSearchQuery, rubros, filterRubroId],
+    [products, deferredProdQuery, rubros, filterRubroId],
   );
+
+  const visibleProducts = useMemo(() => filteredProducts.slice(0, 50), [filteredProducts]);
+
+  const cartById = useMemo(() => {
+    const map = new Map<number, (typeof cart)[number]>();
+    for (const item of cart) map.set(item.product.id, item);
+    return map;
+  }, [cart]);
 
   const promoEval = useMemo(
     () =>
@@ -215,84 +226,91 @@ export const VendedorOrderTakeTab: React.FC<VendedorOrderTakeTabProps> = ({
         </search>
 
         <div style={{ maxHeight: '420px', overflowY: 'auto', border: '1px solid var(--border-color)', borderRadius: '8px', backgroundColor: '#fff' }}>
-          {filteredProducts.length === 0 ? (
-            <div style={{ padding: '18px', textAlign: 'center', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Sin productos</div>
-          ) : (
-            filteredProducts.map((p, idx) => {
-              const price = getVendedorItemPrice(p, selectedClient);
-              const cartItem = cart.find((item) => item.product.id === p.id);
-              const promoBadge = getProductPromoBadge(p.id, weeklyPromos, Boolean(p.isPesable));
-              const outOfStock = p.stock <= 0;
-              return (
-                <div
-                  key={p.id}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    gap: '10px',
-                    padding: '10px 12px',
-                    borderBottom: idx < filteredProducts.length - 1 ? '1px solid var(--border-color)' : 'none',
-                    backgroundColor: cartItem ? '#F0FDF4' : '#fff',
-                    opacity: outOfStock ? 0.55 : 1,
-                  }}
-                >
-                  <button
-                    type="button"
-                    disabled={outOfStock}
-                    onClick={() => onAddToCart(p)}
-                    style={{
-                      flex: 1,
-                      minWidth: 0,
-                      textAlign: 'left',
-                      background: 'transparent',
-                      border: 'none',
-                      boxShadow: 'none',
-                      padding: 0,
-                      justifyContent: 'flex-start',
-                      cursor: outOfStock ? 'not-allowed' : 'pointer',
-                    }}
-                  >
-                    <div style={{ minWidth: 0, width: '100%' }}>
-                      <div style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--text-primary)', lineHeight: 1.3 }}>
-                        {p.name}
-                      </div>
-                      <div className="tabular-nums" style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '2px' }}>
-                        <span>#{p.sku || p.id}</span>
-                        {p.isPesable && <span>· Kg</span>}
-                        {promoBadge && !outOfStock && <span style={{ color: '#065F46', fontWeight: 700 }}>· {promoBadge}</span>}
-                        {outOfStock && <span style={{ color: 'var(--color-danger)', fontWeight: 700 }}>· Agotado</span>}
-                      </div>
-                    </div>
-                  </button>
-
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
-                    <span className="tabular-nums" style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary)' }}>
-                      ${price.toLocaleString('es-AR')}
-                    </span>
-                    {cartItem ? (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <button type="button" className="btn btn-secondary" style={{ padding: '4px 9px', minWidth: '32px' }} aria-label={`Restar ${p.name}`} onClick={() => onUpdateCartQty(p.id, -1)}>-</button>
-                        <span className="tabular-nums" style={{ minWidth: '22px', textAlign: 'center', fontWeight: 700, fontSize: '0.88rem' }}>{cartItem.quantity}</span>
-                        <button type="button" className="btn btn-secondary" style={{ padding: '4px 9px', minWidth: '32px' }} aria-label={`Sumar ${p.name}`} onClick={() => onUpdateCartQty(p.id, 1)}>+</button>
-                      </div>
-                    ) : (
+            filteredProducts.length === 0 ? (
+              <div style={{ padding: '18px', textAlign: 'center', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Sin productos</div>
+            ) : (
+              <>
+                {visibleProducts.map((p, idx) => {
+                  const price = getVendedorItemPrice(p, selectedClient);
+                  const cartItem = cartById.get(p.id);
+                  const promoBadge = getProductPromoBadge(p.id, weeklyPromos, Boolean(p.isPesable));
+                  const outOfStock = p.stock <= 0;
+                  return (
+                    <div
+                      key={p.id}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: '10px',
+                        padding: '10px 12px',
+                        borderBottom: idx < visibleProducts.length - 1 ? '1px solid var(--border-color)' : 'none',
+                        backgroundColor: cartItem ? '#F0FDF4' : '#fff',
+                        opacity: outOfStock ? 0.55 : 1,
+                      }}
+                    >
                       <button
                         type="button"
                         disabled={outOfStock}
                         onClick={() => onAddToCart(p)}
-                        className="btn btn-primary"
-                        style={{ padding: '6px 12px', fontSize: '0.82rem', fontWeight: 700, borderRadius: '8px' }}
-                        aria-label={`Agregar ${p.name}`}
+                        style={{
+                          flex: 1,
+                          minWidth: 0,
+                          textAlign: 'left',
+                          background: 'transparent',
+                          border: 'none',
+                          boxShadow: 'none',
+                          padding: 0,
+                          justifyContent: 'flex-start',
+                          cursor: outOfStock ? 'not-allowed' : 'pointer',
+                        }}
                       >
-                        +
+                        <div style={{ minWidth: 0, width: '100%' }}>
+                          <div style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--text-primary)', lineHeight: 1.3 }}>
+                            {p.name}
+                          </div>
+                          <div className="tabular-nums" style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '2px' }}>
+                            <span>#{p.sku || p.id}</span>
+                            {p.isPesable && <span>· Kg</span>}
+                            {promoBadge && !outOfStock && <span style={{ color: '#065F46', fontWeight: 700 }}>· {promoBadge}</span>}
+                            {outOfStock && <span style={{ color: 'var(--color-danger)', fontWeight: 700 }}>· Agotado</span>}
+                          </div>
+                        </div>
                       </button>
-                    )}
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                        <span className="tabular-nums" style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary)' }}>
+                          ${price.toLocaleString('es-AR')}
+                        </span>
+                        {cartItem ? (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <button type="button" className="btn btn-secondary" style={{ padding: '4px 9px', minWidth: '32px' }} aria-label={`Restar ${p.name}`} onClick={() => onUpdateCartQty(p.id, -1)}>-</button>
+                            <span className="tabular-nums" style={{ minWidth: '22px', textAlign: 'center', fontWeight: 700, fontSize: '0.88rem' }}>{cartItem.quantity}</span>
+                            <button type="button" className="btn btn-secondary" style={{ padding: '4px 9px', minWidth: '32px' }} aria-label={`Sumar ${p.name}`} onClick={() => onUpdateCartQty(p.id, 1)}>+</button>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            disabled={outOfStock}
+                            onClick={() => onAddToCart(p)}
+                            className="btn btn-primary"
+                            style={{ padding: '6px 12px', fontSize: '0.82rem', fontWeight: 700, borderRadius: '8px' }}
+                            aria-label={`Agregar ${p.name}`}
+                          >
+                            +
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+                {filteredProducts.length > 50 && (
+                  <div className="tabular-nums" style={{ padding: '8px 12px', textAlign: 'center', fontSize: '0.75rem', color: 'var(--text-secondary)', borderTop: '1px solid var(--border-color)' }}>
+                    Mostrando 50 de {filteredProducts.length} · Escribí para filtrar
                   </div>
-                </div>
-              );
-            })
-          )}
+                )}
+              </>
+            )
         </div>
       </div>
 
