@@ -102,9 +102,14 @@ export async function closeJointDrawers(req: AuthenticatedRequest, res: Response
   }
 }
 
-export async function getDrawersHistory(_req: AuthenticatedRequest, res: Response): Promise<void> {
+export async function getDrawersHistory(req: AuthenticatedRequest, res: Response): Promise<void> {
   try {
-    const drawers = await centralDrawerService.getDrawersHistory();
+    const drawers = await centralDrawerService.getDrawersHistory({
+      limit: req.query.limit ? Number(req.query.limit) : undefined,
+      offset: req.query.offset ? Number(req.query.offset) : undefined,
+      startDate: req.query.startDate ? String(req.query.startDate) : undefined,
+      endDate: req.query.endDate ? String(req.query.endDate) : undefined,
+    });
     res.status(200).json({ status: 'success', data: { drawers } });
   } catch (error) {
     handleFinanceError(res, error, 'Error al obtener el historial de cajas.');

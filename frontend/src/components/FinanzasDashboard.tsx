@@ -7,10 +7,13 @@ import { computeCajaGrandeBalance, computeFilteredMetricsAndLedger } from './fin
 import { FinanzasBankReconciliationModal } from './finanzas/FinanzasBankReconciliationModal';
 import { FinanzasExpenseModal, FinanzasDrawerInspectModal, FinanzasCentralCloseAndBankModals } from './finanzas/FinanzasModals';
 import { FinanzasBanksCard } from './finanzas/FinanzasBanksCard';
+import { FinanzasTransferenciasTab } from './finanzas/FinanzasTransferenciasTab';
+import { FinanzasCierresHistoryTab } from './finanzas/FinanzasCierresHistoryTab';
 
 export default function FinanzasDashboard() {
   const confirm = useConfirm();
   const isAdmin = api.getCurrentUser()?.role === 'ADMIN';
+  const [activeTab, setActiveTab] = useState<'movements' | 'transfers' | 'history'>('movements');
   const [loading, setLoading] = useState(true);
   const [drawers, setDrawers] = useState<any[]>([]);
   const [transactions, setTransactions] = useState<any[]>([]);
@@ -195,83 +198,83 @@ export default function FinanzasDashboard() {
         ))}
       </div>
 
-      <div>
-        <h3 style={{ margin: '0 0 12px 0', fontSize: '1.15rem', fontWeight: 600 }}>Movimientos</h3>
-        <div className="table-container table-container--sticky" role="region" aria-label="Movimientos de Caja Grande" tabIndex={0}>
-          <table>
-            <thead>
-              <tr><th scope="col">Fecha / Hora</th><th scope="col">Tipo</th><th scope="col">Responsable</th><th scope="col">Medio</th><th scope="col" style={{ textAlign: 'right' }}>Monto</th></tr>
-            </thead>
-            <tbody>
-              {m.ledger.length === 0 ? (
-                <tr><td colSpan={5} style={{ textAlign: 'center', padding: '24px', color: 'var(--text-secondary)' }}>Sin movimientos</td></tr>
-              ) : m.ledger.map((item) => (
-                <tr key={item.id} style={{ cursor: item.drawer ? 'pointer' : 'default' }} onClick={() => item.drawer && setInspectingDrawer(item.drawer)}>
-                  <td style={{ fontSize: '0.82rem' }}>{new Date(item.date).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' })}</td>
-                  <td><span style={{ padding: '3px 8px', borderRadius: '12px', fontSize: '0.72rem', fontWeight: 600, backgroundColor: item.type === 'INGRESO' ? '#ecfdf5' : '#fff5f5', color: item.type === 'INGRESO' ? '#047857' : '#c53030' }}>{item.type}</span></td>
-                  <td style={{ fontWeight: 600 }}>
-                    {item.description}
-                    {item.drawer && <span style={{ marginLeft: '8px', fontSize: '0.72rem', backgroundColor: '#e0f2fe', color: '#0369a1', padding: '2px 8px', borderRadius: '12px' }}>{item.drawer.transactions?.length || 0} recibos</span>}
-                  </td>
-                  <td style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>{item.paymentMethod}</td>
-                  <td className="tabular-nums" style={{ textAlign: 'right', fontWeight: 700, fontFamily: 'monospace', color: item.type === 'INGRESO' ? '#047857' : '#c53030' }}>
-                    {item.type === 'INGRESO' ? '+' : '-'}${Math.round(item.amount).toLocaleString('es-AR')}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(380px, 1fr))', gap: '20px' }}>
-        <FinanzasBanksCard
-          bankAccounts={bankAccounts}
-          onEditBank={(b) => {
-            setModalError(null);
-            setEditingBankId(b.id);
-            setEditingBankName(b.name);
-            setEditingBankAccountNumber(b.accountNumber || '');
-            setEditingBankModalOpen(true);
-          }}
-        />
-
-        <div className="card" style={{ padding: '20px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', gap: '8px' }}>
-            <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 600 }}>Transferencias</h3>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+        <div role="tablist" aria-label="Vistas de Caja Grande" className="linear-tablist">
+          <button type="button" role="tab" aria-selected={activeTab === 'movements'} className="linear-tab" onClick={() => setActiveTab('movements')}>
+            Movimientos
+          </button>
+          <button type="button" role="tab" aria-selected={activeTab === 'transfers'} className="linear-tab" onClick={() => setActiveTab('transfers')} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+            Transferencias
             {(() => {
               const pendingCount = m.transfers.filter((t: any) => !t.verified).length;
               return pendingCount > 0 ? (
-                <span style={{ fontSize: '0.72rem', fontWeight: 600, padding: '2px 8px', borderRadius: '999px', backgroundColor: '#fef3c7', color: '#b45309' }}>
-                  {pendingCount} {pendingCount === 1 ? 'pendiente' : 'pendientes'}
+                <span style={{ fontSize: '0.7rem', fontWeight: 700, padding: '1px 7px', borderRadius: '999px', backgroundColor: '#fef3c7', color: '#b45309' }}>
+                  {pendingCount}
                 </span>
               ) : null;
             })()}
-          </div>
-          <div className="table-container" role="region" aria-label="Transferencias del período" tabIndex={0} style={{ maxHeight: '260px', marginTop: 0 }}>
-            <table style={{ fontSize: '0.82rem' }}>
-              <thead><tr><th scope="col">Fecha</th><th scope="col">Cliente</th><th scope="col">Cuenta</th><th scope="col">Estado</th><th scope="col" style={{ textAlign: 'right' }}>Monto</th></tr></thead>
+          </button>
+          <button type="button" role="tab" aria-selected={activeTab === 'history'} className="linear-tab" onClick={() => setActiveTab('history')}>
+            Historial de Cierres
+          </button>
+        </div>
+
+        {activeTab === 'movements' && (
+          <div className="table-container table-container--sticky" role="region" aria-label="Movimientos de Caja Grande" tabIndex={0}>
+            <table>
+              <thead>
+                <tr><th scope="col">Fecha / Hora</th><th scope="col">Tipo</th><th scope="col">Responsable</th><th scope="col">Medio</th><th scope="col" style={{ textAlign: 'right' }}>Monto</th></tr>
+              </thead>
               <tbody>
-                {m.transfers.length === 0 ? (
-                  <tr><td colSpan={5} style={{ textAlign: 'center', padding: '20px', color: 'var(--text-secondary)' }}>Sin transferencias</td></tr>
-                ) : m.transfers.map((t: any) => (
-                  <tr key={t.id}>
-                    <td>{new Date(t.createdAt).toLocaleDateString('es-AR')}</td>
-                    <td style={{ fontWeight: 600 }}>{t.persona?.name || 'Varios'}</td>
-                    <td style={{ color: 'var(--text-secondary)' }}>{t.bankAccount?.name || 'Sin cuenta'}</td>
-                    <td>
-                      <span style={{ fontSize: '0.72rem', fontWeight: 600, padding: '2px 7px', borderRadius: '999px', backgroundColor: t.verified ? '#dcfce7' : '#fef3c7', color: t.verified ? '#15803d' : '#b45309' }}>
-                        {t.verified ? 'Conciliada' : 'Pendiente'}
-                      </span>
+                {m.ledger.length === 0 ? (
+                  <tr><td colSpan={5} style={{ textAlign: 'center', padding: '24px', color: 'var(--text-secondary)' }}>Sin movimientos</td></tr>
+                ) : m.ledger.map((item) => (
+                  <tr key={item.id} style={{ cursor: item.drawer ? 'pointer' : 'default' }} onClick={() => item.drawer && setInspectingDrawer(item.drawer)}>
+                    <td style={{ fontSize: '0.82rem' }}>{new Date(item.date).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' })}</td>
+                    <td><span style={{ padding: '3px 8px', borderRadius: '12px', fontSize: '0.72rem', fontWeight: 600, backgroundColor: item.type === 'INGRESO' ? '#ecfdf5' : '#fff5f5', color: item.type === 'INGRESO' ? '#047857' : '#c53030' }}>{item.type}</span></td>
+                    <td style={{ fontWeight: 600 }}>
+                      {item.description}
+                      {item.drawer && <span style={{ marginLeft: '8px', fontSize: '0.72rem', backgroundColor: '#e0f2fe', color: '#0369a1', padding: '2px 8px', borderRadius: '12px' }}>{item.drawer.transactions?.length || 0} recibos</span>}
                     </td>
-                    <td className="tabular-nums" style={{ textAlign: 'right', fontWeight: 700, fontFamily: 'monospace', color: '#0f766e' }}>+${Math.round(Number(t.amount)).toLocaleString('es-AR')}</td>
+                    <td style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>{item.paymentMethod}</td>
+                    <td className="tabular-nums" style={{ textAlign: 'right', fontWeight: 700, fontFamily: 'monospace', color: item.type === 'INGRESO' ? '#047857' : '#c53030' }}>
+                      {item.type === 'INGRESO' ? '+' : '-'}${Math.round(item.amount).toLocaleString('es-AR')}
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-        </div>
+        )}
+
+        {activeTab === 'transfers' && (
+          <FinanzasTransferenciasTab
+            transfers={m.transfers}
+            onOpenReconcile={() => {
+              setReconBankId(bankAccounts[0]?.id ? String(bankAccounts[0].id) : '');
+              setReconModalOpen(true);
+            }}
+          />
+        )}
+
+        {activeTab === 'history' && (
+          <FinanzasCierresHistoryTab
+            initialDrawers={drawers}
+            onInspectDrawer={(drawer) => setInspectingDrawer(drawer)}
+          />
+        )}
       </div>
+
+      <FinanzasBanksCard
+        bankAccounts={bankAccounts}
+        onEditBank={(b) => {
+          setModalError(null);
+          setEditingBankId(b.id);
+          setEditingBankName(b.name);
+          setEditingBankAccountNumber(b.accountNumber || '');
+          setEditingBankModalOpen(true);
+        }}
+      />
 
       <FinanzasExpenseModal
         isOpen={expenseModalOpen} onClose={() => { setModalError(null); setExpenseModalOpen(false); }}

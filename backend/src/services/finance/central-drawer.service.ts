@@ -77,11 +77,26 @@ export const centralDrawerService = {
     return auditPairs.map((p) => p.closedDrawer);
   },
 
-  async getDrawersHistory() {
+  async getDrawersHistory(params?: {
+    limit?: number;
+    offset?: number;
+    startDate?: string;
+    endDate?: string;
+  }) {
+    const take = Math.min(Math.max(Number(params?.limit) || 30, 1), 200);
+    const skip = Math.max(Number(params?.offset) || 0, 0);
+    const closedAtFilter: Record<string, Date> = {};
+    if (params?.startDate) closedAtFilter.gte = new Date(`${params.startDate}T00:00:00`);
+    if (params?.endDate) closedAtFilter.lte = new Date(`${params.endDate}T23:59:59.999`);
+
     return prisma.cashDrawer.findMany({
-      where: { status: 'CLOSED' },
+      where: {
+        status: 'CLOSED',
+        ...(Object.keys(closedAtFilter).length > 0 ? { closedAt: closedAtFilter } : {}),
+      },
       orderBy: { closedAt: 'desc' },
-      take: 50,
+      take,
+      skip,
       include: {
         user: {
           select: {

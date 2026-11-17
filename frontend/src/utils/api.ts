@@ -1046,10 +1046,15 @@ export const api = {
     return json.data;
   },
 
-  getCashDrawers: async () => {
-    
+  getCashDrawers: async (params?: { limit?: number; offset?: number; startDate?: string; endDate?: string }) => {
     try {
-      const res = await request('/finance/drawers/history');
+      const qs = new URLSearchParams();
+      if (params?.limit !== undefined) qs.set('limit', String(params.limit));
+      if (params?.offset !== undefined) qs.set('offset', String(params.offset));
+      if (params?.startDate) qs.set('startDate', params.startDate);
+      if (params?.endDate) qs.set('endDate', params.endDate);
+      const queryStr = qs.toString();
+      const res = await request(`/finance/drawers/history${queryStr ? `?${queryStr}` : ''}`);
       return res.drawers || [];
     } catch {
       return [];
