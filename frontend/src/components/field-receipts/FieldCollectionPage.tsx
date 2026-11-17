@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { RefreshCw, Search, Send, Wifi, WifiOff } from 'lucide-react';
 import {
+  buildManualWhatsAppUrl,
   CollectorSettlementDTO,
   fieldReceiptsApi,
   OfflineBundleBankAccount,
@@ -207,14 +208,32 @@ export const FieldCollectionPage: React.FC = () => {
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <span style={{ fontWeight: 700 }}>${Math.round(Number(r.totalAmount)).toLocaleString('es-AR')}</span>
+                  {r.pdfUrl && (
+                    <a
+                      href={r.pdfUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      style={{ padding: '3px 8px', borderRadius: '6px', border: '1px solid #d1d5db', color: '#374151', fontSize: '0.75rem', textDecoration: 'none' }}
+                    >
+                      PDF
+                    </a>
+                  )}
+                  <a
+                    href={buildManualWhatsAppUrl(r)}
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 8px', borderRadius: '6px', border: '1px solid #16a34a', color: '#15803d', fontSize: '0.75rem', fontWeight: 600, textDecoration: 'none' }}
+                  >
+                    <Send size={12} /> WhatsApp
+                  </a>
                   {r.whatsappStatus === 'FAILED' && (
                     <button
                       type="button"
                       onClick={() => void fieldReceiptsApi.resendWhatsApp(r.id).then(refreshAll)}
-                      title="Reenviar WhatsApp"
+                      title="Enviar por API Meta"
                       style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 8px', borderRadius: '6px', border: '1px solid #d1d5db', background: '#fff', fontSize: '0.75rem', cursor: 'pointer' }}
                     >
-                      <Send size={12} /> Reenviar
+                      API
                     </button>
                   )}
                 </div>

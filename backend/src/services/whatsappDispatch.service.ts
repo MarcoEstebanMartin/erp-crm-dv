@@ -12,15 +12,24 @@ export function normalizeArgentinaWhatsAppPhone(rawPhone?: string | null): strin
 }
 
 export const whatsappDispatchService = {
+  getAccessToken(): string {
+    return process.env.WHATSAPP_TOKEN || process.env.WHATSAPP_ACCESS_TOKEN || '';
+  },
+
   isConfigured(): boolean {
-    return Boolean(process.env.WHATSAPP_ACCESS_TOKEN && process.env.WHATSAPP_PHONE_NUMBER_ID);
+    return Boolean(this.getAccessToken() && process.env.WHATSAPP_PHONE_NUMBER_ID);
+  },
+
+  isAutoSendEnabled(): boolean {
+    return process.env.WHATSAPP_RECEIPT_AUTO_SEND === 'true';
   },
 
   /**
-   * Genera el PDF oficial del recibo y lo envía por Meta WhatsApp Cloud API (Plantilla Utility).
+   * Genera el PDF oficial del recibo y, si está habilitado el envío automático (o forceApi),
+   * lo envía por Meta WhatsApp Cloud API (Plantilla Utility).
    * Nunca lanza excepción hacia el caller para no abortar la sincronización contable.
    */
-  async dispatchReceiptPdf(fieldReceiptId: number) {
+  async dispatchReceiptPdf(fieldReceiptId: number, options?: { forceApi?: boolean }) {
     const receipt = await prisma.fieldReceipt.findUnique({
       where: { id: fieldReceiptId },
       include: {
@@ -58,6 +67,15 @@ export const whatsappDispatchService = {
       data: { pdfUrl: pdf.publicUrl },
     });
 
+    if (!options?.forceApi && !this.isAutoSendEnabled()) {
+      return {
+        sent: false,
+        mode: 'MANUAL',
+        pdfUrl: pdf.publicUrl,
+        reason: 'Modo manual activo (WHATSAPP_RECEIPT_AUTO_SEND != true)',
+      };
+    }
+
     const toPhone = normalizeArgentinaWhatsAppPhone(receipt.persona.phone);
     if (!toPhone) {
       await prisma.fieldReceipt.update({
@@ -79,7 +97,7 @@ export const whatsappDispatchService = {
     }
 
     try {
-      const token = process.env.WHATSAPP_ACCESS_TOKEN!;
+      const token = this.getAccessToken();
       const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID!;
       const templateName = process.env.WHATSAPP_RECEIPT_TEMPLATE || 'recibo_cobranza_dv';
       const graphBase = `https://graph.facebook.com/v21.0/${phoneNumberId}`;

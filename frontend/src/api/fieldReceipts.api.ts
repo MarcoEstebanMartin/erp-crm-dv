@@ -107,6 +107,25 @@ export interface CollectorSettlementDTO {
   receipts: FieldReceiptDTO[];
 }
 
+export function buildManualWhatsAppUrl(receipt: FieldReceiptDTO): string {
+  const rawPhone = (receipt.persona?.phone || '').replace(/\D/g, '');
+  const phone = rawPhone.startsWith('549')
+    ? rawPhone
+    : rawPhone.startsWith('54')
+      ? `549${rawPhone.slice(2)}`
+      : rawPhone.startsWith('0')
+        ? `549${rawPhone.slice(1)}`
+        : rawPhone.length >= 8
+          ? `549${rawPhone}`
+          : '';
+  const nro = receipt.receiptNumber || receipt.provisionalCode;
+  const total = `$${Math.round(Number(receipt.totalAmount)).toLocaleString('es-AR')}`;
+  const pdfLink = receipt.pdfUrl ? `\nComprobante PDF: ${window.location.origin}${receipt.pdfUrl}` : '';
+  const text = `Hola ${receipt.persona?.name || ''}, te enviamos tu Recibo Digital ${nro} por ${total}.${pdfLink}`;
+  const base = phone ? `https://wa.me/${phone}` : 'https://wa.me/';
+  return `${base}?text=${encodeURIComponent(text)}`;
+}
+
 export const fieldReceiptsApi = {
   getOfflineBundle(): Promise<OfflineBundleResponse> {
     return apiClient.get('/field-receipts/offline-bundle');

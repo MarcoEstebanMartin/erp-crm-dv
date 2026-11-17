@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Check, Eye, RefreshCw, Send, X } from 'lucide-react';
 import {
+  buildManualWhatsAppUrl,
   CollectorSettlementDTO,
   fieldReceiptsApi,
   OfflineBundleBankAccount,
@@ -215,13 +216,33 @@ export const FieldSettlementsTab: React.FC = () => {
                 <span style={{ fontSize: '0.75rem', padding: '2px 7px', borderRadius: '999px', background: receipt.whatsappStatus === 'FAILED' ? '#fee2e2' : '#f3f4f6', color: receipt.whatsappStatus === 'FAILED' ? '#991b1b' : '#374151' }}>
                   WA: {receipt.whatsappStatus}
                 </span>
+                {receipt.pdfUrl && (
+                  <a
+                    href={receipt.pdfUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{ padding: '4px 8px', borderRadius: '6px', border: '1px solid #d1d5db', color: '#374151', fontSize: '0.75rem', textDecoration: 'none' }}
+                  >
+                    PDF
+                  </a>
+                )}
+                {receipt.status !== 'VOIDED' && (
+                  <a
+                    href={buildManualWhatsAppUrl(receipt)}
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '4px 8px', borderRadius: '6px', border: '1px solid #16a34a', color: '#15803d', fontSize: '0.75rem', fontWeight: 600, textDecoration: 'none' }}
+                  >
+                    <Send size={12} /> WA Manual
+                  </a>
+                )}
                 {receipt.whatsappStatus !== 'DELIVERED' && receipt.status !== 'VOIDED' && (
                   <button
                     type="button"
                     onClick={() => void fieldReceiptsApi.resendWhatsApp(receipt.id).then(loadData)}
                     style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '4px 8px', borderRadius: '6px', border: '1px solid #d1d5db', background: '#fff', fontSize: '0.75rem', cursor: 'pointer' }}
                   >
-                    <Send size={12} /> Reenviar
+                    <Send size={12} /> Enviar API
                   </button>
                 )}
                 {receipt.status !== 'VOIDED' && receipt.payments.some((p) => p.paymentMethod === 'CHECK' && p.status !== 'REJECTED') && (

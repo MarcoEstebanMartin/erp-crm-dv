@@ -117,7 +117,7 @@ export const approveSettlement = async (req: AuthenticatedRequest, res: Response
 export const resendWhatsAppReceipt = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const receiptId = Number(req.params.id);
-    const result = await whatsappDispatchService.dispatchReceiptPdf(receiptId);
+    const result = await whatsappDispatchService.dispatchReceiptPdf(receiptId, { forceApi: true });
     return res.json(result);
   } catch (error) {
     return handleFieldReceiptError(res, error, 'Error al reenviar recibo por WhatsApp');
