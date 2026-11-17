@@ -102,6 +102,7 @@ export default function PendingRendicionesTabs({
         </button>
       </div>
 
+      <div role="tabpanel" style={{ minHeight: '300px' }}>
       {loading ? (
         <div style={{ padding: '48px', textAlign: 'center', color: 'var(--text-secondary)' }}>
           <RefreshCw size={24} className="animate-spin" aria-hidden="true" style={{ margin: '0 auto 10px' }} />
@@ -205,6 +206,7 @@ export default function PendingRendicionesTabs({
           onOpenNewModal={onOpenNewCaja}
         />
       )}
+      </div>
     </>
   );
 }

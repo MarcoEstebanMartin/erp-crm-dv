@@ -1,5 +1,6 @@
 import React from 'react';
 import { AlertTriangle, Check, X } from 'lucide-react';
+import { NativeModalDialog } from './NativeModalDialog';
 
 interface ConfirmModalProps {
   isOpen: boolean;
@@ -39,93 +40,85 @@ export default function ConfirmModal({
   const colors = getColors();
 
   return (
-    <div style={{
-      position: 'fixed',
-      top: 0, left: 0, right: 0, bottom: 0,
-      backgroundColor: 'rgba(0, 0, 0, 0.5)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      zIndex: 9999,
-      backdropFilter: 'blur(4px)',
-      animation: 'fadeIn 0.2s ease-out'
-    }}>
-      <div style={{
-        backgroundColor: 'var(--bg-card, #ffffff)',
-        borderRadius: '12px',
-        padding: '24px',
+    <NativeModalDialog
+      isOpen={isOpen}
+      onClose={isAlert ? onConfirm : onCancel}
+      ariaLabelledBy="confirm-modal-title"
+      style={{
         maxWidth: '400px',
         width: '90%',
-        boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
-        animation: 'slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
-      }}>
-        
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px', marginBottom: '24px' }}>
-          <div style={{
-            backgroundColor: colors.bg,
-            color: colors.icon,
-            padding: '12px',
-            borderRadius: '50%',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            flexShrink: 0
-          }}>
-            <AlertTriangle size={24} />
-          </div>
-          <div>
-            <h3 style={{ margin: '0 0 8px 0', fontSize: '18px', fontWeight: 'bold', color: 'var(--text-primary)' }}>
-              {title}
-            </h3>
-            <p style={{ margin: 0, fontSize: '14px', color: 'var(--text-secondary)', lineHeight: '1.5' }}>
-              {message}
-            </p>
-          </div>
+        borderRadius: '12px',
+        padding: '24px',
+        animation: 'slideUp 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px', marginBottom: '24px' }}>
+        <div style={{
+          backgroundColor: colors.bg,
+          color: colors.icon,
+          padding: '12px',
+          borderRadius: '50%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          flexShrink: 0,
+        }}>
+          <AlertTriangle size={24} aria-hidden="true" />
         </div>
+        <div>
+          <h3 id="confirm-modal-title" style={{ margin: '0 0 8px 0', fontSize: '18px', fontWeight: 'bold', color: 'var(--text-primary)' }}>
+            {title}
+          </h3>
+          <p style={{ margin: 0, fontSize: '14px', color: 'var(--text-secondary)', lineHeight: '1.5' }}>
+            {message}
+          </p>
+        </div>
+      </div>
 
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-          {!isAlert && (
-            <button
-              onClick={onCancel}
-              style={{
-                padding: '8px 16px',
-                backgroundColor: 'transparent',
-                border: '1px solid var(--border-color)',
-                borderRadius: '8px',
-                color: 'var(--text-primary)',
-                fontWeight: '500',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px'
-              }}
-              className="hover-bg-secondary"
-            >
-              <X size={16} /> {cancelText}
-            </button>
-          )}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+        {!isAlert && (
           <button
-            onClick={onConfirm}
+            type="button"
+            onClick={onCancel}
             style={{
               padding: '8px 16px',
-              backgroundColor: colors.btn,
-              border: 'none',
+              backgroundColor: 'transparent',
+              border: '1px solid var(--border-color)',
               borderRadius: '8px',
-              color: '#ffffff',
-              fontWeight: '600',
+              color: 'var(--text-primary)',
+              fontWeight: '500',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
-              boxShadow: `0 4px 6px -1px ${colors.icon}40`
             }}
-            onMouseOver={(e) => e.currentTarget.style.backgroundColor = colors.btnHover}
-            onMouseOut={(e) => e.currentTarget.style.backgroundColor = colors.btn}
+            className="hover-bg-secondary"
           >
-            <Check size={16} /> {isAlert ? 'Aceptar' : confirmText}
+            <X size={16} aria-hidden="true" /> {cancelText}
           </button>
-        </div>
+        )}
+        <button
+          type="button"
+          onClick={onConfirm}
+          style={{
+            padding: '8px 16px',
+            backgroundColor: colors.btn,
+            border: 'none',
+            borderRadius: '8px',
+            color: '#ffffff',
+            fontWeight: '600',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            boxShadow: `0 4px 6px -1px ${colors.icon}40`,
+          }}
+          onMouseOver={(e) => { e.currentTarget.style.backgroundColor = colors.btnHover; }}
+          onMouseOut={(e) => { e.currentTarget.style.backgroundColor = colors.btn; }}
+        >
+          <Check size={16} aria-hidden="true" /> {isAlert ? 'Aceptar' : confirmText}
+        </button>
       </div>
-    </div>
+    </NativeModalDialog>
   );
 }
