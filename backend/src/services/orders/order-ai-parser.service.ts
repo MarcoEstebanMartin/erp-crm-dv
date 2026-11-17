@@ -1,7 +1,12 @@
 import prisma from '../../utils/prisma';
 import { roundToIntegerPeso } from '../../core/money';
 import { geminiService } from '../gemini.service';
-import { isGeminiApiKeyConfigured, runGeminiInteraction } from '../ai/genai-client.helper';
+import {
+  DEFAULT_GEMINI_FLASH_MODEL,
+  FALLBACK_GEMINI_FLASH_LITE_MODEL,
+  isGeminiApiKeyConfigured,
+  runGeminiInteraction,
+} from '../ai/genai-client.helper';
 import { parseStructuredJsonText } from '../../validators/ai-schemas.validator';
 import { AI_ORDER_PARSE_JSON_SCHEMA, aiOrderParseResultValidator } from '../../validators/order-ai.validator';
 
@@ -251,7 +256,7 @@ export async function parseVendedorOrderWithAi(
     input.selectedClientId
       ? Promise.resolve([])
       : prisma.persona.findMany({
-          where: { type: 'CLIENT', isActive: true },
+          where: { isClient: true, isActive: true },
           select: { id: true, name: true, city: true, address: true },
           orderBy: { name: 'asc' },
           take: 500,
@@ -312,6 +317,7 @@ Tu tarea es interpretar el mensaje o dictado de un vendedor y devolver un borrad
         systemInstruction,
         input: userInput,
         jsonSchema: AI_ORDER_PARSE_JSON_SCHEMA,
+        preferredModels: [FALLBACK_GEMINI_FLASH_LITE_MODEL, DEFAULT_GEMINI_FLASH_MODEL],
       });
 
       const parsed = aiOrderParseResultValidator.parse(parseStructuredJsonText(responseText));

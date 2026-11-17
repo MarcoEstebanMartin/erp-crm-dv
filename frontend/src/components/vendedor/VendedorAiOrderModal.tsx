@@ -126,7 +126,12 @@ export const VendedorAiOrderModal: React.FC<VendedorAiOrderModalProps> = ({
   };
 
   const sendAudioBlob = (blob: Blob, fallbackMime: string) => {
-    if (blob.size === 0) return;
+    if (blob.size === 0) {
+      setErrorMsg('No se detectó audio en la grabación.');
+      return;
+    }
+    setLoading(true);
+    setErrorMsg(null);
     const mimeType = (blob.type || fallbackMime || 'audio/webm').split(';')[0];
     const reader = new FileReader();
     reader.onloadend = () => {
@@ -134,7 +139,14 @@ export const VendedorAiOrderModal: React.FC<VendedorAiOrderModalProps> = ({
       const base64 = resultStr.includes(',') ? resultStr.split(',')[1] : resultStr;
       if (base64) {
         void runParse({ audioBase64: base64, audioMimeType: mimeType });
+      } else {
+        setLoading(false);
+        setErrorMsg('No se pudo leer el audio grabado.');
       }
+    };
+    reader.onerror = () => {
+      setLoading(false);
+      setErrorMsg('Error al procesar el archivo de audio.');
     };
     reader.readAsDataURL(blob);
   };
