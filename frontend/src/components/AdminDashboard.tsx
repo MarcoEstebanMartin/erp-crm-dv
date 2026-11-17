@@ -28,6 +28,9 @@ const UnifiedReportsDashboard = lazy(() => import('./UnifiedReportsDashboard'));
 const FulfillmentDashboard = lazy(() => import('./admin/FulfillmentDashboard'));
 const RepartoDashboard = lazy(() => import('./RepartoDashboard'));
 const RendicionesDashboard = lazy(() => import('./RendicionesDashboard'));
+const FieldSettlementsTab = lazy(() =>
+  import('./field-receipts/FieldSettlementsTab').then((m) => ({ default: m.FieldSettlementsTab })),
+);
 const LogisticaDashboard = lazy(() => import('./LogisticaDashboard'));
 const ComprasDashboard = lazy(() => import('./ComprasDashboard'));
 const FinanzasDashboard = lazy(() => import('./FinanzasDashboard'));
@@ -165,6 +168,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
             {[
               { id: 'general', label: 'Finanzas', icon: <DollarSign size={15} aria-hidden="true" />, adminOnly: false },
               { id: 'rendiciones', label: 'Rendiciones', icon: <Receipt size={15} aria-hidden="true" />, adminOnly: false },
+              { id: 'field-receipts', label: 'Recibos Digitales', icon: <Receipt size={15} aria-hidden="true" />, adminOnly: false },
               { id: 'gastos', label: 'Gastos', icon: <DollarSign size={15} aria-hidden="true" />, adminOnly: false },
               { id: 'reportes', label: 'Reportes', icon: <TrendingUp size={15} aria-hidden="true" />, adminOnly: true },
             ]
@@ -185,7 +189,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
           </div>
 
           <Suspense fallback={<LoadingDashboard />}>
-            {c.cajasSubTab === 'general' ? <FinanzasDashboard /> : c.cajasSubTab === 'rendiciones' ? <RendicionesDashboard /> : c.cajasSubTab === 'gastos' ? <GastosDashboard /> : isAdmin ? <UnifiedReportsDashboard orders={c.orders} users={c.users} clients={c.clients} products={c.products} financialReport={c.financialReport} /> : <FinanzasDashboard />}
+            {c.cajasSubTab === 'general' ? <FinanzasDashboard /> : c.cajasSubTab === 'rendiciones' ? <RendicionesDashboard /> : c.cajasSubTab === 'field-receipts' ? <FieldSettlementsTab /> : c.cajasSubTab === 'gastos' ? <GastosDashboard /> : isAdmin ? <UnifiedReportsDashboard orders={c.orders} users={c.users} clients={c.clients} products={c.products} financialReport={c.financialReport} /> : <FinanzasDashboard />}
           </Suspense>
         </div>
       )}
