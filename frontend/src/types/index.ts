@@ -163,6 +163,9 @@ export interface Transaction {
   bankAccountId?: number;
   createdAt: string;
   verified: boolean;
+  verifiedById?: number | null;
+  verifiedBy?: { id: number; username: string } | null;
+  verifiedAt?: string | null;
 }
 
 export interface CashDrawer {

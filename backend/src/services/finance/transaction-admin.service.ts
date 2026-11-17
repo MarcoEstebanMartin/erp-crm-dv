@@ -42,6 +42,7 @@ export const transactionAdminService = {
       where: whereClause,
       include: {
         user: { select: { id: true, username: true } },
+        verifiedBy: { select: { id: true, username: true } },
         persona: { select: { id: true, name: true, isClient: true, isProvider: true } },
         cashDrawer: true,
         bankAccount: true,
@@ -57,6 +58,7 @@ export const transactionAdminService = {
       where: { id },
       include: {
         user: { select: { id: true, username: true } },
+        verifiedBy: { select: { id: true, username: true } },
         persona: { select: { id: true, name: true, isClient: true, isProvider: true } },
         cashDrawer: true,
         bankAccount: true,
@@ -130,11 +132,14 @@ export const transactionAdminService = {
         where: { id: params.txId },
         data: {
           verified: Boolean(params.verified),
+          verifiedById: params.verified ? params.userId : null,
+          verifiedAt: params.verified ? new Date() : null,
           amount: deltas.finalAmount,
           bankAccountId: resolvedBankAccountId,
         },
         include: {
           user: { select: { id: true, username: true } },
+          verifiedBy: { select: { id: true, username: true } },
           persona: { select: { id: true, name: true, isClient: true, isProvider: true } },
           cashDrawer: true,
           bankAccount: true,

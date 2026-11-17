@@ -292,7 +292,7 @@ export const FinanzasBankReconciliationModal: React.FC<FinanzasBankReconciliatio
                   {!t.verified && <input type="checkbox" aria-label={`Seleccionar transferencia ${t.persona?.name || t.id}`} checked={selectedTxs.has(t.id)} onChange={() => setSelectedTxs((prev) => { const n = new Set(prev); if (n.has(t.id)) n.delete(t.id); else n.add(t.id); return n; })} />}
                   <div style={{ minWidth: 0 }}>
                     <div style={{ fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.persona?.name || 'Mostrador'}</div>
-                    <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>{new Date(t.createdAt).toLocaleDateString('es-AR')}</div>
+                    <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>{new Date(t.createdAt).toLocaleDateString('es-AR')}{t.verified && t.verifiedBy?.username ? ` · Concilió: ${t.verifiedBy.username}` : ''}</div>
                   </div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>

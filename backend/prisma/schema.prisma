@@ -83,7 +83,8 @@ model User {
 
   // Relaciones
   orders         Order[]
-  transactions   Transaction[]
+  transactions   Transaction[] @relation("TransactionCreator")
+  verifiedTransactions Transaction[] @relation("TransactionVerifiedBy")
   stockMovements StockMovement[]
   auditLogs      AuditLog[]
   personas       Persona[]
@@ -433,7 +434,7 @@ model Transaction {
   personaId     Int?
   persona       Persona?        @relation(fields: [personaId], references: [id])
   userId        Int
-  user          User            @relation(fields: [userId], references: [id])
+  user          User            @relation("TransactionCreator", fields: [userId], references: [id])
   billingType   BillingType
   type          TransactionType
   paymentMethod PaymentMethod
@@ -462,12 +463,16 @@ model Transaction {
   accountLedgerEntries AccountLedger[]
   fieldReceipt         FieldReceipt?
 
-  createdAt DateTime @default(now())
-  verified  Boolean  @default(false)
+  createdAt    DateTime  @default(now())
+  verified     Boolean   @default(false)
+  verifiedById Int?
+  verifiedBy   User?     @relation("TransactionVerifiedBy", fields: [verifiedById], references: [id], onDelete: SetNull)
+  verifiedAt   DateTime?
 
   @@index([orderId])
   @@index([personaId])
   @@index([userId])
+  @@index([verifiedById])
   @@index([cashDrawerId])
   @@index([bankAccountId])
   @@index([supplierInvoiceId])

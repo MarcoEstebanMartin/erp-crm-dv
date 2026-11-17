@@ -75,13 +75,14 @@ export const FinanzasTransferenciasTab: React.FC<FinanzasTransferenciasTabProps>
               <th scope="col">Cliente</th>
               <th scope="col">Cuenta</th>
               <th scope="col">Estado</th>
+              <th scope="col">Concilió</th>
               <th scope="col" style={{ textAlign: 'right' }}>Monto</th>
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={5} style={{ textAlign: 'center', padding: '24px', color: 'var(--text-secondary)' }}>
+                <td colSpan={6} style={{ textAlign: 'center', padding: '24px', color: 'var(--text-secondary)' }}>
                   Sin transferencias
                 </td>
               </tr>
@@ -106,6 +107,20 @@ export const FinanzasTransferenciasTab: React.FC<FinanzasTransferenciasTabProps>
                     >
                       {t.verified ? 'Conciliada' : 'Pendiente'}
                     </span>
+                  </td>
+                  <td style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                    {t.verified && t.verifiedBy?.username ? (
+                      <div>
+                        <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{t.verifiedBy.username}</div>
+                        {t.verifiedAt && (
+                          <div style={{ fontSize: '0.72rem' }}>
+                            {new Date(t.verifiedAt).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' })}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      '—'
+                    )}
                   </td>
                   <td className="tabular-nums" style={{ textAlign: 'right', fontWeight: 700, fontFamily: 'monospace', color: '#0f766e' }}>
                     +${Math.round(Number(t.amount)).toLocaleString('es-AR')}
