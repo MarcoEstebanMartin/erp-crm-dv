@@ -209,6 +209,10 @@ export async function parseVendedorOrderWithAi(
     const cleaned = (transcription.rawText || '').trim();
     if (cleaned && !cleaned.startsWith('Nota de voz recibida')) {
       transcribedText = cleaned;
+    } else if (!input.text?.trim()) {
+      throw new Error(
+        'No se pudo transcribir el audio con Gemini (verificá que GEMINI_API_KEY sea una clave válida de Google AI Studio).',
+      );
     }
   }
 

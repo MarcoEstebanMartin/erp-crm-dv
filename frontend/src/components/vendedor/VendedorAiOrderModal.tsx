@@ -295,6 +295,12 @@ export const VendedorAiOrderModal: React.FC<VendedorAiOrderModalProps> = ({
             </button>
           </div>
 
+          {loading && (
+            <div style={{ padding: '10px 12px', borderRadius: '8px', backgroundColor: '#f8fafc', border: '1px solid var(--border-color)', color: 'var(--text-primary)', fontSize: '0.84rem', fontWeight: 600, textAlign: 'center' }}>
+              Procesando pedido con IA...
+            </div>
+          )}
+
           {errorMsg && (
             <div style={{ padding: '10px 12px', borderRadius: '8px', backgroundColor: 'rgba(var(--color-corp-red-rgb), 0.08)', color: 'var(--color-corp-red)', fontSize: '0.82rem', fontWeight: 600 }}>
               {errorMsg}
