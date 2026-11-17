@@ -237,18 +237,33 @@ export default function FinanzasDashboard() {
         />
 
         <div className="card" style={{ padding: '20px' }}>
-          <h3 style={{ margin: '0 0 12px 0', fontSize: '1.05rem', fontWeight: 600 }}>Transferencias</h3>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', gap: '8px' }}>
+            <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 600 }}>Transferencias</h3>
+            {(() => {
+              const pendingCount = m.transfers.filter((t: any) => !t.verified).length;
+              return pendingCount > 0 ? (
+                <span style={{ fontSize: '0.72rem', fontWeight: 600, padding: '2px 8px', borderRadius: '999px', backgroundColor: '#fef3c7', color: '#b45309' }}>
+                  {pendingCount} {pendingCount === 1 ? 'pendiente' : 'pendientes'}
+                </span>
+              ) : null;
+            })()}
+          </div>
           <div className="table-container" role="region" aria-label="Transferencias del período" tabIndex={0} style={{ maxHeight: '260px', marginTop: 0 }}>
             <table style={{ fontSize: '0.82rem' }}>
-              <thead><tr><th scope="col">Fecha</th><th scope="col">Cliente</th><th scope="col">Cuenta</th><th scope="col" style={{ textAlign: 'right' }}>Monto</th></tr></thead>
+              <thead><tr><th scope="col">Fecha</th><th scope="col">Cliente</th><th scope="col">Cuenta</th><th scope="col">Estado</th><th scope="col" style={{ textAlign: 'right' }}>Monto</th></tr></thead>
               <tbody>
                 {m.transfers.length === 0 ? (
-                  <tr><td colSpan={4} style={{ textAlign: 'center', padding: '20px', color: 'var(--text-secondary)' }}>Sin transferencias</td></tr>
+                  <tr><td colSpan={5} style={{ textAlign: 'center', padding: '20px', color: 'var(--text-secondary)' }}>Sin transferencias</td></tr>
                 ) : m.transfers.map((t: any) => (
                   <tr key={t.id}>
                     <td>{new Date(t.createdAt).toLocaleDateString('es-AR')}</td>
                     <td style={{ fontWeight: 600 }}>{t.persona?.name || 'Varios'}</td>
-                    <td style={{ color: 'var(--text-secondary)' }}>{t.bankAccount?.name || 'Banco'}</td>
+                    <td style={{ color: 'var(--text-secondary)' }}>{t.bankAccount?.name || 'Sin cuenta'}</td>
+                    <td>
+                      <span style={{ fontSize: '0.72rem', fontWeight: 600, padding: '2px 7px', borderRadius: '999px', backgroundColor: t.verified ? '#dcfce7' : '#fef3c7', color: t.verified ? '#15803d' : '#b45309' }}>
+                        {t.verified ? 'Conciliada' : 'Pendiente'}
+                      </span>
+                    </td>
                     <td className="tabular-nums" style={{ textAlign: 'right', fontWeight: 700, fontFamily: 'monospace', color: '#0f766e' }}>+${Math.round(Number(t.amount)).toLocaleString('es-AR')}</td>
                   </tr>
                 ))}

@@ -14,6 +14,37 @@ export const formatPaymentMethodLabel = (method?: string | null): string => {
   }
 };
 
+/** Parsea montos de CSV en formato argentino ($18.224,50) o internacional (18224.50 / 18,224.50). */
+export const parseCsvAmount = (raw: string): number => {
+  const cleaned = String(raw || '').replace(/[^\d.,-]/g, '').trim();
+  if (!cleaned) return 0;
+
+  const lastDot = cleaned.lastIndexOf('.');
+  const lastComma = cleaned.lastIndexOf(',');
+  let normalized = cleaned;
+
+  if (lastDot !== -1 && lastComma !== -1) {
+    normalized = lastDot > lastComma
+      ? cleaned.replace(/,/g, '')
+      : cleaned.replace(/\./g, '').replace(',', '.');
+  } else if (lastComma !== -1) {
+    const commaCount = (cleaned.match(/,/g) || []).length;
+    if (commaCount > 1 || /^-?\d{1,3}(,\d{3})+$/.test(cleaned)) {
+      normalized = cleaned.replace(/,/g, '');
+    } else {
+      normalized = cleaned.replace(',', '.');
+    }
+  } else if (lastDot !== -1) {
+    const dotCount = (cleaned.match(/\./g) || []).length;
+    if (dotCount > 1 || /^-?\d{1,3}(\.\d{3})+$/.test(cleaned)) {
+      normalized = cleaned.replace(/\./g, '');
+    }
+  }
+
+  const parsed = parseFloat(normalized);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
 export const parseMercadoPagoCsv = (text: string): any[] => {
   const lines = text.split(/\r?\n/).map((line) => line.trim()).filter((line) => line.length > 0);
   if (lines.length < 2) return [];
@@ -47,7 +78,7 @@ export const parseMercadoPagoCsv = (text: string): any[] => {
         cells = line.split(';').map((c) => c.replace(/^"|"$/g, '').trim());
       }
       if (cells.length <= Math.max(amountIdx, dateIdx, idIdx)) return null;
-      const rawAmount = cells[amountIdx] ? parseFloat(cells[amountIdx].replace(/[$.]/g, '').replace(',', '.')) : 0;
+      const rawAmount = cells[amountIdx] ? parseCsvAmount(cells[amountIdx]) : 0;
       return {
         id: idIdx !== -1 && cells[idIdx] ? cells[idIdx] : `row-${rowIdx}`,
         amount: Math.abs(rawAmount),

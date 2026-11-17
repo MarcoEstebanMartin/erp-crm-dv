@@ -53,13 +53,19 @@ export const FinanzasBankReconciliationModal: React.FC<FinanzasBankReconciliatio
     setReconLoading(true); setReconError(null);
     try {
       const [allTxs, allClients] = await Promise.all([
-        api.getTransactions({ bankAccountId: Number(bankId), paymentMethod: 'BANK_TRANSFER' }),
+        api.getTransactions({ paymentMethod: 'BANK_TRANSFER' }),
         api.getPersonas('client'),
       ]);
       const startDT = new Date(`${startDt}T${startTm}:00`), endDT = new Date(`${endDt}T${endTm}:59`);
-      setReconTransactions((allTxs || []).filter((t: any) => { const d = new Date(t.createdAt); return d >= startDT && d <= endDT; }));
+      setReconTransactions(
+        (allTxs || []).filter((t: any) => {
+          const sameOrUnassignedBank = !t.bankAccountId || Number(t.bankAccountId) === Number(bankId);
+          const d = new Date(t.createdAt);
+          return sameOrUnassignedBank && t.type === 'INCOME' && d >= startDT && d <= endDT;
+        }),
+      );
       setSelectedTxs(new Set());
-      setClients(allClients || []);
+      setClients([...(allClients || [])].sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''))));
     } catch { setReconError('Error al cargar datos para conciliar.'); } finally { setReconLoading(false); }
   };
 
@@ -97,6 +103,15 @@ export const FinanzasBankReconciliationModal: React.FC<FinanzasBankReconciliatio
       await Promise.all(exacts.map((x) => api.verifyTransaction(x.m.tx.id, true)));
       setReconciledRows((prev) => { const next = new Set(prev); exacts.forEach((x) => next.add(x.row.id)); return next; });
     }, 'Error al conciliar en lote.');
+  };
+
+  const handleVerifySelected = async () => {
+    const ids = Array.from(selectedTxs);
+    if (ids.length === 0 || !(await confirm(`¿Verificar las ${ids.length} transferencias seleccionadas?`))) return;
+    await runReconAction(async () => {
+      await Promise.all(ids.map((id) => api.verifyTransaction(id, true)));
+      setSelectedTxs(new Set());
+    }, 'Error al verificar transferencias seleccionadas.');
   };
 
   const handleTabKeyDown = (e: KeyboardEvent<HTMLButtonElement>, idx: number) => {
@@ -194,7 +209,7 @@ export const FinanzasBankReconciliationModal: React.FC<FinanzasBankReconciliatio
                           {mInfo.status === 'no_match' && (
                             <select aria-label={`Vincular cliente para operación ${row.id}`} className="select" style={{ marginTop: '6px', height: '28px', fontSize: '0.74rem', maxWidth: '280px' }} value="" onChange={(e) => { const c = clients.find((cl) => cl.id === Number(e.target.value)); if (c) setManualMatches((prev) => ({ ...prev, [row.id]: c })); }}>
                               <option value="">Vincular cliente...</option>
-                              {clients.slice(0, 80).map((c) => (<option key={c.id} value={c.id}>{c.name}</option>))}
+                              {clients.map((c) => (<option key={c.id} value={c.id}>{c.name}</option>))}
                             </select>
                           )}
                         </div>
@@ -219,13 +234,23 @@ export const FinanzasBankReconciliationModal: React.FC<FinanzasBankReconciliatio
         </div>
 
         <div style={{ flex: '1 1 320px', borderLeft: '1px solid var(--border-color)', paddingLeft: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
             <h4 style={{ margin: 0, fontSize: '0.9rem', fontWeight: 700 }}>Transferencias en ERP ({reconTransactions.length})</h4>
-            {reconTransactions.length > 0 && (
-              <button type="button" className="btn btn-ghost" style={{ fontSize: '0.72rem', padding: '2px 6px' }} onClick={() => setSelectedTxs((prev) => prev.size === reconTransactions.length ? new Set() : new Set(reconTransactions.map((t) => t.id)))}>
-                {selectedTxs.size === reconTransactions.length ? 'Deseleccionar' : 'Todo'}
-              </button>
-            )}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              {selectedTxs.size > 0 && (
+                <button type="button" className="btn btn-primary" disabled={reconLoading} style={{ backgroundColor: '#10b981', borderColor: '#10b981', fontSize: '0.72rem', padding: '3px 8px' }} onClick={handleVerifySelected}>
+                  Verificar ({selectedTxs.size})
+                </button>
+              )}
+              {reconTransactions.some((t) => !t.verified) && (
+                <button type="button" className="btn btn-ghost" style={{ fontSize: '0.72rem', padding: '2px 6px' }} onClick={() => {
+                  const unverifiedIds = reconTransactions.filter((t) => !t.verified).map((t) => t.id);
+                  setSelectedTxs((prev) => prev.size === unverifiedIds.length ? new Set() : new Set(unverifiedIds));
+                }}>
+                  {selectedTxs.size === reconTransactions.filter((t) => !t.verified).length ? 'Deseleccionar' : 'Todo'}
+                </button>
+              )}
+            </div>
           </div>
           <div style={{ maxHeight: '380px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px' }}>
             {reconTransactions.map((t: any) => (
