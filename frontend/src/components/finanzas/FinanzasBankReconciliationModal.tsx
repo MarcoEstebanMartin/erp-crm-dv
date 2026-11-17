@@ -35,6 +35,7 @@ export const FinanzasBankReconciliationModal: React.FC<FinanzasBankReconciliatio
   const [clients, setClients] = useState<any[]>([]);
   const [csvRows, setCsvRows] = useState<any[]>([]);
   const [reconciledRows, setReconciledRows] = useState<Set<string>>(new Set());
+  const [ignoredRows, setIgnoredRows] = useState<Set<string>>(new Set());
   const [manualMatches, setManualMatches] = useState<Record<string, any>>({});
   const [csvSearchQuery, setCsvSearchQuery] = useState('');
   const [csvFilterTab, setCsvFilterTab] = useState<CsvFilterKey>('all');
@@ -81,7 +82,19 @@ export const FinanzasBankReconciliationModal: React.FC<FinanzasBankReconciliatio
       if (!text) return;
       const parsed = parseMercadoPagoCsv(text);
       if (parsed.length === 0) { setReconError('No se encontraron ingresos válidos en el archivo CSV.'); return; }
-      setCsvRows(parsed); setReconciledRows(new Set()); setManualMatches({});
+      setCsvRows(parsed); setReconciledRows(new Set()); setIgnoredRows(new Set()); setManualMatches({});
+      const timestamps = parsed.map((r) => new Date(r.date).getTime()).filter((t) => Number.isFinite(t));
+      if (timestamps.length > 0) {
+        const minDt = new Date(Math.min(...timestamps));
+        minDt.setDate(minDt.getDate() - 1);
+        const maxDt = new Date(Math.max(...timestamps));
+        const toIsoDate = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        const nextStart = toIsoDate(minDt);
+        const nextEnd = toIsoDate(maxDt);
+        setReconStartDate(nextStart);
+        setReconEndDate(nextEnd);
+        if (reconBankId) fetchReconciliationData(reconBankId, nextStart, nextEnd, reconStartTime, reconEndTime);
+      }
     };
     reader.readAsText(file);
   };
@@ -97,7 +110,7 @@ export const FinanzasBankReconciliationModal: React.FC<FinanzasBankReconciliatio
   };
 
   const handleReconcileAllExact = async () => {
-    const exacts = csvRows.map((r) => ({ row: r, m: getRowMatchStatus(r) })).filter((x) => x.m.status === 'exact' && x.m.tx);
+    const exacts = csvRows.filter((r) => !ignoredRows.has(r.id)).map((r) => ({ row: r, m: getRowMatchStatus(r) })).filter((x) => x.m.status === 'exact' && x.m.tx);
     if (exacts.length === 0 || !(await confirm(`¿Conciliar las ${exacts.length} transferencias exactas en lote?`))) return;
     await runReconAction(async () => {
       const bankIdNum = Number(reconBankId) || undefined;
@@ -152,14 +165,14 @@ export const FinanzasBankReconciliationModal: React.FC<FinanzasBankReconciliatio
           <label htmlFor="recon-start-date" style={{ fontSize: '0.75rem', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Desde</label>
           <div style={{ display: 'flex', gap: '6px' }}>
             <input id="recon-start-date" type="date" className="input" value={reconStartDate} onChange={(e) => setReconStartDate(e.target.value)} style={{ flex: 1, height: '36px' }} />
-            <input type="time" aria-label="Hora desde" className="input" value={reconStartTime} onChange={(e) => setReconStartTime(e.target.value)} style={{ width: '100px', height: '36px' }} />
+            <input type="time" aria-label="Hora desde" className="input" value={reconStartTime} onChange={(e) => setReconStartTime(e.target.value)} style={{ width: '115px', height: '36px' }} />
           </div>
         </div>
         <div>
           <label htmlFor="recon-end-date" style={{ fontSize: '0.75rem', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Hasta</label>
           <div style={{ display: 'flex', gap: '6px' }}>
             <input id="recon-end-date" type="date" className="input" value={reconEndDate} onChange={(e) => setReconEndDate(e.target.value)} style={{ flex: 1, height: '36px' }} />
-            <input type="time" aria-label="Hora hasta" className="input" value={reconEndTime} onChange={(e) => setReconEndTime(e.target.value)} style={{ width: '100px', height: '36px' }} />
+            <input type="time" aria-label="Hora hasta" className="input" value={reconEndTime} onChange={(e) => setReconEndTime(e.target.value)} style={{ width: '115px', height: '36px' }} />
           </div>
         </div>
         <button type="button" className="btn btn-secondary" disabled={reconLoading} onClick={reload} style={{ height: '36px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '6px' }}>
@@ -186,21 +199,26 @@ export const FinanzasBankReconciliationModal: React.FC<FinanzasBankReconciliatio
                 )}
               </search>
               <div role="tablist" aria-label="Estado de cruce CSV" className="linear-tablist">
-                {CSV_FILTER_TABS.map((t, idx) => (
-                  <button key={t.id} ref={(el) => { tabRefs.current[idx] = el; }} type="button" role="tab" aria-selected={csvFilterTab === t.id} tabIndex={csvFilterTab === t.id ? 0 : -1} className="linear-tab" onClick={() => setCsvFilterTab(t.id)} onKeyDown={(e) => handleTabKeyDown(e, idx)}>
-                    {t.label}
-                  </button>
-                ))}
+                {CSV_FILTER_TABS.map((t, idx) => {
+                  const activeRows = csvRows.filter((r) => !ignoredRows.has(r.id));
+                  const count = t.id === 'all' ? activeRows.length : activeRows.filter((r) => getRowMatchStatus(r).status === t.id).length;
+                  return (
+                    <button key={t.id} ref={(el) => { tabRefs.current[idx] = el; }} type="button" role="tab" aria-selected={csvFilterTab === t.id} tabIndex={csvFilterTab === t.id ? 0 : -1} className="linear-tab" onClick={() => setCsvFilterTab(t.id)} onKeyDown={(e) => handleTabKeyDown(e, idx)}>
+                      {t.label} ({count})
+                    </button>
+                  );
+                })}
               </div>
               <div style={{ maxHeight: '380px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {csvRows
+                  .filter((row) => !ignoredRows.has(row.id))
                   .filter((row) => csvFilterTab === 'all' || getRowMatchStatus(row).status === csvFilterTab)
                   .filter((row) => !csvSearchQuery.trim() || row.payerName.toLowerCase().includes(csvSearchQuery.toLowerCase()) || row.payerCuit.includes(csvSearchQuery) || row.id.includes(csvSearchQuery))
                   .map((row) => {
                     const mInfo = getRowMatchStatus(row);
                     return (
                       <div key={row.id} style={{ padding: '12px', border: '1px solid var(--border-color)', borderRadius: '8px', backgroundColor: mInfo.status === 'exact' ? '#eaf9ee' : mInfo.status === 'rounding' ? '#fff8e1' : '#ffffff', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}>
-                        <div style={{ flex: 1 }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ fontSize: '0.82rem', fontWeight: 700 }}>
                             {row.payerName || 'Pagador sin nombre'}{' '}
                             {row.payerCuit && <span className="tabular-nums" style={{ fontFamily: 'monospace', fontSize: '0.72rem', color: 'var(--text-secondary)' }}>({row.payerCuit})</span>}
@@ -209,18 +227,23 @@ export const FinanzasBankReconciliationModal: React.FC<FinanzasBankReconciliatio
                           {mInfo.status === 'exact' && mInfo.tx && <div style={{ fontSize: '0.74rem', color: '#137333', marginTop: '4px' }}>ERP #{mInfo.tx.receiptNumber || mInfo.tx.id} ({mInfo.tx.persona?.name})</div>}
                           {mInfo.status === 'unregistered' && mInfo.client && <div style={{ fontSize: '0.74rem', color: '#1a73e8', marginTop: '4px' }}>Cliente: <strong>{mInfo.client.name}</strong></div>}
                           {mInfo.status === 'no_match' && (
-                            <select aria-label={`Vincular cliente para operación ${row.id}`} className="select" style={{ marginTop: '6px', height: '28px', fontSize: '0.74rem', maxWidth: '280px' }} value="" onChange={(e) => { const c = clients.find((cl) => cl.id === Number(e.target.value)); if (c) setManualMatches((prev) => ({ ...prev, [row.id]: c })); }}>
+                            <select aria-label={`Vincular cliente para operación ${row.id}`} className="select" style={{ marginTop: '6px', height: '34px', padding: '4px 8px', fontSize: '0.78rem', lineHeight: '1.2', maxWidth: '280px' }} value="" onChange={(e) => { const c = clients.find((cl) => cl.id === Number(e.target.value)); if (c) setManualMatches((prev) => ({ ...prev, [row.id]: c })); }}>
                               <option value="">Vincular cliente...</option>
                               {clients.map((c) => (<option key={c.id} value={c.id}>{c.name}</option>))}
                             </select>
                           )}
                         </div>
-                        <div style={{ textAlign: 'right' }}>
+                        <div style={{ textAlign: 'right', flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
                           <div className="tabular-nums" style={{ fontWeight: 700, fontFamily: 'monospace', fontSize: '1rem' }}>${Math.round(row.amount).toLocaleString('es-AR')}</div>
-                          {mInfo.status === 'exact' && mInfo.tx && <button type="button" className="btn btn-sm" style={{ backgroundColor: '#10b981', color: '#fff', fontSize: '0.72rem', padding: '4px 8px', marginTop: '4px' }} onClick={() => runReconAction(() => api.verifyTransaction(mInfo.tx.id, true, row.amount, Number(reconBankId) || undefined), 'Error al conciliar.', row.id)}>Conciliar</button>}
-                          {mInfo.status === 'rounding' && mInfo.tx && <button type="button" className="btn btn-sm" style={{ backgroundColor: '#f59e0b', color: '#fff', fontSize: '0.72rem', padding: '4px 8px', marginTop: '4px' }} onClick={() => runReconAction(() => api.verifyTransaction(mInfo.tx.id, true, row.amount, Number(reconBankId) || undefined), 'Error al conciliar.', row.id)}>Ajustar y Conciliar</button>}
-                          {mInfo.status === 'unregistered' && mInfo.client && <button type="button" className="btn btn-sm" style={{ backgroundColor: '#3b82f6', color: '#fff', fontSize: '0.72rem', padding: '4px 8px', marginTop: '4px' }} onClick={() => runReconAction(async () => { const res = await api.registerPayment(mInfo.client.id, { amount: row.amount, paymentMethod: 'BANK_TRANSFER', description: `Cobro MP Conciliación - Op ${row.id} - Payer: ${row.payerName}`, branch: 'X', type: 'INCOME', bankAccountId: Number(reconBankId) }); if (res?.transaction?.id) await api.verifyTransaction(res.transaction.id, true, undefined, Number(reconBankId) || undefined); }, 'Error al registrar cobro.', row.id)}>Registrar Cobro</button>}
-                          {mInfo.status === 'reconciled' && <span style={{ fontSize: '0.72rem', color: '#10b981', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '3px' }}><Check size={13} aria-hidden="true" /> Listo</span>}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            {(mInfo.status === 'no_match' || mInfo.status === 'unregistered') && (
+                              <button type="button" className="btn btn-ghost" style={{ fontSize: '0.7rem', padding: '4px 6px', color: 'var(--text-secondary)' }} onClick={() => setIgnoredRows((prev) => new Set(prev).add(row.id))}>Omitir</button>
+                            )}
+                            {mInfo.status === 'exact' && mInfo.tx && <button type="button" className="btn btn-sm" style={{ backgroundColor: '#10b981', color: '#fff', fontSize: '0.72rem', padding: '4px 10px', whiteSpace: 'nowrap' }} onClick={() => runReconAction(() => api.verifyTransaction(mInfo.tx.id, true, row.amount, Number(reconBankId) || undefined), 'Error al conciliar.', row.id)}>Conciliar</button>}
+                            {mInfo.status === 'rounding' && mInfo.tx && <button type="button" className="btn btn-sm" style={{ backgroundColor: '#f59e0b', color: '#fff', fontSize: '0.72rem', padding: '4px 10px', whiteSpace: 'nowrap' }} onClick={() => runReconAction(() => api.verifyTransaction(mInfo.tx.id, true, row.amount, Number(reconBankId) || undefined), 'Error al conciliar.', row.id)}>Ajustar y Conciliar</button>}
+                            {mInfo.status === 'unregistered' && mInfo.client && <button type="button" className="btn btn-sm" style={{ backgroundColor: '#3b82f6', color: '#fff', fontSize: '0.72rem', padding: '4px 10px', whiteSpace: 'nowrap' }} onClick={() => runReconAction(async () => { const res = await api.registerPayment(mInfo.client.id, { amount: row.amount, paymentMethod: 'BANK_TRANSFER', description: `Cobro MP Conciliación - Op ${row.id} - Payer: ${row.payerName}`, branch: 'X', type: 'INCOME', bankAccountId: Number(reconBankId) }); if (res?.transaction?.id) await api.verifyTransaction(res.transaction.id, true, undefined, Number(reconBankId) || undefined); }, 'Error al registrar cobro.', row.id)}>Registrar Cobro</button>}
+                            {mInfo.status === 'reconciled' && <span style={{ fontSize: '0.72rem', color: '#10b981', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '3px' }}><Check size={13} aria-hidden="true" /> Listo</span>}
+                          </div>
                         </div>
                       </div>
                     );
