@@ -256,7 +256,6 @@ export const VendedorAiOrderModal: React.FC<VendedorAiOrderModalProps> = ({
                   ref={fileInputRef}
                   type="file"
                   accept="audio/*"
-                  capture="user"
                   onChange={handleAudioFileChange}
                   style={{ display: 'none' }}
                 />
