@@ -367,12 +367,14 @@ export function OfficialInvoiceView({ invoice }: OfficialInvoiceViewProps) {
                   lineHeight: 1.25,
                 }}
               >
-                P. Unit
-                {isFacturaAOfficial && (
+                {isFacturaAOfficial ? (
                   <>
+                    Precio
                     <br />
-                    <span style={{ fontWeight: 500, color: '#9ca3af' }}>(s/ IVA)</span>
+                    <span style={{ fontWeight: 500, color: '#9ca3af' }}>(c/ IVA)</span>
                   </>
+                ) : (
+                  'P. Unit'
                 )}
               </th>
               <th
@@ -389,12 +391,14 @@ export function OfficialInvoiceView({ invoice }: OfficialInvoiceViewProps) {
                   lineHeight: 1.25,
                 }}
               >
-                Importe
-                {isFacturaAOfficial && (
+                {isFacturaAOfficial ? (
                   <>
+                    Total
                     <br />
                     <span style={{ fontWeight: 500, color: '#9ca3af' }}>(s/ IVA)</span>
                   </>
+                ) : (
+                  'Total'
                 )}
               </th>
             </tr>
@@ -402,9 +406,7 @@ export function OfficialInvoiceView({ invoice }: OfficialInvoiceViewProps) {
           <tbody>
             {items.map((item: any, idx: number) => {
               const isLast = idx === items.length - 1;
-              const displayPrice = isFacturaAOfficial
-                ? Number(item.unitPrice || 0) / 1.21
-                : Number(item.unitPrice || 0);
+              const displayPrice = Number(item.unitPrice || 0);
               const displaySubtotal = isFacturaAOfficial
                 ? Number(item.subtotal || 0) / 1.21
                 : Number(item.subtotal || 0);
