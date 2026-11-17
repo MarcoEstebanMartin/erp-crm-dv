@@ -73,8 +73,13 @@ export function OfficialInvoiceView({ invoice }: OfficialInvoiceViewProps) {
         color: '#111827',
         fontSize: '0.8rem',
         lineHeight: 1.38,
+        minHeight: '262mm',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'space-between',
       }}
     >
+      <div>
       {/* Header Oficial Minimalista: Logo + Empresa | Letra AFIP | Comprobante y Datos Fiscales */}
       <div
         style={{
@@ -471,8 +476,11 @@ export function OfficialInvoiceView({ invoice }: OfficialInvoiceViewProps) {
           </tbody>
         </table>
       </div>
+      </div>
 
-      <InvoicePreviewFooter invoice={invoice} isOfficial={true} decimalOptions={decimalOptions} />
+      <div style={{ paddingTop: '12px' }}>
+        <InvoicePreviewFooter invoice={invoice} isOfficial={true} decimalOptions={decimalOptions} />
+      </div>
     </div>
   );
 }

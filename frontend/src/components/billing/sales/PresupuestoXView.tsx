@@ -53,8 +53,13 @@ export function PresupuestoXView({ invoice }: PresupuestoXViewProps) {
         color: '#111827',
         fontSize: '0.8rem',
         lineHeight: 1.38,
+        minHeight: '262mm',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'space-between',
       }}
     >
+      <div>
       {/* Header minimalista sin datos de la distribuidora */}
       <div
         style={{
@@ -320,6 +325,7 @@ export function PresupuestoXView({ invoice }: PresupuestoXViewProps) {
           </tbody>
         </table>
       </div>
+      </div>
 
       {/* Footer minimalista */}
       <div
@@ -328,6 +334,7 @@ export function PresupuestoXView({ invoice }: PresupuestoXViewProps) {
           justifyContent: 'space-between',
           alignItems: 'flex-end',
           gap: '20px',
+          paddingTop: '12px',
         }}
       >
         <div style={{ fontSize: '0.72rem', color: '#9ca3af' }}>
