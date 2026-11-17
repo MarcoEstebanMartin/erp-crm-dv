@@ -218,6 +218,9 @@ export default function HomeTab({
           routes={pendingRendicionesDetails.routes}
           loading={loadingRendicionesDetails}
           onOpenRendiciones={() => setActiveTab('rendiciones')}
+          onRendicionCompleted={() =>
+            void queryClient.invalidateQueries({ queryKey: HOME_QUERY_KEYS.pendingRendiciones })
+          }
         />
       </div>
 

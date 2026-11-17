@@ -10,7 +10,7 @@ import {
   getDetectedRoutesAndCities,
 } from './types';
 
-export function useRendicionesAudit() {
+export function useRendicionesAudit(options?: { onSuccess?: () => void }) {
   const confirm = useConfirm();
   const [sellers, setSellers] = useState<SellerGroup[]>([]);
   const [routes, setRoutes] = useState<RouteGroup[]>([]);
@@ -154,6 +154,7 @@ export function useRendicionesAudit() {
       }
 
       fetchRendiciones();
+      options?.onSuccess?.();
       setSuccessMsg(res.message || 'Recibo eliminado.');
       setTimeout(() => setSuccessMsg(null), 4000);
     } catch (err: any) {
@@ -208,6 +209,7 @@ export function useRendicionesAudit() {
 
       handleCloseAudit();
       fetchRendiciones();
+      options?.onSuccess?.();
     } catch (err: any) {
       console.error(err);
       setErrorMsg(err.message || 'Error al confirmar el arqueo.');

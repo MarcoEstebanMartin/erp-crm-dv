@@ -1,12 +1,14 @@
-import { useState } from 'react';
 import { ChevronRight } from 'lucide-react';
-import { PendingReceiptsSummaryModal, type PendingReceiptGroup } from './PendingReceiptsSummaryModal';
+import { useRendicionesAudit } from '../../rendiciones/useRendicionesAudit';
+import RendicionAuditModal from '../../rendiciones/RendicionAuditModal';
+import ArqueoResultModal from '../../rendiciones/ArqueoResultModal';
 
 interface HomePendingCashCardProps {
   sellers: any[];
   routes: any[];
   loading: boolean;
   onOpenRendiciones: () => void;
+  onRendicionCompleted?: () => void;
 }
 
 const formatPeso = (value: number) => `$${Math.round(value).toLocaleString('es-AR')}`;
@@ -16,8 +18,9 @@ export function HomePendingCashCard({
   routes,
   loading,
   onOpenRendiciones,
+  onRendicionCompleted,
 }: HomePendingCashCardProps) {
-  const [selectedGroup, setSelectedGroup] = useState<PendingReceiptGroup | null>(null);
+  const audit = useRendicionesAudit({ onSuccess: onRendicionCompleted });
   const pendingCount = sellers.length + routes.length;
 
   return (
@@ -117,16 +120,7 @@ export function HomePendingCashCard({
                 checks={checks}
                 transfers={transfers}
                 total={total}
-                onClick={() =>
-                  setSelectedGroup({
-                    label: name,
-                    transactions: s.transactions || [],
-                    totalCash: cash,
-                    totalChecks: checks,
-                    totalTransfers: transfers,
-                    totalToCollect: total,
-                  })
-                }
+                onClick={() => audit.handleOpenAudit('seller', s)}
               />
             );
           })}
@@ -149,26 +143,42 @@ export function HomePendingCashCard({
                 checks={checks}
                 transfers={transfers}
                 total={total}
-                onClick={() =>
-                  setSelectedGroup({
-                    label,
-                    transactions: r.transactions || [],
-                    totalCash: cash,
-                    totalChecks: checks,
-                    totalTransfers: transfers,
-                    totalToCollect: total,
-                  })
-                }
+                onClick={() => audit.handleOpenAudit('route', r)}
               />
             );
           })}
         </div>
       )}
 
-      <PendingReceiptsSummaryModal
-        group={selectedGroup}
-        onClose={() => setSelectedGroup(null)}
-        onGoToRendiciones={onOpenRendiciones}
+      <RendicionAuditModal
+        auditTarget={audit.auditTarget}
+        errorMsg={audit.errorMsg}
+        actionLoading={audit.actionLoading}
+        realCash={audit.realCash}
+        onRealCashChange={audit.setRealCash}
+        realChecks={audit.realChecks}
+        onRealChecksChange={audit.setRealChecks}
+        declaredChecksList={audit.declaredChecksList}
+        newCheckNumber={audit.newCheckNumber}
+        onNewCheckNumberChange={audit.setNewCheckNumber}
+        newCheckBank={audit.newCheckBank}
+        onNewCheckBankChange={audit.setNewCheckBank}
+        newCheckAmount={audit.newCheckAmount}
+        onNewCheckAmountChange={audit.setNewCheckAmount}
+        onAddCheck={audit.handleAddDeclaredCheck}
+        onRemoveCheck={audit.handleRemoveDeclaredCheck}
+        auditRouteNote={audit.auditRouteNote}
+        onAuditRouteNoteChange={audit.setAuditRouteNote}
+        auditNotes={audit.auditNotes}
+        onAuditNotesChange={audit.setAuditNotes}
+        onDeleteReceipt={audit.handleDeleteReceipt}
+        onClose={audit.handleCloseAudit}
+        onSubmit={audit.handleVerifySubmit}
+      />
+
+      <ArqueoResultModal
+        arqueoResult={audit.arqueoResult}
+        onClose={() => audit.setArqueoResult(null)}
       />
     </section>
   );

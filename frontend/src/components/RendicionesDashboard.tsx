@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { CheckCircle, RefreshCw, AlertCircle, ShieldCheck, X } from 'lucide-react';
 import ArqueoCajaModal from './ArqueoCajaModal';
 import type { RendicionesTabType, RouteGroup, SellerGroup } from './rendiciones/types';
@@ -15,6 +15,7 @@ export type { SellerGroup, RouteGroup };
 
 const RendicionesDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState<RendicionesTabType>('sellers');
+  const hasAutoSelectedTab = useRef(false);
 
   const audit = useRendicionesAudit();
   const deposit = useDepositDrawers();
@@ -23,6 +24,16 @@ const RendicionesDashboard: React.FC = () => {
     audit.fetchRendiciones();
     deposit.fetchDrawers();
   }, []);
+
+  useEffect(() => {
+    if (hasAutoSelectedTab.current || audit.loading) return;
+    if (audit.sellers.length > 0 || audit.routes.length > 0) {
+      hasAutoSelectedTab.current = true;
+      if (audit.sellers.length === 0 && audit.routes.length > 0) {
+        setActiveTab('routes');
+      }
+    }
+  }, [audit.loading, audit.sellers.length, audit.routes.length]);
 
   const topError = (audit.errorMsg && !audit.auditTarget ? audit.errorMsg : null) || deposit.drawerError;
 
