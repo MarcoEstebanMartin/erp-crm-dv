@@ -1,4 +1,4 @@
-const SHELL_CACHE = 'dv-pwa-shell-v1';
+const SHELL_CACHE = 'dv-pwa-shell-v2';
 const MEDIA_CACHE = 'dv-pwa-media-v1';
 const MAX_MEDIA_ENTRIES = 260;
 

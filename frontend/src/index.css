@@ -59,11 +59,13 @@
 /* 1. Reseteo y General */
 html {
   scroll-behavior: smooth;
-  touch-action: manipulation;
+  touch-action: pan-x pan-y;
   -webkit-text-size-adjust: 100%;
+  overflow-x: clip;
+  max-width: 100%;
 }
 
-button, a, input, select, textarea {
+*, *::before, *::after {
   touch-action: manipulation;
 }
 

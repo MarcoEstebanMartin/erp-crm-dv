@@ -12,6 +12,20 @@ import { registerPwaServiceWorker } from './utils/registerPwa.ts'
 
 registerPwaServiceWorker();
 
+if (typeof document !== 'undefined') {
+  const blockPinch = (e: Event) => e.preventDefault();
+  document.addEventListener('gesturestart', blockPinch, { passive: false });
+  document.addEventListener('gesturechange', blockPinch, { passive: false });
+  document.addEventListener('gestureend', blockPinch, { passive: false });
+  document.addEventListener(
+    'touchmove',
+    (e: TouchEvent) => {
+      if (e.touches.length > 1) e.preventDefault();
+    },
+    { passive: false },
+  );
+}
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
