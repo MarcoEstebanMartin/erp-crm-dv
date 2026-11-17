@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Plus, Upload, RotateCcw, Calculator } from 'lucide-react';
-import SupplierCostCalculatorModal from './modals/SupplierCostCalculatorModal';
+import { Plus, Upload, RotateCcw } from 'lucide-react';
 import ProductPhotoLightboxModal from './modals/ProductPhotoLightboxModal';
 import {
   INITIAL_PRODUCTS_BATCH,
@@ -48,7 +47,6 @@ export default function ProductsList({
     categoryName: string;
     categoryIcon: string;
   } | null>(null);
-  const [calculatorProduct, setCalculatorProduct] = useState<any | null>(null);
   const loadMoreSentinelRef = useRef<HTMLDivElement | null>(null);
 
   const safeProducts = useMemo(() => sanitizeProductArray(products), [products]);
@@ -301,13 +299,6 @@ export default function ProductsList({
                     </td>
                     <td style={{ padding: '12px 16px', textAlign: 'center' }}>
                       <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                        <button
-                          type="button" className="btn btn-secondary"
-                          style={{ padding: '5px 10px', fontSize: '0.75rem', borderRadius: '6px', display: 'inline-flex', alignItems: 'center', gap: '4px', fontWeight: 600 }}
-                          onClick={(e) => { e.stopPropagation(); setCalculatorProduct(p); }} title="Calculadora de Costo Proveedor y Lista 4"
-                        >
-                          <Calculator size={13} color="#E30613" /><span>Costo</span>
-                        </button>
                         {(catalogTab === 'inactive_products' || activeFilter === 'inactive' || p.isActive === false) && (
                           <button
                             className="btn"
@@ -339,7 +330,6 @@ export default function ProductsList({
       )}
 
       <ProductPhotoLightboxModal previewModal={previewModal} onClose={() => setPreviewModal(null)} onUploadImage={onUploadImage} />
-      <SupplierCostCalculatorModal product={calculatorProduct} onClose={() => setCalculatorProduct(null)} onSaveProduct={async (updated) => { if (onUpdateProduct) await onUpdateProduct(updated); }} />
     </div>
   );
 }

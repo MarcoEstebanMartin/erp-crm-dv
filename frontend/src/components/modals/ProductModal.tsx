@@ -68,24 +68,27 @@ const ProductModal: React.FC<ProductModalProps> = ({
     const updatedData = { ...productModal.data, [field]: value };
 
     const cost = Number(updatedData.costPrice) || 0;
-    const rentPercentage =
-      updatedData.profitMargin !== '' && updatedData.profitMargin !== undefined ? Number(updatedData.profitMargin) : 25;
-    const margin = 1 + rentPercentage / 100;
+    const currentListPrice = Number(updatedData.listPrice) || 0;
 
     if (field === 'costPrice') {
-      updatedData.listPrice = Math.max(0, Math.round(cost * margin * 100) / 100);
-      applyBandRatios(updatedData, updatedData.listPrice);
+      if (cost > 0 && currentListPrice > 0) {
+        updatedData.profitMargin = Math.round(((currentListPrice / cost - 1) * 100) * 100) / 100;
+      }
     } else if (field === 'profitMargin') {
       const newMargin = valueStr === '' ? 1 : 1 + Number(valueStr) / 100;
       updatedData.listPrice = Math.max(0, Math.round(cost * newMargin * 100) / 100);
       applyBandRatios(updatedData, updatedData.listPrice);
     } else if (field === 'priceSinIva') {
       updatedData.listPrice = Math.max(0, Math.round((Number(value) || 0) * 1.21 * 100) / 100);
-      updatedData.costPrice = Math.max(0, Math.round((updatedData.listPrice / margin) * 100) / 100);
+      if (cost > 0) {
+        updatedData.profitMargin = Math.round(((updatedData.listPrice / cost - 1) * 100) * 100) / 100;
+      }
       applyBandRatios(updatedData, updatedData.listPrice);
     } else if (field === 'listPrice') {
       const listPriceVal = Number(value) || 0;
-      updatedData.costPrice = Math.max(0, Math.round((listPriceVal / margin) * 100) / 100);
+      if (cost > 0) {
+        updatedData.profitMargin = Math.round(((listPriceVal / cost - 1) * 100) * 100) / 100;
+      }
       applyBandRatios(updatedData, listPriceVal);
     }
 
