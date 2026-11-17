@@ -133,7 +133,7 @@ export const fieldReceiptsApi = {
   syncReceipt(payload: SyncFieldReceiptPayload) {
     return apiClient.post<{ receipt: FieldReceiptDTO; alreadySynced: boolean; whatsapp: any }>(
       '/field-receipts/sync',
-      payload,
+      payload as unknown as Record<string, unknown>,
     );
   },
   listMySettlements(): Promise<CollectorSettlementDTO[]> {

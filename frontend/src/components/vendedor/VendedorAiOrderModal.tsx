@@ -276,7 +276,7 @@ export const VendedorAiOrderModal: React.FC<VendedorAiOrderModalProps> = ({
               id="ai-order-text"
               className="input"
               rows={3}
-              autofocus
+              autoFocus
               placeholder="Ej: Para Don José: 2 cajas de fideos Matarazzo y 3 aceites Natura"
               value={textInput}
               onChange={(e) => setTextInput(e.target.value)}
