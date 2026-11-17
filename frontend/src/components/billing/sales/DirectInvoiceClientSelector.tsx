@@ -1,7 +1,8 @@
 import React from 'react';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, Pin } from 'lucide-react';
 import { formatIntegerARS } from '../../../utils/currency';
 import { getClientPriceListLabel } from './salesBilling.helpers';
+import { TRUST_TAG_MAP } from '../../../utils/trustTags';
 
 interface DirectInvoiceClientSelectorProps {
   clientSearchInputRef: React.RefObject<HTMLInputElement | null>;
@@ -32,6 +33,10 @@ export function DirectInvoiceClientSelector({
   const pendingCount = selectedDirectClient?.pendingInvoicesCount || 0;
   const isLimitReached = maxUnpaid > 0 && pendingCount >= maxUnpaid;
   const balance = Number(selectedDirectClient?.outstandingBalance || 0);
+  const warningTags = (Array.isArray(selectedDirectClient?.trustTags) ? selectedDirectClient.trustTags : [])
+    .map((code: string) => TRUST_TAG_MAP[code])
+    .filter((meta: any) => Boolean(meta?.isWarning));
+  const pinnedNote = Array.isArray(selectedDirectClient?.notes) ? selectedDirectClient.notes[0] : null;
 
   return (
     <>
@@ -240,6 +245,38 @@ export function DirectInvoiceClientSelector({
             >
               <AlertTriangle size={14} aria-hidden="true" />
               Saldo pendiente
+            </div>
+          )}
+
+          {(warningTags.length > 0 || pinnedNote) && (
+            <div
+              role="alert"
+              style={{
+                gridColumn: 'span 2',
+                backgroundColor: warningTags.some((t: any) => t.code === 'SOLO_CONTADO' || t.code === 'CONFLICTIVO') ? '#FEF2F2' : '#FFFBEB',
+                border: `1px solid ${warningTags.some((t: any) => t.code === 'SOLO_CONTADO' || t.code === 'CONFLICTIVO') ? '#FECACA' : '#FDE68A'}`,
+                borderRadius: '4px',
+                padding: '6px 10px',
+                color: warningTags.some((t: any) => t.code === 'SOLO_CONTADO' || t.code === 'CONFLICTIVO') ? '#B91C1C' : '#92400E',
+                fontSize: '0.78rem',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '4px',
+                marginTop: '2px'
+              }}
+            >
+              {warningTags.length > 0 && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', fontWeight: 600 }}>
+                  <AlertTriangle size={14} aria-hidden="true" />
+                  <span>{warningTags.map((t: any) => t.label).join(' · ')}</span>
+                </div>
+              )}
+              {pinnedNote && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                  <Pin size={12} aria-hidden="true" style={{ flexShrink: 0 }} />
+                  <span>{pinnedNote.content}</span>
+                </div>
+              )}
             </div>
           )}
         </div>

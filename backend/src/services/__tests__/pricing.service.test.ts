@@ -37,6 +37,7 @@ describe('PricingService Unit Tests (Motor de Precios y Reglas)', () => {
     birthDate: null,
     hireDate: null,
     isActive: true,
+    trustTags: [],
     createdAt: new Date(),
     updatedAt: new Date(),
   };

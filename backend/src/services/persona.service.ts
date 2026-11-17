@@ -7,6 +7,7 @@ import { personaPaymentSubService } from './personas/persona-payment.service';
 import { personaLedgerSubService } from './personas/persona-ledger.service';
 import { personaDebtorsSubService } from './personas/persona-debtors.service';
 import { personaSellersSubService } from './personas/persona-sellers.service';
+import { canAccessPersonaTrustData } from './personas/persona-notes.service';
 import { sessionCache } from '../utils/session-cache.util';
 
 export class PersonaService {
@@ -21,6 +22,8 @@ export class PersonaService {
     else if (role === 'seller') whereClause.isSeller = true;
     else if (role === 'commission' || role === 'commission_agent') whereClause.isCommissionAgent = true;
 
+    const canSeeTrust = canAccessPersonaTrustData(userRole);
+
     let personas = await prisma.persona.findMany({
       where: whereClause,
       include: {
@@ -33,9 +36,30 @@ export class PersonaService {
             seller: { select: { id: true, username: true } },
           },
         },
+        ...(canSeeTrust
+          ? {
+              notes: {
+                where: { isPinned: true },
+                orderBy: { createdAt: 'desc' },
+                take: 3,
+                select: {
+                  id: true,
+                  content: true,
+                  category: true,
+                  isPinned: true,
+                  createdAt: true,
+                  author: { select: { id: true, username: true } },
+                },
+              },
+            }
+          : {}),
       },
       orderBy: { name: 'asc' },
     });
+
+    if (!canSeeTrust) {
+      personas = personas.map(({ trustTags: _hidden, ...rest }) => rest as any);
+    }
 
     if (search && search.trim()) {
       const q = search.trim();
@@ -62,6 +86,7 @@ export class PersonaService {
   }
 
   async getPersonaById(id: number, userId: number, userRole: string) {
+    const canSeeTrust = canAccessPersonaTrustData(userRole);
     const persona = await prisma.persona.findUnique({
       where: { id },
       include: {
@@ -74,12 +99,32 @@ export class PersonaService {
             seller: { select: { id: true, username: true } },
           },
         },
+        ...(canSeeTrust
+          ? {
+              notes: {
+                orderBy: [{ isPinned: 'desc' }, { createdAt: 'desc' }],
+                select: {
+                  id: true,
+                  content: true,
+                  category: true,
+                  isPinned: true,
+                  createdAt: true,
+                  author: { select: { id: true, username: true } },
+                },
+              },
+            }
+          : {}),
       },
     });
 
     if (!persona) throw new Error('Persona no encontrada.');
     if (userRole === Role.VENDEDOR && persona.isClient && persona.sellerId !== userId) {
       throw new Error('Acceso denegado.');
+    }
+
+    if (!canSeeTrust) {
+      const { trustTags: _hidden, ...rest } = persona as any;
+      return rest;
     }
 
     return persona;

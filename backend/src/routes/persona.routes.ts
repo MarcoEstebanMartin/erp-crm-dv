@@ -14,6 +14,13 @@ import {
   recordVisit,
   deletePersona,
 } from '../controllers/persona.controller';
+import {
+  getPersonaNotes,
+  createPersonaNote,
+  togglePinPersonaNote,
+  deletePersonaNote,
+  updatePersonaTrustTags,
+} from '../controllers/persona-notes.controller';
 import { authenticateJWT, requireRole } from '../middlewares/auth';
 import { idempotencyGuard } from '../middlewares/idempotency.middleware';
 import { Role } from '@prisma/client';
@@ -23,6 +30,9 @@ import {
   updatePersonaSchema,
   recordPersonaPaymentSchema,
   recordVisitSchema,
+  updateTrustTagsSchema,
+  createPersonaNoteSchema,
+  personaNoteParamsSchema,
 } from '../validators/persona.validator';
 
 const router = Router();
@@ -49,5 +59,41 @@ router.put('/:id', authenticateJWT, requireRole([Role.ADMIN, Role.FACTURACION, R
 router.post('/:id/payments', authenticateJWT, requireRole([Role.ADMIN, Role.FACTURACION, Role.VENDEDOR]), validateRequest(recordPersonaPaymentSchema), idempotencyGuard, recordPersonaPayment);
 router.post('/:id/visit', authenticateJWT, requireRole([Role.ADMIN, Role.VENDEDOR]), validateRequest(recordVisitSchema), recordVisit);
 router.delete('/:id', authenticateJWT, requireRole([Role.ADMIN]), deletePersona);
+
+// Etiquetas fijas de confianza y bitácora interna (exclusivo ADMIN y FACTURACION)
+router.patch(
+  '/:id/trust-tags',
+  authenticateJWT,
+  requireRole([Role.ADMIN, Role.FACTURACION]),
+  validateRequest(updateTrustTagsSchema),
+  updatePersonaTrustTags,
+);
+router.get(
+  '/:id/notes',
+  authenticateJWT,
+  requireRole([Role.ADMIN, Role.FACTURACION]),
+  getPersonaNotes,
+);
+router.post(
+  '/:id/notes',
+  authenticateJWT,
+  requireRole([Role.ADMIN, Role.FACTURACION]),
+  validateRequest(createPersonaNoteSchema),
+  createPersonaNote,
+);
+router.patch(
+  '/:id/notes/:noteId/pin',
+  authenticateJWT,
+  requireRole([Role.ADMIN, Role.FACTURACION]),
+  validateRequest(personaNoteParamsSchema),
+  togglePinPersonaNote,
+);
+router.delete(
+  '/:id/notes/:noteId',
+  authenticateJWT,
+  requireRole([Role.ADMIN, Role.FACTURACION]),
+  validateRequest(personaNoteParamsSchema),
+  deletePersonaNote,
+);
 
 export default router;

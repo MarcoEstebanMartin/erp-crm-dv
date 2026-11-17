@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { Trash2, MessageCircle } from 'lucide-react';
 import { getWhatsAppLink } from './clientsHelpers';
+import { ClientTrustBadges } from './ClientTrustBadges';
 
 interface ClientPersonaRowProps {
   persona: any;
@@ -41,6 +42,7 @@ const ClientPersonaRow = React.memo<ClientPersonaRowProps>(({
             {c.address || '-'}{c.city ? ` · ${c.city}` : ''}
           </div>
         )}
+        {personaRoleFilter === 'client' && <ClientTrustBadges trustTags={c.trustTags} pinnedNote={c.notes?.[0]} />}
       </td>
       {personaRoleFilter !== 'seller' && (
         <td className="tabular-nums" style={{ fontFamily: 'monospace', whiteSpace: 'nowrap' }}>{c.cuit || ''}</td>

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { MessageCircle, X } from 'lucide-react';
 import { NativeModalDialog } from './NativeModalDialog';
+import { ClientTrustNotesPanel } from './ClientTrustNotesPanel';
 import { api } from '../../utils/api';
 
 const getWhatsAppLink = (phone: string) => {
@@ -269,10 +270,11 @@ const ClientProfileModal: React.FC<ClientProfileModalProps> = ({
           </div>
         </div>
 
-        <div style={{ border: '1px solid var(--border-color)', padding: '18px', borderRadius: '8px', backgroundColor: '#fafafa', alignSelf: 'start' }}>
-          <h4 style={{ margin: '0 0 14px 0', fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--text-secondary)', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
-            Ficha
-          </h4>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', alignSelf: 'start' }}>
+          <div style={{ border: '1px solid var(--border-color)', padding: '18px', borderRadius: '8px', backgroundColor: '#fafafa' }}>
+            <h4 style={{ margin: '0 0 14px 0', fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--text-secondary)', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
+              Ficha
+            </h4>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '18px' }}>
             <div>
@@ -342,6 +344,18 @@ const ClientProfileModal: React.FC<ClientProfileModalProps> = ({
               </>
             )}
           </div>
+          </div>
+
+          {client.isClient && (
+            <ClientTrustNotesPanel
+              client={client}
+              onClientUpdated={(updated) =>
+                setClientProfileModal({ ...clientProfileModal, client: updated })
+              }
+              onDataChanged={fetchData}
+              setErrorMsg={setErrorMsg}
+            />
+          )}
         </div>
       </div>
 

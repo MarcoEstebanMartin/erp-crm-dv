@@ -129,3 +129,42 @@ export const recordVisitSchema = z.object({
     notes: z.string().optional().nullable(),
   }),
 });
+
+export const TRUST_TAG_CODES = [
+  'CONFIABLE',
+  'OBSERVADO',
+  'ATRASO_FRECUENTE',
+  'SOLO_CONTADO',
+  'CONFLICTIVO',
+] as const;
+
+export const updateTrustTagsSchema = z.object({
+  params: z.object({
+    id: z.string().regex(/^\d+$/, 'El ID debe ser numérico'),
+  }),
+  body: z.object({
+    trustTags: z.array(z.enum(TRUST_TAG_CODES)).max(5, 'Máximo 5 etiquetas permitidas'),
+  }),
+});
+
+export const createPersonaNoteSchema = z.object({
+  params: z.object({
+    id: z.string().regex(/^\d+$/, 'El ID debe ser numérico'),
+  }),
+  body: z.object({
+    content: z
+      .string()
+      .trim()
+      .min(1, 'La nota no puede estar vacía')
+      .max(1000, 'La nota no puede superar los 1000 caracteres'),
+    category: z.enum(['GENERAL', 'COBRANZA', 'INCIDENTE', 'COMERCIAL']).default('GENERAL'),
+    isPinned: z.boolean().optional(),
+  }),
+});
+
+export const personaNoteParamsSchema = z.object({
+  params: z.object({
+    id: z.string().regex(/^\d+$/, 'El ID debe ser numérico'),
+    noteId: z.string().regex(/^\d+$/, 'El ID de nota debe ser numérico'),
+  }),
+});

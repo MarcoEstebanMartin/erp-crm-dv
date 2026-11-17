@@ -102,6 +102,7 @@ model User {
   voidedFieldReceipts    FieldReceipt[] @relation("FieldReceiptVoidedBy")
   collectorSettlements   CollectorSettlement[] @relation("SettlementCollector")
   approvedSettlements    CollectorSettlement[] @relation("SettlementApprovedBy")
+  personaNotes           PersonaNote[]         @relation("PersonaNoteAuthor")
 }
 
 model Persona {
@@ -163,6 +164,9 @@ model Persona {
   // Estado activo/inactivo
   isActive Boolean @default(true)
 
+  // Etiquetas fijas de confianza/riesgo (uso interno ADMIN/FACTURACION)
+  trustTags String[] @default([])
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -183,6 +187,7 @@ model Persona {
   crmDrafts           CrmOrderDraft[]
   accountLedgerEntries AccountLedger[]
   fieldReceipts       FieldReceipt[]
+  notes               PersonaNote[]
 
   @@index([sellerId])
   @@index([isClient])
@@ -1518,6 +1523,28 @@ model FieldReceiptPayment {
   @@index([fieldReceiptId])
   @@index([paymentMethod, status])
   @@index([bankAccountId])
+}
+
+enum PersonaNoteCategory {
+  GENERAL
+  COBRANZA
+  INCIDENTE
+  COMERCIAL
+}
+
+model PersonaNote {
+  id        Int                 @id @default(autoincrement())
+  personaId Int
+  persona   Persona             @relation(fields: [personaId], references: [id], onDelete: Cascade)
+  authorId  Int
+  author    User                @relation("PersonaNoteAuthor", fields: [authorId], references: [id])
+  category  PersonaNoteCategory @default(GENERAL)
+  content   String
+  isPinned  Boolean             @default(false)
+  createdAt DateTime            @default(now())
+
+  @@index([personaId, isPinned, createdAt])
+  @@index([authorId])
 }
 
 

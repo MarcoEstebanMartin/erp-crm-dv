@@ -507,6 +507,44 @@ export const api = {
     return api.updatePersona(id, clientData);
   },
 
+  updateClientTrustTags: async (personaId: number, trustTags: string[]) => {
+    const res = await request(`/personas/${personaId}/trust-tags`, {
+      method: 'PATCH',
+      body: JSON.stringify({ trustTags }),
+    });
+    return res.data;
+  },
+
+  getClientNotes: async (personaId: number) => {
+    const res = await request(`/personas/${personaId}/notes`);
+    return res.data.notes || [];
+  },
+
+  createClientNote: async (
+    personaId: number,
+    payload: { content: string; category: string; isPinned?: boolean },
+  ) => {
+    const res = await request(`/personas/${personaId}/notes`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+    return res.data.note;
+  },
+
+  togglePinClientNote: async (personaId: number, noteId: number) => {
+    const res = await request(`/personas/${personaId}/notes/${noteId}/pin`, {
+      method: 'PATCH',
+    });
+    return res.data.note;
+  },
+
+  deleteClientNote: async (personaId: number, noteId: number) => {
+    const res = await request(`/personas/${personaId}/notes/${noteId}`, {
+      method: 'DELETE',
+    });
+    return res.data;
+  },
+
   deletePersona: async (id: number) => {
     return await request(`/personas/${id}`, {
       method: 'DELETE'
