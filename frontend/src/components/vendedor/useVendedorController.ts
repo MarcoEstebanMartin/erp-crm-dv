@@ -336,6 +336,43 @@ export function useVendedorController(activeTab: string) {
     } catch { setErrorMsg('Error al cargar datos para edición.'); }
   };
 
+  const handleReorderRouteClients = async (orderedClientIds: number[]) => {
+    if (!selectedRouteId) return;
+    setLoading(true);
+    try {
+      await api.updateClientSequence(selectedRouteId, orderedClientIds);
+      setClients((prev) => {
+        const map = new Map(prev.map((c) => [c.id, c]));
+        const reordered = orderedClientIds.map((id) => map.get(id)).filter(Boolean) as Persona[];
+        void saveCatalogSnapshot(`route_clients_${selectedRouteId}`, reordered).catch(() => {});
+        return reordered;
+      });
+      showToast('Orden guardado', 'success');
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Error al guardar orden.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRemoveClientFromRoute = async (clientId: number) => {
+    if (!selectedRouteId) return;
+    setLoading(true);
+    try {
+      await api.removeClientFromRoute(selectedRouteId, clientId);
+      setClients((prev) => {
+        const next = prev.filter((c) => c.id !== clientId);
+        void saveCatalogSnapshot(`route_clients_${selectedRouteId}`, next).catch(() => {});
+        return next;
+      });
+      showToast('Cliente quitado de la ruta', 'info');
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Error al quitar cliente de la ruta.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return {
     clients, products, orders, rubros, weeklyPromos, filterRubroId, setFilterRubroId, selectedClient, setSelectedClient,
     clientFilter, setClientFilter, cart, setCart, orderNotes, setOrderNotes, clientModal, setClientModal,
@@ -344,5 +381,6 @@ export function useVendedorController(activeTab: string) {
     errorMsg, setErrorMsg, successMsg, setSuccessMsg, loading, setLoading, toast, selectedCityFilters, setSelectedCityFilters,
     noSaleModal, setNoSaleModal, vendedorRoutes, selectedRouteId, todayVisits, uniqueCities, offlineSync,
     fetchData, addToCart, updateCartQty, handleConfirmOrder, handleSelectRoute, handleRecordNoSale, handleCreateClient, handleOpenEditOrder,
+    handleReorderRouteClients, handleRemoveClientFromRoute,
   };
 }

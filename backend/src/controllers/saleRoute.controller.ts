@@ -156,15 +156,65 @@ export async function updateClientSequence(req: AuthenticatedRequest, res: Respo
   }
 
   try {
-    const result = await saleRouteService.updateClientSequence(Number(id), clientIds, userId);
+    const result = await saleRouteService.updateClientSequence(Number(id), clientIds, userId, req.user?.role);
     res.status(200).json(result);
   } catch (error: any) {
     console.error('Error al reordenar secuencia:', error);
+    if (error.message === 'Acceso denegado.') {
+      res.status(403).json({ status: 'error', message: error.message });
+      return;
+    }
     if (error.message === 'Ruta de venta no encontrada.') {
       res.status(404).json({ status: 'error', message: error.message });
       return;
     }
     res.status(500).json({ status: 'error', message: 'Error al actualizar la secuencia.' });
+  }
+}
+
+/**
+ * Quitar un cliente de la ruta (sin eliminarlo del sistema).
+ */
+export async function removeClientFromRoute(req: AuthenticatedRequest, res: Response): Promise<void> {
+  const { id, clientId } = req.params;
+  const userId = req.user?.id;
+
+  if (!userId) {
+    res.status(401).json({ status: 'error', message: 'No autorizado.' });
+    return;
+  }
+
+  try {
+    const client = await saleRouteService.removeClientFromRoute(Number(id), Number(clientId), userId, req.user?.role);
+    res.status(200).json({ status: 'success', data: { client } });
+  } catch (error: any) {
+    console.error('Error al quitar cliente de la ruta:', error);
+    if (error.message === 'Acceso denegado.') {
+      res.status(403).json({ status: 'error', message: error.message });
+      return;
+    }
+    if (error.message === 'Ruta de venta no encontrada.' || error.message === 'Cliente no encontrado.') {
+      res.status(404).json({ status: 'error', message: error.message });
+      return;
+    }
+    if (error.message === 'El cliente no pertenece a esta ruta.') {
+      res.status(400).json({ status: 'error', message: error.message });
+      return;
+    }
+    res.status(500).json({ status: 'error', message: 'Error al quitar cliente de la ruta.' });
+  }
+}
+
+/**
+ * Listar clientes activos sin ruta asignada (para Administración).
+ */
+export async function getUnassignedClients(_req: AuthenticatedRequest, res: Response): Promise<void> {
+  try {
+    const clients = await saleRouteService.getUnassignedClients();
+    res.status(200).json({ status: 'success', data: { clients } });
+  } catch (error: any) {
+    console.error('Error al obtener clientes sin ruta:', error);
+    res.status(500).json({ status: 'error', message: 'Error al obtener clientes sin ruta.' });
   }
 }
 

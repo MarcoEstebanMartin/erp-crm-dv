@@ -180,6 +180,8 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
           onCollectClient={(client) => { setCollectClientId(client.id); setActiveTab('field-receipts'); }}
           onSellToClient={(client) => { c.setSelectedClient(client); setActiveTab('orders'); }}
           onOpenResumenClient={(client) => c.setResumenClientModal(client)}
+          onReorderClients={c.handleReorderRouteClients}
+          onRemoveClient={c.handleRemoveClientFromRoute}
         />
       )}
 

@@ -1,5 +1,6 @@
 import prisma from '../utils/prisma';
 import { logAudit } from '../utils/audit';
+import { appCache } from '../utils/cache';
 
 export class SaleRouteService {
   /**
@@ -181,22 +182,26 @@ export class SaleRouteService {
   /**
    * Actualizar orden secuencial de los clientes en una ruta.
    */
-  async updateClientSequence(routeId: number, clientIds: number[], userId: number) {
+  async updateClientSequence(routeId: number, clientIds: number[], userId: number, userRole?: string) {
     const route = await prisma.saleRoute.findUnique({ where: { id: routeId } });
     if (!route) throw new Error('Ruta de venta no encontrada.');
+    if (userRole === 'VENDEDOR' && route.sellerId !== userId) {
+      throw new Error('Acceso denegado.');
+    }
 
     // Transacción para actualizar la secuencia de cada cliente
     const updates = clientIds.map((clientId, index) => {
       return prisma.persona.update({
         where: { id: clientId },
-        data: { 
+        data: {
           saleRouteId: routeId,
-          routeSequence: index + 1 
+          routeSequence: index + 1,
         },
       });
     });
 
     await prisma.$transaction(updates);
+    appCache.invalidateByPrefix('personas_');
 
     await logAudit({
       userId,
@@ -207,6 +212,60 @@ export class SaleRouteService {
     });
 
     return { status: 'success', message: 'Secuencia de la ruta actualizada con éxito.' };
+  }
+
+  /**
+   * Quitar un cliente de la ruta (sin borrarlo del sistema; queda sin ruta para Administración).
+   */
+  async removeClientFromRoute(routeId: number, clientId: number, userId: number, userRole?: string) {
+    const route = await prisma.saleRoute.findUnique({ where: { id: routeId } });
+    if (!route) throw new Error('Ruta de venta no encontrada.');
+    if (userRole === 'VENDEDOR' && route.sellerId !== userId) {
+      throw new Error('Acceso denegado.');
+    }
+
+    const client = await prisma.persona.findUnique({ where: { id: clientId } });
+    if (!client) throw new Error('Cliente no encontrado.');
+    if (client.saleRouteId !== routeId) {
+      throw new Error('El cliente no pertenece a esta ruta.');
+    }
+
+    const updatedClient = await prisma.persona.update({
+      where: { id: clientId },
+      data: { saleRouteId: null, routeSequence: null },
+    });
+    appCache.invalidateByPrefix('personas_');
+
+    await logAudit({
+      userId,
+      action: 'REMOVE_CLIENT_FROM_ROUTE',
+      entityType: 'Persona',
+      entityId: clientId,
+      oldValues: { saleRouteId: routeId, routeSequence: client.routeSequence },
+      newValues: { saleRouteId: null, routeSequence: null },
+    });
+
+    return updatedClient;
+  }
+
+  /**
+   * Listar clientes activos que actualmente no tienen ruta asignada.
+   */
+  async getUnassignedClients() {
+    return prisma.persona.findMany({
+      where: { isClient: true, isActive: true, saleRouteId: null },
+      select: {
+        id: true,
+        name: true,
+        address: true,
+        city: true,
+        phone: true,
+        sellerId: true,
+        outstandingBalance: true,
+        seller: { select: { id: true, username: true } },
+      },
+      orderBy: [{ city: 'asc' }, { name: 'asc' }],
+    });
   }
 
   /**

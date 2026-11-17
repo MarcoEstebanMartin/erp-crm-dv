@@ -1623,6 +1623,16 @@ export const api = {
     });
   },
 
+  removeClientFromRoute: async (routeId: number, clientId: number) => {
+    return await request(`/sale-routes/${routeId}/clients/${clientId}`, {
+      method: 'DELETE',
+    });
+  },
+
+  getUnassignedRouteClients: async () => {
+    return await request('/sale-routes/unassigned-clients');
+  },
+
   addClientToRoute: async (id: number, clientId: number) => {
     return await request(`/sale-routes/${id}/clients`, {
       method: 'POST',

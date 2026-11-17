@@ -4,6 +4,7 @@ import { api } from '../utils/api';
 import { useConfirm } from '../context/ConfirmContext';
 import { OptimizeRouteModal } from './modals/OptimizeRouteModal';
 import { SaleRouteDetailPanel } from './admin/routes/SaleRouteDetailPanel';
+import { UnassignedRouteClientsPanel } from './admin/routes/UnassignedRouteClientsPanel';
 import { SaleRouteFormModal } from './admin/routes/SaleRouteFormModal';
 
 const DAYS_OF_WEEK = ['LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO', 'DOMINGO'] as const;
@@ -28,6 +29,7 @@ export default function SaleRoutesDashboard() {
   const [formDay, setFormDay] = useState('');
   const [formActive, setFormActive] = useState(true);
   const [showOptimizeModal, setShowOptimizeModal] = useState(false);
+  const [showUnassignedPanel, setShowUnassignedPanel] = useState(false);
 
   const confirm = useConfirm();
 
@@ -179,11 +181,26 @@ export default function SaleRoutesDashboard() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
         <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700 }}>Rutas de preventa</h3>
-        <button type="button" className="btn btn-primary" onClick={handleOpenCreate} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-          <Plus size={16} />
-          <span>Nueva ruta</span>
-        </button>
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+          <button type="button" className={showUnassignedPanel ? 'btn btn-primary' : 'btn btn-secondary'} onClick={() => setShowUnassignedPanel(!showUnassignedPanel)}>
+            <span>{showUnassignedPanel ? 'Ocultar sin ruta' : 'Clientes sin ruta'}</span>
+          </button>
+          <button type="button" className="btn btn-primary" onClick={handleOpenCreate} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+            <Plus size={16} />
+            <span>Nueva ruta</span>
+          </button>
+        </div>
       </div>
+
+      {showUnassignedPanel && (
+        <UnassignedRouteClientsPanel
+          routes={routes}
+          onAssigned={() => {
+            fetchRoutes();
+            if (selectedRouteId) fetchRouteDetail(selectedRouteId);
+          }}
+        />
+      )}
 
       {errorMsg && (
         <div role="alert" style={{ padding: '10px 14px', backgroundColor: '#fef2f2', border: '1px solid #fecaca', borderRadius: '6px', color: '#991b1b', fontSize: '0.84rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -214,20 +231,7 @@ export default function SaleRoutesDashboard() {
                   type="button"
                   aria-pressed={selected}
                   onClick={() => setSelectedRouteId(r.id)}
-                  style={{
-                    width: '100%',
-                    textAlign: 'left',
-                    padding: '10px 14px',
-                    border: 'none',
-                    borderBottom: idx < routes.length - 1 ? '1px solid #f1f5f9' : 'none',
-                    borderLeft: selected ? '2px solid #111827' : '2px solid transparent',
-                    backgroundColor: selected ? '#f8fafc' : 'transparent',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'stretch',
-                    gap: '2px',
-                  }}
+                  style={{ width: '100%', textAlign: 'left', padding: '10px 14px', border: 'none', borderBottom: idx < routes.length - 1 ? '1px solid #f1f5f9' : 'none', borderLeft: selected ? '2px solid #111827' : '2px solid transparent', backgroundColor: selected ? '#f8fafc' : 'transparent', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'stretch', gap: '2px' }}
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
                     <span style={{ fontWeight: selected ? 700 : 600, fontSize: '0.86rem', color: selected ? '#0f172a' : '#334155', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
