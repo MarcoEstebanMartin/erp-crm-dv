@@ -64,11 +64,29 @@ function normalizeSearchText(value: string): string {
 }
 
 const CLIENT_STOP_WORDS = new Set([
-  'para', 'cliente', 'de', 'del', 'la', 'el', 'los', 'las', 'almacen', 'kiosco', 'despensa', 'autoservicio', 'super', 'minimercado',
+  'para', 'cliente', 'cargar', 'carga', 'pedido', 'de', 'del', 'la', 'el', 'los', 'las', 'a', 'al', 'almacen', 'kiosco', 'despensa', 'autoservicio', 'super', 'minimercado',
 ]);
 
+function levenshtein(a: string, b: string): number {
+  const m = a.length;
+  const n = b.length;
+  if (m === 0) return n;
+  if (n === 0) return m;
+  const dp = Array.from({ length: n + 1 }, (_, j) => j);
+  for (let i = 1; i <= m; i++) {
+    let prev = dp[0];
+    dp[0] = i;
+    for (let j = 1; j <= n; j++) {
+      const tmp = dp[j];
+      dp[j] = a[i - 1] === b[j - 1] ? prev : 1 + Math.min(prev, dp[j], dp[j - 1]);
+      prev = tmp;
+    }
+  }
+  return dp[n];
+}
+
 /**
- * Busca candidatos de cliente por similitud de tokens normalizados.
+ * Busca candidatos de cliente por similitud de tokens normalizados (incluye orden invertido y errores tipográficos/fonéticos).
  */
 export function findClientCandidatesLocal(
   queryText: string,
@@ -87,21 +105,39 @@ export function findClientCandidatesLocal(
   const scored: Array<{ client: AiParsedClientRef; score: number }> = [];
 
   for (const client of clients) {
+    const clientNameNorm = normalizeSearchText(client.name);
     const clientNorm = normalizeSearchText(`${client.name} ${client.city || ''}`);
     if (!clientNorm) continue;
 
     let score = 0;
-    if (normalizedQuery.includes(normalizeSearchText(client.name)) && client.name.length >= 3) {
-      score += 100;
+    if (clientNameNorm.length >= 3 && normalizedQuery.includes(clientNameNorm)) {
+      score += 120;
     }
 
-    const clientTokens = normalizeSearchText(client.name).split(' ').filter((t) => t.length >= 2);
+    const clientTokens = clientNameNorm.split(' ').filter((t) => t.length >= 2);
+    let matchedTokens = 0;
+
     for (const qt of queryTokens) {
       if (clientTokens.some((ct) => ct === qt)) {
-        score += 20;
-      } else if (clientTokens.some((ct) => ct.includes(qt) || qt.includes(ct))) {
-        score += 10;
+        score += 25;
+        matchedTokens += 1;
+      } else if (clientTokens.some((ct) => ct.startsWith(qt) || qt.startsWith(ct) || ct.includes(qt) || qt.includes(ct))) {
+        score += 14;
+        matchedTokens += 1;
+      } else if (qt.length >= 4) {
+        const maxDist = qt.length >= 6 ? 2 : 1;
+        const hasFuzzy = clientTokens.some(
+          (ct) => ct.length >= 4 && Math.abs(ct.length - qt.length) <= maxDist && levenshtein(ct, qt) <= maxDist,
+        );
+        if (hasFuzzy) {
+          score += 10;
+          matchedTokens += 1;
+        }
       }
+    }
+
+    if (matchedTokens >= 2) {
+      score += matchedTokens * 15;
     }
 
     if (score > 0) {
@@ -259,7 +295,6 @@ export async function parseVendedorOrderWithAi(
           where: { isClient: true, isActive: true },
           select: { id: true, name: true, city: true, address: true },
           orderBy: { name: 'asc' },
-          take: 500,
         }),
   ]);
 
@@ -297,14 +332,18 @@ export async function parseVendedorOrderWithAi(
         category: p.commercialCategory || '',
       }));
 
+      const prefilteredClients = input.selectedClientId
+        ? []
+        : findClientCandidatesLocal(rawText, clientList, 50);
+
       const clientsSection = input.selectedClientId
         ? 'El vendedor ya seleccionó el cliente en pantalla. Devuelve detectedClientId: null y clientQuery: null.'
-        : `CLIENTES DISPONIBLES:\n${JSON.stringify(clientList.map((c) => ({ id: c.id, name: c.name, city: c.city || '' })))}`;
+        : `CLIENTES CANDIDATOS:\n${JSON.stringify(prefilteredClients.map((c) => ({ id: c.id, name: c.name, city: c.city || '' })))}`;
 
       const systemInstruction = `
 Eres el asistente de toma de pedidos mayoristas de DV Distribuidora (alimentos y bebidas en Argentina).
 Tu tarea es interpretar el mensaje o dictado de un vendedor y devolver un borrador estructurado:
-1. CLIENTE: Si el vendedor menciona un cliente y no hay cliente preseleccionado, busca el ID exacto en CLIENTES DISPONIBLES. Si hay duda o varios parecidos, deja detectedClientId en null y coloca el nombre mencionado en clientQuery.
+1. CLIENTE: Si el vendedor menciona un cliente y no hay cliente preseleccionado, busca el ID más probable en CLIENTES CANDIDATOS aunque el nombre y apellido estén en otro orden, falte una letra o haya un error de transcripción (ej: "MARCO ESTEBAN MARTI" -> "MARTIN MARCO ESTEBAN"). Solo deja detectedClientId en null si realmente hay empate o ambigüedad real, y coloca el nombre mencionado en clientQuery.
 2. PRODUCTOS: Empareja ÚNICAMENTE productos explícitamente solicitados contra CATÁLOGO DISPONIBLE. Jamás inventes productos.
 3. Si pide "caja", "cajón", "pack" o "bulto", multiplica la cantidad por 'unitsPerBox' (si unitsPerBox > 1).
 4. Si menciona algún producto que NO encuentras con certeza en el catálogo, agrégalo tal cual en unmatchedLines para que el vendedor lo revise.

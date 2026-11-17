@@ -82,6 +82,15 @@ describe('order-ai-parser.service', () => {
     expect(candidates.map((c) => c.id)).toEqual([2, 3]);
   });
 
+  it('detecta clientes con orden invertido y faltante de letra (MARCO ESTEBAN MARTI -> MARTIN MARCO ESTEBAN)', () => {
+    const candidates = findClientCandidatesLocal('Cargar a MARCO ESTEBAN MARTI', [
+      ...MOCK_CLIENTS,
+      { id: 99, name: 'MARTIN MARCO ESTEBAN', city: 'General Villegas', address: null },
+      { id: 100, name: 'ESTEBAN LOPEZ', city: 'Banderaló', address: null },
+    ]);
+    expect(candidates[0]?.id).toBe(99);
+  });
+
   it('guarda en unmatchedLines los productos con cantidad que no existen en el catálogo', () => {
     const parsed = parseOrderItemsLocalFallback(
       '3 fideos matarazzo, 5 yerba desconocida xyz',
