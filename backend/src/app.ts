@@ -41,6 +41,7 @@ import crmWhatsappRoutes from './routes/crm_whatsapp.routes';
 import weeklyScheduleRoutes from './routes/weeklySchedule.routes';
 import webChatRoutes from './routes/webChat.routes';
 import excelImporterRoutes from './routes/excel_importer.routes';
+import fieldReceiptsRoutes from './routes/fieldReceipts.routes';
 
 
 const app: Application = express();
@@ -130,6 +131,7 @@ app.use('/api/crm', crmRoutes);
 app.use('/api/rubros', rubroRoutes);
 app.use('/api/iva', ivaRoutes);
 app.use('/api/collections', collectionRoutes);
+app.use('/api/field-receipts', fieldReceiptsRoutes);
 app.use('/api/perceptions', perceptionRoutes);
 app.use('/api/pricing', pricingRoutes);
 app.use('/api/weekly-promos', weeklyPromoRoutes);
