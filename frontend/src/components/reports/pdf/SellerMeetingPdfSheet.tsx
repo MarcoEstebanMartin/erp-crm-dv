@@ -30,20 +30,15 @@ export const SellerMeetingPdfSheet = forwardRef<HTMLDivElement, SellerMeetingPdf
       ) : (
         <div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #0f172a', paddingBottom: '14px', marginBottom: '20px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <img
-                src="/logo.png"
-                alt="Logo DV"
-                style={{ height: '48px', width: 'auto', objectFit: 'contain' }}
-                onError={(e) => { e.currentTarget.style.display = 'none'; }}
-              />
-              <div style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--color-corp-red)' }}>
-                Distribuidora DV
-              </div>
-            </div>
+            <img
+              src="/logo.png"
+              alt="Logo DV"
+              style={{ height: '48px', width: 'auto', objectFit: 'contain' }}
+              onError={(e) => { e.currentTarget.style.display = 'none'; }}
+            />
             <div style={{ textAlign: 'right' }}>
               <h1 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#0f172a' }}>
-                Vendedor: {data.seller.name}
+                {data.seller.name}
               </h1>
               <div className="tabular-nums" style={{ fontSize: '0.78rem', color: '#475569', marginTop: '3px' }}>
                 Período: <strong>{formatEsDate(data.period.startDate)}</strong> al <strong>{formatEsDate(data.period.endDate)}</strong>
@@ -221,18 +216,6 @@ export const SellerMeetingPdfSheet = forwardRef<HTMLDivElement, SellerMeetingPdf
                 ))}
               </tbody>
             </table>
-          </div>
-
-          <div style={{ marginTop: '28px', paddingTop: '12px', borderTop: '1px dashed #cbd5e1', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-            <div style={{ width: '60%' }}>
-              <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#0f172a', marginBottom: '4px' }}>Compromisos:</div>
-              <div style={{ borderBottom: '1px solid #cbd5e1', minHeight: '18px', marginBottom: '6px' }} />
-              <div style={{ borderBottom: '1px solid #cbd5e1', minHeight: '18px' }} />
-            </div>
-            <div style={{ textAlign: 'center', width: '30%' }}>
-              <div style={{ borderBottom: '1px solid #0f172a', width: '100%', marginBottom: '4px' }} />
-              <div style={{ fontSize: '0.7rem', fontWeight: 600, color: '#475569' }}>Firma</div>
-            </div>
           </div>
         </div>
       )}
