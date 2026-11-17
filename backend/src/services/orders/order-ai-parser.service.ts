@@ -15,6 +15,7 @@ export interface ParseAiOrderInput {
   audioBase64?: string;
   audioMimeType?: string;
   selectedClientId?: number;
+  sellerId?: number;
 }
 
 export interface AiParsedClientRef {
@@ -22,6 +23,7 @@ export interface AiParsedClientRef {
   name: string;
   city: string | null;
   address: string | null;
+  sellerId?: number | null;
 }
 
 export interface AiParsedOrderItem {
@@ -92,6 +94,7 @@ export function findClientCandidatesLocal(
   queryText: string,
   clients: AiParsedClientRef[],
   limit = 5,
+  preferredSellerId?: number,
 ): AiParsedClientRef[] {
   const normalizedQuery = normalizeSearchText(queryText);
   if (!normalizedQuery) return [];
@@ -138,6 +141,10 @@ export function findClientCandidatesLocal(
 
     if (matchedTokens >= 2) {
       score += matchedTokens * 15;
+    }
+
+    if (score > 0 && preferredSellerId && client.sellerId === preferredSellerId) {
+      score += 18;
     }
 
     if (score > 0) {
@@ -293,7 +300,7 @@ export async function parseVendedorOrderWithAi(
       ? Promise.resolve([])
       : prisma.persona.findMany({
           where: { isClient: true, isActive: true },
-          select: { id: true, name: true, city: true, address: true },
+          select: { id: true, name: true, city: true, address: true, sellerId: true },
           orderBy: { name: 'asc' },
         }),
   ]);
@@ -312,6 +319,7 @@ export async function parseVendedorOrderWithAi(
     name: c.name,
     city: c.city,
     address: c.address,
+    sellerId: (c as any).sellerId ?? null,
   }));
 
   let usedAi = false;
@@ -334,16 +342,23 @@ export async function parseVendedorOrderWithAi(
 
       const prefilteredClients = input.selectedClientId
         ? []
-        : findClientCandidatesLocal(rawText, clientList, 50);
+        : findClientCandidatesLocal(rawText, clientList, 50, input.sellerId);
 
       const clientsSection = input.selectedClientId
         ? 'El vendedor ya seleccionó el cliente en pantalla. Devuelve detectedClientId: null y clientQuery: null.'
-        : `CLIENTES CANDIDATOS:\n${JSON.stringify(prefilteredClients.map((c) => ({ id: c.id, name: c.name, city: c.city || '' })))}`;
+        : `CLIENTES CANDIDATOS:\n${JSON.stringify(
+            prefilteredClients.map((c) => ({
+              id: c.id,
+              name: c.name,
+              city: c.city || '',
+              ...(input.sellerId ? { isMine: c.sellerId === input.sellerId } : {}),
+            })),
+          )}`;
 
       const systemInstruction = `
 Eres el asistente de toma de pedidos mayoristas de DV Distribuidora (alimentos y bebidas en Argentina).
 Tu tarea es interpretar el mensaje o dictado de un vendedor y devolver un borrador estructurado:
-1. CLIENTE: Si el vendedor menciona un cliente y no hay cliente preseleccionado, busca el ID más probable en CLIENTES CANDIDATOS aunque el nombre y apellido estén en otro orden, falte una letra o haya un error de transcripción (ej: "MARCO ESTEBAN MARTI" -> "MARTIN MARCO ESTEBAN"). Solo deja detectedClientId en null si realmente hay empate o ambigüedad real, y coloca el nombre mencionado en clientQuery.
+1. CLIENTE: Si el vendedor menciona un cliente y no hay cliente preseleccionado, busca el ID más probable en CLIENTES CANDIDATOS aunque el nombre y apellido estén en otro orden, falte una letra o haya un error de transcripción (ej: "MARCO ESTEBAN MARTI" -> "MARTIN MARCO ESTEBAN"). Si hay dos clientes muy parecidos, prioriza el que tenga isMine: true. Solo deja detectedClientId en null si realmente hay empate o ambigüedad real, y coloca el nombre mencionado en clientQuery.
 2. PRODUCTOS: Empareja ÚNICAMENTE productos explícitamente solicitados contra CATÁLOGO DISPONIBLE. Jamás inventes productos.
 3. Si pide "caja", "cajón", "pack" o "bulto", multiplica la cantidad por 'unitsPerBox' (si unitsPerBox > 1).
 4. Si menciona algún producto que NO encuentras con certeza en el catálogo, agrégalo tal cual en unmatchedLines para que el vendedor lo revise.
@@ -397,13 +412,13 @@ Tu tarea es interpretar el mensaje o dictado de un vendedor y devolver un borrad
     unmatchedLines = localItems.unmatchedLines;
 
     if (!input.selectedClientId && clientList.length > 0) {
-      clientCandidates = findClientCandidatesLocal(rawText, clientList, 5);
+      clientCandidates = findClientCandidatesLocal(rawText, clientList, 5, input.sellerId);
       if (clientCandidates.length === 1) {
         detectedClient = clientCandidates[0];
       }
     }
   } else if (!input.selectedClientId && !detectedClient && clientQuery && clientList.length > 0) {
-    clientCandidates = findClientCandidatesLocal(clientQuery, clientList, 5);
+    clientCandidates = findClientCandidatesLocal(clientQuery, clientList, 5, input.sellerId);
   }
 
   return {

@@ -7,7 +7,10 @@ export const parseAiOrderHandler = async (
   next: NextFunction,
 ) => {
   try {
-    const result = await parseVendedorOrderWithAi(req.body);
+    const result = await parseVendedorOrderWithAi({
+      ...req.body,
+      sellerId: (req as any).user?.id ? Number((req as any).user.id) : undefined,
+    });
     res.json({
       status: 'success',
       data: result,

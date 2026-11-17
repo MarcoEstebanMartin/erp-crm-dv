@@ -39,11 +39,40 @@ export const VendedorOrderTakeTab: React.FC<VendedorOrderTakeTabProps> = ({
   filterRubroId, setFilterRubroId, cart, setCart, orderNotes, setOrderNotes, loading,
   onAddToCart, onUpdateCartQty, onConfirmOrder, onOpenNewClientModal,
 }) => {
-  const filteredClientsForSelect = clients.filter((c) => {
-    const matchesSearch = matchesSearchTokens([c.name, c.cuit, c.city, c.address], clientFilter);
-    const matchesCity = selectedCityFilters.length === 0 || selectedCityFilters.includes(cleanCityName(c.city));
-    return matchesSearch && matchesCity;
-  });
+  const [showAllClients, setShowAllClients] = useState(false);
+
+  const currentUserId = useMemo(() => {
+    try {
+      const raw = localStorage.getItem('auth_user');
+      const parsed = raw ? JSON.parse(raw) : null;
+      return parsed?.id ? Number(parsed.id) : null;
+    } catch {
+      return null;
+    }
+  }, []);
+
+  const hasOwnClients = useMemo(
+    () => Boolean(currentUserId && clients.some((c) => Number((c as any).sellerId) === currentUserId)),
+    [clients, currentUserId],
+  );
+
+  const filteredClientsForSelect = useMemo(() => {
+    const isSearching = clientFilter.trim().length > 0;
+    const list = clients.filter((c) => {
+      if (hasOwnClients && !isSearching && !showAllClients && Number((c as any).sellerId) !== currentUserId) {
+        return false;
+      }
+      const matchesSearch = matchesSearchTokens([c.name, c.cuit, c.city, c.address], clientFilter);
+      const matchesCity = selectedCityFilters.length === 0 || selectedCityFilters.includes(cleanCityName(c.city));
+      return matchesSearch && matchesCity;
+    });
+    if (!hasOwnClients) return list;
+    return [...list].sort((a, b) => {
+      const aMine = Number((a as any).sellerId) === currentUserId ? 1 : 0;
+      const bMine = Number((b as any).sellerId) === currentUserId ? 1 : 0;
+      return bMine - aMine;
+    });
+  }, [clients, clientFilter, selectedCityFilters, hasOwnClients, showAllClients, currentUserId]);
 
   const filteredProducts = sortVendedorCatalog(
     products.filter((p) => {
@@ -108,17 +137,39 @@ export const VendedorOrderTakeTab: React.FC<VendedorOrderTakeTabProps> = ({
               </button>
             </div>
 
-            {uniqueCities.length > 1 && (
+            {(uniqueCities.length > 1 || hasOwnClients) && (
               <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', padding: '2px', scrollbarWidth: 'none' }}>
-                <button type="button" onClick={() => setSelectedCityFilters([])} style={{ padding: '4px 10px', borderRadius: '15px', fontSize: '0.75rem', fontWeight: 600, border: '1px solid', borderColor: selectedCityFilters.length === 0 ? 'var(--text-primary)' : 'var(--border-color)', backgroundColor: selectedCityFilters.length === 0 ? 'var(--text-primary)' : '#fff', color: selectedCityFilters.length === 0 ? '#fff' : 'var(--text-secondary)', whiteSpace: 'nowrap', cursor: 'pointer' }}>Todas</button>
-                {uniqueCities.map((city) => {
-                  const isActive = selectedCityFilters.includes(city);
-                  return (
-                    <button key={city} type="button" onClick={() => setSelectedCityFilters(isActive ? selectedCityFilters.filter((c) => c !== city) : [...selectedCityFilters, city])} style={{ padding: '4px 10px', borderRadius: '15px', fontSize: '0.75rem', fontWeight: 600, border: '1px solid', borderColor: isActive ? 'var(--accent-color)' : 'var(--border-color)', backgroundColor: isActive ? 'rgba(var(--color-corp-red-rgb), 0.06)' : '#fff', color: isActive ? 'var(--accent-color)' : 'var(--text-secondary)', whiteSpace: 'nowrap', cursor: 'pointer' }}>
-                      {city}
+                {hasOwnClients && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => setShowAllClients(false)}
+                      style={{ padding: '4px 10px', borderRadius: '15px', fontSize: '0.75rem', fontWeight: 700, border: '1px solid', borderColor: !showAllClients ? 'var(--color-corp-red)' : 'var(--border-color)', backgroundColor: !showAllClients ? 'rgba(var(--color-corp-red-rgb), 0.08)' : '#fff', color: !showAllClients ? 'var(--color-corp-red)' : 'var(--text-secondary)', whiteSpace: 'nowrap', cursor: 'pointer' }}
+                    >
+                      Mis clientes
                     </button>
-                  );
-                })}
+                    <button
+                      type="button"
+                      onClick={() => setShowAllClients(true)}
+                      style={{ padding: '4px 10px', borderRadius: '15px', fontSize: '0.75rem', fontWeight: 600, border: '1px solid', borderColor: showAllClients ? 'var(--text-primary)' : 'var(--border-color)', backgroundColor: showAllClients ? 'var(--text-primary)' : '#fff', color: showAllClients ? '#fff' : 'var(--text-secondary)', whiteSpace: 'nowrap', cursor: 'pointer' }}
+                    >
+                      Todos
+                    </button>
+                  </>
+                )}
+                {uniqueCities.length > 1 && (
+                  <>
+                    <button type="button" onClick={() => setSelectedCityFilters([])} style={{ padding: '4px 10px', borderRadius: '15px', fontSize: '0.75rem', fontWeight: 600, border: '1px solid', borderColor: selectedCityFilters.length === 0 ? 'var(--text-primary)' : 'var(--border-color)', backgroundColor: selectedCityFilters.length === 0 ? 'var(--text-primary)' : '#fff', color: selectedCityFilters.length === 0 ? '#fff' : 'var(--text-secondary)', whiteSpace: 'nowrap', cursor: 'pointer' }}>Todas</button>
+                    {uniqueCities.map((city) => {
+                      const isActive = selectedCityFilters.includes(city);
+                      return (
+                        <button key={city} type="button" onClick={() => setSelectedCityFilters(isActive ? selectedCityFilters.filter((c) => c !== city) : [...selectedCityFilters, city])} style={{ padding: '4px 10px', borderRadius: '15px', fontSize: '0.75rem', fontWeight: 600, border: '1px solid', borderColor: isActive ? 'var(--accent-color)' : 'var(--border-color)', backgroundColor: isActive ? 'rgba(var(--color-corp-red-rgb), 0.06)' : '#fff', color: isActive ? 'var(--accent-color)' : 'var(--text-secondary)', whiteSpace: 'nowrap', cursor: 'pointer' }}>
+                          {city}
+                        </button>
+                      );
+                    })}
+                  </>
+                )}
               </div>
             )}
 
