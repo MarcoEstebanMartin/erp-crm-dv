@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Mic, Square, Send, Sparkles, X, Trash2, AlertTriangle, Check, Upload } from 'lucide-react';
+import { Mic, Square, Send, Sparkles, X, Trash2, AlertTriangle, Check } from 'lucide-react';
 import { orderApi } from '../../api/order.api';
 import type { Persona, Product } from '../../types';
 
@@ -43,10 +43,10 @@ export const VendedorAiOrderModal: React.FC<VendedorAiOrderModalProps> = ({
   const dialogRef = useRef<HTMLDialogElement | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [textInput, setTextInput] = useState('');
   const [isRecording, setIsRecording] = useState(false);
+  const [recordingSeconds, setRecordingSeconds] = useState(0);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -69,6 +69,17 @@ export const VendedorAiOrderModal: React.FC<VendedorAiOrderModalProps> = ({
       dialog.close();
     }
   }, [open, selectedClient]);
+
+  useEffect(() => {
+    if (!isRecording) {
+      setRecordingSeconds(0);
+      return;
+    }
+    const timer = window.setInterval(() => {
+      setRecordingSeconds((s) => s + 1);
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [isRecording]);
 
   useEffect(() => {
     return () => {
@@ -128,20 +139,13 @@ export const VendedorAiOrderModal: React.FC<VendedorAiOrderModalProps> = ({
     reader.readAsDataURL(blob);
   };
 
-  const handleAudioFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    e.target.value = '';
-    if (!file) return;
-    sendAudioBlob(file, file.type || 'audio/ogg');
-  };
-
   const handleStartRecording = async () => {
     if (typeof window !== 'undefined' && !window.isSecureContext) {
-      setErrorMsg('El micrófono directo requiere HTTPS o localhost. Podés usar "Subir audio" o dictar con el teclado.');
+      setErrorMsg('El micrófono requiere HTTPS (o localhost en PC). Si estás probando por IP local, dictá usando el micrófono del teclado.');
       return;
     }
     if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
-      setErrorMsg('Este navegador no habilita grabación directa. Usá "Subir audio" o dictá por texto.');
+      setErrorMsg('Tu navegador no habilita grabación directa. Podés dictar usando el micrófono del teclado.');
       return;
     }
     setErrorMsg(null);
@@ -241,44 +245,27 @@ export const VendedorAiOrderModal: React.FC<VendedorAiOrderModalProps> = ({
         <div style={{ padding: '14px 16px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px' }}>
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
             {!isRecording ? (
-              <>
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  disabled={loading}
-                  onClick={handleStartRecording}
-                  style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', padding: '10px 12px', fontWeight: 600 }}
-                >
-                  <Mic size={16} color="var(--color-corp-red)" aria-hidden="true" />
-                  Grabar audio
-                </button>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="audio/*"
-                  onChange={handleAudioFileChange}
-                  style={{ display: 'none' }}
-                />
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  disabled={loading}
-                  onClick={() => fileInputRef.current?.click()}
-                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', padding: '10px 12px', fontWeight: 600 }}
-                >
-                  <Upload size={15} aria-hidden="true" />
-                  Subir audio
-                </button>
-              </>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                disabled={loading}
+                onClick={handleStartRecording}
+                style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '12px 14px', fontWeight: 700 }}
+              >
+                <Mic size={17} color="var(--color-corp-red)" aria-hidden="true" />
+                Grabar audio
+              </button>
             ) : (
               <button
                 type="button"
                 className="btn"
                 onClick={handleStopRecording}
-                style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', padding: '10px 12px', fontWeight: 700, backgroundColor: 'var(--color-corp-red)', color: '#fff', border: 'none' }}
+                style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '12px 14px', fontWeight: 700, backgroundColor: 'var(--color-corp-red)', color: '#fff', border: 'none' }}
               >
                 <Square size={14} aria-hidden="true" />
-                Detener y enviar
+                <span className="tabular-nums">
+                  Grabando {Math.floor(recordingSeconds / 60)}:{String(recordingSeconds % 60).padStart(2, '0')} · Enviar
+                </span>
               </button>
             )}
           </div>
