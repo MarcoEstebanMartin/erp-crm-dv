@@ -2,18 +2,18 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { RefreshCw, Search, Send, Wifi, WifiOff } from 'lucide-react';
 import {
   buildManualWhatsAppUrl,
-  CollectorSettlementDTO,
   fieldReceiptsApi,
-  OfflineBundleBankAccount,
-  OfflineBundleClient,
+  type CollectorSettlementDTO,
+  type OfflineBundleBankAccount,
+  type OfflineBundleClient,
 } from '../../api/fieldReceipts.api';
 import {
   flushOfflineReceiptQueue,
   getPendingOfflineReceipts,
   loadOfflineBundle,
-  QueuedFieldReceipt,
   saveOfflineBundle,
   startOfflineSyncListener,
+  type QueuedFieldReceipt,
 } from '../../utils/offlineReceiptQueue';
 import { FieldCollectModal } from './FieldCollectModal';
 

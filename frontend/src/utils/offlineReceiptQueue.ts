@@ -1,7 +1,7 @@
 import {
   fieldReceiptsApi,
-  OfflineBundleResponse,
-  SyncFieldReceiptPayload,
+  type OfflineBundleResponse,
+  type SyncFieldReceiptPayload,
 } from '../api/fieldReceipts.api';
 
 const DB_NAME = 'erp_dv_field_receipts_v1';

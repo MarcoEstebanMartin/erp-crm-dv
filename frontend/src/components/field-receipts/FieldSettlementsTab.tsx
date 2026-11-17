@@ -2,9 +2,9 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Check, Eye, RefreshCw, Send, X } from 'lucide-react';
 import {
   buildManualWhatsAppUrl,
-  CollectorSettlementDTO,
   fieldReceiptsApi,
-  OfflineBundleBankAccount,
+  type CollectorSettlementDTO,
+  type OfflineBundleBankAccount,
 } from '../../api/fieldReceipts.api';
 
 export const FieldSettlementsTab: React.FC = () => {

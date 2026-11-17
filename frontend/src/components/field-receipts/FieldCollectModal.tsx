@@ -1,12 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Camera, CheckCircle2, Plus, Trash2, WifiOff, X } from 'lucide-react';
 import {
-  FieldPaymentMethod,
   fieldReceiptsApi,
-  OfflineBundleBankAccount,
-  OfflineBundleClient,
-  SyncFieldReceiptPaymentPayload,
-  SyncFieldReceiptPayload,
+  type FieldPaymentMethod,
+  type OfflineBundleBankAccount,
+  type OfflineBundleClient,
+  type SyncFieldReceiptPaymentPayload,
+  type SyncFieldReceiptPayload,
 } from '../../api/fieldReceipts.api';
 import {
   enqueueOfflineReceipt,
