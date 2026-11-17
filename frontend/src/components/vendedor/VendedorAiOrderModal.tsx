@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Mic, Square, Send, Sparkles, X, Trash2, AlertTriangle, Check } from 'lucide-react';
+import { Mic, Square, Send, Sparkles, X, Trash2, AlertTriangle, Check, Upload } from 'lucide-react';
 import { orderApi } from '../../api/order.api';
 import type { Persona, Product } from '../../types';
 
@@ -43,6 +43,7 @@ export const VendedorAiOrderModal: React.FC<VendedorAiOrderModalProps> = ({
   const dialogRef = useRef<HTMLDialogElement | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [textInput, setTextInput] = useState('');
   const [isRecording, setIsRecording] = useState(false);
@@ -113,16 +114,42 @@ export const VendedorAiOrderModal: React.FC<VendedorAiOrderModalProps> = ({
     }
   };
 
+  const sendAudioBlob = (blob: Blob, fallbackMime: string) => {
+    if (blob.size === 0) return;
+    const mimeType = (blob.type || fallbackMime || 'audio/webm').split(';')[0];
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const resultStr = typeof reader.result === 'string' ? reader.result : '';
+      const base64 = resultStr.includes(',') ? resultStr.split(',')[1] : resultStr;
+      if (base64) {
+        void runParse({ audioBase64: base64, audioMimeType: mimeType });
+      }
+    };
+    reader.readAsDataURL(blob);
+  };
+
+  const handleAudioFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    sendAudioBlob(file, file.type || 'audio/ogg');
+  };
+
   const handleStartRecording = async () => {
+    if (typeof window !== 'undefined' && !window.isSecureContext) {
+      setErrorMsg('El micrófono directo requiere HTTPS o localhost. Podés usar "Subir audio" o dictar con el teclado.');
+      return;
+    }
     if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
-      setErrorMsg('Tu navegador no soporta grabación de audio.');
+      setErrorMsg('Este navegador no habilita grabación directa. Usá "Subir audio" o dictá por texto.');
       return;
     }
     setErrorMsg(null);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mimeType = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/ogg';
-      const recorder = new MediaRecorder(stream, { mimeType });
+      const candidates = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus', 'audio/ogg', 'audio/mp4'];
+      const supportedMime = candidates.find((m) => MediaRecorder.isTypeSupported(m));
+      const recorder = supportedMime ? new MediaRecorder(stream, { mimeType: supportedMime }) : new MediaRecorder(stream);
       audioChunksRef.current = [];
 
       recorder.ondataavailable = (ev) => {
@@ -131,18 +158,9 @@ export const VendedorAiOrderModal: React.FC<VendedorAiOrderModalProps> = ({
 
       recorder.onstop = () => {
         stream.getTracks().forEach((t) => t.stop());
-        const blob = new Blob(audioChunksRef.current, { type: mimeType });
-        if (blob.size === 0) return;
-
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          const resultStr = typeof reader.result === 'string' ? reader.result : '';
-          const base64 = resultStr.includes(',') ? resultStr.split(',')[1] : resultStr;
-          if (base64) {
-            void runParse({ audioBase64: base64, audioMimeType: mimeType });
-          }
-        };
-        reader.readAsDataURL(blob);
+        const resolvedMime = recorder.mimeType || supportedMime || 'audio/webm';
+        const blob = new Blob(audioChunksRef.current, { type: resolvedMime });
+        sendAudioBlob(blob, resolvedMime);
       };
 
       mediaRecorderRef.current = recorder;
@@ -223,16 +241,36 @@ export const VendedorAiOrderModal: React.FC<VendedorAiOrderModalProps> = ({
         <div style={{ padding: '14px 16px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px' }}>
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
             {!isRecording ? (
-              <button
-                type="button"
-                className="btn btn-secondary"
-                disabled={loading}
-                onClick={handleStartRecording}
-                style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', padding: '10px 12px', fontWeight: 600 }}
-              >
-                <Mic size={16} color="var(--color-corp-red)" aria-hidden="true" />
-                Grabar audio
-              </button>
+              <>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  disabled={loading}
+                  onClick={handleStartRecording}
+                  style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', padding: '10px 12px', fontWeight: 600 }}
+                >
+                  <Mic size={16} color="var(--color-corp-red)" aria-hidden="true" />
+                  Grabar audio
+                </button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="audio/*"
+                  capture="user"
+                  onChange={handleAudioFileChange}
+                  style={{ display: 'none' }}
+                />
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  disabled={loading}
+                  onClick={() => fileInputRef.current?.click()}
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', padding: '10px 12px', fontWeight: 600 }}
+                >
+                  <Upload size={15} aria-hidden="true" />
+                  Subir audio
+                </button>
+              </>
             ) : (
               <button
                 type="button"
