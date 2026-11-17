@@ -52,6 +52,8 @@ export function useVendedorController(activeTab: string) {
   const selectedRouteIdRef = useRef<number | null>(selectedRouteId);
   selectedRouteIdRef.current = selectedRouteId;
   const lastFetchedTabAtRef = useRef<Record<string, number>>({});
+  const hasFullClientsRef = useRef(false);
+  const prefetchedOrdersRef = useRef(false);
 
   const showToast = useCallback((message: string, type: 'success' | 'error' | 'info' = 'success') => {
     if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
@@ -65,8 +67,11 @@ export function useVendedorController(activeTab: string) {
     showToast,
   });
 
-  const applyTabResult = useCallback((result: Awaited<ReturnType<typeof fetchVendedorTabState>>) => {
-    if (result.clients !== undefined) setClients(result.clients);
+  const applyTabResult = useCallback((result: Awaited<ReturnType<typeof fetchVendedorTabState>>, tab = activeTab) => {
+    if (result.clients !== undefined) {
+      hasFullClientsRef.current = tab === 'orders';
+      setClients(result.clients);
+    }
     if (result.products !== undefined) setProducts(result.products);
     if (result.orders !== undefined) setOrders(result.orders);
     if (result.rubros !== undefined) setRubros(result.rubros);
@@ -75,7 +80,7 @@ export function useVendedorController(activeTab: string) {
     if (result.todayVisits !== undefined) setTodayVisits(result.todayVisits);
     if (result.resolvedRouteId && !selectedRouteIdRef.current) setSelectedRouteId(result.resolvedRouteId);
     if (result.lastCatalogSyncAt) offlineSync.setLastCatalogSyncAt(result.lastCatalogSyncAt);
-  }, [offlineSync.setLastCatalogSyncAt]);
+  }, [activeTab, offlineSync.setLastCatalogSyncAt]);
 
   const fetchData = useCallback(async (force = false) => {
     setErrorMsg(null);
@@ -83,8 +88,8 @@ export function useVendedorController(activeTab: string) {
     const lastAt = lastFetchedTabAtRef.current[activeTab] || 0;
     if (!force && now - lastAt < 20_000) return;
 
-    // Hidratación instantánea desde IndexedDB si aún no hay datos cargados para la pestaña
-    if (products.length === 0 || clients.length === 0) {
+    const needsFullClients = activeTab === 'orders' && !hasFullClientsRef.current;
+    if (products.length === 0 || clients.length === 0 || needsFullClients) {
       readCachedVendedorData({
         activeTab,
         prodSearchQuery: '',
@@ -92,7 +97,10 @@ export function useVendedorController(activeTab: string) {
         selectedRouteId: selectedRouteIdRef.current,
       }).then((cached) => {
         if (cached.hasAnyCachedData) {
-          setClients((prev) => (prev.length === 0 && cached.clients ? cached.clients : prev));
+          if (cached.clients && (clients.length === 0 || needsFullClients)) {
+            if (activeTab === 'orders') hasFullClientsRef.current = true;
+            setClients(cached.clients);
+          }
           setProducts((prev) => (prev.length === 0 && cached.products ? cached.products : prev));
           setRubros((prev) => (prev.length === 0 && cached.rubros ? cached.rubros : prev));
           setWeeklyPromos((prev) => (prev.length === 0 && cached.weeklyPromos ? cached.weeklyPromos : prev));
@@ -109,11 +117,28 @@ export function useVendedorController(activeTab: string) {
         selectedRouteId: selectedRouteIdRef.current,
       });
 
-      applyTabResult(result);
+      applyTabResult(result, activeTab);
       lastFetchedTabAtRef.current[activeTab] = Date.now();
       offlineSync.setUsingCachedCatalog(result.fromCache);
       if (result.fromCache && !result.hasAnyCachedData) {
         setErrorMsg('Sin conexión y sin copia local previa del catálogo.');
+      }
+
+      if (activeTab === 'inicio' && !prefetchedOrdersRef.current) {
+        prefetchedOrdersRef.current = true;
+        setTimeout(() => {
+          fetchVendedorTabState({
+            activeTab: 'orders',
+            prodSearchQuery: '',
+            searchQuery: '',
+            selectedRouteId: selectedRouteIdRef.current,
+          })
+            .then((prefetched) => {
+              applyTabResult(prefetched, 'orders');
+              lastFetchedTabAtRef.current['orders'] = Date.now();
+            })
+            .catch(() => {});
+        }, 120);
       }
     } catch (err: any) {
       setErrorMsg(err.message || 'Error al obtener datos.');
@@ -237,6 +262,7 @@ export function useVendedorController(activeTab: string) {
     try {
       const routeDetail = await api.getSaleRouteById(routeId);
       const routeClients = routeDetail.route.clients || [];
+      hasFullClientsRef.current = false;
       setClients(routeClients);
       await saveCatalogSnapshot(`route_clients_${routeId}`, routeClients);
     } catch (err: any) {

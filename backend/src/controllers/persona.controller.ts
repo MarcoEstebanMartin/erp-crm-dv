@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import { AuthenticatedRequest } from '../types';
 import { personaService } from '../services/persona.service';
+import { appCache } from '../utils/cache';
 
 function handlePersonaError(res: Response, error: any, fallbackMessage: string, defaultCode = 500) {
   if (error.message === 'Persona no encontrada.') {
@@ -25,12 +26,20 @@ export async function getPersonas(req: AuthenticatedRequest, res: Response): Pro
   }
 
   try {
+    const cacheKey = `personas_${userRole}_${userRole === 'VENDEDOR' ? userId : 'all'}_${String(role || '')}_${String(search || '')}`;
+    const cached = appCache.get<any[]>(cacheKey);
+    if (cached) {
+      res.status(200).json({ status: 'success', data: { personas: cached } });
+      return;
+    }
+
     const personas = await personaService.getPersonas(
       userId,
       userRole,
       search as string,
       role as string,
     );
+    appCache.set(cacheKey, personas, 30);
     res.status(200).json({ status: 'success', data: { personas } });
   } catch (error: any) {
     res.status(500).json({ status: 'error', message: 'Error al obtener personas.' });
@@ -63,6 +72,7 @@ export async function createPersona(req: AuthenticatedRequest, res: Response): P
 
   try {
     const persona = await personaService.createPersona(req.body, userId, userRole);
+    appCache.invalidateByPrefix('personas_');
     res.status(201).json({ status: 'success', data: { persona } });
   } catch (error: any) {
     res.status(500).json({ status: 'error', message: error.message || 'Error al crear la persona.' });
@@ -84,6 +94,7 @@ export async function updatePersona(req: AuthenticatedRequest, res: Response): P
       userId,
       userRole,
     );
+    appCache.invalidateByPrefix('personas_');
     res.status(200).json({ status: 'success', data: { persona } });
   } catch (error: any) {
     handlePersonaError(res, error, 'Error al actualizar la persona.');
