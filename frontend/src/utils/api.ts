@@ -220,10 +220,11 @@ export const api = {
   },
 
   // --- PRODUCTOS e INVENTARIO ---
-  getProducts: async (search?: string, all?: boolean) => {
+  getProducts: async (search?: string, all?: boolean, light?: boolean) => {
     let url = '/products?';
     if (search) url += `search=${encodeURIComponent(search)}&`;
     if (all) url += `all=true&`;
+    if (light) url += `light=true&`;
     const res = await request(url);
     return res.products;
   },

@@ -20,6 +20,7 @@ export interface VendedorFetchOutput {
   lastCatalogSyncAt?: string;
   hasAnyCachedData?: boolean;
   clients?: Persona[];
+  routeClients?: Persona[];
   products?: Product[];
   orders?: Order[];
   rubros?: Rubro[];
@@ -29,8 +30,10 @@ export interface VendedorFetchOutput {
   weeklyPromos?: WeeklyPromo[];
 }
 
+const VENDEDOR_HISTORY_LIMIT = 50;
+
 export async function readCachedVendedorData(input: VendedorFetchInput): Promise<VendedorFetchOutput> {
-  const [cliSnap, prodSnap, ordSnap, rubSnap, routesSnap, visitsSnap, promoSnap] = await Promise.all([
+  const [cliSnap, prodSnap, ordSnap, rubSnap, routesSnap, visitsSnap, promoSnap, routeCliSnap] = await Promise.all([
     loadCatalogSnapshot<Persona[]>('clients_active'),
     loadCatalogSnapshot<Product[]>('products_full'),
     loadCatalogSnapshot<Order[]>('orders_recent'),
@@ -38,13 +41,10 @@ export async function readCachedVendedorData(input: VendedorFetchInput): Promise
     loadCatalogSnapshot<SaleRoute[]>('seller_routes'),
     loadCatalogSnapshot<any[]>('today_visits'),
     loadCatalogSnapshot<WeeklyPromo[]>('weekly_promos_active'),
+    input.selectedRouteId
+      ? loadCatalogSnapshot<Persona[]>(`route_clients_${input.selectedRouteId}`)
+      : Promise.resolve(null),
   ]);
-
-  let resolvedClients = cliSnap?.payload;
-  if (input.activeTab === 'clients' && input.selectedRouteId) {
-    const routeSnap = await loadCatalogSnapshot<Persona[]>(`route_clients_${input.selectedRouteId}`);
-    if (routeSnap?.payload) resolvedClients = routeSnap.payload;
-  }
 
   const q = input.activeTab === 'products' ? input.searchQuery : input.prodSearchQuery;
   const products = prodSnap?.payload
@@ -54,8 +54,9 @@ export async function readCachedVendedorData(input: VendedorFetchInput): Promise
   return {
     fromCache: true,
     lastCatalogSyncAt: prodSnap?.updatedAt,
-    hasAnyCachedData: Boolean(prodSnap?.payload || cliSnap?.payload),
-    clients: resolvedClients,
+    hasAnyCachedData: Boolean(prodSnap?.payload || cliSnap?.payload || routeCliSnap?.payload),
+    clients: cliSnap?.payload,
+    routeClients: routeCliSnap?.payload,
     products,
     orders: ordSnap?.payload,
     rubros: rubSnap?.payload,
@@ -65,8 +66,18 @@ export async function readCachedVendedorData(input: VendedorFetchInput): Promise
   };
 }
 
+function resolveDefaultRouteId(routesList: SaleRoute[], currentRouteId: number | null): number | null {
+  if (currentRouteId) return currentRouteId;
+  if (routesList.length === 0) return null;
+  const daysMap: Record<number, string> = {
+    0: 'DOMINGO', 1: 'LUNES', 2: 'MARTES', 3: 'MIERCOLES', 4: 'JUEVES', 5: 'VIERNES', 6: 'SABADO',
+  };
+  const todayRoute = routesList.find((r: any) => r.dayOfWeek === daysMap[new Date().getDay()]);
+  return todayRoute ? todayRoute.id : routesList[0].id;
+}
+
 export async function fetchVendedorTabState(input: VendedorFetchInput): Promise<VendedorFetchOutput> {
-  if (typeof navigator !== 'undefined' && !navigator.onLine) {
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) {
     return readCachedVendedorData(input);
   }
 
@@ -74,16 +85,9 @@ export async function fetchVendedorTabState(input: VendedorFetchInput): Promise<
     if (input.activeTab === 'inicio') {
       const routesData = await api.getSellerSaleRoutes();
       const routesList: SaleRoute[] = routesData.routes || [];
-      await saveCatalogSnapshot('seller_routes', routesList);
+      void saveCatalogSnapshot('seller_routes', routesList).catch(() => {});
 
-      let routeIdToLoad = input.selectedRouteId;
-      if (!routeIdToLoad && routesList.length > 0) {
-        const daysMap: Record<number, string> = {
-          0: 'DOMINGO', 1: 'LUNES', 2: 'MARTES', 3: 'MIERCOLES', 4: 'JUEVES', 5: 'VIERNES', 6: 'SABADO',
-        };
-        const todayRoute = routesList.find((r: any) => r.dayOfWeek === daysMap[new Date().getDay()]);
-        routeIdToLoad = todayRoute ? todayRoute.id : routesList[0].id;
-      }
+      const routeIdToLoad = resolveDefaultRouteId(routesList, input.selectedRouteId);
 
       return {
         fromCache: false,
@@ -95,7 +99,7 @@ export async function fetchVendedorTabState(input: VendedorFetchInput): Promise<
     if (input.activeTab === 'orders') {
       const [clientData, prodData, rubroData, promoData] = await Promise.all([
         api.getClients(),
-        api.getProducts(''),
+        api.getProducts('', false, true),
         api.getRubros(),
         api.getActiveWeeklyPromos().catch(() => null),
       ]);
@@ -122,7 +126,8 @@ export async function fetchVendedorTabState(input: VendedorFetchInput): Promise<
     }
 
     if (input.activeTab === 'history') {
-      const orderData = await api.getOrders();
+      const pageRes = await api.getOrdersPage({ page: 1, limit: VENDEDOR_HISTORY_LIMIT });
+      const orderData = pageRes.orders || [];
       void saveCatalogSnapshot('orders_recent', orderData).catch(() => {});
       return {
         fromCache: false,
@@ -131,59 +136,55 @@ export async function fetchVendedorTabState(input: VendedorFetchInput): Promise<
     }
 
     if (input.activeTab === 'clients') {
-      const [routesData, visitsData] = await Promise.all([
+      const preselectedRouteId = input.selectedRouteId;
+      const [routesData, visitsData, preloadedRouteDetail] = await Promise.all([
         api.getSellerSaleRoutes(),
         api.getTodayVisits(),
+        preselectedRouteId ? api.getSaleRouteById(preselectedRouteId).catch(() => null) : Promise.resolve(null),
       ]);
       const routesList: SaleRoute[] = routesData.routes || [];
       const visitsList = visitsData.visits || [];
-
-      await Promise.all([
-        saveCatalogSnapshot('seller_routes', routesList),
-        saveCatalogSnapshot('today_visits', visitsList),
-      ]);
-
-      let routeIdToLoad = input.selectedRouteId;
-      if (!routeIdToLoad && routesList.length > 0) {
-        const daysMap: Record<number, string> = {
-          0: 'DOMINGO', 1: 'LUNES', 2: 'MARTES', 3: 'MIERCOLES', 4: 'JUEVES', 5: 'VIERNES', 6: 'SABADO',
-        };
-        const todayRoute = routesList.find((r: any) => r.dayOfWeek === daysMap[new Date().getDay()]);
-        routeIdToLoad = todayRoute ? todayRoute.id : routesList[0].id;
-      }
+      const routeIdToLoad = resolveDefaultRouteId(routesList, preselectedRouteId);
 
       let routeClients: Persona[] = [];
       if (routeIdToLoad) {
-        const routeDetail = await api.getSaleRouteById(routeIdToLoad);
-        routeClients = routeDetail.route.clients || [];
-        await saveCatalogSnapshot(`route_clients_${routeIdToLoad}`, routeClients);
+        const routeDetail =
+          preloadedRouteDetail && preselectedRouteId === routeIdToLoad
+            ? preloadedRouteDetail
+            : await api.getSaleRouteById(routeIdToLoad);
+        routeClients = routeDetail?.route?.clients || [];
       }
+
+      void Promise.all([
+        saveCatalogSnapshot('seller_routes', routesList),
+        saveCatalogSnapshot('today_visits', visitsList),
+        routeIdToLoad ? saveCatalogSnapshot(`route_clients_${routeIdToLoad}`, routeClients) : Promise.resolve(),
+      ]).catch(() => {});
 
       return {
         fromCache: false,
         vendedorRoutes: routesList,
         todayVisits: visitsList,
         resolvedRouteId: routeIdToLoad,
-        clients: routeClients,
+        routeClients,
       };
     }
 
     if (input.activeTab === 'products') {
       const [prodData, rubroData, promoData] = await Promise.all([
-        api.getProducts(''),
+        api.getProducts('', false, true),
         api.getRubros(),
         api.getActiveWeeklyPromos().catch(() => null),
       ]);
-      await Promise.all([
+      const syncTs = new Date().toISOString();
+      void Promise.all([
         saveCatalogSnapshot('rubros_all', rubroData),
         Array.isArray(promoData)
           ? saveCatalogSnapshot('weekly_promos_active', promoData)
           : Promise.resolve(),
-      ]);
-      let syncTs: string | undefined;
-      if (!input.searchQuery.trim()) {
-        syncTs = await saveCatalogSnapshot('products_full', prodData);
-      }
+        !input.searchQuery.trim() ? saveCatalogSnapshot('products_full', prodData) : Promise.resolve(),
+      ]).catch(() => {});
+
       return {
         fromCache: false,
         lastCatalogSyncAt: syncTs,

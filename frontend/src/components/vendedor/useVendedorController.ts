@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { api } from '../../utils/api';
-import { captureCurrentGpsSilently } from '../../utils/geoUtils';
+import { captureCurrentGpsSilently, getFreshCachedGps, warmUpGpsSilently } from '../../utils/geoUtils';
 import { generateSafeIdempotencyKey } from '../../utils/idempotencyClient';
 import { loadCatalogSnapshot, saveCatalogSnapshot } from '../../utils/offlineCatalogDb';
 import { isLikelyNetworkError } from '../../utils/offlineSyncManager';
@@ -14,6 +14,7 @@ import type { WeeklyPromo } from '../admin/config/weeklyPromo.helpers';
 
 export function useVendedorController(activeTab: string) {
   const [clients, setClients] = useState<Persona[]>([]);
+  const [routeClients, setRouteClients] = useState<Persona[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [rubros, setRubros] = useState<Rubro[]>([]);
@@ -51,8 +52,13 @@ export function useVendedorController(activeTab: string) {
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const selectedRouteIdRef = useRef<number | null>(selectedRouteId);
   selectedRouteIdRef.current = selectedRouteId;
+  const productsLengthRef = useRef(0);
+  productsLengthRef.current = products.length;
+  const clientsLengthRef = useRef(0);
+  clientsLengthRef.current = clients.length;
+  const routeClientsLengthRef = useRef(0);
+  routeClientsLengthRef.current = routeClients.length;
   const lastFetchedTabAtRef = useRef<Record<string, number>>({});
-  const hasFullClientsRef = useRef(false);
   const prefetchedOrdersRef = useRef(false);
 
   const showToast = useCallback((message: string, type: 'success' | 'error' | 'info' = 'success') => {
@@ -67,11 +73,9 @@ export function useVendedorController(activeTab: string) {
     showToast,
   });
 
-  const applyTabResult = useCallback((result: Awaited<ReturnType<typeof fetchVendedorTabState>>, tab = activeTab) => {
-    if (result.clients !== undefined) {
-      hasFullClientsRef.current = tab === 'orders';
-      setClients(result.clients);
-    }
+  const applyTabResult = useCallback((result: Awaited<ReturnType<typeof fetchVendedorTabState>>) => {
+    if (result.clients !== undefined) setClients(result.clients);
+    if (result.routeClients !== undefined) setRouteClients(result.routeClients);
     if (result.products !== undefined) setProducts(result.products);
     if (result.orders !== undefined) setOrders(result.orders);
     if (result.rubros !== undefined) setRubros(result.rubros);
@@ -80,7 +84,7 @@ export function useVendedorController(activeTab: string) {
     if (result.todayVisits !== undefined) setTodayVisits(result.todayVisits);
     if (result.resolvedRouteId && !selectedRouteIdRef.current) setSelectedRouteId(result.resolvedRouteId);
     if (result.lastCatalogSyncAt) offlineSync.setLastCatalogSyncAt(result.lastCatalogSyncAt);
-  }, [activeTab, offlineSync.setLastCatalogSyncAt]);
+  }, [offlineSync.setLastCatalogSyncAt]);
 
   const fetchData = useCallback(async (force = false) => {
     setErrorMsg(null);
@@ -88,8 +92,12 @@ export function useVendedorController(activeTab: string) {
     const lastAt = lastFetchedTabAtRef.current[activeTab] || 0;
     if (!force && now - lastAt < 20_000) return;
 
-    const needsFullClients = activeTab === 'orders' && !hasFullClientsRef.current;
-    if (products.length === 0 || clients.length === 0 || needsFullClients) {
+    const needsHydration =
+      productsLengthRef.current === 0 ||
+      (activeTab === 'orders' && clientsLengthRef.current === 0) ||
+      (activeTab === 'clients' && routeClientsLengthRef.current === 0);
+
+    if (needsHydration) {
       readCachedVendedorData({
         activeTab,
         prodSearchQuery: '',
@@ -97,14 +105,13 @@ export function useVendedorController(activeTab: string) {
         selectedRouteId: selectedRouteIdRef.current,
       }).then((cached) => {
         if (cached.hasAnyCachedData) {
-          if (cached.clients && (clients.length === 0 || needsFullClients)) {
-            if (activeTab === 'orders') hasFullClientsRef.current = true;
-            setClients(cached.clients);
-          }
+          setClients((prev) => (prev.length === 0 && cached.clients ? cached.clients : prev));
+          setRouteClients((prev) => (prev.length === 0 && cached.routeClients ? cached.routeClients : prev));
           setProducts((prev) => (prev.length === 0 && cached.products ? cached.products : prev));
           setRubros((prev) => (prev.length === 0 && cached.rubros ? cached.rubros : prev));
           setWeeklyPromos((prev) => (prev.length === 0 && cached.weeklyPromos ? cached.weeklyPromos : prev));
           setVendedorRoutes((prev) => (prev.length === 0 && cached.vendedorRoutes ? cached.vendedorRoutes : prev));
+          setTodayVisits((prev) => (prev.length === 0 && cached.todayVisits ? cached.todayVisits : prev));
         }
       }).catch(() => {});
     }
@@ -117,7 +124,7 @@ export function useVendedorController(activeTab: string) {
         selectedRouteId: selectedRouteIdRef.current,
       });
 
-      applyTabResult(result, activeTab);
+      applyTabResult(result);
       lastFetchedTabAtRef.current[activeTab] = Date.now();
       offlineSync.setUsingCachedCatalog(result.fromCache);
       if (result.fromCache && !result.hasAnyCachedData) {
@@ -134,7 +141,7 @@ export function useVendedorController(activeTab: string) {
             selectedRouteId: selectedRouteIdRef.current,
           })
             .then((prefetched) => {
-              applyTabResult(prefetched, 'orders');
+              applyTabResult(prefetched);
               lastFetchedTabAtRef.current['orders'] = Date.now();
             })
             .catch(() => {});
@@ -154,6 +161,14 @@ export function useVendedorController(activeTab: string) {
 
   useEffect(() => { fetchData(); }, [fetchData]);
   useEffect(() => { setSuccessMsg(null); setErrorMsg(null); }, [activeTab]);
+  useEffect(() => {
+    if (activeTab === 'orders' || activeTab === 'clients') {
+      warmUpGpsSilently();
+    }
+  }, [activeTab]);
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent('dv:vendedor-cart-count', { detail: cart.length }));
+  }, [cart.length]);
   useEffect(() => {
     const onManualSync = () => {
       void offlineSync.syncNow();
@@ -180,14 +195,12 @@ export function useVendedorController(activeTab: string) {
           return prev;
         }
         const newQty = existing.quantity + 1;
-        showToast(`Agregado: ${product.name} (x${newQty})`, 'success');
         return prev.map((item) => (item.product.id === product.id ? { ...item, quantity: newQty } : item));
       }
       if (product.stock <= 0) {
         showToast(`Sin stock de ${product.name}.`, 'error');
         return prev;
       }
-      showToast(`Agregado: ${product.name} (x${minQty})`, 'success');
       return [...prev, { product, quantity: minQty }];
     });
   }, [showToast]);
@@ -203,6 +216,22 @@ export function useVendedorController(activeTab: string) {
       }
       setErrorMsg(`Solo hay ${existing.product.stock} unidades en stock.`);
       return prev;
+    });
+  }, []);
+
+  const setCartQty = useCallback((productId: number, rawQty: number) => {
+    setCart((prev) => {
+      const existing = prev.find((item) => item.product.id === productId);
+      if (!existing) return prev;
+      const nextQty = Math.floor(rawQty);
+      if (!Number.isFinite(nextQty) || nextQty <= 0) {
+        return prev.filter((item) => item.product.id !== productId);
+      }
+      const clamped = Math.min(nextQty, existing.product.stock);
+      if (nextQty > existing.product.stock) {
+        setErrorMsg(`Solo hay ${existing.product.stock} unidades en stock.`);
+      }
+      return prev.map((item) => (item.product.id === productId ? { ...item, quantity: clamped } : item));
     });
   }, []);
 
@@ -225,7 +254,7 @@ export function useVendedorController(activeTab: string) {
     const orderIdempotencyKey = generateSafeIdempotencyKey();
 
     setLoading(true);
-    const gps = await captureCurrentGpsSilently(1000);
+    const gps = getFreshCachedGps() ?? (await captureCurrentGpsSilently(350));
 
     const saveOrderToOfflineQueue = async () => {
       await offlineSync.queueOrderOffline({
@@ -242,14 +271,22 @@ export function useVendedorController(activeTab: string) {
     try {
       await api.createOrder({ clientId: selectedClient.id, items, notes: orderNotes }, { idempotencyKey: orderIdempotencyKey });
       if (effectiveRouteId) {
-        try {
-          await api.recordRouteVisit(effectiveRouteId, { personaId: selectedClient.id, status: 'ORDERED', latitude: gps?.lat ?? null, longitude: gps?.lng ?? null }, { idempotencyKey: `${orderIdempotencyKey}-visit` });
-        } catch {}
+        void api
+          .recordRouteVisit(
+            effectiveRouteId,
+            { personaId: selectedClient.id, status: 'ORDERED', latitude: gps?.lat ?? null, longitude: gps?.lng ?? null },
+            { idempotencyKey: `${orderIdempotencyKey}-visit` },
+          )
+          .catch(() => {});
       }
+      setTodayVisits((prev) => [
+        ...prev.filter((v) => v.personaId !== selectedClient.id),
+        { personaId: selectedClient.id, status: 'ORDERED' },
+      ]);
       markLocalVisit(selectedClient.id);
       setSuccessMsg(`Pedido enviado${gps ? ' (GPS OK)' : ''}.`);
       setCart([]); setOrderNotes(''); setSelectedClient(null); setClientFilter('');
-      fetchData(true);
+      void fetchData(true);
     } catch (err: any) {
       if (isLikelyNetworkError(err)) await saveOrderToOfflineQueue();
       else setErrorMsg(err.message || 'Error al procesar el pedido.');
@@ -258,18 +295,21 @@ export function useVendedorController(activeTab: string) {
 
   const handleSelectRoute = async (routeId: number) => {
     setSelectedRouteId(routeId);
-    setLoading(true);
+    const cachedSnap = await loadCatalogSnapshot<Persona[]>(`route_clients_${routeId}`).catch(() => null);
+    if (cachedSnap?.payload) {
+      setRouteClients(cachedSnap.payload);
+    } else {
+      setLoading(true);
+    }
     try {
       const routeDetail = await api.getSaleRouteById(routeId);
-      const routeClients = routeDetail.route.clients || [];
-      hasFullClientsRef.current = false;
-      setClients(routeClients);
-      await saveCatalogSnapshot(`route_clients_${routeId}`, routeClients);
+      const nextRouteClients = routeDetail.route.clients || [];
+      setRouteClients(nextRouteClients);
+      void saveCatalogSnapshot(`route_clients_${routeId}`, nextRouteClients).catch(() => {});
     } catch (err: any) {
-      if (isLikelyNetworkError(err)) {
-        const snap = await loadCatalogSnapshot<Persona[]>(`route_clients_${routeId}`);
-        if (snap?.payload) setClients(snap.payload);
-      } else { setErrorMsg('Error al cargar la ruta: ' + err.message); }
+      if (!isLikelyNetworkError(err)) {
+        setErrorMsg('Error al cargar la ruta: ' + err.message);
+      }
     } finally { setLoading(false); }
   };
 
@@ -278,7 +318,7 @@ export function useVendedorController(activeTab: string) {
     if (!noSaleModal || !selectedRouteId) return;
     setLoading(true);
     const visitIdempotencyKey = generateSafeIdempotencyKey();
-    const gps = await captureCurrentGpsSilently(3000);
+    const gps = getFreshCachedGps() ?? (await captureCurrentGpsSilently(350));
 
     const enqueueVisit = async () => {
       await offlineSync.queueVisitOffline({
@@ -286,6 +326,10 @@ export function useVendedorController(activeTab: string) {
         status: 'NO_BUY', noBuyReason: noSaleModal.reason, notes: noSaleModal.notes,
         latitude: gps?.lat ?? null, longitude: gps?.lng ?? null, idempotencyKey: visitIdempotencyKey,
       });
+      setTodayVisits((prev) => [
+        ...prev.filter((v) => v.personaId !== noSaleModal.clientId),
+        { personaId: noSaleModal.clientId, status: 'NO_BUY', noBuyReason: noSaleModal.reason },
+      ]);
       setSuccessMsg('Visita guardada offline.');
       setNoSaleModal(null);
     };
@@ -294,9 +338,10 @@ export function useVendedorController(activeTab: string) {
 
     try {
       await api.recordRouteVisit(selectedRouteId, { personaId: noSaleModal.clientId, status: 'NO_BUY', noBuyReason: noSaleModal.reason, notes: noSaleModal.notes, latitude: gps?.lat ?? null, longitude: gps?.lng ?? null }, { idempotencyKey: visitIdempotencyKey });
-      const [visitsData, routeDetail] = await Promise.all([api.getTodayVisits(), api.getSaleRouteById(selectedRouteId)]);
-      setTodayVisits(visitsData.visits || []);
-      setClients(routeDetail.route.clients || []);
+      setTodayVisits((prev) => [
+        ...prev.filter((v) => v.personaId !== noSaleModal.clientId),
+        { personaId: noSaleModal.clientId, status: 'NO_BUY', noBuyReason: noSaleModal.reason },
+      ]);
       setSuccessMsg('Visita registrada.');
       setNoSaleModal(null);
     } catch (err: any) {
@@ -317,14 +362,16 @@ export function useVendedorController(activeTab: string) {
       });
       setClientModal({ open: false, name: '', cuit: '', address: '', city: '', phone: '', email: '', route: '', saleRouteId: '', latitude: null, longitude: null });
       setSelectedClient(client);
-      fetchData();
+      fetchData(true);
     } catch (err: any) { setErrorMsg(err.message || 'Error al guardar cliente.'); }
   };
 
   const handleOpenEditOrder = async (order: any) => {
     try {
-      const prods = await api.getProducts();
-      setProducts(prods);
+      if (productsLengthRef.current === 0) {
+        const prods = await api.getProducts('', false, true);
+        setProducts(prods);
+      }
       const items = (order.items || [])
         .filter((i: any) => !isBonusOrderItem(i))
         .map((i: any) => ({
@@ -341,7 +388,7 @@ export function useVendedorController(activeTab: string) {
     setLoading(true);
     try {
       await api.updateClientSequence(selectedRouteId, orderedClientIds);
-      setClients((prev) => {
+      setRouteClients((prev) => {
         const map = new Map(prev.map((c) => [c.id, c]));
         const reordered = orderedClientIds.map((id) => map.get(id)).filter(Boolean) as Persona[];
         void saveCatalogSnapshot(`route_clients_${selectedRouteId}`, reordered).catch(() => {});
@@ -360,7 +407,7 @@ export function useVendedorController(activeTab: string) {
     setLoading(true);
     try {
       await api.removeClientFromRoute(selectedRouteId, clientId);
-      setClients((prev) => {
+      setRouteClients((prev) => {
         const next = prev.filter((c) => c.id !== clientId);
         void saveCatalogSnapshot(`route_clients_${selectedRouteId}`, next).catch(() => {});
         return next;
@@ -374,13 +421,13 @@ export function useVendedorController(activeTab: string) {
   };
 
   return {
-    clients, products, orders, rubros, weeklyPromos, filterRubroId, setFilterRubroId, selectedClient, setSelectedClient,
+    clients, routeClients, products, orders, rubros, weeklyPromos, filterRubroId, setFilterRubroId, selectedClient, setSelectedClient,
     clientFilter, setClientFilter, cart, setCart, orderNotes, setOrderNotes, clientModal, setClientModal,
     orderDetailsModal, setOrderDetailsModal, resumenClientModal, setResumenClientModal, isPriceListModalOpen, setIsPriceListModalOpen,
     editOrderModal, setEditOrderModal, searchQuery, setSearchQuery, prodSearchQuery, setProdSearchQuery,
     errorMsg, setErrorMsg, successMsg, setSuccessMsg, loading, setLoading, toast, selectedCityFilters, setSelectedCityFilters,
     noSaleModal, setNoSaleModal, vendedorRoutes, selectedRouteId, todayVisits, uniqueCities, offlineSync,
-    fetchData, addToCart, updateCartQty, handleConfirmOrder, handleSelectRoute, handleRecordNoSale, handleCreateClient, handleOpenEditOrder,
+    fetchData, addToCart, updateCartQty, setCartQty, handleConfirmOrder, handleSelectRoute, handleRecordNoSale, handleCreateClient, handleOpenEditOrder,
     handleReorderRouteClients, handleRemoveClientFromRoute,
   };
 }

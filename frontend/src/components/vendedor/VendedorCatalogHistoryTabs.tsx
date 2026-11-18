@@ -1,8 +1,8 @@
-import React from 'react';
-import { Eye, Edit, Package, FileText, Search } from 'lucide-react';
+import React, { useDeferredValue, useEffect, useMemo, useState } from 'react';
+import { Eye, Edit, Package, FileText, Search, X } from 'lucide-react';
 import { getOrderStatusInfo } from '../../utils/orderStatusHelper';
 import { formatIntegerARS } from '../../utils/currency';
-import { sortVendedorCatalog } from './vendedorHelpers';
+import { buildSearchIndex, filterIndexedItems, sortVendedorCatalog } from './vendedorHelpers';
 import type { Order, Product, Rubro } from '../../types';
 
 interface VendedorHistoryTabProps {
@@ -11,8 +11,68 @@ interface VendedorHistoryTabProps {
   onEditOrder: (order: Order) => void;
 }
 
-export const VendedorHistoryTab: React.FC<VendedorHistoryTabProps> = ({ orders, onViewOrderDetails, onEditOrder }) => (
-  <>
+function useIsMobileViewport(breakpointPx = 768): boolean {
+  const [isMobile, setIsMobile] = useState<boolean>(() =>
+    typeof window !== 'undefined' && typeof window.matchMedia === 'function'
+      ? window.matchMedia(`(max-width: ${breakpointPx}px)`).matches
+      : false,
+  );
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
+    const mq = window.matchMedia(`(max-width: ${breakpointPx}px)`);
+    const onChange = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    setIsMobile(mq.matches);
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, [breakpointPx]);
+
+  return isMobile;
+}
+
+export const VendedorHistoryTab: React.FC<VendedorHistoryTabProps> = ({ orders, onViewOrderDetails, onEditOrder }) => {
+  const isMobile = useIsMobileViewport(768);
+
+  if (isMobile) {
+    return (
+      <div className="vendedor-history-cards" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }} aria-label="Historial de pedidos móvil">
+        {orders.length === 0 ? (
+          <div className="card" style={{ textAlign: 'center', padding: '24px', color: 'var(--text-secondary)' }}>Sin pedidos</div>
+        ) : (
+          orders.map((o, idx) => {
+            const statusInfo = getOrderStatusInfo(o);
+            const deferredStyle = idx >= 8 ? { contentVisibility: 'auto' as const, containIntrinsicSize: 'auto none auto 112px' } : undefined;
+            return (
+              <div key={`m-${o.id}`} className="card" style={{ padding: '14px', display: 'flex', flexDirection: 'column', gap: '8px', ...deferredStyle }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontWeight: 600, fontSize: '0.92rem', color: 'var(--text-primary)' }}>{o.client?.name || o.persona?.name || '-'}</div>
+                    <div className="tabular-nums" style={{ fontSize: '0.76rem', color: 'var(--text-secondary)' }}>
+                      {new Date(o.createdAt).toLocaleDateString('es-AR')} · Pedido #{o.id}
+                    </div>
+                  </div>
+                  <span className={`badge badge-${statusInfo.badgeClass}`} style={{ backgroundColor: statusInfo.color + '15', color: statusInfo.color, border: `1px solid ${statusInfo.color}30`, fontWeight: 600, flexShrink: 0 }}>
+                    {statusInfo.label}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--border-color)', paddingTop: '8px' }}>
+                  <span className="tabular-nums" style={{ fontWeight: 700, fontSize: '1rem' }}>{formatIntegerARS(o.totalAmount)}</span>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button type="button" className="btn btn-secondary" style={{ padding: '6px 10px' }} aria-label={`Ver detalle pedido #${o.id}`} onClick={() => onViewOrderDetails(o)}><Eye size={14} aria-hidden="true" /></button>
+                    {o.status === 'PENDING' && (
+                      <button type="button" className="btn btn-secondary" style={{ padding: '6px 10px' }} aria-label={`Editar pedido #${o.id}`} onClick={() => onEditOrder(o)}><Edit size={14} aria-hidden="true" /></button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+    );
+  }
+
+  return (
     <div className="table-container table-container--sticky vendedor-history-table-desktop" role="region" aria-label="Historial de pedidos" tabIndex={0}>
       <table>
         <thead>
@@ -53,42 +113,8 @@ export const VendedorHistoryTab: React.FC<VendedorHistoryTabProps> = ({ orders, 
         </tbody>
       </table>
     </div>
-
-    <div className="vendedor-history-cards" aria-label="Historial de pedidos móvil">
-      {orders.length === 0 ? (
-        <div className="card" style={{ textAlign: 'center', padding: '24px', color: 'var(--text-secondary)' }}>Sin pedidos</div>
-      ) : (
-        orders.map((o) => {
-          const statusInfo = getOrderStatusInfo(o);
-          return (
-            <div key={`m-${o.id}`} className="card" style={{ padding: '14px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ fontWeight: 600, fontSize: '0.92rem', color: 'var(--text-primary)' }}>{o.client?.name || o.persona?.name || '-'}</div>
-                  <div className="tabular-nums" style={{ fontSize: '0.76rem', color: 'var(--text-secondary)' }}>
-                    {new Date(o.createdAt).toLocaleDateString('es-AR')} · Pedido #{o.id}
-                  </div>
-                </div>
-                <span className={`badge badge-${statusInfo.badgeClass}`} style={{ backgroundColor: statusInfo.color + '15', color: statusInfo.color, border: `1px solid ${statusInfo.color}30`, fontWeight: 600, flexShrink: 0 }}>
-                  {statusInfo.label}
-                </span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--border-color)', paddingTop: '8px' }}>
-                <span className="tabular-nums" style={{ fontWeight: 700, fontSize: '1rem' }}>{formatIntegerARS(o.totalAmount)}</span>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <button type="button" className="btn btn-secondary" style={{ padding: '6px 10px' }} aria-label={`Ver detalle pedido #${o.id}`} onClick={() => onViewOrderDetails(o)}><Eye size={14} aria-hidden="true" /></button>
-                  {o.status === 'PENDING' && (
-                    <button type="button" className="btn btn-secondary" style={{ padding: '6px 10px' }} aria-label={`Editar pedido #${o.id}`} onClick={() => onEditOrder(o)}><Edit size={14} aria-hidden="true" /></button>
-                  )}
-                </div>
-              </div>
-            </div>
-          );
-        })
-      )}
-    </div>
-  </>
-);
+  );
+};
 
 interface VendedorCatalogReadOnlyTabProps {
   products: Product[];
@@ -100,21 +126,32 @@ interface VendedorCatalogReadOnlyTabProps {
   onOpenPriceListModal: () => void;
 }
 
+const CATALOG_PAGE_SIZE = 40;
+
 export const VendedorCatalogReadOnlyTab: React.FC<VendedorCatalogReadOnlyTabProps> = ({
   products, rubros, searchQuery, setSearchQuery, filterRubroId, setFilterRubroId, onOpenPriceListModal,
 }) => {
-  const filtered = sortVendedorCatalog(
-    products.filter((p) => {
-      if (filterRubroId && Number(p.rubroId) !== Number(filterRubroId)) return false;
-      if (searchQuery) {
-        const q = searchQuery.toLowerCase().trim();
-        return (p.name || '').toLowerCase().includes(q) || (p.sku || '').toLowerCase().includes(q) || (p.barcode || '').toLowerCase().includes(q) || (p.description || '').toLowerCase().includes(q);
-      }
-      return true;
-    }),
-    rubros,
-    filterRubroId,
+  const deferredQuery = useDeferredValue(searchQuery);
+  const [visibleCount, setVisibleCount] = useState(CATALOG_PAGE_SIZE);
+
+  useEffect(() => {
+    setVisibleCount(CATALOG_PAGE_SIZE);
+  }, [deferredQuery, filterRubroId]);
+
+  const indexedCatalog = useMemo(() => {
+    const byRubro = filterRubroId
+      ? products.filter((p) => Number(p.rubroId) === Number(filterRubroId))
+      : products;
+    const sorted = sortVendedorCatalog(byRubro, rubros, filterRubroId);
+    return buildSearchIndex(sorted, (p) => [p.name, p.sku, p.barcode, p.description]);
+  }, [products, rubros, filterRubroId]);
+
+  const filtered = useMemo(
+    () => filterIndexedItems(indexedCatalog, deferredQuery),
+    [indexedCatalog, deferredQuery],
   );
+
+  const visibleItems = useMemo(() => filtered.slice(0, visibleCount), [filtered, visibleCount]);
 
   return (
     <div className="no-print">
@@ -122,11 +159,32 @@ export const VendedorCatalogReadOnlyTab: React.FC<VendedorCatalogReadOnlyTabProp
         <search className="search-input-wrapper" style={{ flex: 1, minWidth: '250px', position: 'relative' }}>
           <label htmlFor="vendedor-catalog-search" className="sr-only">Buscar producto</label>
           <Search size={14} aria-hidden="true" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)', pointerEvents: 'none' }} />
-          <input id="vendedor-catalog-search" type="text" className="input" placeholder="Buscar producto" autoCorrect="off" autoCapitalize="none" spellCheck={false} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} style={{ paddingLeft: '34px' }} />
+          <input
+            id="vendedor-catalog-search"
+            type="search"
+            className="input"
+            placeholder="Buscar producto"
+            autoCorrect="off"
+            autoCapitalize="none"
+            spellCheck={false}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            style={{ paddingLeft: '34px', paddingRight: searchQuery ? '34px' : undefined, fontSize: '16px' }}
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              aria-label="Limpiar búsqueda"
+              onClick={() => setSearchQuery('')}
+              style={{ position: 'absolute', right: '6px', top: '50%', transform: 'translateY(-50%)', background: 'transparent', border: 'none', boxShadow: 'none', padding: '4px', color: 'var(--text-muted)', cursor: 'pointer' }}
+            >
+              <X size={15} aria-hidden="true" />
+            </button>
+          )}
         </search>
         <div className="form-group" style={{ margin: 0, minWidth: '180px' }}>
           <label htmlFor="vendedor-catalog-rubro" className="sr-only">Rubro</label>
-          <select id="vendedor-catalog-rubro" className="input" style={{ height: '40px', fontSize: '0.85rem', padding: '8px 12px' }} value={filterRubroId} onChange={(e) => setFilterRubroId(e.target.value)}>
+          <select id="vendedor-catalog-rubro" className="input" style={{ height: '40px', fontSize: '16px', padding: '8px 12px' }} value={filterRubroId} onChange={(e) => setFilterRubroId(e.target.value)}>
             <option value="">Todos los rubros</option>
             {rubros.map((r) => (<option key={r.id} value={r.id}>{r.name}</option>))}
           </select>
@@ -141,14 +199,15 @@ export const VendedorCatalogReadOnlyTab: React.FC<VendedorCatalogReadOnlyTabProp
         {filtered.length === 0 ? (
           <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-secondary)', gridColumn: '1 / -1' }}>Sin productos</div>
         ) : (
-          filtered.map((p) => {
+          visibleItems.map((p, idx) => {
             const imgSrc = p.imageUrl ? (p.imageUrl.startsWith('http') ? p.imageUrl : p.imageUrl.startsWith('/') ? `${p.imageUrl}?v=2.0` : `/uploads/products/${p.imageUrl}?v=2.0`) : null;
+            const deferredStyle = idx >= 8 ? { contentVisibility: 'auto' as const, containIntrinsicSize: 'auto none auto 220px' } : undefined;
             return (
-              <div key={p.id} className="product-card" style={{ backgroundColor: '#fff', borderRadius: '8px', border: '1px solid var(--border-color)', overflow: 'hidden', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '10px', position: 'relative' }}>
+              <div key={p.id} className="product-card" style={{ backgroundColor: '#fff', borderRadius: '8px', border: '1px solid var(--border-color)', overflow: 'hidden', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '10px', position: 'relative', ...deferredStyle }}>
                 <div style={{ position: 'relative', height: '140px', width: '100%', backgroundColor: '#f8fafc', borderRadius: '6px', overflow: 'hidden', marginBottom: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <span className="tabular-nums" style={{ position: 'absolute', top: '4px', left: '4px', backgroundColor: 'rgba(15, 23, 42, 0.75)', color: '#ffffff', fontFamily: 'monospace', fontSize: '0.68rem', fontWeight: 700, padding: '2px 6px', borderRadius: '4px', zIndex: 3 }}>#{p.sku || p.id}</span>
                   {imgSrc ? (
-                    <img src={imgSrc} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'contain', padding: '4px' }} loading="lazy" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
+                    <img src={imgSrc} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'contain', padding: '4px' }} loading="lazy" decoding="async" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', color: '#94a3b8' }}>
                       <Package size={30} color="#cbd5e1" aria-hidden="true" /><span style={{ fontSize: '0.68rem', marginTop: '4px', fontWeight: 600 }}>Sin foto</span>
@@ -163,6 +222,19 @@ export const VendedorCatalogReadOnlyTab: React.FC<VendedorCatalogReadOnlyTabProp
           })
         )}
       </div>
+
+      {filtered.length > visibleCount && (
+        <div style={{ display: 'flex', justifyContent: 'center', marginTop: '12px' }}>
+          <button
+            type="button"
+            className="btn btn-secondary tabular-nums"
+            onClick={() => setVisibleCount((c) => c + CATALOG_PAGE_SIZE)}
+            style={{ padding: '10px 20px', fontSize: '0.85rem', fontWeight: 600 }}
+          >
+            Ver más ({filtered.length - visibleCount})
+          </button>
+        </div>
+      )}
     </div>
   );
 };

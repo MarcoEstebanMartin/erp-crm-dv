@@ -4,6 +4,24 @@ export interface GpsCaptureResult {
   accuracyMeters: number | null;
 }
 
+const DEFAULT_GPS_CACHE_MS = 120_000;
+let lastGpsCache: { result: GpsCaptureResult; capturedAt: number } | null = null;
+
+export function getFreshCachedGps(maxAgeMs = DEFAULT_GPS_CACHE_MS): GpsCaptureResult | null {
+  if (!lastGpsCache) return null;
+  if (Date.now() - lastGpsCache.capturedAt > maxAgeMs) return null;
+  return lastGpsCache.result;
+}
+
+export function warmUpGpsSilently(): void {
+  if (getFreshCachedGps(60_000)) return;
+  void captureCurrentGpsSilently(2500);
+}
+
+export function __resetGpsCacheForTests(): void {
+  lastGpsCache = null;
+}
+
 export const DEPOT_VILLEGAS = {
   lat: -35.0322,
   lng: -63.0134,
@@ -11,6 +29,9 @@ export const DEPOT_VILLEGAS = {
 };
 
 export function captureCurrentGpsSilently(timeoutMs = 3500): Promise<GpsCaptureResult | null> {
+  const cached = getFreshCachedGps();
+  if (cached) return Promise.resolve(cached);
+
   return new Promise((resolve) => {
     if (typeof window === 'undefined' || !('geolocation' in navigator)) {
       resolve(null);
@@ -27,14 +48,16 @@ export function captureCurrentGpsSilently(timeoutMs = 3500): Promise<GpsCaptureR
 
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        if (settled) return;
-        settled = true;
-        window.clearTimeout(timer);
-        resolve({
+        const result: GpsCaptureResult = {
           lat: Number(pos.coords.latitude.toFixed(6)),
           lng: Number(pos.coords.longitude.toFixed(6)),
           accuracyMeters: pos.coords.accuracy ? Math.round(pos.coords.accuracy) : null,
-        });
+        };
+        lastGpsCache = { result, capturedAt: Date.now() };
+        if (settled) return;
+        settled = true;
+        window.clearTimeout(timer);
+        resolve(result);
       },
       () => {
         if (settled) return;

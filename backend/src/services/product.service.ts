@@ -39,6 +39,45 @@ function enrichWithStockValuation<
 
 export class ProductService {
   /**
+   * Catálogo liviano para Preventa móvil: omite lotes, proveedor y valuación contable de stock.
+   */
+  async getProductsLight(search?: string, includeInactive: boolean = false) {
+    const whereClause: any = includeInactive ? {} : { isActive: true };
+    const lightProducts = await prisma.product.findMany({
+      where: whereClause,
+      select: {
+        id: true,
+        sku: true,
+        name: true,
+        description: true,
+        barcode: true,
+        listPrice: true,
+        listPriceB: true,
+        listPriceC: true,
+        stock: true,
+        minOrderQuantity: true,
+        isPesable: true,
+        approximateWeight: true,
+        unitsPerBox: true,
+        rubroId: true,
+        imageUrl: true,
+        isActive: true,
+        commercialCategory: true,
+        rubro: { select: { id: true, name: true } },
+      },
+      orderBy: { sku: 'asc' },
+    });
+
+    if (!search || !search.trim()) return lightProducts;
+    const q = search.trim();
+    return lightProducts.filter((p) => {
+      if (p.barcode && p.barcode === q) return true;
+      const targetText = `${p.sku} ${p.name} ${p.rubro?.name || ''} ${p.commercialCategory || ''}`;
+      return matchesPhoneticQuery(targetText, q);
+    });
+  }
+
+  /**
    * Obtener todos los productos con Buscador Fonético Argentino (b/v, s/z/c, y/i, sin tildes).
    */
   async getProducts(search?: string, includeInactive: boolean = false) {

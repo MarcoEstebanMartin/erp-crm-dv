@@ -9,10 +9,11 @@ import {
 } from '../utils/product-sanitizer.util';
 
 export async function getProducts(req: AuthenticatedRequest, res: Response): Promise<void> {
-  const { search, all } = req.query;
+  const { search, all, light } = req.query;
   const userRole = req.user?.role;
   const includeInactive = userRole === 'ADMIN' && all === 'true';
-  const cacheKey = `products_${search || ''}_${includeInactive}`;
+  const isLight = light === 'true';
+  const cacheKey = `products_${search || ''}_${includeInactive}_${isLight ? 'light' : 'full'}`;
 
   const cached = appCache.get<any[]>(cacheKey);
   if (cached) {
@@ -24,7 +25,9 @@ export async function getProducts(req: AuthenticatedRequest, res: Response): Pro
   }
 
   try {
-    const products = await productService.getProducts(search as string, includeInactive);
+    const products = isLight
+      ? await productService.getProductsLight(search as string, includeInactive)
+      : await productService.getProducts(search as string, includeInactive);
     appCache.set(cacheKey, products, 60);
     res.status(200).json({
       status: 'success',

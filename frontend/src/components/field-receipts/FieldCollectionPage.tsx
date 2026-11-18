@@ -1,5 +1,5 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { RefreshCw, Search, Send, Wifi, WifiOff } from 'lucide-react';
+import React, { useCallback, useDeferredValue, useEffect, useMemo, useState } from 'react';
+import { RefreshCw, Search, Send, WifiOff, X } from 'lucide-react';
 import {
   buildManualWhatsAppUrl,
   fieldReceiptsApi,
@@ -16,7 +16,7 @@ import {
   type QueuedFieldReceipt,
 } from '../../utils/offlineReceiptQueue';
 import { FieldCollectModal } from './FieldCollectModal';
-import { matchesSearchTokens } from '../vendedor/vendedorHelpers';
+import { buildSearchIndex, filterIndexedItems } from '../vendedor/vendedorHelpers';
 
 interface FieldCollectionPageProps {
   initialClientId?: number | null;
@@ -58,7 +58,7 @@ export const FieldCollectionPage: React.FC<FieldCollectionPageProps> = ({
           fieldReceiptsApi.getOfflineBundle(),
           fieldReceiptsApi.listMySettlements(),
         ]);
-        await saveOfflineBundle(bundle);
+        void saveOfflineBundle(bundle).catch(() => {});
         setClients(bundle.clients);
         setBankAccounts(bundle.bankAccounts);
         setCollectorUserId(bundle.collectorUserId);
@@ -102,52 +102,44 @@ export const FieldCollectionPage: React.FC<FieldCollectionPageProps> = ({
     }
   }, [initialClientId, clients, onInitialClientHandled]);
 
+  const deferredSearch = useDeferredValue(search);
+
+  const indexedClients = useMemo(
+    () => buildSearchIndex(clients, (c) => [c.name, c.city, c.cuit, c.address]),
+    [clients],
+  );
+
   const filteredClients = useMemo(() => {
-    if (!search.trim()) return clients.slice(0, 60);
-    return clients
-      .filter((c) => matchesSearchTokens([c.name, c.city, c.cuit, c.address], search))
-      .slice(0, 60);
-  }, [clients, search]);
+    if (!deferredSearch.trim()) return clients.slice(0, 60);
+    return filterIndexedItems(indexedClients, deferredSearch).slice(0, 60);
+  }, [clients, indexedClients, deferredSearch]);
 
   const openSettlement = settlements.find((s) => s.status === 'OPEN');
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxWidth: '820px', margin: '0 auto' }}>
-      <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '10px', padding: '12px 16px', background: '#fff', border: '1px solid #e5e7eb', borderRadius: '12px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <span
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '4px 10px',
-              borderRadius: '999px',
-              fontSize: '0.8rem',
-              fontWeight: 600,
-              background: online ? '#dcfce7' : '#fef3c7',
-              color: online ? '#166534' : '#92400e',
-            }}
-          >
-            {online ? <Wifi size={14} /> : <WifiOff size={14} />}
-            {online ? 'En línea' : 'Sin señal (Offline)'}
-          </span>
-          {pendingQueue.length > 0 && (
-            <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#b45309' }}>
-              {pendingQueue.length} pendiente{pendingQueue.length > 1 ? 's' : ''} de señal
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxWidth: '820px', margin: '0 auto' }}>
+      {(!online || pendingQueue.length > 0) && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '10px', padding: '10px 14px', background: !online ? '#fef3c7' : '#fff', border: '1px solid #e5e7eb', borderRadius: '10px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.82rem', fontWeight: 600, color: !online ? '#92400e' : '#b45309' }}>
+            {!online && <WifiOff size={14} aria-hidden="true" />}
+            <span>
+              {!online ? 'Sin señal' : `${pendingQueue.length} pendiente${pendingQueue.length > 1 ? 's' : ''}`}
+              {!online && pendingQueue.length > 0 ? ` · ${pendingQueue.length} pend.` : ''}
             </span>
+          </div>
+          {online && pendingQueue.length > 0 && (
+            <button
+              type="button"
+              onClick={() => void refreshAll()}
+              disabled={loading}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 10px', borderRadius: '8px', border: '1px solid #d1d5db', background: '#fff', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' }}
+            >
+              <RefreshCw size={13} aria-hidden="true" />
+              {loading ? 'Enviando...' : 'Sincronizar'}
+            </button>
           )}
         </div>
-
-        <button
-          type="button"
-          onClick={() => void refreshAll()}
-          disabled={loading}
-          style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '7px 12px', borderRadius: '8px', border: '1px solid #d1d5db', background: '#fff', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer' }}
-        >
-          <RefreshCw size={14} />
-          {loading ? 'Sincronizando...' : 'Actualizar ruta'}
-        </button>
-      </div>
+      )}
 
       {pendingQueue.some((item) => item.lastError) && (
         <div role="alert" style={{ padding: '10px 14px', borderRadius: '10px', background: '#fef2f2', border: '1px solid #fecaca', color: '#991b1b', fontSize: '0.84rem' }}>
@@ -156,73 +148,91 @@ export const FieldCollectionPage: React.FC<FieldCollectionPageProps> = ({
       )}
 
       {feedback && (
-        <div style={{ padding: '10px 14px', borderRadius: '10px', background: '#ecfdf5', border: '1px solid #a7f3d0', color: '#065f46', fontSize: '0.88rem', fontWeight: 600 }}>
+        <div role="status" style={{ padding: '10px 14px', borderRadius: '10px', background: '#ecfdf5', border: '1px solid #a7f3d0', color: '#065f46', fontSize: '0.86rem', fontWeight: 600 }} onClick={() => setFeedback(null)}>
           {feedback}
         </div>
       )}
 
       {openSettlement && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '10px' }}>
-          <div style={{ padding: '12px 14px', background: '#fff', border: '1px solid #e5e7eb', borderRadius: '10px' }}>
-            <div style={{ fontSize: '0.78rem', color: '#6b7280' }}>Efectivo en tránsito</div>
-            <div style={{ fontSize: '1.1rem', fontWeight: 700 }}>${Math.round(Number(openSettlement.expectedCash)).toLocaleString('es-AR')}</div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '8px' }}>
+          <div style={{ padding: '10px 12px', background: '#fff', border: '1px solid #e5e7eb', borderRadius: '10px' }}>
+            <div style={{ fontSize: '0.72rem', color: '#6b7280' }}>Efectivo</div>
+            <div className="tabular-nums" style={{ fontSize: '1rem', fontWeight: 700 }}>${Math.round(Number(openSettlement.expectedCash)).toLocaleString('es-AR')}</div>
           </div>
-          <div style={{ padding: '12px 14px', background: '#fff', border: '1px solid #e5e7eb', borderRadius: '10px' }}>
-            <div style={{ fontSize: '0.78rem', color: '#6b7280' }}>Cheques ({openSettlement.expectedChecksCount})</div>
-            <div style={{ fontSize: '1.1rem', fontWeight: 700 }}>${Math.round(Number(openSettlement.expectedChecksAmount)).toLocaleString('es-AR')}</div>
+          <div style={{ padding: '10px 12px', background: '#fff', border: '1px solid #e5e7eb', borderRadius: '10px' }}>
+            <div style={{ fontSize: '0.72rem', color: '#6b7280' }}>Cheques ({openSettlement.expectedChecksCount})</div>
+            <div className="tabular-nums" style={{ fontSize: '1rem', fontWeight: 700 }}>${Math.round(Number(openSettlement.expectedChecksAmount)).toLocaleString('es-AR')}</div>
           </div>
-          <div style={{ padding: '12px 14px', background: '#fff', border: '1px solid #e5e7eb', borderRadius: '10px' }}>
-            <div style={{ fontSize: '0.78rem', color: '#6b7280' }}>Transferencias a verificar</div>
-            <div style={{ fontSize: '1.1rem', fontWeight: 700 }}>${Math.round(Number(openSettlement.pendingTransfersAmount)).toLocaleString('es-AR')}</div>
+          <div style={{ padding: '10px 12px', background: '#fff', border: '1px solid #e5e7eb', borderRadius: '10px' }}>
+            <div style={{ fontSize: '0.72rem', color: '#6b7280' }}>Transferencias</div>
+            <div className="tabular-nums" style={{ fontSize: '1rem', fontWeight: 700 }}>${Math.round(Number(openSettlement.pendingTransfersAmount)).toLocaleString('es-AR')}</div>
           </div>
         </div>
       )}
 
-      <div style={{ position: 'relative' }}>
-        <Search size={17} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af' }} />
+      <search style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+        <Search size={17} aria-hidden="true" style={{ position: 'absolute', left: '12px', color: '#9ca3af', pointerEvents: 'none' }} />
+        <label htmlFor="vendedor-collect-search" className="sr-only">Buscar cliente</label>
         <input
+          id="vendedor-collect-search"
           type="search"
-          placeholder="Buscar cliente, localidad o CUIT..."
+          placeholder="Buscar cliente..."
+          autoCorrect="off"
+          autoCapitalize="none"
+          spellCheck={false}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          style={{ width: '100%', padding: '10px 12px 10px 38px', borderRadius: '10px', border: '1px solid #d1d5db', fontSize: '0.95rem', boxSizing: 'border-box' }}
+          style={{ width: '100%', padding: '10px 36px 10px 38px', borderRadius: '10px', border: '1px solid #d1d5db', fontSize: '16px', boxSizing: 'border-box', background: '#fff' }}
         />
-      </div>
+        {search && (
+          <button
+            type="button"
+            aria-label="Limpiar búsqueda"
+            onClick={() => setSearch('')}
+            style={{ position: 'absolute', right: '8px', background: 'transparent', border: 'none', boxShadow: 'none', padding: '4px', color: '#9ca3af', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+          >
+            <X size={16} aria-hidden="true" />
+          </button>
+        )}
+      </search>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
         {loading && clients.length === 0 && (
           <div style={{ textAlign: 'center', padding: '24px', color: '#6b7280', fontSize: '0.88rem' }}>
-            Cargando clientes...
+            Cargando...
           </div>
         )}
-        {filteredClients.map((client) => (
-          <div
-            key={client.id}
-            style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', padding: '12px 16px', background: '#fff', border: '1px solid #e5e7eb', borderRadius: '10px' }}
-          >
-            <div>
-              <div style={{ fontWeight: 700, color: '#111827', fontSize: '0.95rem' }}>{client.name}</div>
-              <div style={{ fontSize: '0.8rem', color: '#6b7280' }}>
-                {[client.city, client.address].filter(Boolean).join(' · ') || 'Sin dirección'}
+        {filteredClients.map((client, idx) => {
+          const locationText = [client.city, client.address].filter(Boolean).join(' · ');
+          const deferredStyle = idx >= 8 ? { contentVisibility: 'auto' as const, containIntrinsicSize: 'auto none auto 68px' } : undefined;
+          return (
+            <div
+              key={client.id}
+              style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', padding: '11px 14px', background: '#fff', border: '1px solid #e5e7eb', borderRadius: '10px', ...deferredStyle }}
+            >
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <div style={{ fontWeight: 700, color: '#111827', fontSize: '0.94rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{client.name}</div>
+                {locationText && (
+                  <div style={{ fontSize: '0.76rem', color: '#6b7280', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {locationText}
+                  </div>
+                )}
               </div>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: '0.72rem', color: '#6b7280' }}>Saldo</div>
-                <div style={{ fontWeight: 700, color: client.outstandingBalance > 0 ? '#dc2626' : '#059669' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
+                <span className="tabular-nums" style={{ fontWeight: 700, fontSize: '0.92rem', color: client.outstandingBalance > 0 ? '#dc2626' : '#059669' }}>
                   ${Math.round(client.outstandingBalance).toLocaleString('es-AR')}
-                </div>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setSelectedClient(client)}
+                  style={{ padding: '7px 13px', minHeight: '36px', borderRadius: '8px', border: 'none', background: '#111827', color: '#fff', fontWeight: 600, fontSize: '0.82rem', cursor: 'pointer', touchAction: 'manipulation', flexShrink: 0 }}
+                >
+                  Cobrar
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={() => setSelectedClient(client)}
-                style={{ padding: '8px 14px', minHeight: '40px', borderRadius: '8px', border: 'none', background: '#111827', color: '#fff', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer', touchAction: 'manipulation', flexShrink: 0 }}
-              >
-                Cobrar
-              </button>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {openSettlement && openSettlement.receipts.length > 0 && (

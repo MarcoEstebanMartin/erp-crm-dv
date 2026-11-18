@@ -1,10 +1,5 @@
 import React from 'react';
 import { ShoppingCart, CheckCircle2, Package, History, Receipt, Home, Navigation } from 'lucide-react';
-import PriceListModal from './PriceListModal';
-import MobileCobros from './MobileCobros';
-import { FieldCollectionPage } from './field-receipts/FieldCollectionPage';
-import EditOrderModal from './modals/EditOrderModal';
-import ResumenCuentaModal from './modals/ResumenCuentaModal';
 import { VendedorHomeTab } from './vendedor/VendedorHomeTab';
 import { VendedorOrderTakeTab } from './vendedor/VendedorOrderTakeTab';
 import { VendedorRoutesTab } from './vendedor/VendedorRoutesTab';
@@ -14,6 +9,13 @@ import { VendedorOfflineBanner } from './vendedor/VendedorOfflineBanner';
 import { cleanCityName } from './vendedor/vendedorHelpers';
 import { useVendedorController } from './vendedor/useVendedorController';
 
+const PriceListModal = React.lazy(() => import('./PriceListModal'));
+const MobileCobros = React.lazy(() => import('./MobileCobros'));
+const FieldCollectionPage = React.lazy(() =>
+  import('./field-receipts/FieldCollectionPage').then((m) => ({ default: m.FieldCollectionPage })),
+);
+const EditOrderModal = React.lazy(() => import('./modals/EditOrderModal'));
+const ResumenCuentaModal = React.lazy(() => import('./modals/ResumenCuentaModal'));
 const RepartoDashboard = React.lazy(() => import('./RepartoDashboard'));
 const DepositoDashboard = React.lazy(() => import('./DepositoDashboard'));
 
@@ -152,6 +154,7 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
           loading={c.loading}
           onAddToCart={c.addToCart}
           onUpdateCartQty={c.updateCartQty}
+          onSetCartQty={c.setCartQty}
           onConfirmOrder={c.handleConfirmOrder}
           onOpenNewClientModal={() => c.setClientModal({ open: true, name: '', cuit: '', address: '', city: '', phone: '', email: '', route: '', saleRouteId: '', latitude: null, longitude: null })}
         />
@@ -169,12 +172,12 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
         <VendedorRoutesTab
           vendedorRoutes={c.vendedorRoutes}
           selectedRouteId={c.selectedRouteId}
-          clients={c.clients}
+          clients={c.routeClients}
           orders={c.orders}
           todayVisits={c.todayVisits}
           loading={c.loading}
           onSelectRoute={c.handleSelectRoute}
-          onSync={() => { c.setLoading(true); c.fetchData().finally(() => c.setLoading(false)); }}
+          onSync={() => { c.setLoading(true); c.fetchData(true).finally(() => c.setLoading(false)); }}
           onOpenNewClientModal={() => c.setClientModal({ open: true, name: '', cuit: '', address: '', city: '', phone: '', email: '', route: '', saleRouteId: c.selectedRouteId || '', latitude: null, longitude: null })}
           onOpenNoSaleModal={(client) => c.setNoSaleModal({ open: true, clientId: client.id, clientName: client.name, reason: 'Estaba cerrado', notes: '' })}
           onCollectClient={(client) => { setCollectClientId(client.id); setActiveTab('field-receipts'); }}
@@ -186,19 +189,23 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
       )}
 
       {activeTab === 'cobranzas' && (
-        <MobileCobros
-          selectedCityFilters={c.selectedCityFilters}
-          setSelectedCityFilters={c.setSelectedCityFilters}
-          uniqueCities={c.uniqueCities}
-          cleanCityName={cleanCityName}
-        />
+        <React.Suspense fallback={<div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-secondary)' }}>Cargando...</div>}>
+          <MobileCobros
+            selectedCityFilters={c.selectedCityFilters}
+            setSelectedCityFilters={c.setSelectedCityFilters}
+            uniqueCities={c.uniqueCities}
+            cleanCityName={cleanCityName}
+          />
+        </React.Suspense>
       )}
 
       {activeTab === 'field-receipts' && (
-        <FieldCollectionPage
-          initialClientId={collectClientId}
-          onInitialClientHandled={() => setCollectClientId(null)}
-        />
+        <React.Suspense fallback={<div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-secondary)' }}>Cargando...</div>}>
+          <FieldCollectionPage
+            initialClientId={collectClientId}
+            onInitialClientHandled={() => setCollectClientId(null)}
+          />
+        </React.Suspense>
       )}
 
       {activeTab === 'products' && (
@@ -213,7 +220,11 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
         />
       )}
 
-      {c.isPriceListModalOpen && <PriceListModal isOpen={c.isPriceListModalOpen} onClose={() => c.setIsPriceListModalOpen(false)} />}
+      {c.isPriceListModalOpen && (
+        <React.Suspense fallback={null}>
+          <PriceListModal isOpen={c.isPriceListModalOpen} onClose={() => c.setIsPriceListModalOpen(false)} />
+        </React.Suspense>
+      )}
 
       <VendedorStreetClientModal
         clientModal={c.clientModal}
@@ -227,14 +238,18 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
         onClose={() => c.setOrderDetailsModal(null)}
       />
 
-      <EditOrderModal
-        editOrderModal={c.editOrderModal}
-        setEditOrderModal={c.setEditOrderModal}
-        products={c.products}
-        fetchData={c.fetchData}
-        setSuccessMsg={c.setSuccessMsg}
-        setErrorMsg={c.setErrorMsg}
-      />
+      {c.editOrderModal?.open && (
+        <React.Suspense fallback={null}>
+          <EditOrderModal
+            editOrderModal={c.editOrderModal}
+            setEditOrderModal={c.setEditOrderModal}
+            products={c.products}
+            fetchData={() => c.fetchData(true)}
+            setSuccessMsg={c.setSuccessMsg}
+            setErrorMsg={c.setErrorMsg}
+          />
+        </React.Suspense>
+      )}
 
       <VendedorNoSaleModal
         noSaleModal={c.noSaleModal}
@@ -244,7 +259,9 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
       />
 
       {c.resumenClientModal && (
-        <ResumenCuentaModal client={c.resumenClientModal} onClose={() => c.setResumenClientModal(null)} />
+        <React.Suspense fallback={null}>
+          <ResumenCuentaModal client={c.resumenClientModal} onClose={() => c.setResumenClientModal(null)} />
+        </React.Suspense>
       )}
 
       {activeTab === 'logistica' && (

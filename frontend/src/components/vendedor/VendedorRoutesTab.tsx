@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useDeferredValue, useEffect, useMemo, useState } from 'react';
 import { ArrowDown, ArrowRight, ArrowUp, CheckCircle2, Map, RefreshCw, Search, Trash2, UserPlus, X } from 'lucide-react';
-import { matchesSearchTokens } from './vendedorHelpers';
+import { buildSearchIndex, filterIndexedItems } from './vendedorHelpers';
 import { useConfirm } from '../../context/ConfirmContext';
-import ClientsGpsMapModal from '../modals/ClientsGpsMapModal';
 import type { Persona, Order, SaleRoute } from '../../types';
+
+const ClientsGpsMapModal = React.lazy(() => import('../modals/ClientsGpsMapModal'));
 
 interface VendedorRoutesTabProps {
   vendedorRoutes: SaleRoute[];
@@ -42,25 +43,59 @@ export const VendedorRoutesTab: React.FC<VendedorRoutesTabProps> = ({
   }, [clients]);
 
   const activeRouteName = vendedorRoutes.find((r) => r.id === selectedRouteId)?.name || 'Ruta';
-  const todayStr = new Date().toDateString();
+  const deferredRouteSearch = useDeferredValue(routeSearch);
+
+  const { orderedTodayIds, visitByClientId } = useMemo(() => {
+    const todayStr = new Date().toDateString();
+    const orderIds = new Set<number>();
+    for (const o of orders) {
+      if (o.status !== 'CANCELLED' && new Date(o.createdAt).toDateString() === todayStr) {
+        orderIds.add(o.clientId);
+      }
+    }
+    const visitMap = new Map<number, any>();
+    for (const v of todayVisits) {
+      if (v.status === 'ORDERED') orderIds.add(v.personaId);
+      visitMap.set(v.personaId, v);
+    }
+    for (const c of clients) {
+      const embedded = (c as any).routeVisits?.[0];
+      if (embedded) {
+        if (embedded.status === 'ORDERED') orderIds.add(c.id);
+        if (!visitMap.has(c.id)) visitMap.set(c.id, embedded);
+      }
+    }
+    return { orderedTodayIds: orderIds, visitByClientId: visitMap };
+  }, [orders, todayVisits, clients]);
 
   const getVisitStatus = (clientId: number) => {
-    const hasOrderToday = orders.some(
-      (o) => o.clientId === clientId && new Date(o.createdAt).toDateString() === todayStr && o.status !== 'CANCELLED',
-    );
-    const visitToday = todayVisits.find((v) => v.personaId === clientId);
-    const status = hasOrderToday ? 'VENTA' : visitToday ? 'NO_COMPRO' : 'PENDIENTE';
+    const visitToday = visitByClientId.get(clientId);
+    const status = orderedTodayIds.has(clientId) ? 'VENTA' : visitToday ? 'NO_COMPRO' : 'PENDIENTE';
     return { status, visitToday };
   };
 
   const sourceList = editMode ? draftClients : clients;
-  const visitedCount = sourceList.filter((c) => getVisitStatus(c.id).status !== 'PENDIENTE').length;
-  const pendingCount = sourceList.length - visitedCount;
 
-  const visibleClients = sourceList.filter((c) => {
-    if (!editMode && onlyPending && getVisitStatus(c.id).status !== 'PENDIENTE') return false;
-    return matchesSearchTokens([c.name, c.address, c.city], routeSearch);
-  });
+  const indexedSource = useMemo(
+    () => buildSearchIndex(sourceList, (c) => [c.name, c.address, c.city]),
+    [sourceList],
+  );
+
+  const { visitedCount, pendingCount } = useMemo(() => {
+    let visited = 0;
+    for (const c of sourceList) {
+      if (orderedTodayIds.has(c.id) || visitByClientId.has(c.id)) visited++;
+    }
+    return { visitedCount: visited, pendingCount: sourceList.length - visited };
+  }, [sourceList, orderedTodayIds, visitByClientId]);
+
+  const visibleClients = useMemo(() => {
+    const searched = deferredRouteSearch.trim()
+      ? filterIndexedItems(indexedSource, deferredRouteSearch)
+      : sourceList;
+    if (editMode || !onlyPending) return searched;
+    return searched.filter((c) => !orderedTodayIds.has(c.id) && !visitByClientId.has(c.id));
+  }, [indexedSource, sourceList, deferredRouteSearch, editMode, onlyPending, orderedTodayIds, visitByClientId]);
 
   const moveClient = (index: number, direction: -1 | 1) => {
     const nextIdx = index + direction;
@@ -194,8 +229,9 @@ export const VendedorRoutesTab: React.FC<VendedorRoutesTabProps> = ({
           visibleClients.map((c, index) => {
             const { status: visitStatus, visitToday } = getVisitStatus(c.id);
             const debt = Number(c.outstandingBalance || 0);
+            const deferredStyle = index >= 8 ? { contentVisibility: 'auto' as const, containIntrinsicSize: 'auto none auto 96px' } : undefined;
             return (
-              <div key={c.id} className="card" style={{ padding: '11px 12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div key={c.id} className="card" style={{ padding: '11px 12px', display: 'flex', flexDirection: 'column', gap: '8px', ...deferredStyle }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
                   <div style={{ minWidth: 0, flex: 1 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -261,7 +297,11 @@ export const VendedorRoutesTab: React.FC<VendedorRoutesTabProps> = ({
         )}
       </div>
 
-      <ClientsGpsMapModal isOpen={isMapOpen} clients={clients} activeFilterLabel={activeRouteName} onClose={() => setIsMapOpen(false)} onSelectClient={(client) => { setIsMapOpen(false); onSellToClient(client); }} />
+      {isMapOpen && (
+        <React.Suspense fallback={null}>
+          <ClientsGpsMapModal isOpen={isMapOpen} clients={clients} activeFilterLabel={activeRouteName} onClose={() => setIsMapOpen(false)} onSelectClient={(client) => { setIsMapOpen(false); onSellToClient(client); }} />
+        </React.Suspense>
+      )}
     </div>
   );
 };

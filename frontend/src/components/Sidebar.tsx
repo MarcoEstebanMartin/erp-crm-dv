@@ -54,6 +54,17 @@ export default function Sidebar({ username, role, activeTab, setActiveTab, onLog
   const location = useLocation();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [vendedorCartCount, setVendedorCartCount] = useState(0);
+
+  useEffect(() => {
+    if (role !== 'VENDEDOR') return;
+    const onCartCount = (ev: Event) => {
+      const count = Number((ev as CustomEvent<number>).detail || 0);
+      setVendedorCartCount(count);
+    };
+    window.addEventListener('dv:vendedor-cart-count', onCartCount);
+    return () => window.removeEventListener('dv:vendedor-cart-count', onCartCount);
+  }, [role]);
 
   const currentTab = (() => {
     const segments = location.pathname.split('/').filter(Boolean);
@@ -221,7 +232,31 @@ export default function Sidebar({ username, role, activeTab, setActiveTab, onLog
                 className={`vendedor-bottom-nav-item ${isActive ? 'vendedor-bottom-nav-item-active' : ''}`}
                 onClick={() => handleTabSelect(item.id)}
               >
-                <div className="bottom-nav-icon-wrapper">{item.icon}</div>
+                <div className="bottom-nav-icon-wrapper" style={{ position: 'relative' }}>
+                  {item.icon}
+                  {item.id === 'orders' && vendedorCartCount > 0 && (
+                    <span
+                      className="tabular-nums"
+                      style={{
+                        position: 'absolute',
+                        top: '-4px',
+                        right: '-8px',
+                        minWidth: '16px',
+                        height: '16px',
+                        padding: '0 4px',
+                        borderRadius: '999px',
+                        backgroundColor: 'var(--color-corp-red)',
+                        color: '#ffffff',
+                        fontSize: '0.65rem',
+                        fontWeight: 700,
+                        lineHeight: '16px',
+                        textAlign: 'center',
+                      }}
+                    >
+                      {vendedorCartCount}
+                    </span>
+                  )}
+                </div>
                 <span>{item.label}</span>
               </button>
             );

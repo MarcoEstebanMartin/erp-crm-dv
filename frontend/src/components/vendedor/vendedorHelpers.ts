@@ -3,11 +3,52 @@ export const getTodayKey = () => {
   return `visits_${today.getFullYear()}-${today.getMonth() + 1}-${today.getDate()}`;
 };
 
-const normalizeSearchText = (value: string): string =>
+export const normalizeSearchText = (value: string): string =>
   value
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase();
+
+export const tokenizeSearchQuery = (query: string): string[] =>
+  normalizeSearchText(query).trim().split(/\s+/).filter(Boolean);
+
+export interface IndexedSearchItem<T> {
+  item: T;
+  searchKey: string;
+}
+
+/**
+ * Pre-normaliza los campos de búsqueda una sola vez para filtrar en O(N) sin regex ni NFD por tecla.
+ */
+export const buildSearchIndex = <T,>(
+  items: T[],
+  getFields: (item: T) => (string | null | undefined)[],
+): IndexedSearchItem<T>[] =>
+  items.map((item) => ({
+    item,
+    searchKey: normalizeSearchText(getFields(item).filter(Boolean).join(' ')),
+  }));
+
+export const filterIndexedItems = <T,>(
+  indexed: IndexedSearchItem<T>[],
+  query: string,
+): T[] => {
+  const tokens = tokenizeSearchQuery(query);
+  if (tokens.length === 0) return indexed.map((entry) => entry.item);
+  const results: T[] = [];
+  for (let i = 0; i < indexed.length; i++) {
+    const entry = indexed[i];
+    let matches = true;
+    for (let j = 0; j < tokens.length; j++) {
+      if (!entry.searchKey.includes(tokens[j])) {
+        matches = false;
+        break;
+      }
+    }
+    if (matches) results.push(entry.item);
+  }
+  return results;
+};
 
 /**
  * Coincide si todas las palabras buscadas aparecen en cualquier orden dentro de los campos dados.
@@ -16,7 +57,7 @@ export const matchesSearchTokens = (
   fields: (string | null | undefined)[],
   query: string,
 ): boolean => {
-  const tokens = normalizeSearchText(query).trim().split(/\s+/).filter(Boolean);
+  const tokens = tokenizeSearchQuery(query);
   if (tokens.length === 0) return true;
   const haystack = normalizeSearchText(fields.filter(Boolean).join(' '));
   return tokens.every((token) => haystack.includes(token));
@@ -94,21 +135,31 @@ export const getVendedorItemPrice = (product: any, client: any) => {
 };
 
 export const sortVendedorCatalog = (products: any[], rubros: any[], filterRubroId: string) => {
-  return [...products].sort((a, b) => {
-    if (filterRubroId) {
-      const rubroA = rubros.find((r) => Number(r.id) === Number(a.rubroId))?.name || 'Z';
-      const rubroB = rubros.find((r) => Number(r.id) === Number(b.rubroId))?.name || 'Z';
-      if (rubroA < rubroB) return -1;
-      if (rubroA > rubroB) return 1;
-    }
-    const strA = String(a.sku || '').trim();
-    const strB = String(b.sku || '').trim();
-    const matchA = strA.match(/\d+/);
-    const matchB = strB.match(/\d+/);
-    if (matchA && matchB) {
-      const diff = parseInt(matchA[0], 10) - parseInt(matchB[0], 10);
-      if (diff !== 0) return diff;
-    }
-    return strA.localeCompare(strB, undefined, { numeric: true, sensitivity: 'base' });
+  const rubroNames = filterRubroId
+    ? new Map<number, string>(rubros.map((r) => [Number(r.id), r.name || 'Z']))
+    : null;
+
+  const keyed = products.map((p) => {
+    const skuStr = String(p.sku || '').trim();
+    const match = skuStr.match(/\d+/);
+    return {
+      p,
+      skuStr,
+      skuNum: match ? parseInt(match[0], 10) : null,
+      rubroName: rubroNames ? (rubroNames.get(Number(p.rubroId)) || 'Z') : '',
+    };
   });
+
+  keyed.sort((a, b) => {
+    if (rubroNames) {
+      if (a.rubroName < b.rubroName) return -1;
+      if (a.rubroName > b.rubroName) return 1;
+    }
+    if (a.skuNum !== null && b.skuNum !== null && a.skuNum !== b.skuNum) {
+      return a.skuNum - b.skuNum;
+    }
+    return a.skuStr.localeCompare(b.skuStr, undefined, { numeric: true, sensitivity: 'base' });
+  });
+
+  return keyed.map((k) => k.p);
 };
