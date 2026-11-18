@@ -147,7 +147,7 @@ function isProviderEntry(item: any): boolean {
 
 function resolveKindLabel(
   item: any,
-): 'Factura' | 'Pago' | 'Retención' | 'Anulación' | 'Ajuste' {
+): 'Factura' | 'Nota de Crédito' | 'Pago' | 'Retención' | 'Anulación' | 'Ajuste' {
   if (item?.sourceType === 'SUPPLIER_INVOICE') return 'Factura';
   if (item?.sourceType === 'SUPPLIER_INVOICE_REVERSAL') return 'Anulación';
   if (item?.sourceType === 'SUPPLIER_PAYMENT') return 'Pago';

@@ -1,5 +1,5 @@
 import React, { useDeferredValue, useEffect, useMemo, useState } from 'react';
-import { ArrowDown, ArrowRight, ArrowUp, CheckCircle2, Map, RefreshCw, Search, Trash2, UserPlus, X } from 'lucide-react';
+import { ArrowDown, ArrowRight, ArrowUp, CheckCircle2, Map as MapIcon, RefreshCw, Search, Trash2, UserPlus, X } from 'lucide-react';
 import { buildSearchIndex, filterIndexedItems } from './vendedorHelpers';
 import { useConfirm } from '../../context/ConfirmContext';
 import type { Persona, Order, SaleRoute } from '../../types';
@@ -29,7 +29,7 @@ export const VendedorRoutesTab: React.FC<VendedorRoutesTabProps> = ({
   onSelectRoute, onSync, onOpenNewClientModal, onOpenNoSaleModal, onCollectClient, onSellToClient, onOpenResumenClient,
   onReorderClients, onRemoveClient,
 }) => {
-  const { confirm } = useConfirm();
+  const confirm = useConfirm();
   const [isMapOpen, setIsMapOpen] = useState(false);
   const [routeSearch, setRouteSearch] = useState('');
   const [onlyPending, setOnlyPending] = useState(false);
@@ -49,7 +49,7 @@ export const VendedorRoutesTab: React.FC<VendedorRoutesTabProps> = ({
     const todayStr = new Date().toDateString();
     const orderIds = new Set<number>();
     for (const o of orders) {
-      if (o.status !== 'CANCELLED' && new Date(o.createdAt).toDateString() === todayStr) {
+      if (o.status !== 'CANCELLED' && o.clientId != null && new Date(o.createdAt).toDateString() === todayStr) {
         orderIds.add(o.clientId);
       }
     }
@@ -121,7 +121,7 @@ export const VendedorRoutesTab: React.FC<VendedorRoutesTabProps> = ({
       message: 'Se quitará de esta ruta. El cliente no se borra del sistema: queda sin ruta para Administración.',
       confirmText: 'Quitar',
       cancelText: 'Cancelar',
-      variant: 'danger',
+      type: 'danger',
     });
     if (ok) await onRemoveClient(client.id);
   };
@@ -149,7 +149,7 @@ export const VendedorRoutesTab: React.FC<VendedorRoutesTabProps> = ({
             <RefreshCw size={15} className={loading ? 'spin-animation' : ''} aria-hidden="true" />
           </button>
           <button type="button" className="btn btn-secondary" onClick={() => setIsMapOpen(true)} aria-label="Mapa GPS" style={{ padding: '7px 10px' }}>
-            <Map size={15} aria-hidden="true" />
+            <MapIcon size={15} aria-hidden="true" />
           </button>
           {selectedRouteId && (
             <button

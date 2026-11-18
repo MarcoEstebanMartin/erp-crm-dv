@@ -2,7 +2,7 @@ import React from 'react';
 import { ShoppingCart, Trash2 } from 'lucide-react';
 import { getVendedorItemPrice } from './vendedorHelpers';
 import type { Persona } from '../../types';
-import type { CartPromoEvaluation } from '../../utils/weeklyPromoCartEvaluator';
+import type { FrontendCartPromoEvalResult } from '../../utils/weeklyPromoCartEvaluator';
 
 export interface VendedorCartLine {
   product: any;
@@ -14,7 +14,7 @@ interface VendedorOrderCartPanelProps {
   cart: VendedorCartLine[];
   setCart: React.Dispatch<React.SetStateAction<VendedorCartLine[]>>;
   selectedClient: Persona | null;
-  promoEval: CartPromoEvaluation;
+  promoEval: FrontendCartPromoEvalResult;
   totalUnits: number;
   orderNotes: string;
   setOrderNotes: (notes: string) => void;

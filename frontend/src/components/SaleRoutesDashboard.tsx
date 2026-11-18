@@ -196,8 +196,8 @@ export default function SaleRoutesDashboard() {
         <UnassignedRouteClientsPanel
           routes={routes}
           onAssigned={() => {
-            fetchRoutes();
-            if (selectedRouteId) fetchRouteDetail(selectedRouteId);
+            void loadInitialData(true);
+            if (selectedRouteId) void loadRouteDetail(selectedRouteId);
           }}
         />
       )}
