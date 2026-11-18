@@ -205,8 +205,8 @@ export class OrderQueriesService {
         deliveryMethod: DeliveryMethod.DELIVERY,
         deliveryRouteId: null,
         deliveredAt: null,
-        status: { not: OrderStatus.CANCELLED },
-        OR: [{ status: OrderStatus.PREPARED }, { invoiceNumber: { not: null } }],
+        status: { notIn: [OrderStatus.CANCELLED, OrderStatus.PENDING, OrderStatus.PREPARING] },
+        invoiceNumber: { not: null },
       });
     }
 

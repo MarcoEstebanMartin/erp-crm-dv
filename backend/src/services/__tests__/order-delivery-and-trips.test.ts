@@ -86,6 +86,7 @@ describe('Paso 1 Entregas y Viajes — Queries, Asignación, Rutas y Recursos Re
         deliveryMethod: DeliveryMethod.DELIVERY,
         deliveryRouteId: null,
         deliveredAt: null,
+        invoiceNumber: { not: null },
       }),
     );
   });

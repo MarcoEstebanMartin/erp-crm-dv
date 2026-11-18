@@ -229,6 +229,13 @@ export function validateOrderDeliveryAssignment(
     throw new AppError('Solo se pueden asignar pedidos a viajes en estado Pendiente.', 400);
   }
 
+  if (targetRoute && !order.invoiceNumber) {
+    throw new AppError(
+      `El pedido #${order.id} debe facturarse antes de asignarse a un viaje.`,
+      400,
+    );
+  }
+
   return {
     deliveryMethod: 'DELIVERY',
     deliveryRouteId: targetRoute ? targetRoute.id : null,

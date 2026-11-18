@@ -194,6 +194,20 @@ describe('delivery-dispatch.engine — Reglas Puras de Despacho, Flota y Retiro 
         markDelivered: true,
       }),
     ).toThrow(/viaje en curso o completado/i);
+
+    expect(() =>
+      validateOrderDeliveryAssignment({
+        order: {
+          id: 59,
+          status: 'PREPARED',
+          invoiceNumber: null,
+          deliveryMethod: 'DELIVERY',
+          deliveryRouteId: null,
+        },
+        targetMethod: 'DELIVERY',
+        targetRoute: { id: 8, status: 'PENDING' },
+      }),
+    ).toThrow(/debe facturarse antes de asignarse a un viaje/i);
   });
 
   it('normaliza secuencias de parada deduplicadas y suma bultos/pesos con Decimal.js ROUND_HALF_UP', () => {
