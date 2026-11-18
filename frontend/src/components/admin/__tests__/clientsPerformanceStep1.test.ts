@@ -29,6 +29,7 @@ describe('Paso 1 Velocidad en Clientes — Buscador Fonético RAM, Conteos O(N) 
       route: 'VILLEGAS CENTRO',
       saleRouteId: 10,
       saleRoute: { id: 10, name: 'Villegas Lunes' },
+      sellerId: 7,
       isActive: true,
     },
     {
@@ -41,6 +42,7 @@ describe('Paso 1 Velocidad en Clientes — Buscador Fonético RAM, Conteos O(N) 
       phone: '3388-501122',
       route: '',
       saleRouteId: null,
+      sellerId: null,
       isActive: true,
     },
     {
@@ -73,7 +75,7 @@ describe('Paso 1 Velocidad en Clientes — Buscador Fonético RAM, Conteos O(N) 
   });
 
   it('computeClientLocationAndRouteCounts y filterClientsInMemory calculan conteos y filtran en 1 pasada', () => {
-    const { cityCounts, routeCounts } = computeClientLocationAndRouteCounts(
+    const { cityCounts, routeCounts, sellerCounts } = computeClientLocationAndRouteCounts(
       sampleClients,
       'client',
       false,
@@ -89,6 +91,10 @@ describe('Paso 1 Velocidad en Clientes — Buscador Fonético RAM, Conteos O(N) 
     expect(routeCounts[10]).toBe(1);
     expect(routeCounts.SIN_RUTA).toBe(1);
 
+    expect(sellerCounts.ALL).toBe(2);
+    expect(sellerCounts[7]).toBe(1);
+    expect(sellerCounts.SIN_VENDEDOR).toBe(1);
+
     const filteredByRoute = filterClientsInMemory(sampleClients, {
       personaRoleFilter: 'client',
       showInactive: false,
@@ -98,6 +104,28 @@ describe('Paso 1 Velocidad en Clientes — Buscador Fonético RAM, Conteos O(N) 
       availableSaleRoutes: sampleRoutes,
     });
     expect(filteredByRoute.map((c) => c.id)).toEqual([1]);
+
+    const filteredBySeller = filterClientsInMemory(sampleClients, {
+      personaRoleFilter: 'client',
+      showInactive: false,
+      selectedCityFilter: 'ALL',
+      selectedRouteFilter: 'ALL',
+      selectedSellerFilter: '7',
+      searchQuery: '',
+      availableSaleRoutes: sampleRoutes,
+    });
+    expect(filteredBySeller.map((c) => c.id)).toEqual([1]);
+
+    const filteredWithoutSeller = filterClientsInMemory(sampleClients, {
+      personaRoleFilter: 'client',
+      showInactive: false,
+      selectedCityFilter: 'ALL',
+      selectedRouteFilter: 'ALL',
+      selectedSellerFilter: 'SIN_VENDEDOR',
+      searchQuery: '',
+      availableSaleRoutes: sampleRoutes,
+    });
+    expect(filteredWithoutSeller.map((c) => c.id)).toEqual([2]);
 
     const filteredInactive = filterClientsInMemory(sampleClients, {
       personaRoleFilter: 'client',

@@ -118,9 +118,14 @@ export function computeClientLocationAndRouteCounts(
   personaRoleFilter: string,
   showInactive: boolean,
   availableSaleRoutes: any[],
-): { cityCounts: Record<string, number>; routeCounts: Record<string | number, number> } {
+): {
+  cityCounts: Record<string, number>;
+  routeCounts: Record<string | number, number>;
+  sellerCounts: Record<string | number, number>;
+} {
   const cityCounts: Record<string, number> = { ALL: 0, OTRAS: 0 };
   const routeCounts: Record<string | number, number> = { ALL: 0, SIN_RUTA: 0 };
+  const sellerCounts: Record<string | number, number> = { ALL: 0, SIN_VENDEDOR: 0 };
   const normalizedRoutes = (availableSaleRoutes || []).map((route) => ({
     id: Number(route.id),
     upperName: (route.name || '').trim().toUpperCase(),
@@ -134,6 +139,14 @@ export function computeClientLocationAndRouteCounts(
 
     cityCounts.ALL += 1;
     routeCounts.ALL += 1;
+    sellerCounts.ALL += 1;
+
+    if (c.sellerId) {
+      const sid = Number(c.sellerId);
+      sellerCounts[sid] = (sellerCounts[sid] || 0) + 1;
+    } else {
+      sellerCounts.SIN_VENDEDOR += 1;
+    }
 
     const normCity = normalizeString(c.city);
     const officialCity = normCity ? OFFICIAL_CITY_NORM_MAP.get(normCity) : null;
@@ -160,7 +173,7 @@ export function computeClientLocationAndRouteCounts(
     if (!matchedRoute) routeCounts.SIN_RUTA += 1;
   }
 
-  return { cityCounts, routeCounts };
+  return { cityCounts, routeCounts, sellerCounts };
 }
 
 export interface FilterClientsInMemoryParams {
@@ -168,6 +181,7 @@ export interface FilterClientsInMemoryParams {
   showInactive: boolean;
   selectedCityFilter: string;
   selectedRouteFilter: string;
+  selectedSellerFilter?: string;
   searchQuery: string;
   availableSaleRoutes: any[];
 }
@@ -181,6 +195,7 @@ export function filterClientsInMemory(
     showInactive,
     selectedCityFilter,
     selectedRouteFilter,
+    selectedSellerFilter = 'ALL',
     searchQuery,
     availableSaleRoutes,
   } = params;
@@ -218,6 +233,14 @@ export function filterClientsInMemory(
           targetRouteName && clientRoute && (clientRoute === targetRouteName || clientRoute.includes(targetRouteName)),
         );
         if (!matchesId && !matchesName) return false;
+      }
+    }
+
+    if (personaRoleFilter === 'client' && selectedSellerFilter !== 'ALL') {
+      if (selectedSellerFilter === 'SIN_VENDEDOR') {
+        if (c.sellerId) return false;
+      } else if (Number(c.sellerId) !== Number(selectedSellerFilter)) {
+        return false;
       }
     }
 

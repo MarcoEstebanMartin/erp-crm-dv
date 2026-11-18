@@ -190,22 +190,27 @@ export default function HomeTab({
   };
 
   return (
-    <div>
+    <div className="home-root">
       <style>{`
+        .home-root { width: 100%; padding-top: 8px; }
+        @media (min-width: 900px) { .home-root { padding-top: 28px; } }
         .home-kpis-wrap { container: home-kpis / inline-size; inline-size: 100%; }
         .home-kpis-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
         @container home-kpis (inline-size >= 720px) {
           .home-kpis-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
         }
-        .home-stat-btn { cursor: pointer; transition: transform 0.15s ease, box-shadow 0.15s ease; }
-        .home-stat-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06); }
+        .home-stat-btn { cursor: pointer; transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease; }
+        .home-stat-btn:hover { transform: translateY(-1px); border-color: #cbd5e1 !important; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05) !important; }
+        .home-compact-section { margin-top: 20px; width: 100%; }
+        .home-half-section { margin-top: 20px; width: 100%; }
+        @media (min-width: 900px) { .home-half-section { width: 50%; } }
       `}</style>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '20px' }}>
-        <h1 style={{ fontSize: '1.5rem', fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--text-primary)', margin: 0 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '22px' }}>
+        <h1 style={{ fontSize: '1.6rem', fontWeight: 700, letterSpacing: '-0.025em', color: 'var(--text-primary)', margin: 0 }}>
           Hola, {displayUsername}!
         </h1>
-        <span style={{ fontSize: '0.84rem', color: 'var(--text-secondary)', fontWeight: 500 }}>{formattedDate}</span>
+        <span style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', fontWeight: 500 }}>{formattedDate}</span>
       </div>
 
       <div className="home-kpis-wrap">
@@ -219,40 +224,29 @@ export default function HomeTab({
                 width: '100%',
                 display: 'flex',
                 flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                textAlign: 'center',
-                gap: '4px',
-                padding: '18px 20px',
+                alignItems: 'flex-start',
+                justifyContent: 'space-between',
+                textAlign: 'left',
+                gap: '12px',
+                padding: '20px 24px',
                 background: 'var(--bg-card, #ffffff)',
                 border: '1px solid var(--border-color)',
-                borderLeft: `3px solid ${card.accent}`,
                 borderRadius: '10px',
+                boxShadow: '0 1px 2px rgba(0, 0, 0, 0.03)',
                 fontVariantNumeric: 'tabular-nums',
               }}
               onClick={() => setSummaryCardModal({ open: true, cardKey: card.key, cardLabel: card.label })}
             >
-              <div className="stat-label" style={{ fontWeight: 600, fontSize: '0.82rem', color: 'var(--text-secondary)', marginBottom: 0 }}>
+              <div className="stat-label" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', fontWeight: 600, fontSize: '0.86rem', color: 'var(--text-secondary)', marginBottom: 0 }}>
+                <span aria-hidden="true" style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: card.accent, flexShrink: 0 }} />
                 {card.label}
               </div>
-              <div className="stat-value" style={{ color: 'var(--text-primary)', fontSize: '2.1rem', fontWeight: 800, lineHeight: 1.1 }}>
+              <div className="stat-value" style={{ color: 'var(--text-primary)', fontSize: '2.25rem', fontWeight: 700, letterSpacing: '-0.03em', lineHeight: 1 }}>
                 {card.count}
               </div>
             </button>
           ))}
         </div>
-      </div>
-
-      <div style={{ marginTop: '20px' }}>
-        <HomePendingCashCard
-          sellers={pendingRendicionesDetails.sellers}
-          routes={pendingRendicionesDetails.routes}
-          loading={loadingRendicionesDetails}
-          onOpenRendiciones={() => setActiveTab('rendiciones')}
-          onRendicionCompleted={() =>
-            void queryClient.invalidateQueries({ queryKey: HOME_QUERY_KEYS.pendingRendiciones })
-          }
-        />
       </div>
 
       <HomeQuickActionsGrid
@@ -266,7 +260,7 @@ export default function HomeTab({
         onOpenFleetExpense={() => setShowGastoModal(true)}
       />
 
-      <div style={{ marginTop: '20px' }}>
+      <div className="home-compact-section">
         <HomeWeeklyScheduleRibbon
           currentWeek={weeklyScheduleData.currentWeek}
           todayName={todayName}
@@ -276,6 +270,18 @@ export default function HomeTab({
           onToggleCurrentWeek={handleToggleCurrentWeek}
           onToggleFullWeek={() => setShowFullWeek((prev) => !prev)}
           onOpenScheduleModal={() => setIsScheduleModalOpen(true)}
+        />
+      </div>
+
+      <div className="home-half-section">
+        <HomePendingCashCard
+          sellers={pendingRendicionesDetails.sellers}
+          routes={pendingRendicionesDetails.routes}
+          loading={loadingRendicionesDetails}
+          onOpenRendiciones={() => setActiveTab('rendiciones')}
+          onRendicionCompleted={() =>
+            void queryClient.invalidateQueries({ queryKey: HOME_QUERY_KEYS.pendingRendiciones })
+          }
         />
       </div>
 

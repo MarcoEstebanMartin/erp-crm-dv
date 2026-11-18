@@ -49,12 +49,12 @@ export function HomeQuickActionsGrid({
   ];
 
   return (
-    <div style={{ marginTop: '20px' }}>
+    <div style={{ marginTop: '32px' }}>
       <style>{`
         .quick-actions-grid {
           display: grid;
           grid-template-columns: repeat(4, minmax(0, 1fr));
-          gap: 10px;
+          gap: 14px;
         }
         @media (max-width: 900px) {
           .quick-actions-grid {
@@ -67,8 +67,9 @@ export function HomeQuickActionsGrid({
           }
         }
         .quick-action-card:hover {
-          border-color: var(--text-secondary) !important;
-          background-color: var(--bg-light, #f9f9fb) !important;
+          border-color: #cbd5e1 !important;
+          background-color: var(--bg-light, #f8fafc) !important;
+          box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04) !important;
         }
       `}</style>
       <div className="quick-actions-grid">
@@ -81,23 +82,24 @@ export function HomeQuickActionsGrid({
             style={{
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center',
-              padding: '8px 12px',
+              justifyContent: 'flex-start',
+              padding: '12px 16px',
               backgroundColor: 'var(--bg-card, #ffffff)',
               border: '1px solid var(--border-color, #e5e5e7)',
-              borderRadius: '8px',
+              borderRadius: '10px',
+              boxShadow: '0 1px 2px rgba(0, 0, 0, 0.02)',
               cursor: 'pointer',
               width: '100%',
-              transition: 'background-color 0.15s ease, border-color 0.15s ease',
+              transition: 'background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease',
             }}
           >
             <span
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '9px',
-                width: '168px',
-                maxWidth: '100%',
+                gap: '12px',
+                width: '100%',
+                minWidth: 0,
                 textAlign: 'left',
               }}
             >
@@ -106,9 +108,9 @@ export function HomeQuickActionsGrid({
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  width: '28px',
-                  height: '28px',
-                  borderRadius: '6px',
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '7px',
                   backgroundColor: 'var(--bg-light, #f5f5f7)',
                   border: '1px solid var(--border-color, #e5e5e7)',
                   color: 'var(--text-secondary)',
@@ -119,7 +121,7 @@ export function HomeQuickActionsGrid({
               </span>
               <span
                 style={{
-                  fontSize: '0.84rem',
+                  fontSize: '0.88rem',
                   fontWeight: 600,
                   color: 'var(--text-primary)',
                   whiteSpace: 'nowrap',

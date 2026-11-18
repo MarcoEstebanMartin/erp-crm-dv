@@ -13,6 +13,15 @@ interface HomeWeeklyScheduleRibbonProps {
 }
 
 const WEEK_DAYS = ['LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO'];
+const DAY_LABELS_ES: Record<string, string> = {
+  DOMINGO: 'Domingo',
+  LUNES: 'Lunes',
+  MARTES: 'Martes',
+  MIERCOLES: 'Miércoles',
+  JUEVES: 'Jueves',
+  VIERNES: 'Viernes',
+  SABADO: 'Sábado',
+};
 
 export function HomeWeeklyScheduleRibbon({
   currentWeek,
@@ -24,7 +33,7 @@ export function HomeWeeklyScheduleRibbon({
   onToggleFullWeek,
   onOpenScheduleModal,
 }: HomeWeeklyScheduleRibbonProps) {
-  const formattedToday = todayName.charAt(0) + todayName.slice(1).toLowerCase();
+  const formattedToday = DAY_LABELS_ES[todayName] || (todayName.charAt(0) + todayName.slice(1).toLowerCase());
 
   return (
     <section style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>

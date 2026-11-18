@@ -127,19 +127,29 @@ export class PersonaService {
   }
 
   async createPersona(data: any, userId: number, userRole: string) {
+    const willBeClient = data.isClient !== undefined ? Boolean(data.isClient) : true;
     const willBeProvider = data.isProvider !== undefined ? Boolean(data.isProvider) : false;
     const resolvedCuit = willBeProvider
       ? (await personaProvidersSubService.validateAndNormalizeProviderInput({ cuit: data.cuit, isProvider: true })).normalizedCuit
       : data.cuit;
 
+    let finalRoute = data.route != null && String(data.route).trim() !== '' ? standardizeRouteName(data.route) : null;
+    let finalSaleRouteId = data.saleRouteId ? Number(data.saleRouteId) : null;
+
+    if (willBeClient && !finalRoute && !finalSaleRouteId) {
+      const oficinaRoute = await prisma.saleRoute.findFirst({
+        where: { name: { equals: 'OFICINA', mode: 'insensitive' } },
+        select: { id: true, name: true },
+      });
+      finalRoute = oficinaRoute ? oficinaRoute.name : 'OFICINA';
+      finalSaleRouteId = oficinaRoute ? oficinaRoute.id : null;
+    }
+
     let finalSellerId = data.sellerId ? Number(data.sellerId) : null;
     if (userRole === Role.VENDEDOR) {
       finalSellerId = userId;
     } else if (!finalSellerId) {
-      finalSellerId = await this.resolveDefaultOficinaSeller(
-        data.route,
-        data.saleRouteId ? Number(data.saleRouteId) : null,
-      );
+      finalSellerId = await this.resolveDefaultOficinaSeller(finalRoute, finalSaleRouteId);
     }
 
     const persona = await prisma.persona.create({
@@ -154,9 +164,9 @@ export class PersonaService {
         phone: data.phone,
         email: data.email,
         rubro: data.rubro || null,
-        route: data.route != null ? standardizeRouteName(data.route) : data.route,
-        isClient: data.isClient !== undefined ? Boolean(data.isClient) : true,
-        isProvider: data.isProvider !== undefined ? Boolean(data.isProvider) : false,
+        route: finalRoute,
+        isClient: willBeClient,
+        isProvider: willBeProvider,
         isSeller: data.isSeller !== undefined ? Boolean(data.isSeller) : false,
         isCommissionAgent: data.isCommissionAgent !== undefined ? Boolean(data.isCommissionAgent) : false,
         isActive: data.isActive !== undefined ? Boolean(data.isActive) : true,
@@ -167,7 +177,7 @@ export class PersonaService {
         paymentTermDays: data.paymentTermDays !== undefined ? Number(data.paymentTermDays) : 30,
         contacts: data.contacts !== undefined ? data.contacts : null,
         seller: finalSellerId ? { connect: { id: finalSellerId } } : undefined,
-        saleRoute: data.saleRouteId ? { connect: { id: Number(data.saleRouteId) } } : undefined,
+        saleRoute: finalSaleRouteId ? { connect: { id: finalSaleRouteId } } : undefined,
         routeSequence: data.routeSequence != null ? Number(data.routeSequence) : null,
         latitude: data.latitude != null ? Number(data.latitude) : null,
         longitude: data.longitude != null ? Number(data.longitude) : null,

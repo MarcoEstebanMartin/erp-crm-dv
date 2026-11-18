@@ -40,6 +40,7 @@ export default function ClientsTab({
   const deferredSearchQuery = useDeferredValue(searchQuery);
   const [selectedCityFilter, setSelectedCityFilter] = useState<string>('ALL');
   const [selectedRouteFilter, setSelectedRouteFilter] = useState<string>('ALL');
+  const [selectedClientSellerFilter, setSelectedClientSellerFilter] = useState<string>('ALL');
   const [visibleCount, setVisibleCount] = useState<number>(INITIAL_CLIENTS_BATCH);
   const [isGpsMapOpen, setIsGpsMapOpen] = useState(false);
 
@@ -81,11 +82,12 @@ export default function ClientsTab({
   useEffect(() => {
     setSelectedCityFilter('ALL');
     setSelectedRouteFilter('ALL');
+    setSelectedClientSellerFilter('ALL');
   }, [personaRoleFilter]);
 
   useEffect(() => {
     setVisibleCount(INITIAL_CLIENTS_BATCH);
-  }, [personaRoleFilter, showInactive, selectedCityFilter, selectedRouteFilter, deferredSearchQuery]);
+  }, [personaRoleFilter, showInactive, selectedCityFilter, selectedRouteFilter, selectedClientSellerFilter, deferredSearchQuery]);
 
   const activePersonas = personaRoleFilter === 'client' ? parentClients : rolePersonas;
 
@@ -96,13 +98,14 @@ export default function ClientsTab({
         showInactive,
         selectedCityFilter,
         selectedRouteFilter,
+        selectedSellerFilter: selectedClientSellerFilter,
         searchQuery: deferredSearchQuery,
         availableSaleRoutes,
       }),
-    [activePersonas, personaRoleFilter, showInactive, selectedCityFilter, selectedRouteFilter, deferredSearchQuery, availableSaleRoutes],
+    [activePersonas, personaRoleFilter, showInactive, selectedCityFilter, selectedRouteFilter, selectedClientSellerFilter, deferredSearchQuery, availableSaleRoutes],
   );
 
-  const { cityCounts, routeCounts } = useMemo(
+  const { cityCounts, routeCounts, sellerCounts } = useMemo(
     () => computeClientLocationAndRouteCounts(activePersonas, personaRoleFilter, showInactive, availableSaleRoutes),
     [activePersonas, personaRoleFilter, showInactive, availableSaleRoutes],
   );
@@ -113,7 +116,7 @@ export default function ClientsTab({
     [filteredClients, visibleCount],
   );
 
-  const isLocationFiltered = selectedCityFilter !== 'ALL' || selectedRouteFilter !== 'ALL' || searchQuery.trim() !== '';
+  const isLocationFiltered = selectedCityFilter !== 'ALL' || selectedRouteFilter !== 'ALL' || selectedClientSellerFilter !== 'ALL' || searchQuery.trim() !== '';
 
   const updateActiveList = useCallback(
     (updater: (prev: any[]) => any[]) => {
@@ -150,6 +153,7 @@ export default function ClientsTab({
   const handleResetFilters = useCallback(() => {
     setSelectedCityFilter('ALL');
     setSelectedRouteFilter('ALL');
+    setSelectedClientSellerFilter('ALL');
     setSearchQuery('');
   }, []);
 
@@ -239,6 +243,14 @@ export default function ClientsTab({
                   <option value="ALL">Rutas ({routeCounts.ALL || 0})</option>
                   {availableSaleRoutes.map((route) => (<option key={route.id} value={route.id}>{route.name} ({routeCounts[route.id] || 0})</option>))}
                   <option value="SIN_RUTA">Sin ruta ({routeCounts.SIN_RUTA || 0})</option>
+                </select>
+              )}
+
+              {personaRoleFilter === 'client' && (
+                <select aria-label="Filtrar por vendedor" className="select" value={selectedClientSellerFilter} onChange={(e) => setSelectedClientSellerFilter(e.target.value)} style={{ width: 'auto', minWidth: '170px', height: '38px' }}>
+                  <option value="ALL">Vendedores ({sellerCounts.ALL || 0})</option>
+                  {availableSellers.map((seller) => (<option key={seller.id} value={seller.id}>{(seller.username || seller.name || '').replace(/_/g, ' ').toUpperCase()} ({sellerCounts[seller.id] || 0})</option>))}
+                  <option value="SIN_VENDEDOR">Sin vendedor ({sellerCounts.SIN_VENDEDOR || 0})</option>
                 </select>
               )}
 
