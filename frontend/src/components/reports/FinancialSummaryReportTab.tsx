@@ -1,10 +1,11 @@
 import { useEffect, useState, type FC } from 'react';
-import { Calendar, FileText, Store, TrendingDown } from 'lucide-react';
+import { Calendar, FileText, Store, TrendingDown, Users } from 'lucide-react';
 import { api } from '../../utils/api';
 import ExecutivePdfReport from './ExecutivePdfReport';
 import { computeArDatePreset } from './reportDateHelpers';
 
 type SummaryPreset = 'this_month' | 'last_month' | 'this_week' | 'custom';
+type PdfReportMode = 'general' | 'employee' | null;
 
 const PRESETS: Array<{ id: SummaryPreset; label: string }> = [
   { id: 'this_month', label: 'Este mes' },
@@ -15,16 +16,20 @@ const PRESETS: Array<{ id: SummaryPreset; label: string }> = [
 
 interface FinancialSummaryReportTabProps {
   financialReport: any;
+  users?: any[];
 }
 
-export const FinancialSummaryReportTab: FC<FinancialSummaryReportTabProps> = ({ financialReport }) => {
+export const FinancialSummaryReportTab: FC<FinancialSummaryReportTabProps> = ({
+  financialReport,
+  users = [],
+}) => {
   const initialRange = computeArDatePreset('this_month');
   const [preset, setPreset] = useState<SummaryPreset>('this_month');
   const [startDate, setStartDate] = useState<string>(initialRange.startDate);
   const [endDate, setEndDate] = useState<string>(initialRange.endDate);
   const [localReport, setLocalReport] = useState<any>(null);
   const [reportLoading, setReportLoading] = useState(false);
-  const [showExecutivePdf, setShowExecutivePdf] = useState(false);
+  const [pdfMode, setPdfMode] = useState<PdfReportMode>(null);
 
   const handlePresetChange = (nextPreset: SummaryPreset) => {
     setPreset(nextPreset);
@@ -47,12 +52,14 @@ export const FinancialSummaryReportTab: FC<FinancialSummaryReportTabProps> = ({ 
     return () => { active = false; };
   }, [startDate, endDate]);
 
-  if (showExecutivePdf) {
+  if (pdfMode) {
     return (
       <ExecutivePdfReport
         initialStartDate={startDate}
         initialEndDate={endDate}
-        onClose={() => setShowExecutivePdf(false)}
+        initialMode={pdfMode}
+        users={users}
+        onClose={() => setPdfMode(null)}
       />
     );
   }
@@ -141,15 +148,26 @@ export const FinancialSummaryReportTab: FC<FinancialSummaryReportTabProps> = ({ 
             {reportLoading && <span role="status" style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Cargando...</span>}
           </div>
 
-          <button
-            type="button"
-            className="btn btn-secondary"
-            onClick={() => setShowExecutivePdf(true)}
-            style={{ fontSize: '0.8rem', padding: '6px 12px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-          >
-            <FileText size={14} aria-hidden="true" />
-            Reporte PDF
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => setPdfMode('employee')}
+              style={{ fontSize: '0.8rem', padding: '6px 12px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+            >
+              <Users size={14} aria-hidden="true" />
+              Empleado PDF
+            </button>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => setPdfMode('general')}
+              style={{ fontSize: '0.8rem', padding: '6px 12px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+            >
+              <FileText size={14} aria-hidden="true" />
+              Reporte PDF
+            </button>
+          </div>
         </div>
       </search>
 

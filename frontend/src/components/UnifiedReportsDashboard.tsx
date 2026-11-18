@@ -79,7 +79,7 @@ export default function UnifiedReportsDashboard({
 
       <div role="tabpanel" aria-labelledby={`reports-tab-${activeTab}`}>
         {activeTab === 'finanzas' && (
-          <FinancialSummaryReportTab financialReport={financialReport} />
+          <FinancialSummaryReportTab financialReport={financialReport} users={users} />
         )}
 
         {activeTab === 'rentabilidad' && <ProfitabilityTab />}

@@ -4,6 +4,7 @@ import {
   getProfitabilityReport,
   getExecutivePdfReport,
   getSellerMeetingPdfReport,
+  getEmployeePdfReport,
   getAuditLogs,
   getDocumentAuditLogs,
   getUsers,
@@ -34,6 +35,7 @@ import {
   getProfitabilityQuerySchema,
   getExecutiveReportQuerySchema,
   getSellerMeetingQuerySchema,
+  getEmployeeReportQuerySchema,
   getZoneReportsQuerySchema,
 } from '../validators/reports.validator';
 
@@ -54,6 +56,7 @@ router.use(requireRole([Role.ADMIN]));
 router.get('/reports', validateRequest(getFinancialReportsQuerySchema), getFinancialReports);
 router.get('/reports/profitability', validateRequest(getProfitabilityQuerySchema), getProfitabilityReport);
 router.get('/reports/pdf/executive', validateRequest(getExecutiveReportQuerySchema), getExecutivePdfReport);
+router.get('/reports/pdf/employee/:userId', validateRequest(getEmployeeReportQuerySchema), getEmployeePdfReport);
 router.get('/reports/pdf/seller/:sellerId', validateRequest(getSellerMeetingQuerySchema), getSellerMeetingPdfReport);
 router.get('/reports/zones', validateRequest(getZoneReportsQuerySchema), getZoneReports);
 

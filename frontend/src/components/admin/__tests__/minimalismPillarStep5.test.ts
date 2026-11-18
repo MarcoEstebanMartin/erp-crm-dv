@@ -83,6 +83,7 @@ const OLA_3_FILES = [
   'reports/reportDateHelpers.ts',
   'reports/pdf/pdfReportHelpers.ts',
   'reports/pdf/ExecutivePdfSheet.tsx',
+  'reports/pdf/EmployeePdfSheet.tsx',
   'reports/ExecutivePdfReport.tsx',
   'reports/pdf/SellerMeetingPdfSheet.tsx',
   'reports/SellerMeetingPdfReport.tsx',

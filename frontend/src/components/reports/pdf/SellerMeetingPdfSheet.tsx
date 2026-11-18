@@ -192,7 +192,7 @@ export const SellerMeetingPdfSheet = forwardRef<HTMLDivElement, SellerMeetingPdf
 
           <div>
             <h3 style={{ fontSize: '0.82rem', fontWeight: 700, color: '#0f172a', marginBottom: '8px', borderBottom: '1px solid #cbd5e1', paddingBottom: '4px' }}>
-              Top productos — {data.seller.name}
+              Top 5 productos — {data.seller.name}
             </h3>
             <table style={{ width: '100%', fontSize: '0.73rem', borderCollapse: 'collapse' }}>
               <thead>
@@ -205,7 +205,7 @@ export const SellerMeetingPdfSheet = forwardRef<HTMLDivElement, SellerMeetingPdf
                 </tr>
               </thead>
               <tbody>
-                {data.topProducts.map((prod: any, idx: number) => (
+                {(data.topProducts || []).slice(0, 5).map((prod: any, idx: number) => (
                   <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
                     <td className="tabular-nums" style={{ padding: '4px 6px', fontWeight: 700, color: '#64748b' }}>{idx + 1}</td>
                     <td style={{ padding: '4px 6px', fontWeight: 600, color: '#0f172a' }}>{prod.name}</td>

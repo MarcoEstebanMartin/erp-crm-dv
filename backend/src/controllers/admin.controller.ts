@@ -245,3 +245,26 @@ export async function getSellerMeetingPdfReport(req: AuthenticatedRequest, res: 
     res.status(500).json({ status: 'error', message: 'Error al generar el reporte para la reunión.' });
   }
 }
+
+export async function getEmployeePdfReport(req: AuthenticatedRequest, res: Response): Promise<void> {
+  const { userId } = req.params;
+  const { startDate, endDate } = req.query;
+  try {
+    if (!userId) {
+      res.status(400).json({ status: 'error', message: 'El ID del empleado es requerido.' });
+      return;
+    }
+    const reportData = await adminService.getEmployeePdfReportData(
+      Number(userId),
+      startDate ? String(startDate) : undefined,
+      endDate ? String(endDate) : undefined,
+    );
+    res.status(200).json({ status: 'success', data: reportData });
+  } catch (error: any) {
+    if (error?.statusCode === 404) {
+      res.status(404).json({ status: 'error', message: error.message || 'Empleado no encontrado.' });
+      return;
+    }
+    res.status(500).json({ status: 'error', message: 'Error al generar el reporte de empleado PDF.' });
+  }
+}

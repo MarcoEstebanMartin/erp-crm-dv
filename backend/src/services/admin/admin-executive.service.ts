@@ -280,8 +280,9 @@ export class AdminExecutiveSubService {
           };
         })
         .sort((a, b) => b.amount - a.amount)
-        .slice(0, 10),
+        .slice(0, 5),
       topClients: Array.from(clientSalesMap.values())
+        .filter((c) => c.totalSalesDec.gt(0))
         .map((c) => {
           const profitDec = c.totalSalesDec.minus(c.costDec);
           return {
@@ -297,7 +298,7 @@ export class AdminExecutiveSubService {
           };
         })
         .sort((a, b) => b.profit - a.profit)
-        .slice(0, 10),
+        .slice(0, 5),
       topCategories: Array.from(categorySalesMap.entries())
         .map(([name, d]) => {
           const profitDec = d.amountDec.minus(d.costDec);

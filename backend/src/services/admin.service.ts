@@ -5,6 +5,7 @@ import { adminProfitabilitySubService } from './admin/admin-profitability.servic
 import { adminZonesSubService } from './admin/admin-zones.service';
 import { adminExecutiveSubService } from './admin/admin-executive.service';
 import { adminSellerMeetingSubService } from './admin/admin-seller-meeting.service';
+import { adminEmployeeReportSubService } from './admin/admin-employee-report.service';
 
 export class AdminService {
   // 1. Reporte Financiero Consolidado (con unitCostSnapshot CMV Histórico)
@@ -66,6 +67,17 @@ export class AdminService {
   ) =>
     adminSellerMeetingSubService.getSellerMeetingPdfReportData(
       sellerId,
+      startDateStr,
+      endDateStr,
+    );
+
+  getEmployeePdfReportData = (
+    userId: number,
+    startDateStr?: string,
+    endDateStr?: string,
+  ) =>
+    adminEmployeeReportSubService.getEmployeePdfReportData(
+      userId,
       startDateStr,
       endDateStr,
     );

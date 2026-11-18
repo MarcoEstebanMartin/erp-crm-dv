@@ -246,7 +246,7 @@ export class AdminZonesSubService {
     }));
 
     const activeSoldProducts = formattedProducts.filter((p) => p.qty > 0);
-    const topProducts = [...activeSoldProducts].sort((a, b) => b.qty - a.qty).slice(0, 10);
+    const topProducts = [...activeSoldProducts].sort((a, b) => b.qty - a.qty).slice(0, 5);
     const bottomProducts = [...activeSoldProducts].sort((a, b) => a.qty - b.qty).slice(0, 10);
 
     const weeklyInvoicing = Array.from(weeklyMap.values())
@@ -316,7 +316,7 @@ export class AdminZonesSubService {
       clients,
       availableCities: [...MAIN_CITIES, 'OTRAS'].sort(),
       availableSellers: sellers,
-      topClients: clientsWithMovements.slice(0, 10),
+      topClients: clientsWithMovements.slice(0, 5),
       clientsWithMovements,
       topProducts,
       bottomProducts,

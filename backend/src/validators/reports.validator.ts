@@ -65,6 +65,16 @@ export const getSellerMeetingQuerySchema = z.object({
   }),
 });
 
+export const getEmployeeReportQuerySchema = z.object({
+  params: z.object({
+    userId: z.string().trim().regex(/^\d+$/, 'ID de empleado inválido'),
+  }),
+  query: z.object({
+    startDate: isoDateOptional,
+    endDate: isoDateOptional,
+  }),
+});
+
 export const getZoneReportsQuerySchema = z.object({
   query: z.object({
     sellerId: numericIdOptional,

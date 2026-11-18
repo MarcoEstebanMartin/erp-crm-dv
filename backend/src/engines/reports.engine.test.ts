@@ -8,11 +8,13 @@ import {
   computeProfitabilityMetrics,
   resolveItemHistoricalMetrics,
 } from './reports-core.engine';
+import { computeEmployeeReportMetrics } from './reports-employee.engine';
 import {
   getArgentinaWeekMondayIso,
   resolveReportDateRange,
 } from '../services/admin/admin-report.helpers';
 import {
+  getEmployeeReportQuerySchema,
   getExecutiveReportQuerySchema,
   getFinancialReportsQuerySchema,
   getProfitabilityQuerySchema,
@@ -177,14 +179,108 @@ describe('Reportes Minimalistas — Motores Decimal.js, Fechas AR (-03:00), Nota
     expect(getExecutiveReportQuerySchema.safeParse({ query: { startDate: '18-11-2026' } }).success).toBe(false);
     expect(getSellerMeetingQuerySchema.safeParse({ params: { sellerId: '12' }, query: { startDate: '' } }).success).toBe(true);
     expect(getSellerMeetingQuerySchema.safeParse({ params: { sellerId: 'abc' }, query: {} }).success).toBe(false);
+    expect(getEmployeeReportQuerySchema.safeParse({ params: { userId: '5' }, query: { startDate: '2026-11-01', endDate: '2026-11-18' } }).success).toBe(true);
+    expect(getEmployeeReportQuerySchema.safeParse({ params: { userId: 'xyz' }, query: {} }).success).toBe(false);
     expect(getZoneReportsQuerySchema.safeParse({ query: { cities: 'GENERAL VILLEGAS,BANDERALO', sellerId: '' } }).success).toBe(true);
   });
 
-  it('crm.controller.ts no tiene mocks Coca Cola/Quilmes y admin.routes.ts ya no expone /reports/weekly ni /reports/sales-channels', () => {
+  it('computeEmployeeReportMetrics calcula Decimal.js, NC APPROVED, cobranzas, operación y limita Top Clientes/Productos a 5', () => {
+    const orders = Array.from({ length: 7 }, (_, i) => {
+      const idx = i + 1;
+      const total = idx * 10000;
+      return {
+        personaId: idx,
+        billingType: idx % 2 === 0 ? 'OFFICIAL' : 'INTERNAL',
+        totalAmount: total,
+        deliveryMethod: idx === 1 ? 'PICKUP' : 'DELIVERY',
+        bultosCount: 2,
+        persona: { name: `Cliente ${idx}`, city: 'GENERAL VILLEGAS' },
+        items: [
+          {
+            productId: 100 + idx,
+            quantity: idx,
+            subtotal: total,
+            unitCostSnapshot: 6000,
+            product: { name: `Producto ${idx}`, isPesable: false, rubro: { name: 'Almacén' } },
+          },
+        ],
+      };
+    });
+
+    const emp = computeEmployeeReportMetrics({
+      orders,
+      creditNotes: [
+        {
+          personaId: 7,
+          billingType: 'INTERNAL',
+          totalAmount: 10000,
+          persona: { name: 'Cliente 7', city: 'GENERAL VILLEGAS' },
+          order: { deliveryMethod: 'DELIVERY', items: [{ productId: 107, unitCostSnapshot: 6000 }] },
+          items: [
+            {
+              productId: 107,
+              quantity: 1,
+              subtotal: 10000,
+              product: { name: 'Producto 7', isPesable: false, rubro: { name: 'Almacén' } },
+            },
+          ],
+        },
+      ],
+      collectionsGrouped: [
+        { paymentMethod: 'CASH', _sum: { amount: 120000 } },
+        { paymentMethod: 'BANK_TRANSFER', _sum: { amount: 80000 } },
+        { paymentMethod: 'CHECK', _sum: { amount: 40000 } },
+      ],
+      routesCount: 4,
+      routeOrdersDelivered: 18,
+      fieldReceiptsCount: 6,
+      fieldReceiptsAmount: '95400.60',
+      cashDrawersCount: 3,
+      stockMovementsCount: 15,
+    });
+
+    // Suma 10k+20k+...+70k = 280k - 10k NC = 270k
+    expect(emp.summary.totalSales).toBe(270000);
+    expect(emp.summary.totalOrders).toBe(7);
+    expect(emp.summary.totalBultos).toBe(14);
+    expect(emp.breakdown.localSales).toBe(10000);
+    expect(emp.breakdown.routeSales).toBe(260000);
+    expect(emp.collections).toEqual({
+      totalCollected: 240000,
+      byMethod: { cash: 120000, transfer: 80000, check: 40000, other: 0 },
+    });
+    expect(emp.operations).toEqual({
+      routesCount: 4,
+      routeOrdersDelivered: 18,
+      fieldReceiptsCount: 6,
+      fieldReceiptsAmount: 95401,
+      cashDrawersCount: 3,
+      stockMovementsCount: 15,
+    });
+    expect(emp.topClients).toHaveLength(5);
+    expect(emp.topProducts).toHaveLength(5);
+    expect(emp.topClients.map((c) => c.name)).toEqual([
+      'Cliente 6',
+      'Cliente 7',
+      'Cliente 5',
+      'Cliente 4',
+      'Cliente 3',
+    ]);
+    expect(emp.topProducts.map((p) => p.name)).toEqual([
+      'Producto 6',
+      'Producto 7',
+      'Producto 5',
+      'Producto 4',
+      'Producto 3',
+    ]);
+  });
+
+  it('crm.controller.ts no tiene mocks Coca Cola/Quilmes y admin.routes.ts expone /reports/pdf/employee/:userId sin rutas muertas', () => {
     const crmContent = fs.readFileSync(path.resolve(__dirname, '../controllers/crm.controller.ts'), 'utf8');
     expect(crmContent).not.toMatch(/Coca Cola|Quilmes/i);
 
     const routesContent = fs.readFileSync(path.resolve(__dirname, '../routes/admin.routes.ts'), 'utf8');
+    expect(routesContent).toContain('/reports/pdf/employee/:userId');
     expect(routesContent).not.toContain('/reports/weekly');
     expect(routesContent).not.toContain('/reports/sales-channels');
     expect(routesContent).not.toContain('/reports/local-sales');

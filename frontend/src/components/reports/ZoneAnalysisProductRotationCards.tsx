@@ -20,13 +20,13 @@ export const ZoneAnalysisProductRotationCards: FC<ZoneAnalysisProductRotationCar
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '24px' }}>
       <div className="card" style={{ padding: '24px', borderRadius: '12px' }}>
         <h4 style={{ fontSize: '1.05rem', fontWeight: 600, margin: '0 0 16px 0', color: '#137333', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <TrendingUp size={18} aria-hidden="true" /> Top productos
+          <TrendingUp size={18} aria-hidden="true" /> Top 5 productos
         </h4>
         {zoneTopProducts.length === 0 ? (
           <div style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>Sin ventas registradas.</div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {zoneTopProducts.map((p: any, idx: number) => (
+            {zoneTopProducts.slice(0, 5).map((p: any, idx: number) => (
               <div key={p.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '12px', borderBottom: '1px solid var(--border-color)' }}>
                 <div>
                   <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>

@@ -802,6 +802,14 @@ export const api = {
     return await request(`/admin/reports/pdf/executive${queryString ? `?${queryString}` : ''}`);
   },
 
+  getEmployeePdfReport: async (userId: number, startDate?: string, endDate?: string) => {
+    const query = new URLSearchParams();
+    if (startDate) query.append('startDate', startDate);
+    if (endDate) query.append('endDate', endDate);
+    const queryString = query.toString();
+    return await request(`/admin/reports/pdf/employee/${userId}${queryString ? `?${queryString}` : ''}`);
+  },
+
   getSellerMeetingPdfReport: async (sellerId: number, startDate?: string, endDate?: string) => {
     const query = new URLSearchParams();
     if (startDate) query.append('startDate', startDate);

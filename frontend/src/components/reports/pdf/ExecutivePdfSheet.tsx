@@ -147,7 +147,7 @@ export const ExecutivePdfSheet = forwardRef<HTMLDivElement, ExecutivePdfSheetPro
 
           <div style={{ marginBottom: '22px' }}>
             <h3 style={{ fontSize: '0.86rem', fontWeight: 700, color: '#0f172a', marginBottom: '10px', borderBottom: '1px solid #cbd5e1', paddingBottom: '4px' }}>
-              3. Top 10 Clientes
+              3. Top 5 Clientes
             </h3>
             <table style={{ width: '100%', fontSize: '0.73rem', borderCollapse: 'collapse' }}>
               <thead>
@@ -163,7 +163,7 @@ export const ExecutivePdfSheet = forwardRef<HTMLDivElement, ExecutivePdfSheetPro
                 </tr>
               </thead>
               <tbody>
-                {data.topClients && data.topClients.map((client: any, idx: number) => (
+                {(data.topClients || []).slice(0, 5).map((client: any, idx: number) => (
                   <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
                     <td className="tabular-nums" style={{ padding: '4px 8px', fontWeight: 700, color: '#64748b' }}>{idx + 1}</td>
                     <td style={{ padding: '4px 8px', fontWeight: 600, color: '#0f172a' }}>{client.name}</td>
@@ -181,7 +181,7 @@ export const ExecutivePdfSheet = forwardRef<HTMLDivElement, ExecutivePdfSheetPro
 
           <div style={{ marginBottom: '22px' }}>
             <h3 style={{ fontSize: '0.86rem', fontWeight: 700, color: '#0f172a', marginBottom: '10px', borderBottom: '1px solid #cbd5e1', paddingBottom: '4px' }}>
-              4. Top Productos
+              4. Top 5 Productos
             </h3>
             <table style={{ width: '100%', fontSize: '0.73rem', borderCollapse: 'collapse' }}>
               <thead>
@@ -195,7 +195,7 @@ export const ExecutivePdfSheet = forwardRef<HTMLDivElement, ExecutivePdfSheetPro
                 </tr>
               </thead>
               <tbody>
-                {data.topProducts.map((prod: any, idx: number) => (
+                {(data.topProducts || []).slice(0, 5).map((prod: any, idx: number) => (
                   <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
                     <td className="tabular-nums" style={{ padding: '4px 8px', fontWeight: 700, color: '#64748b' }}>{idx + 1}</td>
                     <td style={{ padding: '4px 8px', fontWeight: 600, color: '#0f172a' }}>{prod.name}</td>

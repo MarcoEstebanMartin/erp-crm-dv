@@ -55,12 +55,34 @@ describe('Reportes — limpieza minimalista de 3 pestañas y helpers de fecha AR
     expect(zoneTables).not.toContain('salesRecommendations');
   });
 
-  it('integra la tarjeta Mostrador y Reporte PDF dentro de Resumen Financiero', () => {
+  it('integra la tarjeta Mostrador, Reporte PDF y Empleado PDF dentro de Resumen Financiero', () => {
     const summaryTab = readComp('reports/FinancialSummaryReportTab.tsx');
+    const execPdfReport = readComp('reports/ExecutivePdfReport.tsx');
 
     expect(summaryTab).toContain('Mostrador');
     expect(summaryTab).toContain('modalityBreakdown?.local');
     expect(summaryTab).toContain('Reporte PDF');
+    expect(summaryTab).toContain('Empleado PDF');
+    expect(execPdfReport).toContain('exec-pdf-scope');
+    expect(execPdfReport).toContain('General (Empresa)');
+  });
+
+  it('limita Top Clientes y Top Productos a Top 5 únicamente en hojas PDF y Zonas', () => {
+    const execSheet = readComp('reports/pdf/ExecutivePdfSheet.tsx');
+    const empSheet = readComp('reports/pdf/EmployeePdfSheet.tsx');
+    const sellerSheet = readComp('reports/pdf/SellerMeetingPdfSheet.tsx');
+    const zoneRotation = readComp('reports/ZoneAnalysisProductRotationCards.tsx');
+
+    expect(execSheet).toContain('3. Top 5 Clientes');
+    expect(execSheet).toContain('4. Top 5 Productos');
+    expect(execSheet).not.toContain('Top 10 Clientes');
+
+    expect(empSheet).toContain('id="executive-report-container"');
+    expect(empSheet).toContain('3. Top 5 Clientes');
+    expect(empSheet).toContain('4. Top 5 Productos');
+
+    expect(sellerSheet).toContain('Top 5 productos');
+    expect(zoneRotation).toContain('Top 5 productos');
   });
 
   it('formatea y calcula presets de fechas en zona horaria Argentina (-03:00) sin desfase UTC', () => {

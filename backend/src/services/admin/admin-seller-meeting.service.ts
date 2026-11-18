@@ -178,7 +178,7 @@ export class AdminSellerMeetingSubService {
         amount: roundToIntegerPeso(p.amountDec).toNumber(),
       }))
       .sort((a, b) => b.amount - a.amount)
-      .slice(0, 6);
+      .slice(0, 5);
 
     const actionInsights: Array<{ type: 'warning' | 'opportunity' | 'success'; title: string; description: string }> = [];
     if (portfolioCoveragePct < 60) {
