@@ -1,5 +1,6 @@
 import type { FC } from 'react';
-import { Plus, Check, DollarSign, Trash2, Search, UserPlus, Eye, Edit } from 'lucide-react';
+import { Plus, Check, DollarSign, Trash2 } from 'lucide-react';
+export { ComprasProveedoresTab } from './ComprasProveedoresTab';
 
 export const ComprasFacturasTab: FC<{
   isAdmin: boolean;
@@ -133,89 +134,6 @@ export const ComprasFacturasTab: FC<{
             </tbody>
           </table>
         </div>
-      </div>
-    </div>
-  );
-};
-
-export const ComprasProveedoresTab: FC<{
-  isAdmin: boolean;
-  filteredProviders: any[];
-  providerSearch: string;
-  setProviderSearch: (v: string) => void;
-  onOpenCreateProvider: () => void;
-  onOpenAccountSummary: (p: any) => void;
-  onOpenEditProvider: (p: any) => void;
-  onDeleteProvider: (id: number, name: string) => void;
-}> = ({
-  isAdmin, filteredProviders, providerSearch, setProviderSearch,
-  onOpenCreateProvider, onOpenAccountSummary, onOpenEditProvider, onDeleteProvider,
-}) => {
-  return (
-    <div className="card">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
-        <h3 className="card-title" style={{ margin: 0 }}>Proveedores ({filteredProviders.length})</h3>
-        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-          <search aria-label="Buscar proveedores" style={{ display: 'flex', alignItems: 'center', backgroundColor: '#fff', border: '1px solid var(--border-color)', borderRadius: '6px', padding: '4px 10px', gap: '6px' }}>
-            <label htmlFor="compras-prov-search" className="visually-hidden">Buscar proveedor</label>
-            <Search size={14} aria-hidden="true" />
-            <input id="compras-prov-search" type="text" placeholder="CUIT o razón social..." value={providerSearch} onChange={(e) => setProviderSearch(e.target.value)} style={{ border: 'none', outline: 'none', fontSize: '0.8rem', width: '180px' }} autoCorrect="off" autoCapitalize="none" spellCheck={false} />
-          </search>
-          <button type="button" className="btn btn-primary" onClick={onOpenCreateProvider}><UserPlus size={16} aria-hidden="true" /> Nuevo Proveedor</button>
-        </div>
-      </div>
-
-      <div className="table-container table-container--sticky" role="region" aria-label="Proveedores" tabIndex={0}>
-        <table>
-          <thead>
-            <tr>
-              <th scope="col">Proveedor</th>
-              <th scope="col">Rubro</th>
-              <th scope="col">Contactos</th>
-              <th scope="col" style={{ width: '110px' }}>Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredProviders.length === 0 ? (
-              <tr><td colSpan={4} style={{ textAlign: 'center' }}>Sin proveedores encontrados.</td></tr>
-            ) : (
-              filteredProviders.map((p) => (
-                <tr key={p.id}>
-                  <td>
-                    <div style={{ fontWeight: 600, fontSize: '0.88rem' }}>{p.name}</div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{p.address ? `${p.address} (${p.city || 'S/D'})` : 'Sin domicilio'}</div>
-                    <div className="tabular-nums" style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontFamily: 'monospace' }}>{p.cuit ? `CUIT: ${p.cuit}` : 'Sin CUIT'}{p.email ? ` · ${p.email}` : ''}</div>
-                  </td>
-                  <td>
-                    {p.rubro ? (
-                      <span style={{ backgroundColor: 'rgba(227, 6, 19, 0.05)', color: 'var(--color-corp-red)', padding: '4px 8px', borderRadius: '6px', fontSize: '0.78rem', fontWeight: 500, border: '1px solid rgba(227, 6, 19, 0.1)' }}>{p.rubro}</span>
-                    ) : <span style={{ color: 'var(--text-muted)', fontSize: '0.78rem' }}>Sin especificar</span>}
-                  </td>
-                  <td>
-                    {Array.isArray(p.contacts) && p.contacts.length > 0 ? (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                        {p.contacts.map((c: any, idx: number) => (
-                          <div key={idx} className="tabular-nums" style={{ fontSize: '0.76rem' }}><strong>{c.name}</strong>{c.phone ? ` · ${c.phone}` : ''}</div>
-                        ))}
-                      </div>
-                    ) : (
-                      <span className="tabular-nums" style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>{p.phone || 'Sin contacto'}</span>
-                    )}
-                  </td>
-                  <td>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                      <button type="button" className="btn btn-secondary" style={{ padding: '4px 8px', fontSize: '0.76rem', display: 'flex', alignItems: 'center', gap: '4px', justifyContent: 'center' }} onClick={() => onOpenAccountSummary(p)}><Eye size={12} aria-hidden="true" /> Resumen</button>
-                      <button type="button" className="btn btn-secondary" style={{ padding: '4px 8px', fontSize: '0.76rem', display: 'flex', alignItems: 'center', gap: '4px', justifyContent: 'center' }} onClick={() => onOpenEditProvider(p)}><Edit size={12} aria-hidden="true" /> Editar</button>
-                      {isAdmin && (
-                        <button type="button" className="btn btn-secondary" style={{ padding: '4px 8px', fontSize: '0.76rem', display: 'flex', alignItems: 'center', gap: '4px', justifyContent: 'center', color: 'var(--color-danger)' }} onClick={() => onDeleteProvider(p.id, p.name)}><Trash2 size={12} aria-hidden="true" /> Eliminar</button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
       </div>
     </div>
   );

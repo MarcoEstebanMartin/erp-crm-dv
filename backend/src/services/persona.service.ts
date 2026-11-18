@@ -6,9 +6,31 @@ import { matchesPhoneticQuery } from '../core/search';
 import { personaPaymentSubService } from './personas/persona-payment.service';
 import { personaLedgerSubService } from './personas/persona-ledger.service';
 import { personaDebtorsSubService } from './personas/persona-debtors.service';
+import { personaProvidersSubService } from './personas/persona-providers.service';
 import { personaSellersSubService } from './personas/persona-sellers.service';
 import { canAccessPersonaTrustData } from './personas/persona-notes.service';
 import { sessionCache } from '../utils/session-cache.util';
+
+function buildPersonaInclude(canSeeTrust: boolean, singleMode: boolean) {
+  return {
+    seller: { select: { id: true, username: true } },
+    saleRoute: {
+      select: { id: true, name: true, dayOfWeek: true, seller: { select: { id: true, username: true } } },
+    },
+    ...(canSeeTrust
+      ? {
+          notes: {
+            ...(singleMode ? {} : { where: { isPinned: true }, take: 3 }),
+            orderBy: singleMode ? [{ isPinned: 'desc' as const }, { createdAt: 'desc' as const }] : { createdAt: 'desc' as const },
+            select: {
+              id: true, content: true, category: true, isPinned: true, createdAt: true,
+              author: { select: { id: true, username: true } },
+            },
+          },
+        }
+      : {}),
+  };
+}
 
 export class PersonaService {
   /**
@@ -26,34 +48,7 @@ export class PersonaService {
 
     let personas = await prisma.persona.findMany({
       where: whereClause,
-      include: {
-        seller: { select: { id: true, username: true } },
-        saleRoute: {
-          select: {
-            id: true,
-            name: true,
-            dayOfWeek: true,
-            seller: { select: { id: true, username: true } },
-          },
-        },
-        ...(canSeeTrust
-          ? {
-              notes: {
-                where: { isPinned: true },
-                orderBy: { createdAt: 'desc' },
-                take: 3,
-                select: {
-                  id: true,
-                  content: true,
-                  category: true,
-                  isPinned: true,
-                  createdAt: true,
-                  author: { select: { id: true, username: true } },
-                },
-              },
-            }
-          : {}),
-      },
+      include: buildPersonaInclude(canSeeTrust, false),
       orderBy: { name: 'asc' },
     });
 
@@ -82,6 +77,15 @@ export class PersonaService {
       }
     }
 
+    if (role === 'provider') {
+      try {
+        return await personaProvidersSubService.enrichProvidersMetrics(personas);
+      } catch (err) {
+        console.error('Error fetching provider metrics inside getPersonas:', err);
+        return personas;
+      }
+    }
+
     return personas;
   }
 
@@ -89,32 +93,7 @@ export class PersonaService {
     const canSeeTrust = canAccessPersonaTrustData(userRole);
     const persona = await prisma.persona.findUnique({
       where: { id },
-      include: {
-        seller: { select: { id: true, username: true } },
-        saleRoute: {
-          select: {
-            id: true,
-            name: true,
-            dayOfWeek: true,
-            seller: { select: { id: true, username: true } },
-          },
-        },
-        ...(canSeeTrust
-          ? {
-              notes: {
-                orderBy: [{ isPinned: 'desc' }, { createdAt: 'desc' }],
-                select: {
-                  id: true,
-                  content: true,
-                  category: true,
-                  isPinned: true,
-                  createdAt: true,
-                  author: { select: { id: true, username: true } },
-                },
-              },
-            }
-          : {}),
-      },
+      include: buildPersonaInclude(canSeeTrust, true),
     });
 
     if (!persona) throw new Error('Persona no encontrada.');
@@ -148,6 +127,11 @@ export class PersonaService {
   }
 
   async createPersona(data: any, userId: number, userRole: string) {
+    const willBeProvider = data.isProvider !== undefined ? Boolean(data.isProvider) : false;
+    const resolvedCuit = willBeProvider
+      ? (await personaProvidersSubService.validateAndNormalizeProviderInput({ cuit: data.cuit, isProvider: true })).normalizedCuit
+      : data.cuit;
+
     let finalSellerId = data.sellerId ? Number(data.sellerId) : null;
     if (userRole === Role.VENDEDOR) {
       finalSellerId = userId;
@@ -161,7 +145,7 @@ export class PersonaService {
     const persona = await prisma.persona.create({
       data: {
         name: data.name,
-        cuit: data.cuit,
+        cuit: resolvedCuit,
         address: data.address,
         city: data.city != null ? standardizeCityName(data.city) : data.city,
         barrio: data.barrio != null ? String(data.barrio).trim() : null,
@@ -205,6 +189,17 @@ export class PersonaService {
       throw new Error('Acceso denegado.');
     }
 
+    const nextIsProvider = data.isProvider !== undefined ? Boolean(data.isProvider) : original.isProvider;
+    let resolvedCuit = data.cuit;
+    if (nextIsProvider && (data.cuit !== undefined || data.isProvider === true)) {
+      const { normalizedCuit } = await personaProvidersSubService.validateAndNormalizeProviderInput({
+        excludeId: id,
+        cuit: data.cuit !== undefined ? data.cuit : original.cuit,
+        isProvider: true,
+      });
+      if (data.cuit !== undefined || normalizedCuit !== original.cuit) resolvedCuit = normalizedCuit;
+    }
+
     let finalSellerId = original.sellerId;
     if (userRole === Role.ADMIN && data.sellerId !== undefined) {
       finalSellerId = data.sellerId ? Number(data.sellerId) : null;
@@ -220,7 +215,7 @@ export class PersonaService {
       where: { id },
       data: {
         name: data.name,
-        cuit: data.cuit,
+        cuit: resolvedCuit,
         address: data.address,
         city: data.city !== undefined ? (data.city !== null ? standardizeCityName(data.city) : null) : undefined,
         barrio: data.barrio !== undefined ? (data.barrio !== null ? String(data.barrio).trim() : null) : undefined,
@@ -280,23 +275,31 @@ export class PersonaService {
     const persona = await prisma.persona.findUnique({
       where: { id },
       include: {
-        transactions: { select: { id: true } },
-        orders: { select: { id: true } },
-        supplierInvoices: { select: { id: true } },
-        creditNotes: { select: { id: true } },
+        _count: {
+          select: {
+            transactions: true, orders: true, supplierInvoices: true, creditNotes: true,
+            purchaseOrders: true, accountLedgerEntries: true, taxWithholdings: true,
+            vehicleMaintenances: true, fieldReceipts: true,
+          },
+        },
       },
     });
     if (!persona) throw new Error('Persona no encontrada.');
+    const c = persona._count;
     if (
-      persona.transactions.length > 0 ||
-      persona.orders.length > 0 ||
-      persona.supplierInvoices.length > 0 ||
-      persona.creditNotes.length > 0
+      c.transactions > 0 || c.orders > 0 || c.supplierInvoices > 0 || c.creditNotes > 0 ||
+      c.purchaseOrders > 0 || c.accountLedgerEntries > 0 || c.taxWithholdings > 0 ||
+      c.vehicleMaintenances > 0 || c.fieldReceipts > 0
     ) {
-      throw new Error('No se puede eliminar la persona porque tiene movimientos registrados (Órdenes, Transacciones, Notas de Crédito o Facturas).');
+      throw new Error('No se puede eliminar porque tiene historial contable o de movimientos. Desactivalo en su ficha.');
     }
 
-    const deleted = await prisma.persona.delete({ where: { id } });
+    const deleted = await prisma.$transaction(async (tx) => {
+      await tx.product.updateMany({ where: { providerId: id }, data: { providerId: null } });
+      await tx.providerProductMapping.deleteMany({ where: { providerId: id } });
+      await tx.personaNote.deleteMany({ where: { personaId: id } });
+      return tx.persona.delete({ where: { id } });
+    });
     sessionCache.invalidateStoreClientSession(deleted.id);
     await logAudit({ userId, action: 'DELETE_PERSONA', entityType: 'Persona', entityId: deleted.id, oldValues: persona });
     return deleted;

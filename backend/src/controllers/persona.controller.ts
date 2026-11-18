@@ -12,6 +12,13 @@ function handlePersonaError(res: Response, error: any, fallbackMessage: string, 
     res.status(403).json({ status: 'error', message: error.message });
     return;
   }
+  if (
+    typeof error?.message === 'string' &&
+    (error.message.includes('Ya existe') || error.message.includes('inválido'))
+  ) {
+    res.status(400).json({ status: 'error', message: error.message });
+    return;
+  }
   res.status(defaultCode).json({ status: 'error', message: error.message || fallbackMessage });
 }
 
@@ -75,7 +82,7 @@ export async function createPersona(req: AuthenticatedRequest, res: Response): P
     appCache.invalidateByPrefix('personas_');
     res.status(201).json({ status: 'success', data: { persona } });
   } catch (error: any) {
-    res.status(500).json({ status: 'error', message: error.message || 'Error al crear la persona.' });
+    handlePersonaError(res, error, 'Error al crear la persona.');
   }
 }
 
@@ -119,6 +126,7 @@ export async function recordPersonaPayment(
       userId,
       userRole,
     );
+    appCache.invalidateByPrefix('personas_');
     res.status(201).json({ status: 'success', data: result });
   } catch (error: any) {
     handlePersonaError(res, error, 'Error al registrar el cobro.', 400);
@@ -292,6 +300,7 @@ export async function deletePersona(req: AuthenticatedRequest, res: Response): P
 
   try {
     const result = await personaService.deletePersona(Number(req.params.id), userId, userRole);
+    appCache.invalidateByPrefix('personas_');
     res.status(200).json({ status: 'success', data: { result } });
   } catch (error: any) {
     handlePersonaError(res, error, 'Error al eliminar la persona.', 400);
