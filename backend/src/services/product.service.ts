@@ -60,7 +60,6 @@ export class ProductService {
         approximateWeight: true,
         unitsPerBox: true,
         rubroId: true,
-        imageUrl: true,
         isActive: true,
         commercialCategory: true,
         rubro: { select: { id: true, name: true } },

@@ -3,7 +3,6 @@ import {
   ArrowRight,
   History,
   Navigation,
-  Package,
   Receipt,
   ShoppingCart,
 } from 'lucide-react';
@@ -17,7 +16,6 @@ interface VendedorHomeTabProps {
   onGoToRoute: () => void;
   onGoToCollect: () => void;
   onGoToHistory: () => void;
-  onGoToCatalog: () => void;
 }
 
 /**
@@ -32,7 +30,6 @@ export const VendedorHomeTab: React.FC<VendedorHomeTabProps> = ({
   onGoToRoute,
   onGoToCollect,
   onGoToHistory,
-  onGoToCatalog,
 }) => {
   const activeRoute = vendedorRoutes.find((r) => r.id === selectedRouteId) || vendedorRoutes[0];
   const routeBadge = activeRoute ? `${activeRoute.name}${activeRoute.dayOfWeek ? ` · ${activeRoute.dayOfWeek}` : ''}` : 'Sin ruta';
@@ -111,7 +108,7 @@ export const VendedorHomeTab: React.FC<VendedorHomeTabProps> = ({
         </button>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '10px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '10px' }}>
         <button
           type="button"
           onClick={onGoToCollect}
@@ -156,29 +153,6 @@ export const VendedorHomeTab: React.FC<VendedorHomeTabProps> = ({
         >
           <History size={20} aria-hidden="true" style={{ color: 'var(--text-secondary)' }} />
           <span>Historial</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={onGoToCatalog}
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '8px',
-            padding: '16px 8px',
-            borderRadius: '10px',
-            border: '1px solid var(--border-color)',
-            backgroundColor: '#ffffff',
-            color: 'var(--text-primary)',
-            cursor: 'pointer',
-            fontSize: '0.82rem',
-            fontWeight: 600,
-          }}
-        >
-          <Package size={20} aria-hidden="true" style={{ color: 'var(--text-secondary)' }} />
-          <span>Catálogo</span>
         </button>
       </div>
     </div>

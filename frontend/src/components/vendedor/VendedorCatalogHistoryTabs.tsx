@@ -1,9 +1,8 @@
-import React, { useDeferredValue, useEffect, useMemo, useState } from 'react';
-import { Eye, Edit, Package, FileText, Search, X } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Eye, Edit } from 'lucide-react';
 import { getOrderStatusInfo } from '../../utils/orderStatusHelper';
 import { formatIntegerARS } from '../../utils/currency';
-import { buildSearchIndex, filterIndexedItems, sortVendedorCatalog } from './vendedorHelpers';
-import type { Order, Product, Rubro } from '../../types';
+import type { Order } from '../../types';
 
 interface VendedorHistoryTabProps {
   orders: Order[];
@@ -112,129 +111,6 @@ export const VendedorHistoryTab: React.FC<VendedorHistoryTabProps> = ({ orders, 
           )}
         </tbody>
       </table>
-    </div>
-  );
-};
-
-interface VendedorCatalogReadOnlyTabProps {
-  products: Product[];
-  rubros: Rubro[];
-  searchQuery: string;
-  setSearchQuery: (q: string) => void;
-  filterRubroId: string;
-  setFilterRubroId: (id: string) => void;
-  onOpenPriceListModal: () => void;
-}
-
-const CATALOG_PAGE_SIZE = 40;
-
-export const VendedorCatalogReadOnlyTab: React.FC<VendedorCatalogReadOnlyTabProps> = ({
-  products, rubros, searchQuery, setSearchQuery, filterRubroId, setFilterRubroId, onOpenPriceListModal,
-}) => {
-  const deferredQuery = useDeferredValue(searchQuery);
-  const [visibleCount, setVisibleCount] = useState(CATALOG_PAGE_SIZE);
-
-  useEffect(() => {
-    setVisibleCount(CATALOG_PAGE_SIZE);
-  }, [deferredQuery, filterRubroId]);
-
-  const indexedCatalog = useMemo(() => {
-    const byRubro = filterRubroId
-      ? products.filter((p) => Number(p.rubroId) === Number(filterRubroId))
-      : products;
-    const sorted = sortVendedorCatalog(byRubro, rubros, filterRubroId);
-    return buildSearchIndex(sorted, (p) => [p.name, p.sku, p.barcode, p.description]);
-  }, [products, rubros, filterRubroId]);
-
-  const filtered = useMemo(
-    () => filterIndexedItems(indexedCatalog, deferredQuery),
-    [indexedCatalog, deferredQuery],
-  );
-
-  const visibleItems = useMemo(() => filtered.slice(0, visibleCount), [filtered, visibleCount]);
-
-  return (
-    <div className="no-print">
-      <div className="actions-bar" style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap', marginBottom: '16px' }}>
-        <search className="search-input-wrapper" style={{ flex: 1, minWidth: '250px', position: 'relative' }}>
-          <label htmlFor="vendedor-catalog-search" className="sr-only">Buscar producto</label>
-          <Search size={14} aria-hidden="true" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)', pointerEvents: 'none' }} />
-          <input
-            id="vendedor-catalog-search"
-            type="search"
-            className="input"
-            placeholder="Buscar producto"
-            autoCorrect="off"
-            autoCapitalize="none"
-            spellCheck={false}
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            style={{ paddingLeft: '34px', paddingRight: searchQuery ? '34px' : undefined, fontSize: '16px' }}
-          />
-          {searchQuery && (
-            <button
-              type="button"
-              aria-label="Limpiar búsqueda"
-              onClick={() => setSearchQuery('')}
-              style={{ position: 'absolute', right: '6px', top: '50%', transform: 'translateY(-50%)', background: 'transparent', border: 'none', boxShadow: 'none', padding: '4px', color: 'var(--text-muted)', cursor: 'pointer' }}
-            >
-              <X size={15} aria-hidden="true" />
-            </button>
-          )}
-        </search>
-        <div className="form-group" style={{ margin: 0, minWidth: '180px' }}>
-          <label htmlFor="vendedor-catalog-rubro" className="sr-only">Rubro</label>
-          <select id="vendedor-catalog-rubro" className="input" style={{ height: '40px', fontSize: '16px', padding: '8px 12px' }} value={filterRubroId} onChange={(e) => setFilterRubroId(e.target.value)}>
-            <option value="">Todos los rubros</option>
-            {rubros.map((r) => (<option key={r.id} value={r.id}>{r.name}</option>))}
-          </select>
-        </div>
-        <button type="button" className="btn btn-secondary" style={{ padding: '6px 12px', fontSize: '0.8rem', display: 'inline-flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }} onClick={onOpenPriceListModal}>
-          <FileText size={14} aria-hidden="true" />
-          <span>Listas PDF</span>
-        </button>
-      </div>
-
-      <div className="catalog-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '8px', padding: '10px 4px' }}>
-        {filtered.length === 0 ? (
-          <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-secondary)', gridColumn: '1 / -1' }}>Sin productos</div>
-        ) : (
-          visibleItems.map((p, idx) => {
-            const imgSrc = p.imageUrl ? (p.imageUrl.startsWith('http') ? p.imageUrl : p.imageUrl.startsWith('/') ? `${p.imageUrl}?v=2.0` : `/uploads/products/${p.imageUrl}?v=2.0`) : null;
-            const deferredStyle = idx >= 8 ? { contentVisibility: 'auto' as const, containIntrinsicSize: 'auto none auto 220px' } : undefined;
-            return (
-              <div key={p.id} className="product-card" style={{ backgroundColor: '#fff', borderRadius: '8px', border: '1px solid var(--border-color)', overflow: 'hidden', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '10px', position: 'relative', ...deferredStyle }}>
-                <div style={{ position: 'relative', height: '140px', width: '100%', backgroundColor: '#f8fafc', borderRadius: '6px', overflow: 'hidden', marginBottom: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <span className="tabular-nums" style={{ position: 'absolute', top: '4px', left: '4px', backgroundColor: 'rgba(15, 23, 42, 0.75)', color: '#ffffff', fontFamily: 'monospace', fontSize: '0.68rem', fontWeight: 700, padding: '2px 6px', borderRadius: '4px', zIndex: 3 }}>#{p.sku || p.id}</span>
-                  {imgSrc ? (
-                    <img src={imgSrc} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'contain', padding: '4px' }} loading="lazy" decoding="async" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
-                  ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', color: '#94a3b8' }}>
-                      <Package size={30} color="#cbd5e1" aria-hidden="true" /><span style={{ fontSize: '0.68rem', marginTop: '4px', fontWeight: 600 }}>Sin foto</span>
-                    </div>
-                  )}
-                  {p.stock <= 0 && <span style={{ position: 'absolute', top: '4px', right: '4px', background: 'var(--color-danger)', color: '#fff', fontSize: '0.65rem', padding: '2px 6px', borderRadius: '4px', fontWeight: 700, zIndex: 3 }}>Agotado</span>}
-                </div>
-                <span className="tabular-nums" style={{ fontWeight: 800, fontSize: '1.2rem', color: 'var(--text-primary)' }}>{formatIntegerARS(p.listPrice)}</span>
-                <div style={{ fontWeight: 600, fontSize: '0.8rem', marginTop: '6px', textAlign: 'center' }}>{p.name}</div>
-              </div>
-            );
-          })
-        )}
-      </div>
-
-      {filtered.length > visibleCount && (
-        <div style={{ display: 'flex', justifyContent: 'center', marginTop: '12px' }}>
-          <button
-            type="button"
-            className="btn btn-secondary tabular-nums"
-            onClick={() => setVisibleCount((c) => c + CATALOG_PAGE_SIZE)}
-            style={{ padding: '10px 20px', fontSize: '0.85rem', fontWeight: 600 }}
-          >
-            Ver más ({filtered.length - visibleCount})
-          </button>
-        </div>
-      )}
     </div>
   );
 };

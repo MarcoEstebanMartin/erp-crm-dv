@@ -10,13 +10,14 @@ export interface VendedorPagesProps {
 export const VendedorPages: React.FC<VendedorPagesProps> = ({ setActiveTab }) => {
   const { tab = 'inicio' } = useParams<{ tab?: string }>();
   const navigate = useNavigate();
+  const normalizedTab = tab === 'products' ? 'orders' : tab;
 
   const handleTabChange = (newTab: string) => {
     setActiveTab(newTab);
     navigate(`/vendedor/${newTab}`);
   };
 
-  return <VendedorDashboard activeTab={tab} setActiveTab={handleTabChange} />;
+  return <VendedorDashboard activeTab={normalizedTab} setActiveTab={handleTabChange} />;
 };
 
 export default VendedorPages;

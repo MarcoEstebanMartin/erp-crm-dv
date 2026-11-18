@@ -170,30 +170,6 @@ export async function fetchVendedorTabState(input: VendedorFetchInput): Promise<
       };
     }
 
-    if (input.activeTab === 'products') {
-      const [prodData, rubroData, promoData] = await Promise.all([
-        api.getProducts('', false, true),
-        api.getRubros(),
-        api.getActiveWeeklyPromos().catch(() => null),
-      ]);
-      const syncTs = new Date().toISOString();
-      void Promise.all([
-        saveCatalogSnapshot('rubros_all', rubroData),
-        Array.isArray(promoData)
-          ? saveCatalogSnapshot('weekly_promos_active', promoData)
-          : Promise.resolve(),
-        !input.searchQuery.trim() ? saveCatalogSnapshot('products_full', prodData) : Promise.resolve(),
-      ]).catch(() => {});
-
-      return {
-        fromCache: false,
-        lastCatalogSyncAt: syncTs,
-        products: prodData,
-        rubros: rubroData,
-        weeklyPromos: Array.isArray(promoData) ? promoData : undefined,
-      };
-    }
-
     return { fromCache: false };
   } catch (err) {
     if (isLikelyNetworkError(err)) {

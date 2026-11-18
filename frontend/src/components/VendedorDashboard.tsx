@@ -1,15 +1,14 @@
 import React from 'react';
-import { ShoppingCart, CheckCircle2, Package, History, Receipt, Home, Navigation } from 'lucide-react';
+import { ShoppingCart, CheckCircle2, History, Receipt, Home, Navigation } from 'lucide-react';
 import { VendedorHomeTab } from './vendedor/VendedorHomeTab';
 import { VendedorOrderTakeTab } from './vendedor/VendedorOrderTakeTab';
 import { VendedorRoutesTab } from './vendedor/VendedorRoutesTab';
-import { VendedorHistoryTab, VendedorCatalogReadOnlyTab } from './vendedor/VendedorCatalogHistoryTabs';
+import { VendedorHistoryTab } from './vendedor/VendedorCatalogHistoryTabs';
 import { VendedorStreetClientModal, VendedorNoSaleModal, VendedorOrderDetailModal } from './vendedor/VendedorModals';
 import { VendedorOfflineBanner } from './vendedor/VendedorOfflineBanner';
 import { cleanCityName } from './vendedor/vendedorHelpers';
 import { useVendedorController } from './vendedor/useVendedorController';
 
-const PriceListModal = React.lazy(() => import('./PriceListModal'));
 const MobileCobros = React.lazy(() => import('./MobileCobros'));
 const FieldCollectionPage = React.lazy(() =>
   import('./field-receipts/FieldCollectionPage').then((m) => ({ default: m.FieldCollectionPage })),
@@ -75,15 +74,6 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
 
         <button
           type="button"
-          className={`vendedor-nav-pill ${activeTab === 'products' ? 'vendedor-nav-pill-active' : ''}`}
-          aria-current={activeTab === 'products' ? 'page' : undefined}
-          onClick={() => setActiveTab('products')}
-        >
-          <Package size={16} /><span>Catálogo</span>
-        </button>
-
-        <button
-          type="button"
           className={`vendedor-nav-pill ${activeTab === 'history' ? 'vendedor-nav-pill-active' : ''}`}
           aria-current={activeTab === 'history' ? 'page' : undefined}
           onClick={() => setActiveTab('history')}
@@ -126,7 +116,6 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
           onGoToRoute={() => setActiveTab('clients')}
           onGoToCollect={() => setActiveTab('field-receipts')}
           onGoToHistory={() => setActiveTab('history')}
-          onGoToCatalog={() => setActiveTab('products')}
         />
       )}
 
@@ -205,24 +194,6 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
             initialClientId={collectClientId}
             onInitialClientHandled={() => setCollectClientId(null)}
           />
-        </React.Suspense>
-      )}
-
-      {activeTab === 'products' && (
-        <VendedorCatalogReadOnlyTab
-          products={c.products}
-          rubros={c.rubros}
-          searchQuery={c.searchQuery}
-          setSearchQuery={c.setSearchQuery}
-          filterRubroId={c.filterRubroId}
-          setFilterRubroId={c.setFilterRubroId}
-          onOpenPriceListModal={() => c.setIsPriceListModalOpen(true)}
-        />
-      )}
-
-      {c.isPriceListModalOpen && (
-        <React.Suspense fallback={null}>
-          <PriceListModal isOpen={c.isPriceListModalOpen} onClose={() => c.setIsPriceListModalOpen(false)} />
         </React.Suspense>
       )}
 

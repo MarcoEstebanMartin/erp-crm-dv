@@ -31,10 +31,8 @@ export function useVendedorController(activeTab: string) {
   });
   const [orderDetailsModal, setOrderDetailsModal] = useState<any | null>(null);
   const [resumenClientModal, setResumenClientModal] = useState<any | null>(null);
-  const [isPriceListModalOpen, setIsPriceListModalOpen] = useState(false);
   const [editOrderModal, setEditOrderModal] = useState<{ open: boolean; orderId: number; clientId: number; clientName: string; items: any[] } | null>(null);
 
-  const [searchQuery, setSearchQuery] = useState('');
   const [prodSearchQuery, setProdSearchQuery] = useState('');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
@@ -423,8 +421,8 @@ export function useVendedorController(activeTab: string) {
   return {
     clients, routeClients, products, orders, rubros, weeklyPromos, filterRubroId, setFilterRubroId, selectedClient, setSelectedClient,
     clientFilter, setClientFilter, cart, setCart, orderNotes, setOrderNotes, clientModal, setClientModal,
-    orderDetailsModal, setOrderDetailsModal, resumenClientModal, setResumenClientModal, isPriceListModalOpen, setIsPriceListModalOpen,
-    editOrderModal, setEditOrderModal, searchQuery, setSearchQuery, prodSearchQuery, setProdSearchQuery,
+    orderDetailsModal, setOrderDetailsModal, resumenClientModal, setResumenClientModal,
+    editOrderModal, setEditOrderModal, prodSearchQuery, setProdSearchQuery,
     errorMsg, setErrorMsg, successMsg, setSuccessMsg, loading, setLoading, toast, selectedCityFilters, setSelectedCityFilters,
     noSaleModal, setNoSaleModal, vendedorRoutes, selectedRouteId, todayVisits, uniqueCities, offlineSync,
     fetchData, addToCart, updateCartQty, setCartQty, handleConfirmOrder, handleSelectRoute, handleRecordNoSale, handleCreateClient, handleOpenEditOrder,
