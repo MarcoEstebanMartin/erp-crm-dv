@@ -37,15 +37,6 @@ export const getFinancialReportsQuerySchema = z.object({
   }),
 });
 
-export const getLocalSalesQuerySchema = z.object({
-  query: z.object({
-    year: yearOptional,
-    month: monthOptional,
-    startDate: isoDateOptional,
-    endDate: isoDateOptional,
-  }),
-});
-
 export const getProfitabilityQuerySchema = z.object({
   query: z.object({
     startDate: isoDateOptional,
@@ -81,14 +72,5 @@ export const getZoneReportsQuerySchema = z.object({
     cities: z.string().trim().max(1000, 'Lista de localidades demasiado larga').optional().or(z.literal('')),
     startDate: isoDateOptional,
     endDate: isoDateOptional,
-  }),
-});
-
-export const weeklyQuerySchema = z.object({
-  query: z.object({
-    weekStart: z
-      .string()
-      .trim()
-      .regex(/^\d{4}-\d{2}-\d{2}$/, 'El inicio de semana debe tener formato YYYY-MM-DD'),
   }),
 });

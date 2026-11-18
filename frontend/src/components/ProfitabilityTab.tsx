@@ -1,26 +1,29 @@
 import { useEffect, useRef, useState, type FC, type KeyboardEvent } from 'react';
-import { Layers, Package, Users } from 'lucide-react';
+import { Package, Users } from 'lucide-react';
 import { api } from '../utils/api';
 import { ProfitabilityFiltersAndKpis } from './reports/profitability/ProfitabilityFiltersAndKpis';
 import { ProfitabilityTablesAndMatrix } from './reports/profitability/ProfitabilityTablesAndMatrix';
+import { computeArDatePreset } from './reports/reportDateHelpers';
 
 interface ProfitabilityTabProps {
   sellers?: Array<{ id: number; username: string }>;
   rubros?: Array<{ id: number; name: string }>;
 }
 
-type SubViewId = 'clients' | 'products' | 'matrix';
+type SubViewId = 'clients' | 'products';
+type ClassificationFilter = 'ALL' | 'LOW_MARGIN' | 'STAR' | 'VOLUME' | 'OPPORTUNITY';
 
 export const ProfitabilityTab: FC<ProfitabilityTabProps> = ({ sellers = [], rubros = [] }) => {
+  const initialRange = computeArDatePreset('this_month');
   const [loading, setLoading] = useState<boolean>(true);
   const [subView, setSubView] = useState<SubViewId>('clients');
   const [datePreset, setDatePreset] = useState<string>('THIS_MONTH');
-  const [startDate, setStartDate] = useState<string>('');
-  const [endDate, setEndDate] = useState<string>('');
+  const [startDate, setStartDate] = useState<string>(initialRange.startDate);
+  const [endDate, setEndDate] = useState<string>(initialRange.endDate);
   const [selectedSeller, setSelectedSeller] = useState<string>('');
-  const [selectedCity] = useState<string>('');
   const [selectedRubro, setSelectedRubro] = useState<string>('');
   const [selectedBillingType, setSelectedBillingType] = useState<string>('ALL');
+  const [classificationFilter, setClassificationFilter] = useState<ClassificationFilter>('ALL');
   const [searchTerm, setSearchTerm] = useState<string>('');
 
   const [reportData, setReportData] = useState<any>(null);
@@ -29,103 +32,98 @@ export const ProfitabilityTab: FC<ProfitabilityTabProps> = ({ sellers = [], rubr
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
   useEffect(() => {
-    applyDatePreset(datePreset);
-    loadMetadata();
-  }, [datePreset]);
-
-  const loadMetadata = async () => {
-    try {
-      if (sellerOptions.length === 0) {
-        let sellersList: any[] = [];
-        if (api.getSellersList) {
-          sellersList = await api.getSellersList();
-        }
-        if ((!sellersList || sellersList.length === 0) && api.getUsers) {
-          const u = await api.getUsers();
-          if (Array.isArray(u)) {
-            sellersList = u.filter((user: any) => user.role === 'VENDEDOR');
+    const loadMetadata = async () => {
+      try {
+        if (sellerOptions.length === 0) {
+          let sellersList: any[] = [];
+          if (api.getSellersList) sellersList = await api.getSellersList();
+          if ((!sellersList || sellersList.length === 0) && api.getUsers) {
+            const u = await api.getUsers();
+            if (Array.isArray(u)) sellersList = u.filter((user: any) => user.role === 'VENDEDOR');
           }
+          if (Array.isArray(sellersList)) setSellerOptions(sellersList);
         }
-        if (Array.isArray(sellersList)) setSellerOptions(sellersList);
+        if (rubroOptions.length === 0 && api.getRubros) {
+          const r = await api.getRubros();
+          if (Array.isArray(r)) setRubroOptions(r);
+        }
+      } catch (e) {
+        console.error('Error al cargar metadatos de vendedores o rubros:', e);
       }
-      if (rubroOptions.length === 0 && api.getRubros) {
-        const r = await api.getRubros();
-        if (Array.isArray(r)) setRubroOptions(r);
-      }
-    } catch (e) {
-      console.error('Error al cargar metadatos de vendedores o rubros:', e);
+    };
+    loadMetadata();
+  }, []);
+
+  const handlePresetChange = (preset: string) => {
+    setDatePreset(preset);
+    if (preset === 'THIS_MONTH') {
+      const r = computeArDatePreset('this_month');
+      setStartDate(r.startDate);
+      setEndDate(r.endDate);
+    } else if (preset === 'LAST_MONTH') {
+      const r = computeArDatePreset('last_month');
+      setStartDate(r.startDate);
+      setEndDate(r.endDate);
+    } else if (preset === 'QUARTER') {
+      const r = computeArDatePreset('quarter');
+      setStartDate(r.startDate);
+      setEndDate(r.endDate);
+    } else if (preset === 'YEAR') {
+      const r = computeArDatePreset('year');
+      setStartDate(r.startDate);
+      setEndDate(r.endDate);
     }
   };
 
   useEffect(() => {
-    loadReport();
-  }, [startDate, endDate, selectedSeller, selectedCity, selectedRubro, selectedBillingType]);
-
-  const applyDatePreset = (preset: string) => {
-    const now = new Date();
-    let start = new Date();
-    let end = new Date();
-
-    if (preset === 'THIS_MONTH') {
-      start = new Date(now.getFullYear(), now.getMonth(), 1);
-      end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-    } else if (preset === 'LAST_MONTH') {
-      start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-      end = new Date(now.getFullYear(), now.getMonth(), 0);
-    } else if (preset === 'QUARTER') {
-      start = new Date(now.getFullYear(), now.getMonth() - 3, 1);
-      end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-    } else if (preset === 'YEAR') {
-      start = new Date(now.getFullYear(), 0, 1);
-      end = new Date(now.getFullYear(), 11, 31);
-    }
-
-    if (preset !== 'CUSTOM') {
-      setStartDate(start.toISOString().split('T')[0]);
-      setEndDate(end.toISOString().split('T')[0]);
-    }
-  };
-
-  const loadReport = async () => {
+    let active = true;
     setLoading(true);
-    try {
-      const data = await api.getProfitabilityReport({
+    api
+      .getProfitabilityReport({
         startDate: startDate || undefined,
         endDate: endDate || undefined,
         sellerId: selectedSeller ? Number(selectedSeller) : undefined,
-        city: selectedCity || undefined,
         rubroId: selectedRubro ? Number(selectedRubro) : undefined,
         billingType: selectedBillingType !== 'ALL' ? selectedBillingType : undefined,
+      })
+      .then((data) => {
+        if (active) setReportData(data);
+      })
+      .catch((error) => {
+        console.error('Error al cargar reporte de rentabilidad:', error);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
       });
-      setReportData(data);
-    } catch (error) {
-      console.error('Error al cargar reporte de rentabilidad:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+    return () => {
+      active = false;
+    };
+  }, [startDate, endDate, selectedSeller, selectedRubro, selectedBillingType]);
 
-  const formatCurrency = (val: number): string => {
-    return new Intl.NumberFormat('es-AR', {
+  const formatCurrency = (val: number): string =>
+    new Intl.NumberFormat('es-AR', {
       style: 'currency',
       currency: 'ARS',
       maximumFractionDigits: 0,
     }).format(val || 0);
-  };
 
-  const filteredClients = (reportData?.clients || []).filter((c: any) =>
-    c.businessName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    c.city.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredClients = (reportData?.clients || []).filter(
+    (c: any) =>
+      c.businessName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      c.city.toLowerCase().includes(searchTerm.toLowerCase()),
   );
-  const filteredProducts = (reportData?.products || []).filter((p: any) =>
-    p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    p.sku.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+
+  const filteredProducts = (reportData?.products || []).filter((p: any) => {
+    const matchesSearch =
+      p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      p.sku.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesClass = classificationFilter === 'ALL' || p.classification === classificationFilter;
+    return matchesSearch && matchesClass;
+  });
 
   const subTabs: Array<{ id: SubViewId; label: string; Icon: typeof Users }> = [
     { id: 'clients', label: `Clientes (${reportData?.clients?.length || 0})`, Icon: Users },
     { id: 'products', label: `Productos (${reportData?.products?.length || 0})`, Icon: Package },
-    { id: 'matrix', label: 'Matriz', Icon: Layers },
   ];
 
   const handleSubTabKeyDown = (e: KeyboardEvent<HTMLButtonElement>, idx: number) => {
@@ -141,10 +139,10 @@ export const ProfitabilityTab: FC<ProfitabilityTabProps> = ({ sellers = [], rubr
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
       <ProfitabilityFiltersAndKpis
         datePreset={datePreset}
-        setDatePreset={setDatePreset}
+        setDatePreset={handlePresetChange}
         startDate={startDate}
         setStartDate={setStartDate}
         endDate={endDate}
@@ -188,7 +186,24 @@ export const ProfitabilityTab: FC<ProfitabilityTabProps> = ({ sellers = [], rubr
           })}
         </div>
 
-        {subView !== 'matrix' && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+          {subView === 'products' && (
+            <select
+              id="profitability-classification"
+              aria-label="Filtrar por estado de margen"
+              className="select"
+              value={classificationFilter}
+              onChange={(e) => setClassificationFilter(e.target.value as ClassificationFilter)}
+              style={{ padding: '6px 10px', fontSize: '0.82rem', width: 'auto' }}
+            >
+              <option value="ALL">Todos los estados</option>
+              <option value="LOW_MARGIN">Margen bajo (&lt; 15%)</option>
+              <option value="STAR">Estrella</option>
+              <option value="VOLUME">Volumen</option>
+              <option value="OPPORTUNITY">Oportunidad</option>
+            </select>
+          )}
+
           <search aria-label="Buscar en rentabilidad" style={{ minWidth: '220px' }}>
             <label htmlFor="profitability-search" className="visually-hidden">Buscar</label>
             <input
@@ -204,7 +219,7 @@ export const ProfitabilityTab: FC<ProfitabilityTabProps> = ({ sellers = [], rubr
               style={{ padding: '6px 10px', fontSize: '0.82rem', width: '100%' }}
             />
           </search>
-        )}
+        </div>
       </div>
 
       <div role="tabpanel" aria-labelledby={`prof-tab-${subView}`}>
@@ -212,7 +227,6 @@ export const ProfitabilityTab: FC<ProfitabilityTabProps> = ({ sellers = [], rubr
           subView={subView}
           filteredClients={filteredClients}
           filteredProducts={filteredProducts}
-          allProducts={reportData?.products || []}
           formatCurrency={formatCurrency}
         />
       </div>

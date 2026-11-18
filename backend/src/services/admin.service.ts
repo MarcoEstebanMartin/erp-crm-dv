@@ -1,37 +1,17 @@
 import { adminUsersSubService } from './admin/admin-users.service';
 import { adminAuditSubService, AuditLogFilters } from './admin/admin-audit.service';
 import { adminFinanceSubService } from './admin/admin-finance.service';
-import { adminChannelsSubService } from './admin/admin-channels.service';
 import { adminProfitabilitySubService } from './admin/admin-profitability.service';
 import { adminZonesSubService } from './admin/admin-zones.service';
 import { adminExecutiveSubService } from './admin/admin-executive.service';
 import { adminSellerMeetingSubService } from './admin/admin-seller-meeting.service';
 
 export class AdminService {
-  // 1. Reportes Financieros y Semanales (con unitCostSnapshot CMV Histórico)
+  // 1. Reporte Financiero Consolidado (con unitCostSnapshot CMV Histórico)
   getFinancialReports = (
     paramsOrYear?: number | { year?: number; month?: number; startDate?: string; endDate?: string },
     month?: number,
   ) => adminFinanceSubService.getFinancialReports(paramsOrYear, month);
-
-  getAutofillSalesForWeek = (weekStart: string) =>
-    adminFinanceSubService.getAutofillSalesForWeek(weekStart);
-
-  getWeeklyReports = () => adminFinanceSubService.getWeeklyReports();
-
-  saveWeeklyReport = (data: {
-    weekStart: string;
-    purchases: any[];
-    sales: any[];
-    credit: number;
-    buffer: number;
-  }) => adminFinanceSubService.saveWeeklyReport(data);
-
-  deleteWeeklyReport = (weekStart: string) =>
-    adminFinanceSubService.deleteWeeklyReport(weekStart);
-
-  getSuggestedCreditForWeek = (weekStart: string) =>
-    adminFinanceSubService.getSuggestedCreditForWeek(weekStart);
 
   // 2. Usuarios y Logs de Auditoría
   getAuditLogs = (page = 1, limit = 50, filters?: AuditLogFilters) =>
@@ -57,7 +37,7 @@ export class AdminService {
   getUserPasswordVersion = (id: number) =>
     adminUsersSubService.getUserPasswordVersion(id);
 
-  // 3. Reportes de Zonas, Rentabilidad y Canales
+  // 3. Reportes de Zonas y Rentabilidad
   getZoneReports = (filters: {
     sellerId?: number;
     city?: string;
@@ -75,12 +55,7 @@ export class AdminService {
     billingType?: string;
   }) => adminProfitabilitySubService.getProfitabilityReport(filters);
 
-  getSalesChannelStats = (
-    paramsOrYear?: number | { year?: number; month?: number; startDate?: string; endDate?: string },
-    month?: number,
-  ) => adminChannelsSubService.getSalesChannelStats(paramsOrYear, month);
-
-  // 4. Reportes Ejecutivos PDF y Reuniones de Vendedores
+  // 4. Reportes Ejecutivos PDF y Fichas de Vendedores
   getExecutivePdfReportData = (startDateStr?: string, endDateStr?: string) =>
     adminExecutiveSubService.getExecutivePdfReportData(startDateStr, endDateStr);
 

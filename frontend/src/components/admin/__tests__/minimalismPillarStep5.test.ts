@@ -80,18 +80,13 @@ const OLA_3_FILES = [
   'ProfitabilityTab.tsx',
   'reports/profitability/ProfitabilityFiltersAndKpis.tsx',
   'reports/profitability/ProfitabilityTablesAndMatrix.tsx',
-  'SalesChannelReportsTab.tsx',
-  'reports/channels/SalesChannelKpisAndShare.tsx',
-  'reports/channels/SalesChannelMostradorTables.tsx',
+  'reports/reportDateHelpers.ts',
   'reports/pdf/pdfReportHelpers.ts',
   'reports/pdf/ExecutivePdfSheet.tsx',
   'reports/ExecutivePdfReport.tsx',
   'reports/pdf/SellerMeetingPdfSheet.tsx',
   'reports/SellerMeetingPdfReport.tsx',
   'reports/FinancialSummaryReportTab.tsx',
-  'reports/WeeklyCashLogicHook.ts',
-  'reports/WeeklyCashConsolidatedTab.tsx',
-  'reports/WeeklyCashSummaryFooter.tsx',
   'reports/ZoneAnalysisFiltersBar.tsx',
   'reports/ZoneAnalysisReportTab.tsx',
   'reports/ZoneAnalysisCopilotAndTables.tsx',
@@ -197,8 +192,12 @@ describe('Pilar Minimalista Premium — Paso 5 (Finanzas, Rendiciones, Gastos, C
     const sellerSheet = readComponent('reports/pdf/SellerMeetingPdfSheet.tsx');
     expect(sellerSheet).toContain('id="seller-meeting-report-container"');
 
-    const weeklyHook = readComponent('reports/WeeklyCashLogicHook.ts');
-    expect(weeklyHook).toContain('DEFAULT_SUPPLIERS');
-    expect(weeklyHook).toContain('DEFAULT_LOCALITIES');
+    const reportsDash = readComponent('UnifiedReportsDashboard.tsx');
+    expect(reportsDash).toContain("'Resumen'");
+    expect(reportsDash).toContain("'Rentabilidad'");
+    expect(reportsDash).toContain("'Zonas'");
+    expect(reportsDash).not.toContain('Caja Semanal');
+    expect(reportsDash).not.toContain('Alertas IA');
+    expect(reportsDash).not.toContain('Canales');
   });
 });

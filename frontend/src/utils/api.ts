@@ -810,22 +810,23 @@ export const api = {
     return await request(`/admin/reports/pdf/seller/${sellerId}${queryString ? `?${queryString}` : ''}`);
   },
 
-  getFinancialReports: async (year?: number, month?: number) => {
-    let path = '/admin/reports';
-    if (year && month) {
-      path += `?year=${year}&month=${month}`;
+  getFinancialReports: async (
+    paramsOrYear?: number | { year?: number; month?: number; startDate?: string; endDate?: string },
+    month?: number,
+  ) => {
+    const query = new URLSearchParams();
+    if (typeof paramsOrYear === 'object' && paramsOrYear !== null) {
+      if (paramsOrYear.year) query.set('year', String(paramsOrYear.year));
+      if (paramsOrYear.month) query.set('month', String(paramsOrYear.month));
+      if (paramsOrYear.startDate) query.set('startDate', paramsOrYear.startDate);
+      if (paramsOrYear.endDate) query.set('endDate', paramsOrYear.endDate);
+    } else if (paramsOrYear && month) {
+      query.set('year', String(paramsOrYear));
+      query.set('month', String(month));
     }
-    const res = await request(path);
+    const qs = query.toString();
+    const res = await request(`/admin/reports${qs ? `?${qs}` : ''}`);
     return res.report;
-  },
-
-  getSalesChannelStats: async (year?: number, month?: number) => {
-    let path = '/admin/reports/sales-channels';
-    if (year && month) {
-      path += `?year=${year}&month=${month}`;
-    }
-    const res = await request(path);
-    return res;
   },
 
   getZoneReports: async (filters: { city?: string; cities?: string[]; sellerId?: number; startDate?: string; endDate?: string } = {}) => {
@@ -1462,33 +1463,6 @@ export const api = {
     return await request(`/collections/receipt/${id}`, {
       method: 'DELETE'
     });
-  },
-
-
-  getWeeklyReports: async () => {
-    return await request('/admin/reports/weekly');
-  },
-
-  saveWeeklyReport: async (payload: { weekStart: string; purchases: any[]; sales: any[]; credit: number; buffer: number }) => {
-    return await request('/admin/reports/weekly', {
-      method: 'POST',
-      body: JSON.stringify(payload)
-    });
-  },
-
-  deleteWeeklyReport: async (weekStart: string) => {
-    return await request(`/admin/reports/weekly/${weekStart}`, {
-      method: 'DELETE'
-    });
-  },
-
-  getSuggestedCredit: async (weekStart: string) => {
-    const res = await request(`/admin/reports/weekly/suggested-credit?weekStart=${encodeURIComponent(weekStart)}`);
-    return res.suggested;
-  },
-
-  getAutofillSales: async (weekStart: string) => {
-    return await request(`/admin/reports/weekly/autofill-sales?weekStart=${encodeURIComponent(weekStart)}`);
   },
 
   getPerceptions: async () => {

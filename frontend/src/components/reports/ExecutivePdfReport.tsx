@@ -1,10 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
-import { AlertCircle, Calendar, Download, FileText, Printer, RefreshCw } from 'lucide-react';
+import { AlertCircle, ArrowLeft, Calendar, Download, FileText, Printer, RefreshCw } from 'lucide-react';
 import { api } from '../../utils/api';
 import { ExecutivePdfSheet } from './pdf/ExecutivePdfSheet';
 import { computePeriodDates, downloadElementAsA4Pdf, type PeriodType } from './pdf/pdfReportHelpers';
+import { computeArDatePreset } from './reportDateHelpers';
 
 interface ExecutivePdfReportProps {
+  initialStartDate?: string;
+  initialEndDate?: string;
   onClose?: () => void;
 }
 
@@ -15,26 +18,31 @@ const PERIOD_PRESETS: Array<{ id: PeriodType; label: string }> = [
   { id: 'custom', label: 'Personalizado' },
 ];
 
-export default function ExecutivePdfReport({ onClose }: ExecutivePdfReportProps) {
-  const [periodType, setPeriodType] = useState<PeriodType>('month');
-  const [startDate, setStartDate] = useState<string>(() => {
-    const now = new Date();
-    return new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
-  });
-  const [endDate, setEndDate] = useState<string>(() => new Date().toISOString().split('T')[0]);
+export default function ExecutivePdfReport({
+  initialStartDate,
+  initialEndDate,
+  onClose,
+}: ExecutivePdfReportProps) {
+  const defaultRange = computeArDatePreset('this_month');
+  const [periodType, setPeriodType] = useState<PeriodType>(() =>
+    initialStartDate && initialEndDate ? 'custom' : 'month',
+  );
+  const [startDate, setStartDate] = useState<string>(() => initialStartDate || defaultRange.startDate);
+  const [endDate, setEndDate] = useState<string>(() => initialEndDate || defaultRange.endDate);
   const [loading, setLoading] = useState(false);
   const [generatingPdf, setGeneratingPdf] = useState(false);
   const [data, setData] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
   const reportRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    const nextDates = computePeriodDates(periodType);
+  const handleSelectPreset = (nextType: PeriodType) => {
+    setPeriodType(nextType);
+    const nextDates = computePeriodDates(nextType);
     if (nextDates) {
       setStartDate(nextDates.startDate);
       setEndDate(nextDates.endDate);
     }
-  }, [periodType]);
+  };
 
   const fetchReportData = async () => {
     setLoading(true);
@@ -73,7 +81,7 @@ export default function ExecutivePdfReport({ onClose }: ExecutivePdfReportProps)
   };
 
   return (
-    <div style={{ padding: '20px', backgroundColor: '#f8fafc', minHeight: '100vh' }}>
+    <div style={{ padding: '4px 0' }}>
       <style>{`
         @media print {
           body * { visibility: hidden; }
@@ -98,40 +106,46 @@ export default function ExecutivePdfReport({ onClose }: ExecutivePdfReportProps)
         style={{
           backgroundColor: '#fff',
           borderRadius: '10px',
-          padding: '16px 24px',
-          marginBottom: '24px',
+          padding: '12px 16px',
+          marginBottom: '16px',
           border: '1px solid #e2e8f0',
           display: 'flex',
           flexWrap: 'wrap',
           justifyContent: 'space-between',
           alignItems: 'center',
-          gap: '16px',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+          gap: '12px',
         }}
       >
-        <h2 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <FileText size={20} color="var(--color-corp-red)" aria-hidden="true" />
-          Reporte Ejecutivo
-        </h2>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          {onClose && (
+            <button type="button" onClick={onClose} className="btn btn-secondary" style={{ fontSize: '0.8rem', padding: '5px 10px', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+              <ArrowLeft size={14} aria-hidden="true" />
+              Volver
+            </button>
+          )}
+          <span style={{ fontSize: '0.95rem', fontWeight: 700, color: '#0f172a', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+            <FileText size={16} color="var(--color-corp-red)" aria-hidden="true" />
+            Reporte Ejecutivo
+          </span>
+        </div>
 
-        <search aria-label="Período del reporte ejecutivo" style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-          <div style={{ display: 'flex', gap: '4px', backgroundColor: '#f1f5f9', padding: '3px', borderRadius: '6px' }}>
+        <search aria-label="Período del reporte ejecutivo" style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: '4px', backgroundColor: '#f8fafc', padding: '3px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
             {PERIOD_PRESETS.map((p) => (
               <button
                 key={p.id}
                 type="button"
                 aria-pressed={periodType === p.id}
-                onClick={() => setPeriodType(p.id)}
+                onClick={() => handleSelectPreset(p.id)}
                 style={{
                   fontSize: '0.78rem',
-                  padding: '5px 10px',
+                  padding: '4px 9px',
                   borderRadius: '4px',
                   border: 'none',
-                  backgroundColor: periodType === p.id ? '#fff' : 'transparent',
-                  fontWeight: periodType === p.id ? 600 : 400,
-                  color: periodType === p.id ? '#0f172a' : '#64748b',
+                  backgroundColor: periodType === p.id ? '#0f172a' : 'transparent',
+                  fontWeight: periodType === p.id ? 600 : 500,
+                  color: periodType === p.id ? '#fff' : '#64748b',
                   cursor: 'pointer',
-                  boxShadow: periodType === p.id ? '0 1px 2px rgba(0,0,0,0.1)' : 'none'
                 }}
               >
                 {p.label}
@@ -140,14 +154,14 @@ export default function ExecutivePdfReport({ onClose }: ExecutivePdfReportProps)
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <Calendar size={15} color="#64748b" aria-hidden="true" />
+            <Calendar size={14} color="#64748b" aria-hidden="true" />
             <label htmlFor="exec-pdf-start" className="visually-hidden">Desde</label>
             <input
               id="exec-pdf-start"
               type="date"
               className="input tabular-nums"
               value={startDate}
-              onChange={e => { setStartDate(e.target.value); setPeriodType('custom'); }}
+              onChange={(e) => { setStartDate(e.target.value); setPeriodType('custom'); }}
               style={{ fontSize: '0.8rem', padding: '4px 8px' }}
             />
             <span style={{ fontSize: '0.8rem', color: '#64748b' }}>al</span>
@@ -157,7 +171,7 @@ export default function ExecutivePdfReport({ onClose }: ExecutivePdfReportProps)
               type="date"
               className="input tabular-nums"
               value={endDate}
-              onChange={e => { setEndDate(e.target.value); setPeriodType('custom'); }}
+              onChange={(e) => { setEndDate(e.target.value); setPeriodType('custom'); }}
               style={{ fontSize: '0.8rem', padding: '4px 8px' }}
             />
           </div>
@@ -168,26 +182,21 @@ export default function ExecutivePdfReport({ onClose }: ExecutivePdfReportProps)
             disabled={loading}
             className="btn btn-secondary"
             aria-label="Actualizar"
-            style={{ padding: '6px 12px', fontSize: '0.8rem' }}
+            style={{ padding: '6px 10px', fontSize: '0.8rem' }}
           >
             <RefreshCw size={14} className={loading ? 'spin' : ''} aria-hidden="true" />
           </button>
         </search>
 
         <div style={{ display: 'flex', gap: '8px' }}>
-          {onClose && (
-            <button type="button" onClick={onClose} className="btn btn-secondary" style={{ fontSize: '0.82rem' }}>
-              Volver
-            </button>
-          )}
           <button
             type="button"
             onClick={handleDownloadPdf}
             disabled={loading || generatingPdf || !data}
             className="btn btn-secondary"
-            style={{ fontSize: '0.82rem', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+            style={{ fontSize: '0.8rem', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
           >
-            <Download size={15} aria-hidden="true" />
+            <Download size={14} aria-hidden="true" />
             <span>{generatingPdf ? 'Generando...' : 'Descargar PDF'}</span>
           </button>
           <button
@@ -195,17 +204,17 @@ export default function ExecutivePdfReport({ onClose }: ExecutivePdfReportProps)
             onClick={() => window.print()}
             disabled={loading || !data}
             className="btn"
-            style={{ fontSize: '0.82rem', backgroundColor: '#0f172a', color: '#fff', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+            style={{ fontSize: '0.8rem', backgroundColor: '#0f172a', color: '#fff', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
           >
-            <Printer size={15} aria-hidden="true" />
+            <Printer size={14} aria-hidden="true" />
             <span>Imprimir A4</span>
           </button>
         </div>
       </div>
 
       {error && (
-        <div role="alert" style={{ padding: '16px', backgroundColor: '#fef2f2', color: '#991b1b', borderRadius: '8px', border: '1px solid #fca5a5', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <AlertCircle size={18} aria-hidden="true" />
+        <div role="alert" style={{ padding: '14px', backgroundColor: '#fef2f2', color: '#991b1b', borderRadius: '8px', border: '1px solid #fca5a5', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <AlertCircle size={16} aria-hidden="true" />
           <span>{error}</span>
         </div>
       )}

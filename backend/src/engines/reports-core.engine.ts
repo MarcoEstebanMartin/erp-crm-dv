@@ -244,6 +244,7 @@ export function computeFinancialSummaryMetrics(input: FinancialSummaryInput) {
         grossProfit: roundToIntegerPeso(localGrossDec).toNumber(),
         marginPct: computeMarginPercent(localGrossDec, localSalesDec, 0),
         count: localCount,
+        sharePct: netSalesDec.gt(0) ? computeMarginPercent(Decimal.max(0, localSalesDec), netSalesDec, 0) : 0,
       },
       route: {
         sales: roundToIntegerPeso(routeSalesDec).toNumber(),
@@ -251,6 +252,7 @@ export function computeFinancialSummaryMetrics(input: FinancialSummaryInput) {
         grossProfit: roundToIntegerPeso(routeGrossDec).toNumber(),
         marginPct: computeMarginPercent(routeGrossDec, routeSalesDec, 0),
         count: routeCount,
+        sharePct: netSalesDec.gt(0) ? computeMarginPercent(Decimal.max(0, routeSalesDec), netSalesDec, 0) : 0,
       },
     },
     cashflow: {

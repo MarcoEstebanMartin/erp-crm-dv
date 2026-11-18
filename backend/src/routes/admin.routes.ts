@@ -1,7 +1,6 @@
 import { Router } from 'express';
 import {
   getFinancialReports,
-  getSalesChannelStats,
   getProfitabilityReport,
   getExecutivePdfReport,
   getSellerMeetingPdfReport,
@@ -15,11 +14,6 @@ import {
   getConfig,
   updateConfig,
   getZoneReports,
-  getWeeklyReports,
-  saveWeeklyReport,
-  deleteWeeklyReport,
-  getSuggestedCredit,
-  getAutofillSales,
   checkBalancesReport,
   syncBalances,
 } from '../controllers/admin.controller';
@@ -36,17 +30,11 @@ import {
   updateSystemConfigSchema,
 } from '../validators/admin.validator';
 import {
-  saveWeeklyReportSchema,
-  deleteWeeklyReportSchema
-} from '../validators/weeklyReport.validator';
-import {
   getFinancialReportsQuerySchema,
-  getLocalSalesQuerySchema,
   getProfitabilityQuerySchema,
   getExecutiveReportQuerySchema,
   getSellerMeetingQuerySchema,
   getZoneReportsQuerySchema,
-  weeklyQuerySchema,
 } from '../validators/reports.validator';
 
 const router = Router();
@@ -64,17 +52,10 @@ router.use(authenticateJWT);
 router.use(requireRole([Role.ADMIN]));
 
 router.get('/reports', validateRequest(getFinancialReportsQuerySchema), getFinancialReports);
-router.get('/reports/sales-channels', validateRequest(getLocalSalesQuerySchema), getSalesChannelStats);
-router.get('/reports/local-sales', validateRequest(getLocalSalesQuerySchema), getSalesChannelStats);
 router.get('/reports/profitability', validateRequest(getProfitabilityQuerySchema), getProfitabilityReport);
 router.get('/reports/pdf/executive', validateRequest(getExecutiveReportQuerySchema), getExecutivePdfReport);
 router.get('/reports/pdf/seller/:sellerId', validateRequest(getSellerMeetingQuerySchema), getSellerMeetingPdfReport);
 router.get('/reports/zones', validateRequest(getZoneReportsQuerySchema), getZoneReports);
-router.get('/reports/weekly', getWeeklyReports);
-router.get('/reports/weekly/suggested-credit', validateRequest(weeklyQuerySchema), getSuggestedCredit);
-router.get('/reports/weekly/autofill-sales', validateRequest(weeklyQuerySchema), getAutofillSales);
-router.post('/reports/weekly', validateRequest(saveWeeklyReportSchema), saveWeeklyReport);
-router.delete('/reports/weekly/:weekStart', validateRequest(deleteWeeklyReportSchema), deleteWeeklyReport);
 
 router.get('/audit-logs', validateRequest(getAuditLogsQuerySchema), getAuditLogs);
 router.get('/users', getUsers);
@@ -88,6 +69,3 @@ router.get('/reconcile/check', checkBalancesReport);
 router.post('/reconcile/sync', syncBalances);
 
 export default router;
-
-
-
