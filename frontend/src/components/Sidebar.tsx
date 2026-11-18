@@ -35,6 +35,20 @@ const ROLE_LABELS: Record<string, string> = {
   DEPOSITO: 'Depósito',
 };
 
+const ADMIN_PARENT_TAB_MAP: Record<string, string> = {
+  catalog: 'products',
+  stock: 'products',
+  compras: 'clients',
+  entregas: 'fulfillment',
+  orders: 'fulfillment',
+  billing: 'fulfillment',
+  fleet: 'logistica',
+  reparto: 'logistica',
+  reportes: 'rendiciones',
+  reports: 'rendiciones',
+  rrhh: 'config',
+};
+
 export default function Sidebar({ username, role, activeTab, setActiveTab, onLogout }: SidebarProps) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -43,14 +57,16 @@ export default function Sidebar({ username, role, activeTab, setActiveTab, onLog
 
   const currentTab = (() => {
     const segments = location.pathname.split('/').filter(Boolean);
+    let rawTab = activeTab || (role === 'VENDEDOR' ? 'inicio' : role === 'DEPOSITO' ? 'deposito' : 'dashboard');
     if (segments[0] === 'deposito') {
-      if (segments[1] === 'stock') return 'products';
-      return 'deposito';
+      rawTab = segments[1] === 'stock' ? 'products' : 'deposito';
+    } else if (segments.length >= 2) {
+      rawTab = segments[1];
     }
-    if (segments.length >= 2) {
-      return segments[1];
+    if (role === 'ADMIN' || role === 'FACTURACION') {
+      return ADMIN_PARENT_TAB_MAP[rawTab] || rawTab;
     }
-    return activeTab || (role === 'VENDEDOR' ? 'inicio' : role === 'DEPOSITO' ? 'deposito' : 'dashboard');
+    return rawTab;
   })();
 
   useEffect(() => {

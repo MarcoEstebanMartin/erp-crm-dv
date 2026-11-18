@@ -31,7 +31,13 @@ describe('Paso 3 Velocidad — Inicio Liviano y Paginación Real en Pedidos', ()
     expect(ordersTabSrc).toContain('ORDERS_PAGE_LIMIT = 50');
     expect(ordersTabSrc).toContain('Anterior');
     expect(ordersTabSrc).toContain('Siguiente');
+    expect(ordersTabSrc).toContain('<option value="ALL">Todos</option>');
     expect(ordersTabSrc).toContain('value="EN_ARMADO"');
+    expect(ordersTabSrc).toContain('<option value="EN_VIAJE">En reparto</option>');
+    expect(ordersTabSrc).not.toContain('Todos los Estados');
+    expect(ordersTabSrc).not.toContain('Pedidos en Picking');
+    expect(ordersTabSrc).not.toContain('Reparto sin Viaje');
+    expect(ordersTabSrc).not.toContain('Retiro en Local');
 
     expect(summaryModalSrc).toContain('getOrdersPage');
     expect(summaryModalSrc).toContain('Ir a Armado');

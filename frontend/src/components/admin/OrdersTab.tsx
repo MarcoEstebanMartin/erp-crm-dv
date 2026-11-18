@@ -20,6 +20,9 @@ import {
 
 const ORDERS_PAGE_LIMIT = 50;
 
+const normalizeHistoryStatus = (val?: string) =>
+  val === 'ARMADO' || val === 'EN_PICKING' ? 'EN_ARMADO' : val || 'ALL';
+
 interface OrdersTabProps {
   initialStatusFilter?: string;
   ordersVersion?: number;
@@ -43,12 +46,14 @@ export default function OrdersTab({
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [orderStatusFilter, setOrderStatusFilter] = useState<string>(initialStatusFilter || 'ALL');
+  const [orderStatusFilter, setOrderStatusFilter] = useState<string>(() =>
+    normalizeHistoryStatus(initialStatusFilter),
+  );
   const [page, setPage] = useState(1);
   const [syncingWeb, setSyncingWeb] = useState(false);
 
   useEffect(() => {
-    setOrderStatusFilter(initialStatusFilter || 'ALL');
+    setOrderStatusFilter(normalizeHistoryStatus(initialStatusFilter));
     setPage(1);
   }, [initialStatusFilter]);
 
@@ -179,16 +184,12 @@ export default function OrdersTab({
                 setPage(1);
               }}
             >
-              <option value="ALL">Todos los Estados</option>
-              <option value="RECIBIDO">Pedidos Recibidos</option>
-              <option value="EN_ARMADO">Pedidos en Armado</option>
-              <option value="EN_PICKING">Pedidos en Picking</option>
-              <option value="ARMADO">Pedidos Armados (Pend. Facturación)</option>
-              <option value="FACTURADO">Pedidos Facturados</option>
-              <option value="EN_VIAJE">Pedidos en Viaje</option>
-              <option value="SIN_VIAJE">Reparto sin Viaje</option>
-              <option value="RETIRO_LOCAL">Retiro en Local</option>
-              <option value="ENTREGADO">Pedidos Entregados</option>
+              <option value="ALL">Todos</option>
+              <option value="RECIBIDO">Recibidos</option>
+              <option value="EN_ARMADO">En armado</option>
+              <option value="FACTURADO">Facturados</option>
+              <option value="EN_VIAJE">En reparto</option>
+              <option value="ENTREGADO">Entregados</option>
               <option value="CANCELADO">Cancelados</option>
             </select>
           </div>

@@ -94,6 +94,9 @@ describe('Paso 4 — Entregas, Menú Logística y Armado de Viajes', () => {
     const sidebar = readSrc('components/Sidebar.tsx');
     expect(sidebar).toContain("id: 'logistica'");
     expect(sidebar).toContain("label: 'Logística'");
+    expect(sidebar).toContain("orders: 'fulfillment'");
+    expect(sidebar).toContain("entregas: 'fulfillment'");
+    expect(sidebar).toContain("billing: 'fulfillment'");
 
     const adminDashboard = readSrc('components/AdminDashboard.tsx');
     expect(adminDashboard).toContain("id: 'entregas'");
