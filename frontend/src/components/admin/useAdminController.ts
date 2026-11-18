@@ -39,6 +39,7 @@ export function useAdminController(activeTab: string) {
     recibidosCount: number;
     armadosCount: number;
     facturadosCount: number;
+    enRepartoCount?: number;
   } | null>(() => queryClient.getQueryData(ORDERS_QUERY_KEYS.summary) || null);
   const [ordersVersion, setOrdersVersion] = useState(0);
   const [financialReport, setFinancialReport] = useState<any | null>(null);

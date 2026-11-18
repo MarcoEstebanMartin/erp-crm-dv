@@ -592,6 +592,7 @@ export const api = {
     recibidosCount: number;
     armadosCount: number;
     facturadosCount: number;
+    enRepartoCount: number;
   }> => {
     return await request('/orders/summary');
   },
@@ -701,6 +702,7 @@ export const api = {
       deliveryRouteId?: number | null;
       deliverySequence?: number | null;
       markPickedUp?: boolean;
+      markDelivered?: boolean;
     }
   ) => {
     const res = await request(`/orders/${id}/delivery`, {

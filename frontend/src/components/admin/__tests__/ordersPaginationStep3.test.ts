@@ -22,7 +22,7 @@ describe('Paso 3 Velocidad — Inicio Liviano y Paginación Real en Pedidos', ()
     expect(ordersBlock).not.toContain('api.getOrders()');
   });
 
-  it('OrdersTab usa getOrdersPage con límite 50, HomeTab <= 300 líneas y AdminSummaryCardModal consulta paginado', () => {
+  it('OrdersTab usa getOrdersPage con límite 50, HomeTab <= 300 líneas con 4 tarjetas y AdminSummaryCardModal operativo', () => {
     const ordersTabSrc = readAdminFile('OrdersTab.tsx');
     const homeTabSrc = readAdminFile('HomeTab.tsx');
     const summaryModalSrc = readAdminFile('AdminSummaryCardModal.tsx');
@@ -31,9 +31,20 @@ describe('Paso 3 Velocidad — Inicio Liviano y Paginación Real en Pedidos', ()
     expect(ordersTabSrc).toContain('ORDERS_PAGE_LIMIT = 50');
     expect(ordersTabSrc).toContain('Anterior');
     expect(ordersTabSrc).toContain('Siguiente');
+    expect(ordersTabSrc).toContain('value="EN_ARMADO"');
 
     expect(summaryModalSrc).toContain('getOrdersPage');
+    expect(summaryModalSrc).toContain('Ir a Armado');
+    expect(summaryModalSrc).toContain('Ir a Entregas');
+    expect(summaryModalSrc).toContain('Entregar');
+    expect(summaryModalSrc.split(/\r?\n/).length).toBeLessThanOrEqual(300);
+
     expect(homeTabSrc).toContain('ordersSummary');
+    expect(homeTabSrc).toContain('enRepartoCount');
+    expect(homeTabSrc).toContain("'Recibidos'");
+    expect(homeTabSrc).toContain("'En armado'");
+    expect(homeTabSrc).toContain("'Facturados'");
+    expect(homeTabSrc).toContain("'En reparto'");
     expect(homeTabSrc.split(/\r?\n/).length).toBeLessThanOrEqual(300);
     expect(ordersTabSrc.split(/\r?\n/).length).toBeLessThanOrEqual(450);
   });

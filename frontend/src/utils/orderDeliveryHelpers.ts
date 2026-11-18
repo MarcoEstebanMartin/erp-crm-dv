@@ -13,6 +13,7 @@ export interface OrderDeliverySummary {
   isLocked: boolean;
   isPickedUp: boolean;
   canMarkPickedUp: boolean;
+  canMarkDirectDelivered: boolean;
   badgeLabel: string;
   subLabel: string | null;
   selectValue: DeliverySelectionValue;
@@ -49,6 +50,12 @@ export function formatOrderDeliverySummary(order: any): OrderDeliverySummary {
     method === 'PICKUP' &&
     !order?.deliveredAt &&
     Boolean(order?.invoiceNumber);
+  const canMarkDirectDelivered =
+    !isCancelled &&
+    method === 'DELIVERY' &&
+    !routeId &&
+    !order?.deliveredAt &&
+    Boolean(order?.invoiceNumber);
 
   let badgeLabel = 'Reparto · Sin viaje';
   if (method === 'PICKUP') {
@@ -82,6 +89,7 @@ export function formatOrderDeliverySummary(order: any): OrderDeliverySummary {
     isLocked,
     isPickedUp,
     canMarkPickedUp,
+    canMarkDirectDelivered,
     badgeLabel,
     subLabel,
     selectValue,

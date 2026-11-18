@@ -219,6 +219,10 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
         onClose={() => c.setSummaryCardModal(null)}
         onSelectOrderDetails={c.setOrderDetailsModal}
         onViewAllInOrdersTab={(cardKey) => { c.setOrderStatusFilter(cardKey); setActiveTab('orders'); c.setSummaryCardModal(null); }}
+        onNavigateOperationalTab={(tab) => { setActiveTab(tab); c.setSummaryCardModal(null); }}
+        onOrderDelivered={c.fetchData}
+        setErrorMsg={c.setErrorMsg}
+        setSuccessMsg={c.setSuccessMsg}
       />
 
       <AdminOrderDetailsModal

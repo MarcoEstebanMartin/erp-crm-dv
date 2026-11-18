@@ -68,19 +68,27 @@ export function OrderDeliveryBadgeControl({
     }
   };
 
-  const handleMarkPickedUp = async () => {
-    if (saving || !summary.canMarkPickedUp) return;
+  const canDeliverNow = summary.canMarkPickedUp || summary.canMarkDirectDelivered;
+
+  const handleMarkDelivered = async () => {
+    if (saving || !canDeliverNow) return;
     setSaving(true);
     try {
-      const updatedOrder = await api.updateOrderDelivery(order.id, {
-        deliveryMethod: 'PICKUP',
-        markPickedUp: true,
-      });
+      const updatedOrder = await api.updateOrderDelivery(
+        order.id,
+        summary.canMarkPickedUp
+          ? { deliveryMethod: 'PICKUP', markPickedUp: true }
+          : { deliveryMethod: 'DELIVERY', markDelivered: true },
+      );
       invalidateDeliveryCaches();
-      onSuccess?.(`Pedido #${order.id} entregado en local.`);
+      onSuccess?.(
+        summary.canMarkPickedUp
+          ? `Pedido #${order.id} entregado en local.`
+          : `Pedido #${order.id} entregado.`,
+      );
       onUpdated?.(updatedOrder);
     } catch (err: any) {
-      onError?.(err?.message || 'Error al registrar retiro en local.');
+      onError?.(err?.message || 'Error al registrar la entrega.');
     } finally {
       setSaving(false);
     }
@@ -164,13 +172,13 @@ export function OrderDeliveryBadgeControl({
         </select>
       </div>
 
-      {summary.canMarkPickedUp && (
+      {canDeliverNow && (
         <button
           type="button"
           className="btn btn-primary"
           disabled={saving}
-          onClick={() => void handleMarkPickedUp()}
-          title="Registrar entrega por mostrador"
+          onClick={() => void handleMarkDelivered()}
+          title={summary.canMarkPickedUp ? 'Registrar entrega por mostrador' : 'Registrar entrega directa'}
           style={{
             height: compact ? '26px' : '32px',
             padding: compact ? '0 8px' : '0 12px',

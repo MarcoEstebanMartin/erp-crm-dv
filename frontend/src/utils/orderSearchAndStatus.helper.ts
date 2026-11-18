@@ -5,6 +5,7 @@ export type OrderFilterStatusKey =
   | 'RECIBIDO'
   | 'EN_PICKING'
   | 'ARMADO'
+  | 'EN_ARMADO'
   | 'FACTURADO'
   | 'EN_VIAJE'
   | 'ENTREGADO'
@@ -110,6 +111,10 @@ export function getOrderLogicalStatusKey(order: any): Exclude<OrderFilterStatusK
 
 export function matchesOrderStatusFilter(order: any, filterKey: string): boolean {
   if (!filterKey || filterKey === 'ALL') return true;
+  if (filterKey === 'EN_ARMADO') {
+    const k = getOrderLogicalStatusKey(order);
+    return k === 'EN_PICKING' || k === 'ARMADO';
+  }
   if (filterKey === 'RETIRO_LOCAL') {
     return order?.status !== 'CANCELLED' && order?.deliveryMethod === 'PICKUP';
   }

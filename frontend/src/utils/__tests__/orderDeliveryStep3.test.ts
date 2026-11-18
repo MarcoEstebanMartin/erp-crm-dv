@@ -157,6 +157,47 @@ describe('Paso 3 — Designación Directa en Pedidos (Viaje Específico o Retiro
       deliveryMethod: 'DELIVERY',
     });
     expect(cancelled.isLocked).toBe(true);
+
+    const directDeliveryReady = formatOrderDeliverySummary({
+      id: 8,
+      status: 'DELIVERED',
+      deliveryMethod: 'DELIVERY',
+      deliveryRouteId: null,
+      invoiceNumber: 'INT-00008',
+      deliveredAt: null,
+    });
+    expect(directDeliveryReady.canMarkDirectDelivered).toBe(true);
+
+    const directDeliveryNoInvoice = formatOrderDeliverySummary({
+      id: 9,
+      status: 'PREPARED',
+      deliveryMethod: 'DELIVERY',
+      deliveryRouteId: null,
+      invoiceNumber: null,
+      deliveredAt: null,
+    });
+    expect(directDeliveryNoInvoice.canMarkDirectDelivered).toBe(false);
+
+    const directDeliveryWithRoute = formatOrderDeliverySummary({
+      id: 10,
+      status: 'DELIVERED',
+      deliveryMethod: 'DELIVERY',
+      deliveryRouteId: 14,
+      deliveryRoute: { id: 14, status: 'PENDING' },
+      invoiceNumber: 'INT-00010',
+      deliveredAt: null,
+    });
+    expect(directDeliveryWithRoute.canMarkDirectDelivered).toBe(false);
+
+    const directDeliveryAlreadyDone = formatOrderDeliverySummary({
+      id: 11,
+      status: 'DELIVERED',
+      deliveryMethod: 'DELIVERY',
+      deliveryRouteId: null,
+      invoiceNumber: 'INT-00011',
+      deliveredAt: '2026-11-18T13:00:00.000Z',
+    });
+    expect(directDeliveryAlreadyDone.canMarkDirectDelivered).toBe(false);
   });
 
   it('parsea el selector controlado hacia el contrato de PATCH /api/orders/:id/delivery', () => {

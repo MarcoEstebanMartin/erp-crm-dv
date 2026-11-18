@@ -18,6 +18,7 @@ interface HomeTabProps {
     recibidosCount: number;
     armadosCount: number;
     facturadosCount: number;
+    enRepartoCount?: number;
   } | null;
   setActiveTab: (tab: string) => void;
   setSummaryCardModal: (modal: { open: boolean; cardKey: string; cardLabel: string } | null) => void;
@@ -79,7 +80,14 @@ export default function HomeTab({
     () =>
       ordersSummary
         ? ordersSummary.armadosCount
-        : orders.filter((o) => o.status === 'PREPARING' || (o.status === 'PREPARED' && !o.invoiceNumber)).length,
+        : orders.filter(
+            (o) =>
+              o.status === 'PREPARING' ||
+              (o.status === 'PREPARED' &&
+                !o.invoiceNumber &&
+                !o.deliveredAt &&
+                (!o.deliveryRoute || o.deliveryRoute.status === 'PENDING')),
+          ).length,
     [ordersSummary, orders],
   );
   const facturadosCount = useMemo(
@@ -88,10 +96,25 @@ export default function HomeTab({
         ? ordersSummary.facturadosCount
         : orders.filter(
             (o) =>
-              o.invoiceNumber ||
-              o.status === 'DELIVERED' ||
-              o.status === 'BILLED' ||
-              (o.deliveryRoute && (o.deliveryRoute.status === 'IN_TRANSIT' || o.deliveryRoute.status === 'COMPLETED')),
+              o.status !== 'CANCELLED' &&
+              o.status !== 'PENDING' &&
+              o.status !== 'PREPARING' &&
+              Boolean(o.invoiceNumber) &&
+              !o.deliveredAt &&
+              (!o.deliveryRoute || o.deliveryRoute.status === 'PENDING'),
+          ).length,
+    [ordersSummary, orders],
+  );
+  const enRepartoCount = useMemo(
+    () =>
+      ordersSummary
+        ? ordersSummary.enRepartoCount ?? 0
+        : orders.filter(
+            (o) =>
+              o.status !== 'CANCELLED' &&
+              o.status !== 'PENDING' &&
+              o.status !== 'PREPARING' &&
+              o.deliveryRoute?.status === 'IN_TRANSIT',
           ).length,
     [ordersSummary, orders],
   );
@@ -156,8 +179,9 @@ export default function HomeTab({
 
   const kpiCards = [
     { key: 'RECIBIDO', label: 'Recibidos', count: recibidosCount, accent: '#007AFF' },
-    { key: 'ARMADO', label: 'En armado', count: armadosCount, accent: '#D97706' },
+    { key: 'EN_ARMADO', label: 'En armado', count: armadosCount, accent: '#D97706' },
     { key: 'FACTURADO', label: 'Facturados', count: facturadosCount, accent: '#059669' },
+    { key: 'EN_VIAJE', label: 'En reparto', count: enRepartoCount, accent: '#7C3AED' },
   ];
 
   const openClientSearch = (action: 'order' | 'ledger' | 'payment') => {
@@ -168,6 +192,11 @@ export default function HomeTab({
   return (
     <div>
       <style>{`
+        .home-kpis-wrap { container: home-kpis / inline-size; inline-size: 100%; }
+        .home-kpis-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+        @container home-kpis (inline-size >= 720px) {
+          .home-kpis-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+        }
         .home-stat-btn { cursor: pointer; transition: transform 0.15s ease, box-shadow 0.15s ease; }
         .home-stat-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06); }
       `}</style>
@@ -179,37 +208,39 @@ export default function HomeTab({
         <span style={{ fontSize: '0.84rem', color: 'var(--text-secondary)', fontWeight: 500 }}>{formattedDate}</span>
       </div>
 
-      <div className="dashboard-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
-        {kpiCards.map((card) => (
-          <button
-            key={card.key}
-            type="button"
-            className="card stat-card home-stat-btn"
-            style={{
-              width: '100%',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              textAlign: 'center',
-              gap: '4px',
-              padding: '18px 20px',
-              background: 'var(--bg-card, #ffffff)',
-              border: '1px solid var(--border-color)',
-              borderLeft: `3px solid ${card.accent}`,
-              borderRadius: '10px',
-              fontVariantNumeric: 'tabular-nums',
-            }}
-            onClick={() => setSummaryCardModal({ open: true, cardKey: card.key, cardLabel: card.label })}
-          >
-            <div className="stat-label" style={{ fontWeight: 600, fontSize: '0.82rem', color: 'var(--text-secondary)', marginBottom: 0 }}>
-              {card.label}
-            </div>
-            <div className="stat-value" style={{ color: 'var(--text-primary)', fontSize: '2.1rem', fontWeight: 800, lineHeight: 1.1 }}>
-              {card.count}
-            </div>
-          </button>
-        ))}
+      <div className="home-kpis-wrap">
+        <div className="dashboard-grid home-kpis-grid">
+          {kpiCards.map((card) => (
+            <button
+              key={card.key}
+              type="button"
+              className="card stat-card home-stat-btn"
+              style={{
+                width: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                textAlign: 'center',
+                gap: '4px',
+                padding: '18px 20px',
+                background: 'var(--bg-card, #ffffff)',
+                border: '1px solid var(--border-color)',
+                borderLeft: `3px solid ${card.accent}`,
+                borderRadius: '10px',
+                fontVariantNumeric: 'tabular-nums',
+              }}
+              onClick={() => setSummaryCardModal({ open: true, cardKey: card.key, cardLabel: card.label })}
+            >
+              <div className="stat-label" style={{ fontWeight: 600, fontSize: '0.82rem', color: 'var(--text-secondary)', marginBottom: 0 }}>
+                {card.label}
+              </div>
+              <div className="stat-value" style={{ color: 'var(--text-primary)', fontSize: '2.1rem', fontWeight: 800, lineHeight: 1.1 }}>
+                {card.count}
+              </div>
+            </button>
+          ))}
+        </div>
       </div>
 
       <div style={{ marginTop: '20px' }}>

@@ -181,6 +181,7 @@ export default function OrdersTab({
             >
               <option value="ALL">Todos los Estados</option>
               <option value="RECIBIDO">Pedidos Recibidos</option>
+              <option value="EN_ARMADO">Pedidos en Armado</option>
               <option value="EN_PICKING">Pedidos en Picking</option>
               <option value="ARMADO">Pedidos Armados (Pend. Facturación)</option>
               <option value="FACTURADO">Pedidos Facturados</option>
