@@ -52,10 +52,10 @@ export default function FleetDashboard() {
 
       <div style={{ display: 'grid', gridTemplateColumns: '1.1fr 1.9fr', gap: '20px', alignItems: 'start' }}>
         <div style={{ border: '1px solid var(--border-color)', borderRadius: '8px', backgroundColor: 'var(--bg-card, #fff)', overflow: 'hidden' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 18px', borderBottom: '1px solid var(--border-color)' }}>
-            <span className="tabular-nums" style={{ fontWeight: 600, fontSize: '0.9rem' }}>Flota ({c.vehicles.length})</span>
-            <button type="button" className="btn btn-secondary" onClick={c.openCreateVehicle} style={{ padding: '5px 10px', fontSize: '0.78rem' }}>
-              <Plus size={14} aria-hidden="true" /> Nuevo
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', borderBottom: '1px solid var(--border-color)' }}>
+            <span className="tabular-nums" style={{ fontWeight: 600, fontSize: '0.86rem' }}>Flota ({c.vehicles.length})</span>
+            <button type="button" className="btn btn-secondary" onClick={c.openCreateVehicle} style={{ padding: '4px 9px', fontSize: '0.76rem' }}>
+              <Plus size={13} aria-hidden="true" /> Nuevo
             </button>
           </div>
 
@@ -81,21 +81,21 @@ export default function FleetDashboard() {
                       borderBottom: idx < c.vehicles.length - 1 ? '1px solid #f1f5f9' : 'none',
                       borderLeft: isSelected ? '2px solid #111827' : '2px solid transparent',
                       display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                      padding: '11px 16px', cursor: 'pointer',
+                      padding: '6px 14px', cursor: 'pointer',
                       backgroundColor: isSelected ? '#f8fafc' : 'transparent',
                     }}
                   >
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', minWidth: 0 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
-                        <span className="tabular-nums" style={{ fontWeight: isSelected ? 700 : 600, fontSize: '0.88rem', color: isSelected ? '#0f172a' : '#334155' }}>{v.plate}</span>
-                        {hasCritical && <AlertTriangle size={13} color="var(--color-corp-red)" aria-hidden="true" />}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', minWidth: 0, lineHeight: 1.25 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span className="tabular-nums" style={{ fontWeight: isSelected ? 700 : 600, fontSize: '0.82rem', color: isSelected ? '#0f172a' : '#334155' }}>{v.plate}</span>
+                        {hasCritical && <AlertTriangle size={12} color="var(--color-corp-red)" aria-hidden="true" />}
                         {v.status !== 'ACTIVE' && <FleetStatusBadge status={v.status} />}
                       </div>
-                      <span className="tabular-nums" style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      <span className="tabular-nums" style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {v.brand} {v.model} ({v.year})
                       </span>
                     </div>
-                    <span className="tabular-nums" style={{ fontSize: '0.8rem', fontWeight: 500, color: 'var(--text-secondary)', whiteSpace: 'nowrap', marginLeft: '12px' }}>
+                    <span className="tabular-nums" style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--text-secondary)', whiteSpace: 'nowrap', marginLeft: '10px' }}>
                       {v.currentOdometer.toLocaleString('es-AR')} km
                     </span>
                   </button>
