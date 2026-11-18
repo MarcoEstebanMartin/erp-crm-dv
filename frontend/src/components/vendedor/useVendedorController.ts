@@ -167,14 +167,6 @@ export function useVendedorController(activeTab: string) {
   useEffect(() => {
     window.dispatchEvent(new CustomEvent('dv:vendedor-cart-count', { detail: cart.length }));
   }, [cart.length]);
-  useEffect(() => {
-    const onManualSync = () => {
-      void offlineSync.syncNow();
-      void fetchData(true).then(() => showToast('Actualizado', 'info'));
-    };
-    window.addEventListener('dv:vendedor-sync', onManualSync);
-    return () => window.removeEventListener('dv:vendedor-sync', onManualSync);
-  }, [fetchData, offlineSync.syncNow, showToast]);
 
   const uniqueCities = useMemo(() => {
     const unique = [...new Set(clients.map((c) => cleanCityName(c.city)))];

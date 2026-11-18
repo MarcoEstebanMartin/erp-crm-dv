@@ -180,11 +180,10 @@ export default function Sidebar({ username, role, activeTab, setActiveTab, onLog
               onClick={() => {
                 if (isRefreshing) return;
                 setIsRefreshing(true);
-                window.dispatchEvent(new CustomEvent('dv:vendedor-sync'));
-                setTimeout(() => setIsRefreshing(false), 900);
+                window.location.reload();
               }}
-              aria-label="Actualizar datos"
-              title="Actualizar datos"
+              aria-label="Actualizar"
+              title="Actualizar"
               style={{
                 background: 'transparent',
                 border: 'none',
