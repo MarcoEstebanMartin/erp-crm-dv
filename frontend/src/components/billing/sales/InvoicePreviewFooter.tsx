@@ -40,7 +40,7 @@ export function InvoicePreviewFooter({
       >
         {hasCae ? (
           <>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '2px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <span
                 style={{
                   display: 'inline-flex',
@@ -62,6 +62,9 @@ export function InvoicePreviewFooter({
                 Comprobante Autorizado
               </span>
             </div>
+            <small style={{ fontSize: '0.68rem', color: '#6b7280', lineHeight: 1.3, marginBottom: '2px' }}>
+              Orientación al Consumidor Provincia de Buenos Aires - Linea 148
+            </small>
             <div style={{ color: '#374151', fontVariantNumeric: 'tabular-nums' }}>
               <strong style={{ color: '#111827' }}>CAE N°:</strong> {invoice.cae}
             </div>
