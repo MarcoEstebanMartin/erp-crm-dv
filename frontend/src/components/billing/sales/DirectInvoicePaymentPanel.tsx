@@ -201,7 +201,7 @@ export function DirectInvoicePaymentPanel({
               >
                 {bankAccounts.map((b) => (
                   <option key={b.id} value={b.id}>
-                    {b.bankName} · ${Number(b.balance).toLocaleString('es-AR')}
+                    {b.name || b.bankName || `Cuenta #${b.id}`} · ${Number(b.balance).toLocaleString('es-AR')}
                   </option>
                 ))}
               </select>

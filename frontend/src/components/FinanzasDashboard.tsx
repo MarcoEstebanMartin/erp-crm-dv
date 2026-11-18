@@ -220,18 +220,22 @@ export default function FinanzasDashboard() {
           <div className="table-container table-container--sticky" role="region" aria-label="Movimientos de Caja Grande" tabIndex={0}>
             <table>
               <thead>
-                <tr><th scope="col">Fecha / Hora</th><th scope="col">Tipo</th><th scope="col">Responsable</th><th scope="col">Medio</th><th scope="col" style={{ textAlign: 'right' }}>Monto</th></tr>
+                <tr><th scope="col">Fecha / Hora</th><th scope="col">Tipo</th><th scope="col">Responsable</th><th scope="col">Recibos</th><th scope="col">Medio</th><th scope="col" style={{ textAlign: 'right' }}>Monto</th></tr>
               </thead>
               <tbody>
                 {m.ledger.length === 0 ? (
-                  <tr><td colSpan={5} style={{ textAlign: 'center', padding: '24px', color: 'var(--text-secondary)' }}>Sin movimientos</td></tr>
+                  <tr><td colSpan={6} style={{ textAlign: 'center', padding: '24px', color: 'var(--text-secondary)' }}>Sin movimientos</td></tr>
                 ) : m.ledger.map((item) => (
                   <tr key={item.id} style={{ cursor: item.drawer ? 'pointer' : 'default' }} onClick={() => item.drawer && setInspectingDrawer(item.drawer)}>
                     <td style={{ fontSize: '0.82rem' }}>{new Date(item.date).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' })}</td>
                     <td><span style={{ padding: '3px 8px', borderRadius: '12px', fontSize: '0.72rem', fontWeight: 600, backgroundColor: item.type === 'INGRESO' ? '#ecfdf5' : '#fff5f5', color: item.type === 'INGRESO' ? '#047857' : '#c53030' }}>{item.type}</span></td>
-                    <td style={{ fontWeight: 600 }}>
-                      {item.description}
-                      {item.drawer && <span style={{ marginLeft: '8px', fontSize: '0.72rem', backgroundColor: '#e0f2fe', color: '#0369a1', padding: '2px 8px', borderRadius: '12px' }}>{item.drawer.transactions?.length || 0} recibos</span>}
+                    <td style={{ fontWeight: 600 }}>{item.description}</td>
+                    <td>
+                      {item.drawer && (
+                        <span className="tabular-nums" style={{ display: 'inline-block', fontSize: '0.72rem', backgroundColor: '#e0f2fe', color: '#0369a1', padding: '2px 8px', borderRadius: '12px', whiteSpace: 'nowrap', fontWeight: 600 }}>
+                          {(item.drawer.transactions?.length || 0) === 1 ? '1 recibo' : `${item.drawer.transactions?.length || 0} recibos`}
+                        </span>
+                      )}
                     </td>
                     <td style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>{item.paymentMethod}</td>
                     <td className="tabular-nums" style={{ textAlign: 'right', fontWeight: 700, fontFamily: 'monospace', color: item.type === 'INGRESO' ? '#047857' : '#c53030' }}>
