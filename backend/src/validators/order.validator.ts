@@ -140,6 +140,7 @@ export const updateOrderDeliverySchema = z.object({
     deliveryRouteId: z.number().int().positive().nullable().optional(),
     deliverySequence: z.number().int().positive().nullable().optional(),
     markPickedUp: z.boolean().optional(),
+    markDelivered: z.boolean().optional(),
   }),
 });
 

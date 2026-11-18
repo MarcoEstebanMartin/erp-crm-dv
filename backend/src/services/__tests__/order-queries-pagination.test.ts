@@ -23,15 +23,45 @@ describe('Paso 3 Velocidad — Resumen Liviano de Inicio y Paginación Real de P
     vi.clearAllMocks();
   });
 
-  it('buildOrderStatusGroupWhere y buildOrderSearchWhere construyen cláusulas SQL precisas', () => {
+  it('buildOrderStatusGroupWhere y buildOrderSearchWhere construyen cláusulas SQL precisas y excluyentes', () => {
     expect(buildOrderStatusGroupWhere('ALL')).toBeNull();
     expect(buildOrderStatusGroupWhere('RECIBIDO')).toEqual({ status: OrderStatus.PENDING });
     expect(buildOrderStatusGroupWhere('EN_PICKING')).toEqual({ status: OrderStatus.PREPARING });
     expect(buildOrderStatusGroupWhere('ARMADO')).toEqual({
       status: OrderStatus.PREPARED,
       invoiceNumber: null,
+      deliveredAt: null,
+      OR: [{ deliveryRouteId: null }, { deliveryRoute: { is: { status: 'PENDING' } } }],
     });
-    expect(buildOrderStatusGroupWhere('ENTREGADO')).toEqual({ status: OrderStatus.DELIVERED });
+    expect(buildOrderStatusGroupWhere('EN_ARMADO')).toEqual({
+      OR: [
+        { status: OrderStatus.PREPARING },
+        {
+          status: OrderStatus.PREPARED,
+          invoiceNumber: null,
+          deliveredAt: null,
+          OR: [{ deliveryRouteId: null }, { deliveryRoute: { is: { status: 'PENDING' } } }],
+        },
+      ],
+    });
+    expect(buildOrderStatusGroupWhere('FACTURADO')).toEqual({
+      status: { notIn: [OrderStatus.CANCELLED, OrderStatus.PENDING, OrderStatus.PREPARING] },
+      invoiceNumber: { not: null },
+      deliveredAt: null,
+      OR: [{ deliveryRouteId: null }, { deliveryRoute: { is: { status: 'PENDING' } } }],
+    });
+    expect(buildOrderStatusGroupWhere('EN_VIAJE')).toEqual({
+      status: { notIn: [OrderStatus.CANCELLED, OrderStatus.PENDING, OrderStatus.PREPARING] },
+      deliveryRoute: { is: { status: 'IN_TRANSIT' } },
+    });
+    expect(buildOrderStatusGroupWhere('EN_REPARTO')).toEqual(buildOrderStatusGroupWhere('EN_VIAJE'));
+    expect(buildOrderStatusGroupWhere('ENTREGADO')).toEqual({
+      status: { not: OrderStatus.CANCELLED },
+      OR: [
+        { deliveredAt: { not: null } },
+        { deliveryRoute: { is: { status: 'COMPLETED' } } },
+      ],
+    });
     expect(buildOrderStatusGroupWhere('CANCELADO')).toEqual({ status: OrderStatus.CANCELLED });
 
     const numericSearch = buildOrderSearchWhere('#1420');
@@ -42,22 +72,37 @@ describe('Paso 3 Velocidad — Resumen Liviano de Inicio y Paginación Real de P
     expect(buildOrderSearchWhere('   ')).toBeNull();
   });
 
-  it('getOrdersSummary ejecuta 3 COUNT(*) en paralelo y restringe por sellerId para VENDEDOR', async () => {
+  it('getOrdersSummary ejecuta 4 COUNT(*) en paralelo y restringe por sellerId para VENDEDOR', async () => {
     (prisma.order.count as any)
       .mockResolvedValueOnce(12)
       .mockResolvedValueOnce(5)
-      .mockResolvedValueOnce(48);
+      .mockResolvedValueOnce(16)
+      .mockResolvedValueOnce(9);
 
     const summary = await OrderQueriesService.getOrdersSummary(9, Role.VENDEDOR);
 
     expect(summary).toEqual({
       recibidosCount: 12,
       armadosCount: 5,
-      facturadosCount: 48,
+      facturadosCount: 16,
+      enRepartoCount: 9,
     });
-    expect(prisma.order.count).toHaveBeenCalledTimes(3);
+    expect(prisma.order.count).toHaveBeenCalledTimes(4);
     expect(prisma.order.count).toHaveBeenNthCalledWith(1, {
-      where: { sellerId: 9, status: OrderStatus.PENDING },
+      where: {
+        AND: [{ sellerId: 9 }, { status: OrderStatus.PENDING }],
+      },
+    });
+    expect(prisma.order.count).toHaveBeenNthCalledWith(4, {
+      where: {
+        AND: [
+          { sellerId: 9 },
+          {
+            status: { notIn: [OrderStatus.CANCELLED, OrderStatus.PENDING, OrderStatus.PREPARING] },
+            deliveryRoute: { is: { status: 'IN_TRANSIT' } },
+          },
+        ],
+      },
     });
   });
 

@@ -48,6 +48,7 @@ export async function updateOrderDeliveryHandler(
       deliveryRouteId: req.body.deliveryRouteId,
       deliverySequence: req.body.deliverySequence,
       markPickedUp: req.body.markPickedUp,
+      markDelivered: req.body.markDelivered,
     });
     res.status(200).json({ status: 'success', data: { order } });
   } catch (error) {

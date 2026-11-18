@@ -44,6 +44,7 @@ export interface OrderDeliveryValidationInput {
   targetMethod: DispatchDeliveryMethod;
   targetRoute?: { id: number; status: string } | null;
   markPickedUp?: boolean;
+  markDelivered?: boolean;
 }
 
 export interface OrderDeliveryAssignmentPlan {
@@ -162,7 +163,7 @@ export function resolveDefaultDeliveryMethod(params: {
 export function validateOrderDeliveryAssignment(
   params: OrderDeliveryValidationInput,
 ): OrderDeliveryAssignmentPlan {
-  const { order, targetMethod, targetRoute, markPickedUp } = params;
+  const { order, targetMethod, targetRoute, markPickedUp, markDelivered } = params;
 
   if (order.status === 'CANCELLED') {
     throw new AppError('No se puede modificar la entrega de un pedido cancelado.', 400);
@@ -183,10 +184,11 @@ export function validateOrderDeliveryAssignment(
   }
 
   if (targetMethod === 'PICKUP') {
+    const effectiveMarkPickedUp = markPickedUp ?? markDelivered;
     if (targetRoute) {
       throw new AppError('Un pedido de retiro en local no puede tener un viaje asignado.', 400);
     }
-    if (markPickedUp === true && !order.invoiceNumber) {
+    if (effectiveMarkPickedUp === true && !order.invoiceNumber) {
       throw new AppError(
         'El pedido debe facturarse antes de registrar su entrega por retiro en local.',
         400,
@@ -196,8 +198,30 @@ export function validateOrderDeliveryAssignment(
       deliveryMethod: 'PICKUP',
       deliveryRouteId: null,
       clearSequence: true,
-      stampDeliveredAt: Boolean(markPickedUp),
-      clearDeliveredAt: markPickedUp === false,
+      stampDeliveredAt: Boolean(effectiveMarkPickedUp),
+      clearDeliveredAt: effectiveMarkPickedUp === false,
+    };
+  }
+
+  if (markDelivered === true) {
+    if (targetRoute) {
+      throw new AppError(
+        'No se puede registrar entrega directa y asignar un viaje pendiente al mismo tiempo.',
+        400,
+      );
+    }
+    if (!order.invoiceNumber) {
+      throw new AppError(
+        'El pedido debe facturarse antes de registrar su entrega directa.',
+        400,
+      );
+    }
+    return {
+      deliveryMethod: 'DELIVERY',
+      deliveryRouteId: null,
+      clearSequence: true,
+      stampDeliveredAt: true,
+      clearDeliveredAt: false,
     };
   }
 

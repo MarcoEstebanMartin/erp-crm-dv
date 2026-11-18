@@ -19,9 +19,17 @@ export interface OrdersSummaryResult {
   recibidosCount: number;
   armadosCount: number;
   facturadosCount: number;
+  enRepartoCount: number;
 }
 
 const MAX_PAGE_LIMIT = 200;
+
+const NOT_IN_ACTIVE_OR_COMPLETED_ROUTE = {
+  OR: [
+    { deliveryRouteId: null },
+    { deliveryRoute: { is: { status: 'PENDING' } } },
+  ],
+};
 
 export function buildOrderStatusGroupWhere(statusGroup?: string): Record<string, any> | null {
   const key = statusGroup?.trim().toUpperCase();
@@ -33,19 +41,45 @@ export function buildOrderStatusGroupWhere(statusGroup?: string): Record<string,
     case 'EN_PICKING':
       return { status: OrderStatus.PREPARING };
     case 'ARMADO':
-      return { status: OrderStatus.PREPARED, invoiceNumber: null };
-    case 'FACTURADO':
+      return {
+        status: OrderStatus.PREPARED,
+        invoiceNumber: null,
+        deliveredAt: null,
+        ...NOT_IN_ACTIVE_OR_COMPLETED_ROUTE,
+      };
+    case 'EN_ARMADO':
       return {
         OR: [
-          { invoiceNumber: { not: null } },
-          { status: OrderStatus.DELIVERED },
-          { deliveryRoute: { is: { status: { in: ['IN_TRANSIT', 'COMPLETED'] } } } },
+          { status: OrderStatus.PREPARING },
+          {
+            status: OrderStatus.PREPARED,
+            invoiceNumber: null,
+            deliveredAt: null,
+            ...NOT_IN_ACTIVE_OR_COMPLETED_ROUTE,
+          },
         ],
       };
+    case 'FACTURADO':
+      return {
+        status: { notIn: [OrderStatus.CANCELLED, OrderStatus.PENDING, OrderStatus.PREPARING] },
+        invoiceNumber: { not: null },
+        deliveredAt: null,
+        ...NOT_IN_ACTIVE_OR_COMPLETED_ROUTE,
+      };
     case 'EN_VIAJE':
-      return { deliveryRoute: { is: { status: 'IN_TRANSIT' } } };
+    case 'EN_REPARTO':
+      return {
+        status: { notIn: [OrderStatus.CANCELLED, OrderStatus.PENDING, OrderStatus.PREPARING] },
+        deliveryRoute: { is: { status: 'IN_TRANSIT' } },
+      };
     case 'ENTREGADO':
-      return { status: OrderStatus.DELIVERED };
+      return {
+        status: { not: OrderStatus.CANCELLED },
+        OR: [
+          { deliveredAt: { not: null } },
+          { deliveryRoute: { is: { status: 'COMPLETED' } } },
+        ],
+      };
     case 'RETIRO_LOCAL':
       return { deliveryMethod: DeliveryMethod.PICKUP, status: { not: OrderStatus.CANCELLED } };
     case 'SIN_VIAJE':
@@ -95,7 +129,7 @@ export function buildOrderSearchWhere(search?: string): Record<string, any> | nu
 
 export class OrderQueriesService {
   /**
-   * Contadores livianos para las 3 tarjetas de Inicio (3 COUNT(*) indexados en paralelo).
+   * Contadores livianos para las 4 tarjetas de Inicio (4 COUNT(*) indexados en paralelo, excluyentes).
    */
   static async getOrdersSummary(userId: number, userRole: string): Promise<OrdersSummaryResult> {
     const baseWhere: Record<string, any> = {};
@@ -103,32 +137,25 @@ export class OrderQueriesService {
       baseWhere.sellerId = userId;
     }
 
-    const [recibidosCount, armadosCount, facturadosCount] = await Promise.all([
+    const withBase = (groupWhere: Record<string, any> | null) =>
+      Object.keys(baseWhere).length > 0 ? { AND: [baseWhere, groupWhere!] } : groupWhere!;
+
+    const [recibidosCount, armadosCount, facturadosCount, enRepartoCount] = await Promise.all([
       prisma.order.count({
-        where: { ...baseWhere, status: OrderStatus.PENDING },
+        where: withBase(buildOrderStatusGroupWhere('RECIBIDO')),
       }),
       prisma.order.count({
-        where: {
-          ...baseWhere,
-          OR: [
-            { status: OrderStatus.PREPARING },
-            { status: OrderStatus.PREPARED, invoiceNumber: null },
-          ],
-        },
+        where: withBase(buildOrderStatusGroupWhere('EN_ARMADO')),
       }),
       prisma.order.count({
-        where: {
-          ...baseWhere,
-          OR: [
-            { invoiceNumber: { not: null } },
-            { status: OrderStatus.DELIVERED },
-            { deliveryRoute: { is: { status: { in: ['IN_TRANSIT', 'COMPLETED'] } } } },
-          ],
-        },
+        where: withBase(buildOrderStatusGroupWhere('FACTURADO')),
+      }),
+      prisma.order.count({
+        where: withBase(buildOrderStatusGroupWhere('EN_VIAJE')),
       }),
     ]);
 
-    return { recibidosCount, armadosCount, facturadosCount };
+    return { recibidosCount, armadosCount, facturadosCount, enRepartoCount };
   }
 
   /**

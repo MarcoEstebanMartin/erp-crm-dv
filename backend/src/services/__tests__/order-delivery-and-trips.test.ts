@@ -176,6 +176,52 @@ describe('Paso 1 Entregas y Viajes — Queries, Asignación, Rutas y Recursos Re
         markPickedUp: true,
       }),
     ).rejects.toThrow(/debe facturarse antes de registrar su entrega/i);
+
+    // Entrega directa local preservando deliveryMethod = DELIVERY
+    mockTx.order.findUnique.mockResolvedValueOnce({
+      id: 23,
+      sellerId: 66,
+      status: OrderStatus.DELIVERED,
+      invoiceNumber: 'INT-00023',
+      deliveryMethod: DeliveryMethod.DELIVERY,
+      deliveryRouteId: null,
+      deliverySequence: null,
+      deliveredAt: null,
+      deliveryRoute: null,
+      persona: { id: 10, name: 'Despensa Norte' },
+    });
+    mockTx.order.update.mockResolvedValueOnce({
+      id: 23,
+      personaId: 10,
+      deliveryMethod: DeliveryMethod.DELIVERY,
+      deliveryRouteId: null,
+      deliverySequence: null,
+      deliveredAt: new Date('2026-11-18T13:15:00Z'),
+      status: OrderStatus.DELIVERED,
+    });
+
+    const directDelivered = await OrderDeliveryService.updateOrderDelivery({
+      orderId: 23,
+      userId: 71,
+      userRole: Role.ADMIN,
+      deliveryMethod: DeliveryMethod.DELIVERY,
+      markDelivered: true,
+    });
+
+    expect(directDelivered.deliveryMethod).toBe(DeliveryMethod.DELIVERY);
+    expect(directDelivered.deliveredAt).toBeTruthy();
+    expect(mockTx.order.update).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        where: { id: 23 },
+        data: expect.objectContaining({
+          deliveryMethod: DeliveryMethod.DELIVERY,
+          deliveryRouteId: null,
+          deliverySequence: null,
+          status: OrderStatus.DELIVERED,
+          deliveredAt: expect.any(Date),
+        }),
+      }),
+    );
   });
 
   it('OrderDeliveryService.bulkUpdateOrdersDelivery asigna varios pedidos en lote en una transacción', async () => {

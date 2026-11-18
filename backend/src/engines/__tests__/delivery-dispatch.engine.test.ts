@@ -131,6 +131,69 @@ describe('delivery-dispatch.engine — Reglas Puras de Despacho, Flota y Retiro 
       stampDeliveredAt: true,
       clearDeliveredAt: false,
     });
+
+    const okDirectDelivery = validateOrderDeliveryAssignment({
+      order: {
+        id: 55,
+        status: 'DELIVERED',
+        invoiceNumber: 'INT-00055',
+        deliveryMethod: 'DELIVERY',
+        deliveryRouteId: null,
+      },
+      targetMethod: 'DELIVERY',
+      markDelivered: true,
+    });
+    expect(okDirectDelivery).toEqual({
+      deliveryMethod: 'DELIVERY',
+      deliveryRouteId: null,
+      clearSequence: true,
+      stampDeliveredAt: true,
+      clearDeliveredAt: false,
+    });
+
+    expect(() =>
+      validateOrderDeliveryAssignment({
+        order: {
+          id: 56,
+          status: 'PREPARED',
+          invoiceNumber: null,
+          deliveryMethod: 'DELIVERY',
+          deliveryRouteId: null,
+        },
+        targetMethod: 'DELIVERY',
+        markDelivered: true,
+      }),
+    ).toThrow(/debe facturarse antes de registrar su entrega directa/i);
+
+    expect(() =>
+      validateOrderDeliveryAssignment({
+        order: {
+          id: 57,
+          status: 'DELIVERED',
+          invoiceNumber: 'INT-00057',
+          deliveryMethod: 'DELIVERY',
+          deliveryRouteId: null,
+        },
+        targetMethod: 'DELIVERY',
+        targetRoute: { id: 8, status: 'PENDING' },
+        markDelivered: true,
+      }),
+    ).toThrow(/no se puede registrar entrega directa y asignar un viaje pendiente/i);
+
+    expect(() =>
+      validateOrderDeliveryAssignment({
+        order: {
+          id: 58,
+          status: 'DELIVERED',
+          invoiceNumber: 'INT-00058',
+          deliveryMethod: 'DELIVERY',
+          deliveryRouteId: 3,
+          currentRouteStatus: 'IN_TRANSIT',
+        },
+        targetMethod: 'DELIVERY',
+        markDelivered: true,
+      }),
+    ).toThrow(/viaje en curso o completado/i);
   });
 
   it('normaliza secuencias de parada deduplicadas y suma bultos/pesos con Decimal.js ROUND_HALF_UP', () => {

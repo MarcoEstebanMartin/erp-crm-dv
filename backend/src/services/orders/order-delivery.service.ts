@@ -17,6 +17,7 @@ export interface UpdateOrderDeliveryInput {
   deliveryRouteId?: number | null;
   deliverySequence?: number | null;
   markPickedUp?: boolean;
+  markDelivered?: boolean;
 }
 
 export interface BulkUpdateOrdersDeliveryInput {
@@ -87,6 +88,7 @@ export class OrderDeliveryService {
         targetMethod: input.deliveryMethod,
         targetRoute,
         markPickedUp: input.markPickedUp,
+        markDelivered: input.markDelivered,
       });
 
       let nextSequence: number | null = null;
@@ -154,7 +156,9 @@ export class OrderDeliveryService {
       notifyWebOrderStatusForErpOrder(
         result.updatedOrder,
         OrderStatus.DELIVERED,
-        'Retirado por el local',
+        result.updatedOrder.deliveryMethod === DeliveryMethod.PICKUP
+          ? 'Retirado por el local'
+          : 'Entregado en domicilio',
       );
     }
 
