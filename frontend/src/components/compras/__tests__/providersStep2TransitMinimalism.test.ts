@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 import {
   addDaysIso,
   buildProviderLedgerStatement,
+  computeInvoiceDueDaysInfo,
   computeSupplierInvoicesMetrics,
   formatPurchaseOrderLotsSummary,
 } from '../providersHelpers';
@@ -78,7 +79,17 @@ describe('Paso 2 Proveedores — Tránsito, Escáner IA, Lotes Limpios y Minimal
     expect(res.finalPayableAmount).toBe(8500);
   });
 
-  it('Auditoría estática Step 2: 3 pestañas, escáner con select + 3 modos, <= 300 líneas y cero lotes sintéticos', () => {
+  it('computeInvoiceDueDaysInfo calcula días de vencimiento en UTC sin drift', () => {
+    const refNow = new Date(2026, 10, 18, 15, 0, 0);
+    expect(computeInvoiceDueDaysInfo('2026-11-14T00:00:00Z', 'PENDING', refNow)).toMatchObject({ label: 'Vencida 4d', tone: 'overdue', diffDays: -4 });
+    expect(computeInvoiceDueDaysInfo('2026-11-18T00:00:00Z', 'PENDING', refNow)).toMatchObject({ label: 'Vence hoy', tone: 'warning', diffDays: 0 });
+    expect(computeInvoiceDueDaysInfo('2026-11-23T00:00:00Z', 'PENDING', refNow)).toMatchObject({ label: 'En 5d', tone: 'warning', diffDays: 5 });
+    expect(computeInvoiceDueDaysInfo('2026-12-08T00:00:00Z', 'PENDING', refNow)).toMatchObject({ label: 'En 20d', tone: 'neutral', diffDays: 20 });
+    expect(computeInvoiceDueDaysInfo('2026-11-10T00:00:00Z', 'PAID', refNow)).toMatchObject({ label: 'Saldada', tone: 'paid', diffDays: null });
+    expect(computeInvoiceDueDaysInfo(null, 'PENDING', refNow)).toMatchObject({ label: 'S/D', tone: 'neutral', diffDays: null });
+  });
+
+  it('Auditoría estática Step 2: 4 pestañas, escáner en Compras, <= 300 líneas y cero lotes sintéticos', () => {
     const allComprasFiles = [
       ...listTsFilesRecursive(COMPRAS_DIR, 'compras'),
       { rel: 'ComprasDashboard.tsx', content: fs.readFileSync(path.join(COMPONENTS_DIR, 'ComprasDashboard.tsx'), 'utf8') },
@@ -96,7 +107,8 @@ describe('Paso 2 Proveedores — Tránsito, Escáner IA, Lotes Limpios y Minimal
 
     const dashSrc = allComprasFiles.find((f) => f.rel === 'ComprasDashboard.tsx')!.content;
     expect(dashSrc).toContain("label: 'Padrón'");
-    expect(dashSrc).toContain("label: 'Facturas'");
+    expect(dashSrc).toContain("label: 'Cuentas Corrientes'");
+    expect(dashSrc).toContain("label: 'Compras'");
     expect(dashSrc).toContain('Recepciones');
     expect(dashSrc).not.toContain('Órdenes de Compra');
     expect(dashSrc).not.toContain('aria-controls');
@@ -109,8 +121,8 @@ describe('Paso 2 Proveedores — Tránsito, Escáner IA, Lotes Limpios y Minimal
     expect(scannerFormSrc).toContain('IMMEDIATE');
     expect(scannerFormSrc).toContain('NONE');
 
-    const facturasSrc = allComprasFiles.find((f) => f.rel === 'compras/ComprasFacturasProveedoresTabs.tsx')!.content;
-    expect(facturasSrc).toContain('Escanear factura');
-    expect(facturasSrc).toContain('Recibir');
+    const comprasIngresosSrc = allComprasFiles.find((f) => f.rel === 'compras/ComprasIngresosTab.tsx')!.content;
+    expect(comprasIngresosSrc).toContain('Escanear factura');
+    expect(comprasIngresosSrc).toContain('Recibir');
   });
 });

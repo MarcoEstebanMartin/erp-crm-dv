@@ -10,7 +10,7 @@ export const INVOICE_EXTRACTION_JSON_SCHEMA: Record<string, any> = {
     receiverName: { type: ['string', 'null'] },
     documentType: {
       type: 'string',
-      enum: ['FACTURA_A', 'FACTURA_B', 'FACTURA_C', 'REMITO'],
+      enum: ['FACTURA_A', 'FACTURA_B', 'FACTURA_C', 'NOTA_CREDITO_A', 'NOTA_CREDITO_B', 'NOTA_CREDITO_C', 'REMITO'],
     },
     documentNumber: { type: 'string' },
     issueDate: { type: 'string' },

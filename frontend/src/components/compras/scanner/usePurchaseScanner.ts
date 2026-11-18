@@ -11,7 +11,15 @@ interface UsePurchaseScannerParams {
   onClose: () => void;
 }
 
-const VALID_DOC_TYPES = new Set(['FACTURA_A', 'FACTURA_B', 'FACTURA_C', 'REMITO']);
+const VALID_DOC_TYPES = new Set([
+  'FACTURA_A',
+  'FACTURA_B',
+  'FACTURA_C',
+  'NOTA_CREDITO_A',
+  'NOTA_CREDITO_B',
+  'NOTA_CREDITO_C',
+  'REMITO',
+]);
 
 const sumTaxTotalCents = (d: any) =>
   parseExactCents(d.netAmount) + parseExactCents(d.taxAmount) +
@@ -20,7 +28,8 @@ const sumTaxTotalCents = (d: any) =>
   parseExactCents(d.impuestosInternos);
 
 const allowsVat21 = (docType: string, billingType: string) =>
-  billingType !== 'INTERNAL' && (docType === 'FACTURA_A' || docType === 'FACTURA_B');
+  billingType !== 'INTERNAL' &&
+  (docType === 'FACTURA_A' || docType === 'FACTURA_B' || docType === 'NOTA_CREDITO_A' || docType === 'NOTA_CREDITO_B');
 
 const initExtractedData = (response: any) => {
   const ext = response.extracted || {};
@@ -73,7 +82,8 @@ export function usePurchaseScanner({ isOpen, file, onSuccess, onClose }: UsePurc
       const response = await api.uploadPurchaseDocument(fileToProcess);
       const data = initExtractedData(response);
       setExtractedData(data);
-      const hasStockItems = Array.isArray(data.items) && data.items.some((i: any) => !i.isNonStock);
+      const isCreditNote = String(data.documentType || '').startsWith('NOTA_CREDITO');
+      const hasStockItems = !isCreditNote && Array.isArray(data.items) && data.items.some((i: any) => !i.isNonStock);
       setReceptionMode(hasStockItems ? 'IN_TRANSIT' : 'NONE');
     } catch (err: any) {
       setErrorMsg(err.message || 'Error al procesar el documento.');
@@ -94,6 +104,9 @@ export function usePurchaseScanner({ isOpen, file, onSuccess, onClose }: UsePurc
   }, [isOpen, file]);
 
   const updateDocMeta = (patch: Record<string, any>) => {
+    if (typeof patch.documentType === 'string' && patch.documentType.startsWith('NOTA_CREDITO')) {
+      setReceptionMode('NONE');
+    }
     setExtractedData((prev: any) => {
       if (!prev) return prev;
       const next = { ...prev, ...patch };

@@ -45,9 +45,14 @@ export const purchaseDocumentService = {
     const receiverCuitClean = extractedData.receiverCuit
       ? extractedData.receiverCuit.replace(/\D/g, '')
       : '';
-    const isOfficialInvoice = ['FACTURA_A', 'FACTURA_B', 'FACTURA_C'].includes(
-      extractedData.documentType,
-    );
+    const isOfficialInvoice = [
+      'FACTURA_A',
+      'FACTURA_B',
+      'FACTURA_C',
+      'NOTA_CREDITO_A',
+      'NOTA_CREDITO_B',
+      'NOTA_CREDITO_C',
+    ].includes(extractedData.documentType);
     const upperReceiver = extractedData.receiverName?.toUpperCase() || '';
     const matchesCompany =
       receiverCuitClean === COMPANY_CUIT_CLEAN ||
@@ -114,27 +119,29 @@ export const purchaseDocumentService = {
 
     const resolvedBilling =
       params.billingType === BillingType.OFFICIAL ? BillingType.OFFICIAL : BillingType.INTERNAL;
-    const isInvoiceDoc = String(params.documentType || '')
-      .trim()
-      .toUpperCase()
-      .startsWith('FACTURA');
+    const upperDocType = String(params.documentType || '').trim().toUpperCase();
+    const isCreditNoteDoc = upperDocType.startsWith('NOTA_CREDITO');
+    const isInvoiceDoc = upperDocType.startsWith('FACTURA');
+    const isFiscalDoc = isInvoiceDoc || isCreditNoteDoc;
 
-    if (isInvoiceDoc && resolvedBilling === BillingType.OFFICIAL) {
+    if (isFiscalDoc && resolvedBilling === BillingType.OFFICIAL) {
       const cuitDigits = String(provider.cuit || '').replace(/\D/g, '');
       if (cuitDigits.length !== 11) {
         throw new AppError(
-          'Para registrar una factura en Sucursal A (Oficial), el proveedor debe tener un CUIT válido de 11 dígitos. Completalo en Padrón o usá Sucursal X.',
+          'Para registrar un comprobante en Sucursal A (Oficial), el proveedor debe tener un CUIT válido de 11 dígitos. Completalo en Padrón o usá Sucursal X.',
           400,
         );
       }
     }
 
-    const stockItems = (params.items || []).filter(
-      (i: any) => !i.isNonStock && Number(i.productId) > 0 && Math.trunc(Number(i.quantity || 0)) > 0,
-    );
+    const stockItems = isCreditNoteDoc
+      ? []
+      : (params.items || []).filter(
+          (i: any) => !i.isNonStock && Number(i.productId) > 0 && Math.trunc(Number(i.quantity || 0)) > 0,
+        );
 
     const effectiveMode: PurchaseReceptionMode =
-      params.receptionMode === 'NONE' || stockItems.length === 0
+      isCreditNoteDoc || params.receptionMode === 'NONE' || stockItems.length === 0
         ? 'NONE'
         : params.receptionMode === 'IN_TRANSIT'
           ? 'IN_TRANSIT'
@@ -179,14 +186,14 @@ export const purchaseDocumentService = {
         });
       }
 
-      if (isInvoiceDoc) {
+      if (isFiscalDoc) {
         if (params.documentNumber?.trim()) {
           const existingInvoice = await tx.supplierInvoice.findFirst({
             where: { personaId: providerIdNum, invoiceNumber: params.documentNumber.trim() },
           });
           if (existingInvoice) {
             throw new AppError(
-              `La factura Nro ${params.documentNumber} ya se encuentra registrada para este proveedor.`,
+              `El comprobante Nro ${params.documentNumber} ya se encuentra registrado para este proveedor.`,
               400,
             );
           }
@@ -216,8 +223,8 @@ export const purchaseDocumentService = {
             percepcionIvaAmount: breakdown.totalPercIva,
             impuestosInternos: breakdown.impuestosInternos,
             totalAmount: breakdown.totalAmount,
-            status: 'PENDING',
-            paidAmount: 0,
+            status: isCreditNoteDoc ? 'PAID' : 'PENDING',
+            paidAmount: isCreditNoteDoc ? breakdown.totalAmount : 0,
             billingType: resolvedBilling,
             receptionStatus,
             receivedAt: effectiveMode === 'IMMEDIATE' ? new Date() : null,
@@ -226,27 +233,29 @@ export const purchaseDocumentService = {
         invoiceId = invoice.id;
         refId = `INV-${invoice.id}`;
 
-        await recordSupplierInvoicePerceptions(tx, {
-          personaId: providerIdNum,
-          invoiceNumber: resolvedNumber,
-          invoiceDate,
-          pampa: breakdown.pampa,
-          bsas: breakdown.bsas,
-          finalIIBB: breakdown.finalIIBB,
-          iva3337: breakdown.iva3337,
-          iva5329: breakdown.iva5329,
-          fallbackJurisdiction: params.percepcionJurisdiction,
-        });
+        if (!isCreditNoteDoc) {
+          await recordSupplierInvoicePerceptions(tx, {
+            personaId: providerIdNum,
+            invoiceNumber: resolvedNumber,
+            invoiceDate,
+            pampa: breakdown.pampa,
+            bsas: breakdown.bsas,
+            finalIIBB: breakdown.finalIIBB,
+            iva3337: breakdown.iva3337,
+            iva5329: breakdown.iva5329,
+            fallbackJurisdiction: params.percepcionJurisdiction,
+          });
+        }
       }
 
-      if (effectiveMode === 'IN_TRANSIT' || effectiveMode === 'IMMEDIATE' || !isInvoiceDoc) {
+      if (!isCreditNoteDoc && (effectiveMode === 'IN_TRANSIT' || effectiveMode === 'IMMEDIATE' || !isFiscalDoc)) {
         const po = await createLinkedPurchaseReceptionInTx(tx, {
           userId: params.userId,
           personaId: providerIdNum,
           supplierInvoiceId: invoiceId,
           mode: effectiveMode === 'IN_TRANSIT' ? 'IN_TRANSIT' : 'IMMEDIATE',
           reason: `Ingreso por ${params.documentType}`,
-          fallbackTotal: isInvoiceDoc ? undefined : breakdown.totalAmount,
+          fallbackTotal: isFiscalDoc ? undefined : breakdown.totalAmount,
           items: stockItems.map((item: any) => ({
             productId: Number(item.productId),
             quantity: Math.trunc(Number(item.quantity)),
@@ -260,7 +269,21 @@ export const purchaseDocumentService = {
       }
 
       const docNumLabel = params.documentNumber?.trim() || `#${invoiceId || poId}`;
-      if (isInvoiceDoc || effectiveMode === 'IMMEDIATE') {
+      if (isCreditNoteDoc) {
+        await recordLedgerMovement(tx, {
+          personaId: providerIdNum,
+          entryType: LedgerEntryType.DEBIT,
+          sourceType: LedgerSourceType.SUPPLIER_INVOICE,
+          billingType: resolvedBilling,
+          amount: breakdown.totalAmount,
+          supplierInvoiceId: invoiceId,
+          purchaseOrderId: null,
+          userId: params.userId,
+          occurredAt: invoiceDate,
+          reference: `Nota de Crédito Nro ${docNumLabel}`,
+          description: `Nota de Crédito - ${params.documentType} ${docNumLabel}`,
+        });
+      } else if (isInvoiceDoc || effectiveMode === 'IMMEDIATE') {
         await recordLedgerMovement(tx, {
           personaId: providerIdNum,
           entryType: LedgerEntryType.CREDIT,

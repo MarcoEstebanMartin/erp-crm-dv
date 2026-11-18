@@ -104,6 +104,9 @@ export const PurchaseScannerGeneralSection: FC<GeneralSectionProps> = ({
               <option value="FACTURA_A">Factura A</option>
               <option value="FACTURA_B">Factura B</option>
               <option value="FACTURA_C">Factura C</option>
+              <option value="NOTA_CREDITO_A">Nota de Crédito A</option>
+              <option value="NOTA_CREDITO_B">Nota de Crédito B</option>
+              <option value="NOTA_CREDITO_C">Nota de Crédito C</option>
               <option value="REMITO">Remito</option>
             </select>
           </div>

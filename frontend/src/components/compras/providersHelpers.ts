@@ -160,6 +160,9 @@ function resolveKindLabel(
   if (item?.sourceType === 'RECONCILIATION_ADJUSTMENT' || item?.sourceType === 'LEGACY_ADJUSTMENT') {
     return 'Ajuste';
   }
+  if (String(item?.reference || '').startsWith('Nota de Crédito')) {
+    return 'Nota de Crédito';
+  }
   return item?.type === 'CREDIT' ? 'Factura' : 'Pago';
 }
 
@@ -168,7 +171,7 @@ export interface ProviderStatementViewRow {
   date: string;
   reference: string;
   description: string;
-  kindLabel: 'Factura' | 'Pago' | 'Retención' | 'Anulación' | 'Ajuste';
+  kindLabel: 'Factura' | 'Nota de Crédito' | 'Pago' | 'Retención' | 'Anulación' | 'Ajuste';
   compraCents: number;
   pagoCents: number;
   compraAmount: number;
@@ -262,4 +265,24 @@ export function computeSupplierInvoicesMetrics(invoices: any[]) {
     }
   }
   return { totalDeuda, vencidasCount, totalVencidas, proximasCount, totalProximas, enTransitoCount };
+}
+
+export interface InvoiceDueDaysInfo {
+  label: string;
+  tone: 'paid' | 'overdue' | 'warning' | 'neutral';
+  diffDays: number | null;
+}
+
+export function computeInvoiceDueDaysInfo(dueDate?: string | null, status?: string, now = new Date()): InvoiceDueDaysInfo {
+  if (status === 'PAID') return { label: 'Saldada', tone: 'paid', diffDays: null };
+  if (!dueDate) return { label: 'S/D', tone: 'neutral', diffDays: null };
+  const due = new Date(dueDate);
+  if (Number.isNaN(due.getTime())) return { label: 'S/D', tone: 'neutral', diffDays: null };
+  const dueUtc = Date.UTC(due.getUTCFullYear(), due.getUTCMonth(), due.getUTCDate());
+  const todayUtc = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+  const diffDays = Math.round((dueUtc - todayUtc) / 86400000);
+  if (diffDays < 0) return { label: `Vencida ${Math.abs(diffDays)}d`, tone: 'overdue', diffDays };
+  if (diffDays === 0) return { label: 'Vence hoy', tone: 'warning', diffDays: 0 };
+  if (diffDays <= 7) return { label: `En ${diffDays}d`, tone: 'warning', diffDays };
+  return { label: `En ${diffDays}d`, tone: 'neutral', diffDays };
 }

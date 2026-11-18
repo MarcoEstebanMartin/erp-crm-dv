@@ -47,7 +47,7 @@ Extrae con precisión quirúrgica los datos del comprobante adjunto (imagen o PD
 - cuit: CUIT del emisor/proveedor sin inventar dígitos (o null si no figura).
 - receiverCuit: CUIT del receptor/comprador (o null si no figura).
 - receiverName: Razón social o nombre del receptor/comprador (o null si no figura).
-- documentType: "FACTURA_A", "FACTURA_B", "FACTURA_C" o "REMITO".
+- documentType: "FACTURA_A", "FACTURA_B", "FACTURA_C", "NOTA_CREDITO_A", "NOTA_CREDITO_B", "NOTA_CREDITO_C" o "REMITO".
 - documentNumber: Número en formato XXXX-XXXXXXXX.
 - issueDate: Fecha de emisión en formato YYYY-MM-DD.
 - items: Lista de renglones con code (código de artículo del proveedor o null), description, quantity (priorizar kilogramos si el precio unitario está expresado por kg), unitPrice y subtotal.

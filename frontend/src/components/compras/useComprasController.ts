@@ -25,7 +25,7 @@ export function useComprasController(activeSubTab: string, refreshKey?: number, 
   const [supplierStartDate, setSupplierStartDate] = useState('');
   const [supplierEndDate, setSupplierEndDate] = useState('');
   const [branchFilter, setBranchFilter] = useState<'ALL' | 'OFFICIAL' | 'INTERNAL'>('ALL');
-  const [invoiceReceptionFilter, setInvoiceReceptionFilter] = useState<'ALL' | 'IN_TRANSIT'>('ALL');
+  const [invoiceReceptionFilter, setInvoiceReceptionFilter] = useState<'ALL' | 'IN_TRANSIT' | 'RECEIVED'>('ALL');
   const [providerSearch, setProviderSearch] = useState('');
 
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -91,7 +91,11 @@ export function useComprasController(activeSubTab: string, refreshKey?: number, 
   );
   const supplierMetrics = useMemo(() => computeSupplierInvoicesMetrics(baseBranchInvoices), [baseBranchInvoices]);
   const filteredInvoices = useMemo(
-    () => baseBranchInvoices.filter((inv) => invoiceReceptionFilter === 'ALL' || inv.receptionStatus === 'IN_TRANSIT'),
+    () =>
+      baseBranchInvoices.filter((inv) => {
+        if (invoiceReceptionFilter === 'ALL') return true;
+        return inv.receptionStatus === invoiceReceptionFilter;
+      }),
     [baseBranchInvoices, invoiceReceptionFilter],
   );
 
@@ -256,7 +260,7 @@ export function useComprasController(activeSubTab: string, refreshKey?: number, 
   };
 
   return {
-    purchaseOrders, inTransitCount, allProviders, providers, products, filteredInvoices, supplierMetrics, autoCalculatedTotal,
+    purchaseOrders, inTransitCount, allProviders, providers, products, baseBranchInvoices, filteredInvoices, supplierMetrics, autoCalculatedTotal,
     supplierQuery, setSupplierQuery, supplierStartDate, setSupplierStartDate, supplierEndDate, setSupplierEndDate,
     branchFilter, setBranchFilter, invoiceReceptionFilter, setInvoiceReceptionFilter, providerSearch, setProviderSearch,
     showCreateModal, setShowCreateModal, showReceiveModal, setShowReceiveModal, viewDetailsModal, setViewDetailsModal,

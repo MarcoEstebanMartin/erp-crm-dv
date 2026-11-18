@@ -22,8 +22,9 @@ const CONFIRM_LABELS: Record<string, string> = {
 export const PurchaseScannerModal: FC<PurchaseScannerModalProps> = ({ isOpen, onClose, file, providers = [], onSuccess }) => {
   const s = usePurchaseScanner({ isOpen, file, onSuccess, onClose });
   const items = s.extractedData?.items || [];
+  const isCreditNote = String(s.extractedData?.documentType || '').startsWith('NOTA_CREDITO');
   const allItemsValid =
-    s.receptionMode === 'NONE'
+    isCreditNote || s.receptionMode === 'NONE'
       ? true
       : items.length > 0 &&
         items.some((i: any) => !i.isNonStock && !!i.matchedProductId) &&
@@ -107,7 +108,7 @@ export const PurchaseScannerModal: FC<PurchaseScannerModalProps> = ({ isOpen, on
           <button type="button" className="btn btn-secondary" onClick={onClose} disabled={s.loading}>Cancelar</button>
           <button type="button" className="btn btn-primary" onClick={s.handleConfirm} disabled={isDisabled} style={{ backgroundColor: 'var(--color-corp-red)', borderColor: 'var(--color-corp-red)', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
             {s.loading ? <Loader size={16} aria-hidden="true" /> : <Check size={16} aria-hidden="true" />}
-            <span>{CONFIRM_LABELS[s.receptionMode] || 'Confirmar factura'}</span>
+            <span>{isCreditNote ? 'Confirmar nota de crédito' : CONFIRM_LABELS[s.receptionMode] || 'Confirmar factura'}</span>
           </button>
         </div>
       </div>

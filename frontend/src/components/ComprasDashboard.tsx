@@ -4,13 +4,14 @@ import { api } from '../utils/api';
 import { PurchaseScannerModal } from './PurchaseScannerModal';
 import { ComprasOrdenesRecepcionesTabs } from './compras/ComprasOrdenesRecepcionesTabs';
 import { ComprasFacturasTab, ComprasProveedoresTab } from './compras/ComprasFacturasProveedoresTabs';
+import { ComprasIngresosTab } from './compras/ComprasIngresosTab';
 import { ComprasCreateReceiveModals } from './compras/ComprasCreateReceiveModals';
 import { ComprasSupplierInvoiceAndPayModals } from './compras/ComprasSupplierInvoiceAndPayModals';
 import { ComprasProviderModals } from './compras/ComprasProviderModals';
 import { buildEmptyProviderDraft } from './compras/providersHelpers';
 import { useComprasController } from './compras/useComprasController';
 
-export type ComprasSubTab = 'proveedores' | 'facturas' | 'recepciones';
+export type ComprasSubTab = 'proveedores' | 'facturas' | 'compras' | 'recepciones';
 
 export interface ComprasDashboardProps {
   initialSubTab?: ComprasSubTab;
@@ -32,7 +33,8 @@ export default function ComprasDashboard({
   const subTabs = useMemo<Array<{ id: ComprasSubTab; label: string }>>(
     () => [
       { id: 'proveedores', label: 'Padrón' },
-      { id: 'facturas', label: 'Facturas' },
+      { id: 'facturas', label: 'Cuentas Corrientes' },
+      { id: 'compras', label: 'Compras' },
       { id: 'recepciones', label: c.inTransitCount > 0 ? `Recepciones (${c.inTransitCount})` : 'Recepciones' },
     ],
     [c.inTransitCount],
@@ -102,7 +104,18 @@ export default function ComprasDashboard({
 
         {activeSubTab === 'facturas' && (
           <ComprasFacturasTab
-            isAdmin={isAdmin} supplierMetrics={c.supplierMetrics} filteredInvoices={c.filteredInvoices}
+            isAdmin={isAdmin} supplierMetrics={c.supplierMetrics} filteredInvoices={c.baseBranchInvoices}
+            supplierQuery={c.supplierQuery} setSupplierQuery={c.setSupplierQuery}
+            branchFilter={c.branchFilter} setBranchFilter={c.setBranchFilter}
+            onOpenAccountSummary={c.handleOpenAccountSummary}
+            onOpenPayInvoice={c.handleOpenPayInvoice}
+            onDeleteInvoice={c.handleDeleteInvoice}
+          />
+        )}
+
+        {activeSubTab === 'compras' && (
+          <ComprasIngresosTab
+            filteredInvoices={c.filteredInvoices}
             supplierQuery={c.supplierQuery} setSupplierQuery={c.setSupplierQuery}
             supplierStartDate={c.supplierStartDate} setSupplierStartDate={c.setSupplierStartDate}
             supplierEndDate={c.supplierEndDate} setSupplierEndDate={c.setSupplierEndDate}
@@ -111,7 +124,6 @@ export default function ComprasDashboard({
             onOpenSupplierModal={() => { c.setErrorMsg(null); c.setShowSupplierModal(true); }}
             onSelectScannerFile={(file) => { c.setErrorMsg(null); c.setScannerFile(file); c.setShowScannerModal(true); }}
             onOpenReceiveInvoice={c.handleOpenReceiveModal}
-            onOpenPayInvoice={c.handleOpenPayInvoice}
             onDeleteInvoice={c.handleDeleteInvoice}
           />
         )}

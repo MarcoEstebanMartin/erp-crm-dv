@@ -159,15 +159,20 @@ export const supplierInvoiceService = {
       ? new Date(params.dueDate)
       : new Date(issueDt.getTime() + 30 * 24 * 3600 * 1000);
 
-    const stockItems = (params.items || []).filter(
-      (i) => Number(i.productId) > 0 && Math.trunc(Number(i.quantity || 0)) > 0,
-    );
+    const isCreditNote = String(params.invoiceType || '').trim().toUpperCase().startsWith('NOTA_CREDITO');
+    const stockItems = isCreditNote
+      ? []
+      : (params.items || []).filter(
+          (i) => Number(i.productId) > 0 && Math.trunc(Number(i.quantity || 0)) > 0,
+        );
     const effectiveMode =
-      params.receptionMode === 'IN_TRANSIT' && stockItems.length > 0
-        ? 'IN_TRANSIT'
-        : params.receptionMode === 'IMMEDIATE' && stockItems.length > 0
-          ? 'IMMEDIATE'
-          : 'NONE';
+      isCreditNote
+        ? 'NONE'
+        : params.receptionMode === 'IN_TRANSIT' && stockItems.length > 0
+          ? 'IN_TRANSIT'
+          : params.receptionMode === 'IMMEDIATE' && stockItems.length > 0
+            ? 'IMMEDIATE'
+            : 'NONE';
 
     const breakdown = calculateSupplierInvoiceBreakdown({
       netAmount: params.netAmount,
@@ -199,8 +204,8 @@ export const supplierInvoiceService = {
           invoiceType: params.invoiceType,
           issueDate: issueDt,
           dueDate: resolvedDueDate,
-          status: 'PENDING',
-          paidAmount: 0,
+          status: isCreditNote ? 'PAID' : 'PENDING',
+          paidAmount: isCreditNote ? breakdown.totalAmount : 0,
           netAmount: breakdown.netAmount,
           taxAmount: breakdown.taxAmount,
           percepcionAmount: breakdown.finalIIBB,
@@ -234,7 +239,7 @@ export const supplierInvoiceService = {
 
       await recordLedgerMovement(tx, {
         personaId: providerId,
-        entryType: LedgerEntryType.CREDIT,
+        entryType: isCreditNote ? LedgerEntryType.DEBIT : LedgerEntryType.CREDIT,
         sourceType: LedgerSourceType.SUPPLIER_INVOICE,
         billingType: inv.billingType,
         amount: breakdown.totalAmount,
@@ -242,21 +247,23 @@ export const supplierInvoiceService = {
         purchaseOrderId: poId,
         userId: params.userId ?? null,
         occurredAt: issueDt,
-        reference: `Factura Nro ${cleanInvoiceNumber}`,
-        description: `Compra - Factura ${params.invoiceType.replace('_', ' ')}`,
+        reference: `${isCreditNote ? 'Nota de Crédito Nro' : 'Factura Nro'} ${cleanInvoiceNumber}`,
+        description: `${isCreditNote ? 'Nota de Crédito' : 'Compra'} - ${params.invoiceType.replace('_', ' ')}`,
       });
 
-      await recordSupplierInvoicePerceptions(tx, {
-        personaId: providerId,
-        invoiceNumber: cleanInvoiceNumber,
-        invoiceDate: issueDt,
-        pampa: breakdown.pampa,
-        bsas: breakdown.bsas,
-        finalIIBB: breakdown.finalIIBB,
-        iva3337: breakdown.iva3337,
-        iva5329: breakdown.iva5329,
-        fallbackJurisdiction: 'AR-B',
-      });
+      if (!isCreditNote) {
+        await recordSupplierInvoicePerceptions(tx, {
+          personaId: providerId,
+          invoiceNumber: cleanInvoiceNumber,
+          invoiceDate: issueDt,
+          pampa: breakdown.pampa,
+          bsas: breakdown.bsas,
+          finalIIBB: breakdown.finalIIBB,
+          iva3337: breakdown.iva3337,
+          iva5329: breakdown.iva5329,
+          fallbackJurisdiction: 'AR-B',
+        });
+      }
 
       return inv;
     });
@@ -287,8 +294,9 @@ export const supplierInvoiceService = {
       throw new AppError('Factura de compra no encontrada.', 404);
     }
 
+    const isCreditNote = String(invoice.invoiceType || '').toUpperCase().startsWith('NOTA_CREDITO');
     const paidAmt = roundToTwoDecimals(invoice.paidAmount.toString()).toNumber();
-    if (invoice.status !== 'PENDING' || paidAmt > 0) {
+    if (!isCreditNote && (invoice.status !== 'PENDING' || paidAmt > 0)) {
       throw new AppError(
         'No se puede eliminar una factura que ya ha sido saldada o pagada parcialmente. Anule los pagos asociados primero.',
         400,
@@ -300,13 +308,13 @@ export const supplierInvoiceService = {
     await prisma.$transaction(async (tx) => {
       await recordLedgerMovement(tx, {
         personaId: invoice.personaId,
-        entryType: LedgerEntryType.DEBIT,
+        entryType: isCreditNote ? LedgerEntryType.CREDIT : LedgerEntryType.DEBIT,
         sourceType: LedgerSourceType.SUPPLIER_INVOICE_REVERSAL,
         billingType: invoice.billingType,
         amount: amountToRestore,
         userId: params.userId ?? null,
-        reference: `Anulación Factura Nro ${invoice.invoiceNumber}`,
-        description: `Reversión por eliminación de Factura ${invoice.invoiceNumber}`,
+        reference: `Anulación ${isCreditNote ? 'Nota de Crédito' : 'Factura'} Nro ${invoice.invoiceNumber}`,
+        description: `Reversión por eliminación de ${isCreditNote ? 'Nota de Crédito' : 'Factura'} ${invoice.invoiceNumber}`,
       });
 
       await revertSupplierInvoiceStockInTx(tx, {
