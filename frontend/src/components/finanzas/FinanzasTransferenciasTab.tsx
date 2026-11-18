@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { CheckSquare } from 'lucide-react';
+import { isEcheqTx } from './finanzasHelpers';
 
 interface FinanzasTransferenciasTabProps {
   transfers: any[];
@@ -92,7 +93,14 @@ export const FinanzasTransferenciasTab: React.FC<FinanzasTransferenciasTabProps>
                   <td style={{ fontSize: '0.82rem' }}>
                     {new Date(t.createdAt).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' })}
                   </td>
-                  <td style={{ fontWeight: 600 }}>{t.persona?.name || 'Varios'}</td>
+                  <td style={{ fontWeight: 600 }}>
+                    {t.persona?.name || 'Varios'}
+                    {isEcheqTx(t) && (
+                      <span style={{ marginLeft: '6px', fontSize: '0.7rem', fontWeight: 600, padding: '1px 6px', borderRadius: '4px', backgroundColor: '#eff6ff', color: '#1d4ed8' }}>
+                        eCheq
+                      </span>
+                    )}
+                  </td>
                   <td style={{ color: 'var(--text-secondary)', fontSize: '0.84rem' }}>{t.bankAccount?.name || 'Sin cuenta'}</td>
                   <td>
                     <span

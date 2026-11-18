@@ -28,9 +28,27 @@ function formatConceptLabel(raw: string, orderId?: number): string {
   if (/^Rendici[oó]n Reparto/i.test(text)) {
     return 'Rendición reparto';
   }
+
+  const checkMatch = text.match(/^Cheque\s+N°\s*([^\s(]+)\s*\(Emisor:\s*(.+?)\)\s*(?:recibido.*)?$/i);
+  if (checkMatch) {
+    const num = checkMatch[1].trim();
+    let issuer = checkMatch[2].trim();
+    const isEcheq = /\(echeq\)/i.test(issuer);
+    issuer = issuer.replace(/\s*\(echeq\)/gi, '').trim();
+    const prefix = isEcheq ? 'eCheq' : 'Cheque';
+    const numLabel = num && num !== 'S/N' ? ` #${num}` : '';
+    const issuerLabel = issuer && issuer.toLowerCase() !== 'desconocido' ? ` · ${issuer}` : '';
+    return `${prefix}${numLabel}${issuerLabel}`;
+  }
+
+  if (/^Cobro en el acto de factura directa/i.test(text)) {
+    return 'Factura directa';
+  }
+
   text = text
     .replace(/\s*\(Parte Oficial\)/gi, '')
-    .replace(/\s*de pedido #\d+/gi, '')
+    .replace(/\s*\(INT-\d+\)/gi, '')
+    .replace(/\s*(?:de|por)\s+(?:pedido|factura)\s*#\d+/gi, '')
     .trim();
   if (orderId && text === `Pedido #${orderId}`) return 'Cobro pedido';
   return text || 'Movimiento';
@@ -135,7 +153,7 @@ export default function FinanceMovementModal({
       isOpen={isOpen}
       onClose={onClose}
       ariaLabelledBy="fin-mov-modal-title"
-      style={{ maxWidth: '1160px', width: '94vw', maxHeight: '90vh', padding: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
+      style={{ maxWidth: '1360px', width: '96vw', minHeight: '62vh', maxHeight: '92vh', padding: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
     >
       <div style={{ padding: '20px 28px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#ffffff', gap: '16px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
@@ -170,7 +188,7 @@ export default function FinanceMovementModal({
           <input
             id="fin-mov-search"
             type="search"
-            placeholder="Buscar cliente, chofer, pedido..."
+            placeholder="Buscar..."
             autoCorrect="off"
             autoCapitalize="none"
             spellCheck={false}
@@ -222,6 +240,11 @@ export default function FinanceMovementModal({
                   : 'S/F';
                 const cleanOrigin = formatOriginLabel(m.origin);
                 const cleanConcept = formatConceptLabel(m.description, m.orderId);
+                const showSubOrigin = Boolean(
+                  m.personaName &&
+                    cleanOrigin &&
+                    cleanOrigin.toLowerCase() !== m.personaName.trim().toLowerCase(),
+                );
 
                 return (
                   <tr key={`${m.id}-${idx}`}>
@@ -230,7 +253,7 @@ export default function FinanceMovementModal({
                       <div style={{ fontWeight: 600, color: '#0f172a', fontSize: '0.88rem' }}>
                         {m.personaName || cleanOrigin}
                       </div>
-                      {m.personaName && (
+                      {showSubOrigin && (
                         <div style={{ fontSize: '0.76rem', color: '#64748b', marginTop: '2px' }}>{cleanOrigin}</div>
                       )}
                     </td>

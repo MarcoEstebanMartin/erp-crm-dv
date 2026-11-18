@@ -1,18 +1,20 @@
 import { formatResponsibleName } from '../../utils/formatters';
 
-/** Normaliza los nombres de medios de pago con capitalización uniforme para tablas y modales. */
-export const formatPaymentMethodLabel = (method?: string | null): string => {
-  switch (method) {
-    case 'CASH':
-      return 'Efectivo';
-    case 'CHECK':
-      return 'Cheque';
-    case 'BANK_TRANSFER':
-      return 'Transferencia';
-    default:
-      return 'Otro';
-  }
+export const isEcheqTx = (t: any): boolean =>
+  t?.paymentMethod === 'CHECK' && /\(echeq\)|e-?cheq/i.test(String(t?.description || ''));
+
+export const isBankReconcilableTx = (t: any): boolean =>
+  t?.type === 'INCOME' && (t?.paymentMethod === 'BANK_TRANSFER' || isEcheqTx(t));
+
+const PAYMENT_METHOD_LABELS: Record<string, string> = {
+  CASH: 'Efectivo',
+  CHECK: 'Cheque',
+  BANK_TRANSFER: 'Transferencia',
 };
+
+/** Normaliza los nombres de medios de pago con capitalización uniforme para tablas y modales. */
+export const formatPaymentMethodLabel = (method?: string | null): string =>
+  PAYMENT_METHOD_LABELS[method || ''] || 'Otro';
 
 /** Parsea montos de CSV en formato argentino ($18.224,50) o internacional (18224.50 / 18,224.50). */
 export const parseCsvAmount = (raw: string): number => {
@@ -161,6 +163,16 @@ export const computeFilteredMetricsAndLedger = (
     });
   });
 
+  const directChecksInPeriod = transactions.filter((t: any) => {
+    if (t.paymentMethod !== 'CHECK' || t.cashDrawerId !== null) return false;
+    const txDate = new Date(t.createdAt);
+    return txDate >= start && txDate <= end;
+  });
+  directChecksInPeriod.forEach((t: any) => {
+    if (t.type === 'INCOME') checkIncome += Number(t.amount || 0);
+    else if (t.type === 'OUTCOME') checkIncome -= Number(t.amount || 0);
+  });
+
   const expensesInPeriod = transactions.filter((t: any) => {
     if (t.type !== 'OUTCOME' || t.cashDrawerId !== null || t.bankAccountId !== null) return false;
     const txDate = new Date(t.createdAt);
@@ -170,6 +182,11 @@ export const computeFilteredMetricsAndLedger = (
 
   const transfersInPeriod = transactions.filter((t: any) => {
     if (t.paymentMethod !== 'BANK_TRANSFER' || t.type !== 'INCOME') return false;
+    const txDate = new Date(t.createdAt);
+    return txDate >= start && txDate <= end;
+  });
+  const reconcilableInPeriod = transactions.filter((t: any) => {
+    if (!isBankReconcilableTx(t)) return false;
     const txDate = new Date(t.createdAt);
     return txDate >= start && txDate <= end;
   });
@@ -203,28 +220,30 @@ export const computeFilteredMetricsAndLedger = (
     }
   });
 
+  directChecksInPeriod.forEach((t: any) => {
+    const isInc = t.type === 'INCOME';
+    detailedCheckItems.push({
+      id: `check-direct-${t.id}`, date: t.createdAt, type: isInc ? 'INGRESO' : 'EGRESO',
+      origin: t.persona?.name || (t.bankAccount ? `Banco: ${t.bankAccount.bankName || t.bankAccount.name || 'Cta Bancaria'}` : 'Mostrador'),
+      description: t.description || (isInc ? 'Ingreso por cheque' : 'Salida por cheque'),
+      paymentMethod: 'Cheque', reference: t.receiptNumber || undefined,
+      amount: Number(t.amount || 0), orderId: t.orderId || undefined, personaName: t.persona?.name || undefined,
+    });
+  });
+  detailedCheckItems.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
   const detailedTransferItems = transfersInPeriod.map((t: any) => ({
-    id: `transfer-${t.id}`,
-    date: t.createdAt,
-    type: 'INGRESO',
+    id: `transfer-${t.id}`, date: t.createdAt, type: 'INGRESO',
     origin: t.bankAccount ? `Banco: ${t.bankAccount.bankName || t.bankAccount.name || 'Cta Bancaria'}` : 'Transferencia Bancaria',
-    description: t.description || 'Ingreso por transferencia bancaria',
-    paymentMethod: 'Transferencia',
-    reference: t.receiptNumber || undefined,
-    amount: Number(t.amount || 0),
-    orderId: t.orderId || undefined,
-    personaName: t.persona?.name || undefined,
+    description: t.description || 'Ingreso por transferencia bancaria', paymentMethod: 'Transferencia',
+    reference: t.receiptNumber || undefined, amount: Number(t.amount || 0),
+    orderId: t.orderId || undefined, personaName: t.persona?.name || undefined,
   }));
 
   const detailedExpenseItems = expensesInPeriod.map((t: any) => ({
-    id: `expense-${t.id}`,
-    date: t.createdAt,
-    type: 'EGRESO',
-    origin: 'Gastos Generales (Tesorería)',
-    description: t.description || 'Gasto registrado',
-    paymentMethod: formatPaymentMethodLabel(t.paymentMethod),
-    reference: t.receiptNumber || undefined,
-    amount: Number(t.amount || 0),
+    id: `expense-${t.id}`, date: t.createdAt, type: 'EGRESO',
+    origin: 'Gastos Generales (Tesorería)', description: t.description || 'Gasto registrado',
+    paymentMethod: formatPaymentMethodLabel(t.paymentMethod), reference: t.receiptNumber || undefined, amount: Number(t.amount || 0),
   }));
 
   const detailedNetItems = [...detailedCashItems, ...detailedCheckItems, ...detailedTransferItems, ...detailedExpenseItems].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
@@ -238,24 +257,16 @@ export const computeFilteredMetricsAndLedger = (
     });
     const methods = Array.from(methodsSet);
     ledgerItems.push({
-      id: `drawer-${d.id}`,
-      date: d.closedAt,
-      type: 'INGRESO',
-      description: formatResponsibleName(d),
+      id: `drawer-${d.id}`, date: d.closedAt, type: 'INGRESO', description: formatResponsibleName(d),
       paymentMethod: methods.length === 1 ? methods[0] : methods.length > 1 ? 'Varios' : 'Efectivo',
-      amount: netAmount,
-      drawer: d,
+      amount: netAmount, drawer: d,
     });
   });
 
   expensesInPeriod.forEach((t: any) => {
     ledgerItems.push({
-      id: `tx-${t.id}`,
-      date: t.createdAt,
-      type: 'EGRESO',
-      description: `Gasto: ${t.description}`,
-      paymentMethod: formatPaymentMethodLabel(t.paymentMethod),
-      amount: Number(t.amount),
+      id: `tx-${t.id}`, date: t.createdAt, type: 'EGRESO',
+      description: `Gasto: ${t.description}`, paymentMethod: formatPaymentMethodLabel(t.paymentMethod), amount: Number(t.amount),
     });
   });
   ledgerItems.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
@@ -263,7 +274,7 @@ export const computeFilteredMetricsAndLedger = (
   return {
     cashIncome, checkIncome, totalExpenses, totalTransfers,
     netIncome: cashIncome + checkIncome + totalTransfers - totalExpenses,
-    ledger: ledgerItems, transfers: transfersInPeriod,
+    ledger: ledgerItems, transfers: reconcilableInPeriod,
     detailedCashItems, detailedCheckItems, detailedTransferItems, detailedExpenseItems, detailedNetItems,
   };
 };

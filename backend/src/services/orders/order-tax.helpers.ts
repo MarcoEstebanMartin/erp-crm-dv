@@ -151,6 +151,7 @@ export async function settleOrderFinancials(
 
   if (paymentMethod) {
     const isBankTransfer = paymentMethod === 'BANK_TRANSFER';
+    const isEcheq = paymentMethod === 'CHECK' && /\(echeq\)|e-?cheq/i.test(description || '');
 
     const createdTx = await tx.transaction.create({
       data: {
@@ -164,7 +165,7 @@ export async function settleOrderFinancials(
         description,
         cashDrawerId,
         bankAccountId,
-        verified: !isBankTransfer,
+        verified: !(isBankTransfer || isEcheq),
       },
     });
 

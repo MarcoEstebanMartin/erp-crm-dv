@@ -128,7 +128,7 @@ export default function FinanzasDashboard() {
         <h2 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '10px', color: '#e5e7eb' }}>
           <DollarSign size={24} color="#10b981" aria-hidden="true" /> Caja Grande
         </h2>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '36px', flexWrap: 'wrap' }}>
           <div style={{ textAlign: 'right' }}>
             <div style={{ fontSize: '0.82rem', opacity: 0.8 }}>Saldo</div>
             <div className="tabular-nums" style={{ fontSize: '2.1rem', fontWeight: 700, color: '#10b981', fontFamily: 'monospace' }}>${Math.round(cajaGrandeBalance).toLocaleString('es-AR')}</div>
@@ -139,7 +139,7 @@ export default function FinanzasDashboard() {
                 <Lock size={15} aria-hidden="true" /> Cerrar Caja
               </button>
             )}
-            <button type="button" className="btn btn-primary" style={{ backgroundColor: 'var(--color-corp-red)', borderColor: 'var(--color-corp-red)', display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '10px 14px' }} onClick={() => { setModalError(null); setExpenseModalOpen(true); }}>
+            <button type="button" className="btn btn-primary" style={{ backgroundColor: 'var(--color-danger)', borderColor: 'var(--color-danger)', display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '10px 14px' }} onClick={() => { setModalError(null); setExpenseModalOpen(true); }}>
               <PlusCircle size={16} aria-hidden="true" /> Gasto
             </button>
           </div>

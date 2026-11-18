@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseCsvAmount, parseMercadoPagoCsv } from '../finanzasHelpers';
+import { computeFilteredMetricsAndLedger, parseCsvAmount, parseMercadoPagoCsv } from '../finanzasHelpers';
 
 describe('parseCsvAmount', () => {
   it('parses international decimal dot amounts without multiplying by 100', () => {
@@ -43,6 +43,66 @@ describe('parseMercadoPagoCsv', () => {
       amount: 25500,
       payerName: 'CLIENTE DOS',
       payerCuit: '27112223339',
+    });
+  });
+});
+
+describe('computeFilteredMetricsAndLedger', () => {
+  it('incluye echeqs y cheques de facturas directas (cashDrawerId null) en Ingresos en Cheques sin duplicar los de cajas cerradas', () => {
+    const drawers = [
+      {
+        id: 10,
+        status: 'CLOSED',
+        closedAt: '2026-11-18T14:00:00.000Z',
+        branch: 'Central',
+        transactions: [
+          {
+            id: 1,
+            type: 'INCOME',
+            paymentMethod: 'CHECK',
+            amount: 50000,
+            cashDrawerId: 10,
+            createdAt: '2026-11-18T12:00:00.000Z',
+            description: 'Cheque en caja cerrada',
+          },
+        ],
+      },
+    ];
+
+    const transactions = [
+      {
+        id: 1,
+        type: 'INCOME',
+        paymentMethod: 'CHECK',
+        amount: 50000,
+        cashDrawerId: 10,
+        createdAt: '2026-11-18T12:00:00.000Z',
+        description: 'Cheque en caja cerrada',
+      },
+      {
+        id: 2,
+        type: 'INCOME',
+        paymentMethod: 'CHECK',
+        amount: 120000,
+        cashDrawerId: null,
+        orderId: 99,
+        persona: { name: 'Cliente Echeq' },
+        createdAt: '2026-11-18T16:00:00.000Z',
+        description: 'Cheque N° 998877 (Emisor: Titular (Echeq)) recibido en mostrador por factura #99',
+      },
+    ];
+
+    const res = computeFilteredMetricsAndLedger(drawers, transactions, '2026-11-18', '2026-11-18');
+    expect(res.checkIncome).toBe(170000);
+    expect(res.totalTransfers).toBe(0);
+    expect(res.transfers).toHaveLength(1);
+    expect(res.transfers[0].id).toBe(2);
+    expect(res.detailedCheckItems).toHaveLength(2);
+    expect(res.detailedCheckItems[0]).toMatchObject({
+      id: 'check-direct-2',
+      amount: 120000,
+      origin: 'Cliente Echeq',
+      paymentMethod: 'Cheque',
     });
   });
 });

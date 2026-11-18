@@ -2,7 +2,7 @@ import React, { useRef, useState, type KeyboardEvent } from 'react';
 import { CheckSquare, RefreshCw, Upload, Check, X, AlertCircle } from 'lucide-react';
 import { api } from '../../utils/api';
 import { useConfirm } from '../../context/ConfirmContext';
-import { parseMercadoPagoCsv, resolveMpRowMatchStatus } from './finanzasHelpers';
+import { isBankReconcilableTx, isEcheqTx, parseMercadoPagoCsv, resolveMpRowMatchStatus } from './finanzasHelpers';
 import { NativeModalDialog } from '../modals/NativeModalDialog';
 
 interface FinanzasBankReconciliationModalProps {
@@ -54,15 +54,16 @@ export const FinanzasBankReconciliationModal: React.FC<FinanzasBankReconciliatio
     setReconLoading(true); setReconError(null);
     try {
       const [allTxs, allClients] = await Promise.all([
-        api.getTransactions({ paymentMethod: 'BANK_TRANSFER' }),
+        api.getTransactions(),
         api.getPersonas('client'),
       ]);
       const startDT = new Date(`${startDt}T${startTm}:00`), endDT = new Date(`${endDt}T${endTm}:59`);
       setReconTransactions(
         (allTxs || []).filter((t: any) => {
+          if (!isBankReconcilableTx(t)) return false;
           const sameOrUnassignedBank = !t.bankAccountId || Number(t.bankAccountId) === Number(bankId);
           const d = new Date(t.createdAt);
-          return sameOrUnassignedBank && t.type === 'INCOME' && d >= startDT && d <= endDT;
+          return sameOrUnassignedBank && d >= startDT && d <= endDT;
         }),
       );
       setSelectedTxs(new Set());
@@ -291,7 +292,7 @@ export const FinanzasBankReconciliationModal: React.FC<FinanzasBankReconciliatio
                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center', minWidth: 0 }}>
                   {!t.verified && <input type="checkbox" aria-label={`Seleccionar transferencia ${t.persona?.name || t.id}`} checked={selectedTxs.has(t.id)} onChange={() => setSelectedTxs((prev) => { const n = new Set(prev); if (n.has(t.id)) n.delete(t.id); else n.add(t.id); return n; })} />}
                   <div style={{ minWidth: 0 }}>
-                    <div style={{ fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.persona?.name || 'Mostrador'}</div>
+                    <div style={{ fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.persona?.name || 'Mostrador'}{isEcheqTx(t) ? ' · eCheq' : ''}</div>
                     <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>{new Date(t.createdAt).toLocaleDateString('es-AR')}{t.verified && t.verifiedBy?.username ? ` · Concilió: ${t.verifiedBy.username}` : ''}</div>
                   </div>
                 </div>
