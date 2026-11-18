@@ -37,6 +37,7 @@ export const AdminSummaryCardModal: React.FC<AdminSummaryCardModalProps> = ({
   const isOpen = Boolean(summaryCardModal?.open);
   const cardKey = summaryCardModal?.cardKey || '';
   const isFulfillmentStage = cardKey === 'RECIBIDO' || cardKey === 'EN_ARMADO';
+  const showStatusColumn = cardKey === 'EN_ARMADO';
 
   useEffect(() => {
     if (!isOpen || !cardKey) return;
@@ -124,7 +125,7 @@ export const AdminSummaryCardModal: React.FC<AdminSummaryCardModalProps> = ({
                   <th scope="col">Fecha</th>
                   <th scope="col">Vendedor</th>
                   <th scope="col" className="text-right">Total</th>
-                  <th scope="col">Estado</th>
+                  {showStatusColumn && <th scope="col">Estado</th>}
                   <th scope="col">Ruta</th>
                   <th scope="col"><span className="visually-hidden">Acciones</span></th>
                 </tr>
@@ -167,22 +168,24 @@ export const AdminSummaryCardModal: React.FC<AdminSummaryCardModalProps> = ({
                       <td className="text-right" style={{ fontWeight: 700, fontSize: '0.88rem', fontVariantNumeric: 'tabular-nums' }}>
                         ${Math.round(Number(o.totalAmount)).toLocaleString('es-AR')}
                       </td>
-                      <td>
-                        <span
-                          className={`badge badge-${statusInfo.badgeClass}`}
-                          style={{
-                            backgroundColor: `${statusInfo.color}15`,
-                            color: statusInfo.color,
-                            border: `1px solid ${statusInfo.color}30`,
-                            fontSize: '0.72rem',
-                            padding: '3px 8px',
-                            fontWeight: 700,
-                            borderRadius: '12px',
-                          }}
-                        >
-                          {statusInfo.label}
-                        </span>
-                      </td>
+                      {showStatusColumn && (
+                        <td>
+                          <span
+                            className={`badge badge-${statusInfo.badgeClass}`}
+                            style={{
+                              backgroundColor: `${statusInfo.color}15`,
+                              color: statusInfo.color,
+                              border: `1px solid ${statusInfo.color}30`,
+                              fontSize: '0.72rem',
+                              padding: '3px 8px',
+                              fontWeight: 700,
+                              borderRadius: '12px',
+                            }}
+                          >
+                            {statusInfo.label}
+                          </span>
+                        </td>
+                      )}
                       <td>
                         {o.deliveryRoute ? (
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
