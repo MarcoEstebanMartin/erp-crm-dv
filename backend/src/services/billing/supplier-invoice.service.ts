@@ -4,6 +4,10 @@ import AppError from '../../utils/AppError';
 import { logAudit } from '../../utils/audit';
 import { roundToTwoDecimals } from '../../core/money';
 import { calculateSupplierInvoiceBreakdown } from '../../engines/credit-purchase.engine';
+import {
+  createLinkedPurchaseReceptionInTx,
+  revertSupplierInvoiceStockInTx,
+} from '../purchases/purchase-stock-tx.helper';
 import { recordSupplierInvoicePerceptions } from './supplier-tax.helper';
 import { recordLedgerMovement } from '../ledger/account-ledger.service';
 import { parseArgentinaTimestampRange, parseCalendarDateRange } from './billing-date-range.helper';
@@ -79,7 +83,18 @@ export const supplierInvoiceService = {
 
     return prisma.supplierInvoice.findMany({
       where: whereClause,
-      include: { persona: true },
+      include: {
+        persona: true,
+        purchaseOrder: {
+          include: {
+            items: {
+              include: {
+                product: { select: { id: true, name: true, sku: true } },
+              },
+            },
+          },
+        },
+      },
       orderBy: { issueDate: 'desc' },
     });
   },
@@ -101,9 +116,33 @@ export const supplierInvoiceService = {
     impuestosInternos?: number | null;
     totalAmount: number;
     billingType?: string;
+    receptionMode?: 'NONE' | 'IN_TRANSIT' | 'IMMEDIATE';
+    items?: Array<{
+      productId: number;
+      quantity: number;
+      costPrice: number;
+      lotNumber?: string | null;
+      expirationDate?: string | null;
+    }>;
   }) {
     const providerId = Number(params.personaId);
     const cleanInvoiceNumber = params.invoiceNumber.trim();
+    const resolvedBilling =
+      params.billingType === BillingType.INTERNAL ? BillingType.INTERNAL : BillingType.OFFICIAL;
+
+    const provider = await prisma.persona.findUnique({ where: { id: providerId } });
+    if (!provider) {
+      throw new AppError('Proveedor no encontrado.', 404);
+    }
+    if (resolvedBilling === BillingType.OFFICIAL) {
+      const cuitDigits = String(provider.cuit || '').replace(/\D/g, '');
+      if (cuitDigits.length !== 11) {
+        throw new AppError(
+          'Para registrar una factura en Sucursal A (Oficial), el proveedor debe tener un CUIT válido de 11 dígitos.',
+          400,
+        );
+      }
+    }
 
     const existingInvoice = await prisma.supplierInvoice.findFirst({
       where: { personaId: providerId, invoiceNumber: cleanInvoiceNumber },
@@ -120,6 +159,16 @@ export const supplierInvoiceService = {
       ? new Date(params.dueDate)
       : new Date(issueDt.getTime() + 30 * 24 * 3600 * 1000);
 
+    const stockItems = (params.items || []).filter(
+      (i) => Number(i.productId) > 0 && Math.trunc(Number(i.quantity || 0)) > 0,
+    );
+    const effectiveMode =
+      params.receptionMode === 'IN_TRANSIT' && stockItems.length > 0
+        ? 'IN_TRANSIT'
+        : params.receptionMode === 'IMMEDIATE' && stockItems.length > 0
+          ? 'IMMEDIATE'
+          : 'NONE';
+
     const breakdown = calculateSupplierInvoiceBreakdown({
       netAmount: params.netAmount,
       taxAmount: params.taxAmount,
@@ -131,8 +180,18 @@ export const supplierInvoiceService = {
       impuestosInternos: params.impuestosInternos ?? 0,
       totalAmount: params.totalAmount,
     });
+    if (breakdown.totalAmount <= 0) {
+      throw new AppError('El total de la factura debe ser mayor a cero.', 400);
+    }
 
     const invoice = await prisma.$transaction(async (tx) => {
+      const receptionStatus =
+        effectiveMode === 'IN_TRANSIT'
+          ? 'IN_TRANSIT'
+          : effectiveMode === 'IMMEDIATE'
+            ? 'RECEIVED'
+            : 'NONE';
+
       const inv = await tx.supplierInvoice.create({
         data: {
           personaId: providerId,
@@ -148,12 +207,30 @@ export const supplierInvoiceService = {
           percepcionIvaAmount: breakdown.totalPercIva,
           impuestosInternos: breakdown.impuestosInternos,
           totalAmount: breakdown.totalAmount,
-          billingType:
-            params.billingType === BillingType.INTERNAL
-              ? BillingType.INTERNAL
-              : BillingType.OFFICIAL,
+          billingType: resolvedBilling,
+          receptionStatus,
+          receivedAt: effectiveMode === 'IMMEDIATE' ? new Date() : null,
         },
       });
+
+      let poId: number | null = null;
+      if (effectiveMode === 'IN_TRANSIT' || effectiveMode === 'IMMEDIATE') {
+        const po = await createLinkedPurchaseReceptionInTx(tx, {
+          userId: params.userId ?? 1,
+          personaId: providerId,
+          supplierInvoiceId: inv.id,
+          mode: effectiveMode,
+          reason: `Ingreso por Factura ${cleanInvoiceNumber}`,
+          items: stockItems.map((i) => ({
+            productId: Number(i.productId),
+            quantity: Math.trunc(Number(i.quantity)),
+            unitCost: Number(i.costPrice || 0),
+            lotNumber: i.lotNumber,
+            expirationDate: i.expirationDate,
+          })),
+        });
+        poId = po.id;
+      }
 
       await recordLedgerMovement(tx, {
         personaId: providerId,
@@ -162,6 +239,7 @@ export const supplierInvoiceService = {
         billingType: inv.billingType,
         amount: breakdown.totalAmount,
         supplierInvoiceId: inv.id,
+        purchaseOrderId: poId,
         userId: params.userId ?? null,
         occurredAt: issueDt,
         reference: `Factura Nro ${cleanInvoiceNumber}`,
@@ -231,30 +309,11 @@ export const supplierInvoiceService = {
         description: `Reversión por eliminación de Factura ${invoice.invoiceNumber}`,
       });
 
-      const refId = `INV-${invoice.id}`;
-      const stockMovements = await tx.stockMovement.findMany({ where: { referenceId: refId } });
-
-      for (const movement of stockMovements) {
-        await tx.product.update({
-          where: { id: movement.productId },
-          data: { stock: { decrement: movement.quantity } },
-        });
-
-        const targetLot = movement.productLotId
-          ? await tx.productLot.findUnique({ where: { id: movement.productLotId } })
-          : await tx.productLot.findFirst({
-              where: { productId: movement.productId, lotNumber: invoice.invoiceNumber },
-            });
-
-        if (targetLot) {
-          await tx.productLot.update({
-            where: { id: targetLot.id },
-            data: { stock: { decrement: movement.quantity } },
-          });
-        }
-
-        await tx.stockMovement.delete({ where: { id: movement.id } });
-      }
+      await revertSupplierInvoiceStockInTx(tx, {
+        invoiceId: invoice.id,
+        invoiceNumber: invoice.invoiceNumber,
+        userId: params.userId,
+      });
 
       await tx.taxWithholding.deleteMany({
         where: {

@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import { AuthenticatedRequest } from '../types';
 import AppError from '../utils/AppError';
+import { appCache } from '../utils/cache';
 import { supplierInvoiceService } from '../services/billing/supplier-invoice.service';
 import { taxWithholdingService } from '../services/billing/tax-withholding.service';
 
@@ -57,7 +58,10 @@ export async function createSupplierInvoice(
       impuestosInternos: req.body.impuestosInternos,
       totalAmount: Number(req.body.totalAmount),
       billingType: req.body.billingType,
+      receptionMode: req.body.receptionMode,
+      items: req.body.items,
     });
+    appCache.invalidateByPrefix('personas_');
     res.status(201).json({ status: 'success', data: { invoice } });
   } catch (error) {
     handleBillingError(res, error, 'Error al guardar el comprobante de compra.');
@@ -73,6 +77,7 @@ export async function deleteSupplierInvoice(
       userId: req.user?.id,
       invoiceId: Number(req.params.id),
     });
+    appCache.invalidateByPrefix('personas_');
     res.status(200).json({
       status: 'success',
       message:

@@ -9,14 +9,25 @@ interface PurchaseScannerModalProps {
   isOpen: boolean;
   onClose: () => void;
   file: File | null;
+  providers?: any[];
   onSuccess: () => void;
 }
 
-export const PurchaseScannerModal: FC<PurchaseScannerModalProps> = ({ isOpen, onClose, file, onSuccess }) => {
+const CONFIRM_LABELS: Record<string, string> = {
+  IN_TRANSIT: 'Guardar en tránsito',
+  IMMEDIATE: 'Confirmar e ingresar stock',
+  NONE: 'Confirmar factura',
+};
+
+export const PurchaseScannerModal: FC<PurchaseScannerModalProps> = ({ isOpen, onClose, file, providers = [], onSuccess }) => {
   const s = usePurchaseScanner({ isOpen, file, onSuccess, onClose });
   const items = s.extractedData?.items || [];
-  const allItemsValid = items.length > 0 && items.every((i: any) => i.isNonStock || !!i.matchedProductId);
-  const allNonStock = items.length > 0 && items.every((i: any) => i.isNonStock);
+  const allItemsValid =
+    s.receptionMode === 'NONE'
+      ? true
+      : items.length > 0 &&
+        items.some((i: any) => !i.isNonStock && !!i.matchedProductId) &&
+        items.every((i: any) => i.isNonStock || !!i.matchedProductId);
   const isDisabled = s.loading || !s.extractedData || !allItemsValid;
 
   return (
@@ -68,7 +79,13 @@ export const PurchaseScannerModal: FC<PurchaseScannerModalProps> = ({ isOpen, on
                     <span>{s.errorMsg}</span>
                   </div>
                 )}
-                <PurchaseScannerGeneralSection extractedData={s.extractedData} setExtractedData={s.setExtractedData} />
+                <PurchaseScannerGeneralSection
+                  extractedData={s.extractedData}
+                  providers={providers}
+                  receptionMode={s.receptionMode}
+                  setReceptionMode={s.setReceptionMode}
+                  onDocMetaChange={s.updateDocMeta}
+                />
                 <PurchaseScannerItemsSection
                   items={items}
                   activeSearchIndex={s.activeSearchIndex}
@@ -90,7 +107,7 @@ export const PurchaseScannerModal: FC<PurchaseScannerModalProps> = ({ isOpen, on
           <button type="button" className="btn btn-secondary" onClick={onClose} disabled={s.loading}>Cancelar</button>
           <button type="button" className="btn btn-primary" onClick={s.handleConfirm} disabled={isDisabled} style={{ backgroundColor: 'var(--color-corp-red)', borderColor: 'var(--color-corp-red)', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
             {s.loading ? <Loader size={16} aria-hidden="true" /> : <Check size={16} aria-hidden="true" />}
-            <span>{allNonStock ? 'Confirmar Factura' : 'Confirmar e Ingresar Stock'}</span>
+            <span>{CONFIRM_LABELS[s.receptionMode] || 'Confirmar factura'}</span>
           </button>
         </div>
       </div>

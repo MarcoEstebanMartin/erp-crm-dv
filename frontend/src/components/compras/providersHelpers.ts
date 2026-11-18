@@ -4,6 +4,11 @@ import {
   tokenizePhoneticClientQuery,
   type TokenizedClientQuery,
 } from '../admin/clientsHelpers';
+import {
+  extractCleanLotNumber,
+  formatCleanExpirationDate,
+  isSentinelExpiration,
+} from '../stock/lotLabel';
 
 export { getWhatsAppLink, tokenizePhoneticClientQuery };
 
@@ -127,21 +132,31 @@ export function computeProviderPayableSummary(provider: any) {
 
 function isProviderEntry(item: any): boolean {
   if (item?.sourceType && PROVIDER_SOURCE_TYPES.has(String(item.sourceType))) return true;
+  if (item?.sourceType === 'TAX_WITHHOLDING' && item?.type === 'DEBIT') return true;
   const idStr = String(item?.id || '');
   const refStr = String(item?.reference || '');
   const descStr = String(item?.description || '');
   return (
     idStr.startsWith('supplier-invoice-') ||
     refStr.startsWith('Pago #') ||
+    refStr.startsWith('Retención Practicada') ||
     descStr.startsWith('Compra -') ||
     descStr.startsWith('Reversión por eliminación de Factura')
   );
 }
 
-function resolveKindLabel(item: any): 'Factura' | 'Pago' | 'Anulación' | 'Ajuste' {
+function resolveKindLabel(
+  item: any,
+): 'Factura' | 'Pago' | 'Retención' | 'Anulación' | 'Ajuste' {
   if (item?.sourceType === 'SUPPLIER_INVOICE') return 'Factura';
   if (item?.sourceType === 'SUPPLIER_INVOICE_REVERSAL') return 'Anulación';
   if (item?.sourceType === 'SUPPLIER_PAYMENT') return 'Pago';
+  if (
+    (item?.sourceType === 'TAX_WITHHOLDING' && item?.type === 'DEBIT') ||
+    String(item?.reference || '').startsWith('Retención Practicada')
+  ) {
+    return 'Retención';
+  }
   if (item?.sourceType === 'RECONCILIATION_ADJUSTMENT' || item?.sourceType === 'LEGACY_ADJUSTMENT') {
     return 'Ajuste';
   }
@@ -153,7 +168,7 @@ export interface ProviderStatementViewRow {
   date: string;
   reference: string;
   description: string;
-  kindLabel: 'Factura' | 'Pago' | 'Anulación' | 'Ajuste';
+  kindLabel: 'Factura' | 'Pago' | 'Retención' | 'Anulación' | 'Ajuste';
   compraCents: number;
   pagoCents: number;
   compraAmount: number;
@@ -205,11 +220,38 @@ export function buildEmptyProviderDraft() {
   };
 }
 
+export function addDaysIso(baseIso: string, days: number): string {
+  const safeDays = Number.isFinite(Number(days)) ? Math.trunc(Number(days)) : 30;
+  const match = String(baseIso || '').trim().match(/^(\d{4})-(\d{2})-(\d{2})/);
+  const utcMs = match
+    ? Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]) + safeDays)
+    : Date.now() + safeDays * 86400000;
+  return new Date(utcMs).toISOString().split('T')[0];
+}
+
+export function formatPurchaseOrderLotsSummary(order: any): string[] {
+  const movements = Array.isArray(order?.stockMovements) ? order.stockMovements : [];
+  if (movements.length === 0) return ['Sin lote'];
+  const labels = new Set<string>();
+  for (const mv of movements) {
+    const lot = mv?.productLot;
+    const cleanLot = extractCleanLotNumber(lot?.lotNumber);
+    const hasRealLot = cleanLot.toUpperCase() !== 'S/L';
+    const hasRealExp = !isSentinelExpiration(lot?.expirationDate);
+    if (!hasRealLot && !hasRealExp) continue;
+    const lotPart = hasRealLot ? `Lote ${cleanLot}` : 'Sin lote';
+    const expPart = hasRealExp ? `Vto ${formatCleanExpirationDate(lot?.expirationDate)}` : '';
+    labels.add([lotPart, expPart].filter(Boolean).join(' · '));
+  }
+  return labels.size > 0 ? [...labels] : ['Sin lote'];
+}
+
 export function computeSupplierInvoicesMetrics(invoices: any[]) {
-  let totalDeuda = 0, vencidasCount = 0, totalVencidas = 0, proximasCount = 0, totalProximas = 0;
+  let totalDeuda = 0, vencidasCount = 0, totalVencidas = 0, proximasCount = 0, totalProximas = 0, enTransitoCount = 0;
   const today = new Date(); today.setHours(0, 0, 0, 0);
   const in7Days = new Date(); in7Days.setDate(today.getDate() + 7); in7Days.setHours(23, 59, 59, 999);
   for (const inv of invoices || []) {
+    if (inv.receptionStatus === 'IN_TRANSIT') enTransitoCount++;
     if (inv.status === 'PAID') continue;
     const pending = Math.max(0, (parseExactCents(inv.totalAmount) - parseExactCents(inv.paidAmount)) / 100);
     totalDeuda += pending;
@@ -219,5 +261,5 @@ export function computeSupplierInvoicesMetrics(invoices: any[]) {
       else if (due >= today && due <= in7Days) { proximasCount++; totalProximas += pending; }
     }
   }
-  return { totalDeuda, vencidasCount, totalVencidas, proximasCount, totalProximas };
+  return { totalDeuda, vencidasCount, totalVencidas, proximasCount, totalProximas, enTransitoCount };
 }

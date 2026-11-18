@@ -2,13 +2,15 @@ import { BillingType, LedgerEntryType, LedgerSourceType } from '@prisma/client';
 import prisma from '../../utils/prisma';
 import AppError from '../../utils/AppError';
 import { geminiService } from '../gemini.service';
-import { roundToTwoDecimals } from '../../core/money';
 import { calculateSupplierInvoiceBreakdown } from '../../engines/credit-purchase.engine';
 import { recordSupplierInvoicePerceptions } from '../billing/supplier-tax.helper';
 import { findMatchedProduct } from './purchase-matcher.helper';
+import { createLinkedPurchaseReceptionInTx } from './purchase-stock-tx.helper';
 import { recordLedgerMovement } from '../ledger/account-ledger.service';
 
 const COMPANY_CUIT_CLEAN = '20163165059';
+
+export type PurchaseReceptionMode = 'IN_TRANSIT' | 'IMMEDIATE' | 'NONE';
 
 export const purchaseDocumentService = {
   async uploadAndExtractDocument(params: { mimeType: string; fileBuffer: Buffer }) {
@@ -88,6 +90,8 @@ export const purchaseDocumentService = {
     documentType: string;
     documentNumber?: string | null;
     issueDate?: string | null;
+    dueDate?: string | null;
+    receptionMode?: PurchaseReceptionMode;
     items: any[];
     netAmount?: number | null;
     taxAmount?: number | null;
@@ -103,6 +107,39 @@ export const purchaseDocumentService = {
     billingType?: string;
   }) {
     const providerIdNum = Number(params.providerId);
+    const provider = await prisma.persona.findUnique({ where: { id: providerIdNum } });
+    if (!provider) {
+      throw new AppError('Proveedor no encontrado.', 404);
+    }
+
+    const resolvedBilling =
+      params.billingType === BillingType.OFFICIAL ? BillingType.OFFICIAL : BillingType.INTERNAL;
+    const isInvoiceDoc = String(params.documentType || '')
+      .trim()
+      .toUpperCase()
+      .startsWith('FACTURA');
+
+    if (isInvoiceDoc && resolvedBilling === BillingType.OFFICIAL) {
+      const cuitDigits = String(provider.cuit || '').replace(/\D/g, '');
+      if (cuitDigits.length !== 11) {
+        throw new AppError(
+          'Para registrar una factura en Sucursal A (Oficial), el proveedor debe tener un CUIT válido de 11 dígitos. Completalo en Padrón o usá Sucursal X.',
+          400,
+        );
+      }
+    }
+
+    const stockItems = (params.items || []).filter(
+      (i: any) => !i.isNonStock && Number(i.productId) > 0 && Math.trunc(Number(i.quantity || 0)) > 0,
+    );
+
+    const effectiveMode: PurchaseReceptionMode =
+      params.receptionMode === 'NONE' || stockItems.length === 0
+        ? 'NONE'
+        : params.receptionMode === 'IN_TRANSIT'
+          ? 'IN_TRANSIT'
+          : 'IMMEDIATE';
+
     const breakdown = calculateSupplierInvoiceBreakdown({
       netAmount: params.netAmount ?? 0,
       taxAmount: params.taxAmount ?? 0,
@@ -117,11 +154,32 @@ export const purchaseDocumentService = {
     });
 
     return prisma.$transaction(async (tx) => {
-      let createdId = 0;
+      let invoiceId: number | null = null;
+      let poId: number | null = null;
       let refId = '';
       const resolvedNumber = params.documentNumber?.trim() || `AI-${Date.now()}`;
+      const invoiceDate = new Date(params.issueDate || Date.now());
 
-      if (params.documentType.startsWith('FACTURA')) {
+      for (const item of stockItems) {
+        if (!item.code) continue;
+        await tx.providerProductMapping.upsert({
+          where: {
+            providerId_providerCode: {
+              providerId: providerIdNum,
+              providerCode: String(item.code),
+            },
+          },
+          update: { productId: Number(item.productId), providerName: item.description || '' },
+          create: {
+            providerId: providerIdNum,
+            providerCode: String(item.code),
+            productId: Number(item.productId),
+            providerName: item.description || '',
+          },
+        });
+      }
+
+      if (isInvoiceDoc) {
         if (params.documentNumber?.trim()) {
           const existingInvoice = await tx.supplierInvoice.findFirst({
             where: { personaId: providerIdNum, invoiceNumber: params.documentNumber.trim() },
@@ -134,9 +192,16 @@ export const purchaseDocumentService = {
           }
         }
 
-        const invoiceDate = new Date(params.issueDate || Date.now());
-        const provider = await tx.persona.findUnique({ where: { id: providerIdNum } });
-        const termDays = provider?.paymentTermDays ?? 30;
+        const termDays = provider.paymentTermDays ?? 30;
+        const resolvedDueDate = params.dueDate
+          ? new Date(params.dueDate)
+          : new Date(invoiceDate.getTime() + termDays * 24 * 3600 * 1000);
+        const receptionStatus =
+          effectiveMode === 'NONE'
+            ? 'NONE'
+            : effectiveMode === 'IN_TRANSIT'
+              ? 'IN_TRANSIT'
+              : 'RECEIVED';
 
         const invoice = await tx.supplierInvoice.create({
           data: {
@@ -144,7 +209,7 @@ export const purchaseDocumentService = {
             invoiceNumber: resolvedNumber,
             invoiceType: params.documentType,
             issueDate: invoiceDate,
-            dueDate: new Date(invoiceDate.getTime() + termDays * 24 * 3600 * 1000),
+            dueDate: resolvedDueDate,
             netAmount: breakdown.netAmount,
             taxAmount: breakdown.taxAmount,
             percepcionAmount: breakdown.finalIIBB,
@@ -153,13 +218,12 @@ export const purchaseDocumentService = {
             totalAmount: breakdown.totalAmount,
             status: 'PENDING',
             paidAmount: 0,
-            billingType:
-              params.billingType === BillingType.OFFICIAL
-                ? BillingType.OFFICIAL
-                : BillingType.INTERNAL,
+            billingType: resolvedBilling,
+            receptionStatus,
+            receivedAt: effectiveMode === 'IMMEDIATE' ? new Date() : null,
           },
         });
-        createdId = invoice.id;
+        invoiceId = invoice.id;
         refId = `INV-${invoice.id}`;
 
         await recordSupplierInvoicePerceptions(tx, {
@@ -173,117 +237,52 @@ export const purchaseDocumentService = {
           iva5329: breakdown.iva5329,
           fallbackJurisdiction: params.percepcionJurisdiction,
         });
-      } else {
-        const po = await tx.purchaseOrder.create({
-          data: {
-            personaId: providerIdNum,
-            status: 'RECEIVED',
-            totalAmount: breakdown.totalAmount,
-            items: {
-              create: params.items
-                .filter((i: any) => i.productId)
-                .map((item: any) => ({
-                  productId: Number(item.productId),
-                  quantity: Number(item.quantity || 0),
-                  costPrice: roundToTwoDecimals(item.unitPrice || 0).toNumber(),
-                  subtotal: roundToTwoDecimals(item.subtotal || 0).toNumber(),
-                })),
-            },
-          },
-        });
-        createdId = po.id;
-        refId = `PO-${po.id}`;
       }
 
-      const defaultLotNumber = params.documentNumber?.trim() || `LOT-${Date.now()}`;
-      const defaultExpiration = new Date(Date.now() + 365 * 24 * 3600 * 1000);
-
-      for (const item of params.items) {
-        if (!item.productId || item.isNonStock) continue;
-        const productIdNum = Number(item.productId);
-        const qty = Number(item.quantity);
-        const unitCost =
-          Number(item.unitPrice) > 0 ? roundToTwoDecimals(item.unitPrice).toNumber() : undefined;
-
-        await tx.product.update({
-          where: { id: productIdNum },
-          data: { stock: { increment: qty }, costPrice: unitCost },
+      if (effectiveMode === 'IN_TRANSIT' || effectiveMode === 'IMMEDIATE' || !isInvoiceDoc) {
+        const po = await createLinkedPurchaseReceptionInTx(tx, {
+          userId: params.userId,
+          personaId: providerIdNum,
+          supplierInvoiceId: invoiceId,
+          mode: effectiveMode === 'IN_TRANSIT' ? 'IN_TRANSIT' : 'IMMEDIATE',
+          reason: `Ingreso por ${params.documentType}`,
+          fallbackTotal: isInvoiceDoc ? undefined : breakdown.totalAmount,
+          items: stockItems.map((item: any) => ({
+            productId: Number(item.productId),
+            quantity: Math.trunc(Number(item.quantity)),
+            unitCost: Number(item.unitPrice || 0),
+            lotNumber: item.lotNumber,
+            expirationDate: item.expirationDate,
+          })),
         });
+        poId = po.id;
+        if (!refId) refId = `PO-${po.id}`;
+      }
 
-        let lot = await tx.productLot.findUnique({
-          where: {
-            productId_lotNumber_location: {
-              productId: productIdNum,
-              lotNumber: defaultLotNumber,
-              location: 'S/U',
-            },
-          },
-        });
-        lot = lot
-          ? await tx.productLot.update({
-              where: { id: lot.id },
-              data: { stock: { increment: qty } },
-            })
-          : await tx.productLot.create({
-              data: {
-                productId: productIdNum,
-                lotNumber: defaultLotNumber,
-                expirationDate: defaultExpiration,
-                stock: qty,
-                location: 'S/U',
-              },
-            });
-
-        if (item.code) {
-          await tx.providerProductMapping.upsert({
-            where: {
-              providerId_providerCode: {
-                providerId: providerIdNum,
-                providerCode: String(item.code),
-              },
-            },
-            update: { productId: productIdNum, providerName: item.description || '' },
-            create: {
-              providerId: providerIdNum,
-              providerCode: String(item.code),
-              productId: productIdNum,
-              providerName: item.description || '',
-            },
-          });
-        }
-
-        await tx.stockMovement.create({
-          data: {
-            productId: productIdNum,
-            quantity: qty,
-            type: 'IN',
-            referenceId: refId,
-            userId: params.userId,
-            reason: `Ingreso por ${params.documentType}`,
-            productLotId: lot.id,
-          },
+      const docNumLabel = params.documentNumber?.trim() || `#${invoiceId || poId}`;
+      if (isInvoiceDoc || effectiveMode === 'IMMEDIATE') {
+        await recordLedgerMovement(tx, {
+          personaId: providerIdNum,
+          entryType: LedgerEntryType.CREDIT,
+          sourceType: LedgerSourceType.SUPPLIER_INVOICE,
+          billingType: resolvedBilling,
+          amount: breakdown.totalAmount,
+          supplierInvoiceId: invoiceId,
+          purchaseOrderId: poId,
+          userId: params.userId,
+          occurredAt: isInvoiceDoc ? invoiceDate : new Date(),
+          reference: `${isInvoiceDoc ? 'Factura Nro' : 'Remito Nro'} ${docNumLabel}`,
+          description: `Compra - ${isInvoiceDoc ? 'Factura' : 'Remito'} ${docNumLabel}`,
         });
       }
 
-      const resolvedBilling =
-        params.billingType === BillingType.OFFICIAL ? BillingType.OFFICIAL : BillingType.INTERNAL;
-      const isInvoiceDoc = params.documentType === 'FACTURA';
-      const docNumLabel = params.documentNumber?.trim() || `#${createdId}`;
-
-      await recordLedgerMovement(tx, {
-        personaId: providerIdNum,
-        entryType: LedgerEntryType.CREDIT,
-        sourceType: LedgerSourceType.SUPPLIER_INVOICE,
-        billingType: resolvedBilling,
-        amount: breakdown.totalAmount,
-        supplierInvoiceId: isInvoiceDoc ? createdId : null,
-        purchaseOrderId: !isInvoiceDoc ? createdId : null,
-        userId: params.userId,
-        reference: `${isInvoiceDoc ? 'Factura Nro' : 'Remito Nro'} ${docNumLabel}`,
-        description: `Compra - ${isInvoiceDoc ? 'Factura' : 'Remito'} ${docNumLabel}`,
-      });
-
-      return { createdId, refId };
+      return {
+        createdId: invoiceId || poId || 0,
+        supplierInvoiceId: invoiceId,
+        purchaseOrderId: poId,
+        refId,
+        receptionMode: effectiveMode,
+      };
     });
   },
 };

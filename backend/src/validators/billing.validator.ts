@@ -15,8 +15,20 @@ export const createSupplierInvoiceSchema = z.object({
     percepcionIva: z.coerce.number().min(0).optional().nullable(),
     percepcionIva5329: z.coerce.number().min(0).optional().nullable(),
     impuestosInternos: z.coerce.number().min(0).optional().nullable(),
-    totalAmount: z.coerce.number().min(0),
+    totalAmount: z.coerce.number().positive('El total debe ser mayor a cero.'),
     billingType: z.enum(['OFFICIAL', 'INTERNAL']).optional(),
+    receptionMode: z.enum(['NONE', 'IN_TRANSIT', 'IMMEDIATE']).optional(),
+    items: z
+      .array(
+        z.object({
+          productId: z.coerce.number().int().positive(),
+          quantity: z.coerce.number().int().positive(),
+          costPrice: z.coerce.number().min(0),
+          lotNumber: z.string().max(80).optional().nullable(),
+          expirationDate: z.string().optional().nullable(),
+        }),
+      )
+      .optional(),
   }),
 });
 

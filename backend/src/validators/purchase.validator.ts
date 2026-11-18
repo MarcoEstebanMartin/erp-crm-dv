@@ -21,7 +21,9 @@ export const receivePurchaseOrderSchema = z.object({
   }),
   body: z.object({
     invoiceNumber: z.string().max(100).optional().nullable(),
+    invoiceType: z.string().max(40).optional(),
     lotAssignments: z.record(z.string(), z.any()).optional().nullable(),
+    receivedQuantities: z.record(z.string(), z.coerce.number().int().min(0)).optional().nullable(),
     billingType: z.enum(['OFFICIAL', 'INTERNAL']).optional(),
   }),
 });
@@ -32,6 +34,8 @@ export const confirmDocumentSchema = z.object({
     documentType: z.string().trim().min(1, 'El tipo de documento es obligatorio.'),
     documentNumber: z.string().max(100).optional().nullable(),
     issueDate: z.string().optional().nullable(),
+    dueDate: z.string().optional().nullable(),
+    receptionMode: z.enum(['IN_TRANSIT', 'IMMEDIATE', 'NONE']).optional(),
     items: z.array(z.any()).min(1, 'El documento debe incluir al menos un ítem.'),
     netAmount: z.coerce.number().min(0).optional().nullable(),
     taxAmount: z.coerce.number().min(0).optional().nullable(),

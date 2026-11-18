@@ -1407,11 +1407,19 @@ export const api = {
     return res.order;
   },
 
-  receivePurchaseOrder: async (id: number, payload: { invoiceNumber?: string, lotAssignments?: any }) => {    
-
+  receivePurchaseOrder: async (
+    id: number,
+    payload: {
+      invoiceNumber?: string;
+      billingType?: string;
+      invoiceType?: string;
+      lotAssignments?: any;
+      receivedQuantities?: Record<number, number>;
+    },
+  ) => {
     const res = await request(`/purchases/${id}/receive`, {
       method: 'POST',
-      body: JSON.stringify(payload)
+      body: JSON.stringify(payload),
     });
     return res.order;
   },

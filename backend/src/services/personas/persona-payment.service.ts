@@ -68,15 +68,14 @@ export class PersonaPaymentSubService {
       description: p.description || description,
     }));
 
-    const totalPaymentDec = paymentItems.reduce(
-      (acc: any, p: any) => acc.plus(toDecimal(p.amount)),
-      toDecimal(0),
-    );
+    const totalPaymentDec = paymentItems.reduce((acc: any, p: any) => acc.plus(toDecimal(p.amount)), toDecimal(0));
     const totalPaymentAmount = roundToTwoDecimals(totalPaymentDec).toNumber();
+    if (totalPaymentAmount <= 0) throw new Error('El monto total a pagar debe ser mayor a 0.');
 
-    if (totalPaymentAmount <= 0) {
-      throw new Error('El monto total a pagar debe ser mayor a 0.');
-    }
+    const retencionesSumDec = Array.isArray(data.retenciones)
+      ? data.retenciones.reduce((acc: any, r: any) => acc.plus(roundToTwoDecimals(r?.amount || 0)), toDecimal(0))
+      : toDecimal(0);
+    const effectiveAppliedDec = roundToTwoDecimals(toDecimal(totalPaymentAmount).plus(retencionesSumDec));
 
     // Control de duplicados (Idempotencia) para cobro individual de clientes (15s)
     if (resolvedType === TransactionType.INCOME && paymentItems.length === 1) {
@@ -107,11 +106,25 @@ export class PersonaPaymentSubService {
         if (supplierInvoice.personaId !== persona.id) {
           throw new Error('El comprobante no pertenece a este proveedor.');
         }
+        if (supplierInvoice.status === 'PAID') {
+          throw new Error('Esta factura ya se encuentra saldada.');
+        }
+
+        const pendingInvoiceDec = roundToTwoDecimals(
+          toDecimal(supplierInvoice.totalAmount).minus(supplierInvoice.paidAmount || 0),
+        );
+        if (effectiveAppliedDec.gt(pendingInvoiceDec.plus('0.01'))) {
+          throw new Error(
+            `El importe a imputar ($${effectiveAppliedDec.toFixed(2)}) supera el saldo pendiente de la factura ($${pendingInvoiceDec.toFixed(2)}).`,
+          );
+        }
 
         const newPaidDec = roundToTwoDecimals(
-          toDecimal(supplierInvoice.paidAmount || 0).plus(totalPaymentAmount),
+          toDecimal(supplierInvoice.paidAmount || 0).plus(effectiveAppliedDec),
         );
-        const newStatus = newPaidDec.greaterThanOrEqualTo(toDecimal(supplierInvoice.totalAmount))
+        const newStatus = newPaidDec.greaterThanOrEqualTo(
+          toDecimal(supplierInvoice.totalAmount).minus('0.01'),
+        )
           ? 'PAID'
           : 'PARTIALLY_PAID';
 
@@ -235,12 +248,13 @@ export class PersonaPaymentSubService {
       }
 
       if (data.retenciones && Array.isArray(data.retenciones)) {
+        const isSupplierOutcome = resolvedType === TransactionType.OUTCOME;
         for (const ret of data.retenciones) {
           const retAmt = roundToTwoDecimals(ret.amount || 0);
           if (retAmt.lte(0)) continue;
           const createdRet = await tx.taxWithholding.create({
             data: {
-              type: 'RETENCION_SUFRIDA',
+              type: isSupplierOutcome ? 'RETENCION_PRACTICADA' : 'RETENCION_SUFRIDA',
               taxType: ret.taxType,
               personaId: persona.id,
               number: ret.number,
@@ -252,15 +266,15 @@ export class PersonaPaymentSubService {
 
           const retLedgerRes = await recordLedgerMovement(tx, {
             personaId: persona.id,
-            entryType: LedgerEntryType.CREDIT,
+            entryType: isSupplierOutcome ? LedgerEntryType.DEBIT : LedgerEntryType.CREDIT,
             sourceType: LedgerSourceType.TAX_WITHHOLDING,
             billingType: BillingType.OFFICIAL,
             amount: retAmt.toNumber(),
             taxWithholdingId: createdRet.id,
             userId,
             occurredAt: createdRet.date,
-            reference: `Retención Sufrida Cert. Nro ${ret.number}`,
-            description: `Retención Recibida - ${ret.taxType === 'IIBB' ? 'IIBB' : 'Ganancias'}`,
+            reference: `${isSupplierOutcome ? 'Retención Practicada' : 'Retención Sufrida'} Cert. Nro ${ret.number}`,
+            description: `${isSupplierOutcome ? 'Retención Practicada' : 'Retención Recibida'} - ${ret.taxType === 'IIBB' ? 'IIBB' : 'Ganancias'}`,
             metadata: {
               taxType: ret.taxType,
               number: ret.number,

@@ -519,16 +519,20 @@ model SupplierInvoice {
   impuestosInternos   Decimal       @default(0.00) @db.Decimal(12, 2) // Impuestos Internos
   totalAmount         Decimal       @db.Decimal(12, 2) // Total
   billingType         BillingType   @default(INTERNAL)
+  receptionStatus     String        @default("NONE") // "NONE" | "IN_TRANSIT" | "RECEIVED"
+  receivedAt          DateTime?
   createdAt           DateTime      @default(now())
   updatedAt           DateTime      @updatedAt
   transactions        Transaction[]
   accountLedgerEntries AccountLedger[]
+  purchaseOrder       PurchaseOrder?
 
   @@index([personaId])
   @@index([issueDate])
   @@index([status])
   @@index([dueDate])
   @@index([movementId])
+  @@index([receptionStatus])
 }
 
 model TaxWithholding {
@@ -604,13 +608,16 @@ model RouteGpsPing {
 }
 
 model PurchaseOrder {
-  id          Int      @id @default(autoincrement())
-  personaId   Int
-  persona     Persona  @relation(fields: [personaId], references: [id])
-  status      String   @default("PENDING") // "PENDING" | "RECEIVED" | "CANCELLED"
-  totalAmount Decimal  @db.Decimal(12, 2)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id                Int              @id @default(autoincrement())
+  personaId         Int
+  persona           Persona          @relation(fields: [personaId], references: [id])
+  supplierInvoiceId Int?             @unique
+  supplierInvoice   SupplierInvoice? @relation(fields: [supplierInvoiceId], references: [id], onDelete: SetNull)
+  status            String           @default("PENDING") // "PENDING" | "RECEIVED" | "CANCELLED"
+  totalAmount       Decimal          @db.Decimal(12, 2)
+  receivedAt        DateTime?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
 
   items PurchaseOrderItem[]
   stockMovements StockMovement[]

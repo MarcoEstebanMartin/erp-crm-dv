@@ -34,6 +34,7 @@ router.delete(
   '/purchases/:id',
   requireRole([Role.ADMIN, Role.FACTURACION]),
   validateRequest(supplierInvoiceIdParamSchema),
+  idempotencyGuard,
   deleteSupplierInvoice,
 );
 

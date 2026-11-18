@@ -2,9 +2,9 @@ import { BillingType, LedgerEntryType, LedgerSourceType } from '@prisma/client';
 import prisma from '../../utils/prisma';
 import AppError from '../../utils/AppError';
 import { logAudit } from '../../utils/audit';
-import { calculateAfipBreakdown, roundToTwoDecimals } from '../../core/money';
+import { roundToTwoDecimals, toDecimal } from '../../core/money';
 import { calculatePurchaseOrderTotals } from '../../engines/credit-purchase.engine';
-import { extractBaseLotNumber, normalizeWmsLocationCode } from '../../engines/stock.engine';
+import { applyPurchaseStockInTx } from './purchase-stock-tx.helper';
 import { recordLedgerMovement } from '../ledger/account-ledger.service';
 
 export const purchaseOrderService = {
@@ -25,7 +25,9 @@ export const purchaseOrderService = {
       where: whereClause,
       include: {
         persona: true,
+        supplierInvoice: true,
         items: { include: { product: true } },
+        stockMovements: { include: { productLot: true } },
       },
       orderBy: { createdAt: 'desc' },
     });
@@ -72,117 +74,140 @@ export const purchaseOrderService = {
     userId: number;
     orderId: number;
     invoiceNumber?: string | null;
+    invoiceType?: string;
     lotAssignments?: Record<string, any> | null;
+    receivedQuantities?: Record<string, number> | null;
     billingType?: string;
   }) {
     const result = await prisma.$transaction(async (tx) => {
       const order = await tx.purchaseOrder.findUnique({
         where: { id: params.orderId },
-        include: { items: true },
+        include: { items: true, supplierInvoice: true },
       });
 
       if (!order) throw new AppError('Orden de compra no encontrada.', 404);
       if (order.status !== 'PENDING') {
-        throw new AppError('Esta orden de compra ya fue procesada o cancelada.', 400);
+        throw new AppError('Esta recepción ya fue procesada o cancelada.', 400);
       }
 
-      const updatedOrder = await tx.purchaseOrder.update({
-        where: { id: order.id },
-        data: { status: 'RECEIVED' },
-      });
+      const now = new Date();
+      let effectiveOrderTotalDec = toDecimal(0);
+      const effectiveItems = [];
 
       for (const item of order.items) {
-        const qty = Number(item.quantity);
-        const cost = roundToTwoDecimals(item.costPrice.toString()).toNumber();
+        const overrideRaw =
+          params.receivedQuantities?.[item.productId] ??
+          params.receivedQuantities?.[String(item.productId)];
+        const qty =
+          overrideRaw !== undefined && overrideRaw !== null
+            ? Math.max(0, Math.trunc(Number(overrideRaw)))
+            : Number(item.quantity);
+        const costDec = roundToTwoDecimals(item.costPrice.toString());
+        const subDec = roundToTwoDecimals(costDec.times(qty));
+        effectiveOrderTotalDec = effectiveOrderTotalDec.plus(subDec);
 
-        const product = await tx.product.findUnique({ where: { id: item.productId } });
-        if (product) {
-          await tx.product.update({
-            where: { id: product.id },
-            data: { stock: { increment: qty }, costPrice: cost },
+        if (qty !== Number(item.quantity) && tx.purchaseOrderItem?.update) {
+          await tx.purchaseOrderItem.update({
+            where: { id: item.id },
+            data: { quantity: qty, subtotal: subDec.toNumber() },
           });
         }
 
-        const assignment = params.lotAssignments ? params.lotAssignments[item.productId] : null;
-        const lotNumber = extractBaseLotNumber(assignment?.lotNumber ? String(assignment.lotNumber) : 'S/L');
-        const expirationDate = assignment?.expirationDate
-          ? new Date(assignment.expirationDate)
-          : new Date('2036-12-31T00:00:00Z');
-        const location = normalizeWmsLocationCode(assignment?.location ? String(assignment.location) : 'S/U');
-
-        let lot = await tx.productLot.findUnique({
-          where: {
-            productId_lotNumber_location: { productId: item.productId, lotNumber, location },
-          },
-        });
-
-        if (lot) {
-          lot = await tx.productLot.update({
-            where: { id: lot.id },
-            data: { stock: { increment: qty } },
-          });
-        } else {
-          lot = await tx.productLot.create({
-            data: {
-              productId: item.productId,
-              lotNumber,
-              expirationDate,
-              stock: qty,
-              location,
-            },
-          });
-        }
-
-        await tx.stockMovement.create({
-          data: {
-            productId: item.productId,
-            quantity: qty,
-            type: 'IN',
-            purchaseOrderId: order.id,
-            referenceId: `PO-${order.id}`,
-            userId: params.userId,
-            reason: 'Recepción de Orden de Compra',
-            productLotId: lot.id,
-          },
+        effectiveItems.push({
+          productId: item.productId,
+          quantity: qty,
+          costPrice: costDec.toNumber(),
         });
       }
 
-      const breakdown = calculateAfipBreakdown(order.totalAmount.toString(), 21, 0);
-      const total = breakdown.totalAmount.toNumber();
-      const nroInvoice = params.invoiceNumber || `COMP-${order.id.toString().padStart(5, '0')}`;
+      const finalOrderTotal =
+        order.items.length > 0
+          ? roundToTwoDecimals(effectiveOrderTotalDec).toNumber()
+          : roundToTwoDecimals(order.totalAmount.toString()).toNumber();
 
-      const resolvedBillingType =
-        params.billingType === BillingType.INTERNAL ? BillingType.INTERNAL : BillingType.OFFICIAL;
-
-      const createdInv = await tx.supplierInvoice.create({
-        data: {
-          personaId: order.personaId,
-          invoiceNumber: nroInvoice,
-          invoiceType: 'FACTURA_A',
-          issueDate: new Date(),
-          dueDate: new Date(Date.now() + 30 * 24 * 3600 * 1000),
-          status: 'PENDING',
-          paidAmount: 0,
-          netAmount: breakdown.netAmount.toNumber(),
-          taxAmount: breakdown.ivaAmount.toNumber(),
-          percepcionAmount: 0,
-          totalAmount: total,
-          billingType: resolvedBillingType,
-        },
+      let updatedOrder = await tx.purchaseOrder.update({
+        where: { id: order.id },
+        data: { status: 'RECEIVED', receivedAt: now, totalAmount: finalOrderTotal },
       });
 
-      await recordLedgerMovement(tx, {
-        personaId: order.personaId,
-        entryType: LedgerEntryType.CREDIT,
-        sourceType: LedgerSourceType.SUPPLIER_INVOICE,
-        billingType: resolvedBillingType,
-        amount: total,
-        supplierInvoiceId: createdInv.id,
-        purchaseOrderId: order.id,
+      await applyPurchaseStockInTx(tx, {
         userId: params.userId,
-        reference: `Factura Nro ${nroInvoice}`,
-        description: `Compra - Recepción OC #${order.id} (${nroInvoice})`,
+        purchaseOrderId: order.id,
+        supplierInvoiceId: order.supplierInvoiceId,
+        reason: order.supplierInvoiceId
+          ? `Recepción Factura ${order.supplierInvoice?.invoiceNumber || `#${order.supplierInvoiceId}`}`
+          : 'Recepción de Mercadería',
+        items: effectiveItems.map((item) => {
+          const assignment = params.lotAssignments
+            ? params.lotAssignments[item.productId] || params.lotAssignments[String(item.productId)]
+            : null;
+          return {
+            productId: item.productId,
+            quantity: item.quantity,
+            unitCost: item.costPrice,
+            lotNumber: assignment?.lotNumber,
+            expirationDate: assignment?.expirationDate,
+            location: assignment?.location,
+          };
+        }),
       });
+
+      if (order.supplierInvoiceId) {
+        await tx.supplierInvoice.update({
+          where: { id: order.supplierInvoiceId },
+          data: { receptionStatus: 'RECEIVED', receivedAt: now },
+        });
+      } else {
+        const resolvedBillingType =
+          params.billingType === BillingType.OFFICIAL ? BillingType.OFFICIAL : BillingType.INTERNAL;
+        const resolvedInvoiceType =
+          params.invoiceType?.trim() ||
+          (resolvedBillingType === BillingType.OFFICIAL ? 'FACTURA_A' : 'REMITO_X');
+        const netDec = roundToTwoDecimals(finalOrderTotal);
+        const applyIva =
+          resolvedBillingType === BillingType.OFFICIAL && resolvedInvoiceType === 'FACTURA_A';
+        const taxDec = applyIva ? roundToTwoDecimals(netDec.times('0.21')) : toDecimal(0);
+        const totalDec = roundToTwoDecimals(netDec.plus(taxDec));
+        const nroInvoice =
+          params.invoiceNumber?.trim() || `COMP-${order.id.toString().padStart(5, '0')}`;
+
+        const createdInv = await tx.supplierInvoice.create({
+          data: {
+            personaId: order.personaId,
+            invoiceNumber: nroInvoice,
+            invoiceType: resolvedInvoiceType,
+            issueDate: now,
+            dueDate: new Date(now.getTime() + 30 * 24 * 3600 * 1000),
+            status: 'PENDING',
+            paidAmount: 0,
+            netAmount: netDec.toNumber(),
+            taxAmount: taxDec.toNumber(),
+            percepcionAmount: 0,
+            totalAmount: totalDec.toNumber(),
+            billingType: resolvedBillingType,
+            receptionStatus: 'RECEIVED',
+            receivedAt: now,
+          },
+        });
+
+        updatedOrder = await tx.purchaseOrder.update({
+          where: { id: order.id },
+          data: { supplierInvoiceId: createdInv.id },
+        });
+
+        await recordLedgerMovement(tx, {
+          personaId: order.personaId,
+          entryType: LedgerEntryType.CREDIT,
+          sourceType: LedgerSourceType.SUPPLIER_INVOICE,
+          billingType: resolvedBillingType,
+          amount: totalDec.toNumber(),
+          supplierInvoiceId: createdInv.id,
+          purchaseOrderId: order.id,
+          userId: params.userId,
+          reference: `Factura Nro ${nroInvoice}`,
+          description: `Compra - Recepción #${order.id} (${nroInvoice})`,
+        });
+      }
 
       return updatedOrder;
     });

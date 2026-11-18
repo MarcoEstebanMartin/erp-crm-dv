@@ -1,9 +1,14 @@
 import type { FC } from 'react';
 import { Check, AlertCircle } from 'lucide-react';
+import { formatCuitDisplay } from '../providersHelpers';
+import type { ScannerReceptionMode } from './usePurchaseScanner';
 
-interface SectionProps {
+interface GeneralSectionProps {
   extractedData: any;
-  setExtractedData: (next: any) => void;
+  providers: any[];
+  receptionMode: ScannerReceptionMode;
+  setReceptionMode: (mode: ScannerReceptionMode) => void;
+  onDocMetaChange: (patch: Record<string, any>) => void;
 }
 
 const sectionBoxStyle = {
@@ -24,7 +29,19 @@ const fieldLabelStyle = {
   marginBottom: '4px',
 };
 
-export const PurchaseScannerGeneralSection: FC<SectionProps> = ({ extractedData, setExtractedData }) => {
+const RECEPTION_MODES: Array<{ value: ScannerReceptionMode; label: string }> = [
+  { value: 'IN_TRANSIT', label: 'En tránsito (pendiente de ingreso)' },
+  { value: 'IMMEDIATE', label: 'Ingresar stock ahora' },
+  { value: 'NONE', label: 'Sin mercadería (gasto / servicio)' },
+];
+
+export const PurchaseScannerGeneralSection: FC<GeneralSectionProps> = ({
+  extractedData,
+  providers,
+  receptionMode,
+  setReceptionMode,
+  onDocMetaChange,
+}) => {
   const isOfficial = extractedData.billingType === 'OFFICIAL';
 
   return (
@@ -51,30 +68,100 @@ export const PurchaseScannerGeneralSection: FC<SectionProps> = ({ extractedData,
       <div style={sectionBoxStyle}>
         <h3 style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>Datos Generales</h3>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-          <div>
-            <label htmlFor="scanner-supplier-name" style={fieldLabelStyle}>Proveedor</label>
-            <input id="scanner-supplier-name" type="text" className="input" value={extractedData.supplierName || ''} onChange={(e) => setExtractedData({ ...extractedData, supplierName: e.target.value })} />
+          <div style={{ gridColumn: 'span 2' }}>
+            <label htmlFor="scanner-provider-id" style={fieldLabelStyle}>Proveedor</label>
+            <select
+              id="scanner-provider-id"
+              className="select"
+              value={extractedData.providerId || ''}
+              onChange={(e) => onDocMetaChange({ providerId: e.target.value })}
+            >
+              <option value="">Seleccionar proveedor...</option>
+              {providers.map((pr) => {
+                const formattedCuit = formatCuitDisplay(pr.cuit);
+                return (
+                  <option key={pr.id} value={pr.id}>
+                    {formattedCuit ? `${pr.name} (${formattedCuit})` : pr.name}
+                  </option>
+                );
+              })}
+            </select>
+            {!extractedData.providerId && extractedData.supplierName && (
+              <div style={{ fontSize: '0.72rem', color: 'var(--color-warning)', marginTop: '4px' }}>
+                Detectado en PDF: {extractedData.supplierName}
+              </div>
+            )}
           </div>
-          <div>
-            <label htmlFor="scanner-provider-id" style={fieldLabelStyle}>ID Proveedor</label>
-            <input id="scanner-provider-id" type="number" className="input tabular-nums" value={extractedData.providerId || ''} onChange={(e) => setExtractedData({ ...extractedData, providerId: e.target.value })} />
-          </div>
+
           <div>
             <label htmlFor="scanner-doc-type" style={fieldLabelStyle}>Tipo Comprobante</label>
-            <input id="scanner-doc-type" type="text" className="input" value={extractedData.documentType || ''} onChange={(e) => setExtractedData({ ...extractedData, documentType: e.target.value })} />
+            <select
+              id="scanner-doc-type"
+              className="select"
+              value={extractedData.documentType || 'FACTURA_A'}
+              onChange={(e) => onDocMetaChange({ documentType: e.target.value })}
+            >
+              <option value="FACTURA_A">Factura A</option>
+              <option value="FACTURA_B">Factura B</option>
+              <option value="FACTURA_C">Factura C</option>
+              <option value="REMITO">Remito</option>
+            </select>
           </div>
           <div>
             <label htmlFor="scanner-doc-num" style={fieldLabelStyle}>Número Comprobante</label>
-            <input id="scanner-doc-num" type="text" className="input tabular-nums" value={extractedData.documentNumber || ''} onChange={(e) => setExtractedData({ ...extractedData, documentNumber: e.target.value })} autoCorrect="off" autoCapitalize="none" spellCheck={false} />
+            <input
+              id="scanner-doc-num"
+              type="text"
+              className="input tabular-nums"
+              value={extractedData.documentNumber || ''}
+              onChange={(e) => onDocMetaChange({ documentNumber: e.target.value })}
+              autoCorrect="off" autoCapitalize="none" spellCheck={false}
+            />
           </div>
-          <div style={{ gridColumn: 'span 2' }}>
+
+          <div>
+            <label htmlFor="scanner-issue-date" style={fieldLabelStyle}>Fecha de Emisión</label>
+            <input
+              id="scanner-issue-date"
+              type="date"
+              className="input tabular-nums"
+              value={extractedData.issueDate || ''}
+              onChange={(e) => onDocMetaChange({ issueDate: e.target.value })}
+            />
+          </div>
+          <div>
             <label htmlFor="scanner-billing-type" style={fieldLabelStyle}>Sucursal</label>
-            <select id="scanner-billing-type" className="select" value={extractedData.billingType || 'OFFICIAL'} onChange={(e) => setExtractedData({ ...extractedData, billingType: e.target.value })}>
+            <select
+              id="scanner-billing-type"
+              className="select"
+              value={extractedData.billingType || 'OFFICIAL'}
+              onChange={(e) => onDocMetaChange({ billingType: e.target.value })}
+            >
               <option value="OFFICIAL">Sucursal A</option>
               <option value="INTERNAL">Sucursal X</option>
             </select>
           </div>
         </div>
+
+        <fieldset style={{ border: '1px solid var(--border-color)', borderRadius: '8px', padding: '10px 12px', margin: '4px 0 0' }}>
+          <legend style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', padding: '0 4px' }}>
+            Ingreso de mercadería
+          </legend>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            {RECEPTION_MODES.map((opt) => (
+              <label key={opt.value} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem', cursor: 'pointer', color: 'var(--text-primary)' }}>
+                <input
+                  type="radio"
+                  name="scanner-reception-mode"
+                  value={opt.value}
+                  checked={receptionMode === opt.value}
+                  onChange={() => setReceptionMode(opt.value)}
+                />
+                <span>{opt.label}</span>
+              </label>
+            ))}
+          </div>
+        </fieldset>
       </div>
     </>
   );
@@ -90,9 +177,11 @@ const TAX_FIELDS: Array<{ id: string; key: string; label: string }> = [
   { id: 'scanner-imp-internos', key: 'impuestosInternos', label: 'Impuestos Internos' },
 ];
 
-export const PurchaseScannerTotalsSection: FC<SectionProps & { updateExtractedField: (field: string, rawVal: any) => void }> = ({
-  extractedData, setExtractedData, updateExtractedField,
-}) => (
+export const PurchaseScannerTotalsSection: FC<{
+  extractedData: any;
+  setExtractedData: (next: any) => void;
+  updateExtractedField: (field: string, rawVal: any) => void;
+}> = ({ extractedData, setExtractedData, updateExtractedField }) => (
   <div style={sectionBoxStyle}>
     <h3 style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>Totales</h3>
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>

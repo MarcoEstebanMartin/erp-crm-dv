@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import { AuthenticatedRequest } from '../types';
 import AppError from '../utils/AppError';
+import { appCache } from '../utils/cache';
 import { purchaseOrderService } from '../services/purchases/purchase-order.service';
 import { purchaseDocumentService } from '../services/purchases/purchase-document.service';
 
@@ -47,9 +48,12 @@ export async function receivePurchaseOrder(req: AuthenticatedRequest, res: Respo
       userId: req.user.id,
       orderId: Number(req.params.id),
       invoiceNumber: req.body.invoiceNumber,
+      invoiceType: req.body.invoiceType,
       lotAssignments: req.body.lotAssignments,
+      receivedQuantities: req.body.receivedQuantities,
       billingType: req.body.billingType,
     });
+    appCache.invalidateByPrefix('personas_');
     res.status(200).json({ status: 'success', data: { order } });
   } catch (error) {
     handlePurchaseError(res, error, 'Error al procesar la recepción de la orden de compra.');
@@ -84,6 +88,8 @@ export async function confirmDocument(req: AuthenticatedRequest, res: Response):
       documentType: req.body.documentType,
       documentNumber: req.body.documentNumber,
       issueDate: req.body.issueDate,
+      dueDate: req.body.dueDate,
+      receptionMode: req.body.receptionMode,
       items: req.body.items,
       netAmount: req.body.netAmount,
       taxAmount: req.body.taxAmount,
@@ -98,6 +104,7 @@ export async function confirmDocument(req: AuthenticatedRequest, res: Response):
       totalAmount: req.body.totalAmount,
       billingType: req.body.billingType,
     });
+    appCache.invalidateByPrefix('personas_');
     res.status(200).json({ status: 'success', data: result });
   } catch (error) {
     handlePurchaseError(res, error, 'Error al confirmar e ingresar el documento.');
