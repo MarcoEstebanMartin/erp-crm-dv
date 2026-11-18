@@ -13,12 +13,14 @@ import {
 import { AuditModuleKey, AuditStatusKey } from '../validators/admin.validator';
 
 export async function getFinancialReports(req: AuthenticatedRequest, res: Response): Promise<void> {
-  const { year, month } = req.query;
+  const { year, month, startDate, endDate } = req.query;
   try {
-    const report = await adminService.getFinancialReports(
-      year ? Number(year) : undefined,
-      month ? Number(month) : undefined,
-    );
+    const report = await adminService.getFinancialReports({
+      year: year ? Number(year) : undefined,
+      month: month ? Number(month) : undefined,
+      startDate: typeof startDate === 'string' && startDate.trim() ? startDate.trim() : undefined,
+      endDate: typeof endDate === 'string' && endDate.trim() ? endDate.trim() : undefined,
+    });
     res.status(200).json({ status: 'success', data: { report } });
   } catch (error: any) {
     console.error('Error al procesar reporte financiero:', error);
@@ -27,12 +29,14 @@ export async function getFinancialReports(req: AuthenticatedRequest, res: Respon
 }
 
 export async function getSalesChannelStats(req: AuthenticatedRequest, res: Response): Promise<void> {
-  const { year, month } = req.query;
+  const { year, month, startDate, endDate } = req.query;
   try {
-    const report = await adminService.getSalesChannelStats(
-      year ? Number(year) : undefined,
-      month ? Number(month) : undefined,
-    );
+    const report = await adminService.getSalesChannelStats({
+      year: year ? Number(year) : undefined,
+      month: month ? Number(month) : undefined,
+      startDate: typeof startDate === 'string' && startDate.trim() ? startDate.trim() : undefined,
+      endDate: typeof endDate === 'string' && endDate.trim() ? endDate.trim() : undefined,
+    });
     res.status(200).json({ status: 'success', data: report });
   } catch (error: any) {
     console.error('Error al procesar estadísticas de canales de venta:', error);

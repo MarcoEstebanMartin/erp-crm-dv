@@ -1,85 +1,123 @@
+import { parseArgentinaTimestampRange } from '../billing/billing-date-range.helper';
 import {
-  roundToIntegerPeso,
-  roundToThreeDecimalsWeight,
-  toDecimal,
-} from '../../core/money';
+  MAIN_CITIES,
+  normalizeCity,
+  resolveItemHistoricalMetrics,
+  type ReportLineItemInput,
+} from '../../engines/reports-core.engine';
 
-export const MAIN_CITIES = [
-  'GENERAL VILLEGAS',
-  'EMILIO V. BUNGE',
-  'BANDERALO',
-  'INTENDENTE ALVEAR',
-  'PIEDRITAS',
-  'CEBALLOS',
-  'RUFINO',
-  'BUCHARDO',
-  'CHARLONE',
-  'LARROUDE',
-  'SAUCE',
-  'SANSINENA',
-  'TRES ALGARROBOS',
-  'AMEGHINO',
-  'BLAQUIER',
-  'AMERICA',
-  'FORTIN',
-  'CARLOS TEJEDOR',
-];
+export { MAIN_CITIES, normalizeCity };
 
-export function normalizeCity(city: string | null | undefined): string {
-  if (!city) return 'Sin Localidad';
-  const upper = city.toUpperCase().trim();
-
-  for (const mainCity of MAIN_CITIES) {
-    if (upper.includes(mainCity)) {
-      return mainCity;
-    }
-  }
-
-  if (upper.includes('BUNGE')) return 'EMILIO V. BUNGE';
-  if (upper.includes('ALVEAR')) return 'INTENDENTE ALVEAR';
-  if (upper.includes('VILLEGAS')) return 'GENERAL VILLEGAS';
-  if (upper.includes('LARROUDE')) return 'LARROUDE';
-  if (upper.includes('TEJEDOR')) return 'CARLOS TEJEDOR';
-
-  if (upper.startsWith('(') || /\d/.test(upper)) {
-    return 'Sin Localidad';
-  }
-
-  return upper;
+export function resolveOrderItemHistoricalCost(item: ReportLineItemInput): {
+  qtyOrWeight: number;
+  itemRevenue: number;
+  itemCost: number;
+  unitCostUsed: number;
+} {
+  const res = resolveItemHistoricalMetrics(item);
+  return {
+    qtyOrWeight: res.qtyOrWeight,
+    itemRevenue: res.itemRevenue,
+    itemCost: res.itemCost,
+    unitCostUsed: res.unitCostUsed,
+  };
 }
 
-/**
- * Calcula la cantidad facturable real de un renglón (kilos si es pesable y fue pesado, o unidades)
- * y el Costo de Mercadería Vendida (CMV) histórico exacto usando unitCostSnapshot (Spec 01 / Ley 2.2).
- */
-export function resolveOrderItemHistoricalCost(item: {
-  quantity: number;
-  weight?: any;
-  unitPrice?: any;
-  subtotal?: any;
-  unitCostSnapshot?: any;
-  product?: { isPesable?: boolean; costPrice?: any } | null;
-}): { qtyOrWeight: number; itemRevenue: number; itemCost: number; unitCostUsed: number } {
-  const isWeighable = Boolean(item.product?.isPesable);
-  const qtyDec =
-    isWeighable && item.weight && Number(item.weight) > 0
-      ? roundToThreeDecimalsWeight(item.weight)
-      : toDecimal(item.quantity);
+const AR_DATE_FORMATTER = new Intl.DateTimeFormat('en-CA', {
+  timeZone: 'America/Argentina/Buenos_Aires',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+});
 
-  const snapshotCost = Number(item.unitCostSnapshot || 0);
-  const currentCost = Number(item.product?.costPrice || 0);
-  const unitCostUsed = snapshotCost > 0 ? snapshotCost : currentCost;
-
-  const itemRevenueDec =
-    item.subtotal !== undefined && item.subtotal !== null
-      ? roundToIntegerPeso(item.subtotal)
-      : roundToIntegerPeso(toDecimal(item.unitPrice || 0).times(qtyDec));
-
-  const itemCost = roundToIntegerPeso(toDecimal(unitCostUsed).times(qtyDec)).toNumber();
+export function getArgentinaTodayParts(now: Date = new Date()): {
+  year: number;
+  month: number;
+  day: number;
+  isoDate: string;
+} {
+  const isoDate = AR_DATE_FORMATTER.format(now);
+  const [yStr, mStr, dStr] = isoDate.split('-');
   return {
-    qtyOrWeight: qtyDec.toNumber(),
-    itemRevenue: itemRevenueDec.toNumber(),
-    itemCost,
-    unitCostUsed,
+    year: Number(yStr),
+    month: Number(mStr),
+    day: Number(dStr),
+    isoDate,
   };
+}
+
+const YYYY_MM_DD_REGEX = /^\d{4}-\d{2}-\d{2}$/;
+
+export function resolveReportDateRange(params: {
+  startDate?: string;
+  endDate?: string;
+  year?: number;
+  month?: number;
+  defaultCurrentMonth?: boolean;
+}): {
+  start?: Date;
+  end?: Date;
+  range?: { gte?: Date; lte?: Date };
+  startDateIso?: string;
+  endDateIso?: string;
+} {
+  const startRaw = typeof params.startDate === 'string' ? params.startDate.trim() : '';
+  const endRaw = typeof params.endDate === 'string' ? params.endDate.trim() : '';
+
+  if (startRaw || endRaw) {
+    const range = parseArgentinaTimestampRange(startRaw || undefined, endRaw || undefined);
+    if (!range) return {};
+    const startDateIso = YYYY_MM_DD_REGEX.test(startRaw)
+      ? startRaw
+      : range.gte
+        ? getArgentinaTodayParts(range.gte).isoDate
+        : undefined;
+    const endDateIso = YYYY_MM_DD_REGEX.test(endRaw)
+      ? endRaw
+      : range.lte
+        ? getArgentinaTodayParts(range.lte).isoDate
+        : undefined;
+    return {
+      start: range.gte,
+      end: range.lte,
+      range,
+      startDateIso,
+      endDateIso,
+    };
+  }
+
+  const y = Number(params.year);
+  const m = Number(params.month);
+  if (Number.isInteger(y) && y >= 2000 && Number.isInteger(m) && m >= 1 && m <= 12) {
+    const lastDay = new Date(Date.UTC(y, m, 0)).getUTCDate();
+    const mm = String(m).padStart(2, '0');
+    const dd = String(lastDay).padStart(2, '0');
+    const startDateIso = `${y}-${mm}-01`;
+    const endDateIso = `${y}-${mm}-${dd}`;
+    const range = parseArgentinaTimestampRange(startDateIso, endDateIso);
+    return { start: range?.gte, end: range?.lte, range, startDateIso, endDateIso };
+  }
+
+  if (params.defaultCurrentMonth) {
+    const today = getArgentinaTodayParts();
+    const lastDay = new Date(Date.UTC(today.year, today.month, 0)).getUTCDate();
+    const mm = String(today.month).padStart(2, '0');
+    const dd = String(lastDay).padStart(2, '0');
+    const startDateIso = `${today.year}-${mm}-01`;
+    const endDateIso = `${today.year}-${mm}-${dd}`;
+    const range = parseArgentinaTimestampRange(startDateIso, endDateIso);
+    return { start: range?.gte, end: range?.lte, range, startDateIso, endDateIso };
+  }
+
+  return {};
+}
+
+export function getArgentinaWeekMondayIso(dateValue: Date | string): string {
+  const dateObj = typeof dateValue === 'string' ? new Date(dateValue) : dateValue;
+  const { year, month, day } = getArgentinaTodayParts(dateObj);
+  const utcDate = new Date(Date.UTC(year, month - 1, day));
+  const dow = utcDate.getUTCDay();
+  const diff = dow === 0 ? -6 : 1 - dow;
+  utcDate.setUTCDate(utcDate.getUTCDate() + diff);
+  return utcDate.toISOString().slice(0, 10);
 }

@@ -1,23 +1,29 @@
 import prisma from '../../utils/prisma';
-import { BillingType, TransactionType, OrderStatus } from '@prisma/client';
-import { normalizeCity, resolveOrderItemHistoricalCost } from './admin-report.helpers';
+import { BillingType, CreditNoteStatus, OrderStatus, TransactionType } from '@prisma/client';
+import { Decimal } from 'decimal.js';
+import { roundToIntegerPeso, roundToThreeDecimalsWeight, toDecimal } from '../../core/money';
+import {
+  computeMarginPercent,
+  computeOrderRealBultos,
+  findFallbackCostSnapshot,
+  normalizeCity,
+  resolveItemHistoricalMetrics,
+} from '../../engines/reports-core.engine';
+import { resolveReportDateRange } from './admin-report.helpers';
 
 export class AdminSellerMeetingSubService {
   /**
-   * Obtener datos para el Reporte de Reunión por Vendedor usando unitCostSnapshot (CMV histórico real).
+   * Ficha de Reunión por Vendedor: Decimal.js, rango AR (-03:00),
+   * cobranzas reales de su cartera y descuento de Notas de Crédito aprobadas.
    */
   async getSellerMeetingPdfReportData(sellerId: number, startDateStr?: string, endDateStr?: string) {
-    let start: Date;
-    let end: Date;
-
-    if (startDateStr && endDateStr) {
-      start = new Date(startDateStr);
-      end = new Date(endDateStr);
-    } else {
-      const now = new Date();
-      start = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
-      end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
-    }
+    const resolved = resolveReportDateRange({
+      startDate: startDateStr,
+      endDate: endDateStr,
+      defaultCurrentMonth: true,
+    });
+    const start = resolved.start!;
+    const end = resolved.end!;
 
     const sellerUser = await prisma.user.findUnique({ where: { id: sellerId } });
     const sellerPersona = await prisma.persona.findFirst({
@@ -30,76 +36,105 @@ export class AdminSellerMeetingSubService {
       ? sellerUser.username.toUpperCase()
       : sellerPersona?.name || `Vendedor #${sellerId}`;
 
-    const [assignedClients, sellerOrders] = await Promise.all([
-      prisma.persona.findMany({
-        where: { sellerId },
-        include: { saleRoute: true },
-      }),
+    const [assignedClients, sellerOrders, sellerCreditNotes] = await Promise.all([
+      prisma.persona.findMany({ where: { sellerId }, include: { saleRoute: true } }),
       prisma.order.findMany({
+        where: { sellerId, status: OrderStatus.DELIVERED, createdAt: { gte: start, lte: end } },
+        include: { persona: true, items: { include: { product: { include: { rubro: true } } } } },
+      }),
+      prisma.creditNote.findMany({
         where: {
-          sellerId,
-          status: OrderStatus.DELIVERED,
+          status: CreditNoteStatus.APPROVED,
           createdAt: { gte: start, lte: end },
+          OR: [{ order: { sellerId } }, { orderId: null, persona: { sellerId } }],
         },
         include: {
-          persona: true,
+          order: { select: { items: { select: { productId: true, unitCostSnapshot: true } } } },
           items: { include: { product: { include: { rubro: true } } } },
         },
       }),
     ]);
 
     const totalClientsCount = assignedClients.length;
-
-    let totalSales = 0;
-    let totalCost = 0;
+    let totalSalesDec = new Decimal(0);
+    let totalCostDec = new Decimal(0);
     let totalBultos = 0;
-    let officialSales = 0;
-    let internalSales = 0;
+    let officialSalesDec = new Decimal(0);
+    let internalSalesDec = new Decimal(0);
     const buyingClientsSet = new Set<number>();
-    const productSalesMap: Record<number, { name: string; category: string; quantity: number; amount: number }> = {};
+    const productSalesMap = new Map<
+      number,
+      { name: string; category: string; qtyDec: Decimal; amountDec: Decimal }
+    >();
 
-    sellerOrders.forEach((order) => {
-      const orderAmt = Number(order.totalAmount) || 0;
-      totalSales += orderAmt;
+    for (const order of sellerOrders) {
+      const orderAmtDec = roundToIntegerPeso(order.totalAmount || 0);
+      totalSalesDec = totalSalesDec.plus(orderAmtDec);
+      totalBultos += computeOrderRealBultos(order);
       if (order.personaId) buyingClientsSet.add(order.personaId);
 
-      if (order.billingType === BillingType.OFFICIAL) {
-        officialSales += orderAmt;
-      } else {
-        internalSales += orderAmt;
+      if (order.billingType === BillingType.OFFICIAL) officialSalesDec = officialSalesDec.plus(orderAmtDec);
+      else internalSalesDec = internalSalesDec.plus(orderAmtDec);
+
+      for (const item of order.items) {
+        const { qtyDec, itemRevenueDec, itemCostDec } = resolveItemHistoricalMetrics(item);
+        totalCostDec = totalCostDec.plus(itemCostDec);
+
+        const cur = productSalesMap.get(item.productId) || {
+          name: item.product.name,
+          category: item.product.rubro?.name || 'Sin Categoría',
+          qtyDec: new Decimal(0),
+          amountDec: new Decimal(0),
+        };
+        cur.qtyDec = cur.qtyDec.plus(qtyDec);
+        cur.amountDec = cur.amountDec.plus(itemRevenueDec);
+        productSalesMap.set(item.productId, cur);
       }
+    }
 
-      order.items.forEach((item) => {
-        const { itemRevenue, itemCost } = resolveOrderItemHistoricalCost(item);
-        totalCost += itemCost;
-        totalBultos += item.quantity;
+    for (const cn of sellerCreditNotes) {
+      const cnAmtDec = roundToIntegerPeso(cn.totalAmount || 0);
+      totalSalesDec = totalSalesDec.minus(cnAmtDec);
+      if (cn.billingType === BillingType.OFFICIAL) officialSalesDec = officialSalesDec.minus(cnAmtDec);
+      else internalSalesDec = internalSalesDec.minus(cnAmtDec);
 
-        if (!productSalesMap[item.productId]) {
-          productSalesMap[item.productId] = {
-            name: item.product.name,
-            category: item.product.rubro?.name || 'Sin Categoría',
-            quantity: 0,
-            amount: 0,
-          };
+      for (const item of cn.items) {
+        const fallback = findFallbackCostSnapshot(cn.order?.items, item.productId);
+        const { qtyDec, itemRevenueDec, itemCostDec } = resolveItemHistoricalMetrics({
+          ...item,
+          fallbackUnitCostSnapshot: fallback,
+        });
+        totalCostDec = totalCostDec.minus(itemCostDec);
+
+        const cur = productSalesMap.get(item.productId);
+        if (cur) {
+          cur.qtyDec = cur.qtyDec.minus(qtyDec);
+          cur.amountDec = cur.amountDec.minus(itemRevenueDec);
         }
-        productSalesMap[item.productId].quantity += item.quantity;
-        productSalesMap[item.productId].amount += itemRevenue;
-      });
-    });
+      }
+    }
 
     const activeBuyingClientsCount = buyingClientsSet.size;
-    const portfolioCoveragePct =
-      totalClientsCount > 0 ? Math.round((activeBuyingClientsCount / totalClientsCount) * 100) : 0;
+    const portfolioCoveragePct = computeMarginPercent(
+      toDecimal(activeBuyingClientsCount),
+      toDecimal(totalClientsCount),
+      0,
+    );
     const averageTicketPerClient =
-      activeBuyingClientsCount > 0 ? Math.round(totalSales / activeBuyingClientsCount) : 0;
+      activeBuyingClientsCount > 0
+        ? roundToIntegerPeso(totalSalesDec.dividedBy(activeBuyingClientsCount)).toNumber()
+        : 0;
 
     const clientIds = assignedClients.map((c) => c.id);
     const [sellerCollections, carteraDebtAggregate] = await Promise.all([
       prisma.transaction.aggregate({
         where: {
-          userId: sellerId,
           type: TransactionType.INCOME,
           createdAt: { gte: start, lte: end },
+          OR:
+            clientIds.length > 0
+              ? [{ personaId: { in: clientIds } }, { userId: sellerId, personaId: null }]
+              : [{ userId: sellerId }],
         },
         _sum: { amount: true },
       }),
@@ -109,8 +144,8 @@ export class AdminSellerMeetingSubService {
       }),
     ]);
 
-    const totalCollected = Math.round(Number(sellerCollections._sum.amount || 0));
-    const totalCarteraDebt = Math.round(Number(carteraDebtAggregate._sum?.outstandingBalance || 0));
+    const totalCollected = roundToIntegerPeso(sellerCollections._sum.amount ?? 0).toNumber();
+    const totalCarteraDebt = roundToIntegerPeso(carteraDebtAggregate._sum?.outstandingBalance ?? 0).toNumber();
 
     const inactiveClients = assignedClients
       .filter((c) => !buyingClientsSet.has(c.id))
@@ -118,7 +153,7 @@ export class AdminSellerMeetingSubService {
         id: c.id,
         name: c.name,
         city: normalizeCity(c.city || c.route),
-        balance: Math.round(Number(c.outstandingBalance || 0)),
+        balance: roundToIntegerPeso(c.outstandingBalance || 0).toNumber(),
       }))
       .sort((a, b) => b.balance - a.balance)
       .slice(0, 10);
@@ -129,18 +164,23 @@ export class AdminSellerMeetingSubService {
         id: c.id,
         name: c.name,
         city: normalizeCity(c.city || c.route),
-        balance: Math.round(Number(c.outstandingBalance || 0)),
+        balance: roundToIntegerPeso(c.outstandingBalance || 0).toNumber(),
       }))
       .sort((a, b) => b.balance - a.balance)
       .slice(0, 8);
 
-    const topProducts = Object.values(productSalesMap)
+    const topProducts = Array.from(productSalesMap.values())
+      .filter((p) => p.amountDec.gt(0))
+      .map((p) => ({
+        name: p.name,
+        category: p.category,
+        quantity: roundToThreeDecimalsWeight(p.qtyDec).toNumber(),
+        amount: roundToIntegerPeso(p.amountDec).toNumber(),
+      }))
       .sort((a, b) => b.amount - a.amount)
-      .slice(0, 6)
-      .map((p) => ({ ...p, amount: Math.round(p.amount) }));
+      .slice(0, 6);
 
     const actionInsights: Array<{ type: 'warning' | 'opportunity' | 'success'; title: string; description: string }> = [];
-
     if (portfolioCoveragePct < 60) {
       actionInsights.push({
         type: 'warning',
@@ -171,24 +211,28 @@ export class AdminSellerMeetingSubService {
       });
     }
 
-    const grossProfit = totalSales - totalCost;
-    const grossMarginPct = totalSales > 0 ? Math.round((grossProfit / totalSales) * 100) : 0;
+    const grossProfitDec = totalSalesDec.minus(totalCostDec);
 
     return {
       seller: { id: sellerId, name: sellerName, totalAssignedClients: totalClientsCount },
-      period: { startDate: start.toISOString(), endDate: end.toISOString() },
+      period: {
+        startDate: start.toISOString(),
+        endDate: end.toISOString(),
+        startDateIso: resolved.startDateIso,
+        endDateIso: resolved.endDateIso,
+      },
       performance: {
-        totalSales: Math.round(totalSales),
-        totalCost: Math.round(totalCost),
-        grossProfit: Math.round(grossProfit),
-        grossMarginPct,
+        totalSales: roundToIntegerPeso(totalSalesDec).toNumber(),
+        totalCost: roundToIntegerPeso(totalCostDec).toNumber(),
+        grossProfit: roundToIntegerPeso(grossProfitDec).toNumber(),
+        grossMarginPct: computeMarginPercent(grossProfitDec, totalSalesDec, 0),
         totalOrders: sellerOrders.length,
         totalBultos,
         activeBuyingClientsCount,
         portfolioCoveragePct,
         averageTicketPerClient,
-        officialSales: Math.round(officialSales),
-        internalSales: Math.round(internalSales),
+        officialSales: roundToIntegerPeso(officialSalesDec).toNumber(),
+        internalSales: roundToIntegerPeso(internalSalesDec).toNumber(),
       },
       collections: { totalCollected, totalCarteraDebt },
       topProducts,

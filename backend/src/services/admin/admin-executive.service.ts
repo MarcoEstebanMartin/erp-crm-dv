@@ -1,317 +1,239 @@
 import prisma from '../../utils/prisma';
-import { BillingType, TransactionType, OrderStatus } from '@prisma/client';
+import { BillingType, CreditNoteStatus, OrderStatus, TransactionType } from '@prisma/client';
 import { Decimal } from 'decimal.js';
-import { roundToIntegerPeso, toDecimal } from '../../core/money';
-import { normalizeCity, resolveOrderItemHistoricalCost } from './admin-report.helpers';
+import { roundToIntegerPeso, roundToThreeDecimalsWeight, toDecimal } from '../../core/money';
+import {
+  computeMarginPercent,
+  computeOrderRealBultos,
+  findFallbackCostSnapshot,
+  normalizeCity,
+  resolveItemHistoricalMetrics,
+} from '../../engines/reports-core.engine';
+import { resolveReportDateRange } from './admin-report.helpers';
 
 export class AdminExecutiveSubService {
   /**
-   * Obtener datos consolidados para el Reporte Ejecutivo (PDF para la Dirección) usando unitCostSnapshot y Decimal.js.
+   * Reporte Ejecutivo (PDF Dirección): Decimal.js, rango completo AR (-03:00),
+   * bultos reales y descuento de Notas de Crédito aprobadas en período actual y previo.
    */
   async getExecutivePdfReportData(startDateStr?: string, endDateStr?: string) {
-    let start: Date;
-    let end: Date;
-
-    if (startDateStr && endDateStr) {
-      start = new Date(startDateStr);
-      end = new Date(endDateStr);
-      if (isNaN(start.getTime())) start = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
-      if (isNaN(end.getTime())) end = new Date();
-    } else {
-      const now = new Date();
-      start = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
-      end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
-    }
-
-    const durationMs = end.getTime() - start.getTime();
-    const prevStart = new Date(start.getTime() - durationMs);
+    const resolved = resolveReportDateRange({
+      startDate: startDateStr,
+      endDate: endDateStr,
+      defaultCurrentMonth: true,
+    });
+    const start = resolved.start!;
+    const end = resolved.end!;
+    const totalWindowMs = end.getTime() - start.getTime() + 1;
     const prevEnd = new Date(start.getTime() - 1);
+    const prevStart = new Date(start.getTime() - totalWindowMs);
 
-    const [currentOrders, prevOrders] = await Promise.all([
-      prisma.order.findMany({
-        where: { status: OrderStatus.DELIVERED, createdAt: { gte: start, lte: end } },
-        include: {
-          persona: true,
-          items: { include: { product: { include: { rubro: true } } } },
-        },
-      }),
-      prisma.order.findMany({
-        where: { status: OrderStatus.DELIVERED, createdAt: { gte: prevStart, lte: prevEnd } },
-      }),
-    ]);
+    const [currentOrders, prevOrders, currentCreditNotes, prevCreditNotes, collections, debtors, expenses] =
+      await Promise.all([
+        prisma.order.findMany({
+          where: { status: OrderStatus.DELIVERED, createdAt: { gte: start, lte: end } },
+          include: { persona: true, items: { include: { product: { include: { rubro: true } } } } },
+        }),
+        prisma.order.findMany({
+          where: { status: OrderStatus.DELIVERED, createdAt: { gte: prevStart, lte: prevEnd } },
+          select: { totalAmount: true },
+        }),
+        prisma.creditNote.findMany({
+          where: { status: CreditNoteStatus.APPROVED, createdAt: { gte: start, lte: end } },
+          include: {
+            persona: true,
+            order: { select: { items: { select: { productId: true, unitCostSnapshot: true } } } },
+            items: { include: { product: { include: { rubro: true } } } },
+          },
+        }),
+        prisma.creditNote.findMany({
+          where: { status: CreditNoteStatus.APPROVED, createdAt: { gte: prevStart, lte: prevEnd } },
+          select: { totalAmount: true },
+        }),
+        prisma.transaction.groupBy({
+          by: ['paymentMethod'],
+          where: { type: TransactionType.INCOME, createdAt: { gte: start, lte: end } },
+          _sum: { amount: true },
+        }),
+        prisma.persona.aggregate({ where: { outstandingBalance: { gt: 0 } }, _sum: { outstandingBalance: true } }),
+        prisma.expense.findMany({ where: { date: { gte: start, lte: end } }, include: { category: true } }),
+      ]);
 
-    let totalSalesDec = new Decimal(0);
-    let totalCostDec = new Decimal(0);
-    let totalBultos = 0;
-    let officialSalesDec = new Decimal(0);
-    let officialCostDec = new Decimal(0);
-    let officialCount = 0;
-    let internalSalesDec = new Decimal(0);
-    let internalCostDec = new Decimal(0);
-    let internalCount = 0;
+    let totalSalesDec = new Decimal(0), totalCostDec = new Decimal(0), totalBultos = 0;
+    let officialSalesDec = new Decimal(0), officialCostDec = new Decimal(0), officialCount = 0;
+    let internalSalesDec = new Decimal(0), internalCostDec = new Decimal(0), internalCount = 0;
 
-    const productSalesMap: Record<
-      number,
-      { name: string; category: string; quantity: number; amount: Decimal; cost: Decimal }
-    > = {};
-    const categorySalesMap: Record<
-      string,
-      { amount: Decimal; cost: Decimal; itemsCount: number }
-    > = {};
-    const citySalesMap: Record<
-      string,
-      {
-        officialSales: Decimal;
-        internalSales: Decimal;
-        totalSales: Decimal;
-        count: number;
-        clients: Set<number>;
+    const productSalesMap = new Map<number, { name: string; category: string; qtyDec: Decimal; amountDec: Decimal; costDec: Decimal }>();
+    const categorySalesMap = new Map<string, { amountDec: Decimal; costDec: Decimal; itemsCount: number }>();
+    const citySalesMap = new Map<string, { officialSalesDec: Decimal; internalSalesDec: Decimal; totalSalesDec: Decimal; count: number; clients: Set<number> }>();
+    const clientSalesMap = new Map<number, { name: string; city: string; officialSalesDec: Decimal; internalSalesDec: Decimal; totalSalesDec: Decimal; costDec: Decimal; ordersCount: number }>();
+
+    const ensureCity = (cityName: string) => {
+      let c = citySalesMap.get(cityName);
+      if (!c) {
+        c = { officialSalesDec: new Decimal(0), internalSalesDec: new Decimal(0), totalSalesDec: new Decimal(0), count: 0, clients: new Set() };
+        citySalesMap.set(cityName, c);
       }
-    > = {};
-    const clientSalesMap: Record<
-      number,
-      {
-        name: string;
-        city: string;
-        officialSales: Decimal;
-        internalSales: Decimal;
-        totalSales: Decimal;
-        cost: Decimal;
-        ordersCount: number;
+      return c;
+    };
+
+    const ensureClient = (personaId: number, name: string, cityName: string) => {
+      let c = clientSalesMap.get(personaId);
+      if (!c) {
+        c = { name, city: cityName, officialSalesDec: new Decimal(0), internalSalesDec: new Decimal(0), totalSalesDec: new Decimal(0), costDec: new Decimal(0), ordersCount: 0 };
+        clientSalesMap.set(personaId, c);
       }
-    > = {};
+      return c;
+    };
 
     for (const order of currentOrders) {
-      const orderTotalDec = roundToIntegerPeso(order.totalAmount ? order.totalAmount.toString() : 0);
+      const orderTotalDec = roundToIntegerPeso(order.totalAmount?.toString() ?? 0);
       totalSalesDec = totalSalesDec.plus(orderTotalDec);
+      totalBultos += computeOrderRealBultos(order);
       let orderCostDec = new Decimal(0);
 
       const cityName = normalizeCity(order.persona?.city || order.persona?.route);
-      if (!citySalesMap[cityName]) {
-        citySalesMap[cityName] = {
-          officialSales: new Decimal(0),
-          internalSales: new Decimal(0),
-          totalSales: new Decimal(0),
-          count: 0,
-          clients: new Set(),
-        };
-      }
-      citySalesMap[cityName].totalSales = citySalesMap[cityName].totalSales.plus(orderTotalDec);
-      citySalesMap[cityName].count += 1;
-      if (order.personaId) citySalesMap[cityName].clients.add(order.personaId);
-      if (order.billingType === BillingType.OFFICIAL) {
-        citySalesMap[cityName].officialSales = citySalesMap[cityName].officialSales.plus(orderTotalDec);
-      } else {
-        citySalesMap[cityName].internalSales = citySalesMap[cityName].internalSales.plus(orderTotalDec);
-      }
+      const cityAcc = ensureCity(cityName);
+      cityAcc.totalSalesDec = cityAcc.totalSalesDec.plus(orderTotalDec);
+      cityAcc.count += 1;
+      if (order.personaId) cityAcc.clients.add(order.personaId);
+      if (order.billingType === BillingType.OFFICIAL) cityAcc.officialSalesDec = cityAcc.officialSalesDec.plus(orderTotalDec);
+      else cityAcc.internalSalesDec = cityAcc.internalSalesDec.plus(orderTotalDec);
 
       for (const item of order.items) {
-        const { itemRevenue, itemCost } = resolveOrderItemHistoricalCost(item);
-        const itemRevenueDec = toDecimal(itemRevenue);
-        const itemCostDec = toDecimal(itemCost);
-
+        const { qtyDec, itemRevenueDec, itemCostDec } = resolveItemHistoricalMetrics(item);
         orderCostDec = orderCostDec.plus(itemCostDec);
-        totalBultos += item.quantity;
 
-        if (!productSalesMap[item.productId]) {
-          productSalesMap[item.productId] = {
-            name: item.product.name,
-            category: item.product.rubro?.name || 'Sin Categoría',
-            quantity: 0,
-            amount: new Decimal(0),
-            cost: new Decimal(0),
-          };
-        }
-        productSalesMap[item.productId].quantity += item.quantity;
-        productSalesMap[item.productId].amount = productSalesMap[item.productId].amount.plus(itemRevenueDec);
-        productSalesMap[item.productId].cost = productSalesMap[item.productId].cost.plus(itemCostDec);
+        const prodAcc = productSalesMap.get(item.productId) || {
+          name: item.product.name,
+          category: item.product.rubro?.name || 'Sin Categoría',
+          qtyDec: new Decimal(0),
+          amountDec: new Decimal(0),
+          costDec: new Decimal(0),
+        };
+        prodAcc.qtyDec = prodAcc.qtyDec.plus(qtyDec);
+        prodAcc.amountDec = prodAcc.amountDec.plus(itemRevenueDec);
+        prodAcc.costDec = prodAcc.costDec.plus(itemCostDec);
+        productSalesMap.set(item.productId, prodAcc);
 
         const catName = item.product.rubro?.name || 'Sin Categoría';
-        if (!categorySalesMap[catName]) {
-          categorySalesMap[catName] = { amount: new Decimal(0), cost: new Decimal(0), itemsCount: 0 };
-        }
-        categorySalesMap[catName].amount = categorySalesMap[catName].amount.plus(itemRevenueDec);
-        categorySalesMap[catName].cost = categorySalesMap[catName].cost.plus(itemCostDec);
-        categorySalesMap[catName].itemsCount += item.quantity;
+        const catAcc = categorySalesMap.get(catName) || { amountDec: new Decimal(0), costDec: new Decimal(0), itemsCount: 0 };
+        catAcc.amountDec = catAcc.amountDec.plus(itemRevenueDec);
+        catAcc.costDec = catAcc.costDec.plus(itemCostDec);
+        catAcc.itemsCount += item.quantity;
+        categorySalesMap.set(catName, catAcc);
       }
 
       totalCostDec = totalCostDec.plus(orderCostDec);
-
       if (order.billingType === BillingType.OFFICIAL) {
         officialSalesDec = officialSalesDec.plus(orderTotalDec);
         officialCostDec = officialCostDec.plus(orderCostDec);
-        officialCount++;
+        officialCount += 1;
       } else {
         internalSalesDec = internalSalesDec.plus(orderTotalDec);
         internalCostDec = internalCostDec.plus(orderCostDec);
-        internalCount++;
+        internalCount += 1;
       }
 
       if (order.personaId) {
-        const clientName = order.persona?.name || `Cliente #${order.personaId}`;
-        if (!clientSalesMap[order.personaId]) {
-          clientSalesMap[order.personaId] = {
-            name: clientName,
-            city: cityName,
-            officialSales: new Decimal(0),
-            internalSales: new Decimal(0),
-            totalSales: new Decimal(0),
-            cost: new Decimal(0),
-            ordersCount: 0,
-          };
-        }
-        clientSalesMap[order.personaId].totalSales = clientSalesMap[order.personaId].totalSales.plus(orderTotalDec);
-        clientSalesMap[order.personaId].cost = clientSalesMap[order.personaId].cost.plus(orderCostDec);
-        clientSalesMap[order.personaId].ordersCount += 1;
-        if (order.billingType === BillingType.OFFICIAL) {
-          clientSalesMap[order.personaId].officialSales =
-            clientSalesMap[order.personaId].officialSales.plus(orderTotalDec);
-        } else {
-          clientSalesMap[order.personaId].internalSales =
-            clientSalesMap[order.personaId].internalSales.plus(orderTotalDec);
-        }
+        const cliAcc = ensureClient(order.personaId, order.persona?.name || `Cliente #${order.personaId}`, cityName);
+        cliAcc.totalSalesDec = cliAcc.totalSalesDec.plus(orderTotalDec);
+        cliAcc.costDec = cliAcc.costDec.plus(orderCostDec);
+        cliAcc.ordersCount += 1;
+        if (order.billingType === BillingType.OFFICIAL) cliAcc.officialSalesDec = cliAcc.officialSalesDec.plus(orderTotalDec);
+        else cliAcc.internalSalesDec = cliAcc.internalSalesDec.plus(orderTotalDec);
       }
     }
 
-    const prevTotalSalesDec = prevOrders.reduce(
-      (sum, o) => sum.plus(roundToIntegerPeso(o.totalAmount ? o.totalAmount.toString() : 0)),
-      new Decimal(0),
-    );
+    for (const cn of currentCreditNotes) {
+      const cnTotalDec = roundToIntegerPeso(cn.totalAmount?.toString() ?? 0);
+      totalSalesDec = totalSalesDec.minus(cnTotalDec);
+      let cnCostDec = new Decimal(0);
+
+      const cityName = normalizeCity(cn.persona?.city || cn.persona?.route);
+      const cityAcc = ensureCity(cityName);
+      cityAcc.totalSalesDec = cityAcc.totalSalesDec.minus(cnTotalDec);
+      if (cn.billingType === BillingType.OFFICIAL) cityAcc.officialSalesDec = cityAcc.officialSalesDec.minus(cnTotalDec);
+      else cityAcc.internalSalesDec = cityAcc.internalSalesDec.minus(cnTotalDec);
+
+      for (const item of cn.items) {
+        const fallback = findFallbackCostSnapshot(cn.order?.items, item.productId);
+        const { qtyDec, itemRevenueDec, itemCostDec } = resolveItemHistoricalMetrics({ ...item, fallbackUnitCostSnapshot: fallback });
+        cnCostDec = cnCostDec.plus(itemCostDec);
+
+        const prodAcc = productSalesMap.get(item.productId);
+        if (prodAcc) {
+          prodAcc.qtyDec = prodAcc.qtyDec.minus(qtyDec);
+          prodAcc.amountDec = prodAcc.amountDec.minus(itemRevenueDec);
+          prodAcc.costDec = prodAcc.costDec.minus(itemCostDec);
+        }
+        const catName = item.product?.rubro?.name || 'Sin Categoría';
+        const catAcc = categorySalesMap.get(catName);
+        if (catAcc) {
+          catAcc.amountDec = catAcc.amountDec.minus(itemRevenueDec);
+          catAcc.costDec = catAcc.costDec.minus(itemCostDec);
+        }
+      }
+
+      totalCostDec = totalCostDec.minus(cnCostDec);
+      if (cn.billingType === BillingType.OFFICIAL) {
+        officialSalesDec = officialSalesDec.minus(cnTotalDec);
+        officialCostDec = officialCostDec.minus(cnCostDec);
+      } else {
+        internalSalesDec = internalSalesDec.minus(cnTotalDec);
+        internalCostDec = internalCostDec.minus(cnCostDec);
+      }
+
+      if (cn.personaId) {
+        const cliAcc = ensureClient(cn.personaId, cn.persona?.name || `Cliente #${cn.personaId}`, cityName);
+        cliAcc.totalSalesDec = cliAcc.totalSalesDec.minus(cnTotalDec);
+        cliAcc.costDec = cliAcc.costDec.minus(cnCostDec);
+        if (cn.billingType === BillingType.OFFICIAL) cliAcc.officialSalesDec = cliAcc.officialSalesDec.minus(cnTotalDec);
+        else cliAcc.internalSalesDec = cliAcc.internalSalesDec.minus(cnTotalDec);
+      }
+    }
+
+    const prevOrdersDec = prevOrders.reduce((s, o) => s.plus(roundToIntegerPeso(o.totalAmount?.toString() ?? 0)), new Decimal(0));
+    const prevCnDec = prevCreditNotes.reduce((s, c) => s.plus(roundToIntegerPeso(c.totalAmount?.toString() ?? 0)), new Decimal(0));
+    const prevTotalSalesDec = prevOrdersDec.minus(prevCnDec);
     const salesGrowthPct = prevTotalSalesDec.gt(0)
-      ? roundToIntegerPeso(
-          totalSalesDec.minus(prevTotalSalesDec).dividedBy(prevTotalSalesDec).times(100),
-        ).toNumber()
+      ? computeMarginPercent(totalSalesDec.minus(prevTotalSalesDec), prevTotalSalesDec, 0)
       : 0;
 
-    const [collections, debtors, expenses] = await Promise.all([
-      prisma.transaction.groupBy({
-        by: ['paymentMethod'],
-        where: { type: TransactionType.INCOME, createdAt: { gte: start, lte: end } },
-        _sum: { amount: true },
-      }),
-      prisma.persona.aggregate({
-        where: { outstandingBalance: { gt: 0 } },
-        _sum: { outstandingBalance: true },
-      }),
-      prisma.expense.findMany({
-        where: { date: { gte: start, lte: end } },
-        include: { category: true },
-      }),
-    ]);
-
     let totalCollectedDec = new Decimal(0);
-    const collectionsByMethod: Record<string, number> = {
-      CASH: 0,
-      CHECK: 0,
-      BANK_TRANSFER: 0,
-      OTHER: 0,
-    };
-    collections.forEach((c) => {
-      const amtDec = roundToIntegerPeso(c._sum.amount ? c._sum.amount.toString() : 0);
+    const collectionsByMethod: Record<string, number> = { CASH: 0, CHECK: 0, BANK_TRANSFER: 0, OTHER: 0 };
+    for (const c of collections) {
+      const amtDec = roundToIntegerPeso(c._sum.amount?.toString() ?? 0);
       totalCollectedDec = totalCollectedDec.plus(amtDec);
       const method = c.paymentMethod || 'OTHER';
-      collectionsByMethod[method] = roundToIntegerPeso(
-        toDecimal(collectionsByMethod[method] || 0).plus(amtDec),
-      ).toNumber();
-    });
-
-    const totalPendingDebt = roundToIntegerPeso(
-      debtors._sum?.outstandingBalance ? debtors._sum.outstandingBalance.toString() : 0,
-    ).toNumber();
+      collectionsByMethod[method] = roundToIntegerPeso(toDecimal(collectionsByMethod[method] || 0).plus(amtDec)).toNumber();
+    }
 
     let totalExpensesDec = new Decimal(0);
-    const expensesByCategoryMap: Record<string, Decimal> = {};
-    expenses.forEach((e) => {
-      const amtDec = toDecimal(e.amount ? e.amount.toString() : 0);
+    const expensesByCat = new Map<string, Decimal>();
+    for (const e of expenses) {
+      const amtDec = toDecimal(e.amount?.toString() ?? 0);
       totalExpensesDec = totalExpensesDec.plus(amtDec);
       const cat = e.category?.name || 'General';
-      expensesByCategoryMap[cat] = (expensesByCategoryMap[cat] || new Decimal(0)).plus(amtDec);
-    });
-
-    const topProducts = Object.values(productSalesMap)
-      .map((p) => {
-        const amount = roundToIntegerPeso(p.amount).toNumber();
-        const cost = roundToIntegerPeso(p.cost).toNumber();
-        const profitDec = p.amount.minus(p.cost);
-        return {
-          name: p.name,
-          category: p.category,
-          quantity: p.quantity,
-          amount,
-          cost,
-          profit: roundToIntegerPeso(profitDec).toNumber(),
-          marginPct: p.amount.gt(0)
-            ? roundToIntegerPeso(profitDec.dividedBy(p.amount).times(100)).toNumber()
-            : 0,
-        };
-      })
-      .sort((a, b) => b.amount - a.amount)
-      .slice(0, 10);
-
-    const topClients = Object.values(clientSalesMap)
-      .map((c) => {
-        const profitDec = c.totalSales.minus(c.cost);
-        return {
-          name: c.name,
-          city: c.city,
-          ordersCount: c.ordersCount,
-          officialSales: roundToIntegerPeso(c.officialSales).toNumber(),
-          internalSales: roundToIntegerPeso(c.internalSales).toNumber(),
-          totalSales: roundToIntegerPeso(c.totalSales).toNumber(),
-          cost: roundToIntegerPeso(c.cost).toNumber(),
-          profit: roundToIntegerPeso(profitDec).toNumber(),
-          marginPct: c.totalSales.gt(0)
-            ? roundToIntegerPeso(profitDec.dividedBy(c.totalSales).times(100)).toNumber()
-            : 0,
-        };
-      })
-      .sort((a, b) => b.profit - a.profit)
-      .slice(0, 10);
-
-    const topCategories = Object.entries(categorySalesMap)
-      .map(([name, data]) => {
-        const profitDec = data.amount.minus(data.cost);
-        return {
-          name,
-          amount: roundToIntegerPeso(data.amount).toNumber(),
-          cost: roundToIntegerPeso(data.cost).toNumber(),
-          profit: roundToIntegerPeso(profitDec).toNumber(),
-          marginPct: data.amount.gt(0)
-            ? roundToIntegerPeso(profitDec.dividedBy(data.amount).times(100)).toNumber()
-            : 0,
-          itemsCount: data.itemsCount,
-        };
-      })
-      .sort((a, b) => b.amount - a.amount);
-
-    const citiesSummary = Object.entries(citySalesMap)
-      .map(([cityName, data]) => ({
-        cityName,
-        officialSales: roundToIntegerPeso(data.officialSales).toNumber(),
-        internalSales: roundToIntegerPeso(data.internalSales).toNumber(),
-        totalSales: roundToIntegerPeso(data.totalSales).toNumber(),
-        ordersCount: data.count,
-        activeClientsCount: data.clients.size,
-      }))
-      .sort((a, b) => b.totalSales - a.totalSales);
+      expensesByCat.set(cat, (expensesByCat.get(cat) || new Decimal(0)).plus(amtDec));
+    }
 
     const grossProfitDec = totalSalesDec.minus(totalCostDec);
     const netProfitDec = grossProfitDec.minus(totalExpensesDec);
-    const grossMarginPct = totalSalesDec.gt(0)
-      ? roundToIntegerPeso(grossProfitDec.dividedBy(totalSalesDec).times(100)).toNumber()
-      : 0;
 
     return {
       period: {
         startDate: start.toISOString(),
         endDate: end.toISOString(),
-        durationDays: Math.ceil(durationMs / (1000 * 60 * 60 * 24)),
+        startDateIso: resolved.startDateIso,
+        endDateIso: resolved.endDateIso,
+        durationDays: Math.max(1, Math.round(totalWindowMs / 86_400_000)),
       },
       summary: {
         totalSales: roundToIntegerPeso(totalSalesDec).toNumber(),
         totalCost: roundToIntegerPeso(totalCostDec).toNumber(),
         grossProfit: roundToIntegerPeso(grossProfitDec).toNumber(),
-        grossMarginPct,
+        grossMarginPct: computeMarginPercent(grossProfitDec, totalSalesDec, 0),
         totalExpenses: roundToIntegerPeso(totalExpensesDec).toNumber(),
         netProfit: roundToIntegerPeso(netProfitDec).toNumber(),
         totalOrders: currentOrders.length,
@@ -336,22 +258,74 @@ export class AdminExecutiveSubService {
       collections: {
         totalCollected: roundToIntegerPeso(totalCollectedDec).toNumber(),
         byMethod: {
-          cash: collectionsByMethod['CASH'] || 0,
-          check: collectionsByMethod['CHECK'] || 0,
-          transfer: collectionsByMethod['BANK_TRANSFER'] || 0,
-          other: collectionsByMethod['OTHER'] || 0,
+          cash: collectionsByMethod.CASH || 0,
+          check: collectionsByMethod.CHECK || 0,
+          transfer: collectionsByMethod.BANK_TRANSFER || 0,
+          other: collectionsByMethod.OTHER || 0,
         },
-        totalPendingDebt,
+        totalPendingDebt: roundToIntegerPeso(debtors._sum?.outstandingBalance?.toString() ?? 0).toNumber(),
       },
-      topProducts,
-      topClients,
-      topCategories,
-      citiesSummary,
+      topProducts: Array.from(productSalesMap.values())
+        .filter((p) => p.amountDec.gt(0))
+        .map((p) => {
+          const profitDec = p.amountDec.minus(p.costDec);
+          return {
+            name: p.name,
+            category: p.category,
+            quantity: roundToThreeDecimalsWeight(p.qtyDec).toNumber(),
+            amount: roundToIntegerPeso(p.amountDec).toNumber(),
+            cost: roundToIntegerPeso(p.costDec).toNumber(),
+            profit: roundToIntegerPeso(profitDec).toNumber(),
+            marginPct: computeMarginPercent(profitDec, p.amountDec, 0),
+          };
+        })
+        .sort((a, b) => b.amount - a.amount)
+        .slice(0, 10),
+      topClients: Array.from(clientSalesMap.values())
+        .map((c) => {
+          const profitDec = c.totalSalesDec.minus(c.costDec);
+          return {
+            name: c.name,
+            city: c.city,
+            ordersCount: c.ordersCount,
+            officialSales: roundToIntegerPeso(c.officialSalesDec).toNumber(),
+            internalSales: roundToIntegerPeso(c.internalSalesDec).toNumber(),
+            totalSales: roundToIntegerPeso(c.totalSalesDec).toNumber(),
+            cost: roundToIntegerPeso(c.costDec).toNumber(),
+            profit: roundToIntegerPeso(profitDec).toNumber(),
+            marginPct: computeMarginPercent(profitDec, c.totalSalesDec, 0),
+          };
+        })
+        .sort((a, b) => b.profit - a.profit)
+        .slice(0, 10),
+      topCategories: Array.from(categorySalesMap.entries())
+        .map(([name, d]) => {
+          const profitDec = d.amountDec.minus(d.costDec);
+          return {
+            name,
+            amount: roundToIntegerPeso(d.amountDec).toNumber(),
+            cost: roundToIntegerPeso(d.costDec).toNumber(),
+            profit: roundToIntegerPeso(profitDec).toNumber(),
+            marginPct: computeMarginPercent(profitDec, d.amountDec, 0),
+            itemsCount: d.itemsCount,
+          };
+        })
+        .sort((a, b) => b.amount - a.amount),
+      citiesSummary: Array.from(citySalesMap.entries())
+        .map(([cityName, d]) => ({
+          cityName,
+          officialSales: roundToIntegerPeso(d.officialSalesDec).toNumber(),
+          internalSales: roundToIntegerPeso(d.internalSalesDec).toNumber(),
+          totalSales: roundToIntegerPeso(d.totalSalesDec).toNumber(),
+          ordersCount: d.count,
+          activeClientsCount: d.clients.size,
+        }))
+        .sort((a, b) => b.totalSales - a.totalSales),
       expensesSummary: {
         total: roundToIntegerPeso(totalExpensesDec).toNumber(),
-        byCategory: Object.entries(expensesByCategoryMap).map(([name, amountDec]) => ({
+        byCategory: Array.from(expensesByCat.entries()).map(([name, amtDec]) => ({
           name,
-          amount: roundToIntegerPeso(amountDec).toNumber(),
+          amount: roundToIntegerPeso(amtDec).toNumber(),
         })),
       },
     };

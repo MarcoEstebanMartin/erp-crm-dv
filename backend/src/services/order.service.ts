@@ -189,7 +189,11 @@ export class OrderService {
           sellerId,
           billingType: billingType || BillingType.INTERNAL,
           invoiceType: InvoiceType.PRESUPUESTO,
-          salesChannel: salesChannel || SalesChannel.MOSTRADOR,
+          salesChannel:
+            salesChannel ||
+            (resolvedDeliveryMethod === DeliveryMethod.PICKUP
+              ? SalesChannel.MOSTRADOR
+              : SalesChannel.PREVENTA_RUTA),
           deliveryMethod: resolvedDeliveryMethod,
           deliveryRouteId: slot.deliveryRouteId,
           deliverySequence: slot.deliverySequence,

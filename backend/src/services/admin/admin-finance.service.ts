@@ -1,195 +1,140 @@
+import { Decimal } from 'decimal.js';
 import prisma from '../../utils/prisma';
-import { BillingType, TransactionType } from '@prisma/client';
+import { CreditNoteStatus, OrderStatus, TransactionType } from '@prisma/client';
 import { standardizeCityName } from '../../utils/normalize';
-import { roundToIntegerPeso } from '../../core/money';
-import { resolveOrderItemHistoricalCost } from './admin-report.helpers';
+import { roundToIntegerPeso, toDecimal } from '../../core/money';
+import { computeFinancialSummaryMetrics } from '../../engines/reports-core.engine';
+import { parseArgentinaTimestampRange } from '../billing/billing-date-range.helper';
+import { resolveReportDateRange } from './admin-report.helpers';
+
+const AR_DAY_MONTH_FORMATTER = new Intl.DateTimeFormat('en-GB', {
+  timeZone: 'America/Argentina/Buenos_Aires',
+  day: '2-digit',
+  month: '2-digit',
+});
 
 export class AdminFinanceSubService {
   /**
-   * Obtener reporte consolidado financiero usando unitCostSnapshot (CMV histórico real).
+   * Obtener reporte consolidado financiero usando unitCostSnapshot (CMV histórico real)
+   * con Decimal.js, rangos horarios AR (-03:00) y descuento de Notas de Crédito aprobadas.
    */
-  async getFinancialReports(year?: number, month?: number) {
-    const whereClause: any = { status: 'DELIVERED' };
+  async getFinancialReports(
+    paramsOrYear?: number | { year?: number; month?: number; startDate?: string; endDate?: string },
+    month?: number,
+  ) {
+    const params =
+      typeof paramsOrYear === 'object' && paramsOrYear !== null
+        ? paramsOrYear
+        : { year: paramsOrYear, month };
 
-    if (year && month) {
-      const y = Number(year);
-      const m = Number(month);
-      whereClause.createdAt = {
-        gte: new Date(y, m - 1, 1),
-        lte: new Date(y, m, 0, 23, 59, 59, 999),
-      };
-    }
-
-    const deliveredOrders = await prisma.order.findMany({
-      where: whereClause,
-      include: { items: { include: { product: true } } },
+    const { range } = resolveReportDateRange({
+      startDate: params.startDate,
+      endDate: params.endDate,
+      year: params.year,
+      month: params.month,
     });
 
-    let officialSales = 0;
-    let officialCost = 0;
-    let officialCount = 0;
-    let internalSales = 0;
-    let internalCost = 0;
-    let internalCount = 0;
+    const [deliveredOrders, creditNotes, transactionsGrouped, paymentMethodsGrouped, expenses] =
+      await Promise.all([
+        prisma.order.findMany({
+          where: { status: OrderStatus.DELIVERED, ...(range ? { createdAt: range } : {}) },
+          include: {
+            items: {
+              include: {
+                product: { select: { isPesable: true, costPrice: true } },
+              },
+            },
+          },
+        }),
+        prisma.creditNote.findMany({
+          where: { status: CreditNoteStatus.APPROVED, ...(range ? { createdAt: range } : {}) },
+          include: {
+            order: {
+              select: {
+                deliveryMethod: true,
+                salesChannel: true,
+                deliveryRouteId: true,
+                items: { select: { productId: true, unitCostSnapshot: true } },
+              },
+            },
+            items: {
+              include: {
+                product: { select: { isPesable: true, costPrice: true } },
+              },
+            },
+          },
+        }),
+        prisma.transaction.groupBy({
+          by: ['billingType', 'type'],
+          where: range ? { createdAt: range } : {},
+          _sum: { amount: true },
+        }),
+        prisma.transaction.groupBy({
+          by: ['billingType', 'paymentMethod'],
+          where: { ...(range ? { createdAt: range } : {}), type: TransactionType.INCOME },
+          _sum: { amount: true },
+        }),
+        prisma.expense.findMany({
+          where: range ? { date: range } : {},
+          include: { category: true },
+        }),
+      ]);
 
-    for (const order of deliveredOrders) {
-      const amount = roundToIntegerPeso(order.totalAmount || 0).toNumber();
-      let cost = 0;
-      for (const item of order.items) {
-        const { itemCost } = resolveOrderItemHistoricalCost(item);
-        cost += itemCost;
-      }
-
-      if (order.billingType === BillingType.OFFICIAL) {
-        officialSales += amount;
-        officialCost += cost;
-        officialCount++;
-      } else {
-        internalSales += amount;
-        internalCost += cost;
-        internalCount++;
-      }
-    }
-
-    const transactionWhereClause: any = {};
-    if (year && month) {
-      const y = Number(year);
-      const m = Number(month);
-      transactionWhereClause.createdAt = {
-        gte: new Date(y, m - 1, 1),
-        lte: new Date(y, m, 0, 23, 59, 59, 999),
-      };
-    }
-
-    const [transactionsGrouped, paymentMethodsGrouped] = await Promise.all([
-      prisma.transaction.groupBy({
-        by: ['billingType', 'type'],
-        where: transactionWhereClause,
-        _sum: { amount: true },
-      }),
-      prisma.transaction.groupBy({
-        by: ['billingType', 'paymentMethod'],
-        where: {
-          ...transactionWhereClause,
-          type: TransactionType.INCOME,
-        },
-        _sum: { amount: true },
-      }),
-    ]);
-
-    const expenseWhereClause: any = {};
-    if (year && month) {
-      const y = Number(year);
-      const m = Number(month);
-      expenseWhereClause.date = {
-        gte: new Date(y, m - 1, 1),
-        lte: new Date(y, m, 0, 23, 59, 59, 999),
-      };
-    }
-
-    const expenses = await prisma.expense.findMany({
-      where: expenseWhereClause,
-      include: { category: true },
+    return computeFinancialSummaryMetrics({
+      orders: deliveredOrders,
+      creditNotes,
+      expenses,
+      transactionsGrouped,
+      paymentMethodsGrouped,
     });
-
-    let totalExpenses = 0;
-    const expensesByCategoryMap: { [key: string]: number } = {};
-
-    expenses.forEach((e) => {
-      const amount = Number(e.amount) || 0;
-      totalExpenses += amount;
-      const catName = e.category.name;
-      expensesByCategoryMap[catName] = (expensesByCategoryMap[catName] || 0) + amount;
-    });
-
-    const expensesByCategory = Object.keys(expensesByCategoryMap).map((name) => ({
-      name,
-      value: roundToIntegerPeso(expensesByCategoryMap[name]).toNumber(),
-    }));
-
-    return {
-      sales: {
-        official: roundToIntegerPeso(officialSales).toNumber(),
-        officialCost: roundToIntegerPeso(officialCost).toNumber(),
-        officialCount,
-        internal: roundToIntegerPeso(internalSales).toNumber(),
-        internalCost: roundToIntegerPeso(internalCost).toNumber(),
-        internalCount,
-      },
-      cashflow: {
-        officialIncome:
-          transactionsGrouped.find(
-            (g) => g.billingType === BillingType.OFFICIAL && g.type === TransactionType.INCOME,
-          )?._sum.amount || 0,
-        officialOutcome:
-          transactionsGrouped.find(
-            (g) => g.billingType === BillingType.OFFICIAL && g.type === TransactionType.OUTCOME,
-          )?._sum.amount || 0,
-        internalIncome:
-          transactionsGrouped.find(
-            (g) => g.billingType === BillingType.INTERNAL && g.type === TransactionType.INCOME,
-          )?._sum.amount || 0,
-        internalOutcome:
-          transactionsGrouped.find(
-            (g) => g.billingType === BillingType.INTERNAL && g.type === TransactionType.OUTCOME,
-          )?._sum.amount || 0,
-      },
-      paymentMethods: paymentMethodsGrouped.map((m) => ({
-        channel: m.billingType,
-        method: m.paymentMethod,
-        total: m._sum.amount || 0,
-      })),
-      expenses: {
-        total: roundToIntegerPeso(totalExpenses).toNumber(),
-        byCategory: expensesByCategory,
-      },
-    };
   }
 
   async getAutofillSalesForWeek(weekStart: string) {
-    const startDate = new Date(weekStart + 'T00:00:00');
-    const endDate = new Date(startDate);
-    endDate.setDate(startDate.getDate() + 7);
+    const [y, m, d] = weekStart.split('-').map(Number);
+    const sundayUtc = new Date(Date.UTC(y, m - 1, d + 6));
+    const endDateIso = sundayUtc.toISOString().slice(0, 10);
+    const range = parseArgentinaTimestampRange(weekStart, endDateIso);
 
     const orders = await prisma.order.findMany({
-      where: {
-        status: 'DELIVERED',
-        createdAt: { gte: startDate, lt: endDate },
-      },
+      where: { status: OrderStatus.DELIVERED, ...(range ? { createdAt: range } : {}) },
       include: { persona: { select: { city: true } } },
     });
 
     const localityMap = new Map<
       string,
-      { locality: string; date: string; amountA: number; amountX: number }
+      { locality: string; date: string; amountADec: Decimal; amountXDec: Decimal }
     >();
 
     for (const order of orders) {
       const city = standardizeCityName(order.persona?.city || 'SIN ESPECIFICAR');
-      const amount = roundToIntegerPeso(order.totalAmount || 0).toNumber();
-      const isOfficial = order.billingType === BillingType.OFFICIAL;
+      const amountDec = roundToIntegerPeso(order.totalAmount || 0);
+      const isOfficial = order.billingType === 'OFFICIAL';
 
       const current = localityMap.get(city) || {
         locality: city,
         date: '',
-        amountA: 0,
-        amountX: 0,
+        amountADec: new Decimal(0),
+        amountXDec: new Decimal(0),
       };
 
-      if (isOfficial) current.amountA += amount;
-      else current.amountX += amount;
+      if (isOfficial) current.amountADec = current.amountADec.plus(amountDec);
+      else current.amountXDec = current.amountXDec.plus(amountDec);
 
       if (order.createdAt) {
-        const orderDateObj = new Date(order.createdAt);
-        const day = String(orderDateObj.getDate()).padStart(2, '0');
-        const month = String(orderDateObj.getMonth() + 1).padStart(2, '0');
-        current.date = `${day}/${month}`;
+        current.date = AR_DAY_MONTH_FORMATTER.format(new Date(order.createdAt));
       }
 
       localityMap.set(city, current);
     }
 
-    return Array.from(localityMap.values()).sort((a, b) => a.locality.localeCompare(b.locality));
+    return Array.from(localityMap.values())
+      .map((item) => ({
+        locality: item.locality,
+        date: item.date,
+        amountA: roundToIntegerPeso(item.amountADec).toNumber(),
+        amountX: roundToIntegerPeso(item.amountXDec).toNumber(),
+      }))
+      .sort((a, b) => a.locality.localeCompare(b.locality));
   }
 
   async getWeeklyReports() {
@@ -241,9 +186,9 @@ export class AdminFinanceSubService {
   }
 
   async getSuggestedCreditForWeek(weekStart: string): Promise<number> {
-    const date = new Date(weekStart + 'T00:00:00');
-    date.setDate(date.getDate() - 7);
-    const prevWeekStart = date.toISOString().split('T')[0];
+    const [y, m, d] = weekStart.split('-').map(Number);
+    const prevMondayUtc = new Date(Date.UTC(y, m - 1, d - 7));
+    const prevWeekStart = prevMondayUtc.toISOString().slice(0, 10);
 
     const prevReport = await prisma.weeklyReport.findUnique({
       where: { weekStart: prevWeekStart },
@@ -254,17 +199,21 @@ export class AdminFinanceSubService {
     const salesList = (prevReport.sales as any[]) || [];
     const purchasesList = (prevReport.purchases as any[]) || [];
 
-    const prevTotalSales = salesList.reduce(
-      (sum, s) => sum + (Number(s.amountA) || 0) + (Number(s.amountX) || 0),
-      0,
+    const prevTotalSalesDec = salesList.reduce(
+      (sum, s) => sum.plus(toDecimal(s.amountA || 0)).plus(toDecimal(s.amountX || 0)),
+      new Decimal(0),
     );
-    const prevActualPurchases = purchasesList.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+    const prevActualPurchasesDec = purchasesList.reduce(
+      (sum, p) => sum.plus(toDecimal(p.amount || 0)),
+      new Decimal(0),
+    );
 
-    const prevCredit = Number(prevReport.credit) || 0;
-    const prevTotalPurchases = prevActualPurchases + prevCredit;
-    const prevBuffer = Number(prevReport.buffer) || 0;
+    const prevCreditDec = toDecimal(prevReport.credit || 0);
+    const prevBufferDec = toDecimal(prevReport.buffer || 0);
 
-    return roundToIntegerPeso(prevTotalPurchases + prevBuffer - prevTotalSales).toNumber();
+    return roundToIntegerPeso(
+      prevActualPurchasesDec.plus(prevCreditDec).plus(prevBufferDec).minus(prevTotalSalesDec),
+    ).toNumber();
   }
 }
 

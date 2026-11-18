@@ -39,6 +39,15 @@ import {
   saveWeeklyReportSchema,
   deleteWeeklyReportSchema
 } from '../validators/weeklyReport.validator';
+import {
+  getFinancialReportsQuerySchema,
+  getLocalSalesQuerySchema,
+  getProfitabilityQuerySchema,
+  getExecutiveReportQuerySchema,
+  getSellerMeetingQuerySchema,
+  getZoneReportsQuerySchema,
+  weeklyQuerySchema,
+} from '../validators/reports.validator';
 
 const router = Router();
 
@@ -54,15 +63,16 @@ router.get(
 router.use(authenticateJWT);
 router.use(requireRole([Role.ADMIN]));
 
-router.get('/reports', getFinancialReports);
-router.get('/reports/sales-channels', getSalesChannelStats);
-router.get('/reports/profitability', getProfitabilityReport);
-router.get('/reports/pdf/executive', getExecutivePdfReport);
-router.get('/reports/pdf/seller/:sellerId', getSellerMeetingPdfReport);
-router.get('/reports/zones', getZoneReports);
+router.get('/reports', validateRequest(getFinancialReportsQuerySchema), getFinancialReports);
+router.get('/reports/sales-channels', validateRequest(getLocalSalesQuerySchema), getSalesChannelStats);
+router.get('/reports/local-sales', validateRequest(getLocalSalesQuerySchema), getSalesChannelStats);
+router.get('/reports/profitability', validateRequest(getProfitabilityQuerySchema), getProfitabilityReport);
+router.get('/reports/pdf/executive', validateRequest(getExecutiveReportQuerySchema), getExecutivePdfReport);
+router.get('/reports/pdf/seller/:sellerId', validateRequest(getSellerMeetingQuerySchema), getSellerMeetingPdfReport);
+router.get('/reports/zones', validateRequest(getZoneReportsQuerySchema), getZoneReports);
 router.get('/reports/weekly', getWeeklyReports);
-router.get('/reports/weekly/suggested-credit', getSuggestedCredit);
-router.get('/reports/weekly/autofill-sales', getAutofillSales);
+router.get('/reports/weekly/suggested-credit', validateRequest(weeklyQuerySchema), getSuggestedCredit);
+router.get('/reports/weekly/autofill-sales', validateRequest(weeklyQuerySchema), getAutofillSales);
 router.post('/reports/weekly', validateRequest(saveWeeklyReportSchema), saveWeeklyReport);
 router.delete('/reports/weekly/:weekStart', validateRequest(deleteWeeklyReportSchema), deleteWeeklyReport);
 

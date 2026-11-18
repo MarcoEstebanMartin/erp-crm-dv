@@ -9,8 +9,10 @@ import { adminSellerMeetingSubService } from './admin/admin-seller-meeting.servi
 
 export class AdminService {
   // 1. Reportes Financieros y Semanales (con unitCostSnapshot CMV Histórico)
-  getFinancialReports = (year?: number, month?: number) =>
-    adminFinanceSubService.getFinancialReports(year, month);
+  getFinancialReports = (
+    paramsOrYear?: number | { year?: number; month?: number; startDate?: string; endDate?: string },
+    month?: number,
+  ) => adminFinanceSubService.getFinancialReports(paramsOrYear, month);
 
   getAutofillSalesForWeek = (weekStart: string) =>
     adminFinanceSubService.getAutofillSalesForWeek(weekStart);
@@ -73,8 +75,10 @@ export class AdminService {
     billingType?: string;
   }) => adminProfitabilitySubService.getProfitabilityReport(filters);
 
-  getSalesChannelStats = (year?: number, month?: number) =>
-    adminChannelsSubService.getSalesChannelStats(year, month);
+  getSalesChannelStats = (
+    paramsOrYear?: number | { year?: number; month?: number; startDate?: string; endDate?: string },
+    month?: number,
+  ) => adminChannelsSubService.getSalesChannelStats(paramsOrYear, month);
 
   // 4. Reportes Ejecutivos PDF y Reuniones de Vendedores
   getExecutivePdfReportData = (startDateStr?: string, endDateStr?: string) =>

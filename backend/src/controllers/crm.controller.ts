@@ -1,6 +1,8 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import prisma from '../utils/prisma';
 import { AuthenticatedRequest } from '../types';
+import { roundToIntegerPeso, roundToTwoDecimals } from '../core/money';
+import { canViewProductCosts } from '../utils/product-sanitizer.util';
 
 /**
  * Obtener alertas y predicciones de CRM + IA
@@ -31,37 +33,25 @@ export async function getCRMAlerts(req: AuthenticatedRequest, res: Response): Pr
       },
     });
 
-    // 2. Recomendaciones de reabastecimiento (IA) - Productos con stock menor o igual a minStock
+    // 2. Recomendaciones de reabastecimiento (IA) - Productos con stock real debajo del mínimo configurado
     const allActiveProducts = await prisma.product.findMany({
-      where: { isActive: true }
+      where: { isActive: true, minStock: { gt: 0 } },
+      include: { provider: { select: { id: true, name: true } } },
     });
-    const lowStockProducts = allActiveProducts.filter(p => p.stock <= p.minStock);
+    const lowStockProducts = allActiveProducts.filter((p) => p.stock < p.minStock);
+    const showCosts = canViewProductCosts(req.user?.role);
 
-    // Mapear productos con bajo stock a proveedores sugeridos (ej: Quilmes, Coca Cola)
-    const replenishmentSuggestions = lowStockProducts.map(p => {
-      let suggestedProviderName = 'Distribuidora General';
-      let suggestedProviderId = 4; // Cervecería Quilmes por defecto
-
-      if (p.name.toLowerCase().includes('cola') || p.name.toLowerCase().includes('sprite') || p.name.toLowerCase().includes('fanta') || p.name.toLowerCase().includes('agua')) {
-        suggestedProviderName = 'Coca Cola Andina';
-        suggestedProviderId = 5;
-      } else if (p.name.toLowerCase().includes('quilmes') || p.name.toLowerCase().includes('cerveza') || p.name.toLowerCase().includes('patagonia')) {
-        suggestedProviderName = 'Cervecería Quilmes S.A.';
-        suggestedProviderId = 4;
-      }
-
-      return {
-        productId: p.id,
-        sku: p.sku,
-        productName: p.name,
-        currentStock: p.stock,
-        minStock: p.minStock,
-        suggestedQuantity: p.minStock * 2 - p.stock,
-        suggestedProviderId,
-        suggestedProviderName,
-        costPrice: Number(p.costPrice),
-      };
-    });
+    const replenishmentSuggestions = lowStockProducts.map((p) => ({
+      productId: p.id,
+      sku: p.sku,
+      productName: p.name,
+      currentStock: p.stock,
+      minStock: p.minStock,
+      suggestedQuantity: Math.max(1, p.minStock * 2 - p.stock),
+      suggestedProviderId: p.provider?.id ?? null,
+      suggestedProviderName: p.provider?.name ?? 'Sin proveedor asignado',
+      costPrice: showCosts ? roundToTwoDecimals(p.costPrice || 0).toNumber() : 0,
+    }));
 
     // 3. Sugerencias de Consumo Personalizadas por Cliente
     // Para cada cliente activo, sugerir productos que compra frecuentemente pero no compró en su último pedido.
@@ -116,7 +106,7 @@ export async function getCRMAlerts(req: AuthenticatedRequest, res: Response): Pr
           productId: item.product.id,
           name: item.product.name,
           sku: item.product.sku,
-          listPrice: Number(item.product.listPrice),
+          listPrice: roundToIntegerPeso(item.product.listPrice || 0).toNumber(),
           frequency: item.count,
         }));
 
@@ -156,7 +146,7 @@ export async function getCRMAlerts(req: AuthenticatedRequest, res: Response): Pr
           name: c.name,
           cuit: c.cuit,
           phone: c.phone,
-          outstandingBalance: Number(c.outstandingBalance),
+          outstandingBalance: roundToIntegerPeso(c.outstandingBalance || 0).toNumber(),
           lastOrderDate: c.orders[0]?.createdAt || null,
         })),
         replenishmentSuggestions,

@@ -450,4 +450,15 @@
 
 - [x] **Solapa `Proveedores` dentro de `Personas`**: habilitada la pestaña `Proveedores` en `PERSONA_ROLE_TABS` (`clientsHelpers.ts` `230` l.) y `ClientsTab.tsx` (`282` l., `role="tablist"` con navegación por teclado + `role="tabpanel"`), montando `ComprasDashboard.tsx` (`344` l.) con foco inicial en `Proveedores`, preservación de roles múltiples al editar personas y sincronización de caché en `useAdminController.ts` + `AdminDashboard.tsx`, con cobertura ampliada en `clientsPerformanceStep1.test.ts` (`3/3` ✅, `minimalismPillarStep2` `4/4` ✅, `minimalismPillarStep3` `4/4` ✅, `vite build` exit `0` ✅, Backend `tsc --noEmit` `0` errores + `63/63` suites / `296/296` tests ✅).
 
+---
+
+## Plan Activo: Rediseño Minimalista Premium y Blindaje Contable de Reportes (Paso a Paso)
+
+- [x] **Paso 1: Motor `Decimal.js`, Contratos `Zod`, Fechas AR (`-03:00`), Notas de Crédito y Ventas Locales Reales** ✅ COMPLETADO
+  - [x] **Motores Puros (`reports-core.engine.ts` `271` l., `reports-profitability.engine.ts` `262` l., `reports-local-sales.engine.ts` `257` l.)**: cálculo 100% `Decimal.js` (`ROUND_HALF_UP`, pesos enteros en origen y `3` decimales en pesables), costo histórico inmutable (`unitCostSnapshot` + `fallbackUnitCostSnapshot` en ítems de NC), clasificación real `PICKUP -> LOCAL` vs `DELIVERY -> RUTA`, cuadratura exacta de medios de pago (`CASH + TRANSFER + CHECK + CTA_CORRIENTE`), listado auditable `localOrders` y `bultosCount` real.
+  - [x] **Fechas AR (`-03:00`), Contratos `Zod` y Servicios (`admin-report.helpers.ts` `123` l., `reports.validator.ts` `94` l., `admin-finance.service.ts` `220` l., `admin-channels.service.ts` `100` l., `admin-profitability.service.ts` `116` l., `admin-executive.service.ts` `335` l., `admin-seller-meeting.service.ts` `246` l., `admin-zones.service.ts` `331` l.)**: rangos completos `00:00:00.000-03:00` a `23:59:59.999-03:00` (corrigiendo exclusión del último día y desfase de 1 día), descuento de `CreditNote` (`APPROVED`) en los 6 reportes (incluyendo clientes sin compra nueva en Rentabilidad), cobranzas reales de cartera en Ficha de Vendedor, etiquetado `PREVENTA_RUTA` en `order.service.ts`, purga de mocks *Coca Cola / Quilmes* en `crm.controller.ts` y hotfix de pantalla en blanco en `SalesChannelReportsTab.tsx`.
+  - [x] **Verificación**: Backend `tsc --noEmit` (`0` errores) + `vitest run` (`64/64` suites / `303/303` tests, incl. `reports.engine.test.ts` `7/7`) + `npm run build:backend` ✅; Frontend `vite build` (`exit 0`) + `100%` tests de Reportes en `minimalismPillarStep5.test.ts` ✅.
+- [ ] **Paso 2: Interfaz Minimalista de 5 Pestañas en 1 Fila (`Resumen` + PDF A4, `Ventas Local` Auditable, `Rentabilidad` sin Matriz, `Zonas y Vendedores` + Ficha PDF, `Caja Semanal`) y eliminación de `Alertas IA`**
+
+
 

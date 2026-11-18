@@ -1,9 +1,14 @@
 import prisma from '../../utils/prisma';
-import { MAIN_CITIES } from './admin-report.helpers';
+import { CreditNoteStatus, OrderStatus } from '@prisma/client';
+import { Decimal } from 'decimal.js';
+import { roundToIntegerPeso, roundToThreeDecimalsWeight, sumIntegerAmounts } from '../../core/money';
+import { computeMarginPercent, MAIN_CITIES, resolveItemHistoricalMetrics } from '../../engines/reports-core.engine';
+import { getArgentinaWeekMondayIso, resolveReportDateRange } from './admin-report.helpers';
 
 export class AdminZonesSubService {
   /**
-   * Obtener reportes y recomendaciones comerciales por Zonas.
+   * Reportes comerciales por Zonas: Decimal.js, semanas en hora AR (-03:00),
+   * rangos completos (-03:00) y descuento de Notas de Crédito aprobadas.
    */
   async getZoneReports(filters: {
     sellerId?: number;
@@ -13,88 +18,119 @@ export class AdminZonesSubService {
     endDate?: string;
   }) {
     const whereClause: any = { isClient: true };
-    if (filters.sellerId) whereClause.sellerId = filters.sellerId;
+    const personaFilter: any = {};
+
+    if (filters.sellerId) {
+      whereClause.sellerId = filters.sellerId;
+      personaFilter.sellerId = filters.sellerId;
+    }
     if (filters.cities && filters.cities.length > 0) {
       whereClause.city = { in: filters.cities };
+      personaFilter.city = { in: filters.cities };
     } else if (filters.city && filters.city.trim() !== '') {
       whereClause.city = { contains: filters.city, mode: 'insensitive' };
+      personaFilter.city = { contains: filters.city, mode: 'insensitive' };
     }
 
-    const clients = await prisma.persona.findMany({
-      where: whereClause,
-      include: { seller: { select: { id: true, username: true } } },
-      orderBy: { city: 'asc' },
-    });
+    const createdAtRange =
+      filters.startDate || filters.endDate
+        ? resolveReportDateRange({ startDate: filters.startDate, endDate: filters.endDate }).range
+        : undefined;
 
-    const totalClients = clients.length;
-    const totalDebt = clients.reduce((acc, curr) => acc + Number(curr.outstandingBalance || 0), 0);
+    const commonWhere: any = {
+      ...(Object.keys(personaFilter).length > 0 ? { persona: personaFilter } : {}),
+      ...(createdAtRange ? { createdAt: createdAtRange } : {}),
+    };
 
-    const orderWhereClause: any = { status: 'DELIVERED' };
-    if (filters.cities && filters.cities.length > 0) {
-      orderWhereClause.persona = { city: { in: filters.cities } };
-    } else if (filters.city && filters.city.trim() !== '') {
-      orderWhereClause.persona = { city: { contains: filters.city, mode: 'insensitive' } };
-    }
-    if (filters.sellerId) {
-      if (!orderWhereClause.persona) orderWhereClause.persona = {};
-      orderWhereClause.persona.sellerId = filters.sellerId;
-    }
-    if (filters.startDate || filters.endDate) {
-      orderWhereClause.createdAt = {};
-      if (filters.startDate) orderWhereClause.createdAt.gte = new Date(filters.startDate);
-      if (filters.endDate) {
-        const end = new Date(filters.endDate);
-        end.setHours(23, 59, 59, 999);
-        orderWhereClause.createdAt.lte = end;
-      }
-    }
-
-    const orders = await prisma.order.findMany({
-      where: orderWhereClause,
-      include: {
-        persona: {
-          select: {
-            id: true,
-            name: true,
-            city: true,
-            route: true,
-            saleRoute: { select: { id: true, name: true } },
-            seller: { select: { id: true, username: true } },
+    const [clients, orders, creditNotes, sellers, activeProducts] = await Promise.all([
+      prisma.persona.findMany({
+        where: whereClause,
+        include: { seller: { select: { id: true, username: true } } },
+        orderBy: { city: 'asc' },
+      }),
+      prisma.order.findMany({
+        where: { status: OrderStatus.DELIVERED, ...commonWhere },
+        include: {
+          persona: {
+            select: {
+              id: true,
+              name: true,
+              city: true,
+              route: true,
+              saleRoute: { select: { id: true, name: true } },
+              seller: { select: { id: true, username: true } },
+            },
           },
-        },
-        items: {
-          include: {
-            product: {
-              select: {
-                id: true,
-                sku: true,
-                name: true,
-                isPesable: true,
-                rubroId: true,
-                rubro: { select: { id: true, name: true } },
+          items: {
+            include: {
+              product: {
+                select: {
+                  id: true,
+                  sku: true,
+                  name: true,
+                  isPesable: true,
+                  rubroId: true,
+                  rubro: { select: { id: true, name: true } },
+                },
               },
             },
           },
         },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+        orderBy: { createdAt: 'desc' },
+      }),
+      prisma.creditNote.findMany({
+        where: { status: CreditNoteStatus.APPROVED, ...commonWhere },
+        include: {
+          persona: {
+            select: {
+              id: true,
+              name: true,
+              city: true,
+              seller: { select: { id: true, username: true } },
+            },
+          },
+          items: {
+            include: {
+              product: {
+                select: {
+                  id: true,
+                  sku: true,
+                  name: true,
+                  isPesable: true,
+                  rubroId: true,
+                  rubro: { select: { id: true, name: true } },
+                },
+              },
+            },
+          },
+        },
+      }),
+      prisma.user.findMany({ where: { role: 'VENDEDOR' }, select: { id: true, username: true } }),
+      prisma.product.findMany({
+        where: { stock: { gt: 0 } },
+        select: { id: true, sku: true, name: true, stock: true, rubro: { select: { name: true } } },
+      }),
+    ]);
+
+    const totalClients = clients.length;
+    const totalDebt = roundToIntegerPeso(
+      clients.reduce((acc, curr) => acc.plus(curr.outstandingBalance || 0), new Decimal(0)),
+    ).toNumber();
 
     const clientMap = new Map<
       number,
-      { id: number; name: string; city: string; sellerName: string; totalSpent: number; ordersCount: number }
+      { id: number; name: string; city: string; sellerName: string; totalSpentDec: Decimal; ordersCount: number }
     >();
     const productMap = new Map<
       number,
-      { id: number; sku: string; name: string; qty: number; revenue: number; rubroId: number | null; rubroName: string }
+      { id: number; sku: string; name: string; qtyDec: Decimal; revenueDec: Decimal; rubroId: number | null; rubroName: string }
     >();
-    const weeklyMap = new Map<string, { weekStart: string; dateObj: Date; total: number; count: number }>();
-    const weeklyRubroMap = new Map<string, Map<string, number>>();
-    const rubrosAccumulatedMap = new Map<string, { id: number | null; name: string; totalSales: number; itemsCount: number }>();
-    const clientRubroMap = new Map<number, Map<string, number>>();
+    const weeklyMap = new Map<string, { weekStart: string; totalDec: Decimal; count: number }>();
+    const weeklyRubroMap = new Map<string, Map<string, Decimal>>();
+    const rubrosAccumulatedMap = new Map<string, { id: number | null; name: string; totalSalesDec: Decimal; itemsCount: number }>();
 
     for (const order of orders) {
-      const totalAmount = Number(order.totalAmount) || 0;
+      const totalAmtDec = roundToIntegerPeso(order.totalAmount || 0);
       const clientId = order.personaId;
 
       const clientData = clientMap.get(clientId) || {
@@ -102,89 +138,136 @@ export class AdminZonesSubService {
         name: order.persona.name,
         city: order.persona.city || 'Sin especificar',
         sellerName: order.persona.seller?.username || 'Sin preventista',
-        totalSpent: 0,
+        totalSpentDec: new Decimal(0),
         ordersCount: 0,
       };
-      clientData.totalSpent += totalAmount;
+      clientData.totalSpentDec = clientData.totalSpentDec.plus(totalAmtDec);
       clientData.ordersCount += 1;
       clientMap.set(clientId, clientData);
 
-      const orderDate = new Date(order.createdAt);
-      const day = orderDate.getDay();
-      const diff = orderDate.getDate() - day + (day === 0 ? -6 : 1);
-      const monday = new Date(orderDate.setDate(diff));
-      monday.setHours(0, 0, 0, 0);
-      const weekKey = monday.toISOString().split('T')[0];
-
-      const weekData = weeklyMap.get(weekKey) || { weekStart: weekKey, dateObj: monday, total: 0, count: 0 };
-      weekData.total += totalAmount;
+      const weekKey = getArgentinaWeekMondayIso(order.createdAt);
+      const weekData = weeklyMap.get(weekKey) || { weekStart: weekKey, totalDec: new Decimal(0), count: 0 };
+      weekData.totalDec = weekData.totalDec.plus(totalAmtDec);
       weekData.count += 1;
       weeklyMap.set(weekKey, weekData);
 
-      let clientRubro = clientRubroMap.get(clientId);
-      if (!clientRubro) {
-        clientRubro = new Map<string, number>();
-        clientRubroMap.set(clientId, clientRubro);
+      let weekRubro = weeklyRubroMap.get(weekKey);
+      if (!weekRubro) {
+        weekRubro = new Map<string, Decimal>();
+        weeklyRubroMap.set(weekKey, weekRubro);
       }
 
       for (const item of order.items) {
-        const prodId = item.productId;
-        const qty = item.product.isPesable && item.weight ? Number(item.weight) : item.quantity;
-        const subtotal = Number(item.subtotal) || 0;
+        const { qtyDec, itemRevenueDec } = resolveItemHistoricalMetrics(item);
         const rubroName = item.product.rubro?.name || 'VARIOS';
         const rubroId = item.product.rubroId || null;
 
-        const prodData = productMap.get(prodId) || {
-          id: prodId,
+        const prodData = productMap.get(item.productId) || {
+          id: item.productId,
           sku: item.product.sku,
           name: item.product.name,
-          qty: 0,
-          revenue: 0,
+          qtyDec: new Decimal(0),
+          revenueDec: new Decimal(0),
           rubroId,
           rubroName,
         };
-        prodData.qty += qty;
-        prodData.revenue += subtotal;
-        productMap.set(prodId, prodData);
+        prodData.qtyDec = prodData.qtyDec.plus(qtyDec);
+        prodData.revenueDec = prodData.revenueDec.plus(itemRevenueDec);
+        productMap.set(item.productId, prodData);
 
-        let weekRubro = weeklyRubroMap.get(weekKey);
-        if (!weekRubro) {
-          weekRubro = new Map<string, number>();
-          weeklyRubroMap.set(weekKey, weekRubro);
-        }
-        weekRubro.set(rubroName, (weekRubro.get(rubroName) || 0) + subtotal);
+        weekRubro.set(rubroName, (weekRubro.get(rubroName) || new Decimal(0)).plus(itemRevenueDec));
 
         const rAcc = rubrosAccumulatedMap.get(rubroName) || {
           id: rubroId,
           name: rubroName,
-          totalSales: 0,
+          totalSalesDec: new Decimal(0),
           itemsCount: 0,
         };
-        rAcc.totalSales += subtotal;
+        rAcc.totalSalesDec = rAcc.totalSalesDec.plus(itemRevenueDec);
         rAcc.itemsCount += 1;
         rubrosAccumulatedMap.set(rubroName, rAcc);
-
-        clientRubro.set(rubroName, (clientRubro.get(rubroName) || 0) + subtotal);
       }
     }
 
-    const clientsWithMovements = Array.from(clientMap.values()).sort((a, b) => b.totalSpent - a.totalSpent);
-    const topClients = clientsWithMovements.slice(0, 10);
-    const topProducts = Array.from(productMap.values()).sort((a, b) => b.qty - a.qty).slice(0, 10);
-    const bottomProducts = Array.from(productMap.values()).sort((a, b) => a.qty - b.qty).slice(0, 10);
+    for (const cn of creditNotes) {
+      const cnAmtDec = roundToIntegerPeso(cn.totalAmount || 0);
+      const clientData = clientMap.get(cn.personaId);
+      if (clientData) {
+        clientData.totalSpentDec = clientData.totalSpentDec.minus(cnAmtDec);
+      }
+
+      const weekKey = getArgentinaWeekMondayIso(cn.createdAt);
+      const weekData = weeklyMap.get(weekKey);
+      if (weekData) {
+        weekData.totalDec = weekData.totalDec.minus(cnAmtDec);
+      }
+      const weekRubro = weeklyRubroMap.get(weekKey);
+
+      for (const item of cn.items) {
+        const { qtyDec, itemRevenueDec } = resolveItemHistoricalMetrics(item);
+        const rubroName = item.product.rubro?.name || 'VARIOS';
+
+        const prodData = productMap.get(item.productId);
+        if (prodData) {
+          prodData.qtyDec = prodData.qtyDec.minus(qtyDec);
+          prodData.revenueDec = prodData.revenueDec.minus(itemRevenueDec);
+        }
+
+        if (weekRubro) {
+          weekRubro.set(rubroName, (weekRubro.get(rubroName) || new Decimal(0)).minus(itemRevenueDec));
+        }
+
+        const rAcc = rubrosAccumulatedMap.get(rubroName);
+        if (rAcc) {
+          rAcc.totalSalesDec = rAcc.totalSalesDec.minus(itemRevenueDec);
+        }
+      }
+    }
+
+    const clientsWithMovements = Array.from(clientMap.values())
+      .map((c) => ({
+        id: c.id,
+        name: c.name,
+        city: c.city,
+        sellerName: c.sellerName,
+        totalSpent: roundToIntegerPeso(c.totalSpentDec).toNumber(),
+        ordersCount: c.ordersCount,
+      }))
+      .sort((a, b) => b.totalSpent - a.totalSpent);
+
+    const formattedProducts = Array.from(productMap.values()).map((p) => ({
+      id: p.id,
+      sku: p.sku,
+      name: p.name,
+      qty: roundToThreeDecimalsWeight(p.qtyDec).toNumber(),
+      revenue: roundToIntegerPeso(p.revenueDec).toNumber(),
+      rubroId: p.rubroId,
+      rubroName: p.rubroName,
+    }));
+
+    const activeSoldProducts = formattedProducts.filter((p) => p.qty > 0);
+    const topProducts = [...activeSoldProducts].sort((a, b) => b.qty - a.qty).slice(0, 10);
+    const bottomProducts = [...activeSoldProducts].sort((a, b) => a.qty - b.qty).slice(0, 10);
 
     const weeklyInvoicing = Array.from(weeklyMap.values())
-      .sort((a, b) => a.dateObj.getTime() - b.dateObj.getTime())
+      .sort((a, b) => a.weekStart.localeCompare(b.weekStart))
       .map((w) => {
         const weekRubro = weeklyRubroMap.get(w.weekStart);
         const rubrosBreakdown: { [name: string]: number } = {};
         if (weekRubro) {
-          for (const [rName, amount] of weekRubro.entries()) rubrosBreakdown[rName] = Math.round(amount);
+          for (const [rName, amtDec] of weekRubro.entries()) {
+            rubrosBreakdown[rName] = roundToIntegerPeso(amtDec).toNumber();
+          }
         }
-        return { weekStart: w.weekStart, total: w.total, count: w.count, rubros: rubrosBreakdown };
+        return {
+          weekStart: w.weekStart,
+          total: roundToIntegerPeso(w.totalDec).toNumber(),
+          count: w.count,
+          rubros: rubrosBreakdown,
+        };
       });
 
-    const totalInvoicedInZone = weeklyInvoicing.reduce((sum, w) => sum + w.total, 0);
+    const totalInvoicedInZoneDec = weeklyInvoicing.reduce((sum, w) => sum.plus(w.total), new Decimal(0));
 
     const rubroMetrics = Array.from(rubrosAccumulatedMap.values())
       .map((r) => {
@@ -192,34 +275,26 @@ export class AdminZonesSubService {
         let trend = 0;
         if (weekSales.length > 1) {
           const half = Math.floor(weekSales.length / 2);
-          const avg1 = weekSales.slice(0, half).reduce((s, v) => s + v, 0) / half;
-          const avg2 = weekSales.slice(half).reduce((s, v) => s + v, 0) / (weekSales.length - half);
-          trend = avg1 > 0 ? Math.round(((avg2 - avg1) / avg1) * 100) : 0;
+          const avg1Dec = sumIntegerAmounts(weekSales.slice(0, half)).dividedBy(half);
+          const avg2Dec = sumIntegerAmounts(weekSales.slice(half)).dividedBy(weekSales.length - half);
+          trend = avg1Dec.gt(0) ? computeMarginPercent(avg2Dec.minus(avg1Dec), avg1Dec, 0) : 0;
         }
-        const topProdsInRubro = Array.from(productMap.values())
-          .filter((p) => p.rubroName === r.name)
+        const topProdsInRubro = formattedProducts
+          .filter((p) => p.rubroName === r.name && p.revenue > 0)
           .sort((a, b) => b.revenue - a.revenue)
           .slice(0, 3)
-          .map((p) => ({ id: p.id, sku: p.sku, name: p.name, qty: p.qty, revenue: Math.round(p.revenue) }));
+          .map((p) => ({ id: p.id, sku: p.sku, name: p.name, qty: p.qty, revenue: p.revenue }));
 
         return {
           id: r.id,
           name: r.name,
-          totalSales: Math.round(r.totalSales),
-          percentageOfTotal: totalInvoicedInZone > 0 ? Math.round((r.totalSales / totalInvoicedInZone) * 100) : 0,
+          totalSales: roundToIntegerPeso(r.totalSalesDec).toNumber(),
+          percentageOfTotal: computeMarginPercent(r.totalSalesDec, totalInvoicedInZoneDec, 0),
           trend,
           topProducts: topProdsInRubro,
         };
       })
       .sort((a, b) => b.totalSales - a.totalSales);
-
-    const [sellers, activeProducts] = await Promise.all([
-      prisma.user.findMany({ where: { role: 'VENDEDOR' }, select: { id: true, username: true } }),
-      prisma.product.findMany({
-        where: { stock: { gt: 0 } },
-        select: { id: true, sku: true, name: true, stock: true, rubro: { select: { name: true } } },
-      }),
-    ]);
 
     const deadStockProducts = activeProducts
       .filter((p) => !productMap.has(p.id))
@@ -241,7 +316,7 @@ export class AdminZonesSubService {
       clients,
       availableCities: [...MAIN_CITIES, 'OTRAS'].sort(),
       availableSellers: sellers,
-      topClients,
+      topClients: clientsWithMovements.slice(0, 10),
       clientsWithMovements,
       topProducts,
       bottomProducts,

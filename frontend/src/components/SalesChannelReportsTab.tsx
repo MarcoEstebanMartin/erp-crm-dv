@@ -35,8 +35,9 @@ export default function SalesChannelReportsTab() {
     setLoading(true);
     try {
       const res = await api.getSalesChannelStats(year, month);
-      if (res && res.data) {
-        setData(res.data);
+      const payload = res?.channels ? res : res?.data;
+      if (payload) {
+        setData(payload);
       }
     } catch (e) {
       console.error('Error al cargar estadísticas de canales de venta:', e);
