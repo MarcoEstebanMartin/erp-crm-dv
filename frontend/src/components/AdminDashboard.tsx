@@ -214,27 +214,18 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
       )}
 
       <AdminSummaryCardModal
-        summaryCardModal={c.summaryCardModal}
-        orders={c.orders}
-        onClose={() => c.setSummaryCardModal(null)}
+        summaryCardModal={c.summaryCardModal} orders={c.orders} onClose={() => c.setSummaryCardModal(null)}
         onSelectOrderDetails={c.setOrderDetailsModal}
         onViewAllInOrdersTab={(cardKey) => { c.setOrderStatusFilter(cardKey); setActiveTab('orders'); c.setSummaryCardModal(null); }}
         onNavigateOperationalTab={(tab) => { setActiveTab(tab); c.setSummaryCardModal(null); }}
-        onOrderDelivered={c.fetchData}
-        setErrorMsg={c.setErrorMsg}
-        setSuccessMsg={c.setSuccessMsg}
+        onOrderDelivered={c.fetchData} setErrorMsg={c.setErrorMsg} setSuccessMsg={c.setSuccessMsg}
       />
 
       <AdminOrderDetailsModal
-        orderDetailsModal={c.orderDetailsModal}
-        onClose={() => c.setOrderDetailsModal(null)}
-        onFastInvoice={(order) => c.setFastInvoiceOrder(order)}
-        fetchData={c.fetchData}
-        onOrderUpdated={(updated) =>
-          c.setOrderDetailsModal((prev: any) => (prev ? { ...prev, ...updated } : null))
-        }
-        setErrorMsg={c.setErrorMsg}
-        setSuccessMsg={c.setSuccessMsg}
+        orderDetailsModal={c.orderDetailsModal} onClose={() => c.setOrderDetailsModal(null)}
+        onFastInvoice={(order) => c.setFastInvoiceOrder(order)} fetchData={c.fetchData}
+        onOrderUpdated={(updated) => c.setOrderDetailsModal((prev: any) => (prev ? { ...prev, ...updated } : null))}
+        setErrorMsg={c.setErrorMsg} setSuccessMsg={c.setSuccessMsg}
       />
 
       <EditOrderModal editOrderModal={c.editOrderModal} setEditOrderModal={c.setEditOrderModal} products={c.products} fetchData={c.fetchData} setSuccessMsg={c.setSuccessMsg} setErrorMsg={c.setErrorMsg} />

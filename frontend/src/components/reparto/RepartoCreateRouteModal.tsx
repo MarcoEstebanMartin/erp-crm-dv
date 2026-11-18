@@ -69,8 +69,19 @@ export const RepartoCreateRouteModal: FC<RepartoCreateRouteModalProps> = ({
   }, [show, editingRouteId]);
 
   return (
-    <NativeModalDialog isOpen={show} onClose={onClose} ariaLabelledBy="reparto-create-modal-title" style={{ maxWidth: '1220px', width: '94vw', padding: '24px' }}>
-      <div className="modal-header">
+    <NativeModalDialog
+      isOpen={show}
+      onClose={onClose}
+      ariaLabelledBy="reparto-create-modal-title"
+      style={{
+        width: 'min(1320px, 95dvw)',
+        maxWidth: '1320px',
+        height: 'min(760px, 90dvh)',
+        maxHeight: '90dvh',
+        padding: '24px 28px',
+      }}
+    >
+      <div className="modal-header" style={{ flexShrink: 0 }}>
         <h3 id="reparto-create-modal-title" style={{ margin: 0 }}>
           {editingRouteId ? `Editar Viaje #${editingRouteId}` : 'Nuevo Viaje'}
         </h3>
@@ -79,12 +90,12 @@ export const RepartoCreateRouteModal: FC<RepartoCreateRouteModalProps> = ({
         </button>
       </div>
 
-      {errorMsg && <div role="alert" className="alert alert-danger" style={{ marginBottom: '12px' }}>{errorMsg}</div>}
+      {errorMsg && <div role="alert" className="alert alert-danger" style={{ marginBottom: '12px', flexShrink: 0 }}>{errorMsg}</div>}
 
-      <form onSubmit={onSubmit}>
-        <div style={{ display: 'grid', gridTemplateColumns: '430px 1fr', gap: '24px', alignItems: 'start' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+      <form onSubmit={onSubmit} style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '450px minmax(0, 1fr)', gap: '24px', flex: 1, minHeight: 0, overflow: 'hidden' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', minHeight: 0, height: '100%', overflow: 'hidden' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', flexShrink: 0 }}>
               <div className="form-group" style={{ marginBottom: 0 }}>
                 <label htmlFor="reparto-route-name">Nombre del viaje</label>
                 <input id="reparto-route-name" type="text" className="input" placeholder="Ruta Sur" value={routeName} onChange={(e) => setRouteName(e.target.value)} />
@@ -95,7 +106,7 @@ export const RepartoCreateRouteModal: FC<RepartoCreateRouteModalProps> = ({
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', flexShrink: 0 }}>
               <div className="form-group" style={{ marginBottom: 0 }}>
                 <label htmlFor="reparto-driver">Conductor</label>
                 <select
@@ -158,7 +169,7 @@ export const RepartoCreateRouteModal: FC<RepartoCreateRouteModalProps> = ({
             </div>
 
             {isCustomDriver && (
-              <div className="form-group" style={{ marginBottom: 0 }}>
+              <div className="form-group" style={{ marginBottom: 0, flexShrink: 0 }}>
                 <label htmlFor="reparto-driver-custom">Nombre del conductor</label>
                 <input
                   id="reparto-driver-custom"
@@ -176,7 +187,7 @@ export const RepartoCreateRouteModal: FC<RepartoCreateRouteModalProps> = ({
             )}
 
             {selectedVehicleKey === 'CUSTOM' && (
-              <div style={{ display: 'grid', gridTemplateColumns: '130px 1fr', gap: '10px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '130px 1fr', gap: '10px', flexShrink: 0 }}>
                 <div className="form-group" style={{ marginBottom: 0 }}>
                   <label htmlFor="reparto-plate">Patente</label>
                   <input id="reparto-plate" type="text" className="input tabular-nums" placeholder="AA000AA" value={vehiclePlate} onChange={(e) => setVehiclePlate(e.target.value.toUpperCase())} autoCorrect="off" autoCapitalize="characters" spellCheck={false} required />
@@ -188,8 +199,8 @@ export const RepartoCreateRouteModal: FC<RepartoCreateRouteModalProps> = ({
               </div>
             )}
 
-            <div style={{ marginTop: '4px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px', gap: '6px', flexWrap: 'wrap' }}>
+            <div style={{ marginTop: '4px', display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px', gap: '6px', flexWrap: 'wrap', minHeight: '28px', flexShrink: 0 }}>
                 <span className="tabular-nums" style={{ fontWeight: 600, fontSize: '0.84rem' }}>
                   Pedidos ({filteredPendingOrders.length})
                 </span>
@@ -212,7 +223,7 @@ export const RepartoCreateRouteModal: FC<RepartoCreateRouteModalProps> = ({
                 </div>
               </div>
 
-              <div style={{ maxHeight: '275px', overflowY: 'auto', border: '1px solid var(--border-color)', borderRadius: '6px', padding: '6px' }}>
+              <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', scrollbarGutter: 'stable', overscrollBehavior: 'contain', border: '1px solid var(--border-color)', borderRadius: '6px', padding: '6px' }}>
                 {filteredPendingOrders.length === 0 ? (
                   <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', padding: '12px', textAlign: 'center' }}>Sin pedidos para despacho.</div>
                 ) : (
@@ -236,31 +247,38 @@ export const RepartoCreateRouteModal: FC<RepartoCreateRouteModalProps> = ({
             </div>
           </div>
 
-          <div>
-            {selectedOrderIds.length > 0 ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                <div className="tabular-nums" style={{ fontSize: '0.82rem', color: '#111827', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', minHeight: 0, height: '100%', overflow: 'hidden' }}>
+            <div className="tabular-nums" style={{ minHeight: '22px', flexShrink: 0, fontSize: '0.82rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', color: selectedOrderIds.length > 0 ? '#111827' : 'var(--text-secondary)' }}>
+              {selectedOrderIds.length > 0 ? (
+                <>
                   <CheckCircle size={14} aria-hidden="true" style={{ color: 'var(--color-success)' }} />
                   <span>{metrics.ordersCount} {metrics.ordersCount === 1 ? 'pedido' : 'pedidos'}</span>
                   <span>· {metrics.totalBultos} {metrics.totalBultos === 1 ? 'bulto' : 'bultos'}</span>
                   <span>· {metrics.totalAmountLabel}</span>
-                </div>
+                </>
+              ) : (
+                <span>0 pedidos seleccionados</span>
+              )}
+            </div>
+            <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+              {selectedOrderIds.length > 0 ? (
                 <RouteMap
                   locations={currentTspRoute}
                   routePoints={createRouteStreetPoints.length > 0 ? createRouteStreetPoints : mapPoints}
                   onUpdateClientCoords={handleUpdateClientCoords}
+                  fillHeight
                 />
-              </div>
-            ) : (
-              <div style={{ height: '340px', border: '1px dashed var(--border-color)', borderRadius: '8px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '20px', backgroundColor: 'var(--bg-app)', gap: '8px', color: 'var(--text-secondary)' }}>
-                <MapPin size={32} aria-hidden="true" />
-                <span style={{ fontSize: '0.85rem' }}>Seleccione pedidos para trazar la ruta</span>
-              </div>
-            )}
+              ) : (
+                <div style={{ flex: 1, minHeight: 0, border: '1px dashed var(--border-color)', borderRadius: '8px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '20px', backgroundColor: 'var(--bg-app)', gap: '8px', color: 'var(--text-secondary)' }}>
+                  <MapPin size={32} aria-hidden="true" />
+                  <span style={{ fontSize: '0.85rem' }}>Seleccione pedidos para trazar la ruta</span>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
-        <div className="modal-footer" style={{ marginTop: '18px' }}>
+        <div className="modal-footer" style={{ marginTop: '16px', paddingTop: '12px', borderTop: '1px solid var(--border-color)', flexShrink: 0 }}>
           <button type="button" className="btn btn-secondary" onClick={onClose}>Cancelar</button>
           <button type="submit" className="btn btn-primary" disabled={selectedOrderIds.length === 0}>
             {editingRouteId ? 'Guardar cambios' : 'Crear viaje'}

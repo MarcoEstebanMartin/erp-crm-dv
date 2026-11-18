@@ -7,6 +7,7 @@ interface RouteMapProps {
   onUpdateClientCoords?: (clientId: number, lat: number, lng: number) => void;
   gpsLocation?: LiveVehicleGpsPoint | null;
   gpsTrail?: [number, number][];
+  fillHeight?: boolean;
 }
 
 export function LeafletRouteMap({
@@ -14,6 +15,7 @@ export function LeafletRouteMap({
   onUpdateClientCoords,
   gpsLocation,
   gpsTrail,
+  fillHeight = false,
 }: RouteMapProps) {
   return (
     <OfficialGoogleMap
@@ -24,6 +26,7 @@ export function LeafletRouteMap({
       gpsLocation={gpsLocation}
       gpsTrail={gpsTrail}
       heightPx={420}
+      fillHeight={fillHeight}
     />
   );
 }
@@ -33,6 +36,7 @@ export function RouteMap({
   onUpdateClientCoords,
   gpsLocation,
   gpsTrail,
+  fillHeight = false,
 }: RouteMapProps) {
   return (
     <OfficialGoogleMap
@@ -43,6 +47,7 @@ export function RouteMap({
       gpsLocation={gpsLocation}
       gpsTrail={gpsTrail}
       heightPx={420}
+      fillHeight={fillHeight}
     />
   );
 }

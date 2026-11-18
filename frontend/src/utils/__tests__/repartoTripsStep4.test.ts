@@ -104,6 +104,11 @@ describe('Paso 4 — Entregas, Menú Logística y Armado de Viajes', () => {
     expect(ctrl).toContain('dispatchQueue: true');
     expect(ctrl).toContain('setRuntimeGoogleMapsApiKey');
     expect(ctrl).toContain('api.updateDeliveryRoute');
+
+    const createModal = readSrc('components/reparto/RepartoCreateRouteModal.tsx');
+    expect(createModal).toContain("width: 'min(1320px, 95dvw)'");
+    expect(createModal).toContain("height: 'min(760px, 90dvh)'");
+    expect(createModal).toContain('fillHeight');
   });
 
   it('respeta zona ideal <= 300 líneas en todos los archivos nuevos y editados de Reparto', () => {

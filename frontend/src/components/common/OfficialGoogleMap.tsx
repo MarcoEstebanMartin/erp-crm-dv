@@ -29,6 +29,7 @@ interface OfficialGoogleMapProps {
   centerLng?: number;
   defaultZoom?: number;
   heightPx?: number;
+  fillHeight?: boolean;
   apiKey?: string;
   onUpdateClientCoords?: (clientId: number, lat: number, lng: number) => void;
   onSelectMarker?: (markerId: string) => void;
@@ -47,6 +48,7 @@ export function OfficialGoogleMap({
   centerLng = DEPOT_VILLEGAS.lng,
   defaultZoom = 14,
   heightPx = 420,
+  fillHeight = false,
   apiKey,
   onUpdateClientCoords,
   onSelectMarker,
@@ -195,7 +197,15 @@ export function OfficialGoogleMap({
       : null;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%' }}>
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '8px',
+        width: '100%',
+        ...(fillHeight ? { flex: 1, minHeight: 0, height: '100%' } : {}),
+      }}
+    >
       {(metrics || externalRouteUrl) && (
         <div
           style={{
@@ -239,7 +249,7 @@ export function OfficialGoogleMap({
         <div
           role="status"
           style={{
-            height: `${heightPx}px`,
+            ...(fillHeight ? { flex: 1, minHeight: '260px' } : { height: `${heightPx}px` }),
             borderRadius: '8px',
             border: '1px solid var(--border-color)',
             backgroundColor: '#f8fafc',
@@ -262,7 +272,7 @@ export function OfficialGoogleMap({
           ref={containerRef}
           style={{
             width: '100%',
-            height: `${heightPx}px`,
+            ...(fillHeight ? { flex: 1, minHeight: '260px' } : { height: `${heightPx}px` }),
             borderRadius: '8px',
             border: '1px solid var(--border-color)',
             backgroundColor: '#f1f5f9',
