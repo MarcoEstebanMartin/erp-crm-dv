@@ -201,10 +201,16 @@ export const cashDrawerService = {
   },
 
   async getActiveDrawer(userId: number) {
-    return prisma.cashDrawer.findFirst({ where: { userId, status: 'OPEN' } });
+    return prisma.cashDrawer.findFirst({
+      where: { userId, status: 'OPEN' },
+      include: { user: { select: { id: true, username: true } } },
+    });
   },
 
   async getActiveDrawers(userId: number) {
-    return prisma.cashDrawer.findMany({ where: { userId, status: 'OPEN' } });
+    return prisma.cashDrawer.findMany({
+      where: { userId, status: 'OPEN' },
+      include: { user: { select: { id: true, username: true } } },
+    });
   },
 };

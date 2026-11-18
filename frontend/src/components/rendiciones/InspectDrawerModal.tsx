@@ -156,8 +156,10 @@ export default function InspectDrawerModal({
                     {inspectTxs.map((t) => (
                       <tr key={t.id}>
                         <td>{new Date(t.createdAt).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}</td>
-                        <td style={{ fontWeight: 600 }}>{t.receiptNumber || `Pedido #${t.orderId || 'S/N'}`}</td>
-                        <td>{t.persona?.name || 'Varios'}</td>
+                        <td style={{ fontWeight: 600 }}>
+                          {t.receiptNumber || (t.orderId ? `Pedido #${t.orderId}` : t.description || 'Movimiento interno')}
+                        </td>
+                        <td>{t.persona?.name || (t.orderId ? 'Consumidor Final' : '—')}</td>
                         <td>{t.billingType === 'OFFICIAL' ? 'A' : 'X'}</td>
                         <td>
                           <span
