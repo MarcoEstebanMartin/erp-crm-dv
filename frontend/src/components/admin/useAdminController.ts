@@ -282,6 +282,10 @@ export function useAdminController(activeTab: string) {
 
   // Refresco explícito tras mutaciones (invalida React Query + consulta datos frescos del servidor)
   const fetchData = useCallback(async () => {
+    freshnessRef.current.providersAt = 0;
+    freshnessRef.current.hasProviders = false;
+    freshnessRef.current.productsAt = 0;
+    freshnessRef.current.clientsAt = 0;
     void queryClient.invalidateQueries({ queryKey: ORDERS_QUERY_KEYS.all });
     void queryClient.invalidateQueries({ queryKey: CLIENTS_QUERY_KEYS.all });
     void queryClient.invalidateQueries({ queryKey: PRODUCTS_QUERY_KEYS.all });

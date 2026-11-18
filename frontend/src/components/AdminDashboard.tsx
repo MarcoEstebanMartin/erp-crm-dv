@@ -116,6 +116,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
           handleViewClientProfile={c.handleViewClientProfile}
           handleViewSellerProfile={(seller: any) => c.setSellerProfileModal({ open: true, sellerId: seller.id })}
           clientsVersion={c.clientsVersion}
+          onProvidersChanged={c.fetchData}
         />
       )}
 

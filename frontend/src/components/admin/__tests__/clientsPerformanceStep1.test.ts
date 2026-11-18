@@ -3,6 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import {
+  PERSONA_ROLE_TABS,
   computeClientLocationAndRouteCounts,
   filterClientsInMemory,
   matchesClientSearchQuery,
@@ -109,12 +110,16 @@ describe('Paso 1 Velocidad en Clientes — Buscador Fonético RAM, Conteos O(N) 
     expect(filteredInactive.map((c) => c.id)).toEqual([3]);
   });
 
-  it('ClientsTab usa useDeferredValue, elimina llamadas de red al tipear y respeta modularidad <= 300 líneas', () => {
+  it('ClientsTab usa useDeferredValue, elimina llamadas de red al tipear, expone solapa Proveedores y respeta modularidad <= 300 líneas', () => {
     const clientsTabSrc = readAdminFile('ClientsTab.tsx');
     const tableSrc = readAdminFile('ClientsPersonasTable.tsx');
     const helpersSrc = readAdminFile('clientsHelpers.ts');
 
+    expect(PERSONA_ROLE_TABS).toContainEqual({ id: 'providers', label: 'Proveedores' });
     expect(clientsTabSrc).toContain('useDeferredValue');
+    expect(clientsTabSrc).toContain('ComprasDashboard');
+    expect(clientsTabSrc).toContain("personaRoleFilter === 'providers'");
+    expect(clientsTabSrc).toContain('role="tabpanel"');
     expect(clientsTabSrc).not.toContain('api.getSellersList');
     expect(clientsTabSrc).not.toContain('api.getSaleRoutes');
     expect(clientsTabSrc).not.toMatch(/\[personaRoleFilter,\s*searchQuery/);

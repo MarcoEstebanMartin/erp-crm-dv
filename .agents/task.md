@@ -444,3 +444,10 @@
     - Alta y edición completa de viajes pendientes (`routeName`, `PATCH /api/logistics/:id`), selección masiva `Sel. localidad`, totales en vivo en pesos enteros `BigInt` (`pedidos · bultos · $`), reordenamiento directo de paradas `↑`/`↓` y mapa oficial Google Maps con tracking GPS en vivo.
   - [x] **Verificación Integral**: Backend `tsc --noEmit` (`0` errores) + `vitest run` (`58/58` suites / `272/272` tests) ✅; Frontend `tsc -p tsconfig.app.json --noEmit` (`0` errores) + `vitest run` (`26/26` suites / `667/667` tests, incl. `repartoTripsStep4.test.ts` `5/5`, `minimalismPillarStep2/3/4/5`) + `vite build` (`exit 0`, `2.80s`) ✅.
 
+---
+
+## Mejoras Incrementales Recientes
+
+- [x] **Solapa `Proveedores` dentro de `Personas`**: habilitada la pestaña `Proveedores` en `PERSONA_ROLE_TABS` (`clientsHelpers.ts` `230` l.) y `ClientsTab.tsx` (`282` l., `role="tablist"` con navegación por teclado + `role="tabpanel"`), montando `ComprasDashboard.tsx` (`344` l.) con foco inicial en `Proveedores`, preservación de roles múltiples al editar personas y sincronización de caché en `useAdminController.ts` + `AdminDashboard.tsx`, con cobertura ampliada en `clientsPerformanceStep1.test.ts` (`3/3` ✅, `minimalismPillarStep2` `4/4` ✅, `minimalismPillarStep3` `4/4` ✅, `vite build` exit `0` ✅, Backend `tsc --noEmit` `0` errores + `63/63` suites / `296/296` tests ✅).
+
+

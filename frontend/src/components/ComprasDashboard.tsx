@@ -9,14 +9,20 @@ import { ComprasCreateReceiveModals } from './compras/ComprasCreateReceiveModals
 import { ComprasSupplierInvoiceAndPayModals } from './compras/ComprasSupplierInvoiceAndPayModals';
 import { ComprasProviderModals } from './compras/ComprasProviderModals';
 
-type ComprasSubTab = 'ordenes' | 'recepciones' | 'facturas' | 'proveedores';
+export type ComprasSubTab = 'proveedores' | 'facturas' | 'ordenes' | 'recepciones';
 
 const SUB_TABS: Array<{ id: ComprasSubTab; label: string }> = [
+  { id: 'proveedores', label: 'Proveedores' },
+  { id: 'facturas', label: 'Facturas de Compra' },
   { id: 'ordenes', label: 'Órdenes de Compra' },
   { id: 'recepciones', label: 'Recepciones' },
-  { id: 'facturas', label: 'Facturas de Compra' },
-  { id: 'proveedores', label: 'Proveedores' },
 ];
+
+export interface ComprasDashboardProps {
+  initialSubTab?: ComprasSubTab;
+  refreshKey?: number;
+  onProvidersChanged?: () => void;
+}
 
 const INITIAL_SUPPLIER_FORM = () => ({
   personaId: '', invoiceNumber: '', invoiceType: 'FACTURA_A',
@@ -26,13 +32,17 @@ const INITIAL_SUPPLIER_FORM = () => ({
   percepcionIva: '', percepcionIva5329: '', impuestosInternos: '', totalAmount: '', billingType: 'OFFICIAL',
 });
 
-export default function ComprasDashboard() {
+export default function ComprasDashboard({
+  initialSubTab = 'proveedores',
+  refreshKey,
+  onProvidersChanged,
+}: ComprasDashboardProps = {}) {
   const currentUser = api.getCurrentUser();
   const isAdmin = currentUser?.role === 'ADMIN';
   const confirm = useConfirm();
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
-  const [activeSubTab, setActiveSubTab] = useState<ComprasSubTab>('ordenes');
+  const [activeSubTab, setActiveSubTab] = useState<ComprasSubTab>(initialSubTab);
   const [purchaseOrders, setPurchaseOrders] = useState<any[]>([]);
   const [providers, setProviders] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
@@ -85,7 +95,7 @@ export default function ComprasDashboard() {
     } catch { setErrorMsg('Error al cargar datos del módulo de compras.'); }
   };
 
-  useEffect(() => { loadData(); }, [supplierStartDate, supplierEndDate, supplierQuery]);
+  useEffect(() => { loadData(); }, [supplierStartDate, supplierEndDate, supplierQuery, refreshKey]);
   useEffect(() => { setSuccessMsg(null); setErrorMsg(null); }, [activeSubTab]);
 
   const handleTabKeyDown = (e: KeyboardEvent<HTMLButtonElement>, idx: number) => {
@@ -98,6 +108,7 @@ export default function ComprasDashboard() {
     e.preventDefault();
     setActiveSubTab(SUB_TABS[nextIdx].id);
     tabRefs.current[nextIdx]?.focus();
+    tabRefs.current[nextIdx]?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
   };
 
   const filteredInvoices = supplierInvoices.filter((inv) => branchFilter === 'ALL' || inv.billingType === branchFilter);
@@ -160,6 +171,7 @@ export default function ComprasDashboard() {
       setSuccessMsg(`Pago registrado para factura ${inv.invoiceNumber}.`);
       setPayInvoiceModal({ open: false, invoice: null });
       loadData();
+      onProvidersChanged?.();
     } catch (err: any) { setErrorMsg(err.message || 'Error al registrar pago.'); }
   };
 
@@ -190,7 +202,7 @@ export default function ComprasDashboard() {
       await api.receivePurchaseOrder(showReceiveModal.id, { invoiceNumber, lotAssignments });
       setErrorMsg(null);
       setSuccessMsg(`Orden de compra #${showReceiveModal.id} recibida.`);
-      setShowReceiveModal(null); loadData();
+      setShowReceiveModal(null); loadData(); onProvidersChanged?.();
     } catch (err: any) { setErrorMsg(err.message || 'Error al procesar recepción.'); }
   };
 
@@ -210,7 +222,7 @@ export default function ComprasDashboard() {
       });
       setErrorMsg(null);
       setSuccessMsg('Factura de compra registrada.');
-      setShowSupplierModal(false); loadData();
+      setShowSupplierModal(false); loadData(); onProvidersChanged?.();
     } catch (err: any) { setErrorMsg(err.message || 'Error al guardar factura.'); }
   };
 
@@ -218,11 +230,14 @@ export default function ComprasDashboard() {
     e.preventDefault();
     if (!providerModal?.data.name) return setErrorMsg('El nombre es obligatorio.');
     try {
-      const payload = { ...providerModal.data, isClient: false, isProvider: true, isSeller: false, isCommissionAgent: false };
+      const d = providerModal.data;
+      const payload = providerModal.mode === 'create'
+        ? { ...d, isClient: false, isProvider: true, isSeller: false, isCommissionAgent: false }
+        : { ...d, isClient: Boolean(d.isClient), isProvider: true, isSeller: Boolean(d.isSeller), isCommissionAgent: Boolean(d.isCommissionAgent) };
       if (providerModal.mode === 'create') await api.createPersona(payload);
-      else await api.updatePersona(providerModal.data.id, payload);
+      else await api.updatePersona(d.id, payload);
       setErrorMsg(null);
-      setProviderModal(null); setSuccessMsg('Proveedor guardado.'); loadData();
+      setProviderModal(null); setSuccessMsg('Proveedor guardado.'); loadData(); onProvidersChanged?.();
     } catch (err: any) { setErrorMsg(err.message || 'Error al guardar proveedor.'); }
   };
 
@@ -250,7 +265,8 @@ export default function ComprasDashboard() {
             <button
               key={tab.id} ref={(el) => { tabRefs.current[idx] = el; }} id={`compras-tab-${tab.id}`}
               type="button" role="tab" aria-selected={isActive} tabIndex={isActive ? 0 : -1} className="linear-tab"
-              onClick={() => setActiveSubTab(tab.id)} onKeyDown={(e) => handleTabKeyDown(e, idx)}
+              onClick={() => { setActiveSubTab(tab.id); tabRefs.current[idx]?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' }); }}
+              onKeyDown={(e) => handleTabKeyDown(e, idx)}
             >
               {tab.label}
             </button>
@@ -278,7 +294,7 @@ export default function ComprasDashboard() {
             branchFilter={branchFilter} setBranchFilter={setBranchFilter}
             onOpenSupplierModal={() => { setErrorMsg(null); setShowSupplierModal(true); }}
             onOpenPayInvoice={handleOpenPayInvoice}
-            onDeleteInvoice={async (id, num) => { if (await confirm(`¿Anular factura ${num}?`, { type: 'danger' })) { await api.deleteSupplierInvoice(id); loadData(); } }}
+            onDeleteInvoice={async (id, num) => { if (await confirm(`¿Anular factura ${num}?`, { type: 'danger' })) { await api.deleteSupplierInvoice(id); loadData(); onProvidersChanged?.(); } }}
           />
         )}
 
@@ -288,7 +304,7 @@ export default function ComprasDashboard() {
             onOpenCreateProvider={() => { setErrorMsg(null); setProviderModal({ open: true, mode: 'create', data: { id: 0, name: '', cuit: '', address: '', city: '', phone: '', email: '', paymentTermDays: 30, rubro: '', contacts: [] } }); }}
             onOpenAccountSummary={async (p) => { const res = await api.getPersonaLedger(p.id); setAccountSummaryModal(p); setLedgerData(res.ledger || []); }}
             onOpenEditProvider={(p) => { setErrorMsg(null); setProviderModal({ open: true, mode: 'edit', data: { ...p, rubro: p.rubro || '', contacts: Array.isArray(p.contacts) ? p.contacts : [] } }); }}
-            onDeleteProvider={async (id, name) => { if (await confirm(`¿Eliminar proveedor ${name}?`, { type: 'danger' })) { await api.deletePersona(id); loadData(); } }}
+            onDeleteProvider={async (id, name) => { if (await confirm(`¿Eliminar proveedor ${name}?`, { type: 'danger' })) { await api.deletePersona(id); loadData(); onProvidersChanged?.(); } }}
           />
         )}
       </div>
@@ -321,7 +337,7 @@ export default function ComprasDashboard() {
 
       <PurchaseScannerModal
         isOpen={showScannerModal} onClose={() => setShowScannerModal(false)} file={scannerFile}
-        onSuccess={() => { setSuccessMsg('Documento procesado.'); loadData(); }}
+        onSuccess={() => { setSuccessMsg('Documento procesado.'); loadData(); onProvidersChanged?.(); }}
       />
     </div>
   );
