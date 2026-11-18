@@ -260,8 +260,22 @@ export async function resolveAndSettleOrderPayment(
     }
     bankAccountIdVal = selectedBankId;
   } else if (paymentMethod === 'CHECK') {
-    const defaultBank = await tx.bankAccount.findFirst();
-    bankAccountIdVal = defaultBank?.id;
+    if (bankAccountId) {
+      bankAccountIdVal = Number(bankAccountId);
+    } else {
+      const isEcheq = /\(echeq\)|e-?cheq/i.test(String(checkIssuer || ''));
+      if (isEcheq) {
+        const allBanks = await tx.bankAccount.findMany();
+        const preferred =
+          allBanks.find((b: any) => /pcia|provincia/i.test(`${b.name || ''} ${b.bankName || ''}`)) ||
+          allBanks.find((b: any) => !/^mp$/i.test(String(b.name || '').trim())) ||
+          allBanks[0];
+        bankAccountIdVal = preferred?.id;
+      } else {
+        const defaultBank = await tx.bankAccount.findFirst();
+        bankAccountIdVal = defaultBank?.id;
+      }
+    }
     const cleanCheckNumber = checkNumber ? String(checkNumber).trim() : 'S/N';
     const cleanIssuer = checkIssuer ? String(checkIssuer).trim() : 'Desconocido';
     txAmount =

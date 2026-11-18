@@ -244,11 +244,41 @@ export function DirectInvoicePaymentPanel({
                   type="checkbox"
                   id="isEcheq"
                   checked={directInvoiceForm.isEcheq}
-                  onChange={(e) => setDirectInvoiceForm((prev) => ({ ...prev, isEcheq: e.target.checked }))}
+                  onChange={(e) => {
+                    const checked = e.target.checked;
+                    setDirectInvoiceForm((prev) => {
+                      const preferredBank = checked
+                        ? bankAccounts.find((b) => /pcia|provincia/i.test(`${b.name || ''} ${b.bankName || ''}`))
+                        : null;
+                      return {
+                        ...prev,
+                        isEcheq: checked,
+                        bankAccountId: preferredBank ? preferredBank.id.toString() : prev.bankAccountId,
+                      };
+                    });
+                  }}
                   style={{ width: '16px', height: '16px' }}
                 />
                 <label htmlFor="isEcheq" style={{ cursor: 'pointer', margin: 0, fontSize: '0.8rem' }}>Echeq</label>
               </div>
+              {directInvoiceForm.isEcheq && bankAccounts.length > 0 && (
+                <div className="form-group" style={{ margin: 0 }}>
+                  <label htmlFor="direct-echeq-bank-account">Cuenta</label>
+                  <select
+                    id="direct-echeq-bank-account"
+                    className="select"
+                    value={directInvoiceForm.bankAccountId}
+                    onChange={(e) => setDirectInvoiceForm((prev) => ({ ...prev, bankAccountId: e.target.value }))}
+                    required
+                  >
+                    {bankAccounts.map((b) => (
+                      <option key={b.id} value={b.id}>
+                        {b.name || b.bankName || `Cuenta #${b.id}`} · ${Number(b.balance).toLocaleString('es-AR')}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
           )}
         </div>

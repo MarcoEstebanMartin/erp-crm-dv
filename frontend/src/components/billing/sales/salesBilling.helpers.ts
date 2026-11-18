@@ -253,9 +253,15 @@ export function buildDirectInvoiceRequest(
       ? activeDrawers[0].id.toString()
       : cashDrawerId;
 
+  const needsBankAccount =
+    immediatePayment && (paymentMethod === 'BANK_TRANSFER' || (paymentMethod === 'CHECK' && form.isEcheq));
+
   const effectiveBankAccountId =
-    immediatePayment && paymentMethod === 'BANK_TRANSFER' && !bankAccountId && bankAccounts.length > 0
-      ? bankAccounts[0].id.toString()
+    needsBankAccount && !bankAccountId && bankAccounts.length > 0
+      ? (form.isEcheq
+          ? bankAccounts.find((b) => /pcia|provincia/i.test(`${b.name || ''} ${b.bankName || ''}`)) || bankAccounts[0]
+          : bankAccounts[0]
+        ).id.toString()
       : bankAccountId;
 
   if (immediatePayment && paymentMethod === 'CASH' && (!effectiveCashDrawerId || activeDrawers.length === 0)) {
@@ -275,7 +281,7 @@ export function buildDirectInvoiceRequest(
     markDelivered: deliveryMethod === 'PICKUP',
     paymentMethod: immediatePayment ? paymentMethod : undefined,
     cashDrawerId: immediatePayment && paymentMethod === 'CASH' ? Number(effectiveCashDrawerId) : undefined,
-    bankAccountId: immediatePayment && paymentMethod === 'BANK_TRANSFER' ? Number(effectiveBankAccountId) : undefined,
+    bankAccountId: needsBankAccount && effectiveBankAccountId ? Number(effectiveBankAccountId) : undefined,
     items: directCart.map((item) => ({
       productId: item.product.id,
       quantity: Number(item.quantity),
