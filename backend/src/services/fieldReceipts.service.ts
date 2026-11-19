@@ -6,8 +6,10 @@ import {
   Prisma,
   TransactionType,
 } from '@prisma/client';
+import { Decimal } from 'decimal.js';
 import prisma from '../utils/prisma';
 import AppError from '../utils/AppError';
+import { roundToIntegerPeso } from '../core/money';
 import {
   computeCollectorSettlementSummary,
   computeReceiptBreakdown,
@@ -351,6 +353,8 @@ export const fieldReceiptsService = {
    */
   async voidFieldReceipt(receiptId: number, adminUserId: number, voidReason: string) {
     return prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM "FieldReceipt" WHERE id = ${receiptId} FOR UPDATE`;
+
       const receipt = await tx.fieldReceipt.findUnique({
         where: { id: receiptId },
         include: { payments: true },
@@ -362,23 +366,41 @@ export const fieldReceiptsService = {
         throw new AppError('El recibo ya se encuentra anulado', 409);
       }
 
-      const activeSum = receipt.payments
+      const activeSumDec = receipt.payments
         .filter((p) => p.status !== 'REJECTED')
-        .reduce((acc, p) => acc + Number(p.amount), 0);
+        .reduce((acc, p) => acc.plus(roundToIntegerPeso(p.amount.toString())), new Decimal(0));
 
-      if (activeSum > 0) {
+      if (activeSumDec.gt(0)) {
         await recordLedgerMovement(tx, {
           personaId: receipt.personaId,
           entryType: LedgerEntryType.DEBIT,
           sourceType: LedgerSourceType.RECEIPT_REVERSAL,
           billingType: receipt.billingType,
-          amount: computeReversalAmount(activeSum).toNumber(),
+          amount: computeReversalAmount(activeSumDec).toNumber(),
           reference: receipt.receiptNumber ?? receipt.provisionalCode,
           description: `Anulación de recibo ${receipt.receiptNumber ?? receipt.provisionalCode}: ${voidReason}`,
           userId: adminUserId,
         });
       }
 
+      // Revertir saldo bancario de transferencias que ya habían sido acreditadas (CLEARED)
+      for (const payment of receipt.payments) {
+        if (
+          payment.paymentMethod === PaymentMethod.BANK_TRANSFER &&
+          payment.status === 'CLEARED' &&
+          payment.bankAccountId
+        ) {
+          const clearedAmt = roundToIntegerPeso(payment.amount.toString()).toNumber();
+          if (clearedAmt > 0) {
+            await tx.bankAccount.update({
+              where: { id: payment.bankAccountId },
+              data: { balance: { decrement: clearedAmt } },
+            });
+          }
+        }
+      }
+
+      const mirrorTxId = receipt.transactionId;
       const voided = await tx.fieldReceipt.update({
         where: { id: receipt.id },
         data: {
@@ -386,9 +408,14 @@ export const fieldReceiptsService = {
           voidReason,
           voidedByUserId: adminUserId,
           voidedAt: new Date(),
+          transactionId: null,
         },
         include: { payments: true },
       });
+
+      if (mirrorTxId) {
+        await tx.transaction.deleteMany({ where: { id: mirrorTxId } });
+      }
 
       if (receipt.settlementId) {
         await recomputeOpenSettlement(tx, receipt.settlementId);

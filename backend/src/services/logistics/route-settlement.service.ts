@@ -211,6 +211,15 @@ export const routeSettlementService = {
     const returnedToDepotOrderIds: number[] = [];
 
     await prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM "DeliveryRoute" WHERE id = ${input.routeId} FOR UPDATE`;
+      const freshRoute = await tx.deliveryRoute.findUnique({
+        where: { id: input.routeId },
+        select: { status: true },
+      });
+      if (!freshRoute || freshRoute.status === 'COMPLETED') {
+        throw new AppError('La hoja de ruta ya fue completada y liquidada.', 409);
+      }
+
       for (const order of route.orders) {
         const set = input.settlements.find((s) => Number(s.orderId) === order.id);
         if (!set) continue;
@@ -228,9 +237,16 @@ export const routeSettlementService = {
           continue;
         }
 
+        await tx.$queryRaw`SELECT id FROM "Order" WHERE id = ${order.id} FOR UPDATE`;
+        const freshOrder = await tx.order.findUnique({
+          where: { id: order.id },
+          select: { status: true, deliveredAt: true, invoiceNumber: true },
+        });
+        if (!freshOrder) continue;
+
         const totalAmount = roundToIntegerPeso(order.totalAmount.toString()).toNumber();
 
-        if (order.status === OrderStatus.PREPARED) {
+        if (freshOrder.status === OrderStatus.PREPARED) {
           let finalInvoiceType: InvoiceType = InvoiceType.PRESUPUESTO;
           let finalInvoiceNumber = `INT-${order.id.toString().padStart(5, '0')}`;
           let finalCae: string | null = null;
@@ -268,7 +284,7 @@ export const routeSettlementService = {
             reference: `Pedido #${order.id}`,
             description: `Factura ${order.invoiceNumber || finalInvoiceNumber} (Reparto Ruta #${route.id})`,
           });
-        } else if (order.status === OrderStatus.DELIVERED && !order.deliveredAt) {
+        } else if (freshOrder.status === OrderStatus.DELIVERED && !freshOrder.deliveredAt) {
           await tx.order.update({
             where: { id: order.id },
             data: { deliveredAt: new Date() },

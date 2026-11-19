@@ -86,27 +86,41 @@ export class OrderStatusService {
       }
     }
 
-    const initialTotal = roundToIntegerPeso(order.totalAmount).toNumber();
-
     const updated = await prisma.$transaction(async (tx) => {
-      let finalTotalAmount = initialTotal;
+      await tx.$queryRaw`SELECT id FROM "Order" WHERE id = ${order.id} FOR UPDATE`;
 
-      if (status === OrderStatus.PREPARED) {
+      const freshOrder = await tx.order.findUnique({ where: { id: order.id } });
+      if (!freshOrder) {
+        const err: any = new Error('Pedido no encontrado.');
+        err.statusCode = 404;
+        throw err;
+      }
+
+      if (status === OrderStatus.CANCELLED && freshOrder.status === OrderStatus.CANCELLED) {
+        const err: any = new Error(`El pedido #${order.id} ya se encuentra cancelado.`);
+        err.statusCode = 409;
+        throw err;
+      }
+
+      let finalTotalAmount = roundToIntegerPeso(freshOrder.totalAmount).toNumber();
+
+      // Evita doble descuento de lotes si el pedido ya estaba en PREPARED
+      if (status === OrderStatus.PREPARED && freshOrder.status !== OrderStatus.PREPARED) {
         finalTotalAmount = await processOrderPreparedLotAssignments(tx, {
-          orderId: order.id,
-          sellerId: order.sellerId,
+          orderId: freshOrder.id,
+          sellerId: freshOrder.sellerId,
           userId,
           lotAssignments,
         });
       }
 
       const safeBultosDetails = mergeOrderBultosPreservingWebMetadata(
-        order.bultosDetails,
+        freshOrder.bultosDetails,
         bultosDetails,
       );
 
       const uOrder = await tx.order.update({
-        where: { id: order.id },
+        where: { id: freshOrder.id },
         data: {
           status: status as OrderStatus,
           totalAmount: finalTotalAmount,
@@ -115,7 +129,7 @@ export class OrderStatusService {
         },
       });
 
-      if (status === OrderStatus.CANCELLED && order.status !== OrderStatus.CANCELLED) {
+      if (status === OrderStatus.CANCELLED && freshOrder.status !== OrderStatus.CANCELLED) {
         const items = await tx.orderItem.findMany({
           where: { orderId: order.id },
           include: { orderItemLots: true },
@@ -140,9 +154,9 @@ export class OrderStatusService {
           });
 
           const hasLotsAssigned =
-            order.status === OrderStatus.PREPARING ||
-            order.status === OrderStatus.PREPARED ||
-            order.status === OrderStatus.DELIVERED;
+            freshOrder.status === OrderStatus.PREPARING ||
+            freshOrder.status === OrderStatus.PREPARED ||
+            freshOrder.status === OrderStatus.DELIVERED;
           if (hasLotsAssigned) {
             for (const itemLot of item.orderItemLots) {
               await tx.productLot.update({
@@ -157,17 +171,17 @@ export class OrderStatusService {
           }
         }
 
-        if (order.status === OrderStatus.DELIVERED) {
+        if (freshOrder.status === OrderStatus.DELIVERED) {
           await recordLedgerMovement(tx, {
-            personaId: order.personaId,
+            personaId: freshOrder.personaId,
             entryType: LedgerEntryType.CREDIT,
             sourceType: LedgerSourceType.ORDER_CANCELLATION,
-            billingType: order.billingType,
-            amount: initialTotal,
-            orderId: order.id,
+            billingType: freshOrder.billingType,
+            amount: finalTotalAmount,
+            orderId: freshOrder.id,
             userId,
-            reference: `Anulación Pedido #${order.id}`,
-            description: `Reversión por cancelación de Pedido #${order.id} (${order.invoiceNumber || 'INT-' + order.id.toString().padStart(5, '0')})`,
+            reference: `Anulación Pedido #${freshOrder.id}`,
+            description: `Reversión por cancelación de Pedido #${freshOrder.id} (${freshOrder.invoiceNumber || 'INT-' + freshOrder.id.toString().padStart(5, '0')})`,
           });
         }
       }
@@ -184,6 +198,7 @@ export class OrderStatusService {
       newValues: { status: updated.status },
     });
 
+    const initialTotal = roundToIntegerPeso(order.totalAmount).toNumber();
     const finalTotalNum = roundToIntegerPeso(updated.totalAmount).toNumber();
     const scaleNote =
       status === OrderStatus.PREPARED && finalTotalNum !== initialTotal

@@ -89,6 +89,28 @@ export const creditNoteApprovalService = {
     }
 
     const updated = await prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM "CreditNote" WHERE id = ${creditNote.id} FOR UPDATE`;
+      const freshCn = await tx.creditNote.findUnique({ where: { id: creditNote.id } });
+      if (!freshCn || freshCn.status !== CreditNoteStatus.PENDING_APPROVAL) {
+        throw new AppError('La nota de crédito ya fue procesada por otra operación.', 409);
+      }
+
+      if (creditNote.orderId) {
+        await tx.$queryRaw`SELECT id FROM "Order" WHERE id = ${creditNote.orderId} FOR UPDATE`;
+        await validateCreditNoteAgainstLinkedOrder(tx, {
+          orderId: creditNote.orderId,
+          personaId: creditNote.personaId,
+          reason: creditNote.reason,
+          newLines: creditNote.items.map((i) => ({
+            productId: i.productId,
+            quantity: i.quantity,
+            weight: i.weight !== null && i.weight !== undefined ? Number(i.weight) : null,
+          })),
+          newTotalAmount: totalAmount,
+          excludeCreditNoteId: creditNote.id,
+        });
+      }
+
       const approved = await tx.creditNote.update({
         where: { id: creditNote.id },
         data: {
