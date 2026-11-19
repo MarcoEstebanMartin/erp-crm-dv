@@ -20,12 +20,13 @@ export function buildEmptyPersonaDraft(personaRoleFilter: string, showInactive: 
 }
 
 const ES_AR_COLLATOR = new Intl.Collator('es-AR', { sensitivity: 'base' });
+export const MIN_CITY_FILTER_COUNT = 3;
 
 export const OFFICIAL_CITIES = [
-  'BANDERALÓ', 'BERNARDO LARROUDÉ', 'BLAQUIER', 'BUCHARDO', 'CABA',
+  'AMEGHINO', 'BANDERALÓ', 'BERNARDO LARROUDÉ', 'BLAQUIER', 'BUCHARDO', 'CABA',
   'CAÑADA SECA', 'CARLOS TEJEDOR', 'CEBALLOS', 'CORONEL CHARLONE', 'EMILIO V. BUNGE',
-  'FLORENTINO AMEGHINO', 'FORTÍN OLAVARRÍA', 'GENERAL VILLEGAS', 'INTENDENTE ALVEAR', 'PIEDRITAS',
-  'REALICÓ', 'RIVADAVIA', 'RUFINO', 'SANSINENA', 'SANTA ELEODORA',
+  'FORTÍN OLAVARRÍA', 'GENERAL VILLEGAS', 'INTENDENTE ALVEAR', 'PIEDRITAS',
+  'REALICÓ', 'RIVADAVIA AMERICA', 'RUFINO', 'SANSINENA', 'SANTA ELEODORA',
   'SANTA REGINA', 'TRES ALGARROBOS', 'VILLA SABOYA', 'VILLA SAUZE',
 ].sort(ES_AR_COLLATOR.compare);
 
@@ -36,6 +37,7 @@ export const normalizeString = (str: string | null | undefined): string => {
 
 const OFFICIAL_CITY_NORM_MAP = new Map(OFFICIAL_CITIES.map((c) => [normalizeString(c), c]));
 const OFFICIAL_CITIES_NORM_SET = new Set(OFFICIAL_CITIES.map((c) => normalizeString(c)));
+const OTHER_CITY_SENTINELS = new Set(['OTRO', 'OTRA', 'OTROS', 'OTRAS', 'SIN LOCALIDAD', 'SIN CIUDAD', '-']);
 
 export const getWhatsAppLink = (phone: string) => {
   const cleanPhone = (phone || '').replace(/\D/g, '');
@@ -122,9 +124,12 @@ export function computeClientLocationAndRouteCounts(
   availableSaleRoutes: any[],
 ): {
   cityCounts: Record<string, number>;
+  cityOptions: string[];
+  visibleCityNormSet: Set<string>;
   routeCounts: Record<string | number, number>;
   sellerCounts: Record<string | number, number>;
 } {
+  const rawCityCounts = new Map<string, { label: string; count: number; isOfficial: boolean }>();
   const cityCounts: Record<string, number> = { ALL: 0, OTRAS: 0 };
   const routeCounts: Record<string | number, number> = { ALL: 0, SIN_RUTA: 0 };
   const sellerCounts: Record<string | number, number> = { ALL: 0, SIN_VENDEDOR: 0 };
@@ -151,9 +156,21 @@ export function computeClientLocationAndRouteCounts(
     }
 
     const normCity = normalizeString(c.city);
-    const officialCity = normCity ? OFFICIAL_CITY_NORM_MAP.get(normCity) : null;
-    if (officialCity) cityCounts[officialCity] = (cityCounts[officialCity] || 0) + 1;
-    else cityCounts.OTRAS += 1;
+    if (!normCity || OTHER_CITY_SENTINELS.has(normCity)) {
+      cityCounts.OTRAS += 1;
+    } else {
+      const officialCity = OFFICIAL_CITY_NORM_MAP.get(normCity);
+      const existing = rawCityCounts.get(normCity);
+      if (existing) {
+        existing.count += 1;
+      } else {
+        rawCityCounts.set(normCity, {
+          label: officialCity || String(c.city).trim().toUpperCase(),
+          count: 1,
+          isOfficial: Boolean(officialCity),
+        });
+      }
+    }
 
     if (!c.saleRouteId && (!c.route || c.route.trim() === '')) {
       routeCounts.SIN_RUTA += 1;
@@ -175,7 +192,23 @@ export function computeClientLocationAndRouteCounts(
     if (!matchedRoute) routeCounts.SIN_RUTA += 1;
   }
 
-  return { cityCounts, routeCounts, sellerCounts };
+  const useThreshold = personaRoleFilter === 'client' && !showInactive && cityCounts.ALL >= MIN_CITY_FILTER_COUNT;
+  const visibleCityNormSet = new Set<string>();
+  const cityOptions: string[] = [];
+
+  for (const [normCity, entry] of rawCityCounts.entries()) {
+    const qualifies = useThreshold ? entry.count >= MIN_CITY_FILTER_COUNT : entry.isOfficial && entry.count > 0;
+    if (qualifies) {
+      cityCounts[entry.label] = entry.count;
+      cityOptions.push(entry.label);
+      visibleCityNormSet.add(normCity);
+    } else {
+      cityCounts.OTRAS += entry.count;
+    }
+  }
+  cityOptions.sort(ES_AR_COLLATOR.compare);
+
+  return { cityCounts, cityOptions, visibleCityNormSet, routeCounts, sellerCounts };
 }
 
 export interface FilterClientsInMemoryParams {
@@ -186,6 +219,7 @@ export interface FilterClientsInMemoryParams {
   selectedSellerFilter?: string;
   searchQuery: string;
   availableSaleRoutes: any[];
+  visibleCityNormSet?: Set<string>;
 }
 
 export function filterClientsInMemory(
@@ -200,7 +234,9 @@ export function filterClientsInMemory(
     selectedSellerFilter = 'ALL',
     searchQuery,
     availableSaleRoutes,
+    visibleCityNormSet,
   } = params;
+  const activeCityNormSet = visibleCityNormSet ?? OFFICIAL_CITIES_NORM_SET;
   const normSelectedCity = selectedCityFilter !== 'ALL' ? normalizeString(selectedCityFilter) : '';
   const targetRoute =
     personaRoleFilter === 'client' && selectedRouteFilter !== 'ALL' && selectedRouteFilter !== 'SIN_RUTA'
@@ -219,7 +255,7 @@ export function filterClientsInMemory(
     if (selectedCityFilter !== 'ALL') {
       const normCity = normalizeString(c.city);
       if (selectedCityFilter === 'OTRAS') {
-        if (c.city && OFFICIAL_CITIES_NORM_SET.has(normCity)) return false;
+        if (normCity && activeCityNormSet.has(normCity)) return false;
       } else if (normCity !== normSelectedCity) {
         return false;
       }

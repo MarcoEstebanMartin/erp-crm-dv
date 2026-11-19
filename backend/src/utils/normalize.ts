@@ -8,9 +8,9 @@ export const OFFICIAL_CITIES = [
   "BUCHARDO",
   "TRES ALGARROBOS",
   "CARLOS TEJEDOR",
-  "FLORENTINO AMEGHINO",
+  "AMEGHINO",
   "BLAQUIER",
-  "RIVADAVIA",
+  "RIVADAVIA AMERICA",
   "FORTÍN OLAVARRÍA",
   "INTENDENTE ALVEAR",
   "RUFINO",
@@ -92,7 +92,7 @@ export function standardizeCityName(city: string | null | undefined): string {
   if (norm.includes('BUCHARDO') || norm.includes('BOUCHARD')) return 'BUCHARDO';
   if (norm.includes('ALGARROBOS') || norm.includes('CUENCA')) return 'TRES ALGARROBOS';
   if (norm.includes('TEJEDOR')) return 'CARLOS TEJEDOR';
-  if (norm.includes('AMEGHINO')) return 'FLORENTINO AMEGHINO';
+  if (norm.includes('AMEGHINO')) return 'AMEGHINO';
   if (norm.includes('BLAQUIER')) return 'BLAQUIER';
   if (norm.includes('FORTIN') || norm.includes('OLAVARRIA')) return 'FORTÍN OLAVARRÍA';
   if (norm.includes('ALVEAR')) return 'INTENDENTE ALVEAR';
@@ -105,7 +105,7 @@ export function standardizeCityName(city: string | null | undefined): string {
   if (norm.includes('REGINA')) return 'SANTA REGINA';
   if (norm.includes('SABOYA')) return 'VILLA SABOYA';
   if (norm.includes('CAÑADA SECA') || norm.includes('CANADA SECA')) return 'CAÑADA SECA';
-  if (norm.includes('AMERICA') || norm.includes('RIVADAVIA')) return 'RIVADAVIA';
+  if (norm.includes('AMERICA') || norm.includes('RIVADAVIA')) return 'RIVADAVIA AMERICA';
   if (norm.includes('CABA') || norm.includes('CAPITAL FEDERAL') || norm.includes('CIUDAD AUTONOMA')) return 'CABA';
 
   return clean.toUpperCase();

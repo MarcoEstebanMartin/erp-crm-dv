@@ -3,7 +3,7 @@ import { api } from '../../utils/api';
 import { UserPlus, MapPin } from 'lucide-react';
 import SaleRoutesDashboard from '../SaleRoutesDashboard';
 import {
-  INITIAL_CLIENTS_BATCH, CLIENTS_BATCH_STEP, OFFICIAL_CITIES, PERSONA_ROLE_TABS,
+  INITIAL_CLIENTS_BATCH, CLIENTS_BATCH_STEP, PERSONA_ROLE_TABS,
   buildEmptyPersonaDraft, computeClientLocationAndRouteCounts, filterClientsInMemory,
 } from './clientsHelpers';
 import { DebtorsByCityReportView } from './DebtorsByCityReportView';
@@ -83,13 +83,18 @@ export default function ClientsTab({
     setSelectedCityFilter('ALL');
     setSelectedRouteFilter('ALL');
     setSelectedClientSellerFilter('ALL');
-  }, [personaRoleFilter]);
+  }, [personaRoleFilter, showInactive]);
 
   useEffect(() => {
     setVisibleCount(INITIAL_CLIENTS_BATCH);
   }, [personaRoleFilter, showInactive, selectedCityFilter, selectedRouteFilter, selectedClientSellerFilter, deferredSearchQuery]);
 
   const activePersonas = personaRoleFilter === 'client' ? parentClients : rolePersonas;
+
+  const { cityCounts, cityOptions, visibleCityNormSet, routeCounts, sellerCounts } = useMemo(
+    () => computeClientLocationAndRouteCounts(activePersonas, personaRoleFilter, showInactive, availableSaleRoutes),
+    [activePersonas, personaRoleFilter, showInactive, availableSaleRoutes],
+  );
 
   const filteredClients = useMemo(
     () =>
@@ -101,13 +106,9 @@ export default function ClientsTab({
         selectedSellerFilter: selectedClientSellerFilter,
         searchQuery: deferredSearchQuery,
         availableSaleRoutes,
+        visibleCityNormSet,
       }),
-    [activePersonas, personaRoleFilter, showInactive, selectedCityFilter, selectedRouteFilter, selectedClientSellerFilter, deferredSearchQuery, availableSaleRoutes],
-  );
-
-  const { cityCounts, routeCounts, sellerCounts } = useMemo(
-    () => computeClientLocationAndRouteCounts(activePersonas, personaRoleFilter, showInactive, availableSaleRoutes),
-    [activePersonas, personaRoleFilter, showInactive, availableSaleRoutes],
+    [activePersonas, personaRoleFilter, showInactive, selectedCityFilter, selectedRouteFilter, selectedClientSellerFilter, deferredSearchQuery, availableSaleRoutes, visibleCityNormSet],
   );
 
   const hasMoreRows = visibleCount < filteredClients.length;
@@ -234,8 +235,8 @@ export default function ClientsTab({
 
               <select aria-label="Filtrar por localidad" className="select" value={selectedCityFilter} onChange={(e) => setSelectedCityFilter(e.target.value)} style={{ width: 'auto', minWidth: '170px', height: '38px' }}>
                 <option value="ALL">Localidades ({cityCounts.ALL || 0})</option>
-                {OFFICIAL_CITIES.map((city) => (<option key={city} value={city}>{city} ({cityCounts[city] || 0})</option>))}
-                <option value="OTRAS">Otras ({cityCounts.OTRAS || 0})</option>
+                {cityOptions.map((city) => (<option key={city} value={city}>{city} ({cityCounts[city] || 0})</option>))}
+                {(cityCounts.OTRAS || 0) > 0 && <option value="OTRAS">OTRAS ({cityCounts.OTRAS})</option>}
               </select>
 
               {personaRoleFilter === 'client' && (
@@ -250,7 +251,7 @@ export default function ClientsTab({
                 <select aria-label="Filtrar por vendedor" className="select" value={selectedClientSellerFilter} onChange={(e) => setSelectedClientSellerFilter(e.target.value)} style={{ width: 'auto', minWidth: '170px', height: '38px' }}>
                   <option value="ALL">Vendedores ({sellerCounts.ALL || 0})</option>
                   {availableSellers.map((seller) => (<option key={seller.id} value={seller.id}>{(seller.username || seller.name || '').replace(/_/g, ' ').toUpperCase()} ({sellerCounts[seller.id] || 0})</option>))}
-                  <option value="SIN_VENDEDOR">Sin vendedor ({sellerCounts.SIN_VENDEDOR || 0})</option>
+                  <option value="SIN_VENDEDOR">SIN VENDEDOR ({sellerCounts.SIN_VENDEDOR || 0})</option>
                 </select>
               )}
 

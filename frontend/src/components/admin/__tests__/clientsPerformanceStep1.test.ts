@@ -165,7 +165,49 @@ describe('Paso 1 Velocidad en Clientes — Buscador Fonético RAM, Conteos O(N) 
     const collator = new Intl.Collator('es-AR', { sensitivity: 'base' });
     const expected = [...OFFICIAL_CITIES].sort(collator.compare);
     expect(OFFICIAL_CITIES).toEqual(expected);
-    expect(OFFICIAL_CITIES[0]).toBe('BANDERALÓ');
+    expect(OFFICIAL_CITIES[0]).toBe('AMEGHINO');
     expect(OFFICIAL_CITIES[OFFICIAL_CITIES.length - 1]).toBe('VILLA SAUZE');
+  });
+
+  it('oculta localidades con 0 clientes y agrupa las menores a 3 en OTRAS con paridad exacta de filtro', () => {
+    const bulkClients = [
+      ...Array.from({ length: 16 }, (_, i) => ({ id: i + 1, name: `Cliente Villegas ${i}`, city: 'General Villegas', isActive: true })),
+      ...Array.from({ length: 3 }, (_, i) => ({ id: 200 + i, name: `Cliente Sansinena ${i}`, city: 'Sansinena', isActive: true })),
+      ...Array.from({ length: 20 }, (_, i) => ({ id: 400 + i, name: `Cliente Otros ${i}`, city: 'OTROS', isActive: true })),
+      { id: 300, name: 'Cliente Ceballos', city: 'Ceballos', isActive: true },
+      { id: 301, name: 'Cliente Santa Regina', city: 'Santa Regina', isActive: true },
+      { id: 302, name: 'Cliente Sin Ciudad', city: '', isActive: true },
+    ];
+
+    const { cityCounts, cityOptions, visibleCityNormSet } = computeClientLocationAndRouteCounts(
+      bulkClients,
+      'client',
+      false,
+      [],
+    );
+
+    expect(cityOptions).toEqual(['GENERAL VILLEGAS', 'SANSINENA']);
+    expect(cityCounts.ALL).toBe(42);
+    expect(cityCounts['GENERAL VILLEGAS']).toBe(16);
+    expect(cityCounts['SANSINENA']).toBe(3);
+    expect(cityCounts.OTRAS).toBe(23);
+    expect(cityCounts['CABA']).toBeUndefined();
+    expect(cityCounts['CEBALLOS']).toBeUndefined();
+    expect(cityCounts['OTROS']).toBeUndefined();
+
+    const filteredOtras = filterClientsInMemory(bulkClients, {
+      personaRoleFilter: 'client',
+      showInactive: false,
+      selectedCityFilter: 'OTRAS',
+      selectedRouteFilter: 'ALL',
+      searchQuery: '',
+      availableSaleRoutes: [],
+      visibleCityNormSet,
+    });
+    expect(filteredOtras).toHaveLength(23);
+    expect(filteredOtras.some((c) => c.city === 'OTROS')).toBe(true);
+    expect(filteredOtras.some((c) => c.city === 'Ceballos')).toBe(true);
+    expect(filteredOtras.some((c) => c.city === 'Santa Regina')).toBe(true);
+    expect(filteredOtras.some((c) => c.city === '')).toBe(true);
   });
 });

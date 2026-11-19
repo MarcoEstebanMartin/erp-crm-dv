@@ -26,6 +26,7 @@ export const OFFICIAL_CITY_COORDS: Record<string, GeoPoint> = {
   'AMEGHINO': { lat: -34.8439, lng: -62.4667 },
   'BLAQUIER': { lat: -34.7069, lng: -62.4875 },
   'RIVADAVIA': { lat: -35.4889, lng: -62.9742 },
+  'RIVADAVIA AMERICA': { lat: -35.4889, lng: -62.9742 },
   'AMERICA': { lat: -35.4889, lng: -62.9742 },
   'AMÉRICA': { lat: -35.4889, lng: -62.9742 },
   'FORTÍN OLAVARRÍA': { lat: -35.7025, lng: -63.0236 },
