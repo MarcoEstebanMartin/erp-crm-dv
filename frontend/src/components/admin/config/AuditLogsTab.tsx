@@ -2,7 +2,7 @@ import { Fragment, useEffect, useState } from 'react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { api, type AuditLogQueryFilters } from '../../../utils/api';
 import { resolveAuditBadge } from './auditLogDictionary';
-import { formatAuditMessage } from './auditLogFormatter';
+import { formatAuditOperationSummary } from './auditLogSummary';
 import AuditLogsFilterBar, { type AuditFilterUserOption } from './AuditLogsFilterBar';
 import AuditLogDetailPanel from './AuditLogDetailPanel';
 
@@ -179,7 +179,7 @@ export default function AuditLogsTab() {
                     ? 'Sistema'
                     : rawUser;
                 const actionBadge = resolveAuditBadge(l.action || l.category || '');
-                const detailMsg = formatAuditMessage(l);
+                const detailMsg = formatAuditOperationSummary(l);
                 const showErrorSubnote =
                   l.status === 'ERROR' &&
                   typeof l.errorMessage === 'string' &&
